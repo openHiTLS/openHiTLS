@@ -190,7 +190,7 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
 {
     (void)exData;
     int32_t ret;
-    int32_t level;
+    int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
     int32_t minBits;
     if (ctx == NULL && config == NULL) {
         return SECURITY_ERR;

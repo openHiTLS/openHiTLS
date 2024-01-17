@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-typedef struct TlsSessionManager TLS_SessionMgr;
-
 /* Application */
 TLS_SessionMgr *SESSMGR_New(void);
 
