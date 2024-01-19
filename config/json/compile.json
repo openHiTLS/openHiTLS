@@ -9,7 +9,6 @@
             "-Werror",
             "-Wextra",
             "-Wall",
-            "-Wtrampolines",
             "-Wdate-time",
             "-Wfloat-equal",
             "-Wshadow",

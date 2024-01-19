@@ -17,8 +17,6 @@
 #include "conn_common.h"
 #include "hs.h"
 
-typedef int32_t (*WriteEventProcess)(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
-
 int32_t HITLS_GetMaxWriteSize(const HITLS_Ctx *ctx, uint32_t *len)
 {
     if (ctx == NULL || len == NULL) {
