@@ -196,7 +196,7 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
         return SECURITY_ERR;
     } else if (config != NULL) {
         (void)HITLS_CFG_GetSecurityLevel(config, &level);
-    } else if (ctx != NULL) {
+    } else {
         (void)HITLS_GetSecurityLevel(ctx, &level);
     }
     /* No restrictions are imposed when Level is 0. */
