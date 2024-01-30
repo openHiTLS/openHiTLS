@@ -1,35 +1,35 @@
-# 密码算法功能介绍
+# Cryptographic Algorithm Functions
 
-openHiTLS基于密码算法标准提供了加解密、签名验证、哈希等功能。主要功能接口在算法模块中提供，在openHiTLS系统内为证书和TLS模块提供默认密码算法能力。
+openHiTLS provides functions such as encryption and decryption, signature verification, and hash calculation based on the cryptographic algorithm standard. Provided by algorithm module, the main function interfaces support the default cryptographic algorithm capability for the certificate and TLS module in the openHiTLS system
 
-## 功能规格
+## Function Specifications
 
-* 加密解密：支持SM4、AES、CHACHA20对称加解密功能；支持SM2, RSA非对称加解密功能。
-* 签名验证：支持SM2、DSA、ED25519、RSA、ECDSA、ED448签名验证功能。
-* 密钥交换：支持SM2、X25519、ECDH、X448 密钥交换功能。
-* 密钥派生：支持PBKDF2、HKDF、SCRYPT、KDFTLS12密钥派生功能。
-* 完整性算法：支持HMAC 完整性保护功能。
-* 哈希计算：支持SM3、SHA2、SHA3、MD5、SHA1摘要计算功能。
-* 随机数生成：支持DRBG-HASH, DRBG-CTR, DRBG-HMAC随机数功能。
+* Encryption and decryption: supports symmetric encryption and decryption based on SM4, AES, and CHACHA20, and asymmetric encryption and decryption based on SM2 and RSA.
+* Signature verification: supports SM2, DSA, ED25519, RSA, ECDSA, and ED448.
+* Key exchange: supports SM2, X25519, ECDH, and X448.
+* Key derivation: supports PBKDF2, HKDF, SCRYPT, and KDFTLS12.
+* Integrity algorithm: supports integrity protection based on HMAC.
+* Hash calculation: supports digest calculation based on SM3, SHA2, SHA3, MD5, and SHA1.
+* Random number generation: supports DRBG-HASH, DRBG-CTR, and DRBG-HMAC.
 
-# 加解密示例
+# Examples of Encryption and Decryption
 
-## 对称加解密
+## Symmetric Encryption and Decryption
 
-对称加解密功能基于对称算法提供了加解密能力，如下以SM4-CBC算法为例，给出了对称加解密的示例代码，供适配参考。
+This function provides encryption and decryption capabilities based on symmetric algorithms. The following uses the SM4-CBC algorithm as an example to describe the sample code for reference.
 
-## 示例代码
+## Sample Code
 
 ```c
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <stdint.h> 
 #include <string.h>
-#include "crypt_eal_cipher.h" // 对称加解密接口头文件 
+#include "crypt_eal_cipher.h" // Header file of the interfaces for symmetric encryption and decryption.
 #include "bsl_sal.h"
 #include "bsl_err.h"
-#include "crypt_algid.h" // 算法id列表 
-#include "crypt_errno.h" // 错误码列表 
+#include "crypt_algid.h" // Algorithm ID list.
+#include "crypt_errno.h" // Error code list.
 
 void *StdMalloc(uint32_t len) 
 { 
@@ -40,11 +40,11 @@ void PrintLastError(void)
 { 
     const char *file = NULL; 
     uint32_t line = 0; 
-    BSL_ERR_GetLastErrorFileLine(&file, &line); // 获取错误发生的文件名和行数 
+    BSL_ERR_GetLastErrorFileLine(&file, &line); // Obtain the name and number of lines of the error file.
     printf("failed at file %s at line %d\n", file, line); 
 } 
 
-BSL_SAL_MemCallback cb = { StdMalloc, free };  // 注册的内存分配接口 
+BSL_SAL_MemCallback cb = { StdMalloc, free };  // Registered interfaces for memory allocation.
 
 int main(void) 
 { 
@@ -59,34 +59,34 @@ int main(void)
     uint32_t cipherTextLen; 
     int32_t ret;
 
-    printf("plain text to be encrypted: "); // 输出明文 
+    printf("plain text to be encrypted: "); // Output the plaintext.
     for (uint32_t i = 0; i < dataLen; i++) { 
         printf("%02x", data[i]); 
     } 
     printf("\n"); 
 
-    // 初始化错误码模块
+    // Initialize the error code module.
     BSL_ERR_Init();
 
-    // 调用算法API接口之前需要调用BSL_SAL_RegMemCallback函数注册malloc和free函数。该步骤仅需执行一次。
-    // 如果未注册并且默认能力没有被裁剪,使用默认linux实现
+    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb); 
 
-    // 创建上下文 
+    // Create a context.
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_CBC); 
     if (ctx == NULL) { 
         PrintLastError(); 
         BSL_ERR_DeInit(); 
         return 1; 
     } 
-    // 初始化, 最后入参true为加密，false为解密
+    // During initialization, the last input parameter can be **true** or **false**. **true** indicates encryption, and **false** indicates decryption.
     ret = CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true); 
     if (ret != CRYPT_SUCCESS) { 
-        printf("error code is %x\n", ret); // 输出错误码，可借助错误码在crypt_errno.h中找到对应的错误信息 
+        printf("error code is %x\n", ret); // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
         PrintLastError(); 
         goto exit; 
     } 
-    // 设置填充模式。
+    // Set the padding mode.
     ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -94,7 +94,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 输入待计算数据，该接口可以调用多次。此处outLen输入为cipherText长度，输出为处理的数据量 
+    // Enter the data to be calculated. This interface can be called for multiple times. The input value of **outLen** is the length of the ciphertext, and the output value is the amount of processed data.
     ret = CRYPT_EAL_CipherUpdate(ctx, data, dataLen, cipherText, &outLen); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -102,10 +102,10 @@ int main(void)
         goto exit; 
     } 
 
-    outTotalLen += outLen; // 目前已处理数据量 
-    outLen = sizeof(cipherText) - outTotalLen; // cipherText剩余空间 
+    outTotalLen += outLen; // Amount of processed data.
+    outLen = sizeof(cipherText) - outTotalLen; // Remaining space of the ciphertext.
 
-    // 填充并处理最后一段数据 
+    // Fill in and process the last segment of data.
     ret = CRYPT_EAL_CipherFinal(ctx, cipherText + outTotalLen, &outLen); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -114,27 +114,27 @@ int main(void)
     } 
 
     outTotalLen += outLen; 
-    printf("cipher text value is: "); // 输出密文 
+    printf("cipher text value is: "); // Output the ciphertext.
 
     for (uint32_t i = 0; i < outTotalLen; i++) { 
         printf("%02x", cipherText[i]); 
     } 
     printf("\n"); 
 
-    // 开始解密流程 
+    // Start decryption.
     cipherTextLen = outTotalLen; 
     outTotalLen = 0; 
     outLen = sizeof(plainText); 
 
-    // 初始化, 设置为解密 
+    // When initializing the decryption function, set the last input parameter to **false**.
     ret = CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), false); 
     if (ret != CRYPT_SUCCESS) { 
-        printf("error code is %x\n", ret); // 输出错误码，可借助错误码在crypt_errno.h中找到对应的错误信息 
+        printf("error code is %x\n", ret); // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
         PrintLastError(); 
         goto exit; 
     } 
 
-    // 设置填充模式，填充模式必须和加密的填充模式相同 
+    //Set the padding mode, which must be the same as that for encryption.
     ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -142,17 +142,17 @@ int main(void)
         goto exit; 
     } 
 
-    // 输入密文数据 
+    // Enter the ciphertext data.
     ret = CRYPT_EAL_CipherUpdate(ctx, cipherText, cipherTextLen, plainText, &outLen); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
         PrintLastError(); 
         goto exit; 
     } 
-    outTotalLen += outLen; // 目前已处理数据量 
-    outLen = sizeof(plainText) - outTotalLen; // buffer剩余空间 
+    outTotalLen += outLen; // Amount of processed data.
+    outLen = sizeof(plainText) - outTotalLen; // Remaining space of the buffer.
 
-    // 解密最后一段数据并去填充 
+    // Decrypt the last segment of data and remove the filled content.
     ret = CRYPT_EAL_CipherFinal(ctx, plainText + outTotalLen, &outLen); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -162,7 +162,7 @@ int main(void)
 
     outTotalLen += outLen;
 
-    printf("decrypted plain text value is: "); // 输出明文 
+    printf("decrypted plain text value is: "); // Output the plaintext.
     for (uint32_t i = 0; i < outTotalLen; i++) { 
         printf("%02x", plainText[i]); 
     }
@@ -175,30 +175,30 @@ int main(void)
     printf("pass \n");
 
 exit: 
-    // 释放上下文内存
+    // Release the context memory.
     CRYPT_EAL_CipherFreeCtx(ctx); 
     BSL_ERR_DeInit();
     return ret;
 }
 ```
 
-## 非对称加解密
+## Asymmetric Encryption and Decryption
 
-非对称加解密功能基于非对称算法提供了的加解密能力，如下以SM2加解密流程为例，给出了非对称加解密的示例代码，供适配参考。
+This function provides encryption and decryption capabilities based on asymmetric algorithms. The following uses the SM2 encryption and decryption process as an example to describe the sample code for reference.
 
-## 示例代码
+## Sample Code
 
 ```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "crypt_eal_pkey.h" // 非对称加解密接口头文件
+#include "crypt_eal_pkey.h" // Header file of the interfaces for asymmetric encryption and decryption.
 #include "bsl_sal.h"
 #include "bsl_err.h" 
-#include "crypt_algid.h"    // 算法id列表
-#include "crypt_errno.h"    // 错误码列表
-#include "crypt_eal_rand.h" // 随机数头文件
+#include "crypt_algid.h" // Algorithm ID list.
+#include "crypt_errno.h" // Error code list.
+#include "crypt_eal_rand.h" // Header file of the random number.
 #include "crypt_types.h"
 
 void *StdMalloc(uint32_t len)
@@ -209,18 +209,18 @@ void PrintLastError(void)
 {
     const char *file = NULL;
     uint32_t line = 0;
-    BSL_ERR_GetLastErrorFileLine(&file, &line); // 获取错误发生的文件名和行数
+    BSL_ERR_GetLastErrorFileLine(&file, &line); // Obtain the name and number of lines of the error file.
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = {StdMalloc, free}; // 注册的内存分配接口
+BSL_SAL_MemCallback cb = { StdMalloc, free }; // Registered interfaces for memory allocation.
 
 int main(void)
 {
     int32_t ret;
-    BSL_ERR_Init(); // 初始化错误码模块
-    // 调用算法API接口之前需要调用BSL_SAL_RegMemCallback函数注册malloc和free函数。该步骤仅需执行一次
-    // 如果未注册并且默认能力没有被裁剪,使用默认linux实现
+    BSL_ERR_Init(); // Initialize the error code module.
+    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb);
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
@@ -229,7 +229,7 @@ int main(void)
         goto exit;
     }
 
-    // 初始化随机数
+    // Initialize the random number.
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
@@ -237,7 +237,7 @@ int main(void)
         goto exit;
     }
 
-    // 生成密钥对
+    // Generate a key pair.
     ret = CRYPT_EAL_PkeyGen(pkey);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyGen: error code is %x\n", ret);
@@ -245,14 +245,14 @@ int main(void)
         goto exit;
     }
 
-    // 待加密数据
+    // Data to be encrypted.
     char *data = "test enc data";
     uint32_t dataLen = 12;
     uint8_t ecrypt[125] = {0};
     uint32_t ecryptLen = 125;
     uint8_t dcrypt[125] = {0};
     uint32_t dcryptLen = 125;
-    // 加密
+    // Encrypt data.
     ret = CRYPT_EAL_PkeyEncrypt(pkey, data, dataLen, ecrypt, &ecryptLen);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyEncrypt: error code is %x\n", ret);
@@ -260,7 +260,7 @@ int main(void)
         goto exit;
     }
 
-    // 解密
+    // Decrypt data.
     ret = CRYPT_EAL_PkeyDecrypt(pkey, ecrypt, ecryptLen, dcrypt, &dcryptLen);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyDecrypt: error code is %x\n", ret);
@@ -274,7 +274,7 @@ int main(void)
         ret = -1;
     }
 exit:
-    // 释放上下文内存。
+    // Release the context memory.
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_RandDeinit();
     BSL_ERR_DeInit();
@@ -282,25 +282,25 @@ exit:
 }
 ```
 
-# 签名验证示例
+# Example of Signature Verification
 
-## 算法类型
+## Algorithm Type
 
-签名验证功能基于非对称算法提供了的签名验证能力，如下以SM2签名验证为例，给出了签名验证的示例代码，供适配参考。
+This function provides the signature verification capability based on asymmetric algorithms. The following uses SM2 signature verification as an example to describe the sample code for reference.
 
-## 示例代码
+## Sample Code
 
 ```c
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <stdint.h> 
 #include <string.h> 
-#include "crypt_eal_pkey.h" // 签名验签头文件
+#include "crypt_eal_pkey.h" // Header file for signature verification.
 #include "bsl_sal.h"
 #include "bsl_err.h" 
-#include "crypt_algid.h" // 算法id列表 
-#include "crypt_errno.h" // 错误码列表 
-#include "crypt_eal_rand.h" // 随机数头文件 
+#include "crypt_algid.h" // Algorithm ID list.
+#include "crypt_errno.h" // Error code list.
+#include "crypt_eal_rand.h" // Header file of the random number.
 
 void *StdMalloc(uint32_t len) 
 { 
@@ -311,16 +311,16 @@ void PrintLastError(void)
 { 
     const char *file = NULL; 
     uint32_t line = 0; 
-    BSL_ERR_GetLastErrorFileLine(&file, &line); // 获取错误发生的文件名和行数 
+    BSL_ERR_GetLastErrorFileLine(&file, &line); // Obtain the name and number of lines of the error file.
     printf("failed at file %s at line %d\n", file, line); 
 } 
-BSL_SAL_MemCallback cb = { StdMalloc, free };  // 注册的内存分配接口 
+BSL_SAL_MemCallback cb = { StdMalloc, free };  // Registered interfaces for memory allocation.
 
 int main(void) 
 { 
     int ret; 
     uint8_t userId[32] = { 0 }; 
-    uint8_t key[32] = { 0 }; // 此处密钥仅作示例 
+    uint8_t key[32] = { 0 }; // The key value is for reference only.
     uint8_t msg[32] = { 0 }; 
     uint8_t signBuf[100] = { 0 }; 
     uint32_t signLen = sizeof(signBuf); 
@@ -328,9 +328,9 @@ int main(void)
     CRYPT_EAL_PkeyPub pub = { 0 }; 
     CRYPT_EAL_PkeyCtx *ctx = NULL; 
 
-    BSL_ERR_Init(); // 初始化错误码模块
-    // 调用算法API接口之前需要调用BSL_SAL_RegMemCallback函数注册malloc和free函数。该步骤仅需执行一次 
-    // 如果未注册并且默认能力没有被裁剪,使用默认linux实现
+    BSL_ERR_Init(); // Initialize the error code module.
+    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb); 
 
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2); 
@@ -338,7 +338,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 设置用户Id 
+    // Set a user ID.
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -346,7 +346,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 初始化随机数
+    // Initialize the random number.
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -354,7 +354,7 @@ int main(void)
         goto exit; 
     }
 
-    // 生成密钥对
+    // Generate a key pair.
     ret = CRYPT_EAL_PkeyGen(ctx);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
@@ -362,7 +362,7 @@ int main(void)
         goto exit;
     }
 
-    // 签名
+    // Sign.
     ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -370,7 +370,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 验证
+    // Verify the signature.
     ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen);
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -381,7 +381,7 @@ int main(void)
     printf("pass \n");
 
 exit: 
-    // 释放上下文内存
+    // Release the context memory.
     CRYPT_EAL_PkeyFreeCtx(ctx); 
     CRYPT_EAL_RandDeinit(); 
     BSL_ERR_DeInit();
@@ -389,13 +389,13 @@ exit:
 }
 ```
 
-# 密钥交换示例
+# Example of Key Exchange
 
-## 算法类型
+## Algorithm Type
 
-密钥交换功能基于非对称算法提供了密钥交换能力，如下以ECDH为例，给出了密钥交换的示例代码，供适配参考。
+This function provides the key exchange capability based on asymmetric algorithms. The following uses ECDH as an example to describe the sample code for reference.
 
-## 示例代码
+## Sample Code
 
 ```c
 #include <stdio.h> 
@@ -403,11 +403,11 @@ exit:
 #include <stdint.h> 
 #include <string.h> 
 #include "crypt_types.h"
-#include "crypt_eal_pkey.h" // 密钥交换头文件
+#include "crypt_eal_pkey.h" // Header file for key exchange.
 #include "bsl_sal.h" 
 #include "bsl_err.h" 
-#include "crypt_algid.h" // 算法id列表 
-#include "crypt_errno.h" // 错误码列表 
+#include "crypt_algid.h" // Algorithm ID list.
+#include "crypt_errno.h" // Error code list.
 #include "crypt_eal_rand.h"
 
 void *StdMalloc(uint32_t len) 
@@ -419,11 +419,11 @@ void PrintLastError(void)
 { 
     const char *file = NULL; 
     uint32_t line = 0; 
-    BSL_ERR_GetLastErrorFileLine(&file, &line); // 获取错误发生的文件名和行数 
+    BSL_ERR_GetLastErrorFileLine(&file, &line); // Obtain the name and number of lines of the error file.
     printf("failed at file %s at line %d\n", file, line); 
 } 
 
-BSL_SAL_MemCallback cb = { StdMalloc, free };  // 注册的内存分配接口 
+BSL_SAL_MemCallback cb = { StdMalloc, free };  // Registered interfaces for memory allocation.
 
 int main(void) 
 { 
@@ -449,9 +449,9 @@ int main(void)
     CRYPT_EAL_PkeyCtx *pubCtx = NULL; 
     CRYPT_PKEY_ParaId id = CRYPT_ECC_NISTP256;
 
-    BSL_ERR_Init(); // 初始化错误码模块
-    // 调用算法API接口之前需要调用BSL_SAL_RegMemCallback函数注册malloc和free函数。该步骤仅需执行一次
-    // 如果未注册并且默认能力没有被裁剪,使用默认linux实现
+    BSL_ERR_Init(); // Initialize the error code module.
+    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb); 
 
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH); 
@@ -460,7 +460,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 设置曲线参数 
+    // Set the curve parameters.
     ret = CRYPT_EAL_PkeySetParaById(prvCtx, id); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -468,7 +468,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 设置一端的私钥 
+    // Set the private key of one end.
     prvKey.id = CRYPT_PKEY_ECDH; 
     prvKey.key.eccPrv.len = sizeof(prikey); 
     prvKey.key.eccPrv.data = prikey; 
@@ -479,7 +479,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 设置曲线参数
+    // Set the curve parameters.
     ret = CRYPT_EAL_PkeySetParaById(pubCtx, id); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -487,7 +487,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 设置另一端的公钥 
+    // Set the public key of the other end.
     pubKey.id = CRYPT_PKEY_ECDH; 
     pubKey.key.eccPub.len = sizeof(pubkey); 
     pubKey.key.eccPub.data = pubkey; 
@@ -498,7 +498,7 @@ int main(void)
         goto exit; 
     } 
 
-    // 共享密钥只涉及X轴, 这里返回点不压缩编码需要的长度
+    // The shared key involves only the X axis. The length of the public key is not compressed in the returned results.
     shareLen = CRYPT_EAL_PkeyGetKeyLen(prvCtx) / 2; 
     shareKey =  (uint8_t *)malloc(shareLen);
     if(shareKey == NULL) {
@@ -507,7 +507,7 @@ int main(void)
         goto exit; 
     }
 
-    // 初始化随机数
+    // Initialize the random number.
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
@@ -515,7 +515,7 @@ int main(void)
         goto exit;
     }
 
-    // 计算共享密钥 
+    // Calculate the shared key.
     ret = CRYPT_EAL_PkeyComputeShareKey(prvCtx, pubCtx, shareKey, &shareLen); 
     if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret); 
@@ -523,7 +523,7 @@ int main(void)
         goto exit;
     }
 
-    // 和预期对比
+    // Compare the calculation result with the expected one.
     if (shareLen != sizeof(resSharekey) || memcmp(shareKey, resSharekey, shareLen) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
@@ -534,7 +534,7 @@ int main(void)
     printf("pass \n");
 
 exit: 
-    // 释放上下文内存。
+    // Release the context memory.
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(prvCtx); 
     CRYPT_EAL_PkeyFreeCtx(pubCtx); 
@@ -544,24 +544,24 @@ exit:
 }
 ```
 
-# 密钥派生示例
+# Example of Key Derivation
 
-## 算法类型
+## Algorithm Type
 
-提供了PBKDF2、HKDF、SCRYPT和KDFTLS12密钥派生能力，如下以PBKDF2密钥派生算法为例，给出了密钥派生的示例代码，供适配参考。
+The PBKDF2, HKDF, SCRYPT, and KDFTLS12 algorithms can be used for key derivation. The following uses PBKDF2 as an example to describe the sample code for reference.
 
-## 示例代码
+## Sample Code
 
 ```c
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h> 
-#include "crypt_errno.h"    // 错误码列表
+#include "crypt_errno.h" // Error code list.
 #include "bsl_sal.h" 
 #include "bsl_err.h" 
-#include "crypt_algid.h"    // 算法id列表
-#include "crypt_eal_kdf.h"  // 密钥派生接口头文件
+#include "crypt_algid.h" // Algorithm ID list.
+#include "crypt_eal_kdf.h" //Header file of the interfaces for key derivation.
 
 void *StdMalloc(uint32_t len)
 {
@@ -598,11 +598,11 @@ int main(void)
     uint8_t out[sizeof(result)] = {0};
     uint32_t outLen = sizeof(result);
 
-    // 初始化错误码模块
+    // Initialize the error code module.
     BSL_ERR_Init(); 
 
-    // 调用算法API接口之前需要调用BSL_SAL_RegMemCallback函数注册malloc和free函数。该步骤仅需执行一次
-    // 如果未注册并且默认能力没有被裁剪,使用默认linux实现
+    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb);
 
     ret = CRYPT_EAL_Pbkdf2(CRYPT_MAC_HMAC_SHA256, key, sizeof(key), salt, sizeof(salt), iterations, out, outLen);
@@ -623,36 +623,36 @@ exit:
 }
 ```
 
-# 随机数生成示例
+# Example of Random Number Generation
 
-## 算法类型
+## Algorithm Type
 
-提供了DRBG-SHA、DRBG-HMAC和DRBG-CTR随机数算法，其接口类型分为两类，全局随机数接口和多实例随机数接口。
+The DRBG-SHA, DRBG-HMAC, and DRBG-CTR algorithms can be used for random number generation. The interfaces include global random number interfaces and multi-instance random number interfaces.
 
 ```c
 /* 
-*  全局随机数初始化和去初始化接口
- * 初始化接口的seedMeth参数是熵源回调，seedCtx是用户回调的上下文，
-*  用户可以设置自己的熵源的实现。如果不设置，就使用系统默认熵源，
-*  当前支持从 linux 的 /dev/random 获取熵 
+*  Global random number initializing and deinitializing interfaces.
+ * The **seedMeth** value of initializing interfaces is the entropy source of the callback, and the **seedCtx** value is the context called back by the user.
+*  Users can set their own entropy source. If it is not set, the default entropy source is used.
+*  Currently, entropy can be obtained from **/dev/random** of Linux.
 */
 int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx, const uint8_t *pers, uint32_t persLen);
 void CRYPT_EAL_RandDeinit(void);
 
-/* 初始化之后，用户就可以调用如下接口获取伪随机数和补充熵源 */
+/* After initialization, users can call the following interfaces to obtain the pseudo-random number and supplement the entropy source.*/
 int32_t CRYPT_EAL_Randbytes(uint8_t *byte, uint32_t len);
 int32_t CRYPT_EAL_RandSeed(void);
 
-/* 多实例接口对比全局DRBG接口的主要区别就是将DRBG的上下文返回给用户，
- * 支持用户创建多个DRBG上下文，不同上下文在熵源设置和内部状态变化之间互不干扰 。*/
+/*The deterministic random bit generator (DRBG) context of the multi-instance random number interfaces is returned to the user. This is the main difference between the two types of interfaces.
+ * Multiple DRBG contexts can be created. Different contexts do not interfere with each other during entropy source setting and internal status change.*/
 CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx,
     const uint8_t *pers, uint32_t persLen);
 void CRYPT_EAL_DrbgDeinit(CRYPT_EAL_RndCtx *ctx);
 ```
 
-如下以DRBG-SHA算法为例，给出了随机数算法的示例代码，供适配参考。
+The following uses the DRBG-SHA algorithm as an example to describe the sample code for reference.
 
-## 示例代码
+## Sample Code
 
 ```c
 #include <stdio.h> 
@@ -662,9 +662,9 @@ void CRYPT_EAL_DrbgDeinit(CRYPT_EAL_RndCtx *ctx);
 #include "crypt_types.h"
 #include "bsl_sal.h"
 #include "bsl_err.h"
-#include "crypt_algid.h" // 算法id列表 
-#include "crypt_errno.h" // 错误码列表 
-#include "crypt_eal_rand.h" // 随机数头文件
+#include "crypt_algid.h" // Algorithm ID list.
+#include "crypt_errno.h" // Error code list.
+#include "crypt_eal_rand.h" // Header file of the random number.
 
 void *StdMalloc(uint32_t len)
 { 
@@ -675,11 +675,11 @@ void PrintLastError(void)
 {
     const char *file = NULL;
     uint32_t line = 0;
-    BSL_ERR_GetLastErrorFileLine(&file, &line); // 获取错误发生的文件名和行数 
+    BSL_ERR_GetLastErrorFileLine(&file, &line); // Obtain the name and number of lines of the error file.
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = { StdMalloc, free };  // 注册的内存分配接口 
+BSL_SAL_MemCallback cb = { StdMalloc, free };  // Registered interfaces for memory allocation.
 
 int main(void) 
 { 
@@ -687,13 +687,13 @@ int main(void)
     uint8_t output[100] = {0};
     uint32_t len = 100;
 
-    // 调用算法API接口之前需要调用BSL_SAL_RegMemCallback函数注册malloc和free函数。该步骤仅需执行一次。
-    // 如果未注册并且默认能力没有被裁剪,使用默认linux实现
+    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb);
 
-    BSL_ERR_Init(); // 初始化错误模块
+    BSL_ERR_Init(); // Initialize the error module.
 
-    // 初始化全局随机数, 使用linux的/dev/random默认熵源
+    // Initialize the global random number by using the default entropy source from **/dev/random** of Linux.
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
@@ -701,7 +701,7 @@ int main(void)
         goto exit;
     }
 
-    // 获得len长度的随机数序列 
+    // Obtain the random number sequence of the **len** value.
     ret = CRYPT_EAL_Randbytes(output, len); 
     if (ret != CRYPT_SUCCESS) { 
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
@@ -709,13 +709,13 @@ int main(void)
         goto exit;
     }
 
-    printf("random value is: "); // 输出随机数 
+    printf("random value is: "); // Output the random number.
     for (uint32_t i = 0; i < len; i++) { 
         printf("%02x", output[i]); 
     } 
     printf("\n"); 
 
-    //重播种
+    //Reseeding
     ret = CRYPT_EAL_RandSeed(); 
     if (ret != CRYPT_SUCCESS) { 
         printf("CRYPT_EAL_RandSeed: error code is %x\n", ret);
@@ -723,7 +723,7 @@ int main(void)
         goto exit;
     } 
 
-    // 获得len长度的随机数序列 
+    // Obtain the random number sequence of the **len** value.
     ret = CRYPT_EAL_Randbytes(output, len); 
     if (ret != CRYPT_SUCCESS) { 
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
@@ -731,14 +731,14 @@ int main(void)
         goto exit; 
     }
 
-    printf("random value is: "); // 输出随机数 
+    printf("random value is: "); // Output the random number.
     for (uint32_t i = 0; i < len; i++) { 
         printf("%02x", output[i]); 
     } 
     printf("\n");
 
 exit: 
-    // 释放上下文内存。
+    // Release the context memory.
     CRYPT_EAL_RandDeinit();
     BSL_ERR_DeInit();
     return 0; 
@@ -747,5 +747,3 @@ exit:
 
 
 ```
-
-
