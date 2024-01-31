@@ -11,7 +11,7 @@ The test project depends on the source code compilation. Prepare the environment
 
 ## 2. Test Code Directory Structure
 
-![image](../images/User Guide/Test Guide_figures/DirectoryStructure.png)
+![image](../images/User%20Guide/Test%20Guide_figures/DirectoryStructure.png)
 
 Where:
 
@@ -29,7 +29,7 @@ Where:
 
 A test framework developed by the community provides public configurations and methods for community developers to compile and execute the test code. A test unit consists of a function file (.c) and a data file (.data), which store test functions and test data, respectively.
 
-![image](../images/User Guide/Test Guide_figures/TestFrameworkDescription.png)
+![image](../images/User%20Guide/Test%20Guide_figures/TestFrameworkDescription.png)
 
 ### 3.2 Script Parameter Description
 
@@ -83,7 +83,7 @@ The test project depends on the following scripts:
 - **build_hitls.sh**: script for building the source code in one-click mode
 - **build_sdv.sh**: script for building test cases in one-click mode
 - **execute_sdv.sh**: script for executing test cases in one-click mode
-  ![image](../images/User Guide/Test Guide_figures/TestCaseExecutionProcess.png)
+  ![image](../images/User%20Guide/Test%20Guide_figures/TestCaseExecutionProcess.png)
 
 ### 3.4 Viewing Test Case Results
 

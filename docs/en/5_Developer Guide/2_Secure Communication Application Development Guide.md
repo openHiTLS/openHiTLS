@@ -96,7 +96,7 @@ Currently, openHiTLS supports the following protocol versions:
 
 ### Framework
 
-![image](../images/Developer Guide/Secure Communication Application Development Guide_figures/TheFramework.png)
+![image](../images/Developer%20Guide/Secure%20Communication%20Application%20Development%20Guide_figures/TheFramework.png)
 
 ### Context Overview
 
@@ -254,7 +254,7 @@ void HITLS_CERT_DeinitMgrMethod(void);
 
 ## Time Sequence Interaction of Secure Communication Applications
 
-![image](../images/Developer Guide/Secure Communication Application Development Guide_figures/CommunicationApplications.png)
+![image](../images/Developer%20Guide/Secure%20Communication%20Application%20Development%20Guide_figures/CommunicationApplications.png)
 
 # Example TLS Client
 
@@ -386,7 +386,7 @@ int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx);
 
 The procedure for establishing connections based on PSK negotiation is as follows:
 
-![image](../images/Developer Guide/Secure Communication Application Development Guide_figures/LinkSetupProcess.PNG)
+![image](../images/Developer%20Guide/Secure%20Communication%20Application%20Development%20Guide_figures/LinkSetupProcess.PNG)
 
 1. If PSK negotiation is used, the client sends a **ClientHello** message containing the PSK algorithm suite to the server, and the server determines whether to use the PSK algorithm suite.
 2. After a specific PSK algorithm suite is selected, the server includes **`identity_hint`** in the **ServerKeyExchange** message to indicate which PSK the client should use.
@@ -1095,7 +1095,7 @@ HITLS_CFG_SetTlcpPrivateKey(config, signKey, false, true);
 TLS1.2/TLCP or DTLS1.2/TLCP supports security renegotiation. The renegotiation function enables the client or server to initiate a new negotiation over the same security connection to generate a new key. This function applies to connections that require high confidentiality and transmit a large amount of data.
 The security renegotiation procedure is as follows:
 
-![image](../images/Developer Guide/Secure Communication Application Development Guide_figures/SecurityRenegotiationProcedure.png)
+![image](../images/Developer%20Guide/Secure%20Communication%20Application%20Development%20Guide_figures/SecurityRenegotiationProcedure.png)
 
 > **NOTE:** Users can enter the renegotiation state through the `HITLS_Renegotiate` interface and trigger renegotiation handshakes through the `HITLS_Accept`, `HITLS_Connect`, `HITLS_Write`, or `HITLS_Read` interface. The `HITLS_Accept` and `HITLS_Connect` interfaces are recommended.
 

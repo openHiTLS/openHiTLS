@@ -32,7 +32,7 @@ git clone --recurse-submodules https://gitee.com/openhitls/openhitls-dev.git
 
 The openHiTLS code directory structure is as follows:
 
-![image](../images/User Guide/Build and Installation Guide_figures/CodeDirectory.png)
+![image](../images/User%20Guide/Build%20and%20Installation%20Guide_figures/CodeDirectory.png)
 
 Where:
 
