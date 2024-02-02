@@ -49,7 +49,7 @@ Where:
 
 ### 3.1 CMake Build
 
-openHiTLS provides the CMake build mode, which can be configured using **configure.py**. You are advised to create a **build** directory to store temporary files generated during the build process, and then go to the **build** directory and run **cmake ..**** &&make** to build openHiTLS. You can run the `**python3 ./configure.py –help**` command to query the configuration of **configure.py**. The related parameters are as follows.
+openHiTLS provides the CMake build mode, which can be configured using **configure.py**. You are advised to create a **build** directory to store temporary files generated during the build process, and then go to the **build** directory and run "cmake .. &&make" to build openHiTLS. You can run the `python3 ./configure.py –help` command to query the configuration of **configure.py**. The related parameters are as follows.
 
 | **Script Parameter**| **Parameter Description**| **Execution Mode**|
 | ------------- | ------------ | ---------------- |
