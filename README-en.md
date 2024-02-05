@@ -1,7 +1,7 @@
 [简体中文](./README.md) | English
 # openHiTLS #
 
-Welcome to visit the openHiTLS Code Repository, which is under the openHiTLS community\[https://openhitls.net\]. openHiTLS aims to provide highly efficient and agile open-source SDKs for Cryptography and Transport Layer Security in all scenarios. openHiTLS is developing and supports some common standard cryptographic algorithms, TLS, DTLS protocols currently. More features are to be planned. 
+Welcome to visit the openHiTLS Code Repository, which is under the openHiTLS community: <https://openhitls.net>. openHiTLS aims to provide highly efficient and agile open-source SDKs for Cryptography and Transport Layer Security in all scenarios. openHiTLS is developing and supports some common standard cryptographic algorithms, TLS, DTLS protocols currently. More features are to be planned. 
 
 # Contents #
 
@@ -18,7 +18,7 @@ Welcome to visit the openHiTLS Code Repository, which is under the openHiTLS com
 ## [Contribution](#Contribution) ##
 
 ## Overview <a id="Overview"></a>
-The architecture of openHiTLS is highly modular, and openHiTLS can be configured in modules and features. The RAM/ROM footprint depends on the features selected. It provides the optimal performance optimization for cryptographic algorithms. Currently, 3 modulars and cryptographic algorithms are configured, and the performance optimization of ShangMi cryptographic algorithms on Arm is ready. More architectures and features are to be planned. 
+The architecture of openHiTLS is highly modular, and openHiTLS can be configured in modules and features. The RAM/ROM footprint depends on the features selected. It provides the optimal performance optimization for cryptographic algorithms. Currently, 3 modulars and cryptographic algorithms are configured, and the performance optimization of ShangMi cryptographic algorithms on ARM is ready. More architectures and features are to be planned. 
 
 ## Feature Introduction ##
 
@@ -26,7 +26,7 @@ The architecture of openHiTLS is highly modular, and openHiTLS can be configured
 
 1 Functional feature: TLS1.2\*, TLS1.3\*, DTLS1.2\*. GMSSL1.1\*, AES, SM4, Chacha20, RSA, (EC)DSA, (EC)DH, SM2, DRBG, HKDF, SCRYPT, PBKDF2, SHA2, SHA3, MD5, SM3, HMAC.  
 2 DFX feature: highly modular with features configured, performance optimization on Arm\*, maintainability and testability with logs and error stacks.  
-\* indicates only the general standard. Refer to the README in components for details.
+Declaration: \* indicates only the general standard. Refer to the "README" in components for details.
 
 ### The following features are pending for planning: ###
 
@@ -43,9 +43,9 @@ The demo is short for demo application, which provides the application demo and 
 
 ## Development <a id="Development"></a>
 
-## Download ##
+## Dependency Preparation ##
 
-openHiTLS depends on Secure C which should be downloaded to $\{openHiTLS_dir\}/platform/Secure_C. One of the official git repositories of Secure C is located at \[gitee.com/openeuler/libboundscheck\].  
+openHiTLS depends on Secure C which should be downloaded to $\{openHiTLS_dir\}/platform/Secure_C. One of the official git repositories of Secure C is located at <https://gitee.com/openeuler/libboundscheck>.  
 ```
 mkdir -p $\{openHiTLS_dir\}/platform
 cd $\{openHiTLS_dir\}
@@ -58,13 +58,13 @@ Source code mirroring of the official releases is pending for planning.
 
 ## For openHiTLS Contributors ##
 
-The official git repository is located at \[gitee.com/openHiTLS\]. A local copy of the git repository can be obtained by cloning it using:  
+The official source code repository is located at <https://gitee.com/openHiTLS>. A local copy of the git repository can be obtained by cloning it using:  
 ```
 git clone https://gitee.com/openhitls/openhitls-dev.git
 ```
 If you are going to contribute, you need to fork the openhitls repository on gitee and clone your public fork instead:  
 ```
-git clone https://gitee.com/"your gitee name"/openhitls.git
+git clone https://gitee.com/"your gitee name"/openhitls-dev.git
 ```
 
 ## Document <a id="Document"></a>
@@ -73,16 +73,28 @@ This document is designed to improve the learning efficiency of developers and c
 ## Build and Installation <a id="Build"></a>
 The major steps in Linux are as follows. Refer to [install](doc/install.md) for details in build and installation. Refer to [build](build.sh) for the build script. Refer to [config](config/README.md) for details in configuration.  
 The major steps in Linux:  
-Step 1 (Prepare the build directory): `cd openHiTLS && mkdir -p ./build && cd ./build`  
-Step 2 (Generate configurations): `python3 ../configure.py \["option"\]`  
-Step 3 (Generate the build script): `cmake ..`  
-Step 4 (Build and install): `make && make install`  
+Step 1 (Prepare the build directory): 
+```
+cd openHiTLS && mkdir -p ./build && cd ./build
+```
+Step 2 (Generate configurations): 
+```
+python3 ../configure.py ["option"]
+``` 
+Step 3 (Generate the build script): 
+```
+cmake ..
+```
+Step 4 (Build and install): 
+```
+make && make install
+```
 
 ## License <a id="License"></a>
 
-openHiTLS is licensed under openHiTLS software license agreement 1.0, and will be licensed under the Mulan PSL v2 once being opened officially. See the LICENSE.txt file for more details.
+openHiTLS is licensed under "openHiTLS Software License Agreement 1.0", and will be licensed under the Mulan PSL v2 once being opened officially. See the [LICENSE](./LICENSE) file for more details.
 
 ## Contribution <a id="Contribution"></a>
 
-If you plan to contribute to the openHiTLS community, please visit the link to CLA Signing Guide \[https://openhitls.net/XX\] (pending for updates) to complete CLA signing.
+If you plan to contribute to the openHiTLS community, please visit the link [CLA Signing](https://120.46.86.252/cla)  to complete CLA signing.
 
