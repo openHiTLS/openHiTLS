@@ -347,8 +347,8 @@
             },
             "encode": {
                 ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign", "sm2_exch"],
-                ".srcs": "crypto/encode/src/crypt_encode.c",
-                ".deps": ["crypto::bn"]
+                ".srcs": "crypto/encode/src/*.c",
+                ".deps": ["crypto::bn", "bsl::asn1", "crypto::ecc"]
             },
             "util": {
                 ".features": [

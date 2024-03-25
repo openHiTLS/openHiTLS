@@ -352,6 +352,14 @@ enum CRYPT_ERROR {
     CRYPT_SM2_DECODE_FAIL,                            /**< Data decoding fails, the data does not meet
                                                             the decoding requirements. */
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x011C0001,        /**< Unsupport the KDFTLS12 algorithm. */
+
+    CRYPT_DECODE_ASN1_BUFF_NUM_NOT_ENOUGH = 0x011D0001,  /**< The input number of BSL_ANS1_Buffer is not enough. */
+    CRYPT_DECODE_UNSUPPORTED_FILE_FORMAT,                /**< Unsupported file format */
+    CRYPT_DECODE_UNSUPPORTED_PUBKEY_TYPE,                /**< Unsupported pubkey type */
+    CRYPT_DECODE_UNSUPPORTED_PKCS8_TYPE,                 /**< Unsupported pkcs8 type */
+    CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM,               /**< pkcs8 has no valid algorithm parameters */
+    CRYPT_DECODE_UNKNOWN_OID,                            /**< Unknown OID */
+    CRYPT_DECODE_ASN1_BUFF_FAILED,                       /**< decode asn1 buffer failed. */
 };
 
 #ifdef __cplusplus

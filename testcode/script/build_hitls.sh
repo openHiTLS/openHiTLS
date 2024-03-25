@@ -20,7 +20,7 @@ del_options=""
 get_arch=`arch`
 
 LIB_TYPE="static"
-NO_SCTP="OFF"
+NO_SCTP="ON"
 BITS=64
 
 clean()

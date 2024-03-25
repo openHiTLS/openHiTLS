@@ -26,7 +26,7 @@ typedef enum {
     BSL_PARSE_FORMAT_PEM,
     BSL_PARSE_FORMAT_ASN1,
     BSL_PARSE_FORMAT_PKCS12,
-} BSL_ParseFormmat;
+} BSL_ParseFormat;
 
 typedef struct {
     uint8_t *data;
