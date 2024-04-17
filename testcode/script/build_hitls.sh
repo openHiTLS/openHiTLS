@@ -54,7 +54,7 @@ build_depend_code()
 build_hilts_code()
 {
     bsl_features="err hash init list log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str tlv \
-                  uio_plt uio_buffer uio_sctp uio_tcp usrdata asn1"
+                  uio_plt uio_buffer uio_sctp uio_tcp usrdata asn1 obj"
     if [[ "$NO_SCTP" = "ON" ]]; then
         bsl_features="${bsl_features//uio_sctp/}"
     fi

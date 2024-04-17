@@ -84,7 +84,8 @@ ExternalProject_Add(${TESTCASE}
     INSTALL_DIR           ""
     UPDATE_COMMAND        ""
     CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DENABLE_CRYPTO=${ENABLE_CRYPTO}
-                                -DGEN_TEST_FILES=${GEN_TEST_FILES} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} ../..
+                                -DENABLE_X509=${ENABLE_X509} -DGEN_TEST_FILES=${GEN_TEST_FILES}
+                                -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} ../..
     BUILD_COMMAND         make
     INSTALL_COMMAND       ""
     DEPENDS               ${GEN_TESTCASE}

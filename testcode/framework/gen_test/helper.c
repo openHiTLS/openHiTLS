@@ -155,6 +155,8 @@ int SplitArguments(char *inStr, uint32_t inLen, char **outParam, uint32_t *param
                 count++;
             }
             if (count > *paramLen) {
+                printf("Exceed maximum param limit, expect num %u, actual num %u\n",
+                    *paramLen, count);
                 return 1;
             }
             in[cur] = '\0';

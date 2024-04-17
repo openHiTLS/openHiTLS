@@ -17,6 +17,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "bsl_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,9 +64,30 @@ typedef enum {
 
     /* asymmetrical algorithm */
     BSL_CID_RSA = 5001,              /**< identifies the RSA algorithm */
+    BSL_CID_RSASSAPSS,
+    BSL_CID_MD5WITHRSA,
+    BSL_CID_SHA1WITHRSA,
+    BSL_CID_SHA224WITHRSAENCRYPTION,
+    BSL_CID_SHA256WITHRSAENCRYPTION,
+    BSL_CID_SHA384WITHRSAENCRYPTION,
+    BSL_CID_SHA512WITHRSAENCRYPTION,
+    BSL_CID_SM3WITHRSAENCRYPTION,
     BSL_CID_DSA = 5051,              /**< identifies the DSA algorithm */
+    BSL_CID_DSAWITHSHA1,
+    BSL_CID_DSAWITHSHA224,
+    BSL_CID_DSAWITHSHA256,
+    BSL_CID_DSAWITHSHA384,
+    BSL_CID_DSAWITHSHA512,
     BSL_CID_ECDSA = 5101,            /**< identifies the ECDSA algorithm */
+    BSL_CID_ECDSAWITHSHA1,
+    BSL_CID_ECDSAWITHSHA224,
+    BSL_CID_ECDSAWITHSHA256,
+    BSL_CID_ECDSAWITHSHA384,
+    BSL_CID_ECDSAWITHSHA512,
     BSL_CID_SM2 = 5151,              /**< identifies Chinese standard of SM2 */
+    BSL_CID_SM2DSAWITHSM3,
+    BSL_CID_SM2DSAWITHSHA1,
+    BSL_CID_SM2DSAWITHSHA256,
 
     BSL_CID_DH = 5201,               /**< identifies the Diffie-Hellman algorithm */
     BSL_CID_ECDH = 5216,             /**< identifies the EC Diffie-Hellman algorithm */
@@ -143,7 +165,7 @@ typedef enum {
     BSL_CID_SECP384R1,               /**< identifies NIST prime curve 384 */
     BSL_CID_SECP521R1,               /**< identifies NIST prime curve 521 */
 
-    // RFC 3279
+    // RFC 3279 Curve Id
     BSL_CID_PRIME256V1,              /**< identifies RFC 3279 PRIME256V1 */
 
     // NIST Curve
@@ -153,7 +175,7 @@ typedef enum {
     BSL_CID_SM2PRIME256,             /**< identifies sm2 curve */
 
     /* standard constant prime */
-    BSL_CID_DH_RFC2409_768 = 13001,
+    BSL_CID_DH_RFC2409_768 = 12651,
     BSL_CID_DH_RFC2409_1024,
     BSL_CID_DH_RFC3526_1536,
     BSL_CID_DH_RFC3526_2048,
@@ -166,6 +188,14 @@ typedef enum {
     BSL_CID_DH_RFC7919_4096,
     BSL_CID_DH_RFC7919_6144,
     BSL_CID_DH_RFC7919_8192,
+
+    /* rfc5280 */
+    BSL_CID_CE = 127001,
+    BSL_CID_CE_KEYUSAGE,
+    BSL_CID_CE_BASICCONSTRAINTS,
+
+    /* rfc3279 */
+    BSL_CID_EC_PUBLICKEY = 130001,
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,

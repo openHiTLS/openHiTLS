@@ -386,6 +386,20 @@ int32_t BSL_SAL_ThreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine i
 
 /**
  * @ingroup bsl_sal
+ * @brief Read the specified file and memory buff
+ *
+ * Read the specified file and memory buff
+ *
+ * @attention None.
+ * @param path [IN] specified file.
+ * @param buff [OUT] return the read memory.
+ * @param len [OUT] return the read memory len.
+ * @retval if the operation is successful, BSL_SUCCESS is returned, for other errors, see bsl_error.h
+ */
+int32_t BSL_SAL_ReadFile(const char *path, uint8_t **buff, uint32_t *len);
+
+/**
+ * @ingroup bsl_sal
  * @brief Create a thread.
  *
  * Create a thread.

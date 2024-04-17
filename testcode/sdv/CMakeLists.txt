@@ -52,11 +52,17 @@ target_link_directories(${sdv_exe}
         ${openHiTLS_SRC}/build
         ${openHiTLS_SRC}/platform/Secure_C/lib
         )
+if(ENABLE_X509)
+    target_link_libraries(${sdv_exe}
+        -lhitls_x509
+    )
+endif()
 if(ENABLE_CRYPTO)
     target_link_libraries(${sdv_exe}
         -lhitls_crypto
     )
 endif()
+
 target_link_libraries(${sdv_exe}
     -lhitls_bsl
     -lboundscheck
@@ -80,6 +86,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/bsl/hash/include
         ${openHiTLS_SRC}/bsl/list/include
         ${openHiTLS_SRC}/bsl/usrdata/include
+        ${openHiTLS_SRC}/bsl/obj/include
         ${openHiTLS_SRC}/bsl/include
         ${openHiTLS_SRC}/include/crypto/
         ${openHiTLS_SRC}/crypto/bn/include/
@@ -131,5 +138,10 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/bsl/uio/include
         ${openHiTLS_SRC}/bsl/uio/src
         ${openHiTLS_SRC}/bsl/asn1/include
+        ${openHiTLS_SRC}/x509/include
+        ${openHiTLS_SRC}/x509/x509_cert/include
+        ${openHiTLS_SRC}/x509/x509_common/include
+        ${openHiTLS_SRC}/x509/x509_crl/include
+        ${openHiTLS_SRC}/x509/x509_verify/include
         ${openHiTLS_SRC}/config/macro_config)
 

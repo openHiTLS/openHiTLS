@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #include "bsl_type.h"
+#include "crypt_eal_pkey.h"
 
 #ifdef __cplusplus
 extern "C" {

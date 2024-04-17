@@ -8,6 +8,7 @@
                     "init": {"deps": ["err"]},
                     "list": null,
                     "log": null,
+                    "obj":null,
                     "sal": null,
                     "sal_mem": null,
                     "sal_thread": null,
@@ -414,6 +415,11 @@
                 ".srcs": "bsl/list/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             },
+            "obj": {
+                ".features":["obj"],
+                ".srcs":"bsl/obj/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
             "hash": {
                 ".features": ["hash"],
                 ".srcs": "bsl/hash/src/*.c",
@@ -544,23 +550,22 @@
             "x509_cert": {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C"],
-                ".include" : [
-                    "bsl/asn1/include"
-                ]
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
             },
             "x509_crl" : {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_crl/src/*",
-                ".deps" : ["platform::Secure_C"],
-                ".include" : [
-                    "bsl/asn1/include"
-                ]
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "x509_common" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_common/src/*",
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
             },
             "x509_verify" : {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_verify/src/*",
-                ".deps" : ["platform::Secure_C"]
+                ".deps" : ["platform::Secure_C", "x509::x509_cert", "x509::x509_crl", "x509::x509_common"]
             }
         }
     }

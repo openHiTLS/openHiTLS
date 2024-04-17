@@ -101,7 +101,6 @@ typedef enum {
 #define BSL_ASN1_ID_ANY_2 24
 #define BSL_ASN1_ID_ANY_3 34
 
-char *g_oidEcdsaHas256 = "\x2a\x86\x48\xce\x3d\x04\x03\x02";
 char *g_oidEcc = "\x2a\x86\x48\xce\x3d\x02\01";
 char *g_oidRsaPss = "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a";
 
@@ -115,6 +114,7 @@ int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx,
             if (idx == BSL_ASN1_TIME_UTC_1 || idx == BSL_ASN1_TIME_UTC_2) {
                 uint8_t tag = *(uint8_t *) data;
                 if ((tag & BSL_ASN1_TAG_UTCTIME) || (tag & BSL_ASN1_TAG_GENERALIZEDTIME)) {
+                    *(uint8_t *) expVal = tag;
                     return BSL_SUCCESS;
                 }
             }

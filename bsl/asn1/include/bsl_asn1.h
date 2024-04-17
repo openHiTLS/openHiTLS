@@ -36,11 +36,13 @@ extern "C" {
 #define BSL_ASN1_TAG_REAL              0x09
 #define BSL_ASN1_TAG_ENUMERATED        0x0A
 #define BSL_ASN1_TAG_EMBEDDED_PDV      0x0B
-#define BSL_ASN1_TAG_UTF8              0x0C
+#define BSL_ASN1_TAG_UTF8STRING        0x0C
 #define BSL_ASN1_TAG_RALATIVE_ID       0x0D
 #define BSL_ASN1_TAG_TIME              0x0E
 #define BSL_ASN1_TAG_SEQUENCE          0x10
 #define BSL_ASN1_TAG_SET               0x11
+#define BSL_ASN1_TAG_PRINTABLESTRING   0x13
+#define BSL_ASN1_TAG_IA5STRING         0x16
 
 #define BSL_ASN1_TAG_UTCTIME           0x17
 #define BSL_ASN1_TAG_GENERALIZEDTIME   0x18
@@ -104,6 +106,7 @@ typedef struct _BSL_ASN1_DecodeListParam {
 } BSL_ASN1_DecodeListParam;
 
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len);
+int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen);
 
 int32_t BSL_ASN1_DecodeLsitItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
     BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list);
@@ -117,6 +120,8 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
 
 int32_t BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr, int32_t arrNum,
     uint8_t **encode, uint32_t *encLen);
+
+int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem);
 
 #ifdef __cplusplus
 }

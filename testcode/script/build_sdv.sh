@@ -39,7 +39,7 @@ export_env()
     BIG_ENDIAN=${BIG_ENDIAN:=OFF}
     ENABLE_CRYPTO=${ENABLE_CRYPTO:=ON}
     ENABLE_BSL=${ENABLE_BSL:=ON}
-    ENABLE_X509=${ENABLE_X509:ON}
+    ENABLE_X509=${ENABLE_X509:=ON}
     ENABLE_UIO_SCTP=${ENABLE_UIO_SCTP:=ON}
     ENABLE_VERBOSE=${ENABLE_VERBOSE:=''}
     RUN_TESTS=${RUN_TESTS:=''}
@@ -74,6 +74,17 @@ find_test_suite()
     RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${x509_testsuite}"
 }
 
+build_generate()
+{
+    cd ${HITLS_ROOT_DIR}/testcode && rm -rf ./build && mkdir build && cd build
+    cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
+          -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
+          -DGEN_TEST_FILES=${TEST_SUITE} \
+          -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_X509=${ENABLE_X509} -DTLS_DEBUG=${TLS_DEBUG} \
+          -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
+    make GEN_TESTCASE ${ENABLE_VERBOSE} -j
+}
+
 build_test_suite()
 {
     procNum=$(grep -c ^processor /proc/cpuinfo)
@@ -101,7 +112,7 @@ build_test_suite()
             cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
                 -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
                 -DGEN_TEST_FILES=${TEST_SUITE} -DTESTFILE=${tmp_dir} \
-                -DENABLE_CRYPTO=${ENABLE_CRYPTO} \
+                -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_X509=${ENABLE_X509} -DTLS_DEBUG=${TLS_DEBUG} \
                 -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ../..
             make TESTCASE ${ENABLE_VERBOSE} -j || (read -u8 && echo "1" >&8)
             echo >&7
@@ -162,6 +173,9 @@ options()
             no-crypto)
                 ENABLE_CRYPTO=OFF
                 ;;
+            no-x509)
+                ENABLE_X509=OFF
+                ;;
             no-bsl)
                 ENABLE_BSL=OFF
                 ;;
@@ -199,4 +213,5 @@ clean
 down_depend_code
 find_test_suite
 process_custom_cases
+build_generate
 build_test_suite

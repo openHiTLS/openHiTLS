@@ -83,6 +83,56 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
     return BSL_SUCCESS;
 }
 
+int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen)
+{
+    uint8_t *temp = *encode;
+    uint32_t tempLen = *encLen;
+    if (tempLen < 1) {
+        return BSL_INVALID_ARG;
+    }
+    
+    if (tag != *temp) {
+        return BSL_ASN1_ERR_MISMATCH_TAG;
+    }
+    temp++;
+    tempLen--;
+    uint32_t len;
+    int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, &len);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    *valLen = len;
+    *encode = temp;
+    *encLen = tempLen;
+    return BSL_SUCCESS;
+}
+
+int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem)
+{
+    uint8_t tag;
+    uint32_t len;
+    uint8_t *temp = *encode;
+    uint32_t tempLen = *encLen;
+    if (tempLen < 1) {
+        return BSL_INVALID_ARG;
+    }
+    tag = *temp;
+    temp++;
+    tempLen--;
+    int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, &len);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    asnItem->tag = tag;
+    asnItem->len = len;
+    asnItem->buff = temp;
+    temp += len;
+    tempLen -= len;
+    *encode = temp;
+    *encLen = tempLen;
+    return BSL_SUCCESS;
+}
+
 static int32_t ParseBool(uint8_t *val, uint32_t len, bool *decodeData)
 {
     if (len != 1) {
@@ -190,7 +240,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
     uint32_t len = asn->len;
     BSL_ASN1_Buffer item;
     while (len > 0) {
-        if (*buff != param->expTag[layer]) {
+        if (*buff != param->expTag[layer - 1]) {
             return BSL_ASN1_ERR_MISMATCH_TAG;
         }
         tag = *buff;
@@ -229,7 +279,7 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
     uint32_t len = asn->len;
     BSL_ASN1_Buffer item;
     while (len > 0) {
-        if (*buff != param->expTag[1]) {
+        if (*buff != param->expTag[0]) {
             return BSL_ASN1_ERR_MISMATCH_TAG;
         }
         tag = *buff;
@@ -316,14 +366,14 @@ static int32_t BSL_ASN1_AnyOrChoiceTagProcess(bool isAny, BSL_ASN1_AnyOrChoicePa
     return ret;
 }
 
-static int32_t BSL_ASN1_ProcossWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbinfo, uint8_t expTag, uint8_t realTag)
+static int32_t BSL_ASN1_ProcossWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbinfo, uint8_t realTag, uint8_t *expTag)
 {
     int32_t ret;
-    uint8_t tag = expTag;
+    uint8_t tag = *expTag;
     // Any and choice will not have a coexistence scenario, which is meaningless.
     if (tag == BSL_ASN1_TAG_CHOICE) {
         tagCbinfo->previousAsnOrTag = &realTag;
-        ret = BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, NULL);
+        ret = BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, expTag);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -339,6 +389,7 @@ static int32_t BSL_ASN1_ProcossWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
                 "asn1: expected tag %x is not match %x", tag, realTag, 0, 0);
             return BSL_ASN1_ERR_TAG_EXPECTED;
         }
+        *expTag = realTag;
     }
     return BSL_SUCCESS;
 }
@@ -352,31 +403,41 @@ int32_t BSL_ASN1_ProcossNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
 
-    if (item->flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) { // flags or default scene
-        if (tempLen < 1) { // flags or default scene is normal
+    if (item->flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) { // optional or default scene
+        if (tempLen < 1) { // optional or default scene is normal
+            asn->tag = 0;
+            asn->len = 0;
+            asn->buff = NULL;
             return BSL_SUCCESS;
         }
+
         if (tag == BSL_ASN1_TAG_ANY) {
             ret = BSL_ASN1_AnyOrChoiceTagProcess(true, tagCbinfo, &tag);
             if (ret != BSL_SUCCESS) {
                 return ret;
             }
         }
+
+        if (tag == BSL_ASN1_TAG_CHOICE) {
+            tagCbinfo->previousAsnOrTag = temp;
+            ret = BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, &tag);
+            if (ret != BSL_SUCCESS) {
+                return ret;
+            }
+        }
         
-        if (tag != *temp) { // The flag or default scene is not encoded
+        if (tag != *temp) { // The optional or default scene is not encoded
             asn->tag = 0;
             asn->len = 0;
             asn->buff = NULL;
             return BSL_SUCCESS;
         }
     } else {
-        /* No flags or default scenes, tag must exist; 
-        * choice doesn't support flags or default scenes, because it doesn't make sense
-        */
+        /* No optional or default scenes, tag must exist */
         if (tempLen < 1) {
             return BSL_ASN1_ERR_DECODE_LEN;
         }
-        ret = BSL_ASN1_ProcossWithoutDefOrOpt(tagCbinfo, tag, *temp);
+        ret = BSL_ASN1_ProcossWithoutDefOrOpt(tagCbinfo, *temp, &tag);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -427,7 +488,7 @@ static bool BSL_ASN1_IsConstructItem(BSL_ASN1_TemplateItem *item)
     }
 }
 
-static int32_t BSL_ASN1_FillConstructItem(BSL_ASN1_Template *templ, uint32_t *templIdx,
+static int32_t BSL_ASN1_FillConstructItemWithNull(BSL_ASN1_Template *templ, uint32_t *templIdx,
     BSL_ASN1_Buffer *asnArr, uint32_t arrNum, uint32_t *arrIdx)
 {
     // The construct type value is marked headeronly
@@ -459,7 +520,7 @@ int32_t BSL_ASN1_SkipChildNodeAndFill(uint32_t *idx, BSL_ASN1_Template *templ,
         }
         // There are also struct types under the processing parent
         if (BSL_ASN1_IsConstructItem(&templ->templItems[i])) {
-            int32_t ret = BSL_ASN1_FillConstructItem(templ, &i, asnArr, arrNum, &arrIdx);
+            int32_t ret = BSL_ASN1_FillConstructItemWithNull(templ, &i, asnArr, arrNum, &arrIdx);
             if (ret != BSL_SUCCESS) {
                 return ret;
             }

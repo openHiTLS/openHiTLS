@@ -1,0 +1,463 @@
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
+ */
+
+/* BEGIN_HEADER */
+#include "bsl_sal.h"
+#include "securec.h"
+#include "hitls_x509.h"
+#include "hitls_x509_errno.h"
+#include "bsl_type.h"
+#include "bsl_log.h"
+#include "hitls_cert_local.h"
+#include "bsl_init.h"
+
+/* END_HEADER */
+
+void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
+    void *format, void *para1, void *para2, void *para3, void *para4)
+{
+    (void)logLevel;
+    (void)logType;
+    printf("logId:%u\t", logId);
+    printf(format, para1, para2, para3, para4);
+    printf("\n");
+}
+
+void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
+    void *format, void *para)
+{
+    (void)logLevel;
+    (void)logType;
+    printf("logId:%u\t", logId);
+    printf(format, para);
+    printf("\n");
+}
+
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_FUNC_TC001(char *path)
+{
+    TestMemInit();
+    BSL_LOG_BinLogFuncs func = {0};
+    BSL_GLOBAL_Init();
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
+    HITLS_X509_Cert *cert = HITLS_X509_NewCert();
+    ASSERT_TRUE(cert != NULL);
+    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path, cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+static int32_t HITLS_ParseCertTest(char *path, HITLS_X509_Cert **cert)
+{
+    TestMemInit();
+    BSL_LOG_BinLogFuncs func = {0};
+    BSL_GLOBAL_Init();
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    int32_t ret = BSL_LOG_RegBinLogFunc(&func);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    
+    *cert = HITLS_X509_NewCert();
+    if (*cert == NULL) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path, *cert);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    return ret;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_VERSION_FUNC_TC001(char *path, int version)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(cert->tbs.version, version);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_SERIALNUM_FUNC_TC001(char *path, Hex *serialNum)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(cert->tbs.serialNum.tag, 2);
+    ASSERT_COMPARE("serialNum", cert->tbs.serialNum.buff, cert->tbs.serialNum.len,
+        serialNum->x, serialNum->len);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
+    int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(cert->tbs.signAlgId.algId, signAlg);
+    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.hash, rsaPssHash);
+    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.mgf1, rsaPssMgf1);
+    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
+
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
+    Hex *type1, int tag1, Hex *value1,
+    Hex *type2, int tag2, Hex *value2,
+    Hex *type3, int tag3, Hex *value3,
+    Hex *type4, int tag4, Hex *value4,
+    Hex *type5, int tag5, Hex *value5,
+    Hex *type6, int tag6, Hex *value6)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
+        {6, type2->len, type2->x}, {(uint8_t)tag2, value2->len, value2->x},
+        {6, type3->len, type3->x}, {(uint8_t)tag3, value3->len, value3->x},
+        {6, type4->len, type4->x}, {(uint8_t)tag4, value4->len, value4->x},
+        {6, type5->len, type5->x}, {(uint8_t)tag5, value5->len, value5->x},
+        {6, type6->len, type6->x}, {(uint8_t)tag6, value6->len, value6->x},
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.issuerName), count);
+    HITLS_X509_NameNode **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.issuerName);
+    for (size_t i = 0; i < count; i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 1);
+        ASSERT_EQ((*nameNode)->nameType.tag, 0);
+        ASSERT_EQ((*nameNode)->nameType.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameType.len, 0);
+        ASSERT_EQ((*nameNode)->nameValue.tag, 0);
+        ASSERT_EQ((*nameNode)->nameValue.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameValue.len, 0);
+
+        nameNode = BSL_LIST_Next(cert->tbs.issuerName);
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 2);
+        ASSERT_EQ((*nameNode)->nameType.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("nameType", (*nameNode)->nameType.buff, (*nameNode)->nameType.len,
+            expAsan1Arr[i].buff, expAsan1Arr[i].len);
+
+        ASSERT_EQ((*nameNode)->nameValue.tag, expAsan1Arr[i + 1].tag);
+        ASSERT_COMPARE("nameVlaue", (*nameNode)->nameValue.buff, (*nameNode)->nameValue.len,
+            expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.issuerName);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC002(char *path, int count,
+    Hex *type1, int tag1, Hex *value1)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x}
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.issuerName), count);
+    HITLS_X509_NameNode **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.issuerName);
+    for (size_t i = 0; i < count; i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 1);
+        ASSERT_EQ((*nameNode)->nameType.tag, 0);
+        ASSERT_EQ((*nameNode)->nameType.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameType.len, 0);
+        ASSERT_EQ((*nameNode)->nameValue.tag, 0);
+        ASSERT_EQ((*nameNode)->nameValue.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameValue.len, 0);
+
+        nameNode = BSL_LIST_Next(cert->tbs.issuerName);
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 2);
+        ASSERT_EQ((*nameNode)->nameType.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("nameType", (*nameNode)->nameType.buff, (*nameNode)->nameType.len,
+            expAsan1Arr[i].buff, expAsan1Arr[i].len);
+
+        ASSERT_EQ((*nameNode)->nameValue.tag, expAsan1Arr[i + 1].tag);
+        ASSERT_COMPARE("nameVlaue", (*nameNode)->nameValue.buff, (*nameNode)->nameValue.len,
+            expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.issuerName);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC003(char *path, int count,
+    Hex *type1, int tag1, Hex *value1,
+    Hex *type2, int tag2, Hex *value2,
+    Hex *type3, int tag3, Hex *value3,
+    Hex *type4, int tag4, Hex *value4,
+    Hex *type5, int tag5, Hex *value5)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
+        {6, type2->len, type2->x}, {(uint8_t)tag2, value2->len, value2->x},
+        {6, type3->len, type3->x}, {(uint8_t)tag3, value3->len, value3->x},
+        {6, type4->len, type4->x}, {(uint8_t)tag4, value4->len, value4->x},
+        {6, type5->len, type5->x}, {(uint8_t)tag5, value5->len, value5->x}
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.issuerName), count);
+    HITLS_X509_NameNode **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.issuerName);
+    for (size_t i = 0; i < count; i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 1);
+        ASSERT_EQ((*nameNode)->nameType.tag, 0);
+        ASSERT_EQ((*nameNode)->nameType.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameType.len, 0);
+        ASSERT_EQ((*nameNode)->nameValue.tag, 0);
+        ASSERT_EQ((*nameNode)->nameValue.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameValue.len, 0);
+
+        nameNode = BSL_LIST_Next(cert->tbs.issuerName);
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 2);
+        ASSERT_EQ((*nameNode)->nameType.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("nameType", (*nameNode)->nameType.buff, (*nameNode)->nameType.len,
+            expAsan1Arr[i].buff, expAsan1Arr[i].len);
+
+        ASSERT_EQ((*nameNode)->nameValue.tag, expAsan1Arr[i + 1].tag);
+        ASSERT_COMPARE("nameVlaue", (*nameNode)->nameValue.buff, (*nameNode)->nameValue.len,
+            expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.issuerName);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_START_TIME_FUNC_TC001(char *path,
+    int year, int month, int day, int hour, int minute, int second)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(cert->tbs.validTime.start.year, year);
+    ASSERT_EQ(cert->tbs.validTime.start.month, month);
+    ASSERT_EQ(cert->tbs.validTime.start.day, day);
+    ASSERT_EQ(cert->tbs.validTime.start.hour, hour);
+    ASSERT_EQ(cert->tbs.validTime.start.minute, minute);
+    ASSERT_EQ(cert->tbs.validTime.start.second, second);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_END_TIME_FUNC_TC001(char *path,
+    int year, int month, int day, int hour, int minute, int second)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(cert->tbs.validTime.end.year, year);
+    ASSERT_EQ(cert->tbs.validTime.end.month, month);
+    ASSERT_EQ(cert->tbs.validTime.end.day, day);
+    ASSERT_EQ(cert->tbs.validTime.end.hour, hour);
+    ASSERT_EQ(cert->tbs.validTime.end.minute, minute);
+    ASSERT_EQ(cert->tbs.validTime.end.second, second);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC001(char *path, int count,
+    Hex *type1, int tag1, Hex *value1,
+    Hex *type2, int tag2, Hex *value2,
+    Hex *type3, int tag3, Hex *value3,
+    Hex *type4, int tag4, Hex *value4,
+    Hex *type5, int tag5, Hex *value5,
+    Hex *type6, int tag6, Hex *value6)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
+        {6, type2->len, type2->x}, {(uint8_t)tag2, value2->len, value2->x},
+        {6, type3->len, type3->x}, {(uint8_t)tag3, value3->len, value3->x},
+        {6, type4->len, type4->x}, {(uint8_t)tag4, value4->len, value4->x},
+        {6, type5->len, type5->x}, {(uint8_t)tag5, value5->len, value5->x},
+        {6, type6->len, type6->x}, {(uint8_t)tag6, value6->len, value6->x},
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.subjectName), count);
+    HITLS_X509_NameNode **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.subjectName);
+    for (size_t i = 0; i < count; i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 1);
+        ASSERT_EQ((*nameNode)->nameType.tag, 0);
+        ASSERT_EQ((*nameNode)->nameType.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameType.len, 0);
+        ASSERT_EQ((*nameNode)->nameValue.tag, 0);
+        ASSERT_EQ((*nameNode)->nameValue.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameValue.len, 0);
+
+        nameNode = BSL_LIST_Next(cert->tbs.subjectName);
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 2);
+        ASSERT_EQ((*nameNode)->nameType.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("nameType", (*nameNode)->nameType.buff, (*nameNode)->nameType.len,
+            expAsan1Arr[i].buff, expAsan1Arr[i].len);
+
+        ASSERT_EQ((*nameNode)->nameValue.tag, expAsan1Arr[i + 1].tag);
+        ASSERT_COMPARE("nameVlaue", (*nameNode)->nameValue.buff, (*nameNode)->nameValue.len,
+            expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.subjectName);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC002(char *path, int count,
+    Hex *type1, int tag1, Hex *value1)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x}
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.subjectName), count);
+    HITLS_X509_NameNode **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.subjectName);
+    for (size_t i = 0; i < count; i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 1);
+        ASSERT_EQ((*nameNode)->nameType.tag, 0);
+        ASSERT_EQ((*nameNode)->nameType.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameType.len, 0);
+        ASSERT_EQ((*nameNode)->nameValue.tag, 0);
+        ASSERT_EQ((*nameNode)->nameValue.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameValue.len, 0);
+
+        nameNode = BSL_LIST_Next(cert->tbs.subjectName);
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 2);
+        ASSERT_EQ((*nameNode)->nameType.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("nameType", (*nameNode)->nameType.buff, (*nameNode)->nameType.len,
+            expAsan1Arr[i].buff, expAsan1Arr[i].len);
+
+        ASSERT_EQ((*nameNode)->nameValue.tag, expAsan1Arr[i + 1].tag);
+        ASSERT_COMPARE("nameVlaue", (*nameNode)->nameValue.buff, (*nameNode)->nameValue.len,
+            expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.subjectName);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003(char *path, int count,
+    Hex *type1, int tag1, Hex *value1,
+    Hex *type2, int tag2, Hex *value2,
+    Hex *type3, int tag3, Hex *value3,
+    Hex *type4, int tag4, Hex *value4,
+    Hex *type5, int tag5, Hex *value5)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
+        {6, type2->len, type2->x}, {(uint8_t)tag2, value2->len, value2->x},
+        {6, type3->len, type3->x}, {(uint8_t)tag3, value3->len, value3->x},
+        {6, type4->len, type4->x}, {(uint8_t)tag4, value4->len, value4->x},
+        {6, type5->len, type5->x}, {(uint8_t)tag5, value5->len, value5->x}
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.subjectName), count);
+    HITLS_X509_NameNode **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.subjectName);
+    for (size_t i = 0; i < count; i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 1);
+        ASSERT_EQ((*nameNode)->nameType.tag, 0);
+        ASSERT_EQ((*nameNode)->nameType.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameType.len, 0);
+        ASSERT_EQ((*nameNode)->nameValue.tag, 0);
+        ASSERT_EQ((*nameNode)->nameValue.buff, NULL);
+        ASSERT_EQ((*nameNode)->nameValue.len, 0);
+
+        nameNode = BSL_LIST_Next(cert->tbs.subjectName);
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->layer, 2);
+        ASSERT_EQ((*nameNode)->nameType.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("nameType", (*nameNode)->nameType.buff, (*nameNode)->nameType.len,
+            expAsan1Arr[i].buff, expAsan1Arr[i].len);
+
+        ASSERT_EQ((*nameNode)->nameValue.tag, expAsan1Arr[i + 1].tag);
+        ASSERT_COMPARE("nameVlaue", (*nameNode)->nameValue.buff, (*nameNode)->nameValue.len,
+            expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.subjectName);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+// subkey
+// ext
+// sign alg
+// signature

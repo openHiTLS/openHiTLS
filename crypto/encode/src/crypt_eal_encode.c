@@ -54,7 +54,7 @@ typedef enum {
 */
 
 static BSL_ASN1_TemplateItem rsaPrvTempl[] = {
-//  {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* ignore seq header */
+    //  {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* ignore seq header */
     {BSL_ASN1_TAG_INTEGER, 0, 0}, /* version */
     {BSL_ASN1_TAG_INTEGER, 0, 0}, /* n */
     {BSL_ASN1_TAG_INTEGER, 0, 0}, /* e */
@@ -93,9 +93,9 @@ typedef enum {
  * https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.1.2
 */
 static BSL_ASN1_TemplateItem algoIdTempl[] = {
-//  {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},   // ignore seq
-  {BSL_ASN1_TAG_OBJECT_ID, 0, 0},
-  {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 0},
+    //{BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},   // ignore seq
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 0},
+    {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 0},
 };
 
 typedef enum {
@@ -209,6 +209,7 @@ static BSL_ASN1_TemplateItem seqTempl[] = {
 
 static const char *ecPubKey = "\x2a\x86\x48\xce\x3d\x02\01";  // 1.2.840.10045.2.1
 static const char *rsaEncryption = "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01"; // 1.2.840.113549.1.1.1
+static const char *rsaPssEncryption = "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a";
 
 static const char *ecdsaPrimep256v1 = "\x2a\x86\x48\xce\x3d\x03\x01\x07";
 static const char *ecdsaSecp384r1 = "\x2b\x81\x04\x00\x22";  // has '\0', can't use strlen to determine it's lenght.
@@ -227,7 +228,8 @@ static CRYPT_PKEY_ParaId GetParaId(const BSL_ASN1_Buffer *paramOid)
     return CRYPT_PKEY_PARAID_MAX;
 }
 
-static int32_t DecSubKeyInfoCb(int32_t type, int32_t idx, void *data, void *expVal) {
+static int32_t DecSubKeyInfoCb(int32_t type, int32_t idx, void *data, void *expVal)
+{
     (void)idx;
     BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
     size_t len = param->len;
@@ -254,8 +256,7 @@ static int32_t ParseAlgoIdAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buf
     uint32_t tmpBuffLen = buffLen;
 
     BSL_ASN1_Template templ = {algoIdTempl, sizeof(algoIdTempl) / sizeof(algoIdTempl[0])};
-    return BSL_ASN1_DecodeTemplate(&templ, DecSubKeyInfoCb,
-            &tmpBuff, &tmpBuffLen, algoId, algoIdNum);
+    return BSL_ASN1_DecodeTemplate(&templ, DecSubKeyInfoCb, &tmpBuff, &tmpBuffLen, algoId, algoIdNum);
 }
 
 static int32_t ParseSeqHeaderOnly(uint8_t *seq, uint32_t seqLen, BSL_Buffer *data)
@@ -345,7 +346,8 @@ static int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **e
             if (ret != CRYPT_SUCCESS) {
                 goto ERR_OUT;
             }
-        } else if (oid->len == strlen(rsaEncryption) && memcmp(oid->buff, rsaEncryption, oid->len)) {
+        } else if (oid->len == strlen(rsaEncryption) && (memcmp(oid->buff, rsaEncryption, oid->len) == 0 ||
+            (memcmp(oid->buff, rsaPssEncryption, oid->len) == 0))) {
             // rsa pubkey, remove seq header fist.
             BSL_Buffer data = {0};
             ret = ParseSeqHeaderOnly(bitPubkey.buff, bitPubkey.len, &data);
@@ -381,7 +383,7 @@ static int32_t ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL
         pubTempl.templNum = sizeof(subKeyInfoInnerTempl) / sizeof(subKeyInfoInnerTempl[0]);
     }
     int32_t ret = BSL_ASN1_DecodeTemplate(&pubTempl, DecSubKeyInfoCb,
-            &tmpBuff, &tmpBuffLen, pubAsn1, CRYPT_SUBKEYINFO_BITSTRING_IDX + 1);
+        &tmpBuff, &tmpBuffLen, pubAsn1, CRYPT_SUBKEYINFO_BITSTRING_IDX + 1);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -441,7 +443,7 @@ static int32_t ParseEccPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen,
     BSL_ASN1_Buffer asn1[CRYPT_ECPRIKEY_PUBKEY_IDX + 1] = {0};
     BSL_ASN1_Template templ = {ecPriKeyTempl, sizeof(ecPriKeyTempl) / sizeof(ecPriKeyTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL,
-            &tmpBuff, &tmpBuffLen, asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1);
+        &tmpBuff, &tmpBuffLen, asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -496,7 +498,7 @@ static int32_t ParseRsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL
     BSL_ASN1_Buffer asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1] = {0};
     BSL_ASN1_Template templ = {rsaPrvTempl, sizeof(rsaPrvTempl) / sizeof(rsaPrvTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL,
-            &tmpBuff, &tmpBuffLen, asn1, CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1);
+        &tmpBuff, &tmpBuffLen, asn1, CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -535,7 +537,7 @@ static int32_t ParsePk8PriKeyBuff(BSL_Buffer *buff, CRYPT_EAL_PkeyCtx **ealPriKe
     BSL_ASN1_Buffer asn1[CRYPT_PK8_PRIKEY_PRIKEY_IDX + 1] = {0};
     BSL_ASN1_Template templ = {pk8PriKeyTempl, sizeof(pk8PriKeyTempl) / sizeof(pk8PriKeyTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL,
-            &tmpBuff, &tmpBuffLen, asn1, CRYPT_PK8_PRIKEY_PRIKEY_IDX + 1);
+        &tmpBuff, &tmpBuffLen, asn1, CRYPT_PK8_PRIKEY_PRIKEY_IDX + 1);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -566,7 +568,7 @@ static int32_t ParsePk8EncPriKeyBuff(BSL_Buffer *buff, BSL_Buffer *pass, CRYPT_E
     BSL_ASN1_Buffer asn1[CRYPT_PK8_ENCPRIKEY_ENCDATA_IDX + 1] = {0};
     BSL_ASN1_Template templ = {pk8EncPriKeyTempl, sizeof(pk8EncPriKeyTempl) / sizeof(pk8EncPriKeyTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL,
-            &tmpBuff, &tmpBuffLen, asn1, CRYPT_PK8_ENCPRIKEY_ENCDATA_IDX + 1);
+        &tmpBuff, &tmpBuffLen, asn1, CRYPT_PK8_ENCPRIKEY_ENCDATA_IDX + 1);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -630,7 +632,6 @@ static int32_t ReadKeyFile(BSL_ParseFormat format, int32_t type, const char *pat
             return ReadFile(path, buff);
         case BSL_PARSE_FORMAT_UNKNOWN:
         case BSL_PARSE_FORMAT_PEM:
-        case BSL_PARSE_FORMAT_PKCS12:
         default:
             return CRYPT_DECODE_UNSUPPORTED_FILE_FORMAT;
     }

@@ -6,35 +6,43 @@
  *---------------------------------------------------------------------------------------------
  */
 
-/**
- * @defgroup bsl_uio
- * @ingroup bsl
- * @brief uio module
- */
+#ifndef BSL_OBJ_INTERNAL_H
+#define BSL_OBJ_INTERNAL_H
 
-#ifndef BSL_TYPE_H
-#define BSL_TYPE_H
+#include "hitls_build.h"
+#ifdef HITLS_BSL_OBJ
 
-#include <stdint.h>
+#include "bsl_obj.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef enum {
-    BSL_PARSE_FORMAT_UNKNOWN,
-    BSL_PARSE_FORMAT_PEM,
-    BSL_PARSE_FORMAT_ASN1
-} BSL_ParseFormat;
+    BSL_OID_GLOBAL,
+    BSL_OID_HEAP
+} BslOidFlag;
 
 typedef struct {
-    uint8_t *data;
-    uint32_t dataLen;
-} BSL_Buffer;
+    uint32_t octedLen;
+    char *octs;
+    uint32_t flags;
+} BslOidString;
 
+typedef struct {
+    BslOidString strOid;
+    const char *oidName;
+    BslCid cid;
+} BslOidInfo;
+
+BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid);
+
+BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // BSL_TYPE_H
+#endif
+
+#endif // BSL_OBJ_INTERNAL_H
