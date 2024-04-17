@@ -7,6 +7,9 @@ SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa2048ssa-pss.crt"
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sha256 rsa v1 ca, any is null
 SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sha256Rsaca.crt"
 
+SDV_X509_CERT_PARSE_FUNC_TC001 with key usage sha256 rsa v3 ca
+SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/cawithkeyusage.der"
+
 SDV_X509_CERT_PARSE_VERSION_FUNC_TC001 parse ecc p384 v3 ca cert
 SDV_X509_CERT_PARSE_VERSION_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt":2
 
@@ -69,3 +72,27 @@ SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC002:"../testdata/cert/asn1/rsa2048ssa-pss
 
 SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003 parse sha256 rsa v1 ca, any is null
 SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003:"../testdata/cert/asn1/sha256Rsaca.crt":10:"550406":19:"434e":"550408":12:"536861616e7869":"550407":12:"7869616e":"55040a":12:"6f70656e4869544c53":"2a864886f70d010901":22:"6f70656e4869544c5340656d61696c2e636f6d"
+
+SDV_X509_CERT_CTRL_FUNC_TC001 parse ecc p384 v3 ca cert
+SDV_X509_CERT_CTRL_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt":648:BSL_CID_ECDSAWITHSHA256:0:0:0
+
+SDV_X509_CERT_CTRL_FUNC_TC001 parse rsa pss v3 ca cert, any is null
+SDV_X509_CERT_CTRL_FUNC_TC001:"../testdata/cert/asn1/rsa2048ssa-pss.crt":933:BSL_CID_RSASSAPSS:0:0:0
+
+SDV_X509_CERT_CTRL_FUNC_TC001 parse sha256 rsa v1 ca, any is null
+SDV_X509_CERT_CTRL_FUNC_TC001:"../testdata/cert/asn1/sha256Rsaca.crt":594:BSL_CID_SHA256WITHRSAENCRYPTION:0:0:0
+
+SDV_X509_CERT_CTRL_FUNC_TC001 with key usage sha256 rsa v3 ca
+SDV_X509_CERT_CTRL_FUNC_TC001:"../testdata/cert/asn1/cawithkeyusage.der":852:BSL_CID_SHA256WITHRSAENCRYPTION:0:1:0
+
+SDV_X509_CERT_DUP_FUNC_TC001 parse ecc p384 v3 ca cert
+SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt":BSL_CID_ECDSAWITHSHA256:0:0:0
+
+SDV_X509_CERT_DUP_FUNC_TC001 parse rsa pss v3 ca cert, any is null
+SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/rsa2048ssa-pss.crt":BSL_CID_RSASSAPSS:0:0:0
+
+SDV_X509_CERT_DUP_FUNC_TC001 parse sha256 rsa v1 ca, any is null
+SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/sha256Rsaca.crt":BSL_CID_SHA256WITHRSAENCRYPTION:0:0:0
+
+SDV_X509_CERT_DUP_FUNC_TC001 with key usage sha256 rsa v3 ca
+SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/cawithkeyusage.der":BSL_CID_SHA256WITHRSAENCRYPTION:0:1:0

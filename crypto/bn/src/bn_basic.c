@@ -332,4 +332,27 @@ uint32_t BnExtend(BN_BigNum *a, uint32_t words)
     a->room = words;
     return CRYPT_SUCCESS;
 }
+
+/* See the standard document
+ * https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
+ * Table 2: Comparable strengths
+ * */
+int32_t BN_SecBit(int32_t publen, int32_t prvlen)
+{
+    int32_t bits = 256;
+    int32_t level[] = {1024, 2048, 3072, 7680, 15360, INT32_MAX};
+    int32_t secbits[] = {0, 80, 112, 128, 192, 256};
+
+    for (size_t i = 0; i < (sizeof(level) / sizeof(level[0])); i++) {
+        if (publen < level[i]) {
+            bits = secbits[i];
+            break;
+        }
+    }
+    if (prvlen == -1) {
+        return bits;
+    }
+    bits = ((prvlen / 2) >= bits) ? bits : (prvlen / 2);
+    return (bits < 80) ? 0 : bits;
+}
 #endif /* HITLS_CRYPTO_BN */

@@ -323,6 +323,8 @@ int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HI
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+    } else {
+        time->isOptional = true;
     }
     return ret;
 }

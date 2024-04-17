@@ -32,6 +32,7 @@ typedef enum {
     HITLS_X509_CERT_GET_PUBKEY,
     HITLS_X509_CERT_GET_SIGNALG,
     HITLS_X509_CERT_REF_UP,
+    HITLS_X509_CERT_REF_DOWN,
     HITLS_X509_CERT_EXT_KU_KEYENC,
     HITLS_X509_CERT_EXT_KU_DIGITALSIGN,
     HITLS_X509_CERT_EXT_KU_CERTSIGN,
@@ -42,21 +43,32 @@ HITLS_X509_Cert *HITLS_X509_NewCert(void);
 void HITLS_X509_FreeCert(HITLS_X509_Cert *cert);
 int32_t HITLS_X509_ParseBuffCert(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Cert *cert);
 int32_t HITLS_X509_ParseFileCert(int32_t format, const char *path, HITLS_X509_Cert *cert);
-int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t *valLen);
+int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen);
 int32_t HITLS_X509_DupCert(HITLS_X509_Cert *src, HITLS_X509_Cert **dest);
+
+typedef enum {
+    HITLS_X509_CRL_REF_UP,
+    HITLS_X509_CRL_REF_DOWN
+} HITLS_X509_CrlCmd;
 
 HITLS_X509_Crl *HITLS_X509_NewCrl(void);
 void HITLS_X509_FreeCrl(HITLS_X509_Crl *crl);
+int32_t HITLS_X509_CtrlCrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen);
 int32_t HITLS_X509_ParseBuffCrl(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Crl *crl);
 int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl *crl);
 
+typedef enum {
+    HITLS_X509_VFY_FLAG_CRL_ALL = 1,
+    HITLS_X509_VFY_FLAG_CRL_DEV = 2
+} HITLS_X509_VFY_FLAGS;
 
 typedef enum {
     HITLS_X509_STORECTX_SET_PARAM_DEPTH,
     HITLS_X509_STORECTX_SET_PARAM_FLAGS,
     HITLS_X509_STORECTX_SET_TIME,
     HITLS_X509_STORECTX_SET_SECBITS,
-    HITLS_X509_STORECTX_DEL_PARAM_FLAGS,
+    /* clear flag */
+    HITLS_X509_STORECTX_CLR_PARAM_FLAGS,
     HITLS_X509_STORECTX_SET_CA,
     HITLS_X509_STORECTX_SET_CRL,
     HITLS_X509_STORECTX_REF_UP
@@ -64,7 +76,7 @@ typedef enum {
 
 HITLS_X509_StoreCtx *HITLS_X509_NewStoreCtx(void);
 void HITLS_X509_FreeStoreCtx(HITLS_X509_StoreCtx *storeCtx);
-int32_t HITLS_X509_CtrlStoreCtx(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t *valLen);
+int32_t HITLS_X509_CtrlStoreCtx(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t valLen);
 int32_t HITLS_X509_VerifyCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
 int32_t HITLS_X509_BuildCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_List **chain);
 

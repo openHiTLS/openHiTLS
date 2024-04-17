@@ -55,6 +55,7 @@ typedef struct _HITLS_X509_RsaPssParam {
 } HITLS_X509_RsaPssParam;
 
 typedef struct _HITLS_X509_ValidTime {
+    bool isOptional;
     BSL_TIME start;
     BSL_TIME end;
 } HITLS_X509_ValidTime;

@@ -263,6 +263,16 @@ int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
  */
 int32_t CRYPT_SM2_Cmp(const CRYPT_SM2_Ctx *a, const CRYPT_SM2_Ctx *b);
 
+/**
+ * @ingroup sm2
+ * @brief sm2 get security bits
+ *
+ * @param para [IN] sm2 Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_SM2_GetSecBits(const CRYPT_SM2_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

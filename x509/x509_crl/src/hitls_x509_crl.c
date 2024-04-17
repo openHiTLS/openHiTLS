@@ -103,14 +103,14 @@ void HITLS_X509_FreeCrl(HITLS_X509_Crl *crl)
     if (ret > 0) {
         return;
     }
-    
-    if (crl->isCopy == true) {
-        BSL_SAL_FREE(crl->rawData);
-    }
-    
+
     BSL_LIST_FREE(crl->tbs.issuerName, NULL);
     BSL_LIST_FREE(crl->tbs.revokedCerts, NULL);
     BSL_LIST_FREE(crl->tbs.crlExt.extList, NULL);
+    BSL_SAL_ReferencesFree(&(crl->references));
+    if (crl->isCopy == true) {
+        BSL_SAL_FREE(crl->rawData);
+    }
     BSL_SAL_Free(crl);
     return;
 }
@@ -380,6 +380,10 @@ ERR:
 int32_t HITLS_X509_ParseBuffCrl(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Crl *crl)
 {
     int32_t ret;
+    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crl == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
     if (isCopy == true) {
@@ -395,9 +399,11 @@ int32_t HITLS_X509_ParseBuffCrl(bool isCopy, int32_t format, BSL_Buffer *encode,
             ret = HITLS_X509_ParseAsn1Crl(isCopy, &data, &dataLen, crl);
             break;
         case BSL_PARSE_FORMAT_PEM:
-            // TODO
+            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            break;
         case BSL_PARSE_FORMAT_UNKNOWN:
-            // TODO
+            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            break;
         default:
             ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
             break;
@@ -421,4 +427,39 @@ int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl
     ret = HITLS_X509_ParseBuffCrl(true, format, &encode, crl);
     BSL_SAL_Free(data);
     return ret;
+}
+
+static int32_t X509_CrlRefUp(HITLS_X509_Crl *crl, int32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    return BSL_SAL_AtomicUpReferences(&crl->references, val);
+}
+
+static int32_t X509_CrlRefDown(HITLS_X509_Crl *crl, int32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    return BSL_SAL_AtomicDownReferences(&crl->references, val);
+}
+
+int32_t HITLS_X509_CtrlCrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
+{
+    if (crl == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    switch (cmd) {
+        case HITLS_X509_CRL_REF_UP:
+            return X509_CrlRefUp(crl, val, valLen);
+        case HITLS_X509_CRL_REF_DOWN:
+            return X509_CrlRefDown(crl, val, valLen);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+    }
 }

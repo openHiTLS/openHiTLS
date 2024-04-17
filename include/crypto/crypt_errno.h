@@ -351,6 +351,7 @@ enum CRYPT_ERROR {
     CRYPT_SM2_EXCH_VERIFY_FAIL,                       /**< Key Negotiation Failure. */
     CRYPT_SM2_DECODE_FAIL,                            /**< Data decoding fails, the data does not meet
                                                             the decoding requirements. */
+    CRYPT_SM2_ID_TOO_LARGE,                           /**< User id to large. */
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x011C0001,        /**< Unsupport the KDFTLS12 algorithm. */
 
     CRYPT_DECODE_ASN1_BUFF_NUM_NOT_ENOUGH = 0x011D0001,  /**< The input number of BSL_ANS1_Buffer is not enough. */

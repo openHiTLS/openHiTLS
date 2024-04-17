@@ -1,0 +1,17 @@
+SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 1
+SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":128:HITLS_X509_SUCCESS
+
+SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 2
+SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":256:HITLS_X509_ERR_CHECK_SECBITS
+
+SDV_X509_STORE_VFY_CRL_FUNC_TC001 revoked inter ca cert, device cert no revoked, all crl
+SDV_X509_STORE_VFY_CRL_FUNC_TC001:0:HITLS_X509_ERR_CERT_REVOKED:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
+
+SDV_X509_STORE_VFY_CRL_FUNC_TC001 revoked device cert, all crl
+SDV_X509_STORE_VFY_CRL_FUNC_TC001:0:HITLS_X509_ERR_CERT_REVOKED:"../testdata/cert/sm2/enc3.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
+
+SDV_X509_STORE_VFY_CRL_FUNC_TC001 device cert no revoked, dev crl
+SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_X509_SUCCESS:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
+
+SDV_X509_STORE_VFY_CRL_FUNC_TC001 revoked device cert, dev crl
+SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_X509_ERR_CERT_REVOKED:"../testdata/cert/sm2/enc3.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"

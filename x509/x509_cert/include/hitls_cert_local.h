@@ -29,11 +29,16 @@ extern "C" {
 #define HITLS_X509_EXT_KU_ENCIPHER_ONLY      0x0001
 #define HITLS_X509_EXT_KU_DECIPHER_ONLY      0x8000
 
+#define HITLS_X509_CERT_EXT_FLAG_KUSAGE (1 << 0)
+#define HITLS_X509_CERT_EXT_FLAG_BCONS (1 << 1)
+
 typedef struct _HITLS_X509_CertExt {
     BslList *list;
+    uint32_t extFlags;
     // basic usage ext
     bool isCa;
-    uint32_t maxPathLen;
+    // -1 no check, 0 no intermediate certificate
+    int32_t maxPathLen;
     // key usage ext
     uint64_t keyUsage;
 } HITLS_X509_CertExt;

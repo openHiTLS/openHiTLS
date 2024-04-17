@@ -297,6 +297,17 @@ static int32_t ParseRsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL
     return ret;
 }
 
+static bool IsEcdsaEcParaId(int32_t paraId)
+{
+    if (paraId == CRYPT_ECC_NISTP224 || paraId == CRYPT_ECC_NISTP256 ||
+        paraId == CRYPT_ECC_NISTP384 || paraId == CRYPT_ECC_NISTP521 ||
+        paraId == CRYPT_ECC_BRAINPOOLP256R1 || paraId == CRYPT_ECC_BRAINPOOLP384R1 ||
+        paraId == CRYPT_ECC_BRAINPOOLP512R1) {
+        return true;
+    }
+    return false;
+}
+
 static int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPubKey)
 {
     uint8_t *algoBuff = encode->buff; // AlgorithmIdentifier Tag and Len, 2 bytes.
@@ -317,40 +328,48 @@ static int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **e
     }
     CRYPT_EAL_PkeyCtx *pctx = NULL;
 
-    if (oid->tag == BSL_ASN1_TAG_OBJECT_ID) {
-        BslOidString oidStr = {oid->len, (char *)oid->buff, 0};
-        BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
-        if (cid == BSL_CID_EC_PUBLICKEY) {
-            // ecPubKeys
-            pctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
-            if (pctx == NULL) {
-                return CRYPT_MEM_ALLOC_FAIL;
-            }
-            CRYPT_PKEY_ParaId paraId = GetParaId(ecParamOid->buff, ecParamOid->len);
+    BslOidString oidStr = {oid->len, (char *)oid->buff, 0};
+    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    if (cid == BSL_CID_EC_PUBLICKEY) {
+        int32_t algId;
+        CRYPT_PKEY_ParaId paraId = GetParaId(ecParamOid->buff, ecParamOid->len);
+        if (paraId == CRYPT_ECC_SM2) {
+            algId = CRYPT_PKEY_SM2;
+        } else if (IsEcdsaEcParaId(paraId)) {
+            algId = CRYPT_PKEY_ECDSA;
+        } else { // scenario ecdh is not considered, and it will be improved in the future
+            return CRYPT_DECODE_UNKNOWN_OID;
+        }
+        // ecPubKeys
+        pctx = CRYPT_EAL_PkeyNewCtx(algId);
+        if (pctx == NULL) {
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        if (paraId != CRYPT_ECC_SM2) {
             ret = CRYPT_EAL_PkeySetParaById(pctx, paraId);
             if (ret != CRYPT_SUCCESS) {
                 goto ERR_OUT;
             }
-            CRYPT_EAL_PkeyPub pub;
-            pub.id = CRYPT_PKEY_ECDSA;
-            pub.key.eccPub.data = bitPubkey.buff;
-            pub.key.eccPub.len = bitPubkey.len;
-            ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
-            if (ret != CRYPT_SUCCESS) {
-                goto ERR_OUT;
-            }
-        } else if (cid == BSL_CID_RSA || cid == BSL_CID_RSASSAPSS) {
-            // rsa pubkey, remove seq header fist.
-            BSL_Buffer data = {0};
-            ret = ParseSeqHeaderOnly(bitPubkey.buff, bitPubkey.len, &data);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
-            return ParseRsaPubkeyAsn1Buff(data.data, data.dataLen, ealPubKey);
-        } else {
-            BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
-            return CRYPT_DECODE_UNKNOWN_OID;
         }
+        CRYPT_EAL_PkeyPub pub;
+        pub.id = algId;
+        pub.key.eccPub.data = bitPubkey.buff;
+        pub.key.eccPub.len = bitPubkey.len;
+        ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
+        if (ret != CRYPT_SUCCESS) {
+            goto ERR_OUT;
+        }
+    } else if (cid == BSL_CID_RSA || cid == BSL_CID_RSASSAPSS) {
+        // rsa pubkey, remove seq header fist.
+        BSL_Buffer data = {0};
+        ret = ParseSeqHeaderOnly(bitPubkey.buff, bitPubkey.len, &data);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        return ParseRsaPubkeyAsn1Buff(data.data, data.dataLen, ealPubKey);
+    } else { // ed25519 448 will be added in the future
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
+        return CRYPT_DECODE_UNKNOWN_OID;
     }
     *ealPubKey = pctx;
     return ret;
@@ -566,7 +585,7 @@ static int32_t ParsePk8EncPriKeyBuff(BSL_Buffer *buff, BSL_Buffer *pass, CRYPT_E
     return ParsePk8EncPrikeyAsn1(asn1, CRYPT_PK8_ENCPRIKEY_ENCDATA_IDX + 1, ealPriKey);
 }
 
-int32_t CRYPT_EAL_PubKeyBuffParse(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode,
+int32_t CRYPT_EAL_ParseBuffPubKey(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode,
                                   CRYPT_EAL_PkeyCtx **ealPubKey)
 {
     (void)format;
@@ -627,7 +646,7 @@ static int32_t ReadKeyFile(BSL_ParseFormat format, int32_t type, const char *pat
     }
 }
 
-int32_t CRYPT_EAL_PubKeyFileParse(BSL_ParseFormat format, int32_t type, const char *path, CRYPT_EAL_PkeyCtx **ealPubKey)
+int32_t CRYPT_EAL_ParseFilePubKey(BSL_ParseFormat format, int32_t type, const char *path, CRYPT_EAL_PkeyCtx **ealPubKey)
 {
     BSL_Buffer buff = {0};
     int32_t ret = ReadKeyFile(format, type, path, &buff);
@@ -638,14 +657,14 @@ int32_t CRYPT_EAL_PubKeyFileParse(BSL_ParseFormat format, int32_t type, const ch
     // remove header(seq)
     BSL_Buffer tmp = {0};
     if ((ret = ParseSeqHeaderOnly(buff.data, buff.dataLen, &tmp)) != CRYPT_SUCCESS ||
-        (ret = CRYPT_EAL_PubKeyBuffParse(format, type, &tmp, ealPubKey)) != CRYPT_SUCCESS) {
+        (ret = CRYPT_EAL_ParseBuffPubKey(format, type, &tmp, ealPubKey)) != CRYPT_SUCCESS) {
         return ret;
     }
     BSL_SAL_FREE(buff.data);
     return ret;
 }
 
-int32_t CRYPT_EAL_PriKeyBuffParse(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode, uint8_t *pwd,
+int32_t CRYPT_EAL_ParseBuffPriKey(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode, uint8_t *pwd,
                                   uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
     (void)format;
@@ -666,7 +685,7 @@ int32_t CRYPT_EAL_PriKeyBuffParse(BSL_ParseFormat format, int32_t type, BSL_Buff
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_PriKeyFileParse(BSL_ParseFormat format, int32_t type, const char *path, uint8_t *pwd, uint32_t pwdlen,
+int32_t CRYPT_EAL_ParseFilePriKey(BSL_ParseFormat format, int32_t type, const char *path, uint8_t *pwd, uint32_t pwdlen,
                                   CRYPT_EAL_PkeyCtx **ealPriKey)
 {
     BSL_Buffer buff = {0};
@@ -679,7 +698,7 @@ int32_t CRYPT_EAL_PriKeyFileParse(BSL_ParseFormat format, int32_t type, const ch
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_EAL_PriKeyBuffParse(format, type, &data, pwd, pwdlen, ealPriKey);
+    ret = CRYPT_EAL_ParseBuffPriKey(format, type, &data, pwd, pwdlen, ealPriKey);
     BSL_SAL_FREE(buff.data);
     return ret;
 }

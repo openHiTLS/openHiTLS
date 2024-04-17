@@ -677,4 +677,10 @@ int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE255
 
     return CRYPT_SUCCESS;
 }
+
+int32_t CRYPT_CURVE25519_GetSecBits(const CRYPT_CURVE25519_Ctx *ctx)
+{
+    (void) ctx;
+    return 128;
+}
 #endif /* HITLS_CRYPTO_CURVE25519 */

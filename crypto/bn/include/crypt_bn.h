@@ -1060,6 +1060,16 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  */
 int32_t BN_ModSm2EccSqr(
     BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief Return the number of security bits provided by a specific algorithm and specific key size
+ *
+ * @param pubLen [IN] size of the public key
+ * @param prvlen [IN] size of the private key
+ * @retval [OUT] output the result
+ */
+int32_t BN_SecBit(int32_t publen, int32_t prvlen);
 #endif
 
 #ifdef __cplusplus

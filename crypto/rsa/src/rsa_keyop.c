@@ -322,4 +322,14 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
 
     return CRYPT_SUCCESS;
 }
+
+int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return 0;
+    }
+    int32_t bits = (int32_t)CRYPT_RSA_GetBits(ctx);
+    return BN_SecBit(bits, -1);
+}
 #endif // HITLS_CRYPTO_RSA

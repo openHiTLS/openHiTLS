@@ -69,7 +69,7 @@ typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t data
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyCheck)(const void *key);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
-
+typedef int32_t (*PkeyGetSecBits)(const void *key);
 
 /**
 * @ingroup  EAL
@@ -102,6 +102,7 @@ typedef struct EAL_PkeyMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
+    PkeyGetSecBits getSecBits;              // get key security bits
 } EAL_PkeyMethod;
 
 /**

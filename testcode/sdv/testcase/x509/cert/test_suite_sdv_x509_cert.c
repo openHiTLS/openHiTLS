@@ -153,7 +153,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.issuerName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(cert->tbs.issuerName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) {
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -195,7 +195,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC002(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.issuerName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(cert->tbs.issuerName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) {
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -245,7 +245,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC003(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.issuerName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(cert->tbs.issuerName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) {
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -337,7 +337,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC001(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.subjectName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(cert->tbs.subjectName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) {
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -379,7 +379,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC002(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.subjectName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(cert->tbs.subjectName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) {
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -429,7 +429,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.subjectName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(cert->tbs.subjectName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) {
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -453,6 +453,98 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003(char *path, int count,
     }
 exit:
     HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg,
+    int expKuDigitailSign, int expKuCertSign, int expKuKeyAgreement)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int32_t rawDataLen;
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(rawDataLen, expRawDataLen);
+
+    uint8_t *rawData = NULL;
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_ENCODE, &rawData, 0);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(rawData, NULL);
+
+    void *ealKey = NULL;
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_PUBKEY, &ealKey, 0);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(ealKey, NULL);
+    CRYPT_EAL_PkeyFreeCtx(ealKey);
+
+    int32_t alg = 0;
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_SIGNALG, &alg, sizeof(alg));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(alg, expSignAlg);
+
+    int32_t ref = 0;
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_REF_UP, &ref, sizeof(ref));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ref, 2);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_REF_DOWN, &ref, sizeof(ref));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ref, 1);
+
+    bool isTrue = false;
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(isTrue, expKuDigitailSign);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_EXT_KU_CERTSIGN, &isTrue, sizeof(isTrue));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(isTrue, expKuCertSign);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(isTrue, expKuKeyAgreement);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
+    int expKuDigitailSign, int expKuCertSign, int expKuKeyAgreement)
+{
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Cert *dest = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    ret = HITLS_X509_DupCert(cert, &dest);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    int32_t alg = 0;
+    ret = HITLS_X509_CtrlCert(dest, HITLS_X509_CERT_GET_SIGNALG, &alg, sizeof(alg));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(alg, expSignAlg);
+
+    bool isTrue = false;
+    ret = HITLS_X509_CtrlCert(dest, HITLS_X509_CERT_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(isTrue, expKuDigitailSign);
+
+    ret = HITLS_X509_CtrlCert(dest, HITLS_X509_CERT_EXT_KU_CERTSIGN, &isTrue, sizeof(isTrue));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(isTrue, expKuCertSign);
+
+    ret = HITLS_X509_CtrlCert(dest, HITLS_X509_CERT_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(isTrue, expKuKeyAgreement);
+    
+exit:
+    HITLS_X509_FreeCert(cert);
+    HITLS_X509_FreeCert(dest);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */

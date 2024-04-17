@@ -387,6 +387,16 @@ int32_t ECC_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
  */
 int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
 
+/**
+ * @ingroup ecc
+ * @brief ecc get security bits
+ *
+ * @param para [IN] ecc Context structure
+ *
+ * @retval security bits
+ */
+int32_t ECC_GetSecBits(const ECC_Para *para);
+
 #ifdef __cplusplus
 }
 #endif

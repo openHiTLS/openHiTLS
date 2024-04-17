@@ -13,8 +13,7 @@
 #include "hitls_x509_errno.h"
 #include "bsl_type.h"
 #include "bsl_log.h"
-
-
+#include "bsl_init.h"
 
 /* END_HEADER */
 
@@ -52,6 +51,51 @@ void SDV_X509_CRL_PARSE_FUNC_TC001(char *path)
     ASSERT_TRUE(crl != NULL);
     int32_t ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path, crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeCrl(crl);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+static int32_t HITLS_ParseCrlTest(char *path, HITLS_X509_Crl **crl)
+{
+    TestMemInit();
+    BSL_LOG_BinLogFuncs func = {0};
+    BSL_GLOBAL_Init();
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    int32_t ret = BSL_LOG_RegBinLogFunc(&func);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    
+    *crl = HITLS_X509_NewCrl();
+    if (*crl == NULL) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path, *crl);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    return ret;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_CTRL_FUNC_TC001(char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    int32_t ref = 0;
+    ret = HITLS_X509_CtrlCrl(crl, HITLS_X509_CRL_REF_UP, &ref, sizeof(ref));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ref, 2);
+
+    ret = HITLS_X509_CtrlCrl(crl, HITLS_X509_CRL_REF_DOWN, &ref, sizeof(ref));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ref, 1);
 exit:
     HITLS_X509_FreeCrl(crl);
     BSL_GLOBAL_DeInit();

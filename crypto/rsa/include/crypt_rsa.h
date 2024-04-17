@@ -439,6 +439,17 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
 int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
 
+/**
+ * @ingroup RSA
+ * @brief RSA get security bits
+ *
+ * @param ctx [IN] RSA Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx);
+
+
 #ifdef __cplusplus
 }
 #endif

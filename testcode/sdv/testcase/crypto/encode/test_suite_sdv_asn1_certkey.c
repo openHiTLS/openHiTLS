@@ -318,7 +318,7 @@ void SDV_BSL_ASN1_PARSE_PUBKEY_FILE_TC001(char *path, int fileType, int mdId, He
     RegisterLogFunc();
 
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    ASSERT_EQ(CRYPT_EAL_PubKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, fileType, path, &pkeyCtx), CRYPT_SUCCESS);
     if (fileType == CRYPT_PUBKEY_RSA) {
         CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
@@ -342,7 +342,7 @@ void SDV_BSL_ASN1_PARSE_SUBPUBKEY_TC001(int encodeType, Hex *subKeyInfo)
     buff.dataLen = subKeyInfo->len;
 
     CRYPT_EAL_PkeyCtx *pctx = NULL;
-    ASSERT_EQ(CRYPT_EAL_PubKeyBuffParse(BSL_PARSE_FORMAT_ASN1, encodeType, &buff, &pctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(BSL_PARSE_FORMAT_ASN1, encodeType, &buff, &pctx), CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_PkeyFreeCtx(pctx);
@@ -357,7 +357,7 @@ void SDV_BSL_ASN1_PARSE_PRIKEY_FILE_TC001(char *path, int fileType, int mdId, He
 
     uint8_t *signdata = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    ASSERT_EQ(CRYPT_EAL_PriKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
     if (fileType == CRYPT_PRIKEY_RSA || CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
         CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
@@ -388,7 +388,7 @@ void SDV_BSL_ASN1_PARSE_ENCPK8_TC001(char *path, int fileType, Hex *pass, int md
 
     uint8_t *signdata = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    ASSERT_EQ(CRYPT_EAL_PriKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path, pass->x, pass->len, &pkeyCtx),
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, fileType, path, pass->x, pass->len, &pkeyCtx),
               CRYPT_SUCCESS);
     if (fileType == CRYPT_PRIKEY_RSA || CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
         CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};

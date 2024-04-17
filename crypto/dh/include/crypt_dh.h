@@ -275,6 +275,15 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b);
  */
 int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
 
+/**
+ * @ingroup dh
+ * @brief dh get security bits
+ *
+ * @param ctx [IN] dh Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_DH_GetSecBits(const CRYPT_DH_Ctx *ctx);
 #ifdef __cplusplus
 }
 #endif

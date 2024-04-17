@@ -11,7 +11,7 @@ set -e
 cd ../../
 HITLS_ROOT_DIR=`pwd`
 
-hilts_compile_option=()
+hitls_compile_option=()
 
 paramList=$@
 paramNum=$#
@@ -51,7 +51,7 @@ build_depend_code()
     fi
 }
 
-build_hilts_code()
+build_hitls_code()
 {
     bsl_features="err hash init list log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str tlv \
                   uio_plt uio_buffer uio_sctp uio_tcp usrdata asn1 obj"
@@ -131,4 +131,4 @@ clean
 parse_option
 down_depend_code
 build_depend_code
-build_hilts_code
+build_hitls_code

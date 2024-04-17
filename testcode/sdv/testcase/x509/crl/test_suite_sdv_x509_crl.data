@@ -6,3 +6,9 @@ SDV_X509_CRL_PARSE_FUNC_TC001:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der"
 
 SDV_X509_CRL_PARSE_FUNC_TC001
 SDV_X509_CRL_PARSE_FUNC_TC001:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"
+
+SDV_X509_CRL_CTRL_FUNC_TC001
+SDV_X509_CRL_CTRL_FUNC_TC001:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der"
+
+SDV_X509_CRL_CTRL_FUNC_TC001
+SDV_X509_CRL_CTRL_FUNC_TC001:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"

@@ -133,14 +133,14 @@ void HITLS_X509_FreeCert(HITLS_X509_Cert *cert)
         return;
     }
     
-    if (cert->isCopy == true) {
-        BSL_SAL_FREE(cert->rawData);
-    }
-    
     BSL_LIST_FREE(cert->tbs.issuerName, NULL);
     BSL_LIST_FREE(cert->tbs.subjectName, NULL);
     BSL_LIST_FREE(cert->tbs.ext.list, NULL);
     CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
+    BSL_SAL_ReferencesFree(&(cert->references));
+    if (cert->isCopy == true) {
+        BSL_SAL_FREE(cert->rawData);
+    }
     BSL_SAL_Free(cert);
     return;
 }
@@ -173,6 +173,7 @@ HITLS_X509_Cert *HITLS_X509_NewCert()
     cert->tbs.issuerName = issuerName;
     cert->tbs.subjectName = subjectName;
     cert->tbs.ext.list = extList;
+    cert->tbs.ext.maxPathLen = -1;
     return cert;
 ERR:
     BSL_SAL_Free(cert);
@@ -184,9 +185,17 @@ ERR:
 
 int32_t HITLS_X509_ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Cert *cert)
 {
-    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BITSTRING, extEntry->extnValue.len, extEntry->extnValue.buff};
+    uint32_t len;
+    uint8_t *temp = extEntry->extnValue.buff;
+    uint32_t tempLen = extEntry->extnValue.len;
+    int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_BITSTRING, &temp, &tempLen, &len);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BITSTRING, len, temp};
     BSL_ASN1_BitString bitString = {0};
-    int32_t ret = BSL_ASN1_DecodePrimitiveItem(&asn, &bitString);
+    ret = BSL_ASN1_DecodePrimitiveItem(&asn, &bitString);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -196,8 +205,9 @@ int32_t HITLS_X509_ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Ce
         return HITLS_X509_ERR_INVALID_KEYUSAGE;
     }
     for (size_t i = 0; i < bitString.len; i++) {
-        cert->tbs.ext.keyUsage |= (bitString.buff[i] << 8 * i);
+        cert->tbs.ext.keyUsage |= (bitString.buff[i] << (8 * i));
     }
+    cert->tbs.ext.extFlags |= HITLS_X509_CERT_EXT_FLAG_KUSAGE;
     return HITLS_X509_SUCCESS;
 }
 
@@ -240,6 +250,7 @@ int32_t HITLS_X509_ParseExtBasicContaints(HITLS_X509_ExtEntry *extEntry, HITLS_X
             return ret;
         }
     }
+    cert->tbs.ext.extFlags |= HITLS_X509_CERT_EXT_FLAG_BCONS;
     return ret;
 }
 
@@ -340,7 +351,7 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
 
     // subject public key info
     BSL_Buffer encode = {asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff, asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len};
-    ret = CRYPT_EAL_PubKeyBuffParse(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode,
+    ret = CRYPT_EAL_ParseBuffPubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode,
         (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -421,6 +432,10 @@ ERR:
 int32_t HITLS_X509_ParseBuffCert(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Cert *cert)
 {
     int32_t ret;
+    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || cert == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
     if (isCopy == true) {
@@ -436,9 +451,11 @@ int32_t HITLS_X509_ParseBuffCert(bool isCopy, int32_t format, BSL_Buffer *encode
             ret = HITLS_X509_ParseAsn1Cert(isCopy, &data, &dataLen, cert);
             break;
         case BSL_PARSE_FORMAT_PEM:
-            // TODO
+            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            break;
         case BSL_PARSE_FORMAT_UNKNOWN:
-            // TODO
+            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            break;
         default:
             ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
             break;
@@ -455,11 +472,138 @@ int32_t HITLS_X509_ParseFileCert(int32_t format, const char *path, HITLS_X509_Ce
     uint32_t dataLen = 0;
     int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     BSL_Buffer encode = {data, dataLen};
     ret = HITLS_X509_ParseBuffCert(true, format, &encode, cert);
     BSL_SAL_Free(data);
+    return ret;
+}
+
+static int32_t X509_CertGetEncodeLen(HITLS_X509_Cert *cert, uint32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    *(uint32_t *)val = cert->rawDataLen;
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_CertGetEncodeData(HITLS_X509_Cert *cert, uint8_t **val)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    *val = cert->rawData;
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_CertGetPubKey(HITLS_X509_Cert *cert, void **val)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    int32_t ret = CRYPT_EAL_PkeyUpRef(cert->tbs.ealPubKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *val = cert->tbs.ealPubKey;
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_CertGetSignAlg(HITLS_X509_Cert *cert, int32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    *val = cert->signAlgId.algId;
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_CertRefUp(HITLS_X509_Cert *cert, int32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    return BSL_SAL_AtomicUpReferences(&cert->references, val);
+}
+
+static int32_t X509_CertRefDown(HITLS_X509_Cert *cert, int32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    return BSL_SAL_AtomicDownReferences(&cert->references, val);
+}
+
+int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valLen, uint64_t exp)
+{
+    if (val == NULL || valLen != sizeof(bool)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    *val = (cert->tbs.ext.keyUsage & exp);
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen)
+{
+    if (cert == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    switch (cmd) {
+        case HITLS_X509_CERT_GET_ENCODELEN:
+            return X509_CertGetEncodeLen(cert, val, valLen);
+        case HITLS_X509_CERT_ENCODE:
+            return X509_CertGetEncodeData(cert, val);
+        case HITLS_X509_CERT_GET_PUBKEY:
+            return X509_CertGetPubKey(cert, val);
+        case HITLS_X509_CERT_GET_SIGNALG:
+            return X509_CertGetSignAlg(cert, val, valLen);
+        case HITLS_X509_CERT_REF_UP:
+            return X509_CertRefUp(cert, val, valLen);
+        case HITLS_X509_CERT_REF_DOWN:
+            return X509_CertRefDown(cert, val, valLen);
+        case HITLS_X509_CERT_EXT_KU_DIGITALSIGN:
+            return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_DIGITAL_SIGN);
+        case HITLS_X509_CERT_EXT_KU_CERTSIGN:
+            return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_CERT_SIGN);
+        case HITLS_X509_CERT_EXT_KU_KEYAGREEMENT:
+            return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_AGREEMENT);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+    }
+}
+
+int32_t HITLS_X509_DupCert(HITLS_X509_Cert *src, HITLS_X509_Cert **dest)
+{
+    if (src == NULL || dest == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    
+    HITLS_X509_Cert *tempCert = HITLS_X509_NewCert();
+    if (tempCert == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    BSL_Buffer encode = {src->rawData, src->rawDataLen};
+    int32_t ret = HITLS_X509_ParseBuffCert(true, BSL_PARSE_FORMAT_ASN1, &encode, tempCert);
+    if (ret != HITLS_X509_SUCCESS) {
+        HITLS_X509_FreeCert(tempCert);
+        return ret;
+    }
+    *dest = tempCert;
     return ret;
 }

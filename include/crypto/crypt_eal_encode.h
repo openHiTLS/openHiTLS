@@ -46,7 +46,7 @@ typedef enum {
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_PubKeyBuffParse(BSL_ParseFormat format, int32_t type,
+int32_t CRYPT_EAL_ParseBuffPubKey(BSL_ParseFormat format, int32_t type,
     BSL_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPubKey);
 
 /**
@@ -61,7 +61,7 @@ int32_t CRYPT_EAL_PubKeyBuffParse(BSL_ParseFormat format, int32_t type,
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_PubKeyFileParse(BSL_ParseFormat format, int32_t type, const char *path,
+int32_t CRYPT_EAL_ParseFilePubKey(BSL_ParseFormat format, int32_t type, const char *path,
     CRYPT_EAL_PkeyCtx **ealPubKey);
 
 /**
@@ -78,7 +78,7 @@ int32_t CRYPT_EAL_PubKeyFileParse(BSL_ParseFormat format, int32_t type, const ch
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_PriKeyBuffParse(BSL_ParseFormat format, int32_t type,
+int32_t CRYPT_EAL_ParseBuffPriKey(BSL_ParseFormat format, int32_t type,
     BSL_Buffer *encode, uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPriKey);
 
 /**
@@ -95,7 +95,7 @@ int32_t CRYPT_EAL_PriKeyBuffParse(BSL_ParseFormat format, int32_t type,
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_PriKeyFileParse(BSL_ParseFormat format, int32_t type, const char *path,
+int32_t CRYPT_EAL_ParseFilePriKey(BSL_ParseFormat format, int32_t type, const char *path,
     uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPriKey);
 
 

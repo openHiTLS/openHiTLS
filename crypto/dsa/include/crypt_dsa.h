@@ -276,6 +276,17 @@ int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b);
  */
 int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
 
+
+/**
+ * @ingroup DSA
+ * @brief DSA get security bits
+ *
+ * @param ctx [IN] DSA Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_DSA_GetSecBits(const CRYPT_DSA_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

@@ -69,7 +69,7 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
             if (tempLen < 4) {
                 return BSL_ASN1_ERR_DECODE_LEN;
             }
-            parseLen = (size_t)BSL_ByteToUint24(temp);
+            parseLen = (size_t)BSL_ByteToUint32(temp);
             temp += 4;
             tempLen -= 4;
             break;
@@ -366,7 +366,7 @@ static int32_t BSL_ASN1_AnyOrChoiceTagProcess(bool isAny, BSL_ASN1_AnyOrChoicePa
     return ret;
 }
 
-static int32_t BSL_ASN1_ProcossWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbinfo, uint8_t realTag, uint8_t *expTag)
+static int32_t BSL_ASN1_ProcessWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbinfo, uint8_t realTag, uint8_t *expTag)
 {
     int32_t ret;
     uint8_t tag = *expTag;
@@ -394,7 +394,7 @@ static int32_t BSL_ASN1_ProcossWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
     return BSL_SUCCESS;
 }
 
-int32_t BSL_ASN1_ProcossNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
+int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     BSL_ASN1_TemplateItem *item, uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asn)
 {
     uint32_t len;
@@ -437,7 +437,7 @@ int32_t BSL_ASN1_ProcossNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
         if (tempLen < 1) {
             return BSL_ASN1_ERR_DECODE_LEN;
         }
-        ret = BSL_ASN1_ProcossWithoutDefOrOpt(tagCbinfo, *temp, &tag);
+        ret = BSL_ASN1_ProcessWithoutDefOrOpt(tagCbinfo, *temp, &tag);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -589,7 +589,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
         tagCbinfo.previousAsnOrTag = &previousAsn;
         tagCbinfo.idx = i;
         if (BSL_ASN1_IsConstructItem(&templ->templItems[i])) {
-            ret = BSL_ASN1_ProcossNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
+            ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse construct item err %x, idx %d", ret, i, 0, 0);
@@ -600,7 +600,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
                 return ret;
             }
         } else {
-            ret = BSL_ASN1_ProcossNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
+            ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse primitive item err %x, idx %d", ret, i, 0, 0);
