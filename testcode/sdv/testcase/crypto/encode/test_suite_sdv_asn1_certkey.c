@@ -21,9 +21,11 @@
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
 #include "crypt_util_rand.h"
+#include "bsl_obj_internal.h"
 
 /* END_HEADER */
 
+// clang-format off
 /* They are placed in their respective implementations and belong to specific applications, not asn1 modules */
 #define BSL_ASN1_CTX_SPECIFIC_TAG_VER       0
 #define BSL_ASN1_CTX_SPECIFIC_TAG_ISSUERID  1
@@ -61,6 +63,7 @@ typedef enum {
     RSA_PRV_QINV_IDX = 8,
     RSA_PRV_OTHER_PRIME_IDX = 9
 } RSA_PRV_TEMPL_IDX;
+// clang-format on
 
 #define BSL_ASN1_TIME_UTC_1 14
 #define BSL_ASN1_TIME_UTC_2 15
@@ -69,46 +72,40 @@ typedef enum {
 #define BSL_ASN1_ID_ANY_2 24
 #define BSL_ASN1_ID_ANY_3 34
 
-static char *g_oidEcc = "\x2a\x86\x48\xce\x3d\x02\01";
-static char *g_oidRsaPss = "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a";
-
-int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx,
-    void *data, void *expVal)
+int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx, void *data, void *expVal)
 {
-    switch (type)
-    {
-        case BSL_ASN1_TYPE_CHECK_CHOICE_TAG:
-        {
+    switch (type) {
+        case BSL_ASN1_TYPE_CHECK_CHOICE_TAG: {
             if (idx == BSL_ASN1_TIME_UTC_1 || idx == BSL_ASN1_TIME_UTC_2) {
-                uint8_t tag = *(uint8_t *) data;
+                uint8_t tag = *(uint8_t *)data;
                 if (tag & BSL_ASN1_TAG_UTCTIME || tag & BSL_ASN1_TAG_GENERALIZEDTIME) {
-                    *(uint8_t *) expVal = tag;
+                    *(uint8_t *)expVal = tag;
                     return BSL_SUCCESS;
                 }
             }
             return BSL_ASN1_FAIL;
         }
-        case BSL_ASN1_TYPE_GET_ANY_TAG:
-        {
-            BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
-            size_t len = param->len;
+        case BSL_ASN1_TYPE_GET_ANY_TAG: {
+            BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
+            BslOidString oidStr = {param->len, (char *)param->buff, 0};
+            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
             if (idx == BSL_ASN1_ID_ANY_1 || idx == BSL_ASN1_ID_ANY_3) {
-                if (strlen(g_oidRsaPss) == len && memcmp(param->buff, g_oidRsaPss, len) == 0) {
+                if (cid == BSL_CID_RSASSAPSS) {
                     // note: any It can be encoded empty or it can be null
-                    *(uint8_t *) expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+                    *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
                     return BSL_SUCCESS;
                 } else {
-                    *(uint8_t *) expVal = BSL_ASN1_TAG_NULL; // is null
+                    *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null
                     return BSL_SUCCESS;
                 }
             }
             if (idx == BSL_ASN1_ID_ANY_2) {
-                if (strlen(g_oidEcc) == len && memcmp(param->buff, g_oidEcc, len) == 0) {
+                if (cid == BSL_CID_EC_PUBLICKEY) {
                     // note: any It can be encoded empty or it can be null
-                    *(uint8_t *) expVal = BSL_ASN1_TAG_OBJECT_ID;
+                    *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
                     return BSL_SUCCESS;
                 } else { //
-                    *(uint8_t *) expVal = BSL_ASN1_TAG_NULL; // is null
+                    *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null
                     return BSL_SUCCESS;
                 }
                 return BSL_ASN1_FAIL;
@@ -120,40 +117,36 @@ int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx,
     return BSL_ASN1_FAIL;
 }
 
-int32_t BSL_ASN1_SubKeyInfoTagGetOrCheck(int32_t type, int32_t idx,
-    void *data, void *expVal)
+int32_t BSL_ASN1_SubKeyInfoTagGetOrCheck(int32_t type, int32_t idx, void *data, void *expVal)
 {
-    switch (type)
-    {
-        case BSL_ASN1_TYPE_CHECK_CHOICE_TAG:
-            {
-                if (idx == BSL_ASN1_TIME_UTC_1 || idx == BSL_ASN1_TIME_UTC_2) {
-                    uint8_t tag = *(uint8_t *) data;
-                    if (tag & BSL_ASN1_TAG_UTCTIME || tag & BSL_ASN1_TAG_GENERALIZEDTIME) {
-                        return BSL_SUCCESS;
-                    }   
-                }
-                return BSL_ASN1_FAIL;
-            }
-        case BSL_ASN1_TYPE_GET_ANY_TAG:
-            {
-                BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
-                size_t len = param->len;
-                if (strlen(g_oidEcc) == len && memcmp(param->buff, g_oidEcc, len) == 0) {
-                    // note: any It can be encoded empty or it can be null
-                    *(uint8_t *) expVal = BSL_ASN1_TAG_OBJECT_ID; 
-                    return BSL_SUCCESS;
-                } else { //
-                    *(uint8_t *) expVal = BSL_ASN1_TAG_NULL; // is null
+    switch (type) {
+        case BSL_ASN1_TYPE_CHECK_CHOICE_TAG: {
+            if (idx == BSL_ASN1_TIME_UTC_1 || idx == BSL_ASN1_TIME_UTC_2) {
+                uint8_t tag = *(uint8_t *)data;
+                if (tag & BSL_ASN1_TAG_UTCTIME || tag & BSL_ASN1_TAG_GENERALIZEDTIME) {
                     return BSL_SUCCESS;
                 }
             }
+            return BSL_ASN1_FAIL;
+        }
+        case BSL_ASN1_TYPE_GET_ANY_TAG: {
+            BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
+            BslOidString oidStr = {param->len, (char *)param->buff, 0};
+            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+            if (cid == BSL_CID_EC_PUBLICKEY) {
+                // note: any It can be encoded empty or it can be null
+                *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
+                return BSL_SUCCESS;
+            } else { //
+                *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null
+                return BSL_SUCCESS;
+            }
+        }
         default:
             break;
     }
     return BSL_ASN1_FAIL;
 }
-
 
 static int32_t ReadCert(const char *path, uint8_t **buff, uint32_t *len)
 {
@@ -180,7 +173,7 @@ static int32_t ReadCert(const char *path, uint8_t **buff, uint32_t *len)
         if (ret != BSL_SUCCESS) {
             break;
         }
-        
+
         *buff = fileBuff;
         *len = (uint32_t)fileLen;
         return ret;
@@ -189,8 +182,8 @@ static int32_t ReadCert(const char *path, uint8_t **buff, uint32_t *len)
     return ret;
 }
 
-void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
-    void *format, void *para1, void *para2, void *para3, void *para4)
+void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType, void *format, void *para1, void *para2,
+                      void *para3, void *para4)
 {
     (void)logLevel;
     (void)logType;
@@ -199,8 +192,7 @@ void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
     printf("\n");
 }
 
-void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
-    void *format, void *para)
+void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType, void *format, void *para)
 {
     (void)logLevel;
     (void)logType;
@@ -227,8 +219,8 @@ static int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
 }
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_RSA_PRV_TC001(char *path, Hex *version, Hex *n, Hex *e, Hex *d, Hex *p, Hex *q,
-    Hex *dp, Hex *dq, Hex *qinv, int mdId, Hex *msg, Hex *sign)
+void SDV_BSL_ASN1_PARSE_RSA_PRV_TC001(char *path, Hex *version, Hex *n, Hex *e, Hex *d, Hex *p, Hex *q, Hex *dp,
+                                      Hex *dq, Hex *qinv, int mdId, Hex *msg, Hex *sign)
 {
     RegisterLogFunc();
 
@@ -241,53 +233,45 @@ void SDV_BSL_ASN1_PARSE_RSA_PRV_TC001(char *path, Hex *version, Hex *n, Hex *e, 
 
     BSL_ASN1_Buffer asnArr[RSA_PRV_OTHER_PRIME_IDX + 1] = {0};
     BSL_ASN1_Template templ = {rsaPrvTempl, sizeof(rsaPrvTempl) / sizeof(rsaPrvTempl[0])};
-    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck,
-        &fileBuff, &fileLen, asnArr, RSA_PRV_OTHER_PRIME_IDX + 1);
+    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, asnArr,
+                                  RSA_PRV_OTHER_PRIME_IDX + 1);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_EQ(fileLen, 0);
     // version
     if (version->len != 0) {
         ASSERT_EQ_LOG("version compare tag", asnArr[RSA_PRV_VERSION_IDX].tag, BSL_ASN1_TAG_INTEGER);
-        ASSERT_COMPARE("version compare", version->x, version->len,
-            asnArr[RSA_PRV_VERSION_IDX].buff, asnArr[RSA_PRV_VERSION_IDX].len);
+        ASSERT_COMPARE("version compare", version->x, version->len, asnArr[RSA_PRV_VERSION_IDX].buff,
+                       asnArr[RSA_PRV_VERSION_IDX].len);
     }
 
     // n
     ASSERT_EQ_LOG("n compare tag", asnArr[RSA_PRV_N_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("n compare", n->x, n->len,
-        asnArr[RSA_PRV_N_IDX].buff, asnArr[RSA_PRV_N_IDX].len);
+    ASSERT_COMPARE("n compare", n->x, n->len, asnArr[RSA_PRV_N_IDX].buff, asnArr[RSA_PRV_N_IDX].len);
 
     // e
     ASSERT_EQ_LOG("e compare tag", asnArr[RSA_PRV_E_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("e compare", e->x, e->len,
-        asnArr[RSA_PRV_E_IDX].buff, asnArr[RSA_PRV_E_IDX].len);
+    ASSERT_COMPARE("e compare", e->x, e->len, asnArr[RSA_PRV_E_IDX].buff, asnArr[RSA_PRV_E_IDX].len);
 
     // d
     ASSERT_EQ_LOG("d compare tag", asnArr[RSA_PRV_D_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("d compare", d->x, d->len,
-        asnArr[RSA_PRV_D_IDX].buff, asnArr[RSA_PRV_D_IDX].len);
+    ASSERT_COMPARE("d compare", d->x, d->len, asnArr[RSA_PRV_D_IDX].buff, asnArr[RSA_PRV_D_IDX].len);
     // p
     ASSERT_EQ_LOG("p compare tag", asnArr[RSA_PRV_P_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("p compare", p->x, p->len,
-        asnArr[RSA_PRV_P_IDX].buff, asnArr[RSA_PRV_P_IDX].len);
+    ASSERT_COMPARE("p compare", p->x, p->len, asnArr[RSA_PRV_P_IDX].buff, asnArr[RSA_PRV_P_IDX].len);
     // q
     ASSERT_EQ_LOG("q compare tag", asnArr[RSA_PRV_Q_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("q compare", q->x, q->len,
-        asnArr[RSA_PRV_Q_IDX].buff, asnArr[RSA_PRV_Q_IDX].len);
+    ASSERT_COMPARE("q compare", q->x, q->len, asnArr[RSA_PRV_Q_IDX].buff, asnArr[RSA_PRV_Q_IDX].len);
     // d mod (p-1)
     ASSERT_EQ_LOG("dp compare tag", asnArr[RSA_PRV_DP_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("dp compare", dp->x, dp->len,
-        asnArr[RSA_PRV_DP_IDX].buff, asnArr[RSA_PRV_DP_IDX].len);
+    ASSERT_COMPARE("dp compare", dp->x, dp->len, asnArr[RSA_PRV_DP_IDX].buff, asnArr[RSA_PRV_DP_IDX].len);
     // d mod (q-1)
     ASSERT_EQ_LOG("dq compare tag", asnArr[RSA_PRV_DQ_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("dq compare", dq->x, dq->len,
-        asnArr[RSA_PRV_DQ_IDX].buff, asnArr[RSA_PRV_DQ_IDX].len);
+    ASSERT_COMPARE("dq compare", dq->x, dq->len, asnArr[RSA_PRV_DQ_IDX].buff, asnArr[RSA_PRV_DQ_IDX].len);
     // qinv
     ASSERT_EQ_LOG("qinv compare tag", asnArr[RSA_PRV_QINV_IDX].tag, BSL_ASN1_TAG_INTEGER);
-    ASSERT_COMPARE("qinv compare", qinv->x, qinv->len,
-        asnArr[RSA_PRV_QINV_IDX].buff, asnArr[RSA_PRV_QINV_IDX].len);
+    ASSERT_COMPARE("qinv compare", qinv->x, qinv->len, asnArr[RSA_PRV_QINV_IDX].buff, asnArr[RSA_PRV_QINV_IDX].len);
 
-    // create 
+    // create
     CRYPT_EAL_PkeyPrv rsaPrv = {0};
     rsaPrv.id = CRYPT_PKEY_RSA;
     rsaPrv.key.rsaPrv.d = asnArr[RSA_PRV_D_IDX].buff;
@@ -337,10 +321,10 @@ void SDV_BSL_ASN1_PARSE_PUBKEY_FILE_TC001(char *path, int fileType, int mdId, He
     ASSERT_EQ(CRYPT_EAL_PubKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path, &pkeyCtx), CRYPT_SUCCESS);
     if (fileType == CRYPT_PUBKEY_RSA) {
         CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
-            &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)), 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+                  0);
     }
-    
+
     /* verify signature */
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, mdId, msg->x, msg->len, sign->x, sign->len), CRYPT_SUCCESS);
 
@@ -376,8 +360,8 @@ void SDV_BSL_ASN1_PARSE_PRIKEY_FILE_TC001(char *path, int fileType, int mdId, He
     ASSERT_EQ(CRYPT_EAL_PriKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
     if (fileType == CRYPT_PRIKEY_RSA || CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
         CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
-            &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)), 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+                  0);
     }
 
     /* Malloc signature buffer */
@@ -404,14 +388,14 @@ void SDV_BSL_ASN1_PARSE_ENCPK8_TC001(char *path, int fileType, Hex *pass, int md
 
     uint8_t *signdata = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    ASSERT_EQ(CRYPT_EAL_PriKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path,
-        pass->x, pass->len, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PriKeyFileParse(BSL_PARSE_FORMAT_ASN1, fileType, path, pass->x, pass->len, &pkeyCtx),
+              CRYPT_SUCCESS);
     if (fileType == CRYPT_PRIKEY_RSA || CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
         CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
-            &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)), 0);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+                  0);
     }
-    
+
     /* Malloc signature buffer */
     uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(pkeyCtx);
     signdata = (uint8_t *)BSL_SAL_Malloc(signLen);
