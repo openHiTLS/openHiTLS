@@ -92,10 +92,8 @@ void SDV_X509_CRL_CTRL_FUNC_TC001(char *path)
     ret = HITLS_X509_CtrlCrl(crl, HITLS_X509_CRL_REF_UP, &ref, sizeof(ref));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(ref, 2);
+    HITLS_X509_FreeCrl(crl);
 
-    ret = HITLS_X509_CtrlCrl(crl, HITLS_X509_CRL_REF_DOWN, &ref, sizeof(ref));
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ASSERT_EQ(ref, 1);
 exit:
     HITLS_X509_FreeCrl(crl);
     BSL_GLOBAL_DeInit();

@@ -5,11 +5,11 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 #include "hitls_x509_local.h"
 #include "bsl_obj.h"
 #include "bsl_sal.h"
 #include "hitls_x509_errno.h"
+#include "crypt_eal_pkey.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "securec.h"
@@ -114,24 +114,24 @@ static int32_t HITLS_X509_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, HITLS_X509
     if (asnArr[HITLS_X509_RSAPSS_HASH_IDX].tag != 0) {
         BslOidString hashOid = {asnArr[HITLS_X509_RSAPSS_HASH_IDX].len,
             (char *)asnArr[HITLS_X509_RSAPSS_HASH_IDX].buff, 0};
-        x509Alg->rsaPssParam.hash = BSL_OBJ_GetCIDFromOid(&hashOid);
-        if (x509Alg->rsaPssParam.hash == BSL_CID_UNKNOWN) {
+        x509Alg->rsaPssParam.mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCIDFromOid(&hashOid);
+        if (x509Alg->rsaPssParam.mdId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ALG_OID);
             return HITLS_X509_ERR_ALG_OID;
         }
     } else { // default
-        x509Alg->rsaPssParam.hash = BSL_CID_SHA1;
+        x509Alg->rsaPssParam.mdId = (CRYPT_MD_AlgId)BSL_CID_SHA1;
     }
     if (asnArr[HITLS_X509_RSAPSS_MGF1PARAM_IDX].tag != 0) {
         BslOidString mgf1ParamOid = {asnArr[HITLS_X509_RSAPSS_MGF1PARAM_IDX].len,
             (char *)asnArr[HITLS_X509_RSAPSS_MGF1PARAM_IDX].buff, 0};
-        x509Alg->rsaPssParam.mgf1 = BSL_OBJ_GetCIDFromOid(&mgf1ParamOid);
-        if (x509Alg->rsaPssParam.mgf1 == BSL_CID_UNKNOWN) {
+        x509Alg->rsaPssParam.mgfId = (CRYPT_MD_AlgId)BSL_OBJ_GetCIDFromOid(&mgf1ParamOid);
+        if (x509Alg->rsaPssParam.mgfId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ALG_OID);
             return HITLS_X509_ERR_ALG_OID;
         }
     } else { // default
-        x509Alg->rsaPssParam.mgf1 = BSL_CID_SHA1;
+        x509Alg->rsaPssParam.mgfId = (CRYPT_MD_AlgId)BSL_CID_SHA1;
     }
 
     if (asnArr[HITLS_X509_RSAPSS_SALTLEN_IDX].tag != 0) {
@@ -327,4 +327,102 @@ int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HI
         time->isOptional = true;
     }
     return ret;
+}
+
+static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
+{
+    if (src->tag != dest->tag) {
+        return 1;
+    }
+    if (src->len != dest->len) {
+        return 1;
+    }
+    return memcmp(src->buff, dest->buff, dest->len);
+}
+
+static int32_t X509_NodeNameCaseCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
+{
+    if ((src->tag == BSL_ASN1_TAG_UTF8STRING || src->tag == BSL_ASN1_TAG_PRINTABLESTRING) &&
+        (dest->tag == BSL_ASN1_TAG_UTF8STRING || dest->tag == BSL_ASN1_TAG_PRINTABLESTRING)) {
+        if (src->len != dest->len) {
+            return 1;
+        }
+        for (size_t i = 0; i < src->len; i++) {
+            if (src->buff[i] == dest->buff[i]) {
+                continue;
+            }
+            if ('a' <= src->buff[i] && src->buff[i] <= 'z' && src->buff[i] - dest->buff[i] == 32) {
+                continue;
+            }
+            if ('a' <= dest->buff[i] && dest->buff[i] <= 'z' && dest->buff[i] - src->buff[i] == 32) {
+                continue;
+            }
+            return 1;
+        }
+        return 0;
+    }
+    return 1;
+}
+
+static int32_t X509_NodeNameValueCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
+{
+    // quick comparison
+    if (X509_NodeNameCompare(src, dest) == 0) {
+        return 0;
+    }
+    return X509_NodeNameCaseCompare(src, dest);
+}
+
+
+static int32_t X509_NodeCompare(BSL_ASN1_Buffer *buffOri, BSL_ASN1_Buffer *buff)
+{
+    if (buffOri->tag != buff->tag) {
+        return 1;
+    }
+    if (buffOri->len != buff->len) {
+        return 1;
+    }
+    return memcmp(buffOri->buff, buff->buff, buff->len);
+}
+
+int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name)
+{
+    HITLS_X509_NameNode *nodeOri = BSL_LIST_GET_FIRST(nameOri);
+    HITLS_X509_NameNode *node = BSL_LIST_GET_FIRST(name);
+    while(nodeOri != NULL || node != NULL) {
+        if (nodeOri == NULL || node == NULL) {
+            return 1;
+        }
+        if (X509_NodeCompare(&nodeOri->nameType, &node->nameType) != 0) {
+            return 1;
+        }
+        if (nodeOri->layer != node->layer) {
+            return 1;
+        }
+        if (X509_NodeNameValueCompare(&nodeOri->nameValue, &node->nameValue) != 0) {
+            return 1;
+        }
+        nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(nameOri);
+        node = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(name);
+    }
+    return 0;
+}
+
+int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, HITLS_X509_Asn1AlgId *subAlg)
+{
+    uint32_t pubKeyId = CRYPT_EAL_PkeyGetId(pubkey);
+    if (pubKeyId == BSL_CID_UNKNOWN) {      
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
+        return HITLS_X509_ERR_VFY_GET_SIGNID;
+    }
+    BslCid subSignAlg = BSL_OBJ_GetAsymIdFromSignId(subAlg->algId);
+    if (subSignAlg == BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
+        return HITLS_X509_ERR_VFY_GET_SIGNID;
+    }
+    if (pubKeyId != subSignAlg) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+        return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
+    }
+    return HITLS_X509_SUCCESS;
 }

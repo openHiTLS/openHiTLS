@@ -119,8 +119,8 @@ void SDV_X509_CERT_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(cert->tbs.signAlgId.algId, signAlg);
-    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.hash, rsaPssHash);
-    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.mgf1, rsaPssMgf1);
+    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.mdId, rsaPssHash);
+    ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.mgfId, rsaPssMgf1);
     ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
 
 exit:
@@ -489,10 +489,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_REF_UP, &ref, sizeof(ref));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(ref, 2);
-
-    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_REF_DOWN, &ref, sizeof(ref));
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ASSERT_EQ(ref, 1);
+    HITLS_X509_FreeCert(cert);
 
     bool isTrue = false;
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue));

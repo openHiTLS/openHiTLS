@@ -438,15 +438,6 @@ static int32_t X509_CrlRefUp(HITLS_X509_Crl *crl, int32_t *val, int32_t valLen)
     return BSL_SAL_AtomicUpReferences(&crl->references, val);
 }
 
-static int32_t X509_CrlRefDown(HITLS_X509_Crl *crl, int32_t *val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    return BSL_SAL_AtomicDownReferences(&crl->references, val);
-}
-
 int32_t HITLS_X509_CtrlCrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
 {
     if (crl == NULL) {
@@ -456,8 +447,6 @@ int32_t HITLS_X509_CtrlCrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     switch (cmd) {
         case HITLS_X509_CRL_REF_UP:
             return X509_CrlRefUp(crl, val, valLen);
-        case HITLS_X509_CRL_REF_DOWN:
-            return X509_CrlRefDown(crl, val, valLen);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;

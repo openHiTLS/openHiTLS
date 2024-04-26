@@ -9,13 +9,16 @@
 /* BEGIN_HEADER */
 #include "bsl_sal.h"
 #include "securec.h"
-#include "hitls_x509.h"
-#include "hitls_x509_errno.h"
 #include "bsl_type.h"
 #include "bsl_log.h"
 #include "bsl_init.h"
 #include "bsl_list.h"
-#include "hitls_verify_local.h"
+#include "hitls_x509.h"
+#include "hitls_x509_errno.h"
+#include "hitls_x509_verify.h"
+#include "hitls_cert_local.h"
+#include "hitls_crl_local.h"
+#include "bsl_list_internal.h"
 
 /* END_HEADER */
 
@@ -206,3 +209,440 @@ exit:
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_STORE_CTRL_FUNC_TC001(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    int32_t val = 20;
+    int32_t ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &val, sizeof(int32_t));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(store->verifyParam.maxDepth, val);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_SECBITS, &val, sizeof(int32_t));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(store->verifyParam.securityBits, val);
+    ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS | HITLS_X509_VFY_FLAG_CRL_ALL);
+    int64_t timeval = 55;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(store->verifyParam.time, timeval);
+    ASSERT_EQ(store->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME, HITLS_X509_VFY_FLAG_TIME);
+    timeval = HITLS_X509_VFY_FLAG_TIME;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(store->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME, 0);
+    ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS | HITLS_X509_VFY_FLAG_CRL_ALL);
+    int ref;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_REF_UP, &ref, sizeof(int));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ref, 2);
+    HITLS_X509_FreeStoreCtx(store);
+
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest("../testdata/cert/asn1/rsa2048ssa-pss.crt", &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CA, cert, sizeof(HITLS_X509_Cert));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(cert->references.count, 2);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CA, cert, sizeof(HITLS_X509_Cert));
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    HITLS_X509_Crl *crl = NULL;
+    ret = HITLS_ParseCrlTest("../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der", &crl);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(crl->references.count, 2);
+    ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    
+
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(cert);
+    HITLS_X509_FreeCrl(crl);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Cert **cert)
+{
+    int32_t ret = HITLS_ParseCertTest(path, cert);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    return HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CA, *cert, sizeof(HITLS_X509_Cert));
+}
+
+static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Crl **crl)
+{
+    int32_t ret = HITLS_ParseCrlTest(path, crl);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    return HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CRL, *crl, sizeof(HITLS_X509_Crl));
+}
+
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *cert, char *crlPath)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest(rootPath, store, &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *ca = NULL;
+    ret = HITLS_AddCertToStoreTest(caPath, store, &ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *entity = NULL;
+    ret = HITLS_AddCertToStoreTest(cert, store, &entity);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    HITLS_X509_Crl *crl = NULL;
+    ret = HITLS_AddCrlToStoreTest(crlPath, store, &crl);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    
+    ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, entity, &chain);
+    ASSERT_TRUE(ret == HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
+    int64_t timeval = time(NULL);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    HITLS_X509_FreeCert(ca);
+    HITLS_X509_FreeCert(entity);
+    HITLS_X509_FreeCrl(crl);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *ca = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/inter.der", store, &ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *entity = NULL;
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/end.der", store, &entity);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, entity, &chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *root = NULL;
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_BuildCertChain(store, entity, &chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
+    int64_t timeval = time(NULL);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    HITLS_X509_FreeCert(ca);
+    HITLS_X509_FreeCert(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+static int32_t X509_AddCertToChainTest(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
+{
+    int ref;
+    int32_t ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_REF_UP, &ref, sizeof(int));
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END);
+    if (ret != HITLS_X509_SUCCESS) {
+        HITLS_X509_FreeCert(cert);
+        return ret;
+    }
+    return ret;
+}
+
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC003(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/inter.der", store, &ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *entity = NULL;
+    ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/end.der", &entity);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(chain != NULL);
+    ret = X509_AddCertToChainTest(chain, entity);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = X509_AddCertToChainTest(chain, ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    HITLS_X509_FreeCert(ca);
+    HITLS_X509_FreeCert(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC004(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, root, &chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC005(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, root, &chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, root, &chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+    int64_t timeval = 5555;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/rootca.der", store, &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *ca = NULL;
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/ca.der", store, &ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *entity = NULL;
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/cert.der", store, &entity);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    int32_t depth = 2;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &depth, sizeof(depth));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, entity, &chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(chain != NULL);
+    ret = X509_AddCertToChainTest(chain, entity);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t timeval = time(NULL);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    HITLS_X509_FreeCert(ca);
+    HITLS_X509_FreeCert(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *cert, char *rootcrlpath, char *cacrlpath, int flag, int except)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest(rootPath, store, &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *ca = NULL;
+    ret = HITLS_AddCertToStoreTest(caPath, store, &ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *entity = NULL;
+    ret = HITLS_AddCertToStoreTest(cert, store, &entity);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    HITLS_X509_Crl *rootcrl = NULL;
+    if (strlen(rootcrlpath) != 0) {
+        ret = HITLS_AddCrlToStoreTest(rootcrlpath, store, &rootcrl);
+        ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    }
+    HITLS_X509_Crl *cacrl = NULL;
+    ret = HITLS_AddCrlToStoreTest(cacrlpath, store, &cacrl);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    if (strlen(rootcrlpath) == 0) {
+        ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+    } else {
+        ASSERT_EQ(BSL_LIST_COUNT(store->crl), 2);
+    }
+    int32_t depth = 3;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &depth, sizeof(depth));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_BuildCertChain(store, entity, &chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t clrflag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrflag, sizeof(int64_t));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t setFlag = (int64_t)flag;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(int64_t));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t timeval = time(NULL);
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret == except);
+
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    HITLS_X509_FreeCert(ca);
+    HITLS_X509_FreeCert(entity);
+    HITLS_X509_FreeCrl(rootcrl);
+    HITLS_X509_FreeCrl(cacrl);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    int32_t ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    HITLS_X509_Cert *root = NULL;
+    ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = X509_AddCertToChainTest(chain, root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = BSL_LIST_AddElementInt(chain, NULL, BSL_LIST_POS_BEGIN);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_VerifyCert(store, chain);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_FreeCert(root);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+

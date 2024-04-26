@@ -862,7 +862,6 @@ void SDV_BSL_SAL_THREAD_ATOMICADD_TC001(void)
         pthread_join(pid[i], NULL);  // Waiting for all child threads to end.
     }
     pthread_join(pid2[0], NULL);  // Waiting for all child threads to end.
-
     ASSERT_EQ(g_threadStartNum.count, (TEST_atomic_add_pid_cnt - 1) * TEST_THREAD_ATOMICADD_CNT);
 
     for (i = 1; i < TEST_atomic_sub_pid_cnt; i++) {

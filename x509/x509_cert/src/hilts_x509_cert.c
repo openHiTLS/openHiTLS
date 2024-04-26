@@ -7,17 +7,19 @@
  */
 
 
+#include "securec.h"
 #include "hitls_x509.h"
 #include "bsl_sal.h"
-#include "securec.h"
 #include "hitls_x509_errno.h"
 #include "hitls_x509_local.h"
-#include "hitls_cert_local.h"
 #include "crypt_eal_encode.h"
 #include "crypt_errno.h"
+#include "crypt_types.h"
 #include "crypt_eal_pkey.h"
+#include "hitls_x509_local.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
+#include "hitls_cert_local.h"
 
 #define HITLS_CERT_CTX_SPECIFIC_TAG_VER       0
 #define HITLS_CERT_CTX_SPECIFIC_TAG_ISSUERID  1
@@ -201,8 +203,8 @@ int32_t HITLS_X509_ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Ce
         return ret;
     }
     if (bitString.len > sizeof(cert->tbs.ext.keyUsage)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_KEYUSAGE);
-        return HITLS_X509_ERR_INVALID_KEYUSAGE;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_KEYUSAGE);
+        return HITLS_X509_ERR_CERT_INVALID_KEYUSAGE;
     }
     for (size_t i = 0; i < bitString.len; i++) {
         cert->tbs.ext.keyUsage |= (bitString.buff[i] << (8 * i));
@@ -536,15 +538,6 @@ static int32_t X509_CertRefUp(HITLS_X509_Cert *cert, int32_t *val, int32_t valLe
     return BSL_SAL_AtomicUpReferences(&cert->references, val);
 }
 
-static int32_t X509_CertRefDown(HITLS_X509_Cert *cert, int32_t *val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    return BSL_SAL_AtomicDownReferences(&cert->references, val);
-}
-
 int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valLen, uint64_t exp)
 {
     if (val == NULL || valLen != sizeof(bool)) {
@@ -572,8 +565,6 @@ int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
             return X509_CertGetSignAlg(cert, val, valLen);
         case HITLS_X509_CERT_REF_UP:
             return X509_CertRefUp(cert, val, valLen);
-        case HITLS_X509_CERT_REF_DOWN:
-            return X509_CertRefDown(cert, val, valLen);
         case HITLS_X509_CERT_EXT_KU_DIGITALSIGN:
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_DIGITAL_SIGN);
         case HITLS_X509_CERT_EXT_KU_CERTSIGN:
@@ -606,4 +597,117 @@ int32_t HITLS_X509_DupCert(HITLS_X509_Cert *src, HITLS_X509_Cert **dest)
     }
     *dest = tempCert;
     return ret;
+}
+
+#define HITLS_CERT_VERSION_V3 2
+
+/**
+ * Confirm whether the certificate is the issuer of the current certificate
+ *   1. Check if the issueName matches the subjectname
+ *   2. Is the issuer certificate a CA
+ *   3. Check if the algorithm of the issuer certificate matches that of the sub certificate
+ *   4. Check if the certificate keyusage has a certificate sign
+ */
+int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res)
+{
+    int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
+    if (ret != 0) {
+        *res = false;
+        return HITLS_X509_SUCCESS;
+    }
+    /**
+     * If the basic constraints extension is not present in a version 3 certificate, or the extension is present but the cA boolean is not asserted,
+     * then the certified public key MUST NOT be used to verify certificate signatures.
+     */
+    if (issue->tbs.version == HITLS_CERT_VERSION_V3 && !(issue->tbs.ext.extFlags & HITLS_X509_CERT_EXT_FLAG_BCONS) && !issue->tbs.ext.isCa) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_CA);
+        return HITLS_X509_ERR_CERT_NOT_CA;
+    }
+
+    ret = HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    /**
+     * Conforming CAs MUST include this extension in certificates that contain public keys that are used to validate digital signatures on
+     * other public key certificates or CRLs.
+     */
+    if (((issue->tbs.ext.keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN)) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
+        return HITLS_X509_ERR_VFY_KU_NO_CERTSIGN;
+    }
+    *res = true;
+    return HITLS_X509_SUCCESS;
+}
+
+static uint32_t X509_GetHashId(HITLS_X509_Asn1AlgId *alg)
+{
+    uint32_t hashId = BSL_OBJ_GetHashIdFromSignId(alg->algId);
+    if (hashId != BSL_CID_UNKNOWN) {
+        return hashId;
+    }
+    if (alg->algId == BSL_CID_RSASSAPSS) {
+        return alg->rsaPssParam.mdId;
+    }
+    return BSL_CID_UNKNOWN;
+}
+
+static int32_t X509_CtrlAlgInfo(const CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId, HITLS_X509_Asn1AlgId *alg)
+{
+    int32_t ret;
+    switch (alg->algId) {
+        case BSL_CID_SHA224WITHRSAENCRYPTION:
+        case BSL_CID_SHA256WITHRSAENCRYPTION:
+        case BSL_CID_SHA384WITHRSAENCRYPTION:
+        case BSL_CID_SHA512WITHRSAENCRYPTION:
+        case BSL_CID_SM3WITHRSAENCRYPTION:
+            {
+                CRYPT_RSA_PkcsV15Para pkcs15Para = {hashId};
+                ret = CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcs15Para, sizeof(CRYPT_RSA_PkcsV15Para));
+                break;
+            }
+        case BSL_CID_RSASSAPSS:
+            ret = CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &alg->rsaPssParam, sizeof(CRYPT_RSA_PssPara));
+            break;
+        default:
+            ret = HITLS_X509_SUCCESS;
+            break;
+    }
+    return ret;
+}
+
+int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
+    HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature)
+{
+    uint32_t hashId = X509_GetHashId(alg);
+    if (hashId == BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_HASHID);
+        return HITLS_X509_ERR_VFY_GET_HASHID;
+    }
+
+    int32_t ret = X509_CtrlAlgInfo(pubKey, hashId, alg);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyVerify(pubKey, hashId, rawData, rawDataLen, signature->buff, signature->len);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return ret;
+}
+
+int32_t HITLS_X509_CertIsCA(HITLS_X509_Cert *cert, bool *res)
+{
+    *res = true;
+    if (cert->tbs.version == HITLS_CERT_VERSION_V3) {
+        if (!(cert->tbs.ext.extFlags & HITLS_X509_CERT_EXT_FLAG_BCONS)) {
+            *res = false;
+        } else {
+            *res = cert->tbs.ext.isCa;
+        }
+    }
+    return HITLS_X509_SUCCESS;
 }
