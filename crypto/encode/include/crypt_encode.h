@@ -40,6 +40,8 @@ int32_t ASN1_Sm2EncryptDataDecode(const uint8_t *eData, uint32_t eLen, uint8_t *
 
 uint64_t ASN1_Sm2GetEnCodeLen(uint32_t dataLen);
 
+int32_t CRYPT_EAL_ParseAsn1SubPubkey(uint8_t *buff, uint32_t buffLen, void **ealPubKey, bool isComplete);
+
 #ifdef __cplusplus
 }
 #endif

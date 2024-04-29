@@ -177,7 +177,7 @@ int32_t HITLS_X509_ParseCrlExt(BSL_ASN1_Buffer *ext, HITLS_X509_Crl *crl)
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
         BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {2, expTag};
-    int ret = BSL_ASN1_DecodeLsitItem(&listParam, ext, &HITLS_CRL_ParseExtSeqof, crl, crl->tbs.crlExt.extList);
+    int ret = BSL_ASN1_DecodeListItem(&listParam, ext, &HITLS_CRL_ParseExtSeqof, crl, crl->tbs.crlExt.extList);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(crl->tbs.crlExt.extList, NULL);
         BSL_ERR_PUSH_ERROR(ret);
@@ -261,7 +261,7 @@ int32_t HITLS_X509_ParseCrlList(BSL_ASN1_Buffer *crl, BSL_ASN1_List *list)
     
     uint8_t expTag = (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE);
     BSL_ASN1_DecodeListParam listParam = {1, &expTag};
-    int32_t ret = BSL_ASN1_DecodeLsitItem(&listParam, crl, &HITLS_CRL_ParseCrlAsnItem, NULL, list);
+    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, crl, &HITLS_CRL_ParseCrlAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
         return ret;

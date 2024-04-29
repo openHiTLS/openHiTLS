@@ -550,7 +550,7 @@
             "x509_cert": {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
             },
             "x509_crl" : {
                 ".features" : ["all_x509"],

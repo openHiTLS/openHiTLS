@@ -20,6 +20,7 @@
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "hitls_cert_local.h"
+#include "crypt_encode.h"
 
 #define HITLS_CERT_CTX_SPECIFIC_TAG_VER       0
 #define HITLS_CERT_CTX_SPECIFIC_TAG_ISSUERID  1
@@ -295,7 +296,7 @@ int32_t HITLS_X509_ParseCertExt(BSL_ASN1_Buffer *ext, HITLS_X509_Cert *cert)
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
         BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {2, expTag};
-    int ret = BSL_ASN1_DecodeLsitItem(&listParam, ext, &HITLS_CERT_ParseExtSeqof, cert, cert->tbs.ext.list);
+    int ret = BSL_ASN1_DecodeListItem(&listParam, ext, &HITLS_CERT_ParseExtSeqof, cert, cert->tbs.ext.list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(cert->tbs.ext.list, NULL);
         BSL_ERR_PUSH_ERROR(ret);
@@ -352,9 +353,8 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
     }
 
     // subject public key info
-    BSL_Buffer encode = {asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff, asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len};
-    ret = CRYPT_EAL_ParseBuffPubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode,
-        (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
+    ret = CRYPT_EAL_ParseAsn1SubPubkey(asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
+        asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len, &cert->tbs.ealPubKey, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

@@ -108,7 +108,7 @@ typedef struct _BSL_ASN1_DecodeListParam {
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len);
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen);
 
-int32_t BSL_ASN1_DecodeLsitItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
+int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
     BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list);
 
 

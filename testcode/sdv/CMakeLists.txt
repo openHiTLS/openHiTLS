@@ -133,7 +133,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/crypto/ecdsa/include
         ${openHiTLS_SRC}/crypto/sm2/include
         ${openHiTLS_SRC}/crypto/sm2/src
-        ${openHiTLS_SRC}/crypto//encode/include
+        ${openHiTLS_SRC}/crypto/encode/include
         ${openHiTLS_SRC}/bsl/err/include
         ${openHiTLS_SRC}/bsl/err/src
         ${openHiTLS_SRC}/bsl/uio/include

@@ -72,7 +72,7 @@ int32_t CRYPT_EAL_ParseFilePubKey(BSL_ParseFormat format, int32_t type, const ch
  * @param   type [IN] the type of private-key.
  * @param   encode [IN] the encoded asn1 buffer.
  * @param   pwd [IN] the password, maybe NULL for unencrypted private key.
- * @param   pwd [IN] the length of password.
+ * @param   pwdlen [IN] the length of password.
  * @param   ealPriKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
  *
  * @retval #CRYPT_SUCCESS, if success.
@@ -89,7 +89,7 @@ int32_t CRYPT_EAL_ParseBuffPriKey(BSL_ParseFormat format, int32_t type,
  * @param   type [IN] the type of private-key.
  * @param   path [IN] the encoded file path.
  * @param   pwd [IN] the password, maybe NULL for unencrypted private key.
- * @param   pwd [IN] the length of password.
+ * @param   pwdlen [IN] the length of password.
  * @param   ealPriKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the path.
  *
  * @retval #CRYPT_SUCCESS, if success.

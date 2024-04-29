@@ -17,9 +17,11 @@
 #include "bsl_asn1.h"
 #include "bsl_err.h"
 #include "bsl_log.h"
+#include "bsl_init.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
+#include "crypt_encode.h"
 #include "crypt_util_rand.h"
 #include "bsl_obj_internal.h"
 
@@ -207,6 +209,7 @@ static void RegisterLogFunc()
     func.fixLenFunc = BinLogFixLenFunc;
     func.varLenFunc = BinLogVarLenFunc;
     BSL_LOG_RegBinLogFunc(&func);
+    BSL_GLOBAL_Init();
 }
 
 static int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
@@ -309,6 +312,7 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(signdata);
     BSL_SAL_FREE(rawBuff);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -330,6 +334,7 @@ void SDV_BSL_ASN1_PARSE_PUBKEY_FILE_TC001(char *path, int fileType, int mdId, He
 
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -337,15 +342,13 @@ exit:
 void SDV_BSL_ASN1_PARSE_SUBPUBKEY_TC001(int encodeType, Hex *subKeyInfo)
 {
     RegisterLogFunc();
-    BSL_Buffer buff;
-    buff.data = subKeyInfo->x;
-    buff.dataLen = subKeyInfo->len;
-
+    (void)encodeType;
     CRYPT_EAL_PkeyCtx *pctx = NULL;
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(BSL_PARSE_FORMAT_ASN1, encodeType, &buff, &pctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_PkeyFreeCtx(pctx);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -370,13 +373,48 @@ void SDV_BSL_ASN1_PARSE_PRIKEY_FILE_TC001(char *path, int fileType, int mdId, He
     ASSERT_TRUE(signdata != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
 
-    if (fileType == CRYPT_PRIKEY_RSA) {
+    if (sign->len != 0) {
         ASSERT_COMPARE("Signature Compare", sign->x, sign->len, signdata, signLen);
     }
 
 exit:
     BSL_SAL_Free(signdata);
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC001(char *path, int fileType, int mdId, Hex *msg, int alg,
+    Hex *rawKey, int paraId)
+{
+    RegisterLogFunc();
+    CRYPT_RandRegist(RandFunc);
+    uint8_t rawPriKey[100] = {0};
+    uint32_t rawPriKeyLen = 100;
+    uint8_t *signdata = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyPrv pkeyPrv = {0};
+    pkeyPrv.id = alg;
+    pkeyPrv.key.eccPrv.data = rawPriKey;
+    pkeyPrv.key.eccPrv.len = rawPriKeyLen;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkeyCtx, &pkeyPrv), CRYPT_SUCCESS);
+    ASSERT_COMPARE("key cmp", rawKey->x, rawKey->len, rawPriKey, rawKey->len);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkeyCtx), alg);
+    if (alg != CRYPT_PKEY_SM2) { // sm2 is null
+        ASSERT_EQ(CRYPT_EAL_PkeyGetParaId(pkeyCtx), paraId);
+    }
+    /* Malloc signature buffer */
+    uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(pkeyCtx);
+    signdata = (uint8_t *)BSL_SAL_Malloc(signLen);
+    ASSERT_TRUE(signdata != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
+
+exit:
+    BSL_SAL_Free(signdata);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -402,12 +440,13 @@ void SDV_BSL_ASN1_PARSE_ENCPK8_TC001(char *path, int fileType, Hex *pass, int md
     ASSERT_TRUE(signdata != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
 
-    if (fileType == CRYPT_PRIKEY_RSA) {
+    if (sign->len != 0) {
         ASSERT_COMPARE("Signature Compare", sign->x, sign->len, signdata, signLen);
     }
 
 exit:
     BSL_SAL_Free(signdata);
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */

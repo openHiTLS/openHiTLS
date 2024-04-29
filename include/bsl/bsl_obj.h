@@ -154,6 +154,7 @@ typedef enum {
 
     /* PKCS 5 */
     BSL_CID_PBKDF2 = 12001,         /**< identifies PBKDF2 */
+    BSL_CID_PBES2,
 
     /* standard constant international curve */
     // BRAINPOOL

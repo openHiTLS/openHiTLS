@@ -245,7 +245,7 @@ int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list)
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET,
         BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {2, expTag};
-    int32_t ret = BSL_ASN1_DecodeLsitItem(&listParam, name, &HITLS_X509_ParseListAsnItem, NULL, list);
+    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, name, &HITLS_X509_ParseListAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
         return ret;

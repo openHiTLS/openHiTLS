@@ -18,6 +18,9 @@
 
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
 {
+    if (encode == NULL || encLen == NULL || len == NULL) {
+        return BSL_NULL_INPUT;
+    }
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
     uint32_t parseLen = 0;
@@ -85,6 +88,9 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
 
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen)
 {
+    if (encode == NULL || encLen == NULL || valLen == NULL) {
+        return BSL_NULL_INPUT;
+    }
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
     if (tempLen < 1) {
@@ -109,6 +115,9 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
 
 int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem)
 {
+    if (encode == NULL || encLen == NULL || asnItem == NULL) {
+        return BSL_NULL_INPUT;
+    }
     uint8_t tag;
     uint32_t len;
     uint8_t *temp = *encode;
@@ -307,7 +316,7 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
 }
 
 
-int32_t BSL_ASN1_DecodeLsitItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
+int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
     BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
 {
     if (param == NULL || asn == NULL || parseListItemCb == NULL || list == NULL) {
@@ -578,7 +587,8 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
     uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnArr, uint32_t arrNum)
 {
     int32_t ret;
-    if (templ == NULL || encode == NULL || encLen == NULL || asnArr == NULL) {
+    if (templ == NULL || templ->templNum == 0 || templ->templItems == NULL ||
+        encode == NULL || encLen == NULL || asnArr == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
