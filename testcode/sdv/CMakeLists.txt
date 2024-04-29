@@ -82,6 +82,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/bsl/sal/include
         ${openHiTLS_SRC}/bsl/tlv/include
         ${openHiTLS_SRC}/include/bsl
+        ${openHiTLS_SRC}/include/tls
         ${openHiTLS_SRC}/bsl/log/include
         ${openHiTLS_SRC}/bsl/hash/include
         ${openHiTLS_SRC}/bsl/list/include

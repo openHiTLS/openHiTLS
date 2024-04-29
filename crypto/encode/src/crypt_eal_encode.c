@@ -589,6 +589,9 @@ int32_t CRYPT_EAL_ParseBuffPubKey(BSL_ParseFormat format, int32_t type, BSL_Buff
                                   CRYPT_EAL_PkeyCtx **ealPubKey)
 {
     (void)format;
+    if (encode == NULL || ealPubKey == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
     switch (type) {
         case CRYPT_PUBKEY_SUBKEY:
             return ParseSubPubkeyAsn1Buff(encode->data, encode->dataLen, ealPubKey, false);
@@ -669,7 +672,9 @@ int32_t CRYPT_EAL_ParseBuffPriKey(BSL_ParseFormat format, int32_t type, BSL_Buff
 {
     (void)format;
     BSL_Buffer pass = {.data = pwd, .dataLen = pwdlen};
-
+    if (encode == NULL || ealPriKey == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
     switch (type) {
         case CRYPT_PRIKEY_ECC:
             return ParseEccPrikeyAsn1Buff(encode->data, encode->dataLen, NULL, ealPriKey);

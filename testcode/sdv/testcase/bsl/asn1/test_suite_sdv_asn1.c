@@ -204,6 +204,38 @@ void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
 }
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_DecodeTemplate_TC001(char *path)
+{
+    BSL_LOG_BinLogFuncs func = {0};
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
+
+    uint32_t fileLen = 0;
+    uint8_t *fileBuff = NULL;
+    int32_t ret = ReadCert(path, &fileBuff, &fileLen);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+    uint8_t *rawBuff = fileBuff;
+    BSL_ASN1_Buffer asnArr[BSL_ASN1_TAG_SIGN_IDX + 1] = {0};
+    BSL_ASN1_Template templ = {certTempl, sizeof(certTempl) / sizeof(certTempl[0])};
+    ret = BSL_ASN1_DecodeTemplate(NULL, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, asnArr, BSL_ASN1_TAG_SIGN_IDX + 1);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &fileBuff, &fileLen, asnArr, BSL_ASN1_TAG_SIGN_IDX + 1);
+    ASSERT_EQ(ret, BSL_ASN1_ERR_NO_CALLBACK);
+    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, NULL, &fileLen, asnArr, BSL_ASN1_TAG_SIGN_IDX + 1);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, NULL, asnArr, BSL_ASN1_TAG_SIGN_IDX + 1);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, NULL, BSL_ASN1_TAG_SIGN_IDX + 1);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, asnArr, 0);
+    ASSERT_EQ(ret, BSL_ASN1_ERR_OVERFLOW);
+exit:
+    BSL_SAL_FREE(rawBuff);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_CERT_FUNC_TC001(char *path, Hex *version, Hex *serial, Hex *algId, Hex *anyAlgId,
     Hex *issuer, Hex *before, Hex *after, Hex *subject, Hex *pubId, Hex *pubAny, Hex *pubKey, Hex *issuerId,
     Hex *subjectId, Hex *ext, Hex *signAlg, Hex *signAlgAny, Hex *sign)
@@ -322,6 +354,48 @@ exit:
 }
 /* END_CASE */
 
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DecodePrimitiveItem_FUNC_TC001(Hex *val)
+{
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BOOLEAN, val->len, val->x};
+    bool res;
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(NULL, &res);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodePrimitiveItem(&asn, NULL);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DecodePrimitiveItem_FUNC_TC002(int tag, Hex *val)
+{
+    BSL_ASN1_Buffer asn = {(uint8_t)tag, val->len, val->x};
+    int32_t res;
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(NULL, &res);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodePrimitiveItem(&asn, NULL);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DecodePrimitiveItem_FUNC_TC003(Hex *val)
+{
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BITSTRING, val->len, val->x};
+    BSL_ASN1_BitString res;
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(NULL, &res);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+    ret = BSL_ASN1_DecodePrimitiveItem(&asn, NULL);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
+exit:
+    return;
+}
+/* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_BOOL_PRIMITIVEITEM_FUNC(Hex *val, int expectVal)

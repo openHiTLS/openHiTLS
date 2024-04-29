@@ -639,6 +639,9 @@ bool CRYPT_EAL_PkeyIsValidAlgId(CRYPT_PKEY_AlgId id)
 int32_t CRYPT_EAL_PkeyUpRef(CRYPT_EAL_PkeyCtx *pkey)
 {
     int i = 0;
+    if (pkey == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
     return BSL_SAL_AtomicUpReferences(&(pkey->references), &i);
 }
 #endif

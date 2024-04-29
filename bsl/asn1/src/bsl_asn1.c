@@ -310,13 +310,13 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
 int32_t BSL_ASN1_DecodeLsitItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
     BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
 {
+    if (param == NULL || asn == NULL || parseListItemCb == NULL || list == NULL) {
+        return BSL_INVALID_ARG;
+    }
+    
      // Currently, it supports a maximum of 2 layers
     if (param->layer > BSL_ASN1_MAX_LIST_NEST_EPTH) {
         return BSL_ASN1_ERR_EXCEED_LIST_DEPTH;
-    }
-    
-    if (parseListItemCb == NULL) {
-        return BSL_INVALID_ARG;
     }
     
     if (param->layer == 1) {
@@ -333,6 +333,9 @@ int32_t BSL_ASN1_DecodeLsitItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer
  *  */
 int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData)
 {
+    if (asn == NULL || decodeData == NULL) {
+        return BSL_NULL_INPUT;
+    }
     switch (asn->tag) {
         case BSL_ASN1_TAG_BOOLEAN:
             return ParseBool(asn->buff, asn->len, decodeData);
@@ -575,6 +578,9 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
     uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnArr, uint32_t arrNum)
 {
     int32_t ret;
+    if (templ == NULL || encode == NULL || encLen == NULL || asnArr == NULL) {
+        return BSL_NULL_INPUT;
+    }
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
     BSL_ASN1_Buffer asn = {0}; // temp var

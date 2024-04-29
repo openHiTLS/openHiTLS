@@ -509,6 +509,26 @@ exit:
 }
 /* END_CASE */
 
+// subkey
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC001(char *path, char *path2)
+{
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Cert *cert2 = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_ParseCertTest(path2, &cert2);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_X509_CheckSignature(cert2->tbs.ealPubKey, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen,
+        &cert->signAlgId, &cert->signature);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_FreeCert(cert);
+    HITLS_X509_FreeCert(cert2);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
     int expKuDigitailSign, int expKuCertSign, int expKuKeyAgreement)
@@ -546,7 +566,73 @@ exit:
 }
 /* END_CASE */
 
-// subkey
 // ext
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_EXTENSIONS_FUNC_TC001(char *path, int isCA, int maxPathLen, int keyUsage,
+    int tag1, Hex *value1, int tag2, Hex *value2,
+    int tag3, Hex *value3, int tag4, Hex *value4)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(cert->tbs.ext.isCa, isCA);
+    ASSERT_EQ(cert->tbs.ext.maxPathLen, maxPathLen);
+    ASSERT_EQ(cert->tbs.ext.keyUsage, keyUsage);
+
+    BSL_ASN1_Buffer expAsan1Arr[] = {
+        {tag1, value1->len, value1->x}, {tag2, value2->len, value2->x},
+        {tag3, value3->len, value3->x}, {tag4, value4->len, value4->x},
+    };
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.ext.list), 2);
+    HITLS_X509_ExtEntry **nameNode = NULL;
+    nameNode = BSL_LIST_First(cert->tbs.ext.list);
+    for (size_t i = 0; i < sizeof(expAsan1Arr) / sizeof(expAsan1Arr[0]); i+=2) {
+        ASSERT_NE((*nameNode), NULL);
+        ASSERT_EQ((*nameNode)->critical, 0);
+        ASSERT_EQ((*nameNode)->extnId.tag, expAsan1Arr[i].tag);
+        ASSERT_COMPARE("ext", (*nameNode)->extnId.buff, (*nameNode)->extnId.len, expAsan1Arr[i].buff, expAsan1Arr[i].len);
+        ASSERT_EQ((*nameNode)->extnValue.tag, expAsan1Arr[i+1].tag);
+        ASSERT_COMPARE("extnValue", (*nameNode)->extnValue.buff, (*nameNode)->extnValue.len, expAsan1Arr[i+1].buff, expAsan1Arr[i+1].len);
+        nameNode = BSL_LIST_Next(cert->tbs.ext.list);
+    }
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 // sign alg
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
+    int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(cert->signAlgId.algId, signAlg);
+    ASSERT_EQ(cert->signAlgId.rsaPssParam.mdId, rsaPssHash);
+    ASSERT_EQ(cert->signAlgId.rsaPssParam.mgfId, rsaPssMgf1);
+    ASSERT_EQ(cert->signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
+
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 // signature
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBits)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(cert->signature.len, buff->len);
+    ASSERT_COMPARE("signature", cert->signature.buff, cert->signature.len, buff->x, buff->len);
+    ASSERT_EQ(cert->signature.unusedBits, unusedBits);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
