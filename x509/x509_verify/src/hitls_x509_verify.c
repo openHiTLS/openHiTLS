@@ -131,9 +131,8 @@ HITLS_X509_StoreCtx *HITLS_X509_NewStoreCtx(void)
         return NULL;
     }
 
-    ctx->verifyParam.maxDepth = 20;
+    ctx->verifyParam.maxDepth = HITLS_X509_MAX_DEPTH;
     ctx->verifyParam.securityBits = 128;
-    ctx->verifyParam.flags |= HITLS_X509_VFY_FLAG_CRL_ALL;
     BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }

@@ -222,7 +222,7 @@ void SDV_X509_STORE_CTRL_FUNC_TC001(void)
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_SECBITS, &val, sizeof(int32_t));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(store->verifyParam.securityBits, val);
-    ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS | HITLS_X509_VFY_FLAG_CRL_ALL);
+    ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS);
     int64_t timeval = 55;
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
@@ -232,7 +232,7 @@ void SDV_X509_STORE_CTRL_FUNC_TC001(void)
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &timeval, sizeof(timeval));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(store->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME, 0);
-    ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS | HITLS_X509_VFY_FLAG_CRL_ALL);
+    ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS);
     int ref;
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_REF_UP, &ref, sizeof(int));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
@@ -364,8 +364,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002(void)
     int64_t timeval = time(NULL);
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
@@ -416,8 +414,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC003(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = X509_AddCertToChainTest(chain, ca);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
@@ -445,8 +441,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC004(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_TRUE(chain != NULL);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
@@ -472,8 +466,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC005(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_TRUE(chain != NULL);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
@@ -502,8 +494,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006(void)
     int64_t timeval = 5555;
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
@@ -543,8 +533,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007(void)
     int64_t timeval = time(NULL);
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
@@ -593,8 +581,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *ce
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_BuildCertChain(store, entity, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    int64_t clrflag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrflag, sizeof(int64_t));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     int64_t setFlag = (int64_t)flag;
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(int64_t));
@@ -633,8 +619,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = BSL_LIST_AddElementInt(chain, NULL, BSL_LIST_POS_BEGIN);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
