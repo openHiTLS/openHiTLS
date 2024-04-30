@@ -24,7 +24,8 @@
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]}
                     },
-                    "usrdata": null
+                    "usrdata": null,
+                    "asn1":null
                 }
             }
         },
@@ -119,6 +120,14 @@
             "features": {
                 "c": {
                     "all_tls": null
+                }
+            }
+        },
+        "hitls_x509":{
+            "lang" : "C",
+            "features" : {
+                "c": {
+                    "all_x509" : null
                 }
             }
         }
@@ -421,6 +430,11 @@
                 ".features": ["usrdata"],
                 ".srcs": "bsl/usrdata/src/*.c"
             },
+            "asn1": {
+                ".features": ["asn1"],
+                ".srcs": "bsl/asn1/src/*.c",
+                ".deps": ["bsl::sal"]
+            },
             "init": {
                 ".features": ["init"],
                 ".srcs": "bsl/init/*.c"
@@ -524,6 +538,29 @@
                     "include",
                     "bsl/uio/src"
                 ]
+            }
+        },
+        "x509" : {
+            "x509_cert": {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_cert/src/*",
+                ".deps" : ["platform::Secure_C"],
+                ".include" : [
+                    "bsl/asn1/include"
+                ]
+            },
+            "x509_crl" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_crl/src/*",
+                ".deps" : ["platform::Secure_C"],
+                ".include" : [
+                    "bsl/asn1/include"
+                ]
+            },
+            "x509_verify" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_verify/src/*",
+                ".deps" : ["platform::Secure_C"]
             }
         }
     }

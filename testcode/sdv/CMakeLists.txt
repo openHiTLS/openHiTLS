@@ -130,5 +130,6 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/bsl/err/src
         ${openHiTLS_SRC}/bsl/uio/include
         ${openHiTLS_SRC}/bsl/uio/src
+        ${openHiTLS_SRC}/bsl/asn1/include
         ${openHiTLS_SRC}/config/macro_config)
 

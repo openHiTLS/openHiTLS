@@ -141,7 +141,7 @@ static uint32_t BslDateTimeCmpCheck(const BSL_TIME *dateA, int64_t *utcTimeA,
     return BSL_SUCCESS;
 }
 
-uint32_t BSL_SAL_DateTimeCompare(const BSL_TIME *dateA, const BSL_TIME *dateB, int64_t *diffSec)
+int32_t BSL_SAL_DateTimeCompare(const BSL_TIME *dateA, const BSL_TIME *dateB, int64_t *diffSec)
 {
     int64_t utcTimeA = 0;
     int64_t utcTimeB = 0;
@@ -179,7 +179,7 @@ static uint32_t TimeCmp(uint32_t a, uint32_t b)
     return BSL_TIME_CMP_EQUAL;
 }
 
-uint32_t BSL_SAL_DateTimeCompareByUs(const BSL_TIME *dateA, const BSL_TIME *dateB)
+int32_t BSL_SAL_DateTimeCompareByUs(const BSL_TIME *dateA, const BSL_TIME *dateB)
 {
     int64_t diffSec = 0;
     uint32_t ret;
@@ -228,7 +228,7 @@ uint32_t BSL_DateTimeAddUs(BSL_TIME *dateR, const BSL_TIME *dateA, uint32_t us)
     return BSL_SUCCESS;
 }
 
-uint32_t BSL_SAL_DateToUtcTimeConvert(const BSL_TIME *dateTime, int64_t *utcTime)
+int32_t BSL_SAL_DateToUtcTimeConvert(const BSL_TIME *dateTime, int64_t *utcTime)
 {
     uint32_t ret = BSL_INTERNAL_EXCEPTION;
 
@@ -342,7 +342,7 @@ bool BSL_DateTimeCheck(const BSL_TIME *dateTime)
     return ret;
 }
 
-uint32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
+int32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
 {
     if (sysTime == NULL || utcTime > BSL_UTCTIME_MAX) {
         return BSL_SAL_ERR_BAD_PARAM;
@@ -350,7 +350,7 @@ uint32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
     return TIME_UtcTimeToDateConvert(utcTime, sysTime);
 }
 
-uint32_t BSL_SAL_SysTimeGet(BSL_TIME *sysTime)
+int32_t BSL_SAL_SysTimeGet(BSL_TIME *sysTime)
 {
     if (sysTime == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;

@@ -561,9 +561,6 @@ typedef struct {
     uint8_t  minute;    /**< Minute, the value range is [0, 59]. */
     uint16_t millSec;   /**< Millisecond, the value range is [0, 999]. */
     uint8_t  second;    /**< Second, the value range is [0, 59]. */
-    uint8_t  utcSign;   /**< Positive or negtive to UTC 0:positive 1:negtive. */
-    uint8_t  utcHour;   /**< Hour to UTC,the value domain is from 0~11. */
-    uint8_t  utcMinute; /**< Minutes to UTC, the value domain is from 0~59. */
     uint32_t microSec;  /**< Microseconds, the value range is [0, 999]. */
 } BSL_TIME;
 
@@ -611,7 +608,7 @@ void BSL_SAL_SysTimeFuncReg(BslTimeFunc func);
  * @retval  #BSL_TIME_DATE_BEFORE - The first date is before the second date.
  * @retval  #BSL_TIME_DATE_AFTER - The first date is after the second
  */
-uint32_t BSL_SAL_DateTimeCompare(const BSL_TIME *dateA, const BSL_TIME *dateB, int64_t *diffSec);
+int32_t BSL_SAL_DateTimeCompare(const BSL_TIME *dateA, const BSL_TIME *dateB, int64_t *diffSec);
 
 /**
  * @ingroup bsl_sal
@@ -625,7 +622,7 @@ uint32_t BSL_SAL_DateTimeCompare(const BSL_TIME *dateA, const BSL_TIME *dateB, i
  * @retval #BSL_SAL_ERR_BAD_PARAM, the value of cb is null.
  * @retval #BSL_INTERNAL_EXCEPTION, an exception occurred when obtaining the time.
  */
-uint32_t BSL_SAL_SysTimeGet(BSL_TIME *sysTime);
+int32_t BSL_SAL_SysTimeGet(BSL_TIME *sysTime);
 
 /**
  * @ingroup bsl_sal
@@ -649,7 +646,7 @@ BslUnixTime BSL_SAL_CurrentSysTimeGet(void);
  * @retval #BSL_SUCCESS, time is successfully converted.
  * @retval #BSL_INTERNAL_EXCEPTION, an exception occurred when obtaining the time.
  */
-uint32_t BSL_SAL_DateToUtcTimeConvert(const BSL_TIME *dateTime, int64_t *utcTime);
+int32_t BSL_SAL_DateToUtcTimeConvert(const BSL_TIME *dateTime, int64_t *utcTime);
 
 /**
  * @ingroup bsl_sal
@@ -663,7 +660,7 @@ uint32_t BSL_SAL_DateToUtcTimeConvert(const BSL_TIME *dateTime, int64_t *utcTime
  * @retval #BSL_SUCCESS, time is converted successfully
  * @retval #BSL_SAL_ERR_BAD_PARAM, the value of utcTime exceeds the upper limit or the value of sysTime is null.
  */
-uint32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime);
+int32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime);
 
 /**
  * @ingroup bsl_sal
@@ -680,7 +677,7 @@ uint32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime);
  * @retval #BSL_TIME_DATE_BEFORE - The first date is on the second
  * @retval #BSL_TIME_DATE_ AFTER - The first date is after the second
  */
-uint32_t BSL_SAL_DateTimeCompareByUs(const BSL_TIME *dateA, const BSL_TIME *dateB);
+int32_t BSL_SAL_DateTimeCompareByUs(const BSL_TIME *dateA, const BSL_TIME *dateB);
 
 /**
  * @ingroup bsl_sal
