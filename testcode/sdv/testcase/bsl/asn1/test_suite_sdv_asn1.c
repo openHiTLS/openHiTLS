@@ -229,7 +229,7 @@ void SDV_BSL_ASN1_DecodeTemplate_TC001(char *path)
     ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, NULL, BSL_ASN1_TAG_SIGN_IDX + 1);
     ASSERT_EQ(ret, BSL_NULL_INPUT);
     ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, asnArr, 0);
-    ASSERT_EQ(ret, BSL_ASN1_ERR_OVERFLOW);
+    ASSERT_EQ(ret, BSL_NULL_INPUT);
 exit:
     BSL_SAL_FREE(rawBuff);
 }

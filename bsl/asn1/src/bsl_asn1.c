@@ -592,7 +592,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
 {
     int32_t ret;
     if (templ == NULL || templ->templNum == 0 || templ->templItems == NULL ||
-        encode == NULL || encLen == NULL || asnArr == NULL) {
+        encode == NULL || encLen == NULL || asnArr == NULL || arrNum == 0) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;

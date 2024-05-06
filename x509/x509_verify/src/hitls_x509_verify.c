@@ -577,17 +577,20 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
         ret = HITLS_X509_TrvList(crl->tbs.crlExt.extList,
             (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, NULL);
         if (ret != HITLS_X509_SUCCESS) {
+            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
             continue;
         }
         
         ret = HITLS_X509_CheckTime(storeCtx, &(crl->tbs.validTime));
         if (ret != HITLS_X509_SUCCESS) {
+            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
             continue;
         }
 
         ret = HITLS_X509_CheckSignature(parent->tbs.ealPubKey, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen,
             &(crl->signAlgId), &(crl->signature));
         if (ret != HITLS_X509_SUCCESS) {
+            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
             continue;
         }
         flag = true;

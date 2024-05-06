@@ -571,6 +571,8 @@ int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_CERT_SIGN);
         case HITLS_X509_CERT_EXT_KU_KEYAGREEMENT:
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_AGREEMENT);
+        case HITLS_X509_CERT_EXT_KU_KEYENC:
+            return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
