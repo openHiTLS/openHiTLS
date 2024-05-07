@@ -478,11 +478,17 @@
             },
             "cert": {
                 ".features": ["all_tls"],
-                ".srcs": "tls/cert/cert_adapt/*.c",
+                ".srcs": "tls/cert/**/*.c",
                 ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal"],
                 ".include": [
                     "include",
-                    "include/tls"
+                    "include/tls",
+                    "include/bsl",
+                    "bsl/asn1/include",
+                    "x509/include",
+                    "x509/x509_cert/include",
+                    "x509/x509_common/include",
+                    "tls/cert/hitls_x509_adapt"
                 ]
             },
             "config": {

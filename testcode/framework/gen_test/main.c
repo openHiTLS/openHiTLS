@@ -73,7 +73,7 @@ int WriteToFile(GenTestParams *genParam)
 
 int main(int argc, char **argv)
 {
-    (void) argc;
+    (void)argc;
 #ifndef PRINT_TO_TERMINAL
     FILE *fp = fopen("GenTest.output", "a");
     if (fp == NULL) {

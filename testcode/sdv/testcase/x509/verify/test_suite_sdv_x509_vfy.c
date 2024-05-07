@@ -253,11 +253,11 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     int32_t ret = HITLS_ParseCertTest("../testdata/cert/asn1/rsa2048ssa-pss.crt", &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CA, cert, sizeof(HITLS_X509_Cert));
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cert->references.count, 2);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
-    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CA, cert, sizeof(HITLS_X509_Cert));
+    ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
     HITLS_X509_Crl *crl = NULL;
     ret = HITLS_ParseCrlTest("../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der", &crl);
@@ -283,7 +283,7 @@ static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, 
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
-    return HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CA, *cert, sizeof(HITLS_X509_Cert));
+    return HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, *cert, sizeof(HITLS_X509_Cert));
 }
 
 static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Crl **crl)

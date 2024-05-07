@@ -50,6 +50,7 @@ endif()
 target_link_directories(${sdv_exe}
     PUBLIC
         ${openHiTLS_SRC}/build
+        ${openHiTLS_SRC}/testcode/framework/tls/lib
         ${openHiTLS_SRC}/platform/Secure_C/lib
         )
 if(ENABLE_X509)
@@ -57,7 +58,18 @@ if(ENABLE_X509)
         -lhitls_x509
     )
 endif()
-if(ENABLE_CRYPTO)
+
+if(ENABLE_TLS)
+    target_link_libraries(${sdv_exe}
+        -ltls_hlt
+        -ltls_frame
+        -lhitls_tls
+        -lhitls_x509
+        -lrec_wrapper
+    )
+endif()
+
+if(ENABLE_CRYPTO OR ENABLE_TLS)
     target_link_libraries(${sdv_exe}
         -lhitls_crypto
     )
@@ -68,8 +80,7 @@ target_link_libraries(${sdv_exe}
     -lboundscheck
     -lpthread
 )
-
-if(ENABLE_UIO_SCTP)
+if(ENABLE_UIO_SCTP OR ENABLE_TLS)
     target_link_libraries(${sdv_exe} -lsctp)
 endif()
 target_include_directories(${sdv_exe}
@@ -79,6 +90,14 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/testcode/framework/include
         ${openHiTLS_SRC}/testcode/framework/crypto
         ${openHiTLS_SRC}/testcode/framework/stub
+        ${openHiTLS_SRC}/testcode/framework/tls/func_wrapper/include
+        ${openHiTLS_SRC}/testcode/framework/tls/include
+        ${openHiTLS_SRC}/testcode/framework/tls/callback/include
+        ${openHiTLS_SRC}/testcode/framework/tls/base/include
+        ${openHiTLS_SRC}/testcode/framework/tls/resource/include
+        ${openHiTLS_SRC}/testcode/framework/tls/rpc/include
+        ${openHiTLS_SRC}/testcode/framework/tls/process/include
+        ${openHiTLS_SRC}/testcode/framework/tls/transfer/include
         ${openHiTLS_SRC}/bsl/sal/include
         ${openHiTLS_SRC}/bsl/tlv/include
         ${openHiTLS_SRC}/include/bsl
@@ -136,7 +155,19 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/crypto/encode/include
         ${openHiTLS_SRC}/bsl/err/include
         ${openHiTLS_SRC}/bsl/err/src
+        ${openHiTLS_SRC}/include/tls
+        ${openHiTLS_SRC}/tls/include
+        ${openHiTLS_SRC}/tls/cert/include
+        ${openHiTLS_SRC}/tls/cm/include
+        ${openHiTLS_SRC}/tls/config/include
+        ${openHiTLS_SRC}/tls/crypt/include
+        ${openHiTLS_SRC}/tls/app/include
+        ${openHiTLS_SRC}/tls/app/src
+        ${openHiTLS_SRC}/tls/ccs/include
+        ${openHiTLS_SRC}/tls/alert/include
         ${openHiTLS_SRC}/bsl/uio/include
+        ${openHiTLS_SRC}/tls/record/include
+        ${openHiTLS_SRC}/tls/record/src
         ${openHiTLS_SRC}/bsl/uio/src
         ${openHiTLS_SRC}/bsl/asn1/include
         ${openHiTLS_SRC}/x509/include
@@ -144,5 +175,21 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/x509/x509_common/include
         ${openHiTLS_SRC}/x509/x509_crl/include
         ${openHiTLS_SRC}/x509/x509_verify/include
+        ${openHiTLS_SRC}/config/macro_config
+        ${openHiTLS_SRC}/tls/handshake/include
+        ${openHiTLS_SRC}/tls/handshake/common/include
+        ${openHiTLS_SRC}/tls/handshake/cookie/include
+        ${openHiTLS_SRC}/tls/handshake/parse/include
+        ${openHiTLS_SRC}/tls/handshake/pack/include
+        ${openHiTLS_SRC}/tls/handshake/send/src
+        ${openHiTLS_SRC}/tls/handshake/recv/src
+        ${openHiTLS_SRC}/tls/handshake/recv/include
+        ${openHiTLS_SRC}/tls/feature/session/src
+        ${openHiTLS_SRC}/tls/cert/include
+        ${openHiTLS_SRC}/tls/cert/cert_adapt
+        ${openHiTLS_SRC}/tls/cert/cert_self
+        ${openHiTLS_SRC}/tls/crypt/crypt_self
+        ${openHiTLS_SRC}/config/macro_config
+	${openHiTLS_SRC}/tls/handshake/parse/src
         ${openHiTLS_SRC}/config/macro_config)
 

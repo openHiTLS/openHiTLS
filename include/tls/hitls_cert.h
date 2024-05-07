@@ -575,12 +575,14 @@ int32_t HITLS_CFG_AddChainCert(HITLS_Config *config, HITLS_CERT_X509 *cert, bool
  * @brief   Add the certificate to the certificate store that is being used by the current config.
  *
  * @param   config  [IN] TLS link configuration
- * @param   certPath [IN] Certificate path to be added
+ * @param   cert [IN] Certificate to be added
  * @param   storeType [IN] Indicates which store to add cert.
+ * @param   isClone [IN] Indicates whether deep copy is required. The options are true and false.
  * @retval  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, char *certPath, HITLS_CERT_StoreType storeType);
+int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_StoreType storeType,
+    bool isClone);
 
 /**
  * @ingroup hitls_cert

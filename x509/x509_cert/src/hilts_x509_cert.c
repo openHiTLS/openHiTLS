@@ -565,6 +565,8 @@ int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
             return X509_CertGetSignAlg(cert, val, valLen);
         case HITLS_X509_CERT_REF_UP:
             return X509_CertRefUp(cert, val, valLen);
+        case HITLS_X509_CERT_EXT_KU_KEYENC:
+            return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT);
         case HITLS_X509_CERT_EXT_KU_DIGITALSIGN:
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_DIGITAL_SIGN);
         case HITLS_X509_CERT_EXT_KU_CERTSIGN:
@@ -635,10 +637,12 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
      * Conforming CAs MUST include this extension in certificates that contain public keys that are used to validate digital signatures on
      * other public key certificates or CRLs.
      */
-    if (((issue->tbs.ext.keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN)) == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
-        return HITLS_X509_ERR_VFY_KU_NO_CERTSIGN;
-    }
+    if (issue->tbs.ext.extFlags & HITLS_X509_CERT_EXT_FLAG_KUSAGE) {
+    	if (((issue->tbs.ext.keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN)) == 0) {
+        	BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
+        	return HITLS_X509_ERR_VFY_KU_NO_CERTSIGN;
+    	}
+	}
     *res = true;
     return HITLS_X509_SUCCESS;
 }

@@ -220,7 +220,7 @@ static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ce
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen, bool isCopy)
 {
     if (val == NULL || valLen != sizeof(HITLS_X509_Cert)) {
         BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
@@ -230,14 +230,19 @@ static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valL
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
-    int ref;
-    ret = HITLS_X509_CtrlCert(val, HITLS_X509_CERT_REF_UP, &ref, sizeof(int));
-    if (ret != HITLS_SUCCESS) {
-        return ret;
+    if (isCopy) {
+        int ref;
+        ret = HITLS_X509_CtrlCert(val, HITLS_X509_CERT_REF_UP, &ref, sizeof(int));
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
     }
 
     ret = BSL_LIST_AddElement(storeCtx->store, val, BSL_LIST_POS_BEFORE);
     if (ret != HITLS_SUCCESS) {
+        if (isCopy) {
+            HITLS_X509_FreeCert(val);
+        }
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -306,8 +311,10 @@ int32_t HITLS_X509_CtrlStoreCtx(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
             return X509_SetVerifySecurityBits(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_CLR_PARAM_FLAGS:
             return X509_ClearParamFlag(storeCtx, val, valLen);
-        case HITLS_X509_STORECTX_SET_CA:
-            return X509_SetCA(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_DEEP_COPY_SET_CA:
+            return X509_SetCA(storeCtx, val, valLen, true);
+        case HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA:
+            return X509_SetCA(storeCtx, val, valLen, false);
         case HITLS_X509_STORECTX_SET_CRL:
             return X509_SetCRL(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_REF_UP:

@@ -60,6 +60,38 @@ endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L")
 
 include(ExternalProject)
+ExternalProject_Add(${LIB_TEST_TLS}
+    SOURCE_DIR            ${openHiTLS_SRC}
+    PREFIX                ""
+    BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/tls/build
+    INSTALL_DIR           ""
+    UPDATE_COMMAND        ""
+    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DENABLE_TLS_DEBUG=${TLS_DEBUG} ..
+    BUILD_COMMAND         make
+    INSTALL_COMMAND       ""
+    BUILD_ALWAYS          FALSE
+    LOG_BUILD             TRUE
+    LOG_DOWNLOAD          TRUE
+    EXCLUDE_FROM_ALL      TRUE
+    LOG_OUTPUT_ON_FAILURE TRUE
+)
+
+ExternalProject_Add(${PROCESS}
+    SOURCE_DIR            ${openHiTLS_SRC}
+    PREFIX                ""
+    BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/process/build
+    INSTALL_DIR           ""
+    UPDATE_COMMAND        ""
+    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
+    BUILD_COMMAND         make
+    INSTALL_COMMAND       ""
+    DEPENDS               ${LIB_TEST_TLS}
+    BUILD_ALWAYS          FALSE
+    LOG_BUILD             TRUE
+    LOG_DOWNLOAD          TRUE
+    EXCLUDE_FROM_ALL      TRUE
+    LOG_OUTPUT_ON_FAILURE TRUE
+)
 
 ExternalProject_Add(${GEN_TESTCASE}
     SOURCE_DIR            ${openHiTLS_SRC}
@@ -84,11 +116,11 @@ ExternalProject_Add(${TESTCASE}
     INSTALL_DIR           ""
     UPDATE_COMMAND        ""
     CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DENABLE_CRYPTO=${ENABLE_CRYPTO}
+                                -DENABLE_TLS=${ENABLE_TLS}
                                 -DENABLE_X509=${ENABLE_X509} -DGEN_TEST_FILES=${GEN_TEST_FILES}
                                 -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} ../..
     BUILD_COMMAND         make
     INSTALL_COMMAND       ""
-    DEPENDS               ${GEN_TESTCASE}
     BUILD_ALWAYS          FALSE
     LOG_BUILD             TRUE
     LOG_DOWNLOAD          TRUE
@@ -96,3 +128,6 @@ ExternalProject_Add(${TESTCASE}
     LOG_OUTPUT_ON_FAILURE TRUE
 )
 
+if(ENABLE_TLS)
+    add_dependencies(${GEN_TESTCASE} ${PROCESS})
+endif()

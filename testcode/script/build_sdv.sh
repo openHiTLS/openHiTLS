@@ -36,6 +36,7 @@ export_env()
     ENABLE_PRINT=${ENABLE_PRINT:=ON}
     ENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT:=OFF}
     CUSTOM_CFLAGS=${CUSTOM_CFLAGS:=''}
+    ENABLE_TLS=${ENABLE_TLS:=ON}
     BIG_ENDIAN=${BIG_ENDIAN:=OFF}
     ENABLE_CRYPTO=${ENABLE_CRYPTO:=ON}
     ENABLE_BSL=${ENABLE_BSL:=ON}
@@ -71,7 +72,10 @@ find_test_suite()
     if [[ ${ENABLE_X509} == "ON" ]]; then
         x509_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/x509 -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
     fi
-    RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${x509_testsuite}"
+    if [[ ${ENABLE_TLS} == "ON" ]]; then
+        proto_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/tls  -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
+    fi
+    RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${x509_testsuite}${proto_testsuite}"
 }
 
 build_generate()
@@ -79,7 +83,7 @@ build_generate()
     cd ${HITLS_ROOT_DIR}/testcode && rm -rf ./build && mkdir build && cd build
     cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
           -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
-          -DGEN_TEST_FILES=${TEST_SUITE} \
+          -DGEN_TEST_FILES=${TEST_SUITE} -DENABLE_TLS=${ENABLE_TLS} \
           -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_X509=${ENABLE_X509} -DTLS_DEBUG=${TLS_DEBUG} \
           -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
     make GEN_TESTCASE ${ENABLE_VERBOSE} -j
@@ -112,8 +116,9 @@ build_test_suite()
             cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
                 -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
                 -DGEN_TEST_FILES=${TEST_SUITE} -DTESTFILE=${tmp_dir} \
-                -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_X509=${ENABLE_X509} -DTLS_DEBUG=${TLS_DEBUG} \
-                -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ../..
+                -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_X509=${ENABLE_X509} -DENABLE_TLS=${ENABLE_TLS} \
+                -DTLS_DEBUG=${TLS_DEBUG} -DOS_BIG_ENDIAN=${BIG_ENDIAN} \
+                -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ../..
             make TESTCASE ${ENABLE_VERBOSE} -j || (read -u8 && echo "1" >&8)
             echo >&7
        } &
@@ -179,8 +184,12 @@ options()
             no-bsl)
                 ENABLE_BSL=OFF
                 ;;
+            no-tls)
+                ENABLE_TLS=OFF
+                ;;
             no-sctp)
                 ENABLE_UIO_SCTP=OFF
+                ENABLE_TLS=OFF
                 ;;
             verbose)
                 ENABLE_VERBOSE='VERBOSE=1'
