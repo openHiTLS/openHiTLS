@@ -29,9 +29,13 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
     }
     
     if (*temp < 0x80) {
-        *len = *temp;
+        parseLen = *temp;
         temp++;
         tempLen--;
+        if (parseLen > tempLen) {
+            return BSL_ASN1_ERR_DECODE_LEN;
+        }
+        *len = parseLen;
         *encode = temp;
         *encLen = tempLen;
         return BSL_SUCCESS;
