@@ -436,6 +436,10 @@ static int32_t ParseEccPrikeyAsn1(BSL_ASN1_Buffer *encode, BSL_ASN1_Buffer *pk8A
         // has a valid Algorithm param
         param = ecParamOid;
     } else {
+        if (param == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+            return CRYPT_NULL_INPUT;
+        }
         if (param->len == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM);
             return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;

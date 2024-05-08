@@ -450,3 +450,18 @@ exit:
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_BUFF_TC001(int type, Hex *pass, Hex *data)
+{
+    RegisterLogFunc();
+    CRYPT_RandRegist(RandFunc);
+
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(BSL_PARSE_FORMAT_ASN1, type, (BSL_Buffer *)data,
+        pass->x, pass->len, &pkeyCtx), CRYPT_NULL_INPUT);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+}
+/* END_CASE */
