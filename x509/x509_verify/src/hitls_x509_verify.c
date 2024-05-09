@@ -568,8 +568,7 @@ int32_t HITLS_X509_CheckCertRevoked(HITLS_X509_Cert *cert, HITLS_X509_CrlEntry *
 
 int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert *parent)
 {
-    int32_t ret;
-    bool flag = false;
+    int32_t ret = HITLS_X509_ERR_CRL_NOT_FOUND;
     HITLS_X509_Crl *crl = BSL_LIST_GET_FIRST(storeCtx->crl);
     if (parent->tbs.ext.extFlags & HITLS_X509_CERT_EXT_FLAG_KUSAGE) {
         if (!(parent->tbs.ext.keyUsage & HITLS_X509_EXT_KU_CRL_SIGN)) {
@@ -581,26 +580,23 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             crl = BSL_LIST_GET_NEXT(storeCtx->crl);
             continue;
         }
+
+        if (HITLS_X509_CheckTime(storeCtx, &(crl->tbs.validTime)) != HITLS_X509_SUCCESS) {
+            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
+            continue;
+        }
         ret = HITLS_X509_TrvList(crl->tbs.crlExt.extList,
             (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, NULL);
         if (ret != HITLS_X509_SUCCESS) {
-            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
-            continue;
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
         }
-        
-        ret = HITLS_X509_CheckTime(storeCtx, &(crl->tbs.validTime));
-        if (ret != HITLS_X509_SUCCESS) {
-            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
-            continue;
-        }
-
         ret = HITLS_X509_CheckSignature(parent->tbs.ealPubKey, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen,
             &(crl->signAlgId), &(crl->signature));
         if (ret != HITLS_X509_SUCCESS) {
-            crl = BSL_LIST_GET_NEXT(storeCtx->crl);
-            continue;
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
         }
-        flag = true;
         ret = HITLS_X509_TrvList(crl->tbs.revokedCerts,
             (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertRevoked, cert);
         if (ret != HITLS_X509_SUCCESS) {
@@ -609,7 +605,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
         }
         crl = BSL_LIST_GET_NEXT(storeCtx->crl);
     }
-    return (flag ? ret : HITLS_X509_ERR_CRL_NOT_FOUND);
+    return ret;
 }
 
 int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
