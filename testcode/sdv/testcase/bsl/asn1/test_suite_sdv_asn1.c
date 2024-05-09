@@ -74,6 +74,10 @@ BSL_ASN1_TemplateItem certTempl[] = {
   {BSL_ASN1_TAG_BITSTRING, 0, 1} /* sig */
 };
 
+BSL_ASN1_TemplateItem maxDepthTempl[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 7},
+};
+
 typedef enum {
     BSL_ASN1_TAG_VERSION_IDX = 0,
     BSL_ASN1_TAG_SERIAL_IDX = 1,
@@ -230,6 +234,28 @@ void SDV_BSL_ASN1_DecodeTemplate_TC001(char *path)
     ASSERT_EQ(ret, BSL_NULL_INPUT);
     ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, asnArr, 0);
     ASSERT_EQ(ret, BSL_NULL_INPUT);
+exit:
+    BSL_SAL_FREE(rawBuff);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_TEMPLATE_TC002(char *path)
+{
+    BSL_LOG_BinLogFuncs func = {0};
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
+
+    uint32_t fileLen = 0;
+    uint8_t *fileBuff = NULL;
+    int32_t ret = ReadCert(path, &fileBuff, &fileLen);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+    uint8_t *rawBuff = fileBuff;
+    BSL_ASN1_Buffer asnArr[BSL_ASN1_TAG_SIGN_IDX + 1] = {0};
+    BSL_ASN1_Template templ = {maxDepthTempl, sizeof(maxDepthTempl) / sizeof(maxDepthTempl[0])};
+    ret = BSL_ASN1_DecodeTemplate(&templ, BSL_ASN1_CertTagGetOrCheck, &fileBuff, &fileLen, asnArr, BSL_ASN1_TAG_SIGN_IDX + 1);
+    ASSERT_EQ(ret, BSL_ASN1_ERR_MAX_DEPTH);
 exit:
     BSL_SAL_FREE(rawBuff);
 }

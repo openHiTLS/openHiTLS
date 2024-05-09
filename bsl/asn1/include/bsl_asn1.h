@@ -60,7 +60,7 @@ extern "C" {
 /* The implied values are of the same type */
 #define BSL_ASN1_FLAG_SAME 8
 
-#define BSL_ASN1_MAX_TEMPLATE_DEPTH 7
+#define BSL_ASN1_MAX_TEMPLATE_DEPTH 6
 
 #define BSL_ASN1_List BslList
 
