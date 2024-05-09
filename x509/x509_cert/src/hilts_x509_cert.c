@@ -565,8 +565,6 @@ int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
             return X509_CertGetSignAlg(cert, val, valLen);
         case HITLS_X509_CERT_REF_UP:
             return X509_CertRefUp(cert, val, valLen);
-        case HITLS_X509_CERT_EXT_KU_KEYENC:
-            return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT);
         case HITLS_X509_CERT_EXT_KU_DIGITALSIGN:
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_DIGITAL_SIGN);
         case HITLS_X509_CERT_EXT_KU_CERTSIGN:
