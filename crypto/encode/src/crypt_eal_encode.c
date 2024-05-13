@@ -278,8 +278,18 @@ static int32_t ParseAlgoIdAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buf
     return BSL_ASN1_DecodeTemplate(&templ, DecSubKeyInfoCb, &tmpBuff, &tmpBuffLen, algoId, algoIdNum);
 }
 
+static int32_t GetRsaPubKeyPadTypeByCid(BslCid cid)
+{
+    if (cid == BSL_CID_RSA) {
+        return CRYPT_PKEY_EMSA_PKCSV15;
+    } else if (cid == BSL_CID_RSASSAPSS) {
+        return CRYPT_PKEY_EMSA_PSS;
+    }
 
-static int32_t ParseRsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL_PkeyCtx **ealPubKey)
+    return CRYPT_PKEY_RSA_PADDINGMAX;
+}
+
+static int32_t ParseRsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL_PkeyCtx **ealPubKey, BslCid cid)
 {
     uint8_t *tmpBuff = buff;
     uint32_t tmpBuffLen = buffLen;
@@ -307,6 +317,14 @@ static int32_t ParseRsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL
         return ret;
     }
 
+    int32_t padType = GetRsaPubKeyPadTypeByCid(cid);
+    if (padType != CRYPT_PKEY_RSA_PADDINGMAX) {
+        ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType));
+        if (ret != CRYPT_SUCCESS) {
+            CRYPT_EAL_PkeyFreeCtx(pctx);
+            return ret;
+        }
+    }
     *ealPubKey = pctx;
     return ret;
 }
@@ -396,7 +414,7 @@ static int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **e
     if (cid == BSL_CID_EC_PUBLICKEY) {
         return ParseEccPubkeyAsn1Buff(&bitPubkey, ecParamOid, ealPubKey);
     } else if (cid == BSL_CID_RSA || cid == BSL_CID_RSASSAPSS) {
-        return ParseRsaPubkeyAsn1Buff(bitPubkey.buff, bitPubkey.len, ealPubKey);
+        return ParseRsaPubkeyAsn1Buff(bitPubkey.buff, bitPubkey.len, ealPubKey, cid);
     } else { // ed25519 448 will be added in the future
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -480,7 +498,7 @@ static int32_t ParseEccPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_
     return ParseEccPrikeyAsn1(asn1, pk8AlgoParam, ealPriKey);
 }
 
-static int32_t ParseRsaPrikeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPriKey)
+static int32_t ParseRsaPrikeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPriKey, BslCid cid)
 {
     CRYPT_EAL_PkeyPrv rsaPrv;
     rsaPrv.id = CRYPT_PKEY_RSA;
@@ -510,11 +528,19 @@ static int32_t ParseRsaPrikeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **e
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
     }
+    int32_t padType = GetRsaPubKeyPadTypeByCid(cid);
+    if (padType != CRYPT_PKEY_RSA_PADDINGMAX) {
+        ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType));
+        if (ret != CRYPT_SUCCESS) {
+            CRYPT_EAL_PkeyFreeCtx(pctx);
+            return ret;
+        }
+    }
     *ealPriKey = pctx;
     return ret;
 }
 
-static int32_t ParseRsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL_PkeyCtx **ealPriKey)
+static int32_t ParseRsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL_PkeyCtx **ealPriKey, BslCid cid)
 {
     uint8_t *tmpBuff = buff;
     uint32_t tmpBuffLen = buffLen;
@@ -526,7 +552,7 @@ static int32_t ParseRsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL
         return ret;
     }
 
-    return ParseRsaPrikeyAsn1(asn1, ealPriKey);
+    return ParseRsaPrikeyAsn1(asn1, ealPriKey, cid);
 }
 
 static int32_t ParsePk8PrikeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPriKey)
@@ -540,8 +566,8 @@ static int32_t ParsePk8PrikeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **e
     }
     BslOidString oidStr = {algoId[0].len, (char *)algoId[0].buff, 0};
     BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
-    if (cid == BSL_CID_RSA) {
-        return ParseRsaPrikeyAsn1Buff(octPriKey->buff, octPriKey->len, ealPriKey);
+    if (cid == BSL_CID_RSA || cid == BSL_CID_RSASSAPSS) {
+        return ParseRsaPrikeyAsn1Buff(octPriKey->buff, octPriKey->len, ealPriKey, cid);
     } else if (cid == BSL_CID_EC_PUBLICKEY) {
         return ParseEccPrikeyAsn1Buff(octPriKey->buff, octPriKey->len, algoId + 1, ealPriKey);
     }
@@ -735,7 +761,7 @@ int32_t CRYPT_EAL_ParseAsn1PubKey(int32_t type, BSL_Buffer *encode, CRYPT_EAL_Pk
         case CRYPT_PUBKEY_SUBKEY:
             return CRYPT_EAL_ParseAsn1SubPubkey(encode->data, encode->dataLen, (void **)ealPubKey, true);
         case CRYPT_PUBKEY_RSA:
-            return ParseRsaPubkeyAsn1Buff(encode->data, encode->dataLen, ealPubKey);
+            return ParseRsaPubkeyAsn1Buff(encode->data, encode->dataLen, ealPubKey, BSL_CID_UNKNOWN);
         default:
             return CRYPT_DECODE_NO_SUPPORT_TYPE;
     }
@@ -790,7 +816,7 @@ int32_t CRYPT_EAL_ParseAsn1PriKey(int32_t type, BSL_Buffer *encode, uint8_t *pwd
         case CRYPT_PRIKEY_ECC:
             return ParseEccPrikeyAsn1Buff(encode->data, encode->dataLen, NULL, ealPriKey);
         case CRYPT_PRIKEY_RSA:
-            return ParseRsaPrikeyAsn1Buff(encode->data, encode->dataLen, ealPriKey);
+            return ParseRsaPrikeyAsn1Buff(encode->data, encode->dataLen, ealPriKey, BSL_CID_UNKNOWN);
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
             return ParsePk8PriKeyBuff(encode, ealPriKey);
         case CRYPT_PRIKEY_PKCS8_ENCRYPT:
