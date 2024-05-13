@@ -352,6 +352,63 @@ static inline uint32_t Uint32ConstTimeGt(uint32_t a, uint32_t b)
     return ~Uint32ConstTimeLt(a, b);
 }
 
+void GetCpuInstrSupportState(void);
+
+#ifdef __x86_64__
+#define CPU_ID_OUT_U32_CNT      4
+#define EAX_OUT_IDX             0
+#define EBX_OUT_IDX             1
+#define ECX_OUT_IDX             2
+#define EDX_OUT_IDX             3
+
+/* %eax */
+#define XCR0_BIT_SSE            (1ULL << 1)
+#define XCR0_BIT_AVX            (1ULL << 2)
+#define XCR0_BIT_OPMASK         (1ULL << 5)
+#define XCR0_BIT_ZMM_LOW        (1ULL << 6)
+#define XCR0_BIT_ZMM_HIGH       (1ULL << 7)
+
+typedef struct {
+    uint32_t code1Out[CPU_ID_OUT_U32_CNT];
+    uint32_t code7Out[CPU_ID_OUT_U32_CNT];
+    bool osSupportAVX;      /* input ecx = 0, output edx:eax bit 2 */
+    bool osSupportAVX512;   /* input ecx = 0, output edx:eax bit 6 */
+} CpuInstrSupportState;
+
+bool IsSupportAES(void);
+bool IsSupportBMI1(void);
+bool IsSupportBMI2(void);
+bool IsSupportAVX(void);
+bool IsSupportAVX2(void);
+bool IsSupportSSE(void);
+bool IsSupportSSE2(void);
+bool IsSupportSSE3(void);
+bool IsSupportMOVBE(void);
+bool IsSupportAVX512F(void);
+bool IsSupportAVX512VL(void);
+bool IsSupportAVX512BW(void);
+bool IsSupportAVX512DQ(void);
+bool IsSupportXSAVE(void);
+bool IsSupportOSXSAVE(void);
+bool IsOSSupportAVX(void);
+bool IsOSSupportAVX512(void);
+
+void GetCpuId(uint32_t eax, uint32_t ecx, uint32_t cpuId[CPU_ID_OUT_U32_CNT]);
+
+#elif defined(__arm__) || defined(__arm) || defined(__aarch64__)
+
+bool IsSupportAES(void);
+bool IsSupportPMULL(void);
+bool IsSupportSHA1(void);
+bool IsSupportSHA256(void);
+bool IsSupportNEON(void);
+
+#if defined(__aarch64__)
+bool IsSupportSHA512(void);
+#endif // __aarch64__
+
+#endif // __arm__ || __arm || __aarch64__
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

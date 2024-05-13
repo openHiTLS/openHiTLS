@@ -16,6 +16,7 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "crypt_algid.h"
+#include "crypt_ealinit.h"
 #include "crypt_drbg.h"
 #ifdef HITLS_CRYPTO_MD
 #include "eal_md_local.h"
@@ -418,6 +419,12 @@ static int32_t DrbgParaIsValid(CRYPT_RAND_AlgId id, const CRYPT_RandSeedMethod *
 static CRYPT_EAL_RndCtx *EAL_RandInitDrbg(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth,
                                           void *seedCtx, const uint8_t *pers, uint32_t persLen)
 {
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Drbg(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     CRYPT_RandSeedMethod seedMethTmp = {0};
     CRYPT_RandSeedMethod *seedMethond = seedMeth;
     int32_t ret = DrbgParaIsValid(id, seedMeth, seedCtx, pers, persLen);

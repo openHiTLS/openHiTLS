@@ -35,6 +35,7 @@
 #endif
 #include "eal_common.h"
 #include "crypt_utils.h"
+#include "crypt_ealinit.h"
 
 #ifdef HITLS_CRYPTO_PBKDF2
 static const uint32_t PBKDF_ID_LIST[] = {
@@ -105,6 +106,12 @@ int32_t CRYPT_EAL_Pbkdf2(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen
     uint32_t saltLen, uint32_t it, uint8_t *out, uint32_t len)
 {
 #ifdef HITLS_CRYPTO_PBKDF2
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
+    }
+#endif
     if (!ParamIdIsValid(id, PBKDF_ID_LIST, sizeof(PBKDF_ID_LIST) / sizeof(PBKDF_ID_LIST[0]))) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_PBKDF2, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
@@ -218,6 +225,12 @@ int32_t CRYPT_EAL_Hkdf(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen, 
     const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t len)
 {
 #ifdef HITLS_CRYPTO_HKDF
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
+    }
+#endif
     if (!ParamIdIsValid(id, HKDF_ID_LIST, sizeof(HKDF_ID_LIST) / sizeof(HKDF_ID_LIST[0]))) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
@@ -255,6 +268,12 @@ int32_t CRYPT_EAL_KdfTls12(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyL
     uint32_t labelLen, const uint8_t *seed, uint32_t seedLen,  uint8_t *out, uint32_t len)
 {
 #ifdef HITLS_CRYPTO_KDFTLS12
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
+    }
+#endif
     // For KDF-TLS1.2, only HMAC-SHA256, HMAC-SHA384 and HMAC-SHA512 can be used.
     if (!ParamIdIsValid(id, KDFTLS12_ID_LIST, sizeof(KDFTLS12_ID_LIST) / sizeof(KDFTLS12_ID_LIST[0]))) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_KDFTLS12, CRYPT_EAL_ERR_ALGID);

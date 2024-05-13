@@ -515,6 +515,7 @@ class FeatureConfigParser:
                 fea = fea.split('::')[0]
                 macros.add("-D%s_%s" % (lib_upper, fea.upper()))
                 macros.add("-D%s_%s_ASM" % (lib_upper, fea.upper()))
+                macros.add("-D%s_%s_%s" % (lib_upper, fea.upper(), self.asm_type.upper()))
 
         if self._cfg['endian'] == 'big':
             macros.add("-DHITLS_BIG_ENDIAN")

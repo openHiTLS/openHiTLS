@@ -35,6 +35,7 @@
             "features": {
                 "c": {
                     "eal": {"deps": ["init"]},
+                    "ealinit": null,
                     "md": {
                         "md5": null,
                         "sm3": null,
@@ -140,6 +141,7 @@
                 ".srcs": "crypto/eal/src/*.c",
                 ".deps": ["bsl::sal"],
                 ".include": [
+                    "crypto/ealinit/include",
                     "crypto/sha1/include",
                     "crypto/sha2/include",
                     "crypto/sha3/include",
@@ -168,6 +170,11 @@
                     "crypto/curve448/include",
                     "crypto/sm2/include"
                 ]
+            },
+            "ealinit": {
+                ".features": ["ealinit"],
+                ".srcs": "crypto/ealinit/src/*.c",
+                ".deps": ["platform::Secure_C"]
             },
             "sha1": {
                 ".features": ["sha1"],

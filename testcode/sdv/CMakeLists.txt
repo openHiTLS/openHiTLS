@@ -137,6 +137,8 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/crypto/rsa/src
         ${openHiTLS_SRC}/crypto/eal/src
         ${openHiTLS_SRC}/crypto/eal/include
+        ${openHiTLS_SRC}/crypto/ealinit/include
+        ${openHiTLS_SRC}/crypto/ealinit/src
         ${openHiTLS_SRC}/crypto/dsa/src
         ${openHiTLS_SRC}/crypto/curve25519/src
         ${openHiTLS_SRC}/crypto/curve25519/include

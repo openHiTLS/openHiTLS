@@ -18,6 +18,7 @@
 #include "eal_common.h"
 #include "crypt_method.h"
 #include "crypt_utils.h"
+#include "crypt_ealinit.h"
 
 // Block encryption or not
 #define EAL_IS_BLOCKCIPHER(blockSize) ((blockSize) != 1)    // 1: stream encryption
@@ -83,6 +84,12 @@ static CRYPT_EAL_CipherCtx *CipherNewDefaultCtx(CRYPT_CIPHER_AlgId id)
 
 CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id)
 {
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Cipher(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     return CipherNewDefaultCtx(id);
 }
 

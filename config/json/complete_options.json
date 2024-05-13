@@ -174,7 +174,10 @@
             "-g3",
             "-gdwarf-2"
         ],
-        "CC_USER_DEFINE_FLAGS": ""
+        "CC_USER_DEFINE_FLAGS": [
+            "-DHITLS_CRYPTO_DRBG_GM_LEVEL=n",
+            "-DHITLS_EAL_INIT_OPTS=n"
+        ]
     },
     "linkFlag": {
         "PUBLIC": [

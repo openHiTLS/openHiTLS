@@ -39,7 +39,7 @@ extern "C" {
  * @retval #CRYPT_SUCCESS, if successful.
  *         For other error codes, see the crypt_errno.h file.
  */
-int32_t CRYPT_EAL_Init(uint64_t opts, void* data, uint32_t datalen);
+int32_t CRYPT_EAL_Init(uint64_t opts);
 
 /**
  * @ingroup crypt_method

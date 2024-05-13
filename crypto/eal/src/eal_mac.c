@@ -19,6 +19,7 @@
 #include "crypt_eal_mac.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
+#include "crypt_ealinit.h"
 #include "eal_mac_local.h"
 #include "eal_common.h"
 
@@ -59,6 +60,12 @@ CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
 
 CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtx(CRYPT_MAC_AlgId id)
 {
+#if defined(HITLS_CRYPTO_ASM_CHECK)
+    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     return MacNewDefaultCtx(id);
 }
 

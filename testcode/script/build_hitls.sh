@@ -61,6 +61,7 @@ build_hitls_code()
 
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
+    add_options="${add_options} -DHITLS_EAL_INIT_OPTS=1 -DHITLS_CRYPTO_ASM_CHECK" # Get CPU capability
     python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_x509 --bits=$BITS --system=linux
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
