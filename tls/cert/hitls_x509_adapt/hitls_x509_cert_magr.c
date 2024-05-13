@@ -131,6 +131,58 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertRef(HITLS_CERT_X509 *cert)
     return cert;
 }
 
+static HITLS_SignHashAlgo BslCid2SignHashAlgo(BslCid cid)
+{
+    typedef struct {
+        BslCid cid;
+        HITLS_SignHashAlgo signHashAlg;
+    } SignHashMap;
+    static SignHashMap signMap[] = {
+        { BSL_CID_SHA1WITHRSA, CERT_SIG_SCHEME_RSA_PKCS1_SHA1 },
+        { BSL_CID_SHA224WITHRSAENCRYPTION, CERT_SIG_SCHEME_RSA_PKCS1_SHA224 },
+        { BSL_CID_SHA256WITHRSAENCRYPTION, CERT_SIG_SCHEME_RSA_PKCS1_SHA256 },
+        { BSL_CID_SHA384WITHRSAENCRYPTION, CERT_SIG_SCHEME_RSA_PKCS1_SHA384 },
+        { BSL_CID_SHA512WITHRSAENCRYPTION, CERT_SIG_SCHEME_RSA_PKCS1_SHA512 },
+        { BSL_CID_RSASSAPSS, CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256 },
+        { BSL_CID_ECDSAWITHSHA1, CERT_SIG_SCHEME_ECDSA_SHA1 },
+        { BSL_CID_ECDSAWITHSHA224, CERT_SIG_SCHEME_ECDSA_SHA224 },
+        { BSL_CID_ECDSAWITHSHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256 },
+        { BSL_CID_ECDSAWITHSHA384, CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384 },
+        { BSL_CID_ECDSAWITHSHA512, CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512 },
+#ifndef HITLS_NO_TLCP11
+        { BSL_CID_SM2DSAWITHSM3, CERT_SIG_SCHEME_SM2_SM3 },
+#endif
+        { BSL_CID_ED25519, CERT_SIG_SCHEME_ED25519 },
+        { BSL_CID_DSAWITHSHA1, CERT_SIG_SCHEME_DSA_SHA1 },
+        { BSL_CID_DSAWITHSHA224, CERT_SIG_SCHEME_DSA_SHA224 },
+        { BSL_CID_DSAWITHSHA256, CERT_SIG_SCHEME_DSA_SHA256 },
+        { BSL_CID_DSAWITHSHA384, CERT_SIG_SCHEME_DSA_SHA384 },
+        { BSL_CID_DSAWITHSHA512, CERT_SIG_SCHEME_DSA_SHA512 },
+    };
+    for (size_t i = 0; i < sizeof(signMap) / sizeof(signMap[0]); i++) {
+        if (signMap[i].cid == cid) {
+            return signMap[i].signHashAlg;
+        }
+    }
+
+    return CERT_SIG_SCHEME_UNKNOWN;
+    
+}
+
+static int32_t CertCtrlGetSignAlgo(HITLS_CERT_X509 *cert, HITLS_SignHashAlgo *algSign)
+{
+    BslCid tmpCid = 0;
+    *algSign = CERT_SIG_SCHEME_UNKNOWN;
+    int32_t ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_SIGNALG, &tmpCid, sizeof(BslCid));
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    *algSign = BslCid2SignHashAlgo(tmpCid);
+    return HITLS_SUCCESS;
+}
+
 int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output)
 {
@@ -147,9 +199,7 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
             x509Cmd = HITLS_X509_CERT_GET_PUBKEY;
             break;
         case CERT_CTRL_GET_SIGN_ALGO:
-            valLen = (int32_t)sizeof(int32_t);
-            x509Cmd = HITLS_X509_CERT_GET_SIGNALG;
-            break;
+            return CertCtrlGetSignAlgo(cert, (HITLS_SignHashAlgo *)output);
         case CERT_KEY_CTRL_IS_KEYENC_USAGE:
             valLen = (int32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_CERT_EXT_KU_KEYENC;
@@ -174,5 +224,6 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
+
     return ret;
 }

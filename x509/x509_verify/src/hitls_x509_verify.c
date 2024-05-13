@@ -497,12 +497,9 @@ int32_t HITLS_X509_BuildCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert
         return HITLS_X509_SUCCESS;
     }
     ret = X509_BuildChain(storeCtx, NULL, cert, tmpChain, NULL);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
-        return ret;
-    }
+
     *chain = tmpChain;
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 static int32_t HITLS_X509_SecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert)

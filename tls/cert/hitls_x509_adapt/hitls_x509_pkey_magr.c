@@ -158,6 +158,7 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
         return NULL;
     }
     (void)memcpy_s(encode.data, len, buf, len);
+    encode.dataLen = len;
     switch (type) {
         case TLS_PARSE_TYPE_FILE:
             certKey = HitlsPrivKeyFileParse(config, format, buf);

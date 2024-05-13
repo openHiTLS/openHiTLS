@@ -69,10 +69,10 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
     HITLS_CERT_X509 **list, uint32_t *num)
 {
     (void)config;
+    *num = 0;
     HITLS_X509_List *certChain = NULL;
     int32_t ret = HITLS_X509_BuildCertChain((HITLS_X509_StoreCtx *)store, cert, &certChain);
-    if (ret != HITLS_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    if (ret != HITLS_SUCCESS && certChain == NULL) {
         return ret;
     }
     ret = BuildArrayFromList(certChain, list, num);
