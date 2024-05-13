@@ -492,15 +492,16 @@ int32_t TlsCheckVersionField(TLS_Ctx *ctx, uint16_t version, uint8_t type)
 
 static int32_t TlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *recordHdr)
 {
-    int32_t ret = TlsCheckVersionField(ctx, recordHdr->version, recordHdr->type);
-    if (ret != HITLS_SUCCESS) {
-        return HITLS_REC_INVALID_PROTOCOL_VERSION;
-    }
-
     if (RecCastUintToRecType(ctx, recordHdr->type) == REC_TYPE_UNKNOWN) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15450, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get a record with invalid type", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+    }
+
+    int32_t ret = TlsCheckVersionField(ctx, recordHdr->version, recordHdr->type);
+    if (ret != HITLS_SUCCESS) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        return HITLS_REC_INVALID_PROTOCOL_VERSION;
     }
 
     if (recordHdr->bodyLen == 0) {
@@ -768,6 +769,13 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15803, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get a record with invalid length", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+    }
+
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
+        ctx->method.isRecvCCS(ctx) &&
+        encryptedMsg.type != REC_TYPE_HANDSHAKE) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+        return HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED;
     }
 
     /* An unexpected message is received */

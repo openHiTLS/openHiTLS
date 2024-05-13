@@ -1577,6 +1577,8 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
             return ParseServerTicket(ctx, buf, extMsgLen, msg);
         case HS_EX_TYPE_ENCRYPT_THEN_MAC:
             return ParseServerEncryptThenMac(ctx, buf, extMsgLen, msg);
+        case HS_EX_TYPE_SUPPORTED_GROUPS:
+            return HITLS_SUCCESS;
         default:
             break;
     }

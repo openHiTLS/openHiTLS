@@ -63,16 +63,16 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, uint8_t *buf, uint3
 
     uint32_t pubKeyLenOffset = offset;
     offset += sizeof(uint8_t);
-
-    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyLen);
-    if (ret != HITLS_SUCCESS) {
+    uint32_t pubKeyUsedLen = 0;
+    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyUsedLen);
+    if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15675, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "encode ecdh key fail.", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
     }
-    offset += pubKeyLen;
-    buf[pubKeyLenOffset] = (uint8_t)pubKeyLen;
+    offset += pubKeyUsedLen;
+    buf[pubKeyLenOffset] = (uint8_t)pubKeyUsedLen;
 
     *usedLen = offset;
     return HITLS_SUCCESS;

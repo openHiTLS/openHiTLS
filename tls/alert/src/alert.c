@@ -148,7 +148,7 @@ void ALERT_Recv(TLS_Ctx *ctx, const uint8_t *data, uint32_t len)
         BSL_ERR_PUSH_ERROR(HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15769, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get a alert msg with illegal len", 0, 0, 0, 0);
-        ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return;
     }
 

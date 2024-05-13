@@ -542,10 +542,10 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     /* Length of the Pack KeyExChange */
     BSL_Uint16ToByte((uint16_t)pubKeyLen, &buf[offset]);
     offset += sizeof(uint16_t);
-
+    uint32_t pubKeyUsedLen = 0;
     /* Pack KeyExChange */
-    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyLen);
-    if (ret != HITLS_SUCCESS) {
+    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyUsedLen);
+    if (ret != HITLS_SUCCESS || pubKeyUsedLen != pubKeyLen) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15423, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "encode client keyShare key fail.", 0, 0, 0, 0);
@@ -1021,10 +1021,10 @@ static int32_t PackServerKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     /* Length of the paced KeyExChange */
     BSL_Uint16ToByte((uint16_t)pubKeyLen, &buf[offset]);
     offset += sizeof(uint16_t);
-
+    uint32_t pubKeyUsedLen = 0;
     /* Pack KeyExChange */
-    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyLen);
-    if (ret != HITLS_SUCCESS) {
+    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyUsedLen);
+    if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15429, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "encode server keyShare key fail.", 0, 0, 0, 0);

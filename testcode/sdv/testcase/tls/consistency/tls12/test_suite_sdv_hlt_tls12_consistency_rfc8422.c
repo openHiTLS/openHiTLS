@@ -519,9 +519,9 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCYECDHE_ECDHE_LOSE_CURVE_FUNC_TC001(void)
     TestPara testPara = {0};
     testPara.port = g_uiPort;
     testPara.isSupportExtendMasterSecret = true;
-    testPara.expectHsState = TRY_RECV_FINISH;
+    testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     // 3. The server continues to establish a connection.
-    testPara.expectDescription = ALERT_BAD_RECORD_MAC;
+    testPara.expectDescription = ALERT_HANDSHAKE_FAILURE;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
 }

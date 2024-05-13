@@ -967,6 +967,44 @@ exit:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_TLS_TLCP_CONSISTENCY_TRANSPORT_FUNC_TC01(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+ 
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+ 
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+    ASSERT_TRUE(serverCtxConfig != NULL);
+ 
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLCP1_1, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+ 
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    ASSERT_TRUE(clientCtxConfig != NULL);
+ 
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLCP1_1, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+ 
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+    uint8_t writeBuf[READ_BUF_SIZE] = {0};
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, writeBuf, 16384) == 0);
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen;
+    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
+    ASSERT_TRUE(readLen == 16384);
+ 
+exit:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
 /* @
 * @test    SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009
 * @title   set the session cache mode on the client server. try to Resumption

@@ -231,6 +231,8 @@ typedef enum {
     HITLS_REC_NORMAL_IO_EOF,                       /**< IO object has reached EOF. */
     HITLS_REC_ENCRYPTED_NUMBER_OVERFLOW,           /**< The number of AES-GCM encryption times cannot exceed 2^24.5. */
     HITLS_REC_ERR_MSAK_APP_MSG,                    /**< set app msg failure. */
+    HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED,   /**< When version is below TLS13,
+                                                        must not have data between ccs and finished. */
 
     HITLS_UIO_FAIL_START = 0x020B0001,             /**< uio module error code start bit. */
     HITLS_UIO_FAIL,                                /**< UIO internal failure. */

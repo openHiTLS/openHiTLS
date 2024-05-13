@@ -2206,10 +2206,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC043(void
 
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.expectHsState = TRY_RECV_FINISH;
-    testPara.expectDescription = ALERT_DECRYPT_ERROR;
+    testPara.expectHsState = TRY_RECV_SERVER_HELLO;
+    testPara.expectDescription = ALERT_HANDSHAKE_FAILURE;
     testPara.isExpectRet = true;
-    testPara.expectRet = HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL;
+    testPara.expectRet = HITLS_MSG_HANDLE_CIPHER_SUITE_ERR;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
 }
@@ -2313,5 +2313,39 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CERTFICATE_VERITY_FAIL_TC007()
 
     TEST_UnexpectMsg(&frameHandle, &testExpect, true);
     return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_RFC5246_CONSISTENCY_SUPPORT_GROUP_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *c_config = NULL;
+    HITLS_Config *s_config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    c_config = HITLS_CFG_NewTLS12Config();
+    s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    ASSERT_TRUE(s_config != NULL);
+
+    uint16_t cipherSuite = HITLS_ECDH_ANON_WITH_AES_128_CBC_SHA;
+    ASSERT_TRUE(HITLS_CFG_SetCipherSuites(c_config, &cipherSuite, 1) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetCipherSuites(s_config, &cipherSuite, 1) == HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    client->ssl->config.tlsConfig.groupsSize = 0;
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_MSG_HANDLE_CIPHER_SUITE_ERR);
+
+exit:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

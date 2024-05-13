@@ -163,7 +163,7 @@ static uint32_t CalcPlaintextLenUpperBound(const RecConnState *state, uint32_t c
            the upper bound of plaintextLen when using CBC CIPHER */
         ptLenUpperBound -= (CBC_PADDING_LEN_TAG_SIZE + macLen);
     }
-    return ptLenUpperBound;
+    return ptLenUpperBound > REC_MAX_PLAIN_TEXT_LENGTH ? REC_MAX_PLAIN_TEXT_LENGTH : ptLenUpperBound;
 }
 
 static int32_t AeadGetNonce(const RecConnState *state, uint8_t *nonce, uint8_t nonceLen,

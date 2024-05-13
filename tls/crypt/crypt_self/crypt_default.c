@@ -819,6 +819,14 @@ static int32_t DhKeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bu
     }
 
     *pubKeyLen = pub.key.dhPub.len;
+    uint32_t padLen = bufLen - (*pubKeyLen);
+    if (padLen == 0) {
+        return HITLS_SUCCESS;
+    }
+ 
+    (void)memmove_s(pubKeyBuf + padLen, *pubKeyLen + padLen, pubKeyBuf, *pubKeyLen);
+    (void)memset_s(pubKeyBuf, *pubKeyLen + padLen, 0, padLen);
+    *pubKeyLen += padLen;
     return HITLS_SUCCESS;
 #else
     (void)key;

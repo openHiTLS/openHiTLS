@@ -83,7 +83,7 @@ int32_t TcpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
 static int32_t TcpSocketWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
 {
     *writeLen = 0;
-    int32_t err;
+    int32_t err = 0;
     int32_t fd = BSL_UIO_GetFd(uio);
     if (fd < 0) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
@@ -108,7 +108,7 @@ static int32_t TcpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
 {
     *readLen = 0;
 
-    int32_t err;
+    int32_t err = 0;
     (void)BSL_UIO_ClearFlags(uio, BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY);
     int32_t fd = BSL_UIO_GetFd(uio);
     if (fd < 0) {

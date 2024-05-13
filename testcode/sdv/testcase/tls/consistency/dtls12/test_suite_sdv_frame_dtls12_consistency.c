@@ -2582,7 +2582,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC8422_EXTENSION_MISS_TC001(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_HANDSHAKE);
     ASSERT_TRUE(frameMsg.body.hsMsg.type.data == SERVER_HELLO);
     FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
-    ASSERT_TRUE(serverMsg->cipherSuite.data == HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384);
+    ASSERT_EQ(serverMsg->cipherSuite.data, HITLS_DHE_RSA_WITH_AES_256_GCM_SHA384);
 
 exit:
     FRAME_CleanMsg(&frameType, &frameMsg);

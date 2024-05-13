@@ -78,11 +78,6 @@ static int32_t ServerCheckPointFormats(const ClientHelloMsg *clientHello)
 */
 static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
-    if (clientHello->extension.content.supportedGroupsSize == 0u) {
-        /* By default, the first configured elliptic curve is used */
-        return ctx->config.tlsConfig.groups[0];
-    }
-
     uint32_t perferenceGroupsSize = 0;
     uint32_t normalGroupsSize = 0;
     uint16_t *perferenceGroups = NULL;
