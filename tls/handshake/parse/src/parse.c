@@ -306,13 +306,6 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
 
 int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t hsBodyLen, HS_Msg *hsMsg)
 {
-    if (hsBodyLen == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15938, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "TLS decode error: msg len = %u.", hsBodyLen, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
     switch (hsMsg->type) {
         case CLIENT_HELLO:
             return ParseClientHello(ctx, hsBodyData, hsBodyLen, hsMsg);
@@ -332,6 +325,15 @@ int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t
             return ParseKeyUpdate(ctx, hsBodyData, hsBodyLen, hsMsg);
         case NEW_SESSION_TICKET:
             return ParseNewSessionTicket(ctx, hsBodyData, hsBodyLen, hsMsg);
+        case HELLO_REQUEST:
+            if (hsBodyLen != 0u) {
+                BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15611, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "hello request length is not zero.", 0, 0, 0, 0);
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+                return HITLS_PARSE_INVALID_MSG_LEN;
+            }
+            return HITLS_SUCCESS;
         default:
             break;
     }

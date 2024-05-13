@@ -152,6 +152,7 @@ static int32_t PackEncryptTicket(
     }
     ret = SESS_Encode(sess, plaintext, plaintextLen, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_SAL_CleanseData(plaintext, plaintextLen);
         BSL_SAL_FREE(plaintext);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16025, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SESS_Encode fail when encrypt session ticket.", 0, 0, 0, 0);
@@ -172,6 +173,7 @@ static int32_t PackEncryptTicket(
     /* Encrypt and fill the ticket. */
     uint32_t encryptLen = len - offset;
     ret = SAL_CRYPT_Encrypt(cipher, plaintext, plaintextLen, &data[offset], &encryptLen);
+    BSL_SAL_CleanseData(plaintext, plaintextLen);
     BSL_SAL_FREE(plaintext);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16026, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

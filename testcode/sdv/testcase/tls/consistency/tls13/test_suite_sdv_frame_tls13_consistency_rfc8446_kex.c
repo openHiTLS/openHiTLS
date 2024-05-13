@@ -1903,14 +1903,15 @@ exit:
 * @spec     A client which has a cached session ID set by a pre-TLS 1.3 server SHOULD set this field to that value.
 *       In compatibility mode (see Appendix D.4),this field MUST be non-empty, so a client not offering a
 *       pre-TLS 1.3 session MUST generate a new 32-byte value. This value need not be random but SHOULD be unpredictable
-*        to avoid implementations fixating on a specific value (also known as ossification). Otherwise, it MUST be set as
-*        a zero-length vector (i.e., a zero-valued single byte length field).
+        to avoid implementations fixating on a specific value (also known as ossification). Otherwise, it MUST be set as
+        a zero-length vector (i.e., a zero-valued single byte length field).
 * @title Set the client server to tls1.3 and construct the value of legacy_session_id in the sent clienthello message to
-*        26 bytes 0. It is expected that the connection fails to be established.
+        26 bytes 0. The expected connection is successfully established..
 * @precon nan
 * @brief 4.1.2. Client Hello row18
 *       Set the client server to tls1.3 and construct the value of legacy_session_id in the sent clienthello message to
-*        26 bytes 0. The expected connection establishment fails.
+        26 bytes 0. The expected link establishment success.
+* @expect 1. Link establishment success.
 * @expect 1. Link establishment fails.
 @ */
 /* BEGIN_CASE */
@@ -1938,7 +1939,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SESSION_ID_FUNC_TC005()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
-    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
 
 exit:
     ClearWrapper();

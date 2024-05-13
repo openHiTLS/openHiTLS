@@ -566,7 +566,7 @@ static int32_t ClientCheckResumeServerHello(TLS_Ctx *ctx, const ServerHelloMsg *
     if (serverHello->haveExtendedMasterSecret != (bool)haveExtMasterSecret) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15275, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "session resume error:can not downgrade from extended master secret.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_EXTRENED_MASTER_SECRET);
         return HITLS_MSG_HANDLE_ILLEGAL_EXTRENED_MASTER_SECRET;
     }
@@ -1091,8 +1091,8 @@ static int32_t ClientProcessPreSharedKey(TLS_Ctx *ctx, const ServerHelloMsg *ser
     }
 
     pskInfo->psk = BSL_SAL_Dump(psk, pskLen);
+    BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
     if (pskInfo->psk == NULL) {
-        (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return HITLS_MEMALLOC_FAIL;
     }

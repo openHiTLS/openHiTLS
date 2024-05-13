@@ -93,14 +93,30 @@ static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uin
             return ParseEmptyExtension(ctx, HS_EX_TYPE_EARLY_DATA, extMsgLen, &msg->haveEarlyData);
         case HS_EX_TYPE_SERVER_NAME:
             return ParseEmptyExtension(ctx, HS_EX_TYPE_SERVER_NAME, extMsgLen, &msg->haveServerName);
+        case HS_EX_TYPE_SIGNATURE_ALGORITHMS:
+        case HS_EX_TYPE_KEY_SHARE:
+        case HS_EX_TYPE_PRE_SHARED_KEY:
+        case HS_EX_TYPE_STATUS_REQUEST:
+        case HS_EX_TYPE_STATUS_REQUEST_V2:
+        case HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES:
+        case HS_EX_TYPE_COOKIE:
+        case HS_EX_TYPE_SUPPORTED_VERSIONS:
+        case HS_EX_TYPE_TRUSTED_CA_LIST:
+        case HS_EX_TYPE_OID_FILTERS:
+        case HS_EX_TYPE_POST_HS_AUTH:
+        case HS_EX_TYPE_SIGNATURE_ALGORITHMS_CERT:
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Illegal extension received", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORTED_EXTENSION);
+            return HITLS_PARSE_UNSUPPORTED_EXTENSION;
         default:
             break;
     }
 
-    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15713, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "unknown external message type:%d len:%lu in Encrypted extendsion hello message.",
-        extMsgType, extMsgLen, 0, 0);
-    return HITLS_SUCCESS;
+    ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNSUPPORTED_EXTENSION);
+    BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORTED_EXTENSION);
+    return HITLS_PARSE_UNSUPPORTED_EXTENSION;
 }
 
 // Parse the EncryptedExtensions extension message

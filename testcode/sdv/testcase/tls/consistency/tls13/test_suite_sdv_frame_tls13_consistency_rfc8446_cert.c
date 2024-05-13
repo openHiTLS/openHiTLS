@@ -210,7 +210,7 @@ static void Test_EE_len0(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t 
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, ENCRYPTED_EXTENSIONS);
     memset_s(data, bufSize, 0, bufSize);
-    if (ctx->isClient == false) {
+    if (ctx->isClient) {
         data[0] = ENCRYPTED_EXTENSIONS;
         data[1] = 0X00;
         data[2] = 0X00;

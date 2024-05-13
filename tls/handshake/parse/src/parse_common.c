@@ -103,7 +103,7 @@ int32_t ParseSessionId(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15650, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "the sessionId length of handshake message less than 24.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
         return HITLS_PARSE_INVALID_MSG_LEN;
     }
 

@@ -372,7 +372,7 @@ int32_t HS_TLS13CalcServerHelloProcessSecret(TLS_Ctx *ctx)
     PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
     uint16_t hashAlg = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
     uint32_t hashLen = SAL_CRYPT_DigestSize(hashAlg);
-    if (hashLen == 0) {
+    if (hashLen == 0 || hashLen > MAX_DIGEST_SIZE) {
         return HITLS_CRYPT_ERR_DIGEST;
     }
     uint8_t zero[MAX_DIGEST_SIZE] = {0};
@@ -389,6 +389,7 @@ int32_t HS_TLS13CalcServerHelloProcessSecret(TLS_Ctx *ctx)
 
     uint32_t earlySecretLen = hashLen;
     int32_t ret = HS_TLS13DeriveEarlySecret(hashAlg, psk, pskLen, ctx->hsCtx->earlySecret, &earlySecretLen);
+    BSL_SAL_CleanseData(psk, pskLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

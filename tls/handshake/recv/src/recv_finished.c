@@ -70,7 +70,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     }
 
     /* The default session length is 0. If the session length is not 0, insert the session length */
-    if (hsCtx->sessionId != NULL && !isTls13) {
+    if (hsCtx->sessionIdSize != 0 && !isTls13) {
         /* The session generated during the finish operation of TLS 1.3 cannot be used for session resume. In this
          * case, sessionId is blocked so that the HITLS_SESS_IsResumable return value is false */
         ret = HITLS_SESS_SetSessionId(ctx->session, hsCtx->sessionId, hsCtx->sessionIdSize);

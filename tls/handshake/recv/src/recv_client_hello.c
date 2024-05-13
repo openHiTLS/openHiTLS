@@ -27,7 +27,6 @@
 #include "hs_verify.h"
 
 #define HS_MAX_BINDER_SIZE 64
-#define TLS_13_SESSION_ID_SIZE 32u
 
 static void CheckRenegotiate(TLS_Ctx *ctx)
 {
@@ -1593,14 +1592,6 @@ static int32_t ServerSelectPskAndCheckBinder(TLS_Ctx *ctx, const ClientHelloMsg 
 
 static int32_t Tls13ServerSetSessionId(TLS_Ctx *ctx, const uint8_t *sessionId, uint32_t sessionIdSize)
 {
-    /* rfc8446 4.1.2. The sessionId in the clienthello message must be 32 bytes or 0 bytes */
-    if (sessionIdSize != TLS_13_SESSION_ID_SIZE && sessionIdSize != 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15247, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "received an empty session ID.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
-    }
 
     if (sessionIdSize == 0) {
         ctx->hsCtx->sessionIdSize = sessionIdSize;

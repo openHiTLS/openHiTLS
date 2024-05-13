@@ -894,6 +894,78 @@ exit:
 }
 /* END_CASE */
 
+/* @
+* @test  UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC005
+* @brief 2.1.  Incorrect DHE Share
+* @spec  If the client has not provided a sufficient "key_share" extension (e.g., it includes only DHE or ECDHE groups
+    unacceptable to or unsupported by the server), the server corrects the mismatch with a HelloRetryRequest and the
+    client needs to restart the handshake with an appropriate "key_share" extension, as shown in Figure 2. If no common
+    cryptographic parameters can be negotiated, the server MUST abort the handshake with an appropriate alert.
+* @title  Configure groups_list:"brainpoolP512r1:X25519" on the client and groups_list:"brainpoolP512r1:X25519" on the
+    server. Observe the link setup result and check whether the server sends Hello_Retry_Requset.
+* @precon  nan
+* @brief
+1. Configure groups_list:"brainpoolP512r1:X25519" on the client and groups_list:"brainpoolP512r1:X25519" on the
+    server.
+* @expect
+1. Send clienthello with X25519 keyshare. The link is established successfully.
+2. The server does not send Hello_Retry_Requset.
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC005()
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientconfig = NULL;
+    HITLS_Config *serverconfig = NULL;
+    clientconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientconfig != NULL);
+    serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+
+    uint16_t clientgroups[] = {HITLS_EC_GROUP_BRAINPOOLP512R1, HITLS_EC_GROUP_CURVE25519};
+    uint16_t servergroups[] = {HITLS_EC_GROUP_BRAINPOOLP512R1, HITLS_EC_GROUP_CURVE25519};
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverconfig, servergroups, sizeof(servergroups)/sizeof(uint16_t)) , HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientconfig, clientgroups, sizeof(clientgroups)/sizeof(uint16_t)) , HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recBuf = ioUserData->recMsg.msg;
+    uint32_t recLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recLen != 0);
+
+    uint32_t parseLen = 0;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recBuf, recLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerHelloMsg *serverHello = &frameMsg.body.hsMsg.body.serverHello;
+    ASSERT_TRUE(serverHello->keyShare.data.group.data == HITLS_EC_GROUP_CURVE25519);
+    ASSERT_EQ(server->ssl->hsCtx->haveHrr, false);
+
+    // Continue to establish the link.
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+exit:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
 /** @
 * @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_EXCHANGE_MODES_MISS_FUNC_TC001
 * @brief 4.2.9-Pre-Shared Key Exchange Modes-77
@@ -2684,7 +2756,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC005()
 
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT) , HITLS_SUCCESS);
-    printf("dddd===\n");
 exit:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_SESS_Free(testInfo.clientSession);

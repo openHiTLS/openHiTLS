@@ -966,3 +966,113 @@ exit:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
+
+/* @
+* @test    SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009
+* @title   set the session cache mode on the client server. try to Resumption
+* @precon  nan
+* @brief  1. Configure the session cache mode establish the connection. Expected result 1
+          2. Perform the first handshake, obtain and save the session. Expected result 2
+          3. Try resume the session. Expected result 3
+* @expect 1. Return success
+          2. The handshake is complete and obtain the session successfully
+          3. HITLS_SESS_CACHE_NO and HITLS_SESS_CACHE_CLIENT resumption fails, otherwise successful
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
+{
+    Process *localProcess = NULL;
+    Process *remoteProcess = NULL;
+    HLT_FD sockFd = {0};
+    int cnt = 1;
+
+    HITLS_Session *session = NULL;
+    const char *writeBuf = "Hello world";
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_CreateRemoteProcess(HITLS);
+    ASSERT_TRUE(remoteProcess != NULL);
+ 
+    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLCP1_1, false);
+    void *clientConfig = HLT_TlsNewCtx(TLCP1_1, true);
+    ASSERT_TRUE(clientConfig != NULL);
+
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+ 
+    HLT_SetSessionCacheMode(clientCtxConfig, mode);
+    HLT_SetSessionCacheMode(serverCtxConfig, mode);
+
+    ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
+    ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
+    do{
+        DataChannelParam channelParam;
+        channelParam.port = PORT;
+        channelParam.type = TCP;
+        channelParam.isBlock = true;
+        sockFd = HLT_CreateDataChannel(localProcess, remoteProcess, channelParam);
+        ASSERT_TRUE((sockFd.srcFd > 0) && (sockFd.peerFd > 0));
+        remoteProcess->connFd = sockFd.peerFd;
+        localProcess->connFd = sockFd.srcFd;
+        remoteProcess->connType = TCP;
+        localProcess->connType = TCP;
+ 
+        int32_t serverSslId = HLT_RpcTlsNewSsl(remoteProcess, serverConfigId);
+        HLT_Ssl_Config *serverSslConfig;
+        serverSslConfig = HLT_NewSslConfig(NULL);
+        ASSERT_TRUE(serverSslConfig != NULL);
+        serverSslConfig->sockFd = remoteProcess->connFd;
+        serverSslConfig->connType = TCP;
+        ASSERT_TRUE(HLT_RpcTlsSetSsl(remoteProcess, serverSslId, serverSslConfig) == 0);
+        HLT_RpcTlsAccept(remoteProcess, serverSslId);
+
+        void *clientSsl = HLT_TlsNewSsl(clientConfig);
+        ASSERT_TRUE(clientSsl != NULL);
+        HLT_Ssl_Config *clientSslConfig;
+        clientSslConfig = HLT_NewSslConfig(NULL);
+        ASSERT_TRUE(clientSslConfig != NULL);
+        clientSslConfig->sockFd = localProcess->connFd;
+        clientSslConfig->connType = TCP;
+
+        HLT_TlsSetSsl(clientSsl, clientSslConfig);
+        if (session != NULL) {
+            ASSERT_TRUE(HITLS_SetSession(clientSsl, session) == HITLS_SUCCESS);
+        }
+        ASSERT_EQ(HLT_TlsConnect(clientSsl) , 0);
+
+        ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
+        ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+        ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
+        ASSERT_TRUE(readLen == strlen(writeBuf));
+        ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
+
+        ASSERT_TRUE(HLT_RpcTlsClose(remoteProcess, serverSslId) == 0);
+        ASSERT_TRUE(HLT_TlsClose(clientSsl) == 0);
+        HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen);
+        HLT_RpcTlsRead(remoteProcess, serverSslId, readBuf, READ_BUF_SIZE, &readLen);
+        HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
+        HLT_CloseFd(sockFd.srcFd, localProcess->connType);
+
+        if (cnt == 2) {
+            if (mode == HITLS_SESS_CACHE_NO || mode == HITLS_SESS_CACHE_CLIENT){
+                uint8_t isReused = -1;
+                HITLS_IsSessionReused(clientSsl, &isReused);
+                ASSERT_TRUE(isReused == 0);
+            } else {
+                uint8_t isReused = -1;
+                HITLS_IsSessionReused(clientSsl, &isReused);
+                ASSERT_TRUE(isReused == 1);
+            }
+        } else {
+            session = HITLS_GetDupSession(clientSsl);
+            ASSERT_TRUE(session != NULL);
+        }cnt++;
+    }while(cnt < 3);
+exit:
+    HITLS_SESS_Free(session);
+    HLT_FreeAllProcess();
+}
+/* END_CASE */

@@ -407,7 +407,7 @@ exit:
 void SDV_BSL_BIN_LOG_FUNC_TC001(void)
 {
     int32_t ret;
-    const char *filename = "/tmp/HITLS_binlog_test.log";
+    const char *filename = "./HITLS_binlog_test.log";
     remove(filename);
 
     g_LogOutput = fopen(filename, "w");

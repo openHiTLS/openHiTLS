@@ -141,6 +141,19 @@ int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx)
 
     return ClientChangeStateAfterSendClientHello(ctx);
 }
+static bool Tls13SelectGroup(TLS_Ctx *ctx, uint16_t *group)
+{
+    TLS_Config *tlsConfig = &ctx->config.tlsConfig;
+    uint16_t version = (ctx->negotiatedInfo.version == 0) ?
+        ctx->config.tlsConfig.maxVersion : ctx->negotiatedInfo.version;
+    for (uint32_t i = 0; i < tlsConfig->groupsSize; ++i) {
+        if (GroupConformToVersion(version, tlsConfig->groups[i])) {
+            *group = tlsConfig->groups[i];
+            return true;
+        }
+    }
+    return false;
+}
 
 static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyExMode)
 {
@@ -171,13 +184,11 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
         /** If the value of group is updated, use the updated group */
         selectGroup = keyShare->group;
     } else {
+        if (!Tls13SelectGroup(ctx, &selectGroup)) {
+            return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+        }
         /** Send the client hello message for the first time and fill in the group in the key share extension */
         keyShare->group = selectGroup;
-    }
-    uint16_t version = (ctx->negotiatedInfo.version == 0) ?
-        ctx->config.tlsConfig.maxVersion : ctx->negotiatedInfo.version;
-    if (!GroupConformToVersion(version, selectGroup)) {
-        return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
     }
     HITLS_ECParameters curveParams = {
         .type = HITLS_EC_CURVE_TYPE_NAMED_CURVE,
@@ -469,11 +480,11 @@ static int32_t PackClientPreSharedKeyBinders(const TLS_Ctx *ctx, uint8_t *buf, u
         }
         ret = VERIFY_CalcPskBinder(ctx, hashAlg, false, psk, pskLen,
             ctx->hsCtx->msgBuf, trucatedLen, &buf[offset], binderLen);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
         offset += binderLen;
-        memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
     }
 
     if (pskInfo->userPskSess != NULL) {
@@ -488,11 +499,11 @@ static int32_t PackClientPreSharedKeyBinders(const TLS_Ctx *ctx, uint8_t *buf, u
         }
         ret = VERIFY_CalcPskBinder(ctx, hashAlg, true, psk, pskLen,
             ctx->hsCtx->msgBuf, trucatedLen, &buf[offset], binderLen);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
         offset += binderLen;
-        memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
     }
 
     BSL_Uint16ToByte((uint16_t)(offset - sizeof(uint16_t)), &buf[0]); // pack binder len

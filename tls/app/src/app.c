@@ -74,8 +74,7 @@ int32_t APP_Init(TLS_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
-    bufSize = ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 ?
-            REC_MAX_TLS13_ENCRYPTED_LEN : REC_MAX_PLAIN_LENGTH;
+    bufSize = REC_MAX_TLS13_ENCRYPTED_LEN;
 
     appCtx->appReadBuf.buf = (uint8_t *)BSL_SAL_Malloc(bufSize);
     if (appCtx->appReadBuf.buf == NULL) {
@@ -209,7 +208,7 @@ static int32_t AppReadData(TLS_Ctx *ctx, uint8_t *buf, uint32_t num, uint32_t *r
 
     /* If there is no data in the cache and the size of the user buffer is greater than the maximum size of the record,
        the app read cache is not used. */
-    if (num >= REC_MAX_PLAIN_LENGTH) {
+    if (num >= REC_MAX_TLS13_ENCRYPTED_LEN) {
         return REC_Read(ctx, REC_TYPE_APP, buf, readLen, num);
     }
     // read data from the uio of the CTX to revAppdata
