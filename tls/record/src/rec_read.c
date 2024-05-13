@@ -792,6 +792,7 @@ int32_t REC_TlsReadNbytes(TLS_Ctx *ctx, REC_Type recordType, uint8_t *buf, uint3
     }
 
     do {
+        uint32_t offset = num - wantLen;
         if (!recCtx->hasReadBufDecrypted) {
             recCtxBuf->singleRecStart = 0;
             ret = REC_Read(ctx, recordType, readBuf, &readbytes, REC_MAX_CIPHER_TEXT_LEN);
@@ -800,26 +801,26 @@ int32_t REC_TlsReadNbytes(TLS_Ctx *ctx, REC_Type recordType, uint8_t *buf, uint3
                 return ret;
             }
             recCtx->hasReadBufDecrypted = true;
-            (void)memcpy_s(recCtxBuf->buf + recCtxBuf->singleRecStart, REC_MAX_CIPHER_TEXT_LEN, readBuf, readbytes);
+            (void)memcpy_s(recCtxBuf->buf, REC_MAX_CIPHER_TEXT_LEN, readBuf, readbytes);
             recCtxBuf->singleRecEnd = recCtxBuf->singleRecStart + readbytes;
 
             if (readbytes >= wantLen) {
-                (void)memcpy_s(buf, num, recCtxBuf->buf + recCtxBuf->singleRecStart, wantLen);
+                (void)memcpy_s(buf + offset, wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart, wantLen);
                 recCtxBuf->singleRecStart += wantLen;
                 wantLen = 0;
             } else {
-                (void)memcpy_s(buf, wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart, readbytes);
+                (void)memcpy_s(buf + offset, wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart, readbytes);
                 recCtx->hasReadBufDecrypted = false;
                 wantLen -= readbytes;
             }
         } else {
             uint32_t availableBytes = recCtxBuf->singleRecEnd - recCtxBuf->singleRecStart;
             if (availableBytes >= wantLen) {
-                (void)memcpy_s(buf + (num - wantLen), wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart, wantLen);
+                (void)memcpy_s(buf + offset, wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart, wantLen);
                 recCtxBuf->singleRecStart += wantLen;
                 wantLen = 0;
             } else {
-                (void)memcpy_s(buf + (num - wantLen), wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart,
+                (void)memcpy_s(buf + offset, wantLen, recCtxBuf->buf + recCtxBuf->singleRecStart,
                     availableBytes);
                 wantLen -= availableBytes;
                 recCtx->hasReadBufDecrypted = false;
