@@ -896,10 +896,10 @@ SDV_CRYPTO_BN_CMP_FUNC_TC001:0:"":0:"01":1
 BN_Cmp Verification Test #3: a != NULL, b=NULL
 SDV_CRYPTO_BN_CMP_FUNC_TC001:0:"01":0:"":-1
 
-BN_Cmp Verification Test #4: a->sign != b->sign, a->sign=false
+BN_Cmp Verification Test #4: a, b have different sign, a > 0
 SDV_CRYPTO_BN_CMP_FUNC_TC001:0:"01":1:"01":1
 
-BN_Cmp Verification Test #5: a->sign != b->sign, a->sign=true
+BN_Cmp Verification Test #5: a, b have different sign, a < 0
 SDV_CRYPTO_BN_CMP_FUNC_TC001:1:"01":0:"01":-1
 
 BN_Cmp Verification Test #6: a=b, sign=true

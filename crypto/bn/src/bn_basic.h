@@ -20,9 +20,13 @@ extern "C" {
 
 #define BN_UINT_BITS ((uint32_t)sizeof(BN_UINT) << 3)
 #define BITS_TO_BN_UNIT(bits) (((bits) + BN_UINT_BITS - 1) / BN_UINT_BITS)
+#define BITS_TO_BYTES(bits) (((bits) + 7) / 8)
+#define BN_CLRNEG(n)        ((n) &= 0x7FFFFFFF)
+#define BN_SETNEG(n)        ((n) |= CRYPT_BN_FLAG_ISNEGTIVE)
+#define BN_ISNEG(n)         (((n) & CRYPT_BN_FLAG_ISNEGTIVE) != 0)
+#define BN_GETNEG(n)        ((n) & CRYPT_BN_FLAG_ISNEGTIVE)
 
 struct BigNum {
-    bool sign; /* *< BigNum sign: negtive(true) or not(false) */
     uint32_t size; /* *< BigNum size (count of BN_UINT) */
     uint32_t room; /* *< BigNum max size (count of BN_UINT) */
     uint32_t flag; /* *< BigNum flag */

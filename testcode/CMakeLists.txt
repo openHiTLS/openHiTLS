@@ -96,10 +96,10 @@ ExternalProject_Add(${PROCESS}
 ExternalProject_Add(${GEN_TESTCASE}
     SOURCE_DIR            ${openHiTLS_SRC}
     PREFIX                ""
-    BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/gen_test/build/${TESTFILE}
+    BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/gen_test/build/
     INSTALL_DIR           ""
     UPDATE_COMMAND        ""
-    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} ../..
+    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} ..
     BUILD_COMMAND         make
     INSTALL_COMMAND       ""
     BUILD_ALWAYS          FALSE

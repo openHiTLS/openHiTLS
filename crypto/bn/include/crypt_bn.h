@@ -39,6 +39,7 @@ extern "C" {
 typedef enum {
     CRYPT_BN_FLAG_OPTIMIZER = 0x01,      /**< Flag of BigNum, indicating the BigNum obtained from the optimizer */
     CRYPT_BN_FLAG_CONSTTIME = 0x02,      /**< Flag of BigNum, indicating the constant time execution. */
+    CRYPT_BN_FLAG_ISNEGTIVE = 0x80000000,  /**< Flag of BigNum, indicating the bignum is negtive. */
 } CRYPT_BN_FLAG;
 
 typedef struct BnMont BN_Mont;
@@ -153,7 +154,7 @@ int32_t BN_SetSign(BN_BigNum *a, bool sign);
  * @brief BigNum copy
  *
  * @param r [OUT] BigNum
- * @param a [IN] BigNum
+ * @param a [IN] BigNum, a != r.
  *
  * @retval CRYPT_SUCCESS            succeeded.
  * @retval CRYPT_NULL_INPUT         Invalid null pointer

@@ -115,7 +115,11 @@ int32_t BN_SetSign(BN_BigNum *a, bool sign)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_NO_NEGATIVE_ZERO);
         return CRYPT_BN_NO_NEGATIVE_ZERO;
     }
-    a->sign = sign;
+    if (sign) {
+        BN_SETNEG(a->flag);
+    } else {
+        BN_CLRNEG(a->flag);
+    }
     return CRYPT_SUCCESS;
 }
 
@@ -130,7 +134,8 @@ int32_t BN_Copy(BN_BigNum *r, const BN_BigNum *a)
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
-        r->sign = a->sign;
+        BN_CLRNEG(r->flag);
+        r->flag |= BN_GETNEG(a->flag);
         BN_COPY_BYTES(r->data, r->size, a->data, a->size);
         r->size = a->size;
     }
@@ -144,7 +149,7 @@ BN_BigNum *BN_Dup(const BN_BigNum *a)
     }
     BN_BigNum *r = BN_Create(a->room * BN_UINT_BITS);
     if (r != NULL) {
-        r->sign = a->sign;
+        r->flag |= BN_GETNEG(a->flag);
         BN_COPY_BYTES(r->data, r->size, a->data, a->size);
         r->size = a->size;
     }
@@ -166,7 +171,7 @@ bool BN_IsOne(const BN_BigNum *a)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return false;
     }
-    return (a->size == 1 && a->data[0] == 1 && a->sign == false);
+    return (a->size == 1 && a->data[0] == 1 && !BN_ISNEG(a->flag));
 }
 
 bool BN_IsNegative(const BN_BigNum *a)
@@ -175,7 +180,7 @@ bool BN_IsNegative(const BN_BigNum *a)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return false;
     }
-    return a->sign;
+    return BN_ISNEG(a->flag);
 }
 
 bool BN_IsOdd(const BN_BigNum *a)
@@ -204,7 +209,7 @@ int32_t BN_Zeroize(BN_BigNum *a)
     }
     // clear sensitive information
     BSL_SAL_CleanseData(a->data, a->size * sizeof(BN_UINT));
-    a->sign = false;
+    BN_CLRNEG(a->flag);
     a->size = 0;
     return CRYPT_SUCCESS;
 }
@@ -285,7 +290,7 @@ int32_t BN_ClrBit(BN_BigNum *a, uint32_t n)
     // check whether the size changes
     a->size = BinFixSize(a->data, a->size);
     if (a->size == 0) {
-        a->sign = false;
+        BN_CLRNEG(a->flag);
     }
     return CRYPT_SUCCESS;
 }

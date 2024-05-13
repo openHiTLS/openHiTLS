@@ -1284,7 +1284,7 @@ void SDV_CRYPTO_BN_SUB_LIMB_FUNC_TC001(int sign1, Hex *hex1, Hex *hex2, int sign
 
     ASSERT_TRUE(BN_SetLimb(res, w) == CRYPT_SUCCESS);
     if (w != 0) {
-        res->sign = true;
+        res->flag |= CRYPT_BN_FLAG_ISNEGTIVE;
     }
     ASSERT_TRUE(BN_Cmp(n, res) == 0);
 

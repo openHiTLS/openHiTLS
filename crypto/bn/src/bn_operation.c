@@ -30,10 +30,10 @@ int32_t BN_Cmp(const BN_BigNum *a, const BN_BigNum *b)
         }
         return 0;
     }
-    if (a->sign != b->sign) {
-        return a->sign == false ? 1 : -1;
+    if (BN_ISNEG(a->flag ^ b->flag)) {
+        return BN_ISNEG(a->flag) ? -1 : 1;
     }
-    if (a->sign == true) {
+    if (BN_ISNEG(a->flag)) {
         return BinCmp(b->data, b->size, a->data, a->size);
     }
     return BinCmp(a->data, a->size, b->data, b->size);
@@ -49,30 +49,36 @@ int32_t BN_Add(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
     uint32_t aBits = BN_Bits(a);
     uint32_t bBits = BN_Bits(b);
     uint32_t maxbits = (aBits >= bBits) ? aBits : bBits;
-    if (a->sign == b->sign) {
+    uint32_t tmpFlag = 0;
+    if (!BN_ISNEG(a->flag ^ b->flag)) {
         maxbits += 1;
     }
     if (BnExtend(r, BITS_TO_BN_UNIT(maxbits)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (a->sign == b->sign) {
-        r->sign = a->sign;
+    if (!BN_ISNEG(a->flag ^ b->flag)) {
+        tmpFlag = BN_GETNEG(a->flag);
         UAdd(r, a, b);
-        return CRYPT_SUCCESS;
+        goto END;
     }
     // compare absolute value
     int32_t res = BinCmp(a->data, a->size, b->data, b->size);
     if (res > 0) {
-        r->sign = a->sign;
+        tmpFlag = BN_GETNEG(a->flag);
         USub(r, a, b);
-        return CRYPT_SUCCESS;
+        goto END;
     } else if (res < 0) {
-        r->sign = b->sign;
+        tmpFlag = BN_GETNEG(b->flag);
         USub(r, b, a);
-        return CRYPT_SUCCESS;
+        goto END;
+    } else {
+        return BN_Zeroize(r);
     }
-    return BN_Zeroize(r);
+END:
+    BN_CLRNEG(r->flag);
+    r->flag |= tmpFlag;
+    return CRYPT_SUCCESS;
 }
 
 int32_t BN_AddLimb(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
@@ -89,36 +95,36 @@ int32_t BN_AddLimb(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
     if (a->size == 1 && a->data[0] < w) {
         needBits = BN_UINT_BITS - GetZeroBitsUint(w);
     }
-    if (a->sign == false) {
+    if (!BN_ISNEG(a->flag)) {
         needBits += 1;
     }
     if (BnExtend(r, BITS_TO_BN_UNIT(needBits)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (a->sign == false) { // a is positive
-        r->sign = false;
+    if (!BN_ISNEG(a->flag)) { // a is positive
+        BN_CLRNEG(r->flag);
         UInc(r, a, w);
         return CRYPT_SUCCESS;
     }
 
     if (a->size == 1) {
         if (a->data[0] > w) {
-            r->sign = true;
+            BN_SETNEG(r->flag);
             r->data[0] = a->data[0] - w;
             r->size = 1;
         } else if (a->data[0] == w) {
-            r->sign = false;
+            BN_CLRNEG(r->flag);
             r->data[0] = 0;
             r->size = 0;
         } else {
-            r->sign = false;
+            BN_CLRNEG(r->flag);
             r->data[0] = w - a->data[0];
             r->size = 1;
         }
         return CRYPT_SUCCESS;
     }
-    r->sign = true;
+    BN_SETNEG(r->flag);
     UDec(r, a, w);
     return CRYPT_SUCCESS;
 }
@@ -133,15 +139,18 @@ int32_t BN_Sub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
     uint32_t aBits = BN_Bits(a);
     uint32_t bBits = BN_Bits(b);
     uint32_t maxbits = (aBits >= bBits) ? aBits : bBits;
-    if (a->sign != b->sign) {
+    uint32_t tmpFlag = 0;
+    if (BN_ISNEG(a->flag ^ b->flag)) {
         maxbits += 1;
     }
     if (BnExtend(r, BITS_TO_BN_UNIT(maxbits)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (a->sign != b->sign) {
-        r->sign = a->sign;
+    if (BN_ISNEG(a->flag ^ b->flag)) {
+        tmpFlag = BN_GETNEG(a->flag);
+        BN_CLRNEG(r->flag);
+        r->flag |= tmpFlag;
         UAdd(r, a, b);
         return CRYPT_SUCCESS;
     }
@@ -150,11 +159,15 @@ int32_t BN_Sub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
     if (res == 0) {
         return BN_Zeroize(r);
     } else if (res > 0) {
-        r->sign = a->sign;
+        tmpFlag = BN_GETNEG(a->flag);
+        BN_CLRNEG(r->flag);
+        r->flag |= tmpFlag;
         USub(r, a, b);
         return CRYPT_SUCCESS;
     }
-    r->sign = !b->sign;
+    tmpFlag = BN_GETNEG(b->flag) ^ CRYPT_BN_FLAG_ISNEGTIVE;
+    BN_CLRNEG(r->flag);
+    r->flag |= tmpFlag;
     USub(r, b, a);
     return CRYPT_SUCCESS;
 }
@@ -170,7 +183,11 @@ int32_t BN_SubLimb(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
-        r->sign = (w == 0) ? false : true;
+        if (w == 0) {
+            BN_CLRNEG(r->flag);
+        } else {
+            BN_SETNEG(r->flag);
+        }
         return CRYPT_SUCCESS;
     }
     uint32_t needBits = BN_Bits(a);
@@ -178,15 +195,15 @@ int32_t BN_SubLimb(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
     if (a->size == 1 && a->data[0] < w) {
         needBits = BN_UINT_BITS - GetZeroBitsUint(w);
     }
-    if (a->sign == true) {
+    if (BN_ISNEG(a->flag)) {
         needBits += 1;
     }
     if (BnExtend(r, BITS_TO_BN_UNIT(needBits)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (a->sign == true) {
-        r->sign = true;
+    if (BN_ISNEG(a->flag)) {
+        BN_SETNEG(r->flag);
         UInc(r, a, w);
         return CRYPT_SUCCESS;
     }
@@ -195,13 +212,13 @@ int32_t BN_SubLimb(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
             r->data[0] = a->data[0] - w;
             r->size = BinFixSize(r->data, 1);
         } else {
-            r->sign = true;
+            BN_SETNEG(r->flag);
             r->data[0] = w - a->data[0];
             r->size = 1;
         }
         return CRYPT_SUCCESS;
     }
-    r->sign = false;
+    BN_CLRNEG(r->flag);
     UDec(r, a, w);
     return CRYPT_SUCCESS;
 }
@@ -237,7 +254,11 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     } else {
         t = r;
     }
-    t->sign = a->sign != b->sign;
+    if (BN_ISNEG(a->flag ^ b->flag)) {
+        BN_SETNEG(t->flag);
+    } else {
+        BN_CLRNEG(t->flag);
+    }
     t->size = BinMul(t->data, t->room, a->data, a->size, b->data, b->size);
     if (r != t) {
         int32_t ret = BN_Copy(r, t);
@@ -282,7 +303,7 @@ int32_t BN_Sqr(BN_BigNum *r, const BN_BigNum *a, BN_Optimizer *opt)
     t->size = BinSqr(t->data, t->room, a->data, a->size);
     (void)BN_Copy(r, t); // The preceding verification has been performed. The return value can be ignored.
     OptimizerEnd(opt); // release occupation from the optimizer
-    r->sign = false; // The square must be positive.
+    BN_CLRNEG(r->flag); // The square must be positive.
     return CRYPT_SUCCESS;
 }
 
@@ -319,12 +340,13 @@ int32_t DivSimple(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x,
         }
     } else {
         if (q != NULL) {
-            bool sign = x->sign != y->sign;
+            uint32_t tmpFlag = BN_GETNEG(x->flag ^ y->flag);
             ret = BN_SetLimb(q, 1);
             if (ret != 0) {
                 return ret;
             }
-            q->sign = sign;
+            BN_CLRNEG(q->flag);
+            q->flag |= tmpFlag;
         }
         if (r != NULL) {
             ret = BN_Zeroize(r);
@@ -362,31 +384,33 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x,
     if (qTmp == NULL || rTmp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
-        goto err;
+        goto ERR;
     }
 
     ret = BN_Copy(rTmp, x);
     if (ret != CRYPT_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     qTmp->size = qTmp->room;
     rTmp->size = BinDiv(qTmp->data, &(qTmp->size), rTmp->data, rTmp->size, y->data, y->size);
     if (rTmp->size == 0) {
-        rTmp->sign = false; // The symbol can only be positive when the value is 0.
+        BN_CLRNEG(rTmp->flag);
+    }
+    if (qTmp->size != 0 && BN_ISNEG(x->flag ^ y->flag)) {
+        BN_SETNEG(qTmp->flag);
     }
 
-    qTmp->sign = (qTmp->size == 0) ? false : (x->sign != y->sign);
     if (q != NULL) {
         ret = BN_Copy(q, qTmp);
         if (ret != CRYPT_SUCCESS) {
-            goto err;
+            goto ERR;
         }
     }
     if (r != NULL) {
         ret = BN_Copy(r, rTmp);
     }
-err:
+ERR:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -424,13 +448,13 @@ int32_t BN_Mod(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimize
         return ret;
     }
     // t is a positive number
-    if (t->sign == false) {
+    if (!BN_ISNEG(t->flag)) {
         ret = BN_Copy(r, t);
         OptimizerEnd(opt);
         return ret;
     }
     // When t is a negative number, the modulo operation result must be positive.
-    if (m->sign == true) { // m is a negative number
+    if (BN_ISNEG(m->flag)) { // m is a negative number
         ret = BN_Sub(r, t, m);
     } else { // m is a positive number
         ret = BN_Add(r, t, m);
@@ -482,18 +506,18 @@ int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Sub(t, a, b);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-err:
+ERR:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -517,18 +541,18 @@ int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Add(t, a, b);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-err:
+ERR:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -552,18 +576,18 @@ int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Mul(t, a, b, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-err:
+ERR:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -597,18 +621,18 @@ int32_t BN_ModSqr(
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Sqr(t, a, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-err:
+ERR:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -627,7 +651,7 @@ int32_t ModExpInputCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
         return CRYPT_BN_ERR_DIVISOR_ZERO;
     }
     // the power cannot be negative
-    if (e->sign == true) {
+    if (BN_ISNEG(e->flag)) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_EXP_NO_NEGATIVE);
         return CRYPT_BN_ERR_EXP_NO_NEGATIVE;
     }
@@ -757,8 +781,7 @@ int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-
-    r->sign = a->sign;
+    uint32_t tmpFlag = BN_GETNEG(a->flag);
     uint32_t size = BinRshift(r->data, a->data, a->size, n);
     if (size < r->size) {
         if (memset_s(r->data + size, (r->room - size) * sizeof(BN_UINT), 0,
@@ -767,6 +790,8 @@ int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n)
             return CRYPT_SECUREC_FAIL;
         }
     }
+    BN_CLRNEG(r->flag);
+    r->flag |= tmpFlag;
     r->size = size;
     return CRYPT_SUCCESS;
 }
@@ -788,10 +813,12 @@ int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     BN_UINT *dst = r->data;
     BN_UINT *srcA = a->data;
     BN_UINT *srcB = b->data;
+    uint32_t tmpFlag = (mask != 0) ? (a->flag) : (b->flag);
     for (uint32_t i = 0; i < len; i++) {
         dst[i] = (srcA[i] & rmask) ^ (srcB[i] & mask);
     }
-    r->sign = (mask != 0) ? (a->sign) : (b->sign);
+    BN_CLRNEG(r->flag);
+    r->flag |= BN_GETNEG(tmpFlag);
     r->size = (a->size & (uint32_t)rmask) ^ (b->size & (uint32_t)mask);
     return CRYPT_SUCCESS;
 }
