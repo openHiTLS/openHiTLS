@@ -97,7 +97,12 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/testcode/framework/tls/resource/include
         ${openHiTLS_SRC}/testcode/framework/tls/rpc/include
         ${openHiTLS_SRC}/testcode/framework/tls/process/include
+        ${openHiTLS_SRC}/testcode/framework/tls/crypt/include
         ${openHiTLS_SRC}/testcode/framework/tls/transfer/include
+        ${openHiTLS_SRC}/testcode/framework/tls/frame/src
+        ${openHiTLS_SRC}/testcode/framework/tls/msg/include
+        ${openHiTLS_SRC}/testcode/framework/tls/io/include
+        ${openHiTLS_SRC}/testcode/framework/tls/io/src
         ${openHiTLS_SRC}/bsl/sal/include
         ${openHiTLS_SRC}/bsl/tlv/include
         ${openHiTLS_SRC}/include/bsl
@@ -187,7 +192,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/tls/feature/session/src
         ${openHiTLS_SRC}/tls/cert/include
         ${openHiTLS_SRC}/tls/cert/cert_adapt
-        ${openHiTLS_SRC}/tls/cert/cert_self
+        ${openHiTLS_SRC}/tls/cert/hitls_x509_adapt
         ${openHiTLS_SRC}/tls/crypt/crypt_self
         ${openHiTLS_SRC}/config/macro_config
 	${openHiTLS_SRC}/tls/handshake/parse/src

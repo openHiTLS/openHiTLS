@@ -354,7 +354,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002(void)
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_BuildCertChain(store, entity, &chain);
-    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    ASSERT_TRUE(ret == HITLS_X509_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
     HITLS_X509_Cert *root = NULL;
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root);
@@ -526,7 +526,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_BuildCertChain(store, entity, &chain);
-    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    ASSERT_TRUE(ret == HITLS_X509_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
     chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_TRUE(chain != NULL);

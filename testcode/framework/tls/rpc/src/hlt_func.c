@@ -1270,3 +1270,23 @@ void HLT_CleanFrameHandle(void)
 {
     CleanFrameHandle();
 }
+
+#define SCTP_AUTH_FILE_PATH "/proc/sys/net/sctp/auth_enable"
+#define SCTP_AUTH_ENABLE "echo 1 > /proc/sys/net/sctp/auth_enable"
+#define SCTP_FLAG_BUFF 10
+
+bool IsEnableSctpAuth(void)
+{
+    system(SCTP_AUTH_ENABLE);
+    char buf[SCTP_FLAG_BUFF] = { 0 };
+    FILE* file = fopen(SCTP_AUTH_FILE_PATH, "r+");
+    if (file == NULL) {
+        return false;
+    }
+    (void)fgets(buf, SCTP_FLAG_BUFF, file);
+    fclose(file);
+    if (strcmp(buf, "1") == 0) {
+        return true;
+    }
+    return false;
+}

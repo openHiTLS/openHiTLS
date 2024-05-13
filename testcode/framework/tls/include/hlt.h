@@ -156,6 +156,7 @@ int HLT_ProcessTlsWrite(HLT_Process *process, HLT_Tls_Res* tlsRes, uint8_t *data
 int HLT_TlsSetMtu(void *ssl, uint16_t mtu);
 int HLT_TlsGetErrorCode(void *ssl);
 
+bool IsEnableSctpAuth(void);
 #ifdef __cplusplus
 }
 #endif

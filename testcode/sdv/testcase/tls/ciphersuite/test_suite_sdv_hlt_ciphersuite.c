@@ -24,27 +24,8 @@
 /* END_HEADER */
 
 #define READ_BUF_LEN_18K (18 * 1024)
-#define SCTP_FLAG_BUFF 10
 #define PORT 10086
-#define SCTP_AUTH_FILE_PATH "/proc/sys/net/sctp/auth_enable"
-#define SCTP_AUTH_ENABLE "echo 1 > /proc/sys/net/sctp/auth_enable"
 int32_t g_testSecurityLevel = 0;
-
-static bool IsEnableSctpAuth(void)
-{
-    system(SCTP_AUTH_ENABLE);
-    char buf[SCTP_FLAG_BUFF] = { 0 };
-    FILE* file = fopen(SCTP_AUTH_FILE_PATH, "r+");
-    if (file == NULL) {
-        return false;
-    }
-    (void)fgets(buf, SCTP_FLAG_BUFF, file);
-    fclose(file);
-    if (strcmp(buf, "1") == 0) {
-        return true;
-    }
-    return false;
-}
 
 void SetCert(HLT_Ctx_Config *ctxConfig, char *cert)
 {

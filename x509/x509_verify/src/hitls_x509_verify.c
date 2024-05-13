@@ -496,10 +496,10 @@ int32_t HITLS_X509_BuildCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert
         *chain = tmpChain;
         return HITLS_X509_SUCCESS;
     }
-    ret = X509_BuildChain(storeCtx, NULL, cert, tmpChain, NULL);
-
+    (void)X509_BuildChain(storeCtx, NULL, cert, tmpChain, NULL);
     *chain = tmpChain;
-    return ret;
+
+    return HITLS_X509_SUCCESS;
 }
 
 static int32_t HITLS_X509_SecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert)

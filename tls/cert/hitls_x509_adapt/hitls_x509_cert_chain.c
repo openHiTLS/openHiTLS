@@ -72,7 +72,7 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
     *num = 0;
     HITLS_X509_List *certChain = NULL;
     int32_t ret = HITLS_X509_BuildCertChain((HITLS_X509_StoreCtx *)store, cert, &certChain);
-    if (ret != HITLS_SUCCESS && certChain == NULL) {
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
     ret = BuildArrayFromList(certChain, list, num);
