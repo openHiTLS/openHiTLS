@@ -689,13 +689,19 @@ int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawD
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_HASHID);
         return HITLS_X509_ERR_VFY_GET_HASHID;
     }
-
-    int32_t ret = X509_CtrlAlgInfo(pubKey, hashId, alg);
+    CRYPT_EAL_PkeyCtx *verifyPubKey = CRYPT_EAL_PkeyDupCtx(pubKey);
+    if (verifyPubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_DUP_PUBKEY);
+        return HITLS_X509_ERR_VFY_DUP_PUBKEY;
+    }
+    int32_t ret = X509_CtrlAlgInfo(verifyPubKey, hashId, alg);
     if (ret != HITLS_X509_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(verifyPubKey);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyVerify(pubKey, hashId, rawData, rawDataLen, signature->buff, signature->len);
+    ret = CRYPT_EAL_PkeyVerify(verifyPubKey, hashId, rawData, rawDataLen, signature->buff, signature->len);
+    CRYPT_EAL_PkeyFreeCtx(verifyPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
