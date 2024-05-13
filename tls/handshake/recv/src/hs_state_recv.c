@@ -25,6 +25,7 @@
 #include "bsl_uio.h"
 #include "hs_kx.h"
 #include "indicator.h"
+#include "securec.h"
 
 static int32_t ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
@@ -174,6 +175,7 @@ static int32_t Tls12TryRecvHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Msg hsMsg = {0};
+    (void)memset_s(&hsMsg, sizeof(HS_Msg), 0, sizeof(HS_Msg));
 
     ret = ReadThenParseTlsHsMsg(ctx, &hsMsg);
     if (ret != HITLS_SUCCESS) {
@@ -191,6 +193,7 @@ static int32_t Tls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Msg hsMsg = {0};
+    (void)memset_s(&hsMsg, sizeof(HS_Msg), 0, sizeof(HS_Msg));
 
     ret = ReadThenParseTlsHsMsg(ctx, &hsMsg);
     if (ret != HITLS_SUCCESS) {
@@ -224,6 +227,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     uint8_t *buf = NULL;
     uint32_t dataLen = 0;
     HS_Msg hsMsg = {0};
+    (void)memset_s(&hsMsg, sizeof(HS_Msg), 0, sizeof(HS_Msg));
     HS_MsgInfo hsMsgInfo = {0};
 
     /* Read the message with the expected sequence number from the reassembly queue. If no message exists, read the
@@ -282,6 +286,10 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
                               hsMsgInfo.length, ctx, ctx->config.tlsConfig.msgArg);
 
+    if (hsMsgInfo.type == HELLO_REQUEST && hsMsgInfo.sequence != 0) {
+        HS_CleanMsg(&hsMsg);
+        return HITLS_SUCCESS;
+    }
     ret = ProcessReceivedHandshakeMsg(ctx, &hsMsg);
     HS_CleanMsg(&hsMsg);
     return ret;

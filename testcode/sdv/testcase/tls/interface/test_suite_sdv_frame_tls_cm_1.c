@@ -622,4 +622,132 @@ exit:
 }
 /* END_CASE */
 
+static void Test_Warning_Alert(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)bufSize;
+    (void)user;
+    (void)len;
+    (void)data;
+    uint8_t alertdata[2] = {0x01, 0x29};
+    REC_Write(ctx, REC_TYPE_ALERT, alertdata, 2);
+    return;
+}
 
+static void Test_Fatal_Alert(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)bufSize;
+    (void)user;
+    (void)len;
+    (void)data;
+    uint8_t alertdata[2] = {0x02, 0x29};
+    REC_Write(ctx, REC_TYPE_ALERT, alertdata, 2);
+    return;
+}
+
+/** @
+* @test     UT_TLS_CM_WARNING_ALERT_TC001
+* @title    recv warning alert brefore client hello need to return UNEXPECT_MSG alert
+* @precon   nan
+* @brief    1. Initialize the client and server. Expected result 1
+*           2. After the initialization, send a warning alert to server, expect reslut 2.
+* @expect   1. The initialization is successful.
+*           2. The client send a unexpected message alert
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_WARNING_ALERT_TC001(int version)
+{
+    RecWrapper wrapper = {
+        TRY_SEND_CLIENT_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        Test_Warning_Alert
+    };
+    RegisterWrapper(wrapper);
+
+    FRAME_Init();
+    HITLS_Config *config;
+    FRAME_LinkObj *client;
+    FRAME_LinkObj *server;
+    config = GetHitlsConfigViaVersion(version);
+    ASSERT_TRUE(config != NULL);
+
+    /* Link initialization */
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_IDLE);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(server->ssl->state, CM_STATE_ALERTED);
+
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(server->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+
+exit:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    return;
+}
+/* END_CASE */
+
+
+/** @
+* @test     UT_TLS_CM_FATAL_ALERT_TC001
+* @title    recv fatal alert brefore client hello need to close connection
+* @precon   nan
+* @brief    1. Initialize the client and server. Expected result 1
+*           2. After the initialization, send a fetal alert to server, expect reslut 2.
+* @expect   1. The initialization is successful.
+*           2. The client close the connection
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_FATAL_ALERT_TC001(int version)
+{
+    RecWrapper wrapper = {
+        TRY_SEND_CLIENT_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        Test_Fatal_Alert
+    };
+    RegisterWrapper(wrapper);
+
+    FRAME_Init();
+    HITLS_Config *config;
+    FRAME_LinkObj *client;
+    FRAME_LinkObj *server;
+    config = GetHitlsConfigViaVersion(version);
+    ASSERT_TRUE(config != NULL);
+
+    /* Link initialization */
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_IDLE);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(server->ssl->state, CM_STATE_ALERTED);
+
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(server->ssl, &info);
+    /* Alert recv means the handshake state is in alerting state and no alert to be sent*/
+    ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_NO_CERTIFICATE_RESERVED);
+
+exit:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    return;
+}
+/* END_CASE */

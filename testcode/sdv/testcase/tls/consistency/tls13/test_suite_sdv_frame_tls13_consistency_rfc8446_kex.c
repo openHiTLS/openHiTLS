@@ -1706,6 +1706,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SESSION_ID_FUNC_TC002()
     RegisterWrapper(wrapper);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    clientTlsCtx->hsCtx->sessionIdSize = 0;
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
@@ -2064,7 +2065,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CH_CIPHERSUITES_FUNC_TC002()
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
 
     FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
-    ASSERT_TRUE(clientMsg->psks.exState == INITIAL_FIELD);
+    ASSERT_TRUE(clientMsg->psks.exState == MISSING_FIELD);
 
 
 exit:
@@ -4868,5 +4869,74 @@ void SDV_TLS13_RFC8446_KeyShareGroup_TC003(int version, int connType)
 exit:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_SUPPORT_VERSION_FUNC_TC001
+* @title    During the TLS1.3 HRR handshaking, application messages can not be received
+* @precon nan
+* @brief 
+*       1. Initialize the client and server to tls1.3, construct the scenario where the supportedversion values carried
+*       by serverhello and hrr are different, expect result 1.
+*       2. Send a app data message the server, expect reslut 2.
+* @expect 1. The client send secend client hello message.
+8         2. The server send unexpected message alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS13_RFC8446_HRR_APP_RECV_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
+    tlsConfig->isSupportClientVerify = true;
+    HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
+    HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
+    /* 1. Initialize the client and server to tls1.3, construct the scenario where the supportedversion values carried
+        by serverhello and hrr are different, */
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
+    CONN_Deinit(serverTlsCtx);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+ 
+    ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_SEND_CHANGE_CIPHER_SPEC);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_RECV_CLIENT_HELLO);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
+ 
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(clientTlsCtx->hsCtx->state == TRY_SEND_CLIENT_HELLO);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+ 
+    uint32_t sendLenapp = 7;
+    uint8_t sendBufapp[7] = {0x17, 0x03, 0x03, 0x00, 0x02, 0x05, 0x05};
+    uint32_t writeLen;
+    BSL_UIO_Write(clientTlsCtx->uio, sendBufapp, sendLenapp, &writeLen);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+ 
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+ 
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_ALERTED);
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(server->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

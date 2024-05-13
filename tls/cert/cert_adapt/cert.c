@@ -286,7 +286,6 @@ static int32_t TLS13EcdsaCheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchem
 {
     HITLS_Config *config = &ctx->config.tlsConfig;
     HITLS_NamedGroup keyCureName = HITLS_NAMED_GROUP_BUTT;
-    HITLS_NamedGroup signCureName = HITLS_NAMED_GROUP_BUTT;
     // Obtains the elliptic curve type of the certificate.
     int32_t ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&keyCureName);
     if (ret != HITLS_SUCCESS) {
@@ -299,7 +298,7 @@ static int32_t TLS13EcdsaCheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchem
     // Cyclically traverse the supported signature algorithms, obtain the elliptic curve based on the signature
     // algorithm, find the one that matches keyCureName, and set it to the negotiated signature algorithm.
     for (uint32_t i = 0; i < signSchemeNum; i++) {
-        signCureName = CFG_GetEcdsaCurveNameBySchemes(signSchemeList[i]);
+        HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(signSchemeList[i]);
         if (signCureName == HITLS_NAMED_GROUP_BUTT || keyCureName != signCureName ||
             keyCureName == HITLS_NAMED_GROUP_BUTT) {
             continue;

@@ -427,7 +427,6 @@ static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *ser
 
 static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
-    int32_t ret = SECURITY_SUCCESS;
     uint16_t clientMinVersion = ctx->config.tlsConfig.minVersion;
     uint16_t clientMaxVersion = ctx->config.tlsConfig.maxVersion;
     uint16_t serverVersion = serverHello->version;
@@ -454,7 +453,7 @@ static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHell
         }
     }
 
-    ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_VERSION, 0, serverHello->version, NULL);
+    int32_t  ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_VERSION, 0, serverHello->version, NULL);
     if (ret != SECURITY_SUCCESS) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_VERSION);
@@ -769,13 +768,15 @@ static int32_t Tls13ClientCheckHelloRetryRequest(TLS_Ctx *ctx, const ServerHello
 static int32_t Tls13ClientCheckSessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
     /* The legacy_session_id_echo field must be the same as the sent field */
+    if (ctx->hsCtx->sessionIdSize != serverHello->sessionIdSize) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
+    }
     if (serverHello->sessionIdSize != 0) {
-        if (ctx->hsCtx->sessionIdSize != serverHello->sessionIdSize) {
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
-            return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
-        }
         if (memcmp(ctx->hsCtx->sessionId, serverHello->sessionId, serverHello->sessionIdSize) != 0) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
             return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
         }
     }

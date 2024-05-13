@@ -294,19 +294,15 @@ static bool BslDayValidCheck(uint16_t year, uint8_t month, uint8_t day)
 
 static bool BslYearMonthDayCheck(const BSL_TIME *dateTime)
 {
-    bool ret = true;
-
     if (dateTime->year < BSL_TIME_SYSTEM_EPOCH_YEAR) {
-        ret = false;
+        return false;
     } else if ((dateTime->month < BSL_MONTH_JAN) || (dateTime->month > BSL_MONTH_DEC)) {
-        ret = false;
+        return false;
     } else if (dateTime->day < BSL_MONTH_JAN) {
-        ret = false;
+        return false;
     } else {
-        ret = BslDayValidCheck(dateTime->year, dateTime->month, dateTime->day);
+        return BslDayValidCheck(dateTime->year, dateTime->month, dateTime->day);
     }
-
-    return ret;
 }
 
 static bool BslHourMinSecCheck(const BSL_TIME *dateTime)

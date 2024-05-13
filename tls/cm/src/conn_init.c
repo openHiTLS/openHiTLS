@@ -16,6 +16,7 @@
 #include "alert.h"
 #include "change_cipher_spec.h"
 #include "conn_common.h"
+#include "hs_ctx.h"
 
 // an instance of unexpectedMsgProcessCb
 int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data, uint32_t dataLen)
@@ -42,6 +43,12 @@ int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data,
             CCS_Recv(ctx, data, dataLen);
             break;
         case REC_TYPE_ALERT:
+            if (ctx->hsCtx != NULL && ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP11 &&
+                ctx->hsCtx->state == TRY_RECV_CLIENT_HELLO && ctx->negotiatedInfo.version == 0 &&
+                data[0] == ALERT_LEVEL_WARNING) {
+                ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+                return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+            }
             ALERT_Recv(ctx, data, dataLen);
             break;
         case REC_TYPE_HANDSHAKE:

@@ -59,7 +59,7 @@ static int32_t ParseClientHelloCipherSuites(TLS_Ctx *ctx, const uint8_t *buf, ui
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15701, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "the cipherSuites length of client hello is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_INVALID_MSG_LEN;
     }
 

@@ -257,7 +257,8 @@ int32_t CreatePskSession(TLS_Ctx *ctx, uint8_t *id, uint32_t idLen, HITLS_Sessio
     return HITLS_SUCCESS;
 }
 
-static bool IsTls13SessionValid(HITLS_HashAlgo hashAlgo, HITLS_Session* session)
+static bool IsTls13SessionValid(HITLS_HashAlgo hashAlgo, HITLS_Session* session, uint16_t *tls13CipherSuites,
+    uint32_t tls13cipherSuitesSize)
 {
     uint16_t version = 0;
     HITLS_SESS_GetProtocolVersion(session, &version);
@@ -268,10 +269,22 @@ static bool IsTls13SessionValid(HITLS_HashAlgo hashAlgo, HITLS_Session* session)
     CipherSuiteInfo cipherInfo = {0};
     (void)HITLS_SESS_GetCipherSuite(session, &cipherSuite); // only null input cause error
     int32_t ret = CFG_GetCipherSuiteInfo(cipherSuite, &cipherInfo);
-    if (ret != HITLS_SUCCESS || (hashAlgo != HITLS_HASH_NULL && hashAlgo != cipherInfo.hashAlg)) {
+    if (ret != HITLS_SUCCESS) {
         return false;
     }
-    return true;
+    if (hashAlgo != HITLS_HASH_NULL) {
+        return (hashAlgo == cipherInfo.hashAlg);
+    }
+    if (tls13CipherSuites != NULL) {
+        for (uint32_t i = 0; i < tls13cipherSuitesSize; i++) {
+            CipherSuiteInfo configCipher = {0};
+            ret = CFG_GetCipherSuiteInfo(tls13CipherSuites[i], &configCipher);
+            if (ret == HITLS_SUCCESS && configCipher.hashAlg == cipherInfo.hashAlg) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 static UserPskList *ConstructUserPsk(HITLS_Session *sessoin, const uint8_t *identity, uint32_t identityLen,
@@ -310,7 +323,9 @@ static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
     /* Obtain the resume psk information from the session */
     HITLS_SESS_Free(hsCtx->kxCtx->pskInfo13.resumeSession);
     hsCtx->kxCtx->pskInfo13.resumeSession = NULL;
-    if (HITLS_SESS_HasTicket(ctx->session) && IsTls13SessionValid(hashAlgo, ctx->session) &&
+    if (HITLS_SESS_HasTicket(ctx->session) &&
+        IsTls13SessionValid(hashAlgo, ctx->session, ctx->config.tlsConfig.tls13CipherSuites,
+                            ctx->config.tlsConfig.tls13cipherSuitesSize) &&
         SESS_CheckValidity(ctx->session, (uint64_t)BSL_SAL_CurrentSysTimeGet())) {
         hsCtx->kxCtx->pskInfo13.resumeSession = HITLS_SESS_Dup(ctx->session);
     }
@@ -333,7 +348,8 @@ static int32_t Tls13ClientPreparePSK(TLS_Ctx *ctx)
         idLen = (uint32_t)strlen((char *)identity);
     }
 
-    if (pskSession != NULL && IsTls13SessionValid(hashAlgo, pskSession)) {
+    if (pskSession != NULL && IsTls13SessionValid(hashAlgo, pskSession, ctx->config.tlsConfig.tls13CipherSuites,
+            ctx->config.tlsConfig.tls13cipherSuitesSize)) {
         userPsk = ConstructUserPsk(pskSession, id, idLen, index);
     }
     HITLS_SESS_Free(pskSession);

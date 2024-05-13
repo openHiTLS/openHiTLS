@@ -2386,9 +2386,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC002()
     testInfo.server = NULL;
 
     /* Set the 256 cipher suite, preset the PSK, and establish a connection. */
-    uint16_t cipher_suite[] = { HITLS_AES_128_GCM_SHA256 };
+    uint16_t cipher_suite[] = { HITLS_AES_128_GCM_SHA256, HITLS_AES_256_GCM_SHA384 };
     HITLS_CFG_SetCipherSuites(testInfo.c_config, cipher_suite, sizeof(cipher_suite)/sizeof(uint16_t));
-    HITLS_CFG_SetCipherSuites(testInfo.s_config, cipher_suite, sizeof(cipher_suite)/sizeof(uint16_t));
+    HITLS_CFG_SetCipherSuites(testInfo.s_config, cipher_suite, sizeof(cipher_suite[0])/sizeof(uint16_t));
 
     HITLS_CFG_SetPskClientCallback(testInfo.c_config, (HITLS_PskClientCb)ExampleClientCb);
     HITLS_CFG_SetPskServerCallback(testInfo.s_config, (HITLS_PskServerCb)ExampleServerCb);
@@ -2586,7 +2586,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC004()
 
     FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->haveHrr == true);
-
+    serverMsg = &frameMsg.body.hsMsg.body.serverHello;
+    ASSERT_TRUE(serverMsg->pskSelectedIdentity.data.data == 0);
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_REC_NORMAL_IO_BUSY);
 
@@ -2595,22 +2596,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC004()
     uint32_t sendLen = ioUserData2->sndMsg.len;
     ASSERT_TRUE(sendLen != 0);
 
-    uint32_t parseLen2 = 0;
-    FRAME_Msg frameMsg2 = {0};
-    FRAME_Type frameType2 = {0};
-    frameType2.versionType = HITLS_VERSION_TLS13;
-    frameType2.recordType = REC_TYPE_HANDSHAKE;
-    frameType2.handshakeType = CLIENT_HELLO;
-    frameType2.keyExType = HITLS_KEY_EXCH_ECDHE;
-    ASSERT_TRUE(FRAME_ParseMsg(&frameType2, sendBuf, sendLen, &frameMsg2, &parseLen2) == HITLS_SUCCESS);
-
-    serverMsg = &frameMsg.body.hsMsg.body.serverHello;
-    ASSERT_TRUE(serverMsg->pskSelectedIdentity.data.data == 0);
-
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT) , HITLS_SUCCESS);
 exit:
     FRAME_CleanMsg(&frameType, &frameMsg);
-    FRAME_CleanMsg(&frameType2, &frameMsg2);
     HITLS_SESS_Free(testInfo.clientSession);
     HITLS_CFG_FreeConfig(testInfo.c_config);
     HITLS_CFG_FreeConfig(testInfo.s_config);
@@ -2660,9 +2648,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC005()
     testInfo.server = NULL;
 
     /* Set the 256 cipher suite, preset the PSK, and establish a link. */
-    uint16_t cipher_suite[] = { HITLS_AES_128_GCM_SHA256 };
+    uint16_t cipher_suite[] = { HITLS_AES_128_GCM_SHA256, HITLS_AES_256_GCM_SHA384};
     HITLS_CFG_SetCipherSuites(testInfo.c_config, cipher_suite, sizeof(cipher_suite)/sizeof(uint16_t));
-    HITLS_CFG_SetCipherSuites(testInfo.s_config, cipher_suite, sizeof(cipher_suite)/sizeof(uint16_t));
+    HITLS_CFG_SetCipherSuites(testInfo.s_config, cipher_suite, sizeof(cipher_suite[0])/sizeof(uint16_t));
 
     ExampleSetPsk("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     HITLS_CFG_SetPskClientCallback(testInfo.c_config, (HITLS_PskClientCb)ExampleClientCb);

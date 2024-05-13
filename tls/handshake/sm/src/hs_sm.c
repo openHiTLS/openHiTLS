@@ -480,7 +480,7 @@ bool HS_IsAppDataAllowed(TLS_Ctx *ctx)
 {
     /* If the negotiated version is 0, it indicates that the handshake is the first time. In this case, an alert message
      * needs to be sent when the unexpected app message is received */
-    if (ctx->negotiatedInfo.version == 0u) {
+    if (ctx->negotiatedInfo.version == 0u || ctx->userRenego == false) {
         return false;
     }
 

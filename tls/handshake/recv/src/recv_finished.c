@@ -218,7 +218,11 @@ int32_t ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15741, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client verify server finished data error.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECRYPT_ERROR);
+        if (ret == HITLS_MSG_HANDLE_INCORRECT_DIGEST_LEN) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        } else {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECRYPT_ERROR);
+        }
         return HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL;
     }
 

@@ -2591,3 +2591,46 @@ exit:
     FRAME_FreeLink(testInfo.server);
 }
 /* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC6347_TC001
+* @spec -
+* @title The client receives a Hello Request message which msg seq is not 0.
+* @precon nan
+* @brief 1. Use the default configuration items to configure the client and server. Expected result 1.
+* 2. After the client finished handshake, the client receives a Hello Request message. Expected result 2.
+* @expect 1. The initialization is successful.
+* 2. The client igore the message.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC6347_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    tlsConfig->isSupportRenegotiation = true;
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_SCTP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_SCTP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+    uint8_t buf[DTLS_HS_MSG_HEADER_SIZE] = {0u};
+    buf[5] = 1;
+    size_t len = DTLS_HS_MSG_HEADER_SIZE;
+    REC_Write(serverTlsCtx, REC_TYPE_HANDSHAKE, buf, len);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    uint8_t readData[MAX_RECORD_LENTH] = {0};
+    uint32_t readLen = MAX_RECORD_LENTH;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(clientTlsCtx->state, CM_STATE_RENEGOTIATION);
+    ASSERT_TRUE(clientTlsCtx->hsCtx->state == TRY_RECV_SERVER_HELLO);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

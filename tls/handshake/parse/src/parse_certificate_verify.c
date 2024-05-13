@@ -113,7 +113,6 @@ static bool KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITLS_C
     int32_t ret;
     HITLS_Config *config = &ctx->config.tlsConfig;
     HITLS_NamedGroup keyCureName = HITLS_NAMED_GROUP_BUTT;
-    HITLS_NamedGroup signCureName = HITLS_NAMED_GROUP_BUTT;
     ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&keyCureName);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15568, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -122,7 +121,7 @@ static bool KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITLS_C
         return false;
     }
 
-    signCureName = CFG_GetEcdsaCurveNameBySchemes(signScheme);
+    HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(signScheme);
     if (signCureName != HITLS_NAMED_GROUP_BUTT && keyCureName != signCureName) {
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORT_SIGN_ALG);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);

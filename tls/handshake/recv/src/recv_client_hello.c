@@ -1354,11 +1354,7 @@ int32_t GetPskByIdentity(TLS_Ctx *ctx, const uint8_t *id, uint32_t idLen, uint8_
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return HITLS_MEMALLOC_FAIL;
     }
-    if (memcpy_s(strId, idLen + 1, id, idLen) != EOK) {
-        BSL_SAL_FREE(strId);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return HITLS_MEMCPY_FAIL;
-    }
+    (void)memcpy_s(strId, idLen + 1, id, idLen);
     strId[idLen] = '\0';
 
     uint32_t usedLen = ctx->config.tlsConfig.pskServerCb(ctx, strId, psk, *pskLen);

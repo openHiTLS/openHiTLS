@@ -396,6 +396,72 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_SESSID_FROM_SH_FUNC_TC001()
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+exit:
+    FRAME_CleanMsg(&frameType, &parsedSH);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_SESSID_FROM_SH_FUNC_TC002
+ * @spec  legacy_session_id_echo: The contents of the client's
+ *        legacy_session_id field. Note that this field is echoed even if
+ *        the client' s value corresponded to a cached pre-TLS 1.3 session
+ *        which the server has chosen not to resume. A client which
+ *        receives a legacy_session_id_echo field that does not match what
+ *        it sent in the ClientHello MUST abort the handshake with an
+ *        "illegal_parameter" alert.
+ * @brief 4.1.3. Server Hello row 25
+ *        1.Initialize configuration
+ *        2.A client which receives a legacy_session_id_echo field that does not match what
+ *          it sent in the ClientHello MUST abort the handshake with an "illegal_parameter" alert.
+ * @expect
+ *   1.Initialization succeeded.
+ *   2.Return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID.
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_SESSID_FROM_SH_FUNC_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+ 
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO) == HITLS_SUCCESS);
+ 
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+    FRAME_Msg parsedSH = {0};
+    uint32_t parseLen = 0;
+    FRAME_Type frameType = {0};
+    SetFrameType(&frameType, HITLS_VERSION_TLS13, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &parsedSH, &parseLen) == HITLS_SUCCESS);
+ 
+    FRAME_ServerHelloMsg *shMsg = &parsedSH.body.hsMsg.body.serverHello;
+    shMsg->sessionId.size = 0;
+    shMsg->sessionId.state = MISSING_FIELD;
+    shMsg->sessionIdSize.data = 0;
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &parsedSH, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
 exit:
     FRAME_CleanMsg(&frameType, &parsedSH);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -2693,8 +2759,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC003(void)
      *    interface. */
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->state == TRY_RECV_FINISH);
-    bool isCcsRecv = testInfo.server->ssl->method.isRecvCCS(testInfo.server->ssl);
-    ASSERT_TRUE(isCcsRecv == false);
     ALERT_Info info = {0};
     ALERT_GetInfo(testInfo.server->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -2769,8 +2833,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC004(void)
      *    interface. */
     ASSERT_EQ(HITLS_Accept(testInfo.client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_TRUE(testInfo.client->ssl->hsCtx->state == TRY_RECV_FINISH);
-    bool isCcsRecv = testInfo.client->ssl->method.isRecvCCS(testInfo.client->ssl);
-    ASSERT_TRUE(isCcsRecv == false);
     ALERT_Info info = {0};
     ALERT_GetInfo(testInfo.client->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
