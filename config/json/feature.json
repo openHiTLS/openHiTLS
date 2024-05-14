@@ -106,6 +106,16 @@
                     },
                     "bn": null
                 },
+                "x8664": {
+                    "sha1": {"ins_set":["x8664", "avx512"]},
+                    "sha2": {"ins_set":["x8664", "avx512"]},
+                    "md5": {"ins_set":["x8664", "avx512"]},
+                    "sm3": null,
+                    "modes": {"ins_set":["x8664", "avx512"]},
+                    "aes": {"ins_set":["x8664", "avx512"]},
+                    "sm4": {"ins_set":["x8664", "avx512"]},
+                    "ecc": {"ins_set":["x8664", "avx512"]}
+                },
                 "armv8": {
                     "sm3": null,
                     "gcm": null,
@@ -180,7 +190,12 @@
                 ".features": ["sha1"],
                 ".srcs": {
                     "public":"crypto/sha1/src/sha1*.c",
-                    "no_asm": "crypto/sha1/src/noasm_*.c"
+                    "no_asm": "crypto/sha1/src/noasm_*.c",
+                    "armv8": "crypto/sha1/src/asm/*_armv8.S",
+                    "x8664": {
+                        "x8664": "crypto/sha1/src/asm/*_x86_64.S",
+                        "avx512": "crypto/sha1/src/asm/*_x86_64.S"
+                    }
                 },
                 ".deps": ["platform::Secure_C"]
             },
@@ -188,7 +203,12 @@
                 ".features": ["sha224", "sha256", "sha384", "sha512"],
                 ".srcs": {
                     "public": "crypto/sha2/src/sha2*.c",
-                    "no_asm": "crypto/sha2/src/noasm_*.c"
+                    "no_asm": "crypto/sha2/src/noasm_*.c",
+                    "armv8": ["crypto/sha2/src/asm_*.c", "crypto/sha2/src/asm/*_armv8.S"],
+                    "x8664":{
+                        "x8664":["crypto/sha2/src/asm_*.c", "crypto/sha2/src/asm/*_x86_64.S"],
+                        "avx512":["crypto/sha2/src/asm_*.c", "crypto/sha2/src/asm/*_x86_64.S"]
+                    }
                 },
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             },
@@ -196,7 +216,8 @@
                 ".features": ["sha3"],
                 ".srcs": {
                     "public":"crypto/sha3/src/sha3*.c",
-                    "no_asm": "crypto/sha3/src/noasm_*.c"
+                    "no_asm": "crypto/sha3/src/noasm_*.c",
+                    "armv8": "crypto/sha3/src/asm/*_armv8.S"
                 },
                 ".deps": ["platform::Secure_C"]
             },
@@ -204,7 +225,11 @@
                 ".features": ["md5"],
                 ".srcs": {
                     "public":"crypto/md5/src/md5*.c",
-                    "no_asm": "crypto/md5/src/noasm_*.c"
+                    "no_asm": "crypto/md5/src/noasm_*.c",
+                    "x8664": {
+                        "x8664": "crypto/md5/src/asm/*_x86_64.S",
+                        "avx512": "crypto/md5/src/asm/*_x86_64.S"
+                    }
                 },
                 ".deps": ["platform::Secure_C"]
             },
@@ -213,7 +238,8 @@
                 ".srcs": {
                     "public": "crypto/sm3/src/sm3_public.c",
                     "no_asm": ["crypto/sm3/src/noasm_sm3.c"],
-                    "armv8": ["crypto/sm3/src/asm/*armv8.S", "crypto/sm3/src/asm_sm3.c"]
+                    "armv8": ["crypto/sm3/src/asm/*armv8.S", "crypto/sm3/src/asm_sm3.c"],
+                    "x8664": ["crypto/sm3/src/asm/*x86_64.s", "crypto/sm3/src/asm_sm3.c"]
                 },
                 ".deps": ["platform::Secure_C"]
             },
@@ -249,20 +275,63 @@
                     "no_asm": "crypto/modes/src/noasm_*.c",
                     "armv8": [
                         "crypto/modes/src/noasm_poly1305.c",
-                        "crypto/modes/src/noasm_aes_gcm.c",
-                        "crypto/modes/src/noasm_aes_cbc.c",
-                        "crypto/modes/src/noasm_aes_ctr.c",
-                        "crypto/modes/src/noasm_aes_cfb.c",
+                        "crypto/modes/src/asm_aes_gcm.c",
+                        "crypto/modes/src/asm_aes_cbc.c",
+                        "crypto/modes/src/asm_aes_ecb.c",
+                        "crypto/modes/src/asm_aes_ctr.c",
+                        "crypto/modes/src/asm/aes_gcm_16block_aarch64.S",
+                        "crypto/modes/src/asm/aes_gcm_64block_aarch64.S",
                         "crypto/modes/src/asm/ghash_armv8.S",
-                        "crypto/modes/src/noasm_ccm.c",
-                        "crypto/modes/src/noasm_sm4_xts.c",
-                        "crypto/modes/src/noasm_sm4_ofb.c",
-                        "crypto/modes/src/noasm_sm4_cfb.c",
+                        "crypto/modes/src/noasm_aes_ccm.c",
+                        "crypto/modes/src/asm_aes_cfb.c",
+                        "crypto/modes/src/asm_sm4_xts.c",
+                        "crypto/modes/src/asm_sm4_ecb.c",
                         "crypto/modes/src/asm_sm4_cbc.c",
+                        "crypto/modes/src/asm_sm4_cfb.c",
+                        "crypto/modes/src/asm_sm4_ofb_armv8.c",
                         "crypto/modes/src/asm_sm4_ctr.c",
                         "crypto/modes/src/asm_sm4_setkey.c",
                         "crypto/modes/src/asm_sm4_gcm.c"
-                    ]
+                    ],
+                    "x8664": {
+                        "x8664":[
+                            "crypto/modes/src/asm_aes_ctr.c",
+                            "crypto/modes/src/asm_aes_gcm.c",
+                            "crypto/modes/src/asm/aes_gcm_16block_x86_64.S",
+                            "crypto/modes/src/asm/aes_gcm_64block_x86_64.S",
+                            "crypto/modes/src/asm/aes_gcm_96block_x86_64.S",
+                            "crypto/modes/src/asm_aes_cbc.c",
+                            "crypto/modes/src/asm_aes_ecb.c",
+                            "crypto/modes/src/asm/ghash_x86_64.S",
+                            "crypto/modes/src/asm_aes_ccm.c",
+                            "crypto/modes/src/asm/aes_ccm_x86_64.S",
+                            "crypto/modes/src/noasm_poly1305.c",
+                            "crypto/modes/src/noasm_aes_cfb.c",
+                            "crypto/modes/src/asm_sm4_xts.c",
+                            "crypto/modes/src/asm_sm4_ecb.c",
+                            "crypto/modes/src/asm_sm4_cbc.c",
+                            "crypto/modes/src/asm_sm4_cfb.c",
+                            "crypto/modes/src/asm_sm4_ofb_x86_64.c",
+                            "crypto/modes/src/asm_sm4_ctr.c",
+                            "crypto/modes/src/asm_sm4_setkey.c",
+                            "crypto/modes/src/asm_sm4_gcm.c"
+                        ],
+                        "avx512":[
+                            "crypto/modes/src/asm_aes_ctr.c",
+                            "crypto/modes/src/asm_aes_gcm.c",
+                            "crypto/modes/src/asm/aes_gcm_16block_x86_64.S",
+                            "crypto/modes/src/asm/aes_gcm_64block_x86_64.S",
+                            "crypto/modes/src/asm/aes_gcm_96block_x86_64.S",
+                            "crypto/modes/src/asm_aes_cbc.c",
+                            "crypto/modes/src/asm_aes_ecb.c",
+                            "crypto/modes/src/asm/ghash_x86_64.S",
+                            "crypto/modes/src/asm_aes_ccm.c",
+                            "crypto/modes/src/asm/aes_ccm_x86_64.S",
+                            "crypto/modes/src/noasm_poly1305.c",
+                            "crypto/modes/src/noasm_aes_cfb.c",
+                            "crypto/modes/src/asm_sm4_xts.c"
+                        ]
+                    }
                 },
                 ".deps": ["bsl::sal"],
                 ".include": ["crypto/sm4/include", "crypto/aes/include"]
@@ -272,7 +341,27 @@
                 ".srcs": {
                     "no_asm":["crypto/aes/src/crypt_aes.c"],
                     "public": "crypto/aes/src/crypt_aes_setkey.c",
-                    "armv8":["crypto/aes/src/crypt_aes.c"]
+                    "armv8":[
+                        "crypto/aes/src/asm/crypt_aes_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_ecb_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_cbc_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_ctr_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_cfb_armv8.S"
+                    ],
+                   "x8664": {
+                        "x8664": [
+                            "crypto/aes/src/asm/crypt_aes_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ecb_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_cbc_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ctr_x86_64.S"
+                        ],
+                        "avx512": [
+                            "crypto/aes/src/asm/crypt_aes_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ecb_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_cbc_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ctr_x86_64.S"
+                        ]
+                    }
                 },
                 ".deps": ["platform::Secure_C"]
             },
@@ -289,6 +378,7 @@
                 ".features": ["sm4"],
                 ".srcs": {
                     "public": [
+                        "crypto/sm4/src/crypt_sm4_public.c",
                         "crypto/sm4/src/crypt_sm4.c",
                         "crypto/sm4/src/sm4_key.c"
                     ],
@@ -297,10 +387,28 @@
                         "crypto/sm4/src/sm4_key.c"
                     ],
                     "armv8":[
-                        "crypto/sm4/src/asm/crypt_sm4_setkey_armv8.S",
+                        "crypto/sm4/src/asm/crypt_sm4_xts_armv8.S",
                         "crypto/sm4/src/asm/crypt_sm4_armv8.S",
                         "crypto/sm4/src/crypt_sm4_armv8.c"
-                    ]
+                    ],
+                    "x8664":{
+                        "x8664":[
+                            "crypto/sm4/src/asm/crypt_sm4_macro_x86_64.s",
+                            "crypto/sm4/src/asm/crypt_sm4_setkey_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_xts_x86_64.S",
+                            "crypto/sm4/src/crypt_sm4_x86_64.c",
+                            "crypto/sm4/src/asm/crypt_sm4_modes_macro_x86_64.s",
+                            "crypto/sm4/src/asm/crypt_sm4_modes_x86_64.S"
+                        ],
+                        "avx512":[
+                            "crypto/sm4/src/asm/crypt_sm4_macro_x86_64.s",
+                            "crypto/sm4/src/asm/crypt_sm4_setkey_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_xts_x86_64.S",
+                            "crypto/sm4/src/crypt_sm4_x86_64.c"
+                        ]
+                    }
                 },
                 ".deps": ["bsl::sal"]
             },
@@ -373,7 +481,11 @@
                 ".srcs": {
                     "public": "crypto/ecc/src/ec*.c",
                     "no_asm": "crypto/ecc/src/noasm_*.c",
-                    "armv8": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*armv8.S"]
+                    "armv8": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*armv8.S"],
+                    "x8664": {
+                        "x8664": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"],
+                        "avx512": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"]
+                    }
                 },
                 ".deps": ["crypto::bn", "bsl::sal"]
             },

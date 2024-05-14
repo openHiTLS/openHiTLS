@@ -6,7 +6,9 @@
  *---------------------------------------------------------------------------------------------
  */
 
+#include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
+
 .arch	armv8-a+crypto
 .text
 
@@ -14,14 +16,45 @@ rk0       .req  v12
 rk1       .req  v13
 rka       .req  v14
 rkb       .req  v15
+rk2       .req  v20
+rkc       .req  v21
 
+vtmp0     .req  v0
+vtmp1     .req  v1
+vtmp2     .req  v2
+vtmp3     .req  v3
+
+vtmp4     .req  v24
 vtmp5     .req  v25
+vtmp6     .req  v22
+vtmp7     .req  v23
+
+data0     .req  v4
+data1     .req  v5
+data2     .req  v6
+data3     .req  v7
+
+datax0     .req  v8
+datax1     .req  v9
+datax2     .req  v10
+datax3     .req  v11
+
+vtmpx0     .req  v12
+vtmpx1     .req  v13
+vtmpx2     .req  v14
+vtmpx3     .req  v15
+
+data10     .req  v16
+data11     .req  v17
+data12     .req  v18
+data13     .req  v19
 
 MaskV     .req  v26
 TAHMatV   .req  v27
 TALMatV   .req  v28
 ATAHMatV  .req  v29
 ATALMatV  .req  v30
+ANDMaskV  .req  v31
 
 MaskQ      .req q26
 TAHMatQ    .req q27
@@ -29,6 +62,9 @@ TALMatQ    .req q28
 ATAHMatQ   .req q29
 ATALMatQ   .req q30
 ANDMaskQ   .req q31
+vtmp5q     .req q25
+vtmp6q     .req q22
+vtmp7q     .req q23
 
 inp      .req   x0
 outp     .req   x1
@@ -37,16 +73,17 @@ rks      .req   x3
 
 wtmp0   .req    w7
 wtmp1   .req    w8
+wtmp2   .req    w9
 
 ptr     .req    x10
 counter .req    w11
 
-word0   .req    w12
-word1   .req    w13
-word2   .req    w14
-word3   .req    w15
+word0   .req    w12 
+word1   .req    w13 
+word2   .req    w14 
+word3   .req    w15 
 
-xword1  .req    x13
+xword1  .req    x13  
 tbox0   .req    x19
 tbox1   .req    x20
 tbox2   .req    x21
@@ -57,6 +94,9 @@ ivp     .req   x4
 ctr     .req   w5
 ivec    .req   v3
 ivec1   .req   v15
+
+.Lxts_magic:
+	.quad 0x0101010101010187,0x0101010101010101
 
 .Ltbox1:
 .word	0xd55b5b8e, 0x924242d0, 0xeaa7a74d, 0xfdfbfb06, 0xcf3333fc, 0xe2878765, 0x3df4f4c9, 0xb5dede6b, 0x1658584e
@@ -189,7 +229,9 @@ ivec1   .req   v15
     .dword 0xc10bb67c4a803df7,0x15df62a89e54e923
     .dword 0x1407c6d56c7fbead,0xb9aa6b78c1d21300
     .dword 0xe383c1a1fe9edcbc,0x6404462679195b3b
-    .dword 0x0f0f0f0f0f0f0f0f,0x0f0f0f0f0f0f0f0f
+    .dword 0x0E0D0C0F0A09080B,0x0605040702010003
+    .dword 0x0D0C0F0E09080B0A,0x0504070601000302
+    .dword 0x0C0F0E0D080B0A09,0x0407060500030201
 #else
 .Lsbox_magic:
     .dword 0x0b0e0104070a0d00,0x0306090c0f020508
@@ -197,7 +239,9 @@ ivec1   .req   v15
     .dword 0x15df62a89e54e923,0xc10bb67c4a803df7
     .dword 0xb9aa6b78c1d21300,0x1407c6d56c7fbead
     .dword 0x6404462679195b3b,0xe383c1a1fe9edcbc
-    .dword 0x0f0f0f0f0f0f0f0f,0x0f0f0f0f0f0f0f0f
+    .dword 0x0605040702010003,0x0E0D0C0F0A09080B
+    .dword 0x0504070601000302,0x0D0C0F0E09080B0A
+    .dword 0x0407060500030201,0x0C0F0E0D080B0A09
 #endif
 
 .macro LoadSbox
@@ -206,7 +250,9 @@ ivec1   .req   v15
     ldr TALMatQ,    .Lsbox_magic+32
     ldr ATAHMatQ,   .Lsbox_magic+48
     ldr ATALMatQ,   .Lsbox_magic+64
-    ldr ANDMaskQ,     .Lsbox_magic+80
+    ldr vtmp5q,     .Lsbox_magic+80
+    ldr vtmp6q,     .Lsbox_magic+96
+    ldr vtmp7q,     .Lsbox_magic+112
 .endm
 
 .macro round x1, x2, x3, x4, rk
@@ -251,15 +297,15 @@ ivec1   .req   v15
 	EncRound4 112, 120
 .endm
 
-.macro transpose dat0s, dat1s, dat2s, dat3s, dat0d, dat1d, dat2d, dat3d
-	zip1	v8.4s, \dat0s, \dat1s
-	zip2	v9.4s, \dat0s, \dat1s
-	zip1	v10.4s, \dat2s, \dat3s
-	zip2	v11.4s, \dat2s, \dat3s
-	zip1	\dat0d, v8.2d, v10.2d
-	zip2	\dat1d, v8.2d, v10.2d
-	zip1	\dat2d, v9.2d, v11.2d
-	zip2	\dat3d, v9.2d, v11.2d
+.macro transpose dat0s, dat1s, dat2s, dat3s, dat0d, dat1d, dat2d, dat3d, vt0s, vt1s, vt2s, vt3s, vt0d, vt1d, vt2d, vt3d
+	zip1	\vt0s, \dat0s, \dat1s
+	zip2	\vt1s, \dat0s, \dat1s
+	zip1	\vt2s, \dat2s, \dat3s
+	zip2	\vt3s, \dat2s, \dat3s
+	zip1	\dat0d, \vt0d, \vt2d
+	zip2	\dat1d, \vt0d, \vt2d
+	zip1	\dat2d, \vt1d, \vt3d
+	zip2	\dat3d, \vt1d, \vt3d
 .endm
 
 .macro Encrypt1blkNorevCtr
@@ -278,24 +324,34 @@ ivec1   .req   v15
 .endm
 
 # matrix multiplication Mat*x = (lowerMat*x) ^ (higherMat*x)
-.macro MulMatrix x,higherMat, lowerMat
-	ushr	v24.16b, \x, 4
-	and		\x, \x, v31.16b
+.macro MulMatrix x, higherMat, lowerMat, tmp
+	ushr	\tmp, \x, 4
+	and		\x, \x, ANDMaskV.16b
 	tbl		\x, {\lowerMat}, \x
-	tbl		v24.16b, {\higherMat}, v24.16b
-	eor		\x, \x, v24.16b
+	tbl		\tmp, {\higherMat}, \tmp
+	eor		\x, \x, \tmp
+.endm
+
+# matrix multiplication Mat*x = (lowerMat*x) ^ (higherMat*x)
+.macro MulMatrixOut x, higherMat, lowerMat, tmp, out
+	ushr	\tmp, \x, 4
+	and		\x, \x, ANDMaskV.16b
+	tbl		\x, {\lowerMat}, \x
+	tbl		\tmp, {\higherMat}, \tmp
+	eor		\out, \x, \tmp
 .endm
 
 # Sbox operations for 4-lane of words
 .macro Sbox dat, dat2
+	movi ANDMaskV.16b, #0x0f
 	// optimize Sbox using AESE instruction
 	tbl	v0.16b, {\dat}, MaskV.16b
-	MulMatrix v0.16b, TAHMatV.16b, TALMatV.16b
+	MulMatrix v0.16b, TAHMatV.16b, TALMatV.16b, v24.16b
 
 	eor v1.16b, v1.16b, v1.16b
 	aese v0.16b, v1.16b
 	
-	MulMatrix v0.16b, ATAHMatV.16b, ATALMatV.16b
+	MulMatrix v0.16b, ATAHMatV.16b, ATALMatV.16b, v24.16b
 
 	mov	\dat, v0.16b
 
@@ -328,7 +384,7 @@ ivec1   .req   v15
 	Sbox rk0.16b, rk0.4s
 
 	eor	v4.16b, v4.16b, rk0.16b
-	
+
 	// B1 ^= SBOX(B0 ^ B2 ^ B3 ^ RK1)
 	eor	rka.16b, rka.16b, v4.16b
 	eor	rk1.16b, rka.16b, rk1.16b
@@ -337,7 +393,7 @@ ivec1   .req   v15
 
 	ldp	wtmp0, wtmp1,[\kptr],8
 	eor	v5.16b,v5.16b, rk1.16b
-	
+
 	dup	rk0.4s, wtmp0
 	dup	rk1.4s, wtmp1
 
@@ -382,20 +438,19 @@ ivec1   .req   v15
 .endm
 
 # Sbox operation for 8-lane of words
-.macro SboxDouble
+.macro SboxDouble dat datx
+	movi ANDMaskV.16b, #0x0f
 	// optimize Sbox using AESE instruction
 	tbl	v0.16b, {rk0.16b}, MaskV.16b
 	tbl	v1.16b, {rk1.16b}, MaskV.16b
 
-	MulMatrix v0.16b, TAHMatV.16b, TALMatV.16b
-	MulMatrix v1.16b, TAHMatV.16b, TALMatV.16b
+	MulMatrix v0.16b, TAHMatV.16b, TALMatV.16b, v24.16b
+	MulMatrix v1.16b, TAHMatV.16b, TALMatV.16b, v24.16b
 	eor vtmp5.16b, vtmp5.16b, vtmp5.16b
 	aese v0.16b,vtmp5.16b
 	aese v1.16b,vtmp5.16b
-	MulMatrix v0.16b, ATAHMatV.16b, ATALMatV.16b
-	MulMatrix v1.16b, ATAHMatV.16b, ATALMatV.16b
-	mov	rk0.16b, v0.16b
-	mov	rk1.16b, v1.16b
+	MulMatrixOut v0.16b, ATAHMatV.16b, ATALMatV.16b, v24.16b, rk0.16b
+	MulMatrixOut v1.16b, ATAHMatV.16b, ATALMatV.16b, v24.16b, rk1.16b
 
 	// linear transformation
 	ushr	v0.4s,rk0.4s,32-2
@@ -422,6 +477,66 @@ ivec1   .req   v15
 	eor	v24.16b,v24.16b,v1.16b
 	eor	rk1.16b,v2.16b,v3.16b
 	eor	rk1.16b,rk1.16b,v24.16b
+.endm
+
+
+.macro SboxThree dat, datx, dat1
+	movi	ANDMaskV.16b, #0x0f
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {\dat}, MaskV.16b
+	tbl	v1.16b, {\datx}, MaskV.16b
+	tbl	v2.16b, {\dat1}, MaskV.16b
+	eor v3.16b, v3.16b, v3.16b
+
+	MulMatrix v0.16b, TAHMatV.16b, TALMatV.16b, v24.16b
+	MulMatrix v1.16b, TAHMatV.16b, TALMatV.16b, v24.16b
+
+	aese v0.16b, v3.16b
+
+	MulMatrix v2.16b, TAHMatV.16b, TALMatV.16b, v24.16b
+
+	aese v1.16b, v3.16b
+	aese v2.16b, v3.16b
+
+	MulMatrixOut v0.16b, ATAHMatV.16b, ATALMatV.16b, v24.16b, \dat
+	MulMatrixOut v1.16b, ATAHMatV.16b, ATALMatV.16b, v24.16b, \datx
+	MulMatrixOut v2.16b, ATAHMatV.16b, ATALMatV.16b, v24.16b, \dat1
+
+	// linear transformation
+    tbl v0.16b, {\dat},  vtmp5.16b // shitf left 8
+    tbl v1.16b, {\datx}, vtmp5.16b
+    tbl v2.16b, {\dat1}, vtmp5.16b
+
+    tbl v3.16b,  {\dat},   v22.16b // shitf left 16
+    tbl v24.16b,    {\datx},  v22.16b
+    tbl ANDMaskV.16b, {\dat1},  v22.16b
+
+    eor v0.16b, v0.16b, \dat
+    eor v1.16b, v1.16b, \datx
+    eor v2.16b, v2.16b, \dat1
+
+	eor v0.16b, v0.16b, v3.16b
+    eor v1.16b, v1.16b, v24.16b
+    eor v2.16b, v2.16b, ANDMaskV.16b
+
+    shl v3.4s, v0.4s, #2  // shift left by 2 bits, equivalent to v12<<2 xor v12<<10 xor v12<<18
+    sri v3.4s, v0.4s, #30
+    shl v24.4s, v1.4s, #2
+    sri v24.4s, v1.4s, #30
+    shl ANDMaskV.4s, v2.4s, #2
+    sri ANDMaskV.4s, v2.4s, #30
+
+    tbl v0.16b, {\dat},  v23.16b  // shitf left 24
+    tbl v1.16b, {\datx}, v23.16b
+    tbl v2.16b, {\dat1}, v23.16b
+
+	eor \dat, \dat, v3.16b
+	eor \datx, \datx, v24.16b
+	eor \dat1, \dat1, ANDMaskV.16b
+
+    eor \dat, v0.16b, \dat
+    eor \datx, v1.16b, \datx
+    eor \dat1, v2.16b, \dat1
 .endm
 
 .macro Sm48blks kptr
@@ -477,6 +592,77 @@ ivec1   .req   v15
 .endm
 
 
+.macro Sm412blks kptr
+	ldp	wtmp0,wtmp1,[\kptr],8
+	// B0 ^= SBOX(B1 ^ B2 ^ B3 ^ RK0)
+	dup	rk0.4s,wtmp0
+	eor	rka.16b,v6.16b,v7.16b
+	eor	rkb.16b,v10.16b,v11.16b
+	eor	rkc.16b,v18.16b,v19.16b
+	eor	v0.16b,v5.16b,rk0.16b
+	eor	v1.16b,v9.16b,rk0.16b
+	eor	v2.16b,v17.16b,rk0.16b
+	eor	rk0.16b,rka.16b,v0.16b
+	eor	rk1.16b,rkb.16b,v1.16b
+	eor	rk2.16b,rkc.16b,v2.16b
+
+	SboxThree rk0.16b, rk1.16b, rk2.16b
+
+	eor	v4.16b,v4.16b,rk0.16b
+	eor	v8.16b,v8.16b,rk1.16b
+	eor	v16.16b,v16.16b,rk2.16b
+
+	// B1 ^= SBOX(B0 ^ B2 ^ B3 ^ RK1)
+	dup	rk1.4s,wtmp1
+	eor	rka.16b,rka.16b,v4.16b
+	eor	rkb.16b,rkb.16b,v8.16b
+	eor	rkc.16b,rkc.16b,v16.16b
+	eor	rk0.16b,rka.16b,rk1.16b
+	eor	rk2.16b,rkc.16b,rk1.16b
+	eor	rk1.16b,rkb.16b,rk1.16b
+
+	SboxThree rk0.16b, rk1.16b, rk2.16b
+
+	ldp	wtmp0,wtmp1,[\kptr],8
+	eor	v5.16b,v5.16b,rk0.16b
+	eor	v9.16b,v9.16b,rk1.16b
+	eor	v17.16b,v17.16b,rk2.16b
+
+	// B2 ^= SBOX(B0 ^ B1 ^ B3 ^ RK2)
+	dup	rk0.4s,wtmp0
+	eor	rka.16b,v4.16b,v5.16b
+	eor	rkb.16b,v8.16b,v9.16b
+	eor	rkc.16b,v16.16b,v17.16b
+	eor	v0.16b,v7.16b,rk0.16b
+	eor	v1.16b,v11.16b,rk0.16b
+	eor	v2.16b,v19.16b,rk0.16b
+	eor	rk0.16b,rka.16b,v0.16b
+	eor	rk1.16b,rkb.16b,v1.16b
+	eor	rk2.16b,rkc.16b,v2.16b
+
+	SboxThree rk0.16b, rk1.16b, rk2.16b
+
+	eor	v6.16b,v6.16b,rk0.16b
+	eor	v10.16b,v10.16b,rk1.16b
+	eor	v18.16b,v18.16b,rk2.16b
+
+	// B3 ^= SBOX(B0 ^ B1 ^ B2 ^ RK3)
+	dup	rk1.4s,wtmp1
+	eor	rka.16b,rka.16b,v6.16b
+	eor	rkb.16b,rkb.16b,v10.16b
+	eor	rkc.16b,rkc.16b,v18.16b
+	eor	rk0.16b,rka.16b,rk1.16b
+	eor	rk2.16b,rkc.16b,rk1.16b
+	eor	rk1.16b,rkb.16b,rk1.16b
+
+	SboxThree rk0.16b, rk1.16b, rk2.16b
+
+	eor	v7.16b,v7.16b,rk0.16b
+	eor	v11.16b,v11.16b,rk1.16b
+	eor	v19.16b,v19.16b,rk2.16b
+.endm
+
+
 .macro Encrypt8blks
 	mov	ptr, rks
 	mov	counter, #8
@@ -506,9 +692,51 @@ ivec1   .req   v15
 #endif
 .endm
 
+.macro Encrypt12blks
+	mov	ptr, rks
+	mov	counter, #8
+10:
+	Sm412blks ptr
+
+	subs	counter,counter,#1
+	b.ne	10b
+	// last reverse transform
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v3.16b,v4.16b
+	rev32	v2.16b,v5.16b
+	rev32	v1.16b,v6.16b
+	rev32	v0.16b,v7.16b
+
+	rev32	v7.16b,v8.16b
+	rev32	v6.16b,v9.16b
+	rev32	v5.16b,v10.16b
+	rev32	v4.16b,v11.16b
+
+	rev32	v11.16b,v16.16b
+	rev32	v10.16b,v17.16b
+	rev32	v9.16b,v18.16b
+	rev32	v8.16b,v19.16b
+#else
+	mov	v3.16b,v4.16b
+	mov	v2.16b,v5.16b
+	mov	v1.16b,v6.16b
+	mov	v0.16b,v7.16b
+
+	mov	v7.16b,v8.16b
+	mov	v6.16b,v9.16b
+	mov	v5.16b,v10.16b
+	mov	v4.16b,v11.16b
+
+	mov	v11.16b,v16.16b
+	mov	v10.16b,v17.16b
+	mov	v9.16b,v18.16b
+	mov	v8.16b,v19.16b
+#endif
+.endm
+
 .type	Sm4Enc4blks,%function
 .align	4
-Sm4Enc4blks:
+Sm4Enc4blks: 
 	Encrypt4blks
 	ret
 .size	Sm4Enc4blks,.-Sm4Enc4blks
@@ -517,18 +745,102 @@ Sm4Enc4blks:
 .align	4
 Sm4Enc8blks:
 	Encrypt8blks
-	ret
+	ret 
 .size	Sm4Enc8blks,.-Sm4Enc8blks
 
-# void Vpsm4BlockEncrypt(const unsigned char *in, unsigned char *out, const uint32_t *key);
-.globl	Vpsm4BlockEncrypt
-.type	Vpsm4BlockEncrypt,%function
-.align	5
-Vpsm4BlockEncrypt:
-	stp	x19,x20,[sp,#-32]!
-	stp	x21,x22,[sp,#16]
+.type	Sm4Enc12blks,%function
+.align	4
+Sm4Enc12blks:
+	Encrypt12blks
+	ret 
+.size	Sm4Enc12blks,.-Sm4Enc12blks
 
-	mov	x3, x2
+.globl	Vpsm4EcbEncrypt
+.type	Vpsm4EcbEncrypt,%function
+.align	5
+Vpsm4EcbEncrypt:
+	// convert length into blocks
+	lsr	x2,x2,4
+	stp	d8,d9,[sp,#-112]!
+	stp	d10,d11,[sp,#16]
+	stp	d12,d13,[sp,#32]
+	stp	d14,d15,[sp,#48]
+	stp	x29,x30,[sp,#64]
+	stp	x19,x20,[sp,#80]
+	stp	x21,x22,[sp,#96]
+	LoadSbox
+
+.Lecb_12_blocks_process:
+	cmp	blocks,#12
+	b.lt  .Lecb_8_blocks_process
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[inp],#64
+	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[inp],#64
+	ld4	{v16.4s,v17.4s,v18.4s,v19.4s},[inp],#64
+
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+
+	rev32	v16.16b,v16.16b
+	rev32	v17.16b,v17.16b
+	rev32	v18.16b,v18.16b
+	rev32	v19.16b,v19.16b
+#endif
+
+	bl	Sm4Enc12blks
+	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[outp],#64
+	st4	{v4.4s,v5.4s,v6.4s,v7.4s},[outp],#64
+	st4	{v8.4s,v9.4s,v10.4s,v11.4s},[outp],#64
+	subs    blocks,blocks,#12
+	b.gt	.Lecb_12_blocks_process
+	b	100f
+
+.Lecb_8_blocks_process:
+	cmp	blocks, #8
+	b.lt	.Lecb_4_blocks_process
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
+	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[x0],#64
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+#endif
+	bl	Sm4Enc8blks
+	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
+	st4	{v4.4s,v5.4s,v6.4s,v7.4s},[x1],#64
+	subs	blocks,blocks,#8
+	b.gt	.Lecb_8_blocks_process
+	b	100f
+.Lecb_4_blocks_process:
+	cmp	blocks,#4
+	b.lt	1f
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b, v4.16b
+	rev32	v5.16b, v5.16b
+	rev32	v6.16b, v6.16b
+	rev32	v7.16b, v7.16b
+#endif
+	bl	Sm4Enc4blks
+	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
+	sub	blocks,blocks,#4
+1:
+	// process last block
+	cmp	blocks,#1
+	b.lt	100f
+	b.gt	1f
 
 	adrp	 x19, .Ltbox1
     add x19,x19,:lo12:.Ltbox1
@@ -556,11 +868,44 @@ Vpsm4BlockEncrypt:
 #endif
 	stp	w11,w10,[outp]
 	stp	w9,w8,[outp,#8]
-
-	ldp	x21,x22,[sp,#16]
-	ldp	x19,x20,[sp],#32
+	b	100f
+1:	// process last 2 blocks
+	ld4	{v4.s,v5.s,v6.s,v7.s}[0],[inp],#16
+	ld4	{v4.s,v5.s,v6.s,v7.s}[1],[inp],#16
+	cmp	blocks,#2
+	b.gt	1f
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+#endif
+	bl	Sm4Enc4blks
+	st4	{v0.s,v1.s,v2.s,v3.s}[0],[outp],#16
+	st4	{v0.s,v1.s,v2.s,v3.s}[1],[outp]
+	b	100f // 
+1:	//	process last 3 blocks
+	ld4	{v4.s,v5.s,v6.s,v7.s}[2],[inp],#16
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+#endif
+	bl	Sm4Enc4blks
+	st4	{v0.s,v1.s,v2.s,v3.s}[0],[outp],#16
+	st4	{v0.s,v1.s,v2.s,v3.s}[1],[outp],#16
+	st4	{v0.s,v1.s,v2.s,v3.s}[2],[outp]
+100:
+	ldp	d10,d11,[sp,#16]
+	ldp	d12,d13,[sp,#32]
+	ldp	d14,d15,[sp,#48]
+	ldp	x29,x30,[sp,#64]
+	ldp	x19,x20,[sp,#80]
+	ldp	x21,x22,[sp,#96]
+	ldp	d8,d9,[sp],#112
 	ret
-.size	Vpsm4BlockEncrypt,.-Vpsm4BlockEncrypt
+.size	Vpsm4EcbEncrypt,.-Vpsm4EcbEncrypt
 
 
 .globl	Vpsm4CbcEncrypt
@@ -637,6 +982,63 @@ Vpsm4CbcEncrypt:
 	stp	d10,d11,[sp,#16]
 	stp	d12,d13,[sp,#32]
 	stp	d14,d15,[sp,#48]
+
+.Lcbc_12_blocks_dec:
+	cmp	w2,#12
+	b.lt	.Lcbc_8_blocks_dec
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[x0]
+	add	x10,x0,#64
+	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[x10]
+	add	x10,x10,#64
+	ld4	{v16.4s,v17.4s,v18.4s,v19.4s},[x10]
+
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+	rev32	v16.16b,v16.16b
+	rev32	v17.16b,v17.16b
+	rev32	v18.16b,v18.16b
+	rev32	v19.16b,v19.16b
+#endif
+	bl	Sm4Enc12blks
+	// transpose to xor iv
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
+	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
+	transpose v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
+	ld1	{ivec1.4s},[ivp]
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[inp],#64
+	eor	v0.16b,v0.16b,ivec1.16b
+	ld1 {v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
+	eor	v1.16b,v1.16b,v16.16b
+	eor	v2.16b,v2.16b,v17.16b
+	eor	v3.16b,v3.16b,v18.16b
+	st1	{v0.4s,v1.4s,v2.4s,v3.4s},[outp],#64
+
+	eor v4.16b,v4.16b,v19.16b
+	eor v5.16b,v5.16b,v12.16b
+	eor v6.16b,v6.16b,v13.16b
+	eor v7.16b,v7.16b,v14.16b
+	st1	{v4.4s,v5.4s,v6.4s,v7.4s},[outp],#64
+
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[inp],#64
+	eor v8.16b,v8.16b,v15.16b
+	eor v9.16b,v9.16b,v16.16b
+	eor v10.16b,v10.16b,v17.16b
+	eor v11.16b,v11.16b,v18.16b
+	st1	{v8.4s,v9.4s,v10.4s,v11.4s},[outp],#64
+	// save back iv
+	st1	{v19.4s}, [ivp]
+
+	subs    blocks,blocks,#12
+	b.gt	.Lcbc_12_blocks_dec
+	b	100f
+
 .Lcbc_8_blocks_dec:
 	cmp	blocks,#8
 	b.lt	1f
@@ -655,11 +1057,11 @@ Vpsm4CbcEncrypt:
 	rev32	v11.16b,v11.16b
 #endif
 	bl	Sm4Enc8blks
-	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d
-	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
+	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	ld1	{ivec1.4s},[ivp]
 	ld1	{v8.4s,v9.4s,v10.4s,v11.4s},[inp],#64
-	// note ivec1 and vtmpx[3] are resuing the same register
+	// note ivec1 and v15 are resuing the same register
 	// care needs to be taken to avoid conflict
 	eor	v0.16b,v0.16b,ivec1.16b
 	ld1	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
@@ -691,7 +1093,7 @@ Vpsm4CbcEncrypt:
 #endif
 	bl	Sm4Enc4blks
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[inp],#64
-	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,ivec1.16b
 	eor	v1.16b,v1.16b,v4.16b
 	orr	v15.16b,v7.16b,v7.16b
@@ -750,7 +1152,7 @@ Vpsm4CbcEncrypt:
 #endif
 	bl	Sm4Enc4blks
 	ld1	{v4.4s,v5.4s},[inp],#32
-	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,ivec1.16b
 	eor	v1.16b,v1.16b,v4.16b
 	st1	{v0.4s,v1.4s},[outp],#32
@@ -767,7 +1169,7 @@ Vpsm4CbcEncrypt:
 #endif
 	bl	Sm4Enc4blks
 	ld1	{v4.4s,v5.4s,v6.4s},[inp],#48
-	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,ivec1.16b
 	eor	v1.16b,v1.16b,v4.16b
 	eor	v2.16b,v2.16b,v5.16b
@@ -796,7 +1198,7 @@ Vpsm4Ctr32EncryptBlocks:
 	rev32	v3.16b,v3.16b
 #endif
 	LoadSbox
-	cmp	w2,#1
+	cmp	blocks,#1
 	b.ne	1f
 	// fast processing for one single block without
 	// context saving overhead
@@ -818,7 +1220,7 @@ Vpsm4Ctr32EncryptBlocks:
 	st1	{v4.4s},[outp]
 	ldp	x21,x22,[sp,#16]
 	ldp	x19,x20,[sp],#32
-    ldr ctr,[ivp,#12]
+	ldr ctr,[ivp,#12]
 #ifndef HITLS_BIG_ENDIAN
 	rev ctr,ctr
 #endif
@@ -878,6 +1280,8 @@ Vpsm4Ctr32EncryptBlocks:
 	add	ctr,ctr,#1
 	mov	v11.s[3],ctr
 	add	ctr,ctr,#1
+	cmp	blocks,#12
+	b.ge	.Lctr32_12_blocks_process
 	bl	Sm4Enc8blks
 	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
 	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[inp],#64
@@ -894,6 +1298,41 @@ Vpsm4Ctr32EncryptBlocks:
 	subs	blocks,blocks,#8
 	b.ne	.Lctr32_4_blocks_process
 	b	100f
+.Lctr32_12_blocks_process:
+	dup	v16.4s,word0
+	dup	v17.4s,word1
+	dup	v18.4s,word2
+	mov	v19.s[0],ctr
+	add	ctr,ctr,#1
+	mov	v19.s[1],ctr
+	add	ctr,ctr,#1
+	mov	v19.s[2],ctr
+	add	ctr,ctr,#1
+	mov	v19.s[3],ctr
+	add	ctr,ctr,#1
+	bl	Sm4Enc12blks
+	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
+	eor	v0.16b,v0.16b,v12.16b
+	eor	v1.16b,v1.16b,v13.16b
+	eor	v2.16b,v2.16b,v14.16b
+	eor	v3.16b,v3.16b,v15.16b
+	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[outp],#64
+	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
+	eor	v4.16b,v4.16b,v12.16b
+	eor	v5.16b,v5.16b,v13.16b
+	eor	v6.16b,v6.16b,v14.16b
+	eor	v7.16b,v7.16b,v15.16b
+	st4	{v4.4s,v5.4s,v6.4s,v7.4s},[outp],#64
+	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
+	eor	v8.16b,v8.16b,v12.16b
+	eor	v9.16b,v9.16b,v13.16b
+	eor	v10.16b,v10.16b,v14.16b
+	eor	v11.16b,v11.16b,v15.16b
+	st4	{v8.4s,v9.4s,v10.4s,v11.4s},[outp],#64
+	subs	blocks,blocks,#12
+	b.ne	.Lctr32_4_blocks_process
+	b	100f
+
 1:	//	last block processing
 	subs	blocks,blocks,#1
 	b.lt	100f
@@ -927,7 +1366,7 @@ Vpsm4Ctr32EncryptBlocks:
 	dup	v6.4s,word2
 	mov	v7.s[0],ctr
 	add	ctr,ctr,#1
-	mov	v7.s[1],ctr	
+	mov	v7.s[1],ctr
 	subs	blocks,blocks,#1
 	b.ne	1f
 	add	ctr,ctr,#1
@@ -971,5 +1410,407 @@ Vpsm4Ctr32EncryptBlocks:
 	str ctr, [ivp,#12]
 	ret
 .size	Vpsm4Ctr32EncryptBlocks,.-Vpsm4Ctr32EncryptBlocks
+
+
+.globl	Vpsm4Cfb128Encrypt
+.type	Vpsm4Cfb128Encrypt,%function
+.align	5
+Vpsm4Cfb128Encrypt:
+	stp	x29,x30,[sp,#-80]!
+	add	x29,sp,#0
+	stp	x19,x20,[sp,#16]
+	stp	x21,x22,[sp,#32]
+	stp	x23,x8,[sp,#48]
+	stp	x16,x17,[sp,#64]
+
+	// load tbox
+	adrp	 x19, .Ltbox1
+    add x19,x19,:lo12:.Ltbox1
+	adrp	 x20, .Ltbox2
+    add x20,x20,:lo12:.Ltbox2
+	adrp	 x21, .Ltbox3
+    add x21,x21,:lo12:.Ltbox3
+	adrp	 x22, .Ltbox4
+    add x22,x22,:lo12:.Ltbox4
+
+	// load num
+	ldr	w23,[x5]
+	cbz	w23,.Lcfb128_enc_update
+.Lcfb128_enc_init:
+	ldrb	w7,[ivp,x23]
+	ldrb	w8,[inp]
+	eor	w7,w7,w8
+	strb	w7,[outp]
+	strb	w7,[ivp,x23]
+
+	add	inp,inp,#1
+	add	outp,outp,#1
+	add	w23,w23,#1
+	sub	len,len,#1
+	cmp	w23,#16
+	b.eq	.Lcfb128_enc_init_final
+	cbz	len,.Lcfb128_enc_ret
+	b	.Lcfb128_enc_init
+.Lcfb128_enc_init_final:
+	mov	w23,#0
+.Lcfb128_enc_update:
+	cbz	len,.Lcfb128_enc_ret
+	// load iv
+	ldp	w8,w9,[ivp]
+	ldp	w10,w11,[ivp,#8]
+#ifndef HITLS_BIG_ENDIAN
+	rev	w8,w8
+	rev	w9,w9
+	rev	w10,w10
+	rev	w11,w11
+#endif
+	EncRound
+#ifndef HITLS_BIG_ENDIAN
+	rev	w8,w8
+	rev	w9,w9
+	rev	w10,w10
+	rev	w11,w11
+#endif
+	// save back IV
+	stp	w11,w10,[ivp]
+	stp	w9,w8,[ivp,#8]
+
+	cmp	len,#16
+	b.lt	.Lcfb128_enc_final
+	// xor with plain
+	ldp	w6,w7,[inp],#8
+	ldp	w16,w17,[inp],#8
+	eor	w11,w11,w6
+	eor	w10,w10,w7
+	eor	w9,w9,w16
+	eor	w8,w8,w17
+
+	stp	w11,w10,[outp],#8
+	stp	w9,w8,[outp],#8
+	// save back IV
+	stp	w11,w10,[ivp]
+	stp	w9,w8,[ivp,#8]
+
+	sub	len,len,#16
+	b	.Lcfb128_enc_update
+.Lcfb128_enc_final:
+	ldrb	w7,[ivp,x23]
+	ldrb	w8,[inp]
+	eor	w7,w7,w8
+	strb	w7,[outp]
+	strb	w7,[ivp,x23]
+	
+	add	inp,inp,#1
+	add	outp,outp,#1
+	add	w23,w23,#1
+	subs	len,len,#1
+	b.ne	.Lcfb128_enc_final
+.Lcfb128_enc_ret:
+	// store num
+	str	w23,[x5]
+
+	// restore register
+	ldp	x19,x20,[sp,#16]
+	ldp	x21,x22,[sp,#32]
+	ldp	x23,x8,[sp,#48]
+	ldp	x16,x17,[sp,#64]
+	ldp	x29,x30,[sp],#80
+
+	ret
+.size	Vpsm4Cfb128Encrypt,.-Vpsm4Cfb128Encrypt
+
+# void Vpsm4Cfb128Decrypt(const uint8_t *in, uint8_t *out, uint64_t len, const uint32_t *key, uint8_t *iv, int *num);
+.globl	Vpsm4Cfb128Decrypt
+.type	Vpsm4Cfb128Decrypt,%function
+.align	5
+Vpsm4Cfb128Decrypt:
+	stp	x29,x30,[sp,#-128]!
+	stp	x19,x20,[sp,#16]
+	stp	x21,x22,[sp,#32]
+	stp	x23,x24,[sp,#48]
+	stp	d8,d9,[sp,#64]
+	stp	d10,d11,[sp,#80]
+	stp	d12,d13,[sp,#96]
+	stp	d14,d15,[sp,#112]
+
+	// load tbox
+	adrp	 x19, .Ltbox1
+    add x19,x19,:lo12:.Ltbox1
+	adrp	 x20, .Ltbox2
+    add x20,x20,:lo12:.Ltbox2
+	adrp	 x21, .Ltbox3
+    add x21,x21,:lo12:.Ltbox3
+	adrp	 x22, .Ltbox4
+    add x22,x22,:lo12:.Ltbox4
+	LoadSbox
+// load num
+	ldr	w23,[x5]
+	cbz	w23,.Lcfb128_12_blocks_dec
+
+.Lcfb128_dec_init:
+	ldrb	w7,[ivp,x23]
+	ldrb	w8,[inp]
+	eor	w7,w7,w8
+	strb	w7,[outp]
+	// store in to iv
+	strb	w8,[ivp,x23]
+	
+	add	inp,inp,#1
+	add	outp,outp,#1
+	subs len,len,#1
+	add	w23,w23,#1
+	and w23,w23,#15
+	b.eq	100f
+	cbz	w23,.Lcfb128_12_blocks_dec
+	b	.Lcfb128_dec_init
+
+.Lcfb128_12_blocks_dec:
+	cmp	len,#192
+	b.lt	.Lcfb128_8_blocks_dec
+
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[inp]
+	// append iv as last element
+	ld4	{v4.s,v5.s,v6.s,v7.s}[3],[ivp]
+	add	ptr,inp,#48
+	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[ptr]
+	add	ptr,ptr,#64
+	ld4	{v16.4s,v17.4s,v18.4s,v19.4s},[ptr]
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+
+	rev32	v16.16b,v16.16b
+	rev32	v17.16b,v17.16b
+	rev32	v18.16b,v18.16b
+	rev32	v19.16b,v19.16b
+#endif
+	bl	Sm4Enc12blks
+
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
+	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
+	transpose v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
+
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[inp],#64
+	ld1	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
+	eor	v0.16b,v0.16b,v17.16b
+	eor	v1.16b,v1.16b,v18.16b
+	eor	v2.16b,v2.16b,v19.16b
+	eor	v3.16b,v3.16b,v16.16b
+	// save plainText decrypted from iv as first one
+	st1	{v3.4s},[outp],#16
+	st1	{v0.4s,v1.4s,v2.4s},[outp],#48
+
+	eor	v4.16b,v4.16b,v12.16b
+	eor	v5.16b,v5.16b,v13.16b
+	eor	v6.16b,v6.16b,v14.16b
+	eor	v7.16b,v7.16b,v15.16b
+	st1	{v4.4s,v5.4s,v6.4s,v7.4s},[outp],#64
+
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[inp],#64
+	eor	v8.16b,v8.16b,v16.16b
+	eor	v9.16b,v9.16b,v17.16b
+	eor	v10.16b,v10.16b,v18.16b
+	eor	v11.16b,v11.16b,v19.16b
+	st1	{v8.4s,v9.4s,v10.4s,v11.4s},[outp],#64
+	// save back IV
+	st1	{v19.4s}, [ivp]
+	
+	subs	len,len,#192
+	b.gt	.Lcfb128_12_blocks_dec
+	b.eq	100f
+
+.Lcfb128_8_blocks_dec:
+	cmp	len,#128
+	b.lt	.Lcfb128_4_blocks_dec
+
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[inp]
+	// append iv as last element
+	ld4	{v4.s,v5.s,v6.s,v7.s}[3],[ivp]
+	add	ptr,inp,#48
+	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[ptr]
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+#endif
+	bl	Sm4Enc8blks
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
+	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
+
+	ld1	{v8.4s,v9.4s,v10.4s,v11.4s},[inp],#64
+	ld1	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
+	eor	v0.16b,v0.16b,v9.16b
+	eor	v1.16b,v1.16b,v10.16b
+	eor	v2.16b,v2.16b,v11.16b
+	eor	v3.16b,v3.16b,v8.16b
+	// save back IV
+	st1	{v15.4s}, [ivp]
+	eor	v4.16b,v4.16b,v12.16b
+	eor	v5.16b,v5.16b,v13.16b
+	eor	v6.16b,v6.16b,v14.16b
+	eor	v7.16b,v7.16b,v15.16b
+	st1	{v3.4s},[outp],#16
+	st1	{v0.4s,v1.4s,v2.4s},[outp],#48
+	st1	{v4.4s,v5.4s,v6.4s,v7.4s},[outp],#64
+	subs	len,len,#128
+	b.gt	.Lcfb128_8_blocks_dec
+	b.eq	100f
+.Lcfb128_4_blocks_dec:
+	cmp	len,#64
+	b.lt	.Llast_block
+	ld4	{v4.4s,v5.4s,v6.4s,v7.4s},[inp]
+	// append iv as last element
+	ld4	{v4.s,v5.s,v6.s,v7.s}[3],[ivp]
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+#endif
+	bl	Sm4Enc4blks
+	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[inp],#64
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
+	eor	v0.16b,v0.16b,v5.16b
+	eor	v1.16b,v1.16b,v6.16b
+	eor	v2.16b,v2.16b,v7.16b
+	eor	v3.16b,v3.16b,v4.16b
+	st1	{v3.4s},[outp],#16
+	st1	{v0.4s,v1.4s,v2.4s},[outp],#48
+	// save back IV
+	st1	{v7.4s}, [ivp]
+	subs	len,len,#64
+	b.gt	.Lcfb128_4_blocks_dec
+	b.eq	100f
+
+.Llast_block:	// last block
+	cmp	len,#16
+	b.gt	.Llast_2_blocks
+1:
+	// load in
+	ldp	w6,w7,[inp]
+	ldp	w16,w17,[inp,#8]
+	// load iv
+	ldp	w8,w9,[ivp]
+	ldp	w10,w11,[ivp,#8]
+#ifndef HITLS_BIG_ENDIAN
+	rev	w8,w8
+	rev	w9,w9
+	rev	w10,w10
+	rev	w11,w11
+#endif
+	EncRound
+#ifndef HITLS_BIG_ENDIAN
+	rev	w8,w8
+	rev	w9,w9
+	rev	w10,w10
+	rev	w11,w11
+#endif
+	// save encrypted iv 
+	stp	w11,w10,[ivp]
+	stp	w9,w8,[ivp,#8]
+
+	cmp	len,#16
+	b.lt	.Lcfb128_dec_final
+
+	stp	w6,w7,[ivp]
+	stp	w16,w17,[ivp,#8]
+	eor	w11,w11,w6
+	eor	w10,w10,w7
+	eor	w9,w9,w16
+	eor	w8,w8,w17
+	stp	w11,w10,[outp],#8
+	stp	w9,w8,[outp],#8
+	add	inp,inp,#16
+	subs	len,len,#16
+	b.gt	1b
+	b.eq	100f
+	b	.Lcfb128_dec_final
+.Llast_2_blocks:	//	last two blocks
+	ld4	{v4.s,v5.s,v6.s,v7.s}[0],[ivp]
+	mov	ptr,inp
+	ld4	{v4.s,v5.s,v6.s,v7.s}[1],[ptr],#16
+
+	cmp	x2,#32
+	b.gt	.Llast_3_blocks
+	b.lt	1b
+1:
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+#endif
+	bl	Sm4Enc4blks
+	ld1	{v4.4s,v5.4s},[inp],#32
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
+	eor	v0.16b,v0.16b,v4.16b
+	eor	v1.16b,v1.16b,v5.16b
+	st1	{v0.4s,v1.4s},[outp],#32
+	// save back IV
+	st1	{v5.4s}, [ivp]
+	subs	len,len,#32
+	b.eq	100f
+	b	.Llast_block
+.Llast_3_blocks:	// last 3 blocks
+	cmp	len,#48
+	b.lt	1b
+	ld4	{v4.s,v5.s,v6.s,v7.s}[2],[ptr]
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+#endif
+	bl	Sm4Enc4blks
+	ld1	{v4.4s,v5.4s,v6.4s},[inp],#48
+	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
+	eor	v0.16b,v0.16b,v4.16b
+	eor	v1.16b,v1.16b,v5.16b
+	eor	v2.16b,v2.16b,v6.16b
+	st1	{v0.4s,v1.4s,v2.4s},[outp],#48
+	// save back IV
+	st1	{v6.4s}, [ivp]
+	subs	len,len,#48
+	b.eq	100f
+	b	.Llast_block
+.Lcfb128_dec_final:
+	ldrb	w7,[ivp,x23]
+	ldrb	w8,[inp]
+	eor	w7,w7,w8
+	strb	w7,[outp]
+	// store in to iv
+	strb	w8,[ivp,x23]
+
+	add	inp,inp,#1
+	add	outp,outp,#1
+	add	w23,w23,#1
+	subs	len,len,#1
+	b.ne	.Lcfb128_dec_final
+100:
+	// store num
+	str	w23,[x5]
+	ldp	x19,x20,[sp,#16]
+	ldp	x21,x22,[sp,#32]
+	ldp	x23,x24,[sp,#48]
+	ldp	d8,d9,[sp,#64]
+	ldp	d10,d11,[sp,#80]
+	ldp	d12,d13,[sp,#96]
+	ldp	d14,d15,[sp,#112]
+	ldp	x29,x30,[sp],#128
+
+	ret
+.size	Vpsm4Cfb128Decrypt,.-Vpsm4Cfb128Decrypt
 
 #endif

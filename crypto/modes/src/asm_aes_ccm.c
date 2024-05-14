@@ -7,15 +7,21 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CCM
+#if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CCM)
 
+#include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_modes.h"
+#include "asm_aes_ccm.h"
 #include "ccm_core.h"
 #include "crypt_modes_ccm.h"
 
-int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+static int32_t AesCcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
+    if (ctx->ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     XorCryptData data;
     data.in = in;
     data.out = out;
@@ -24,22 +30,30 @@ int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t 
 
     uint8_t countLen = (ctx->nonce[0] & 0x07) + 1;
     uint32_t dataLen = len;
-    void (*xorBlock)(XorCryptData *data) = enc ? XorInEncryptBlock : XorInDecryptBlock;
     void (*xor)(XorCryptData *data, uint32_t len) = enc ? XorInEncrypt : XorInDecrypt;
-    while (dataLen >= CCM_BLOCKSIZE) { // process the integer multiple of 16bytes data
-        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
-        xorBlock(&data);
-        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
-        MODE_IncCounter(ctx->nonce + CCM_BLOCKSIZE - countLen, countLen); // counter +1
-        dataLen -= CCM_BLOCKSIZE;
-        data.in += CCM_BLOCKSIZE;
-        data.out += CCM_BLOCKSIZE;
-    }
-    if (dataLen > 0) { // process the integer multiple of 16bytes data
+    void (*crypt_asm)(void *key, uint8_t *nonce, const uint8_t *in, uint8_t *out, uint32_t len) =
+        enc ? AesCcmEncryptAsm : AesCcmDecryptAsm;
+    crypt_asm(ctx->ciphCtx, ctx->nonce, data.in, data.out, dataLen);
+    uint32_t tmpOffset = dataLen & 0xfffffff0;
+    dataLen &= 0x0fU;
+    data.in += tmpOffset;
+    data.out += tmpOffset;
+    if (dataLen > 0) { // data processing with less than 16 bytes
         (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
         xor(&data, dataLen);
         MODE_IncCounter(ctx->nonce + CCM_BLOCKSIZE - countLen, countLen); // counter +1
     }
     return CRYPT_SUCCESS;
 }
+
+int32_t MODES_AES_CCM_Encrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    return CcmCrypt(ctx, in, out, len, true, AesCcmBlocks);
+}
+
+int32_t MODES_AES_CCM_Decrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    return CcmCrypt(ctx, in, out, len, false, AesCcmBlocks);
+}
+
 #endif

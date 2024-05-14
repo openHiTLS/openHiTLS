@@ -225,6 +225,49 @@
     #endif
 #endif
 
+#ifdef HITLS_CRYPTO_ECC
+    #ifndef HITLS_CRYPTO_CURVE_NISTP224
+        #define HITLS_CRYPTO_CURVE_NISTP224
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_NISTP256
+        #define HITLS_CRYPTO_CURVE_NISTP256
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_NISTP384
+        #define HITLS_CRYPTO_CURVE_NISTP384
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_NISTP521
+        #define HITLS_CRYPTO_CURVE_NISTP521
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_BP256R1
+        #define HITLS_CRYPTO_CURVE_BP256R1
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_BP384R1
+        #define HITLS_CRYPTO_CURVE_BP384R1
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_BP512R1
+        #define HITLS_CRYPTO_CURVE_BP512R1
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_192WAPI
+        #define HITLS_CRYPTO_CURVE_192WAPI
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_SM2
+        #define HITLS_CRYPTO_CURVE_SM2
+    #endif
+    #ifndef HITLS_CRYPTO_CURVE_SM9
+        #define HITLS_CRYPTO_CURVE_SM9
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP256) || \
+    defined(HITLS_CRYPTO_CURVE_NISTP384) || defined(HITLS_CRYPTO_CURVE_NISTP521) || \
+    defined(HITLS_CRYPTO_CURVE_BP256R1) || defined(HITLS_CRYPTO_CURVE_BP384R1) || \
+    defined(HITLS_CRYPTO_CURVE_BP512R1) || defined(HITLS_CRYPTO_CURVE_192WAPI) || \
+    defined(HITLS_CRYPTO_CURVE_SM2) || defined(HITLS_CRYPTO_CURVE_SM9)
+    #ifndef HITLS_CRYPTO_ECC
+        #define HITLS_CRYPTO_ECC
+    #endif
+#endif
+
 #ifdef HITLS_CRYPTO_CURVE25519
     #ifndef HITLS_CRYPTO_X25519
         #define HITLS_CRYPTO_X25519
@@ -294,10 +337,18 @@
     #endif
 #endif
 
+#if defined(HITLS_CRYPTO_SM2) && !defined(HITLS_CRYPTO_CURVE_SM2)
+    #define HITLS_CRYPTO_CURVE_SM2
+#endif
+
 #if defined(HITLS_CRYPTO_ECDH) || defined(HITLS_CRYPTO_ECDSA)
     #ifndef HITLS_CRYPTO_ECC
         #define HITLS_CRYPTO_ECC
     #endif
+#endif
+
+#if defined(HITLS_CRYPTO_SM2)
+    #define HITLS_CRYPTO_CURVE_SM2
 #endif
 
 #if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA)

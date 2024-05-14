@@ -174,10 +174,39 @@ static int32_t TagInit(MODES_CCM_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
-// Enc: true for encryption and false for decryption.
-static int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+static int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
-    if (ctx == NULL || in == NULL || out == NULL || len == 0) {
+    XorCryptData data;
+    data.in = in;
+    data.out = out;
+    data.ctr = ctx->last;
+    data.tag = ctx->tag;
+
+    uint8_t countLen = (ctx->nonce[0] & 0x07) + 1;
+    uint32_t dataLen = len;
+    void (*xorBlock)(XorCryptData *data) = enc ? XorInEncryptBlock : XorInDecryptBlock;
+    void (*xor)(XorCryptData *data, uint32_t len) = enc ? XorInEncrypt : XorInDecrypt;
+    while (dataLen >= CCM_BLOCKSIZE) { // process the integer multiple of 16bytes data
+        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
+        xorBlock(&data);
+        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+        MODE_IncCounter(ctx->nonce + CCM_BLOCKSIZE - countLen, countLen); // counter +1
+        dataLen -= CCM_BLOCKSIZE;
+        data.in += CCM_BLOCKSIZE;
+        data.out += CCM_BLOCKSIZE;
+    }
+    if (dataLen > 0) { // process the integer multiple of 16bytes data
+        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
+        xor(&data, dataLen);
+        MODE_IncCounter(ctx->nonce + CCM_BLOCKSIZE - countLen, countLen); // counter +1
+    }
+    return CRYPT_SUCCESS;
+}
+
+// Enc: true for encryption and false for decryption.
+int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc, const CcmCore func)
+{
+    if (ctx == NULL || ctx->ciphCtx == NULL || in == NULL || out == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -210,7 +239,7 @@ static int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uin
     }
 
     uint32_t tmpLen = len - lastLen;
-    ret = CcmBlocks(ctx, in + lastLen, out + lastLen, tmpLen, enc);
+    ret = func(ctx, in + lastLen, out + lastLen, tmpLen, enc);
     if (ret != CRYPT_SUCCESS) {
         // Returned by the internal function. No redundant push err is required.
         return ret;
@@ -222,12 +251,12 @@ static int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uin
 
 int32_t MODES_CCM_Encrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    return CcmCrypt(ctx, in, out, len, true);
+    return CcmCrypt(ctx, in, out, len, true, CcmBlocks);
 }
 
 int32_t MODES_CCM_Decrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    return CcmCrypt(ctx, in, out, len, false);
+    return CcmCrypt(ctx, in, out, len, false, CcmBlocks);
 }
 
 // 7 <= ivLen <= 13

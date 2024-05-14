@@ -65,7 +65,7 @@ build_hitls_code()
     python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_x509 --bits=$BITS --system=linux
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --add_options="$add_options" --del_options="$del_options"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type x8664 --add_options="$add_options" --del_options="$del_options"
     elif [[ $get_arch = "armv8_be" ]]; then
         echo "Compile: env=armv8, asm + c, big endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options"
@@ -103,6 +103,9 @@ parse_option()
                 ;;
             "armv8_le")
                 get_arch="armv8_le"
+                ;;
+            "pure_c")
+                get_arch="C"
                 ;;
             "no_sctp")
                 NO_SCTP="ON"

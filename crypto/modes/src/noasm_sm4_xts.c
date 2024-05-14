@@ -16,27 +16,16 @@
 
 void MODES_SM4_XTS_Clean(MODE_XTS_Ctx *ctx)
 {
-    if (ctx == NULL) {
-        return;
-    }
     MODE_XTS_Clean(ctx);
 }
 
 int32_t MODES_SM4_XTS_SetEncryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     return MODE_XTS_SetEncryptKey(ctx, key, len);
 }
 
 int32_t MODES_SM4_XTS_SetDecryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     return MODE_XTS_SetDecryptKey(ctx, key, len);
 }
 

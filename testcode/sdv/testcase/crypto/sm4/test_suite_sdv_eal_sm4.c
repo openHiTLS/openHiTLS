@@ -377,7 +377,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC001(Hex *key, Hex *iv, Hex *msg)
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_MODES_METHODS_NOT_SUPPORT);
+    ASSERT_TRUE(ret == CRYPT_MODES_CTRL_TYPE_ERROR);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_IV, iv->x, iv->len);
     ASSERT_TRUE(ret == CRYPT_EAL_CIPHER_CTRL_ERROR);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_IV, iv->x, iv->len);
@@ -490,7 +490,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC003(Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, (uint8_t *)&blockSizeGet, 0);
     ASSERT_TRUE(ret == CRYPT_MODE_ERR_INPUT_LEN);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_MAX, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_MODES_METHODS_NOT_SUPPORT);
+    ASSERT_TRUE(ret == CRYPT_MODES_CTRL_TYPE_ERROR);
 
 exit:
     CRYPT_EAL_CipherDeinit(ctx);

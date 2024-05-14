@@ -235,6 +235,8 @@ enum CRYPT_ERROR {
     CRYPT_MODE_BUFF_LEN_NOT_ENOUGH,                  /**< The buffer length is insufficient. */
     CRYPT_MODE_ERR_INPUT_LEN,                        /**< The function input length is not the
                                                           expected length. */
+    CRYPT_MODES_CTRL_TYPE_ERROR,                     /**< The input type is not supported when the ctrl
+                                                          interface is used. */
     CRYPT_MODES_AAD_IS_SET_ERROR,                    /**< In ccm mode, an error is returned when the tagLen and
                                                           msgLen are set after the aad is set. */
     CRYPT_MODES_MSGLEN_OVERFLOW,                     /**< In ccm mode, the length of the input message during
@@ -309,6 +311,7 @@ enum CRYPT_ERROR {
 
     CRYPT_SM4_KEYLEN_ERROR = 0x01180001,              /**< Wrong key length set. */
     CRYPT_SM4_DATALEN_ERROR,                          /**< Wrong data length is set. */
+    CRYPT_SM4_ERR_KEY_LEN,                            /**< Wrong key length is set. */
     CRYPT_SM4_UNSAFE_KEY,                             /**< DataKey is the same as tweakKey. */
 
     CRYPT_MD5_INPUT_OVERFLOW = 0x01190001,             /**< The length of the input data exceeds the

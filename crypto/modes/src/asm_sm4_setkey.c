@@ -17,19 +17,10 @@
 
 int32_t MODES_SM4_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
 {
-    if (ctx == NULL || key == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     return CRYPT_SM4_SetEncryptKey(ctx->ciphCtx, key, len);
 }
-
-int32_t MODES_SM4_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
-{
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    return CRYPT_SM4_SetDecryptKey(ctx->ciphCtx, key, len);
-}
-#endif // HITLS_CRYPTO_SM4
+#endif

@@ -5,31 +5,25 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 #ifndef CCM_CORE_H
 #define CCM_CORE_H
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CCM
 
-#include "crypt_utils.h"
-#include "crypt_modes.h"
 #include "crypt_modes_ccm.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif  // __cplusplus
 
-void XorInDecrypt(XorCryptData *data, uint32_t len);
-void XorInEncrypt(XorCryptData *data, uint32_t len);
-void XorInEncryptBlock(XorCryptData *data);
-void XorInDecryptBlock(XorCryptData *data);
-int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc);
+typedef int32_t (*CcmCore)(MODES_CCM_Ctx *, const uint8_t *, uint8_t *, uint32_t, bool);
+
+int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc, const CcmCore func);
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif  // __cplusplus
 
-#endif // HITLS_CRYPTO_CCM
-
-#endif // CCM_CORE_H
+#endif
+#endif

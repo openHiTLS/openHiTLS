@@ -365,7 +365,7 @@ void SDV_CRYPTO_AES_CTRL_API_TC001(int id, Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, (uint8_t *)&blockSizeGet, 0);
     ASSERT_TRUE(ret == CRYPT_MODE_ERR_INPUT_LEN);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_MAX, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_MODES_METHODS_NOT_SUPPORT);
+    ASSERT_TRUE(ret == CRYPT_MODES_CTRL_TYPE_ERROR);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, NULL, sizeof(uint32_t));
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
 

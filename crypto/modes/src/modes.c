@@ -113,6 +113,16 @@ int32_t MODE_GetIv(MODE_CipherCtx *ctx, uint8_t *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+int32_t MODE_DefaultCtrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, uint32_t *val, uint32_t len)
+{
+    if (ctx->ciphMeth == NULL || ctx->ciphMeth->ctrl == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
+        return CRYPT_MODES_CTRL_TYPE_ERROR;
+    }
+    return ctx->ciphMeth->ctrl(ctx->ciphCtx, opt, val, len);
+}
+
+// support: finally do the MODE_DefaultCtrl, but not all MODEs have assembly optimizations
 int32_t MODE_Ctrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -126,8 +136,7 @@ int32_t MODE_Ctrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t
         case CRYPT_CTRL_GET_IV:
             return MODE_GetIv(ctx, (uint8_t *)val, len);
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_MODES_METHODS_NOT_SUPPORT);
-            return CRYPT_MODES_METHODS_NOT_SUPPORT;
+            return MODE_DefaultCtrl(ctx, opt, val, len);
     }
 }
 

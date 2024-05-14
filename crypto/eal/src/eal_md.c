@@ -20,6 +20,7 @@
 #include "crypt_errno.h"
 #include "eal_md_local.h"
 #include "eal_common.h"
+#include "crypt_ealinit.h"
 
 static CRYPT_EAL_MdCTX *MdAllocCtx(CRYPT_MD_AlgId id, const EAL_MdMethod *method)
 {
@@ -59,6 +60,12 @@ static CRYPT_EAL_MdCTX *MdNewDefaultCtx(CRYPT_MD_AlgId id)
 
 CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id)
 {
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Md(id) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     return MdNewDefaultCtx(id);
 }
 

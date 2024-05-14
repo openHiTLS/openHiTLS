@@ -112,6 +112,85 @@ int32_t CRYPT_AES_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *
 */
 int32_t CRYPT_AES_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
+#ifdef HITLS_CRYPTO_CBC
+/**
+ * @ingroup aes
+ * @brief AES cbc encryption
+ *
+ * @param ctx [IN]  AES handle, storing keys
+ * @param in  [IN]  Input plaintext data, 16 bytes.
+ * @param out [OUT] Output ciphertext data. The length is 16 bytes.
+ * @param len [IN]  Block length.
+ * @param iv  [IN]  Initialization vector.
+*/
+int32_t CRYPT_AES_CBC_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len, uint8_t *iv);
+
+/**
+ * @ingroup aes
+ * @brief AES cbc decryption
+ *
+ * @param ctx [IN]  AES handle, storing keys
+ * @param in  [IN]  Input ciphertext data. The value is 16 bytes.
+ * @param out [OUT] Output plaintext data. The length is 16 bytes.
+ * @param len [IN]  Block length.
+ * @param iv  [IN]  Initialization vector.
+*/
+int32_t CRYPT_AES_CBC_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len, uint8_t *iv);
+#endif /* HITLS_CRYPTO_CBC */
+
+#if defined(HITLS_CRYPTO_CTR) || defined(HITLS_CRYPTO_GCM)
+/**
+ * @ingroup aes
+ * @brief AES ctr encryption
+ *
+ * @param ctx [IN]  AES handle, storing keys
+ * @param in  [IN]  Input plaintext data, 16 bytes.
+ * @param out [OUT] Output ciphertext data. The length is 16 bytes.
+ * @param len [IN]  Block length.
+ * @param iv  [IN]  Initialization vector.
+*/
+int32_t CRYPT_AES_CTR_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len, uint8_t *iv);
+#endif
+
+#ifdef HITLS_CRYPTO_ECB
+/**
+ * @ingroup aes
+ * @brief AES ecb encryption
+ *
+ * @param ctx [IN]  AES handle, storing keys
+ * @param in  [IN]  Input plaintext data. The length is a multiple of 16 bytes.
+ * @param out [OUT] Output ciphertext data. The length is a multiple of 16 bytes.
+ * @param len [IN]  Block length.
+*/
+int32_t CRYPT_AES_ECB_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+
+/**
+ * @ingroup aes
+ * @brief AES ecb decryption
+ *
+ * @param ctx [IN]  AES handle, storing keys
+ * @param in  [IN]  Input ciphertext data. The value is 16 bytes.
+ * @param out [OUT] Output plaintext data. The length is 16 bytes.
+ * @param len [IN]  Block length.
+*/
+int32_t CRYPT_AES_ECB_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+#endif
+
+#ifdef HITLS_CRYPTO_CFB
+/**
+ * @brief Decryption in CFB mode
+ *
+ * @param ctx [IN] Mode handle
+ * @param in  [IN] Data to be encrypted
+ * @param out [OUT] Encrypted data
+ * @param len [IN] Data length
+ * @param iv  [IN] Initial vector
+ * @return Success response: CRYPT_SUCCESS
+ * Returned upon failure: Other error codes.
+ */
+int32_t CRYPT_AES_CFB_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len, uint8_t *iv);
+#endif
+
 /**
  * @ingroup aes
  * @brief Delete the AES key information.

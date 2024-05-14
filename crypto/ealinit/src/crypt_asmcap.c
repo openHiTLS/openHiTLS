@@ -175,9 +175,6 @@ static const EAL_CheckAsm HITLS_ASM_MD_ALG_CHECK[] = {
     #if defined(HITLS_CRYPTO_SM3_ASM)
         {.id = CRYPT_MD_SM3, .callback = {CRYPT_SM3_AsmCheck, NULL}},
     #endif
-    #if defined(HITLS_CRYPTO_MD5_ASM) && defined(HITLS_CRYPTO_SHA1_ASM)
-        {.id = CRYPT_MD_MD5_SHA1, .callback = {CRYPT_MD5_AsmCheck, CRYPT_SHA1_AsmCheck}},
-    #endif
 };
 #endif
 
@@ -245,9 +242,6 @@ static const EAL_CheckAsm HITLS_ASM_MAC_ALG_CHECK[] = {
 #endif
 #if defined(HITLS_CRYPTO_SHA1_ASM)
     {.id = CRYPT_MAC_HMAC_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
-#if defined(HITLS_CRYPTO_MD5_ASM)
-    {.id = CRYPT_MAC_HMAC_MD5_SHA1, .callback = {CRYPT_MD5_AsmCheck, CRYPT_SHA1_AsmCheck}},
-#endif
 #endif
 #if defined(HITLS_CRYPTO_SHA2_ASM)
     {.id = CRYPT_MAC_HMAC_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
