@@ -2782,7 +2782,7 @@ void UT_TLS13_RFC8446_HRR_APP_RECV_TC001()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
     /* 1. Initialize the client and server to tls1.3, construct the scenario where the supportedversion values carried
@@ -2852,7 +2852,7 @@ void UT_TLS1_3_RFC8446_Legacy_Version_TC001(int statehs)
     FRAME_LinkObj *server = NULL;
     client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
     /* Configure the server to support only the non-default curve. The server sends the HRR message. */
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(tlsConfig, groups, groupsSize);
     server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
@@ -2910,7 +2910,7 @@ void UT_TLS1_3_RFC8446_Legacy_Version_TC002(int statehs)
     FRAME_LinkObj *server = NULL;
     client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
     /* Configure the server to support only the non-default curve. The server sends the HRR message. */
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(tlsConfig, groups, groupsSize);
     server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);

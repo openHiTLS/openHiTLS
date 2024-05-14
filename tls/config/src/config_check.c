@@ -70,7 +70,7 @@ static bool  HaveMatchSignAlg(HITLS_AuthAlgo authAlg, const uint16_t *signatureA
                 return true;
             }
 
-            if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519) || (signAlg == HITLS_SIGN_ED448)) &&
+            if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519)) &&
                 (authAlg == HITLS_AUTH_ECDSA)) {
                 return true;
             }

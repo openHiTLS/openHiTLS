@@ -430,7 +430,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC005(void)
     FRAME_LinkObj *server = NULL;
     client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
     /* Configure the server to support only the non-default curve. The server sends the HRR message. */
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(tlsConfig, groups, groupsSize);
     server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
@@ -497,7 +497,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC006(void)
     FRAME_LinkObj *server = NULL;
 
     client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(tlsConfig, groups, groupsSize);
     server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);

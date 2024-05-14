@@ -3045,13 +3045,13 @@ void UT_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(int version)
     ASSERT_TRUE(config_c != NULL);
     ASSERT_TRUE(config_s != NULL);
 
-    uint16_t groups_c[] = {HITLS_EC_GROUP_SECP384R1, HITLS_EC_GROUP_CURVE448};
+    uint16_t groups_c[] = {HITLS_EC_GROUP_SECP384R1, HITLS_EC_GROUP_CURVE25519};
     uint16_t signAlgs_c[] = {
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
         CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
     };
 
-    uint16_t groups_s[] = {HITLS_EC_GROUP_SECP521R1, HITLS_EC_GROUP_CURVE448};
+    uint16_t groups_s[] = {HITLS_EC_GROUP_SECP521R1, HITLS_EC_GROUP_CURVE25519};
     uint16_t signAlgs_s[] = {
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
         CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
@@ -3079,7 +3079,7 @@ void UT_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(int version)
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     uint16_t groupId;
-    uint16_t expectedGroupId = (version == HITLS_VERSION_TLS12) ? 0 : HITLS_EC_GROUP_CURVE448;
+    uint16_t expectedGroupId = (version == HITLS_VERSION_TLS12) ? 0 : HITLS_EC_GROUP_CURVE25519;
     ret = HITLS_GetNegotiateGroup(server->ssl, &groupId);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ASSERT_EQ(groupId, expectedGroupId);

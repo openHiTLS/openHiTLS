@@ -994,7 +994,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_NULL_KEYSHARE_FUNC_TC001()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -1064,7 +1064,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC001()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -1128,7 +1128,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC002()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -1213,7 +1213,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC003()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
@@ -3185,7 +3185,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_RANDOM_FUNC_TC001()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -3300,7 +3300,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_RANDOM_FUNC_TC002()
     g_hrrRandom, sizeof(g_hrrRandom) / sizeof(uint8_t)) == 0);
     serverMsg->keyShare.data.keyExchangeLen.state = MISSING_FIELD;
     serverMsg->keyShare.data.keyExchange.state = MISSING_FIELD;
-    serverMsg->keyShare.data.group.data = HITLS_EC_GROUP_CURVE448;
+    serverMsg->keyShare.data.group.data = HITLS_EC_GROUP_SECP521R1;
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -3549,7 +3549,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_FUNC_TC001()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -3637,7 +3637,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_FUNC_TC002()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -3729,7 +3729,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_FUNC_TC003()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
     /* Initialize the client and server to tls1.3, construct the scenario where the hrr message is sent and the hrr
@@ -3825,7 +3825,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC001()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     /*  Initialize the client and server as tls1.3. Construct the scenario where two hrr messages are sent. */
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -3949,7 +3949,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC002()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4044,7 +4044,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC003()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4141,7 +4141,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC004()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4231,7 +4231,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC005()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4333,7 +4333,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC006()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4429,7 +4429,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_CONTENT_FUNC_TC001()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4526,7 +4526,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_CONTENT_FUNC_TC002()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4635,7 +4635,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_CONTENT_FUNC_TC003()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
 
@@ -4743,7 +4743,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_SUPPORT_VERSION_FUNC_TC001()
     HITLS_CFG_SetVersionSupport(&client->ssl->config.tlsConfig, 0x00000030U);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
     /* 1. Initialize the client and server to tls1.3, construct the scenario where the supportedversion values carried
@@ -4898,7 +4898,7 @@ void UT_TLS13_RFC8446_HRR_APP_RECV_TC001()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-    const uint16_t groups[] = {HITLS_EC_GROUP_CURVE448};
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
     uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
     HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
     /* 1. Initialize the client and server to tls1.3, construct the scenario where the supportedversion values carried

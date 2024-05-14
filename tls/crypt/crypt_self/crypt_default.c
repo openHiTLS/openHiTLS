@@ -681,8 +681,6 @@ static CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_NamedGroup groupId)
             return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_BRAINPOOLP512R1);
         case HITLS_EC_GROUP_CURVE25519:
             return GeneratePkeyByParaId(CRYPT_PKEY_X25519, CRYPT_PKEY_PARAID_MAX);
-        case HITLS_EC_GROUP_CURVE448:
-            return GeneratePkeyByParaId(CRYPT_PKEY_X448, CRYPT_PKEY_PARAID_MAX);
         case HITLS_EC_GROUP_SM2:
             return GeneratePkeyByParaId(CRYPT_PKEY_SM2, CRYPT_ECC_SM2);
         case HITLS_FF_DHE_2048:
@@ -839,26 +837,11 @@ static int32_t DhKeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bu
 
 static int32_t X448KeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
 {
-#ifdef HITLS_CRYPTO_X448
-    CRYPT_EAL_PkeyPub pub;
-    pub.id = CRYPT_PKEY_X448;
-    pub.key.curve448Pub.data = pubKeyBuf;
-    pub.key.curve448Pub.len = bufLen;
-
-    int32_t ret = CRYPT_EAL_PkeyGetPub(key, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
-    *pubKeyLen = pub.key.dhPub.len;
-    return HITLS_SUCCESS;
-#else
     (void)key;
     (void)pubKeyLen;
     (void)pubKeyBuf;
     (void)bufLen;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
-#endif
 }
 
 int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)

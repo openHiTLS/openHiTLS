@@ -123,7 +123,6 @@ static int32_t SetDefaultGroups(HITLS_Config *config)
 {
     const uint16_t groupsTls[] = {
         HITLS_EC_GROUP_CURVE25519,
-        HITLS_EC_GROUP_CURVE448,
         HITLS_EC_GROUP_SECP521R1,
         HITLS_EC_GROUP_SECP384R1,
         HITLS_EC_GROUP_SECP256R1,
@@ -151,7 +150,6 @@ static int32_t SetDefaultTLS13Groups(HITLS_Config *config)
     /* rfc8446 4.2.7 Supported Groups */
     const uint16_t groupsTls[] = {
         HITLS_EC_GROUP_CURVE25519,
-        HITLS_EC_GROUP_CURVE448,
         HITLS_EC_GROUP_SECP521R1,
         HITLS_EC_GROUP_SECP384R1,
         HITLS_EC_GROUP_SECP256R1,

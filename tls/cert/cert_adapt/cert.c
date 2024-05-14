@@ -57,7 +57,6 @@ CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType)
             return CERT_TYPE_DSS_SIGN;
         case TLS_CERT_KEY_TYPE_ECDSA:
         case TLS_CERT_KEY_TYPE_ED25519:
-        case TLS_CERT_KEY_TYPE_ED448:
             return CERT_TYPE_ECDSA_SIGN;
 #ifndef HITLS_NO_TLCP11
         case TLS_CERT_KEY_TYPE_SM2:
@@ -99,8 +98,6 @@ HITLS_CERT_KeyType SignScheme2CertKeyType(HITLS_SignHashAlgo signScheme)
             return TLS_CERT_KEY_TYPE_ECDSA;
         case CERT_SIG_SCHEME_ED25519:
             return TLS_CERT_KEY_TYPE_ED25519;
-        case CERT_SIG_SCHEME_ED448:
-            return TLS_CERT_KEY_TYPE_ED448;
 #ifndef HITLS_NO_TLCP11
         case CERT_SIG_SCHEME_SM2_SM3:
             return TLS_CERT_KEY_TYPE_SM2;
@@ -124,8 +121,6 @@ HITLS_SignHashAlgo SAL_CERT_GetDefaultSignHashAlgo(HITLS_CERT_KeyType keyType)
             return CERT_SIG_SCHEME_ECDSA_SHA1;
         case TLS_CERT_KEY_TYPE_ED25519:
             return CERT_SIG_SCHEME_ED25519;
-        case TLS_CERT_KEY_TYPE_ED448:
-            return CERT_SIG_SCHEME_ED448;
 #ifndef HITLS_NO_TLCP11
         case TLS_CERT_KEY_TYPE_SM2:
             return CERT_SIG_SCHEME_SM2_SM3;
