@@ -115,7 +115,6 @@ do {
 do {
     ret = HITLS_Accept(ctx);
 } while (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY);
-
 ```
 
 > **NOTE:** The `do while` statement serves as a reference only. In practice, the service logic may be implemented in a different manner.
@@ -273,48 +272,48 @@ To use the certificate authentication-based client, you need both a trust certif
    
    For the configuration context, users can use the following interface to configure a trust certificate pool for verifying peer certificates:
 
-```c
-/**
- * @brief   Set `VerifyStore` for TLS to verify certificates.
- */
-int32_t HITLS_CFG_SetVerifyStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone);
-```
+    ```c
+    /**
+     * @brief   Set `VerifyStore` for TLS to verify certificates.
+     */
+    int32_t HITLS_CFG_SetVerifyStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone);
+    ```
 
-For the link context, users can call `HITLS_SetVerifyStore` to set `VerifyStore`.
+    For the link context, users can call `HITLS_SetVerifyStore` to set `VerifyStore`.
 
-> **NOTE:** Calling `HITLS_CFG_NewXXXConfig` will generate a default certificate pool, `CertStore`. If `VerifyStore` is not set, `CertStore` will be used to verify the certificate chain by default.
+    > **NOTE:** Calling `HITLS_CFG_NewXXXConfig` will generate a default certificate pool, `CertStore`. If `VerifyStore` is not set, `CertStore` will be used to verify the certificate chain by default.
 
 2. Pool used to generate the local certificate chain
    As part of the handshake process, the server sends its local certificate to the peer for verification. If the certificate chain for the local certificate is not configured, the server will search the trust certificate pool for the chain and send it to the peer. If the server has sent a certificate chain, it can request the TLS client's certificate to verify the client's identity, which is known as ***two-way authentication***. The TLS client will then send its local certificate and certificate chain to the server through handshake messages. If the local certificate is not found in the configured trust certificate pool or the pool is not configured, the client will send an empty certificate message. Whether the handshake can proceed depends on the server's behavior.
    
    Users can use the following interface to configure a trust certificate pool for generating the local certificate chain:
 
-```c
-/**
- * @brief Set the chain store used for TLS configuration to construct a certificate chain.
- */
-int32_t HITLS_CFG_SetChainStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone);
-```
+    ```c
+    /**
+     * @brief Set the chain store used for TLS configuration to construct a certificate chain.
+     */
+    int32_t HITLS_CFG_SetChainStore(HITLS_Config *config, HITLS_CERT_Store *store, bool isClone);
+    ```
 
 - Using device certificates and the corresponding certificate chains: The server or client (in two-way authentication) needs to send device certificates and certificate chains to the peer. In addition to the trust certificate pools, the certificate chains can be added based on the device certificates. When certificate chains are sent to the peer, those that match the device certificates are preferred. You can use the following interfaces to add the desired certificate chains:
 
-```c
-/**
- * @brief Add certificates to the certificate chain being used by **config**.
- */
-int32_t HITLS_CFG_AddChainCert(HITLS_Config *config, HITLS_CERT_X509 *cert, bool isClone);
-```
+    ```c
+    /**
+     * @brief Add certificates to the certificate chain being used by **config**.
+     */
+    int32_t HITLS_CFG_AddChainCert(HITLS_Config *config, HITLS_CERT_X509 *cert, bool isClone);
+    ```
 
 - Adding certificates to the trust certificate pool: After configuring a trust certificate pool, you can add trust certificates to it through the following interface:
 
-```c
-/**
- * @brief Add certificates to the specified trust certificate pool.
- */
-int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, char *certPath, HITLS_CERT_StoreType storeType);
-```
+    ```c
+    /**
+     * @brief Add certificates to the specified trust certificate pool.
+     */
+    int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, char *certPath, HITLS_CERT_StoreType storeType);
+    ```
 
-> **NOTE:** This interface can be used to add certificates to the default certificate pool, verification certificate pool, and certificate chain pool. The certificates are transferred using relative paths.
+    > **NOTE:** This interface can be used to add certificates to the default certificate pool, verification certificate pool, and certificate chain pool. The certificates are transferred using relative paths.
 
 #### Configuring Client Certificates
 

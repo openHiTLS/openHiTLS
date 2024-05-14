@@ -9,8 +9,10 @@ openHiTLS is a C/C++ library for building cryptographic security capabilities. I
 ## Installing openHiTLS
 
 1. Download related codes.
-   openHiTLS download address: https://gitee.com/openhitls/openhitls-dev.git
-   libboundscheck download address: https://gitee.com/openeuler/libboundscheck.git.
+   openHiTLS download address: https://gitee.com/openhitls/openhitls.git
+
+   libboundscheck download address: https://gitee.com/openeuler/libboundscheck.git
+
    Note: Download libboundscheck to the **openHiTLS/platform/Secure_C** directory.
 2. To build and install openHiTLS, run the following commands in the openHiTLS root directory:
 

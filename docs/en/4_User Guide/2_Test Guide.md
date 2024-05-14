@@ -11,8 +11,37 @@ The test project depends on the source code compilation. Prepare the environment
 
 ## 2. Test Code Directory Structure
 
-![image](../images/User%20Guide/Test%20Guide_figures/DirectoryStructure.png)
-
+```
+./testcode/
+├── CMakeLists.txt
+├── common
+│   ├── execute_base.c
+│   └── execute_test.c
+├── demo
+├── framework
+│   ├── crypto
+│   ├── gen_test
+│   ├── include
+│   ├── process
+│   ├── stub
+│   └── tls
+├── output
+├── script
+│   ├── all_mini_test.sh
+│   ├── build_hitls.sh
+│   ├── build_sdv.sh
+│   ├── execute_sdv.sh
+│   └── mini_build_test.sh
+├── sdv
+│   ├── build
+│   ├── CMakeLists.txt
+│   ├── log
+│   ├── report
+│   └── testcase
+└── testdata
+    ├── cert
+    └── tls
+```
 Where:
 
 - common: common test framework code

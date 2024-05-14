@@ -16,8 +16,10 @@ Check whether the build tools have been installed in the system and can be used 
 Method 1
 
 1. Download the openHiTLS code, including the service code, build script, and test code.
-   Repository address: https://gitee.com/openhitls/openhitls-dev.git
+
+   Repository address: https://gitee.com/openhitls/openhitls.git
 2. openHiTLS depends on the libboundscheck library. Before building openHiTLS, download the library to **openHiTLS/platform/Secure\_C**.
+
    Repository address: https://gitee.com/openeuler/libboundscheck.git
 
 Method 2
@@ -25,25 +27,41 @@ Method 2
 Run the **git submodule** command to download the source code and dependent SecureC library:
 
 ```
-git clone --recurse-submodules https://gitee.com/openhitls/openhitls-dev.git
+git clone --recurse-submodules https://gitee.com/openhitls/openhitls.git
 ```
 
 ## 3. Building and Installing openHiTLS
 
 The openHiTLS code directory structure is as follows:
 
-![image](../images/User%20Guide/Build%20and%20Installation%20Guide_figures/CodeDirectory.png)
-
+```
+└── openHiTLS
+   ├── bsl
+   ├── CMakeLists.txt
+   ├── config
+   ├── configure.py
+   ├── crypto
+   ├── docs
+   ├── include
+   ├── LICENSE
+   ├── platform
+   ├── README-en.md
+   ├── README.md
+   ├── script
+   ├── testcode
+   ├── tls
+   └── x509
+```
 Where:
 
-- configure.py: provides the command line function for build configuration.
-- config and script: stores build-related scripts.
-- bsl: stores the code related to basic functions.
+- configure.py: provides the command line function for build configuration
+- config and script: stores build-related scripts
+- bsl: stores the code related to basic functions
 - crypto: stores the code related to cryptographic algorithm capabilities.
-- tls: stores the code related to secure transmission.
-- platform: stores other dependent codes.
-- demo: stores code examples.
-- testcode: stores the test project code.
+- tls: stores the code related to secure transmission
+- platform: stores other dependent codes
+- testcode: stores the test project code
+- x509: provides the X509 certificate function
 
 **Call CMake to build the source code. The detailed method is as follows:**
 
@@ -72,11 +90,11 @@ The **configure.py** script modifies the existing configuration based on the **c
 
 The overall CMake build procedure is as follows:
 
-```
+```bash
 cd openHiTLS
 mkdir -p ./build
 cd ./build
-python3 ../configure.py #Modify the configuration. For details, see section 3.1.1.
+python3 ../configure.py # Modify the configuration. For details, see section 3.1.1.
 cmake ..
 make -j
 ```
@@ -85,7 +103,7 @@ The build result is stored in the **openHiTLS/build** directory.
 
 #### 3.1.1 Common Configuration Commands
 
-```
+```bash
 # Disable a feature.
 python3 ../configure.py --disable [feature]::[module]
 
@@ -116,11 +134,11 @@ python3 ../configure.py --lib_type shared static object
 
 To cross compile openHiTLS, you need to use the **-DCMAKE_TOOLCHAIN_FILE** parameter of CMake to transfer the cross compilation configuration. The template configuration file **usr_gcc.toolchain.cmake** is stored in the **conf/toolchain** directory of openHiTLS. You can run the following commands after adapting the compiler:
 
-```
+```bash
 cd openHiTLS
 mkdir -p ./build
 cd ./build
-python3 ../configure.py #Modify the configuration. For details, see section 3.2.1.
+python3 ../configure.py # Modify the configuration. For details, see section 3.2.1.
 cmake -DCMAKE_TOOLCHAIN_FILE=usr_gcc.toolchain.cmake ..
 make -j
 ```
@@ -129,12 +147,12 @@ make -j
 
 To install the build result of openHiTLS, you only need to enter the following command:
 
-```
+```bash
 make install
 ```
 
 By default, header files are installed in **/usr/local/include**, and library files are installed in **/usr/local/lib**. If you need to customize the installation path, run the following command in the CMake configuration phase:
 
-```
+```bash
 cmake -DCMAKE_INSTALL_PREFIX=<customized path> ..
 ```

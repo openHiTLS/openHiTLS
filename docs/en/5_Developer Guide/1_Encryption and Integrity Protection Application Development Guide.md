@@ -6,7 +6,7 @@ openHiTLS provides functions such as encryption and decryption, signature verifi
 
 * Encryption and decryption: supports symmetric encryption and decryption based on SM4, AES, and CHACHA20, and asymmetric encryption and decryption based on SM2 and RSA.
 * Signature verification: supports SM2, DSA, ED25519, RSA, ECDSA, and ED448.
-* Key exchange: supports SM2, X25519, ECDH, and X448.
+* Key exchange: supports SM2, X25519, and ECDH.
 * Key derivation: supports PBKDF2, HKDF, SCRYPT, and KDFTLS12.
 * Integrity algorithm: supports integrity protection based on HMAC.
 * Hash calculation: supports digest calculation based on SM3, SHA2, SHA3, MD5, and SHA1.
@@ -743,7 +743,4 @@ exit:
     BSL_ERR_DeInit();
     return 0; 
 }
-
-
-
 ```
