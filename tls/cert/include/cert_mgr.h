@@ -38,7 +38,7 @@ HITLS_CERT_X509 *SAL_CERT_PairGetX509(CERT_Pair *certPair);
  *
  * @return  Encryption certificate
  */
-HITLS_CERT_X509 *SAL_CERT_GetGmEncCert(CERT_Pair *certPair);
+HITLS_CERT_X509 *SAL_CERT_GetTlcpEncCert(CERT_Pair *certPair);
 
 HITLS_CERT_Chain *SAL_CERT_PairGetChain(CERT_Pair *certPair);
 

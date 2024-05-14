@@ -176,7 +176,7 @@ void ALERT_Recv(TLS_Ctx *ctx, const uint8_t *data, uint32_t len)
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15771, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "get a alert msg with illegal type", 0, 0, 0, 0);
     /** Decoding error. Send an alert. */
-    ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+    ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
     return;
 }
 

@@ -974,24 +974,24 @@ void SDV_TLS_TLCP_CONSISTENCY_TRANSPORT_FUNC_TC01(void)
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
     HLT_Process *remoteProcess = NULL;
- 
+
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
     ASSERT_TRUE(remoteProcess != NULL);
- 
+
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
     ASSERT_TRUE(serverCtxConfig != NULL);
- 
+
     serverRes = HLT_ProcessTlsAccept(localProcess, TLCP1_1, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
- 
+
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientCtxConfig != NULL);
- 
+
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLCP1_1, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
- 
+
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
     uint8_t writeBuf[READ_BUF_SIZE] = {0};
     ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, writeBuf, 16384) == 0);
@@ -999,7 +999,7 @@ void SDV_TLS_TLCP_CONSISTENCY_TRANSPORT_FUNC_TC01(void)
     uint32_t readLen;
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
     ASSERT_TRUE(readLen == 16384);
- 
+
 exit:
     HLT_FreeAllProcess();
 }
@@ -1033,14 +1033,14 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
- 
+
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLCP1_1, false);
     void *clientConfig = HLT_TlsNewCtx(TLCP1_1, true);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
- 
+
     HLT_SetSessionCacheMode(clientCtxConfig, mode);
     HLT_SetSessionCacheMode(serverCtxConfig, mode);
 
@@ -1057,7 +1057,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
         localProcess->connFd = sockFd.srcFd;
         remoteProcess->connType = TCP;
         localProcess->connType = TCP;
- 
+
         int32_t serverSslId = HLT_RpcTlsNewSsl(remoteProcess, serverConfigId);
         HLT_Ssl_Config *serverSslConfig;
         serverSslConfig = HLT_NewSslConfig(NULL);
@@ -1112,5 +1112,87 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
 exit:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+#define ALERT_BODY_LEN 2u   /* Alert data length */
+static int32_t SendAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
+{
+    uint8_t data[ALERT_BODY_LEN];
+    /** Obtain the alert level. */
+    data[0] = level;
+    data[1] = description;
+    /** Write records. */
+    int32_t ret = REC_Write(ctx, REC_TYPE_ALERT, data, ALERT_BODY_LEN);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    return HITLS_SUCCESS;
+}
+
+/* BEGIN_CASE */
+void SDV_TLS_TLCP1_1_LEVEL_UNKNOWN_ALERT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    tlsConfig->isSupportClientVerify = true;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_SEND_CLIENT_KEY_EXCHANGE) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(SendAlert(client->ssl, ALERT_LEVEL_UNKNOWN, ALERT_NO_RENEGOTIATION) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    HITLS_Ctx *Ctx = FRAME_GetTlsCtx(server);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(Ctx, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_TLCP1_1_LEVEL_UNKNOWN_ALERT_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    tlsConfig->isSupportClientVerify = true;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_HELLO) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(SendAlert(server->ssl, ALERT_LEVEL_UNKNOWN, ALERT_DECODE_ERROR) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    HITLS_Ctx *Ctx = FRAME_GetTlsCtx(client);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(Ctx, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

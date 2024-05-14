@@ -19,6 +19,9 @@
 #include "hitls_error.h"
 #include "session_enc.h"
 #include "session_type.h"
+#include "cert_mgr_ctx.h"
+#include "cert_method.h"
+#include "parse_common.h"
 
 #define MAX_PSK_IDENTITY_LEN 0xffff
 #define MAX_HOST_NAME_LEN 0xff
@@ -289,6 +292,69 @@ static int32_t DecSessObjVerifyResult(HITLS_Session *sess, SessionObjType type, 
     return HITLS_SUCCESS;
 }
 
+static int32_t ParseBufToCert(HITLS_Session *sess, const uint8_t *buf, uint32_t bufLen)
+{
+    if (bufLen < CERT_LEN_TAG_SIZE) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16057, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode certLen fail.", bufLen, 0, 0, 0);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+    uint32_t offset = 0;
+    uint32_t certLen = BSL_ByteToUint24(buf); /* Obtain the certificate length */
+    offset += CERT_LEN_TAG_SIZE;
+
+    if (certLen != (bufLen - offset)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16058, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode certLen fail.", 0, 0, 0, 0);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+    CERT_MgrCtx *certMgrCtx = sess->certMgrCtx;
+    if (certMgrCtx == NULL || certMgrCtx->method.certParse == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16059, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "certMgrCtx or certMgrCtx->method.certParse is null.", 0, 0, 0, 0);
+        return HITLS_NULL_INPUT;
+    }
+
+    /* Parse the first device certificate. */
+    HITLS_CERT_X509 *cert = certMgrCtx->method.certParse(NULL, &buf[offset], certLen,
+        TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
+    if (cert == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16060, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "parse peer eecert error", 0, 0, 0, 0);
+        return HITLS_CERT_ERR_PARSE_MSG;
+    }
+
+    CERT_Pair *newCertPair = BSL_SAL_Calloc(1u, sizeof(CERT_Pair));
+    if (newCertPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16061, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "peer cert malloc fail.", 0, 0, 0, 0);
+        SAL_CERT_X509Free(cert);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    newCertPair->cert = cert;
+    sess->peerCert = newCertPair;
+    return HITLS_SUCCESS;
+}
+
+static int32_t DecSessObjPeerCert(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
+    uint32_t *readLen)
+{
+    (void)type;
+    uint32_t offset = sizeof(uint32_t);
+    // The length has been verified at the upper layer and must be greater than 8 bytes.
+    uint32_t tlvLen = BSL_ByteToUint32(&data[offset]);
+    offset += sizeof(uint32_t);
+    if ((tlvLen == 0) || (tlvLen > length - offset)) {
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_PEER_CERT_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16062, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode peercert fail.", 0, 0, 0, 0);
+        return HITLS_SESS_ERR_DEC_PEER_CERT_FAIL;
+    }
+
+    *readLen = tlvLen + offset;
+    return ParseBufToCert(sess, &data[offset], tlvLen);
+}
+
 static int32_t DecSessObjTicketAgeAdd(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
@@ -318,6 +384,7 @@ static const SessObjDecFunc OBJ_LIST[] = {
     {SESS_OBJ_VERSION, DecSessObjVersion},
     {SESS_OBJ_CIPHER_SUITE, DecSessObjCipherSuite},
     {SESS_OBJ_MASTER_SECRET, DecSessObjMasterSecret},
+    {SESS_OBJ_PEER_CERT, DecSessObjPeerCert},
     {SESS_OBJ_PSK_IDENTITY, DecSessObjPskIdentity},
     {SESS_OBJ_START_TIME, DecSessObjStartTime},
     {SESS_OBJ_TIMEOUT, DecSessObjTimeout},

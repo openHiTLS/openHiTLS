@@ -831,9 +831,25 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     return EncodeCertStore(ctx, buf, bufLen, usedLen, cert);
 }
 
+// rfc8446 4.4.2.4. Receiving a Certificate Message
+// Any endpoint receiving any certificate which it would need to validate using any signature algorithm using an MD5
+// hash MUST abort the handshake with a "bad_certificate" alert.
+// Currently, the MD5 signature algorithm is not available, but it is still an unknown one.
+int32_t CheckCertSignature(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert)
+{
+    HITLS_Config *config = &ctx->config.tlsConfig;
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        int32_t signAlg = 0;
+        (void)SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
+        if (signAlg == CERT_SIG_SCHEME_UNKNOWN) {
+            return HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO;
+        }
+    }
+    return HITLS_SUCCESS;
+}
+
 int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HITLS_CERT_X509 **encCert)
 {
-    HITLS_CERT_X509 *cert = NULL;
     HITLS_Config *config = &ctx->config.tlsConfig;
     HITLS_CERT_Chain *newChain = SAL_CERT_ChainNew();
     if (newChain == NULL) {
@@ -844,7 +860,7 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
 
     CERT_Item *listNode = item;
     while (listNode != NULL) {
-        cert = SAL_CERT_X509Parse(config, listNode->data, listNode->dataSize,
+        HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(config, listNode->data, listNode->dataSize,
             TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
         if (cert == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15050, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -853,6 +869,13 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
             SAL_CERT_ChainFree(newChain);
             return HITLS_CERT_ERR_PARSE_MSG;
         }
+        if (CheckCertSignature(ctx, cert) != HITLS_SUCCESS) {
+            SAL_CERT_X509Free(*encCert);
+            SAL_CERT_X509Free(cert);
+            SAL_CERT_ChainFree(newChain);
+            return HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO;
+        }
+
 #ifndef HITLS_NO_TLCP11
         if (SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE) == true) {
             SAL_CERT_X509Free(*encCert);
@@ -898,6 +921,11 @@ int32_t SAL_CERT_ParseCertChain(HITLS_Ctx *ctx, CERT_Item *item, CERT_Pair **cer
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15052, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "parse peer device certificate error: callback failed.", 0, 0, 0, 0);
         return HITLS_CERT_ERR_PARSE_MSG;
+    }
+
+    if (CheckCertSignature(ctx, cert) != HITLS_SUCCESS) {
+        SAL_CERT_X509Free(cert);
+        return HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO;
     }
 
     /* Parse other certificates in the certificate chain. */

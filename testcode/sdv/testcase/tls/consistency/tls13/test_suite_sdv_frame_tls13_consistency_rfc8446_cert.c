@@ -1020,7 +1020,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC003()
         TRY_SEND_CERTIFICATE_REQUEST, REC_TYPE_HANDSHAKE, false, NULL, Test_CertReqPackAndParseNoSign};
     RegisterWrapper(wrapper);
 
-    ASSERT_EQ(DoHandshake(&testInfo), HITLS_PARSE_UNSUPPORT_SIGN_ALG);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_MISSING_EXTENSION);
 exit:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1079,7 +1079,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC004()
         TRY_SEND_CERTIFICATE_REQUEST, REC_TYPE_HANDSHAKE, false, NULL, Test_CertReqPackAndParseUnknownEx};
     RegisterWrapper(wrapper);
 
-    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_VERIFY_SIGN_FAIL);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_MISSING_EXTENSION);
 
 exit:
     ClearWrapper();

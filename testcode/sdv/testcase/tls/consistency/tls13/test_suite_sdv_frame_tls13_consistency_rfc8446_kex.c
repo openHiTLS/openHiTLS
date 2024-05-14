@@ -4877,7 +4877,7 @@ exit:
 * @test UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_SUPPORT_VERSION_FUNC_TC001
 * @title    During the TLS1.3 HRR handshaking, application messages can not be received
 * @precon nan
-* @brief 
+* @brief
 *       1. Initialize the client and server to tls1.3, construct the scenario where the supportedversion values carried
 *       by serverhello and hrr are different, expect result 1.
 *       2. Send a app data message the server, expect reslut 2.
@@ -4909,32 +4909,64 @@ void UT_TLS13_RFC8446_HRR_APP_RECV_TC001()
     CONN_Deinit(serverTlsCtx);
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
- 
+
     ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_SEND_CHANGE_CIPHER_SPEC);
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_RECV_CLIENT_HELLO);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
- 
+
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_TRUE(clientTlsCtx->hsCtx->state == TRY_SEND_CLIENT_HELLO);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
- 
+
     uint32_t sendLenapp = 7;
     uint8_t sendBufapp[7] = {0x17, 0x03, 0x03, 0x00, 0x02, 0x05, 0x05};
     uint32_t writeLen;
     BSL_UIO_Write(clientTlsCtx->uio, sendBufapp, sendLenapp, &writeLen);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
- 
+
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
- 
+
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_ALERTED);
     ALERT_Info info = { 0 };
     ALERT_GetInfo(server->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* IN TLS1.3, mutiple ccs can be received*/
+/* BEGIN_CASE */
+void UT_TLS13_RFC8446_RECV_MUTI_CCS_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_CERTIFICATE_VERIFY) == HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    uint32_t sendLenccs = 6;
+    uint8_t sendBufccs[6] = {0x14, 0x03, 0x03, 0x00, 0x01, 0x01};
+    uint32_t writeLen;
+    for (int i = 0; i < 5; i++) {
+        BSL_UIO_Write(serverTlsCtx->uio, sendBufccs, sendLenccs, &writeLen);
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    }
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

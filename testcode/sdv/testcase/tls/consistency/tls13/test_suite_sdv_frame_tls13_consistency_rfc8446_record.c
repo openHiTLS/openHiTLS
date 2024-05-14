@@ -160,12 +160,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC001(void)
     ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     /* The server generates the unexpected_message alarm after receiving the CCS message for the second time. */
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED);
-    ALERT_Info info = {0};
-    ALERT_GetInfo(client->ssl, &info);
-    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
-    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -235,12 +230,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC002(void)
     ASSERT_EQ(SendCcs(client->ssl, &data, sizeof(data)), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     /* The server generates the unexpected_message alarm after receiving the CCS message for the second time. */
-    ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-    ALERT_Info info = {0};
-    ALERT_GetInfo(server->ssl, &info);
-    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
-    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+    ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -401,12 +391,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC004(void)
     ASSERT_EQ(SendCcs(client->ssl, &data, sizeof(data)), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     /* The server generates the unexpected_message alarm after receiving the CCS message for the second time. */
-    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-    ALERT_Info info = {0};
-    ALERT_GetInfo(server->ssl, &info);
-    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
-    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -475,12 +460,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC005(void)
     ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     /* When the client receives the CCS message for the second time, the unexpected_message alarm is generated. */
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED);
-    ALERT_Info info = {0};
-    ALERT_GetInfo(client->ssl, &info);
-    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
-    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

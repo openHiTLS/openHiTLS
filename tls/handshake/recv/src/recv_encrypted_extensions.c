@@ -73,9 +73,6 @@ int32_t Tls13ClientRecvEncryptedExtensionsProcess(TLS_Ctx *ctx, const HS_Msg *ms
 {
     int32_t ret;
 
-    /* CCS messages are not allowed to be received from now on. */
-    ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
-
     const EncryptedExtensions *eEMsg = &msg->body.encryptedExtensions;
 
     ret = ClientCheckEncryptedExtensionsFlag(ctx, eEMsg);

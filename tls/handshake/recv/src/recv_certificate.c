@@ -122,7 +122,7 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
     /* The encryption certificate is required for TLS of TLCP. Both ECDHE and ECC of the client depend on the encryption
      * certificate. */
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
-        HITLS_CERT_Key *cert = SAL_CERT_GetGmEncCert(peerCert);
+        HITLS_CERT_Key *cert = SAL_CERT_GetTlcpEncCert(peerCert);
         if (cert == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15918, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "client check peer enc cert failed.", 0, 0, 0, 0);
@@ -151,7 +151,7 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
     /* Service processing logic. The ECDHE exchange algorithm logic requires the encryption certificate */
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 &&
         ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE) {
-        HITLS_CERT_Key *cert = SAL_CERT_GetGmEncCert(peerCert);
+        HITLS_CERT_Key *cert = SAL_CERT_GetTlcpEncCert(peerCert);
         if (cert == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15923, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "service check peer enc cert failed", 0, 0, 0, 0);
@@ -171,6 +171,7 @@ bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
     bool checkUsageRec = false;
     HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(peerCert);
+    HITLS_CERT_X509 *encCert = SAL_CERT_GetTlcpEncCert(peerCert);
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
     }
@@ -187,6 +188,11 @@ bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
             case HITLS_KEY_EXCH_RSA:
             case HITLS_KEY_EXCH_ECC:
             case HITLS_KEY_EXCH_RSA_PSK:
+                if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+                    checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE) &&
+                                    SAL_CERT_CheckCertKeyUsage(ctx, encCert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
+                    break;
+                }
                 checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
                 break;
             case HITLS_KEY_EXCH_ECDH:
@@ -371,9 +377,6 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     int32_t ret;
     const CertificateMsg *certs = &msg->body.certificate;
-
-    /** CCS messages are not allowed to be received after that. */
-    ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
 
     ret = CertificateReqCtxCheck(ctx, certs);
     if (ret != HITLS_SUCCESS) {

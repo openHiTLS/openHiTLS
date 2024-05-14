@@ -463,7 +463,7 @@ static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecre
             return HITLS_CERT_ERR_EXP_CERT;
         }
         HITLS_CRYPT_Key *peerPubKey = NULL;
-        HITLS_CERT_X509 *cert = SAL_CERT_GetGmEncCert(ctx->hsCtx->peerCert);
+        HITLS_CERT_X509 *cert = SAL_CERT_GetTlcpEncCert(ctx->hsCtx->peerCert);
         ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&peerPubKey);
         if (ret != HITLS_SUCCESS) {
             return ret;

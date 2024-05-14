@@ -337,6 +337,8 @@ typedef enum {
     HITLS_SESS_ERR_DEC_SESSION_ID_CTX_FAIL,        /**< Failed to decode the session ID context. */
     HITLS_SESS_ERR_DEC_SESSION_ID_FAIL,            /**< Failed to decode the session ID. */
     HITLS_SESS_ERR_DEC_EXT_MASTER_SECRET_FAIL,     /**< Failed to decode the extended master secret. */
+    HITLS_SESS_ERR_ENC_PEER_CERT_FAIL,             /**< Failed to encode the peercert. */
+    HITLS_SESS_ERR_DEC_PEER_CERT_FAIL,             /**< Failed to decode the peercert. */
 
     HITLS_X509_FAIL_START = 0x02100001,            /**< The X509 feature error code start bit of. */
     HITLS_X509_V_ERR_UNSPECIFIED,

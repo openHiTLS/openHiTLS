@@ -194,7 +194,7 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     /* Encrypt the PreMasterSecret using the public key of the server certificate */
     HITLS_Config *config = &ctx->config.tlsConfig;
     CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
-    HITLS_CERT_X509 *certEnc = SAL_CERT_GetGmEncCert(hsCtx->peerCert);
+    HITLS_CERT_X509 *certEnc = SAL_CERT_GetTlcpEncCert(hsCtx->peerCert);
     if (ctx->config.tlsConfig.needCheckKeyUsage == true &&
         SAL_CERT_CheckCertKeyUsage(ctx, certEnc, CERT_KEY_CTRL_IS_KEYENC_USAGE) != true) {
         return HITLS_CERT_ERR_KEYUSAGE;

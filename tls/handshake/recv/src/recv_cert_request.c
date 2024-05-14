@@ -79,6 +79,10 @@ int32_t Tls13ClientRecvCertRequestProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             return HITLS_MEMCPY_FAIL;
         }
     }
+    if (certReq->signatureAlgorithms == NULL) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_MISSING_EXTENSION);
+        return HITLS_MSG_HANDLE_MISSING_EXTENSION;
+    }
 
     ctx->hsCtx->isNeedClientCert = true;
 

@@ -57,7 +57,7 @@ void CCS_Recv(TLS_Ctx *ctx, const uint8_t *buf, uint32_t len)
         return;
     }
 
-    if (ctx->ccsCtx->ccsRecvflag == true) {
+    if (ctx->ccsCtx->ccsRecvflag == true && HS_GetVersion(ctx) != HITLS_VERSION_TLS13) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return;
     }

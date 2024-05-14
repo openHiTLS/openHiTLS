@@ -21,9 +21,39 @@
 #include "parse_extensions.h"
 #include "parse_msg.h"
 
-
 #define SINGLE_CIPHER_SUITE_SIZE 2u                 /* Length of the signature cipher suite */
 
+int32_t ParseClientHelloCipherSuitesLen(
+    TLS_Ctx *ctx, const uint8_t *msgBuf, uint32_t bufLen, uint32_t *bufOffset, uint16_t *cipherSuitesLen)
+{
+    if (bufLen < sizeof(uint16_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15700, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "the length of client hello is incorrect.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+
+    /* Obtain the cipher suite length */
+    *cipherSuitesLen = BSL_ByteToUint16(&msgBuf[*bufOffset]);
+    *bufOffset += sizeof(uint16_t);
+
+    if ((uint32_t)*cipherSuitesLen > (bufLen - *bufOffset)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "the cipherSuites length of client hello is incorrect. lenght mismatch", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+    if (((*cipherSuitesLen % SINGLE_CIPHER_SUITE_SIZE) != 0u) || (*cipherSuitesLen == 0u)) {
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15701, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "the cipherSuites length of client hello is incorrect.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+
+    return HITLS_SUCCESS;
+}
 /**
  * @brief Parse the cipher suite list of Client Hello messages.
  *
@@ -42,25 +72,10 @@ static int32_t ParseClientHelloCipherSuites(TLS_Ctx *ctx, const uint8_t *buf, ui
 {
     const uint8_t *msgBuf = buf;
     uint32_t bufOffset = 0;
-
-    if (bufLen < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15700, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the length of client hello is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-
-    /* Obtain the cipher suite length */
-    uint16_t cipherSuitesLen = BSL_ByteToUint16(&msgBuf[bufOffset]);
-    bufOffset += sizeof(uint16_t);
-    if (((uint32_t)cipherSuitesLen > (bufLen - bufOffset)) || ((cipherSuitesLen % SINGLE_CIPHER_SUITE_SIZE) != 0u) ||
-        (cipherSuitesLen == 0u)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15701, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the cipherSuites length of client hello is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    uint16_t cipherSuitesLen = 0;
+    int32_t ret = ParseClientHelloCipherSuitesLen(ctx, msgBuf, bufLen, &bufOffset, &cipherSuitesLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 
     msg->cipherSuitesSize = cipherSuitesLen / SINGLE_CIPHER_SUITE_SIZE;

@@ -548,7 +548,11 @@
                 ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "bsl::err", "bsl::tlv", "bsl::hash", "bsl::uio", "tls::cm", "tls::crypt"],
                 ".include": [
                     "include",
-                    "bsl/uio/src"
+                    "bsl/uio/src",
+                    "bsl/obj/include",
+                    "tls/cert/cert_adapt",
+                    "tls/handshake/parse/src",
+                    "tls/handshake/common/include"
                 ]
             }
         },

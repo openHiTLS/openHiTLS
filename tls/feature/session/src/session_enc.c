@@ -13,9 +13,11 @@
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "bsl_bytes.h"
+#include "bsl_list.h"
 #include "bsl_sal.h"
 #include "hitls_error.h"
 #include "session_type.h"
+#include "cert_mgr_ctx.h"
 #include "session_enc.h"
 
 typedef int32_t (*PfuncEncSessionObjFunc)(const HITLS_Session *sess, SessionObjType type, uint8_t *data,
@@ -334,6 +336,101 @@ static int32_t EncSessObjVerifyResult(const HITLS_Session *sess, SessionObjType 
     return HITLS_SUCCESS;
 }
 
+static int32_t PackCertToBuf(const HITLS_Session *sess, uint8_t *buf, uint32_t bufLen)
+{
+    CERT_Pair *peerCert = sess->peerCert;
+    HITLS_CERT_X509 *cert = peerCert->cert;
+    CERT_MgrCtx *mgrCtx = sess->certMgrCtx;
+    if (mgrCtx->method.certEncode == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16063, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "mgrCtx->method.certEncode is null.", 0, 0, 0, 0);
+        return HITLS_NULL_INPUT;
+    }
+    uint32_t encodeLen = 0;
+    /* Write the certificate data. */
+    int32_t ret = mgrCtx->method.certEncode(NULL, cert, &buf[CERT_LEN_TAG_SIZE],
+        bufLen - CERT_LEN_TAG_SIZE, &encodeLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16064, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "certEncode error.", 0, 0, 0, 0);
+        return HITLS_CERT_ERR_ENCODE_CERT;
+    }
+    if (bufLen - CERT_LEN_TAG_SIZE != encodeLen) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "encodeLen error.", 0, 0, 0, 0);
+        return HITLS_CERT_ERR_ENCODE_CERT;
+    }
+    BSL_Uint24ToByte(encodeLen, buf);
+
+    return HITLS_SUCCESS;
+}
+
+static int32_t GetPeertCertSize(const HITLS_Session *sess)
+{
+    uint32_t certLen = 0;
+    CERT_Pair *peerCert = sess->peerCert;
+    CERT_MgrCtx *mgrCtx = sess->certMgrCtx;
+    if (mgrCtx == NULL || mgrCtx->method.certCtrl == NULL || peerCert->cert == NULL) {
+        return 0;
+    }
+    int32_t ret = mgrCtx->method.certCtrl(NULL, peerCert->cert, CERT_CTRL_GET_ENCODE_LEN, NULL, (void *)&certLen);
+    if (ret != HITLS_SUCCESS || certLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16066, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CERT_CTRL_GET_ENCODE_LEN error.", 0, 0, 0, 0);
+        return 0;
+    }
+    return certLen + CERT_LEN_TAG_SIZE;
+}
+
+static int32_t EncSessObjPeerCert(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
+    uint32_t *encLen)
+{
+    CERT_Pair *peerCert = sess->peerCert;
+    if (peerCert == NULL) {
+        return HITLS_SUCCESS;
+    }
+    uint32_t bufLen = GetPeertCertSize(sess);
+    if (bufLen == 0) {
+        return HITLS_SUCCESS;
+    }
+    BSL_Tlv tlv = {0};
+    tlv.type = type;
+    tlv.length = bufLen;
+
+    if (data == NULL) {
+        /* If the input parameter is NULL, return the length after encoding. */
+        *encLen = sizeof(tlv.type) + sizeof(tlv.length) + tlv.length;
+        return HITLS_SUCCESS;
+    }
+
+    uint8_t *buf = BSL_SAL_Calloc(1u, bufLen);
+    if (buf == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "buf malloc fail.", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    int32_t ret = PackCertToBuf(sess, buf, bufLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(buf);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16068, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PackCertToBuf fail.", 0, 0, 0, 0);
+        return HITLS_SESS_ERR_ENC_PEER_CERT_FAIL;
+    }
+    tlv.value = buf;
+
+    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    BSL_SAL_FREE(buf);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_PEER_CERT_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16069, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "encode session obj peer cert fail.", 0, 0, 0, 0);
+        return HITLS_SESS_ERR_ENC_PEER_CERT_FAIL;
+    }
+
+    return HITLS_SUCCESS;
+}
+
 static int32_t EncSessObjTicketAgeAdd(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
@@ -369,6 +466,7 @@ static const SessObjEncFunc OBJ_LIST[] = {
     {SESS_OBJ_VERSION, EncSessObjVersion},
     {SESS_OBJ_CIPHER_SUITE, EncSessObjCipherSuite},
     {SESS_OBJ_MASTER_SECRET, EncSessObjMasterSecret},
+    {SESS_OBJ_PEER_CERT, EncSessObjPeerCert},
     {SESS_OBJ_PSK_IDENTITY, EncSessObjPskIdentity},
     {SESS_OBJ_START_TIME, EncSessObjStartTime},
     {SESS_OBJ_TIMEOUT, EncSessObjTimeout},

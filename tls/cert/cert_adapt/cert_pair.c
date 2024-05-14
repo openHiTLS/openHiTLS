@@ -20,7 +20,7 @@ HITLS_CERT_X509 *SAL_CERT_PairGetX509(CERT_Pair *certPair)
     return certPair->cert;
 }
 
-HITLS_CERT_X509 *SAL_CERT_GetGmEncCert(CERT_Pair *certPair)
+HITLS_CERT_X509 *SAL_CERT_GetTlcpEncCert(CERT_Pair *certPair)
 {
     if (certPair == NULL) {
         return NULL;

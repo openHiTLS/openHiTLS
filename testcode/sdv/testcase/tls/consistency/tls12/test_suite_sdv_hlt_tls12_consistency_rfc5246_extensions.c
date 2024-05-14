@@ -566,7 +566,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC012(void)
     testPara.isSupportExtendMasterSecret = true;
     testPara.isSupportRenegotiation = true;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testPara.expectDescription = ALERT_DECODE_ERROR;
+    testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
     ServerSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
 }
@@ -611,7 +611,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC013(void)
     testPara.isSupportExtendMasterSecret = true;
     testPara.isSupportSessionTicket = true;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testPara.expectDescription = ALERT_DECODE_ERROR;
+    testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
     ServerSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
 }
@@ -918,7 +918,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC006(void)
     TestPara testPara = {0};
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
-    testPara.expectDescription = ALERT_DECODE_ERROR;
+    testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
     testPara.isSupportExtendMasterSecret = true;
     testPara.isSupportSessionTicket = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);

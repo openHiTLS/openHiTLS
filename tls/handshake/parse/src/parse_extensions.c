@@ -656,7 +656,7 @@ static int32_t ParseServerPreShareKey(TLS_Ctx *ctx, const uint8_t *buf, uint32_t
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15156, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type pre_shared_key in server hello message is repeated", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -679,7 +679,7 @@ static int32_t ParseServerKeySharePre(TLS_Ctx *ctx, uint32_t bufLen, const Serve
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15158, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type ServerKeyShare in server hello message is repeated", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -779,7 +779,7 @@ static int32_t ParseServerCookie(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15162, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type cookie in server hello message is repeated", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -799,7 +799,7 @@ static int32_t ParseServerSupportedVersions(TLS_Ctx *ctx, const uint8_t *buf, ui
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15164, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type ServerSupportedVersions in hello message is repeated", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -1011,7 +1011,7 @@ static int32_t ParseClientPostHsAuth(TLS_Ctx *ctx, uint32_t bufLen, ClientHelloM
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15182, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type post_handshake_auth in hello message is repeated.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -1080,7 +1080,7 @@ static int32_t ParseClientSecRenegoInfo(TLS_Ctx *ctx, const uint8_t *buf, uint32
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15187, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type renegotiation info in client hello message is repeated.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -1112,7 +1112,7 @@ static int32_t ParseClientTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15148, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type tiket externsion in server hello is repeated.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -1488,7 +1488,7 @@ static int32_t ParseServerSecRenegoInfo(TLS_Ctx *ctx, const uint8_t *buf, uint32
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15204, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type renegotiation info in server hello is repeated.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
@@ -1513,7 +1513,7 @@ static int32_t ParseServerTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufL
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15179, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "extension message type tiket externsion in server hello is repeated.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }
 
