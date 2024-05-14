@@ -274,6 +274,19 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_TIME_FUNC_TC001(char *path)
+{
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    ASSERT_EQ(ret, HITLS_X509_ERR_CHECK_TAG);
+
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_START_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {

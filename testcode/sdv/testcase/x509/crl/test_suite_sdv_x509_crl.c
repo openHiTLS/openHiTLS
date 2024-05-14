@@ -226,6 +226,18 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_TIME_FUNC_TC001(char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    ASSERT_EQ(ret, HITLS_X509_ERR_CHECK_TAG);
+exit:
+    HITLS_X509_FreeCrl(crl);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_START_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {

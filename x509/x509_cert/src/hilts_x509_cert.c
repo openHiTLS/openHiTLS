@@ -93,7 +93,7 @@ int32_t HITLS_X509_CertTagGetOrCheck(int32_t type, int32_t idx, void *data, void
         case BSL_ASN1_TYPE_CHECK_CHOICE_TAG: {
             if (idx == X509_ASN1_START_TIME_IDX || idx == X509_ASN1_END_TIME_IDX) {
                 uint8_t tag = *(uint8_t *) data;
-                if ((tag & BSL_ASN1_TAG_UTCTIME) || (tag & BSL_ASN1_TAG_GENERALIZEDTIME)) {
+                if ((tag == BSL_ASN1_TAG_UTCTIME) || (tag == BSL_ASN1_TAG_GENERALIZEDTIME)) {
                     *(uint8_t *) expVal = tag;
                     return BSL_SUCCESS;
                 }
