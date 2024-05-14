@@ -38,8 +38,7 @@ typedef struct {
     void *hmacCtx;
 } DRBG_HmacCtx;
 
-static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *in1,
-                    const CRYPT_Data *in2, const CRYPT_Data *in3)
+static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *provData[], int32_t provDataLen)
 {
     int32_t ret;
     uint32_t ctxKLen = sizeof(ctx->k);
@@ -58,17 +57,11 @@ static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *in1,
         BSL_ERR_PUSH_ERROR(ret);
         goto OUT;
     }
-    if (!CRYPT_IsDataNull(in1) && (ret = ctx->hmacMeth->update(ctx->hmacCtx, in1->data, in1->len)) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
-    }
-    if (!CRYPT_IsDataNull(in2) && (ret = ctx->hmacMeth->update(ctx->hmacCtx, in2->data, in2->len)) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
-    }
-    if (!CRYPT_IsDataNull(in3) && (ret = ctx->hmacMeth->update(ctx->hmacCtx, in3->data, in3->len)) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+    for (int32_t i = 0; i < provDataLen; i++) {
+        if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, provData[i]->data, provData[i]->len)) != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            goto OUT;
+        }
     }
     if ((ret = ctx->hmacMeth->final(ctx->hmacCtx, ctx->k, &ctxKLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -93,22 +86,26 @@ OUT :
     return ret;
 }
 
-static int32_t DRBG_HmacUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *in2, const CRYPT_Data *in3)
+/**
+ * Ref: NIST.SP.800-90Ar1 https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-90ar1.pdf
+ * Section: 10.1.2.2 HMAC_DRBG Update Process
+ */
+static int32_t DRBG_HmacUpdate(DRBG_Ctx *drbg, const CRYPT_Data *provData[], int32_t provDataLen)
 {
     DRBG_HmacCtx *ctx = (DRBG_HmacCtx *)drbg->ctx;
     int32_t ret;
-    // K = HMAC (K, V || 0x00 || provided_data).  V = HMAC (K, V),  provided_data have 3 input
-    ret = Hmac(ctx, 0x00, in1, in2, in3);
+    // K = HMAC (K, V || 0x00 || provided_data).  V = HMAC (K, V), provided_data have 3 input
+    ret = Hmac(ctx, 0x00, provData, provDataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // If (provided_data = Null), then return K and V. It's not an error, it's algorithmic.
-    if (CRYPT_IsDataNull(in1) && CRYPT_IsDataNull(in2) && CRYPT_IsDataNull(in3)) {
+    if (provDataLen == 0) {
         return ret;
     }
     // K = HMAC (K, V || 0x01 || provided_data).  V = HMAC (K, V)
-    ret = Hmac(ctx, 0x01, in1, in2, in3);
+    ret = Hmac(ctx, 0x01, provData, provDataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -116,11 +113,26 @@ static int32_t DRBG_HmacUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYP
     return ret;
 }
 
+/**
+ * Ref: NIST.SP.800-90Ar1 https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-90ar1.pdf
+ * Section: 10.1.2.3 Instantiation of HMAC_DRBG
+ */
 int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, const CRYPT_Data *nonce,
     const CRYPT_Data *perstr)
 {
     DRBG_HmacCtx *ctx = (DRBG_HmacCtx *)drbg->ctx;
     int32_t ret;
+    const CRYPT_Data *provData[3] = {0}; // We only need 3 at most.
+    int32_t index = 0;
+    if (!CRYPT_IsDataNull(entropyInput)) {
+        provData[index++] = entropyInput;
+    }
+    if (!CRYPT_IsDataNull(nonce)) {
+        provData[index++] = nonce;
+    }
+    if (!CRYPT_IsDataNull(perstr)) {
+        provData[index++] = perstr;
+    }
 
     // Key = 0x00 00...00.
     (void)memset_s(ctx->k, sizeof(ctx->k), 0, ctx->blockLen);
@@ -130,7 +142,7 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
 
     // seed_material = entropy_input || nonce || personalization_string.
     // (Key, V) = HMAC_DRBG_Update (seed_material, Key, V).
-    ret = DRBG_HmacUpdate(drbg, entropyInput, nonce, perstr);
+    ret = DRBG_HmacUpdate(drbg, provData, index);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -139,12 +151,24 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
     return ret;
 }
 
+/**
+ * Ref: NIST.SP.800-90Ar1 https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-90ar1.pdf
+ * Section: 10.1.2.4 HMAC_DRBG Reseed Process
+ */
 int32_t DRBG_HmacReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, const CRYPT_Data *adin)
 {
     int32_t ret;
     // seed_material = entropy_input || additional_input.
+    const CRYPT_Data *seedMaterial[2] = {0}; // This stage only needs 2 at most.
+    int32_t index = 0;
+    if (!CRYPT_IsDataNull(entropyInput)) {
+        seedMaterial[index++] = entropyInput;
+    }
+    if (!CRYPT_IsDataNull(adin)) {
+        seedMaterial[index++] = adin;
+    }
     // (Key, V) = HMAC_DRBG_Update (seed_material, Key, V).
-    ret = DRBG_HmacUpdate(drbg, entropyInput, adin, NULL);
+    ret = DRBG_HmacUpdate(drbg, seedMaterial, index);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -153,6 +177,10 @@ int32_t DRBG_HmacReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, const CR
     return ret;
 }
 
+/**
+ * Ref: NIST.SP.800-90Ar1 https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-90ar1.pdf
+ * Section: 10.1.2.5 HMAC_DRBG Generate Process
+ */
 int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const CRYPT_Data *adin)
 {
     DRBG_HmacCtx *ctx = (DRBG_HmacCtx *)drbg->ctx;
@@ -162,10 +190,11 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     uint32_t len = outLen;
     uint8_t *buf = out;
     int32_t ret;
-
+    uint32_t ctxVLen;
+    int32_t hasAdin = CRYPT_IsDataNull(adin) ? 0 : 1;
     // If additional_input ≠ Null, then (Key, V) = HMAC_DRBG_Update (additional_input, Key, V).
-    if (adin != NULL && adin->data != NULL && adin->len != 0) {
-        if ((ret = DRBG_HmacUpdate(drbg, adin, NULL, NULL)) != CRYPT_SUCCESS) {
+    if (hasAdin == 1) {
+        if ((ret = DRBG_HmacUpdate(drbg, &adin, hasAdin)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -176,36 +205,35 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
         V = HMAC (Key, V).
         temp = temp || V.
     */
-    for (;;) {
+    while (len > 0) {
         if ((ret = hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS ||
             (ret = hmacMeth->update(ctx->hmacCtx, temp, ctx->blockLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto OUT;
         }
-        if (len > ctx->blockLen) {
-            if ((ret = hmacMeth->final(ctx->hmacCtx, buf, &tmpLen)) != CRYPT_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
-                goto OUT;
-            }
-            temp = buf;
-        } else {
-            uint32_t ctxVLen = sizeof(ctx->v);
-            if ((ret = hmacMeth->final(ctx->hmacCtx, ctx->v, &ctxVLen)) != CRYPT_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
-                goto OUT;
-            }
-            // Intercepts the len-length V-value as an output, and because of len <= blockLen,
-            // length of V is always greater than blockLen. Therefore, this problem does not exist.
-            (void)memcpy_s(buf, len, ctx->v, len);
+        if (len <= ctx->blockLen) {
             break;
         }
-
+        if ((ret = hmacMeth->final(ctx->hmacCtx, buf, &tmpLen)) != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            goto OUT;
+        }
+        temp = buf;
         buf += ctx->blockLen;
         len -= ctx->blockLen;
     }
 
+    ctxVLen = sizeof(ctx->v);
+    if ((ret = hmacMeth->final(ctx->hmacCtx, ctx->v, &ctxVLen)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto OUT;
+    }
+    // Intercepts the len-length V-value as an output, and because of len <= blockLen,
+    // length of V is always greater than blockLen，Therefore, this problem does not exist.
+    (void)memcpy_s(buf, len, ctx->v, len);
+
     //  (Key, V) = HMAC_DRBG_Update (additional_input, Key, V).
-    if ((ret = DRBG_HmacUpdate(drbg, adin, NULL, NULL)) != CRYPT_SUCCESS) {
+    if ((ret = DRBG_HmacUpdate(drbg, &adin, hasAdin)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto OUT;
     }

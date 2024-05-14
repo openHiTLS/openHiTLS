@@ -472,6 +472,7 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
  *
  * @retval CRYPT_SUCCESS
  * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_INVALID_ARG            The addresses of q, r are identical, or both of them are null. 
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  */

@@ -461,6 +461,7 @@ static int32_t PrimeVerifyGenPrime(const BN_BigNum *bn)
 int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb)
 {
     int32_t time = 0;
+    int32_t maxTime = 256; // if cb == NULL, The maximum number of cycles is 256.
     int32_t ret = GenCheck(r, bits, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -483,9 +484,14 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
         return CRYPT_BN_OPTIMIZER_GET_FAIL;
     }
     do {
-        if (BN_CbCtxCall(cb, time, 0) != CRYPT_SUCCESS) {
-            OptimizerEnd(opt);
+        if (cb == NULL && maxTime == time) {
             BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_GEN_PRIME);
+            OptimizerEnd(opt);
+            return CRYPT_BN_NOR_GEN_PRIME;
+        }
+        if (BN_CbCtxCall(cb, time, 0) != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_GEN_PRIME);
+            OptimizerEnd(opt);
             return CRYPT_BN_NOR_GEN_PRIME;
         }
         // Generate a random number bn that may be a prime.

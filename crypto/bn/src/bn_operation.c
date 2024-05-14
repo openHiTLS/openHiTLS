@@ -310,9 +310,13 @@ int32_t BN_Sqr(BN_BigNum *r, const BN_BigNum *a, BN_Optimizer *opt)
 int32_t DivInputCheck(const BN_BigNum *q, const BN_BigNum *r, const BN_BigNum *x,
     const BN_BigNum *y, const BN_Optimizer *opt)
 {
-    if (x == NULL || y == NULL || q == r || opt == NULL) {
+    if (x == NULL || y == NULL || opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    if (q == r) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
     // The divisor cannot be 0.
     if (BN_Bits(y) == 0) {

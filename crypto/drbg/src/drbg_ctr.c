@@ -619,25 +619,24 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_CipherMethod *ciphMeth, const uint32_t keyLen
 
     drbg->strength = keyLen * 8;
     drbg->maxRequest = DRBG_MAX_REQUEST;
-
+    // NIST.SP.800-90Ar1, Section 10.3.1 Table 3 defined those initial value.
     if (isUsedDf) {
         drbg->entropyRange.min = keyLen;
         drbg->entropyRange.max = DRBG_MAX_LEN;
-
-        drbg->nonceRange.min = drbg->entropyRange.min / DRBG_NONCE_FROM_ENTROPY;
-        drbg->nonceRange.max = DRBG_MAX_LEN;
-
         drbg->maxPersLen = DRBG_MAX_LEN;
         drbg->maxAdinLen = DRBG_MAX_LEN;
+
+        // NIST.SP.800-90Ar1, Section 8.6.7 defined, a nonce needs (security_strength/2) bits of entropy at least.
+        drbg->nonceRange.min = drbg->entropyRange.min / DRBG_NONCE_FROM_ENTROPY;
+        drbg->nonceRange.max = DRBG_MAX_LEN;
     } else {
         drbg->entropyRange.min = ctx->seedLen;
         drbg->entropyRange.max = ctx->seedLen;
+        drbg->maxPersLen = ctx->seedLen;
+        drbg->maxAdinLen = ctx->seedLen;
 
         drbg->nonceRange.min = 0;
         drbg->nonceRange.max = 0;
-
-        drbg->maxPersLen = ctx->seedLen;
-        drbg->maxAdinLen = ctx->seedLen;
     }
 
     return drbg;
