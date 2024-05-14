@@ -88,7 +88,7 @@ SM3_CompressAsm:
     mov x23, x1 // x23: data
     mov w24, w2 // x24: blockCnt
 
-    // w0-w7: ABCDEFGH word register in《SM3 cryptographic hash algorithm》
+    // w0-w7: ABCDEFGH word register in"SM3 cryptographic hash algorithm"
     ldp w0, w1, [x22]
     ldp w2, w3, [x22, #8]
     ldp w4, w5, [x22, #16]

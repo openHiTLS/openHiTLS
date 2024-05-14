@@ -6,13 +6,15 @@
  *---------------------------------------------------------------------------------------------
  */
 
+/* Some of these codes are adapted from https://ed25519.cr.yp.to/software.html */
+
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CURVE25519
 
 #include "curve25519_local.h"
 
 /* lookup table that computing y-x, y+x and 2dxy, with 512 ^ n B, n starts from 0 */
-/* table is generated base on article 《High-speed high-security signatures》 */
+/* table is generated base on article "High-speed high-security signatures" */
 static const GePre CURVE25519PRE_COMPUTE[32][8] = {
     {
         {

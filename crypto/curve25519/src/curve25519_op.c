@@ -6,6 +6,8 @@
  *---------------------------------------------------------------------------------------------
  */
 
+/* Some of these codes are adapted from https://ed25519.cr.yp.to/software.html */
+
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CURVE25519
 
@@ -374,7 +376,7 @@ void FpInvert(Fp25 *out, const Fp25 *a)
     Fp25 temp1, temp2;
 
     /* We know a×b=1(mod p), then a and b are inverses of mod p, i.e. a=b^(-1), b=a^(-1);
-     * According to Fermat's small theorem a^(p-1)=1(mod p), so a*a^(p-2)=1(mod p);
+     * According to Fermat's little theorem a^(p-1)=1(mod p), so a*a^(p-2)=1(mod p);
      * So the inverse element of a is a^(-1) = a^(p-2)(mod p)
      * Here it is, p=2^255-19, thus we need to compute a^(2^255-21)(mod(2^255-19))
      */
@@ -1507,7 +1509,7 @@ static void SlideReduce(int8_t *out, uint32_t outLen, const uint8_t *in, uint32_
     }
 }
 
-// Base on article 《High-speed high-security signatures》
+// Base on article "High-speed high-security signatures"
 // stores B, 3B, 5B, 7B, 9B, 11B, 13B, 15B, with B as ed25519 base point
 static const GePre g_precomputedB[8] = {
     {

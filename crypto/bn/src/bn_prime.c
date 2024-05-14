@@ -270,7 +270,7 @@ int32_t MillerRabinCheckCore(const BN_BigNum *bn, BN_Mont *mont, BN_BigNum *rnd,
                 return ret;
             }
         }
-        // 3.4 Fermat's small theorem inverse negation if sum = rnd^(bn -1) != 1 mod bn, bn is not a prime number.
+        // 3.4 Fermat's little theorem inverse negation if sum = rnd^(bn -1) != 1 mod bn, bn is not a prime number.
         if (!BN_IsOne(sum)) {
             ret = CRYPT_BN_NOR_CHECK_PRIME;
             return ret;

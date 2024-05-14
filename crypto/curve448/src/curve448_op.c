@@ -7,6 +7,8 @@
  */
 
 
+/* Some of these codes are adapted from https://ed448goldilocks.sourceforge.net/ by Mike Hamburg */
+
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CURVE448
 
@@ -488,7 +490,7 @@ void PointPNielsToStandard(Curve448Point *out, const PointPNiels *in)
     Curve448FpSqr(&out->z, &in->z);
 }
 
-// base on 《Ed448-Goldilocks, a new elliptic curve》
+// base on "Ed448-Goldilocks, a new elliptic curve"
 void PointAddPNiels(Curve448Point *out, const PointPNiels *in)
 {
     Fp16 tmp;
@@ -617,7 +619,7 @@ void PointSetZero(Curve448Point *point)
     CURVE448_FP_COPY(point->t, g_FpZero);
 }
 
-// base on 《Ed448-Goldilocks, a new elliptic curve》
+// base on "Ed448-Goldilocks, a new elliptic curve"
 void PointSubPNiels(Curve448Point *out, const PointPNiels *in)
 {
     Fp16 tmp;
@@ -735,8 +737,8 @@ static int32_t ProcessFirstPoint(Curve448Point *out, WnafSlide kSlide, WnafSlide
     return i;
 }
 
-// wnaf table method, base on 《New Multibase Non-Adjacent Form Scalar Multiplication
-// and its Application to Elliptic Curve Cryptosystems》
+// wnaf table method, base on "New Multibase Non-Adjacent Form Scalar Multiplication
+// and its Application to Elliptic Curve Cryptosystems"
 // out = k * A + s * B
 int32_t Curve448KAMulPlusMulBase(Curve448Point *out, const Scalar *s, const Scalar *k, Curve448Point *a)
 {

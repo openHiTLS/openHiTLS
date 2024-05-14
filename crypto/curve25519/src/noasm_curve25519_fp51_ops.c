@@ -263,7 +263,7 @@ static void Fp51Invert(Fp51 *out, const Fp51 *a)
     Fp51 temp1, temp2;
 
     /* We know a×b=1(mod p), then a and b are inverses of mod p, i.e. a=b^(-1), b=a^(-1);
-     * According to Fermat's small theorem a^(p-1)=1(mod p), so a*a^(p-2)=1(mod p);
+     * According to Fermat's little theorem a^(p-1)=1(mod p), so a*a^(p-2)=1(mod p);
      * So the inverse element of a is a^(-1) = a^(p-2)(mod p)
      * Here it is, p=2^255-19, thus we need to compute a^(2^255-21)(mod(2^255-19))
      */
