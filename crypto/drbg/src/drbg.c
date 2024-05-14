@@ -259,19 +259,19 @@ int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen)
     ret = DRBG_GetEntropy(ctx, &entropy, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
 
     ret = ctx->meth->reseed(ctx, &entropy, &adinData);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
 
     ctx->reseedCtr = 1;
     ctx->state = DRBG_STATE_READY;
 
-OUT:
+ERR:
     DRBG_CleanEntropy(ctx, &entropy);
 
     return ret;

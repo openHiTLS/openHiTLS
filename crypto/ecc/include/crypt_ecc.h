@@ -128,11 +128,11 @@ ECC_Point *ECC_DupPoint(const ECC_Point *pt);
 
 /**
  * @ingroup ecc
- * @brief Check whether a is consistent with b.
+ * @brief Check if a and b are the same point
  *
  * @param para [IN] Curve parameter information
- * @param a [IN] Input point information
- * @param b [IN] Input point information
+ * @param a [IN] Point a in Jacobian coordinate
+ * @param b [IN] Point b in Jacobian coordinate
  *
  * @retval CRYPT_SUCCESS             The two points are the same.
  * @retval CRYPT_ECC_POINT_NOT_EQUAL The two points are different.
@@ -142,12 +142,12 @@ int32_t ECC_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *
 
 /**
  * @ingroup ecc
- * @brief Convert the point to the affine coordinate and obtain the x and y coordinates based on the point data.
+ * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and get coordinates.
  *
  * @param para [IN] Curve parameter information
- * @param pt [IN/OUT] Point information
- * @param x [OUT] Value of the coordinate x
- * @param y [OUT] Value of the coordinate y
+ * @param pt [IN/OUT] Point (x, y, z) -> (x/z^2, y/z^3, 1)
+ * @param x [OUT] x/z^2
+ * @param y [OUT] y/z^3
  *
  * @retval CRYPT_SUCCESS succeeded.
  * @retval For details about other errors, see crypt_errno.h.
@@ -156,11 +156,11 @@ int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_D
 
 /**
  * @ingroup ecc
- * @brief Convert the point to the affine coordinate and obtain the BigNum x from the point data.
+ * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and get x/z^2
  *
  * @param para [IN] Curve parameter information
- * @param pt [IN/OUT] Point information
- * @param x [OUT] Value of the coordinate x
+ * @param pt [IN/OUT] Point (x, y, z) -> (x/z^2, y/z^3, 1)
+ * @param x [OUT] x/z^2
  *
  * @retval CRYPT_SUCCESS succeeded.
  * @retval For details about other errors, see crypt_errno.h.
@@ -169,13 +169,13 @@ int32_t ECC_GetPointDataX(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x);
 
 /**
  * @ingroup ecc
- * @brief Calculate r = k * pt. When pt is NULL, calculate r = k * G.
+ * @brief Calculate r = k * pt. When pt is NULL, calculate r = k * G, where G is the generator
  * The pre-computation table under the para parameter will be updated.
  *
  * @param para [IN] Curve parameter information
- * @param r [OUT] Output point information
+ * @param r [OUT] Scalar multiplication
  * @param k [IN] Scalar
- * @param pt [IN] Point data, which can be set to NULL.
+ * @param pt [IN] Point data, which can be NULL.
  *
  * @retval CRYPT_SUCCESS succeeded.
  * @retval For details about other errors, see crypt_errno.h.
@@ -185,13 +185,13 @@ int32_t ECC_PointMul(ECC_Para *para,  ECC_Point *r,
 
 /**
  * @ingroup ecc
- * @brief Calculate r = k1 * G + k2 * pt
+ * @brief Calculate r = k1 * G + k2 * pt, where G is the generator.
  *
  * @param para [IN] Curve parameter information
- * @param r [OUT] Output point information
- * @param k1 [IN] Scalar 1
- * @param k2 [IN] Scalar 2
- * @param pt [IN] Point data
+ * @param r [OUT] Point k1 * G + k2 * pt
+ * @param k1 [IN] Scalar k1
+ * @param k2 [IN] Scalar k2
+ * @param pt [IN] Point pt
  *
  * @retval CRYPT_SUCCESS succeeded.
  * @retval For details about other errors, see crypt_errno.h.
@@ -201,10 +201,10 @@ int32_t ECC_PointMulAdd(ECC_Para *para,  ECC_Point *r,
 
 /**
  * @ingroup ecc
- * @brief Convert the point to the affine coordinate and encode the point information as a data stream.
+ * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and encode point.
  *
  * @param para [IN] Curve parameter information
- * @param pt [IN/OUT] Point data
+ * @param pt [IN/OUT] Point (x, y, z) -> (x/z^2, y/z^3, 1)
  * @param data [OUT] Data stream
  * @param dataLen [IN/OUT] The input is the buff length of data and the output is the valid length of data.
  * @param format [IN] Encoding format
@@ -220,7 +220,7 @@ int32_t ECC_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint
  * @brief Encode the data stream into point information.
  *
  * @param para [IN] Curve parameter information
- * @param pt [OUT] Point data
+ * @param pt [OUT] Point in affine coordinate(z=1)
  * @param data [IN] Data stream
  * @param dataLen [IN] Data stream length
  *
@@ -294,9 +294,10 @@ BN_BigNum *ECC_GetParaX(const ECC_Para *para);
  * @retval NULL     failure
  */
 BN_BigNum *ECC_GetParaY(const ECC_Para *para);
+
 /**
  * @ingroup ecc
- * @brief Obtain the specification based on the curve parameter, that is, the bit length of the parameter p.
+ * @brief Obtain bit length of parameter p based on the curve parameter.
  *
  * @param para [IN] Curve parameter information
  *
@@ -330,7 +331,7 @@ int32_t ECC_PointCheck(const ECC_Point *pt);
 
 /**
  * @ingroup ecc
- * @brief Obtain the generator based on curve parameters.
+ * @brief Obtain the generator(with z=1) based on curve parameters.
  *
  * @param para [IN] Curve parameters
  *
@@ -375,12 +376,12 @@ int32_t ECC_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
 
 /**
  * @ingroup ecc
- * @brief Calculation of multiple points of prime curve r = a + b
+ * @brief Calculate addition r = a + b
  *
  * @param para [IN] Curve parameter
- * @param r [OUT] Output point information
- * @param a [IN] Input point information
- * @param b [IN] Input point information
+ * @param r [OUT] Point r = a + b
+ * @param a [IN] Point a
+ * @param b [IN] Point b
  *
  * @retval CRYPT_SUCCESS succeeded.
  * @retval For other errors, see crypt_errno.h.

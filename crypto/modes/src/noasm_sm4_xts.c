@@ -14,7 +14,7 @@
 #include "crypt_errno.h"
 #include "crypt_modes_xts.h"
 
-void MODES_SM4_XTS_Clean(MODE_CipherCtx *ctx)
+void MODES_SM4_XTS_Clean(MODE_XTS_Ctx *ctx)
 {
     if (ctx == NULL) {
         return;
@@ -22,7 +22,7 @@ void MODES_SM4_XTS_Clean(MODE_CipherCtx *ctx)
     MODE_XTS_Clean(ctx);
 }
 
-int32_t MODES_SM4_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODES_SM4_XTS_SetEncryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
     if (ctx == NULL || key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -31,7 +31,7 @@ int32_t MODES_SM4_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uin
     return MODE_XTS_SetEncryptKey(ctx, key, len);
 }
 
-int32_t MODES_SM4_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODES_SM4_XTS_SetDecryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
     if (ctx == NULL || key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -40,7 +40,7 @@ int32_t MODES_SM4_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uin
     return MODE_XTS_SetDecryptKey(ctx, key, len);
 }
 
-int32_t MODES_SM4_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_SM4_XTS_Encrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || in == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -49,7 +49,7 @@ int32_t MODES_SM4_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *o
     return MODE_XTS_Encrypt(ctx, in, out, len);
 }
 
-int32_t MODES_SM4_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_SM4_XTS_Decrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || in == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

@@ -104,7 +104,9 @@ void BSL_LIST_DeleteNode(BslList *pstList, const BslListNode *pstListNode, BSL_L
             } else {
                 pstList->first = pstCurrentNode->next;
             }
-
+            if (pstCurrentNode == pstList->curr) {
+                pstList->curr = pstList->curr->next;
+            }
             pstList->count--;
 
             if (pfFreeFunc == NULL) {

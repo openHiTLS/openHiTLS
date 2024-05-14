@@ -28,7 +28,7 @@ make && make install
 
 ```
 # Use **-I** to specify the path of the header file and **-L** to specify the path of the dynamic library.
-gcc application.c -lhitls_crypto -lhitls_tls -lhitls_bsl -lsecurec -I <openHiTLS header file installation path> -L <openHiTLS dynamic library installation path>
+gcc application.c -lhitls_crypto -lhitls_tls -lhitls_bsl -lboundscheck -I <openHiTLS header file installation path> -L <openHiTLS dynamic library installation path>
 ```
 
 ## Getting Started with openHiTLS

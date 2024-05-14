@@ -952,7 +952,7 @@ int32_t BN_ModSubQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
 
 /**
  * @ingroup bn
- * @brief Calculate r = (a + a) % mod
+ * @brief Calculate r = (a + b) % mod
  *
  * @attention This API is invoked in the area where ECC point computing is intensive and is performance-sensitive.
  * The user must ensure that a < mod, b < mod

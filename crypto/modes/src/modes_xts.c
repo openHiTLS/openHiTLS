@@ -26,7 +26,7 @@
         (o) += (len); \
     } while (false)
 
-int32_t MODE_XTS_InitCtx(MODE_CipherCtx *ctx, EAL_CipherMethod *method)
+int32_t MODE_XTS_InitCtx(MODE_XTS_Ctx *ctx, EAL_CipherMethod *method)
 {
     // The upper layer has checked the validity of the ctx and method.
     ctx->ciphCtx = BSL_SAL_Malloc(2 * method->ctxSize); // cipher context has 2 method contexts in xts mode
@@ -45,7 +45,7 @@ int32_t MODE_XTS_InitCtx(MODE_CipherCtx *ctx, EAL_CipherMethod *method)
     return CRYPT_SUCCESS;
 }
 
-static int32_t XtsCheckPara(const MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+static int32_t XtsCheckPara(const MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
     if (ctx == NULL || key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -59,7 +59,7 @@ static int32_t XtsCheckPara(const MODE_CipherCtx *ctx, const uint8_t *key, uint3
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODE_XTS_SetEncryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
     int32_t ret = XtsCheckPara(ctx, key, len);
     if (ret != CRYPT_SUCCESS) {
@@ -85,7 +85,7 @@ int32_t MODE_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODE_XTS_SetDecryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
     int32_t ret = XtsCheckPara(ctx, key, len);
     if (ret != CRYPT_SUCCESS) {
@@ -126,7 +126,7 @@ void GF128MulGm(uint8_t *a, uint32_t len)
     }
 }
 
-int32_t BlockCrypt(MODE_CipherCtx *ctx, const uint8_t *in, const uint8_t *t, uint8_t *pp, bool enc)
+int32_t BlockCrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, const uint8_t *t, uint8_t *pp, bool enc)
 {
     int32_t ret;
     uint32_t blockSize = ctx->blockSize;
@@ -146,7 +146,7 @@ int32_t BlockCrypt(MODE_CipherCtx *ctx, const uint8_t *in, const uint8_t *t, uin
     return CRYPT_SUCCESS;
 }
 
-int32_t BlocksCrypt(MODE_CipherCtx *ctx, const uint8_t **in, uint8_t **out, uint32_t *tmpLen,
+int32_t BlocksCrypt(MODE_XTS_Ctx *ctx, const uint8_t **in, uint8_t **out, uint32_t *tmpLen,
     bool enc)
 {
     int32_t ret;
@@ -154,22 +154,21 @@ int32_t BlocksCrypt(MODE_CipherCtx *ctx, const uint8_t **in, uint8_t **out, uint
     const uint8_t *tmpIn = *in;
     uint8_t *tmpOut = *out;
     while (*tmpLen >= 2 * blockSize) {  // If the value is greater than blockSize * 2, process the tmpIn.
-        ret = BlockCrypt(ctx, tmpIn, ctx->iv, tmpOut, enc);
+        ret = BlockCrypt(ctx, tmpIn, ctx->tweak, tmpOut, enc);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
 
         XTS_UPDATE_VALUES(*tmpLen, tmpIn, tmpOut, blockSize);
-        GF128MulGm(ctx->iv, blockSize);
+        GF128MulGm(ctx->tweak, blockSize);
     }
     *in = tmpIn;
     *out = tmpOut;
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODE_XTS_Encrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    int32_t ret;
     uint32_t i;
     uint8_t pp[MODE_XTS_BLOCKSIZE];
     uint32_t tmpLen = len;
@@ -186,26 +185,25 @@ int32_t MODE_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_METHODS_NOT_SUPPORT);
         return CRYPT_MODES_METHODS_NOT_SUPPORT;
     }
-    ret = BlocksCrypt(ctx, &tmpIn, &tmpOut, &tmpLen, true);
+    int32_t ret = BlocksCrypt(ctx, &tmpIn, &tmpOut, &tmpLen, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     // Encryption
-    ret = BlockCrypt(ctx, tmpIn, ctx->iv, tmpOut, true);
+    ret = BlockCrypt(ctx, tmpIn, ctx->tweak, tmpOut, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     XTS_UPDATE_VALUES(tmpLen, tmpIn, tmpOut, blockSize);
-    // If len is an integer multiple of blockSize, the subsequent calculations is not required.
+
+    GF128MulGm(ctx->tweak, blockSize);
     if (tmpLen == 0) {
-        GF128MulGm(ctx->iv, blockSize);
+        // If len is an integer multiple of blockSize, the subsequent calculations is not required.
         return CRYPT_SUCCESS;
     }
-    GF128MulGm(ctx->iv, blockSize);
-
     lastBlock = tmpOut - blockSize;
     // Process the subsequent two pieces of data.
     for (i = 0; i < tmpLen; i++) {
@@ -216,7 +214,7 @@ int32_t MODE_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
     for (i = tmpLen; i < blockSize; i++) {
         pp[i] = lastBlock[i];
     }
-    ret = BlockCrypt(ctx, pp, ctx->iv, pp, true);
+    ret = BlockCrypt(ctx, pp, ctx->tweak, pp, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -230,9 +228,8 @@ int32_t MODE_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODE_XTS_Decrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    int32_t ret;
     uint8_t pp[MODE_XTS_BLOCKSIZE], t2[MODE_XTS_BLOCKSIZE]; // xts blocksize MODE_XTS_BLOCKSIZE
     uint32_t i;
     uint32_t tmpLen = len;
@@ -248,7 +245,7 @@ int32_t MODE_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_METHODS_NOT_SUPPORT);
         return CRYPT_MODES_METHODS_NOT_SUPPORT;
     }
-    ret = BlocksCrypt(ctx, &tmpIn, &tmpOut, &tmpLen, false);
+    int32_t ret = BlocksCrypt(ctx, &tmpIn, &tmpOut, &tmpLen, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -256,20 +253,20 @@ int32_t MODE_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
 
     // If len is an integer multiple of blockSize, the subsequent calculations is not required.
     if (tmpLen == blockSize) {
-        ret = BlockCrypt(ctx, tmpIn, ctx->iv, tmpOut, false);
+        ret = BlockCrypt(ctx, tmpIn, ctx->tweak, tmpOut, false);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        GF128MulGm(ctx->iv, blockSize);
+        GF128MulGm(ctx->tweak, blockSize);
         return CRYPT_SUCCESS;
     }
 
-    (void)memcpy_s(t2, MODE_XTS_BLOCKSIZE, ctx->iv, blockSize);
+    (void)memcpy_s(t2, MODE_XTS_BLOCKSIZE, ctx->tweak, blockSize);
 
-    GF128MulGm(ctx->iv, blockSize);
+    GF128MulGm(ctx->tweak, blockSize);
 
-    ret = BlockCrypt(ctx, tmpIn, ctx->iv, pp, false);
+    ret = BlockCrypt(ctx, tmpIn, ctx->tweak, pp, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -293,14 +290,15 @@ int32_t MODE_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
     return CRYPT_SUCCESS;
 }
 
-void MODE_XTS_Clean(MODE_CipherCtx *ctx)
+void MODE_XTS_Clean(MODE_XTS_Ctx *ctx)
 {
     BSL_SAL_CleanseData((void *)(ctx->iv), MODES_MAX_IV_LENGTH);
+    BSL_SAL_CleanseData((void *)(ctx->tweak), MODES_MAX_IV_LENGTH);
     ctx->ciphMeth->clean(ctx->ciphCtx);
     ctx->ciphMeth->clean((void *)((uintptr_t)ctx->ciphCtx + ctx->ciphMeth->ctxSize));
 }
 
-static int32_t SetIv(MODE_CipherCtx *ctx, uint8_t *val, uint32_t len)
+static int32_t SetIv(MODE_XTS_Ctx *ctx, uint8_t *val, uint32_t len)
 {
     int32_t ret;
     if (val == NULL) {
@@ -317,7 +315,7 @@ static int32_t SetIv(MODE_CipherCtx *ctx, uint8_t *val, uint32_t len)
     }
 
     // Use key2 and i to encrypt to obtain the tweak.
-    ret = ctx->ciphMeth->encrypt((uint8_t*)ctx->ciphCtx + ctx->ciphMeth->ctxSize, ctx->iv, ctx->iv, ctx->blockSize);
+    ret = ctx->ciphMeth->encrypt((uint8_t*)ctx->ciphCtx + ctx->ciphMeth->ctxSize, ctx->iv, ctx->tweak, ctx->blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -325,7 +323,7 @@ static int32_t SetIv(MODE_CipherCtx *ctx, uint8_t *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static int32_t GetIv(MODE_CipherCtx *ctx, uint8_t *val, uint32_t len)
+static int32_t GetIv(MODE_XTS_Ctx *ctx, uint8_t *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -342,7 +340,7 @@ static int32_t GetIv(MODE_CipherCtx *ctx, uint8_t *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_XTS_Ctrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len)
+int32_t MODE_XTS_Ctrl(MODE_XTS_Ctx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

@@ -122,14 +122,14 @@ static int32_t CalcMontExp(const BN_BigNum *n, const BN_BigNum *eOrd,
     if (optimizer == NULL || mont == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto OUT;
+        goto ERR;
     }
     if (consttime) {
         ret = BN_MontExpConsttime(result, input, eOrd, mont, optimizer);
     } else {
         ret = BN_MontExp(result, input, eOrd, mont, optimizer);
     }
-OUT:
+ERR:
     BN_OptimizerDestroy(optimizer);
     BN_MontDestroy(mont);
     return ret;
@@ -224,41 +224,41 @@ static int32_t NormalDecProcedure(
     /* cP = M mod P where inp = M = Message */
     ret = BN_Mod(procedure.cP, message, priKey->p, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* cQ = M mod Q where inp = M = Message */
     ret = BN_Mod(procedure.cQ, message, priKey->q, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* mP = cP^dP mod p */
     ret = BN_MontExpConsttime(procedure.mP, procedure.cP, priKey->dP, procedure.montP, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* mQ = cQ^dQ mod q */
     ret = BN_MontExpConsttime(procedure.mQ, procedure.cQ, priKey->dQ, procedure.montQ, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* result = (mP - mQ) mod p */
     ret = BN_ModSub(result, procedure.mP, procedure.mQ, priKey->p, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* result = result * qInv mod p */
     ret = BN_ModMul(result, result, priKey->qInv, priKey->p, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* result = result * q */
     ret = BN_Mul(result, result, priKey->q, procedure.optimizer);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     /* result = result + mQ */
     ret = BN_Add(result, result, procedure.mQ);
-OUT:
+ERR:
     RsaDecProcedureFree(&procedure);
     return ret;
 }
@@ -405,14 +405,14 @@ static int32_t RSA_AllocAndCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input,
     ret = AllocResultAndInputBN(bits, result, message, input, inputLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     ret = InputRangeCheck(*message, ctx->prvKey->n);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
     return ret;
-OUT:
+ERR:
     BN_Destroy(*result);
     BN_Destroy(*message);
     return ret;
@@ -490,11 +490,11 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
 
     ret = RSA_PrvProcess(ctx, message, result, opt);
     if (ret != CRYPT_SUCCESS) {
-        goto OUT;
+        goto ERR;
     }
 
     ret = ResultToOut(bits, result, out, outLen);
-OUT:
+ERR:
     BN_OptimizerDestroy(opt);
     BN_Destroy(result);
     BN_Destroy(message);
@@ -600,17 +600,17 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen
         default: // This branch cannot be entered because it's been verified before.
             ret = CRYPT_RSA_PAD_NO_SET_ERROR;
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
     }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     ret = CRYPT_RSA_PrvDec(ctx, pad, padLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-OUT:
+ERR:
     (void)memset_s(pad, padLen, 0, padLen);
     BSL_SAL_FREE(pad);
     return ret;
@@ -661,7 +661,7 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataL
     ret = CRYPT_RSA_PubEnc(ctx, sign, signLen, pad, &padLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     saltLen = (uint32_t)ctx->pad.para.pss.saltLen;
     switch (ctx->pad.type) {
@@ -681,9 +681,9 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataL
         default: // This branch cannot be entered because it's been verified before.
             ret = CRYPT_RSA_PAD_NO_SET_ERROR;
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
     }
-OUT:
+ERR:
     (void)memset_s(pad, padLen, 0, padLen);
     BSL_SAL_FREE(pad);
     return ret;
@@ -737,7 +737,7 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
             ret = CRYPT_RSA_SetPkcsV15Type2(data, dataLen, pad, padLen);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
-                goto OUT;
+                goto ERR;
             }
             break;
         case RSAES_OAEP:
@@ -745,28 +745,28 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
                 ctx->pad.para.oaep.mgfMeth, data, dataLen, ctx->label.data, ctx->label.len, pad, padLen);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
-                goto OUT;
+                goto ERR;
             }
             break;
         case RSA_NO_PAD:
             if (dataLen != padLen) {
                 ret = CRYPT_RSA_ERR_ENC_INPUT_NOT_ENOUGH;
                 BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_ENC_INPUT_NOT_ENOUGH);
-                goto OUT;
+                goto ERR;
             }
             (void)memcpy_s(pad, padLen, data, dataLen);
             break;
         default:
             ret = CRYPT_RSA_PAD_NO_SET_ERROR;
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
     }
 
     ret = CRYPT_RSA_PubEnc(ctx, pad, padLen, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-OUT:
+ERR:
     (void)memset_s(pad, padLen, 0, padLen);
     BSL_SAL_FREE(pad);
     return ret;
@@ -813,7 +813,7 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     ret = CRYPT_RSA_PrvDec(ctx, data, dataLen, pad, &padLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
 
     switch (ctx->pad.type) {
@@ -828,16 +828,16 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
             if (memcpy_s(out, *outLen, pad, padLen) != EOK) {
                 ret = CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
                 BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
-                goto OUT;
+                goto ERR;
             }
             *outLen = padLen;
             break;
         default:
             ret = CRYPT_RSA_PAD_NO_SET_ERROR;
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
     }
-OUT:
+ERR:
     BSL_SAL_CleanseData(pad, padLen);
     BSL_SAL_FREE(pad);
     return ret;

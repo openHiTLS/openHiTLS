@@ -47,40 +47,40 @@ static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *provData[
     // provided_data = in1 || in2 || in3, private_data can be NULL
     if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, ctx->v, ctx->blockLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, &mark, 1)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     for (int32_t i = 0; i < provDataLen; i++) {
         if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, provData[i]->data, provData[i]->len)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
     }
     if ((ret = ctx->hmacMeth->final(ctx->hmacCtx, ctx->k, &ctxKLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     // V = HMAC (K, V).
     if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, ctx->v, ctx->blockLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     if ((ret = ctx->hmacMeth->final(ctx->hmacCtx, ctx->v, &ctxVLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
-OUT :
+ERR :
     // clear hmacCtx
     ctx->hmacMeth->deinit(ctx->hmacCtx);
     return ret;
@@ -209,14 +209,14 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
         if ((ret = hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS ||
             (ret = hmacMeth->update(ctx->hmacCtx, temp, ctx->blockLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         if (len <= ctx->blockLen) {
             break;
         }
         if ((ret = hmacMeth->final(ctx->hmacCtx, buf, &tmpLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         temp = buf;
         buf += ctx->blockLen;
@@ -226,7 +226,7 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     ctxVLen = sizeof(ctx->v);
     if ((ret = hmacMeth->final(ctx->hmacCtx, ctx->v, &ctxVLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     // Intercepts the len-length V-value as an output, and because of len <= blockLen,
     // length of V is always greater than blockLen，Therefore, this problem does not exist.
@@ -235,9 +235,9 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     //  (Key, V) = HMAC_DRBG_Update (additional_input, Key, V).
     if ((ret = DRBG_HmacUpdate(drbg, &adin, hasAdin)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
-OUT:
+ERR:
     // clear hmacCtx
     hmacMeth->deinit(ctx->hmacCtx);
     return ret;

@@ -19,6 +19,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+typedef struct {
+    void *ciphCtx;                    /* Key defined by each algorithm  */
+    const EAL_CipherMethod *ciphMeth; /* corresponding to the encrypt and decrypt in the bottom layer, operate keyctx */
+    uint8_t iv[MODES_MAX_IV_LENGTH];  /* The length is blocksize */
+    uint8_t tweak[MODES_MAX_IV_LENGTH]; /* The length is blocksize */
+    uint8_t blockSize;                  /* Save the block size. */
+    CRYPT_SYM_AlgId algId;              /* symmetric algorithm ID */
+} MODE_XTS_Ctx;
+
 /**
  * @brief  Initialize the module, register the method of the encryption and decryption algorithm in the module,
  *         and create the algorithm context.
@@ -28,7 +38,7 @@ extern "C" {
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODE_XTS_InitCtx(MODE_CipherCtx *ctx, EAL_CipherMethod *method);
+int32_t MODE_XTS_InitCtx(MODE_XTS_Ctx *ctx, EAL_CipherMethod *method);
 /**
  * @brief Set the encryption key in XTS mode.
  *
@@ -38,7 +48,7 @@ int32_t MODE_XTS_InitCtx(MODE_CipherCtx *ctx, EAL_CipherMethod *method);
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODE_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len);
+int32_t MODE_XTS_SetEncryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len);
 
 /**
  * @brief Set the decryption key in XTS mode.
@@ -49,7 +59,7 @@ int32_t MODE_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODE_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len);
+int32_t MODE_XTS_SetDecryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len);
 
 /**
  * @brief XTS mode encryption. If the value of len is not an integer multiple of 16,
@@ -62,7 +72,7 @@ int32_t MODE_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODE_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODE_XTS_Encrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
 /**
  * @brief XTS mode decryption. If the value of len is not an integer multiple of 16,
@@ -75,14 +85,14 @@ int32_t MODE_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODE_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODE_XTS_Decrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 /**
  * @brief Clear the XTS mode context, delete sensitive data. Preserve the memory and methods of algorithm modules
  *
  * @param ctx [IN] Context of xts mode encryption
  * @return none
  */
-void MODE_XTS_Clean(MODE_CipherCtx *ctx);
+void MODE_XTS_Clean(MODE_XTS_Ctx *ctx);
 /**
  * @brief Operate parameters for the XTS mode.
  *
@@ -93,7 +103,7 @@ void MODE_XTS_Clean(MODE_CipherCtx *ctx);
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODE_XTS_Ctrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len);
+int32_t MODE_XTS_Ctrl(MODE_XTS_Ctx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len);
 
 #ifdef HITLS_CRYPTO_SM4
 /**
@@ -105,7 +115,7 @@ int32_t MODE_XTS_Ctrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, void *val, uint
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODES_SM4_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len);
+int32_t MODES_SM4_XTS_SetEncryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len);
 
 /**
  * @brief SM4-XTS mode setting decryption key
@@ -116,7 +126,7 @@ int32_t MODES_SM4_XTS_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uin
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODES_SM4_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len);
+int32_t MODES_SM4_XTS_SetDecryptKey(MODE_XTS_Ctx *ctx, const uint8_t *key, uint32_t len);
 
 /**
  * @brief SM4-XTS mode encryption. When the value of len is not an integer multiple of 16,
@@ -129,7 +139,7 @@ int32_t MODES_SM4_XTS_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uin
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODES_SM4_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODES_SM4_XTS_Encrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
 /**
  * @brief SM4-XTS mode decryption. If the value of len is not an integer multiple of 16,
@@ -142,7 +152,7 @@ int32_t MODES_SM4_XTS_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *o
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
  */
-int32_t MODES_SM4_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODES_SM4_XTS_Decrypt(MODE_XTS_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
 /**
  * @brief Clear the SM4-XTS mode context, delete sensitive data. Preserve the memory and methods of algorithm modules
@@ -150,7 +160,7 @@ int32_t MODES_SM4_XTS_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *o
  * @param ctx [IN] Context of xts mode encryption
  * @return none
  */
-void MODES_SM4_XTS_Clean(MODE_CipherCtx *ctx);
+void MODES_SM4_XTS_Clean(MODE_XTS_Ctx *ctx);
 #endif // HITLS_CRYPTO_SM4
 
 #ifdef __cplusplus

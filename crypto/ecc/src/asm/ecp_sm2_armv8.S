@@ -130,7 +130,7 @@ ECP_Sm2MulBy3:
 	mov x11, x6
 
 	# Sub polynomial
-	adrp    x2, :pg_hi21:.Lpoly
+	adrp    x2, .Lpoly
     add	    x2, x2, :lo12:.Lpoly
 	ldp x12, x13, [x2]
 	ldp x14, x15, [x2, #16]
@@ -161,7 +161,7 @@ ECP_Sm2MulBy3:
 	mov x11, x6
 
 	# Sub polynomial
-	adrp x2, :pg_hi21:.Lpoly
+	adrp x2, .Lpoly
     add	x2, x2, :lo12:.Lpoly
 	ldp x12, x13, [x2]
 	ldp x14, x15, [x2, #16]
@@ -200,7 +200,7 @@ ECP_Sm2MulBy3:
 	mov		x13,x5;				\
 	mov		x14,x6;				\
 	/* Sub polynomial */		\
-	adrp    x2, :pg_hi21:mod;   \
+	adrp    x2, mod;            \
     add	    x2, x2, :lo12:mod;  \
 	ldp		x7,x8,[x2];			\
 	ldp		x9,x10,[x2,#0x10];	\
@@ -234,7 +234,7 @@ ECP_Sm2MulBy3:
 	mov		x13,x5;				\
 	mov		x14,x6;				\
 	/* Add polynomial */		\
-	adrp    x2, :pg_hi21:mod;   \
+	adrp    x2, mod;            \
     add	    x2, x2, :lo12:mod;  \
 	ldp		x7,x8,[x2];			\
 	ldp		x9,x10,[x2,#0x10];	\
@@ -458,7 +458,7 @@ ECP_Sm2SubModOrd:
 	mov s6, s2
 	mov s7, s3
 
-	adrp x3, :pg_hi21:.Lpoly
+	adrp x3, .Lpoly
     add	x3, x3, :lo12:.Lpoly
 	ldp x4, x15, [x3]
 	ldp x16, x17, [x3, #16]

@@ -130,6 +130,31 @@ ERR:
     return ret;
 }
 
+int32_t ECC_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
+{
+    if (para == NULL || r == NULL || a == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (para->id != a->id || para->id != r->id) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
+    }
+    if (BN_IsZero(a->z)) { // infinity point
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
+        return CRYPT_ECC_POINT_AT_INFINITY;
+    }
+    if (para->method->point2Affine == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
+        return CRYPT_ECC_NOT_SUPPORT;
+    }
+    int32_t ret = para->method->point2Affine(para, r, a);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
 int32_t ECC_GetPointDataX(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x)
 {
     int32_t ret;
@@ -319,6 +344,7 @@ int32_t ECC_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 */
 int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
+    int32_t ret;
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -327,7 +353,17 @@ int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, con
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return CRYPT_ECC_NOT_SUPPORT;
     }
-    return para->method->pointAdd(para, r, a, b);
+    ECC_Point *affineb = ECC_NewPoint(para);
+    if (affineb == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    GOTO_ERR_IF(ECC_Point2Affine(para, affineb, b), ret);
+
+    GOTO_ERR_IF(para->method->pointAdd(para, r, a, affineb), ret);
+ERR:
+    ECC_FreePoint(affineb);
+    return ret;
 }
 
 typedef struct {

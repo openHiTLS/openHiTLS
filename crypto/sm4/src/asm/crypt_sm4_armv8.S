@@ -182,13 +182,31 @@ ivec1   .req   v15
 .word	0x5cefb3b3, 0xd23ae8e8, 0xacdf7373, 0x794c3535, 0xa0208080, 0x9d78e5e5, 0x56edbbbb, 0x235e7d7d, 0xc63ef8f8
 .word	0x8bd45f5f, 0xe7c82f2f, 0xdd39e4e4, 0x68492121
 
+#ifdef HITLS_BIG_ENDIAN
+.Lsbox_magic:
+    .dword 0x0306090c0f020508,0x0b0e0104070a0d00
+    .dword 0x22581a6002783a40,0x62185a2042387a00
+    .dword 0xc10bb67c4a803df7,0x15df62a89e54e923
+    .dword 0x1407c6d56c7fbead,0xb9aa6b78c1d21300
+    .dword 0xe383c1a1fe9edcbc,0x6404462679195b3b
+    .dword 0x0f0f0f0f0f0f0f0f,0x0f0f0f0f0f0f0f0f
+#else
+.Lsbox_magic:
+    .dword 0x0b0e0104070a0d00,0x0306090c0f020508
+    .dword 0x62185a2042387a00,0x22581a6002783a40
+    .dword 0x15df62a89e54e923,0xc10bb67c4a803df7
+    .dword 0xb9aa6b78c1d21300,0x1407c6d56c7fbead
+    .dword 0x6404462679195b3b,0xe383c1a1fe9edcbc
+    .dword 0x0f0f0f0f0f0f0f0f,0x0f0f0f0f0f0f0f0f
+#endif
+
 .macro LoadSbox
-    ldr MaskQ,      =0x0306090c0f0205080b0e0104070a0d00
-    ldr TAHMatQ,    =0x22581a6002783a4062185a2042387a00
-    ldr TALMatQ,    =0xc10bb67c4a803df715df62a89e54e923
-    ldr ATAHMatQ,   =0x1407c6d56c7fbeadb9aa6b78c1d21300
-    ldr ATALMatQ,   =0xe383c1a1fe9edcbc6404462679195b3b
-    ldr ANDMaskQ,   =0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f
+    ldr MaskQ,      .Lsbox_magic
+    ldr TAHMatQ,    .Lsbox_magic+16
+    ldr TALMatQ,    .Lsbox_magic+32
+    ldr ATAHMatQ,   .Lsbox_magic+48
+    ldr ATALMatQ,   .Lsbox_magic+64
+    ldr ANDMaskQ,     .Lsbox_magic+80
 .endm
 
 .macro round x1, x2, x3, x4, rk
@@ -512,13 +530,13 @@ Vpsm4BlockEncrypt:
 
 	mov	x3, x2
 
-	adrp	 x19,:pg_hi21:.Ltbox1
+	adrp	 x19, .Ltbox1
     add x19,x19,:lo12:.Ltbox1
-	adrp	 x20,:pg_hi21:.Ltbox2
+	adrp	 x20, .Ltbox2
     add x20,x20,:lo12:.Ltbox2
-	adrp	 x21,:pg_hi21:.Ltbox3
+	adrp	 x21, .Ltbox3
     add x21,x21,:lo12:.Ltbox3
-	adrp	 x22,:pg_hi21:.Ltbox4
+	adrp	 x22, .Ltbox4
     add x22,x22,:lo12:.Ltbox4
 
 	ldp	w8,w9,[inp],#8
@@ -555,13 +573,13 @@ Vpsm4CbcEncrypt:
 	stp	x21,x22,[sp,#32]
 
 	// load tbox
-	adrp	 x19,:pg_hi21:.Ltbox1
+	adrp	 x19, .Ltbox1
     add x19,x19,:lo12:.Ltbox1
-	adrp	 x20,:pg_hi21:.Ltbox2
+	adrp	 x20, .Ltbox2
     add x20,x20,:lo12:.Ltbox2
-	adrp	 x21,:pg_hi21:.Ltbox3
+	adrp	 x21, .Ltbox3
     add x21,x21,:lo12:.Ltbox3
-	adrp	 x22,:pg_hi21:.Ltbox4
+	adrp	 x22, .Ltbox4
     add x22,x22,:lo12:.Ltbox4
 
 	cbz	w5,.Ldec
@@ -784,13 +802,13 @@ Vpsm4Ctr32EncryptBlocks:
 	// context saving overhead
 	stp	x19,x20,[sp,#-32]!
 	stp	x21,x22,[sp,#16]
-	adrp	 x19,:pg_hi21:.Ltbox1
+	adrp	 x19, .Ltbox1
     add x19,x19,:lo12:.Ltbox1
-	adrp	 x20,:pg_hi21:.Ltbox2
+	adrp	 x20, .Ltbox2
     add x20,x20,:lo12:.Ltbox2
-	adrp	 x21,:pg_hi21:.Ltbox3
+	adrp	 x21, .Ltbox3
     add x21,x21,:lo12:.Ltbox3
-	adrp	 x22,:pg_hi21:.Ltbox4
+	adrp	 x22, .Ltbox4
     add x22,x22,:lo12:.Ltbox4
 
 	Encrypt1blkNorevCtr
@@ -886,13 +904,13 @@ Vpsm4Ctr32EncryptBlocks:
 	mov	ivec.s[3],ctr
 	add	ctr,ctr,#1
 
-	adrp	 x19,:pg_hi21:.Ltbox1
+	adrp	 x19, .Ltbox1
     add x19,x19,:lo12:.Ltbox1
-	adrp	 x20,:pg_hi21:.Ltbox2
+	adrp	 x20, .Ltbox2
     add x20,x20,:lo12:.Ltbox2
-	adrp	 x21,:pg_hi21:.Ltbox3
+	adrp	 x21, .Ltbox3
     add x21,x21,:lo12:.Ltbox3
-	adrp	 x22,:pg_hi21:.Ltbox4
+	adrp	 x22, .Ltbox4
     add x22,x22,:lo12:.Ltbox4
 
 	Encrypt1blkNorevCtr

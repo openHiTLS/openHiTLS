@@ -539,31 +539,31 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx)
     if (x == NULL || y == NULL || opt == NULL || mont == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         /* Generate the private key x of [1, q-1], see RFC6979-2.2. */
         ret = RandRangeQ(x, ctx->para->q);
         if (ret != CRYPT_SUCCESS) {
             // Internal API, the BSL_ERR_PUSH_ERROR info is already exists when failed.
-            goto OUT;
+            goto ERR;
         }
         /* Calculate the public key y. */
         ret = BN_MontExpConsttime(y, ctx->para->g, x, mont, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         /* y != 0 && y != 1 */
         if (BN_IsZero(y) || BN_IsOne(y)) {
             continue;
         }
-        goto OUT; // If succeed then exit.
+        goto ERR; // If succeed then exit.
     }
     /* If the key fails to be generated after try CRYPT_DSA_TRY_MAX_CNT times, then failed and exit. */
     ret = CRYPT_DSA_ERR_TRY_CNT;
     BSL_ERR_PUSH_ERROR(ret);
-OUT:
+ERR:
     RefreshCtx(ctx, x, y, ret);
     BN_MontDestroy(mont);
     BN_OptimizerDestroy(opt);
@@ -647,25 +647,25 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
     if (k == NULL || montP == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         // Generate random number k of [1, q-1], see RFC6979-2.4.2 */
         ret = RandRangeQ(k, ctx->para->q);
         if (ret != CRYPT_SUCCESS) {
             // Internal function. The BSL_ERR_PUSH_ERROR information exists when the failure occurs.
-            goto OUT;
+            goto ERR;
         }
         // Compute r = g^k mod p mod q, see RFC6979-2.4.3 */
         ret = BN_MontExpConsttime(r, ctx->para->g, k, montP, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         ret = BN_Mod(r, r, ctx->para->q, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         if (BN_IsZero(r)) {
             continue;
@@ -674,16 +674,16 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
         DSA_Sign sign = { r, s };
         ret = CalcSValue(ctx, &sign, k, d, opt);
         if (ret != CRYPT_SUCCESS) {
-            goto OUT;
+            goto ERR;
         }
         if (BN_IsZero(s)) {
             continue;
         }
-        goto OUT; // The signature generation meets the requirements and exits successfully.
+        goto ERR; // The signature generation meets the requirements and exits successfully.
     }
     ret = CRYPT_DSA_ERR_TRY_CNT;
     BSL_ERR_PUSH_ERROR(ret);
-OUT:
+ERR:
     BN_Destroy(k);
     BN_MontDestroy(montP);
     BN_OptimizerDestroy(opt);

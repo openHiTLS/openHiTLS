@@ -429,46 +429,46 @@ int32_t CRYPT_DH_Gen(CRYPT_DH_Ctx *ctx)
     if (x == NULL || y == NULL || minP == NULL || xLimb == NULL || mont == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     ret = BN_SubLimb(minP, ctx->para->p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     ret = GetXLimb(xLimb, ctx->para->p, ctx->para->q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     for (cnt = 0; cnt < CRYPT_DH_TRY_CNT_MAX; cnt++) {
         /*  Generate private key x for [1, q-1] or [1, p-2] */
         ret = BN_RandRange(x, xLimb);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         ret = BN_AddLimb(x, x, 1);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         /* Calculate the public key y. */
         ret = BN_MontExpConsttime(y, ctx->para->g, x, mont, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
         /* Check whether the public key meets the requirements. If not, try to generate the key again. */
         // y != 0, y != 1, y < p - 1
         if (BN_IsZero(y) || BN_IsOne(y) || BN_Cmp(y, minP) >= 0) {
             continue;
         }
-        goto OUT; // The function exits successfully.
+        goto ERR; // The function exits successfully.
     }
     ret = CRYPT_DH_RAND_GENERATE_ERROR;
     BSL_ERR_PUSH_ERROR(ret);
-OUT:
+ERR:
     RefreshCtx(ctx, x, y, ret);
     BN_Destroy(minP);
     BN_Destroy(xLimb);

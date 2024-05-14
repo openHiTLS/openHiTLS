@@ -597,7 +597,7 @@ ERR:
     return ret;
 }
 
-// Z coordinate of point pt multiplied by z
+// Convert (x, y, z) to (x/z0^2, y/z0^3, z*z0)
 static int32_t ECP_PointJacMulZ(const ECC_Para *para, ECC_Point *pt, const BN_BigNum *z, BN_Optimizer *opt)
 {
     if (BN_IsZero(pt->z)) {

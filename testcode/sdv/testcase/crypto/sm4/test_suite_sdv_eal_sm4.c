@@ -891,11 +891,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC004(int id, Hex *key, Hex *iv)
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, niv, iv->len);
-    if (id == CRYPT_CIPHER_SM4_XTS) {
-        ASSERT_TRUE(memcmp(niv, iv->x, iv->len) != 0);
-    } else {
-        ASSERT_TRUE(memcmp(niv, iv->x, iv->len) == 0);
-    }
+    ASSERT_TRUE(memcmp(niv, iv->x, iv->len) == 0);
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -923,11 +919,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC005(int id, Hex *key, Hex *iv)
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, niv, iv->len);
-    if (id == CRYPT_CIPHER_SM4_XTS) {
-        ASSERT_TRUE(memcmp(niv, iv->x, iv->len) != 0);
-    } else {
-        ASSERT_TRUE(memcmp(niv, iv->x, iv->len) == 0);
-    }
+    ASSERT_TRUE(memcmp(niv, iv->x, iv->len) == 0);
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }

@@ -269,18 +269,18 @@ int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8
         ret = method->update(data, in, inLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
     }
 
     ret = method->final(data, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     *outLen = method->mdSize;
 
-OUT:
+ERR:
     method->deinit(data);
     BSL_SAL_FREE(data);
     return ret;

@@ -968,3 +968,45 @@ exit:
     BSL_SAL_FREE(testList);
 }
 /* END_CASE */
+
+/**
+ * @test SDV_BSL_LIST_DELETE_FUNC_TC001
+ * @title  test the function of deleting a node.
+ * @brief
+ * @prior  Level 1
+ * @auto  TRUE
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_DELETE_FUNC_TC001(void)
+{
+    BslList *testList = BSL_LIST_New(MAX_NAME_LEN);
+    ASSERT_TRUE(testList != NULL);
+ 
+    ASSERT_TRUE(BSL_LIST_AddElement(testList, "aaaa", BSL_LIST_POS_BEFORE) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_LIST_AddElement(testList, "bbbb", BSL_LIST_POS_BEFORE) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 2);
+    BslListNode *tmpNode = NULL;
+    for (BslListNode *node = BSL_LIST_FirstNode(testList); node != NULL;) {
+        tmpNode = node;
+        char *name = BSL_LIST_GetData(tmpNode);
+        if (name == NULL) {
+            continue;
+        }
+        node = BSL_LIST_GetNextNode(testList, tmpNode);
+        if (strcmp(name, "aaaa") == 0) {
+            BSL_LIST_DeleteNode(testList, (const BslListNode *)tmpNode, UserDataFree);
+            continue;
+        }
+        if (strcmp(name, "bbbb") == 0) {
+            BSL_LIST_DeleteNode(testList, (const BslListNode *)tmpNode, UserDataFree);
+            continue;
+        }
+    }
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
+    ASSERT_TRUE(BSL_LIST_AddElement(testList, "cccc", BSL_LIST_POS_BEFORE) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 1);
+    BSL_LIST_DeleteCurrent(testList, UserDataFree);
+exit:
+    BSL_SAL_FREE(testList);
+}
+/* END_CASE */

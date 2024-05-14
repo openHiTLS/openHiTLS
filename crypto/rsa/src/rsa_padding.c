@@ -34,20 +34,20 @@ static int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_Data *hashDa
     int32_t ret = hashMethod->init(mdCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto ERR;
     }
     for (uint32_t i = 0; i < size; i++) {
         ret = hashMethod->update(mdCtx, hashData[i].data, hashData[i].len);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
     }
     ret = hashMethod->final(mdCtx, out, &hLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-OUT:
+ERR:
     hashMethod->deinit(mdCtx);
     BSL_SAL_FREE(mdCtx);
     return ret;
@@ -76,17 +76,17 @@ static int32_t Mgf(const EAL_MdMethod *hashMethod, const uint8_t *seed, const ui
         PUT_UINT32_BE(i, counter, 0);
         ret = CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), md, hashLen);
         if (ret != CRYPT_SUCCESS) {
-            goto OUT;
+            goto ERR;
         }
         // Output the leading maskLen octets of T as the octet string mask
         partLen = (outLen + hashLen <= maskLen) ? hashLen : (maskLen - outLen);
         if (memcpy_s(mask + outLen, maskLen - outLen, md, partLen) != EOK) {
             ret = CRYPT_SECUREC_FAIL;
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto ERR;
         }
     }
-OUT:
+ERR:
     BSL_SAL_CleanseData(md, sizeof(md));
     return ret;
 }
