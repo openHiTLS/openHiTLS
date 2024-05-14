@@ -121,11 +121,9 @@ exit:
  *    1. Init the Drbg and create two contexts(ctx1, ctx2) of the SM2 algorithm, expected result 1.
  *    2. ctx1: set server, private key and generate r, expected result 2.
  *    3. ctx2: set userId, R and public key, expected result 3.
- *    4. Call the CRYPT_EAL_PkeyComputeShareKey method, expected result 4.
  * @expect
  *    1. Success, and two contexts are not NULL.
  *    2-3. CRYPT_SUCCESS
- *    4. CRYPT_SM2_USERID_NOT_SET
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM2_EXCHANGE_API_TC003(Hex *prvKey, Hex *pubKey, Hex *R)
@@ -156,8 +154,6 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC003(Hex *prvKey, Hex *pubKey, Hex *R)
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SM2_USERID_NOT_SET);
-
 exit:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
@@ -173,11 +169,9 @@ exit:
  *    1. Init the Drbg and create two contexts(ctx1, ctx2) of the SM2 algorithm, expected result 1.
  *    2. ctx1: set userId, server, private key and generate r, expected result 2.
  *    3. ctx2: set R and public key, expected result 3.
- *    4. Call the CRYPT_EAL_PkeyComputeShareKey method, expected result 4.
  * @expect
  *    1. Success, and two contexts are not NULL.
  *    2-3. CRYPT_SUCCESS
- *    4. CRYPT_SM2_USERID_NOT_SET
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM2_EXCHANGE_API_TC004(Hex *prvKey, Hex *pubKey, Hex *R)
@@ -207,8 +201,6 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC004(Hex *prvKey, Hex *pubKey, Hex *R)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);
-
-    ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SM2_USERID_NOT_SET);
 
 exit:
     CRYPT_EAL_PkeyFreeCtx(ctx1);

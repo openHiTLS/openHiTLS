@@ -720,4 +720,10 @@ int32_t CRYPT_CURVE448_Cmp(const CRYPT_CURVE448_Ctx *a, const CRYPT_CURVE448_Ctx
 
     return CRYPT_SUCCESS;
 }
+
+int32_t CRYPT_CURVE448_GetSecBits(const CRYPT_CURVE448_Ctx *ctx)
+{
+    (void) ctx;
+    return 224;
+}
 #endif /* HITLS_CRYPTO_CURVE448 */

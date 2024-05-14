@@ -334,12 +334,12 @@ static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
     ret = BnCheck(bnSubOne, bnSubThree, divisor, rnd, mont);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = BnSubGet(bnSubOne, bnSubThree, bn);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     // 1. Extract the power p of factor 2 in bnSubOne.
     p = GetP(bnSubOne);
@@ -347,10 +347,10 @@ static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
     ret = BN_Rshift(divisor, bnSubOne, p);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = MillerRabinCheckCore(bn, mont, rnd, divisor, bnSubOne, bnSubThree, p, opt);
-err:
+ERR:
     BN_MontDestroy(mont);
     OptimizerEnd(opt);
     return ret;
@@ -371,7 +371,7 @@ int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt)
         return CRYPT_BN_NOR_CHECK_PRIME;
     }
     // Check whether the number is negative.
-    if (bn->sign == 1) {
+    if (BN_ISNEG(bn->flag)) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_CHECK_PRIME);
         return CRYPT_BN_NOR_CHECK_PRIME;
     }

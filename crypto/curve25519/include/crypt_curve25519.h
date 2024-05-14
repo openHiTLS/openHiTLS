@@ -246,6 +246,16 @@ int32_t CRYPT_X25519_GenKey(CRYPT_CURVE25519_Ctx *pkey);
  */
 int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE25519_Ctx *b);
 
+/**
+ * @ingroup curve25519
+ * @brief curve25519 get security bits
+ *
+ * @param ctx [IN] curve25519 Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_CURVE25519_GetSecBits(const CRYPT_CURVE25519_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

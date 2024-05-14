@@ -20,27 +20,36 @@
 
 static int32_t RandGenerate(BN_BigNum *r, uint32_t bits)
 {
-    uint8_t *buf = NULL;
     int32_t ret;
     uint32_t room = BITS_TO_BN_UNIT(bits);
-    if (BnExtend(r, room) != CRYPT_SUCCESS) {
+    BN_UINT mask;
+    uint32_t bufSize = BITS_TO_BYTES(bits); // bits < (1u << 29), hence bits + 7 will not exceed the upper limit.
+    uint8_t *buf = BSL_SAL_Malloc(bufSize);
+    if (buf == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    buf = (uint8_t *)r->data;
-    BN_Zeroize(r);
-    ret = CRYPT_Rand(buf, room * sizeof(BN_UINT));
+    ret = CRYPT_Rand(buf, bufSize);
     if (ret == CRYPT_NO_REGIST_RAND) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     if (ret != CRYPT_SUCCESS) {
+        ret = CRYPT_BN_RAND_GEN_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_BN_RAND_GEN_FAIL);
-        return CRYPT_BN_RAND_GEN_FAIL;
+        goto ERR;
     }
-    BN_UINT mask = (BN_UINT)(-1) >> ((BN_UINT_BITS - bits % BN_UINT_BITS) % BN_UINT_BITS);
+    ret = BN_Bin2Bn(r, buf, bufSize);
+    BSL_SAL_CleanseData((void *)buf, bufSize);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    mask = (BN_UINT)(-1) >> ((BN_UINT_BITS - bits % BN_UINT_BITS) % BN_UINT_BITS);
     r->data[room - 1] &= mask;
     r->size = BinFixSize(r->data, room);
+ERR:
+    BSL_SAL_FREE(buf);
     return ret;
 }
 
@@ -108,7 +117,7 @@ static int32_t InputCheck(const BN_BigNum *r, const BN_BigNum *p)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_RAND_ZERO);
         return CRYPT_BN_ERR_RAND_ZERO;
     }
-    if (p->sign == true) {
+    if (BN_ISNEG(p->flag)) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_RAND_NEGATIVE);
         return CRYPT_BN_ERR_RAND_NEGATIVE;
     }

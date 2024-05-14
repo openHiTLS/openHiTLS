@@ -39,6 +39,7 @@ extern "C" {
 typedef enum {
     CRYPT_BN_FLAG_OPTIMIZER = 0x01,      /**< Flag of BigNum, indicating the BigNum obtained from the optimizer */
     CRYPT_BN_FLAG_CONSTTIME = 0x02,      /**< Flag of BigNum, indicating the constant time execution. */
+    CRYPT_BN_FLAG_ISNEGTIVE = 0x80000000,  /**< Flag of BigNum, indicating the bignum is negtive. */
 } CRYPT_BN_FLAG;
 
 typedef struct BnMont BN_Mont;
@@ -153,7 +154,7 @@ int32_t BN_SetSign(BN_BigNum *a, bool sign);
  * @brief BigNum copy
  *
  * @param r [OUT] BigNum
- * @param a [IN] BigNum
+ * @param a [IN] BigNum, a != r.
  *
  * @retval CRYPT_SUCCESS            succeeded.
  * @retval CRYPT_NULL_INPUT         Invalid null pointer
@@ -1060,6 +1061,16 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  */
 int32_t BN_ModSm2EccSqr(
     BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief Return the number of security bits provided by a specific algorithm and specific key size
+ *
+ * @param pubLen [IN] size of the public key
+ * @param prvlen [IN] size of the private key
+ * @retval [OUT] output the result
+ */
+int32_t BN_SecBit(int32_t publen, int32_t prvlen);
 #endif
 
 #ifdef __cplusplus

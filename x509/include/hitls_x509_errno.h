@@ -1,0 +1,61 @@
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
+ */
+
+#ifndef HITLS_X509_ERRNO_H
+#define HITLS_X509_ERRNO_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum {
+    HITLS_X509_SUCCESS,
+    HITLS_X509_ERR_TIME_EXPIRED = 0x04000001,
+    HITLS_X509_ERR_TIME_FUTURE,
+    HITLS_X509_ERR_VFY_KU_NO_CERTSIGN,
+    HITLS_X509_ERR_VFY_KU_NO_CRLSIGN,
+    HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH,
+    HITLS_X509_ERR_INVALID_PARAM,
+    HITLS_X509_ERR_VFY_CHECK_SECBITS,
+    HITLS_X509_ERR_VFY_CERT_REVOKED,
+    HITLS_X509_ERR_VFY_GET_HASHID,
+    HITLS_X509_ERR_VFY_GET_SIGNID,
+    HITLS_X509_ERR_VFY_DUP_PUBKEY,
+    HITLS_X509_ERR_CHECK_ISSUE_FAIL,
+    HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0,
+    HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND,
+    HITLS_X509_ERR_ROOT_CERT_NOT_FOUND,
+    HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT,
+
+    HITLS_X509_ERR_CERT_NOT_CA = 0x04010001,
+    HITLS_X509_ERR_CERT_EXIST,
+    HITLS_X509_ERR_CERT_IS_SELF_SIGNED,
+    HITLS_X509_ERR_CERT_START_TIME_LATER,
+    HITLS_X509_ERR_CERT_END_TIME_EARLIER,
+    HITLS_X509_ERR_CERT_IS_EXPIRED,
+    HITLS_X509_ERR_CERT_INVALID_KEYUSAGE,
+    HITLS_X509_ERR_CERT_INVALID_EXT,
+    HITLS_X509_ERR_PROCESS_CRITICALEXT,
+
+    HITLS_X509_ERR_CRL_EXIST = 0x04020001,
+    HITLS_X509_ERR_CRL_NOT_FOUND,
+
+    HITLS_X509_ERR_NOT_SUPPORT_FORMAT = 0x04030001,
+    HITLS_X509_ERR_ALG_OID,
+    HITLS_X509_ERR_PARSE_PARAM,
+    HITLS_X509_ERR_NAME_OID,
+    HITLS_X509_ERR_PARSE_STR,
+    HITLS_X509_ERR_CHECK_TAG,
+    HITLS_X509_ERR_GET_ANY_TAG,
+} HITLS_X509_ERRNO;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // HITLS_X509_ERRNO_H

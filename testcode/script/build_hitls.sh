@@ -11,7 +11,7 @@ set -e
 cd ../../
 HITLS_ROOT_DIR=`pwd`
 
-hilts_compile_option=()
+hitls_compile_option=()
 
 paramList=$@
 paramNum=$#
@@ -51,17 +51,17 @@ build_depend_code()
     fi
 }
 
-build_hilts_code()
+build_hitls_code()
 {
     bsl_features="err hash init list log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str tlv \
-                  uio_plt uio_buffer uio_sctp uio_tcp usrdata"
+                  uio_plt uio_buffer uio_sctp uio_tcp usrdata asn1 obj"
     if [[ "$NO_SCTP" = "ON" ]]; then
         bsl_features="${bsl_features//uio_sctp/}"
     fi
 
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
-    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls --bits=$BITS --system=linux
+    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_x509 --bits=$BITS --system=linux
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --add_options="$add_options" --del_options="$del_options"
@@ -131,4 +131,4 @@ clean
 parse_option
 down_depend_code
 build_depend_code
-build_hilts_code
+build_hitls_code

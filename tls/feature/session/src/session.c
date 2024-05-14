@@ -137,41 +137,41 @@ HITLS_Session *SESS_Copy(HITLS_Session *src)
 
     dest->certMgrCtx = SAL_CERT_MgrCtxNew();
     if (dest->certMgrCtx == NULL) {
-        goto err;
+        goto ERR;
     }
 
     if (src->peerCert != NULL) {
         dest->peerCert = SAL_CERT_PairDup(dest->certMgrCtx, src->peerCert);
         if (dest->peerCert == NULL) {
-            goto err;
+            goto ERR;
         }
     }
 
     if (src->hostNameSize > 0) {
         if (SESS_SetHostName(dest, src->hostNameSize, src->hostName) != HITLS_SUCCESS) {
-            goto err;
+            goto ERR;
         }
     }
 
     if (src->pskIdentitySize > 0) {
         dest->pskIdentity = (uint8_t *)BSL_SAL_Calloc(1u, (src->pskIdentitySize + 1) * sizeof(uint8_t));
         if (dest->pskIdentity == NULL) {
-            goto err;
+            goto ERR;
         }
         if (memcpy_s(dest->pskIdentity, src->pskIdentitySize + 1, src->pskIdentity, src->pskIdentitySize) != EOK) {
-            goto err;
+            goto ERR;
         }
         dest->pskIdentitySize = src->pskIdentitySize;
     }
 
     if (src->ticketSize > 0) {
         if (SESS_SetTicket(dest, src->ticket, src->ticketSize) != HITLS_SUCCESS) {
-            goto err;
+            goto ERR;
         }
     }
 
     return dest;
-err:
+ERR:
     HITLS_SESS_Free(dest);
     return NULL;
 }

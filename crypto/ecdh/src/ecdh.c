@@ -224,4 +224,13 @@ int32_t CRYPT_ECDH_Cmp(const CRYPT_ECDH_Ctx *a, const CRYPT_ECDH_Ctx *b)
 {
     return ECC_PkeyCmp(a, b);
 }
+
+int32_t CRYPT_ECDH_GetSecBits(const CRYPT_ECDH_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return 0;
+    }
+    return ECC_GetSecBits(ctx->para);
+}
 #endif /* HITLS_CRYPTO_ECDH */

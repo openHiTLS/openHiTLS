@@ -30,6 +30,7 @@ extern "C" {
 #define SM2_POINT_COORDINATE_LEN 65
 #define SM2_TWO_POINT_COORDINATE_LEN 128
 #define SM2_X_LEN 32
+
 /* SM2 key context */
 struct SM2_Ctx {
     ECC_Pkey *pkey;

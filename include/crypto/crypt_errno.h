@@ -351,7 +351,19 @@ enum CRYPT_ERROR {
     CRYPT_SM2_EXCH_VERIFY_FAIL,                       /**< Key Negotiation Failure. */
     CRYPT_SM2_DECODE_FAIL,                            /**< Data decoding fails, the data does not meet
                                                             the decoding requirements. */
+    CRYPT_SM2_ID_TOO_LARGE,                           /**< User id to large. */
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x011C0001,        /**< Unsupport the KDFTLS12 algorithm. */
+
+    CRYPT_DECODE_ASN1_BUFF_NUM_NOT_ENOUGH = 0x011D0001,  /**< The input number of BSL_ANS1_Buffer is not enough. */
+    CRYPT_DECODE_UNSUPPORTED_PUBKEY_TYPE,                /**< Unsupported pubkey type */
+    CRYPT_DECODE_UNSUPPORTED_PKCS8_TYPE,                 /**< Unsupported pkcs8 type */
+    CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM,               /**< pkcs8 has no valid algorithm parameters */
+    CRYPT_DECODE_UNKNOWN_OID,                            /**< Unknown OID */
+    CRYPT_DECODE_ASN1_BUFF_FAILED,                       /**< decode asn1 buffer failed. */
+    CRYPT_DECODE_NO_SUPPORT_TYPE,                        /**< decode no support key type. */
+    CRYPT_DECODE_NO_SUPPORT_FORMAT,                      /**< decode no support key format. */
+    CRYPT_DECODE_PKCS8_INVALID_ITER,                     /**< pkcs8 invalid iter num */
+    CRYPT_DECODE_PKCS8_INVALID_KEYLEN,                   /**< pkcs8 invalid keylen */
 };
 
 #ifdef __cplusplus

@@ -33,7 +33,7 @@ static void UpdateSize(BN_BigNum *r, uint32_t modSize)
         }
     }
     r->size = size;
-    r->sign = false;
+    BN_CLRNEG(r->flag);
 }
 
 #define P521SIZE SIZE_OF_BNUINT(521)
@@ -940,7 +940,6 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     BN_BigNum rMul = {
         .data = tData,
         .size = 0,
-        .sign = false,
         .room = P521SIZE << 1
     };
     uint32_t size = mod->size << 1;
@@ -999,7 +998,6 @@ int32_t BN_ModNistEccSqr(
     BN_BigNum rSqr = {
         .data = tData,
         .size = 0,
-        .sign = false,
         .room = P521SIZE << 1
     };
     uint32_t size = mod->size << 1;
@@ -1040,7 +1038,6 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     BN_BigNum rMul = {
         .data = tData,
         .size = 0,
-        .sign = false,
         .room = P256SIZE << 1
     };
     uint32_t size = mod->size << 1;
@@ -1066,7 +1063,6 @@ int32_t BN_ModSm2EccSqr(
     BN_BigNum rSqr = {
         .data = tData,
         .size = 0,
-        .sign = false,
         .room = P256SIZE << 1
     };
     uint32_t size = mod->size << 1;

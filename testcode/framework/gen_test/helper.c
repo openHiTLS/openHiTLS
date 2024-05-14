@@ -155,6 +155,8 @@ int SplitArguments(char *inStr, uint32_t inLen, char **outParam, uint32_t *param
                 count++;
             }
             if (count > *paramLen) {
+                printf("Exceed maximum param limit, expect num %u, actual num %u\n",
+                    *paramLen, count);
                 return 1;
             }
             in[cur] = '\0';
@@ -306,6 +308,7 @@ int ReadFunction(const char *in, const uint32_t inLen, char *outFuncName, uint32
 
         int type = -1;
         if (CheckType(in, cur, prev, &type) != 0) {
+            Print("******\nERROR: check type failed at: \n");
             return 1;
         }
         argv[count] = type;
@@ -491,13 +494,13 @@ int ScanAllFunction(FILE *inFile, FILE *outFile)
 
         if (isDeclaration) {
             if (ConnectFunction(buf, sizeof(buf), inFile) != 0) {
-                Print("******\nERROR: Read function failed at: \n");
+                Print("******\nERROR: connect function failed at: \n");
                 Print("%s\n", buf);
                 return 1;
             }
             ret = ReadFunction(buf, strlen(buf), funcName, sizeof(funcName), arguments, &len);
             if (ret != 0) {
-                Print("******\nERROR: Read function failed at: \n");
+                Print("*******\nERROR: Read function failed at: \n");
                 Print("%s\n", buf);
                 return ret;
             }

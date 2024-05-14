@@ -81,7 +81,7 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        r->sign = false; // the greatest common divisor is a positive integer
+        BN_CLRNEG(r->flag); // the greatest common divisor is a positive integer
         return CRYPT_SUCCESS;
     }
     const BN_BigNum *bigNum = (ret > 0) ? a : b;
@@ -114,7 +114,7 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     // obtain the GCD, ensure that input parameter max > min
     ret = BnGcdDiv(r, max, min, opt);
     if (ret == CRYPT_SUCCESS) {
-        r->sign = false; // The GCD is a positive integer
+        BN_CLRNEG(r->flag); // The GCD is a positive integer
     }
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
@@ -128,7 +128,7 @@ static int32_t InverseReady(BN_BigNum *a, BN_BigNum *b, const BN_BigNum *x,
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    a->sign = false;
+    BN_CLRNEG(a->flag);
     ret = BN_Mod(b, x, m, opt); // b must be a positive number and do not need to convert symbols.
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -166,7 +166,7 @@ static int32_t InverseCore(BN_BigNum *r, BN_BigNum *x, BN_BigNum *y, uint32_t mS
             }
             break;  // Failed to obtain the inverse modulus value.
         }
-        t->sign = !t->sign;
+        t->flag ^= CRYPT_BN_FLAG_ISNEGTIVE;
         ret = BN_Mul(e, t, d, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);

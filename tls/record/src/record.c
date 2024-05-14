@@ -90,7 +90,7 @@ int32_t REC_Init(TLS_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15532, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record: malloc fail.", 0, 0, 0, 0);
-        goto err;
+        goto ERR;
     }
 
     newRecCtx->outBuf = RecBufNew(bufSize);
@@ -98,14 +98,14 @@ int32_t REC_Init(TLS_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15533, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record: malloc fail.", 0, 0, 0, 0);
-        goto err;
+        goto ERR;
     }
 
     ret = RecConnStatesInit(newRecCtx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15534, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record: init connect state fail.", 0, 0, 0, 0);
-        goto err;
+        goto ERR;
     }
 
 #ifndef HITLS_NO_DTLS12
@@ -116,7 +116,7 @@ int32_t REC_Init(TLS_Ctx *ctx)
     ctx->recCtx = newRecCtx;
     return HITLS_SUCCESS;
 
-err:
+ERR:
     RecBufFree(newRecCtx->outBuf);
     RecBufFree(newRecCtx->inBuf);
     BSL_SAL_FREE(newRecCtx);
@@ -244,13 +244,13 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     RecConnState *readState = RecConnStateNew();
     RecConnState *writeState = RecConnStateNew();
     if (readState == NULL || writeState == NULL) {
-        goto err;
+        goto ERR;
     }
 
     /* 1.Generate a secret */
     ret = RecConnKeyBlockGen(param, &clientSuitInfo, &serverSuitInfo);
     if (ret != HITLS_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     /* 2.Set the corresponding read/write pending state */
@@ -258,11 +258,11 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     in = (param->isClient == true) ? &serverSuitInfo : &clientSuitInfo;
     ret = RecConnStateSetCipherInfo(writeState, out);
     if (ret != HITLS_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     ret = RecConnStateSetCipherInfo(readState, in);
     if (ret != HITLS_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     /* Clear sensitive information */
@@ -273,7 +273,7 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     recordCtx->readStates.pendingState = readState;
     recordCtx->writeStates.pendingState = writeState;
     return HITLS_SUCCESS;
-err:
+ERR:
     /* Clear sensitive information */
     BSL_SAL_CleanseData((void *)&clientSuitInfo, sizeof(RecConnSuitInfo));
     BSL_SAL_CleanseData((void *)&serverSuitInfo, sizeof(RecConnSuitInfo));

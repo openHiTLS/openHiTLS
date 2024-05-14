@@ -875,4 +875,13 @@ int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32
     BSL_ERR_PUSH_ERROR(CRYPT_DSA_UNSUPPORTED_CTRL_OPTION);
     return CRYPT_DSA_UNSUPPORTED_CTRL_OPTION;
 }
+
+int32_t CRYPT_DSA_GetSecBits(const CRYPT_DSA_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->para == NULL || ctx->para->p == NULL || ctx->para->q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return 0;
+    }
+    return BN_SecBit(BN_Bits(ctx->para->p), BN_Bits(ctx->para->q));
+}
 #endif /* HITLS_CRYPTO_DSA */

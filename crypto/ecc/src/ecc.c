@@ -329,4 +329,35 @@ int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, con
     }
     return para->method->pointAdd(para, r, a, b);
 }
+
+typedef struct {
+    uint32_t ecKeyLen;
+    uint32_t secBits;
+} ComparableStrengths;
+
+/* See the standard document
+   https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
+   Table 2: Comparable strengths */
+const ComparableStrengths g_strengthsTable[] = {
+    {512, 256},
+    {384, 192},
+    {256, 128},
+    {224, 112},
+    {160, 80}
+};
+
+int32_t ECC_GetSecBits(const ECC_Para *para)
+{
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return 0;
+    }
+    uint32_t bits = BN_Bits(para->n);
+    for (size_t i = 0; i < (sizeof(g_strengthsTable) / sizeof(g_strengthsTable[0])); i++) {
+        if (bits >= g_strengthsTable[i].ecKeyLen) {
+            return g_strengthsTable[i].secBits;
+        }
+    }
+    return bits / 2;
+}
 #endif /* HITLS_CRYPTO_ECC */

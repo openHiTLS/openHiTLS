@@ -143,26 +143,9 @@ typedef void *(*BSL_LIST_PFUNC_DUP)(const void *);
         BSL_LIST_DeleteAll((pList), pFreeFunc); \
         if (NULL != (pList)) {             \
             BSL_SAL_FREE(pList);                  \
-            (pList) = NULL;                    \
-            (void)(pList);                     \
         }                                      \
     } while (0)
 
-/**
- * @ingroup bsl_list
- *
- * Delete all the nodes in the list and then frees the header.
- * But it does not delete the data pointers inside the list nodes.
- * It is used only after sort to delete the input list to the sort function.
- */
-#define BSL_LIST_FREE_AFTER_SORT(pList)    \
-    do {                                   \
-        BSL_LIST_DeleteAllAfterSort(pList); \
-        if (NULL != (pList)) {         \
-            BSL_SAL_FREE(pList);              \
-            (pList) = NULL;                \
-        }                                  \
-    } while (0)
 
 #define SEC_INT_ERROR (-2)
 

@@ -8,6 +8,7 @@
                     "init": {"deps": ["err"]},
                     "list": null,
                     "log": null,
+                    "obj":null,
                     "sal": null,
                     "sal_mem": null,
                     "sal_thread": null,
@@ -24,7 +25,8 @@
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]}
                     },
-                    "usrdata": null
+                    "usrdata": null,
+                    "asn1":null
                 }
             }
         },
@@ -119,6 +121,14 @@
             "features": {
                 "c": {
                     "all_tls": null
+                }
+            }
+        },
+        "hitls_x509":{
+            "lang" : "C",
+            "features" : {
+                "c": {
+                    "all_x509" : null
                 }
             }
         }
@@ -338,8 +348,8 @@
             },
             "encode": {
                 ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign", "sm2_exch"],
-                ".srcs": "crypto/encode/src/crypt_encode.c",
-                ".deps": ["crypto::bn"]
+                ".srcs": "crypto/encode/src/*.c",
+                ".deps": ["crypto::bn", "bsl::asn1", "crypto::ecc", "bsl::obj"]
             },
             "util": {
                 ".features": [
@@ -405,6 +415,11 @@
                 ".srcs": "bsl/list/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             },
+            "obj": {
+                ".features":["obj"],
+                ".srcs":"bsl/obj/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
             "hash": {
                 ".features": ["hash"],
                 ".srcs": "bsl/hash/src/*.c",
@@ -420,6 +435,11 @@
             "usrdata": {
                 ".features": ["usrdata"],
                 ".srcs": "bsl/usrdata/src/*.c"
+            },
+            "asn1": {
+                ".features": ["asn1"],
+                ".srcs": "bsl/asn1/src/*.c",
+                ".deps": ["bsl::sal"]
             },
             "init": {
                 ".features": ["init"],
@@ -458,11 +478,17 @@
             },
             "cert": {
                 ".features": ["all_tls"],
-                ".srcs": "tls/cert/cert_adapt/*.c",
+                ".srcs": "tls/cert/**/*.c",
                 ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal"],
                 ".include": [
                     "include",
-                    "include/tls"
+                    "include/tls",
+                    "include/bsl",
+                    "bsl/asn1/include",
+                    "x509/include",
+                    "x509/x509_cert/include",
+                    "x509/x509_common/include",
+                    "tls/cert/hitls_x509_adapt"
                 ]
             },
             "config": {
@@ -524,6 +550,28 @@
                     "include",
                     "bsl/uio/src"
                 ]
+            }
+        },
+        "x509" : {
+            "x509_cert": {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_cert/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "x509_crl" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_crl/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "x509_common" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_common/src/*",
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "x509_verify" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_verify/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_cert", "x509::x509_crl", "x509::x509_common"]
             }
         }
     }

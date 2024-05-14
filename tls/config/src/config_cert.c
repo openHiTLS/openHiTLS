@@ -513,9 +513,10 @@ int32_t HITLS_CFG_AddChainCert(HITLS_Config *config, HITLS_CERT_X509 *cert, bool
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, char *certPath, HITLS_CERT_StoreType storeType)
+int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_StoreType storeType,
+    bool isClone)
 {
-    if (config == NULL || certPath == NULL) {
+    if (config == NULL || cert == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -535,7 +536,14 @@ int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, char *certPath, HITLS_CER
             return HITLS_CERT_ERR_INVALID_STORE_TYPE;
     }
 
-    return SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, certPath, NULL);
+    HITLS_CERT_CtrlCmd cmd = isClone ? CERT_STORE_CTRL_DEEP_COPY_ADD_CERT_LIST :
+        CERT_STORE_CTRL_SHALLOW_COPY_ADD_CERT_LIST;
+    int32_t ret = SAL_CERT_StoreCtrl(config, store, cmd, cert, NULL);
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+
+    return ret;
 }
 
 HITLS_CERT_Chain *HITLS_CFG_GetChainCerts(HITLS_Config *config)

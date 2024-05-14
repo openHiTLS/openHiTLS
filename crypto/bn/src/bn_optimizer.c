@@ -103,7 +103,7 @@ static BN_BigNum *BnMake(BN_BigNum *r, uint32_t room)
     }
     memset_s(r->data, r->room * sizeof(BN_UINT), 0, r->room * sizeof(BN_UINT));
     r->size = 0;
-    r->sign = false;
+    BN_CLRNEG(r->flag);
     r->flag |= CRYPT_BN_FLAG_OPTIMIZER;
     return r;
 }

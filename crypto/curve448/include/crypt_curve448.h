@@ -317,6 +317,16 @@ int32_t CRYPT_CURVE448_Ctrl(CRYPT_CURVE448_Ctx *pkey, CRYPT_PkeyCtrl opt, const 
  */
 int32_t CRYPT_CURVE448_Cmp(const CRYPT_CURVE448_Ctx *a, const CRYPT_CURVE448_Ctx *b);
 
+/**
+ * @ingroup curve448
+ * @brief curve448 get security bits
+ *
+ * @param ctx [IN] curve448 Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_CURVE448_GetSecBits(const CRYPT_CURVE448_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

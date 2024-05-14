@@ -461,6 +461,7 @@ static int32_t PackClientPreSharedKeyBinders(const TLS_Ctx *ctx, uint8_t *buf, u
     }
 
     if (pskInfo->userPskSess != NULL) {
+        pskLen = HS_PSK_MAX_LEN;
         HITLS_HashAlgo hashAlg = HITLS_HASH_NULL;
         binderLen = HS_GetBinderLen(pskInfo->userPskSess->pskSession, &hashAlg);  // context is guaranteed to succeed
         buf[offset] = (uint8_t)binderLen;

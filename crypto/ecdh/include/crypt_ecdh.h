@@ -252,6 +252,16 @@ int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint
  */
 int32_t CRYPT_ECDH_Cmp(const CRYPT_ECDH_Ctx *a, const CRYPT_ECDH_Ctx *b);
 
+/**
+ * @ingroup ecdh
+ * @brief ecdh get security bits
+ *
+ * @param para [IN] ecdh Context structure
+ *
+ * @retval security bits
+ */
+int32_t CRYPT_ECDH_GetSecBits(const CRYPT_ECDH_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

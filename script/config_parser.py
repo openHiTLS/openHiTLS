@@ -21,7 +21,8 @@ class FeatureParser:
     lib_dir_map = {
         "hitls_bsl": "bsl",
         "hitls_crypto": "crypto",
-        "hitls_tls": "tls"
+        "hitls_tls": "tls",
+        "hitls_x509": "x509"
     }
 
     def __init__(self, file_path):
@@ -459,7 +460,7 @@ class FeatureConfigParser:
 
     def _re_sort_lib(self):
         # Change the key sequence of the 'libs' dictionary. Otherwise, the compilation fails.
-        lib_sort = ['hitls_bsl', 'hitls_crypto', 'hitls_tls']
+        lib_sort = ['hitls_bsl', 'hitls_crypto', 'hitls_tls', "hitls_x509"]
         libs = self.libs.copy()
         self._cfg['libs'].clear()
 

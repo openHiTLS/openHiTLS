@@ -40,7 +40,7 @@ static int32_t CheckParam(const BN_BigNum *a, const BN_BigNum *p)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_SQRT_PARA);
         return CRYPT_BN_ERR_SQRT_PARA;
     }
-    if (p->sign || a->sign) { // p, a must be positive
+    if (BN_ISNEG(p->flag | a->flag)) { // p, a must be positive
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_SQRT_PARA);
         return CRYPT_BN_ERR_SQRT_PARA;
     }
