@@ -138,46 +138,6 @@ static uint32_t ALERT_GetVersion(const TLS_Ctx *ctx)
     }
 }
 
-static bool ALERT_IsErrorAlert(uint8_t description)
-{
-    bool ret = false;
-    uint8_t errorAlert[] = {
-        ALERT_UNEXPECTED_MESSAGE,
-        ALERT_BAD_RECORD_MAC,
-        ALERT_RECORD_OVERFLOW,
-        ALERT_HANDSHAKE_FAILURE,
-        ALERT_BAD_CERTIFICATE,
-        ALERT_UNSUPPORTED_CERTIFICATE,
-        ALERT_CERTIFICATE_REVOKED,
-        ALERT_CERTIFICATE_EXPIRED,
-        ALERT_CERTIFICATE_UNKNOWN,
-        ALERT_ILLEGAL_PARAMETER,
-        ALERT_UNKNOWN_CA,
-        ALERT_ACCESS_DENIED,
-        ALERT_DECODE_ERROR,
-        ALERT_DECRYPT_ERROR,
-        ALERT_PROTOCOL_VERSION,
-        ALERT_INSUFFICIENT_SECURITY,
-        ALERT_INTERNAL_ERROR,
-        ALERT_INAPPROPRIATE_FALLBACK,
-        ALERT_MISSING_EXTENSION,
-        ALERT_UNSUPPORTED_EXTENSION,
-        ALERT_UNRECOGNIZED_NAME,
-        ALERT_BAD_CERTIFICATE_STATUS_RESPONSE,
-        ALERT_UNKNOWN_PSK_IDENTITY,
-        ALERT_CERTIFICATE_REQUIRED,
-        ALERT_NO_APPLICATION_PROTOCOL,
-        ALERT_UNKNOWN
-    };
-    size_t n = sizeof(errorAlert) / sizeof(uint8_t);
-    for (size_t i = 0; i < n; i++) {
-        if (description == errorAlert[i]) {
-            ret = true;
-            break;
-        }
-    }
-    return ret;
-}
 
 void ALERT_Recv(TLS_Ctx *ctx, const uint8_t *data, uint32_t len)
 {
@@ -201,7 +161,7 @@ void ALERT_Recv(TLS_Ctx *ctx, const uint8_t *data, uint32_t len)
         alertCtx->flag = ALERT_FLAG_RECV;
         alertCtx->level = data[0];
         alertCtx->description = data[1];
-        if (ALERT_GetVersion(ctx) == HITLS_VERSION_TLS13 && ALERT_IsErrorAlert(alertCtx->description)) {
+        if (ALERT_GetVersion(ctx) == HITLS_VERSION_TLS13 && alertCtx->description != ALERT_CLOSE_NOTIFY) {
             alertCtx->level = ALERT_LEVEL_FATAL;
         }
         if (alertCtx->level == ALERT_LEVEL_FATAL) {

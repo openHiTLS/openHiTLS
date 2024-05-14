@@ -320,7 +320,7 @@ static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr
 
     bool isCcsRecv = ctx->method.isRecvCCS(ctx);
     /* App messages arrive earlier than finished messages and need to be cached */
-    if (ctx->hsCtx != NULL && isCcsRecv == true && hdr->type == REC_TYPE_APP) {
+    if (ctx->hsCtx != NULL && isCcsRecv == true && (hdr->type == REC_TYPE_APP || hdr->type == REC_TYPE_ALERT)) {
         return RecordBufferUnprocessedMsg(recordCtx, hdr, recordBody);
     }
 
@@ -448,52 +448,53 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
 
 #endif
 
-static int32_t TlsCheckVersionField(const TLS_Ctx *ctx, uint16_t version)
+static int32_t VersionProcess(TLS_Ctx *ctx, uint16_t version, uint8_t type)
 {
-    if (ctx->negotiatedInfo.version == 0u) {
-        if (ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 &&
-#ifndef HITLS_NO_TLCP11
-            (((version < HITLS_VERSION_SSL30) && (version != HITLS_VERSION_TLCP11)) ||
-            (version > HITLS_VERSION_TLS12))) {
-#else
-            ((version < HITLS_VERSION_SSL30) || (version > HITLS_VERSION_TLS12))) {
-#endif
-            BSL_ERR_PUSH_ERROR(HITLS_REC_INVALID_PROTOCOL_VERSION);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15447, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "get a record with illegal version(0x%x).", version, 0, 0, 0);
-            return HITLS_REC_INVALID_PROTOCOL_VERSION;
-#ifndef HITLS_NO_TLCP11
-        } else if (((version >> 8u) != HITLS_VERSION_TLS_MAJOR) && (version != HITLS_VERSION_TLCP11)) {
-#else
-        } else if ((version >> 8u) != HITLS_VERSION_TLS_MAJOR) {
-#endif
-            BSL_ERR_PUSH_ERROR(HITLS_REC_INVALID_PROTOCOL_VERSION);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15867, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "get a record with illegal version(0x%x).", version, 0, 0, 0);
-            return HITLS_REC_INVALID_PROTOCOL_VERSION;
-        }
-    } else {
-        if ((ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) && (version != HITLS_VERSION_TLS12)) {
+    if ((ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) && (version != HITLS_VERSION_TLS12)) {
             /* If the negotiated version is tls1.3, the record version must be tls1.2 */
             BSL_ERR_PUSH_ERROR(HITLS_REC_INVALID_PROTOCOL_VERSION);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15448, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "get a record with illegal version(0x%x).", version, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
             return HITLS_REC_INVALID_PROTOCOL_VERSION;
-        } else if ((ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) && (version != ctx->negotiatedInfo.version)) {
+    } else if ((ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) && (version != ctx->negotiatedInfo.version)) {
+        BSL_ERR_PUSH_ERROR(HITLS_REC_INVALID_PROTOCOL_VERSION);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15449, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "get a record with illegal version(0x%x).", version, 0, 0, 0);
+        if (((version & 0xff00u) == (ctx->negotiatedInfo.version & 0xff00u)) && type == REC_TYPE_ALERT) {
+            return HITLS_SUCCESS;
+        }
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
+        return HITLS_REC_INVALID_PROTOCOL_VERSION;
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t TlsCheckVersionField(TLS_Ctx *ctx, uint16_t version, uint8_t type)
+{
+    if (ctx->negotiatedInfo.version == 0u) {
+#ifndef HITLS_NO_TLCP11
+        if (((version >> 8u) != HITLS_VERSION_TLS_MAJOR) && (version != HITLS_VERSION_TLCP11)) {
+#else
+        if ((version >> 8u) != HITLS_VERSION_TLS_MAJOR) {
+#endif
             BSL_ERR_PUSH_ERROR(HITLS_REC_INVALID_PROTOCOL_VERSION);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15449, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15867, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "get a record with illegal version(0x%x).", version, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
             return HITLS_REC_INVALID_PROTOCOL_VERSION;
         }
+    } else {
+        return VersionProcess(ctx, version, type);
     }
     return HITLS_SUCCESS;
 }
 
 static int32_t TlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *recordHdr)
 {
-    int32_t ret = TlsCheckVersionField(ctx, recordHdr->version);
+    int32_t ret = TlsCheckVersionField(ctx, recordHdr->version, recordHdr->type);
     if (ret != HITLS_SUCCESS) {
-        return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
+        return HITLS_REC_INVALID_PROTOCOL_VERSION;
     }
 
     if (RecCastUintToRecType(ctx, recordHdr->type) == REC_TYPE_UNKNOWN) {

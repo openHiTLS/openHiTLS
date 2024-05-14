@@ -2592,6 +2592,50 @@ exit:
 }
 /* END_CASE */
 
+/* when receive alert between finish and ccs, dtls12 should cache it*/
+/* BEGIN_CASE */
+void UT_DTLS_RFC6347_RECV_ALERT_AFTER_CCS_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_SCTP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_SCTP);
+    client->needStopBeforeRecvCCS = true;
+    server->needStopBeforeRecvCCS = true;
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
+    
+    // client receive ccs, wait to receive finish 
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    uint8_t alertdata[2] = {0x02, 0x0a};
+    ASSERT_EQ(REC_Write(serverTlsCtx, REC_TYPE_ALERT, alertdata, sizeof(alertdata)), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    // client cache the alert, wait to receive finish
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
+    // server send finish, handshake success
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    // client receive finish, handshake success
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_SUCCESS);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
+    // client read cached alert
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTED);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
 /* @
 * @test UT_TLS_DTLS_CONSISTENCY_RFC6347_TC001
 * @spec -

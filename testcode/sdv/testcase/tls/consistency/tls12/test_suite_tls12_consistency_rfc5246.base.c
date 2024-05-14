@@ -25,6 +25,7 @@
 #include "hs_state_recv.h"
 #include "conn_init.h"
 #include "app.h"
+#include "alert.h"
 #include "record.h"
 #include "rec_conn.h"
 #include "session.h"
@@ -50,6 +51,7 @@
 #define HASH_EXDATA_LEN_ERROR 23        /* Length of the content of the client_HELLOW signature hash field */
 #define SIGNATURE_ALGORITHMS 0x04, 0x03 /* Fields added to the SERVER_HELLOW message */
 #define READ_BUF_SIZE (18 * 1024)       /* Maximum length of the read message buffer */
+#define READ_BUF_LEN_18K (18 * 1024)
 #define TEMP_DATA_LEN 1024              /* Length of a single message */
 #define ALERT_BODY_LEN 2u   /* Alert data length */
 #define GetEpochSeq(epoch, seq) (((uint64_t)(epoch) << 48) | (seq))

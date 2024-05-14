@@ -189,6 +189,7 @@ int32_t HS_SendKeyUpdate(TLS_Ctx *ctx)
 static int32_t RecvKeyUpdateMsgProcess(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
 {
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
     }
 
@@ -402,6 +403,7 @@ static int32_t DealUnexpectedMsgWrtType(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo, CM_
         case NEW_SESSION_TICKET:
             /* If the version is not TLS1.3, ignore the message */
             if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
                 break;
             }
             ret = HS_HandleTLS13NewSessionTicket(ctx, hsMsgInfo);
@@ -480,7 +482,7 @@ bool HS_IsAppDataAllowed(TLS_Ctx *ctx)
 {
     /* If the negotiated version is 0, it indicates that the handshake is the first time. In this case, an alert message
      * needs to be sent when the unexpected app message is received */
-    if (ctx->negotiatedInfo.version == 0u || ctx->userRenego == false) {
+    if (ctx->negotiatedInfo.version == 0u || ctx->negotiatedInfo.renegotiationNum == 0) {
         return false;
     }
 

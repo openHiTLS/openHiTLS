@@ -5153,3 +5153,59 @@ exit:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+* @test  UT_TLS1_2_RFC5246_SERVER_CHOSE_VERSION_TC002
+* @spec  -
+* @title  Check the TLS protocol version carried in the serverHello message.
+* @brief  1. Use the configuration items to configure the client and server. Change the record version in client hello
+*         to 0x0305 Expected result 1 is obtained.
+*         2. Obtain and parse the server Hello message. Expected result 2 is obtained.
+* @expect 1. The initialization is successful.
+*         2. The protocol version carried in the server Hello message is TLS1.2.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+
+/* BEGIN_CASE */
+void UT_TLS1_2_RFC5246_SERVER_CHOSE_VERSION_TC002(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    
+    recvBuf[2] = 0x05;
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+
+    FRAME_Msg frameMsg = { 0 };
+    FRAME_Type frameType = { 0 };
+    uint8_t *sndBuf = ioUserData->sndMsg.msg;
+    uint32_t sndLen = ioUserData->sndMsg.len;
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS12;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, sndBuf, sndLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
+    ASSERT_TRUE(serverMsg->version.data == HITLS_VERSION_TLS12);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_CleanMsg(&frameType, &frameMsg);
+}
+/* END_CASE */

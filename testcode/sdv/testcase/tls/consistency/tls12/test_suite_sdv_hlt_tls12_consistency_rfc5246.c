@@ -198,3 +198,147 @@ exit:
     HLT_CleanFrameHandle();
 }
 /* END_CASE */
+
+int32_t SendKeyupdate_Err(HITLS_Ctx *ctx)
+{
+    int32_t ret;
+    /** Initialize the message buffer. */
+    uint8_t buf[5] = {KEY_UPDATE, 0x00, 0x00, 0x01, 0x01};
+    size_t len = 5;
+
+    /** Write records. */
+    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
+    return ret;
+}
+/* tls12 receive keyupdate message during transporting*/
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_KEYUPDATE_TC001(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+    clientCtxConfig->isSupportExtendMasterSecret=true;
+    serverCtxConfig->isSupportExtendMasterSecret=true;
+    serverCtxConfig->isSupportSessionTicket=true;
+    clientCtxConfig->isSupportSessionTicket=true;
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(remoteProcess, clientRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    uint8_t readBuf2[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen2= 0;
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf2, READ_BUF_LEN_18K, &readLen2) , 0);
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf2, READ_BUF_LEN_18K, &readLen2) , 0);
+
+    HITLS_Ctx *serverCtx = (HITLS_Ctx *)serverRes->ssl;
+    ASSERT_TRUE(serverCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_EQ(SendKeyupdate_Err(serverRes->ssl) , HITLS_SUCCESS);
+    uint8_t readBuf[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen= 0;
+
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(serverRes->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+exit:
+    HLT_FreeAllProcess();
+    HLT_CleanFrameHandle();
+}
+/* END_CASE */
+
+int32_t SendNEW_SESSION_TICKET_Err(HITLS_Ctx *ctx)
+{
+    int32_t ret;
+    /** Initialize the message buffer. */
+    uint8_t buf[32] = {NEW_SESSION_TICKET,0,0,0x1c,0x20,0xc1,};
+    size_t len = 32;
+
+    /** Write records. */
+    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
+    return ret;
+}
+/* tls12 receive NST message during transporting*/
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_NST_TC001(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+    clientCtxConfig->isSupportExtendMasterSecret=true;
+    serverCtxConfig->isSupportExtendMasterSecret=true;
+    serverCtxConfig->isSupportSessionTicket=true;
+    clientCtxConfig->isSupportSessionTicket=true;
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(remoteProcess, clientRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    uint8_t readBuf2[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen2= 0;
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf2, READ_BUF_LEN_18K, &readLen2) , 0);
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf2, READ_BUF_LEN_18K, &readLen2) , 0);
+
+    HITLS_Ctx *serverCtx = (HITLS_Ctx *)serverRes->ssl;
+    ASSERT_TRUE(serverCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_EQ(SendNEW_SESSION_TICKET_Err(serverRes->ssl) , HITLS_SUCCESS);
+    uint8_t readBuf[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen= 0;
+
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(serverRes->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+exit:
+    HLT_FreeAllProcess();
+    HLT_CleanFrameHandle();
+}
+/* END_CASE */
