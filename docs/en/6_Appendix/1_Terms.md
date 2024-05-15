@@ -1,0 +1,52 @@
+|Acronym/Abbreviation|Full Name|Description|
+|-|-|:-:|
+|/|Symmetric Encryption|An algorithm that uses the same key for encryption and decryption, which is also called shared key cryptography.|
+|/|Public Key Encryption|An algorithm that uses a pair of public and private keys for encryption and decryption. The public key is used for encryption, and the private key is used for decryption. Common public key encryption algorithms include RSA and ECC.|
+|/|Hash Function|The hash function accepts an input and maps it to a fixed-length output. The hash function features anti-collision and irreversibility. Common hash functions include MD5, SHA-1, and SHA-256.|
+|/|Digital Signature|A private key is used to encrypt the message and verify its source and integrity. A public key can be used to verify the digital signature.|
+|/|Key Exchange|A secure communication channel is provided for the server and client so that they can securely share keys for symmetric encryption.|
+|/|Replay Attack|An attacker repeats or delays sending authenticated messages during communication to deceive or damage communication integrity.|
+|/|Key Length|An indicator used to measure the cryptographic algorithm strength. Generally, the longer the key, the more secure the algorithm.|
+|/|TLS Handshake|A handshake process between the client and server before TLS communication starts. The handshake process includes encryption algorithm negotiation, identity authentication, session key generation, and other steps.|
+|/|TLS Certificate|A digital certificate used to verify the identities of the server and client during a TLS handshake. The server usually has a public key certificate, and the client can verify the authenticity and credibility of the certificate.|
+|/|Key Exchange Algorithm|An algorithm used during a TLS handshake to securely exchange cryptographic keys between the client and server. Common key exchange algorithms include RSA, Diffie-Hellman, and Elliptic Curve Diffie-Hellman (ECDH).|
+|/|Block Cipher|A symmetric encryption algorithm used to encrypt and decrypt data in TLS. Common block cipher algorithms include Advanced Encryption Standard (AES) and Triple Data Encryption Standard (3DES).|
+|/|Stream Cipher|A symmetric encryption algorithm used to encrypt and decrypt data in TLS. The input and keystream conduct an exclusive OR (XOR) operation to generate a ciphertext stream. Common stream cipher algorithms include RC4 and ChaCha20.|
+|/|TLS Session|A secure session established between the client and server after the TLS handshake is complete. It is used to encrypt and protect communication data. Sessions can be reused in multiple TLS connections to improve performance.|
+|/|Man-in-the-Middle Attack|An attack mode in which an attacker inserts itself as a man-in-the-middle in TLS communication and steals or tampers with the communication data.|
+|/|Man-in-the-Middle Attack|During a TLS handshake, the client and server negotiate security parameters such as the encryption algorithm, key exchange algorithm, and certificate authentication mode.|
+|/|Secure Renegotiation|After a TLS handshake is complete, the client or server initiates a handshake process again to negotiate a new key.|
+|/|Server Name Indication|An extended TLS protocol. The client specifies the name of the host to be connected to the server in the CLIENTHELLO packet.|
+|/|Application Layer Protocol Negotiation|An extended TLS protocol. The client and server negotiate the application layer protocol when negotiating the TLS protocol.|
+|/|Session Resumption|After a handshake is complete, the TLS session information is saved. In the second handshake, the first session information is used to restore the link.|
+|AES|Advanced Encryption Standard|A symmetric encryption algorithm that is widely used in fields such as data encryption and network security. The key length of the AES algorithm can be 128 bits, 192 bits, or 256 bits.|
+|Arm|Advanced RISC Machines|A processor architecture that is widely used in fields such as mobile devices and embedded systems. The Arm processor features low power consumption and high performance.|
+|Curl|Curl|An open-source network transmission tool that supports multiple protocols, such as HTTP, FTP, and SMTP. It is widely used in fields such as web development and testing.|
+|DH|Diffie-Hellman|A key exchange algorithm that is widely used in fields such as network security and VPN. The key length of the DH algorithm can be 1024 bits, 2048 bits, or 4096 bits.|
+|DRBG|Deterministic Random Byte Generator|A pseudo-random number generator used to generate random numbers such as keys and initialization vectors in encryption algorithms.|
+|DSA|Digital Signature Algorithm|A digital signature algorithm that is widely used in fields such as digital signature and identity authentication. The key length of the DSA algorithm can be 1024 bits, 2048 bits, or 3072 bits.|
+|DTLS|Datagram Transport Layer Security|A transport layer security protocol for data packets. It is used to protect the security and integrity of data packet communication and is widely used in real-time communication scenarios such as VoIP and video conferences.|
+|EC|Elliptic Curve|An asymmetric encryption algorithm based on the elliptic curve mathematical theory. It is widely used in fields such as digital signature and key exchange.|
+|HKDF|HMAC-based Extract-and-Expand Key Derivation Function|A key derivation function used to derive multiple subkeys from a long term key. The HKDF algorithm is based on the HMAC algorithm.|
+|HMAC|Hash-based Message Authentication Code|A message authentication code used to ensure the integrity and authenticity of messages. The HMAC algorithm is based on the hash algorithm and key.|
+|Java|Java|A cross-platform programming language that is widely used in fields such as web development and mobile applications. Java is object-oriented and secure.|
+|MD5|Message-Digest Algorithm 5|A hash algorithm that is widely used in fields such as digital signature and message authentication. The key length of the MD5 algorithm is 128 bits.|
+|Nginx|Engine X|A high-performance web server and reverse proxy server, which is widely used in fields such as the Internet and mobile applications. Nginx features high concurrency and low memory consumption.|
+|PBKDF2|Password-Based Key Derivation Function 2|A key derivation function used to derive keys in encryption algorithms from user passwords.|
+|Python|Python|A high-level programming language that is widely used in fields such as data analysis and artificial intelligence. Python is simple and easy to read.|
+|QUIC|Quick UDP Internet Connections|A new network transmission protocol based on UDP, which is widely used in fields such as web pages and mobile applications. The QUIC protocol supports features such as encryption, multiplexing, and 0-RTT.|
+|RAM|Random Access Memory|A computer internal memory used to temporarily store data and programs. RAM is a volatile memory. The stored data will be lost after a power failure.|
+|ROM|Read-Only Memory|A computer internal memory used to store solidified programs and data. ROM is a non-volatile memory. The stored data will not be lost after a power failure.|
+|RSA|Rivest-Shamir-Adleman|An asymmetric encryption algorithm that is widely used in fields such as digital signature and key exchange. The key length of the RSA algorithm can be 1024 bits, 2048 bits, or 4096 bits.|
+|SCRYPT|Scrypt|A key derivation function used to derive multiple subkeys from a long term key. The SCRYPT algorithm is based on the PBKDF2 algorithm.|
+|SDF|Security Domain Function|A standard cryptographic security interface that defines the communication protocol and data format between cryptographic devices (such as cryptographic chip cards) and user devices, including aspects such as key management, authentication, and data transmission. Implementation of the SDF interface specifications can ensure security and reliability of cryptographic devices, and is mainly applied to the financial field to ensure security of payment cards such as a bank card.|
+|SHA2|Secure Hash Algorithm 2|A hash algorithm that is widely used in fields such as digital signature and message authentication. The SHA2 algorithm includes multiple variants, such as SHA-224, SHA-256, SHA-384 and SHA-512.|
+|SHA3|Secure Hash Algorithm 3|A hash algorithm. It is the successor of the SHA2 algorithm and is widely used in fields such as digital signature and message authentication. The SHA3 algorithm includes multiple variants, such as SHA3-224, SHA3-256, SHA3-384 and SHA3-512.|
+|SKF|Security Domain Function|A standard cryptographic security interface that defines the communication protocol and data format between cryptographic devices (such as cryptographic chip cards) and user devices, including aspects such as key management, authentication, and data transmission. Implementation of the SKF interface specifications can ensure security and reliability of cryptographic devices, and is applied to secure communication between cryptographic devices (such as cryptographic chip cards) and user devices, including aspects such as key management, authentication, and data transmission.|
+|SM2|ShangMi-2|An asymmetric encryption algorithm, which is one of the encryption algorithms recommended by China. The key length of the SM2 algorithm is 256 bits.|
+|SM3|ShangMi-3|A hash algorithm recommended by China. The output length of the SM3 algorithm is 256 bits.|
+|SM4|ShangMi-4|A symmetric encryption algorithm, which is one of the encryption algorithms recommended by China. The key length of the SM4 algorithm is 128 bits.|
+|TLCP|Transport Layer Cryptography Protocol|A transport layer cryptography protocol that is used to protect the security and integrity of network communication. It is widely used in secure communication scenarios such as web pages and emails in China.|
+|TLS|Transport Layer Security|A transport layer security protocol that is used to protect the security and integrity of network communication. It is widely used in secure communication scenarios such as web pages and emails.|
+|X.509|T-REC-X.509|A digital certificate standard used to prove the validity of public keys and the authenticity of identities. An X.509 certificate contains information such as the public key, certificate issuer, and validity period.|
+|x86|Intel 80x86|A processor architecture that is widely used in fields such as personal computers and servers. The x86 processor features high performance and compatibility.|

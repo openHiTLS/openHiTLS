@@ -1,0 +1,32 @@
+SDV_BSL_ERR_FUNC_TC001
+SDV_BSL_ERR_FUNC_TC001:
+
+After the stack is not pushed or cleared, call BSL_ERR_GetLastError to query all error stacks.
+SDV_BSL_ERR_STACK_FUNC_TC001:0
+
+After the stack is not pushed or cleared, call BSL_ERR_GetLastError to query all error stacks.
+SDV_BSL_ERR_STACK_FUNC_TC001:1
+
+Testing CMake Compatibility
+SDV_BSL_ERR_COMPATIBILITY_FUNC_TC001:
+
+BSL_ERR_ClearError Interface Test
+SDV_BSL_ERR_STACK_API_TC001:0
+
+BSL_ERR_ClearError Interface Test
+SDV_BSL_ERR_STACK_API_TC001:1
+
+SDV_BSL_ERR_MARK_FUNC_TC001
+SDV_BSL_ERR_MARK_FUNC_TC001:
+
+SDV_BSL_ERR_STRING_FUNC_TC001
+SDV_BSL_ERR_STRING_FUNC_TC001:
+
+AVL LL test
+SDV_BSL_ERR_AVLLL_FUNC_TC001:
+
+AVL LR test
+SDV_BSL_ERR_AVLLR_FUNC_TC001:
+
+AVL RL test
+SDV_BSL_ERR_AVLRL_FUNC_TC001:
