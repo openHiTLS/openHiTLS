@@ -118,7 +118,6 @@
                 },
                 "armv8": {
                     "sm3": null,
-                    "gcm": null,
                     "aes": null,
                     "chacha20": null,
                     "sm4": null,
@@ -275,12 +274,10 @@
                     "no_asm": "crypto/modes/src/noasm_*.c",
                     "armv8": [
                         "crypto/modes/src/noasm_poly1305.c",
-                        "crypto/modes/src/asm_aes_gcm.c",
+                        "crypto/modes/src/noasm_aes_gcm.c",
                         "crypto/modes/src/asm_aes_cbc.c",
                         "crypto/modes/src/asm_aes_ecb.c",
                         "crypto/modes/src/asm_aes_ctr.c",
-                        "crypto/modes/src/asm/aes_gcm_16block_aarch64.S",
-                        "crypto/modes/src/asm/aes_gcm_64block_aarch64.S",
                         "crypto/modes/src/asm/ghash_armv8.S",
                         "crypto/modes/src/noasm_aes_ccm.c",
                         "crypto/modes/src/asm_aes_cfb.c",
@@ -296,10 +293,7 @@
                     "x8664": {
                         "x8664":[
                             "crypto/modes/src/asm_aes_ctr.c",
-                            "crypto/modes/src/asm_aes_gcm.c",
-                            "crypto/modes/src/asm/aes_gcm_16block_x86_64.S",
-                            "crypto/modes/src/asm/aes_gcm_64block_x86_64.S",
-                            "crypto/modes/src/asm/aes_gcm_96block_x86_64.S",
+                            "crypto/modes/src/noasm_aes_gcm.c",
                             "crypto/modes/src/asm_aes_cbc.c",
                             "crypto/modes/src/asm_aes_ecb.c",
                             "crypto/modes/src/asm/ghash_x86_64.S",
@@ -318,10 +312,7 @@
                         ],
                         "avx512":[
                             "crypto/modes/src/asm_aes_ctr.c",
-                            "crypto/modes/src/asm_aes_gcm.c",
-                            "crypto/modes/src/asm/aes_gcm_16block_x86_64.S",
-                            "crypto/modes/src/asm/aes_gcm_64block_x86_64.S",
-                            "crypto/modes/src/asm/aes_gcm_96block_x86_64.S",
+                            "crypto/modes/src/noasm_aes_gcm.c",
                             "crypto/modes/src/asm_aes_cbc.c",
                             "crypto/modes/src/asm_aes_ecb.c",
                             "crypto/modes/src/asm/ghash_x86_64.S",
