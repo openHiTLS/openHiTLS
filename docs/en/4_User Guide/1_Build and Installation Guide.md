@@ -138,7 +138,7 @@ To cross compile openHiTLS, you need to use the **-DCMAKE_TOOLCHAIN_FILE** param
 cd openHiTLS
 mkdir -p ./build
 cd ./build
-python3 ../configure.py # Modify the configuration. For details, see section 3.2.1.
+python3 ../configure.py # Modify the configuration. For details, see section 3.1.1.
 cmake -DCMAKE_TOOLCHAIN_FILE=usr_gcc.toolchain.cmake ..
 make -j
 ```
