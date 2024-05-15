@@ -161,6 +161,7 @@ int32_t Tls12ServerSendFinishedProcess(TLS_Ctx *ctx);
  * @retval  HITLS_SUCCESS
  * @retval  For details, see hitls_error.h
  */
+
 #ifndef HITLS_NO_DTLS12
 int32_t DtlsClientSendFinishedProcess(TLS_Ctx *ctx);
 #endif
@@ -173,6 +174,7 @@ int32_t DtlsClientSendFinishedProcess(TLS_Ctx *ctx);
  * @retval  HITLS_SUCCESS
  * @return  For details, see hitls_error.h
  */
+
 #ifndef HITLS_NO_DTLS12
 int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx);
 #endif

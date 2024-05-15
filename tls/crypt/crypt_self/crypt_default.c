@@ -645,7 +645,7 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaI
         return NULL;
     }
 
-    if (algId != CRYPT_PKEY_X25519 && algId != CRYPT_PKEY_X448 && algId != CRYPT_PKEY_SM2) {
+    if (algId != CRYPT_PKEY_X25519 && algId != CRYPT_PKEY_SM2) {
         ret = CRYPT_EAL_PkeySetParaById(pkey, paraId);
         if (ret != CRYPT_SUCCESS) {
             CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -835,15 +835,6 @@ static int32_t DhKeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bu
 #endif
 }
 
-static int32_t X448KeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
-{
-    (void)key;
-    (void)pubKeyLen;
-    (void)pubKeyBuf;
-    (void)bufLen;
-    return CRYPT_EAL_ALG_NOT_SUPPORT;
-}
-
 int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
 {
 #ifdef HITLS_CRYPTO_PKEY
@@ -856,8 +847,6 @@ int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32
             return X25519KeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
         case CRYPT_PKEY_DH:
             return DhKeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
-        case CRYPT_PKEY_X448:
-            return X448KeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
         case CRYPT_PKEY_SM2:
             return SM2KeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
         default:
@@ -890,10 +879,6 @@ static int32_t SetPubData(CRYPT_EAL_PkeyPub *pub, uint8_t *peerPubkey, uint32_t 
         case CRYPT_PKEY_DH:
             pub->key.dhPub.data = peerPubkey;
             pub->key.dhPub.len = pubKeyLen;
-            break;
-        case CRYPT_PKEY_X448:
-            pub->key.curve448Pub.data = peerPubkey;
-            pub->key.curve448Pub.len = pubKeyLen;
             break;
         default:
             return HITLS_CRYPT_ERR_CALC_SHARED_KEY;

@@ -60,8 +60,8 @@ int32_t CRYPT_EAL_PkeySignData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *has
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    // ed25519/ed448/sm2/sm9 does not support signing hash data
-    if (pkey->id == CRYPT_PKEY_ED25519 || pkey->id == CRYPT_PKEY_ED448 || pkey->id == CRYPT_PKEY_SM2) {
+    // ed25519/sm2/sm9 does not support signing hash data
+    if (pkey->id == CRYPT_PKEY_ED25519 || pkey->id == CRYPT_PKEY_SM2) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -84,12 +84,6 @@ static int32_t PkeySignCore(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id,
         if (id != CRYPT_MD_SHA512) {
             EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_CURVE25519_HASH_METH_ERROR);
             return CRYPT_CURVE25519_HASH_METH_ERROR;
-        }
-        ret = pkey->method->sign(pkey->key, data, dataLen, sign, signLen);
-    } else if (pkey->id == CRYPT_PKEY_ED448) { // ed448 directly sign the plaintext data.
-        if (id != CRYPT_MD_SHAKE256) {
-            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_CURVE448_HASH_METH_ERROR);
-            return CRYPT_CURVE448_HASH_METH_ERROR;
         }
         ret = pkey->method->sign(pkey->key, data, dataLen, sign, signLen);
     } else if (pkey->id == CRYPT_PKEY_SM2) { // sm2: directly verify the plaintext data.
@@ -139,12 +133,6 @@ static int32_t PkeyVerifyCore(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id,
         if (id != CRYPT_MD_SHA512) {
             EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_CURVE25519_HASH_METH_ERROR);
             return CRYPT_CURVE25519_HASH_METH_ERROR;
-        }
-        ret = pkey->method->verify(pkey->key, data, dataLen, sign, signLen);
-    } else if (pkey->id == CRYPT_PKEY_ED448) { // ed448 directly verify the plaintext data.
-        if (id != CRYPT_MD_SHAKE256) {
-            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_CURVE448_HASH_METH_ERROR);
-            return CRYPT_CURVE448_HASH_METH_ERROR;
         }
         ret = pkey->method->verify(pkey->key, data, dataLen, sign, signLen);
     } else if (pkey->id == CRYPT_PKEY_SM2) { // sm2: directly verify the plaintext.
@@ -199,8 +187,8 @@ int32_t CRYPT_EAL_PkeyVerifyData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *h
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    // ed25519/ed448: does not support signing hash data
-    if (pkey->id == CRYPT_PKEY_ED25519 || pkey->id == CRYPT_PKEY_ED448) {
+    // ed25519: does not support signing hash data
+    if (pkey->id == CRYPT_PKEY_ED25519) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }

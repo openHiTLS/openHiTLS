@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <stddef.h>
 #include "bsl_err_internal.h"
 #include "hitls_error.h"

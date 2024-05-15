@@ -8,6 +8,7 @@
 
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_interface */
+
 #include <stdio.h>
 #include "hitls_error.h"
 #include "hitls_cert.h"

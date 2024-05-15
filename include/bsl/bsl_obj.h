@@ -91,8 +91,6 @@ typedef enum {
 
     BSL_CID_DH = 5201,               /**< identifies the Diffie-Hellman algorithm */
     BSL_CID_ECDH = 5216,             /**< identifies the EC Diffie-Hellman algorithm */
-    BSL_CID_X448 = 5231,             /**< identifies the EC Diffie-Hellman algorithm */
-    BSL_CID_ED448 = 5246,           /**< identifies the EC Diffie-Hellman algorithm */
     BSL_CID_ED25519 = 5261,         /**< Identifies ED25519 algorithm */
     BSL_CID_X25519 = 5276,          /**< Identifies X25519 algorithm */
 

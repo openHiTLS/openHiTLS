@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "bsl_sal.h"
 #include "securec.h"
 #include "hitls_x509.h"

@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <stdint.h>
 
 #include "tls_binlog_id.h"

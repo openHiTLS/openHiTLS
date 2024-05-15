@@ -5,7 +5,6 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 /* Some of these codes are adapted from https://ed25519.cr.yp.to/software.html */
 
 #include "hitls_build.h"

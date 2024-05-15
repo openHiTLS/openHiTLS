@@ -319,22 +319,6 @@ enum CRYPT_ERROR {
     CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
                                                            output result is insufficient. */
 
-    CRYPT_CURVE448_NO_PUBKEY = 0x011A0001,            /**< No public key. */
-    CRYPT_CURVE448_NO_PRVKEY,                         /**< No private key. */
-    CRYPT_CURVE448_KEYLEN_ERROR,                      /**< Incorrect key length. */
-    CRYPT_CURVE448_SIGNLEN_ERROR,                     /**< Incorrect signature length. */
-    CRYPT_CURVE448_VERIFY_FAIL,                       /**< Signature verification failed due to incorrect signature. */
-    CRYPT_CURVE448_NO_HASH_METHOD,                    /**< Hash method not set. */
-    CRYPT_CURVE448_UNSUPPORTED_CTRL_OPTION,           /**< Unsupported mode of operation. */
-    CRYPT_CURVE448_KEY_COMPUTE_FAILED,                /**< Failed to generate the shared key. */
-    CRYPT_CURVE448_INVALID_PUBKEY,                    /**< Invalid public key. */
-    CRYPT_CURVE448_CONTEXT_TOO_LONG,                  /**< Context over 255. */
-    CRYPT_CURVE448_NO_CONTEXT,                        /**< Ctx is not set. */
-    CRYPT_CURVE448_HASH_METH_ERROR,                   /**< Hash method is not SHAKE256. */
-    CRYPT_CURVE448_PUBKEY_NOT_EQUAL,                  /**< CURVE448 public keys are not equal. */
-    CRYPT_CURVE448_POINT_NOT_EQUAL,                   /**< CURVE448 points are not equal. */
-    CRYPT_CURVE448_FAIL,                              /**< CURVE448 parameter error. */
-
     CRYPT_SM2_BUFF_LEN_NOT_ENOUGH = 0x011B0001,       /**< Insufficient buffer length. */
     CRYPT_SM2_NO_PUBKEY,                              /**< SM2 the public key is not set. */
     CRYPT_SM2_NO_PRVKEY,                              /**< SM2 The private key is not set. */

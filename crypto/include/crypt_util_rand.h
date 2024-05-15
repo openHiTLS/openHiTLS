@@ -10,7 +10,7 @@
 #define CRYPT_UTIL_RAND_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_DRBG) || defined(HITLS_CRYPTO_CURVE448) || defined(HITLS_CRYPTO_CURVE25519) || \
+#if defined(HITLS_CRYPTO_DRBG) || defined(HITLS_CRYPTO_CURVE25519) || \
     defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_BN)
 
 #include <stdint.h>

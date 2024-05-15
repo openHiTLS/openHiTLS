@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -469,6 +470,7 @@ int32_t SAL_CERT_CheckCertInfo(HITLS_Ctx *ctx, const CERT_ExpectInfo *expectCert
  * depends on the server configuration.)
  * Therefore, the client does not verify any certificate and only sets the index.
  * */
+
 #ifndef HITLS_NO_TLCP11
 static int32_t TlcpSelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
 {

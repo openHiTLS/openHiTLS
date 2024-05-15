@@ -396,6 +396,7 @@ int32_t MontSqrBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool constt
         return CRYPT_BN_OPTIMIZER_GET_FAIL;
     }
     SqrConquer(x, r, mSize, bnSpace->data, consttime);
+    
     Reduce(r, x, mont->mod, mSize, mont->k0);
 
     OptimizerEnd(opt);

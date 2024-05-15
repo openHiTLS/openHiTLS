@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef SESSION_MGR_H
 #define SESSION_MGR_H
 

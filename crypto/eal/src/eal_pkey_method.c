@@ -23,9 +23,6 @@
 #ifdef HITLS_CRYPTO_CURVE25519
 #include "crypt_curve25519.h"
 #endif
-#ifdef HITLS_CRYPTO_CURVE448
-#include "crypt_curve448.h"
-#endif
 #ifdef HITLS_CRYPTO_DH
 #include "crypt_dh.h"
 #endif
@@ -311,66 +308,6 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_SM2_Cmp,
         CRYPT_SM2_GetSecBits
     ), // CRYPT_PKEY_SM2
-#endif
-#ifdef HITLS_CRYPTO_ED448
-    EAL_PKEY_METHOD_DEFINE(
-        CRYPT_PKEY_ED448,
-        CRYPT_CURVE448_NewCtx,
-        CRYPT_CURVE448_DupCtx,
-        CRYPT_CURVE448_FreeCtx,
-        NULL,
-        NULL,
-        CRYPT_ED448_GenKey,
-        CRYPT_ED448_GetBits,
-        CRYPT_ED448_GetSignLen,
-        CRYPT_CURVE448_Ctrl,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        CRYPT_ED448_SetPubKey,
-        CRYPT_ED448_SetPrvKey,
-        CRYPT_ED448_GetPubKey,
-        CRYPT_ED448_GetPrvKey,
-        CRYPT_CURVE448_Sign,
-        CRYPT_CURVE448_Verify,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        CRYPT_CURVE448_Cmp,
-        CRYPT_CURVE448_GetSecBits
-    ), // CRYPT_PKEY_ED448
-#endif
-#ifdef HITLS_CRYPTO_X448
-    EAL_PKEY_METHOD_DEFINE(
-        CRYPT_PKEY_X448,
-        CRYPT_CURVE448_NewCtx,
-        CRYPT_CURVE448_DupCtx,
-        CRYPT_CURVE448_FreeCtx,
-        NULL,
-        NULL,
-        CRYPT_X448_GenKey,
-        CRYPT_X448_GetBits,
-        NULL,
-        CRYPT_CURVE448_Ctrl,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        CRYPT_X448_SetPubKey,
-        CRYPT_X448_SetPrvKey,
-        CRYPT_X448_GetPubKey,
-        CRYPT_X448_GetPrvKey,
-        NULL,
-        NULL,
-        CRYPT_X448_ComputeSharedKey,
-        NULL,
-        NULL,
-        NULL,
-        CRYPT_CURVE448_Cmp,
-        CRYPT_CURVE448_GetSecBits
-    ), // CRYPT_PKEY_X448
 #endif
 };
 

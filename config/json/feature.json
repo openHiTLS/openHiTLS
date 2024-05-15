@@ -93,10 +93,6 @@
                             "ed25519": {"deps": ["sha512"]},
                             "x25519": null
                         },
-                        "curve448": {
-                            "ed448": {"deps": ["sha3"]},
-                            "x448": null
-                        },
                         "sm2": {
                             "sm2_crypt": null,
                             "sm2_sign": null,
@@ -121,7 +117,6 @@
                     "aes": null,
                     "chacha20": null,
                     "sm4": null,
-                    "bn": null,
                     "ecc": null
                 }
             }
@@ -176,7 +171,6 @@
                     "crypto/ecdsa/include",
                     "crypto/ecdh/include",
                     "crypto/curve25519/include",
-                    "crypto/curve448/include",
                     "crypto/sm2/include"
                 ]
             },
@@ -419,8 +413,7 @@
                     "public": [
                         "crypto/bn/src/bn_*.c"
                     ],
-                    "no_asm": "crypto/bn/src/noasm_*.c",
-                    "armv8": ["crypto/bn/src/asm_*.c", "crypto/bn/src/asm/*_armv8.S"]
+                    "no_asm": "crypto/bn/src/noasm_*.c"
                 },
                 ".deps": ["bsl::sal"]
             },
@@ -435,11 +428,6 @@
                     "public": "crypto/curve25519/src/curve25519*.c",
 		            "no_asm": "crypto/curve25519/src/noasm_*.c"
                 },
-                ".deps": ["platform::Secure_C", "bsl::sal"]
-            },
-            "curve448": {
-                ".features": ["ed448", "x448"],
-                ".srcs": ["crypto/curve448/src/*.c"],
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             },
             "dsa": {
@@ -462,7 +450,7 @@
                     "sha1", "sha224", "sha256", "sha384", "sha512",
                     "bn",
                     "drbg_hash", "drbg_hmac", "drbg_ctr",
-                    "rsa", "ed25519", "x25519", "ed448", "x448"
+                    "rsa", "ed25519", "x25519"
                 ],
                 ".srcs": "crypto/util/*.c",
                 ".deps": ["platform::Secure_C"]

@@ -5,7 +5,9 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>

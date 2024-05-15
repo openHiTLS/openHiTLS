@@ -171,13 +171,6 @@ typedef CRYPT_Data CRYPT_Curve25519Prv;
 /**
  * @ingroup crypt_types
  *
- * ed448/x448 private key parameter structure
- */
-typedef CRYPT_Data CRYPT_Curve448Prv;
-
-/**
- * @ingroup crypt_types
- *
  * RSA public key parameter structure
  */
 typedef struct {
@@ -235,13 +228,6 @@ typedef CRYPT_Data CRYPT_EcdhPub;
  * ed25519/x25519 public key parameter structure
  */
 typedef CRYPT_Data CRYPT_Curve25519Pub;
-
-/**
- * @ingroup crypt_types
- *
- * ed448/x448 public key parameter structure
- */
-typedef CRYPT_Data CRYPT_Curve448Pub;
 
 /**
  * @ingroup crypt_types
@@ -411,9 +397,6 @@ typedef enum {
     CRYPT_CTRL_SM2_GET_SEND_CHECK,      /* SM2 obtain the check value sent from the local end to the peer end. */
     CRYPT_CTRL_SM2_DO_CHECK,            /* SM2 check the shared key. */
 
-    CRYPT_CTRL_SET_ED448_HASH_METHOD,   /**< ed448 Set the hash method. */
-    CRYPT_CTRL_SET_ED448_CONTEXT,       /**< ed448 Set the context. */
-    CRYPT_CTRL_SET_ED448_PREHASH,       /**< ed448 Set the prehash mode. */
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
 } CRYPT_PkeyCtrl;

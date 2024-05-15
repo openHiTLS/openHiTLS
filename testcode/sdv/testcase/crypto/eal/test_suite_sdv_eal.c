@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "eal_md_local.h"
@@ -89,9 +90,7 @@ static bool IsPkeyAlgIdValid(int id)
         CRYPT_PKEY_DH,
         CRYPT_PKEY_ECDSA,
         CRYPT_PKEY_ECDH,
-        CRYPT_PKEY_SM2,
-        CRYPT_PKEY_ED448,
-        CRYPT_PKEY_X448,
+        CRYPT_PKEY_SM2
     };
     int algIdCnt = sizeof(algList) / sizeof(int);
     for (int i = 0; i < algIdCnt; i++) {

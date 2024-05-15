@@ -1,8 +1,9 @@
-/**
- * @defgroup    modes_ecb crypt_modes_ecb.h
- * @ingroup     crypto
- * @copyright   Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
- * @brief       modes Handle type
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #ifndef CRYPT_MODES_ECB_H

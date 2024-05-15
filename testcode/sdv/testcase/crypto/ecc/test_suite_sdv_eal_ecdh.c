@@ -5,8 +5,8 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 /* INCLUDE_BASE test_suite_sdv_eal_ecc */
+
 /* BEGIN_HEADER */
 /* END_HEADER */
 #define ECDH_MAX_BIT_LEN 521
@@ -161,8 +161,7 @@ exit:
  *       (3) opt = CRYPT_CTRL_SET_ECC_POINT_FORMAT, expected result 4
  *       (4) opt = CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, expected result 5
  *       (5) opt = CRYPT_CTRL_SET_SM2_USER_ID, expected result 6
- *       (6) opt = CRYPT_CTRL_SET_ED448_HASH_METHOD, expected result 7
- *       (7) opt = CRYPT_CTRL_SET_RSA_PADDING, expected result 8
+ *       (6) opt = CRYPT_CTRL_SET_RSA_PADDING, expected result 8
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
@@ -170,8 +169,7 @@ exit:
  *    4. CRYPT_SUCCESS
  *    5. CRYPT_SUCCESS
  *    6. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
- *    7. CRYPT_EAL_ALG_NOT_SUPPORT
- *    8. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
+ *    7. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDH_CTRL_API_TC001(int type, int expect)

@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <limits.h>
 #include <pthread.h>
 #include "securec.h"

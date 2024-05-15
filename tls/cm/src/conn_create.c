@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_log_internal.h"

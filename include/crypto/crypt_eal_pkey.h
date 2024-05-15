@@ -39,7 +39,6 @@ typedef struct {
         CRYPT_DhPub dhPub;   /**< DH public key structure */
         CRYPT_EccPub eccPub; /**< ECC public key structure */
         CRYPT_Curve25519Pub curve25519Pub; /**< ed25519/x25519 public key structure */
-        CRYPT_Curve448Pub curve448Pub; /**< ed448/x448 public key structure */
     }key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
@@ -56,7 +55,6 @@ typedef struct {
         CRYPT_DhPrv  dhPrv;  /**< DH private key structure */
         CRYPT_EccPrv eccPrv; /**< ECC private key structure */
         CRYPT_Curve25519Prv curve25519Prv; /**< ed25519/x25519 private key structure */
-        CRYPT_Curve448Prv curve448Prv; /**< ed448/x448 private key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
 
@@ -95,6 +93,7 @@ typedef struct EAL_PkeyCtx CRYPT_EAL_PkeyCtx;
 bool CRYPT_EAL_PkeyIsValidAlgId(CRYPT_PKEY_AlgId id);
 
 /* Pkey external interface */
+
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Create an asymmetric key pair structure.

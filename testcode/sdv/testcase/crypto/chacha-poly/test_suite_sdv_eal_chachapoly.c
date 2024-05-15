@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "crypt_errno.h"
 #include "crypt_eal_cipher.h"
 #include "bsl_sal.h"

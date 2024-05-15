@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <stdint.h>
 #include "securec.h"
 #include "bsl_sal.h"
@@ -211,9 +212,6 @@ static HITLS_NamedGroup GetCurveNameByKey(const CRYPT_EAL_PkeyCtx *key)
     CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(key);
     if (cid == CRYPT_PKEY_X25519) {
         return HITLS_EC_GROUP_CURVE25519;
-    }
-    if (cid == CRYPT_PKEY_X448) {
-        return HITLS_EC_GROUP_CURVE448;
     }
     if (cid != CRYPT_PKEY_ECDSA && cid != CRYPT_PKEY_ECDH) {
         return HITLS_NAMED_GROUP_BUTT;

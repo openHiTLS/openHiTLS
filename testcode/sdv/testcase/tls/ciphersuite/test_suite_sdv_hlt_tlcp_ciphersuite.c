@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <unistd.h>
 #include <semaphore.h>
 #include "securec.h"

@@ -6,7 +6,6 @@
 #  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
 #  for license information.
 # ---------------------------------------------------------------------------------------------
-
 import sys
 sys.dont_write_bytecode = True
 import json

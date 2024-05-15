@@ -5,7 +5,9 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
+
 #include "frame_tls.h"
 #include "frame_link.h"
 #include "session.h"

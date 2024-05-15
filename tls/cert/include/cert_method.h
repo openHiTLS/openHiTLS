@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CERT_METHOD_H
 #define CERT_METHOD_H
 

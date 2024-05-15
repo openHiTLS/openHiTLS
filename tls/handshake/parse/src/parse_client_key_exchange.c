@@ -44,6 +44,7 @@ static int32_t ParseClientKxMsgEcdhe(TLS_Ctx *ctx, const uint8_t *data, uint32_t
 
     uint32_t bufOffset = 0;
     /* Compatible with OpenSSL, add 3 bytes to the client key exchange */
+
 #ifndef HITLS_NO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
         // Curve type + Curve ID + Public key length

@@ -5,7 +5,6 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 #ifdef HITLS_CRYPTO_GCM
 .arch    armv8-a+crypto
 .text

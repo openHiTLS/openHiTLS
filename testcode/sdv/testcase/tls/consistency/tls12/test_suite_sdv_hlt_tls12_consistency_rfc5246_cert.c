@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_tls12_consistency_rfc5246 */
 /* END_HEADER */

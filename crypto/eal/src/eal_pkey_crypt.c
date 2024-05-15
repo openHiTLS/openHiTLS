@@ -87,9 +87,6 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
         case CRYPT_PKEY_SM2:
             hashId = CRYPT_MD_SM3;
             break;
-        case CRYPT_PKEY_ED448:
-            hashId = CRYPT_MD_SHAKE256;
-            break;
         default:
             return CRYPT_NOT_SUPPORT;
     }

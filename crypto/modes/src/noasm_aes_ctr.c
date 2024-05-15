@@ -6,7 +6,6 @@
  *---------------------------------------------------------------------------------------------
  */
 
-
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CTR)
 

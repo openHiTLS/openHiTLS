@@ -75,4 +75,4 @@ make && make install
 
 ## 贡献
 
-如果您有意为openHiTLS社区做贡献，请先在[CLA签署](https://120.46.86.252/cla)平台上完成CLA签署。
+如果您有意为openHiTLS社区做贡献，请先在[CLA签署](https://cla.openhitls.net)平台上完成CLA签署。

@@ -6,7 +6,6 @@
 #  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
 #  for license information.
 # ---------------------------------------------------------------------------------------------
-
 """
 Customize the openHiTLS build.
 Generate the modules.cmake file based on command line arguments and configuration files.

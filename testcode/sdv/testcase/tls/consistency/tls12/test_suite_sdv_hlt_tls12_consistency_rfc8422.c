@@ -8,6 +8,7 @@
 
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_tls12_consistency_rfc5246 */
+
 #include <stdio.h>
 #include "stub_replace.h"
 #include "hitls.h"

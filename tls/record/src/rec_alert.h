@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef REC_ALERT_H
 #define REC_ALERT_H
 

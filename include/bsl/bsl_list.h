@@ -24,6 +24,7 @@ extern "C" {
 #endif
 
 /* for handling ASN.1 SET OF type */
+
 /**
  * @ingroup bsl_list
  *

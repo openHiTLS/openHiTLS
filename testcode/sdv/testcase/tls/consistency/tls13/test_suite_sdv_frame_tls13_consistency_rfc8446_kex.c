@@ -5,7 +5,9 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
+
 #include "hitls_error.h"
 #include "tls.h"
 #include "change_cipher_spec.h"

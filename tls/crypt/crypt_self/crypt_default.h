@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CRYPT_DEFAULT_H
 #define CRYPT_DEFAULT_H
 #include <stdint.h>

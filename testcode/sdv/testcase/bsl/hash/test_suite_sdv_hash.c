@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include <string.h>
 #include "securec.h"

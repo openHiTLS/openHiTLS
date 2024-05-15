@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef ASM_AES_CCM_H
 #define ASM_AES_CCM_H
 

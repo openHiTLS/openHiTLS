@@ -5,7 +5,9 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include <stdint.h>
 #include "config.h"

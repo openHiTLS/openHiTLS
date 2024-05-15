@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef HS_VERIFY_H
 #define HS_VERIFY_H
 

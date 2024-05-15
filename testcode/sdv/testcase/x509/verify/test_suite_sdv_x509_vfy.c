@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "bsl_sal.h"
 #include "securec.h"
 #include "bsl_type.h"

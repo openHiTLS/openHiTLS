@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <stdint.h>
 #include "securec.h"
 #include "bsl_sal.h"

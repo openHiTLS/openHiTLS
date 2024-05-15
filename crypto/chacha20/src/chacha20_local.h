@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CHACHA20_LOCAL_H
 #define CHACHA20_LOCAL_H
 

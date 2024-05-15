@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
 #include "tls_binlog_id.h"

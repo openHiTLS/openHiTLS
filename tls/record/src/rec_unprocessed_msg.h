@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef REC_UNPROCESSED_MSG_H
 #define REC_UNPROCESSED_MSG_H
 

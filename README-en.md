@@ -72,4 +72,4 @@ make && make install
 
 ## Contribution
 
-If you plan to contribute to the openHiTLS community, please visit the link [CLA Signing](https://120.46.86.252/cla)  to complete CLA signing.
+If you plan to contribute to the openHiTLS community, please visit the link [CLA Signing](https://cla.openhitls.net)  to complete CLA signing.

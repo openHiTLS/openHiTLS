@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef BSL_LIST_INTERNAL_H
 #define BSL_LIST_INTERNAL_H
 

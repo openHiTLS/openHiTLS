@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CHANGE_CIPHER_SPEC_H
 #define CHANGE_CIPHER_SPEC_H
 

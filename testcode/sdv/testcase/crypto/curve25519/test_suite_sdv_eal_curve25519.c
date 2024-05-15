@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>

@@ -489,6 +489,7 @@ SHA1CryptoExt:
     sub     x1, x1, #64                 // update the remaining address length.
 
     /* little endian inversion */
+
 #ifndef   HITLS_BIG_ENDIAN
     rev32     v23.16b, v23.16b
     rev32     v24.16b, v24.16b

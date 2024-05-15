@@ -46,7 +46,6 @@ static int32_t GetGroupSecbits(HITLS_NamedGroup groupId)
         case HITLS_EC_GROUP_SECP384R1:
         case HITLS_EC_GROUP_BRAINPOOLP384R1:
         case HITLS_FF_DHE_8192:
-        case HITLS_EC_GROUP_CURVE448:
             return HITLS_SECURITY_LEVEL_FOUR_SECBITS;
         case HITLS_EC_GROUP_SECP521R1:
         case HITLS_EC_GROUP_BRAINPOOLP512R1:
@@ -78,7 +77,6 @@ static int32_t GetSigalgSecbits(HITLS_SignHashAlgo signScheme)
         case CERT_SIG_SCHEME_RSA_PKCS1_SHA384:
         case CERT_SIG_SCHEME_DSA_SHA384:
         case CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384:
-        case CERT_SIG_SCHEME_ED448:
             return HITLS_SECURITY_LEVEL_FOUR_SECBITS;
         case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512:
         case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512:

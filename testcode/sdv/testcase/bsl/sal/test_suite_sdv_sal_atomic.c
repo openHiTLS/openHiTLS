@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <unistd.h>
 #include <pthread.h>
 #include "bsl_sal.h"

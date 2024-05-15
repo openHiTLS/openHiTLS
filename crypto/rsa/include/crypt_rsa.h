@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CRYPT_RSA_H
 #define CRYPT_RSA_H
 
@@ -32,6 +33,7 @@ typedef struct RSA_Para CRYPT_RSA_Para;
 
 
 /* RSA method */
+
 /**
  * @ingroup rsa
  * @brief Allocate rsa context memory space.

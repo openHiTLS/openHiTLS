@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef BN_BINCAL_H
 #define BN_BINCAL_H
 

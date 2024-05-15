@@ -5,7 +5,6 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 /* Check the dependency of the configuration features. The check rules are as follows:
  * Non-deterministic feature dependency needs to be checked.
  * For example, feature a depends on feature b or c:

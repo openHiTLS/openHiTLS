@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <string.h>
 #include <stdio.h>
 #include "bsl_errno.h"

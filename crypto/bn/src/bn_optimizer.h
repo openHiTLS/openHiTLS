@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef BN_OPTIMIZER_H
 #define BN_OPTIMIZER_H
 

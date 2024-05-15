@@ -11,6 +11,7 @@
  * @ingroup hitls
  * @brief  Algorithm related interfaces to be registered
  */
+
 #ifndef HITLS_CRYPT_TYPE_H
 #define HITLS_CRYPT_TYPE_H
 
@@ -148,7 +149,6 @@ typedef enum {
     HITLS_SIGN_ECDSA,
     HITLS_SIGN_RSA_PSS_RSAE,
     HITLS_SIGN_ED25519,
-    HITLS_SIGN_ED448,
     HITLS_SIGN_RSA_PSS_PSS,
     HITLS_SIGN_SM2,
     HITLS_SIGN_BUTT = 255
@@ -175,7 +175,6 @@ typedef enum {
     HITLS_EC_GROUP_BRAINPOOLP384R1 = 27,
     HITLS_EC_GROUP_BRAINPOOLP512R1 = 28,
     HITLS_EC_GROUP_CURVE25519 = 29,
-    HITLS_EC_GROUP_CURVE448 = 30,
     HITLS_EC_GROUP_SM2 = 41,
     HITLS_FF_DHE_2048 = 256,
     HITLS_FF_DHE_3072 = 257,

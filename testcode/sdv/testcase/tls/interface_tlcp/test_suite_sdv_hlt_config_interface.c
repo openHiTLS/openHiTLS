@@ -5,7 +5,9 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
+
 #include <stdlib.h>
 #include <semaphore.h>
 #include <unistd.h>

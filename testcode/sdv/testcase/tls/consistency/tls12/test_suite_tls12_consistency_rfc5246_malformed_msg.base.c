@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <semaphore.h>
 #include "securec.h"
 #include "hitls_error.h"

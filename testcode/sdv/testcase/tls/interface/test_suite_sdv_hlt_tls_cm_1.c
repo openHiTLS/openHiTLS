@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "securec.h"
 #include "hlt.h"
 #include "hitls_error.h"

@@ -1,18 +1,9 @@
-/* Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
- * @file sha1_x86_64.S
- * Description: SHA1 algorithm x86_64 assembly implementation
- * Author: wujiajie
- * Create: 2022-10-19
- * Modification History
- *  DATE        NAME             DESCRIPTION
- *  --------------------------------------------------------------------------
- *  2022-10-19  wujiajie      implementation of sha1 algorithm x86_64 assembly
- *  2022-10-20  wujiajie      x86_64 optimize 62% -> 72%
- *  2022-10-21  wujiajie      x86_64 optimize 72% -> 77%
- *  2022-10-26  wujiajie      x86_64 optimize 77% -> 82%
- *  2022-10-27  wujiajie      x86_64 optimize 82% -> 92%
- *  2022-10-28  wujiajie      x86_64 optimize 92% -> 95%
- *  2022-10-29  wujiajie      x86_64 optimize 95% -> 96%
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include "hitls_build.h"

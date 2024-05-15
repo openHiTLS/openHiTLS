@@ -6,7 +6,6 @@
  *---------------------------------------------------------------------------------------------
  */
 
-
 #include "bsl_init.h"
 #include "bsl_err_internal.h"
 #include "crypt_method.h"

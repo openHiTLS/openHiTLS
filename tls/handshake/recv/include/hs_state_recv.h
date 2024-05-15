@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef HS_STATE_RECV_H
 #define HS_STATE_RECV_H
 

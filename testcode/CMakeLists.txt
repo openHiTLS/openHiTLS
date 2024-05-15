@@ -4,7 +4,6 @@
 #  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
 #  for license information.
 # ---------------------------------------------------------------------------------------------
-
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 PROJECT(openHiTLS_TEST)

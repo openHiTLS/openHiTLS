@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <stdbool.h>
 #include "securec.h"
 #include "bsl_bytes.h"

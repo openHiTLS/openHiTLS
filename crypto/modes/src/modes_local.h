@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef MODES_LOCAL_H
 #define MODES_LOCAL_H
 

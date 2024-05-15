@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CRYPT_CHACHA20_H
 #define CRYPT_CHACHA20_H
 

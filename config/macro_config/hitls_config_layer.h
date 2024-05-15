@@ -5,7 +5,6 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 /* Derivation of configuration features.
  * The derivation type (rule) and sequence are as follows:
  * 1. Parent features derive child features.
@@ -217,9 +216,6 @@
     #ifndef HITLS_CRYPTO_SM2
         #define HITLS_CRYPTO_SM2
     #endif
-    #ifndef HITLS_CRYPTO_CURVE448
-        #define HITLS_CRYPTO_CURVE448
-    #endif
     #ifndef HITLS_CRYPTO_CURVE25519
         #define HITLS_CRYPTO_CURVE25519
     #endif
@@ -287,26 +283,6 @@
     #endif
 #endif
 
-#ifdef HITLS_CRYPTO_CURVE448
-    #ifndef HITLS_CRYPTO_X448
-        #define HITLS_CRYPTO_X448
-    #endif
-    #ifndef HITLS_CRYPTO_ED448
-        #define HITLS_CRYPTO_ED448
-    #endif
-#endif
-
-
-#if defined(HITLS_CRYPTO_ED448) && !defined(HITLS_CRYPTO_SHA3)
-    #define HITLS_CRYPTO_SHA3
-#endif
-
-#if defined(HITLS_CRYPTO_X448) || defined(HITLS_CRYPTO_ED448)
-    #ifndef HITLS_CRYPTO_CURVE448
-        #define HITLS_CRYPTO_CURVE448
-    #endif
-#endif
-
 #ifdef HITLS_CRYPTO_SM2
     #ifndef HITLS_CRYPTO_SM2_SIGN
         #define HITLS_CRYPTO_SM2_SIGN
@@ -365,7 +341,7 @@
 
 #if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_CURVE25519) || defined(HITLS_CRYPTO_RSA) || \
     defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_ECDH) ||      \
-    defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_CURVE448)
+    defined(HITLS_CRYPTO_SM2)
     #ifndef HITLS_CRYPTO_PKEY
         #define HITLS_CRYPTO_PKEY
     #endif

@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef REC_WRITE_H
 #define REC_WRITE_H
 

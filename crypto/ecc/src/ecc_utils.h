@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef ECC_UTILS_H
 #define ECC_UTILS_H
 

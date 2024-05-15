@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef HITLS_X509_ADAPT_LOCAL_H
 #define HITLS_X509_ADAPT_LOCAL_H
 

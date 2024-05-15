@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CRYPT_HMAC_H
 #define CRYPT_HMAC_H
 

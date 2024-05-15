@@ -5,7 +5,6 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
  /**
  * @defgroup hitls_crypt_init
  * @ingroup hitls

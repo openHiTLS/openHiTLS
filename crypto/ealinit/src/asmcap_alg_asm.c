@@ -4,9 +4,7 @@
  *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
  *  for license information.
  *---------------------------------------------------------------------------------------------
- */
- 
- 
+ */ 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ASM_CHECK
  

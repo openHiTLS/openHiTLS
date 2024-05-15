@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef CRYPT_ECDSA_H
 #define CRYPT_ECDSA_H
 

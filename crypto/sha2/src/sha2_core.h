@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef SHA2_CORE_H
 #define SHA2_CORE_H
 #include <stdint.h>

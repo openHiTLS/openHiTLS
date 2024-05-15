@@ -10,6 +10,7 @@
  * @defgroup list_base Raw bidirectional linked list
  * @ingroup bsl
  */
+
 #ifndef LIST_BASE_H
 #define LIST_BASE_H
 

@@ -6,7 +6,6 @@
  *---------------------------------------------------------------------------------------------
  */
 
-
 #include "securec.h"
 #include "bsl_bytes.h"
 #include "bsl_sal.h"
@@ -780,6 +779,7 @@ static int32_t ParseClientKxMsg(FRAME_Type *frameType, const uint8_t *buffer, ui
     switch (frameType->keyExType) {
         case HITLS_KEY_EXCH_ECDHE:
             /* Three bytes are added to the client key exchange. */
+
 #ifndef HITLS_NO_TLCP11
             if (frameType->versionType == HITLS_VERSION_TLCP11) {
                 // Curve type + Curve ID + Public key length

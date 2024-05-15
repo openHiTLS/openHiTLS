@@ -5,9 +5,10 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 /* INCLUDE_BASE test_suite_sdv_eal_sm2 */
+
 /* BEGIN_HEADER */
+
 #include "eal_pkey_local.h"
 
 #define SM2_SIGN_MAX_LEN 72
@@ -549,13 +550,11 @@ exit:
  *       (3) userId != null, idLen = 8192, and other parameters are valid, expected result 4
  *       (4) userId != null, idLen = 8191, and other parameters are valid, expected result 5
  *       (5) userId != null, idLen = 1, and other parameters are valid, expected result 6
- *    3. Call the CRYPT_EAL_PkeyCtrl, opt = CRYPT_CTRL_SET_ED448_CONTEXT, expected result 7
  * @expect
  *    1. Success, and context is not NULL.
  *    2. CRYPT_NULL_INPUT
  *    3-4. CRYPT_ECC_PKEY_ERR_CTRL_LEN
  *    5-6. CRYPT_SUCCESS
- *    7. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM2_CTRL_API_TC001(void)
@@ -572,9 +571,6 @@ void SDV_CRYPTO_SM2_CTRL_API_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, idLen + 1) == CRYPT_ECC_PKEY_ERR_CTRL_LEN);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, idLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, 1) == CRYPT_SUCCESS);
-    ASSERT_TRUE(
-        CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_ED448_CONTEXT, userId, 1) == CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
-
 exit:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }

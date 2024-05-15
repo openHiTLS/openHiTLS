@@ -7,6 +7,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <pthread.h>
 #include "securec.h"
 #include "crypt_eal_kdf.h"

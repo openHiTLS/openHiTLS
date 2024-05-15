@@ -206,9 +206,6 @@ uint32_t HS_GetNamedCurvePubkeyLen(HITLS_NamedGroup namedcurve)
         case HITLS_EC_GROUP_CURVE25519:
             len = 32u; /* 32 elliptic curve X25519 public key length */
             break;
-        case HITLS_EC_GROUP_CURVE448:
-            len = 56u; /* 56 elliptic curve X448 public key length */
-            break;
         case HITLS_EC_GROUP_SECP256R1:
         case HITLS_EC_GROUP_BRAINPOOLP256R1:
             len = 65u; /* (32 * 2) + 1 elliptic curve SECP256R1,brainpoolP256r1 public key length */

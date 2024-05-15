@@ -209,7 +209,7 @@ typedef enum {
         HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
         HITLS_DHE_DSS_WITH_AES_128_GCM_SHA256, HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, x448
+    groups:secp256r1, secp384r1, secp521r1, x25519
     Extended Master Key: Not Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -265,7 +265,7 @@ HITLS_Config *HITLS_CFG_NewTLCPConfig(void);
         HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
         HITLS_DHE_DSS_WITH_AES_128_GCM_SHA256, HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, x448
+    groups:secp256r1, secp384r1, secp521r1, x25519
     Extended Master Key: Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -289,7 +289,7 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void);
     Version number: HITLS_VERSION_TLS13
     Algorithm suite: HITLS_AES_128_GCM_SHA256, HITLS_CHACHA20_POLY1305_SHA256, HITLS_AES_128_GCM_SHA256
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, x448
+    groups:secp256r1, secp384r1, secp521r1, x25519
     Extended Master Key: Enabled
     Signature algorithm: rsa, ecdsa, eddsa
     Dual-ended check: Disabled
@@ -321,7 +321,7 @@ HITLS_Config *HITLS_CFG_NewTLS13Config(void);
             HITLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, HITLS_DHE_RSA_WITH_AES_128_CBC_SHA,
             HITLS_RSA_WITH_AES_256_CBC_SHA, HITLS_RSA_WITH_AES_128_CBC_SHA,
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, x448, brainpool256r1, brainpool384r1, brainpool521r1
+    groups:secp256r1, secp384r1, secp521r1, x25519, brainpool256r1, brainpool384r1, brainpool521r1
     Extended Master Key: Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -350,7 +350,7 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void);
             HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, HITLS_DHE_DSS_WITH_AES_128_GCM_SHA256,
             HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, x448, brainpool256r1, brainpool384r1, brainpool521r1
+    groups:secp256r1, secp384r1, secp521r1, x25519, brainpool256r1, brainpool384r1, brainpool521r1
     Extended Master Key: Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled

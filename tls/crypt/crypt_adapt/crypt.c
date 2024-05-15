@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #include <stddef.h>
 #include "securec.h"
 #include "tls_binlog_id.h"

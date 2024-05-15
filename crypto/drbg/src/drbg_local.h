@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef DRBG_LOCAL_H
 #define DRBG_LOCAL_H
 

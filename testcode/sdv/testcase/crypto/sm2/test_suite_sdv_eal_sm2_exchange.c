@@ -5,9 +5,10 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
-
 /* INCLUDE_BASE test_suite_sdv_eal_sm2 */
+
 /* BEGIN_HEADER */
+
 #include "eal_pkey_local.h"
 /* END_HEADER */
 

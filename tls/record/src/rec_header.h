@@ -5,6 +5,7 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 #ifndef RECORD_HEADER_H
 #define RECORD_HEADER_H
 

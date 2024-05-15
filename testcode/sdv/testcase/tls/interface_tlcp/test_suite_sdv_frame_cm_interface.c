@@ -5,7 +5,9 @@
  *  for license information.
  *---------------------------------------------------------------------------------------------
  */
+
 /* BEGIN_HEADER */
+
 #include <stdlib.h>
 #include <unistd.h>
 #include "securec.h"
@@ -3063,15 +3065,6 @@ void UT_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(int version)
         uint16_t cipherSuite = HITLS_RSA_WITH_AES_256_CBC_SHA;
         ASSERT_EQ(HITLS_CFG_SetCipherSuites(config_c, &cipherSuite, 1), HITLS_SUCCESS);
     }
-    if (version == HITLS_VERSION_TLS13) {
-        uint16_t cipherSuite = HITLS_AES_128_GCM_SHA256;
-        ASSERT_EQ(HITLS_CFG_SetCipherSuites(config_c, &cipherSuite, 1), HITLS_SUCCESS);
-        HITLS_CFG_SetGroups(config_c, groups_c, sizeof(groups_c) / sizeof(uint16_t));
-        HITLS_CFG_SetSignature(config_c, signAlgs_c, sizeof(signAlgs_c) / sizeof(uint16_t));
-        HITLS_CFG_SetGroups(config_s, groups_s, sizeof(groups_s) / sizeof(uint16_t));
-        HITLS_CFG_SetSignature(config_s, signAlgs_s, sizeof(signAlgs_s) / sizeof(uint16_t));
-    }
-
     FRAME_LinkObj *client = FRAME_CreateLink(config_c, BSL_UIO_TCP);
     FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
