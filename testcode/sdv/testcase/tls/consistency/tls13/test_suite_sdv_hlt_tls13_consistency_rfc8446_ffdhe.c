@@ -360,55 +360,48 @@ exit:
 *   4. The connection is set up successfully and data is read and written successfully.
 @ */
 /* BEGIN_CASE */
-void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC001(int ClientType, int ServerType, int group)
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC001(int group)
 {
-    HLT_Tls_Res *serverRes = NULL;
-    HLT_Tls_Res *clientRes = NULL;
-    HLT_Process *localProcess = NULL;
-    HLT_Process *remoteProcess = NULL;
-    HLT_Ctx_Config *serverConfig = NULL;
-    HLT_Ctx_Config *clientConfig = NULL;
-    char *servergroup;
-    char *clientgroup;
+    FRAME_Init();
+    int32_t ret;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
 
-    localProcess = HLT_InitLocalProcess(ClientType);
-    ASSERT_TRUE(localProcess != NULL);
-    remoteProcess = HLT_LinkRemoteProcess(ServerType, TCP, PORT, false);
-    ASSERT_TRUE(remoteProcess != NULL);
+    uint16_t groups = group;
+    uint16_t clientGroups[2] = {HITLS_EC_GROUP_SECP256R1};
+    clientGroups[1] = group;
+    HITLS_CFG_SetGroups(c_config, clientGroups, 2);
+    HITLS_CFG_SetGroups(s_config, &groups, 1);
 
-    // Apply for and initialize the TLS1.3 configuration file.
-    serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
-    ASSERT_TRUE(serverConfig != NULL);
-    clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
-    ASSERT_TRUE(clientConfig != NULL);
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
 
-    // Configure the client and server to support ffdhe2048, and set the client to ffdhe2048 as the second supported
-    // group.
-    GetStrGroup(ServerType, group, &servergroup);
-    HRR_ClientGroupSetInfo(ClientType, group, &clientgroup);
+    ret = FRAME_CreateConnection(client, server, false, HS_STATE_BUTT);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, group);
 
-    HLT_SetGroups(serverConfig, servergroup);
-    HLT_SetGroups(clientConfig, clientgroup);
-
-    // Establish a connection and read and write data.
-    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
-    ASSERT_TRUE(serverRes != NULL);
-
-    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
-    ASSERT_TRUE(clientRes != NULL);
-    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
-
-    HITLS_Ctx *clientTlsCtx = clientRes->ssl;
-    ASSERT_EQ(clientTlsCtx->negotiatedInfo.negotiatedGroup, group);
+    uint8_t data[] = "Hello World";
+    ASSERT_TRUE(HITLS_Write(client->ssl, data, strlen("Hello World")) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
 
     uint8_t readBuf[MAX_BUF_SIZE] = {0};
-    uint32_t readLen;
-    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, clientRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
-    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, serverRes, readBuf, sizeof(readBuf), &readLen) == 0);
+    uint32_t readLen = 0;
+    ASSERT_TRUE(HITLS_Read(server->ssl, readBuf, MAX_BUF_SIZE, &readLen) == HITLS_SUCCESS);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 exit:
-    HLT_FreeAllProcess();
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */
 
@@ -431,64 +424,54 @@ exit:
 *   5. The connection is successfully set up, and data is successfully read and written.
 @ */
 /* BEGIN_CASE */
-void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC002(int ClientType, int ServerType, int group)
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC002(int group)
 {
-    HLT_Tls_Res *serverRes = NULL;
-    HLT_Tls_Res *clientRes = NULL;
-    HLT_Process *localProcess = NULL;
-    HLT_Process *remoteProcess = NULL;
-    HLT_Ctx_Config *serverConfig = NULL;
-    HLT_Ctx_Config *clientConfig = NULL;
-    char *servergroup;
-    char *clientgroup;
+    FRAME_Init();
+    int32_t ret;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
 
-    localProcess = HLT_InitLocalProcess(ClientType);
-    ASSERT_TRUE(localProcess != NULL);
-    remoteProcess = HLT_LinkRemoteProcess(ServerType, TCP, PORT, false);
-    ASSERT_TRUE(remoteProcess != NULL);
+    uint16_t cipherSuite = HITLS_AES_128_GCM_SHA256;
+    HITLS_CFG_SetCipherSuites(c_config, &cipherSuite, 1);
+    HITLS_CFG_SetCipherSuites(s_config, &cipherSuite, 1);
+    HITLS_CFG_SetKeyExchMode(c_config, TLS13_KE_MODE_PSK_WITH_DHE);
+    HITLS_CFG_SetKeyExchMode(s_config, TLS13_KE_MODE_PSK_WITH_DHE);
+    uint16_t groups = group;
+    HITLS_CFG_SetGroups(c_config, &groups, 1);
+    HITLS_CFG_SetGroups(s_config, &groups, 1);
+    HITLS_CFG_SetPskClientCallback(c_config, ExampleClientCb);
+    HITLS_CFG_SetPskServerCallback(s_config, ExampleServerCb);
 
-    // Apply for and initialize the TLS1.3 configuration file.
-    serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
-    ASSERT_TRUE(serverConfig != NULL);
-    clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
-    ASSERT_TRUE(clientConfig != NULL);
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
 
-    // Set the PSK mode to psk_with_dhe.
-    HLT_SetKeyExchMode(serverConfig, TLS13_KE_MODE_PSK_WITH_DHE);
-    HLT_SetKeyExchMode(clientConfig, TLS13_KE_MODE_PSK_WITH_DHE);
+    ret = FRAME_CreateConnection(client, server, false, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, group);
+    ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode , TLS13_KE_MODE_PSK_WITH_DHE);
 
-    // Configure the client and server to support FFDHE2048.
-    GetStrGroup(ClientType, group, &clientgroup);
-    GetStrGroup(ServerType, group, &servergroup);
-
-    memcpy_s(clientConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
-    memcpy_s(serverConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
-
-    HLT_SetCipherSuites(serverConfig, "HITLS_AES_128_GCM_SHA256");
-    HLT_SetCipherSuites(clientConfig, "HITLS_AES_128_GCM_SHA256");
-    HLT_SetGroups(clientConfig, clientgroup);
-    HLT_SetGroups(serverConfig, servergroup);
-
-    // Establish a connection and read and write data.
-    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
-    ASSERT_TRUE(serverRes != NULL);
-
-    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
-    ASSERT_TRUE(clientRes != NULL);
-    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
-
-    HITLS_Ctx *clientTlsCtx = clientRes->ssl;
-    ASSERT_EQ(clientTlsCtx->negotiatedInfo.negotiatedGroup , group);
-    ASSERT_EQ(clientTlsCtx->negotiatedInfo.tls13BasicKeyExMode , TLS13_KE_MODE_PSK_WITH_DHE);
+    uint8_t data[] = "Hello World";
+    ASSERT_TRUE(HITLS_Write(client->ssl, data, strlen("Hello World")) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
 
     uint8_t readBuf[MAX_BUF_SIZE] = {0};
-    uint32_t readLen;
-    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, clientRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
-    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, serverRes, readBuf, sizeof(readBuf), &readLen) == 0);
+    uint32_t readLen = 0;
+    ASSERT_TRUE(HITLS_Read(server->ssl, readBuf, MAX_BUF_SIZE, &readLen) == HITLS_SUCCESS);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 exit:
-    HLT_FreeAllProcess();
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */
 
@@ -513,65 +496,54 @@ exit:
 *   6. The connection is successfully set up, and data is successfully read and written.
 @ */
 /* BEGIN_CASE */
-void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC003(int ClientType, int ServerType, int group)
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC003(int group)
 {
-    HLT_Tls_Res *serverRes = NULL;
-    HLT_Tls_Res *clientRes = NULL;
-    HLT_Process *localProcess = NULL;
-    HLT_Process *remoteProcess = NULL;
-    HLT_Ctx_Config *serverConfig = NULL;
-    HLT_Ctx_Config *clientConfig = NULL;
-    char *servergroup;
-    char *clientgroup;
+    FRAME_Init();
+    int32_t ret;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
 
-    localProcess = HLT_InitLocalProcess(ClientType);
-    ASSERT_TRUE(localProcess != NULL);
-    remoteProcess = HLT_LinkRemoteProcess(ServerType, TCP, PORT, false);
-    ASSERT_TRUE(remoteProcess != NULL);
+    uint16_t cipherSuite = HITLS_AES_128_GCM_SHA256;
+    HITLS_CFG_SetCipherSuites(c_config, &cipherSuite, 1);
+    HITLS_CFG_SetCipherSuites(s_config, &cipherSuite, 1);
+    HITLS_CFG_SetKeyExchMode(c_config, TLS13_KE_MODE_PSK_ONLY);
+    HITLS_CFG_SetKeyExchMode(s_config, TLS13_KE_MODE_PSK_ONLY);
+    uint16_t groups = group;
+    HITLS_CFG_SetGroups(c_config, &groups, 1);
+    HITLS_CFG_SetGroups(s_config, &groups, 1);
+    ExampleSetPsk("12121212121212");
+    HITLS_CFG_SetPskClientCallback(c_config, ExampleClientCb);
 
-    // Apply for and initialize the TLS1.3 configuration file.
-    serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
-    ASSERT_TRUE(serverConfig != NULL);
-    clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
-    ASSERT_TRUE(clientConfig != NULL);
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
 
-    HLT_SetCipherSuites(serverConfig, "HITLS_AES_128_GCM_SHA256");
-    HLT_SetCipherSuites(clientConfig, "HITLS_AES_128_GCM_SHA256");
+    ret = FRAME_CreateConnection(client, server, false, HS_STATE_BUTT);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, group);
+    ASSERT_EQ(client->ssl->negotiatedInfo.tls13BasicKeyExMode , TLS13_CERT_AUTH_WITH_DHE);
 
-    GetStrGroup(ClientType, group, &clientgroup);
-    GetStrGroup(ServerType, group, &servergroup);
-
-    // Set the PSK only on the client.
-    memcpy_s(clientConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
-
-    // Set the PSK mode of the client and server to psk_with_only.
-    HLT_SetKeyExchMode(clientConfig, TLS13_KE_MODE_PSK_ONLY);
-    HLT_SetKeyExchMode(serverConfig, TLS13_KE_MODE_PSK_ONLY);
-
-    // Set the client and server to ffdhe2048.
-    HLT_SetGroups(serverConfig, servergroup);
-    HLT_SetGroups(clientConfig, clientgroup);
-
-    // Establish a connection and read and write data.
-    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
-    ASSERT_TRUE(serverRes != NULL);
-
-    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
-    ASSERT_TRUE(clientRes != NULL);
-    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
-
-    HITLS_Ctx *clientTlsCtx = clientRes->ssl;
-    ASSERT_EQ(clientTlsCtx->negotiatedInfo.negotiatedGroup , group);
-    ASSERT_EQ(clientTlsCtx->negotiatedInfo.tls13BasicKeyExMode , TLS13_CERT_AUTH_WITH_DHE);
+    uint8_t data[] = "Hello World";
+    ASSERT_TRUE(HITLS_Write(client->ssl, data, strlen("Hello World")) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
 
     uint8_t readBuf[MAX_BUF_SIZE] = {0};
-    uint32_t readLen;
-    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, clientRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
-    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, serverRes, readBuf, sizeof(readBuf), &readLen) == 0);
+    uint32_t readLen = 0;
+    ASSERT_TRUE(HITLS_Read(server->ssl, readBuf, MAX_BUF_SIZE, &readLen) == HITLS_SUCCESS);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 exit:
-    HLT_FreeAllProcess();
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */
 
