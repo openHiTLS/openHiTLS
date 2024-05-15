@@ -47,7 +47,7 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *a
     CRYPT_EAL_CipherCtx *ctx = NULL;
     uint32_t tagLen = tag->len;
     uint8_t result[DATA_MAX_LEN];
-    uint8_t tagResult[tagLen];
+    uint8_t tagResult[DATA_LEN];
     uint32_t outLen = DATA_MAX_LEN;
     ctx = CRYPT_EAL_CipherNewCtx(algId);
     ASSERT_TRUE(ctx != NULL);
