@@ -11,7 +11,9 @@
  * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
- */#ifndef ASM_AES_CCM_H
+ */
+
+#ifndef ASM_AES_CCM_H
 #define ASM_AES_CCM_H
 
 #include "hitls_build.h"

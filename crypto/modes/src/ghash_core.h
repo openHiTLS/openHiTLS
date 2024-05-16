@@ -11,7 +11,9 @@
  * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
- */#ifndef GHASH_CORE_H
+ */
+
+#ifndef GHASH_CORE_H
 #define GHASH_CORE_H
 
 #include "hitls_build.h"
