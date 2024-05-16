@@ -11,7 +11,9 @@
  * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
- */#ifndef CRYPT_EALINIT_H
+ */
+
+#ifndef CRYPT_EALINIT_H
 #define CRYPT_EALINIT_H
  
 #include "hitls_build.h"
