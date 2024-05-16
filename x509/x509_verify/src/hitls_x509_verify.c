@@ -359,7 +359,7 @@ int32_t HITLS_X509_CheckTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_ValidTime
         return HITLS_X509_ERR_TIME_FUTURE;
     }
 
-    if (validTime->isOptional == true) {
+    if ((validTime->flag & BSL_TIME_AFTER_TIME_ABSENT) != 0) {
         return HITLS_X509_SUCCESS;
     }
     

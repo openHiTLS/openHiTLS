@@ -324,6 +324,9 @@ int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HI
         return ret;
     }
 
+    if (before->buff[before->len - 1] == 'Z') {
+        time->flag |= BSL_TIME_BEFORE_TIME_IS_GMT;
+    }
     // crl after time is optional
     if (after->tag != 0) {
         ret = BSL_ASN1_DecodePrimitiveItem(after, &time->end);
@@ -331,8 +334,11 @@ int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HI
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+        if (after->buff[after->len - 1] == 'Z') {
+            time->flag |= BSL_TIME_AFTER_TIME_IS_GMT;
+        }
     } else {
-        time->isOptional = true;
+        time->flag |= BSL_TIME_AFTER_TIME_ABSENT;
     }
     return ret;
 }

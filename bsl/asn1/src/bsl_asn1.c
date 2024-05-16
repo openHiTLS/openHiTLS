@@ -231,7 +231,6 @@ static int32_t ParseTime(uint8_t tag, uint8_t *val, uint32_t len, BSL_TIME *deco
     if (ret != BSL_SUCCESS) {
         return ret;
     }
-    
     if (tag == BSL_ASN1_TAG_UTCTIME) {
         decodeData->year = DecodeAscllNum(&temp, 2);
         decodeData->year += 2000; // Currently supported after 2000 year
