@@ -47,7 +47,7 @@ void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
 
 
 /* BEGIN_CASE */
-void SDV_X509_CERT_PARSE_FUNC_TC001(char *path)
+void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
 {
     TestMemInit();
     BSL_LOG_BinLogFuncs func = {0};
@@ -57,7 +57,7 @@ void SDV_X509_CERT_PARSE_FUNC_TC001(char *path)
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
     HITLS_X509_Cert *cert = HITLS_X509_NewCert();
     ASSERT_TRUE(cert != NULL);
-    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path, cert);
+    int32_t ret = HITLS_X509_ParseFileCert(format, path, cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_FreeCert(cert);
@@ -65,7 +65,7 @@ exit:
 }
 /* END_CASE */
 
-static int32_t HITLS_ParseCertTest(char *path, HITLS_X509_Cert **cert)
+static int32_t HITLS_ParseCertTest(char *path, int32_t fromat, HITLS_X509_Cert **cert)
 {
     TestMemInit();
     BSL_LOG_BinLogFuncs func = {0};
@@ -82,7 +82,7 @@ static int32_t HITLS_ParseCertTest(char *path, HITLS_X509_Cert **cert)
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path, *cert);
+    ret = HITLS_X509_ParseFileCert(fromat, path, *cert);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -93,7 +93,7 @@ static int32_t HITLS_ParseCertTest(char *path, HITLS_X509_Cert **cert)
 void SDV_X509_CERT_PARSE_VERSION_FUNC_TC001(char *path, int version)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
 exit:
@@ -106,7 +106,7 @@ exit:
 void SDV_X509_CERT_PARSE_SERIALNUM_FUNC_TC001(char *path, Hex *serialNum)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cert->tbs.serialNum.tag, 2);
     ASSERT_COMPARE("serialNum", cert->tbs.serialNum.buff, cert->tbs.serialNum.len,
@@ -122,7 +122,7 @@ void SDV_X509_CERT_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(cert->tbs.signAlgId.algId, signAlg);
@@ -146,7 +146,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
     Hex *type6, int tag6, Hex *value6)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -193,7 +193,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC002(char *path, int count,
     Hex *type1, int tag1, Hex *value1)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -239,7 +239,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC003(char *path, int count,
     Hex *type5, int tag5, Hex *value5)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -284,7 +284,7 @@ exit:
 void SDV_X509_CERT_PARSE_TIME_FUNC_TC001(char *path)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_ERR_CHECK_TAG);
 
 exit:
@@ -298,7 +298,7 @@ void SDV_X509_CERT_PARSE_START_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(cert->tbs.validTime.start.year, year);
@@ -318,7 +318,7 @@ void SDV_X509_CERT_PARSE_END_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(cert->tbs.validTime.end.year, year);
@@ -343,7 +343,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC001(char *path, int count,
     Hex *type6, int tag6, Hex *value6)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -390,7 +390,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC002(char *path, int count,
     Hex *type1, int tag1, Hex *value1)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -436,7 +436,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003(char *path, int count,
     Hex *type5, int tag5, Hex *value5)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -482,7 +482,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     int expKuDigitailSign, int expKuCertSign, int expKuKeyAgreement)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     int32_t rawDataLen;
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen));
@@ -535,9 +535,9 @@ void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC001(char *path, char *path2)
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *cert2 = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ret = HITLS_ParseCertTest(path2, &cert2);
+    ret = HITLS_ParseCertTest(path2, BSL_PARSE_FORMAT_ASN1, &cert2);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_CheckSignature(cert2->tbs.ealPubKey, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen,
         &cert->signAlgId, &cert->signature);
@@ -555,7 +555,7 @@ void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *dest = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ret = HITLS_X509_DupCert(cert, &dest);
@@ -593,7 +593,7 @@ void SDV_X509_CERT_PARSE_EXTENSIONS_FUNC_TC001(char *path, int isCA, int maxPath
     int tag3, Hex *value3, int tag4, Hex *value4)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cert->tbs.ext.isCa, isCA);
     ASSERT_EQ(cert->tbs.ext.maxPathLen, maxPathLen);
@@ -627,7 +627,7 @@ void SDV_X509_CERT_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(cert->signAlgId.algId, signAlg);
@@ -646,7 +646,7 @@ exit:
 void SDV_X509_CERT_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBits)
 {
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest(path, &cert);
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cert->signature.len, buff->len);
     ASSERT_COMPARE("signature", cert->signature.buff, cert->signature.len, buff->x, buff->len);

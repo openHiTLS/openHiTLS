@@ -32,16 +32,16 @@ extern "C" {
  */
 #define HITLS_X509_RETURN_RET_IF(ret)            \
     do {                                         \
-        if (ret != 0) {                          \
-            BSL_ERR_PUSH_ERROR(ret);             \
-            return ret;                          \
+        if ((ret) != 0) {                          \
+            BSL_ERR_PUSH_ERROR((ret));             \
+            return (ret);                          \
         }                                        \
     } while (0)
 
 #define HITLS_X509_GOTO_RET_IF(ret)              \
     do {                                         \
-        if (ret != 0) {                          \
-            BSL_ERR_PUSH_ERROR(ret);             \
+        if ((ret) != 0) {                          \
+            BSL_ERR_PUSH_ERROR((ret));             \
             goto ERR;                            \
         }                                        \
     } while (0)
@@ -71,6 +71,8 @@ typedef struct _HITLS_X509_Asn1AlgId {
     };
 } HITLS_X509_Asn1AlgId;
 
+typedef int32_t (*HITLS_X509_Asn1Parse)(bool isCopy, bool isMange, BSL_Buffer *encode, void *out);
+
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRsaData, uint32_t *tbsRsaDataLen);
 
 // The public key  parsing is more complex, and the crypto module completes it
@@ -83,6 +85,11 @@ int32_t HITLS_X509_ParseExt(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *extEn
 int32_t HITLS_X509_ParseItemDefault(void *item, uint32_t len,  BSL_ASN1_List *list);
 
 int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HITLS_X509_ValidTime *time);
+
+int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, HITLS_X509_Asn1Parse parsefun, void *out);
+
+int32_t HITLS_X509_ParseUnkonw(BSL_Buffer *encode, bool isCopy, bool isCert, HITLS_X509_Asn1Parse parsefun,
+    void *out);
 
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);
 
