@@ -115,6 +115,8 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/include/tls
         ${openHiTLS_SRC}/bsl/log/include
         ${openHiTLS_SRC}/bsl/hash/include
+        ${openHiTLS_SRC}/bsl/base64/include
+        ${openHiTLS_SRC}/bsl/pem/include
         ${openHiTLS_SRC}/bsl/list/include
         ${openHiTLS_SRC}/bsl/usrdata/include
         ${openHiTLS_SRC}/bsl/obj/include

@@ -1,281 +1,290 @@
+SDV_X509_CERT_PARSE_FUNC_TC001 parse pem cert
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_PEM:"../testdata/cert/pem/cert/ca.pem"
+
+SDV_X509_CERT_PARSE_FUNC_TC001 parse unknown(pem) cert
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/pem/cert/ca.pem"
+
+SDV_X509_CERT_PARSE_FUNC_TC001 parse unknown(asn1) cert
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/asn1/sm2_cert/inter.notCA.der"
+
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecc p384 v3 ca cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/nist384ca.crt"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa pss v3 ca cert, any is null
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa2048ssa-pss.crt"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa2048ssa-pss.crt"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sha256 rsa v1 ca, any is null
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sha256Rsaca.crt"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sha256Rsaca.crt"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 with key usage sha256 rsa v3 ca
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/cawithkeyusage.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/cawithkeyusage.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ca cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/ca.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/ca.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ca.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/ca.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/ca.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ca.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/ca.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/ca.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ca.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/ca.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/ca.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ca.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/ca.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/ca.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end2.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end2.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end2.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_end3.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/end3.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/end3.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_inter cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/inter.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/inter.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_inter.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/inter.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/inter.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_inter.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/inter.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/inter.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_inter.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/inter.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/inter.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_inter.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/inter.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_cert/inter.v1.der"
 
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_ca cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ca.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_ca.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ca.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_ca.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ca.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_ca.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ca.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_ca.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ca.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end2.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end2.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end2.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_end3.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/end3.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/end3.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_inter cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/inter.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/inter.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_inter.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/inter.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/inter.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_inter.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/inter.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/inter.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_inter.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/inter.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/inter.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ecdsa_inter.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/inter.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/inter.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_ca cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/ca.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/ca.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_ca.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/ca.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/ca.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_ca.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/ca.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/ca.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_ca.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/ca.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/ca.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_ca.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/ca.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/ca.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end2.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end2.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end2.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_end3.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/end3.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/end3.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_inter cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/inter.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/inter.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_inter.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/inter.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/inter.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_inter.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/inter.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/inter.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_inter.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/inter.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/inter.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_ecc_inter.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_ecc_cert/inter.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_cert/inter.v1.der"
 
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_ca cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/ca.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/ca.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_ca.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/ca.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/ca.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_ca.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/ca.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/ca.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_ca.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/ca.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/ca.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_ca.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/ca.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/ca.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end.v1.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end2.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end2.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end2.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_end3.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/end3.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/end3.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_inter cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/inter.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/inter.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_inter.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/inter.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/inter.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_inter.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/inter.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/inter.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_inter.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/inter.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/inter.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse rsa_pss_inter.v1 cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/inter.v1.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_cert/inter.v1.der"
 
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_ca cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/ca.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/ca.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_ca.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/ca.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/ca.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_ca.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/ca.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/ca.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_ca.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/ca.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/ca.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_enc cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/enc.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/enc.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_enc.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/enc.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/enc.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_enc.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/enc.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/enc.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_enc.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/enc.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/enc.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_enc2.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/enc2.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/enc2.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_enc3.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/enc3.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/enc3.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_sign cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sign.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/sign.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_sign.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sign.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/sign.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_sign.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sign.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/sign.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_sign.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sign.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/sign.notCA.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_sign2.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sign2.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/sign2.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_sign3.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sign3.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/sign3.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_inter cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/inter.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/inter.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_inter.mul cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/inter.mul.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/inter.mul.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_inter.noCRL cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/inter.noCRL.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/inter.noCRL.der"
 
 SDV_X509_CERT_PARSE_FUNC_TC001 parse sm2_inter.notCA cert
-SDV_X509_CERT_PARSE_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/inter.notCA.der"
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/sm2_cert/inter.notCA.der"
 
 SDV_X509_CERT_PARSE_VERSION_FUNC_TC001 parse ecc p384 v3 ca cert
 SDV_X509_CERT_PARSE_VERSION_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt":2

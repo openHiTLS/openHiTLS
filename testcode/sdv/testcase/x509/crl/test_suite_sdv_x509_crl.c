@@ -47,7 +47,7 @@ void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
 }
 
 
-static int32_t HITLS_ParseCrlTest(char *path, HITLS_X509_Crl **crl)
+static int32_t HITLS_ParseCrlTest(int32_t format, char *path, HITLS_X509_Crl **crl)
 {
     TestMemInit();
     BSL_LOG_BinLogFuncs func = {0};
@@ -64,7 +64,7 @@ static int32_t HITLS_ParseCrlTest(char *path, HITLS_X509_Crl **crl)
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path, *crl);
+    ret = HITLS_X509_ParseFileCrl(format, path, *crl);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -72,7 +72,7 @@ static int32_t HITLS_ParseCrlTest(char *path, HITLS_X509_Crl **crl)
 }
 
 /* BEGIN_CASE */
-void SDV_X509_CRL_PARSE_FUNC_TC001(char *path)
+void SDV_X509_CRL_PARSE_FUNC_TC001(int format, char *path)
 {
     TestMemInit();
     BSL_LOG_BinLogFuncs func = {0};
@@ -82,7 +82,7 @@ void SDV_X509_CRL_PARSE_FUNC_TC001(char *path)
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
     HITLS_X509_Crl *crl = HITLS_X509_NewCrl();
     ASSERT_TRUE(crl != NULL);
-    int32_t ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path, crl);
+    int32_t ret = HITLS_X509_ParseFileCrl((int32_t)format, path, crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_FreeCrl(crl);
@@ -94,7 +94,7 @@ exit:
 void SDV_X509_CRL_CTRL_FUNC_TC001(char *path)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path,  &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     int32_t ref = 0;
@@ -113,7 +113,7 @@ exit:
 void SDV_X509_CRL_PARSE_VERSION_FUNC_TC001(char *path, int version)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(crl->tbs.version, version);
 exit:
@@ -127,7 +127,7 @@ void SDV_X509_CRL_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(crl->tbs.signAlgId.algId, signAlg);
@@ -150,7 +150,7 @@ void SDV_X509_CRL_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
     Hex *type5, int tag5, Hex *value5)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
@@ -195,7 +195,7 @@ exit:
 void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC001(char *path)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, BSL_SAL_ERR_FILE_LENGTH);
 exit:
     HITLS_X509_FreeCrl(crl);
@@ -208,7 +208,7 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC003(char *path, int count, int num,
     int tag1, Hex *value1, int year1, int month1, int day1, int hour1, int minute1, int second1)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.revokedCerts), count);
     HITLS_X509_CrlEntry **nameNode = NULL;
@@ -236,7 +236,7 @@ exit:
 void SDV_X509_CRL_PARSE_TIME_FUNC_TC001(char *path)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_ERR_CHECK_TAG);
 exit:
     HITLS_X509_FreeCrl(crl);
@@ -249,7 +249,7 @@ void SDV_X509_CRL_PARSE_START_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(crl->tbs.validTime.start.year, year);
@@ -269,7 +269,7 @@ void SDV_X509_CRL_PARSE_END_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(crl->tbs.validTime.end.year, year);
@@ -289,7 +289,7 @@ void SDV_X509_CRL_PARSE_EXTENSIONS_FUNC_TC001(char *path,
     int tag1, Hex *value1, int tag2, Hex *value2)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.crlExt.extList), 1);
@@ -312,7 +312,7 @@ void SDV_X509_CRL_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(crl->signAlgId.algId, signAlg);
@@ -330,7 +330,7 @@ exit:
 void SDV_X509_CRL_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBits)
 {
     HITLS_X509_Crl *crl = NULL;
-    int32_t ret = HITLS_ParseCrlTest(path, &crl);
+    int32_t ret = HITLS_ParseCrlTest(BSL_PARSE_FORMAT_ASN1, path,  &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(crl->signature.len, buff->len);
     ASSERT_COMPARE("signature", crl->signature.buff, crl->signature.len, buff->x, buff->len);

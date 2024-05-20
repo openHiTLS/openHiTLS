@@ -25,6 +25,7 @@
 #include "crypt_eal_pkey.h"
 #include "hitls_x509_local.h"
 #include "bsl_obj_internal.h"
+#include "bsl_pem_internal.h"
 #include "bsl_err_internal.h"
 #include "hitls_cert_local.h"
 #include "crypt_encode.h"
@@ -438,6 +439,24 @@ ERR:
     return ret;
 }
 
+static int32_t X509_CopyAndParseAsn1Cert(bool isCopy, bool isMange, BSL_Buffer *encode, HITLS_X509_Cert *cert)
+{
+    uint8_t *data = encode->data;
+    uint32_t dataLen = encode->dataLen;
+    if (isCopy) {
+        data = BSL_SAL_Malloc(dataLen);
+        if (data == NULL) {
+            return BSL_MALLOC_FAIL;
+        }
+        (void)memcpy_s(data, dataLen, encode->data, dataLen);
+    }
+    int32_t ret = HITLS_X509_ParseAsn1Cert(isMange, &data, &dataLen, cert);
+    if (ret != HITLS_X509_SUCCESS && isCopy) {
+        BSL_SAL_Free(data);
+    }
+    return ret;
+}
+
 int32_t HITLS_X509_ParseBuffCert(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Cert *cert)
 {
     int32_t ret;
@@ -445,32 +464,19 @@ int32_t HITLS_X509_ParseBuffCert(bool isCopy, int32_t format, BSL_Buffer *encode
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    uint8_t *data = encode->data;
-    uint32_t dataLen = encode->dataLen;
-    if (isCopy == true) {
-        data = BSL_SAL_Malloc(dataLen);
-        if (data == NULL) {
-            return BSL_MALLOC_FAIL;
-        }
-        (void)memcpy_s(data, encode->dataLen, encode->data, encode->dataLen);
-    }
-    
     switch (format) {
         case BSL_PARSE_FORMAT_ASN1:
-            ret = HITLS_X509_ParseAsn1Cert(isCopy, &data, &dataLen, cert);
+            ret = X509_CopyAndParseAsn1Cert(isCopy, isCopy, encode, cert);
             break;
         case BSL_PARSE_FORMAT_PEM:
-            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            ret = HITLS_X509_ParsePem(encode, true, (HITLS_X509_Asn1Parse)X509_CopyAndParseAsn1Cert, cert);
             break;
         case BSL_PARSE_FORMAT_UNKNOWN:
-            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            ret = HITLS_X509_ParseUnkonw(encode, isCopy, true, (HITLS_X509_Asn1Parse)X509_CopyAndParseAsn1Cert, cert);
             break;
         default:
             ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
             break;
-    }
-    if (ret != HITLS_X509_SUCCESS && isCopy == true) {
-        BSL_SAL_Free(data);
     }
     return ret;
 }

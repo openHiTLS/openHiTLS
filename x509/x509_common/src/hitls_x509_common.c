@@ -19,6 +19,7 @@
 #include "crypt_eal_pkey.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
+#include "bsl_pem_internal.h"
 #include "securec.h"
 
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRsaData, uint32_t *tbsRsaDataLen)
@@ -334,6 +335,50 @@ int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HI
         time->isOptional = true;
     }
     return ret;
+}
+
+static void X509_GetPemSymbol(bool isCert, BSL_PEM_Symbol *symbol)
+{
+    if (isCert) {
+        symbol->head = BSL_PEM_CERT_BEGIN_STR;
+        symbol->tail = BSL_PEM_CERT_END_STR;
+    } else {
+        symbol->head = BSL_PEM_CRL_BEGIN_STR;
+        symbol->tail = BSL_PEM_CRL_END_STR;
+    }
+}
+
+int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, HITLS_X509_Asn1Parse parsefun, void *out)
+{
+    char *nextEncode = (char *)(encode->data);
+    uint32_t nextEncodeLen = encode->dataLen;
+    BSL_PEM_Symbol symbol = {NULL};
+    X509_GetPemSymbol(isCert, &symbol);
+    BSL_Buffer asn1Buf = {NULL};
+    int32_t ret = BSL_PEM_ParsePem2Asn1(&nextEncode, &nextEncodeLen, &symbol, &(asn1Buf.data),
+        &(asn1Buf.dataLen));
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = parsefun(false, true, &asn1Buf, out);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_SAL_FREE(asn1Buf.data);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_ParseUnkonw(BSL_Buffer *encode, bool isCopy, bool isCert, HITLS_X509_Asn1Parse parsefun,
+    void *out)
+{
+    bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
+    if (isPem) {
+        return HITLS_X509_ParsePem(encode, isCert, parsefun, out);
+    } else {
+        return parsefun(isCopy, isCopy, encode, out);
+    }
 }
 
 static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
