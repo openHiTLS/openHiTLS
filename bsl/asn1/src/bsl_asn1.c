@@ -12,18 +12,19 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
-#include "bsl_asn1.h"
+#include <stdbool.h>
 #include "bsl_err.h"
 #include "bsl_bytes.h"
 #include "bsl_log_internal.h"
 #include "bsl_binlog_id.h"
-#include "bsl_asn1.h"
 #include "bsl_asn1_local.h"
 #include "bsl_sal.h"
 #include "sal_time.h"
+#include "bsl_asn1.h"
 
-int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
+#define BSL_ASN1_INDEFINITE_LENGTH  0x80
+
+int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
     if (encode == NULL || encLen == NULL || len == NULL) {
         return BSL_NULL_INPUT;
@@ -35,60 +36,35 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
         return BSL_ASN1_ERR_DECODE_LEN;
     }
     
-    if (*temp < 0x80) {
+    if ((*temp & BSL_ASN1_INDEFINITE_LENGTH) == 0) {
         parseLen = *temp;
         temp++;
         tempLen--;
-        if (parseLen > tempLen) {
-            return BSL_ASN1_ERR_DECODE_LEN;
+        parseLen += ((completeLen) ? 1 : 0);
+    } else {
+        uint32_t index = *temp - BSL_ASN1_INDEFINITE_LENGTH;
+        if (index > sizeof(int32_t)) {
+            return BSL_ASN1_ERR_MAX_LEN_NUM;
         }
-        *len = parseLen;
-        *encode = temp;
-        *encLen = tempLen;
-        return BSL_SUCCESS;
-    }
-    /* The length supports a maximum of 4 bytes */
-    if (*temp > 0x84) {
-        return BSL_ASN1_ERR_MAX_LEN_NUM;
-    }
-    uint8_t count = (*temp & 7);
-    temp++;
-    tempLen--;
-    switch (count) {
-        case 1:
-            if (tempLen < 1) {
-                return BSL_ASN1_ERR_DECODE_LEN;
-            }
-            parseLen = *temp;
+        temp++;
+        tempLen--;
+        if (tempLen < index) {
+            return BSL_ASN1_ERR_BUFF_NOT_ENOUGH;
+        }
+        for (uint32_t iter = 0; iter < index; iter++) {
+            parseLen = (parseLen << 8) | *temp; // one byte = 8 bits
             temp++;
             tempLen--;
-            break;
-        case 2:
-            if (tempLen < 2) {
-                return BSL_ASN1_ERR_DECODE_LEN;
-            }
-            parseLen = (size_t)BSL_ByteToUint16(temp);
-            temp += 2;
-            tempLen -= 2;
-            break;
-        case 3:
-            if (tempLen < 3) {
-                return BSL_ASN1_ERR_DECODE_LEN;
-            }
-            parseLen = (size_t)BSL_ByteToUint24(temp);
-            temp += 3;
-            tempLen -= 3;
-            break;
-        case 4:
-            if (tempLen < 4) {
-                return BSL_ASN1_ERR_DECODE_LEN;
-            }
-            parseLen = (size_t)BSL_ByteToUint32(temp);
-            temp += 4;
-            tempLen -= 4;
-            break;
+        }
+        // anti-flip
+        if (parseLen >= ((((uint64_t)1 << 32) - 1) - index - 2)) { // 1<<32:U32_MAX; 2: Tag + length(0x8x)
+            return BSL_ASN1_ERR_MAX_LEN_NUM;
+        }
+        parseLen += ((completeLen) ? (index + 1) : 0);
     }
-    if (parseLen > tempLen) {
+    uint32_t length = (completeLen) ? *encLen : tempLen;
+    /* The length supports a maximum of 4 bytes */
+    if (parseLen > length) {
         return BSL_ASN1_ERR_DECODE_LEN;
     }
     *len = parseLen;
@@ -96,6 +72,26 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len)
     *encLen = tempLen;
     return BSL_SUCCESS;
 }
+
+int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen)
+{
+    uint8_t *tmp = data;
+    uint32_t tmpLen = *dataLen;
+    uint32_t len = 0;
+    if (tmpLen < 1) {
+        return BSL_ASN1_ERR_BUFF_NOT_ENOUGH;
+    }
+
+    tmp++;
+    tmpLen--;
+    int32_t ret = BSL_ASN1_DecodeLen(&tmp, &tmpLen, true, &len);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    *dataLen = len + 1;
+    return BSL_SUCCESS;
+}
+
 
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen)
 {
@@ -114,7 +110,7 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
     temp++;
     tempLen--;
     uint32_t len;
-    int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, &len);
+    int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, false, &len);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
@@ -139,7 +135,7 @@ int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer 
     tag = *temp;
     temp++;
     tempLen--;
-    int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, &len);
+    int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, false, &len);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
@@ -266,7 +262,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
         tag = *buff;
         buff++;
         len--;
-        ret = BSL_ASN1_DecodeLen(&buff, &len, &encLen);
+        ret = BSL_ASN1_DecodeLen(&buff, &len, false, &encLen);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -305,7 +301,7 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
         tag = *buff;
         buff++;
         len--;
-        ret = BSL_ASN1_DecodeLen(&buff, &len, &encLen);
+        ret = BSL_ASN1_DecodeLen(&buff, &len, false, &encLen);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -468,7 +464,7 @@ int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
 
     temp++;
     tempLen--;
-    ret = BSL_ASN1_DecodeLen(&temp, &tempLen, &len);
+    ret = BSL_ASN1_DecodeLen(&temp, &tempLen, false, &len);
     if (ret != BSL_SUCCESS) {
         return ret;
     }

@@ -45,10 +45,10 @@ typedef enum {
     HITLS_X509_CERT_EXT_KU_KEYAGREEMENT
 } HITLS_X509_CertCmd;
 
-HITLS_X509_Cert *HITLS_X509_NewCert(void);
 void HITLS_X509_FreeCert(HITLS_X509_Cert *cert);
-int32_t HITLS_X509_ParseBuffCert(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Cert *cert);
-int32_t HITLS_X509_ParseFileCert(int32_t format, const char *path, HITLS_X509_Cert *cert);
+int32_t HITLS_X509_ParseBuffCert(int32_t format, BSL_Buffer *encode, HITLS_X509_Cert **cert);
+int32_t HITLS_X509_ParseFileCert(int32_t format, const char *path, HITLS_X509_Cert **cert);
+int32_t HITLS_X509_ParseFileCertMul(int32_t format, const char *path, HITLS_X509_List **certlist);
 int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen);
 int32_t HITLS_X509_DupCert(HITLS_X509_Cert *src, HITLS_X509_Cert **dest);
 
@@ -56,11 +56,11 @@ typedef enum {
     HITLS_X509_CRL_REF_UP,
 } HITLS_X509_CrlCmd;
 
-HITLS_X509_Crl *HITLS_X509_NewCrl(void);
 void HITLS_X509_FreeCrl(HITLS_X509_Crl *crl);
 int32_t HITLS_X509_CtrlCrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen);
-int32_t HITLS_X509_ParseBuffCrl(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Crl *crl);
-int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl *crl);
+int32_t HITLS_X509_ParseBuffCrl(int32_t format, BSL_Buffer *encode, HITLS_X509_Crl **crl);
+int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl **crl);
+int32_t HITLS_X509_ParseFileCrlMul(int32_t format, const char *path, HITLS_X509_List **crllist);
 
 typedef enum {
     HITLS_X509_VFY_FLAG_CRL_ALL = 1,

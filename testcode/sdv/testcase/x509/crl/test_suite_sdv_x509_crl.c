@@ -58,13 +58,8 @@ static int32_t HITLS_ParseCrlTest(int32_t format, char *path, HITLS_X509_Crl **c
     if (ret != BSL_SUCCESS) {
         return ret;
     }
-    
-    *crl = HITLS_X509_NewCrl();
-    if (*crl == NULL) {
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
 
-    ret = HITLS_X509_ParseFileCrl(format, path, *crl);
+    ret = HITLS_X509_ParseFileCrl(format, path, crl);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -80,9 +75,8 @@ void SDV_X509_CRL_PARSE_FUNC_TC001(int format, char *path)
     func.fixLenFunc = BinLogFixLenFunc;
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
-    HITLS_X509_Crl *crl = HITLS_X509_NewCrl();
-    ASSERT_TRUE(crl != NULL);
-    int32_t ret = HITLS_X509_ParseFileCrl((int32_t)format, path, crl);
+    HITLS_X509_Crl *crl = NULL;
+    int32_t ret = HITLS_X509_ParseFileCrl((int32_t)format, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_FreeCrl(crl);
@@ -338,5 +332,18 @@ void SDV_X509_CRL_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBi
 exit:
     HITLS_X509_FreeCrl(crl);
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_MUL_CRL_PARSE_FUNC_TC001(int format, char *path, int crlNum)
+{
+    BSL_GLOBAL_Init();
+    HITLS_X509_List *list = NULL;
+    int32_t ret = HITLS_X509_ParseFileCrlMul(format, path, &list);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(list), crlNum);
+exit:
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCrl);
 }
 /* END_CASE */
