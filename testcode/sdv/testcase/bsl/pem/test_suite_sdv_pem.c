@@ -1,0 +1,85 @@
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
+ */
+/* BEGIN_HEADER */
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include "securec.h"
+#include "bsl_errno.h"
+#include "bsl_sal.h"
+#include "bsl_pem_internal.h"
+
+/* END_HEADER */
+
+/* BEGIN_CASE */
+void SDV_BSL_PEM_ISPEM_FUNC_TC001(char *data, int expflag)
+{
+    char *encode = data;
+    uint32_t encodeLen = strlen(data);
+    bool isPem = BSL_PEM_IsPemFormat(encode, encodeLen);
+    ASSERT_TRUE(isPem == (bool)expflag);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_PEM_ISPEM_FUNC_TC002(void)
+{
+    char *aa = "aaaaaaaa";
+    ASSERT_TRUE(BSL_PEM_IsPemFormat(NULL, 0) == false);
+    ASSERT_TRUE(BSL_PEM_IsPemFormat(aa, strlen(aa)) == false);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_PEM_PARSE_FUNC_TC001(char *encode, char *head, char *tail, int expRes)
+{
+    BSL_PEM_Symbol sym = {head, tail};
+    char *pemdata = encode;
+    uint32_t len = strlen(encode);
+    uint8_t *asn1Encode = NULL;
+    uint32_t asn1Len;
+    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&pemdata, &len, &sym, &asn1Encode, &asn1Len) == expRes);
+exit:
+    BSL_SAL_Free(asn1Encode);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
+{
+    BSL_PEM_Symbol sym = {BSL_PEM_EC_PIR_KEY_BEGIN_STR, BSL_PEM_EC_PIR_KEY_END_STR};
+    char *pemdata = "-----BEGIN EC PRIVATE KEY-----\n"
+                    "MHcCAQEEIAadtjyegBKXLH9xvNDvH24j7cn3PsaNSXSMIVmvJZM7oAoGCCqGSM49\n"
+                    "AwEHoUQDQgAEPFKNDGyE7HES1hPd8mXydX4QunGvk37ISPOhXJStzxTt8sWdcEtV\n"
+                    "gaXhArNx9Dz8pKIhoGcviy8xML3wPICv9Q==\n"
+                    "-----END EC PRIVATE KEY-----\n"
+                    "-----BEGIN EC PRIVATE KEY-----\n"
+                    "MHcCAQEEIAadtjyegBKXLH9xvNDvH24j7cn3PsaNSXSMIVmvJZM7oAoGCCqGSM49\n"
+                    "AwEHoUQDQgAEPFKNDGyE7HES1hPd8mXydX4QunGvk37ISPOhXJStzxTt8sWdcEtV\n"
+                    "gaXhArNx9Dz8pKIhoGcviy8xML3wPICv9Q==\n"
+                    "-----END EC PRIVATE KEY-----\n";
+    int32_t len = strlen(pemdata);
+    char *next = pemdata;
+    int32_t nextLen = len;
+    uint8_t *asn1Encode = NULL;
+    uint32_t asn1Len;
+    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
+    BSL_SAL_Free(asn1Encode);
+    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
+exit:
+    BSL_SAL_Free(asn1Encode);
+    return;
+}
+/* END_CASE */

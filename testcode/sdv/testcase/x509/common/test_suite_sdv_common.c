@@ -1,5 +1,12 @@
-/* BEGIN_HEADER */
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
+ */
 
+/* BEGIN_HEADER */
 #include "bsl_sal.h"
 #include "securec.h"
 #include "hitls_error.h"
@@ -135,14 +142,14 @@ void SDV_HITLS_X509_ParseBuffCert_TC001(void)
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, 0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     BSL_Buffer buff = {0};
-    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, 0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.data = &buff;
-    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, 0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
-    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, 0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, 0xff, &buff, &buff), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_ParseBuffCert(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCert(0xff, &buff, &buff), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -159,7 +166,8 @@ void SDV_HITLS_X509_ParseFileCert_TC001(void)
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, NULL, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/asn1/nist384ca.crt", NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/asn1/nist384ca.crt", NULL),
+        HITLS_X509_ERR_INVALID_PARAM);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -264,14 +272,14 @@ void SDV_HITLS_X509_ParseBuffCrl_TC001(void)
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, 0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     BSL_Buffer buff = {0};
-    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, 0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.data = &buff;
-    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, 0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
-    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, 0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, 0xff, &buff, &buff), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0xff, &buff, &buff), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -288,7 +296,8 @@ void SDV_HITLS_X509_ParseFileCrl_TC001(void)
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, NULL, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/asn1/ca-1-rsa-sha256-v2.der", NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/asn1/ca-1-rsa-sha256-v2.der",
+        NULL), HITLS_X509_ERR_INVALID_PARAM);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -307,12 +316,12 @@ void SDV_CRYPT_EAL_ParseBuffPubKey_TC001(void)
     BSL_Buffer buff = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, 0xff, &buff, &pkey), CRYPT_INVALID_ARG);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_SUBKEY, NULL, &pkey), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_RSA, NULL, &pkey), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_SUBKEY, &buff, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_RSA, &buff, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_SUBKEY, &buff, &pkey), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_RSA, &buff, &pkey), BSL_ASN1_ERR_DECODE_LEN);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_SUBKEY, NULL, &pkey), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_RSA, NULL, &pkey), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_SUBKEY, &buff, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_RSA, &buff, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_SUBKEY, &buff, &pkey), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPubKey(0, CRYPT_PUBKEY_RSA, &buff, &pkey), CRYPT_INVALID_ARG);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -328,11 +337,13 @@ void SDV_CRYPT_EAL_ParseFilePubKey_TC001(void)
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(0xff, 0, NULL, NULL), CRYPT_DECODE_NO_SUPPORT_FORMAT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(0xff, 0, NULL, NULL), BSL_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, NULL, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, "../testdata/cert/asn1/prime256v1pub.der", NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY,
+        "../testdata/cert/asn1/prime256v1pub.der", NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_RSA, NULL, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_RSA, "../testdata/cert/asn1/rsa2048pub_pkcs1.der", NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PUBKEY_RSA,
+        "../testdata/cert/asn1/rsa2048pub_pkcs1.der", NULL), CRYPT_INVALID_ARG);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -352,22 +363,22 @@ void SDV_CRYPT_EAL_ParseBuffPriKey_TC001(void)
     uint8_t pwd = 0;
     CRYPT_EAL_PkeyCtx *key = NULL;
     ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, 0xff, &buff, &pwd, 0, &key), CRYPT_INVALID_ARG);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, NULL, &pwd, 0, &key), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, NULL, &pwd, 0, &key), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, NULL, &pwd, 0, &key), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, NULL, &pwd, 0, &key), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, &buff, NULL, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, &buff, NULL, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &buff, NULL, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, &buff, NULL, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, &buff, &pwd, 0, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, &buff, &pwd, 0, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &buff, &pwd, 0, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, &buff, &pwd, 0, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, &buff, &pwd, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, &buff, &pwd, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &buff, &pwd, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
-    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, &buff, &pwd, 0, &key), BSL_ASN1_ERR_DECODE_LEN);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, NULL, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, NULL, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, NULL, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, NULL, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, &buff, NULL, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, &buff, NULL, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &buff, NULL, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, &buff, NULL, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, &buff, &pwd, 0, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, &buff, &pwd, 0, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &buff, &pwd, 0, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, &buff, &pwd, 0, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_ECC, &buff, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_RSA, &buff, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &buff, &pwd, 0, &key), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseBuffPriKey(0, CRYPT_PRIKEY_PKCS8_ENCRYPT, &buff, &pwd, 0, &key), CRYPT_INVALID_ARG);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -383,16 +394,56 @@ void SDV_CRYPT_EAL_ParseFilePriKey_TC001(void)
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(0xff, 0, NULL, NULL, 0, NULL), CRYPT_DECODE_NO_SUPPORT_FORMAT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(0xff, 0, NULL, NULL, 0, NULL), BSL_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_ECC, NULL, NULL, 0, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_ECC, "../testdata/cert/asn1/prime256v1.der", NULL, 0, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_ECC,
+        "../testdata/cert/asn1/prime256v1.der", NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_RSA, NULL, NULL, 0, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_RSA, "../testdata/cert/asn1/rsa2048key_pkcs1.der", NULL, 0, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, NULL, NULL, 0, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, "../testdata/cert/asn1/prime256v1_pkcs8.der", NULL, 0, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT, NULL, NULL, 0, NULL), BSL_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT, "../testdata/cert/asn1/prime256v1_pkcs8_enc.der", NULL, 0, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa2048key_pkcs1.der", NULL, 0, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, NULL, NULL, 0,
+        NULL), BSL_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+        "../testdata/cert/asn1/prime256v1_pkcs8.der", NULL, 0, NULL), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT, NULL, NULL, 0, NULL),
+        BSL_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
+        "../testdata/cert/asn1/prime256v1_pkcs8_enc.der", NULL, 0, NULL), CRYPT_INVALID_ARG);
 exit:
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_LOG_BinLogFuncs func = {0};
+    BSL_GLOBAL_Init();
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    ASSERT_EQ(CRYPT_EAL_ParseFilePriKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_LOG_BinLogFuncs func = {0};
+    BSL_GLOBAL_Init();
+    func.fixLenFunc = BinLogFixLenFunc;
+    func.varLenFunc = BinLogVarLenFunc;
+    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    ASSERT_EQ(CRYPT_EAL_ParseFilePubKey(format, type, path, &key), CRYPT_SUCCESS);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */

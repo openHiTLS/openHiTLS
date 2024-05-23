@@ -492,12 +492,26 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_DECODELEN_FUNC(Hex *val, int res)
+void SDV_BSL_ASN1_DECODELEN_FUNC(int flag, Hex *val, int res)
 {
     uint8_t *encode = val->x;
     uint32_t encodeLen = val->len;
     uint32_t len = 0;
-    ASSERT_EQ(BSL_ASN1_DecodeLen(&encode, &encodeLen, &len), res);
+    ASSERT_EQ(BSL_ASN1_DecodeLen(&encode, &encodeLen, flag, &len), res);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODECOMPLETELEN_FUNC(Hex *val, int ecpLen, int res)
+{
+    uint8_t *encode = val->x;
+    uint32_t encodeLen = val->len;
+    ASSERT_EQ(BSL_ASN1_GetCompleteLen(encode, &encodeLen), res);
+    if (res == BSL_SUCCESS) {
+        ASSERT_EQ(encodeLen, ecpLen);
+    }
 exit:
     return;
 }

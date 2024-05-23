@@ -6,6 +6,8 @@
                     "err": null,
                     "hash": null,
                     "init": {"deps": ["err"]},
+                    "base64": null,
+                    "pem": null,
                     "list": null,
                     "log": null,
                     "obj":null,
@@ -443,7 +445,7 @@
             "encode": {
                 ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign", "sm2_exch"],
                 ".srcs": "crypto/encode/src/*.c",
-                ".deps": ["crypto::bn", "bsl::asn1", "crypto::ecc", "bsl::obj"]
+                ".deps": ["crypto::bn", "bsl::asn1", "bsl::pem", "crypto::ecc", "bsl::obj"]
             },
             "util": {
                 ".features": [
@@ -517,6 +519,16 @@
                 ".features":["obj"],
                 ".srcs":"bsl/obj/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "base64": {
+                ".features": ["base64"],
+                ".srcs": "bsl/base64/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "pem": {
+                ".features": ["pem"],
+                ".srcs": "bsl/pem/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::base64"]
             },
             "hash": {
                 ".features": ["hash"],
@@ -668,7 +680,7 @@
             "x509_common" : {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_common/src/*",
-                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem"]
             },
             "x509_verify" : {
                 ".features" : ["all_x509"],
