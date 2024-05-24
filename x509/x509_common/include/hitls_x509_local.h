@@ -71,7 +71,15 @@ typedef struct _HITLS_X509_Asn1AlgId {
     };
 } HITLS_X509_Asn1AlgId;
 
-typedef int32_t (*HITLS_X509_Asn1Parse)(bool isCopy, bool isMange, BSL_Buffer *encode, void *out);
+typedef int32_t (*HITLS_X509_Asn1Parse)(bool isCopy, uint8_t **encode, uint32_t *encodeLen, void *out);
+typedef void *(*HITLS_X509_New)(void);
+typedef void (*HITLS_X509_Free)(void *elem);
+
+typedef struct {
+    HITLS_X509_Asn1Parse asn1Parse;
+    HITLS_X509_New x509New;
+    HITLS_X509_Free x509Free;
+} X509_ParseFuncCbk;
 
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRsaData, uint32_t *tbsRsaDataLen);
 
@@ -86,11 +94,8 @@ int32_t HITLS_X509_ParseItemDefault(void *item, uint32_t len,  BSL_ASN1_List *li
 
 int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HITLS_X509_ValidTime *time);
 
-int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, HITLS_X509_Asn1Parse parsefun, void *out);
-
-int32_t HITLS_X509_ParseUnkonw(BSL_Buffer *encode, bool isCopy, bool isCert, HITLS_X509_Asn1Parse parsefun,
-    void *out);
-
+int32_t HITLS_X509_ParseX509(int32_t format, BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+    HITLS_X509_List *list);
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, HITLS_X509_Asn1AlgId *subAlg);

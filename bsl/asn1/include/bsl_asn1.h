@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "bsl_list.h"
 
 #ifdef __cplusplus
@@ -112,7 +113,7 @@ typedef struct _BSL_ASN1_DecodeListParam {
     uint8_t *expTag;
 } BSL_ASN1_DecodeListParam;
 
-int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, uint32_t *len);
+int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len);
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen);
 
 int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
@@ -129,6 +130,8 @@ int32_t BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnAr
     uint8_t **encode, uint32_t *encLen);
 
 int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem);
+
+int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen);
 
 #ifdef __cplusplus
 }

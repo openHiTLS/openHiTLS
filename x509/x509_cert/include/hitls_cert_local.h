@@ -76,10 +76,12 @@ typedef struct _HITLS_X509_Cert {
     BSL_SAL_RefCount references;
 } HITLS_X509_Cert;
 
+HITLS_X509_Cert *HITLS_X509_NewCert(void);
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res);
 int32_t HITLS_X509_CertIsCA(HITLS_X509_Cert *cert, bool *res);
 int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
     HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature);
+int32_t HITLS_X509_ParseBuffCertMul(int32_t format, BSL_Buffer *encode, HITLS_X509_List **certlist);
 
 #ifdef __cplusplus
 }

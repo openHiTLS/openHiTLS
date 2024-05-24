@@ -261,8 +261,8 @@ static int32_t X509_CheckCRL(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl)
     HITLS_X509_List *crlStore = storeCtx->crl;
     HITLS_X509_Crl *tmp = BSL_LIST_SearchEx(crlStore, crl, (BSL_LIST_PFUNC_CMP)X509_CrlCmp);
     if (tmp != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_EXIST);
-        return HITLS_X509_ERR_CERT_EXIST;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_EXIST);
+        return HITLS_X509_ERR_CRL_EXIST;
     }
 
     return HITLS_X509_SUCCESS;

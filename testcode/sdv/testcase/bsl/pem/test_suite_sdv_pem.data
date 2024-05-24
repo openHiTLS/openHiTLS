@@ -35,7 +35,7 @@ SDV_BSL_PEM_PARSE_FUNC_TC001
 SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN CERTIFICATE-----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_PEM_SYMBOL_NOT_FOUND
 
 SDV_BSL_PEM_PARSE_FUNC_TC001
-SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN CERTIFICATE-----\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n-----END CERTIFICATE-----\n":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_BASE64_DECODE_FAILED
+SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN CERTIFICATE-----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-----END CERTIFICATE-----\n":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_SUCCESS
 
 SDV_BSL_PEM_PARSE_FUNC_TC002
 SDV_BSL_PEM_PARSE_FUNC_TC002:

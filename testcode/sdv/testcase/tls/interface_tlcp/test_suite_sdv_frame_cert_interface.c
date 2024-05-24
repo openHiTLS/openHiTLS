@@ -284,8 +284,7 @@ void UT_TLS_CERT_CFG_LoadCertBuffer_FUNC_001(int version, char *certPath)
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
     ASSERT_EQ(
         HITLS_CFG_LoadCertBuffer(tlsConfig, buf1, bufLen - 1, TLS_PARSE_FORMAT_ASN1), HITLS_CONFIG_ERR_LOAD_CERT_BUFFER);
-    ASSERT_EQ(
-        HITLS_CFG_LoadCertBuffer(tlsConfig, buf2, bufLen + 1, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf2, bufLen + 1, TLS_PARSE_FORMAT_ASN1) != HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
 
 exit:

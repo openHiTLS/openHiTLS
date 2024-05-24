@@ -218,7 +218,6 @@ static uint32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBuf
     uint32_t expectLen = 0U;
     uint32_t idx;
 
-    *filterBufLen = 0U;
     /* Filter the characters \r\n, spaces, and '=' in the character string. */
     for (idx = 0U; idx < srcBufLen; idx++) {
         /* Check whether the characters are invalid characters in the Base64 mapping table. */
@@ -247,6 +246,7 @@ static uint32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBuf
         }
     }
 
+    uint32_t num = 0;
     /* Filter out the specified number of '=' when the '=' is encountered. */
     while (idx < expectLen) {
         if (BASE64_DECODE_MAP_TABLE[tmp[idx]] == 64U) {
@@ -261,6 +261,7 @@ static uint32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBuf
             return BSL_BASE64_INVALID_CHARACTER;
         }
         idx++;
+        num++;
     }
 
     /* Filter out the '\r's, '\n's or spaces after valid characters. */
@@ -274,6 +275,10 @@ static uint32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBuf
     if (validCnt < (BASE64_DECODE_BYTES - BASE64_PAD_MAX)) { /* less than 2 valid characters cannot be decoded */
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
+    }
+    if ((validCnt + num) % BASE64_DECODE_BYTES != 0) {
+        BSL_ERR_PUSH_ERROR(BSL_BASE64_INVALID_ENCODE);
+        return BSL_BASE64_INVALID_ENCODE;
     }
     *filterBufLen = validCnt;
 
@@ -369,8 +374,8 @@ uint32_t BSL_BASE64_Decode(const char *srcBuf, const uint32_t srcBufLen, uint8_t
 
     ret = BslBase64ArithDecodeProc(srcBuf, srcBufLen, dstBuf, dstBufLen);  /* start decoding */
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(BSL_BASE64_DECODE_FAILED);
-        return BSL_BASE64_DECODE_FAILED;
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
 
     return ret;

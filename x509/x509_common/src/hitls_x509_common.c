@@ -348,37 +348,114 @@ static void X509_GetPemSymbol(bool isCert, BSL_PEM_Symbol *symbol)
     }
 }
 
-int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, HITLS_X509_Asn1Parse parsefun, void *out)
+static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, bool isCopy, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
 {
-    char *nextEncode = (char *)(encode->data);
-    uint32_t nextEncodeLen = encode->dataLen;
-    BSL_PEM_Symbol symbol = {NULL};
-    X509_GetPemSymbol(isCert, &symbol);
-    BSL_Buffer asn1Buf = {NULL};
-    int32_t ret = BSL_PEM_ParsePem2Asn1(&nextEncode, &nextEncodeLen, &symbol, &(asn1Buf.data),
-        &(asn1Buf.dataLen));
+    void *res = parsefun->x509New();
+    if (res == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = parsefun->asn1Parse(isCopy, &(asn1Buf->data), &(asn1Buf->dataLen), res);
     if (ret != HITLS_X509_SUCCESS) {
+        parsefun->x509Free(res);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = parsefun(false, true, &asn1Buf, out);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_FREE(asn1Buf.data);
+    ret = BSL_LIST_AddElement(list, res, BSL_LIST_POS_AFTER);
+    if (ret != BSL_SUCCESS) {
+        parsefun->x509Free(res);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseUnkonw(BSL_Buffer *encode, bool isCopy, bool isCert, HITLS_X509_Asn1Parse parsefun,
-    void *out)
+int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, bool isCopy, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+{
+    uint8_t *data = encode->data;
+    uint32_t dataLen = encode->dataLen;
+    while (dataLen > 0) {
+        uint32_t elemLen = dataLen;
+        int32_t ret = BSL_ASN1_GetCompleteLen(data, &elemLen);
+        if (ret != HITLS_X509_SUCCESS) {
+            return ret;
+        }
+        BSL_Buffer asn1Buf = {data, elemLen};
+        if (isCopy) {
+            asn1Buf.data = BSL_SAL_Malloc(elemLen);
+            if (asn1Buf.data == NULL) {
+                return BSL_MALLOC_FAIL;
+            }
+            (void)memcpy_s(asn1Buf.data, dataLen, data, elemLen);
+        }
+        ret = X509_ParseAndAddRes(&asn1Buf, isCopy, parsefun, list);
+        if (ret != HITLS_X509_SUCCESS) {
+            BSL_SAL_Free(asn1Buf.data);
+            return ret;
+        }
+        data += elemLen;
+        dataLen -= elemLen;
+    }
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+    HITLS_X509_List *list)
+{
+    char *nextEncode = (char *)(encode->data);
+    uint32_t nextEncodeLen = encode->dataLen;
+    BSL_PEM_Symbol symbol = {NULL};
+    X509_GetPemSymbol(isCert, &symbol);
+    while (nextEncodeLen > 0) {
+        BSL_Buffer asn1Buf = {NULL};
+        int32_t ret = BSL_PEM_ParsePem2Asn1(&nextEncode, &nextEncodeLen, &symbol, &(asn1Buf.data),
+            &(asn1Buf.dataLen));
+        if (ret != HITLS_X509_SUCCESS) {
+            break;
+        }
+        ret = X509_ParseAndAddRes(&asn1Buf, true, parsefun, list);
+        if (ret != HITLS_X509_SUCCESS) {
+            BSL_SAL_Free(asn1Buf.data);
+            return ret;
+        }
+    }
+    if (BSL_LIST_COUNT(list) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_NO_ELEMENT);
+        return HITLS_X509_ERR_PARSE_NO_ELEMENT;
+    }
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_ParseUnkonw(BSL_Buffer *encode, bool isCopy, bool isCert, X509_ParseFuncCbk *parsefun,
+    HITLS_X509_List *list)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
     if (isPem) {
-        return HITLS_X509_ParsePem(encode, isCert, parsefun, out);
+        return HITLS_X509_ParsePem(encode, isCert, parsefun, list);
     } else {
-        return parsefun(isCopy, isCopy, encode, out);
+        return HITLS_X509_ParseAsn1(encode, isCopy, parsefun, list);
     }
+}
+
+int32_t HITLS_X509_ParseX509(int32_t format, BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+    HITLS_X509_List *list)
+{
+    int32_t ret;
+    switch (format) {
+        case BSL_PARSE_FORMAT_ASN1:
+            ret = HITLS_X509_ParseAsn1(encode, true, parsefun, list);
+            break;
+        case BSL_PARSE_FORMAT_PEM:
+            ret = HITLS_X509_ParsePem(encode, isCert, parsefun, list);
+            break;
+        case BSL_PARSE_FORMAT_UNKNOWN:
+            ret = HITLS_X509_ParseUnkonw(encode, true, isCert, parsefun, list);
+            break;
+        default:
+            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
+            break;
+    }
+    return ret;
 }
 
 static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)

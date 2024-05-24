@@ -668,13 +668,11 @@ void Base64BlockEncDec(const uint8_t *buf, const uint32_t len)
     const uint8_t *src = buf;
     const uint32_t srcLen = len;
 
-    const uint32_t hitlsEncLen = HITLS_BASE64_ENCODE_LENGTH(len);
+    uint32_t hitlsEncLen = HITLS_BASE64_ENCODE_LENGTH(len);
     char *hitlsEncResult = BSL_SAL_Malloc(hitlsEncLen);
-    int opensslEncLen = 0;
 
-    const uint32_t hitlsDecLen = HITLS_BASE64_DECODE_LENGTH(hitlsEncLen);
+    uint32_t hitlsDecLen = HITLS_BASE64_DECODE_LENGTH(hitlsEncLen);
     uint8_t *hitlsDecResult = BSL_SAL_Malloc(hitlsDecLen);
-    int opensslDecLen = 0;
     TRUE_OR_EXIT(BSL_BASE64_Encode(src, srcLen, hitlsEncResult, &hitlsEncLen) == BSL_SUCCESS);
 
     TRUE_OR_EXIT(BSL_BASE64_Decode(hitlsEncResult, hitlsEncLen, hitlsDecResult, &hitlsDecLen) == BSL_SUCCESS);
@@ -883,5 +881,18 @@ exit:
 void SDV_BSL_BASE64_FUNC_TC011(void)
 {
     Base64StreamMultiUpdate(testData);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_BASE64_FUNC_TC012(char *src, int expectRes)
+{
+    uint32_t srcBufLen = strlen(src);
+    uint32_t dstBufLen = HITLS_BASE64_DECODE_LENGTH(srcBufLen);
+    uint8_t *dst = BSL_SAL_Malloc(dstBufLen);
+    ASSERT_TRUE(dst != NULL);
+    ASSERT_EQ(BSL_BASE64_Decode(src, srcBufLen, dst, &dstBufLen), (int32_t)expectRes);
+exit:
+    BSL_SAL_Free(dst);
 }
 /* END_CASE */

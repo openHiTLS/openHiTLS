@@ -40,7 +40,6 @@ exit:
 /* BEGIN_CASE */
 void SDV_BSL_PEM_ISPEM_FUNC_TC002(void)
 {
-    bool isPem = false;
     char *aa = "aaaaaaaa";
     ASSERT_TRUE(BSL_PEM_IsPemFormat(NULL, 0) == false);
     ASSERT_TRUE(BSL_PEM_IsPemFormat(aa, strlen(aa)) == false);

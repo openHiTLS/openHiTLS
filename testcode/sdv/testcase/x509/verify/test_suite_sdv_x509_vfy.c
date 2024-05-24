@@ -98,39 +98,10 @@ HITLS_X509_StoreCtx *HITLS_X509_NewStoreCtxMock(void)
     return ctx;
 }
 
-static int32_t HITLS_ParseCrlTest(char *path, HITLS_X509_Crl **crl)
-{
-    *crl = HITLS_X509_NewCrl();
-    if (*crl == NULL) {
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
-    int32_t ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path, *crl);
-    if (ret != HITLS_X509_SUCCESS) {
-        return ret;
-    }
-    return ret;
-}
-
-static int32_t HITLS_ParseCertTest(char *path, HITLS_X509_Cert **cert)
-{
-    *cert = HITLS_X509_NewCert();
-    if (*cert == NULL) {
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
-    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path, *cert);
-    if (ret != HITLS_X509_SUCCESS) {
-        return ret;
-    }
-    return ret;
-}
-
 static int32_t HITLS_BuildChain(BslList *list, int type,
     char *path1, char *path2, char *path3, char *path4, char *path5)
 {
     int32_t ret;
-    
     char *path[] = {path1, path2, path3, path4, path5};
     for (size_t i = 0; i < sizeof(path) / sizeof(path[0]); i++) {
         if (path[i] == NULL) {
@@ -138,7 +109,7 @@ static int32_t HITLS_BuildChain(BslList *list, int type,
         }
         if (type == 0) { // cert
             HITLS_X509_Cert *cert = NULL;
-            ret = HITLS_ParseCertTest(path[i], &cert);
+            ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path[i], &cert);
             if (ret != HITLS_X509_SUCCESS) {
                 return ret;
             }
@@ -148,7 +119,7 @@ static int32_t HITLS_BuildChain(BslList *list, int type,
             }
         } else { // crl
             HITLS_X509_Crl *crl = NULL;
-            ret = HITLS_ParseCrlTest(path[i], &crl);
+            ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path[i], &crl);
             if (ret != HITLS_X509_SUCCESS) {
                 return ret;
             }
@@ -257,7 +228,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
 {
     HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
     HITLS_X509_Cert *cert = NULL;
-    int32_t ret = HITLS_ParseCertTest("../testdata/cert/asn1/rsa2048ssa-pss.crt", &cert);
+    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/asn1/rsa2048ssa-pss.crt", &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
@@ -267,7 +238,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
     HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_ParseCrlTest("../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der", &crl);
+    ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der", &crl);
     ret = HITLS_X509_CtrlStoreCtx(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(crl->references.count, 2);
@@ -286,7 +257,7 @@ exit:
 
 static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Cert **cert)
 {
-    int32_t ret = HITLS_ParseCertTest(path, cert);
+    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, path, cert);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -295,7 +266,7 @@ static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, 
 
 static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Crl **crl)
 {
-    int32_t ret = HITLS_ParseCrlTest(path, crl);
+    int32_t ret = HITLS_X509_ParseFileCrl(BSL_PARSE_FORMAT_ASN1, path, crl);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -409,12 +380,12 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC003(void)
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *ca = NULL;
     HITLS_X509_Cert *root = NULL;
-    int32_t ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/inter.der", store, &ca);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     HITLS_X509_Cert *entity = NULL;
-    ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/end.der", &entity);
+    ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/end.der", &entity);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
     HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_TRUE(chain != NULL);
@@ -466,7 +437,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC005(void)
     HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *root = NULL;
-    int32_t ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
     HITLS_X509_List *chain = NULL;
@@ -491,7 +462,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006(void)
     HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtx();
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *root = NULL;
-    int32_t ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    int32_t ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
     HITLS_X509_List *chain = NULL;
@@ -622,7 +593,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009(void)
     int32_t ret = HITLS_X509_VerifyCert(store, chain);
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
     HITLS_X509_Cert *root = NULL;
-    ret = HITLS_ParseCertTest("../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
+    ret = HITLS_X509_ParseFileCert(BSL_PARSE_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = X509_AddCertToChainTest(chain, root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);

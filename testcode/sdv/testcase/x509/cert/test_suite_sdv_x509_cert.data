@@ -3355,3 +3355,18 @@ SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/sha256Rsaca.crt":BSL_CID_SHA
 
 SDV_X509_CERT_DUP_FUNC_TC001 with key usage sha256 rsa v3 ca
 SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/cawithkeyusage.der":BSL_CID_SHA256WITHRSAENCRYPTION:0:1:0
+
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 3 pem certs 
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_PEM:"../testdata/cert/sm2/chain.pem":3
+
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 3 der certs
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/sm2/chain.der":3
+
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 3 unknown(pem) certs 
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/sm2/chain.pem":3
+
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 3 unknown(der) certs
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/sm2/chain.der":3
+
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 3 unknown(pem) certs (with redundant symbols)
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/sm2/chain-red.pem":3

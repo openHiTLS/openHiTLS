@@ -45,7 +45,6 @@ void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
     printf("\n");
 }
 
-
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
 {
@@ -55,9 +54,8 @@ void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
     func.fixLenFunc = BinLogFixLenFunc;
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
-    HITLS_X509_Cert *cert = HITLS_X509_NewCert();
-    ASSERT_TRUE(cert != NULL);
-    int32_t ret = HITLS_X509_ParseFileCert(format, path, cert);
+    HITLS_X509_Cert *cert = NULL;
+    int32_t ret = HITLS_X509_ParseFileCert(format, path, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_FreeCert(cert);
@@ -76,13 +74,8 @@ static int32_t HITLS_ParseCertTest(char *path, int32_t fromat, HITLS_X509_Cert *
     if (ret != BSL_SUCCESS) {
         return ret;
     }
-    
-    *cert = HITLS_X509_NewCert();
-    if (*cert == NULL) {
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
 
-    ret = HITLS_X509_ParseFileCert(fromat, path, *cert);
+    ret = HITLS_X509_ParseFileCert(fromat, path, cert);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -654,5 +647,17 @@ void SDV_X509_CERT_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedB
 exit:
     HITLS_X509_FreeCert(cert);
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_MUL_CERT_PARSE_FUNC_TC001(int format, char *path, int certNum)
+{
+    HITLS_X509_List *list = NULL;
+    int32_t ret = HITLS_X509_ParseFileCertMul(format, path, &list);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(list), certNum);
+exit:
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
 }
 /* END_CASE */
