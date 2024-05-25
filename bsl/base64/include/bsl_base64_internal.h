@@ -57,7 +57,7 @@ struct BASE64_ControlBlock {
  * @param num        [OUT] Obtain the remaining length of the buf.
  * @retval If it is success, BSL_SUCCESS is returned. Otherwise, a failure error code is returned.
  */
-uint32_t BSL_Base64GetNum(BSL_Base64Ctx *ctx, uint32_t *num);
+int32_t BSL_Base64GetNum(BSL_Base64Ctx *ctx, uint32_t *num);
 
 #ifdef __cplusplus
 }
