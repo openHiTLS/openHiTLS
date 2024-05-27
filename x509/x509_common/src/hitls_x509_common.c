@@ -155,7 +155,7 @@ static int32_t HITLS_X509_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, HITLS_X509
 
     if (asnArr[HITLS_X509_RSAPSS_TRAILED_IDX].tag != 0) {
         uint32_t trailerField;
-        ret = BSL_ASN1_DecodePrimitiveItem(&asnArr[HITLS_X509_RSAPSS_SALTLEN_IDX], &trailerField);
+        ret = BSL_ASN1_DecodePrimitiveItem(&asnArr[HITLS_X509_RSAPSS_TRAILED_IDX], &trailerField);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
