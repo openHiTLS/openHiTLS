@@ -518,6 +518,9 @@ void BSL_SAL_FileClose(bsl_sal_file_handle stream);
  * @brief   Read the file.
  *
  * Read the file.
+ * The actual memory of the interface is 1 more than the real length of the read file,
+ * which is used to add '\0' after the end of the read file content, and the outgoing parameter len is the real
+ * data length, excluding '\0'.
  *
  * @attention none
  * @param stream [IN] File handle

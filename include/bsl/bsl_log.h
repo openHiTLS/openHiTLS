@@ -68,7 +68,6 @@ extern "C" {
  *
  * HiTLS version string
  */
-
 #ifndef OPENHITLS_VERSION_S
 #define OPENHITLS_VERSION_S "openHiTLS 0.1.0 alpha1"
 #endif

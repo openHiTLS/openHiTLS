@@ -1,0 +1,62 @@
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
+ */
+#ifndef BSL_PEM_INTERNAL_H
+#define BSL_PEM_INTERNAL_H
+
+#include "hitls_build.h"
+#ifdef HITLS_BSL_PEM
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define BSL_PEM_CERT_BEGIN_STR "-----BEGIN CERTIFICATE-----"
+#define BSL_PEM_CERT_END_STR "-----END CERTIFICATE-----"
+
+#define BSL_PEM_CRL_BEGIN_STR "-----BEGIN X509 CRL-----"
+#define BSL_PEM_CRL_END_STR "-----END X509 CRL-----"
+
+#define BSL_PEM_PUB_KEY_BEGIN_STR "-----BEGIN PUBLIC KEY-----"
+#define BSL_PEM_PUB_KEY_END_STR "-----END PUBLIC KEY-----"
+
+#define BSL_PEM_RSA_PUB_KEY_BEGIN_STR "-----BEGIN RSA PUBLIC KEY-----"
+#define BSL_PEM_RSA_PUB_KEY_END_STR "-----END RSA PUBLIC KEY-----"
+
+#define BSL_PEM_RSA_PIR_KEY_BEGIN_STR "-----BEGIN RSA PRIVATE KEY-----"
+#define BSL_PEM_RSA_PIR_KEY_END_STR "-----END RSA PRIVATE KEY-----"
+
+/** rfc5915 section 4 */
+#define BSL_PEM_EC_PIR_KEY_BEGIN_STR "-----BEGIN EC PRIVATE KEY-----"
+#define BSL_PEM_EC_PIR_KEY_END_STR "-----END EC PRIVATE KEY-----"
+
+/** rfc5958 section 5 */
+#define BSL_PEM_PIR_KEY_BEGIN_STR "-----BEGIN PRIVATE KEY-----"
+#define BSL_PEM_PIR_KEY_END_STR "-----END PRIVATE KEY-----"
+
+/** rfc5958 section 5 */
+#define BSL_PEM_P8_PRI_KEY_BEGIN_STR "-----BEGIN ENCRYPTED PRIVATE KEY-----"
+#define BSL_PEM_P8_PRI_KEY_END_STR "-----END ENCRYPTED PRIVATE KEY-----"
+
+typedef struct {
+    const char *head;
+    const char *tail;
+} BSL_PEM_Symbol;
+
+/* encode must end in '\0' */
+int32_t BSL_PEM_ParsePem2Asn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
+    uint32_t *asn1Len);
+
+/* encode must end in '\0' */
+bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* HITLS_BSL_PEM */
+#endif /* BSL_PEM_INTERNAL_H */

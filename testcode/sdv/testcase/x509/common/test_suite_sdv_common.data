@@ -1,0 +1,137 @@
+SDV_HITLS_X509_FreeCert_TC001
+SDV_HITLS_X509_FreeCert_TC001
+
+SDV_HITLS_X509_ParseBuffCert_TC001
+SDV_HITLS_X509_ParseBuffCert_TC001
+
+SDV_HITLS_X509_ParseFileCert_TC001
+SDV_HITLS_X509_ParseFileCert_TC001
+
+SDV_HITLS_X509_CtrlCert_TC001
+SDV_HITLS_X509_CtrlCert_TC001
+
+SDV_HITLS_X509_DupCert_TC001
+SDV_HITLS_X509_DupCert_TC001
+
+SDV_HITLS_X509_FreeCrl_TC001
+SDV_HITLS_X509_FreeCrl_TC001
+
+SDV_HITLS_X509_CtrlCrl_TC001
+SDV_HITLS_X509_CtrlCrl_TC001
+
+SDV_HITLS_X509_ParseBuffCrl_TC001
+SDV_HITLS_X509_ParseBuffCrl_TC001
+
+SDV_HITLS_X509_ParseFileCrl_TC001
+SDV_HITLS_X509_ParseFileCrl_TC001
+
+SDV_CRYPT_EAL_ParseBuffPubKey_TC001
+SDV_CRYPT_EAL_ParseBuffPubKey_TC001
+
+SDV_CRYPT_EAL_ParseFilePubKey_TC001
+SDV_CRYPT_EAL_ParseFilePubKey_TC001
+
+SDV_CRYPT_EAL_ParseBuffPriKey_TC001
+SDV_CRYPT_EAL_ParseBuffPriKey_TC001
+
+SDV_CRYPT_EAL_ParseFilePriKey_TC001
+SDV_CRYPT_EAL_ParseFilePriKey_TC001
+
+SDV_HITLS_X509_FreeStoreCtx_TC001
+SDV_HITLS_X509_FreeStoreCtx_TC001
+
+SDV_HITLS_X509_CtrlStoreCtx_TC001
+SDV_HITLS_X509_CtrlStoreCtx_TC001
+
+SDV_HITLS_X509_VerifyCert_TC001
+SDV_HITLS_X509_VerifyCert_TC001
+
+SDV_HITLS_X509_BuildCertChain_TC001
+SDV_HITLS_X509_BuildCertChain_TC001
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem secp521r1 private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_ECC:"../testdata/cert/asn1/secp521r1.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown type(pem) ecc private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_ECC:"../testdata/cert/asn1/secp521r1.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem prime256v1 private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_ECC:"../testdata/cert/asn1/secp384r1.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown type(pem) ecc private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_ECC:"../testdata/cert/asn1/secp384r1.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown type(der) ecc private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_ECC:"../testdata/cert/asn1/secp384r1.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 ec unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/prime256v1_pkcs8.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(pem) pkcs8 ec unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/prime256v1_pkcs8.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(der) pkcs8 ec unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/prime256v1_pkcs8.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem rsa private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pri-key.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(pem) rsa private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pri-key.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(der) rsa private key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pri-key.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 rsa unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(pem) pkcs8 rsa unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(der) pkcs8 rsa unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 ec encrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/prime256v1_pkcs8_enc.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(pem) pkcs8 ec encrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/prime256v1_pkcs8_enc.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(der) pkcs8 ec encrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/prime256v1_pkcs8_enc1.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 rsa encrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8-enc.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(pem) pkcs8 rsa encrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8-enc.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(der) pkcs8 rsa encrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8-enc.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem pkcs8 ec public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/secp384r1pub.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(pem) pkcs8 ec public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/secp384r1pub.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(der) pkcs8 ec public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/secp384r1pub.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem pkcs8 rsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown pkcs8 rsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/keypem/rsa-pub-key-p8.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown pkcs8 rsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/keypem/rsa-pub-key-p8.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem rsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_PEM:CRYPT_PUBKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pub-key.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(pem) rsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PUBKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pub-key.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(der) rsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_PARSE_FORMAT_UNKNOWN:CRYPT_PUBKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pub-key.der"

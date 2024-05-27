@@ -13,6 +13,7 @@
 #include "hitls_x509_local.h"
 #include "hitls_crl_local.h"
 #include "bsl_obj_internal.h"
+#include "bsl_pem_internal.h"
 #include "bsl_err_internal.h"
 
 #define HITLS_CRL_CTX_SPECIFIC_TAG_EXTENSION 0
@@ -377,44 +378,57 @@ ERR:
     return ret;
 }
 
-int32_t HITLS_X509_ParseBuffCrl(bool isCopy, int32_t format, BSL_Buffer *encode, HITLS_X509_Crl *crl)
+int32_t HITLS_X509_ParseBuffCrlMul(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist)
 {
-    int32_t ret;
-    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crl == NULL) {
+    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crllist == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    uint8_t *data = encode->data;
-    uint32_t dataLen = encode->dataLen;
-    if (isCopy == true) {
-        data = BSL_SAL_Malloc(dataLen);
-        if (data == NULL) {
-            return BSL_MALLOC_FAIL;
-        }
-        (void)memcpy_s(data, encode->dataLen, encode->data, encode->dataLen);
+
+    X509_ParseFuncCbk crlCbk = {
+        (HITLS_X509_Asn1Parse)HITLS_X509_ParseAsn1Crl,
+        (HITLS_X509_New)HITLS_X509_NewCrl,
+        (HITLS_X509_Free)HITLS_X509_FreeCrl,
+    };
+    HITLS_X509_List *list = BSL_LIST_New(sizeof(HITLS_X509_Crl));
+    if (list == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
     }
-    
-    switch (format) {
-        case BSL_PARSE_FORMAT_ASN1:
-            ret = HITLS_X509_ParseAsn1Crl(isCopy, &data, &dataLen, crl);
-            break;
-        case BSL_PARSE_FORMAT_PEM:
-            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
-            break;
-        case BSL_PARSE_FORMAT_UNKNOWN:
-            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
-            break;
-        default:
-            ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
-            break;
+    int32_t ret = HITLS_X509_ParseX509(format, encode, false, &crlCbk, list);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCrl);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    if (ret != HITLS_X509_SUCCESS && isCopy == true) {
-        BSL_SAL_Free(data);
-    }
-    return ret;
+    *crllist = list;
+    return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl *crl)
+int32_t HITLS_X509_ParseBuffCrl(int32_t format, BSL_Buffer *encode, HITLS_X509_Crl **crl)
+{
+    HITLS_X509_List *list = NULL;
+    if (crl == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    int32_t ret = HITLS_X509_ParseBuffCrlMul(format, encode, &list);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    HITLS_X509_Crl *tmp = BSL_LIST_GET_FIRST(list);
+    int ref;
+    ret = HITLS_X509_CtrlCrl(tmp, HITLS_X509_CRL_REF_UP, &ref, sizeof(int));
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCrl);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    *crl = tmp;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl **crl)
 {
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
@@ -424,7 +438,22 @@ int32_t HITLS_X509_ParseFileCrl(int32_t format, const char *path, HITLS_X509_Crl
     }
 
     BSL_Buffer encode = {data, dataLen};
-    ret = HITLS_X509_ParseBuffCrl(true, format, &encode, crl);
+    ret = HITLS_X509_ParseBuffCrl(format, &encode, crl);
+    BSL_SAL_Free(data);
+    return ret;
+}
+
+int32_t HITLS_X509_ParseFileCrlMul(int32_t format, const char *path, HITLS_X509_List **crllist)
+{
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    BSL_Buffer encode = {data, dataLen};
+    ret = HITLS_X509_ParseBuffCrlMul(format, &encode, crllist);
     BSL_SAL_Free(data);
     return ret;
 }

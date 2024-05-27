@@ -70,14 +70,10 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
     BSL_Buffer encodedCert = { NULL, 0 };
     BSL_ParseFormat bslFormat = GetBslParseFormat(format);
     int ret = HITLS_X509_ADAPT_ERR;
-    HITLS_X509_Cert *cert = HITLS_X509_NewCert();
-    if (cert == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return NULL;
-    }
+    HITLS_X509_Cert *cert = NULL;
     switch (type) {
         case TLS_PARSE_TYPE_FILE:
-            ret = HITLS_X509_ParseFileCert(bslFormat, (const char *)buf, cert);
+            ret = HITLS_X509_ParseFileCert(bslFormat, (const char *)buf, &cert);
             break;
         case TLS_PARSE_TYPE_BUFF:
             encodedCert.data = (uint8_t *)BSL_SAL_Calloc(len, (uint32_t)sizeof(uint8_t));
@@ -87,14 +83,13 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
             }
             (void)memcpy_s(encodedCert.data, len, buf, len);
             encodedCert.dataLen = len;
-            ret = HITLS_X509_ParseBuffCert(true, bslFormat, &encodedCert, cert);
+            ret = HITLS_X509_ParseBuffCert(bslFormat, &encodedCert, &cert);
             break;
         default:
             break;
     }
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        HITLS_X509_FreeCert(cert);
         BSL_SAL_FREE(encodedCert.data);
         return NULL;
     }
