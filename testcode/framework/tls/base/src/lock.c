@@ -6,11 +6,11 @@
  *---------------------------------------------------------------------------------------------
  */
 
+#include <pthread.h>
 #include <stdint.h>
 #include "securec.h"
 #include "logger.h"
 #include "lock.h"
-
 Lock *OsLockNew(void)
 {
     pthread_mutexattr_t attr;

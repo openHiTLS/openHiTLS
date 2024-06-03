@@ -168,12 +168,12 @@ static int32_t GetFrameType(HLT_FrameHandle *frameHandle, FRAME_Type *frameType)
 static bool CheckHandleType(FRAME_Msg *msg)
 {
     if (msg->recType.data != REC_TYPE_HANDSHAKE) {
-        if (msg->recType.data == g_frameHandle.expectReType) {
+        if ((int32_t)msg->recType.data == g_frameHandle.expectReType) {
             return true;
         }
     } else {
-        if (msg->recType.data == g_frameHandle.expectReType &&
-            msg->body.hsMsg.type.data == g_frameHandle.expectHsType) {
+        if ((int32_t)msg->recType.data == g_frameHandle.expectReType &&
+            (int32_t)msg->body.hsMsg.type.data == g_frameHandle.expectHsType) {
             return true;
         }
     }

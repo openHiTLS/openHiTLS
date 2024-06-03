@@ -873,11 +873,11 @@ void UT_TLS_CFG_GET_SET_SESSION_TICKETKEY_API_TC001(int version)
     uint32_t getKeySize = DATA_MAX_LEN;
     uint32_t outSize = 0;
 
-    uint8_t *ticketKey = "748ab9f3dc1a23748ab9f3dc1a23748ab9f3dc1a23748ab9f3dc1a23748ab9f3dc1a23748ab9f3d";
+    char *ticketKey = "748ab9f3dc1a23748ab9f3dc1a23748ab9f3dc1a23748ab9f3dc1a23748ab9f3dc1a23748ab9f3d";
     uint32_t ticketKeyLen = HITLS_TICKET_KEY_NAME_SIZE + HITLS_TICKET_KEY_SIZE + HITLS_TICKET_KEY_SIZE;
 
     ASSERT_TRUE(HITLS_CFG_SetSessionTicketKey(config, NULL, ticketKeyLen) == HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_CFG_SetSessionTicketKey(config, ticketKey, ticketKeyLen) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetSessionTicketKey(config, (uint8_t *)ticketKey, ticketKeyLen) == HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_CFG_GetSessionTicketKey(config, getKey, getKeySize, NULL) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetSessionTicketKey(config, getKey, getKeySize, &outSize) == HITLS_SUCCESS);
@@ -1110,7 +1110,7 @@ void UT_TLS_CFG_SET_GET_CONFIGUSEDATA_API_TC001(int version)
     HITLS_Config *config = GetHitlsConfigViaVersion(version);
     ASSERT_TRUE(config != NULL);
 
-    uint8_t* userData = "123456";
+    char *userData = "123456";
     ASSERT_TRUE(HITLS_CFG_SetConfigUserData(NULL, userData) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_SetConfigUserData(config, userData) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_GetConfigUserData(config) != NULL);

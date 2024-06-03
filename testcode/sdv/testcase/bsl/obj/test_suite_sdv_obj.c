@@ -31,7 +31,6 @@ void SDV_BSL_OBJ_CID_OID_FUNC_TC001()
     int32_t cidIndex = 0;
     int32_t oidIndex = 0;
     int32_t ret = 0;
-    BslCid id = BSL_OBJ_GetCIDFromOid(NULL);
     while (cidIndex < BSL_CID_MAX && oidIndex < (int32_t)g_tableSize) {
         if ((int32_t)g_oidTable[oidIndex].cid == cidIndex) {
             ret++;

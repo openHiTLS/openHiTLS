@@ -179,11 +179,14 @@ exit:
  *    1. Create the context of the sm2 algorithm, expected result 1
  *    2. Call the CRYPT_EAL_PkeySetPrv method to set private key:
  *       (1) prv.len is invalid (prvKey.len + 1),  expected result 2
- *       (2) private key is all 0x00,  expected result 3
- *       (3) private key is all 0xFF,  expected result 4
+ *       (2) private key is all 0x00,  expected result 2
+ *       (3) private key is all 0xFF,  expected result 2
+ *       (4) value of private key  == order(curve_sm2) - 1,  expected result 2
+ *       (5) ctx id is wrong,  expected result 3
  * @expect
  *    1. Success, and the context is not NULL.
- *    2-4. CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY
+ *    2. CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY
+ *    3. CRYPT_EAL_ERR_ALGID
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM2_SET_PRV_API_TC001(Hex *prvKey)
@@ -208,6 +211,11 @@ void SDV_CRYPTO_SM2_SET_PRV_API_TC001(Hex *prvKey)
     ASSERT_TRUE_AND_LOG("zero data key", CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY);
     prv.key.eccPrv.data = fullF;
     ASSERT_TRUE_AND_LOG("full 1 key", CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY);
+
+    prv.id = CRYPT_PKEY_SM2;
+    prv.key.eccPrv.data = prvKey->x;
+    prv.key.eccPrv.len = prvKey->len;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY);
 
     prv.id = CRYPT_PKEY_ED25519;
     prv.key.eccPrv.data = prvKey->x;

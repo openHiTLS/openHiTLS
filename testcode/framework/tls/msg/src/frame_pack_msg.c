@@ -921,7 +921,7 @@ static int32_t PackServerDheMsg(FRAME_Type *type, const FRAME_ServerKeyExchangeM
     return HITLS_SUCCESS;
 }
 
-static int32_t PackServerEccMsg(FRAME_Type *type, const FRAME_ServerKeyExchangeMsg *serverKeyExchange, uint8_t *buf,
+static int32_t PackServerEccMsg(const FRAME_ServerKeyExchangeMsg *serverKeyExchange, uint8_t *buf,
     uint32_t bufLen, uint32_t *usedLen)
 {
     uint32_t offset = 0;
@@ -941,7 +941,7 @@ static int32_t PackServerKeyExchangeMsg(FRAME_Type *type, const FRAME_ServerKeyE
     } else if (type->keyExType == HITLS_KEY_EXCH_DHE) {
         return PackServerDheMsg(type, serverKeyExchange, buf, bufLen, usedLen);
     } else if (type->keyExType == HITLS_KEY_EXCH_ECC) {
-        return PackServerEccMsg(type, serverKeyExchange, buf, bufLen, usedLen);
+        return PackServerEccMsg(serverKeyExchange, buf, bufLen, usedLen);
     }
 
     return HITLS_PACK_UNSUPPORT_KX_ALG;

@@ -104,7 +104,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -223,7 +223,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC007(int ver
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -340,7 +340,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     int32_t serverConfigId2 = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");

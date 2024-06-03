@@ -233,7 +233,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
 
     // Apply for the config context.
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
-    void *clientConfig = HLT_TlsNewCtx(TLS1_3, true);
+    void *clientConfig = HLT_TlsNewCtx(TLS1_3);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Configure the session restoration function.
@@ -2666,7 +2666,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC004()
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_REC_NORMAL_IO_BUSY);
 
     FrameUioUserData *ioUserData2 = BSL_UIO_GetUserData(testInfo.client->io);
-    uint8_t *sendBuf = ioUserData2->sndMsg.msg;
     uint32_t sendLen = ioUserData2->sndMsg.len;
     ASSERT_TRUE(sendLen != 0);
 
@@ -2960,7 +2959,6 @@ exit:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_PROCESS_TC001()
 {
     FRAME_Init();
-    int32_t ret;
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
 
     tlsConfig->isSupportExtendMasterSecret = true;

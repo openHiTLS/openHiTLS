@@ -7,7 +7,6 @@
  */
 
 #include <stdlib.h>
-#include <stdlib.h>
 #include <malloc.h>
 #include <stdatomic.h>
 #include "securec.h"
@@ -238,9 +237,8 @@ int32_t ExampleTicketKeyFailCb(uint8_t *keyName, uint32_t keyNameSize, HITLS_Cip
 
 int32_t ExampleServerNameCb(HITLS_Ctx *ctx, int *alert, void *arg)
 {
-    SNI_Arg *sniArg = (SNI_Arg *)arg;
-    const char *servername = "testServer";
-
+    (void)ctx;
+    (void)arg;
     *alert = HITLS_ACCEPT_SNI_ERR_OK;
     return HITLS_ACCEPT_SNI_ERR_OK;
 }
@@ -267,12 +265,7 @@ void *ExampleServerNameArg(void)
     return g_sniArg;
 }
 
-static uint8_t C_parsedList1[100];
-uint8_t C_parsedListLen1;
-static const char *g_alpn1 = "http,ftp";
-static const char *g_alpnhttp = "http";
-static const char *g_alpnftp = "ftp";
-#define MAX_PROTOCOL_LEN1 255
+static char *g_alpnhttp = "http";
 
 int32_t ExampleAlpnParseProtocolList1(uint8_t *out, uint8_t *outLen, uint8_t *in, uint8_t inLen)
 {
@@ -280,7 +273,7 @@ int32_t ExampleAlpnParseProtocolList1(uint8_t *out, uint8_t *outLen, uint8_t *in
         return HITLS_NULL_INPUT;
     }
 
-    if (inLen == 0 || inLen > MAX_PROTOCOL_LEN1) {
+    if (inLen == 0) {
         return HITLS_CONFIG_INVALID_LENGTH;
     }
 
@@ -307,12 +300,10 @@ int32_t ExampleAlpnParseProtocolList1(uint8_t *out, uint8_t *outLen, uint8_t *in
     return HITLS_SUCCESS;
 }
 
-int32_t ExampleAlpnCb(HITLS_Ctx *ctx, uint8_t **selectedProto, uint8_t *selectedProtoSize, uint8_t *clientAlpnList,
+int32_t ExampleAlpnCb(HITLS_Ctx *ctx, char **selectedProto, uint8_t *selectedProtoSize, char *clientAlpnList,
     uint32_t clientAlpnListSize, void *userData)
 {
     (void)ctx;
-    (void)clientAlpnList;
-    (void)clientAlpnListSize;
     (void)userData;
     if (clientAlpnListSize >= 5 && memcmp(clientAlpnList + 1, "http", 4) == 0) {
         *selectedProto = clientAlpnList + 1;

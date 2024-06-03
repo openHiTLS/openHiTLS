@@ -27,6 +27,7 @@ void SendAlertStake(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description descripti
 
 int32_t ParserRecordHeader(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len, uint32_t *parserLen)
 {
+    (void)len;
     uint32_t bufOffset = 0;
 
     frameMsg->type = buffer[bufOffset];
@@ -78,6 +79,7 @@ int32_t ParserHandShakeMsg(const FRAME_LinkObj *linkObj, FRAME_Msg *frameMsg,
 
 int32_t ParserCCSMsg(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len, uint32_t *parserLen)
 {
+    (void)len;
     frameMsg->body.ccsMsg.type = buffer[0];
     *parserLen += sizeof(uint8_t);
     return HITLS_SUCCESS;
@@ -85,6 +87,7 @@ int32_t ParserCCSMsg(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len, u
 
 int32_t ParserAlertMsg(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len, uint32_t *parserLen)
 {
+    (void)len;
     uint32_t bufOffset = 0;
     frameMsg->body.alertMsg.level = buffer[bufOffset];
     bufOffset += sizeof(uint8_t);
@@ -96,6 +99,7 @@ int32_t ParserAlertMsg(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len,
 
 int32_t ParserAppMsg(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len, uint32_t *parserLen)
 {
+    (void)len;
     uint32_t bufOffset = 0;
     uint32_t userDataLen = BSL_ByteToUint32(&buffer[bufOffset]);
     frameMsg->body.appMsg.len = userDataLen;

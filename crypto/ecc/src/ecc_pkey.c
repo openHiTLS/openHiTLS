@@ -103,7 +103,9 @@ int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const CRYPT_EccPrv *prv)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-
+    if (ctx->para->id == CRYPT_ECC_SM2) {
+        (void)BN_SubLimb(paraN, paraN, 1);
+    }
     ret = BN_Bin2Bn(newPrvKey, prv->data, prv->len);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -212,32 +214,46 @@ int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_EccPub *pub)
 
 static int32_t GenPrivateKey(ECC_Pkey *ctx)
 {
-    int32_t ret;
+    int32_t ret = CRYPT_SUCCESS;
     uint32_t tryCount = 0;
-
-    if (ctx->prvkey == NULL) {
-        ctx->prvkey = BN_Create(ECC_ParaBits(ctx->para));
-        if (ctx->prvkey == NULL) {
+    uint32_t paraBits = ECC_ParaBits(ctx->para);
+    BN_BigNum *paraN = NULL;
+    if (ctx->para->id == CRYPT_ECC_SM2) {
+        paraN = BN_Create(paraBits);
+        if (paraN == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
+        (void)BN_SubLimb(paraN, ctx->para->n, 1);
+    } else {
+        paraN = ctx->para->n;
     }
-
+    if (ctx->prvkey == NULL) {
+        ctx->prvkey = BN_Create(paraBits);
+        if (ctx->prvkey == NULL) {
+            ret = CRYPT_MEM_ALLOC_FAIL;
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            goto ERR;
+        }
+    }
     do {
-        ret = BN_RandRange(ctx->prvkey, ctx->para->n);
+        ret = BN_RandRange(ctx->prvkey, paraN);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+            goto ERR;
         }
         tryCount += 1;
     } while ((BN_IsZero(ctx->prvkey) == true) && (tryCount < CRYPT_ECC_TRY_MAX_CNT));
 
     if (tryCount == CRYPT_ECC_TRY_MAX_CNT) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_TRY_CNT);
-        return CRYPT_ECC_PKEY_ERR_TRY_CNT;
+        ret = CRYPT_ECC_PKEY_ERR_TRY_CNT;
     }
-
-    return CRYPT_SUCCESS;
+ERR:
+    if (paraN != ctx->para->n) {
+        BN_Destroy(paraN);
+    }
+    return ret;
 }
 
 int32_t ECC_GenPublicKey(ECC_Pkey *ctx)

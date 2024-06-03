@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 typedef struct {
-    uint8_t *funcId;
+    char *funcId;
     int (*hfunc)(CmdData *cmdData);
 } RpcFunList;
 

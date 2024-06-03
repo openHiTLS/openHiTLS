@@ -84,7 +84,7 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     remoteProcess = HLT_CreateRemoteProcess(remote);
     ASSERT_TRUE(remoteProcess != NULL);
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     HLT_SetRenegotiationSupport(clientCtxConfig, true);

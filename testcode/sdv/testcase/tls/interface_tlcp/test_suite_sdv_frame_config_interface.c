@@ -1389,7 +1389,6 @@ void UT_TLS_CFG_SET_GET_DHAUTOSUPPORT_FUNC_TC001(void)
     HITLS_Config *serverConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
-    HITLS_CRYPT_Key *key = NULL;
     uint16_t pfsCipherSuites[] = {HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256};
 
     clientConfig = HITLS_CFG_NewTLS12Config();

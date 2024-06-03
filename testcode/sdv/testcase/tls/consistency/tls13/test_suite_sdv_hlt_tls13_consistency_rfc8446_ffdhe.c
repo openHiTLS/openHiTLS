@@ -287,7 +287,7 @@ void UT_TLS13_RFC8446_FFDHE_TC001()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");

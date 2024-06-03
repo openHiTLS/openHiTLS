@@ -132,11 +132,11 @@ int32_t SctpConnect(char *targetIP, int targetPort, bool isBlock)
     }
 
     // Set the protocol and port number
-    bzero(&sockAddr, sizeof(struct sockaddr_in));
+    memset_s(&sockAddr, sizeof(struct sockaddr_in), 0, sizeof(struct sockaddr_in));
     sockAddr.sin_family = AF_INET;
     sockAddr.sin_port = htons(targetPort);
     // Set the IP address
-    sockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    sockAddr.sin_addr.s_addr = inet_addr(targetIP);
 
     // Connection
     int16_t tryNum = 0;
@@ -196,7 +196,7 @@ int32_t SctpBind(int port)
     }
 
     // Set the protocol and port number
-    bzero(&serverAddr, sizeof(serverAddr));
+    memset_s(&serverAddr, sizeof(struct sockaddr_in), 0, sizeof(struct sockaddr_in));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -245,6 +245,7 @@ ERR:
 
 int32_t SctpAccept(char* ip, int listenFd, bool isBlock)
 {
+    (void)ip;
     int32_t ret;
     struct sockaddr_in sockAddr;
 

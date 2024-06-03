@@ -151,7 +151,7 @@ void SDV_X509_CRL_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.issuerName), count);
     HITLS_X509_NameNode **nameNode = NULL;
     nameNode = BSL_LIST_First(crl->tbs.issuerName);
-    for (size_t i = 0; i < count; i+=2) {
+    for (int i = 0; i < count; i += 2) { // Iteration with step=2
         ASSERT_NE((*nameNode), NULL);
         ASSERT_EQ((*nameNode)->layer, 1);
         ASSERT_EQ((*nameNode)->nameType.tag, 0);
@@ -201,7 +201,7 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC003(char *path, int count, int num,
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.revokedCerts), count);
     HITLS_X509_CrlEntry **nameNode = NULL;
     nameNode = BSL_LIST_First(crl->tbs.revokedCerts);
-    for (size_t i = 1; i < num; i++) {
+    for (int i = 1; i < num; i++) {
         nameNode = BSL_LIST_Next(crl->tbs.revokedCerts);
     }
 

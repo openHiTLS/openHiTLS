@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/syscall.h>
@@ -263,13 +264,13 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
     }
 
     // Start a thread to listen to the control link. The link is used to receive the results returned by other processes
-    pthread_t t_id;
+    pthread_t tId;
     channelInfo->isExit = false;
-    if (pthread_create(&t_id, NULL, (void*)MonitorControlChannel, NULL) != 0) {
+    if (pthread_create(&tId, NULL, (void*)MonitorControlChannel, NULL) != 0) {
         LOG_ERROR("Create MonitorControlChannel Thread Error ...");
         goto ERR;
     }
-    channelInfo->tid = t_id;
+    channelInfo->tid = tId;
 
     // Populate Process Information
     process->tlsType = tlsType;
@@ -378,7 +379,7 @@ HLT_Process *InitPeerProcess(TLS_TYPE tlsType, HILT_TransportType connType, int 
         HLT_FD sockFd = {0};
         channelParam.port = port;
         channelParam.type = connType;
-        channelParam.isBlock = false; // The SCTP link is set to non-block. Otherwise, the SCTP link may be suspended.
+        channelParam.isBlock = isBlock; // The SCTP link is set to non-block. Otherwise, the SCTP link may be suspended.
         sockFd = HLT_CreateDataChannel(process, localProcess, channelParam);
         localProcess->connType = connType;
         localProcess->connFd = sockFd.peerFd;

@@ -6,8 +6,10 @@
  *---------------------------------------------------------------------------------------------
  */
 
-#include "rec_wrapper.h"
+#include "securec.h"
 #include "hs_ctx.h"
+#include "rec_wrapper.h"
+
 #define MAX_BUF 16384
 static RecWrapper g_recWrapper;
 static bool g_enableWrapper;
@@ -44,7 +46,7 @@ extern int32_t __wrap_REC_Read(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data,
 extern int32_t __wrap_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
 {
     // Length that can be manipulated in wrapper
-    int manipulateLen = num;
+    uint32_t manipulateLen = num;
     if (!g_enableWrapper || g_recWrapper.isRecRead || g_recWrapper.recordType != recordType) {
         return __real_REC_Write(ctx, recordType, data, manipulateLen);
     }
