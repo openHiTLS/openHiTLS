@@ -681,7 +681,7 @@ static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer
         if (tmpBuffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e ',' and '\0'
             ret = HITLS_X509_ERR_INVALID_PARAM;
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            goto exit;
+            return HITLS_X509_ERR_INVALID_PARAM;
         }
         if (nameNode != firstNameNode && nameNode->layer == 2) {
             *tmpBuff = ',';
@@ -691,7 +691,8 @@ static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer
         int32_t eachUsedLen = 0;
         ret = X509PrintNameNode(nameNode, tmpBuff, tmpBuffLen - offset, &eachUsedLen);
         if (ret != HITLS_X509_SUCCESS) {
-            goto exit;
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
         }
         tmpBuff += eachUsedLen;
         offset += eachUsedLen;
@@ -705,10 +706,6 @@ static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer
     (void)memcpy_s(buff->data, offset + 1, tmpBuffStr, offset);
     buff->dataLen = offset;
     return HITLS_X509_SUCCESS;
-exit:
-    BSL_SAL_FREE(buff->data);
-    buff->dataLen = 0;
-    return ret;
 }
 
 static int32_t X509_GetDistinguishNameStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)
