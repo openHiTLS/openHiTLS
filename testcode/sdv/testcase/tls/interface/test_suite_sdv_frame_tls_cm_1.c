@@ -361,11 +361,11 @@ void UT_TLS_CM_SET_SERVERNAME_FUNC_TC001(void)
 
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
-    ASSERT_EQ(HITLS_SetServerName(client->ssl, (uint8_t *)g_serverName, (uint32_t)strlen((char *)g_serverName)),
+    ASSERT_EQ(HITLS_SetServerName(client->ssl, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName)),
         HITLS_SUCCESS);
     client->ssl->isClient = true;
     const char *server_name = HITLS_GetServerName(client->ssl, HITLS_SNI_HOSTNAME_TYPE);
-    ASSERT_TRUE(memcmp(server_name, g_serverName, strlen(g_serverName)) == 0);
+    ASSERT_TRUE(memcmp(server_name, (uint8_t *)g_serverName, strlen(g_serverName)) == 0);
 
 exit:
     HITLS_CFG_FreeConfig(config);
@@ -621,8 +621,8 @@ void UT_TLS_CM_GET_PEERSIGNATURE_TYPE_API_TC001(int version)
     ctx = HITLS_New(tlsConfig);
     ASSERT_TRUE(ctx != NULL);
     HITLS_SignAlgo sigType = {0};
-    ASSERT_EQ(HITLS_GetPeerSignatureType(NULL, NULL),HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_GetPeerSignatureType(ctx, &sigType),HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE);
+    ASSERT_EQ(HITLS_GetPeerSignatureType(NULL, NULL), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_GetPeerSignatureType(ctx, &sigType), HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);

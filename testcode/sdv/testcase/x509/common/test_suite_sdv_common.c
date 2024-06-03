@@ -144,6 +144,8 @@ void SDV_HITLS_X509_ParseBuffCert_TC001(void)
 {
     TestMemInit();
     BSL_LOG_BinLogFuncs func = {0};
+    HITLS_X509_Cert *cert = NULL;
+    uint8_t buffData[10] = {0};
     BSL_GLOBAL_Init();
     func.fixLenFunc = BinLogFixLenFunc;
     func.varLenFunc = BinLogVarLenFunc;
@@ -152,11 +154,11 @@ void SDV_HITLS_X509_ParseBuffCert_TC001(void)
     ASSERT_EQ(HITLS_X509_ParseBuffCert(0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     BSL_Buffer buff = {0};
     ASSERT_EQ(HITLS_X509_ParseBuffCert(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    buff.data = &buff;
+    buff.data = buffData;
     ASSERT_EQ(HITLS_X509_ParseBuffCert(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
     ASSERT_EQ(HITLS_X509_ParseBuffCert(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_ParseBuffCert(0xff, &buff, &buff), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_ParseBuffCert(0xff, &buff, &cert), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -274,6 +276,8 @@ void SDV_HITLS_X509_ParseBuffCrl_TC001(void)
 {
     TestMemInit();
     BSL_LOG_BinLogFuncs func = {0};
+    HITLS_X509_Crl *crl = NULL;
+    uint8_t buffData[10] = {0};
     BSL_GLOBAL_Init();
     func.fixLenFunc = BinLogFixLenFunc;
     func.varLenFunc = BinLogVarLenFunc;
@@ -282,11 +286,11 @@ void SDV_HITLS_X509_ParseBuffCrl_TC001(void)
     ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     BSL_Buffer buff = {0};
     ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    buff.data = &buff;
+    buff.data = buffData;
     ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
     ASSERT_EQ(HITLS_X509_ParseBuffCrl(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0xff, &buff, &buff), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_ParseBuffCrl(0xff, &buff, &crl), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
 exit:
     BSL_GLOBAL_DeInit();
 }

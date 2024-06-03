@@ -599,7 +599,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_BSL_UIO_FLAGS_FUNC_TC001(int uioType)
 {
-    if (uioType = BSL_UIO_SCTP) {
+    if (uioType == BSL_UIO_SCTP) {
 #ifndef HITLS_BSL_UIO_SCTP
     SKIP_TEST();
 #endif

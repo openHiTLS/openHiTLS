@@ -137,9 +137,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC003(Hex *prvKey, Hex *pubKey, Hex *R)
 {
     uint8_t userId[10] = {0};
     int32_t server = 1;
-    uint8_t out[64];
     uint8_t localR[65];
-    uint32_t outLen = sizeof(out);
     CRYPT_EAL_PkeyPrv prv = {0};
     CRYPT_EAL_PkeyPub pub = {0};
 
@@ -187,9 +185,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC004(Hex *prvKey, Hex *pubKey, Hex *R)
     CRYPT_RandRegist(RandFunc);
     uint8_t userId[10] = {0};
     int32_t server = 1;
-    uint8_t out[64];
     uint8_t localR[65];
-    uint32_t outLen = sizeof(out);
     CRYPT_EAL_PkeyPrv prv = {0};
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);

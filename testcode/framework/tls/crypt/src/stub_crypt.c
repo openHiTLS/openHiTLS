@@ -465,7 +465,7 @@ void STUB_CRYPT_HmacFreeCallback(HITLS_HMAC_Ctx *ctx)
  */
 int32_t STUB_CRYPT_HmacUpdateCallback(HITLS_HMAC_Ctx *ctx, const uint8_t *data, uint32_t len)
 {
-    if ((ctx == NULL) || (data == NULL)) {
+    if ((ctx == NULL) || (data == NULL) || len == 0) {
         return HITLS_INTERNAL_EXCEPTION;
     }
     return HITLS_SUCCESS;
@@ -517,7 +517,8 @@ int32_t STUB_CRYPT_HmacFinalCallback(HITLS_HMAC_Ctx *ctx, uint8_t *out, uint32_t
 int32_t STUB_CRYPT_HmacCallback(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if ((key == NULL) || (in == NULL) || (out == NULL) || (outLen == NULL)) {
+    if ((key == NULL) || (keyLen == 0) || (in == NULL) || (inLen == 0) ||
+        (out == NULL) || (outLen == NULL)) {
         return HITLS_INTERNAL_EXCEPTION;
     }
 

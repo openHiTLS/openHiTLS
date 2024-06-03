@@ -403,6 +403,17 @@ HITLS_Session *HITLS_GetDupSession(HITLS_Ctx *ctx);
 
 /**
  * @ingroup hitls_session
+ * @brief   Obtain the sign type of the peer
+ *
+ * @param   ctx [IN] TLS connection handle
+ * @param   sigType [OUT] sign type.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_GetPeerSignatureType(const HITLS_Ctx *ctx, HITLS_SignAlgo *sigType);
+
+/**
+ * @ingroup hitls_session
  * @brief   Apply for a new session.
  *
  * @param   void

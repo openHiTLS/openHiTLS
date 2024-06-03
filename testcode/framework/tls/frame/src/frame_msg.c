@@ -20,6 +20,9 @@
 FRAME_Msg *FRAME_GenerateMsgFromBuffer(const FRAME_LinkObj *linkObj, const uint8_t *buffer, uint32_t len)
 {
     // Check whether the const Frame_LinkObj *linkObj parameter is required. If the parameter is not required, delete it
+    (void)linkObj;
+    (void)buffer;
+    (void)len;
     return NULL;
 }
 
@@ -30,6 +33,10 @@ FRAME_Msg *FRAME_GenerateMsgFromBuffer(const FRAME_LinkObj *linkObj, const uint8
 */
 int32_t FRAME_GetLinkRecMsg(FRAME_LinkObj *link, uint8_t *buffer, uint32_t len, uint32_t *msgLen)
 {
+    (void)link;
+    (void)buffer;
+    (void)len;
+    (void)msgLen;
     return HITLS_SUCCESS;
 }
 
@@ -40,5 +47,9 @@ int32_t FRAME_GetLinkRecMsg(FRAME_LinkObj *link, uint8_t *buffer, uint32_t len, 
 */
 int32_t FRAME_GetLinkSndMsg(FRAME_LinkObj *link, uint8_t *buffer, uint32_t len, uint32_t *msgLen)
 {
+    (void)link;
+    (void)buffer;
+    (void)len;
+    (void)msgLen;
     return HITLS_SUCCESS;
 }

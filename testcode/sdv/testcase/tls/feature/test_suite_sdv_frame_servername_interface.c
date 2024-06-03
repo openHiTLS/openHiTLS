@@ -21,32 +21,7 @@
 #include "hitls_error.h"
 /* END_HEADER */
 
-
 static char *g_serverName = "www.example.com";
-
-static HITLS_Config *GetHitlsConfigViaVersion(int ver)
-{
-    switch (ver) {
-        case TLS1_2:
-        case HITLS_VERSION_TLS12:
-            return HITLS_CFG_NewTLS12Config();
-        case TLS1_3:
-        case HITLS_VERSION_TLS13:
-            return HITLS_CFG_NewTLS13Config();
-        case DTLS1_2:
-        case HITLS_VERSION_DTLS12:
-            return HITLS_CFG_NewDTLS12Config();
-        default:
-            return NULL;
-    }
-}
-
-static int32_t UT_ClientHelloCb(HITLS_Ctx *ctx, int32_t *alert, void *arg)
-{
-    (void)ctx;
-    (void)alert;
-    return *(int32_t *)arg;
-}
 
 int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
 {
@@ -91,11 +66,11 @@ void UT_TLS_CFG_SET_SERVERNAME_API_TC001()
     HitlsInit();
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
-    ASSERT_TRUE(HITLS_CFG_SetServerName(NULL, (uint8_t *)g_serverName, (uint32_t)strlen((char *)g_serverName)) ==
+    ASSERT_TRUE(HITLS_CFG_SetServerName(NULL, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName)) ==
                 HITLS_NULL_INPUT);
     uint32_t errLen = HITLS_CFG_MAX_SIZE + 1;
     ASSERT_TRUE(HITLS_CFG_SetServerName(config, (uint8_t *)g_serverName, errLen) == HITLS_CONFIG_INVALID_LENGTH);
-    ASSERT_TRUE(HITLS_CFG_SetServerName(config, (uint8_t *)g_serverName, (uint32_t)strlen((char *)g_serverName)) ==
+    ASSERT_TRUE(HITLS_CFG_SetServerName(config, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName)) ==
                 HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_GetServerName(NULL, NULL, NULL) == HITLS_NULL_INPUT);
 
@@ -113,7 +88,7 @@ void UT_TLS_CFG_SET_SERVERNAME_API_TC001()
     ASSERT_TRUE(HITLS_GetServerName(ctx, HITLS_SNI_BUTT) == NULL);
     ASSERT_TRUE(HITLS_GetServerName(NULL, HITLS_SNI_HOSTNAME_TYPE) == NULL);
 
-    ASSERT_TRUE(HITLS_GetServernameType(ctx) != NULL);
+    ASSERT_TRUE(HITLS_GetServernameType(ctx) != 0);
 exit:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);

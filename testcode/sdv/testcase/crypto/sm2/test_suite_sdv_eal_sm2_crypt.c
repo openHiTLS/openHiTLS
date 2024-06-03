@@ -160,7 +160,6 @@ void SDV_CRYPTO_SM2_DEC_API_TC001(Hex *prvKey, Hex *cipherText)
 {
     uint8_t plainText[MAX_PLAIN_TEXT_LEN];
     uint32_t outLen = cipherText->len;
-    uint32_t errDataLen;
     CRYPT_EAL_PkeyPrv prv = {0};
     SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
 

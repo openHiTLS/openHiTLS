@@ -48,8 +48,7 @@ void UT_TLS12_RESUME_FUNC_TC001()
     HITLS_CFG_SetServerNameCb(config, ServernameCbErrOK);
 
     char *sessionIdCtx1 = "123456789";
-    ASSERT_EQ(HITLS_CFG_SetSessionIdCtx(config,
-        (const uint8_t *)sessionIdCtx1, strlen(sessionIdCtx1)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSessionIdCtx(config, (const uint8_t *)sessionIdCtx1, strlen(sessionIdCtx1)), HITLS_SUCCESS);
 
     FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
