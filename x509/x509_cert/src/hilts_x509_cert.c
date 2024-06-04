@@ -6,9 +6,11 @@
  *---------------------------------------------------------------------------------------------
  */
 
+#include <stdio.h>
 #include "securec.h"
 #include "hitls_x509.h"
 #include "bsl_sal.h"
+#include "bsl_obj_internal.h"
 #include "hitls_x509_errno.h"
 #include "hitls_x509_local.h"
 #include "crypt_eal_encode.h"
@@ -26,6 +28,20 @@
 #define HITLS_CERT_CTX_SPECIFIC_TAG_ISSUERID  1
 #define HITLS_CERT_CTX_SPECIFIC_TAG_SUBJECTID 2
 #define HITLS_CERT_CTX_SPECIFIC_TAG_EXTENSION 3
+#define MAX_DN_STR_LEN 256
+#define PRINT_TIME_MAX_SIZE 32
+
+typedef enum {
+    HITLS_X509_ISSUER_DN_NAME,
+    HITLS_X509_SUBJECT_DN_NAME,
+    HITLS_X509_DN_NAME_UNKOWN
+} DISTINCT_NAME_TYPE;
+
+typedef enum {
+    HITLS_X509_BEFORE_TIME,
+    HITLS_X509_AFTER_TIME,
+    HITLS_X509_TIME_UNKOWN
+} X509_TIME_TYPE;
 
 BSL_ASN1_TemplateItem g_certTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* x509 */
@@ -245,7 +261,7 @@ int32_t HITLS_X509_ParseExtBasicContaints(HITLS_X509_ExtEntry *extEntry, HITLS_X
             return ret;
         }
     }
-    
+
     if (asnArr[HITLS_X509_EXT_BC_PATHLEN_IDX].tag != 0) {
         ret = BSL_ASN1_DecodePrimitiveItem(&asnArr[HITLS_X509_EXT_BC_PATHLEN_IDX], &cert->tbs.ext.maxPathLen);
         if (ret != BSL_SUCCESS) {
@@ -568,7 +584,7 @@ static int32_t X509_CertRefUp(HITLS_X509_Cert *cert, int32_t *val, int32_t valLe
     return BSL_SAL_AtomicUpReferences(&cert->references, val);
 }
 
-int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valLen, uint64_t exp)
+static int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valLen, uint64_t exp)
 {
     if (val == NULL || valLen != sizeof(bool)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -576,6 +592,223 @@ int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valLen, uin
     }
     *val = (cert->tbs.ext.keyUsage & exp);
     return HITLS_X509_SUCCESS;
+}
+
+/* RFC2253 https://www.rfc-editor.org/rfc/rfc2253 */
+static int32_t X509GetPrintSNStr(const BSL_ASN1_Buffer *nameType, char *buff, int32_t buffLen, int32_t *usedLen)
+{
+    if (nameType == NULL || nameType->buff == NULL || nameType->len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    BslOidString oid = {
+        .octs = (char *)nameType->buff,
+        .octedLen = nameType->len,
+    };
+    const char *oidName = BSL_OBJ_GetOidNameFromOid(&oid);
+    if (oidName == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
+        return HITLS_X509_ERR_CERT_INVALID_DN;
+    }
+    if (strcpy_s(buff, buffLen, oidName) != EOK) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
+        return HITLS_X509_ERR_CERT_INVALID_DN;
+    }
+
+    *usedLen = strlen(oidName);
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509PrintNameNode(const HITLS_X509_NameNode *nameNode, char *buff, int32_t buffLen, int32_t *usedLen)
+{
+    if (nameNode->layer == 1) {
+        return HITLS_X509_SUCCESS;
+    }
+    int offset = 0;
+    *usedLen = 0;
+    /* Get the printable type */
+    int32_t ret = X509GetPrintSNStr(&nameNode->nameType, buff, buffLen, &offset);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    /* print '=' between type and value */
+    if (buffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e '=' and '\0'
+        ret = HITLS_X509_ERR_INVALID_PARAM;
+        goto exit;
+    }
+    buff[offset] = '=';
+    offset++;
+    /* print 'value' */
+    if (nameNode->nameValue.buff == NULL || nameNode->nameValue.len == 0) {
+        ret = HITLS_X509_ERR_INVALID_PARAM;
+        goto exit;
+    }
+    if (memcpy_s(buff + offset, buffLen - offset, nameNode->nameValue.buff, nameNode->nameValue.len) != EOK) {
+        ret = HITLS_X509_ERR_CERT_INVALID_DN;
+        goto exit;
+    }
+    offset += nameNode->nameValue.len;
+    *usedLen = offset;
+    return HITLS_X509_SUCCESS;
+exit:
+    BSL_ERR_PUSH_ERROR(ret);
+    return ret;
+}
+
+static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff)
+{
+    if (nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    uint32_t offset = 0;
+    int32_t ret;
+    char tmpBuffStr[MAX_DN_STR_LEN] = {};
+    char *tmpBuff = tmpBuffStr;
+    uint32_t tmpBuffLen = MAX_DN_STR_LEN;
+    (void)BSL_LIST_GET_FIRST(nameList);
+    HITLS_X509_NameNode *firstNameNode = BSL_LIST_GET_NEXT(nameList);
+    HITLS_X509_NameNode *nameNode = firstNameNode;
+    while (nameNode != NULL) {
+        if (tmpBuffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e ',' and '\0'
+            ret = HITLS_X509_ERR_INVALID_PARAM;
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+        }
+        if (nameNode != firstNameNode && nameNode->layer == 2) {
+            *tmpBuff = ',';
+            tmpBuff++;
+            offset++;
+        }
+        int32_t eachUsedLen = 0;
+        ret = X509PrintNameNode(nameNode, tmpBuff, tmpBuffLen - offset, &eachUsedLen);
+        if (ret != HITLS_X509_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        tmpBuff += eachUsedLen;
+        offset += eachUsedLen;
+        nameNode = BSL_LIST_GET_NEXT(nameList);
+    }
+    buff->data = BSL_SAL_Calloc(offset + 1, sizeof(char));
+    if (buff->data == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    (void)memcpy_s(buff->data, offset + 1, tmpBuffStr, offset);
+    buff->dataLen = offset;
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_GetDistinguishNameStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    switch (opt) {
+        case HITLS_X509_ISSUER_DN_NAME:
+            return GetDistinguishNameStrFromList(cert->tbs.issuerName, val);
+        case HITLS_X509_SUBJECT_DN_NAME:
+            return GetDistinguishNameStrFromList(cert->tbs.subjectName, val);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+    }
+}
+
+static int32_t GetAsn1SerialNumStr(const BSL_ASN1_Buffer *number, BSL_Buffer *val)
+{
+    if (number == NULL || number->buff == NULL || number->len == 0 || number->tag != BSL_ASN1_TAG_INTEGER ||
+        val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    for (size_t i = 0; i < number->len - 1; i++) {
+        if (sprintf_s((char *)&val->data[3 * i], val->dataLen - 3 * i, "%02x:", number->buff[i]) == -1) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
+            return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
+        }
+    }
+    size_t index = 3 * (number->len - 1);
+    if (sprintf_s((char *)&val->data[index], val->dataLen - index, "%02x", number->buff[number->len - 1]) == -1) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
+        return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
+    }
+    val->dataLen = 3 * number->len - 1;
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
+{
+    if (val == NULL || cert->tbs.serialNum.buff == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    BSL_ASN1_Buffer serialNum = cert->tbs.serialNum;
+    val->data = BSL_SAL_Calloc(serialNum.len * 3, sizeof(uint8_t));
+    if (val->data == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    val->dataLen = serialNum.len * 3;
+    int32_t ret = GetAsn1SerialNumStr(&serialNum, val);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_SAL_FREE(val->data);
+        val->dataLen = 0;
+    }
+
+    return ret;
+}
+
+// rfc822: https://www.w3.org/Protocols/rfc822/
+static const char g_monAsn1Str[12][4] = {
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+static int32_t GetAsn1BslTimeStr(const BSL_TIME *time, bool isGmt, BSL_Buffer *val)
+{
+    if (time == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    val->data = BSL_SAL_Calloc(PRINT_TIME_MAX_SIZE, sizeof(uint8_t));
+    if (val->data == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    const char *timeFormatStr = isGmt ? " GMT" : "";
+    if (sprintf_s((char *)val->data, PRINT_TIME_MAX_SIZE, "%s %u %02u:%02u:%02u %u%s",
+        g_monAsn1Str[time->month - 1], time->day, time->hour, time->minute, time->second, time->year,
+        timeFormatStr) == -1) {
+        BSL_SAL_FREE(val->data);
+        val->dataLen = 0;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_TIME);
+        return HITLS_X509_ERR_CERT_INVALID_TIME;
+    }
+    val->dataLen = strlen((char *)val->data);
+    return HITLS_X509_SUCCESS;
+}
+
+static int32_t X509_GetAsn1BslTimeStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    bool isBeforeTimeIsGmt = (cert->tbs.validTime.flag & BSL_TIME_BEFORE_TIME_IS_GMT) != 0;
+    bool isAfterTimeIsGmt = (cert->tbs.validTime.flag & BSL_TIME_AFTER_TIME_IS_GMT) != 0;
+    switch (opt) {
+        case HITLS_X509_BEFORE_TIME:
+            return GetAsn1BslTimeStr(&cert->tbs.validTime.start, isBeforeTimeIsGmt, val);
+        case HITLS_X509_AFTER_TIME:
+            return GetAsn1BslTimeStr(&cert->tbs.validTime.end, isAfterTimeIsGmt, val);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+    }
 }
 
 int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen)
@@ -603,6 +836,16 @@ int32_t HITLS_X509_CtrlCert(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_AGREEMENT);
         case HITLS_X509_CERT_EXT_KU_KEYENC:
             return X509_KeyUsageCheck(cert, val, valLen, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT);
+        case HITLS_X509_CERT_GET_SUBJECT_DNNAME:
+            return X509_GetDistinguishNameStr(cert, val, HITLS_X509_SUBJECT_DN_NAME);
+        case HITLS_X509_CERT_GET_ISSUER_DNNAME:
+            return X509_GetDistinguishNameStr(cert, val, HITLS_X509_ISSUER_DN_NAME);
+        case HITLS_X509_CERT_GET_SERIALNUM:
+            return X509_GetSerialNumStr(cert, val);
+        case HITLS_X509_CERT_GET_BEFORE_TIME:
+            return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_BEFORE_TIME);
+        case HITLS_X509_CERT_GET_AFTER_TIME:
+            return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_AFTER_TIME);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;

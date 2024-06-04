@@ -72,7 +72,17 @@ BslOidInfo g_oidTable[] = {
     {{8, "\52\201\34\317\125\1\202\55", BSL_OID_GLOBAL}, "SM2PRIME256", BSL_CID_SM2PRIME256},
     {{3, "\125\35\17", BSL_OID_GLOBAL}, "CE-KEYUSAGE", BSL_CID_CE_KEYUSAGE},
     {{3, "\125\35\23", BSL_OID_GLOBAL}, "CE-BASICCONSTRAINTS", BSL_CID_CE_BASICCONSTRAINTS},
-    {{7, "\52\206\110\316\75\2\1", BSL_OID_GLOBAL}, "EC-PUBLICKEY", BSL_CID_EC_PUBLICKEY} // ecc subkey
+    {{7, "\52\206\110\316\75\2\1", BSL_OID_GLOBAL}, "EC-PUBLICKEY", BSL_CID_EC_PUBLICKEY}, // ecc subkey
+    {{3, "\125\4\3", BSL_OID_GLOBAL}, "CN", BSL_CID_COMMONNAME},
+    {{3, "\125\4\7", BSL_OID_GLOBAL}, "L", BSL_CID_LOCALITYNAME},
+    {{3, "\125\4\10", BSL_OID_GLOBAL}, "ST", BSL_CID_STATEORPROVINCENAME},
+    {{3, "\125\4\12", BSL_OID_GLOBAL}, "O", BSL_CID_ORGANIZATIONNAME},
+    {{3, "\125\4\13", BSL_OID_GLOBAL}, "OU", BSL_CID_ORGANIZATIONUNITNAME},
+    {{3, "\125\4\6", BSL_OID_GLOBAL}, "C", BSL_CID_COUNTRYNAME},
+    {{3, "\125\4\11", BSL_OID_GLOBAL}, "STREET", BSL_CID_STREETADDRESS},
+    {{10, "\11\222\46\211\223\362\54\144\1\31", BSL_OID_GLOBAL}, "DC", BSL_CID_DOMAINCOMPONENT},
+    {{10, "\11\222\46\211\223\362\54\144\1\1", BSL_OID_GLOBAL}, "UID", BSL_CID_USERID},
+    {{9, "\52\206\110\206\367\15\1\11\1", BSL_OID_GLOBAL}, "emailAddress", BSL_CID_EMAILADDRESS},
 };
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
@@ -121,6 +131,22 @@ BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
         return NULL;
     }
     return &g_oidTable[index].strOid;
+}
+
+const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
+{
+    if (oid == NULL || oid->octs == NULL) {
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < g_tableSize; i++) {
+        if (g_oidTable[i].strOid.octedLen == oid->octedLen) {
+            if (memcmp(g_oidTable[i].strOid.octs, oid->octs, oid->octedLen) == 0) {
+                return g_oidTable[i].oidName;
+            }
+        }
+    }
+    return NULL;
 }
 
 #endif
