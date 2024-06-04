@@ -46,6 +46,9 @@ extern "C" {
         }                                        \
     } while (0)
 
+#define BSL_TIME_AFTER_TIME_ABSENT   0x01
+#define BSL_TIME_AFTER_TIME_IS_GMT   0x02
+#define BSL_TIME_BEFORE_TIME_IS_GMT  0x04
 typedef struct _HITLS_X509_NameNode {
     BSL_ASN1_Buffer nameType;
     BSL_ASN1_Buffer nameValue;
@@ -59,7 +62,7 @@ typedef struct _HITLS_X509_ExtEntry {
 } HITLS_X509_ExtEntry;
 
 typedef struct _HITLS_X509_ValidTime {
-    bool isOptional;
+    uint8_t flag;
     BSL_TIME start;
     BSL_TIME end;
 } HITLS_X509_ValidTime;

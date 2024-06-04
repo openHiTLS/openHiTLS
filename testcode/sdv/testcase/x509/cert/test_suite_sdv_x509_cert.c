@@ -516,12 +516,68 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(isTrue, expKuKeyAgreement);
+
 exit:
     HITLS_X509_FreeCert(cert);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *expectedSubjectName,
+    char *expectedIssueName, char *expectedBeforeTime, char *expectedAfterTime)
+{
+    HITLS_X509_Cert *cert = NULL;
+    BSL_Buffer subjectName = { NULL, 0 };
+    BSL_Buffer issuerName = { NULL, 0 };
+    BSL_Buffer serialNum = { NULL, 0 };
+    BSL_Buffer beforeTime = { NULL, 0 };
+    BSL_Buffer afterTime = { NULL, 0 };
+
+    int32_t ret = HITLS_ParseCertTest(path, BSL_PARSE_FORMAT_ASN1, &cert);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_SUBJECT_DNNAME, &subjectName, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(subjectName.data, NULL);
+    ASSERT_EQ(subjectName.dataLen, strlen(expectedSubjectName));
+    ASSERT_EQ(strcmp(subjectName.data, expectedSubjectName), 0);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_ISSUER_DNNAME, &issuerName, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(issuerName.data, NULL);
+    ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
+    ASSERT_EQ(strcmp(issuerName.data, expectedIssueName), 0);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_SERIALNUM, &serialNum, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(serialNum.data, NULL);
+    ASSERT_EQ(serialNum.dataLen, strlen(expectedSerialNum));
+    ASSERT_EQ(strcmp(serialNum.data, expectedSerialNum), 0);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_BEFORE_TIME, &beforeTime, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(beforeTime.data, NULL);
+    ASSERT_EQ(beforeTime.dataLen, strlen(expectedBeforeTime));
+    ASSERT_EQ(strcmp(beforeTime.data, expectedBeforeTime), 0);
+
+    ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_AFTER_TIME, &afterTime, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_NE(afterTime.data, NULL);
+    ASSERT_EQ (afterTime.dataLen, strlen(expectedAfterTime));
+    ASSERT_EQ(strcmp(afterTime.data, expectedAfterTime), 0);
+exit:
+    HITLS_X509_FreeCert(cert);
+    BSL_SAL_FREE(subjectName.data);
+    BSL_SAL_FREE(issuerName.data);
+    BSL_SAL_FREE(serialNum.data);
+    BSL_SAL_FREE(beforeTime.data);
+    BSL_SAL_FREE(afterTime.data);
+    BSL_GLOBAL_DeInit();
+    return;
+}
+
+/* END_CASE */
 // subkey
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC001(char *path, char *path2)

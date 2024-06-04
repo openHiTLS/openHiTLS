@@ -190,7 +190,6 @@ void HITLS_X509_Adapt_KeyFree(HITLS_CERT_Key *key)
     CRYPT_EAL_PkeyFreeCtx(key);
 }
 
-
 static HITLS_NamedGroup GetCurveNameByParaId(CRYPT_PKEY_ParaId paraId)
 {
     typedef struct {
