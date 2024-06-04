@@ -86,7 +86,7 @@ int HLT_LibraryInit(TLS_TYPE tlsType);
 // The local process invokes TLS functions
 HLT_Tls_Res* HLT_ProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     HLT_Ctx_Config *ctxConfig, HLT_Ssl_Config *sslConfig);
-void* HLT_TlsNewCtx(TLS_VERSION tlsVersion, bool isClient);
+void* HLT_TlsNewCtx(TLS_VERSION tlsVersion);
 HLT_Ctx_Config* HLT_NewCtxConfig(char* setFile, const char* key);
 HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClient);
 int HLT_TlsSetCtx(void* ctx, HLT_Ctx_Config* config);

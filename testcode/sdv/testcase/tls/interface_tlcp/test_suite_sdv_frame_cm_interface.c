@@ -3052,18 +3052,6 @@ void UT_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(int version)
     ASSERT_TRUE(config_c != NULL);
     ASSERT_TRUE(config_s != NULL);
 
-    uint16_t groups_c[] = {HITLS_EC_GROUP_SECP384R1, HITLS_EC_GROUP_CURVE25519};
-    uint16_t signAlgs_c[] = {
-        CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
-        CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
-    };
-
-    uint16_t groups_s[] = {HITLS_EC_GROUP_SECP521R1, HITLS_EC_GROUP_CURVE25519};
-    uint16_t signAlgs_s[] = {
-        CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
-        CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
-    };
-
     if (version == HITLS_VERSION_TLS12) {
         ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config_c, true), HITLS_SUCCESS);
         ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config_s, true), HITLS_SUCCESS);
@@ -3459,15 +3447,16 @@ exit:
 }
 /* END_CASE */
 
-uint32_t psk_callback(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, uint32_t maxPskLen)
+uint32_t SetPskClientCallback(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity, uint32_t maxIdentityLen,
+    uint8_t *psk, uint32_t maxPskLen)
 {
-    uint32_t pskTransUsedLen = 0u;
     (void)ctx;
+    (void)hint;
     (void)identity;
+    (void)maxIdentityLen;
     (void)psk;
     (void)maxPskLen;
-
-    return pskTransUsedLen;
+    return HITLS_SUCCESS;
 }
 
 /* @
@@ -3490,13 +3479,22 @@ void UT_TLS_CM_SetPskClientCallback_API_TC001()
     HITLS_Ctx *ctx = NULL;
     ctx = HITLS_New(tlsConfig);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_SetPskClientCallback(NULL, psk_callback), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetPskClientCallback(ctx, psk_callback), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetPskClientCallback(NULL, SetPskClientCallback), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetPskClientCallback(ctx, SetPskClientCallback), HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
 /* END_CASE */
+
+static uint32_t SetPskServerCallback(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, uint32_t maxPskLen)
+{
+    (void)ctx;
+    (void)identity;
+    (void)psk;
+    (void)maxPskLen;
+    return HITLS_SUCCESS;
+}
 
 /* @
 * @test  UT_TLS_CM_SetPskServerCallback_API_TC001
@@ -3518,23 +3516,23 @@ void UT_TLS_CM_SetPskServerCallback_API_TC001()
     HITLS_Ctx *ctx = NULL;
     ctx = HITLS_New(tlsConfig);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_SetPskServerCallback(NULL, psk_callback), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetPskServerCallback(ctx, psk_callback), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetPskServerCallback(NULL, SetPskServerCallback), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetPskServerCallback(ctx, SetPskServerCallback), HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
 /* END_CASE */
 
-static int32_t psksession_callback(HITLS_Ctx *ctx, const uint8_t *identity, uint32_t identityLen,
-    HITLS_Session **session)
+static int32_t SetPskUsePsksessionCallback(HITLS_Ctx *ctx, uint32_t hashAlgo, const uint8_t **id,
+    uint32_t *idLen, HITLS_Session **session)
 {
     (void)ctx;
-    (void)identity;
-    (void)identityLen;
+    (void)hashAlgo;
+    (void)id;
+    (void)idLen;
     (void)session;
-
-    return HITLS_PSK_FIND_SESSION_CB_FAIL;
+    return HITLS_SUCCESS;
 }
 
 /* @
@@ -3557,13 +3555,23 @@ void UT_TLS_CM_SetPskUseSessionCallback_API_TC001()
     HITLS_Ctx *ctx = NULL;
     ctx = HITLS_New(tlsConfig);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_SetPskUseSessionCallback(NULL, psksession_callback), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetPskUseSessionCallback(ctx, psksession_callback), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetPskUseSessionCallback(NULL, SetPskUsePsksessionCallback), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetPskUseSessionCallback(ctx, SetPskUsePsksessionCallback), HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
 /* END_CASE */
+
+int32_t SetPskFindSessionCallback(HITLS_Ctx *ctx, const uint8_t *identity, uint32_t identityLen,
+    HITLS_Session **session)
+{
+    (void)ctx;
+    (void)identity;
+    (void)identityLen;
+    (void)session;
+    return HITLS_SUCCESS;
+}
 
 /* @
 * @test  UT_TLS_CM_SetPskFindSessionCallback_API_TC001
@@ -3585,8 +3593,8 @@ void UT_TLS_CM_SetPskFindSessionCallback_API_TC001()
     HITLS_Ctx *ctx = NULL;
     ctx = HITLS_New(tlsConfig);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(HITLS_SetPskFindSessionCallback(NULL, psksession_callback), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetPskFindSessionCallback(ctx, psksession_callback), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetPskFindSessionCallback(NULL, SetPskFindSessionCallback), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetPskFindSessionCallback(ctx, SetPskFindSessionCallback), HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
@@ -3642,7 +3650,7 @@ void UT_TLS_CM_SetPskIdentityHint_API_TC001()
     ASSERT_TRUE(ctx != NULL);
 
     uint8_t * identityH = (uint8_t *)"123456";
-    uint32_t identityHintLen = strlen(identityH);
+    uint32_t identityHintLen = strlen((char *)identityH);
     ASSERT_TRUE(HITLS_SetPskIdentityHint(ctx, identityH, identityHintLen) == HITLS_SUCCESS);
 
 exit:
@@ -4325,17 +4333,17 @@ exit:
 void UT_TLS_CM_SET_SESSIONIDCTX_API_TC001(int version)
 {
     FRAME_Init();
-    uint8_t key[] = "748ab9f3dc1a23";
+    char *key = "748ab9f3dc1a23";
     HITLS_Config *config = GetHitlsConfigViaVersion(version);
     ASSERT_TRUE(config != NULL);
 
     HITLS_Ctx *ctx = HITLS_New(config);
     ASSERT_TRUE(ctx != NULL);
     uint32_t keyLen = strlen(key);
-    ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(NULL, key, keyLen)== HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(config, key, keyLen)!= HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_SetSessionIdCtx(NULL, key, keyLen)== HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_SetSessionIdCtx(ctx, key, keyLen)!= HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(NULL, (const uint8_t *)key, keyLen)== HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(config, (const uint8_t *)key, keyLen)!= HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_SetSessionIdCtx(NULL, (const uint8_t *)key, keyLen)== HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_SetSessionIdCtx(ctx, (const uint8_t *)key, keyLen)!= HITLS_NULL_INPUT);
 
 exit:
     HITLS_CFG_FreeConfig(config);
@@ -4484,7 +4492,7 @@ void UT_HITLS_CM_HITLS_GetPostHandshakeAuthSupport_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     HITLS_Ctx *ctx = NULL;
-    uint8_t isSupport = 0;
+    uint32_t isSupport = 0;
 
     ASSERT_TRUE(HITLS_GetPostHandshakeAuthSupport(NULL, NULL) == HITLS_NULL_INPUT);
     config = GetHitlsConfigViaVersion(tlsVersion);
@@ -4493,7 +4501,7 @@ void UT_HITLS_CM_HITLS_GetPostHandshakeAuthSupport_TC001(int tlsVersion)
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(HITLS_GetEncryptThenMac(ctx, NULL) == HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_SetEncryptThenMac(ctx, &isSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_SetEncryptThenMac(ctx, isSupport) == HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);

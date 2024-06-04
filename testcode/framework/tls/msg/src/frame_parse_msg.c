@@ -652,7 +652,7 @@ static int32_t ParseServerKxDhMsg(FRAME_Type *frameType, const uint8_t *buffer, 
     return HITLS_SUCCESS;
 }
 
-static int32_t ParseServerKxEccMsg(FRAME_Type *frameType, const uint8_t *buffer, uint32_t bufLen,
+static int32_t ParseServerKxEccMsg(const uint8_t *buffer, uint32_t bufLen,
                                     FRAME_ServerEcdh *ecdh, uint32_t *parseLen)
 {
     uint32_t offset = 0;
@@ -671,7 +671,7 @@ static int32_t ParseServerKxMsg(FRAME_Type *frameType, const uint8_t *buffer, ui
         case HITLS_KEY_EXCH_DHE:
             return ParseServerKxDhMsg(frameType, buffer, bufLen, &serverKx->keyEx.dh, parseLen);
         case HITLS_KEY_EXCH_ECC:
-            return ParseServerKxEccMsg(frameType, buffer, bufLen, &serverKx->keyEx.ecdh, parseLen);
+            return ParseServerKxEccMsg(buffer, bufLen, &serverKx->keyEx.ecdh, parseLen);
         default:
             break;
     }

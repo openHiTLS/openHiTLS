@@ -109,7 +109,7 @@ ControlChannelRes *GetControlChannelRes()
     return &g_channelRes;
 }
 
-int PushResultToChannelSendBuffer(ControlChannelRes *channelInfo, uint8_t *result)
+int PushResultToChannelSendBuffer(ControlChannelRes *channelInfo, char *result)
 {
     int ret;
     OsLock(channelInfo->sendBufferLock);
@@ -133,7 +133,7 @@ int PushResultToChannelSendBuffer(ControlChannelRes *channelInfo, uint8_t *resul
     return SUCCESS;
 }
 
-int PushResultToChannelRcvBuffer(ControlChannelRes *channelInfo, uint8_t *result)
+int PushResultToChannelRcvBuffer(ControlChannelRes *channelInfo, char *result)
 {
     int ret;
     OsLock(channelInfo->rcvBufferLock);
@@ -157,7 +157,7 @@ int PushResultToChannelRcvBuffer(ControlChannelRes *channelInfo, uint8_t *result
     return SUCCESS;
 }
 
-int PushResultToChannelIdBuffer(ControlChannelRes *channelInfo, uint8_t *result, int id)
+int PushResultToChannelIdBuffer(ControlChannelRes *channelInfo, char *result, int id)
 {
     int ret;
     OsLock(channelInfo->rcvBufferLock);

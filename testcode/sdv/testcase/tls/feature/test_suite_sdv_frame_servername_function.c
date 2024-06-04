@@ -78,24 +78,6 @@ int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
     return HITLS_ACCEPT_SNI_ERR_OK;
 }
 
-int32_t ServernameCbErrAlertFatal(HITLS_Ctx *ctx, int *alert, void *arg)
-{
-    (void)ctx;
-    (void)alert;
-    (void)arg;
-
-    return HITLS_ACCEPT_SNI_ERR_ALERT_FATAL;
-}
-
-int32_t ServernameCbErrNoack(HITLS_Ctx *ctx, int *alert, void *arg)
-{
-    (void)ctx;
-    (void)alert;
-    (void)arg;
-
-    return HITLS_ACCEPT_SNI_ERR_NOACK;
-}
-
 void STUB_SendAlert(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
 {
     (void)ctx;
@@ -108,11 +90,6 @@ typedef struct TEST_SNI_DEAL_CB {
     uint32_t sniState;
     HITLS_SniDealCb sniDealCb;
 } TEST_SNI_DEAL_CB;
-
-static TEST_SNI_DEAL_CB g_ServernameCbs[] = {{HITLS_ACCEPT_SNI_ERR_OK, ServernameCbErrOK},
-    {HITLS_ACCEPT_SNI_ERR_ALERT_FATAL, ServernameCbErrAlertFatal},
-    {HITLS_ACCEPT_SNI_ERR_NOACK, ServernameCbErrNoack},
-    {HITLS_ACCEPT_SNI_ERR_NOACK, NULL}};
 
 typedef struct {
     HITLS_Config *clientConfig;
@@ -215,7 +192,7 @@ static int32_t DefaultCfgAndLink(HandshakeTestInfo *testInfo)
         return HITLS_INTERNAL_EXCEPTION;
     }
     SetCommonConfig(&(testInfo->clientConfig));
-    HITLS_CFG_SetServerName(testInfo->clientConfig, (uint8_t *)g_serverName, (uint32_t)strlen((char *)g_serverName));
+    HITLS_CFG_SetServerName(testInfo->clientConfig, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName));
 
 
     CreateConfig(&(testInfo->serverConfig), testInfo->version);

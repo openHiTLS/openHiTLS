@@ -17,6 +17,35 @@
 /* INCLUDE_BASE test_suite_sdv_frame_tlcp_consistency */
 /* END_HEADER */
 
+static void Test_MisSessionId(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    if (*(bool *)user) {
+        return;
+    }
+    *(bool *)user = true;
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
+    ASSERT_EQ(parseLen, *len);
+    frameMsg.body.hsMsg.body.serverHello.sessionId.state = MISSING_FIELD;
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
 /* @
 * @test  UT_TLS_TLCP_CONSISTENCY_SESSIONID_MISS_TC001
 * @title During session recovery, the server deletes session_id after sending the server hello message. The expected
@@ -62,6 +91,35 @@ exit:
     HITLS_SESS_Free(clientSession);
 }
 /* END_CASE */
+
+static void Test_DiffServerKeyEx(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    if (*(bool *)user) {
+        return;
+    }
+    *(bool *)user = true;
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_KEY_EXCHANGE);
+    ASSERT_EQ(parseLen, *len);
+    frameType.keyExType = HITLS_KEY_EXCH_ECC;
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
 
 /* @
 * @test  UT_TLS_TLCP_CONSISTENCY_KEY_EXCHANGE_TC001
@@ -196,6 +254,77 @@ exit:
 }
 /* END_CASE */
 
+static void TEST_SendUnexpectCertificateVerifyMsg(void *msg, void *data)
+{
+    FRAME_Type *frameType = (FRAME_Type *)data;
+    FRAME_Msg *frameMsg = (FRAME_Msg *)msg;
+
+    FRAME_Msg newFrameMsg = {0};
+    HS_MsgType hsTypeTmp = frameType->handshakeType;
+    REC_Type recTypeTmp = frameType->recordType;
+    frameType->handshakeType = CERTIFICATE_VERIFY;
+    FRAME_Init();
+    FRAME_GetDefaultMsg(frameType, &newFrameMsg);
+    HLT_TlsRegCallback(HITLS_CALLBACK_DEFAULT); // recovery callback
+
+    frameType->handshakeType = hsTypeTmp;
+    frameType->recordType = recTypeTmp;
+    FRAME_CleanMsg(frameType, frameMsg);
+
+    frameType->recordType = REC_TYPE_HANDSHAKE;
+    frameType->handshakeType = CERTIFICATE_VERIFY;
+    frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
+    if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
+        Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
+    }
+}
+
+static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpect, bool isSupportClientVerify)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverConfig = NULL;
+    ALERT_Info alertInfo = {0};
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+    ASSERT_TRUE(serverConfig != NULL);
+    if (isSupportClientVerify) {
+        ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
+    }
+
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
+
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLCP1_1, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+    // Client Initialization
+    clientRes = HLT_ProcessTlsInit(localProcess, TLCP1_1, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_TRUE(frameHandle != NULL);
+    frameHandle->ctx = clientRes->ssl;
+    HLT_SetFrameHandle(frameHandle);
+    ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), testExpect->connectExpect);
+    HLT_CleanFrameHandle();
+
+    ALERT_GetInfo(clientRes->ssl, &alertInfo);
+    ASSERT_TRUE(alertInfo.level == testExpect->expectLevel);
+    ASSERT_EQ(alertInfo.description, testExpect->expectDescription);
+    ASSERT_EQ(HLT_RpcGetTlsAcceptResult(serverRes->acceptId), testExpect->acceptExpect);
+
+exit:
+    HLT_CleanFrameHandle();
+    HLT_FreeAllProcess();
+}
+
 /* @
 * @test  UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC002
 * @title  The server receives the certificate verify message when receiving the certificate.
@@ -311,6 +440,35 @@ void UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC004()
     TEST_UnexpectMsg(&frameHandle, &testExpect, false);
 }
 /* END_CASE */
+
+static void Test_ErrCertVerify(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    if (*(bool *)user) {
+        return;
+    }
+    *(bool *)user = true;
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CERTIFICATE_VERIFY);
+    ASSERT_EQ(parseLen, *len);
+    frameMsg.body.hsMsg.body.certificateVerify.sign.data[0]++;
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
 
 /* @
 * @test    UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC005
@@ -471,6 +629,60 @@ exit:
 }
 /* END_CASE */
 
+static void Test_Finish_Len_TooLong(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLCP11;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, FINISHED);
+    ASSERT_EQ(frameMsg.body.hsMsg.body.finished.verifyData.size, 12); // in RFC5246, length of verifyData is always 12.
+
+    frameMsg.body.hsMsg.body.finished.verifyData.state = ASSIGNED_FIELD;
+    frameMsg.body.hsMsg.body.finished.verifyData.data[0] = 0x00;
+
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+static void Test_Finish_Len_TooLong_client(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLCP11;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, FINISHED);
+    ASSERT_EQ(frameMsg.body.hsMsg.body.finished.verifyData.size, 12); // in RFC5246, length of verifyData is always 12.
+    if (ctx->isClient==true) {
+        frameMsg.body.hsMsg.body.finished.verifyData.state = ASSIGNED_FIELD;
+        frameMsg.body.hsMsg.body.finished.verifyData.data[0] = 0x00;
+    }
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
 /* @
 * @test  UT_TLS_TLCP_CONSISTENCY_ERROR_FINISH_001
 * @title  An unexpected message is received when the server is in the TRY_RECV_FINISH state during the handshake.
@@ -559,6 +771,33 @@ exit:
 }
 /* END_CASE */
 
+static int32_t GetDisorderServerCertAndKeyExchMsg(FRAME_LinkObj *server, uint8_t *data, uint32_t len, uint32_t *usedLen)
+{
+    uint32_t readLen = 0;
+    uint32_t offset = 0;
+    uint8_t tmpData[READ_BUF_SIZE] = {0};
+    uint32_t tmpLen = sizeof(tmpData);
+    (void)HITLS_Accept(server->ssl);
+    int32_t ret = FRAME_TransportSendMsg(server->io, tmpData, tmpLen, &readLen);
+    if (readLen == 0 || ret != HITLS_SUCCESS) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    tmpLen = readLen;
+
+    (void)HITLS_Accept(server->ssl);
+    ret = FRAME_TransportSendMsg(server->io, &data[offset], len - offset, &readLen);
+    if (readLen == 0 || ret != HITLS_SUCCESS) {
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+    offset += readLen;
+
+    if (memcpy_s(&data[offset], len - offset, tmpData, tmpLen) != EOK) {
+        return HITLS_MEMCPY_FAIL;
+    }
+    offset += tmpLen;
+    *usedLen = offset;
+    return HITLS_SUCCESS;
+}
 
 /* @
  * @test   UT_TLS_TLCP_CONSISTENCY_DISORDER_TC001
@@ -748,6 +987,14 @@ exit:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+static int32_t STUB_APP_Write_Fatal(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+{
+    (void)data;
+    (void)dataLen;
+    ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+    return HITLS_INTERNAL_EXCEPTION;
+}
 
 /* @
  * @test   UT_TLS_TLCP_CONSISTENCY_FATAL_ALERT_TC003

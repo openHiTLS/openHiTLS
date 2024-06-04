@@ -101,7 +101,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC001(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
@@ -216,7 +216,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC002(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
@@ -320,7 +320,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC003(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
@@ -422,8 +422,8 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC004(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
-    void *clientConfig2 = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
+    void *clientConfig2 = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
     ASSERT_TRUE(clientConfig2 != NULL);
 
@@ -563,7 +563,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC005(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
@@ -676,7 +676,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC006(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
@@ -788,7 +788,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC007(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
@@ -898,7 +898,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC008(int version, int connType)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
@@ -1042,7 +1042,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLCP1_1, false);
-    void *clientConfig = HLT_TlsNewCtx(TLCP1_1, true);
+    void *clientConfig = HLT_TlsNewCtx(TLCP1_1);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);

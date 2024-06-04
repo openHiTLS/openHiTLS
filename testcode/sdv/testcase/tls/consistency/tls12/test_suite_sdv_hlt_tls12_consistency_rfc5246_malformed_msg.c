@@ -25,6 +25,31 @@
 
 /* END_HEADER */
 
+// Replace the message to be sent with the CERTIFICATION_VERIFY message.
+void TEST_SendUnexpectCertificateVerifyMsg(void *msg, void *data)
+{
+    FRAME_Type *frameType = (FRAME_Type *)data;
+    FRAME_Msg *frameMsg = (FRAME_Msg *)msg;
+    FRAME_Msg newFrameMsg = {0};
+    HS_MsgType hsTypeTmp = frameType->handshakeType;
+    REC_Type recTypeTmp = frameType->recordType;
+    frameType->handshakeType = CERTIFICATE_VERIFY;
+    FRAME_Init();  // Callback for changing the certificate algorithm, which is used to generate negotiation handshake
+                   // messages.
+    FRAME_GetDefaultMsg(frameType, &newFrameMsg);
+    HLT_TlsRegCallback(HITLS_CALLBACK_DEFAULT);  // recovery callback
+    // Release the original msg.
+    frameType->handshakeType = hsTypeTmp;
+    frameType->recordType = recTypeTmp;
+    FRAME_CleanMsg(frameType, frameMsg);
+    // Change message.
+    frameType->recordType = REC_TYPE_HANDSHAKE;
+    frameType->handshakeType = CERTIFICATE_VERIFY;
+    frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
+    if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
+        Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
+    }
+}
 
 static void MalformedClientHelloMsgCallback_01(void *msg, void *userData)
 {
@@ -2221,6 +2246,52 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC043(void
     return;
 }
 /* END_CASE */
+
+static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpect, bool isSupportClientVerify)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverConfig = NULL;
+    ALERT_Info alertInfo = {0};
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+    ASSERT_TRUE(serverConfig != NULL);
+    if (isSupportClientVerify) {
+        ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
+    }
+
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
+
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLCP1_1, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+    // Client Initialization
+    clientRes = HLT_ProcessTlsInit(localProcess, TLCP1_1, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_TRUE(frameHandle != NULL);
+    frameHandle->ctx = clientRes->ssl;
+    HLT_SetFrameHandle(frameHandle);
+    ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), testExpect->connectExpect);
+    HLT_CleanFrameHandle();
+
+    ALERT_GetInfo(clientRes->ssl, &alertInfo);
+    ASSERT_TRUE(alertInfo.level == testExpect->expectLevel);
+    ASSERT_EQ(alertInfo.description, testExpect->expectDescription);
+    ASSERT_EQ(HLT_RpcGetTlsAcceptResult(serverRes->acceptId), testExpect->acceptExpect);
+
+exit:
+    HLT_CleanFrameHandle();
+    HLT_FreeAllProcess();
+}
 
 /* @
 * @test SDV_TLS_TLS12_RFC5246_CONSISTENCY_CERTFICATE_VERITY_FAIL_TC006

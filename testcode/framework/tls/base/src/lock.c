@@ -13,11 +13,11 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <pthread.h>
 #include <stdint.h>
 #include "securec.h"
 #include "logger.h"
 #include "lock.h"
-
 Lock *OsLockNew(void)
 {
     pthread_mutexattr_t attr;

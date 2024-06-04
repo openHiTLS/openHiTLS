@@ -482,7 +482,7 @@ static int32_t X509_NodeNameCaseCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *d
         if (src->len != dest->len) {
             return 1;
         }
-        for (size_t i = 0; i < src->len; i++) {
+        for (uint32_t i = 0; i < src->len; i++) {
             if (src->buff[i] == dest->buff[i]) {
                 continue;
             }

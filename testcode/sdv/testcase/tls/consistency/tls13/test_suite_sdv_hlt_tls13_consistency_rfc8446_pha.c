@@ -829,7 +829,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC009()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply and initialize config
@@ -953,7 +953,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC011()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply for and initialize the config file
@@ -1077,7 +1077,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC012()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply for and initialize the config file
@@ -1200,7 +1200,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC013()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply for and initialize the configuration file
@@ -1329,7 +1329,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC014()
 
     // Apply for and initialize the configuration file
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -1461,7 +1461,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC015()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply for and initialize the configuration file
@@ -1598,7 +1598,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC016()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply for and initialize the configuration file
@@ -1735,7 +1735,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC017()
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Apply for and initialize the configuration file

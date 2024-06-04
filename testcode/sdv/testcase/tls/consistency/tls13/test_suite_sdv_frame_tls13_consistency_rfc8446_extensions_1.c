@@ -545,9 +545,9 @@ static void RepeatClientHelloExtension(void *memberAddress, bool isPsk)
         HITLS_CFG_SetPskServerCallback(testInfo.config, (HITLS_PskServerCb)ExampleServerCb);
         HITLS_CFG_SetPskClientCallback(testInfo.config, (HITLS_PskClientCb)ExampleClientCb);
     }
-    uint8_t serverName[] = "testServer";
+    char serverName[] = "testServer";
     uint8_t alpn[6] = {4, '1', '2', '3', '4', 0};
-    HITLS_CFG_SetServerName(testInfo.config, serverName, strlen((char *)serverName));
+    HITLS_CFG_SetServerName(testInfo.config, (uint8_t *)serverName, strlen(serverName));
     HITLS_CFG_SetAlpnProtos(testInfo.config, alpn, strlen((char *)alpn));
     testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);

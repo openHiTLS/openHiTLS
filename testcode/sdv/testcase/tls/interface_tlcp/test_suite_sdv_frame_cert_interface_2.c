@@ -67,56 +67,6 @@
 int32_t g_uiPort = 18886;
 HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(const char *file);
 
-static int TestHITLS_VerifyCb(int32_t isPreverifyOk, HITLS_CERT_StoreCtx *storeCtx)
-{
-    (void)isPreverifyOk;
-    (void)storeCtx;
-    return 0;
-}
-
-static int32_t TestPasswordCb(char *buf, int32_t bufLen, int32_t flag, void *userdata)
-{
-    (void)flag;
-    char *passwd = NULL;
-    static char pass[] = "123456";
-    if (userdata != NULL) {
-        passwd = userdata;
-    } else {
-        passwd = pass;
-    }
-    int32_t len = strlen(passwd);
-    if (len > bufLen) {
-        return -1;
-    }
-
-    memcpy(buf, passwd, len);
-    return len;
-}
-
-static uint32_t ReadFileBuffer(const char *filePath, char *data)
-{
-    FILE *fd;
-    uint32_t size;
-    uint32_t bytes;
-
-    fd = fopen(filePath, "rb");
-    if (fd == NULL) {
-        return 0;
-    }
-
-    (void)fseek(fd, 0, SEEK_END);
-    size = (uint32_t)ftell(fd);
-    rewind(fd);
-
-    bytes = (uint32_t)fread(data, 1, size, fd);
-    (void)fclose(fd);
-    if (bytes != size) {
-        return 0;
-    }
-
-    return bytes;
-}
-
 /* @
 * @test    UT_TLS_CERT_CM_SetVerifyStore_API_TC001
 * @title   The input parameters of the HITLS_SetVerifyStore and HITLS_GetVerifyStore interfaces are replaced.

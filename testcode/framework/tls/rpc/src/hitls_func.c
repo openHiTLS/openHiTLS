@@ -29,6 +29,7 @@
 #include "hitls_sni.h"
 #include "hitls_alpn.h"
 #include "hitls_security.h"
+#include "hitls_crypt_init.h"
 #include "hlt_type.h"
 #include "logger.h"
 #include "tls_res.h"
@@ -36,11 +37,13 @@
 #include "sctp_channel.h"
 #include "tcp_channel.h"
 #include "common_func.h"
+#include "crypt_eal_rand.h"
 #include "crypt_algid.h"
+#include "channel_res.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
-#define TIME_OUT_SEC 120
+#define FUNC_TIME_OUT_SEC 120
 
 #define ASSERT_RETURN(condition, log) \
     do {                              \
@@ -258,7 +261,7 @@ void HitlsFreeCtx(void *ctx)
     HITLS_CFG_FreeConfig(ctx);
 }
 
-static int GetConfigVauleFromStr(const HitlsConfig *hitlsConfigList, uint32_t configSize, const char *cipherName)
+static int32_t GetConfigVauleFromStr(const HitlsConfig *hitlsConfigList, uint32_t configSize, const char *cipherName)
 {
     for (uint32_t i = 0; i < configSize; i++) {
         if (strcmp(cipherName, hitlsConfigList[i].name) != 0) {
@@ -275,7 +278,7 @@ static int8_t HitlsSetConfig(const HitlsConfig *hitlsConfigList, int configListS
     int ret = 0;
     char configArray[MAX_CIPHERSUITES_LEN] = {0}; // A maximum of 512 characters are supported.
     char *token, *rest;
-    uint16_t configValue;
+    int32_t configValue;
     uint16_t configValueArray[20] = {0}; // Currently, a maximum of 20 cipher suites are supported.
     uint32_t configSize = 0;
     ret = memcpy_s(configArray, sizeof(configArray), name, strlen(name));
@@ -288,7 +291,7 @@ static int8_t HitlsSetConfig(const HitlsConfig *hitlsConfigList, int configListS
         ASSERT_RETURN(configSize < 20, "Max Support Set 20 Config");
         configValue = GetConfigVauleFromStr(hitlsConfigList, configListSize, token);
         ASSERT_RETURN(configValue != ERROR, "GetConfigVauleFromStr Error");
-        configValueArray[configSize] = configValue;
+        configValueArray[configSize] = (uint16_t)configValue;
         token = strtok_s(NULL, ":", &rest);
         configSize++;
     } while (token != NULL);
@@ -322,8 +325,7 @@ static int8_t HitlsSetConfig(const HitlsConfig *hitlsConfigList, int configListS
 
 int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
 {
-    int ret, id;
-    ResList *ctxList = GetCtxList();
+    int ret;
 
     if (inCtxCfg->setSessionCache >= 0) {
         LOG_DEBUG("HiTLS Set SessionCache is %d", inCtxCfg->setSessionCache);
@@ -417,7 +419,7 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     // sni
     if (strncmp("NULL", inCtxCfg->serverName, strlen(inCtxCfg->serverName)) != 0) {
         LOG_DEBUG("HiTLS Set ServerName is %s", inCtxCfg->serverName);
-        ret = HITLS_CFG_SetServerName(outCfg, inCtxCfg->serverName, strlen(inCtxCfg->serverName));
+        ret = HITLS_CFG_SetServerName(outCfg, (uint8_t *)inCtxCfg->serverName, strlen(inCtxCfg->serverName));
         ASSERT_RETURN(ret == SUCCESS, "Hitls Set ServerName ERROR");
     }
 
@@ -438,7 +440,7 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     // alpn
     if (strncmp("NULL", inCtxCfg->alpnList, strlen(inCtxCfg->alpnList)) != 0) {
         LOG_DEBUG("HiTLS Set alpnList is %s", inCtxCfg->alpnList);
-        ret = HITLS_CFG_SetAlpnProtos(outCfg, inCtxCfg->alpnList, strlen(inCtxCfg->alpnList));
+        ret = HITLS_CFG_SetAlpnProtos(outCfg, (const uint8_t *)inCtxCfg->alpnList, strlen(inCtxCfg->alpnList));
         ASSERT_RETURN(ret == SUCCESS, "Hitls Set alpnList ERROR");
     }
 
@@ -538,12 +540,12 @@ void HitlsFreeSsl(void *ssl)
     HITLS_Free(ssl);
 }
 
-const BSL_UIO_Method *GetDefaultMethod(BSL_UIO_TransportType type)
+const BSL_UIO_Method *GetDefaultMethod(HILT_TransportType type)
 {
     switch (type) {
-        case BSL_UIO_SCTP:
+        case SCTP:
             return SctpGetDefaultMethod();
-        case BSL_UIO_TCP:
+        case TCP:
             return TcpGetDefaultMethod();
         default:
             break;
@@ -597,7 +599,7 @@ int HitlsAccept(void *ssl)
         tryNum++;
     } while ((ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
             ret == HITLS_REC_NORMAL_IO_BUSY) &&
-            (tryNum < TIME_OUT_SEC * 1000));
+            (tryNum < FUNC_TIME_OUT_SEC * 1000)); // usleep(1000) after each attemp.
     if (ret != SUCCESS) {
         LOG_ERROR("HITLS_Accept Error is %d", ret);
     } else {
@@ -617,7 +619,7 @@ int HitlsConnect(void *ssl)
         tryNum++;
     } while ((ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||
             ret == HITLS_REC_NORMAL_IO_BUSY) &&
-            (tryNum < TIME_OUT_SEC * 1000));
+            (tryNum < FUNC_TIME_OUT_SEC * 1000)); // usleep(1000) after each attemp.
     if (ret != SUCCESS) {
         LOG_ERROR("HITLS_Connect Error is %d", ret);
     } else {

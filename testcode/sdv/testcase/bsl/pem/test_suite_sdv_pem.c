@@ -79,7 +79,7 @@ void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
                     "-----END EC PRIVATE KEY-----\n";
     int32_t len = strlen(pemdata);
     char *next = pemdata;
-    int32_t nextLen = len;
+    uint32_t nextLen = len;
     uint8_t *asn1Encode = NULL;
     uint32_t asn1Len;
     ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);

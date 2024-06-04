@@ -25,7 +25,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     option(__x86_64__ "x86" ON)
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wl,--wrap=REC_Read -Wl,--wrap=REC_Write")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -Wformat=2 -Wno-format-nonliteral -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wl,--wrap=REC_Read -Wl,--wrap=REC_Write")
 
 message(STATUS "System processor :${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "Enable bsl uio sctp :${ENABLE_UIO_SCTP}")
@@ -63,7 +63,7 @@ if(OS_BIG_ENDIAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mbig-endian")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64 -D_POSIX_C_SOURCE=200809L")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
 
 include(ExternalProject)
 ExternalProject_Add(${LIB_TEST_TLS}

@@ -216,7 +216,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
 
     // Apply for the config context.
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
-    void *clientConfig = HLT_TlsNewCtx(TLS1_3, true);
+    void *clientConfig = HLT_TlsNewCtx(TLS1_3);
     ASSERT_TRUE(clientConfig != NULL);
 
     // Configure the session restoration function.
@@ -309,21 +309,6 @@ exit:
     HLT_FreeAllProcess();
     return;
 }
-
-static void FrameCallBack_ServerHello_LegacyVersion_Unsafe(void *msg, void *userData)
-{
-    // ServerHello exception: Send the ServerHello message with the LegacyVersion set to SSL3.0.
-    HLT_FrameHandle *handle = (HLT_FrameHandle *)userData;
-    FRAME_Msg *frameMsg = (FRAME_Msg *)msg;
-    ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
-    FRAME_ServerHelloMsg *serverhello = &frameMsg->body.hsMsg.body.serverHello;
-
-    serverhello->version.state = ASSIGNED_FIELD;
-    serverhello->version.data = HITLS_VERSION_SSL30;
-exit:
-    return;
-}
-
 
 static void FrameCallBack_ClientHello_PskBinder_Miss(void *msg, void *userData)
 {

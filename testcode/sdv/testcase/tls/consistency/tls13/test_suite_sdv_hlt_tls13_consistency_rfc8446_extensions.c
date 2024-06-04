@@ -772,30 +772,6 @@ exit:
 }
 /* END_CASE */
 
-
-static void Test_Server_SVersion5(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
-{
-    (void)ctx;
-    (void)user;
-    FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS12;
-    FRAME_Msg frameMsg = {0};
-    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
-    frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLS12;
-    uint32_t parseLen = 0;
-    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
-    ASSERT_EQ(parseLen, *len);
-    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
-    frameMsg.body.hsMsg.body.clientHello.version.data = 0x0304;
-
-    memset_s(data, bufSize, 0, bufSize);
-    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
-    FRAME_CleanMsg(&frameType, &frameMsg);
-    return;
-}
-
 static void Test_Server_SVersion6(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     (void)ctx;
@@ -1062,7 +1038,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
     ASSERT_TRUE(remoteProcess != NULL);
 
     int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    void *clientConfig = HLT_TlsNewCtx(version, true);
+    void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");

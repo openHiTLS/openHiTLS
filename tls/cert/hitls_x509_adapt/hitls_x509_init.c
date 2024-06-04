@@ -32,11 +32,11 @@ int32_t HITLS_CertMethodInit(void)
         .certParse = HITLS_X509_Adapt_CertParse,
         .certDup = HITLS_X509_Adapt_CertDup,
         .certRef = HITLS_X509_Adapt_CertRef,
-        .certFree = HITLS_X509_Adapt_CertFree,             
+        .certFree = HITLS_X509_Adapt_CertFree,
         .certCtrl = HITLS_X509_Adapt_CertCtrl,
 
-        .keyParse = HITLS_X509_Adapt_KeyParse,      
-        .keyDup = HITLS_X509_Adapt_KeyDup,        
+        .keyParse = HITLS_X509_Adapt_KeyParse,
+        .keyDup = HITLS_X509_Adapt_KeyDup,
         .keyFree = HITLS_X509_Adapt_KeyFree,
         .keyCtrl = HITLS_X509_Adapt_KeyCtrl,
                    
