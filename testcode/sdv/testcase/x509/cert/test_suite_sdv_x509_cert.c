@@ -541,31 +541,31 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(subjectName.data, NULL);
     ASSERT_EQ(subjectName.dataLen, strlen(expectedSubjectName));
-    ASSERT_EQ(strcmp(subjectName.data, expectedSubjectName), 0);
+    ASSERT_EQ(strcmp((char *)subjectName.data, expectedSubjectName), 0);
 
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_ISSUER_DNNAME, &issuerName, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(issuerName.data, NULL);
     ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
-    ASSERT_EQ(strcmp(issuerName.data, expectedIssueName), 0);
+    ASSERT_EQ(strcmp((char *)issuerName.data, expectedIssueName), 0);
 
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_SERIALNUM, &serialNum, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(serialNum.data, NULL);
     ASSERT_EQ(serialNum.dataLen, strlen(expectedSerialNum));
-    ASSERT_EQ(strcmp(serialNum.data, expectedSerialNum), 0);
+    ASSERT_EQ(strcmp((char *)serialNum.data, expectedSerialNum), 0);
 
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_BEFORE_TIME, &beforeTime, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(beforeTime.data, NULL);
     ASSERT_EQ(beforeTime.dataLen, strlen(expectedBeforeTime));
-    ASSERT_EQ(strcmp(beforeTime.data, expectedBeforeTime), 0);
+    ASSERT_EQ(strcmp((char *)beforeTime.data, expectedBeforeTime), 0);
 
     ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_AFTER_TIME, &afterTime, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(afterTime.data, NULL);
     ASSERT_EQ (afterTime.dataLen, strlen(expectedAfterTime));
-    ASSERT_EQ(strcmp(afterTime.data, expectedAfterTime), 0);
+    ASSERT_EQ(strcmp((char *)afterTime.data, expectedAfterTime), 0);
 exit:
     HITLS_X509_FreeCert(cert);
     BSL_SAL_FREE(subjectName.data);
