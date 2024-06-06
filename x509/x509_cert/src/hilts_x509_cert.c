@@ -223,7 +223,7 @@ int32_t HITLS_X509_ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Ce
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_KEYUSAGE);
         return HITLS_X509_ERR_CERT_INVALID_KEYUSAGE;
     }
-    for (size_t i = 0; i < bitString.len; i++) {
+    for (uint32_t i = 0; i < bitString.len; i++) {
         cert->tbs.ext.keyUsage |= (bitString.buff[i] << (8 * i));
     }
     cert->tbs.ext.extFlags |= HITLS_X509_CERT_EXT_FLAG_KUSAGE;

@@ -16,6 +16,8 @@
 #include "bsl_err.h"
 #include "crypt_algid.h"
 #include "hitls_crypt_init.h"
+#include "crypt_eal_rand.h"
+#include "hitls_cert_init.h"
 
 static void *StdMalloc(uint32_t len)
 {

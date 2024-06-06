@@ -26,6 +26,7 @@
 #include "tls.h"
 #include "bsl_list.h"
 #include "hitls_x509_adapt_local.h"
+#include "hitls_cert_init.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -91,7 +92,8 @@ int32_t RegMemCallback(MemCallbackType type)
 
 HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(const char *file)
 {
-    return HITLS_X509_Adapt_CertParse(NULL, file, strlen(file) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    return HITLS_X509_Adapt_CertParse(NULL, (const uint8_t *)file, strlen(file) + 1, TLS_PARSE_TYPE_FILE,
+        TLS_PARSE_FORMAT_ASN1);
 }
 
 void *HiTLS_X509_LoadCertListToStore(const char *fileList)
@@ -210,7 +212,8 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
         }
         LOG_DEBUG("Load Cert Path is %s", filePath);
 
-        key = HITLS_X509_Adapt_KeyParse(tlsCfg, filePath, strlen(filePath), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+        key = HITLS_X509_Adapt_KeyParse(tlsCfg, (const uint8_t *)filePath, strlen(filePath),
+            TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
         if (key == NULL) {
             LOG_ERROR("LoadCert Error: path = %s.", filePath);
             return ERROR;

@@ -34,7 +34,7 @@ typedef struct {
 } DataBuf;
 
 typedef struct {
-    uint8_t data[CONTROL_CHANNEL_MAX_MSG_LEN];
+    char data[CONTROL_CHANNEL_MAX_MSG_LEN];
     uint32_t dataLen;
 } ControlChannelBuf;
 
@@ -44,8 +44,8 @@ typedef struct {
     struct sockaddr_un srcAddr;
     struct sockaddr_un peerAddr;
     int32_t sockFd;
-    uint8_t sendBuffer[MAX_SEND_BUFFER_NUM][CONTROL_CHANNEL_MAX_MSG_LEN];
-    uint8_t rcvBuffer[MAX_RCV_BUFFER_NUM][CONTROL_CHANNEL_MAX_MSG_LEN];
+    char sendBuffer[MAX_SEND_BUFFER_NUM][CONTROL_CHANNEL_MAX_MSG_LEN];
+    char rcvBuffer[MAX_RCV_BUFFER_NUM][CONTROL_CHANNEL_MAX_MSG_LEN];
     uint8_t sendBufferNum;
     Lock *sendBufferLock;
     uint8_t rcvBufferNum;
@@ -72,17 +72,17 @@ ControlChannelRes* GetControlChannelRes(void);
 /**
 * @brief  Writes data to the control link
 */
-int PushResultToChannelSendBuffer(ControlChannelRes *channelInfo, uint8_t *result);
+int PushResultToChannelSendBuffer(ControlChannelRes *channelInfo, char *result);
 
 /**
 * @brief  Read data from the control link
 */
-int PushResultToChannelRcvBuffer(ControlChannelRes *channelInfo, uint8_t *result);
+int PushResultToChannelRcvBuffer(ControlChannelRes *channelInfo, char *result);
 
 /**
 * @brief  Writes data to the control link by ID
 */
-int PushResultToChannelIdBuffer(ControlChannelRes *channelInfo, uint8_t *result, int id);
+int PushResultToChannelIdBuffer(ControlChannelRes *channelInfo, char *result, int id);
 
 #ifdef __cplusplus
 }

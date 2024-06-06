@@ -23,7 +23,6 @@
 
 TLS_Ctx *NewFrameTlsCtx(void)
 {
-    int32_t ret = 0;
     TLS_Ctx *tlsCtx = (TLS_Ctx *)BSL_SAL_Calloc(1u, sizeof(HITLS_Ctx));
     if (tlsCtx == NULL) {
         return NULL;
@@ -131,7 +130,7 @@ int32_t PackClientHelloMsg(FRAME_Msg *msg)
         goto FREE_MEM;
     }
 
-    int32_t usedLen = 0;
+    uint32_t usedLen = 0;
     ret = HS_PackMsg(tlsCtx, CLIENT_HELLO, &msg->buffer[msg->len], REC_MAX_PLAIN_LENGTH, &usedLen);
     if (ret == HITLS_SUCCESS) {
         msg->len += usedLen;
@@ -170,7 +169,7 @@ int32_t PackServerHelloMsg(FRAME_Msg *msg)
     tlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite = serverHello->cipherSuite;
     tlsCtx->negotiatedInfo.isExtendedMasterSecret = serverHello->haveExtendedMasterSecret;
 
-    int32_t usedLen = 0;
+    uint32_t usedLen = 0;
     ret = HS_PackMsg(tlsCtx, SERVER_HELLO, &msg->buffer[msg->len], REC_MAX_PLAIN_LENGTH, &usedLen);
     if (ret == HITLS_SUCCESS) {
         msg->len += usedLen;
@@ -314,7 +313,7 @@ int32_t PackFinishMsg(FRAME_Msg *msg)
         goto FREE_MEM;
     }
 
-    int32_t usedLen = 0;
+    uint32_t usedLen = 0;
     ret = HS_PackMsg(tlsCtx, FINISHED, &msg->buffer[msg->len], REC_MAX_PLAIN_LENGTH, &usedLen);
     if (ret == HITLS_SUCCESS) {
         msg->len += usedLen;
@@ -418,7 +417,7 @@ int32_t PackRecordHeader(FRAME_Msg *msg)
 int32_t PackFrameMsg(FRAME_Msg *msg)
 {
     // Apply for an 18 KB buffer for storing the current message.
-    msg->buffer = (char *)BSL_SAL_Calloc(1u, RECORD_BUF_LEN);
+    msg->buffer = (uint8_t *)BSL_SAL_Calloc(1u, RECORD_BUF_LEN);
     if (msg->buffer == NULL) {
         return HITLS_MEMALLOC_FAIL;
     }

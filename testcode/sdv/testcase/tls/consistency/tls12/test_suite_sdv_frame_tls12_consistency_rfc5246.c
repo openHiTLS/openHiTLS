@@ -5185,7 +5185,6 @@ void UT_TLS1_2_RFC5246_SERVER_CHOSE_VERSION_TC002(void)
 
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
     uint8_t *recvBuf = ioUserData->recMsg.msg;
-    uint32_t recvLen = ioUserData->recMsg.len;
     
     recvBuf[2] = 0x05;
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);

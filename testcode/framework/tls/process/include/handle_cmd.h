@@ -23,10 +23,10 @@ extern "C" {
 
 typedef struct {
     uint8_t parasNum;
-    uint8_t id[MAX_CMD_ID_LEN];
-    uint8_t funcId[MAX_CMD_FUNCID_LEN];
-    uint8_t paras[MAX_CMD_PARAS_NUM][CONTROL_CHANNEL_MAX_MSG_LEN];
-    uint8_t result[CONTROL_CHANNEL_MAX_MSG_LEN];
+    char id[MAX_CMD_ID_LEN];
+    char funcId[MAX_CMD_FUNCID_LEN];
+    char paras[MAX_CMD_PARAS_NUM][CONTROL_CHANNEL_MAX_MSG_LEN];
+    char result[CONTROL_CHANNEL_MAX_MSG_LEN];
 } CmdData;
 
 /**
@@ -42,7 +42,7 @@ int WaitResultFromPeer(CmdData *expectCmdData);
 /**
 * @brief  Resolve instructions from a string
 */
-int ParseCmdFromStr(uint8_t *str, CmdData *cmdData);
+int ParseCmdFromStr(char *str, CmdData *cmdData);
 
 /**
 * @brief  Parse the instruction from the buffer.
@@ -57,7 +57,7 @@ int ExecuteCmd(CmdData *cmdData);
 /**
 * @brief  Obtain the CTX configuration content from the character string parsing.
 */
-int ParseCtxConfigFromString(uint8_t (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ctx_Config *ctxConfig);
+int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ctx_Config *ctxConfig);
 
 #ifdef __cplusplus
 }

@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     // Print information
     LOG_DEBUG("Create Remote Process Successful");
     // The message is sent to the peer end, indicating that the process is started successfully
-    PushResultToChannelSendBuffer(channelInfo, (uint8_t*)"0|HEART");
+    PushResultToChannelSendBuffer(channelInfo, "0|HEART");
     while (1) {
         if (kill(ppid, 0) != 0) {
             LOG_DEBUG("\nthe parent process [%u] does not exist, I want to exist\n", ppid);

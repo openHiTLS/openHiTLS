@@ -305,7 +305,7 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
     eeKeyPath2 = DEFAULT_CERT_PATH""ECDSA_PRIV_KEY_DER;
 
     ASSERT_EQ(HLT_TlsRegCallback(HITLS_CALLBACK_DEFAULT), SUCCESS);
-    serverConfig = HLT_TlsNewCtx(DTLS1_2, false);
+    serverConfig = HLT_TlsNewCtx(DTLS1_2);
     ASSERT_TRUE(serverConfig != NULL);
     uint16_t group = HITLS_EC_GROUP_SECP256R1;
     ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, &group, 1), SUCCESS);

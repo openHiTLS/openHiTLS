@@ -34,7 +34,6 @@ int ExpectResult(CmdData *expectCmdData)
     char *endPtr = NULL;
     CmdData cmdData;
     ControlChannelRes *channelRes;
-    ControlChannelBuf dataBuf;
     channelRes = GetControlChannelRes();
     OsLock(channelRes->rcvBufferLock);
 
@@ -84,16 +83,16 @@ int WaitResultFromPeer(CmdData *expectCmdData)
     return SUCCESS;
 }
 
-int ParseCmdFromStr(uint8_t *str, CmdData *cmdData)
+int ParseCmdFromStr(char *str, CmdData *cmdData)
 {
     int ret, count, strBufLen;
     char *token = NULL;
     char *rest = NULL;
-    uint8_t *strBuf = NULL;
+    char *strBuf = NULL;
     (void)memset_s(cmdData, sizeof(CmdData), 0, sizeof(CmdData));
 
     strBufLen = strlen(str) + 1;
-    strBuf = (uint8_t*)malloc(strBufLen);
+    strBuf = (char*)malloc(strBufLen);
     ASSERT_RETURN(strBuf != NULL, "Malloc Error");
     (void)memset_s(strBuf, strBufLen, 0, strBufLen);
     ret = memcpy_s(strBuf, strBufLen, str, strlen(str));
@@ -176,12 +175,9 @@ int ExecuteCmd(CmdData *cmdData)
     return ret;
 }
 
-int ParseCtxConfigFromString(uint8_t (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ctx_Config *ctxConfig)
+int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ctx_Config *ctxConfig)
 {
-    int ret, count;
-    char *token = NULL;
-    char *rest = NULL;
-
+    int ret;
     /*
         The message structure is as follows:
         minVersion | maxVersion |cipherSuites |CA |......

@@ -291,7 +291,6 @@ int HLT_RpcTlsConnectUnBlock(HLT_Process *peerProcess, int sslId)
 {
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    CmdData expectCmdData = {0};
     ControlChannelBuf dataBuf;
 
     ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsConnect");
@@ -315,7 +314,6 @@ int HLT_RpcTlsConnectUnBlock(HLT_Process *peerProcess, int sslId)
 int HLT_RpcGetTlsConnectResult(int cmdIndex)
 {
     int ret;
-    char *endPtr = NULL;
     CmdData expectCmdData = {0};
     // Waiting for the result returned by the peer
     ret = WaitResult(&expectCmdData, cmdIndex, "HLT_RpcTlsConnect");
@@ -369,7 +367,6 @@ int HLT_RpcTlsReadUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, ui
     int ret;
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    CmdData expectCmdData = {0};
     ControlChannelBuf dataBuf;
 
     ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsRead");
@@ -443,7 +440,6 @@ int HLT_RpcTlsWriteUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, u
     int ret;
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    CmdData expectCmdData = {0};
     ControlChannelBuf dataBuf;
 
     ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsWrite");

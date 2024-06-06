@@ -82,9 +82,8 @@ int RpcTlsNewCtx(CmdData *cmdData)
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
 
     tlsVersion = atoi(cmdData->paras[0]);
-    bool isClient = atoi(cmdData->paras[1]);
     // Invoke the corresponding function.
-    void* ctx = HLT_TlsNewCtx(tlsVersion, isClient);
+    void* ctx = HLT_TlsNewCtx(tlsVersion);
     if (ctx == NULL) {
         LOG_ERROR("HLT_TlsNewCtx Return NULL");
         id = ERROR;
@@ -199,7 +198,8 @@ ERR:
 
 int RpcTlsListen(CmdData *cmdData)
 {
-    int ret, fd, sslId;
+    int ret;
+    int sslId;
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
     ResList *sslList = GetSslList();
     sslId = strtol(cmdData->paras[0], NULL, 10); // Convert to a decimal number
@@ -221,7 +221,7 @@ ERR:
 
 int RpcTlsAccept(CmdData *cmdData)
 {
-    int ret, fd;
+    int ret;
 
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
     ResList *sslList = GetSslList();
@@ -245,7 +245,7 @@ ERR:
 
 int RpcTlsConnect(CmdData *cmdData)
 {
-    int ret, fd;
+    int ret;
 
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
 
@@ -269,7 +269,7 @@ ERR:
 
 int RpcTlsRead(CmdData *cmdData)
 {
-    int ret = SUCCESS, fd;
+    int ret = SUCCESS;
 
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
     ResList *sslList = GetSslList();
@@ -310,7 +310,7 @@ ERR:
 
 int RpcTlsWrite(CmdData *cmdData)
 {
-    int ret, fd;
+    int ret;
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
 
     ResList *sslList = GetSslList();
@@ -423,7 +423,6 @@ int RpcDataChannelAccept(CmdData *cmdData)
     // Invoke the blocking interface
     sockFd = RunDataChannelAccept(&channelParam);
 
-ERR:
     // Return the result.
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, sockFd);
     ASSERT_RETURN(ret > 0);
@@ -446,7 +445,6 @@ int RpcDataChannelBind(CmdData *cmdData)
     // Invoke the blocking interface
     sockFd = RunDataChannelBind(&channelParam);
 
-ERR:
     // Return the result.
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d|%d", cmdData->id, cmdData->funcId,
         sockFd, channelParam.port);

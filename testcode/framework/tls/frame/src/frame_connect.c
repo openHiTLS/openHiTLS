@@ -78,8 +78,9 @@ static bool StateCompare(FRAME_LinkObj *link, bool isClient, HITLS_HandshakeStat
         /* In tls1.3, if the single-end verification is used, the server may receive the CCS message in the TRY_RECV_FINISH phase */
         if (state == TRY_RECV_FINISH){
             if (link->needStopBeforeRecvCCS || CCS_IsRecv(link->ssl) == true ||
-            link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 && isClient == true ||
-            link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 && link->ssl->config.tlsConfig.isSupportClientVerify == true) {
+                (link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 && isClient == true) ||
+                (link->ssl->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 &&
+                link->ssl->config.tlsConfig.isSupportClientVerify == true)) {
             return true;
             }
         }

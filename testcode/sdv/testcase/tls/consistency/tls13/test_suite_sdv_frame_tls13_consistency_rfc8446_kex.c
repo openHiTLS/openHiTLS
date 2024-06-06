@@ -2333,7 +2333,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNKNOWN_EXTENSION_FUNC_TC001()
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     tlsConfig->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
-    HITLS_CFG_SetServerName(tlsConfig, (uint8_t *)g_serverName, (uint32_t)strlen((char *)g_serverName));
+    HITLS_CFG_SetServerName(tlsConfig, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName));
     ASSERT_TRUE(tlsConfig != NULL);
 
     FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
@@ -2705,7 +2705,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_DATA_AFTER_COMPRESSION_FUNC_TC004()
         HITLS_CFG_SetCipherSuites(tlsConfig_s, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
     ASSERT_TRUE(tlsConfig_s != NULL);
     HITLS_Config *tlsConfig_c = HITLS_CFG_NewTLS12Config();
-    HITLS_CFG_SetServerName(tlsConfig_c, (uint8_t *)g_serverName, (uint32_t)strlen((char *)g_serverName));
+    HITLS_CFG_SetServerName(tlsConfig_c, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName));
     tlsConfig_c->isSupportClientVerify = true;
     ASSERT_TRUE(tlsConfig_c != NULL);
     FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig_c, BSL_UIO_TCP);
