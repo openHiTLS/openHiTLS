@@ -16,6 +16,9 @@
 #include "bsl_asn1.h"
 #include "bsl_err.h"
 #include "bsl_log.h"
+#include "sal_time.h"
+#include "bsl_obj_internal.h"
+#include "hitls_x509_local.h"
 
 /* END_HEADER */
 
@@ -78,6 +81,42 @@ BSL_ASN1_TemplateItem maxDepthTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 7},
 };
 
+static BSL_ASN1_TemplateItem g_rsaPub[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* ignore seq */
+            {BSL_ASN1_TAG_INTEGER, 0, 1},                         /* n */
+            {BSL_ASN1_TAG_INTEGER, 0, 1},                         /* e */
+    };
+
+static BSL_ASN1_TemplateItem g_rsaPrv[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* ignore seq header */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* version */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* n */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* e */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* p */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* q */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d mod (p-1) */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d mod (q-1) */
+        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* q^-1 mod p */
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+         BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 1}, /* OtherPrimeInfos OPTIONAL */
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2}, /* OtherPrimeInfo */
+                {BSL_ASN1_TAG_INTEGER, 0, 3}, /* ri */
+                {BSL_ASN1_TAG_INTEGER, 0, 3}, /* di */
+                {BSL_ASN1_TAG_INTEGER, 0, 3} /* ti */
+};
+
+typedef struct {
+    BSL_ASN1_TemplateItem *items;
+    uint32_t itemNum;
+    uint32_t asnNum;
+} TestAsn1Param;
+
+static TestAsn1Param g_tests[] = {
+    {g_rsaPub, sizeof(g_rsaPub) / sizeof(g_rsaPub[0]), 2},
+    {g_rsaPrv, sizeof(g_rsaPrv) / sizeof(g_rsaPrv[0]), 10},
+};
+
 typedef enum {
     BSL_ASN1_TAG_VERSION_IDX = 0,
     BSL_ASN1_TAG_SERIAL_IDX = 1,
@@ -108,8 +147,7 @@ typedef enum {
 char *g_oidEcc = "\x2a\x86\x48\xce\x3d\x02\01";
 char *g_oidRsaPss = "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a";
 
-int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx,
-    void *data, void *expVal)
+int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx, void *data, void *expVal)
 {
     BSL_ASN1_Buffer *param = NULL;
     uint32_t len = 0;
@@ -514,5 +552,559 @@ void SDV_BSL_ASN1_DECODECOMPLETELEN_FUNC(Hex *val, int ecpLen, int res)
     }
 exit:
     return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_API_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    BSL_ASN1_Buffer asnArr[1] = {0};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    /* templ */
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(NULL, asnArr, 1, &encode, &encodeLen), BSL_INVALID_ARG);
+    templ.templItems = NULL;
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 1, &encode, &encodeLen), BSL_INVALID_ARG);
+    templ.templItems = item;
+    templ.templNum = 0;
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 1, &encode, &encodeLen), BSL_INVALID_ARG);
+    templ.templNum = 1;
+
+    /* asnArr */
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, NULL, 1, &encode, &encodeLen), BSL_INVALID_ARG);
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 0, &encode, &encodeLen), BSL_INVALID_ARG);
+
+    /* encode */
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 1, NULL, &encodeLen), BSL_INVALID_ARG);
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 1, &encode, NULL), BSL_INVALID_ARG);
+    encode = (uint8_t*)&encodeLen;
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 1, &encode, &encodeLen), BSL_INVALID_ARG);
+
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_ERROR_TC001(void)
+{
+    BSL_ASN1_Template templ = {maxDepthTempl, sizeof(maxDepthTempl) / sizeof(maxDepthTempl[0])};
+    BSL_ASN1_Buffer asnArr[1] = {0};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asnArr, 1, &encode, &encodeLen), BSL_ASN1_ERR_MAX_DEPTH);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_ERROR_TC002(int tag, int ret)
+{
+    BSL_ASN1_TemplateItem item[] = {{tag, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    uint8_t data = 1;
+    BSL_ASN1_Buffer asn = {tag, 1, &data};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), ret);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_ERROR_TC003(Hex *data)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+            {BSL_ASN1_TAG_ANY, 0, 1},
+            {BSL_ASN1_TAG_CHOICE, 0, 1}
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_INTEGER, data->len, data->x};
+    BSL_ASN1_Buffer asns[] = {asn, asn, asn, asn};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+    uint32_t expectAsnNum = 3;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, expectAsnNum - 1, &encode, &encodeLen),
+              BSL_ASN1_ERR_ENCODE_ASN_LACK);
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, expectAsnNum + 1, &encode, &encodeLen),
+              BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_ERROR_TC004(void)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    int iData = 256;
+    BSL_ASN1_Buffer asn[] = {{BSL_ASN1_TAG_ENUMERATED, sizeof(int), (uint8_t *)&iData}};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asn, sizeof(asn) / sizeof(asn[0]), &encode, &encodeLen),
+              BSL_ASN1_ERR_TAG_EXPECTED);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_BOOL_FUNC(int data, Hex *expect)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_BOOLEAN, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BOOLEAN, 1, (uint8_t *)&data};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode bool", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_INT_LIMB_FUNC(int ret, int data, Hex *expect)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    BSL_ASN1_Buffer asn = {0};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, data, &asn), BSL_SUCCESS);
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), ret);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode int", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(asn.buff);
+    if (ret == BSL_SUCCESS) {
+        BSL_SAL_Free(encode);
+    }
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_INT_BN_FUNC(Hex *bn, Hex *expect)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_INTEGER, bn->len, bn->x};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode int", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_BITSTRING_FUNC(int ret, Hex *data, int unusedBits, Hex *expect)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_BITSTRING, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    BSL_ASN1_BitString bs = {data->x, data->len, unusedBits};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BITSTRING,
+                           data->len == 0 ? 0 : sizeof(BSL_ASN1_BitString),
+                           data->len == 0 ? NULL : (uint8_t *)&bs};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), ret);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode bitstring", expect->x, expect->len, encode, encodeLen);
+exit:
+    if (ret == BSL_SUCCESS) {
+        BSL_SAL_Free(encode);
+    }
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TIME_FUNC(int tag, int ret, int year, int month, int day, int hour, int minute, int second,
+    Hex *expect)
+{
+    BSL_ASN1_TemplateItem item[] = {{tag, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    BSL_TIME time = {year, month, day, hour, minute, 0, second, 0};
+    BSL_ASN1_Buffer asn = {tag, sizeof(BSL_TIME), (uint8_t *)&time};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), ret);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode time", expect->x, expect->len, encode, encodeLen);
+exit:
+    if (ret == BSL_SUCCESS) {
+        BSL_SAL_Free(encode);
+    }
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_NULL_FUNC_TC001(Hex *expect)
+{
+    BSL_ASN1_TemplateItem item[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_NULL, 0, 1},
+            {BSL_ASN1_TAG_NULL, BSL_ASN1_FLAG_OPTIONAL, 1},
+            {BSL_ASN1_TAG_NULL, BSL_ASN1_FLAG_DEFAULT, 1},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+                {BSL_ASN1_TAG_NULL, 0, 2},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL, 1},
+                {BSL_ASN1_TAG_NULL, 0, 2},
+    };
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_NULL, 0, NULL};
+    BSL_ASN1_Buffer asns[] = {asn, asn, asn, asn, asn};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asn), &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode null", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_NULL_FUNC_TC002(Hex *expect)
+{
+    uint8_t data = 1;
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_NULL, 0, 1}};
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_NULL, 1, &data};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode null", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_FUNC_TC001(Hex *expect)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
+                {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
+                    {BSL_ASN1_TAG_INTEGER, 0, 3},
+                    {BSL_ASN1_TAG_INTEGER, 0, 3},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    uint8_t iData[] = {0x01, 0x00};
+    uint8_t data = 0x12;
+    BSL_ASN1_Buffer asns[] = {
+        {BSL_ASN1_TAG_INTEGER, sizeof(iData) / sizeof(uint8_t), iData},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 1, &data},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 1, &data},
+        {BSL_ASN1_TAG_INTEGER, sizeof(iData) / sizeof(uint8_t), iData},
+    };
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asns[0]), &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode headonly", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_TEMPLATE_FUNC_TC002(Hex *data, Hex *expect)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+            {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_OPTIONAL, 1},
+            {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_DEFAULT, 1},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+                {BSL_ASN1_TAG_INTEGER, 0, 2},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_OPTIONAL, 1},
+                {BSL_ASN1_TAG_INTEGER, 0, 2},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_DEFAULT, 1},
+                {BSL_ASN1_TAG_INTEGER, 0, 2},
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_INTEGER, data->len, data->x};
+    BSL_ASN1_Buffer asns[] = {asn, asn, asn, asn, asn, asn};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asn), &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode optional|default", expect->x, expect->len, encode, encodeLen);
+exit:
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_API_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_NULL, 0, 1},
+            {BSL_ASN1_TAG_NULL, 0, 1},
+    };
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    BSL_ASN1_Buffer asnArr[] = {
+        {BSL_ASN1_TAG_NULL, 0, NULL},
+        {BSL_ASN1_TAG_NULL, 0, NULL},
+    };
+    uint32_t arrNum = sizeof(asnArr) / sizeof(asnArr[0]);
+    BSL_ASN1_Buffer out = {0};
+
+    /* tag */
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_TIME, 1, &templ, asnArr, arrNum, &out), BSL_INVALID_ARG);
+
+    /* listSize */
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_TIME, 0, &templ, asnArr, arrNum, &out), BSL_INVALID_ARG);
+
+    /* templ */
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, NULL, asnArr, arrNum, &out), BSL_INVALID_ARG);
+    templ.templItems = NULL;
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, 1, &templ, asnArr, arrNum, &out), BSL_INVALID_ARG);
+    templ.templItems = item;
+    templ.templNum = 0;
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, arrNum, &out), BSL_INVALID_ARG);
+    templ.templNum = sizeof(item) / sizeof(item[0]);
+
+    /* asnArr */
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, NULL, arrNum, &out), BSL_INVALID_ARG);
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, 0, &out), BSL_INVALID_ARG);
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, arrNum + 1, &templ, asnArr, arrNum, &out), BSL_INVALID_ARG);
+
+    /* out */
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, arrNum, NULL), BSL_INVALID_ARG);
+    out.buff = (uint8_t *)&arrNum;
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, arrNum, &out), BSL_INVALID_ARG);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_ERROR_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_TAG_NULL, 0, 1},
+    }; /* The expected number of asns in the current template is 1. */
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    BSL_ASN1_Buffer asnArr[] = {{BSL_ASN1_TAG_INTEGER, 0, NULL}};
+    BSL_ASN1_Buffer out = {0};
+
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, 1, &out), BSL_ASN1_ERR_TAG_EXPECTED);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_ERROR_TC002(void)
+{
+    BSL_ASN1_TemplateItem item[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_NULL, 0, 1},
+            {BSL_ASN1_TAG_NULL, 0, 1},
+    }; /* The expected number of asns in the current template is 2. */
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    BSL_ASN1_Buffer asnArr[] = {
+        {BSL_ASN1_TAG_NULL, 0, NULL},
+        {BSL_ASN1_TAG_NULL, 0, NULL},
+        {BSL_ASN1_TAG_NULL, 0, NULL},
+    };
+    uint32_t arrNum = sizeof(asnArr) / sizeof(asnArr[0]);
+    BSL_ASN1_Buffer out = {0};
+
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, 1, &out), BSL_ASN1_ERR_ENCODE_ASN_LACK);
+
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, asnArr, arrNum, &out),
+              BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_ERROR_TC003(int tag, int ret)
+{
+    BSL_ASN1_TemplateItem item[] = {{tag, 0, 0}};
+    BSL_ASN1_Template templ = {item, 1};
+    uint8_t data = 1;
+    BSL_ASN1_Buffer asn = {tag, 1, &data};
+    BSL_ASN1_Buffer out = {0};
+
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 1, &templ, &asn, 1, &out), ret);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_TC001(int listSize, Hex *encode)
+{
+    BSL_ASN1_TemplateItem x509Name[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+                {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+                {BSL_ASN1_TAG_ANY, 0, 2}
+    };
+    BSL_ASN1_Template templ = {x509Name, sizeof(x509Name) / sizeof(x509Name[0])};
+    BslOidString *o = BSL_OBJ_GetOidFromCID(BSL_CID_ORGANIZATIONNAME);
+    char *oName = "Energy TEST";
+    BslOidString *cn = BSL_OBJ_GetOidFromCID(BSL_CID_COMMONNAME);
+    char *cnName = "Energy ECC Equipment Root CA 1";
+    BSL_ASN1_Buffer in[] = {
+        {BSL_ASN1_TAG_OBJECT_ID, o->octedLen, (uint8_t *)o->octs},
+        {BSL_ASN1_TAG_PRINTABLESTRING, strlen(oName), (uint8_t *)oName},
+        {BSL_ASN1_TAG_OBJECT_ID, cn->octedLen, (uint8_t *)cn->octs},
+        {BSL_ASN1_TAG_PRINTABLESTRING, strlen(cnName), (uint8_t *)cnName},
+    };
+    BSL_ASN1_Buffer out = {0};
+
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, listSize, &templ, in, sizeof(in) / sizeof(in[0]), &out),
+              BSL_SUCCESS);
+    ASSERT_EQ(encode->len, out.len);
+    ASSERT_COMPARE("Encode list", encode->x, encode->len, out.buff, out.len);
+exit:
+    BSL_SAL_FREE(out.buff);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_THEN_ENCODE_FUNC_TC001(int testIdx, char *path)
+{
+    BSL_ASN1_Template templ = {g_tests[testIdx].items, g_tests[testIdx].itemNum};
+    uint32_t asnNum = g_tests[testIdx].asnNum;
+    uint8_t *rawData = NULL;
+    uint32_t dataLen = 0;
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    BSL_ASN1_Buffer *decodeAsns = (BSL_ASN1_Buffer *)BSL_SAL_Calloc(asnNum, sizeof(BSL_ASN1_Buffer));
+    ASSERT_TRUE(decodeAsns != NULL);
+
+    /* Decode */
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &rawData, &dataLen), BSL_SUCCESS);
+    uint8_t *decode = rawData;
+    uint32_t decodeLen = dataLen;
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &decode, &decodeLen, decodeAsns, asnNum),
+              BSL_SUCCESS);
+    ASSERT_EQ(decodeLen, 0);
+
+    /* Encode */
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, decodeAsns, asnNum, &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, dataLen);
+    ASSERT_COMPARE("Decode then encode", rawData, dataLen, encode, encodeLen);
+exit:
+    BSL_SAL_Free(decodeAsns);
+    BSL_SAL_Free(rawData);
+    BSL_SAL_Free(encode);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_THEN_DECODE_FUNC_TC001(int boolData, int number, Hex *bitString, int unusedBits, Hex *utf8,
+    int year, int month, int day, int hour, int minute, int second, Hex *headonly, Hex *expect)
+{
+    BSL_ASN1_TemplateItem items[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_TAG_BOOLEAN, 0, 1},
+        {BSL_ASN1_TAG_INTEGER, 0, 1},
+        {BSL_ASN1_TAG_BITSTRING, 0, 1},
+        {BSL_ASN1_TAG_NULL, BSL_ASN1_FLAG_OPTIONAL, 1},
+        {BSL_ASN1_TAG_UTF8STRING, 0, 1},
+        {BSL_ASN1_TAG_UTCTIME, 0, 1},
+        {BSL_ASN1_TAG_UTCTIME, BSL_ASN1_FLAG_OPTIONAL, 1},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
+            {BSL_ASN1_TAG_NULL, 0, 2},
+    };
+    BSL_ASN1_Buffer integer = {0};
+    ASSERT_EQ(BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, number, &integer), BSL_SUCCESS);
+    BSL_ASN1_BitString bs = {bitString->x, bitString->len, unusedBits};
+    BSL_TIME time = {year, month, day, hour, minute, 0, second, 0};
+    BSL_ASN1_Buffer asns[] = {
+        {BSL_ASN1_TAG_BOOLEAN, sizeof(bool), (uint8_t *)&boolData},                     // 0
+        integer,                                                                        // 1
+        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&bs},           // 2
+        {BSL_ASN1_TAG_NULL, 0, NULL},                                                   // 3
+        {BSL_ASN1_TAG_UTF8STRING, utf8->len, utf8->x},                                  // 4
+        {BSL_ASN1_TAG_UTCTIME, sizeof(BSL_TIME), (uint8_t *)&time},                     // 5
+        {BSL_ASN1_TAG_UTCTIME, 0, NULL},                                                // 6
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, headonly->len, headonly->x}, // 7
+    };
+    uint32_t asnNum = sizeof(asns) / sizeof(asns[0]);
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+
+    ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, asnNum, &encode, &encodeLen), BSL_SUCCESS);
+    ASSERT_EQ(encodeLen, expect->len);
+    ASSERT_COMPARE("Encode", expect->x, expect->len, encode, encodeLen);
+
+    uint8_t *tmp = encode;
+    uint32_t tmpLen = encodeLen;
+    BSL_ASN1_Buffer decAns[8] = {0}; // 8 is asnNum
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, decAns, asnNum), BSL_SUCCESS);
+    ASSERT_EQ(tmpLen, 0);
+
+    bool bRes;
+    ASSERT_EQ(BSL_ASN1_DecodePrimitiveItem(decAns + 0, &bRes), BSL_SUCCESS); // Check the decoded data with index 0.
+    ASSERT_EQ(bRes, boolData);
+
+    int iRes;
+    ASSERT_EQ(BSL_ASN1_DecodePrimitiveItem(decAns + 1, &iRes), BSL_SUCCESS); // Check the decoded data with index 1.
+    ASSERT_EQ(iRes, number);
+
+    BSL_ASN1_BitString bs2 = {0};
+    ASSERT_EQ(BSL_ASN1_DecodePrimitiveItem(decAns + 2, &bs2), BSL_SUCCESS); // Check the decoded data with index 2.
+    ASSERT_EQ(bs.unusedBits, unusedBits);
+
+    BSL_TIME time2 = {0};
+    ASSERT_EQ(BSL_ASN1_DecodePrimitiveItem(decAns + 5, &time2), BSL_SUCCESS); // Check the decoded data with index 5.
+    ASSERT_EQ(time2.year, year);
+    ASSERT_EQ(time2.month, month);
+    ASSERT_EQ(time2.day, day);
+    ASSERT_EQ(time2.hour, hour);
+    ASSERT_EQ(time2.minute, minute);
+    ASSERT_EQ(time2.second, second);
+
+exit:
+    BSL_SAL_Free(integer.buff);
+    BSL_SAL_Free(encode);
 }
 /* END_CASE */
