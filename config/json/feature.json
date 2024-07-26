@@ -20,7 +20,6 @@
                     "sal_net": null,
                     "sal_str": null,
                     "tlv": null,
-                    "uio_plt": null,
                     "uio": {
                         "uio_plt": null,
                         "uio_buffer": {"deps": ["uio_plt"]},
