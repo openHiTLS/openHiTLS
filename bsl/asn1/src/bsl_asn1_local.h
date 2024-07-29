@@ -37,6 +37,16 @@ typedef struct _ASN1_AnyOrChoiceParam {
     BSL_ASN1_DecTemplCallBack tagCb;
 } BSL_ASN1_AnyOrChoiceParam;
 
+typedef struct _BSL_ASN1_EncodeItem {
+    uint64_t asnOctetNum; // tag + len + content
+    BSL_ASN1_Buffer *asn;
+    uint8_t tag;
+    uint8_t depth;
+    uint8_t skip; // Whether to skip processing template item
+    uint8_t optional;
+    uint8_t lenOctetNum; // The maximum number of the length octets is 126 + 1
+} BSL_ASN1_EncodeItem;
+
 #ifdef __cplusplus
 }
 #endif
