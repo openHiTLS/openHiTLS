@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------------------
 #  This file is part of the openHiTLS project.
-#  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+#  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
 #  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
 #  for license information.
 # ---------------------------------------------------------------------------------------------
@@ -13,6 +13,7 @@ set(HITLS_ROOT ../..)
 set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
                   ${HITLS_ROOT}/include/crypto
                   ${HITLS_ROOT}/include/tls
+                  ${HITLS_ROOT}/x509/include
                   ${HITLS_ROOT}/platform/Secure_C/include)
 
 add_library(DEMO_INTF INTERFACE)
@@ -22,7 +23,7 @@ target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build
 target_link_libraries(DEMO_INTF INTERFACE  hitls_tls hitls_x509 hitls_crypto hitls_bsl boundscheck)
 target_include_directories(DEMO_INTF INTERFACE ${HITLS_INCLUDE})
 
-set(TESTS client.c server.c)
+set(TESTS client.c server.c drbg.c ecdh.c pbkdf2.c sm2enc.c sm2sign.c sm4cbc.c)
 foreach(testcase ${TESTS})
     get_filename_component(testname ${testcase} NAME_WLE)
     add_executable(${testname} ${testcase})

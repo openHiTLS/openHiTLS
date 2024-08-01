@@ -20,6 +20,7 @@
 #include "hitls_cert_init.h"
 #include "hitls_cert.h"
 #include "hitls_crypt_init.h"
+#include "hitls_x509.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
@@ -33,9 +34,9 @@ int main(int32_t argc, char *argv[])
     BSL_UIO *uio = NULL;
     int fd = 0;
     int infd = 0;
-    HITLS_CERT_X509 *rootCA = NULL;
-    HITLS_CERT_X509 *subCA = NULL;
-    HITLS_CERT_X509 *serverCert = NULL;
+    HITLS_X509_Cert *rootCA = NULL;
+    HITLS_X509_Cert *subCA = NULL;
+    HITLS_X509_Cert *serverCert = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
     /* 注册BSL内存能力、仅供参考 */
@@ -165,9 +166,9 @@ exit:
     HITLS_CFG_FreeConfig(config);
     close(fd);
     close(infd);
-    HITLS_X509_Adapt_CertFree(rootCA);
-    HITLS_X509_Adapt_CertFree(subCA);
-    HITLS_X509_Adapt_CertFree(serverCert);
+    HITLS_X509_FreeCert(rootCA);
+    HITLS_X509_FreeCert(subCA);
+    HITLS_X509_FreeCert(serverCert);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return exitValue;
 }
