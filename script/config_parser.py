@@ -336,6 +336,14 @@ class FeatureConfigParser:
                 if 'children' in self._features.feas_info[fea]:
                     enable_feas.update(self._features.feas_info[fea]['children'])
 
+    def _get_parents(self, disables):
+        parents = set()
+        for d in disables:
+            relation = self._features.feas_info.get(d)
+            if relation and 'parent' in relation:
+                parents.add(relation['parent'])
+        return parents
+
     def get_enable_feas(self, enables):
         """
         Obtain the enabled features from the configuration file and input parameters.
@@ -408,24 +416,34 @@ class FeatureConfigParser:
             if 'c' in self._features.feas_info[fea]['impl']:
                 self._add_feature(fea, 'c')
 
-    def _update_enable_feature(self, features):
+    def _update_enable_feature(self, features, disables):
         """
         The sub-feature macro is derived from the parent feature macro in the code.
         Therefore, the sub-feature is removed and the parent feature is retained.
         """
+        disable_parents = self._get_parents(disables)
         tmp_feas = features.copy()
         enable_set = set()
         feas_info = self._features.feas_info
         for fea in tmp_feas:
             rel = feas_info[fea]
-            is_fea_contained = False
-            while('parent' in rel):
-                if rel['parent'] in features:
-                    is_fea_contained = True
-                    break
-                rel = feas_info[rel['parent']]
-            if not is_fea_contained:
-                enable_set.add(fea)
+            if fea in disable_parents:
+                if 'children' in rel:
+                    enable_set.update(rel['children'])
+                enable_set.discard(fea)
+            else:
+                is_fea_contained = False
+                while 'parent' in rel:
+                    if rel['parent'] in disables:
+                        raise Exception("The 'disables' features {} and 'enables' featrues {} conflict".format(fea, disables))
+
+                    if rel['parent'] in features:
+                        is_fea_contained = True
+                        break
+                    rel = feas_info[rel['parent']]
+                if not is_fea_contained:
+                    enable_set.add(fea)
+        enable_set.difference_update(set(disables))
         return list(enable_set)
 
     def _check_bn_config(self):
@@ -467,7 +485,7 @@ class FeatureConfigParser:
             if lib in libs:
                 self._cfg['libs'][lib] = libs[lib].copy()
 
-    def update_feature(self, enable):
+    def update_feature(self, enables, disables):
         '''
         update feature:
         1. Add the default lib and features: hitls_bsl: sal
@@ -487,15 +505,15 @@ class FeatureConfigParser:
 
         for lib in libs:
             if 'c' in libs[lib]:
-                libs[lib]['c'] = self._update_enable_feature(libs[lib]['c'])
+                libs[lib]['c'] = self._update_enable_feature(libs[lib]['c'], disables)
                 libs[lib]['c'].sort()
             if self.asm_type != 'no_asm' and self.asm_type in libs[lib]:
-                libs[lib]['asm'] = self._update_enable_feature(libs[lib]['asm'])
+                libs[lib]['asm'] = self._update_enable_feature(libs[lib]['asm'], disables)
                 libs[lib]['asm'].sort()
 
         self._re_sort_lib()
 
-        if 'all' in enable:
+        if 'all' in enables:
             self.set_param('system', None)
             self.set_param('bits', None)
             return
