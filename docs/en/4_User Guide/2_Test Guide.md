@@ -33,7 +33,6 @@ The test project depends on the source code compilation. Prepare the environment
 │   ├── execute_sdv.sh
 │   └── mini_build_test.sh
 ├── sdv
-│   ├── build
 │   ├── CMakeLists.txt
 │   ├── log
 │   ├── report
@@ -83,6 +82,8 @@ A test framework developed by the community provides public configurations and m
 | --help or -h    |  bash build_sdv.sh --help |Obtains help information.       |
 | no-crypto    | bash build_sdv.sh no-crypto         |Deletes the test cases of the crypto module.       |
 | no-bsl    | bash build_sdv.sh no-bsl         | Deletes the test cases of the bsl module.       |
+| no-tls    | bash build_sdv.sh no-tls         | Deletes the test cases of the tls module.       |
+| no-x509    | bash build_sdv.sh no-x509         | Deletes the test cases of the x509 module.       |
 | verbose    |bash build_sdv.sh verbose          |Displays the detailed information about the build process.        |
 | gcov     |  bash build_sdv.sh gcov  | Enables the capability of obtaining the coverage rate.      |
 | asan    | bash build_sdv.sh asan         | Enables the memory monitoring capability.      |

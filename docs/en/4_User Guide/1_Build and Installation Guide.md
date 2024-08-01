@@ -83,7 +83,10 @@ openHiTLS provides the CMake build mode, which can be configured using **configu
 |--disable|disable buld features|python3 configure.py --disable sal_thread |
 |--enable-sctp|enable sctp which is DTLS depended on|python3 configure.py --enable-sctp|
 |--asm_type|Indicates the assembly type.|python3 configure.py --lib_type  static --asm_type armv8|
+|--asm|Specifes build asm features, whicht needs to be used simultaneously with parameter `asm_type`.|python3 configure.py --lib_type  static --asm_type armv8 --asm sha2|
 |--endian|Indicates big-endian or little-endian build.|python3 configure.py --endian little|
+|--system|Specified the system type, currently only supports `linux`, used for 'sal_xxx' related features|python3 configure.py --system linux|
+|--bits|To enable feature "bn", should specify the number of OS bits, `32\|64`|python3 configure.py --bits 64|
 |--lib_type|Builds a static library, a dynamic library, or an object.|python3 configure.py --lib_type  static|
 |--add_options|Adds compilation options.|python3 configure.py --add_options "-O0 -g3"|
 |--del_options|Removes compilation options.|python3 configure.py --del_options"-O2"|
@@ -142,14 +145,14 @@ python3 ../configure.py --lib_type shared static object
 
 #### 3.1.2 Cross Compilation
 
-To cross compile openHiTLS, you need to use the **-DCMAKE_TOOLCHAIN_FILE** parameter of CMake to transfer the cross compilation configuration. The template configuration file **usr_gcc.toolchain.cmake** is stored in the **conf/toolchain** directory of openHiTLS. You can run the following commands after adapting the compiler:
+To cross compile openHiTLS, you need to use the **-DCMAKE_TOOLCHAIN_FILE** parameter of CMake to transfer the cross compilation configuration, as follows:
 
 ```bash
 cd openHiTLS
 mkdir -p ./build
 cd ./build
 python3 ../configure.py --bits=64 --system=linux # Modify the configuration. For details, see section 3.1.1.
-cmake -DCMAKE_TOOLCHAIN_FILE=usr_gcc.toolchain.cmake ..
+cmake -DCMAKE_TOOLCHAIN_FILE=usr_gcc.toolchain.cmake .. # xxx.toolchain.cmake needs to be written by the user.
 make -j
 ```
 
