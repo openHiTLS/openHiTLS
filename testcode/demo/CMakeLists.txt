@@ -1,0 +1,30 @@
+# ---------------------------------------------------------------------------------------------
+#  This file is part of the openHiTLS project.
+#  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+#  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+#  for license information.
+# ---------------------------------------------------------------------------------------------
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+
+project(demo)
+
+message(status "HITLS_ROOT: ${HITLS_ROOT}")
+set(HITLS_ROOT ../..)
+set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
+                  ${HITLS_ROOT}/include/crypto
+                  ${HITLS_ROOT}/include/tls
+                  ${HITLS_ROOT}/platform/Secure_C/include)
+
+add_library(DEMO_INTF INTERFACE)
+target_compile_options(DEMO_INTF INTERFACE -g)
+target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build 
+                                            ${HITLS_ROOT}/platform/Secure_C/lib/)
+target_link_libraries(DEMO_INTF INTERFACE  hitls_tls hitls_x509 hitls_crypto hitls_bsl boundscheck)
+target_include_directories(DEMO_INTF INTERFACE ${HITLS_INCLUDE})
+
+set(TESTS client.c server.c)
+foreach(testcase ${TESTS})
+    get_filename_component(testname ${testcase} NAME_WLE)
+    add_executable(${testname} ${testcase})
+    target_link_libraries(${testname} PRIVATE DEMO_INTF)
+endforeach()

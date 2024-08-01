@@ -78,7 +78,8 @@
             "-Wformat-security",
             "-Wignored-qualifiers",
             "-Wimplicit-fallthrough=3",
-            "-Wtype-limits"
+            "-Wtype-limits",
+            "-Wno-stringop-overread"
         ],
         "CC_SEC_FLAGS": [
             "-fPIC",
