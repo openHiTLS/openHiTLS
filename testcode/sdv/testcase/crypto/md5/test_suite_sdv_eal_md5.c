@@ -250,7 +250,7 @@ void SDV_CRYPTO_MD5_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MdCTX));
+    cpyCtx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
 

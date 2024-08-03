@@ -17,6 +17,29 @@
 #include "bsl_err_internal.h"
 #include "crypt_sm3.h"
 #include "sm3_local.h"
+#include "bsl_sal.h"
+
+struct CryptSm3Ctx {
+    uint32_t h[CRYPT_SM3_DIGESTSIZE / sizeof(uint32_t)];  /* store the intermediate data of the hash value */
+    uint32_t hNum, lNum;                                  /* input data counter, maximum value 2 ^ 64 bits */
+    uint8_t block[CRYPT_SM3_BLOCKSIZE];                   /* store the remaining data which less than one block */
+    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
+    uint32_t num;
+};
+
+CRYPT_SM3_Ctx *CRYPT_SM3_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SM3_Ctx));
+}
+
+void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx)
+{
+    CRYPT_SM3_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SM3_Ctx));
+}
 
 int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx)
 {
@@ -180,7 +203,7 @@ int32_t CRYPT_SM3_Final(CRYPT_SM3_Ctx *ctx, uint8_t *out, uint32_t *outLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SM3_CopyCtx(CRYPT_SM3_Ctx *dst, const CRYPT_SM3_Ctx *src)
+int32_t CRYPT_SM3_CopyCtx(const CRYPT_SM3_Ctx *src, CRYPT_SM3_Ctx *dst)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

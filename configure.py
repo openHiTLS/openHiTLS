@@ -272,6 +272,7 @@ class CMakeGenerator:
             path = 'include/' + module
             if os.path.exists(path):
                 inc_dirs.add(path)
+
         if os.path.exists('config/macro_config'):
             inc_dirs.add('config/macro_config')
         if os.path.exists('../../../../Secure_C/include'):

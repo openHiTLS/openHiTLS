@@ -17,6 +17,29 @@
 #include "sha2_core.h"
 #include "bsl_sal.h"
 
+struct CryptSha256Ctx {
+    uint32_t h[CRYPT_SHA2_256_DIGESTSIZE / sizeof(uint32_t)]; /* 256 bits for SHA256 state */
+    uint32_t block[CRYPT_SHA2_256_BLOCKSIZE / sizeof(uint32_t)]; /* 512 bits block cache */
+    uint32_t lNum, hNum;                                           /* input bits counter, max 2^64 bits */
+    uint32_t blocklen;                                     /* block length */
+    uint32_t outlen;                                       /* digest output length */
+    uint32_t errorCode; /* error Code */
+};
+
+CRYPT_SHA2_256_Ctx *CRYPT_SHA2_256_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_256_Ctx));
+}
+
+void CRYPT_SHA2_256_FreeCtx(CRYPT_SHA2_256_Ctx *ctx)
+{
+    CRYPT_SHA2_256_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_256_Ctx));
+}
+
 int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -56,7 +79,7 @@ void CRYPT_SHA2_256_Deinit(CRYPT_SHA2_256_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_256_Ctx));
 }
 
-int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, CRYPT_SHA2_256_Ctx *src)
+int32_t CRYPT_SHA2_256_CopyCtx(const CRYPT_SHA2_256_Ctx *src, CRYPT_SHA2_256_Ctx *dst)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -223,6 +246,22 @@ int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t 
 }
 
 #ifdef HITLS_CRYPTO_SHA224
+
+
+CRYPT_SHA2_224_Ctx *CRYPT_SHA2_224_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_224_Ctx));
+}
+
+void CRYPT_SHA2_224_FreeCtx(CRYPT_SHA2_224_Ctx *ctx)
+{
+    CRYPT_SHA2_224_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_224_Ctx));
+}
+
 int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -262,7 +301,7 @@ void CRYPT_SHA2_224_Deinit(CRYPT_SHA2_224_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_224_Ctx));
 }
 
-int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, CRYPT_SHA2_224_Ctx *src)
+int32_t CRYPT_SHA2_224_CopyCtx(const CRYPT_SHA2_224_Ctx *src, CRYPT_SHA2_224_Ctx *dst)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

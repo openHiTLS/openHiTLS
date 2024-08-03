@@ -43,8 +43,8 @@
  *    2. CRYPT_SUCCESS
  *    3. CRYPT_SUCCESS for valid providers
  *    4. BSL_SAL_ERR_DL_NOT_FOUND
- *    5. CRYPT_PROVIDER_NON_STANDARD
- *    6. CRYPT_PROVIDER_NON_STANDARD
+ *    5. CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL
+ *    6. CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL
  *    7. CRYPT_SUCCESS, and only one EalProviderMgrCtx structure for the provider in list with ref == 2
  *    8. CRYPT_SUCCESS
  *    9. CRYPT_SUCCESS
@@ -97,7 +97,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *test1, char *test2, char *
     // Test loading a provider without complete return methods
     ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoFullfunc, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
-    ASSERT_EQ(ret, CRYPT_PROVIDER_NON_STANDARD);
+    ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
 
     // Test CRYPT_EAL_UnloadProvider
     ret = CRYPT_EAL_UnloadProvider(libCtx, test1);

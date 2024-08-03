@@ -28,7 +28,8 @@ typedef enum {
 } CRYPT_MD_WORKSTATE;
 
 struct EAL_MdCtx {
-    const EAL_MdMethod *method;  /* algorithm operation entity */
+    bool isProvider;
+    const EAL_MdUnitaryMethod *method;  /* algorithm operation entity */
     void *data;        /* Algorithm ctx, mainly context */
     uint32_t state;
     CRYPT_MD_AlgId id;

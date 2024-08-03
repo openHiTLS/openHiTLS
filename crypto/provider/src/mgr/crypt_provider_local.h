@@ -36,8 +36,8 @@ struct EalProviderMgrCtx {
     BSL_SAL_RefCount ref;
     char *providerName;
     char *providerPath;
-    void *seedCtx; // entroy ctx
-
+    void *seedCtx; // entropy ctx
+    struct EalLibCtx *libCtx;
     CRYPT_EAL_ImplProviderInit provInitFunc;
 
     // out funcs
@@ -46,6 +46,9 @@ struct EalProviderMgrCtx {
     CRYPT_EAL_ProvCtrlCb provCtrlCb;
 };
 
+int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, CRYPT_Param *param,
+    CRYPT_EAL_ImplProviderInit providerInit);
+CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtxInternal();
 
 #ifdef __cplusplus
 }

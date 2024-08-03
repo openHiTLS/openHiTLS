@@ -311,7 +311,7 @@ void SDV_CRYPTO_SHA3_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
     uint8_t output[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MdCTX));
+    cpyCtx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
 

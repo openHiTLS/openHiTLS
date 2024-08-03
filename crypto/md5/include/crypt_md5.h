@@ -22,15 +22,23 @@ extern "C" {
 #define CRYPT_MD5_DIGESTSIZE 16
 #define CRYPT_MD5_BLOCKSIZE  64
 
-/* md5 ctx */
-typedef struct {
-    uint32_t h[CRYPT_MD5_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
-    uint8_t block[CRYPT_MD5_BLOCKSIZE];                  /* store the remaining data of less than one block */
-    uint32_t hNum, lNum;                                 /* input data counter, maximum value 2 ^ 64 bits */
-    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
-    uint32_t num;
-} CRYPT_MD5_Ctx;
+typedef struct CryptMdCtx CRYPT_MD5_Ctx;
+/**
+ * @ingroup MD5
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_MD5_Ctx *CRYPT_MD5_NewCtx(void);
 
+/**
+ * @ingroup MD5
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx);
 /**
  * @ingroup MD5
  * @brief This API is used to initialize the MD5 context.
@@ -80,10 +88,10 @@ int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen);
 /**
  * @ingroup MD5
  * @brief MD5 copy CTX function
- * @param dst [out]  Pointer to the new MD5 context.
  * @param src [in]   Pointer to the original MD5 context.
+ * @param dst [out]  Pointer to the new MD5 context.
  */
-int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src);
+int32_t CRYPT_MD5_CopyCtx(const CRYPT_MD5_Ctx *src, CRYPT_MD5_Ctx *dst);
 
 #ifdef __cplusplus
 }

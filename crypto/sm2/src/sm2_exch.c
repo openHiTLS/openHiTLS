@@ -36,7 +36,7 @@ int32_t KdfGmt0032012(uint8_t *out, const uint32_t *outlen, const uint8_t *z, ui
     uint32_t mdlen;
     int32_t ret;
     uint32_t len = MAX_MD_SIZE;
-    void *mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    void *mdCtx = hashMethod->newCtx();
     uint8_t dgst[MAX_MD_SIZE];
     uint8_t *tmp = out;
     uint32_t tmplen = *outlen;
@@ -63,8 +63,7 @@ int32_t KdfGmt0032012(uint8_t *out, const uint32_t *outlen, const uint8_t *z, ui
         }
     }
 ERR:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -160,7 +159,7 @@ static int32_t Sm3MsgHash(const EAL_MdMethod *hashMethod, const uint8_t *yBuf, c
     uint8_t *out, uint32_t *outlen, uint8_t tag)
 {
     int32_t ret;
-    void *mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    void *mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -172,8 +171,7 @@ static int32_t Sm3MsgHash(const EAL_MdMethod *hashMethod, const uint8_t *yBuf, c
     GOTO_ERR_IF(hashMethod->update(mdCtx, hashBuf, SM3_MD_SIZE), ret);
     GOTO_ERR_IF(hashMethod->final(mdCtx, out, outlen), ret);
 ERR:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -181,7 +179,7 @@ static int32_t Sm3InnerHash(const EAL_MdMethod *hashMethod, const uint8_t *coord
     uint32_t zlen, const uint8_t *rBuf, uint8_t *out, uint32_t *outlen)
 {
     int32_t ret;
-    void *mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    void *mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -193,8 +191,7 @@ static int32_t Sm3InnerHash(const EAL_MdMethod *hashMethod, const uint8_t *coord
     GOTO_ERR_IF(hashMethod->update(mdCtx, rBuf, SM2_TWO_POINT_COORDINATE_LEN), ret);
     GOTO_ERR_IF(hashMethod->final(mdCtx, out, outlen), ret);
 ERR:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -260,7 +257,7 @@ static int SM2_PKG_Kdf(const CRYPT_SM2_Ctx *ctx, uint8_t *in, const uint32_t inL
     const EAL_MdMethod *hashMethod = ctx->hashMethod;
     uint8_t *tmp = BSL_SAL_Malloc(hashMethod->mdSize);
     uint32_t tmpLen = hashMethod->mdSize;
-    void *mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    void *mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL || tmp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -276,8 +273,7 @@ static int SM2_PKG_Kdf(const CRYPT_SM2_Ctx *ctx, uint8_t *in, const uint32_t inL
     }
     *outLen = shareKeyLen;
 ERR:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     BSL_SAL_ClearFree(tmp, hashMethod->mdSize);
     return ret;
 }

@@ -14,7 +14,6 @@
 #include "securec.h"
 #include "eal_pkey_local.h"
 #include "crypt_eal_pkey.h"
-#include "crypt_method.h"
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
@@ -23,7 +22,6 @@
 #include "crypt_utils.h"
 #include "eal_md_local.h"
 #include "eal_common.h"
-#include "crypt_method.h"
 
 typedef struct {
     CRYPT_PKEY_AlgId pkeyId;

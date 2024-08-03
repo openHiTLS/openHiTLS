@@ -19,12 +19,12 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
+#include "crypt_eal_provider.h"
 #include "crypt_eal_pkey.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif // __cplusplusp
 
 /**
  * @ingroup crypt_eal_pkey
@@ -41,6 +41,11 @@ typedef struct {
         CRYPT_Curve25519Pub curve25519Pub; /**< ed25519/x25519 public key structure */
     }key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
+
+#define CRYPT_EAL_PKEY_SIGN_TYPE    1
+#define CRYPT_EAL_PKEY_CIPHER_TYPE  2
+#define CRYPT_EAL_PKEY_EXCH_TYPE    3
+#define CRYPT_EAL_PKEY_KEM_TYPE     4
 
 /**
  * @ingroup crypt_eal_pkey
@@ -104,6 +109,21 @@ bool CRYPT_EAL_PkeyIsValidAlgId(CRYPT_PKEY_AlgId id);
  *          NULL, if the operation fails.
  */
 CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Create an asymmetric key pair structure in the providers.
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] Symmetric encryption/decryption algorithm ID.
+ * @param type [IN] Specify operation type.
+ * @param attrName [IN] Specify expected attribute values
+ *
+ * @retval  CRYPT_EAL_PkeyCtx pointer.
+ *          NULL, if the operation fails.
+ */
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t type,
+    const char *attrName);
 
 /**
  * @ingroup crypt_eal_pkey
