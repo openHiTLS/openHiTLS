@@ -78,6 +78,7 @@ target_link_libraries(${sdv_exe}
     -lhitls_bsl
     -lboundscheck
     -lpthread
+    -ldl
 )
 if(ENABLE_UIO_SCTP OR ENABLE_TLS)
     target_link_libraries(${sdv_exe} -lsctp)
@@ -114,6 +115,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/bsl/usrdata/include
         ${openHiTLS_SRC}/bsl/obj/include
         ${openHiTLS_SRC}/bsl/include
+        ${openHiTLS_SRC}/bsl/sal/src
         ${openHiTLS_SRC}/include/crypto/
         ${openHiTLS_SRC}/crypto/bn/include/
         ${openHiTLS_SRC}/crypto/bn/src/
@@ -125,6 +127,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/crypto/sha1/include
         ${openHiTLS_SRC}/crypto/md5/include
         ${openHiTLS_SRC}/crypto/pbkdf2/include
+        ${openHiTLS_SRC}/crypto/provider/src
         ${openHiTLS_SRC}/crypto/hkdf/include
         ${openHiTLS_SRC}/crypto/kdf/include
         ${openHiTLS_SRC}/crypto/scrypt/include

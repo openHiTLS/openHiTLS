@@ -56,6 +56,12 @@ enum BSL_ERROR {
     BSL_SAL_ERR_NET_BIND,                    /**< Error occured when binding a socket */
     BSL_SAL_ERR_NET_CONNECT,                 /**< Error occured when building a connection. */
     BSL_SAL_ERR_NET_IOCTL,                   /**< Error occured when calling ioctl. */
+    BSL_SAL_ERR_DL_NOT_FOUND,          /**< dl not found. */
+    BSL_SAL_ERR_DL_LOAD_FAIL,          /**< Error occured when loading dynamic library. */
+    BSL_SAL_ERR_DL_UNLOAAD_FAIL,       /**< Error occured when unloading dynamic library. */
+    BSL_SAL_ERR_DL_NON_FUNCTION,       /**< dl doesn't find function. */
+    BSL_SAL_ERR_DL_LOOKUP_METHOD,      /**< Error occurred when looking up dl method. */
+    BSL_SAL_ERR_DL_PATH_EXCEED,        /**< Path exceeds the maximum length. */
 
     /* The return value of the LOG submodule starts from 0x03020001. */
     BSL_LOG_ERR_BAD_PARAM = 0x03020001,      /**< Bad parameter. */

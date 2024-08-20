@@ -19,6 +19,7 @@
                     "sal_file": null,
                     "sal_net": null,
                     "sal_str": null,
+                    "sal_dl": null,
                     "tlv": null,
                     "uio": {
                         "uio_plt": null,
@@ -101,6 +102,7 @@
                             "deps": ["ecc", "sm3"]
                         }
                     },
+                    "provider": null,
                     "bn": null
                 },
                 "x8664": {
@@ -408,6 +410,11 @@
                 ".srcs": "crypto/drbg/src/*.c",
                 ".deps": ["bsl::sal"]
             },
+            "provider": {
+                ".features": ["provider"],
+                ".srcs": "crypto/provider/src/*.c",
+                ".deps": ["bsl::sal"]
+            },
             "bn": {
                 ".features": ["bn"],
                 ".srcs": {
@@ -492,7 +499,7 @@
                 ".deps": ["platform::Secure_C"]
             },
             "sal": {
-                ".features": ["sal", "sal_mem", "sal_lock", "sal_thread", "sal_time", "sal_file", "sal_str"],
+                ".features": ["sal", "sal_mem", "sal_lock", "sal_thread", "sal_time", "sal_file", "sal_str", "sal_dl"],
                 ".srcs": [
                     "bsl/sal/src/*.c",
                     "bsl/sal/src/linux/*.c"
