@@ -1,0 +1,14 @@
+SDV_BSL_SAL_DL_FUNC_TC001
+SDV_BSL_SAL_DL_FUNC_TC001:"../testdata/provider/libprovider_load_test1.so":"../testdata/provider/libprovider_load_test2.so":"../testdata/provider/libprovider_load_test_no_init.so":"CRYPT_EAL_ProviderInitcb"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #1
+SDV_BSL_SAL_CONVERTER_NAME_TC001:"../testdata/provider":"provider_load_test1":1:"../testdata/provider/provider_load_test1.so"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #2
+SDV_BSL_SAL_CONVERTER_NAME_TC001:"../testdata/provider":"provider_load_test1":2:"../testdata/provider/libprovider_load_test1.so"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #3
+SDV_BSL_SAL_CONVERTER_NAME_TC001:"../testdata/provider":"provider_load_test1":3:"../testdata/provider/libprovider_load_test1.dll"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #4
+SDV_BSL_SAL_CONVERTER_NAME_TC001:"../testdata/provider":"provider_load_test1":4:"../testdata/provider/provider_load_test1.dll"

@@ -271,6 +271,56 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
+ * Obtain the entropy source. If the default entropy source provided by HiTLS is not used,
+ * the API must be registered. the output data must meet requirements such as the length.
+ * The HiTLS does not check the entropy source. The data must be provided by the entropy source.
+ *
+ * @param ctx      [IN] Context used by the caller.
+ * @param entropy  [OUT] Indicates the obtained entropy source data. The length of the entropy source data
+ *                 must meet the following requirements: lenRange->min <= len <= lenRange->max.
+ * @param strength  [IN] Entropy source strength.
+ * @param lenRange  [IN] Entropy source length range.
+ * @retval 0 indicates success, and other values indicate failure.
+ */
+typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
+
+/**
+ * @ingroup crypt_types
+ * @brief The entropy source memory is cleared, this API is optional.
+ * @param ctx     [IN] Context used by the caller
+ * @param entropy [OUT] Entropy source data
+ * @retval  void
+ */
+typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
+
+/**
+ * @ingroup crypt_types
+ * @brief Obtain the random number. This API is not need to registered.
+ *        For registration, the output data must meet requirements such as the length.
+ *        The HiTLS does not check the entropy source, but will implement if provide the function.
+ *
+ * @param ctx      [IN] Context used by the caller
+ * @param nonce    [OUT] Obtained random number.
+ * The length of the random number must be lenRange->min <= len <= lenRange->max.
+ * @param strength [IN]: Random number strength
+ * @param lenRange [IN] Random number length range.
+ * @retval 0 indicates success, and other values indicate failure.
+ */
+typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
+
+/**
+* @ingroup crypt_types
+* @brief Random number memory clearance. this API is optional.
+* @param ctx [IN] Context used by the caller
+* @param nonce [OUT] random number
+* @retval void
+*/
+typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
+
+
+/**
+ * @ingroup crypt_types
+ *
  *     Metohd structure of the RAND registration interface, including the entropy source obtaining and clearing
  * interface and random number obtaining and clearing interface.
  *     For details about how to use the default entropy source of the HiTLS, see CRYPT_EAL_RandInit().
@@ -503,6 +553,14 @@ typedef enum {
     CRYPT_INFO_BLOCK_LEN,            /**< Algorithm block length. */
     CRYPT_INFO_MAX
 } CRYPT_INFO_TYPE;
+
+
+typedef struct {
+    int32_t type;
+    void *param;
+    uint32_t paramLen;
+} CRYPT_Param;
+
 
 #ifdef __cplusplus
 }

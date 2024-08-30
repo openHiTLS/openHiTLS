@@ -88,8 +88,24 @@ build_generate()
     make GEN_TESTCASE ${ENABLE_VERBOSE} -j
 }
 
+# 新增函数：编译provider .so文件
+build_provider_so()
+{
+    # 进入provider目录
+    cd ${HITLS_ROOT_DIR}/testcode/testdata/provider
+    # 创建build目录
+    mkdir -p build && cd build
+    # 执行cmake
+    cmake ..
+    # 编译
+    make
+    # 返回到原目录
+    cd ${HITLS_ROOT_DIR}/testcode/build
+}
+
 build_test_suite()
 {
+    build_provider_so
     procNum=$(grep -c ^processor /proc/cpuinfo)
     echo "procNum = $procNum"
     tmpPipe="$$.fifo"
@@ -155,6 +171,8 @@ clean()
     rm -rf ${HITLS_ROOT_DIR}/testcode/sdv/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/framework/process/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/framework/gen_test/build
+    # 清理provider的build目录
+    rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/build
     mkdir ${HITLS_ROOT_DIR}/testcode/output/log
 }
 

@@ -352,6 +352,8 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_NO_SUPPORT_FORMAT,                      /**< decode no support key format. */
     CRYPT_DECODE_PKCS8_INVALID_ITER,                     /**< pkcs8 invalid iter num */
     CRYPT_DECODE_PKCS8_INVALID_KEYLEN,                   /**< pkcs8 invalid keylen */
+
+    CRYPT_PROVIDER_NON_STANDARD = 0x011E0001,        /**< Provider doesn‘t conform to implementation standards */
 };
 
 #ifdef __cplusplus
