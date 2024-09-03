@@ -32,10 +32,11 @@
 
 #define CRYPT_MD_IMPL_METHOD_DECLARE(name)     \
     EAL_MdMethod g_mdMethod_##name = {         \
-        CRYPT_##name##_BLOCKSIZE,         CRYPT_##name##_DIGESTSIZE,         \
-        sizeof(CRYPT_##name##_Ctx),       (MdInit)CRYPT_##name##_Init,       \
-        (MdUpdate)CRYPT_##name##_Update,  (MdFinal)CRYPT_##name##_Final,     \
-        (MdDeinit)CRYPT_##name##_Deinit,  (MdCopyCtx)CRYPT_##name##_CopyCtx  \
+        CRYPT_##name##_BLOCKSIZE,         CRYPT_##name##_DIGESTSIZE,              \
+        (MdNewCtx)CRYPT_##name##_NewCtx,       (MdInit)CRYPT_##name##_Init,       \
+        (MdUpdate)CRYPT_##name##_Update,  (MdFinal)CRYPT_##name##_Final,          \
+        (MdDeinit)CRYPT_##name##_Deinit,  (MdCopyCtx)CRYPT_##name##_CopyCtx,      \
+        (MdFreeCtx)CRYPT_##name##_FreeCtx, NULL                                   \
     }
 
 #ifdef HITLS_CRYPTO_MD5

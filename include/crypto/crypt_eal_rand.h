@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +56,21 @@ extern "C" {
  */
 int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx,
     const uint8_t *pers, uint32_t persLen);
+
+/**
+ * @ingroup crypt_eal_rand
+ * @brief   Random number initialization in the providers.
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] rand algorithm ID.
+ * @param attrName [IN] Specify expected attribute values
+ * @param param [IN] Transparent transmission of underlying parameters
+ *
+ * @retval #CRYPT_SUCCESS, if successful.
+ *         For other error codes, see the crypt_errno.h file.
+ */
+int32_t CRYPT_EAL_RandInitCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
+    CRYPT_Param *param);
 
 /**
  * @ingroup crypt_eal_rand
@@ -147,6 +163,21 @@ typedef struct EAL_RndCtx CRYPT_EAL_RndCtx;
  */
 CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx,
     const uint8_t *pers, uint32_t persLen);
+
+/**
+ * @ingroup crypt_eal_rand
+ * @brief   Random number initialization in the providers.
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] rand algorithm ID.
+ * @param attrName [IN] Specify expected attribute values
+ * @param param [IN] Transparent transmission of underlying parameters
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInitWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
+    CRYPT_Param *param);
 
 /**
  * @ingroup CRYPT_EAL_DrbgDeinit

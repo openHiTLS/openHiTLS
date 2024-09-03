@@ -442,6 +442,8 @@ void DRBG_HashFree(DRBG_Ctx *drbg)
     }
 
     DRBG_HashUnInstantiate(drbg);
+    DRBG_HashCtx *ctx = (DRBG_HashCtx*)drbg->ctx;
+    ctx->md->freeCtx(ctx->mdCtx);
     BSL_SAL_FREE(drbg);
     return;
 }
@@ -485,21 +487,27 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *se
         DRBG_HashFree
     };
 
-    if (md == NULL || seedMeth == NULL) {
+    if (md == NULL || md->newCtx == NULL || md->freeCtx == NULL || seedMeth == NULL) {
         return NULL;
     }
 
-    drbg = (DRBG_Ctx*)BSL_SAL_Malloc(sizeof(DRBG_Ctx) + sizeof(DRBG_HashCtx) + md->ctxSize);
+    drbg = (DRBG_Ctx*)BSL_SAL_Malloc(sizeof(DRBG_Ctx) + sizeof(DRBG_HashCtx));
     if (drbg == NULL) {
         return NULL;
     }
 
     ctx = (DRBG_HashCtx*)(drbg + 1);
     ctx->md = md;
-    ctx->mdCtx = (void*)(ctx + 1);
-
+    ctx->mdCtx = md->newCtx();
+    if (ctx->mdCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        BSL_SAL_FREE(drbg);
+        return NULL;
+    }
     if (DRBG_NewHashCtxBase(md->mdSize, drbg, ctx) != CRYPT_SUCCESS) {
         BSL_SAL_FREE(drbg);
+        md->freeCtx(ctx->mdCtx);
+        ctx->mdCtx = NULL;
         return NULL;
     }
 

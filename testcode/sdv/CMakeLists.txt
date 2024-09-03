@@ -127,7 +127,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/crypto/sha1/include
         ${openHiTLS_SRC}/crypto/md5/include
         ${openHiTLS_SRC}/crypto/pbkdf2/include
-        ${openHiTLS_SRC}/crypto/provider/src
+        ${openHiTLS_SRC}/crypto/provider/src/mgr
         ${openHiTLS_SRC}/crypto/hkdf/include
         ${openHiTLS_SRC}/crypto/kdf/include
         ${openHiTLS_SRC}/crypto/scrypt/include

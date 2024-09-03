@@ -317,7 +317,6 @@ typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t s
 */
 typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
 
-
 /**
  * @ingroup crypt_types
  *
@@ -328,54 +327,10 @@ typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
  * obtaining random numbers can be null.
  */
 typedef struct {
-    /**
-     * @ingroup crypt_types
-     *
-     * Obtain the entropy source. If the default entropy source provided by HiTLS is not used,
-     * the API must be registered. the output data must meet requirements such as the length.
-     * The HiTLS does not check the entropy source. The data must be provided by the entropy source.
-     *
-     * @param ctx      [IN] Context used by the caller.
-     * @param entropy  [OUT] Indicates the obtained entropy source data. The length of the entropy source data
-     *                 must meet the following requirements: lenRange->min <= len <= lenRange->max.
-     * @param strength  [IN] Entropy source strength.
-     * @param lenRange  [IN] Entropy source length range.
-     * @retval 0 indicates success, and other values indicate failure.
-     */
-int32_t (*getEntropy)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
-
-    /**
-     * @ingroup crypt_types
-     * @brief The entropy source memory is cleared, this API is optional.
-     * @param ctx     [IN] Context used by the caller
-     * @param entropy [OUT] Entropy source data
-     * @retval  void
-     */
-    void (*cleanEntropy)(void *ctx, CRYPT_Data *entropy);
-
-    /**
-     * @ingroup crypt_types
-     * @brief Obtain the random number. This API is not need to registered.
-     *        For registration, the output data must meet requirements such as the length.
-     *        The HiTLS does not check the entropy source, but will implement if provide the function.
-     *
-     * @param ctx      [IN] Context used by the caller
-     * @param nonce    [OUT] Obtained random number.
-     * The length of the random number must be lenRange->min <= len <= lenRange->max.
-     * @param strength [IN]: Random number strength
-     * @param lenRange [IN] Random number length range.
-     * @retval 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*getNonce)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
-
-    /**
-    * @ingroup crypt_types
-    * @brief Random number memory clearance. this API is optional.
-    * @param ctx [IN] Context used by the caller
-    * @param nonce [OUT] random number
-    * @retval void
-    */
-    void (*cleanNonce)(void *ctx, CRYPT_Data *nonce);
+    CRYPT_RAL_GetEntropyCb getEntropy;
+    CRYPT_RAL_CleanEntropyCb cleanEntropy;
+    CRYPT_RAL_GetNonceCb getNonce;
+    CRYPT_RAL_CleanNonceCb cleanNonce;
 } CRYPT_RandSeedMethod;
 
 /**
@@ -554,13 +509,11 @@ typedef enum {
     CRYPT_INFO_MAX
 } CRYPT_INFO_TYPE;
 
-
 typedef struct {
     int32_t type;
     void *param;
     uint32_t paramLen;
 } CRYPT_Param;
-
 
 #ifdef __cplusplus
 }

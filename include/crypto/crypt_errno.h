@@ -37,7 +37,8 @@ enum CRYPT_ERROR {
     CRYPT_NO_REGIST_RAND,               /**< The global random number is not registered.*/
     CRYPT_ERR_ALGID,                    /**< Incorrect algorithm ID. */
     CRYPT_INVALID_ARG,                  /**< Invalid input parameter. */
-    CRYPT_NOT_SUPPORT,
+    CRYPT_NOT_SUPPORT,                  /**< unsupported operation. */
+    CRYPT_INCONSISTENT_OPERATION,       /**< Inconsistent  operation. */
 
     CRYPT_BN_BUFF_LEN_NOT_ENOUGH = 0x01020001, /**< Insufficient buffer length. */
     CRYPT_BN_SPACE_NOT_ENOUGH,          /**< Insufficient big number space. */
@@ -318,6 +319,7 @@ enum CRYPT_ERROR {
                                                            maximum processing range of the MD5. */
     CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
                                                            output result is insufficient. */
+    CRYPT_MD_ERR_NEWCTX,                              /**< create md ctx failed. */
 
     CRYPT_SM2_BUFF_LEN_NOT_ENOUGH = 0x011B0001,       /**< Insufficient buffer length. */
     CRYPT_SM2_NO_PUBKEY,                              /**< SM2 the public key is not set. */
@@ -353,9 +355,12 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_PKCS8_INVALID_ITER,                     /**< pkcs8 invalid iter num */
     CRYPT_DECODE_PKCS8_INVALID_KEYLEN,                   /**< pkcs8 invalid keylen */
 
-    CRYPT_PROVIDER_NON_STANDARD = 0x011E0001,        /**< Provider doesn‘t conform to implementation standards */
+    CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x011E0001,     /**< Unexpected impl */
+    CRYPT_PROVIDER_ERR_IMPL_NULL,
+    CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */
+    CRYPT_PROVIDER_ERR_NEWCTX,
+    CRYPT_PROVIDER_NOT_SUPPORT,
 };
-
 #ifdef __cplusplus
 }
 #endif

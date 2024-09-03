@@ -200,7 +200,7 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
     int32_t ret;
     uint32_t hashLen = prvHashLen;
 
-    mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -225,8 +225,7 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
     }
 
 END:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -237,7 +236,7 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
     int32_t ret;
     uint32_t hashLen = CRYPT_CURVE25519_SIGNLEN;
 
-    mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -268,8 +267,7 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
     }
 
 END:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -281,7 +279,7 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
     int32_t ret;
     uint32_t hashLen = CRYPT_CURVE25519_SIGNLEN;
 
-    mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -318,8 +316,7 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
     }
 
 END:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 

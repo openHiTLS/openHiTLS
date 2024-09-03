@@ -126,7 +126,7 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
     BN_BigNum *b = ECC_GetParaB(ctx->pkey->para);
     BN_BigNum *xG = ECC_GetParaX(ctx->pkey->para);
     BN_BigNum *yG = ECC_GetParaY(ctx->pkey->para);
-    void *mdCtx = BSL_SAL_Malloc(ctx->hashMethod->ctxSize);
+    void *mdCtx = ctx->hashMethod->newCtx();
     uint8_t *buf = BSL_SAL_Calloc(1u, keyBits);
     if (a == NULL || b == NULL || xG == NULL || yG == NULL || buf == NULL || mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
@@ -156,12 +156,11 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
     GOTO_ERR_IF(ctx->hashMethod->update(mdCtx, pub.data + 1, pub.len - 1), ret); // xA and yA
     GOTO_ERR_IF(ctx->hashMethod->final(mdCtx, out, outLen), ret);
 ERR:
-    ctx->hashMethod->deinit(mdCtx);
+    ctx->hashMethod->freeCtx(mdCtx);
     BN_Destroy(a);
     BN_Destroy(b);
     BN_Destroy(xG);
     BN_Destroy(yG);
-    BSL_SAL_FREE(mdCtx);
     BSL_SAL_FREE(buf);
     return ret;
 }
@@ -172,7 +171,7 @@ static int32_t Sm2ComputeMsgHash(const CRYPT_SM2_Ctx *ctx, const uint8_t *msg, u
     int ret;
     uint8_t out[SM3_MD_SIZE];
     uint32_t outLen = sizeof(out);
-    void *mdCtx = BSL_SAL_Calloc(1u, ctx->hashMethod->ctxSize);
+    void *mdCtx = ctx->hashMethod->newCtx();
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -185,8 +184,7 @@ static int32_t Sm2ComputeMsgHash(const CRYPT_SM2_Ctx *ctx, const uint8_t *msg, u
     GOTO_ERR_IF(ctx->hashMethod->final(mdCtx, out, &outLen), ret);
     GOTO_ERR_IF_EX(BN_Bin2Bn(e, out, outLen), ret);
 ERR:
-    ctx->hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    ctx->hashMethod->freeCtx(mdCtx);
     return ret;
 }
 #endif

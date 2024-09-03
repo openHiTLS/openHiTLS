@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include "crypt_method.h"
+#include "crypt_eal_init.h"
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"

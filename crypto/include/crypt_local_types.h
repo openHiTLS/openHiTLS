@@ -12,29 +12,48 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 /* Prototype of the MD algorithm operation functions */
+typedef void* (*MdNewCtx)(void);
+typedef void* (*MdProvNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*MdInit)(void *data);
 typedef int32_t (*MdUpdate)(void *data, const uint8_t *input, uint32_t len);
 typedef int32_t (*MdFinal)(void *data, uint8_t *out, uint32_t *len);
 typedef void (*MdDeinit)(void *data);
 typedef int32_t (*MdCopyCtx)(void *dst, void *src);
+typedef void (*MdFreeCtx)(void *data);
+typedef int32_t (*MdCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
 
 typedef struct {
     uint16_t blockSize; // Block size processed by the hash algorithm at a time, which is used with other algorithms.
     uint16_t mdSize;    // Output length of the HASH algorithm
-    uint16_t ctxSize;   // Context size of the HASH.
+    MdNewCtx newCtx;    // generate md context
     MdInit init;        // Initialize the MD context.
     MdUpdate update;    // Add block data for MD calculation.
     MdFinal final;      // Complete the MD calculation and obtain the MD result.
     MdDeinit deinit;    // Clear the key information of the MD context.
     MdCopyCtx copyCtx;  // Copy the MD context.
+    MdFreeCtx freeCtx;   // free md context
+    MdCtrl ctrl;        // get/set md param
 } EAL_MdMethod;
+
+typedef struct {
+    uint16_t blockSize;
+    uint16_t mdSize;
+    MdNewCtx newCtx;
+    MdProvNewCtx provNewCtx;
+    MdInit init;
+    MdUpdate update;
+    MdFinal final;
+    MdDeinit deinit;
+    MdCopyCtx copyCtx;
+    MdFreeCtx freeCtx;
+    MdCtrl ctrl;
+} EAL_MdUnitaryMethod;
 
 typedef struct {
     uint32_t id;

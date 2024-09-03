@@ -394,7 +394,7 @@ void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
     uint8_t output[SHA2_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA2_OUTPUT_MAXSIZE;
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MdCTX));
+    cpyCtx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
 
@@ -408,5 +408,31 @@ void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
+{
+    TestMemInit();
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtxWithLib(NULL, id, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+    uint8_t output[SHA2_OUTPUT_MAXSIZE];
+    uint32_t outLen = SHA2_OUTPUT_MAXSIZE;
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+
+exit:
+    CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */

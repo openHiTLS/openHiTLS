@@ -26,7 +26,7 @@ static int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_Data *hashDa
     uint8_t *out, uint32_t outlen)
 {
     uint32_t hLen = outlen;
-    void *mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    void *mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -48,8 +48,7 @@ static int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_Data *hashDa
         BSL_ERR_PUSH_ERROR(ret);
     }
 ERR:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 

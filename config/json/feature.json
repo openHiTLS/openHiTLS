@@ -174,13 +174,15 @@
                     "crypto/ecdsa/include",
                     "crypto/ecdh/include",
                     "crypto/curve25519/include",
-                    "crypto/sm2/include"
+                    "crypto/sm2/include",
+                    "crypto/provider/include"
                 ]
             },
             "ealinit": {
                 ".features": ["ealinit"],
                 ".srcs": "crypto/ealinit/src/*.c",
-                ".deps": ["platform::Secure_C"]
+                ".deps": ["platform::Secure_C"],
+                ".include":["crypto/provider/include"]
             },
             "sha1": {
                 ".features": ["sha1"],
@@ -412,8 +414,16 @@
             },
             "provider": {
                 ".features": ["provider"],
-                ".srcs": "crypto/provider/src/*.c",
-                ".deps": ["bsl::sal"]
+                ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
+                ".deps": ["bsl::sal"],
+                ".include": [
+                    "crypto/ealinit/include",
+                    "crypto/sha1/include",
+                    "crypto/sha2/include",
+                    "crypto/sha3/include",
+                    "crypto/md5/include",
+                    "crypto/sm3/include"
+                ]
             },
             "bn": {
                 ".features": ["bn"],

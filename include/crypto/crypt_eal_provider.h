@@ -31,8 +31,7 @@ typedef struct EalLibCtx CRYPT_EAL_LibCtx;
  *
  * @retval return Library context
 */
-CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtx();
-
+CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtx(void);
 
 /**
  * @ingroup crypt_eal_provider
@@ -40,8 +39,7 @@ CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtx();
  * @param libCtx [IN] Library context
  *
  */
-void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libctx);
-
+void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
 
 /**
  * @ingroup crypt_eal_provider
@@ -62,7 +60,7 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libctx);
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libctx, BSL_SAL_ConverterCmd cmd,
+int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
     const char *providerName, CRYPT_Param *param);
 
 
@@ -76,8 +74,7 @@ int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libctx, BSL_SAL_ConverterCmd cm
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libctx, const char *providerName);
-
+int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libCtx, const char *providerName);
 
 /**
  * @ingroup crypt_eal_provider
@@ -90,11 +87,10 @@ int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libctx, const char *providerN
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_SetLoadProviderPath(CRYPT_EAL_LibCtx *libctx, const char *searchPath);
+int32_t CRYPT_EAL_SetLoadProviderPath(CRYPT_EAL_LibCtx *libCtx, const char *searchPath);
 
 #ifdef __cplusplus
 }
 #endif // __cplusplus
 
 #endif // CRYPT_EAL_PROVIDER_H
-
