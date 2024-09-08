@@ -717,12 +717,39 @@ static int32_t ParsePk8EncPrikeyAsn1(BSL_ASN1_Buffer *asn, BSL_Buffer *pass, CRY
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_KEYLEN);
         return CRYPT_DECODE_PKCS8_INVALID_KEYLEN;
     }
-    
-    ret = CRYPT_EAL_Pbkdf2(prfId, pass->data, pass->dataLen, salt.data, salt.dataLen, iter, key, symKeyLen);
-    if (ret != CRYPT_SUCCESS) {
+
+    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    if (kdfCtx == NULL) {
+        return CRYPT_PBKDF2_NOT_SUPPORTED;
+    }
+
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &prfId, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, pass->data, pass->dataLen};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &passwordParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt.data, salt.dataLen};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &iter, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &iterParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    if ((ret = CRYPT_EAL_KdfDerive(kdfCtx, key, symKeyLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
+
     uint8_t *pkcs8Data = BSL_SAL_Malloc(asn[CRYPT_PK8_ENCPRIKEY_ENCDATA_IDX].len);
     if (pkcs8Data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);

@@ -19,6 +19,8 @@
 extern "C" {
 #endif // __cplusplus
 
+typedef struct CryptHkdfCtx CRYPT_HKDF_Ctx;
+
 /**
  * @brief HKdf Key derivation algorithm
  *
@@ -85,6 +87,60 @@ int32_t CRYPT_HKDF_Extract(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdM
  */
 int32_t CRYPT_HKDF_Expand(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth, const uint8_t *prk, uint32_t prkLen,
     const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t outLen);
+
+
+/**
+ * @ingroup HKDF
+ * @brief Generate HKDF context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void);
+
+/**
+ * @ingroup HKDF
+ * @brief Set parameters for the HKDF context.
+ *
+ * @param ctx   [in, out] Pointer to the HKDF context.
+ * @param param [in] Either a MAC algorithm ID, a salt, a password, or an iteration count.
+ *
+ * @retval Success: CRYPT_SUCCESS
+ *         For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const CRYPT_Param *param);
+
+/**
+ * @ingroup HKDF
+ * @brief Obtain the derived key based on the passed HKDF context..
+ *
+ * @param ctx   [in, out] Pointer to the HKDF context.
+ * @param out   [out] Derived key buffer.
+ * @param out   [out] Derived key buffer size.
+ *
+ * @retval Success: CRYPT_SUCCESS
+ *         For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_HKDF_Derive(CRYPT_HKDF_Ctx *ctx, uint8_t *out, uint32_t len);
+
+/**
+ * @ingroup HKDF
+ * @brief HKDF deinitialization API
+ *
+ * @param ctx [in, out]   Pointer to the HKDF context.
+ *
+ * @retval #CRYPT_SUCCESS       Deinitialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_HKDF_Deinit(CRYPT_HKDF_Ctx *ctx);
+
+/**
+ * @ingroup HKDF
+ * @brief free HKDF context.
+ *
+ * @param ctx [IN] HKDF handle
+ */
+void CRYPT_HKDF_FreeCtx(CRYPT_HKDF_Ctx *ctx);
 
 #ifdef __cplusplus
 }

@@ -821,7 +821,7 @@ static int32_t DhKeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bu
     if (padLen == 0) {
         return HITLS_SUCCESS;
     }
- 
+
     (void)memmove_s(pubKeyBuf + padLen, *pubKeyLen + padLen, pubKeyBuf, *pubKeyLen);
     (void)memset_s(pubKeyBuf, *pubKeyLen + padLen, 0, padLen);
     *pubKeyLen += padLen;
@@ -1139,12 +1139,43 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
         return HITLS_CRYPT_ERR_HMAC;
     }
 
-    ret = CRYPT_EAL_HkdfExtract(id, input->ikm, input->ikmLen, input->salt, input->saltLen, prk, &tmpLen);
-    if (ret != CRYPT_SUCCESS) {
+    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    if (kdfCtx == NULL) {
+        return HITLS_CRYPT_ERR_HKDF_EXTRACT;
+    }
+
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_EXTRACT;
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &modeParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, (void *)input->ikm, input->ikmLen};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &keyParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, (void *)input->salt, input->saltLen};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param outLenParam = {CRYPT_KDF_PARAM_OUTLEN,  &tmpLen, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &outLenParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    if ((ret = CRYPT_EAL_KdfDerive(kdfCtx, prk, tmpLen)) != CRYPT_SUCCESS) {
         return ret;
     }
 
     *prkLen = tmpLen;
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
     return HITLS_SUCCESS;
 #else
     (void)input;
@@ -1163,11 +1194,37 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
         return HITLS_CRYPT_ERR_HMAC;
     }
 
-    ret = CRYPT_EAL_HkdfExpand(id, input->prk, input->prkLen, input->info, input->infoLen, okm, okmLen);
-    if (ret != CRYPT_SUCCESS) {
+    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    if (kdfCtx == NULL) {
+        return HITLS_CRYPT_ERR_HKDF_EXPAND;
+    }
+
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam)) != CRYPT_SUCCESS) {
         return ret;
     }
 
+    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_EXPAND;
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &modeParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param prkParam = {CRYPT_KDF_PARAM_PRK, (void *)input->prk, input->prkLen};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &prkParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_Param infoParam = {CRYPT_KDF_PARAM_INFO, (void *)input->info, input->infoLen};
+    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &infoParam)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    if ((ret = CRYPT_EAL_KdfDerive(kdfCtx, okm, okmLen)) != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
     return HITLS_SUCCESS;
 #else
     (void)input;

@@ -19,6 +19,8 @@
 extern "C" {
 #endif // __cplusplus
 
+typedef struct CryptPbkdf2Ctx CRYPT_PBKDF2_Ctx;
+
 /**
  * @brief PBKDF Password-based key derivation function
  *
@@ -41,6 +43,59 @@ int32_t CRYPT_PBKDF2_HMAC(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMe
     const uint8_t *key, uint32_t keyLen,
     const uint8_t *salt, uint32_t saltLen,
     uint32_t iterCnt, uint8_t *out, uint32_t len);
+
+/**
+ * @ingroup PBKDF2
+ * @brief Generate PBKDF2 context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_PBKDF2_Ctx* CRYPT_PBKDF2_NewCtx(void);
+
+/**
+ * @ingroup PBKDF2
+ * @brief Set parameters for the PBKDF2 context.
+ *
+ * @param ctx   [in, out] Pointer to the PBKDF2 context.
+ * @param param [in] Either a MAC algorithm ID, a salt, a password, or an iteration count.
+ *
+ * @retval Success: CRYPT_SUCCESS
+ *         For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_PBKDF2_SetParam(CRYPT_PBKDF2_Ctx *ctx, const CRYPT_Param *param);
+
+/**
+ * @ingroup PBKDF2
+ * @brief Obtain the derived key based on the passed PBKDF2 context..
+ *
+ * @param ctx   [in, out] Pointer to the PBKDF2 context.
+ * @param out   [out] Derived key buffer.
+ * @param out   [out] Derived key buffer size.
+ *
+ * @retval Success: CRYPT_SUCCESS
+ *         For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_PBKDF2_Derive(CRYPT_PBKDF2_Ctx *ctx, uint8_t *out, uint32_t len);
+
+/**
+ * @ingroup PBKDF2
+ * @brief PBKDF2 deinitialization API
+ *
+ * @param ctx [in, out]   Pointer to the PBKDF2 context.
+ *
+ * @retval #CRYPT_SUCCESS       Deinitialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_PBKDF2_Deinit(CRYPT_PBKDF2_Ctx *ctx);
+
+/**
+ * @ingroup PBKDF2
+ * @brief free PBKDF2 context.
+ *
+ * @param ctx [IN] PBKDF2 handle
+ */
+void CRYPT_PBKDF2_FreeCtx(CRYPT_PBKDF2_Ctx *ctx);
 
 #ifdef __cplusplus
 }

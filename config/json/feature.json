@@ -249,22 +249,29 @@
             "scrypt": {
                 ".features": ["scrypt"],
                 ".srcs": "crypto/scrypt/src/*.c",
-                ".deps": ["platform::Secure_C"]
+                ".deps": ["platform::Secure_C"],
+                ".include": ["crypto/eal/src"]
             },
             "hkdf": {
                 ".features": ["hkdf"],
                 ".srcs": "crypto/hkdf/src/*.c",
-                ".deps": ["platform::Secure_C"]
+                ".deps": ["platform::Secure_C"],
+                ".include": ["crypto/eal/src"]
             },
             "kdf": {
                 ".features": ["kdftls12"],
                 ".srcs": "crypto/kdf/src/*.c",
-                ".deps": ["platform::Secure_C"]
+                ".deps": ["platform::Secure_C"],
+                ".include": ["crypto/eal/src"]
             },
             "pbkdf2": {
                 ".features": ["pbkdf2"],
                 ".srcs": "crypto/pbkdf2/src/*.c",
-                ".deps": ["platform::Secure_C"]
+                ".deps": ["platform::Secure_C"],
+                ".include": [
+                    "crypto/eal/src",
+                    "crypto/ealinit/include"
+                ]
             },
             "modes": {
                 ".features": ["cbc", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "chacha20poly1305"],
@@ -422,7 +429,12 @@
                     "crypto/sha2/include",
                     "crypto/sha3/include",
                     "crypto/md5/include",
-                    "crypto/sm3/include"
+                    "crypto/sm3/include",
+
+                    "crypto/scrypt/include",
+                    "crypto/pbkdf2/include",
+                    "crypto/kdf/include",
+                    "crypto/hkdf/include"
                 ]
             },
             "bn": {

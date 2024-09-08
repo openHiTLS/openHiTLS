@@ -165,7 +165,7 @@ void EalFreeProviderMgrCtx(void *data)
     if (mgrCtx->provFreeCb != NULL) {
         mgrCtx->provFreeCb(mgrCtx->provCtx);
     }
-    
+
     BSL_SAL_ReferencesFree(&mgrCtx->ref);
     BSL_SAL_FREE(mgrCtx);
 }
@@ -196,7 +196,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
         BSL_ERR_PUSH_ERROR(ret);
         BSL_LIST_DeleteAll(libCtx->providers, EalFreeProviderMgrCtx);
     }
-    
+
     return ret;
 }
 
