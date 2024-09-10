@@ -88,18 +88,18 @@ build_generate()
     make GEN_TESTCASE ${ENABLE_VERBOSE} -j
 }
 
-# 新增函数：编译provider .so文件
+# Function: Compile provider .so file
 build_provider_so()
 {
-    # 进入provider目录
+    # Enter provider directory
     cd ${HITLS_ROOT_DIR}/testcode/testdata/provider
-    # 创建build目录
+    # Create build directory
     mkdir -p build && cd build
-    # 执行cmake
+    # Execute cmake
     cmake ..
-    # 编译
+    # Compile
     make
-    # 返回到原目录
+    # Return to original directory
     cd ${HITLS_ROOT_DIR}/testcode/build
 }
 
@@ -171,8 +171,9 @@ clean()
     rm -rf ${HITLS_ROOT_DIR}/testcode/sdv/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/framework/process/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/framework/gen_test/build
-    # 清理provider的build目录
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/build
+    rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path1
+    rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path2
     mkdir ${HITLS_ROOT_DIR}/testcode/output/log
 }
 

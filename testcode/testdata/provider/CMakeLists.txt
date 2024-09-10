@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------------------
 #  This file is part of the openHiTLS project.
-#  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+#  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
 #  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
 #  for license information.
 # ---------------------------------------------------------------------------------------------
@@ -14,40 +14,94 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -shared")
 # Set output directory
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Define source file list
-set(SOURCE_FILES
+# Define four file areas
+set(SOURCE_FILES_PATH1_SO
     provider_load_test1.c
-    provider_load_test2.c
-    provider_load_test_no_init.c
-    provider_load_test_no_fullfunc.c
 )
 
-# Create a shared library target for each source file
-foreach(SOURCE_FILE ${SOURCE_FILES})
-    # Get the file name (without extension)
+set(SOURCE_FILES_PATH1_LIBSO
+    provider_load_test2.c
+    provider_load_test_no_fullfunc.c
+    provider_load_test_no_init.c
+    provider_load_test1.c
+)
+
+set(SOURCE_FILES_PATH2_SO
+
+)
+
+set(SOURCE_FILES_PATH2_LIBSO
+    provider_load_test1.c
+)
+
+# Create shared library targets for files with %s.so format in path1 directory
+foreach(SOURCE_FILE ${SOURCE_FILES_PATH1_SO})
     get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)
-    
-    # Create shared library target
-    add_library(lib${FILE_NAME} SHARED ${SOURCE_FILE})
-    
-    # Set output name
-    set_target_properties(lib${FILE_NAME} PROPERTIES
-        PREFIX ""
-        OUTPUT_NAME "lib${FILE_NAME}"
-    )
-    
-    # Link necessary libraries
-    # target_link_libraries(lib${FILE_NAME}
-    #     -lhitls_bsl
-    #     -lboundscheck
-    #     -lpthread
-    #     -ldl
-    # )
-    
-    # Set include directories
-    target_include_directories(lib${FILE_NAME}
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/../../include
-            ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
-    )
+    if(NOT TARGET ${FILE_NAME}_path1)
+        add_library(${FILE_NAME}_path1 SHARED ${SOURCE_FILE})
+        set_target_properties(${FILE_NAME}_path1 PROPERTIES
+            PREFIX ""
+            OUTPUT_NAME "${FILE_NAME}"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path1"
+        )
+        target_include_directories(${FILE_NAME}_path1
+            PRIVATE
+                ${CMAKE_SOURCE_DIR}/../../include
+                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
+        )
+    endif()
+endforeach()
+
+# Create shared library targets for files with lib%s.so format in path1 directory
+foreach(SOURCE_FILE ${SOURCE_FILES_PATH1_LIBSO})
+    get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)
+    if(NOT TARGET lib${FILE_NAME}_path1)
+        add_library(lib${FILE_NAME}_path1 SHARED ${SOURCE_FILE})
+        set_target_properties(lib${FILE_NAME}_path1 PROPERTIES
+            PREFIX ""
+            OUTPUT_NAME "lib${FILE_NAME}"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path1"
+        )
+        target_include_directories(lib${FILE_NAME}_path1
+            PRIVATE
+                ${CMAKE_SOURCE_DIR}/../../include
+                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
+        )
+    endif()
+endforeach()
+
+# Create shared library targets for files with %s.so format in path2 directory
+foreach(SOURCE_FILE ${SOURCE_FILES_PATH2_SO})
+    get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)
+    if(NOT TARGET ${FILE_NAME}_path2)
+        add_library(${FILE_NAME}_path2 SHARED ${SOURCE_FILE})
+        set_target_properties(${FILE_NAME}_path2 PROPERTIES
+            PREFIX ""
+            OUTPUT_NAME "${FILE_NAME}"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path2"
+        )
+        target_include_directories(${FILE_NAME}_path2
+            PRIVATE
+                ${CMAKE_SOURCE_DIR}/../../include
+                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
+        )
+    endif()
+endforeach()
+
+# Create shared library targets for files with lib%s.so format in path2 directory
+foreach(SOURCE_FILE ${SOURCE_FILES_PATH2_LIBSO})
+    get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)
+    if(NOT TARGET lib${FILE_NAME}_path2)
+        add_library(lib${FILE_NAME}_path2 SHARED ${SOURCE_FILE})
+        set_target_properties(lib${FILE_NAME}_path2 PROPERTIES
+            PREFIX ""
+            OUTPUT_NAME "lib${FILE_NAME}"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path2"
+        )
+        target_include_directories(lib${FILE_NAME}_path2
+            PRIVATE
+                ${CMAKE_SOURCE_DIR}/../../include
+                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
+        )
+    endif()
 endforeach()
