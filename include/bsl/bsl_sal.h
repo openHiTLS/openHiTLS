@@ -1022,18 +1022,16 @@ typedef enum {
  * @ingroup bsl_sal
  * @brief Convert filename to full library path for dl.
  *
- * Convert filename to full library path for dl according to the specified format and directory.
+ * Convert filename to full library name for dl according to the specified format and directory.
  *
  * @attention None.
  * @param cmd [IN] Command specifying the conversion format.
  * @param fileName [IN] Original filename.
- * @param dirName [IN] Directory name.
- * @param name [OUT] Pointer to store the converted full path.
+ * @param name [OUT] Pointer to store the converted full name.
  * @retval If the operation is successful, BSL_OK is returned;
  * Otherwise, an error code is returned.
  */
-int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName,
-    const char *dirName, char **name);
+int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name);
 
 /**
  * @ingroup bsl_sal

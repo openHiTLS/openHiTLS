@@ -104,7 +104,7 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, CRYPT_Param *par
         return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
     }
     // Mount function addresses to corresponding positions in mgr according to method definition
-    for (int i = 0; ((outFuncs[i].id != 0) && (outFuncs[i].func != NULL)); i++) {
+    for (int i = 0; outFuncs[i].id != 0; i++) {
         switch (outFuncs[i].id) {
             case CRYPT_EAL_PROVCB_FREE:
                 ctx->provFreeCb = (CRYPT_EAL_ProvFreeCb)outFuncs[i].func;

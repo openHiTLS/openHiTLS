@@ -28,40 +28,43 @@ static BSL_SAL_DlCallback g_dlCallback = {0};
 #define BSL_SAL_PATH_RESERVE 10
 
 #define BSL_SAL_PATH_MAX 4095
+#define BSL_SAL_NAME_MAX 255
 
-int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, const char *dirName, char **name)
+int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name)
 {
-    if (fileName == NULL || dirName == NULL || name == NULL) {
+    if (fileName == NULL || name == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
     int32_t ret = 0;
     char *tempName = NULL;
-    // BSL_SAL_PATH_RESERVE is reserved for path separator, trailing \0, and possible future extensions
-    uint32_t dlPathLen = strlen(dirName) + strlen(fileName);
-    if (dlPathLen > BSL_SAL_PATH_MAX) {
+    uint32_t dlPathLen = strlen(fileName) + BSL_SAL_PATH_RESERVE;
+    if (dlPathLen > BSL_SAL_NAME_MAX) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_PATH_EXCEED);
         return BSL_SAL_ERR_DL_PATH_EXCEED;
     }
-    dlPathLen += BSL_SAL_PATH_RESERVE;
     tempName = (char *)BSL_SAL_Calloc(1, dlPathLen);
     if (tempName == NULL) {
         return BSL_MALLOC_FAIL;
     }
     switch (cmd) {
+        case BSL_SAL_CONVERTER_SO:
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.so", fileName);
+            break;
         case BSL_SAL_CONVERTER_LIBSO:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s/lib%s.so", dirName, fileName);
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.so", fileName);
             break;
         case BSL_SAL_CONVERTER_LIBDLL:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s/lib%s.dll", dirName, fileName);
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.dll", fileName);
             break;
         case BSL_SAL_CONVERTER_DLL:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s/%s.dll", dirName, fileName);
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.dll", fileName);
             break;
         default:
             // Default to the first(BSL_SAL_CONVERTER_SO) conversion
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s/%s.so", dirName, fileName);
-            break;
+            BSL_SAL_Free(tempName);
+            BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
+            return BSL_SAL_ERR_BAD_PARAM;
     }
     if (ret < 0) {
         BSL_SAL_Free(tempName);
