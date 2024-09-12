@@ -135,6 +135,9 @@ void SDV_CRYPT_EAL_SHA2_API_TC003(int id)
 {
     TestMemInit();
     CRYPT_EAL_MdCTX *ctx = NULL;
+
+    ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_NULL_INPUT);
+
     ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
 
@@ -162,6 +165,10 @@ void SDV_CRYPT_EAL_SHA2_API_TC003(int id)
     ASSERT_EQ(CRYPT_EAL_MdGetId(ctx), id);
     ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdIsValidAlgId(id), true);
+
+    ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(ctx->state, CRYPT_MD_STATE_NEW);
+
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -291,6 +298,9 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003(int algId, Hex *in, Hex *digest)
 
     ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
 
+        
+    ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen),CRYPT_SUCCESS);
+    ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -389,13 +399,21 @@ void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
     CRYPT_EAL_MdCTX *cpyCtx = NULL;
+    CRYPT_EAL_MdCTX *dupCtx = NULL;
     CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[SHA2_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA2_OUTPUT_MAXSIZE;
 
+    dupCtx=CRYPT_EAL_MdDupCtx(cpyCtx);
+    ASSERT_TRUE(dupCtx == NULL);
+    ASSERT_EQ(CRYPT_MD_MAX, CRYPT_EAL_MdGetId(dupCtx));
+    
+    ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_NULL_INPUT);
     cpyCtx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(cpyCtx != NULL);
+    ASSERT_TRUE(dupCtx == NULL);
+    ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, dupCtx), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(cpyCtx), CRYPT_SUCCESS);
@@ -404,7 +422,15 @@ void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, cpyCtx->id);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+    
+    dupCtx=CRYPT_EAL_MdDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdInit(dupCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(dupCtx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(dupCtx, output, &outLen), CRYPT_SUCCESS);
 
+    ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);

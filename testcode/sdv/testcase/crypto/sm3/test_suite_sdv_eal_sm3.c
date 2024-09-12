@@ -14,7 +14,34 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "securec.h"
+#include <pthread.h>
 /* END_HEADER */
+
+typedef struct {
+    uint8_t *data;
+    uint8_t *hash;
+    uint32_t dataLen;
+    uint32_t hashLen;
+} ThreadParameter;
+
+void MultiThreadTest(void *arg)
+{
+    ThreadParameter *threadParameter = (ThreadParameter *)arg;
+    uint8_t out[32];
+    uint32_t outLen = sizeof(out);
+    CRYPT_EAL_MdCTX *ctx = NULL;
+    ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SM3);
+    ASSERT_TRUE(ctx != NULL);
+    for (uint32_t i = 0; i < 10; i++) {
+        ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, threadParameter->data, threadParameter->dataLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), CRYPT_SUCCESS);
+        ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->hash, threadParameter->hashLen);
+    }
+
+exit:
+    CRYPT_EAL_MdFreeCtx(ctx);
+}
 
 /**
  * @test   SDV_CRYPT_EAL_SM3_API_TC001
@@ -66,6 +93,10 @@ void SDV_CRYPT_EAL_SM3_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, input, inLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &longOutLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MdGetId(ctx), CRYPT_MD_SM3);
+    ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
+    
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -139,6 +170,8 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC002(Hex *data, Hex *hash)
 
     ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
 
+    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SM3, data->x, data->len, out, &outLen),CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -247,5 +280,121 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC004(void)
 exit:
     CRYPT_EAL_MdFreeCtx(ctx1);
     CRYPT_EAL_MdFreeCtx(ctx2);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM3_COPY_CTX_FUNC_TC001
+ * @title  MD5 copy ctx function test.
+ * @precon nan
+ * @brief
+ *    1. Create the context ctx of md algorithm, expected result 1
+ *    2. Call to CRYPT_EAL_MdCopyCtx method to copy ctx, expected result 2
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 3
+ * @expect
+ *    1. Success, the context is not null.
+ *    2. CRYPT_SUCCESS
+ *    3. Success, the hashs are the same.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM3_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
+{
+    TestMemInit();
+    CRYPT_EAL_MdCTX *cpyCtx = NULL;
+    CRYPT_EAL_MdCTX *dupCtx = NULL;
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
+    ASSERT_TRUE(ctx != NULL);
+    uint8_t output[32]; // SM3 digest length is 32
+    uint32_t outLen = sizeof(output);
+
+    dupCtx=CRYPT_EAL_MdDupCtx(cpyCtx);
+    ASSERT_TRUE(dupCtx == NULL);
+    ASSERT_EQ(CRYPT_MD_MAX, CRYPT_EAL_MdGetId(dupCtx));
+
+    cpyCtx = CRYPT_EAL_MdNewCtx(id);
+    ASSERT_TRUE(cpyCtx != NULL);
+    ASSERT_TRUE(dupCtx == NULL);
+    ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, dupCtx), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(cpyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(cpyCtx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(cpyCtx, output, &outLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(id, cpyCtx->id);
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+
+    dupCtx=CRYPT_EAL_MdDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdInit(dupCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(dupCtx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(dupCtx, output, &outLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+exit:
+    CRYPT_EAL_MdFreeCtx(ctx);
+    CRYPT_EAL_MdFreeCtx(cpyCtx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM3_DEFAULT_PROVIDER_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
+{
+    TestMemInit();
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtxWithLib(NULL, id, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+    uint8_t output[32]; // SM3 digest length is 32
+    uint32_t outLen = sizeof(output);
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+
+exit:
+    CRYPT_EAL_MdFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_MD_SM3_FUNC_TC001
+ * @title  Test multi-thread hash calculation.
+ * @precon nan
+ * @brief
+ *    1.Create two threads and calculate the hash, expected result 1.
+ *    2.Compare the result to the expected value, expected result 2.
+ * @expect
+ *    1.Hash calculation succeeded.
+ *    2.The results are as expected.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_MD_SM3_FUNC_TC001(Hex *data, Hex *hash)
+{
+    int ret;
+    TestMemInit();
+    const uint32_t threadNum = 2;
+    pthread_t thrd[2];
+    ThreadParameter arg[2] = {
+        {data->x, hash->x, data->len, hash->len},
+        {data->x, hash->x, data->len, hash->len}
+    };
+    for (uint32_t i = 0; i < threadNum; i++) {
+        ret = pthread_create(&thrd[i], NULL, (void *)MultiThreadTest, &arg[i]);
+        ASSERT_TRUE(ret == 0);
+    }
+    for (uint32_t i = 0; i < threadNum; i++) {
+        pthread_join(thrd[i], NULL);
+    }
+
+exit:
+    return;
 }
 /* END_CASE */
