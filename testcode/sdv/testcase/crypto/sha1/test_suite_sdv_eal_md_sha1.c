@@ -14,7 +14,6 @@
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
-#include <pthread.h>
 /* END_HEADER */
 
 #define SHA1_DIGEST_LEN (20)
