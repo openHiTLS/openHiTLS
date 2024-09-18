@@ -335,6 +335,7 @@ void SDV_CRYPTO_SM3_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
+    CRYPT_EAL_MdFreeCtx(dupCtx);
 }
 /* END_CASE */
 
