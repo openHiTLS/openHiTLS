@@ -8,7 +8,6 @@
 
 /* BEGIN_HEADER */
 #include <pthread.h>
-#include <limits.h>
 #include "securec.h"
 #include "eal_md_local.h"
 #include "crypt_eal_md.h"
