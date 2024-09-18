@@ -7,14 +7,13 @@
  */
 
 /* BEGIN_HEADER */
-
+#include <pthread.h>
 #include "crypt_eal_md.h"
 #include "bsl_sal.h"
 #include "eal_md_local.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "securec.h"
-#include <pthread.h>
 /* END_HEADER */
 
 typedef struct {
@@ -170,7 +169,7 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC002(Hex *data, Hex *hash)
 
     ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
 
-    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SM3, data->x, data->len, out, &outLen),CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SM3, data->x, data->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);

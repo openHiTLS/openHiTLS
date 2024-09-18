@@ -262,7 +262,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC003(int algId, Hex *in, Hex *digest)
     ASSERT_EQ(outLen, digest->len);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
 
-    ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen),CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
 
 exit:
@@ -383,5 +383,3 @@ exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
-
-

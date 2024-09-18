@@ -7,9 +7,8 @@
  */
 
 /* BEGIN_HEADER */
-
-#include <limits.h>
 #include <pthread.h>
+#include <limits.h>
 #include "securec.h"
 #include "eal_md_local.h"
 #include "crypt_eal_md.h"
@@ -177,7 +176,7 @@ void SDV_CRYPT_EAL_SHA1_API_TC003(Hex *hash1, Hex *data2, Hex *hash2, Hex *hash3
 
     ASSERT_TRUE(CRYPT_EAL_MdFinal(ctx, out, &digestLen) == CRYPT_EAL_ERR_STATE);
 
-    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SHA1, data2->x, data2->len, out, &digestLen),CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SHA1, data2->x, data2->len, out, &digestLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hash2 result cmp", out, digestLen, hash2->x, hash2->len);
     
 exit:

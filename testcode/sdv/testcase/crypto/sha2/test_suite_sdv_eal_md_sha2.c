@@ -297,9 +297,8 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003(int algId, Hex *in, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), CRYPT_SUCCESS);
 
     ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
-
-        
-    ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen),CRYPT_SUCCESS);
+  
+    ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);

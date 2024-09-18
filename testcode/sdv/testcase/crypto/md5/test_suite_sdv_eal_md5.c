@@ -7,7 +7,7 @@
  */
 
 /* BEGIN_HEADER */
-
+#include <pthread.h>
 #include <limits.h>
 #include "crypt_eal_md.h"
 #include "bsl_sal.h"
@@ -15,7 +15,6 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_md5.h"
-#include <pthread.h>
 /* END_HEADER */
 
 typedef struct {
@@ -163,7 +162,7 @@ void SDV_CRYPTO_MD5_FUNC_TC002(Hex *msg, Hex *hash)
     ASSERT_EQ(outLen, CRYPT_MD5_DIGESTSIZE);
     ASSERT_COMPARE("md5", output, outLen, hash->x, hash->len);
     
-    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_MD5, msg->x, msg->len, output, &outLen),CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_MD5, msg->x, msg->len, output, &outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("md5", output, outLen, hash->x, hash->len);
 exit:
     CRYPT_EAL_MdFreeCtx(md5Ctx);
