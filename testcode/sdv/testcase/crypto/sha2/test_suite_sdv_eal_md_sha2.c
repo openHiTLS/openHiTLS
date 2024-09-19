@@ -120,15 +120,19 @@ exit:
  * @title  update and final test.
  * @precon nan
  * @brief
- *    1.Call CRYPT_EAL_MdNewCtx create the CTX, expected result 1.
- *    2.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal before initialization, expected result 2.
- *    3.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal use null pointer, expected result 3.
- *    4.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal normally, expected result 4.
+ *    1.Call CRYPT_EAL_MdDeinit the null CTX, expected result 1.
+ *    2.Call CRYPT_EAL_MdNewCtx create the CTX, expected result 2.
+ *    3.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal before initialization, expected result 3.
+ *    4.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal use null pointer, expected result 4.
+ *    5.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal normally, expected result 5.
+ *    6.Call CRYPT_EAL_MdDeinit the CTX, expected result 6.
  * @expect
- *    1.Create successful.
- *    2.Return CRYPT_EAL_ERR_STATE.
- *    3.Return CRYPT_NULL_INPUT.
- *    4.Successful.
+ *    1.Return CRYPT_NULL_INPUT
+ *    2.Create successful.
+ *    3.Return CRYPT_EAL_ERR_STATE.
+ *    4.Return CRYPT_NULL_INPUT.
+ *    5.Successful.
+ *    6.Return CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_SHA2_API_TC003(int id)
@@ -274,9 +278,11 @@ exit:
  * @title  standard vector test.
  * @precon nan
  * @brief
- *    Calculate the hash of the data and compare it with the standard vector.
+ *    1.Calculate the hash of the data and compare it with the standard vector, expected result 1.
+ *    2.Call CRYPT_EAL_Md to calculate the hash of the data and compare it with the standard vector, expected result 2.
  * @expect
- *    The results are the same.
+ *    1.The results are the same.
+ *    2.The results are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003(int algId, Hex *in, Hex *digest)
@@ -387,11 +393,17 @@ exit:
  * @brief
  *    1. Create the context ctx of md algorithm, expected result 1
  *    2. Call to CRYPT_EAL_MdCopyCtx method to copy ctx, expected result 2
- *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 3
+ *    2. Call to CRYPT_EAL_MdCopyCtx method to copy a null ctx, expected result 3
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 4
+ *    4. Call to CRYPT_EAL_MdDupCtx method to copy ctx, expected result 5
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 6
  * @expect
- *    1. Successful, the context is not null.
+ *    1. Success, the context is not null.
  *    2. CRYPT_SUCCESS
- *    3. Successful, the hashs are the same.
+ *    3. CRYPT_NULL_INPUT
+ *    4. Success, the context is not null.
+ *    5. CRYPT_SUCCESS
+ *    6. Success, the hashs are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)

@@ -49,15 +49,23 @@ exit:
  * @title  update and final test.
  * @precon nan
  * @brief
- *    1.Call CRYPT_EAL_MdNewCtx create the CTX, expected result 1.
- *    2.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal before initialization, expected result 2.
- *    3.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal use null pointer, expected result 3.
- *    4.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal normally, expected result 4.
+ *    1.Call CRYPT_EAL_MdDeinit the null CTX, expected result 1.
+ *    2.Call CRYPT_EAL_MdNewCtx create the CTX, expected result 2.
+ *    3.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal before initialization, expected result 3.
+ *    4.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal use null pointer, expected result 4.
+ *    5.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal normally, expected result 5.
+ *    6.Call CRYPT_EAL_MdDeinit the CTX, expected result 6.
+ *    7.Call CRYPT_EAL_MdFinal after CRYPT_EAL_MdFinal, expected result 7.
+ *    8.Call CRYPT_EAL_MdUpdate after CRYPT_EAL_MdFinal expected result 8.
  * @expect
- *    1.Create successful.
- *    2.Return CRYPT_EAL_ERR_STATE.
- *    3.Return CRYPT_NULL_INPUT.
- *    4.Successful.
+ *    1.Return CRYPT_NULL_INPUT.
+ *    2.Create successful.
+ *    3.Return CRYPT_EAL_ERR_STATE.
+ *    4.Return CRYPT_NULL_INPUT.
+ *    5.Successful.
+ *    6.Successful.
+ *    7.Return CRYPT_EAL_ERR_STATE.
+ *    8.Return CRYPT_EAL_ERR_STATE.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_MD5_API_TC001(void)
@@ -141,10 +149,12 @@ exit:
  * @precon nan
  * @brief
  *    1.Calculate the hash of each group of data, expected result 1.
-*     2.Compare the result to the expected value, expected result 2.
+ *    2.Compare the result to the expected value, expected result 2.
+ *    3.Call CRYPT_EAL_Md to calculate the hash of each group of data, expected result 3.
  * @expect
  *    1.Hash calculation succeeded.
  *    2.The results are as expected.
+ *    3.The results are as expected.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_MD5_FUNC_TC002(Hex *msg, Hex *hash)
@@ -270,11 +280,17 @@ exit:
  * @brief
  *    1. Create the context ctx of md algorithm, expected result 1
  *    2. Call to CRYPT_EAL_MdCopyCtx method to copy ctx, expected result 2
- *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 3
+ *    2. Call to CRYPT_EAL_MdCopyCtx method to copy a null ctx, expected result 3
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 4
+ *    4. Call to CRYPT_EAL_MdDupCtx method to copy ctx, expected result 5
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 6
  * @expect
  *    1. Success, the context is not null.
  *    2. CRYPT_SUCCESS
- *    3. Success, the hashs are the same.
+ *    3. CRYPT_NULL_INPUT
+ *    4. Success, the context is not null.
+ *    5. CRYPT_SUCCESS
+ *    6. Success, the hashs are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_MD5_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
