@@ -1144,39 +1144,47 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
         return HITLS_CRYPT_ERR_HKDF_EXTRACT;
     }
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, 0};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam)) != CRYPT_SUCCESS) {
-        return ret;
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, sizeof(id)};
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_EXTRACT;
-    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &modeParam)) != CRYPT_SUCCESS) {
-        return ret;
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, sizeof(mode)};
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &modeParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, (void *)input->ikm, input->ikmLen};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &keyParam)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &keyParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, (void *)input->salt, input->saltLen};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_Param outLenParam = {CRYPT_KDF_PARAM_OUTLEN,  &tmpLen, 0};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &outLenParam)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &outLenParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
-    if ((ret = CRYPT_EAL_KdfDerive(kdfCtx, prk, tmpLen)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfDerive(kdfCtx, prk, tmpLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     *prkLen = tmpLen;
+    ret = HITLS_SUCCESS;
+Exit:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
-    return HITLS_SUCCESS;
+    return ret;
 #else
     (void)input;
     (void)prk;
@@ -1199,33 +1207,40 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
         return HITLS_CRYPT_ERR_HKDF_EXPAND;
     }
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, 0};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam)) != CRYPT_SUCCESS) {
-        return ret;
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, sizeof(id)};
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_EXPAND;
-    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &modeParam)) != CRYPT_SUCCESS) {
-        return ret;
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, sizeof(mode)};
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &modeParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_Param prkParam = {CRYPT_KDF_PARAM_PRK, (void *)input->prk, input->prkLen};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &prkParam)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &prkParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
     CRYPT_Param infoParam = {CRYPT_KDF_PARAM_INFO, (void *)input->info, input->infoLen};
-    if ((ret = CRYPT_EAL_KdfSetParam(kdfCtx, &infoParam)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &infoParam);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
-    if ((ret = CRYPT_EAL_KdfDerive(kdfCtx, okm, okmLen)) != CRYPT_SUCCESS) {
-        return ret;
+    ret = CRYPT_EAL_KdfDerive(kdfCtx, okm, okmLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto Exit;
     }
 
+    ret = HITLS_SUCCESS;
+Exit:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
-    return HITLS_SUCCESS;
+    return ret;
 #else
     (void)input;
     (void)okm;

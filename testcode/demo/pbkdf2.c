@@ -68,10 +68,10 @@ int main(void)
     }
     CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
     CRYPT_Param PBKDF2_PARAM[PBKDF2_PARAM_LEN] = {
-        {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, 0},
+        {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, sizeof(id)},
         {CRYPT_KDF_PARAM_PASSWORD, key, sizeof(key)},
         {CRYPT_KDF_PARAM_SALT, salt, sizeof(salt)},
-        {CRYPT_KDF_PARAM_ITER, &iterations, 0},
+        {CRYPT_KDF_PARAM_ITER, &iterations, sizeof(iterations)},
     };
 
     for (int i = 0; i < PBKDF2_PARAM_LEN; i++) {

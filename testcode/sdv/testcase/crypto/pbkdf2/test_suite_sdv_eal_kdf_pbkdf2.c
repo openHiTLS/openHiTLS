@@ -65,7 +65,7 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_API_TC001(void)
 
     CRYPT_MAC_AlgId macAlgId = CRYPT_MAC_HMAC_SHA1;
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &macAlgId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &macAlgId, sizeof(macAlgId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
@@ -74,7 +74,7 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_API_TC001(void)
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, 0};
+    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, sizeof(it)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
@@ -108,10 +108,10 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
     uint32_t iterCntFailed = 0;
-    PBKDF2_SET_PARAM(&iterParam, &iterCntFailed, 0);
+    PBKDF2_SET_PARAM(&iterParam, &iterCntFailed, sizeof(iterCntFailed));
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_PBKDF2_PARAM_ERROR);
 
-    PBKDF2_SET_PARAM(&iterParam, &it, 0);
+    PBKDF2_SET_PARAM(&iterParam, &it, sizeof(it));
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, NULL, outLen), CRYPT_NULL_INPUT);
@@ -144,6 +144,11 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_API_TC001(void)
     macAlgId = CRYPT_MAC_HMAC_SM3;
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 exit:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
@@ -174,7 +179,7 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_FUN_TC001(int algId, Hex *key, Hex *salt, int it, 
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
@@ -183,7 +188,7 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_FUN_TC001(int algId, Hex *key, Hex *salt, int it, 
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, 0};
+    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, sizeof(it)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
@@ -217,7 +222,7 @@ void SDV_CRYPTO_PBKDF2_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *sal
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtxWithLib(NULL, CRYPT_KDF_PBKDF2, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
@@ -226,7 +231,7 @@ void SDV_CRYPTO_PBKDF2_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *sal
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, 0};
+    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, sizeof(it)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);

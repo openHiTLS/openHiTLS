@@ -155,13 +155,14 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId)
         return NULL;
     }
     EAL_KdfUnitaryMethod *temp = BSL_SAL_Calloc(1, sizeof(EAL_KdfUnitaryMethod));
-    if (method == NULL) {
+    if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
     EalKdfCopyMethod(method, temp);
     CRYPT_EAL_KdfCTX *ctx = KdfAllocCtx(algId, temp);
     if (ctx == NULL) {
+        BSL_SAL_FREE(temp);
         return NULL;
     }
 

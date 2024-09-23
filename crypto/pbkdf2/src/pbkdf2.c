@@ -20,6 +20,7 @@
 #include "crypt_algid.h"
 #include "eal_mac_local.h"
 #include "crypt_ealinit.h"
+#include "pbkdf2_local.h"
 
 #define PBKDF2_MAX_BLOCKSIZE 64
 #define PBKDF2_MAX_KEYLEN 0xFFFFFFFF
@@ -129,7 +130,7 @@ int32_t CRYPT_PBKDF2_CalcT(const CRYPT_PBKDF2_Ctx *pCtx, uint32_t blockCount, ui
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_PBKDF2_GenDk(const CRYPT_PBKDF2_Ctx *pCtx,  uint8_t *dk, uint32_t dkLen)
+int32_t CRYPT_PBKDF2_GenDk(const CRYPT_PBKDF2_Ctx *pCtx, uint8_t *dk, uint32_t dkLen)
 {
     uint32_t curLen;
     uint8_t *t = dk;
@@ -217,7 +218,7 @@ int32_t CRYPT_PBKDF2_HMAC(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMe
 
 CRYPT_PBKDF2_Ctx* CRYPT_PBKDF2_NewCtx(void)
 {
-    CRYPT_PBKDF2_Ctx* ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_PBKDF2_Ctx));
+    CRYPT_PBKDF2_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_PBKDF2_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -225,8 +226,12 @@ CRYPT_PBKDF2_Ctx* CRYPT_PBKDF2_NewCtx(void)
     return ctx;
 }
 
-int32_t CRYPT_PBKDF2_SetMacMethod(CRYPT_PBKDF2_Ctx *ctx, const CRYPT_MAC_AlgId id)
+int32_t CRYPT_PBKDF2_SetMacMethod(CRYPT_PBKDF2_Ctx *ctx, const CRYPT_MAC_AlgId id, const uint32_t idLen)
 {
+    if (idLen != sizeof(CRYPT_MAC_AlgId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_PARAM_ERROR);
+        return CRYPT_PBKDF2_PARAM_ERROR;
+    }
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
@@ -250,11 +255,6 @@ int32_t CRYPT_PBKDF2_SetMacMethod(CRYPT_PBKDF2_Ctx *ctx, const CRYPT_MAC_AlgId i
 
 int32_t CRYPT_PBKDF2_SetPassWord(CRYPT_PBKDF2_Ctx *ctx, const uint8_t *password, uint32_t passLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (password == NULL && passLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -273,11 +273,6 @@ int32_t CRYPT_PBKDF2_SetPassWord(CRYPT_PBKDF2_Ctx *ctx, const uint8_t *password,
 
 int32_t CRYPT_PBKDF2_SetSalt(CRYPT_PBKDF2_Ctx *ctx, const uint8_t *salt, uint32_t saltLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (salt == NULL && saltLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -294,13 +289,9 @@ int32_t CRYPT_PBKDF2_SetSalt(CRYPT_PBKDF2_Ctx *ctx, const uint8_t *salt, uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_PBKDF2_SetCnt(CRYPT_PBKDF2_Ctx *ctx, const uint32_t iterCnt)
+int32_t CRYPT_PBKDF2_SetCnt(CRYPT_PBKDF2_Ctx *ctx, const uint32_t iterCnt, const uint32_t iterLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (iterCnt == 0) {
+    if (iterLen != sizeof(uint32_t) || iterCnt == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_PARAM_ERROR);
         return CRYPT_PBKDF2_PARAM_ERROR;
     }
@@ -317,13 +308,13 @@ int32_t CRYPT_PBKDF2_SetParam(CRYPT_PBKDF2_Ctx *ctx, const CRYPT_Param *param)
 
     switch (param->type) {
         case CRYPT_KDF_PARAM_MAC_ALG_ID:
-            return CRYPT_PBKDF2_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param));
+            return CRYPT_PBKDF2_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param), param->paramLen);
         case CRYPT_KDF_PARAM_PASSWORD:
             return CRYPT_PBKDF2_SetPassWord(ctx, param->param, param->paramLen);
         case CRYPT_KDF_PARAM_SALT:
             return CRYPT_PBKDF2_SetSalt(ctx, param->param, param->paramLen);
         case CRYPT_KDF_PARAM_ITER:
-            return CRYPT_PBKDF2_SetCnt(ctx, *(uint32_t *)(param->param));
+            return CRYPT_PBKDF2_SetCnt(ctx, *(uint32_t *)(param->param), param->paramLen);
         default:
             return CRYPT_PBKDF2_PARAM_ERROR;
     }

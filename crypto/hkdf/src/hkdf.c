@@ -180,7 +180,7 @@ int32_t CRYPT_HKDF(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth, con
 
 CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void)
 {
-    CRYPT_HKDF_Ctx* ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_HKDF_Ctx));
+    CRYPT_HKDF_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_HKDF_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -188,8 +188,13 @@ CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void)
     return ctx;
 }
 
-int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id)
+int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id, const uint32_t idLen)
 {
+    if (idLen != sizeof(CRYPT_MAC_AlgId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
+        return CRYPT_HKDF_PARAM_ERROR;
+    }
+
     EAL_MacMethLookup method;
     if (!CRYPT_HKDF_IsValidAlgId(id)) {
         BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
@@ -205,11 +210,11 @@ int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_HKDF_SetMode(CRYPT_HKDF_Ctx *ctx, const CRYPT_HKDF_MODE mode)
+int32_t CRYPT_HKDF_SetMode(CRYPT_HKDF_Ctx *ctx, const CRYPT_HKDF_MODE mode, const uint32_t modeLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+    if (modeLen != sizeof(CRYPT_HKDF_MODE)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
+        return CRYPT_HKDF_PARAM_ERROR;
     }
 
     ctx->mode = mode;
@@ -218,11 +223,6 @@ int32_t CRYPT_HKDF_SetMode(CRYPT_HKDF_Ctx *ctx, const CRYPT_HKDF_MODE mode)
 
 int32_t CRYPT_HKDF_SetKey(CRYPT_HKDF_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (key == NULL && keyLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -241,11 +241,6 @@ int32_t CRYPT_HKDF_SetKey(CRYPT_HKDF_Ctx *ctx, const uint8_t *key, uint32_t keyL
 
 int32_t CRYPT_HKDF_SetSalt(CRYPT_HKDF_Ctx *ctx, const uint8_t *salt, uint32_t saltLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (salt == NULL && saltLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -264,11 +259,6 @@ int32_t CRYPT_HKDF_SetSalt(CRYPT_HKDF_Ctx *ctx, const uint8_t *salt, uint32_t sa
 
 int32_t CRYPT_HKDF_SetPRK(CRYPT_HKDF_Ctx *ctx, const uint8_t *prk, uint32_t prkLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (prk == NULL && prkLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -287,11 +277,6 @@ int32_t CRYPT_HKDF_SetPRK(CRYPT_HKDF_Ctx *ctx, const uint8_t *prk, uint32_t prkL
 
 int32_t CRYPT_HKDF_SetInfo(CRYPT_HKDF_Ctx *ctx, const uint8_t *info, uint32_t infoLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (info == NULL && infoLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -310,7 +295,7 @@ int32_t CRYPT_HKDF_SetInfo(CRYPT_HKDF_Ctx *ctx, const uint8_t *info, uint32_t in
 
 int32_t CRYPT_HKDF_SetOutLen(CRYPT_HKDF_Ctx *ctx, uint32_t *outLen)
 {
-    if (ctx == NULL || outLen == NULL) {
+    if (outLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -328,9 +313,9 @@ int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const CRYPT_Param *param)
 
     switch (param->type) {
         case CRYPT_KDF_PARAM_MAC_ALG_ID:
-            return CRYPT_HKDF_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param));
+            return CRYPT_HKDF_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param), param->paramLen);
         case CRYPT_KDF_PARAM_MODE:
-            return CRYPT_HKDF_SetMode(ctx, *(CRYPT_HKDF_MODE *)(param->param));
+            return CRYPT_HKDF_SetMode(ctx, *(CRYPT_HKDF_MODE *)(param->param), param->paramLen);
         case CRYPT_KDF_PARAM_KEY:
             return CRYPT_HKDF_SetKey(ctx, param->param, param->paramLen);
         case CRYPT_KDF_PARAM_SALT:

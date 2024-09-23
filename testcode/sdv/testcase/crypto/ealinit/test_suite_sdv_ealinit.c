@@ -219,13 +219,13 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC004()
     ASSERT_TRUE(ctx != NULL);
 
     CRYPT_MAC_AlgId macAlgId = CRYPT_MAC_HMAC_SHA256;
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &macAlgId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &macAlgId, sizeof(macAlgId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, 0};
+    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, sizeof(it)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);

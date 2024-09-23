@@ -83,10 +83,10 @@ void SDV_CRYPT_EAL_KDF_HKDF_API_TC001(int algId)
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
-    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, sizeof(mode)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &modeParam), CRYPT_SUCCESS);
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key, keyLen};
@@ -142,6 +142,24 @@ void SDV_CRYPT_EAL_KDF_HKDF_API_TC001(int algId)
     HKDF_SET_PARAM(&infoParam, info, infoLen);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &infoParam), CRYPT_SUCCESS);
 
+    CRYPT_Param prkParam = {CRYPT_KDF_PARAM_PRK, key, keyLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &prkParam), CRYPT_SUCCESS);
+
+    HKDF_SET_PARAM(&prkParam, NULL, keyLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &prkParam), CRYPT_NULL_INPUT);
+
+    HKDF_SET_PARAM(&prkParam, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &prkParam), CRYPT_SUCCESS);
+
+    HKDF_SET_PARAM(&prkParam, key, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &prkParam), CRYPT_SUCCESS);
+
+    CRYPT_Param outLenParam = {CRYPT_KDF_PARAM_OUTLEN, NULL, 0};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &outLenParam), CRYPT_NULL_INPUT);
+
+    HKDF_SET_PARAM(&outLenParam, &outLen, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &outLenParam), CRYPT_SUCCESS);
+
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, NULL, outLen), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, 0), CRYPT_NULL_INPUT);
 
@@ -152,6 +170,10 @@ void SDV_CRYPT_EAL_KDF_HKDF_API_TC001(int algId)
     CRYPT_MAC_AlgId macAlgIdFailed = CRYPT_MAC_MAX;
     HKDF_SET_PARAM(&macAlgIdParam, &macAlgIdFailed, 0);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_HKDF_PARAM_ERROR);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 exit:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
@@ -184,10 +206,10 @@ void SDV_CRYPT_EAL_KDF_HKDF_FUN_TC001(int algId, Hex *key, Hex *salt, Hex *info,
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
-    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, sizeof(mode)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &modeParam), CRYPT_SUCCESS);
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key->x, key->len};
@@ -232,10 +254,10 @@ void SDV_CRYPTO_HKDF_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *salt,
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
-    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, 0};
+    CRYPT_Param modeParam = {CRYPT_KDF_PARAM_MODE, &mode, sizeof(mode)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &modeParam), CRYPT_SUCCESS);
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key->x, key->len};

@@ -49,7 +49,7 @@ void SDV_CRYPT_EAL_KDF_TLS12_API_TC001(int algId)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_KDFTLS12);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key, keyLen};
@@ -111,6 +111,10 @@ void SDV_CRYPT_EAL_KDF_TLS12_API_TC001(int algId)
     CRYPT_MAC_AlgId macAlgIdFailed = CRYPT_MAC_HMAC_SHA224;
     KDFTLS12_SET_PARAM(&macAlgIdParam, &macAlgIdFailed, 0);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_KDFTLS12_PARAM_ERROR);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 exit:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
@@ -141,7 +145,7 @@ void SDV_CRYPT_EAL_KDF_TLS12_FUN_TC001(int algId, Hex *key, Hex *label, Hex *see
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_KDFTLS12);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key->x, key->len};
@@ -184,7 +188,7 @@ void SDV_CRYPTO_KDFTLS12_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *l
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtxWithLib(NULL, CRYPT_KDF_KDFTLS12, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
 
     CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key->x, key->len};

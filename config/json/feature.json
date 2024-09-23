@@ -250,7 +250,10 @@
                 ".features": ["scrypt"],
                 ".srcs": "crypto/scrypt/src/*.c",
                 ".deps": ["platform::Secure_C"],
-                ".include": ["crypto/eal/src"]
+                ".include": [
+                    "crypto/eal/src",
+                    "crypto/pbkdf2/src"
+                ]
             },
             "hkdf": {
                 ".features": ["hkdf"],
@@ -430,7 +433,6 @@
                     "crypto/sha3/include",
                     "crypto/md5/include",
                     "crypto/sm3/include",
-
                     "crypto/scrypt/include",
                     "crypto/pbkdf2/include",
                     "crypto/kdf/include",

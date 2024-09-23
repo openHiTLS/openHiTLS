@@ -19,7 +19,7 @@
 #include "crypt_types.h"
 #include "crypt_scrypt.h"
 #include "eal_mac_local.h"
-
+#include "pbkdf2_local.h"
 
 #define SCRYPT_PR_MAX   ((1 << 30) - 1)
 
@@ -70,7 +70,6 @@ do { \
 struct CryptScryptCtx {
     const EAL_MacMethod *macMeth;
     const EAL_MdMethod *mdMeth;
-    CRYPT_MAC_AlgId id;
     PBKDF2_PRF pbkdf2Prf;
     uint8_t *password;
     uint32_t passLen;
@@ -291,48 +290,48 @@ ERR:
     return ret;
 }
 
-CRYPT_SCRYPT_Ctx* CRYPT_SCRYPT_NewCtx(void)
-{
-    CRYPT_SCRYPT_Ctx* ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_SCRYPT_Ctx));
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    return ctx;
-}
-
-int32_t CRYPT_SCRYPT_SetMacMethod(CRYPT_SCRYPT_Ctx *ctx, const CRYPT_MAC_AlgId id)
+int32_t CRYPT_SCRYPT_SetMacMethod(CRYPT_SCRYPT_Ctx *ctx)
 {
     EAL_MacMethLookup method;
-    int32_t ret = EAL_MacFindMethod(id, &method);
+    int32_t ret = EAL_MacFindMethod(CRYPT_MAC_HMAC_SHA256, &method);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
         return CRYPT_EAL_ERR_METH_NULL_NUMBER;
     }
     ctx->macMeth = method.macMethod;
     ctx->mdMeth = method.md;
-    ctx->id = id;
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetPBKDF2PRF(CRYPT_SCRYPT_Ctx *ctx, const PBKDF2_PRF pbkdf2Prf)
+int32_t CRYPT_SCRYPT_InitCtx(CRYPT_SCRYPT_Ctx *ctx)
 {
-    if (ctx == NULL || pbkdf2Prf == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+    int32_t ret = CRYPT_SCRYPT_SetMacMethod(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-
-    ctx->pbkdf2Prf = pbkdf2Prf;
+    ctx->pbkdf2Prf = CRYPT_PBKDF2_HMAC;
     return CRYPT_SUCCESS;
+}
+
+CRYPT_SCRYPT_Ctx* CRYPT_SCRYPT_NewCtx(void)
+{
+    CRYPT_SCRYPT_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_SCRYPT_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    int32_t ret = CRYPT_SCRYPT_InitCtx(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_FREE(ctx);
+        return NULL;
+    }
+    return ctx;
 }
 
 int32_t CRYPT_SCRYPT_SetPassWord(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *password, uint32_t passLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (password == NULL && passLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -351,11 +350,6 @@ int32_t CRYPT_SCRYPT_SetPassWord(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *password,
 
 int32_t CRYPT_SCRYPT_SetSalt(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *salt, uint32_t saltLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (salt == NULL && saltLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -372,13 +366,9 @@ int32_t CRYPT_SCRYPT_SetSalt(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *salt, uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n)
+int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n, const uint32_t nLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (n <= 1 || (n & (n - 1)) != 0) {
+    if (nLen != sizeof(uint32_t) || n <= 1 || (n & (n - 1)) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SCRYPT_PARAM_ERROR);
         return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -386,13 +376,9 @@ int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetR(CRYPT_SCRYPT_Ctx *ctx, const uint32_t r)
+int32_t CRYPT_SCRYPT_SetR(CRYPT_SCRYPT_Ctx *ctx, const uint32_t r, const uint32_t rLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (r == 0) {
+    if (rLen != sizeof(uint32_t) || r == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SCRYPT_PARAM_ERROR);
         return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -400,13 +386,9 @@ int32_t CRYPT_SCRYPT_SetR(CRYPT_SCRYPT_Ctx *ctx, const uint32_t r)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetP(CRYPT_SCRYPT_Ctx *ctx, const uint32_t p)
+int32_t CRYPT_SCRYPT_SetP(CRYPT_SCRYPT_Ctx *ctx, const uint32_t p, const uint32_t pLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (p == 0) {
+    if (pLen != sizeof(uint32_t) || p == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SCRYPT_PARAM_ERROR);
         return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -422,20 +404,16 @@ int32_t CRYPT_SCRYPT_SetParam(CRYPT_SCRYPT_Ctx *ctx, const CRYPT_Param *param)
     }
 
     switch (param->type) {
-        case CRYPT_KDF_PARAM_MAC_ALG_ID:
-            return CRYPT_SCRYPT_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param));
-        case CRYPT_KDF_PARAM_PBKDF2:
-            return CRYPT_SCRYPT_SetPBKDF2PRF(ctx, param->param);
         case CRYPT_KDF_PARAM_PASSWORD:
             return CRYPT_SCRYPT_SetPassWord(ctx, param->param, param->paramLen);
         case CRYPT_KDF_PARAM_SALT:
             return CRYPT_SCRYPT_SetSalt(ctx, param->param, param->paramLen);
         case CRYPT_KDF_PARAM_N:
-            return CRYPT_SCRYPT_SetN(ctx, *(uint32_t *)(param->param));
+            return CRYPT_SCRYPT_SetN(ctx, *(uint32_t *)(param->param), param->paramLen);
         case CRYPT_KDF_PARAM_R:
-            return CRYPT_SCRYPT_SetR(ctx, *(uint32_t *)(param->param));
+            return CRYPT_SCRYPT_SetR(ctx, *(uint32_t *)(param->param), param->paramLen);
         case CRYPT_KDF_PARAM_P:
-            return CRYPT_SCRYPT_SetP(ctx, *(uint32_t *)(param->param));
+            return CRYPT_SCRYPT_SetP(ctx, *(uint32_t *)(param->param), param->paramLen);
         default:
             return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -509,6 +487,12 @@ int32_t CRYPT_SCRYPT_Deinit(CRYPT_SCRYPT_Ctx *ctx)
     BSL_SAL_ClearFree(ctx->password, ctx->passLen);
     BSL_SAL_FREE(ctx->salt);
     (void)memset_s(ctx, sizeof(CRYPT_SCRYPT_Ctx), 0, sizeof(CRYPT_SCRYPT_Ctx));
+
+    int32_t ret = CRYPT_SCRYPT_InitCtx(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     return CRYPT_SUCCESS;
 }
 

@@ -146,7 +146,7 @@ int32_t CRYPT_KDF_TLS12(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth
 
 CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void)
 {
-    CRYPT_KDFTLS12_Ctx* ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_KDFTLS12_Ctx));
+    CRYPT_KDFTLS12_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_KDFTLS12_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -154,8 +154,13 @@ CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void)
     return ctx;
 }
 
-int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_AlgId id)
+int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_AlgId id, const uint32_t idLen)
 {
+    if (idLen != sizeof(CRYPT_MAC_AlgId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_PARAM_ERROR);
+        return CRYPT_KDFTLS12_PARAM_ERROR;
+    }
+
     EAL_MacMethLookup method;
     if (!CRYPT_KDFTLS12_IsValidAlgId(id)) {
         BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_PARAM_ERROR);
@@ -173,11 +178,6 @@ int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_Alg
 
 int32_t CRYPT_KDFTLS12_SetKey(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (key == NULL && keyLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -196,11 +196,6 @@ int32_t CRYPT_KDFTLS12_SetKey(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *key, uint3
 
 int32_t CRYPT_KDFTLS12_SetLabel(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *label, uint32_t labelLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (label == NULL && labelLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -219,11 +214,6 @@ int32_t CRYPT_KDFTLS12_SetLabel(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *label, u
 
 int32_t CRYPT_KDFTLS12_SetSeed(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *seed, uint32_t seedLen)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (seed == NULL && seedLen > 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -249,7 +239,7 @@ int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_Param *para
 
     switch (param->type) {
         case CRYPT_KDF_PARAM_MAC_ALG_ID:
-            return CRYPT_KDFTLS12_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param));
+            return CRYPT_KDFTLS12_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param), param->paramLen);
         case CRYPT_KDF_PARAM_KEY:
             return CRYPT_KDFTLS12_SetKey(ctx, param->param, param->paramLen);
         case CRYPT_KDF_PARAM_LABEL:

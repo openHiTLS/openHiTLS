@@ -51,27 +51,19 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001(void)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_MAC_AlgId algId = CRYPT_MAC_HMAC_SHA256;
-
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pbkdf2Param = {CRYPT_KDF_PARAM_PBKDF2, CRYPT_PBKDF2_HMAC, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pbkdf2Param), CRYPT_SUCCESS);
-
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
 
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, 0};
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
 
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, 0};
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
 
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, 0};
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
@@ -139,6 +131,10 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001(void)
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, NULL, outLen), CRYPT_SCRYPT_PARAM_ERROR);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, 0), CRYPT_SCRYPT_PARAM_ERROR);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 exit:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
@@ -176,27 +172,19 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC002(void)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_MAC_AlgId algId = CRYPT_MAC_HMAC_SHA256;
-
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pbkdf2Param = {CRYPT_KDF_PARAM_PBKDF2, CRYPT_PBKDF2_HMAC, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pbkdf2Param), CRYPT_SUCCESS);
-
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
 
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, 0};
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
 
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, 0};
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
 
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, 0};
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
@@ -293,27 +281,19 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC001(Hex *key, Hex *salt, int N, int r, int p
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_MAC_AlgId algId = CRYPT_MAC_HMAC_SHA256;
-
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pbkdf2Param = {CRYPT_KDF_PARAM_PBKDF2, CRYPT_PBKDF2_HMAC, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pbkdf2Param), CRYPT_SUCCESS);
-
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
 
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, 0};
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
 
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, 0};
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
 
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, 0};
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
@@ -344,27 +324,19 @@ void SDV_CRYPTO_SCRYPT_DEFAULT_PROVIDER_FUNC_TC001(Hex *key, Hex *salt, int N, i
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtxWithLib(NULL, CRYPT_KDF_SCRYPT, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_MAC_AlgId algId = CRYPT_MAC_HMAC_SHA256;
-
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pbkdf2Param = {CRYPT_KDF_PARAM_PBKDF2, CRYPT_PBKDF2_HMAC, 0};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pbkdf2Param), CRYPT_SUCCESS);
-
     CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
 
     CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, 0};
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
 
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, 0};
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
 
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, 0};
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
