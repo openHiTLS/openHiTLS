@@ -36,6 +36,11 @@ extern const CRYPT_EAL_Func defMdShake128[];
 extern const CRYPT_EAL_Func defMdShake256[];
 extern const CRYPT_EAL_Func defMdSm3[];
 
+extern const CRYPT_EAL_Func defKdfScrypt[];
+extern const CRYPT_EAL_Func defKdfPBKdf2[];
+extern const CRYPT_EAL_Func defKdfKdfTLS12[];
+extern const CRYPT_EAL_Func defKdfHkdf[];
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

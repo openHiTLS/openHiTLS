@@ -35,6 +35,14 @@ static const CRYPT_EAL_AlgInfo defMds[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
+static const CRYPT_EAL_AlgInfo defKdfs[] = {
+    {CRYPT_KDF_SCRYPT, defKdfScrypt, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_KDF_PBKDF2, defKdfPBKdf2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_KDF_KDFTLS12, defKdfKdfTLS12, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_KDF_HKDF, defKdfHkdf, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
 static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
     (void) provCtx;
@@ -46,7 +54,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             break;
         case CRYPT_EAL_OPERAID_SIGN:
             break;
- 
+
         case CRYPT_EAL_OPERAID_ASYMCIPHER:
             break;
 
@@ -61,6 +69,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
         case CRYPT_EAL_OPERAID_MAC:
             break;
         case CRYPT_EAL_OPERAID_KDF:
+            *algInfos = defKdfs;
             break;
         case CRYPT_EAL_OPERAID_RAND:
             break;

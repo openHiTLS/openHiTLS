@@ -443,6 +443,7 @@ typedef enum {
     CRYPT_EVENT_VERIFY,       /**< Verify the signature. */
     CRYPT_EVENT_MD,           /**< Hash. */
     CRYPT_EVENT_MAC,          /**< MAC. */
+    CRYPT_EVENT_KDF,          /**< KDF. */
     CRYPT_EVENT_KEYAGGREMENT, /**< Key negotiation. */
     CRYPT_EVENT_KEYDERIVE,    /**< Derived key. */
     CRYPT_EVENT_RANDGEN,      /**< Generating a random number. */
@@ -508,6 +509,32 @@ typedef enum {
     CRYPT_INFO_BLOCK_LEN,            /**< Algorithm block length. */
     CRYPT_INFO_MAX
 } CRYPT_INFO_TYPE;
+
+typedef enum {
+    CRYPT_KDF_PARAM_PASSWORD = 0,
+    CRYPT_KDF_PARAM_SALT,
+    CRYPT_KDF_PARAM_ITER,
+    CRYPT_KDF_PARAM_MAC_ALG_ID,
+    CRYPT_KDF_PARAM_MAC_METHOD,
+    CRYPT_KDF_PARAM_KEY,
+    CRYPT_KDF_PARAM_LABEL,
+    CRYPT_KDF_PARAM_SEED,
+    CRYPT_KDF_PARAM_PBKDF2,
+    CRYPT_KDF_PARAM_N,
+    CRYPT_KDF_PARAM_R,
+    CRYPT_KDF_PARAM_P,
+    CRYPT_KDF_PARAM_MODE,
+    CRYPT_KDF_PARAM_PRK,
+    CRYPT_KDF_PARAM_INFO,
+    CRYPT_KDF_PARAM_OUTLEN,
+    CRYPT_KDF_PARAM_MAX,
+} CRYPT_KDF_PARAM_TYPE;
+
+typedef enum {
+    CRYPT_KDF_HKDF_MODE_FULL = 0,
+    CRYPT_KDF_HKDF_MODE_EXTRACT,
+    CRYPT_KDF_HKDF_MODE_EXPAND,
+} CRYPT_HKDF_MODE;
 
 typedef struct {
     int32_t type;
