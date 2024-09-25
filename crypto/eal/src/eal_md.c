@@ -198,6 +198,13 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+
+    if (from == NULL || from->method == NULL || from->method->newCtx == NULL || from->method->copyCtx == NULL ||
+        from->method->freeCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
     if (to->isProvider != from->isProvider) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_INCONSISTENT_OPERATION);
         return CRYPT_INCONSISTENT_OPERATION;
@@ -210,12 +217,6 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
         }
         to->method->freeCtx(to->data);
         to->data = NULL;
-    }
-
-    if (from == NULL || from->method == NULL || from->method->newCtx == NULL || from->method->copyCtx == NULL ||
-        from->method->freeCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
     }
 
     void *data = from->method->newCtx();
