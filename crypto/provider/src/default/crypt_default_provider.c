@@ -77,6 +77,20 @@ static const CRYPT_EAL_AlgInfo defSigns[] = {
     {CRYPT_PKEY_RSA, defSignRsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_ECDSA, defSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, defSignSm2, CRYPT_EAL_DEFAULT_ATTR},
+};
+
+static const CRYPT_EAL_AlgInfo defMacs[] = {
+    {CRYPT_MAC_HMAC_MD5, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA1, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA224, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA256, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA384, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA512, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_224, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_256, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_384, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_512, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SM3, defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -105,6 +119,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             *algInfos = defMds;
             break;
         case CRYPT_EAL_OPERAID_MAC:
+            *algInfos = defMacs;
             break;
         case CRYPT_EAL_OPERAID_KDF:
             *algInfos = defKdfs;

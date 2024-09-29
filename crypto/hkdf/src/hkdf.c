@@ -36,6 +36,7 @@ bool CRYPT_HKDF_IsValidAlgId(CRYPT_MAC_AlgId id)
 }
 
 struct CryptHkdfCtx {
+    CRYPT_MAC_AlgId macId;
     const EAL_MacMethod *macMeth;
     const EAL_MdMethod *mdMeth;
     CRYPT_HKDF_MODE mode;
@@ -50,11 +51,11 @@ struct CryptHkdfCtx {
     uint32_t *outLen;
 };
 
-int32_t CRYPT_HKDF_Extract(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth, const uint8_t *key,
+int32_t CRYPT_HKDF_Extract(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const uint8_t *key,
     uint32_t keyLen, const uint8_t *salt, uint32_t saltLen, uint8_t *prk, uint32_t *prkLen)
 {
     int32_t ret;
-    if (macMeth == NULL || mdMeth == NULL) {
+    if (macMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -67,22 +68,20 @@ int32_t CRYPT_HKDF_Extract(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdM
         return CRYPT_NULL_INPUT;
     }
 
-    void *macCtx = BSL_SAL_Malloc(macMeth->ctxSize);
+    void *macCtx = macMeth->newCtx(macId);
     if (macCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memset_s(macCtx, macMeth->ctxSize, 0, macMeth->ctxSize);
 
-    GOTO_ERR_IF(macMeth->initCtx(macCtx, mdMeth), ret);
     GOTO_ERR_IF(macMeth->init(macCtx, salt, saltLen), ret);
     GOTO_ERR_IF(macMeth->update(macCtx, key, keyLen), ret);
     GOTO_ERR_IF(macMeth->final(macCtx, prk, prkLen), ret);
 
 ERR:
     macMeth->deinit(macCtx);
-    macMeth->deinitCtx(macCtx);
-    BSL_SAL_FREE(macCtx);
+    macMeth->freeCtx(macCtx);
+    macCtx = NULL;
     return ret;
 }
 
@@ -118,8 +117,8 @@ static int32_t HKDF_ExpandParamCheck(const EAL_MacMethod *macMeth, const EAL_MdM
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_HKDF_Expand(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth, const uint8_t *prk, uint32_t prkLen,
-    const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t outLen)
+int32_t CRYPT_HKDF_Expand(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const EAL_MdMethod *mdMeth,
+    const uint8_t *prk, uint32_t prkLen, const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t outLen)
 {
     int32_t ret = HKDF_ExpandParamCheck(macMeth, mdMeth, prk, prkLen, info, infoLen, out, outLen);
     if (ret != CRYPT_SUCCESS) {
@@ -130,13 +129,13 @@ int32_t CRYPT_HKDF_Expand(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMe
     uint8_t counter = 1;
     uint32_t totalLen = 0;
     uint32_t n;
-    void *macCtx = BSL_SAL_Malloc(macMeth->ctxSize);
+
+    void *macCtx = macMeth->newCtx(macId);
     if (macCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    GOTO_ERR_IF(macMeth->initCtx(macCtx, mdMeth), ret);
     GOTO_ERR_IF(macMeth->init(macCtx, prk, prkLen), ret);
 
     /* ceil(a / b) = (a + b - 1) / b */
@@ -156,22 +155,23 @@ int32_t CRYPT_HKDF_Expand(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMe
 
 ERR:
     macMeth->deinit(macCtx);
-    macMeth->deinitCtx(macCtx);
-    BSL_SAL_FREE(macCtx);
+    macMeth->freeCtx(macCtx);
+    macCtx = NULL;
     return ret;
 }
 
-int32_t CRYPT_HKDF(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *salt, uint32_t saltLen, const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t len)
+int32_t CRYPT_HKDF(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const EAL_MdMethod *mdMeth,
+    const uint8_t *key, uint32_t keyLen, const uint8_t *salt, uint32_t saltLen,
+    const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t len)
 {
     int ret;
     uint8_t prk[HKDF_MAX_HMACSIZE];
     uint32_t prkLen = HKDF_MAX_HMACSIZE;
-    ret = CRYPT_HKDF_Extract(macMeth, mdMeth, key, keyLen, salt, saltLen, prk, &prkLen);
+    ret = CRYPT_HKDF_Extract(macMeth, macId, key, keyLen, salt, saltLen, prk, &prkLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_HKDF_Expand(macMeth, mdMeth, prk, prkLen, info, infoLen, out, len);
+    ret = CRYPT_HKDF_Expand(macMeth, macId, mdMeth, prk, prkLen, info, infoLen, out, len);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -206,6 +206,7 @@ int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id, c
         return CRYPT_EAL_ERR_METH_NULL_NUMBER;
     }
     ctx->macMeth = method.macMethod;
+    ctx->macId = id;
     ctx->mdMeth = method.md;
     return CRYPT_SUCCESS;
 }
@@ -339,6 +340,7 @@ int32_t CRYPT_HKDF_Derive(CRYPT_HKDF_Ctx *ctx, uint8_t *out, uint32_t len)
     }
 
     const EAL_MacMethod *macMeth = ctx->macMeth;
+    CRYPT_MAC_AlgId macId = ctx->macId;
     const EAL_MdMethod *mdMeth = ctx->mdMeth;
     const uint8_t *key = ctx->key;
     uint32_t keyLen = ctx->keyLen;
@@ -352,11 +354,11 @@ int32_t CRYPT_HKDF_Derive(CRYPT_HKDF_Ctx *ctx, uint8_t *out, uint32_t len)
 
     switch (ctx->mode) {
         case CRYPT_KDF_HKDF_MODE_FULL:
-            return CRYPT_HKDF(macMeth, mdMeth, key, keyLen, salt, saltLen, info, infoLen, out, len);
+            return CRYPT_HKDF(macMeth, macId, mdMeth, key, keyLen, salt, saltLen, info, infoLen, out, len);
         case CRYPT_KDF_HKDF_MODE_EXTRACT:
-            return CRYPT_HKDF_Extract(macMeth, mdMeth, key, keyLen, salt, saltLen, out, outLen);
+            return CRYPT_HKDF_Extract(macMeth, macId, key, keyLen, salt, saltLen, out, outLen);
         case CRYPT_KDF_HKDF_MODE_EXPAND:
-            return CRYPT_HKDF_Expand(macMeth, mdMeth, prk, prkLen, info, infoLen, out, len);
+            return CRYPT_HKDF_Expand(macMeth, macId, mdMeth, prk, prkLen, info, infoLen, out, len);
         default:
             return CRYPT_HKDF_PARAM_ERROR;
     }

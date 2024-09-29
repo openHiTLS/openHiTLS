@@ -217,42 +217,49 @@ typedef struct EAL_CipherMethod {
 } EAL_CipherMethod;
 
 /* prototype of MAC algorithm operation functions */
-// Initialize the memory and set the method.
-typedef int32_t (*MacInitCtx)(void *ctx, const void *method);
+typedef void* (*MacNewCtx)(CRYPT_MAC_AlgId id);
+typedef void* (*MacProvNewCtx)(void *provCtx, int32_t algId);
 // Complete key initialization.
 typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len);
 typedef int32_t (*MacUpdate)(void *ctx, const uint8_t *in, uint32_t len);
 typedef int32_t (*MacFinal)(void *ctx, const uint8_t *out, uint32_t *len);
 typedef void    (*MacDeinit)(void *ctx);
 // The action is opposite to the initCtx. Sensitive data is deleted.
-typedef void    (*MacDeinitCtx)(void *ctx);
 typedef void    (*MacReinit)(void *ctx);
 typedef uint32_t (*MacGetMacLen)(void *ctx);
+typedef int32_t (*MacCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
+typedef void (*MacFreeCtx)(void *ctx);
 
 /* set of MAC algorithm operation methods */
 typedef struct {
-    MacInitCtx initCtx;     // Allocate memory, initializing, and setting the method
+    MacNewCtx newCtx;
     MacInit init;           // Initialize the MAC context.
     MacUpdate update;       // Add block data for MAC calculation.
     MacFinal final;         // Complete MAC calculation and obtain the MAC result.
     MacDeinit deinit;       // Clear the key information in MAC context.
-    MacDeinitCtx deinitCtx; // Delete sensitive data and free memory
     // Re-initialize the key. This method is used where the keys are the same during multiple MAC calculations.
     MacReinit reinit;
     MacGetMacLen getLen;    // Obtain the data length of the MAC calculation result.
-    uint16_t ctxSize;       // Context size of the MAC algorithm
+    MdFreeCtx freeCtx;
 } EAL_MacMethod;
 
 typedef struct {
-    union {
-        const EAL_MacMethod *macMethod;
-        const EAL_CipherMethod *modeMethod; // Method of gmac-dependent symmetric algorithms
-        const void *masMeth;    // Method pointer of the master algorithm.
-    };
-    union {
-        const EAL_MdMethod *md;        // MD algorithm which HMAC depends on
-        const void *depMeth;           // Pointer to the dependent algorithm, which is reserved for extension.
-    };
+    MacNewCtx newCtx;
+    MdFreeCtx freeCtx;
+    MacProvNewCtx provNewCtx;
+    MacInit init;           // Initialize the MAC context.
+    MacUpdate update;       // Add block data for MAC calculation.
+    MacFinal final;         // Complete MAC calculation and obtain the MAC result.
+    MacDeinit deinit;       // Clear the key information in MAC context.
+    // Re-initialize the key. This method is used where the keys are the same during multiple MAC calculations.
+    MacReinit reinit;
+    MacGetMacLen getLen;    // Obtain the data length of the MAC calculation result.
+    MacCtrl ctrl;
+} EAL_MacUnitaryMethod;
+
+typedef struct {
+    const EAL_MacMethod *macMethod;
+    const EAL_MdMethod *md;        // MD algorithm which HMAC depends on
 } EAL_MacMethLookup;
 
 /**
