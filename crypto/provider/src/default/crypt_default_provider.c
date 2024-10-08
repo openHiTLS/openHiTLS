@@ -35,11 +35,48 @@ static const CRYPT_EAL_AlgInfo defMds[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
+
 static const CRYPT_EAL_AlgInfo defKdfs[] = {
     {CRYPT_KDF_SCRYPT, defKdfScrypt, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_KDF_PBKDF2, defKdfPBKdf2, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_KDF_KDFTLS12, defKdfKdfTLS12, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_KDF_HKDF, defKdfHkdf, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
+static const CRYPT_EAL_AlgInfo defKeyMgmt[] = {
+    {CRYPT_PKEY_DSA, defKeyMgmtDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ED25519, defKeyMgmtEd25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_X25519, defKeyMgmtX25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_RSA, defKeyMgmtRsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_DH, defKeyMgmtDh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDSA, defKeyMgmtEcdsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDH, defKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, defKeyMgmtSm2, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
+static const CRYPT_EAL_AlgInfo defAsymCiphers[] = {
+    {CRYPT_PKEY_RSA, defAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, defAsymCipherSm2, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
+static const CRYPT_EAL_AlgInfo defKeyExch[] = {
+    {CRYPT_PKEY_X25519, defExchX25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_DH, defExchDh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDH, defExchEcdh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, defExchSm2, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
+static const CRYPT_EAL_AlgInfo defSigns[] = {
+    {CRYPT_PKEY_DSA, defSignDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ED25519, defSignEd25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_X25519, defSignX25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_RSA, defSignRsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDSA, defSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, defSignSm2, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -51,16 +88,17 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
         case CRYPT_EAL_OPERAID_SYMMCIPHER:
             break;
         case CRYPT_EAL_OPERAID_KEYMGMT:
+            *algInfos = defKeyMgmt;
             break;
         case CRYPT_EAL_OPERAID_SIGN:
+            *algInfos = defSigns;
             break;
-
         case CRYPT_EAL_OPERAID_ASYMCIPHER:
+            *algInfos = defAsymCiphers;
             break;
-
         case CRYPT_EAL_OPERAID_KEYEXCH:
+            *algInfos = defKeyExch;
             break;
-
         case CRYPT_EAL_OPERAID_KEM:
             break;
         case CRYPT_EAL_OPERAID_HASH:

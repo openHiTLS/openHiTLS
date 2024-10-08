@@ -425,7 +425,7 @@
             "provider": {
                 ".features": ["provider"],
                 ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
-                ".deps": ["bsl::sal"],
+                ".deps": ["bsl::sal","bsl::err"],
                 ".include": [
                     "crypto/ealinit/include",
                     "crypto/sha1/include",
@@ -436,7 +436,16 @@
                     "crypto/scrypt/include",
                     "crypto/pbkdf2/include",
                     "crypto/kdf/include",
-                    "crypto/hkdf/include"
+                    "crypto/hkdf/include",
+                    "crypto/rsa/include",
+                    "crypto/dsa/include",
+                    "crypto/curve25519/include",
+                    "crypto/dh/include",
+                    "crypto/ecdsa/include",
+                    "crypto/ecdh/include",
+                    "crypto/sm2/include",
+                    "crypto/bn/include",
+                    "crypto/ecc/include"
                 ]
             },
             "bn": {
@@ -452,7 +461,8 @@
             "rsa": {
                 ".features": ["rsa"],
                 ".srcs": "crypto/rsa/src/*.c",
-                ".deps" : ["crypto::bn"]
+                ".deps" : ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
             },
             "curve25519": {
                 ".features": ["ed25519", "x25519"],
@@ -460,17 +470,20 @@
                     "public": "crypto/curve25519/src/curve25519*.c",
 		            "no_asm": "crypto/curve25519/src/noasm_*.c"
                 },
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": ["crypto/eal/src"]
             },
             "dsa": {
                 ".features": ["dsa"],
                 ".srcs": "crypto/dsa/src/*.c",
-                ".deps": ["crypto::bn", "crypto::encode"]
+                ".deps": ["crypto::bn", "crypto::encode"],
+                ".include": ["crypto/eal/src"]
             },
             "dh": {
                 ".features": ["dh"],
                 ".srcs": "crypto/dh/src/*.c",
-                ".deps": ["crypto::bn"]
+                ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
             },
             "encode": {
                 ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign", "sm2_exch"],
@@ -498,22 +511,26 @@
                         "avx512": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"]
                     }
                 },
-                ".deps": ["crypto::bn", "bsl::sal"]
+                ".deps": ["crypto::bn", "bsl::sal"],
+                ".include": ["crypto/eal/src"]
             },
             "ecdh": {
                 ".features": ["ecdh"],
                 ".srcs": "crypto/ecdh/src/*.c",
-                ".deps": ["crypto::bn", "bsl::sal", "crypto::ecc"]
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::ecc"],
+                ".include": ["crypto/eal/src"]
             },
             "ecdsa": {
                 ".features": ["ecdsa"],
                 ".srcs": "crypto/ecdsa/src/*.c",
-                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"]
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"],
+                ".include": ["crypto/eal/src"]
             },
             "sm2": {
                 ".features": ["sm2_crypt", "sm2_sign", "sm2_exch"],
                 ".srcs": "crypto/sm2/src/*.c",
-                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"]
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"],
+                ".include": ["crypto/eal/src"]
             }
         },
         "bsl":{

@@ -23,6 +23,7 @@
 #include "crypt_local_types.h"
 #include "crypt_sm2.h"
 #include "sm2_local.h"
+#include "eal_md_local.h"
 
 static int32_t Sm2SetUserId(CRYPT_SM2_Ctx *ctx, const uint8_t *val, uint32_t len)
 {
@@ -52,6 +53,18 @@ CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void)
     ctx->server = 1; // Indicates the initiator by default.
     ctx->isSumValid = 0; // checksum is invalid by default.
     BSL_SAL_ReferencesInit(&(ctx->references));
+    const EAL_MdMethod *mdMethod = EAL_MdFindMethod(CRYPT_MD_SM3);
+    if (mdMethod == NULL) {
+        CRYPT_SM2_FreeCtx(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_EVENT_ERR);
+        return NULL;
+    }
+    int32_t ret = CRYPT_SM2_Ctrl(ctx, CRYPT_CTRL_SET_SM2_HASH_METHOD, (EAL_MdMethod *)(uintptr_t)mdMethod, sizeof(EAL_MdMethod));
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_SM2_FreeCtx(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_EVENT_ERR);
+        return NULL;
+    }
     return ctx;
 }
 
@@ -545,6 +558,10 @@ static void Sm2Clean(CRYPT_SM2_Ctx *ctx)
 
 static int32_t Sm2GenerateR(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     int32_t ret;
     Sm2Clean(ctx);
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
@@ -586,6 +603,10 @@ ERR:
 
 static int32_t Sm2SetR(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     int32_t ret;
     Sm2Clean(ctx);
     ECC_Point *rs = ECC_NewPoint(ctx->pkey->para);
@@ -637,6 +658,10 @@ ERR:
 
 static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     int32_t ret;
     if (ctx->isSumValid != 1) {
         ret = CRYPT_SM2_ERR_S_NOT_SET;
@@ -676,6 +701,10 @@ static int32_t IsDataEqual(const uint8_t *data1, const uint8_t *data2, uint32_t 
 
 static int32_t Sm2DoCheck(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     int32_t ret;
     if (ctx->isSumValid != 1) {
         ret = CRYPT_SM2_ERR_S_NOT_SET;
@@ -696,6 +725,10 @@ static int32_t Sm2DoCheck(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t CtrlServerSet(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_CTRL_LEN);
         return CRYPT_SM2_ERR_CTRL_LEN;
@@ -711,6 +744,10 @@ static int32_t CtrlServerSet(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t CtrlUserId(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (len == 0 || len > SM2_MAX_ID_LENGTH) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
         return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
@@ -721,6 +758,10 @@ static int32_t CtrlUserId(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t SM2SetHash(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (len != (uint32_t)sizeof(EAL_MdMethod)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -731,6 +772,10 @@ static int32_t SM2SetHash(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t Sm2SetPKG(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_CTRL_LEN);
         return CRYPT_SM2_ERR_CTRL_LEN;
@@ -745,6 +790,10 @@ static int32_t Sm2SetPKG(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t SM2UpReferences(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 {
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     if (val != NULL && len == (uint32_t)sizeof(int)) {
         return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
     }
@@ -754,13 +803,21 @@ static int32_t SM2UpReferences(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 
 int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
 {
-    int32_t ret = CRYPT_SUCCESS;
-    if (ctx == NULL || val == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
+    int32_t ret = CRYPT_SUCCESS;
     switch (opt) {
+        case CRYPT_CTRL_GET_BITS:
+            return CRYPT_SM2_GetBits(ctx);
+            break;
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return CRYPT_SM2_GetSignLen(ctx);
+            break;
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_SM2_GetSecBits(ctx);
+            break;
         case CRYPT_CTRL_SET_SM2_SERVER:
             ret = CtrlServerSet(ctx, val, len);
             break;

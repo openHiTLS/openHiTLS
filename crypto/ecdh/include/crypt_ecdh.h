@@ -108,7 +108,7 @@ void CRYPT_ECDH_FreePara(CRYPT_EcdhPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL internal memory allocation error
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPara *para);
+int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *param);
 
 /**
  * @ingroup ecdh
@@ -121,7 +121,7 @@ int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Get successfully.
  */
-int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, CRYPT_EccPara *para);
+int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup ecdh

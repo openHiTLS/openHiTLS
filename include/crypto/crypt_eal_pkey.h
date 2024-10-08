@@ -42,11 +42,11 @@ typedef struct {
     }key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
-#define CRYPT_EAL_PKEY_SIGN_TYPE    1
-#define CRYPT_EAL_PKEY_CIPHER_TYPE  2
-#define CRYPT_EAL_PKEY_EXCH_TYPE    3
-#define CRYPT_EAL_PKEY_KEM_TYPE     4
+#define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
+#define CRYPT_EAL_PKEY_EXCH_OPERATE     2
+#define CRYPT_EAL_PKEY_SIGN_OPERATE     4
 
+#define DEFAULT_PROVIDER_PARAM_TYPE 0
 /**
  * @ingroup crypt_eal_pkey
  *
@@ -122,8 +122,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t type,
-    const char *attrName);
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t operId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -171,6 +170,18 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
 
 /**
  * @ingroup crypt_eal_pkey
+ * @brief   Set the key parameters, the key parameter marked as "para" is applied for and released by the caller.
+ *
+ * @param   pkey [IN/OUT] Structure of the key pair to be set
+ * @param   para [IN] Parameter
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeySetParaEx(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_Param *para);
+
+/**
+ * @ingroup crypt_eal_pkey
  * @brief   Obtain the key parameter, the key parameter marked as "para" is applied for and released by the caller.
  *
  * @param   pkey [IN] Key pair structure
@@ -181,6 +192,17 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
  */
 int32_t CRYPT_EAL_PkeyGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para);
 
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Obtain the key parameter, the key parameter marked as "para" is applied for and released by the caller.
+ *
+ * @param   pkey [IN] Key pair structure
+ * @param   para [OUT] Parameter to be received
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyGetParaEx(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_Param *para);
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Set key parameters.

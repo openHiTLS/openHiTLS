@@ -16,7 +16,8 @@
 #include "bsl_sal.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
-
+#include "eal_pkey_local.h"
+#include "eal_md_local.h"
 
 // rsa-decrypt Calculation used by Chinese Remainder Theorem(CRT). intermediate variables:
 typedef struct {
@@ -1138,6 +1139,82 @@ static int32_t SetRsaPad(CRYPT_RSA_Ctx *ctx, const void *val, const uint32_t len
     return CRYPT_SUCCESS;
 }
 
+static int32_t MdIdCheckSha1Sha2(CRYPT_MD_AlgId id)
+{
+    if (id < CRYPT_MD_MD5 || id > CRYPT_MD_SHA512) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EalSetOaep(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
+{
+    RSA_PadingPara padPara;
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    const CRYPT_RSA_OaepPara *opad = val;
+    if (len != sizeof(CRYPT_RSA_OaepPara)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_PKEY_CTRL_ERROR);
+        return CRYPT_EAL_PKEY_CTRL_ERROR;
+    }
+    int32_t ret = MdIdCheckSha1Sha2(opad->mdId);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = MdIdCheckSha1Sha2(opad->mgfId);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    padPara.mdId = opad->mdId;
+    padPara.mgfId = opad->mgfId;
+    padPara.mdMeth = EAL_MdFindMethod(opad->mdId);
+    padPara.mgfMeth = EAL_MdFindMethod(opad->mgfId);
+    if (padPara.mdMeth == NULL || padPara.mgfMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    return SetOaep(ctx, &padPara, sizeof(RSA_PadingPara));
+}
+
+static int32_t EalSetPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
+{
+    RSA_PadingPara padPara;
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_RSA_PssPara *pad = val;
+    if (len != sizeof(CRYPT_RSA_PssPara)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_PKEY_CTRL_ERROR);
+        return CRYPT_EAL_PKEY_CTRL_ERROR;
+    }
+    int32_t ret = MdIdCheckSha1Sha2(pad->mdId);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = MdIdCheckSha1Sha2(pad->mgfId);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    padPara.saltLen = pad->saltLen;
+    padPara.mdId = pad->mdId;
+    padPara.mgfId = pad->mgfId;
+    padPara.mdMeth = EAL_MdFindMethod(pad->mdId);
+    padPara.mgfMeth = EAL_MdFindMethod(pad->mgfId);
+    if (padPara.mdMeth == NULL || padPara.mgfMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    return SetEmsaPss(ctx, &padPara, sizeof(RSA_PadingPara));
+}
+
 int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -1147,8 +1224,6 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32
     switch (opt) {
         case CRYPT_CTRL_SET_RSA_EMSA_PKCSV15:
             return SetEmsaPkcsV15(ctx, val, len);
-        case CRYPT_CTRL_SET_RSA_EMSA_PSS:
-            return SetEmsaPss(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_SALT:
             return SetSalt(ctx, val, len);
         case CRYPT_CTRL_GET_RSA_SALT:
@@ -1159,9 +1234,6 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32
             return GetMd(ctx, val, len);
         case CRYPT_CTRL_GET_RSA_MGF:
             return GetMgf(ctx, val, len);
-
-        case CRYPT_CTRL_SET_RSA_RSAES_OAEP:
-            return SetOaep(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_OAEP_LABEL:
             return SetOaepLabel(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_RSAES_PKCSV15:
@@ -1174,6 +1246,16 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32
             return SetRsaPad(ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
             return RsaUpReferences(ctx, val, len);
+        case CRYPT_CTRL_GET_BITS:
+            return CRYPT_RSA_GetBits(ctx);
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return CRYPT_RSA_GetSignLen(ctx);
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_RSA_GetSecBits(ctx);
+        case CRYPT_CTRL_SET_RSA_EMSA_PSS:
+            return EalSetPss(ctx, val, len);
+        case CRYPT_CTRL_SET_RSA_RSAES_OAEP:
+            return EalSetOaep(ctx, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR);
             return CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR;

@@ -94,7 +94,7 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx);
  * @retval CRYPT_MEM_ALLOC_FAIL     internal memory allocation error
  * @retval CRYPT_SUCCESS            set successfully.
  */
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_RSA_Para *para);
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup rsa
