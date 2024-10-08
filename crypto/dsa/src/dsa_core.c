@@ -236,14 +236,20 @@ static CRYPT_DSA_Para *ParaDup(const CRYPT_DSA_Para *para)
     return ret;
 }
 
-int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DSA_Para *para)
+int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
 {
-    if (ctx == NULL || para == NULL) {
+    if (ctx == NULL || para == NULL || para->param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = ParaDataCheck(para);
+    CRYPT_DSA_Para *dsaPara = CRYPT_DSA_NewPara((CRYPT_DsaPara *)para->param);
+    if (dsaPara == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = ParaDataCheck(dsaPara);
     if (ret != CRYPT_SUCCESS) {
+        CRYPT_DSA_FreePara(dsaPara);
         return ret;
     }
 
@@ -252,7 +258,7 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DSA_Para *para)
     CRYPT_DSA_FreePara(ctx->para);
     ctx->x = NULL;
     ctx->y = NULL;
-    ctx->para = ParaDup(para);
+    ctx->para = dsaPara;
     if (ctx->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -260,15 +266,19 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DSA_Para *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPara *para)
+int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *param)
 {
     int32_t ret;
-
+    if (param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_DsaPara *para = (CRYPT_DsaPara *)param->param;
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
+    
     if (ctx->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
         return CRYPT_DSA_PARA_ERROR;
@@ -865,12 +875,27 @@ int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b)
 
 int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
 {
-    if (ctx == NULL || val == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (opt == CRYPT_CTRL_UP_REFERENCES && len == (uint32_t)sizeof(int)) {
-        return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+    switch (opt) {
+        case CRYPT_CTRL_GET_BITS:
+            return CRYPT_DSA_GetBits(ctx);
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return CRYPT_DSA_GetSignLen(ctx);
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_DSA_GetSecBits(ctx);
+        case CRYPT_CTRL_UP_REFERENCES:
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+                return CRYPT_NULL_INPUT;
+            }
+            if (len == (uint32_t)sizeof(int)) {
+                return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+            }
+        default:
+            break;
     }
     BSL_ERR_PUSH_ERROR(CRYPT_DSA_UNSUPPORTED_CTRL_OPTION);
     return CRYPT_DSA_UNSUPPORTED_CTRL_OPTION;

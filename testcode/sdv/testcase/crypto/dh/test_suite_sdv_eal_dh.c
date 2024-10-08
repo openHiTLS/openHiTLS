@@ -651,6 +651,278 @@ exit:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_DH_SET_PARAEX_API_TC001
+ * @title  DH CRYPT_EAL_PkeySetParaEx: Invalid parameter (NULL).
+ * @precon Registering memory-related functions.
+ *         DH parameters.
+ * @brief
+ *    1. Create the context(pkey) of the dh algorithm, expected result 1.
+ *    2. Call the CRYPT_EAL_PkeySetParaEx method: p = null, expected result 2
+ *    3. Call the CRYPT_EAL_PkeySetParaEx method: pLen = 0, expected result 2
+ *    4. Call the CRYPT_EAL_PkeySetParaEx method: g = null, expected result 2
+ *    5. Call the CRYPT_EAL_PkeySetParaEx method: gLen = 0, expected result 2
+ *    6. Call the CRYPT_EAL_PkeySetParaEx method: q = null, qLen != 0, expected result 2
+ *    7. Call the CRYPT_EAL_PkeySetParaEx method: ctx = null, expected result 3
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_EAL_ERR_NEW_PARA_FAIL
+ *    3. CRYPT_NULL_INPUT
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_SET_PARAEX_API_TC001(Hex *p, Hex *g, Hex *q)
+{
+    CRYPT_EAL_PkeyPara para = {0};
+    Set_DH_Para(&para, NULL, q->x, g->x, p->len, q->len, g->len);
+
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    ASSERT_TRUE(pkey != NULL);
+    CRYPT_Param param;
+    param.param = &para.para.dhPara;
+    param.paramLen = sizeof(para.para.dhPara);
+    ASSERT_TRUE_AND_LOG("p is null", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.p = p->x;
+    para.para.dhPara.pLen = 0;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("pLen is zero", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.pLen = p->len;
+    para.para.dhPara.g = NULL;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("g is null", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.g = g->x;
+    para.para.dhPara.gLen = 0;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("gLen is zero", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.gLen = g->len;
+    para.para.dhPara.q = NULL;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("q is null but qLen != 0", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.q = q->x;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(NULL, &param) == CRYPT_NULL_INPUT);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_DH_SET_PARAEX_API_TC002
+ * @title  DH CRYPT_EAL_PkeySetParaEx: Invalid parameter(length).
+ * @precon Registering memory-related functions.
+ *         DH parameters.
+ * @brief
+ *    1. Create the context(pkey) of the dh algorithm, expected result 1.
+ *    2. Call the CRYPT_EAL_PkeySetParaEx method: pLen > 8192, expected result 2
+ *    3. Call the CRYPT_EAL_PkeySetParaEx method: pLen < 768, expected result 2
+ *    4. Call the CRYPT_EAL_PkeySetParaEx method: pLen > 768, but actual data Len < 768, expected result 3
+ *    5. Call the CRYPT_EAL_PkeySetParaEx method: qLen < 160, expected result 3
+ *    6. Call the CRYPT_EAL_PkeySetParaEx method: qLen > pLen, expected result 2
+ *    7. Call the CRYPT_EAL_PkeySetParaEx method: qLen > 160, but actual data Len < 160, expected result 3
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_EAL_ERR_NEW_PARA_FAIL
+ *    3. CRYPT_DH_PARA_ERROR
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_SET_PARAEX_API_TC002(Hex *p, Hex *g, Hex *q)
+{
+    uint8_t longBuf[1030] = {0};
+    uint32_t bufLen = sizeof(longBuf);
+    CRYPT_EAL_PkeyPara para = {0};
+    Set_DH_Para(&para, longBuf, q->x, g->x, bufLen, q->len, g->len);
+    CRYPT_Param param;
+    param.param = &para.para.dhPara;
+    param.paramLen = sizeof(para.para.dhPara);
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    ASSERT_TRUE(pkey != NULL);
+
+    longBuf[0] = 1;
+    longBuf[1024] = 1;
+    ASSERT_TRUE_AND_LOG("p greater than 8192", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.p = p->x;
+    para.para.dhPara.pLen = 95;  // 768 / 8 = 96, 96 - 1 = 95
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("p smaller than 768", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    (void)memset_s(longBuf, sizeof(longBuf), 0, sizeof(longBuf));
+    longBuf[p->len - 1] = 1;
+    para.para.dhPara.p = longBuf;
+    para.para.dhPara.pLen = p->len;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("p greater than 768 but value smaller than 768 bits",
+        CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    para.para.dhPara.p = p->x;
+    para.para.dhPara.pLen = p->len;
+    para.para.dhPara.qLen = 19;  // 160 / 8 = 20, 19 < 20
+    para.para.dhPara.q = longBuf;
+    (void)memset_s(longBuf, sizeof(longBuf), 0, sizeof(longBuf));
+    longBuf[18] = 1;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("q smaller than 160", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    para.para.dhPara.qLen = p->len + 1;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("q longer than p", CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    (void)memset_s(longBuf, sizeof(longBuf), 0, sizeof(longBuf));
+    longBuf[20] = 1;
+    para.para.dhPara.qLen = 21;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE_AND_LOG("q greater than 160 but value smaller than 160 bits",
+        CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_DH_SET_PARAEX_API_TC003
+ * @title  DH CRYPT_EAL_PkeySetParaEx: Invalid parameter (value).
+ * @precon Registering memory-related functions.
+ *         DH parameters.
+ * @brief
+ *    1. Create the context(pkey) of the dh algorithm, expected result 1.
+ *    2. Call the CRYPT_EAL_PkeySetParaEx method: p is an even number, expected result 2
+ *    3. Call the CRYPT_EAL_PkeySetParaEx method: q is an even number, expected result 2
+ *    4. Call the CRYPT_EAL_PkeySetParaEx method: g=0, expected result 2
+ *    5. Call the CRYPT_EAL_PkeySetParaEx method: g=1, expected result 2
+ *    6. Call the CRYPT_EAL_PkeySetParaEx method: g=p-1, expected result 2
+ *    7. Call the CRYPT_EAL_PkeySetParaEx method: q=p-1, expected result 2
+ *    8. Call the CRYPT_EAL_PkeySetParaEx method: q=p-2, expected result 2
+ *    9. Call the CRYPT_EAL_PkeySetParaEx method: q=p+2>p, expected result 2
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_DH_PARA_ERROR
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_SET_PARAEX_API_TC003(Hex *p, Hex *g, Hex *q)
+{
+    uint8_t buf[1030];
+    uint32_t bufLen = sizeof(buf);
+    CRYPT_EAL_PkeyPara para = {0};
+
+    Set_DH_Para(&para, NULL, q->x, g->x, 0, q->len, g->len);
+    CRYPT_Param param;
+    param.param = &para.para.dhPara;
+    param.paramLen = sizeof(para.para.dhPara);
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    ASSERT_TRUE(pkey != NULL);
+
+    int last = p->len - 1;
+    ASSERT_TRUE(memcpy_s(buf, bufLen, p->x, p->len) == 0);
+    buf[last] += 1;  // p is even
+
+    para.para.dhPara.p = buf;
+    para.para.dhPara.pLen = p->len;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    ASSERT_TRUE(memcpy_s(buf, bufLen, q->x, q->len) == 0);
+    last = q->len - 1;
+    buf[last] += 1;  // q is even
+    para.para.dhPara.p = p->x;
+    para.para.dhPara.q = buf;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    (void)memset_s(buf, sizeof(buf), 0, sizeof(buf));  // g = 0
+    para.para.dhPara.q = q->x;
+    para.para.dhPara.g = buf;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    last = g->len - 1;
+    buf[last] = 1;  // g = 1
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    last = p->len - 1;
+    para.para.dhPara.gLen = p->len;
+    ASSERT_TRUE(memcpy_s(buf, bufLen, p->x, p->len) == 0);
+    buf[last] -= 1;  // g = p - 1
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    // q = p - 1
+    para.para.dhPara.g = g->x;
+    para.para.dhPara.gLen = g->len;
+    para.para.dhPara.q = buf;
+    para.para.dhPara.qLen = p->len;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    buf[last] -= 1;  // q = p - 2
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+    buf[last] += 4;  // q = p - 2 + 4 = p + 2 > p
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_DH_PARA_ERROR);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_DH_SET_PARAEX_API_TC004
+ * @title  DH CRYPT_EAL_PkeySetParaEx: Repeated call.
+ * @precon Registering memory-related functions.
+ *         DH parameters.
+ * @brief
+ *    1. Create the context(pkey) of the dh algorithm, expected result 1.
+ *    2. Call the CRYPT_EAL_PkeySetParaEx method with normal parameters, expected result 2
+ *    3. Call the CRYPT_EAL_PkeySetParaEx method with normal parameters again, expected result 3
+ *    4. Call the CRYPT_EAL_PkeySetParaEx method: pLen < 768, expected result 4
+ *    5. Call the CRYPT_EAL_PkeySetParaEx method with normal parameters again, expected result 5
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_SUCCESS
+ *    3. CRYPT_SUCCESS
+ *    4. CRYPT_EAL_ERR_NEW_PARA_FAIL
+ *    5. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_SET_PARAEX_API_TC004(Hex *p, Hex *g, Hex *q)
+{
+    CRYPT_EAL_PkeyPara para = {0};
+    Set_DH_Para(&para, p->x, q->x, g->x, p->len, q->len, g->len);
+    CRYPT_Param param;
+    param.param = &para.para.dhPara;
+    param.paramLen = sizeof(para.para.dhPara);
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    ASSERT_TRUE(pkey != NULL);
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_SUCCESS);
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_SUCCESS);
+    
+    para.para.dhPara.pLen = 95;  // 768 / 8 = 96, 95 < 96
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+
+    para.para.dhPara.pLen = p->len;
+    param.param = &para.para.dhPara;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_SUCCESS);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_DH_SET_PRV_API_TC001
  * @title  DH: CRYPT_EAL_PkeySetPrv test.
  * @precon Registering memory-related functions.
@@ -1307,6 +1579,7 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(pKey);
 }
 /* END_CASE */
+
 
 /**
  * @test   SDV_CRYPTO_DH_CMP_API_TC001

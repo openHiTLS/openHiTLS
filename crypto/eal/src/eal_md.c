@@ -24,7 +24,6 @@
 #include "crypt_ealinit.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
-#include "crypt_errno.h"
 
 static CRYPT_EAL_MdCTX *MdAllocCtx(CRYPT_MD_AlgId id, const EAL_MdUnitaryMethod *method)
 {

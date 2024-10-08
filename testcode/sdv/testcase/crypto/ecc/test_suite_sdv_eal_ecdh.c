@@ -677,3 +677,210 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_GET_PRV_PROVIDER_API_TC001
+ * @title  ECDH CRYPT_EAL_PkeyGetPrv: Test the validity of parameters for the default provider.
+ * @precon Registering memory-related functions.
+ *         private key
+ * @brief
+ *    1. Create the context of the ecdh algorithm using the default provider, expected result 1
+ *    2. Set the para by eccId(p-224), expected result 2
+ *    3. Get the private key when there is no private key, expected result 3
+ *    4. Set the private key, expected result 4
+ *    5. Call the CRYPT_EAL_PkeyGetPrv method:
+ *       (1) pkey = null, expected result 5
+ *       (2) prv = null, expected result 6
+ *       (3) pkey.id != prv.id, expected result 7
+ *       (4) Correct parameters., expected result 8
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2. CRYPT_SUCCESS
+ *    3. CRYPT_ECC_PKEY_ERR_EMPTY_KEY
+ *    4. CRYPT_SUCCESS
+ *    5-6. CRYPT_NULL_INPUT
+ *    7. CRYPT_EAL_ERR_ALGID
+ *    8. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_GET_PRV_PROVIDER_API_TC001(Hex *prvKey)
+{
+    ASSERT_TRUE(EAL_PkeyGetPrv_Provider_Api_TC001(CRYPT_PKEY_ECDH, prvKey) == 0);
+exit:
+    return;
+}
+/* END_CASE */
+
+
+/**
+ * @test   SDV_CRYPTO_ECDH_GET_PUB_PROVIDER_API_TC001
+ * @title  ECDH CRYPT_EAL_PkeyGetPub: Test the validity of parameters for the default provider.
+ * @precon Registering memory-related functions.
+ *         public key point
+ * @brief
+ *    1. Create the context of the ecdh algorithm using the default provider, expected result 1
+ *    2. Set the para by eccId(p-224), expected result 2
+ *    3. Get the public key when there is no public key, expected result 3
+ *    4. Set the public key, expected result 4
+ *    5. Call the CRYPT_EAL_PkeyGetPub method:
+ *       (1) pkey = null, expected result 5
+ *       (2) pub = null, expected result 6
+ *       (3) pkey.id != pub.id, expected result 7
+ *       (4) Correct parameters, expected result 8
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2. CRYPT_SUCCESS
+ *    3. CRYPT_ECC_PKEY_ERR_EMPTY_KEY
+ *    4. CRYPT_SUCCESS
+ *    5-6. CRYPT_NULL_INPUT
+ *    7. CRYPT_EAL_ERR_ALGID
+ *    8. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_GET_PUB_PROVIDER_API_TC001(Hex *pubKeyX, Hex *pubKeyY)
+{
+    ASSERT_TRUE(EAL_PkeyGetPub_Provider_Api_TC001(CRYPT_PKEY_ECDH, pubKeyX, pubKeyY) == 0);
+exit:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_DUP_CTX_PROVIDER_API_TC001
+ * @title  ECDH CRYPT_EAL_PkeyDupCtx test for the default provider.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Create the context(pKeyCtx) of the ecdh algorithm using the default provider, expected result 1
+ *    2. Set the para by eccId(p-224/256/384/512, bp256r1/384r1/512/r1), expected result 2
+ *    3. Call the CRYPT_EAL_PkeyDupCtx to dup context where the parameter is null, expected result 3
+ *    4. Call the CRYPT_EAL_PkeyDupCtx to dup context(newCtx), expected result 4
+ *    5. Get the reference count, expected result 5
+ *    6. Compare the pkey ids obtained from pKeyCtx and newCtx, , expected result 6
+ *    7. Compare the curve ids obtained from pKeyCtx and newCtx, expected result 7
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2. CRYPT_SUCCESSY
+ *    3. Return null.
+ *    4. Return non-null.
+ *    5. The reference count is 1.
+ *    6-7. Both are the same.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_DUP_CTX_PROVIDER_API_TC001(int paraId)
+{
+    CRYPT_EAL_PkeyCtx *pKeyCtx = NULL;
+    CRYPT_EAL_PkeyCtx *newCtx = NULL;
+
+    pKeyCtx = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    ASSERT_TRUE(pKeyCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pKeyCtx, (CRYPT_PKEY_ParaId)paraId) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyDupCtx(NULL) == NULL);
+
+    newCtx = CRYPT_EAL_PkeyDupCtx(pKeyCtx);
+    ASSERT_TRUE(newCtx != NULL);
+
+    ASSERT_EQ(newCtx->references.count, 1);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetId(pKeyCtx) == CRYPT_EAL_PkeyGetId(newCtx));
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetParaId(pKeyCtx) == CRYPT_EAL_PkeyGetParaId(newCtx));
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pKeyCtx);
+    CRYPT_EAL_PkeyFreeCtx(newCtx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_CMP_PROVIDER_FUNC_TC001
+ * @title  ECDH: CRYPT_EAL_PkeyCmp test for the default provider.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Create the contexts(ctx1, ctx2) of the ecdh algorithm using the default provider, expected result 1
+ *    2. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 2
+ *    3. Set para id CRYPT_ECC_NISTP224 and public key for ctx1, expected result 3
+ *    4. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 4
+ *    5. Set para id CRYPT_ECC_NISTP256 for ctx2, expected result 5
+ *    6. Set public key for ctx2, expected result 6
+ *    7. Set para id CRYPT_ECC_NISTP224 and public key for ctx2, expected result 7
+ *    8. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 8
+ * @expect
+ *    1. Success, and contexts are not NULL.
+ *    2. CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL
+ *    3. CRYPT_SUCCESS
+ *    4. CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL
+ *    5. CRYPT_SUCCESS
+ *    6. CRYPT_ECC_ERR_POINT_CODE
+ *    7. CRYPT_SUCCESS
+ *    8. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_CMP_PROVIDER_FUNC_TC001(Hex *pubKeyX, Hex *pubKeyY)
+{
+    ASSERT_TRUE(EAL_PkeyCmp_Api_TC001(CRYPT_PKEY_ECDH, pubKeyX, pubKeyY) == 0);
+exit:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_EXCH_PROVIDER_FUNC_TC001
+ * @title  ECDH key exchange test: set the key and exchange the key.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Create two contexts(ecdhPkey, peerEcdhPubPkey) of the ECDH algorithm, expected result 1
+ *    2. Init the drbg, expected result 2
+ *    3. ecdhPkey: Set elliptic curve type(p-224/256/384/512, bp256r1/384r1/512/r1) and private key, expected result 3
+ *    4. peerEcdhPubPkey: Set elliptic curve type(p-224/256/384/512, bp256r1/384r1/512/r1) and public key(compressed/
+ *       uncompressed/hybrid), expected result 4
+ *    5. Compute the shared key, expected result 5
+ *    6. Compare the output shared secret and shared secret vector, expected result 6
+ * @expect
+ *    1. Success, and two contexts are not NULL.
+ *    2-5. CRYPT_SUCCESS
+ *    6. The two shared secrets are the same.
+ */
+void SDV_CRYPTO_ECDH_EXCH_PROVIDER_FUNC_TC001(    int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, Hex *shareKeyVector)
+{
+    int ret;
+    CRYPT_EAL_PkeyCtx *ecdhPkey = NULL;
+    CRYPT_EAL_PkeyCtx *peerEcdhPubPkey = NULL;
+    CRYPT_EAL_PkeyPrv ecdhPrvkey = {0};
+    CRYPT_EAL_PkeyPub peerEcdhPubkey;
+    KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
+    uint8_t *shareKey = NULL;
+    uint32_t shareKeyLen;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    ecdhPkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    peerEcdhPubPkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    ASSERT_TRUE(ecdhPkey != NULL && peerEcdhPubPkey != NULL);
+
+    /* Local: Set elliptic curve type and private key. */
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdhPkey, eccId), CRYPT_SUCCESS);
+    Ecc_SetPrvKey(&ecdhPrvkey, CRYPT_PKEY_ECDH, prvKeyVector->x, prvKeyVector->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ecdhPkey, &ecdhPrvkey), CRYPT_SUCCESS);
+
+    /* Peer: Set elliptic curve type and public key. */
+    /* Create a key structure to store the public key. */
+    ret = EccPointToBuffer(pubKeyX, pubKeyY, pointFormat, &pubKeyVector);
+    ASSERT_TRUE_AND_LOG("EccPointToVector", ret == CRYPT_SUCCESS);
+    Ecc_SetPubKey(&peerEcdhPubkey, CRYPT_PKEY_ECDH, pubKeyVector.data, pubKeyVector.len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(peerEcdhPubPkey, eccId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(peerEcdhPubPkey, &peerEcdhPubkey), CRYPT_SUCCESS);
+
+    /* Compute share secret. */
+    shareKeyLen = CRYPT_EAL_PkeyGetKeyLen(ecdhPkey);
+    ASSERT_TRUE(shareKeyLen > shareKeyVector->len);
+    shareKey = (uint8_t *)malloc(shareKeyVector->len);
+    ASSERT_TRUE(shareKey != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ecdhPkey, peerEcdhPubPkey, shareKey, &shareKeyLen), CRYPT_SUCCESS);
+    ASSERT_TRUE_AND_LOG("Compare ShareKey Len", shareKeyLen == shareKeyVector->len);
+    ASSERT_COMPARE("Compare ShareKey", shareKey, shareKeyLen, shareKeyVector->x, shareKeyVector->len);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(ecdhPkey);
+    CRYPT_EAL_PkeyFreeCtx(peerEcdhPubPkey);
+    CRYPT_EAL_RandDeinit();
+    free(shareKey);
+}

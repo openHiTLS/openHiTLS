@@ -89,7 +89,7 @@ void CRYPT_DSA_FreePara(CRYPT_DSA_Para *para);
  * @retval BN error code.            An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS             Set successfully.
  */
-int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DSA_Para *para);
+int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *param);
 
 /**
  * @ingroup dsa
@@ -103,7 +103,7 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DSA_Para *para);
  * @retval BN error code.            An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS             Get successfully.
  */
-int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPara *para);
+int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup dsa

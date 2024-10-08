@@ -62,6 +62,7 @@ typedef struct {
 
 /* provide asymmetric primitive method */
 typedef void *(*PkeyNew)(void);
+typedef void* (*PkeyProvNew)(void *provCtx, int32_t algId);
 typedef void *(*PkeyDup)(void *key);
 typedef void (*PkeyFree)(void *key);
 typedef void *(*PkeyNewParaById)(int32_t id);
@@ -89,12 +90,16 @@ typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t data
 typedef int32_t (*PkeyCheck)(const void *key);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
-
+typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
+typedef int32_t (*PkeyParse)(void *ctx);
+typedef int32_t (*PkeyEncode)(const void *ctx);
+typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
 /**
 * @ingroup  EAL
 *
 * Method structure of the EAL
 */
+
 typedef struct EAL_PkeyMethod {
     uint32_t id;
     PkeyNew newCtx;                         // Apply for a key pair structure resource.
@@ -103,13 +108,7 @@ typedef struct EAL_PkeyMethod {
     PkeySetPara setPara;                    // Set parameters of the key pair structure.
     PkeyGetPara getPara;                    // Obtain parameters from the key pair structure.
     PkeyGen gen;                            // Generate a key pair.
-    PkeyBits bits;                          // Obtain the key length.
-    PkeyGetSignLen signLen;                 // Obtain the signature data length.
     PkeyCtrl ctrl;                          // Control function.
-    PkeyNewParaById newParaById;            // Generate parameters by parameter ID.
-    PkeyGetParaId getParaId;                // Obtain the parameter ID.
-    PkeyFreePara freePara;                  // Free key parameters.
-    PkeyNewPara newPara;                    // Generate key parameters.
     PkeySetPub setPub;                      // Set the public key.
     PkeySetPrv setPrv;                      // Set the private key.
     PkeyGetPub getPub;                      // Obtain the public key.
@@ -121,9 +120,34 @@ typedef struct EAL_PkeyMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
-    PkeyGetSecBits getSecBits;              // get key security bits
+    PkeyCopyParam copyPara;                 // copy parameter from source to destination
 } EAL_PkeyMethod;
 
+typedef struct EAL_PkeyUnitaryMethod {
+    PkeyNew newCtx;                         // Apply for a key pair structure resource.
+    PkeyProvNew provNewCtx;                 // Creat a key pair structure resource for provider
+    PkeyDup dupCtx;                         // Copy key pair structure resource.
+    PkeyFree freeCtx;                       // Free the key structure.
+    PkeySetPara setPara;                    // Set parameters of the key pair structure.
+    PkeyGetPara getPara;                    // Obtain parameters from the key pair structure.
+    PkeyGen gen;                            // Generate a key pair.
+    PkeyCtrl ctrl;                          // Control function.
+    PkeySetPub setPub;                      // Set the public key.
+    PkeySetPrv setPrv;                      // Set the private key.
+    PkeyGetPub getPub;                      // Obtain the public key.
+    PkeyGetPrv getPrv;                      // Obtain the private key.
+    PkeySign sign;                          // Sign the signature.
+    PkeyVerify verify;                      // Verify the signature.
+    PkeyComputeShareKey computeShareKey;    // Calculate the shared key.
+    PkeyCrypt encrypt;                      // Encrypt.
+    PkeyCrypt decrypt;                      // Decrypt.
+    PkeyCheck check;                        // Check the consistency of the key pair.
+    PkeyCmp cmp;                            // Compare keys and parameters.
+    PkeyCopyParam copyPara;                 // Copy parameter from source to destination
+    PkeyParse parse;
+    PkeyEncode encode;
+    PkeyRecover recover;
+} EAL_PkeyUnitaryMethod;
 /**
  * @ingroup  sym_algid
  * Symmetric encryption/decryption algorithm ID

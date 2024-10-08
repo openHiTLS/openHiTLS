@@ -278,7 +278,7 @@ ERR :
     return NULL;
 }
 
-int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para)
+int32_t CRYPT_DH_SetParaEx(CRYPT_DH_Ctx *ctx, CRYPT_DH_Para *para)
 {
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -294,7 +294,7 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para)
     CRYPT_DH_FreePara(ctx->para);
     ctx->x = NULL;
     ctx->y = NULL;
-    ctx->para = ParaDup(para);
+    ctx->para = para;
     if (ctx->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -302,10 +302,44 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_DhPara *para)
+int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
+{
+    if (ctx == NULL || para==NULL || para->param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_DH_Para *dhPara = CRYPT_DH_NewPara((CRYPT_DhPara *)para->param);
+    if (dhPara==NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = ParaDataCheck(dhPara);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_DH_FreePara(dhPara);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BN_Destroy(ctx->x);
+    BN_Destroy(ctx->y);
+    CRYPT_DH_FreePara(ctx->para);
+    ctx->x = NULL;
+    ctx->y = NULL;
+    ctx->para = dhPara;
+    if (ctx->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_Param *param)
 {
     int32_t ret;
-
+    if (param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_DhPara *para = (CRYPT_DhPara *)param->param;
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -781,14 +815,54 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
     return CRYPT_SUCCESS;
 }
 
+int32_t CRYPT_SET_PARA_BY_ID(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
+{
+    CRYPT_DH_Para *para = CRYPT_DH_NewParaById(id);
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = CRYPT_DH_SetParaEx(ctx, para);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_DH_FreePara(para);
+        return ret;
+    }
+    return ret;
+}
+
 int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
 {
-    if (ctx == NULL || val == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len == (uint32_t)sizeof(int) && opt == CRYPT_CTRL_UP_REFERENCES) {
-        return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+    switch (opt) {
+        case CRYPT_CTRL_GET_PARAID:
+            return CRYPT_DH_GetParaId(ctx);
+        case CRYPT_CTRL_GET_BITS:
+            return CRYPT_DH_GetBits(ctx);
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_DH_GetSecBits(ctx);
+        case CRYPT_CTRL_SET_PARA_BY_ID:
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+                return CRYPT_NULL_INPUT;
+            }
+            if (len == (uint32_t)sizeof(CRYPT_PKEY_ParaId)) {
+                return CRYPT_SET_PARA_BY_ID(ctx, *(CRYPT_PKEY_ParaId*)val);
+            }
+            break;
+        case CRYPT_CTRL_UP_REFERENCES:
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+                return CRYPT_NULL_INPUT;
+            }
+            if (len == (uint32_t)sizeof(int)) {
+                return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+            }
+            break;
+        default:
+            break;
     }
     BSL_ERR_PUSH_ERROR(CRYPT_DH_UNSUPPORTED_CTRL_OPTION);
     return CRYPT_DH_UNSUPPORTED_CTRL_OPTION;

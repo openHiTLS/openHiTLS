@@ -48,31 +48,31 @@ static void *CRYPT_EAL_DefMdNewCtx(void *provCtx, int32_t algId)
             mdCtx = CRYPT_SHA2_256_NewCtx();
             break;
         case CRYPT_MD_SHA384:
-            mdCtx = CRYPT_SHA2_384_NewCtx();;
+            mdCtx = CRYPT_SHA2_384_NewCtx();
             break;
         case CRYPT_MD_SHA512:
-            mdCtx = CRYPT_SHA2_512_NewCtx();;
+            mdCtx = CRYPT_SHA2_512_NewCtx();
             break;
         case CRYPT_MD_SHA3_224:
-            mdCtx = CRYPT_SHA3_256_NewCtx();;
+            mdCtx = CRYPT_SHA3_256_NewCtx();
             break;
         case CRYPT_MD_SHA3_256:
-            mdCtx = CRYPT_SHA3_256_NewCtx();;
+            mdCtx = CRYPT_SHA3_256_NewCtx();
             break;
         case CRYPT_MD_SHA3_384:
-            mdCtx = CRYPT_SHA3_256_NewCtx();;
+            mdCtx = CRYPT_SHA3_256_NewCtx();
             break;
         case CRYPT_MD_SHA3_512:
-            mdCtx = CRYPT_SHA3_256_NewCtx();;
+            mdCtx = CRYPT_SHA3_256_NewCtx();
             break;
         case CRYPT_MD_SHAKE128:
-            mdCtx = CRYPT_SHAKE256_NewCtx();;
+            mdCtx = CRYPT_SHAKE256_NewCtx();
             break;
         case CRYPT_MD_SHAKE256:
-            mdCtx = CRYPT_SHAKE256_NewCtx();;
+            mdCtx = CRYPT_SHAKE256_NewCtx();
             break;
         case CRYPT_MD_SM3:
-            mdCtx = CRYPT_SM3_NewCtx();;
+            mdCtx = CRYPT_SM3_NewCtx();
             break;
     }
     if (mdCtx == NULL) {
