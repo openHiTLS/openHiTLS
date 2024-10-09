@@ -46,7 +46,6 @@ typedef struct {
 #define CRYPT_EAL_PKEY_EXCH_OPERATE     2
 #define CRYPT_EAL_PKEY_SIGN_OPERATE     4
 
-#define DEFAULT_PROVIDER_PARAM_TYPE 0
 /**
  * @ingroup crypt_eal_pkey
  *
@@ -122,7 +121,8 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t operId, const char *attrName);
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t operId,
+    const char *attrName);
 
 /**
  * @ingroup crypt_eal_pkey

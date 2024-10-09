@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------------------------------------
+ /*---------------------------------------------------------------------------------------------
  *  This file is part of the openHiTLS project.
  *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
  *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
@@ -140,16 +140,16 @@ typedef void *(*CRYPT_EAL_ImplPkeyMgmtNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetParam)(void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGenKey)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPrv)(void *ctx, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPrv)(void *ctx, const CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, const CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPrv)(const void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPub)(const void *ctx, CRYPT_Param *param);
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtDupCtx)(const void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCheck)(const void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCompare)(const void *ctx1, const void *ctx2);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCopyParam)(const void *src, void *dest);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtEncode)(const void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx, const CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtEncode)(const void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 

@@ -137,56 +137,56 @@ int32_t CRYPT_SM2_Verify(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t
  * @brief SM2 Set the private key data.
  *
  * @param ctx [OUT] sm2 context structure
- * @param prv [IN] External private key data
+ * @param para [IN] External private key data
  *
  * @retval CRYPT_NULL_INPUT     Error null pointer input
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        set successfully.
  */
-int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Sm2Prv *prv);
+int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup sm2
  * @brief SM2 Set the public key data.
  *
  * @param ctx [OUT] sm2 context structure
- * @param pub [IN] External public key data
+ * @param para [IN] External public key data
  *
  * @retval CRYPT_NULL_INPUT     Invalid null pointer input
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        set successfully.
  */
-int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_DsaPub *pub);
+int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup sm2
  * @brief SM2 Obtain the private key data.
  *
  * @param ctx [IN] sm2 context structure
- * @param prv [OUT] External private key data
+ * @param para [OUT] External private key data
  *
  * @retval CRYPT_NULL_INPUT             Error null pointer input
  * @retval CRYPT_ECC_PKEY_ERR_EMPTY_KEY The key is empty.
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                obtained successfully.
  */
-int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_DsaPrv *prv);
+int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup sm2
  * @brief SM2 Obtain the public key data.
  *
  * @param ctx [IN] sm2 context structure
- * @param pub [OUT] External public key data
+ * @param para [OUT] External public key data
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input
  * @retval CRYPT_ECC_PKEY_ERR_EMPTY_KEY The key is empty.
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_DsaPub *pub);
+int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup sm2

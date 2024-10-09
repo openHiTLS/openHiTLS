@@ -302,12 +302,12 @@ CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para)
 
 int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
 {
-    if (ctx == NULL || para==NULL || para->param == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     CRYPT_RSA_Para *rsaPara = CRYPT_RSA_NewPara((CRYPT_RsaPara *)para->param);
-    if (rsaPara==NULL) {
+    if (rsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
     }

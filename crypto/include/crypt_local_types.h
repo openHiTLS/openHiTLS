@@ -60,6 +60,8 @@ typedef struct {
     EAL_MdMethod *mdMeth;
 } EAL_CidToMdMeth;
 
+#define DEFAULT_PROVIDER_PARAM_TYPE 0
+
 /* provide asymmetric primitive method */
 typedef void *(*PkeyNew)(void);
 typedef void* (*PkeyProvNew)(void *provCtx, int32_t algId);
@@ -74,10 +76,10 @@ typedef int32_t (*PkeyGen)(void *key);
 typedef uint32_t (*PkeyBits)(void *key);
 typedef uint32_t (*PkeyGetSignLen)(void *key);
 typedef int32_t (*PkeyCtrl)(void *key, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
-typedef int32_t (*PkeySetPrv)(void *key, const void *prv);
-typedef int32_t (*PkeySetPub)(void *key, const void *pub);
-typedef int32_t (*PkeyGetPrv)(const void *key, void *prv);
-typedef int32_t (*PkeyGetPub)(const void *key, void *pub);
+typedef int32_t (*PkeySetPrv)(void *key, const void *para);
+typedef int32_t (*PkeySetPub)(void *key, const void *para);
+typedef int32_t (*PkeyGetPrv)(const void *key, void *para);
+typedef int32_t (*PkeyGetPub)(const void *key, void *para);
 typedef void *(*PkeyNewPara)(const void *para);
 typedef int32_t (*PkeySign)(const void *key, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
@@ -91,8 +93,8 @@ typedef int32_t (*PkeyCheck)(const void *key);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
 typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
-typedef int32_t (*PkeyParse)(void *ctx);
-typedef int32_t (*PkeyEncode)(const void *ctx);
+typedef int32_t (*PkeyParse)(void *ctx, const void *para);
+typedef int32_t (*PkeyEncode)(const void *ctx, void *para);
 typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
 /**
 * @ingroup  EAL

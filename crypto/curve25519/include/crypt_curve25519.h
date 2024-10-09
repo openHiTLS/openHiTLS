@@ -82,54 +82,54 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, CRYPT_PkeyCtrl opt, vo
  * @brief curve25519 Set the public key.
  *
  * @param pkey [IN] curve25519 Key pair structure
- * @param pub  [IN] Public key
+ * @param para  [IN] Public key
  *
  * @retval CRYPT_SUCCESS                        set successfully.
  * @retval CRYPT_NULL_INPUT                     If any input parameter is empty
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        pubKeyLen is not equal to curve25519 public key length
  */
-int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Pub *pub);
+int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para);
 
 /**
  * @ingroup curve25519
 * @brief curve25519 Obtain the public key.
  *
  * @param pkey [IN] curve25519 Key pair structure
- * @param pub  [OUT] Public key
+ * @param para  [OUT] Public key
  *
  * @retval CRYPT_SUCCESS                        set successfully.
  * @retval CRYPT_NULL_INPUT                     If any input parameter is empty
  * @retval CRYPT_CURVE25519_NO_PUBKEY           The key pair has no public key.
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        pubKeyLen is less than curve25519 public key length.
  */
-int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Pub *pub);
+int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para);
 
 /**
  * @ingroup curve25519
  * @brief curve25519 Set the private key.
  *
  * @param pkey [IN] curve25519 Key pair structure
- * @param prv  [IN] Private key
+ * @param para  [IN] Private key
  *
  * @retval CRYPT_SUCCESS                        set successfully.
  * @retval CRYPT_NULL_INPUT                     If any input parameter is empty
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        prvKeyLen is not equal to curve25519 private key length
  */
-int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Prv *prv);
+int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para);
 
 /**
  * @ingroup curve25519
 * @brief curve25519 Obtain the private key.
  *
  * @param pkey [IN] curve25519 Key pair structure
- * @param prv [OUT] private key
+ * @param para [OUT] private key
  *
  * @retval CRYPT_SUCCESS                        successfully set.
  * @retval CRYPT_NULL_INPUT                     Any input parameter is empty.
  * @retval CRYPT_CURVE25519_NO_PRVKEY           The key pair has no private key.
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        prvKeyLen is less than the private key length of curve25519.
  */
-int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Prv *prv);
+int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para);
 
 /**
  * @ingroup curve25519
