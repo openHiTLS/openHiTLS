@@ -18,12 +18,6 @@
 #include "crypt_errno.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
-#include "crypt_eal_pkey.h"
-
-struct {
-    void *pkeyCtx;
-    int32_t algId;
-} CRYPT_EAL_DefPKeyCtx;
 
 void *CRYPT_EAL_DefPkeyMgmtNewCtx(void *provCtx, int32_t algId)
 {

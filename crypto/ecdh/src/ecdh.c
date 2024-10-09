@@ -82,10 +82,6 @@ void CRYPT_ECDH_FreePara(CRYPT_EcdhPara *para)
 
 int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *param)
 {
-    if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     CRYPT_EccPara *para = (CRYPT_EccPara *)param->param;
     return ECC_GetPara(ctx, para);
 }
@@ -111,12 +107,12 @@ int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPara *para)
 
 int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *para)
 {
-    if (ctx == NULL || para==NULL || para->param == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     CRYPT_EcdhPara *ecdhPara = CRYPT_ECDH_NewPara((CRYPT_EccPara *)para->param);
-    if (ecdhPara==NULL) {
+    if (ecdhPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
     }
@@ -137,24 +133,24 @@ uint32_t CRYPT_ECDH_GetBits(const CRYPT_ECDH_Ctx *ctx)
     return ECC_PkeyGetBits(ctx);
 }
 
-int32_t CRYPT_ECDH_SetPrvKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPrv *prv)
+int32_t CRYPT_ECDH_SetPrvKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *para)
 {
-    return ECC_PkeySetPrvKey(ctx, prv);
+    return ECC_PkeySetPrvKey(ctx, para);
 }
 
-int32_t CRYPT_ECDH_SetPubKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPub *pub)
+int32_t CRYPT_ECDH_SetPubKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *para)
 {
-    return ECC_PkeySetPubKey(ctx, pub);
+    return ECC_PkeySetPubKey(ctx, para);
 }
 
-int32_t CRYPT_ECDH_GetPrvKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPrv *prv)
+int32_t CRYPT_ECDH_GetPrvKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *para)
 {
-    return ECC_PkeyGetPrvKey(ctx, prv);
+    return ECC_PkeyGetPrvKey(ctx, para);
 }
 
-int32_t CRYPT_ECDH_GetPubKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPub *pub)
+int32_t CRYPT_ECDH_GetPubKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *para)
 {
-    return ECC_PkeyGetPubKey(ctx, pub);
+    return ECC_PkeyGetPubKey(ctx, para);
 }
 
 int32_t CRYPT_ECDH_Gen(CRYPT_ECDH_Ctx *ctx)
@@ -251,14 +247,7 @@ int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_ECDH_GetSecBits(ctx);
         case CRYPT_CTRL_SET_PARA_BY_ID:
-            if (val == NULL) {
-                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-                return CRYPT_NULL_INPUT;
-            }
-            if (len == (uint32_t)sizeof(CRYPT_PKEY_ParaId)) {
-                CRYPT_EcdhPara *para = CRYPT_ECDH_NewParaById(*(CRYPT_PKEY_ParaId *)val);
-                return CRYPT_ECDH_SetParaEx(ctx, para);
-            }
+            return CRYPT_ECDH_SetParaEx(ctx, CRYPT_ECDH_NewParaById(*(CRYPT_PKEY_ParaId *)val));
         default:
             break;
     }

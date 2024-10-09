@@ -9,13 +9,10 @@
 #include "hitls_build.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_dsa.h"
-#include "crypt_curve25519.h"
 #include "crypt_rsa.h"
-#include "crypt_dh.h"
 #include "crypt_ecdsa.h"
-#include "crypt_ecdh.h"
 #include "crypt_sm2.h"
-#include "crypt_bn.h"
+#include "crypt_curve25519.h"
 
 const CRYPT_EAL_Func defSignDsa[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, CRYPT_DSA_Sign},

@@ -192,7 +192,7 @@ exit:
  *    2. Call the CRYPT_EAL_PkeyCtrl, opt is CRYPT_CTRL_UP_REFERENCES, len is 0, expected result 3
  * @expect
  *    1. Success, and context is not NULL.
- *    2. CRYPT_EAL_ALG_NOT_SUPPORT
+ *    2. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
  *    3. CRYPT_NULL_INPUT
  */
 /* BEGIN_CASE */
@@ -205,8 +205,8 @@ void SDV_CRYPTO_SM2_CTRL_API_TC001(void)
     ASSERT_TRUE(ctx != NULL);
 
     EAL_MdMethod hashMethod = {0};
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_HASH_METHOD, &hashMethod, sizeof(EAL_MdMethod)) ==
-                CRYPT_EAL_ALG_NOT_SUPPORT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &hashMethod, sizeof(EAL_MdMethod)) ==
+                CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_UP_REFERENCES, &ref, 0), CRYPT_NULL_INPUT);
 
 exit:

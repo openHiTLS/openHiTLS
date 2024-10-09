@@ -185,7 +185,7 @@ static int Ecc_GenKey(int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
     /* Set point format*/
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, 4, &pointFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_ECC_POINT_FORMAT, &pointFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
 
     /* Get public key */
     ecdsaPubKey.id = algId;

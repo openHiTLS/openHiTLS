@@ -366,7 +366,6 @@ typedef enum {
  * Set and obtain internal parameters of pkey.
  */
 typedef enum {
-    CRYPT_CTRL_SET_ED25519_HASH_METHOD, /**< ED25519 Set the hash method. */
     CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,    /**< RSA set the signature padding mode to EMSA_PKCSV15. */
     CRYPT_CTRL_SET_RSA_EMSA_PSS,        /**< RSA set the signature padding mode to EMSA_PSS. */
     CRYPT_CTRL_SET_RSA_SALT,            /**< When the RSA algorithm is used for PSS signature, the salt data is
@@ -391,9 +390,7 @@ typedef enum {
     CRYPT_CTRL_SET_RSA_FLAG,            /**< RSA set the flag. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15,   /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15. */
-    CRYPT_CTRL_SET_SM9_HASH_METHOD,     /**< SM9 Set the hash method. */
     CRYPT_CTRL_SET_SM2_USER_ID,
-    CRYPT_CTRL_SET_SM2_HASH_METHOD,     /* SM2 calculate the hash value by set SM3. */
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */
     CRYPT_CTRL_GENE_SM2_R,              /* SM2 obtain the R value. */
     CRYPT_CTRL_SET_SM2_R,               /* SM2 set the R value. */

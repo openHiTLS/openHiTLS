@@ -179,7 +179,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
  * @brief DH Set the private key.
  *
  * @param ctx [OUT] dh Context structure
- * @param prv [IN] Private key
+ * @param para [IN] Private key
  *
  * @retval CRYPT_NULL_INPUT         Invalid null pointer input
  * @retval CRYPT_DH_PARA_ERROR      The key parameter is incorrect.
@@ -188,14 +188,14 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv);
+int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup dh
  * @brief DH Set the public key data.
  *
  * @param ctx [OUT] dh Context structure
- * @param pub [IN] Public key data
+ * @param para [IN] Public key data
  *
  * @retval CRYPT_NULL_INPUT         Error null pointer input
  * @retval CRYPT_DH_PARA_ERROR      The key parameter data is incorrect.
@@ -204,14 +204,14 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPub *pub);
+int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup dh
  * @brief DH Obtain the private key data.
  *
  * @param ctx [IN] dh Context structure
- * @param prv [OUT] Private key data
+ * @param para [OUT] Private key data
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input
  * @retval CRYPT_DH_BUFF_LEN_NOT_ENOUGH The buffer length is insufficient.
@@ -219,14 +219,14 @@ int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPub *pub);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                obtained successfully.
  */
-int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv);
+int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup dh
  * @brief DH Obtain the public key data.
  *
  * @param ctx [IN] dh Context structure
- * @param pub [OUT] Public key data
+ * @param para [OUT] Public key data
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input
  * @retval CRYPT_DH_BUFF_LEN_NOT_ENOUGH The buffer length is insufficient.
@@ -234,7 +234,7 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPub *pub);
+int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup dh

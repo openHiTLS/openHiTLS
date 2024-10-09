@@ -190,7 +190,7 @@ int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t
  * @brief Set the private key data for the DSA.
  *
  * @param ctx [IN] DSA context structure
- * @param prv [IN] External private key data
+ * @param para [IN] External private key data
  *
  * @retval CRYPT_NULL_INPUT          Invalid null pointer input.
  * @retval CRYPT_DSA_ERR_KEY_PARA    The key parameter data is incorrect.
@@ -199,14 +199,14 @@ int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t
  * @retval BN error.                 An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS             Set successfully.
  */
-int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPrv *prv);
+int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup dsa
  * @brief Set the public key data for the DSA.
  *
  * @param ctx [IN] DSA context structure
- * @param pub [IN] External public key data
+ * @param para [IN] External public key data
  *
  * @retval CRYPT_NULL_INPUT         Error null pointer input.
  * @retval CRYPT_DSA_ERR_KEY_PARA   The key parameter data is incorrect.
@@ -215,14 +215,14 @@ int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPrv *prv);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPub *pub);
+int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup dsa
  * @brief Obtain the private key data of the DSA.
  *
  * @param ctx [IN] DSA context structure
- * @param prv [OUT] External private key data
+ * @param para [OUT] External private key data
  *
  * @retval CRYPT_NULL_INPUT                 Invalid null pointer input.
  * @retval CRYPT_DSA_BUFF_LEN_NOT_ENOUGH    The buffer length is insufficient.
@@ -230,14 +230,14 @@ int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPub *pub);
  * @retval BN error.                        An error occurs in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
-int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv);
+int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup dsa
  * @brief Obtain the public key data of the DSA.
  *
  * @param ctx [IN] DSA context structure
- * @param pub [OUT] External public key data
+ * @param para [OUT] External public key data
  *
  * @retval CRYPT_NULL_INPUT                 Invalid null pointer input.
  * @retval CRYPT_DSA_BUFF_LEN_NOT_ENOUGH    The buffer length is insufficient.
@@ -245,7 +245,7 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv);
  * @retval BN error.                        An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
-int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPub *pub);
+int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup dsa

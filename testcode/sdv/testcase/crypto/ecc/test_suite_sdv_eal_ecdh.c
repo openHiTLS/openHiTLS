@@ -157,19 +157,17 @@ exit:
  *    1. Create the context of the ecdh algorithm, expected result 1
  *    2. Call the CRYPT_EAL_PkeyCtrl method:
  *       (1) opt = CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, expected result 2
- *       (2) opt = CRYPT_CTRL_SET_ED25519_HASH_METHOD, expected result 3
- *       (3) opt = CRYPT_CTRL_SET_ECC_POINT_FORMAT, expected result 4
- *       (4) opt = CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, expected result 5
- *       (5) opt = CRYPT_CTRL_SET_SM2_USER_ID, expected result 6
- *       (6) opt = CRYPT_CTRL_SET_RSA_PADDING, expected result 8
+ *       (2) opt = CRYPT_CTRL_SET_ECC_POINT_FORMAT, expected result 3
+ *       (3) opt = CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, expected result 4
+ *       (4) opt = CRYPT_CTRL_SET_SM2_USER_ID, expected result 5
+ *       (5) opt = CRYPT_CTRL_SET_RSA_PADDING, expected result 6
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
- *    3. CRYPT_EAL_ALG_NOT_SUPPORT
+ *    3. CRYPT_SUCCESS
  *    4. CRYPT_SUCCESS
- *    5. CRYPT_SUCCESS
+ *    5. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
  *    6. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
- *    7. CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDH_CTRL_API_TC001(int type, int expect)

@@ -181,7 +181,7 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
  * @brief RSA Set the private key information.
  *
  * @param ctx [OUT] rsa context structure
- * @param prv [IN] Private key data
+ * @param para [IN] Private key data
  *
  * @retval CRYPT_NULL_INPUT             Error null pointer input
  * @retval CRYPT_RSA_ERR_KEY_BITS       The key length does not meet the requirements.
@@ -191,14 +191,14 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
  * @retval BN error                     An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                The private key is successfully set.
  */
-int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv);
+int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup rsa
  * @brief RSA Set the public key information.
  *
  * @param ctx [OUT] RSA context structure
- * @param pub [IN] Public key data
+ * @param para [IN] Public key data
  *
  * @retval CRYPT_NULL_INPUT          Error null pointer input
  * @retval CRYPT_RSA_ERR_KEY_BITS    The key length does not meet the requirements.
@@ -207,33 +207,33 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv);
  * @retval BN error                  An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS             The public key is successfully set.
  */
-int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub);
+int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup rsa
  * @brief RSA Obtain the private key information.
  *
  * @param ctx [IN] RSA context structure
- * @param prv [OUT] Private key data
+ * @param para [OUT] Private key data
  *
  * @retval CRYPT_NULL_INPUT Invalid null pointer input
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The private key is obtained successfully.
  */
-int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPrv *prv);
+int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup rsa
  * @brief RSA Obtain the public key information.
  *
  * @param ctx [IN] RSA context structure
- * @param pub [OUT] Public key data
+ * @param para [OUT] Public key data
  *
  * @retval CRYPT_NULL_INPUT Invalid null pointer input
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The public key is obtained successfully.
  */
-int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPub *pub);
+int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup rsa

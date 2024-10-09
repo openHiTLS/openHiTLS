@@ -45,20 +45,14 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
     }
     (void)memset_s(ctx, sizeof(CRYPT_CURVE25519_Ctx), 0, sizeof(CRYPT_CURVE25519_Ctx));
 
+    ctx->hashMethod = EAL_MdFindMethod(CRYPT_MD_SHA512);
+    if (ctx->hashMethod == NULL) {
+        CRYPT_CURVE25519_FreeCtx(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return NULL;
+    }
     ctx->keyType = CURVE25519_NOKEY;
     BSL_SAL_ReferencesInit(&(ctx->references));
-    const EAL_MdMethod *mdMethod = EAL_MdFindMethod(CRYPT_MD_SHA512);
-    if (mdMethod == NULL) {
-        CRYPT_CURVE25519_FreeCtx(ctx);
-        BSL_ERR_PUSH_ERROR(CRYPT_EVENT_ERR);
-        return NULL;
-    }
-    int32_t ret = CRYPT_CURVE25519_Ctrl(ctx, CRYPT_CTRL_SET_ED25519_HASH_METHOD, (EAL_MdMethod *)(uintptr_t)mdMethod, sizeof(EAL_MdMethod));
-    if (ret != CRYPT_SUCCESS) {
-        CRYPT_CURVE25519_FreeCtx(ctx);
-        BSL_ERR_PUSH_ERROR(CRYPT_EVENT_ERR);
-        return NULL;
-    }
     return ctx;
 }
 
@@ -95,29 +89,11 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, CRYPT_PkeyCtrl opt, vo
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_CURVE25519_GetSecBits(pkey);
         case CRYPT_CTRL_UP_REFERENCES:
-            if (val == NULL) {
-                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-                return CRYPT_NULL_INPUT;
+            if (val == NULL || len != (uint32_t)sizeof(int)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+                return CRYPT_INVALID_ARG;
             }
-            if (len == (uint32_t)sizeof(int)) {
-                return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
-            }
-            break;
-        case CRYPT_CTRL_SET_ED25519_HASH_METHOD:
-            if (val == NULL) {
-                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-                return CRYPT_NULL_INPUT;
-            }
-            if (len == sizeof(EAL_MdMethod)) {
-                const EAL_MdMethod *hashMethod = (const EAL_MdMethod *)val;
-                // SHA512 digest size is 64, no other hash has 64 md size
-                if (hashMethod->mdSize != 64) {
-                    BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_HASH_METH_ERROR);
-                    return CRYPT_CURVE25519_HASH_METH_ERROR;
-                }
-                pkey->hashMethod = (const EAL_MdMethod *)hashMethod;
-                return CRYPT_SUCCESS;
-            }
+            return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
         default:
             break;
     }
@@ -140,8 +116,9 @@ void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey)
     BSL_SAL_FREE(pkey);
 }
 
-int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Pub *pub)
+int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para)
 {
+    CRYPT_Curve25519Pub *pub = (CRYPT_Curve25519Pub *)para->param;
     if (pkey == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -160,8 +137,9 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Prv *prv)
+int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para)
 {
+    CRYPT_Curve25519Prv *prv = (CRYPT_Curve25519Prv *)para->param;
     if (pkey == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -181,8 +159,9 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Pub *pub)
+int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para)
 {
+    CRYPT_Curve25519Pub *pub = (CRYPT_Curve25519Pub *)para->param;
     if (pkey == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -207,8 +186,9 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Prv *prv)
+int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para)
 {
+    CRYPT_Curve25519Prv *prv = (CRYPT_Curve25519Prv *)para->param;
     if (pkey == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

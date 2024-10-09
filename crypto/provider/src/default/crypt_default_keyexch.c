@@ -8,18 +8,10 @@
 
 #include "hitls_build.h"
 #include "crypt_eal_implprovider.h"
-#include "crypt_dsa.h"
 #include "crypt_curve25519.h"
-#include "crypt_rsa.h"
 #include "crypt_dh.h"
-#include "crypt_ecdsa.h"
 #include "crypt_ecdh.h"
 #include "crypt_sm2.h"
-#include "crypt_errno.h"
-#include "bsl_log_internal.h"
-#include "bsl_err_internal.h"
-#include "crypt_eal_pkey.h"
-
 
 typedef struct {
     void *pkeyCtx;
