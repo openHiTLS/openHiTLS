@@ -16,6 +16,58 @@
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_hmac.h"
+#include "eal_mac_local.h"
+
+struct HMAC_Ctx {
+    const EAL_MdMethod *method;
+    void *mdCtx;            /* md ctx */
+    void *oCtx;             /* opad ctx */
+    void *iCtx;             /* ipad ctx */
+};
+
+CRYPT_HMAC_Ctx *CRYPT_HMAC_NewCtx(CRYPT_MAC_AlgId id)
+{
+    int32_t ret;
+    EAL_MacMethLookup method;
+    ret = EAL_MacFindMethod(id, &method);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    CRYPT_HMAC_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_HMAC_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    ctx->method = method.md;
+
+    ret = CRYPT_MD_ERR_NEWCTX;
+    if (ctx->method == NULL || ctx->method->newCtx == NULL || ctx->method->freeCtx == NULL) {
+        goto ERR;
+    }
+    ctx->mdCtx = ctx->method->newCtx();
+    if (ctx->mdCtx == NULL) {
+        goto ERR;
+    }
+    ctx->iCtx = ctx->method->newCtx();
+    if (ctx->iCtx == NULL) {
+        goto ERR;
+    }
+    ctx->oCtx = ctx->method->newCtx();
+    if (ctx->oCtx == NULL) {
+        goto ERR;
+    }
+
+    return ctx;
+ERR:
+    BSL_ERR_PUSH_ERROR(ret);
+    if (ctx != NULL) {
+        ctx->method->freeCtx(ctx->mdCtx);
+        ctx->method->freeCtx(ctx->iCtx);
+        ctx->method->freeCtx(ctx->oCtx);
+        BSL_SAL_Free(ctx);
+    }
+    return NULL;
+}
 
 uint32_t CRYPT_HMAC_GetMacLen(const CRYPT_HMAC_Ctx *ctx)
 {
@@ -24,56 +76,6 @@ uint32_t CRYPT_HMAC_GetMacLen(const CRYPT_HMAC_Ctx *ctx)
         return 0;
     }
     return ctx->method->mdSize;
-}
-
-int32_t CRYPT_HMAC_InitCtx(CRYPT_HMAC_Ctx *ctx, const EAL_MdMethod *m)
-{
-    if (ctx == NULL || m == NULL || m->newCtx == NULL || m->freeCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    int32_t ret = CRYPT_MD_ERR_NEWCTX;
-    ctx->mdCtx = m->newCtx();
-    if (ctx->mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ctx->iCtx = m->newCtx();
-    if (ctx->iCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(ret);
-        m->freeCtx(ctx->mdCtx);
-        ctx->mdCtx = NULL;
-        return ret;
-    }
-    ctx->oCtx = m->newCtx();
-    if (ctx->oCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(ret);
-        m->freeCtx(ctx->mdCtx);
-        ctx->mdCtx = NULL;
-        m->freeCtx(ctx->iCtx);
-        ctx->iCtx = NULL;
-        return ret;
-    }
-    
-    ctx->method = m;
-
-    return CRYPT_SUCCESS;
-}
-
-void CRYPT_HMAC_DeinitCtx(CRYPT_HMAC_Ctx *ctx)
-{
-    if (ctx == NULL || ctx->method == NULL || ctx->method->freeCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
-    const EAL_MdMethod *method = ctx->method;
-    // clear 3 contexts including mdCtx, iCtx, oCtx
-    method->freeCtx(ctx->mdCtx);
-    ctx->mdCtx = NULL;
-    method->freeCtx(ctx->iCtx);
-    ctx->iCtx = NULL;
-    method->freeCtx(ctx->oCtx);
-    ctx->oCtx = NULL;
 }
 
 static void HmacCleanseData(uint8_t *tmp, uint32_t tmpLen, uint8_t *ipad, uint32_t ipadLen,
@@ -184,5 +186,26 @@ void CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)
     method->deinit(ctx->mdCtx);
     method->deinit(ctx->iCtx);
     method->deinit(ctx->oCtx);
+}
+
+void CRYPT_HMAC_FreeCtx(CRYPT_HMAC_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
+    const EAL_MdMethod *method = ctx->method;
+    // clear 3 contexts including mdCtx, iCtx, oCtx
+    method->freeCtx(ctx->mdCtx);
+    ctx->mdCtx = NULL;
+    method->freeCtx(ctx->iCtx);
+    ctx->iCtx = NULL;
+    method->freeCtx(ctx->oCtx);
+    ctx->oCtx = NULL;
+
+    BSL_SAL_FREE(ctx);
 }
 #endif // HITLS_CRYPTO_HMAC

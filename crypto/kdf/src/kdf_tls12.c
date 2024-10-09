@@ -28,8 +28,8 @@ static const uint32_t KDFTLS12_ID_LIST[] = {
 };
 
 struct CryptKdfTls12Ctx {
+    CRYPT_MAC_AlgId macId;
     const EAL_MacMethod *macMeth;
-    const EAL_MdMethod *mdMeth;
     void *macCtx;
     const uint8_t *key;
     uint32_t keyLen;
@@ -64,20 +64,18 @@ int32_t KDF_PHASH(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)
 {
     int32_t ret;
     const EAL_MacMethod *macMeth = ctx->macMeth;
-    const EAL_MdMethod *mdMeth = ctx->mdMeth;
     uint32_t totalLen = 0;
     uint8_t nextIn[KDFTLS12_MAX_BLOCKSIZE];
     uint32_t nextInLen = KDFTLS12_MAX_BLOCKSIZE;
     uint8_t outTmp[KDFTLS12_MAX_BLOCKSIZE];
     uint32_t outTmpLen = KDFTLS12_MAX_BLOCKSIZE;
 
-    ctx->macCtx = BSL_SAL_Malloc(macMeth->ctxSize);
-    if (ctx->macCtx == NULL) {
+    void *macCtx = macMeth->newCtx(ctx->macId);
+    if (macCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memset_s(ctx->macCtx, macMeth->ctxSize, 0, macMeth->ctxSize);
-    GOTO_ERR_IF(macMeth->initCtx(ctx->macCtx, mdMeth), ret);
+    ctx->macCtx = macCtx;
 
     while (len > totalLen) {
         if (totalLen == 0) {
@@ -102,15 +100,15 @@ int32_t KDF_PHASH(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)
 
 ERR:
     macMeth->deinit(ctx->macCtx);
-    macMeth->deinitCtx(ctx->macCtx);
-    BSL_SAL_FREE(ctx->macCtx);
+    macMeth->freeCtx(ctx->macCtx);
+    ctx->macCtx = NULL;
     return ret;
 }
 
-int32_t CRYPT_KDF_TLS12(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth, const uint8_t *key, uint32_t keyLen,
+int32_t CRYPT_KDF_TLS12(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const uint8_t *key, uint32_t keyLen,
     const uint8_t *label, uint32_t labelLen, const uint8_t *seed, uint32_t seedLen, uint8_t *out, uint32_t len)
 {
-    if (macMeth == NULL || mdMeth == NULL) {
+    if (macMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -133,7 +131,7 @@ int32_t CRYPT_KDF_TLS12(const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth
 
     CRYPT_KDFTLS12_Ctx ctx;
     ctx.macMeth = macMeth;
-    ctx.mdMeth = mdMeth;
+    ctx.macId = macId;
     ctx.key = key;
     ctx.keyLen = keyLen;
     ctx.label = label;
@@ -172,7 +170,7 @@ int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_Alg
         return CRYPT_EAL_ERR_METH_NULL_NUMBER;
     }
     ctx->macMeth = method.macMethod;
-    ctx->mdMeth = method.md;
+    ctx->macId = id;
     return CRYPT_SUCCESS;
 }
 
@@ -253,7 +251,7 @@ int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_Param *para
 
 int32_t CRYPT_KDFTLS12_Derive(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)
 {
-    if (ctx->macMeth == NULL || ctx->mdMeth == NULL) {
+    if (ctx->macMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

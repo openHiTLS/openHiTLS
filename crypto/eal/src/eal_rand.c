@@ -362,7 +362,7 @@ void* EAL_RandDrbgNew(CRYPT_RndParam *param)
         if (EAL_MacFindMethod(map->depId, &hmac) != CRYPT_SUCCESS) {
             return NULL;
         }
-        drbg = DRBG_NewHmacCtx(hmac.macMethod, hmac.md, p->seedMeth, p->seedCtx);
+        drbg = DRBG_NewHmacCtx(hmac.macMethod, map->depId, p->seedMeth, p->seedCtx);
     }
 #endif
 #ifdef HITLS_CRYPTO_DRBG_CTR

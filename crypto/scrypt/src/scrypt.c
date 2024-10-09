@@ -240,9 +240,9 @@ static int32_t SCRYPT_CheckPointer(PBKDF2_PRF pbkdf2Prf, const uint8_t *key, uin
 }
 
 /* For details about this function, see section 6 in RFC7914. */
-int32_t CRYPT_SCRYPT(PBKDF2_PRF pbkdf2Prf, const EAL_MacMethod *macMeth, const EAL_MdMethod *mdMeth,
-    const uint8_t *key, uint32_t keyLen, const uint8_t *salt, uint32_t saltLen, uint32_t n,
-    uint32_t r, uint32_t p, uint8_t *out, uint32_t len)
+int32_t CRYPT_SCRYPT(PBKDF2_PRF pbkdf2Prf, const EAL_MacMethod *macMeth,  CRYPT_MAC_AlgId macId,
+    const EAL_MdMethod *mdMeth, const uint8_t *key, uint32_t keyLen, const uint8_t *salt,
+    uint32_t saltLen, uint32_t n, uint32_t r, uint32_t p, uint8_t *out, uint32_t len)
 {
     int32_t ret;
     // V in ROMix and BlockMix is allocated here, reducing memory application and release costs
@@ -275,14 +275,14 @@ int32_t CRYPT_SCRYPT(PBKDF2_PRF pbkdf2Prf, const EAL_MacMethod *macMeth, const E
     v = b + bLen;
     y = v + blockSize * n;
 
-    GOTO_ERR_IF(pbkdf2Prf(macMeth, mdMeth, key, keyLen, salt, saltLen, 1, b, bLen), ret);
+    GOTO_ERR_IF(pbkdf2Prf(macMeth, macId, mdMeth, key, keyLen, salt, saltLen, 1, b, bLen), ret);
 
     bi = b;
     for (uint32_t i = 0; i < p; i++, bi += blockSize) {
         SCRYPT_ROMix(bi, n, r, v, y);
     }
 
-    GOTO_ERR_IF(pbkdf2Prf(macMeth, mdMeth, key, keyLen, b, bLen, 1, out, len), ret);
+    GOTO_ERR_IF(pbkdf2Prf(macMeth, macId, mdMeth, key, keyLen, b, bLen, 1, out, len), ret);
 
 ERR:
     BSL_SAL_FREE(b);
@@ -463,14 +463,14 @@ int32_t CRYPT_SCRYPT_Derive(CRYPT_SCRYPT_Ctx *ctx, uint8_t *out, uint32_t len)
     v = b + bLen;
     y = v + blockSize * ctx->n;
 
-    GOTO_ERR_IF(pbkdf2Prf(macMeth, mdMeth, password, passLen, salt, saltLen, 1, b, bLen), ret);
+    GOTO_ERR_IF(pbkdf2Prf(macMeth, CRYPT_MAC_HMAC_SHA256, mdMeth, password, passLen, salt, saltLen, 1, b, bLen), ret);
 
     bi = b;
     for (uint32_t i = 0; i < p; i++, bi += blockSize) {
         SCRYPT_ROMix(bi, n, r, v, y);
     }
 
-    GOTO_ERR_IF(pbkdf2Prf(macMeth, mdMeth, password, passLen, b, bLen, 1, out, len), ret);
+    GOTO_ERR_IF(pbkdf2Prf(macMeth, CRYPT_MAC_HMAC_SHA256, mdMeth, password, passLen, b, bLen, 1, out, len), ret);
 
 ERR:
     BSL_SAL_FREE(b);

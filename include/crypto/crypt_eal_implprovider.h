@@ -217,19 +217,17 @@ typedef void (*CRYPT_EAL_ImplMdFreeCtx)(void *ctx);
 
 // CRYPT_EAL_OPERAID_MAC
 #define CRYPT_EAL_IMPLMAC_NEWCTX      1
-#define CRYPT_EAL_IMPLMAC_INITCTX     2
+#define CRYPT_EAL_IMPLMAC_INIT        2
 #define CRYPT_EAL_IMPLMAC_UPDATE      3
 #define CRYPT_EAL_IMPLMAC_FINAL       4
-#define CRYPT_EAL_IMPLMAC_DEINITCTX   5
-#define CRYPT_EAL_IMPLMAC_REINITCTX   6
-#define CRYPT_EAL_IMPLMAC_CTRL        7
-#define CRYPT_EAL_IMPLMAC_FREECTX     8
+#define CRYPT_EAL_IMPLMAC_REINITCTX   5
+#define CRYPT_EAL_IMPLMAC_CTRL        6
+#define CRYPT_EAL_IMPLMAC_FREECTX     7
 
 typedef void *(*CRYPT_EAL_ImplMacNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplMacInitCtx)(void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMacUpdate)(const void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMacFinal)(const void *ctx, uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplMacDeInitCtx)(void *ctx);
 typedef void (*CRYPT_EAL_ImplMacReInitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplMacCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplMacFreeCtx)(void *ctx);

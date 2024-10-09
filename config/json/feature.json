@@ -244,7 +244,8 @@
             "hmac": {
                 ".features": ["hmac"],
                 ".srcs": "crypto/hmac/src/*.c",
-                ".deps": ["platform::Secure_C"]
+                ".deps": ["platform::Secure_C"],
+                ".include": ["crypto/eal/src"]
             },
             "scrypt": {
                 ".features": ["scrypt"],
@@ -445,7 +446,8 @@
                     "crypto/ecdh/include",
                     "crypto/sm2/include",
                     "crypto/bn/include",
-                    "crypto/ecc/include"
+                    "crypto/ecc/include",
+                    "crypto/hmac/include"
                 ]
             },
             "bn": {

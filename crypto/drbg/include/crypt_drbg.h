@@ -65,7 +65,7 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *se
  * @retval DRBG_Ctx* Success
  * @retval NULL      failure
  */
-DRBG_Ctx *DRBG_NewHmacCtx(const EAL_MacMethod *hmacMeth, const EAL_MdMethod *mdMeth,
+DRBG_Ctx *DRBG_NewHmacCtx(const EAL_MacMethod *hmacMeth, CRYPT_MAC_AlgId macId,
     const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 #endif
 
