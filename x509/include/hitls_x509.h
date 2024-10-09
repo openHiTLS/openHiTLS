@@ -480,10 +480,57 @@ typedef enum {
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
 
+/**
+ * @ingroup x509
+ * @brief Allocate a StoreCtx.
+ *
+ * @retval HITLS_X509_StoreCtx *
+ */
 HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void);
+
+/**
+ * @ingroup x509
+ * @brief Release the StoreCtx.
+ *
+ * @param storeCtx    [IN] StoreCtx.
+ * @retval void
+ */
 void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
+
+/**
+ * @ingroup x509
+ * @brief Ctrl function to process StoreCtx.
+ *
+ * @param storeCtx [IN] StoreCtx.
+ * @param cmd [IN] HITLS_X509_Cmd
+ * @param val [IN/OUT] input and output value.
+ * @param valLen [IN] value length.
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
+ */
 int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t valLen);
+
+/**
+ * @ingroup x509
+ * @brief StoreCtx verify function.
+ *
+ * @param storeCtx [IN] StoreCtx.
+ * @param chain [IN] certificate chain.
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
+ */
 int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
+
+/**
+ * @ingroup x509
+ * @brief StoreCtx build chain function.
+ *
+ * @param storeCtx [IN] StoreCtx.
+ * @param cert [IN] certificate.
+ * @param chain [OUT] certificate chain.
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
+ */
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_List **chain);
 
 typedef struct _HITLS_X509_Attr {

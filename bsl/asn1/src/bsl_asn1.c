@@ -336,6 +336,48 @@ int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer
                              : DecodeTwoLayerList(param, asn, parseListItemCb, cbParam, list);
 }
 
+static int32_t ParseBMPString(const uint8_t *bmp, uint32_t bmpLen, BSL_ASN1_Buffer *decode)
+{
+    if (bmp == NULL || bmpLen == 0 || decode == NULL) {
+        return BSL_NULL_INPUT;
+    }
+    if (bmpLen % 2 != 0) { // multiple of 2
+        return BSL_INVALID_ARG;
+    }
+    uint8_t *tmp = (uint8_t *)BSL_SAL_Malloc(bmpLen / 2); // decodeLen = bmpLen/2
+    if (tmp == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    for (uint32_t i = 0; i < bmpLen / 2; i++) { // decodeLen = bmpLen/2
+        tmp[i] = bmp[i * 2 + 1];
+    }
+    decode->buff = tmp;
+    decode->len = bmpLen / 2; // decodeLen = bmpLen/2
+    return BSL_SUCCESS;
+}
+
+int32_t EncodeBMPString(const uint8_t *in, uint32_t inLen, uint8_t *encode, uint32_t *offset)
+{
+    if (in == NULL || inLen == 0 || encode == NULL || offset == NULL) {
+        return BSL_NULL_INPUT;
+    }
+    uint8_t *tmp = (uint8_t *)BSL_SAL_Calloc(inLen * 2, 1); // encodeLen = 2 * inLen
+    if (tmp == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    for (uint32_t i = 0; i < inLen; i++) {
+        if (in[i] > 127) { // max ascii 127.
+            BSL_SAL_FREE(tmp);
+            return BSL_INVALID_ARG;
+        }
+        tmp[2 * i + 1] = in[i]; // we need 2 space, [0,0] -> after encode = [0, data];
+    }
+    (void)memcpy_s(encode + *offset, inLen * 2, tmp, inLen * 2); // encodeLen = 2 * inLen
+    BSL_SAL_FREE(tmp);
+    *offset += inLen * 2; // encodeLen = 2 * inLen
+    return BSL_SUCCESS;
+}
+
 /**
  * Big numbers do not need to call this interface,
  * the filled leading 0 has no effect on the result of large numbers, big numbers can be directly used asn's buff.
@@ -358,6 +400,8 @@ int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData)
         case BSL_ASN1_TAG_UTCTIME:
         case BSL_ASN1_TAG_GENERALIZEDTIME:
             return ParseTime(asn->tag, asn->buff, asn->len, decodeData);
+        case BSL_ASN1_TAG_BMPSTRING:
+            return ParseBMPString(asn->buff, asn->len, decodeData);
         default:
             break;
     }
@@ -732,6 +776,8 @@ static uint32_t GetContentLen(BSL_ASN1_Buffer *asn)
             return BSL_ASN1_UTCTIME_LEN;
         case BSL_ASN1_TAG_GENERALIZEDTIME:
             return BSL_ASN1_GENERALIZEDTIME_LEN;
+        case BSL_ASN1_TAG_BMPSTRING:
+            return asn->len * 2; // encodeLen = 2 * asn->len
         default:
             return asn->len;
     }
@@ -897,6 +943,9 @@ static void EncodeContent(BSL_ASN1_Buffer *asn, uint32_t encodeLen, uint8_t *enc
         case BSL_ASN1_TAG_UTCTIME:
         case BSL_ASN1_TAG_GENERALIZEDTIME:
             EncodeTime((BSL_TIME *)asn->buff, asn->tag, encode, offset);
+            return;
+        case BSL_ASN1_TAG_BMPSTRING:
+            EncodeBMPString(asn->buff, asn->len, encode, offset);
             return;
         default:
             (void)memcpy_s(encode + *offset, encodeLen, asn->buff, encodeLen);
