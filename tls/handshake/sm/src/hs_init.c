@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #include "bsl_sal.h"
 #include "hitls_error.h"
 #include "hitls_sni.h"

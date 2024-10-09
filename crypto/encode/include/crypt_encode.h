@@ -19,11 +19,19 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ENCODE
 
+#include "bsl_type.h"
+#include "bsl_asn1.h"
+#include "crypt_eal_pkey.h"
 #include "crypt_bn.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
+
+#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_HASH    0
+#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_MASKGEN 1
+#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTlEN 2
+#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED 3
 
 typedef struct {
     BN_BigNum *r;
@@ -47,7 +55,24 @@ int32_t ASN1_Sm2EncryptDataDecode(const uint8_t *eData, uint32_t eLen, uint8_t *
 
 uint64_t ASN1_Sm2GetEnCodeLen(uint32_t dataLen);
 
+int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara *para);
+
 int32_t CRYPT_EAL_ParseAsn1SubPubkey(uint8_t *buff, uint32_t buffLen, void **ealPubKey, bool isComplete);
+
+int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
+    BSL_ParseFormat format, int32_t type, bool isComplete, BSL_Buffer *encode);
+
+int32_t CRYPT_EAL_EncodeRsaPssAlgParam(CRYPT_RSA_PssPara *rsaPssParam, uint8_t **buf, uint32_t *bufLen);
+
+int32_t CRYPT_EAL_PriKeyParseFile(BSL_ParseFormat format, int32_t type, const char *path, uint8_t *pwd, uint32_t pwdlen,
+    CRYPT_EAL_PkeyCtx **ealPriKey);
+
+// parse PKCS7-EncryptData：only support PBES2 + PBKDF2.
+int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
+    BSL_Buffer *encryptData);
+
+// encode PKCS7-EncryptData：only support PBES2 + PBKDF2.
+int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, void *encodeParam, BSL_Buffer **encode);
 
 #ifdef __cplusplus
 }

@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>

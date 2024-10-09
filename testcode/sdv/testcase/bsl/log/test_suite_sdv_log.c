@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,8 +175,8 @@ void SDV_BSL_LOG_VERSION_API_TC001(void)
 
     versionLen = 200;
     ASSERT_TRUE(BSL_LOG_GetVersion((char *)version, &versionLen) == BSL_SUCCESS);
-    ASSERT_TRUE(versionLen == strlen("openHiTLS 0.1.0 alpha1"));
-    ASSERT_TRUE(memcmp(version, "openHiTLS 0.1.0 alpha1", versionLen) == 0);
+    ASSERT_TRUE(versionLen == strlen("openHiTLS 0.1.0 25 12 2023"));
+    ASSERT_TRUE(memcmp(version, "openHiTLS 0.1.0 25 12 2023", versionLen) == 0);
     uint32_t versionNum = BSL_LOG_GetVersionNum();
     ASSERT_TRUE(versionNum == 0x00001000U);
 exit:

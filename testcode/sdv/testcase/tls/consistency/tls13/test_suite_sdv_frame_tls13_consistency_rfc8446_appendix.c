@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "rec_wrapper.h"
 #include "alert.h"
 #include "hitls_crypt_init.h"

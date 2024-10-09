@@ -12,7 +12,6 @@
 # EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
-
 set -e
 
 usage()
@@ -172,6 +171,9 @@ options()
         key=${1%%=*}
         value=${1#*=}
         case ${key} in
+            tls-debug)
+                TLS_DEBUG=ON
+                ;;
             gcov)
                 ENABLE_GCOV=ON
                 ;;

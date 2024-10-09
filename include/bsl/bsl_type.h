@@ -29,9 +29,9 @@ extern "C" {
 #endif
 
 typedef enum {
-    BSL_PARSE_FORMAT_UNKNOWN,
-    BSL_PARSE_FORMAT_PEM,
-    BSL_PARSE_FORMAT_ASN1
+    BSL_FORMAT_UNKNOWN,
+    BSL_FORMAT_PEM,
+    BSL_FORMAT_ASN1
 } BSL_ParseFormat;
 
 typedef struct {

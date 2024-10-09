@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #include <stdint.h>
 #include "securec.h"
 #include "bsl_sal.h"
@@ -85,20 +86,37 @@ static HITLS_CERT_Key *HitlsPrivKeyBuffAsn1Parse(HITLS_Config *config, BSL_Buffe
                 continue;
             }
         }
-        ret = CRYPT_EAL_ParseBuffPriKey(BSL_PARSE_FORMAT_ASN1, g_tryTypes[i], encode, pwd, pwdLen,
+        ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, g_tryTypes[i], encode, pwd, pwdLen,
             (CRYPT_EAL_PkeyCtx **)&ealPriKey);
         if (ret == HITLS_SUCCESS) {
+            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
             return ealPriKey;
         }
     }
+    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     return NULL;
 }
 
 static HITLS_CERT_Key *HitlsPrivKeyBuffPemParse(HITLS_Config *config, BSL_Buffer *encode)
 {
-    // TODO parse pem format buffer key
-    (void)config;
-    (void)encode;
+    HITLS_CERT_Key *ealPriKey = NULL;
+    uint8_t pwd[MAX_PASS_LEN] = { 0 };
+    uint32_t pwdLen = MAX_PASS_LEN;
+    int32_t ret;
+    for (size_t i = 0; i < sizeof(g_tryTypes) / sizeof(g_tryTypes[0]); i++) {
+        if (g_tryTypes[i] == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
+            if (GetPrivKeyPassword(config, pwd, (int32_t *)&pwdLen) != HITLS_SUCCESS) {
+                continue;
+            }
+        }
+        ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, g_tryTypes[i], encode, pwd, pwdLen,
+            (CRYPT_EAL_PkeyCtx **)&ealPriKey);
+        if (ret == HITLS_SUCCESS) {
+            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
+            return ealPriKey;
+        }
+    }
+    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     return NULL;
 }
 
@@ -113,20 +131,36 @@ static HITLS_CERT_Key *HitlsPrivKeyFileAsn1Parse(HITLS_Config *config, const uin
                 continue;
             }
         }
-        int ret = CRYPT_EAL_ParseFilePriKey(BSL_PARSE_FORMAT_ASN1, g_tryTypes[i], (const char *)buf, pwd, pwdLen,
+        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, g_tryTypes[i], (const char *)buf, pwd, pwdLen,
             (CRYPT_EAL_PkeyCtx **)&ealPriKey);
         if (ret == HITLS_SUCCESS) {
+            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
             return ealPriKey;
         }
     }
+    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     return NULL;
 }
 
 static HITLS_CERT_Key *HitlsPrivKeyFilePemParse(HITLS_Config *config, const uint8_t *buf)
 {
-    // TODO parse pem format file key
-    (void)config;
-    (void)buf;
+    HITLS_CERT_Key *ealPriKey = NULL;
+    uint8_t pwd[MAX_PASS_LEN] = { 0 };
+    uint32_t pwdLen = MAX_PASS_LEN;
+    for (size_t i = 0; i < sizeof(g_tryTypes) / sizeof(g_tryTypes[0]); i++) {
+        if (g_tryTypes[i] == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
+            if (GetPrivKeyPassword(config, pwd, (int32_t *)&pwdLen) != HITLS_SUCCESS) {
+                continue;
+            }
+        }
+        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, g_tryTypes[i], (const char *)buf, pwd, pwdLen,
+            (CRYPT_EAL_PkeyCtx **)&ealPriKey);
+        if (ret == HITLS_SUCCESS) {
+            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
+            return ealPriKey;
+        }
+    }
+    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     return NULL;
 }
 

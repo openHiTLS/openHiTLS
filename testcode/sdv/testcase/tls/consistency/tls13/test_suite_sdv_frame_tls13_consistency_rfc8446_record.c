@@ -15,6 +15,7 @@
 
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_tls13_consistency_rfc8446 */
+
 #include "stub_replace.h"
 #include "hitls.h"
 #include "hitls_config.h"

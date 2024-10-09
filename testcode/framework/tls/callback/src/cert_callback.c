@@ -289,12 +289,12 @@ int32_t HiTLS_X509_LoadCertAndKey(HITLS_Config *tlsCfg, const char *caFile, cons
         }
     }
 
-	if ((eeFile != NULL) && (strncmp(eeFile, "NULL", strlen(eeFile)) != 0)) {
-            ret = HITLS_X509_LoadEECertList(tlsCfg, eeFile, hasTlcpSignCert);
-            if (ret != SUCCESS) {
-                return ret;
-            }
-	}
+    if ((eeFile != NULL) && (strncmp(eeFile, "NULL", strlen(eeFile)) != 0)) {
+        ret = HITLS_X509_LoadEECertList(tlsCfg, eeFile, hasTlcpSignCert);
+        if (ret != SUCCESS) {
+            return ret;
+        }
+    }
 
     if ((signPrivateKeyFile != NULL) && (strncmp(signPrivateKeyFile, "NULL", strlen(signPrivateKeyFile)) != 0)) {
         ret = HITLS_X509_LoadPrivateKeyList(tlsCfg, signPrivateKeyFile, false);

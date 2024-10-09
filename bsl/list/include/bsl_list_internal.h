@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef BSL_LIST_INTERNAL_H
 #define BSL_LIST_INTERNAL_H
 

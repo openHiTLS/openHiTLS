@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
 

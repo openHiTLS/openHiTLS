@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef CRYPT_RSA_H
 #define CRYPT_RSA_H
 
@@ -39,6 +40,7 @@ typedef struct RSA_Para CRYPT_RSA_Para;
 
 
 /* RSA method */
+
 /**
  * @ingroup rsa
  * @brief Allocate rsa context memory space.

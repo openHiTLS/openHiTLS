@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef REC_UNPROCESSED_MSG_H
 #define REC_UNPROCESSED_MSG_H
 

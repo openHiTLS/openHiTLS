@@ -85,19 +85,19 @@ uint32_t TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
     return BSL_SUCCESS;
 }
 
-void BSL_SAL_Sleep(uint32_t time)
+void SAL_Sleep(uint32_t time)
 {
     sleep(time);
 }
 
-long BSL_SAL_Tick(void)
+long SAL_Tick(void)
 {
     struct tms buf = {0};
     clock_t tickCount = times(&buf);
     return (long)tickCount;
 }
 
-long BSL_SAL_TicksPerSec(void)
+long SAL_TicksPerSec(void)
 {
     return sysconf(_SC_CLK_TCK);
 }

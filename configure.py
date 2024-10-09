@@ -12,7 +12,6 @@
 # EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
-
 """
 Customize the openHiTLS build.
 Generate the modules.cmake file based on command line arguments and configuration files.
@@ -101,6 +100,9 @@ def get_cfg_args():
         # Compilation Feature Configuration
         parser.add_argument('--enable', metavar='feature', nargs='+', default=[],
                             help='enable some libs or features, such as --enable sha256 aes gcm_asm, default is "all"')
+        parser.add_argument('--disable', action='extend', metavar='feature', nargs='+', default=['uio_sctp'],
+                            help='disable some libs or features, such as --disable aes gcm_asm, default is disable "uio_sctp" ')
+        parser.add_argument('--enable-sctp', action="store_true", help='enable sctp which is used in DTLS')
         parser.add_argument('--asm_type', type=str, help='Assembly Type, default is "no_asm".')
         parser.add_argument('--asm', metavar='feature', default=[], nargs='+', help='config asm, such as --asm sha2')
         # System Configuration
@@ -122,13 +124,18 @@ def get_cfg_args():
         parser.add_argument('--del_link_flags', default='', type=str,
                             help='delete some link flags such as --del_link_flags="-shared -Wl,-z,relro"')
 
-        parser.add_argument('--hitls_version', default='openHiTLS 0.1.0 alpha1', help='%(prog)s version str')
+        parser.add_argument('--hitls_version', default='openHiTLS 0.1.0 25 12 2023', help='%(prog)s version str')
         parser.add_argument('--hitls_version_num', default=0x00001000, help='%(prog)s version num')
 
         args = vars(parser.parse_args())
 
         args['tmp_feature_config'] = os.path.join(args['build_dir'], 'feature_config.json')
         args['tmp_compile_config'] = os.path.join(args['build_dir'], 'compile_config.json')
+
+        # disable uio_sctp by default
+        if args['enable_sctp'] or args['module_cmake']:
+            args['disable'].remove('uio_sctp')
+
     except argparse.ArgumentError as e:
         parser.print_help()
         raise ValueError("Error: Failed to obtain parameters.") from e
@@ -224,7 +231,7 @@ class Configure:
         conf_custom_feature.set_c_features(enable_feas)
 
         # update feature and resave file.
-        conf_custom_feature.update_feature(self._args.enable)
+        conf_custom_feature.update_feature(self._args.enable, self._args.disable)
         conf_custom_feature.save(self._args.tmp_feature_config)
 
     def update_compile_config(self, all_options: CompleteOptionParser):

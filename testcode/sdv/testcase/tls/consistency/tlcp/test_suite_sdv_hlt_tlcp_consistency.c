@@ -12,8 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
  /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include "stub_replace.h"
 #include "hitls.h"

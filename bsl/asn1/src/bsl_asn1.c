@@ -115,6 +115,9 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
     if (ret != BSL_SUCCESS) {
         return ret;
     }
+    if (len > tempLen) {
+        return BSL_ASN1_ERR_BUFF_NOT_ENOUGH;
+    }
     *valLen = len;
     *encode = temp;
     *encLen = tempLen;
@@ -318,14 +321,13 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
     return BSL_SUCCESS;
 }
 
-
 int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
     BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
 {
     if (param == NULL || asn == NULL || parseListItemCb == NULL || list == NULL) {
         return BSL_INVALID_ARG;
     }
-    
+
      // Currently, it supports a maximum of 2 layers
     if (param->layer > BSL_ASN1_MAX_LIST_NEST_EPTH) {
         return BSL_ASN1_ERR_EXCEED_LIST_DEPTH;
@@ -727,9 +729,9 @@ static uint32_t GetContentLen(BSL_ASN1_Buffer *asn)
         case BSL_ASN1_TAG_BITSTRING:
             return ((BSL_ASN1_BitString *)asn->buff)->len + 1;
         case BSL_ASN1_TAG_UTCTIME:
-            return 13; // 13: YYMMDDHHMMSSZ
+            return BSL_ASN1_UTCTIME_LEN;
         case BSL_ASN1_TAG_GENERALIZEDTIME:
-            return 15; // 15: YYYYMMDDHHMMSSZ
+            return BSL_ASN1_GENERALIZEDTIME_LEN;
         default:
             return asn->len;
     }
@@ -737,7 +739,7 @@ static uint32_t GetContentLen(BSL_ASN1_Buffer *asn)
 
 static void ComputeOctetNum(bool optional, BSL_ASN1_EncodeItem *item, BSL_ASN1_Buffer *asn)
 {
-    if (optional && asn->len == 0) {
+    if (optional && asn->len == 0 && (asn->tag != BSL_ASN1_TAG_NULL)) {
         return;
     }
     uint32_t contentOctetNum = asn->len == 0 ? 0 : GetContentLen(asn);
@@ -762,37 +764,34 @@ static void ComputeConstructAsnOctetNum(bool optional, BSL_ASN1_TemplateItem *te
     item[curIdx].asnOctetNum = 1 + item[curIdx].lenOctetNum + contentOctetNum;
 }
 
-static int32_t EncodeInitItemContent(BSL_ASN1_EncodeItem *itemArr, BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr,
-                                     int32_t asnNum)
+static int32_t EncodeInitItemContent(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_TemplateItem *tItems, uint32_t itemNum,
+                                     BSL_ASN1_Buffer *asnArr, int32_t *asnNum)
 {
-    int32_t asnIdx = asnNum - 1;
+    int32_t asnIdx = *asnNum - 1;
     uint8_t lastDepth = 0;
 
-    for (int32_t i = templ->templNum - 1; i >= 0; i--) {
-        if (itemArr[i].skip == 1) {
+    for (int32_t i = itemNum - 1; i >= 0; i--) {
+        if (eItems[i].skip == 1) {
             continue;
         }
-        if (templ->templItems[i].depth < lastDepth) {
-            itemArr[i].tag = templ->templItems[i].tag;
-            ComputeConstructAsnOctetNum(itemArr[i].optional, templ->templItems, itemArr, templ->templNum, i);
+        if (tItems[i].depth < lastDepth) {
+            eItems[i].tag = tItems[i].tag;
+            ComputeConstructAsnOctetNum(eItems[i].optional, tItems, eItems, itemNum, i);
         } else {
             if (asnIdx < 0) {
                 return BSL_ASN1_ERR_ENCODE_ASN_LACK;
             }
-            if (itemArr[i].optional == false && asnArr[asnIdx].tag != templ->templItems[i].tag &&
-                !IsAnyOrChoice(templ->templItems[i].tag)) {
+            if (eItems[i].optional == false && asnArr[asnIdx].tag != tItems[i].tag && !IsAnyOrChoice(tItems[i].tag)) {
                 return BSL_ASN1_ERR_TAG_EXPECTED;
             }
-            ComputeOctetNum(itemArr[i].optional, itemArr + i, asnArr + asnIdx);
-            itemArr[i].tag = asnArr[asnIdx].tag;
-            itemArr[i].asn = asnArr + asnIdx; // Shallow copy.
+            ComputeOctetNum(eItems[i].optional, eItems + i, asnArr + asnIdx);
+            eItems[i].tag = asnArr[asnIdx].tag;
+            eItems[i].asn = asnArr + asnIdx; // Shallow copy.
             asnIdx--;
         }
-        lastDepth = templ->templItems[i].depth;
+        lastDepth = tItems[i].depth;
     }
-    if (asnIdx != -1) {
-        return BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH;
-    }
+    *asnNum = asnIdx + 1;
     return BSL_SUCCESS;
 }
 
@@ -952,6 +951,8 @@ static int32_t CheckBslTime(BSL_ASN1_Buffer *asn)
 static int32_t CheckAsn(BSL_ASN1_Buffer *asn)
 {
     switch (asn->tag) {
+        case BSL_ASN1_TAG_BOOLEAN:
+            return asn->len != sizeof(bool) ? BSL_ASN1_ERR_ENCODE_BOOL : BSL_SUCCESS;
         case BSL_ASN1_TAG_BITSTRING:
             if (asn->len != sizeof(BSL_ASN1_BitString)) {
                 return BSL_ASN1_ERR_ENCODE_BIT_STRING;
@@ -980,15 +981,43 @@ static int32_t CheckAsnArr(BSL_ASN1_Buffer *asnArr, uint32_t arrNum)
     return BSL_SUCCESS;
 }
 
-static int32_t EncodeInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr,
-                          int32_t arrNum)
+static int32_t EncodeItemInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_TemplateItem *tItems, uint32_t itemNum,
+                              BSL_ASN1_Buffer *asnArr, int32_t *arrNum)
 {
-    int32_t ret = EncodeInitItemFlag(eItems, templ->templItems, templ->templNum);
+    int32_t ret = EncodeInitItemFlag(eItems, tItems, itemNum);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
 
-    return EncodeInitItemContent(eItems, templ, asnArr, arrNum);
+    return EncodeInitItemContent(eItems, tItems, itemNum, asnArr, arrNum);
+}
+
+static int32_t EncodeInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr,
+                          uint32_t arrNum, uint32_t *encodeLen)
+{
+    int32_t tempArrNum = (int32_t)arrNum;
+    uint32_t stBegin;
+    uint32_t stEnd = templ->templNum - 1;
+    int32_t ret;
+    for (int32_t i = templ->templNum - 1; i >= 0; i--) {
+        if (templ->templItems[i].depth > BSL_ASN1_MAX_TEMPLATE_DEPTH) {
+            return BSL_ASN1_ERR_MAX_DEPTH;
+        }
+        if (templ->templItems[i].depth != 0) {
+            continue;
+        }
+        stBegin = i;
+        ret = EncodeItemInit(eItems + stBegin, templ->templItems + stBegin, stEnd - stBegin + 1, asnArr, &tempArrNum);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        *encodeLen += (eItems + stBegin)->asnOctetNum;
+        stEnd = i - 1;
+    }
+    if (tempArrNum != 0) {
+        return BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH;
+    }
+    return ret;
 }
 
 int32_t BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr, uint32_t arrNum, uint8_t **encode,
@@ -1006,19 +1035,20 @@ int32_t BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnAr
     if (eItems == NULL) {
         return BSL_MALLOC_FAIL;
     }
-    ret = EncodeInit(eItems, templ, asnArr, arrNum);
+    uint32_t encodeLen = 0;
+    ret = EncodeInit(eItems, templ, asnArr, arrNum, &encodeLen);
     if (ret != BSL_SUCCESS) {
         BSL_SAL_Free(eItems);
         return ret;
     }
 
-    *encode = (uint8_t *)BSL_SAL_Calloc(1, eItems->asnOctetNum);
+    *encode = (uint8_t *)BSL_SAL_Calloc(1, encodeLen);
     if (*encode == NULL) {
         BSL_SAL_Free(eItems);
         return BSL_MALLOC_FAIL;
     }
     EncodeItem(eItems, templ->templNum, *encode);
-    *encLen = eItems->asnOctetNum;
+    *encLen = encodeLen;
 
     BSL_SAL_Free(eItems);
     return BSL_SUCCESS;
@@ -1042,12 +1072,18 @@ int32_t BSL_ASN1_EncodeListItem(uint8_t tag, uint32_t listSize, BSL_ASN1_Templat
         return BSL_MALLOC_FAIL;
     }
     uint32_t encodeLen = 0;
-    uint32_t itemAsnNum = arrNum / listSize;
+    int32_t itemAsnNum;
     for (uint32_t i = 0; i < listSize; i++) {
-        ret = EncodeInit(eItems + i * templ->templNum, templ, asnArr + i * itemAsnNum, itemAsnNum);
+        itemAsnNum = arrNum / listSize;
+        ret = EncodeItemInit(
+            eItems + i * templ->templNum, templ->templItems, templ->templNum, asnArr + i * itemAsnNum, &itemAsnNum);
         if (ret != BSL_SUCCESS) {
             BSL_SAL_Free(eItems);
             return ret;
+        }
+        if (itemAsnNum != 0) {
+            BSL_SAL_Free(eItems);
+            return BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH;
         }
         encodeLen += (eItems + i * templ->templNum)->asnOctetNum;
     }
@@ -1063,7 +1099,7 @@ int32_t BSL_ASN1_EncodeListItem(uint8_t tag, uint32_t listSize, BSL_ASN1_Templat
         encode += (eItems + i * templ->templNum)->asnOctetNum;
     }
 
-    out->tag = tag;
+    out->tag = tag | BSL_ASN1_TAG_CONSTRUCTED;
     out->len = encodeLen;
 
     BSL_SAL_Free(eItems);

@@ -15,6 +15,7 @@
 
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_tls12_consistency_rfc5246 */
+
 #include <stdio.h>
 #include "hitls.h"
 #include "hitls_config.h"

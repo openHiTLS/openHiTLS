@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "securec.h"
 #include "crypt_eal_kdf.h"
 #include "crypt_errno.h"

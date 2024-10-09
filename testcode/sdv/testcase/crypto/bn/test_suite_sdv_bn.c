@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <stdlib.h>
 #include "securec.h"
 #include "bsl_sal.h"

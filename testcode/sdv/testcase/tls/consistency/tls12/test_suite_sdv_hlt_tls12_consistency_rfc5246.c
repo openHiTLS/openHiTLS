@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_tls12_consistency_rfc5246 */
 /* END_HEADER */

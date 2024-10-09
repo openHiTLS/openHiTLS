@@ -12,7 +12,6 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
 .arch    armv8-a+crypto
 
 // The first 16 of the compression function, w13 is Tj.

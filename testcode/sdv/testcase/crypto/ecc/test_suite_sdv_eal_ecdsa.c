@@ -12,8 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
 /* INCLUDE_BASE test_suite_sdv_eal_ecc */
+
 /* BEGIN_HEADER */
 int SignEncode(Hex *R, Hex *S, uint8_t *vectorSign, uint32_t *vectorSignLen)
 {

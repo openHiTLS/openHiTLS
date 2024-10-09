@@ -1,20 +1,20 @@
 SDV_X509_CRL_PARSE_FUNC_TC001 parse pem crl
-SDV_X509_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"
 
 SDV_X509_CRL_PARSE_FUNC_TC001 parse unknown(pem) crl
-SDV_X509_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.pem"
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.pem"
 
 SDV_X509_CRL_PARSE_FUNC_TC001 parse unknown(asn1) crl
-SDV_X509_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 
 SDV_X509_CRL_PARSE_FUNC_TC001
-SDV_X509_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 
 SDV_X509_CRL_PARSE_FUNC_TC001
-SDV_X509_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der"
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der"
 
 SDV_X509_CRL_PARSE_FUNC_TC001
-SDV_X509_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"
 
 SDV_X509_CRL_CTRL_FUNC_TC001
 SDV_X509_CRL_CTRL_FUNC_TC001:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der"
@@ -179,16 +179,46 @@ SDV_X509_CRL_PARSE_SIGNATURE_FUNC_TC001
 SDV_X509_CRL_PARSE_SIGNATURE_FUNC_TC001:"../testdata/cert/asn1/dsa_crl/crl_v2.der":"303C021C6B1DD2654D01044087FC459909362569913044323D2F34FE6AFE6631021C0DEAB0A4E517BDF50BE586159DB2B4A5B122B5F81679A9DDBC81C192":0
 
 SDV_X509_MUL_CRL_PARSE_FUNC_TC001 with 3 pem crls 
-SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_PEM:"../testdata/cert/asn1/ecdsa_crl/mulcrls.pem":3
+SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/ecdsa_crl/mulcrls.pem":3
 
 SDV_X509_MUL_CRL_PARSE_FUNC_TC001 with 3 der crls
-SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_crl/mulcrls.der":3
+SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_crl/mulcrls.der":3
 
 SDV_X509_MUL_CRL_PARSE_FUNC_TC001 with 3 unknown(pem) crls
-SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/asn1/ecdsa_crl/mulcrls.pem":3
+SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/asn1/ecdsa_crl/mulcrls.pem":3
 
 SDV_X509_MUL_CRL_PARSE_FUNC_TC001 with 3 unknown(der) crls
-SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/asn1/ecdsa_crl/mulcrls.der":3
+SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/asn1/ecdsa_crl/mulcrls.der":3
 
 SDV_X509_MUL_CRL_PARSE_FUNC_TC001 with 3 unknown(der) crls (with redundant symbols)
-SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_PARSE_FORMAT_UNKNOWN:"../testdata/cert/asn1/ecdsa_crl/mulcrls-red.pem":3
+SDV_X509_MUL_CRL_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/asn1/ecdsa_crl/mulcrls-red.pem":3
+
+SDV_X509_CRL_Encode_TC001 rsa crl(der) with revokelist
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/rsa_crl/crl_v2.v1.der"
+
+SDV_X509_CRL_Encode_TC001 rsa crl(der) without revokelist
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/rsa_crl/crl_v2.v1.old.der"
+
+SDV_X509_CRL_Encode_TC001 ecc crl(der)
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/rsa_ecc_crl/crl_v2.v1.der"
+
+SDV_X509_CRL_Encode_TC001 sm2 crl(der)
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/sm2_crl/crl_v2.v1.der"
+
+SDV_X509_CRL_Encode_TC001 rsa-pss crl(der)
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_crl/pss_v2.der"
+
+SDV_X509_CRL_Encode_TC001 rsa-pss crl-v1(der)
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/rsa_pss_crl/pss_v1.der"
+
+SDV_X509_CRL_Encode_TC001 sm2 crl(pem)
+SDV_X509_CRL_Encode_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"
+
+SDV_X509_CRL_EncodeParam_TC001
+SDV_X509_CRL_EncodeParam_TC001:
+
+SDV_X509_CRL_EncodeFile_TC001 sm2 crl(der)
+SDV_X509_CRL_EncodeFile_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/sm2_crl/crl_v2.v1.der"
+
+SDV_X509_CRL_EncodeFile_TC001 sm2 crl(pem)
+SDV_X509_CRL_EncodeFile_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"

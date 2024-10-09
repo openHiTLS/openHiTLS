@@ -12,7 +12,6 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
 /* Some of these codes are adapted from https://ed25519.cr.yp.to/software.html */
 
 #include "hitls_build.h"

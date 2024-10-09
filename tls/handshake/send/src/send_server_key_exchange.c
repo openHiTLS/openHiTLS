@@ -225,6 +225,7 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
     }
     /* Make sure the client will always send a certificate message, because ECDHE relies on the client's encrypted
      * certificate, even if the client does not require authentication (isSupportClientVerify equals false). */
+
 #ifndef HITLS_NO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 &&
         ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_ECDHE_SM4_CBC_SM3) {

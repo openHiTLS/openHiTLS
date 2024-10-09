@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 /* BEGIN_HEADER */
+
 #include "hitls_error.h"
 #include "tls.h"
 #include "change_cipher_spec.h"

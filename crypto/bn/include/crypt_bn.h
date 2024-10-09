@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef CRYPT_BN_H
 #define CRYPT_BN_H
 
@@ -1079,6 +1080,24 @@ int32_t BN_ModSm2EccSqr(
  * @retval [OUT] output the result
  */
 int32_t BN_SecBit(int32_t publen, int32_t prvlen);
+#endif
+
+#ifdef HITLS_CRYPTO_PAILLIER
+/**
+ * @ingroup bn
+ * @brief BigNum Calculate the least common multiple
+ * @par Description: lcm(a, b) (a, b!=0)
+ *
+ * @param r     [OUT] least common multiple
+ * @param a     [IN] BigNum
+ * @param b     [IN] BigNum
+ * @param opt   [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ */
+int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
 #endif
 
 #ifdef __cplusplus

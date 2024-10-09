@@ -26,10 +26,22 @@ openHiTLS include 4 components currently. The BSL component will be used with ot
 
 openHiTLS depends on Secure C which should be downloaded to ${openHiTLS_dir}/platform/Secure_C. One of the official git repositories of Secure C is located at <https://gitee.com/openeuler/libboundscheck>.
 
+* Download the security library
+
 ```bash
-mkdir -p ${openHiTLS_dir}/platform
-cd ${openHiTLS_dir}
+# Method 1: Pull it with the openHiTLS code repository
+git clone --recurse-submodules https://gitee.com/openhitls/openhitls.git
+
+# Method 2: Pull the security library separately
+git clone https://gitee.com/openhitls/openhitls.git
+cd ${openHiTLS_dir} 
 git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
+```
+
+* Build security library
+```bash
+cd ${openHiTLS_dir}/platform/Secure_C
+make -j
 ```
 
 ### For Application Developers
@@ -61,6 +73,18 @@ Step 2 (Generate configurations):
 ```
 python3 ../configure.py ["option"]
 ```
+
+* C Full build:
+```
+python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_x509 --lib_type static --bits=64 --system=linux
+```
+
+* x8664 Optimize the full build：
+```
+python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_x509 --lib_type static --bits=64 --system=linux --asm_type x8664
+```
+The options are described in [Build Installation Guide](docs/en/4_User%20Guide/1_Build%20and%20Installation%20Guide.md)
+
 Step 3 (Generate the build script):
 ```
 cmake ..
@@ -73,7 +97,3 @@ make && make install
 ## Contribution
 
 If you plan to contribute to the openHiTLS community, please visit the link [CLA Signing](https://cla.openhitls.net)  to complete CLA signing.
-
-## Report security issue
-
-If you find potential security issues in openHiTLS, please follow the [openHiTLS vulnerability process](https://openhitls.net/zh/security/) to complete the report.

@@ -25,13 +25,13 @@
 
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreNew(void)
 {
-    return (HITLS_CERT_Store *)HITLS_X509_NewStoreCtx();
+    return (HITLS_CERT_Store *)HITLS_X509_StoreCtxNew();
 }
 
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
 {
     int references = 0;
-    int32_t ret = HITLS_X509_CtrlStoreCtx((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_REF_UP, &references,
+    int32_t ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_REF_UP, &references,
         sizeof(int));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -43,7 +43,7 @@ HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
 
 void HITLS_X509_Adapt_StoreFree(HITLS_CERT_Store *store)
 {
-    HITLS_X509_FreeStoreCtx(store);
+    HITLS_X509_StoreCtxFree(store);
 }
 
 int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd,
@@ -70,5 +70,5 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
             return HITLS_X509_ADAPT_ERR;
     }
 
-    return HITLS_X509_CtrlStoreCtx(store, x509Cmd, input, inputLen);
+    return HITLS_X509_StoreCtxCtrl(store, x509Cmd, input, inputLen);
 }

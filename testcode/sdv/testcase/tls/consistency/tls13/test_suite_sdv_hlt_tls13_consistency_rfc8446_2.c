@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include "stub_replace.h"
 #include "hitls.h"
@@ -80,9 +81,8 @@ void SetConfig(HLT_Ctx_Config *clientconfig, HLT_Ctx_Config *serverconfig, SetIn
         if (setInfo.ServerGroup != NULL) {
             HLT_SetGroups(serverconfig, setInfo.ServerGroup);
         }
-        if (setInfo.psk != NULL ) {
-            memcpy_s(serverconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
-        }
+        memcpy_s(serverconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
+
         if ( (setInfo.ClientKeyExchangeMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_KE_MODE_PSK_ONLY)) != 0) {
             clientconfig->keyExchMode = setInfo.ClientKeyExchangeMode;
         }
@@ -94,9 +94,7 @@ void SetConfig(HLT_Ctx_Config *clientconfig, HLT_Ctx_Config *serverconfig, SetIn
         if (setInfo.ClientGroup != NULL) {
             HLT_SetGroups(clientconfig, setInfo.ClientGroup);
         }
-        if (setInfo.psk != NULL ) {
-            memcpy_s(clientconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
-        }
+        memcpy_s(clientconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
         if ( (setInfo.ServerKeyExchangeMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_KE_MODE_PSK_ONLY)) != 0) {
             serverconfig->keyExchMode = setInfo.ServerKeyExchangeMode;
         }

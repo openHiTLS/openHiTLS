@@ -149,7 +149,7 @@ int32_t HITLS_X509_Adapt_CheckPrivateKey(const HITLS_Config *config, HITLS_CERT_
     (void)config;
     CRYPT_EAL_PkeyCtx *ealPubKey = NULL;
     CRYPT_EAL_PkeyCtx *ealPrivKey = (CRYPT_EAL_PkeyCtx *)key;
-    int32_t ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_PUBKEY, &ealPubKey, 0);
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &ealPubKey, 0);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

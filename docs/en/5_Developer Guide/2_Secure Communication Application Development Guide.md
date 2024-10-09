@@ -411,141 +411,14 @@ int32_t HITLS_CFG_SetPskClientCallback(HITLS_Config *config, HITLS_PskClientCb c
 
 ### Certificate Authentication-based Client
 
-```c
-#include <stdio.h> 
-#include <stdlib.h> 
-#include "bsl_sal.h" 
-#include "bsl_err.h" 
-#include "hitls_error.h" 
-#include "hitls_config.h" 
-#include "hitls.h" 
-#include "hitls_cert_reg.h" 
-#include "hitls_crypt_reg.h" 
-
-#define HTTP_BUF_MAXLEN (18 * 1024)  /* 18KB */ 
-
-int main(int32_t argc, char *argv[]) 
-{ 
-    int32_t exitValue = -1; 
-    int32_t ret = 0; 
-    HITLS_Config *config = NULL; 
-    HITLS_Ctx *ctx = NULL; 
-    BSL_UIO *uio = NULL; 
-
-    /* Register the BSL memory. (The following is for reference only.) */
-    BSL_SAL_MemCallback memMthod = {(void *(*)(uint32_t size))malloc, free}; 
-    BSL_SAL_RegMemCallback(&memMthod); 
-    BSL_ERR_Init(); 
-
-    /* Register algorithms and certificates. The callback needs to be implemented by users. */
-    HITLS_CERT_MgrMethod certMgrMethod = { 0 };
-    HITLS_CERT_RegisterMgrMethod(&certMgrMethod);
-    HITLS_CRYPT_BaseMethod baseMethod = {0};
-    HITLS_CRYPT_RegisterBaseMethod(&baseMethod);
-    HITLS_CRYPT_EcdhMethod ecdhMethod = {0};
-    HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
-    HITLS_CRYPT_DhMethod dhMethod = {0};
-    HITLS_CRYPT_RegisterDhMethod(&dhMethod);
-    HITLS_CRYPT_KdfMethod hkdfMethod = {0};
-    HITLS_CRYPT_RegisterHkdfMethod(&hkdfMethod);
-
-	/* Users need to implement the TCP connection. */
-    struct sockaddr_in sockAddr; 
-    int fd = TCP_Connect("127.0.0.1", "12345", &sockAddr); 
-    if (fd &lt; 0) { 
-        printf("SCTP_Connect failed.\n"); 
-        return -1; 
-    } 
-
-    config = HITLS_CFG_NewTLS12Config(); 
-    if (config == NULL) { 
-        printf("HITLS_CFG_NewTLS12Config failed.\n"); 
-        return -1; 
-    } 
-
-    /* Load certificates. This capability needs to be implemented by users. */
-    HITLS_CFG_AddCertToStore(config, "rootCA.pem", TLS_CERT_STORE_TYPE_DEFAULT);
-    HITLS_CFG_AddCertToStore(config, "intCA.pem", TLS_CERT_STORE_TYPE_DEFAULT);
-
-    /* Create an openHiTLS context. */
-    ctx = HITLS_New(config); 
-    if (ctx == NULL) { 
-        printf("HITLS_New failed.\n"); 
-        goto exit; 
-    } 
-
-    /* Users can implement methods as required. */
-    uio = BSL_UIO_New(TcpGetDefaultMethod()); 
-    if (uio == NULL) { 
-        printf("BSL_UIO_New failed.\n"); 
-        goto exit; 
-    } 
-
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("BSL_UIO_SET_FD failed, fd = %u.\n", fd); 
-        goto exit; 
-    } 
-
-    ret = HITLS_SetUio(ctx, uio); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("HITLS_SetUio failed. ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    /* Establish a TLS connection. Users need to consider the return values based on the site requirements. */
-    ret = HITLS_Connect(ctx); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Connect failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    /* Send packets to the peer. Users need to consider the return values based on the site requirements. */
-    const uint8_t sndBuf[] = "Hi, this is client\n"; 
-    ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf)); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Write error:error code:%d\n", ret); 
-        goto exit; 
-    } 
-
-    /* Read packets from the peer. Users need to consider the return values based on the site requirements. */
-    uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0}; 
-    uint32_t readLen = 0; 
-    ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Read failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    printf("get from server size:%u :%s\n", readLen, readBuf); 
-
-    exitValue = 0; 
-exit: 
-    HITLS_Close(ctx); 
-    HITLS_Free(ctx); 
-    HITLS_CFG_FreeConfig(config); 
-    TCP_Close(fd); 
-    return exitValue; 
-}
-```
+See [client.c](../../../testcode/demo/client.c)
 
 ### PSK Authentication-based Client
 
+Most code of PSK Authentication-based client is the same as that Certificate Authentication-based client, except for the configuration of `HITLS_Config`.
+
 ```c
-#include <stdio.h> 
-#include <stdlib.h> 
-#include "bsl_sal.h" 
-#include "bsl_err.h" 
-#include "hitls_error.h" 
-#include "hitls_config.h" 
-#include "hitls.h" 
-#include "hitls_cert_reg.h" 
-#include "hitls_crypt_reg.h" 
-
-#define HTTP_BUF_MAXLEN (18 * 1024)  /* 18KB */ 
-
+...
 uint32_t ExampleClientCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity, uint32_t maxIdentityLen, uint8_t *psk,
     uint32_t maxPskLen)
 {
@@ -566,115 +439,31 @@ uint32_t ExampleClientCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
 
 int main(int32_t argc, char *argv[]) 
 { 
-    int32_t exitValue = -1; 
-    int32_t ret = 0; 
-    HITLS_Config *config = NULL; 
-    HITLS_Ctx *ctx = NULL; 
-    BSL_UIO *uio = NULL; 
-
-    /* Register the BSL memory. (The following is for reference only.) */
-    BSL_SAL_MemCallback memMthod = {(void *(*)(uint32_t size))malloc, free}; 
-    BSL_SAL_RegMemCallback(&memMthod); 
-    BSL_ERR_Init(); 
-
-    /* Register algorithms and certificates. The callback needs to be implemented by users. */
-    HITLS_CERT_MgrMethod certMgrMethod = { 0 };
-    HITLS_CERT_RegisterMgrMethod(&certMgrMethod);
-    HITLS_CRYPT_BaseMethod baseMethod = {0};
-    HITLS_CRYPT_RegisterBaseMethod(&baseMethod);
-    HITLS_CRYPT_EcdhMethod ecdhMethod = {0};
-    HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
-    HITLS_CRYPT_DhMethod dhMethod = {0};
-    HITLS_CRYPT_RegisterDhMethod(&dhMethod);
-    HITLS_CRYPT_KdfMethod hkdfMethod = {0};
-    HITLS_CRYPT_RegisterHkdfMethod(&hkdfMethod);
-
-	/* Users need to implement the TCP connection. */
-    struct sockaddr_in sockAddr; 
-    int fd = TCP_Connect("127.0.0.1", "12345", &sockAddr); 
-    if (fd &lt; 0) { 
-        printf("SCTP_Connect failed.\n"); 
-        return -1; 
-    } 
-
+    ...
     config = HITLS_CFG_NewTLS12Config(); 
     if (config == NULL) { 
         printf("HITLS_CFG_NewTLS12Config failed.\n"); 
         return -1; 
     }
 	uint16_t cipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
-	// Configure the algorithm suite.
+	// config cipher suite
     if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetCipherSuites err\n");
         return -1;
     }
-	// Configure PSK callback.
+	// config PSK callbacks
 	if (HITLS_CFG_SetPskClientCallback(config, (HITLS_PskClientCb)ExampleClientCb) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetPskClientCallback err\n");
         return -1;
     }
 
-    /* Create an openHiTLS context. */
     ctx = HITLS_New(config); 
     if (ctx == NULL) { 
         printf("HITLS_New failed.\n"); 
         goto exit; 
     } 
 
-    /* Users can implement methods as required. */
-    uio = BSL_UIO_New(TcpGetDefaultMethod()); 
-    if (uio == NULL) { 
-        printf("BSL_UIO_New failed.\n"); 
-        goto exit; 
-    } 
-
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("BSL_UIO_SET_FD failed, fd = %u.\n", fd); 
-        goto exit; 
-    } 
-
-    ret = HITLS_SetUio(ctx, uio); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("HITLS_SetUio failed. ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    /* Establish a TLS connection. Users need to consider the return values based on the site requirements. */
-    ret = HITLS_Connect(ctx); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Connect failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    /* Send packets to the peer. Users need to consider the return values based on the site requirements. */
-    const uint8_t sndBuf[] = "Hi, this is client\n"; 
-    ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf)); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Write error:error code:%d\n", ret); 
-        goto exit; 
-    } 
-
-    /* Read packets from the peer. Users need to consider the return values based on the site requirements. */
-    uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0}; 
-    uint32_t readLen = 0; 
-    ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Read failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    printf("get from server size:%u :%s\n", readLen, readBuf); 
-
-    exitValue = 0; 
-exit: 
-    HITLS_Close(ctx); 
-    HITLS_Free(ctx); 
-    HITLS_CFG_FreeConfig(config);
-    TCP_Close(fd); 
-    return exitValue; 
+    ...
 }
 ```
 
@@ -781,141 +570,14 @@ For details about the remaining procedure, see "PSK Authentication-based Client.
 
 ### Certificate Authentication-based Server
 
-```c
-#include <stdio.h> 
-#include <stdlib.h> 
-#include "bsl_sal.h" 
-#include "bsl_err.h" 
-#include "hitls_error.h" 
-#include "hitls_config.h" 
-#include "hitls.h" 
-#include "hitls_cert_reg.h" 
-#include "hitls_crypt_reg.h" 
+See [server.c](../../../testcode/demo/server.c)
 
-#define HTTP_BUF_MAXLEN (18 * 1024)  /* 18KB */ 
+### ### PSK Authentication-based Server
 
-int main(int32_t argc, char *argv[]) 
-{ 
-    int32_t exitValue = -1; 
-    int32_t ret = 0; 
-    HITLS_Config *config = NULL; 
-    HITLS_Ctx *ctx = NULL; 
-    BSL_UIO *uio = NULL; 
-
-    /* Register the BSL memory. (The following is for reference only.) */
-    BSL_SAL_MemCallback memMthod = {(void *(*)(uint32_t size))malloc, free}; 
-    BSL_SAL_RegMemCallback(&memMthod); 
-    BSL_ERR_Init(); 
-
-    /* Register algorithms and certificates. The callback needs to be implemented by users. */
-    HITLS_CERT_MgrMethod certMgrMethod = { 0 };
-    HITLS_CERT_RegisterMgrMethod(&certMgrMethod);
-    HITLS_CRYPT_BaseMethod baseMethod = {0};
-    HITLS_CRYPT_RegisterBaseMethod(&baseMethod);
-    HITLS_CRYPT_EcdhMethod ecdhMethod = {0};
-    HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
-    HITLS_CRYPT_DhMethod dhMethod = {0};
-    HITLS_CRYPT_RegisterDhMethod(&dhMethod);
-    HITLS_CRYPT_KdfMethod hkdfMethod = {0};
-    HITLS_CRYPT_RegisterHkdfMethod(&hkdfMethod);
-
-	/* Users need to implement the TCP connection. */
-	int listenFd = TCP_Bind("12345");  
-    struct sockaddr_in sockAddr;  
-    int fd = TCP_Accept(listenFd, &sockAddr);  
-    if (fd < 0) {  
-        printf("TCP_Accept failed.\n");  
-        return -1;  
-    }
-
-    config = HITLS_CFG_NewTLS12Config(); 
-    if (config == NULL) { 
-        printf("HITLS_CFG_NewTLS12Config failed.\n"); 
-        return -1; 
-    } 
-
-    /* Load certificates. This capability needs to be implemented by users. */
-    HITLS_CFG_AddCertToStore(config, "rootCA.pem", TLS_CERT_STORE_TYPE_DEFAULT);
-    HITLS_CFG_AddCertToStore(config, "intCA.pem", TLS_CERT_STORE_TYPE_DEFAULT);
-    HITLS_CFG_LoadCertFile(config, "server.pem", TLS_PARSE_FORMAT_PEM);
-    HITLS_CFG_LoadKeyFile(config, "server.key.pem", TLS_PARSE_FORMAT_PEM);
-
-    /* Create an openHiTLS context. */
-    ctx = HITLS_New(config); 
-    if (ctx == NULL) { 
-        printf("HITLS_New failed.\n"); 
-        goto exit; 
-    } 
-
-    /* Users can implement methods as required. */
-    uio = BSL_UIO_New(TcpGetDefaultMethod()); 
-    if (uio == NULL) { 
-        printf("BSL_UIO_New failed.\n"); 
-        goto exit; 
-    } 
-
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("BSL_UIO_SET_FD failed, fd = %u.\n", fd); 
-        goto exit; 
-    } 
-
-    ret = HITLS_SetUio(ctx, uio); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("HITLS_SetUio failed. ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    /* Establish a TLS connection. Users need to consider the return values based on the site requirements. */
-    ret = HITLS_Accept(ctx); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Accept failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-	/* Read packets from the peer. Users need to consider the return values based on the site requirements. */
-    uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0}; 
-    uint32_t readLen = 0; 
-    ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Read failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-    printf("get from client size:%u :%s\n", readLen, readBuf); 
-
-    /* Send packets to the peer. Users need to consider the return values based on the site requirements. */
-    const uint8_t sndBuf[] = "Hi, this is server\n"; 
-    ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf)); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Write error:error code:%d\n", ret); 
-        goto exit; 
-    }
-    exitValue = 0; 
-exit: 
-    HITLS_Close(ctx); 
-    HITLS_Free(ctx); 
-    HITLS_CFG_FreeConfig(config); 
-    TCP_Close(fd); 
-    return exitValue; 
-}
-```
-
-### PSK Authentication-based Server
+Most code of PSK Authentication-based server is the same as that Certificate Authentication-based server, except for the configuration of `HITLS_Config`.
 
 ```c
-#include <stdio.h> 
-#include <stdlib.h> 
-#include "bsl_sal.h" 
-#include "bsl_err.h" 
-#include "hitls_error.h" 
-#include "hitls_config.h" 
-#include "hitls.h" 
-#include "hitls_cert_reg.h" 
-#include "hitls_crypt_reg.h" 
-
-#define HTTP_BUF_MAXLEN (18 * 1024)  /* 18KB */ 
+...
 
 uint32_t ExampleServerCb(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, uint32_t maxPskLen)
 {
@@ -933,113 +595,31 @@ uint32_t ExampleServerCb(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, 
 
 int main(int32_t argc, char *argv[]) 
 { 
-    int32_t exitValue = -1; 
-    int32_t ret = 0; 
-    HITLS_Config *config = NULL; 
-    HITLS_Ctx *ctx = NULL; 
-    BSL_UIO *uio = NULL; 
-
-    /* Register the BSL memory. (The following is for reference only.) */
-    BSL_SAL_MemCallback memMthod = {(void *(*)(uint32_t size))malloc, free}; 
-    BSL_SAL_RegMemCallback(&memMthod); 
-    BSL_ERR_Init(); 
-
-    /* Register algorithms and certificates. The callback needs to be implemented by users. */
-    HITLS_CERT_MgrMethod certMgrMethod = { 0 };
-    HITLS_CERT_RegisterMgrMethod(&certMgrMethod);
-    HITLS_CRYPT_BaseMethod baseMethod = {0};
-    HITLS_CRYPT_RegisterBaseMethod(&baseMethod);
-    HITLS_CRYPT_EcdhMethod ecdhMethod = {0};
-    HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
-    HITLS_CRYPT_DhMethod dhMethod = {0};
-    HITLS_CRYPT_RegisterDhMethod(&dhMethod);
-    HITLS_CRYPT_KdfMethod hkdfMethod = {0};
-    HITLS_CRYPT_RegisterHkdfMethod(&hkdfMethod);
-
-	/* Users need to implement the TCP connection. */
-    struct sockaddr_in sockAddr; 
-    int fd = TCP_Connect("127.0.0.1", "12345", &sockAddr); 
-    if (fd < 0) { 
-        printf("SCTP_Connect failed.\n"); 
-        return -1; 
-    } 
-
+    ...
     config = HITLS_CFG_NewTLS12Config(); 
     if (config == NULL) { 
         printf("HITLS_CFG_NewTLS12Config failed.\n"); 
         return -1; 
     }
 	uint16_t cipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
-	// Configure the algorithm suite.
+	// config cipher suite
     if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetCipherSuites err\n");
         return -1;
     }
-	// Configure PSK callback.
+	// config PSK callback
 	if (HITLS_CFG_SetPskServerCallback(tlsConfig, (HITLS_PskServerCb)ExampleServerCb) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetPskClientCallback err\n");
         return -1;
     }
 
-    /* Create an openHiTLS context. */
     ctx = HITLS_New(config); 
     if (ctx == NULL) { 
         printf("HITLS_New failed.\n"); 
         goto exit; 
     } 
 
-    /* Users can implement methods as required. */
-    uio = BSL_UIO_New(TcpGetDefaultMethod()); 
-    if (uio == NULL) { 
-        printf("BSL_UIO_New failed.\n"); 
-        goto exit; 
-    } 
-
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("BSL_UIO_SET_FD failed, fd = %u.\n", fd); 
-        goto exit; 
-    } 
-
-    ret = HITLS_SetUio(ctx, uio); 
-    if (ret != HITLS_SUCCESS) { 
-        BSL_UIO_Free(uio); 
-        printf("HITLS_SetUio failed. ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-    /* Establish a TLS connection. Users need to consider the return values based on the site requirements. */
-    ret = HITLS_Connect(ctx); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Accept failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-
-	/* Read packets from the peer. Users need to consider the return values based on the site requirements. */
-    uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0}; 
-    uint32_t readLen = 0; 
-    ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Read failed, ret = 0x%x.\n", ret); 
-        goto exit; 
-    } 
-    printf("get from client size:%u :%s\n", readLen, readBuf); 
-
-    /* Send packets to the peer. Users need to consider the return values based on the site requirements. */
-    const uint8_t sndBuf[] = "Hi, this is client\n"; 
-    ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf)); 
-    if (ret != HITLS_SUCCESS) { 
-        printf("HITLS_Write error:error code:%d\n", ret); 
-        goto exit; 
-    } 
-    exitValue = 0; 
-exit: 
-    HITLS_Close(ctx); 
-    HITLS_Free(ctx); 
-    HITLS_CFG_FreeConfig(config); 
-    TCP_Close(fd); 
-    return exitValue; 
+    ...
 }
 ```
 

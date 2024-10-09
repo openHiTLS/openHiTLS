@@ -89,7 +89,7 @@ int LogWrite(LogLevel level, const char *file, int line, const char *fmt, ...)
 END:
     va_end(vargs);
 #ifdef TLS_DEBUG
-    printf(logBuf);
+    printf("%s", logBuf);
 #endif
     return 0;
 }

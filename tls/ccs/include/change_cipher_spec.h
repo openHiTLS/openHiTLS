@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef CHANGE_CIPHER_SPEC_H
 #define CHANGE_CIPHER_SPEC_H
 

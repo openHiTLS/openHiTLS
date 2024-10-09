@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-
 #include <stdbool.h>
 #include <stdint.h>
 #include "bsl_err_internal.h"

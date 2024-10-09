@@ -31,6 +31,7 @@ typedef struct {
 } HITLS_X509_CrlExt;
 
 typedef struct {
+    uint8_t flag;
     BSL_ASN1_Buffer serialNumber;
     BSL_TIME time;
     BSL_ASN1_Buffer entryExt;
@@ -60,9 +61,9 @@ typedef struct _HITLS_X509_Crl {
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
-HITLS_X509_Crl *HITLS_X509_NewCrl(void);
-int32_t HITLS_X509_ParseBuffCrlMul(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist);
-
+HITLS_X509_Crl *HITLS_X509_CrlNew(void);
+int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist);
+int32_t HITLS_X509_EncodeCrlTbs(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *asn);
 #ifdef __cplusplus
 }
 #endif

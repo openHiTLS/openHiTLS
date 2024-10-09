@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "eal_md_local.h"

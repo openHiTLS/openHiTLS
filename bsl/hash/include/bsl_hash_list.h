@@ -17,6 +17,7 @@
  * @defgroup bsl_list bidirectional linked list
  * @ingroup bsl
  */
+
 #ifndef BSL_HASH_LIST_H
 #define BSL_HASH_LIST_H
 

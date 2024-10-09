@@ -218,6 +218,7 @@ void BSL_LIST_DeleteAll(BslList *pList, BSL_LIST_PFUNC_FREE pfFreeFunc)
             BSL_SAL_FREE(pNode->data);
         } else {
             pfFreeFunc(pNode->data);
+            pNode->data = NULL;
         }
 
         BSL_SAL_FREE(pNode);
@@ -431,6 +432,7 @@ BslList *BSL_LIST_Copy(BslList *pSrcList, BSL_LIST_PFUNC_DUP pFuncCpy, BSL_LIST_
         if (BSL_LIST_AddElement(pDstList, pDstData, BSL_LIST_POS_AFTER) != BSL_SUCCESS) {
             if (pfFreeFunc != NULL) {
                 pfFreeFunc(pDstData);
+                pDstData = NULL;
             } else {
                 BSL_SAL_FREE(pDstData);
             }

@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef CRYPT_DEFAULT_H
 #define CRYPT_DEFAULT_H
 #include <stdint.h>

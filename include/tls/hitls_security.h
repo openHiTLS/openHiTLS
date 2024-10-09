@@ -35,6 +35,7 @@ extern "C" {
  * HiTLS default level of security. You can configure the default level by using the compilation macro.
  * If the compilation macro is not defined, the default level 0 is used.
  */
+
 #ifndef HITLS_DEFAULT_SECURITY_LEVEL
 #define HITLS_DEFAULT_SECURITY_LEVEL 0
 #endif

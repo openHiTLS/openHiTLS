@@ -1113,6 +1113,7 @@ static int32_t ServerCheckAndProcessClientHello(TLS_Ctx *ctx, const ClientHelloM
         return ret;
     }
     /* TLCP does not pay attention to the extension */
+
 #ifndef HITLS_NO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
         return HITLS_SUCCESS;

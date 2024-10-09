@@ -50,10 +50,16 @@ extern "C" {
 #define BSL_PEM_P8_PRI_KEY_BEGIN_STR "-----BEGIN ENCRYPTED PRIVATE KEY-----"
 #define BSL_PEM_P8_PRI_KEY_END_STR "-----END ENCRYPTED PRIVATE KEY-----"
 
+#define BSL_PEM_CERT_REQ_BEGIN_STR "-----BEGIN CERTIFICATE REQUEST-----"
+#define BSL_PEM_CERT_REQ_END_STR "-----END CERTIFICATE REQUEST-----"
+
 typedef struct {
     const char *head;
     const char *tail;
 } BSL_PEM_Symbol;
+
+int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_Symbol *symbol,
+    char **encode, uint32_t *encodeLen);
 
 /* encode must end in '\0' */
 int32_t BSL_PEM_ParsePem2Asn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,

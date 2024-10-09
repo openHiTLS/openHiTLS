@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 /* for handling ASN.1 SET OF type */
+
 /**
  * @ingroup bsl_list
  *
@@ -149,7 +150,7 @@ typedef void *(*BSL_LIST_PFUNC_DUP)(const void *);
     do {                                       \
         BSL_LIST_DeleteAll((pList), pFreeFunc); \
         if (NULL != (pList)) {             \
-            BSL_SAL_FREE(pList);                  \
+            BSL_SAL_Free(pList);                  \
         }                                      \
     } while (0)
 

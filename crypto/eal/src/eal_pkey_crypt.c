@@ -73,9 +73,16 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
         return CRYPT_NULL_INPUT;
     }
 
+    int32_t ret = CRYPT_SUCCESS;
+    uint8_t *signedData = NULL;
+    CRYPT_EAL_PkeyCtx *tempPubKey = CRYPT_EAL_PkeyDupCtx(pubKey);
+    CRYPT_EAL_PkeyCtx *tempPrivKey = CRYPT_EAL_PkeyDupCtx(prvKey);
+    if (tempPubKey == NULL || tempPrivKey == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto ERR;
+    }
     CRYPT_MD_AlgId hashId;
-    CRYPT_PKEY_AlgId algId = CRYPT_EAL_PkeyGetId(pubKey);
-    int32_t ret;
+    CRYPT_PKEY_AlgId algId = CRYPT_EAL_PkeyGetId(tempPubKey);
     switch (algId) {
         case CRYPT_PKEY_DSA:
         case CRYPT_PKEY_ED25519:
@@ -86,34 +93,39 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
             break;
         case CRYPT_PKEY_RSA:
             hashId = CRYPT_MD_SHA512;
-            ret = CryptRsaEmsaPairSet(pubKey, prvKey, hashId);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
+            ret = CryptRsaEmsaPairSet(tempPubKey, tempPrivKey, hashId);
             break;
         case CRYPT_PKEY_SM2:
             hashId = CRYPT_MD_SM3;
             break;
         default:
-            return CRYPT_NOT_SUPPORT;
+            ret = CRYPT_NOT_SUPPORT;
+            break;
     }
 
-    uint8_t toBeSig[] = {1};
-    uint32_t signedLen = CRYPT_EAL_PkeyGetSignLen(prvKey);
-    if (signedLen == 0) {
-        return CRYPT_ECC_PKEY_ERR_SIGN_LEN;
-    }
-    uint8_t *signedData = BSL_SAL_Malloc(signedLen);
-    if (signedData == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ret = CRYPT_EAL_PkeySign(prvKey, hashId, toBeSig, sizeof(toBeSig), signedData, &signedLen);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
-    ret = CRYPT_EAL_PkeyVerify(pubKey, hashId, toBeSig, sizeof(toBeSig), signedData, signedLen);
+    uint8_t toBeSig[] = {1};
+    uint32_t signedLen = CRYPT_EAL_PkeyGetSignLen(tempPrivKey);
+    if (signedLen == 0) {
+        ret = CRYPT_ECC_PKEY_ERR_SIGN_LEN;
+        goto ERR;
+    }
+    signedData = BSL_SAL_Malloc(signedLen);
+    if (signedData == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto ERR;
+    }
+    ret = CRYPT_EAL_PkeySign(tempPrivKey, hashId, toBeSig, sizeof(toBeSig), signedData, &signedLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+    ret = CRYPT_EAL_PkeyVerify(tempPubKey, hashId, toBeSig, sizeof(toBeSig), signedData, signedLen);
 ERR:
     BSL_SAL_FREE(signedData);
+    CRYPT_EAL_PkeyFreeCtx(tempPubKey);
+    CRYPT_EAL_PkeyFreeCtx(tempPrivKey);
     return ret;
 }
 #endif

@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef HITLS_X509_ADAPT_LOCAL_H
 #define HITLS_X509_ADAPT_LOCAL_H
 

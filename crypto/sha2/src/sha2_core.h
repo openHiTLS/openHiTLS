@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #ifndef SHA2_CORE_H
 #define SHA2_CORE_H
 #include <stdint.h>

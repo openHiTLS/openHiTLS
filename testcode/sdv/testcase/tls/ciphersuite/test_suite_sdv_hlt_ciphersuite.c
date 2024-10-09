@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>

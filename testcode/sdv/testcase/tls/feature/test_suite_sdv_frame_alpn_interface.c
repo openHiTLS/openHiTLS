@@ -12,8 +12,10 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 /* INCLUDE_BASE ../consistency/tls12/test_suite_tls12_consistency_rfc5246_malformed_msg */
 /* BEGIN_HEADER */
+
 #include "securec.h"
 #include "bsl_bytes.h"
 #include "bsl_sal.h"

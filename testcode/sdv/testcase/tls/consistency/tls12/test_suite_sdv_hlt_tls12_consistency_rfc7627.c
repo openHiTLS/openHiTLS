@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 /* BEGIN_HEADER */
+
 #include <semaphore.h>
 #include <unistd.h>
 #include "securec.h"
