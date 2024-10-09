@@ -1,19 +1,13 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /* BEGIN_HEADER */
+
 #include <stdio.h>
 #include "stub_replace.h"
 #include "hitls.h"
@@ -80,9 +74,8 @@ void SetConfig(HLT_Ctx_Config *clientconfig, HLT_Ctx_Config *serverconfig, SetIn
         if (setInfo.ServerGroup != NULL) {
             HLT_SetGroups(serverconfig, setInfo.ServerGroup);
         }
-        if (setInfo.psk != NULL ) {
-            memcpy_s(serverconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
-        }
+        memcpy_s(serverconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
+
         if ( (setInfo.ClientKeyExchangeMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_KE_MODE_PSK_ONLY)) != 0) {
             clientconfig->keyExchMode = setInfo.ClientKeyExchangeMode;
         }
@@ -94,9 +87,7 @@ void SetConfig(HLT_Ctx_Config *clientconfig, HLT_Ctx_Config *serverconfig, SetIn
         if (setInfo.ClientGroup != NULL) {
             HLT_SetGroups(clientconfig, setInfo.ClientGroup);
         }
-        if (setInfo.psk != NULL ) {
-            memcpy_s(clientconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
-        }
+        memcpy_s(clientconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
         if ( (setInfo.ServerKeyExchangeMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_KE_MODE_PSK_ONLY)) != 0) {
             serverconfig->keyExchMode = setInfo.ServerKeyExchangeMode;
         }

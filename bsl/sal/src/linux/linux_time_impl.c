@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include "hitls_build.h"
@@ -85,19 +78,19 @@ uint32_t TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
     return BSL_SUCCESS;
 }
 
-void BSL_SAL_Sleep(uint32_t time)
+void SAL_Sleep(uint32_t time)
 {
     sleep(time);
 }
 
-long BSL_SAL_Tick(void)
+long SAL_Tick(void)
 {
     struct tms buf = {0};
     clock_t tickCount = times(&buf);
     return (long)tickCount;
 }
 
-long BSL_SAL_TicksPerSec(void)
+long SAL_TicksPerSec(void)
 {
     return sysconf(_SC_CLK_TCK);
 }

@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -115,6 +108,7 @@ typedef enum {
     CRYPT_PKEY_ECDSA = BSL_CID_ECDSA,
     CRYPT_PKEY_ECDH = BSL_CID_ECDH,
     CRYPT_PKEY_SM2 = BSL_CID_SM2,
+    CRYPT_PKEY_PAILLIER = BSL_CID_PAILLIER,
     CRYPT_PKEY_MAX = BSL_CID_UNKNOWN
 } CRYPT_PKEY_AlgId;
 

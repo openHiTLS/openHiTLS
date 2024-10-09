@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include "hitls_build.h"
@@ -73,9 +66,16 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
         return CRYPT_NULL_INPUT;
     }
 
+    int32_t ret = CRYPT_SUCCESS;
+    uint8_t *signedData = NULL;
+    CRYPT_EAL_PkeyCtx *tempPubKey = CRYPT_EAL_PkeyDupCtx(pubKey);
+    CRYPT_EAL_PkeyCtx *tempPrivKey = CRYPT_EAL_PkeyDupCtx(prvKey);
+    if (tempPubKey == NULL || tempPrivKey == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto ERR;
+    }
     CRYPT_MD_AlgId hashId;
-    CRYPT_PKEY_AlgId algId = CRYPT_EAL_PkeyGetId(pubKey);
-    int32_t ret;
+    CRYPT_PKEY_AlgId algId = CRYPT_EAL_PkeyGetId(tempPubKey);
     switch (algId) {
         case CRYPT_PKEY_DSA:
         case CRYPT_PKEY_ED25519:
@@ -86,34 +86,39 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
             break;
         case CRYPT_PKEY_RSA:
             hashId = CRYPT_MD_SHA512;
-            ret = CryptRsaEmsaPairSet(pubKey, prvKey, hashId);
-            if (ret != CRYPT_SUCCESS) {
-                return ret;
-            }
+            ret = CryptRsaEmsaPairSet(tempPubKey, tempPrivKey, hashId);
             break;
         case CRYPT_PKEY_SM2:
             hashId = CRYPT_MD_SM3;
             break;
         default:
-            return CRYPT_NOT_SUPPORT;
+            ret = CRYPT_NOT_SUPPORT;
+            break;
     }
 
-    uint8_t toBeSig[] = {1};
-    uint32_t signedLen = CRYPT_EAL_PkeyGetSignLen(prvKey);
-    if (signedLen == 0) {
-        return CRYPT_ECC_PKEY_ERR_SIGN_LEN;
-    }
-    uint8_t *signedData = BSL_SAL_Malloc(signedLen);
-    if (signedData == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ret = CRYPT_EAL_PkeySign(prvKey, hashId, toBeSig, sizeof(toBeSig), signedData, &signedLen);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
-    ret = CRYPT_EAL_PkeyVerify(pubKey, hashId, toBeSig, sizeof(toBeSig), signedData, signedLen);
+    uint8_t toBeSig[] = {1};
+    uint32_t signedLen = CRYPT_EAL_PkeyGetSignLen(tempPrivKey);
+    if (signedLen == 0) {
+        ret = CRYPT_ECC_PKEY_ERR_SIGN_LEN;
+        goto ERR;
+    }
+    signedData = BSL_SAL_Malloc(signedLen);
+    if (signedData == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto ERR;
+    }
+    ret = CRYPT_EAL_PkeySign(tempPrivKey, hashId, toBeSig, sizeof(toBeSig), signedData, &signedLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+    ret = CRYPT_EAL_PkeyVerify(tempPubKey, hashId, toBeSig, sizeof(toBeSig), signedData, signedLen);
 ERR:
     BSL_SAL_FREE(signedData);
+    CRYPT_EAL_PkeyFreeCtx(tempPubKey);
+    CRYPT_EAL_PkeyFreeCtx(tempPrivKey);
     return ret;
 }
 #endif

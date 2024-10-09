@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include "hitls_build.h"
@@ -218,6 +211,7 @@ void BSL_LIST_DeleteAll(BslList *pList, BSL_LIST_PFUNC_FREE pfFreeFunc)
             BSL_SAL_FREE(pNode->data);
         } else {
             pfFreeFunc(pNode->data);
+            pNode->data = NULL;
         }
 
         BSL_SAL_FREE(pNode);
@@ -431,6 +425,7 @@ BslList *BSL_LIST_Copy(BslList *pSrcList, BSL_LIST_PFUNC_DUP pFuncCpy, BSL_LIST_
         if (BSL_LIST_AddElement(pDstList, pDstData, BSL_LIST_POS_AFTER) != BSL_SUCCESS) {
             if (pfFreeFunc != NULL) {
                 pfFreeFunc(pDstData);
+                pDstData = NULL;
             } else {
                 BSL_SAL_FREE(pDstData);
             }

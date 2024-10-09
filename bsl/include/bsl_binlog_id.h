@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #ifndef BSL_BINLOG_ID_H
@@ -33,7 +26,8 @@ enum BSL_BINLOG_ID {
     BINLOG_ID05046, BINLOG_ID05047, BINLOG_ID05048, BINLOG_ID05049, BINLOG_ID05050,
     BINLOG_ID05051, BINLOG_ID05052, BINLOG_ID05053, BINLOG_ID05054, BINLOG_ID05055,
     BINLOG_ID05056, BINLOG_ID05057, BINLOG_ID05058, BINLOG_ID05059, BINLOG_ID05060,
-    BINLOG_ID05061, BINLOG_ID05062, BINLOG_ID05063, BINLOG_ID05064, BINLOG_ID05065
+    BINLOG_ID05061, BINLOG_ID05062, BINLOG_ID05063, BINLOG_ID05064, BINLOG_ID05065,
+    BINLOG_ID05066, BINLOG_ID05067, BINLOG_ID05068
 };
 
 #ifdef __cplusplus

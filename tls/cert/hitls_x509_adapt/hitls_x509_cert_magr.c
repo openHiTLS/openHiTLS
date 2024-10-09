@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include <stdint.h>
@@ -30,7 +23,7 @@ int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8
     (void)ctx;
     *usedLen = 0;
     uint32_t encodeLen = 0;
-    int32_t ret = HITLS_X509_CtrlCert((HITLS_X509_Cert *)cert, HITLS_X509_CERT_GET_ENCODELEN, &encodeLen,
+    int32_t ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)cert, HITLS_X509_GET_ENCODELEN, &encodeLen,
         (int32_t)sizeof(uint32_t));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -41,7 +34,7 @@ int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8
         return HITLS_INVALID_INPUT;
     }
     uint8_t *encodedBuff = NULL;
-    ret = HITLS_X509_CtrlCert((HITLS_X509_Cert *)cert, HITLS_X509_CERT_ENCODE, (void *)&encodedBuff, 0);
+    ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)cert, HITLS_X509_GET_ENCODE, (void *)&encodedBuff, 0);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -58,8 +51,8 @@ static BSL_ParseFormat GetBslParseFormat(HITLS_ParseFormat format)
        BSL_ParseFormat bslFormat;
     } ParseFormatMap;
     static ParseFormatMap formatMap[]= {
-        {TLS_PARSE_FORMAT_PEM, BSL_PARSE_FORMAT_PEM},
-        {TLS_PARSE_FORMAT_ASN1, BSL_PARSE_FORMAT_ASN1}
+        {TLS_PARSE_FORMAT_PEM, BSL_FORMAT_PEM},
+        {TLS_PARSE_FORMAT_ASN1, BSL_FORMAT_ASN1}
     };
     for (size_t i = 0; i < sizeof(formatMap) / sizeof(formatMap[0]); i++) {
         if (formatMap[i].hitlsFormat == format) {
@@ -67,7 +60,7 @@ static BSL_ParseFormat GetBslParseFormat(HITLS_ParseFormat format)
         }
     }
 
-    return BSL_PARSE_FORMAT_UNKNOWN;
+    return BSL_FORMAT_UNKNOWN;
 }
 
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
@@ -80,7 +73,7 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
     HITLS_X509_Cert *cert = NULL;
     switch (type) {
         case TLS_PARSE_TYPE_FILE:
-            ret = HITLS_X509_ParseFileCert(bslFormat, (const char *)buf, &cert);
+            ret = HITLS_X509_CertParseFile(bslFormat, (const char *)buf, &cert);
             break;
         case TLS_PARSE_TYPE_BUFF:
             encodedCert.data = (uint8_t *)BSL_SAL_Calloc(len, (uint32_t)sizeof(uint8_t));
@@ -90,7 +83,7 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
             }
             (void)memcpy_s(encodedCert.data, len, buf, len);
             encodedCert.dataLen = len;
-            ret = HITLS_X509_ParseBuffCert(bslFormat, &encodedCert, &cert);
+            ret = HITLS_X509_CertParseBuff(bslFormat, &encodedCert, &cert);
             break;
         default:
             break;
@@ -108,7 +101,7 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertDup(HITLS_CERT_X509 *cert)
 {
     HITLS_X509_Cert *dest = NULL;
-    int32_t ret = HITLS_X509_DupCert(cert, &dest);
+    int32_t ret = HITLS_X509_CertDup(cert, &dest);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -119,13 +112,13 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertDup(HITLS_CERT_X509 *cert)
 
 void HITLS_X509_Adapt_CertFree(HITLS_CERT_X509 *cert)
 {
-    HITLS_X509_FreeCert(cert);
+    HITLS_X509_CertFree(cert);
 }
 
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertRef(HITLS_CERT_X509 *cert)
 {
     int ref = 0;
-    int ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_REF_UP, (void *)&ref, (int32_t)sizeof(int));
+    int ret = HITLS_X509_CertCtrl(cert, HITLS_X509_REF_UP, (void *)&ref, (int32_t)sizeof(int));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -175,7 +168,7 @@ static int32_t CertCtrlGetSignAlgo(HITLS_CERT_X509 *cert, HITLS_SignHashAlgo *al
 {
     BslCid tmpCid = 0;
     *algSign = CERT_SIG_SCHEME_UNKNOWN;
-    int32_t ret = HITLS_X509_CtrlCert(cert, HITLS_X509_CERT_GET_SIGNALG, &tmpCid, sizeof(BslCid));
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &tmpCid, sizeof(BslCid));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -194,35 +187,35 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
     int32_t x509Cmd = 0;
     switch (cmd) {
         case CERT_CTRL_GET_ENCODE_LEN:
-            x509Cmd = HITLS_X509_CERT_GET_ENCODELEN;
+            x509Cmd = HITLS_X509_GET_ENCODELEN;
             break;
         case CERT_CTRL_GET_PUB_KEY:
             valLen = (int32_t)sizeof(CRYPT_EAL_PkeyPub *);
-            x509Cmd = HITLS_X509_CERT_GET_PUBKEY;
+            x509Cmd = HITLS_X509_GET_PUBKEY;
             break;
         case CERT_CTRL_GET_SIGN_ALGO:
             return CertCtrlGetSignAlgo(cert, (HITLS_SignHashAlgo *)output);
         case CERT_KEY_CTRL_IS_KEYENC_USAGE:
             valLen = (int32_t)sizeof(uint8_t);
-            x509Cmd = HITLS_X509_CERT_EXT_KU_KEYENC;
+            x509Cmd = HITLS_X509_EXT_KU_KEYENC;
             break;
         case CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE:
             valLen = (int32_t)sizeof(uint8_t);
-            x509Cmd = HITLS_X509_CERT_EXT_KU_DIGITALSIGN;
+            x509Cmd = HITLS_X509_EXT_KU_DIGITALSIGN;
             break;
         case CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE:
             valLen = (int32_t)sizeof(uint8_t);
-            x509Cmd = HITLS_X509_CERT_EXT_KU_CERTSIGN;
+            x509Cmd = HITLS_X509_EXT_KU_CERTSIGN;
             break;
         case CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE:
             valLen = (int32_t)sizeof(uint8_t);
-            x509Cmd = HITLS_X509_CERT_EXT_KU_KEYAGREEMENT;
+            x509Cmd = HITLS_X509_EXT_KU_KEYAGREEMENT;
             break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
             return HITLS_X509_ADAPT_ERR;
     }
-    int32_t ret = HITLS_X509_CtrlCert(cert, x509Cmd, output, valLen);
+    int32_t ret = HITLS_X509_CertCtrl(cert, x509Cmd, output, valLen);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

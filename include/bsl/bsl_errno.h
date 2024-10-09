@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -44,10 +37,12 @@ enum BSL_ERROR {
     BSL_MALLOC_FAIL,                        /**< Error occurs when allocating memory */
     BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy_s. */
     BSL_INVALID_ARG,                        /**< Invalid arguments. */
+    BSL_DUMP_FAIL,                          /**< Error occurs when duplicating memory */
 
     /* The return value of the SAL submodule starts from 0x03010001. */
     BSL_SAL_ERR_UNKNOWN = 0x03010001,        /**< Unknown error. */
     BSL_SAL_ERR_BAD_PARAM,                   /**< Parameter incorrect. */
+
     BSL_SAL_ERR_FILE_OPEN,                   /**< Open file error. */
     BSL_SAL_ERR_FILE_READ,                   /**< File reading error. */
     BSL_SAL_ERR_FILE_WRITE,                  /**< File writing error. */
@@ -56,6 +51,8 @@ enum BSL_ERROR {
     BSL_SAL_ERR_FILE_SEEK,                   /**< Failed to set pointer position of file. */
     BSL_SAL_ERR_FILE_SET_ATTR,               /**< Setting file attribute failed. */
     BSL_SAL_ERR_FILE_GET_ATTR,               /**< Error in obtaining file attributes. */
+    BSL_SAL_FILE_NO_REG_FUNC,
+
     BSL_SAL_ERR_NET_SOCKCLOSE,               /**< Error occured when closing a socket. */
     BSL_SAL_ERR_NET_SETSOCKOPT,              /**< Error occured when setting a socket option. */
     BSL_SAL_ERR_NET_GETSOCKOPT,              /**< Error occured when getting a socket option. */
@@ -63,6 +60,9 @@ enum BSL_ERROR {
     BSL_SAL_ERR_NET_BIND,                    /**< Error occured when binding a socket */
     BSL_SAL_ERR_NET_CONNECT,                 /**< Error occured when building a connection. */
     BSL_SAL_ERR_NET_IOCTL,                   /**< Error occured when calling ioctl. */
+    BSL_SAL_NET_NO_REG_FUNC,
+
+    BSL_SAL_TIME_NO_REG_FUNC,
 
     /* The return value of the LOG submodule starts from 0x03020001. */
     BSL_LOG_ERR_BAD_PARAM = 0x03020001,      /**< Bad parameter. */
@@ -90,6 +90,7 @@ enum BSL_ERROR {
     BSL_LIST_INVALID_LIST_CURRENT = 0x03060001, /**< Current node pointer is NULL */
     BSL_LIST_DATA_NOT_AVAILABLE,                /**< Data of current node is NULL */
     BSL_LIST_FULL,                              /**< Number of nodes has reached its limit */
+    BSL_LIST_ERR_CONCAT,
 
     BSL_ASN1_FAIL = 0x03070001,
     BSL_ASN1_ERR_DECODE_BOOL,
@@ -111,6 +112,7 @@ enum BSL_ERROR {
     BSL_ASN1_ERR_ENCODE_FAIL,
     BSL_ASN1_ERR_ENCODE_ASN_LACK,
     BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH,
+    BSL_ASN1_ERR_ENCODE_BOOL,
     BSL_ASN1_ERR_ENCODE_INT,
     BSL_ASN1_ERR_ENCODE_BIT_STRING,
     BSL_ASN1_ERR_ENCODE_UTC_TIME,

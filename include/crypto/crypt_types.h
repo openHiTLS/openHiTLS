@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -129,6 +122,22 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
+ * Paillier private key parameter structure
+ */
+typedef struct {
+    uint8_t *n;      /**< Paillier private key parameter marked as n */
+    uint8_t *lambda; /**< Paillier private key parameter marked as lambda */
+    uint8_t *mu;     /**< Paillier private key parameter marked as mu */
+    uint8_t *n2;     /**< Paillier private key parameter marked as n2 */
+    uint32_t nLen;   /**< Length of the Paillier private key parameter marked as n */
+    uint32_t lambdaLen; /**< Length of the Paillier private key parameter marked as lambda */
+    uint32_t muLen; /**< Length of the Paillier private key parameter marked as mu */
+    uint32_t n2Len; /**< Length of the Paillier private key parameter marked as n2 */
+} CRYPT_PaillierPrv;
+
+/**
+ * @ingroup crypt_types
+ *
  * DSA private key parameter structure
  */
 typedef CRYPT_Data CRYPT_DsaPrv;
@@ -186,6 +195,20 @@ typedef struct {
     uint32_t eLen; /**< Length of the RSA public key parameter marked as e*/
     uint32_t nLen; /**< Length of the RSA public key parameter marked as e*/
 } CRYPT_RsaPub;
+
+/**
+ * @ingroup crypt_types
+ *
+ * Paillier public key parameter structure
+ */
+typedef struct {
+    uint8_t *n;  /**< Paillier public key parameter marked as n */
+    uint8_t *g;  /**< Paillier public key parameter marked as g */
+    uint8_t *n2; /**< Paillier public key parameter marked as n2 */
+    uint32_t nLen; /**< Length of the Paillier public key parameter marked as n */
+    uint32_t gLen; /**< Length of the Paillier public key parameter marked as g */
+    uint32_t n2Len; /**< Length of the Paillier public key parameter marked as n2 */
+} CRYPT_PaillierPub;
 
 /**
  * @ingroup crypt_types
@@ -274,6 +297,19 @@ typedef struct {
     uint32_t qLen; /**< Length of parameter q. */
     uint32_t gLen; /**< Length of parameter g. */
 } CRYPT_DhPara;
+
+/**
+ * @ingroup crypt_types
+ *
+ * Para structure of the Paillier algorithm
+ */
+typedef struct {
+    uint8_t *p; /**< Parameter p. */
+    uint8_t *q; /**< Parameter q. */
+    uint32_t pLen; /**< Length of parameter p. */
+    uint32_t qLen; /**< Length of parameter q. */
+    uint32_t bits; /**< Bits of para. */
+} CRYPT_PaillierPara;
 
 /**
  * @ingroup crypt_types
@@ -406,6 +442,7 @@ typedef enum {
 
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
+    CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**

@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -359,6 +352,25 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_NO_SUPPORT_FORMAT,                      /**< decode no support key format. */
     CRYPT_DECODE_PKCS8_INVALID_ITER,                     /**< pkcs8 invalid iter num */
     CRYPT_DECODE_PKCS8_INVALID_KEYLEN,                   /**< pkcs8 invalid keylen */
+    CRYPT_DECODE_ERR_RSSPSS_GET_ANY_TAG,                 /**< decode rsapss param failed. */
+    CRYPT_DECODE_ERR_RSSPSS,                             /**< decode rsapss param failed. */
+    CRYPT_DECODE_ERR_RSSPSS_MD,                          /**< rsapss md is invalid. */
+    CRYPT_DECODE_ERR_RSSPSS_MGF1MD,                      /**< rsapss mgf1md is invalid. */
+    CRYPT_DECODE_ERR_RSSPSS_TRAILER,                     /**< rsapss trailer field is invalid. */
+    CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE,        /**< Invaild pkcs7-encryptedData. */
+    CRYPT_DECODE_UNSUPPORTED_PKCS7_TYPE,                 /**< Unsupported pkcs7 type */
+    CRYPT_DECODE_UNSUPPORTED_ENCRYPT_TYPE,               /**< Unsupported encrypt type */
+
+    CRYPT_ENCODE_NO_SUPPORT_TYPE = 0x011E0001,           /**< encode no support key type. */
+    CRYPT_ENCODE_NO_SUPPORT_FORMAT,                      /**< encode no support key format. */
+    CRYPT_ENCODE_ERR_RSA_PAD,                            /**< rsa pad err. */
+    
+    CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x011F0001, /**< The buffer length is insufficient. */
+    CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
+    CRYPT_PAILLIER_ERR_KEY_BITS,             /**< Incorrect key length. */
+    CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
 };
 
 #ifdef __cplusplus

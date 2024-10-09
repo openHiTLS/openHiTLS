@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #ifndef HITLS_CRL_LOCAL_H
@@ -31,6 +24,7 @@ typedef struct {
 } HITLS_X509_CrlExt;
 
 typedef struct {
+    uint8_t flag;
     BSL_ASN1_Buffer serialNumber;
     BSL_TIME time;
     BSL_ASN1_Buffer entryExt;
@@ -60,9 +54,9 @@ typedef struct _HITLS_X509_Crl {
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
-HITLS_X509_Crl *HITLS_X509_NewCrl(void);
-int32_t HITLS_X509_ParseBuffCrlMul(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist);
-
+HITLS_X509_Crl *HITLS_X509_CrlNew(void);
+int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist);
+int32_t HITLS_X509_EncodeCrlTbs(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *asn);
 #ifdef __cplusplus
 }
 #endif

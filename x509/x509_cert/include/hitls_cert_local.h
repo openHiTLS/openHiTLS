@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #ifndef HITLS_CERT_LOCAL_H
@@ -26,34 +19,13 @@
 extern "C" {
 #endif
 
-#define HITLS_X509_EXT_KU_DIGITAL_SIGN       0x0080
-#define HITLS_X509_EXT_KU_NON_REPUDIATION    0x0040
-#define HITLS_X509_EXT_KU_KEY_ENCIPHERMENT   0x0020
-#define HITLS_X509_EXT_KU_DATA_ENCIPHERMENT  0x0010
-#define HITLS_X509_EXT_KU_KEY_AGREEMENT      0x0008
-#define HITLS_X509_EXT_KU_KEY_CERT_SIGN      0x0004
-#define HITLS_X509_EXT_KU_CRL_SIGN           0x0002
-#define HITLS_X509_EXT_KU_ENCIPHER_ONLY      0x0001
-#define HITLS_X509_EXT_KU_DECIPHER_ONLY      0x8000
-
-#define HITLS_X509_CERT_EXT_FLAG_KUSAGE (1 << 0)
-#define HITLS_X509_CERT_EXT_FLAG_BCONS (1 << 1)
-
-typedef struct _HITLS_X509_CertExt {
-    BslList *list;
-    uint32_t extFlags;
-    // basic usage ext
-    bool isCa;
-    // -1 no check, 0 no intermediate certificate
-    int32_t maxPathLen;
-    // key usage ext
-    uint64_t keyUsage;
-} HITLS_X509_CertExt;
+#define HITLS_X509_CERT_PARSE_FLAG  0x01
+#define HITLS_X509_CERT_GEN_FLAG    0x02
 
 typedef struct {
     uint8_t *tbsRawData;
     uint32_t tbsRawDataLen;
-    
+
     int32_t version;
     BSL_ASN1_Buffer serialNum;
     HITLS_X509_Asn1AlgId signAlgId;
@@ -63,25 +35,26 @@ typedef struct {
     BSL_ASN1_List *subjectName;
 
     void *ealPubKey;
-    HITLS_X509_CertExt ext;
+    HITLS_X509_Ext ext;
 } HITLS_X509_CertTbs;
 
 typedef struct _HITLS_X509_Cert {
-    bool isCopy;
+    int8_t flag; // Used to mark certificate parsing or generation, indicating resource release behavior.
+
     uint8_t *rawData;
     uint32_t rawDataLen;
     HITLS_X509_CertTbs tbs;
     HITLS_X509_Asn1AlgId signAlgId;
     BSL_ASN1_BitString signature;
+
+    void *ealPrivKey;         // Used to sign.
+    CRYPT_MD_AlgId signMdId;
     BSL_SAL_RefCount references;
 } HITLS_X509_Cert;
 
-HITLS_X509_Cert *HITLS_X509_NewCert(void);
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res);
 int32_t HITLS_X509_CertIsCA(HITLS_X509_Cert *cert, bool *res);
-int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
-    HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature);
-int32_t HITLS_X509_ParseBuffCertMul(int32_t format, BSL_Buffer *encode, HITLS_X509_List **certlist);
+int32_t HITLS_X509_CertMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **certlist);
 
 #ifdef __cplusplus
 }

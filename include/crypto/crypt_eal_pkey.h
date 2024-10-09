@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -46,7 +39,8 @@ typedef struct {
         CRYPT_DhPub dhPub;   /**< DH public key structure */
         CRYPT_EccPub eccPub; /**< ECC public key structure */
         CRYPT_Curve25519Pub curve25519Pub; /**< ed25519/x25519 public key structure */
-    }key;                           /**< Public key union of all algorithms */
+        CRYPT_PaillierPub paillierPub; /**< Paillier public key structure */
+    } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
 /**
@@ -62,6 +56,7 @@ typedef struct {
         CRYPT_DhPrv  dhPrv;  /**< DH private key structure */
         CRYPT_EccPrv eccPrv; /**< ECC private key structure */
         CRYPT_Curve25519Prv curve25519Prv; /**< ed25519/x25519 private key structure */
+        CRYPT_PaillierPrv paillierPrv; /**< Paillier private key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
 
@@ -78,6 +73,7 @@ typedef struct {
         CRYPT_DsaPara dsaPara; /**< DSA Para structure */
         CRYPT_DhPara  dhPara;  /**< DH Para structure */
         CRYPT_EccPara eccPara; /**< ECC Para structure */
+        CRYPT_PaillierPara paillierPara; /**< Paillier Para structure */
     } para;                            /**<Para union of all algorithms */
 } CRYPT_EAL_PkeyPara;
 
@@ -100,6 +96,7 @@ typedef struct EAL_PkeyCtx CRYPT_EAL_PkeyCtx;
 bool CRYPT_EAL_PkeyIsValidAlgId(CRYPT_PKEY_AlgId id);
 
 /* Pkey external interface */
+
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Create an asymmetric key pair structure.

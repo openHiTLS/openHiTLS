@@ -1,18 +1,11 @@
 #!/bin/bash
 
-# This file is part of the openHiTLS project.
-#
-# openHiTLS is licensed under the Mulan PSL v2.
-# You can use this software according to the terms and conditions of the Mulan PSL v2.
-# You may obtain a copy of Mulan PSL v2 at:
-#
-#     http://license.coscl.org.cn/MulanPSL2
-#
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-# See the Mulan PSL v2 for more details.
-
+# ---------------------------------------------------------------------------------------------
+#  This file is part of the openHiTLS project.
+#  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+#  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+#  for license information.
+# ---------------------------------------------------------------------------------------------
 set -e
 cd ../../
 HITLS_ROOT_DIR=`pwd`
@@ -26,7 +19,7 @@ del_options=""
 get_arch=`arch`
 
 LIB_TYPE="static"
-NO_SCTP="OFF"
+enable_sctp="--enable-sctp"
 BITS=64
 
 clean()
@@ -61,26 +54,23 @@ build_hitls_code()
 {
     bsl_features="err hash init list log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str tlv \
                   uio_plt uio_buffer uio_sctp uio_tcp usrdata asn1 obj base64 pem"
-    if [[ "$NO_SCTP" = "ON" ]]; then
-        bsl_features="${bsl_features//uio_sctp/}"
-    fi
 
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
     add_options="${add_options} -DHITLS_EAL_INIT_OPTS=1 -DHITLS_CRYPTO_ASM_CHECK" # Get CPU capability
-    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_x509 --bits=$BITS --system=linux
+    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_x509 --bits=$BITS --system=linux ${enable_sctp}
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type x8664 --add_options="$add_options" --del_options="$del_options"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type x8664 --add_options="$add_options" --del_options="$del_options" ${enable_sctp}
     elif [[ $get_arch = "armv8_be" ]]; then
         echo "Compile: env=armv8, asm + c, big endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options" ${enable_sctp}
     elif [[ $get_arch = "armv8_le" ]]; then
         echo "Compile: env=armv8, asm + c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type armv8 --add_options="$add_options" --del_options="$del_options"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type armv8 --add_options="$add_options" --del_options="$del_options" ${enable_sctp}
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --add_options="$add_options" --del_options="$del_options"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --add_options="$add_options" --del_options="$del_options" ${enable_sctp}
     fi
     cmake ..
     make -j
@@ -114,7 +104,7 @@ parse_option()
                 get_arch="C"
                 ;;
             "no_sctp")
-                NO_SCTP="ON"
+                enable_sctp=""
                 ;;
             "bits")
                 BITS="$value"

@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include "hitls_build.h"
@@ -21,7 +14,7 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 
-int32_t BSL_SAL_FileOpen(bsl_sal_file_handle *stream, const char *path, const char *mode)
+int32_t SAL_FileOpen(bsl_sal_file_handle *stream, const char *path, const char *mode)
 {
     bsl_sal_file_handle temp = NULL;
 
@@ -38,7 +31,7 @@ int32_t BSL_SAL_FileOpen(bsl_sal_file_handle *stream, const char *path, const ch
     return BSL_SUCCESS;
 }
 
-int32_t BSL_SAL_FileRead(bsl_sal_file_handle stream, void *buffer, size_t size, size_t num, size_t *len)
+int32_t SAL_FileRead(bsl_sal_file_handle stream, void *buffer, size_t size, size_t num, size_t *len)
 {
     if (stream == NULL || buffer == NULL || len == NULL) {
         return BSL_NULL_INPUT;
@@ -50,7 +43,7 @@ int32_t BSL_SAL_FileRead(bsl_sal_file_handle stream, void *buffer, size_t size, 
     return BSL_SUCCESS;
 }
 
-int32_t BSL_SAL_FileWrite(bsl_sal_file_handle stream, const void *buffer, size_t size, size_t num)
+int32_t SAL_FileWrite(bsl_sal_file_handle stream, const void *buffer, size_t size, size_t num)
 {
     if (stream == NULL || buffer == NULL) {
         return BSL_NULL_INPUT;
@@ -60,12 +53,12 @@ int32_t BSL_SAL_FileWrite(bsl_sal_file_handle stream, const void *buffer, size_t
     return ret == num ? BSL_SUCCESS : BSL_SAL_ERR_FILE_WRITE;
 }
 
-void BSL_SAL_FileClose(bsl_sal_file_handle stream)
+void SAL_FileClose(bsl_sal_file_handle stream)
 {
     (void)fclose(stream);
 }
 
-int32_t BSL_SAL_FileLength(const char *path, size_t *len)
+int32_t SAL_FileLength(const char *path, size_t *len)
 {
     int32_t ret;
     long tmp;

@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include "hitls_build.h"
@@ -41,6 +34,9 @@
 #endif
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
+#endif
+#ifdef HITLS_CRYPTO_PAILLIER
+#include "crypt_paillier.h"
 #endif
 #include "bsl_err_internal.h"
 #include "crypt_types.h"
@@ -315,6 +311,36 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_SM2_Cmp,
         CRYPT_SM2_GetSecBits
     ), // CRYPT_PKEY_SM2
+#endif
+#ifdef HITLS_CRYPTO_PAILLIER
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_PAILLIER,
+        CRYPT_PAILLIER_NewCtx,
+        CRYPT_PAILLIER_DupCtx,
+        CRYPT_PAILLIER_FreeCtx,
+        CRYPT_PAILLIER_SetPara,
+        NULL,
+        CRYPT_PAILLIER_Gen,
+        CRYPT_PAILLIER_GetBits,
+        NULL,
+        NULL,  // ctrl,
+        NULL,
+        NULL,
+        CRYPT_PAILLIER_FreePara,
+        CRYPT_PAILLIER_NewPara,
+        CRYPT_PAILLIER_SetPubKey,
+        CRYPT_PAILLIER_SetPrvKey,
+        CRYPT_PAILLIER_GetPubKey,
+        CRYPT_PAILLIER_GetPrvKey,
+        NULL,
+        NULL,
+        NULL,
+        CRYPT_PAILLIER_Encrypt,
+        CRYPT_PAILLIER_Decrypt,
+        NULL,
+        NULL,  // cmp
+        CRYPT_PAILLIER_GetSecBits
+    ), // CRYPT_PKEY_PAILLIER
 #endif
 };
 

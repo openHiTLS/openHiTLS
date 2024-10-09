@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 #ifndef BSL_PEM_INTERNAL_H
 #define BSL_PEM_INTERNAL_H
@@ -50,10 +43,16 @@ extern "C" {
 #define BSL_PEM_P8_PRI_KEY_BEGIN_STR "-----BEGIN ENCRYPTED PRIVATE KEY-----"
 #define BSL_PEM_P8_PRI_KEY_END_STR "-----END ENCRYPTED PRIVATE KEY-----"
 
+#define BSL_PEM_CERT_REQ_BEGIN_STR "-----BEGIN CERTIFICATE REQUEST-----"
+#define BSL_PEM_CERT_REQ_END_STR "-----END CERTIFICATE REQUEST-----"
+
 typedef struct {
     const char *head;
     const char *tail;
 } BSL_PEM_Symbol;
+
+int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_Symbol *symbol,
+    char **encode, uint32_t *encodeLen);
 
 /* encode must end in '\0' */
 int32_t BSL_PEM_ParsePem2Asn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,

@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -100,6 +93,7 @@ typedef enum {
     BSL_CID_ECDH = 5216,             /**< identifies the EC Diffie-Hellman algorithm */
     BSL_CID_ED25519 = 5261,         /**< Identifies ED25519 algorithm */
     BSL_CID_X25519 = 5276,          /**< Identifies X25519 algorithm */
+    BSL_CID_PAILLIER = 5291,        /**< identifies the Paillier algorithm */
 
     /* hash algorithm */
     BSL_CID_MD4 = 10001,            /**< identifies MD4 hash algorithm */
@@ -197,23 +191,67 @@ typedef enum {
 
     /* rfc5280 */
     BSL_CID_CE = 127001,
+    BSL_CID_CE_AUTHORITYKEYID,
+    BSL_CID_CE_SUBJECTKEYID,
     BSL_CID_CE_KEYUSAGE,
+    BSL_CID_CE_SUBJECTALTNAME,
     BSL_CID_CE_BASICCONSTRAINTS,
+    BSL_CID_CE_EXTENDEDKEYUSAGE,
+    BSL_CID_CE_SERVERAUTH,
+    BSL_CID_CE_CLIENTAUTH,
+    BSL_CID_CE_CODESIGNING,
+    BSL_CID_CE_EMAILPROTECTION,
+    BSL_CID_CE_TIMESTAMPING,
+    BSL_CID_CE_OSCPSIGNING,
+
+    /* rfc4055 */
+    BSL_CID_MGF1 = 127301,
 
     /* rfc3279 */
     BSL_CID_EC_PUBLICKEY = 130001,
 
-    /* rfc2253 */
+    /* Attributes: rfc4519, rfc5280 */
     BSL_CID_COMMONNAME = 130301,
+    BSL_CID_SUNAME,
+    BSL_CID_SERIALNUMBER,
+    BSL_CID_COUNTRYNAME,
     BSL_CID_LOCALITYNAME,
     BSL_CID_STATEORPROVINCENAME,
+    BSL_CID_STREETADDRESS,
     BSL_CID_ORGANIZATIONNAME,
     BSL_CID_ORGANIZATIONUNITNAME,
-    BSL_CID_COUNTRYNAME,
-    BSL_CID_STREETADDRESS,
+    BSL_CID_TITLE,
+    BSL_CID_GIVENNAME,
+    BSL_CID_INITIALS,
+    BSL_CID_GENERATIONQUALIFIER,
+    BSL_CID_DNQUALIFIER,
+    BSL_CID_PSEUDONYM,
     BSL_CID_DOMAINCOMPONENT,
     BSL_CID_USERID,
     BSL_CID_EMAILADDRESS,
+
+    /* rfc 2985 attribute */
+    BSL_CID_REQ_EXTENSION = 130601,
+
+    /* rfc2315 */
+    BSL_CID_CONTENTINFO = 130701,
+    BSL_CID_DATA, // kind of contentInfo
+    BSL_CID_SIGENEDDATA,
+    BSL_CID_ENCRYPTEDDATA,
+    BSL_CID_ENVELOPEDDATA,
+
+    /* PKCS9  */
+    BSL_CID_FRIENDLYNAME = 130801,
+    BSL_CID_LOCATEDID,
+    BSL_CID_X509CERTIFICATE,
+
+    /* rfc7292 */
+    BSL_CID_KEYBAG = 130901, // kind of safeBag.
+    BSL_CID_PKCS8SHROUDEDKEYBAG,
+    BSL_CID_CERTBAG,
+    BSL_CID_CRLBAG,
+    BSL_CID_SECRETBAG,
+    BSL_CID_SAFECONTENT,
 
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,

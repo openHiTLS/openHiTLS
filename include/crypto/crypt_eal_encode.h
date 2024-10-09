@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 /**
@@ -41,70 +34,92 @@ typedef enum {
     CRYPT_PUBKEY_RSA
 } CRYPT_ENCODE_TYPE;
 
+typedef enum {
+    CRYPT_DERIVE_PBKDF2,
+} CRYPT_DERIVE_MODE;
+
+typedef struct {
+    uint32_t deriveMode;
+    void *param;
+} CRYPT_EncodeParam;
+
+typedef struct {
+    uint32_t pbesId;
+    uint32_t pbkdfId;
+    uint32_t hmacId;
+    uint32_t symId;
+    uint32_t saltLen;
+    uint8_t *pwd;
+    uint32_t pwdLen;
+    uint32_t itCnt;
+} CRYPT_Pbkdf2Param;
+
+
 /**
  * @ingroup crypt_eal_encode
- * @brief   Parse formatted buffer of pubkey
+ * @brief   Decode formatted buffer of pkey
  *
  * @param   format [IN] the buffer format.
- * @param   type [IN] the type of pubkey.
+ * @param   type [IN] the type of pkey.
  * @param   encode [IN] the encoded asn1 buffer.
- * @param   ealPubKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
+ * @param   pwd [IN] the password, maybe NULL for unencrypted private key / public key.
+ * @param   pwdlen [IN] the length of password.
+ * @param   ealPKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ParseBuffPubKey(BSL_ParseFormat format, int32_t type,
-    BSL_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPubKey);
+int32_t CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type,
+    BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_encode
- * @brief   Parse formatted file of pubkey
+ * @brief   Decode formatted file of pkey
  *
  * @param   format [IN] the file format.
- * @param   type [IN] the type of pubkey.
+ * @param   type [IN] the type of pkey.
  * @param   path [IN] the encoded file path.
- * @param   ealPubKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the path.
+ * @param   pwd [IN] the password, maybe NULL for unencrypted private key / public key.
+ * @param   pwdlen [IN] the length of password.
+ * @param   ealPKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the path.
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ParseFilePubKey(BSL_ParseFormat format, int32_t type, const char *path,
-    CRYPT_EAL_PkeyCtx **ealPubKey);
+int32_t CRYPT_EAL_DecodeFileKey(BSL_ParseFormat format, int32_t type, const char *path,
+    uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_encode
- * @brief   Parse formatted buffer of private-key
+ * @brief   Encode formatted buffer of pkey
  *
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   encodeParam [IN] pkcs8 encode params.
  * @param   format [IN] the buffer format.
- * @param   type [IN] the type of private-key.
- * @param   encode [IN] the encoded asn1 buffer.
- * @param   pwd [IN] the password, maybe NULL for unencrypted private key.
- * @param   pwdlen [IN] the length of password.
- * @param   ealPriKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
+ * @param   type [IN] the type of pkey.
+ * @param   encode [OUT] the encoded asn1 buffer.
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ParseBuffPriKey(BSL_ParseFormat format, int32_t type,
-    BSL_Buffer *encode, uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPriKey);
+int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodeParam *encodeParam,
+    BSL_ParseFormat format, int32_t type, BSL_Buffer *encode);
 
 /**
  * @ingroup crypt_eal_encode
- * @brief   Parse formatted file of private-key
+ * @brief   Encode formatted file of pkey
  *
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   encodeParam [IN] pkcs8 encode params.
  * @param   format [IN] the file format.
- * @param   type [IN] the type of private-key.
+ * @param   type [IN] the type of pkey.
  * @param   path [IN] the encoded file path.
- * @param   pwd [IN] the password, maybe NULL for unencrypted private key.
- * @param   pwdlen [IN] the length of password.
- * @param   ealPriKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the path.
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ParseFilePriKey(BSL_ParseFormat format, int32_t type, const char *path,
-    uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPriKey);
-
+int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodeParam *encodeParam,
+    BSL_ParseFormat format, int32_t type, const char *path);
 
 #ifdef __cplusplus
 }

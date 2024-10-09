@@ -89,6 +89,7 @@
                         "rsa": {"deps": ["bn"]},
                         "dsa": {"deps": ["bn"]},
                         "dh": {"deps": ["bn"]},
+                        "paillier": {"deps":["bn"]},
                         "ecdh": {"deps": ["ecc"]},
                         "ecdsa": {"deps": ["ecc"]},
                         "curve25519": {
@@ -173,7 +174,8 @@
                     "crypto/ecdsa/include",
                     "crypto/ecdh/include",
                     "crypto/curve25519/include",
-                    "crypto/sm2/include"
+                    "crypto/sm2/include",
+                    "crypto/paillier/include"
                 ]
             },
             "ealinit": {
@@ -484,6 +486,11 @@
                 ".features": ["sm2_crypt", "sm2_sign", "sm2_exch"],
                 ".srcs": "crypto/sm2/src/*.c",
                 ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"]
+            },
+            "paillier": {
+                ".features": ["paillier"],
+                ".srcs": "crypto/paillier/src/*.c",
+                ".deps": ["crypto::bn"]
             }
         },
         "bsl":{
@@ -670,7 +677,8 @@
             "x509_cert": {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".include": ["x509/x509_csr/include"]
             },
             "x509_crl" : {
                 ".features" : ["all_x509"],
@@ -680,12 +688,27 @@
             "x509_common" : {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_common/src/*",
-                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem"]
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem", "crypto::encode"]
             },
             "x509_verify" : {
                 ".features" : ["all_x509"],
                 ".srcs" : "x509/x509_verify/src/*",
                 ".deps" : ["platform::Secure_C", "x509::x509_cert", "x509::x509_crl", "x509::x509_common"]
+            },
+            "x509_csr" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_csr/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "pkcs12" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/pkcs12/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "x509::x509_cert", "x509::cms"]
+            },
+            "cms" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/cms/src/*",
+                ".deps" : ["platform::Secure_C", "crypto::encode"]
             }
         }
     }

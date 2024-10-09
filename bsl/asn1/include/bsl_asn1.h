@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2023 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #ifndef BSL_ASN1_H
@@ -54,6 +47,7 @@ extern "C" {
 
 #define BSL_ASN1_TAG_UTCTIME           0x17
 #define BSL_ASN1_TAG_GENERALIZEDTIME   0x18
+#define BSL_ASN1_TAG_BMPSTRING         0x1E
 
 /* Custom types, use private class to prevent conflicts */
 #define BSL_ASN1_TAG_CHOICE (BSL_ASN1_CLASS_PRIVATE | 1)
@@ -61,7 +55,7 @@ extern "C" {
 
 /* The current value is flags, is used to guide asn1 encoding or decoding */
 #define BSL_ASN1_FLAG_OPTIONAL 1
-/* The current value is deflaut, is used to guide asn1 encoding or decoding */
+/* The current value is default, is used to guide asn1 encoding or decoding */
 #define BSL_ASN1_FLAG_DEFAULT  2
 /* Only parsing or encoding headers, and child nodes are not traversed */
 #define BSL_ASN1_FLAG_HEADERONLY 4
@@ -69,6 +63,9 @@ extern "C" {
 #define BSL_ASN1_FLAG_SAME 8
 
 #define BSL_ASN1_MAX_TEMPLATE_DEPTH 6
+
+#define BSL_ASN1_UTCTIME_LEN 13         // YYMMDDHHMMSSZ
+#define BSL_ASN1_GENERALIZEDTIME_LEN 15 // YYYYMMDDHHMMSSZ
 
 #define BSL_ASN1_List BslList
 

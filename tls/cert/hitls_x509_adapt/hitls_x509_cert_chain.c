@@ -1,16 +1,9 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/*---------------------------------------------------------------------------------------------
+ *  This file is part of the openHiTLS project.
+ *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
+ *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
+ *  for license information.
+ *---------------------------------------------------------------------------------------------
  */
 
 #include <stdint.h>
@@ -34,7 +27,7 @@ static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listA
         }
 
         int ref = 0;
-        ret = HITLS_X509_CtrlCert(elemt, HITLS_X509_CERT_REF_UP, (void *)&ref, (int32_t)sizeof(int));
+        ret = HITLS_X509_CertCtrl(elemt, HITLS_X509_REF_UP, (void *)&ref, (int32_t)sizeof(int));
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -57,15 +50,15 @@ static int32_t BuildCertListFromCertArray(HITLS_CERT_X509 **listCert, uint32_t n
     }
     for (uint32_t i = 0; i < num; i++) {
         int ref = 0;
-        ret = HITLS_X509_CtrlCert(listArray[i], HITLS_X509_CERT_REF_UP, (void *)&ref, (int32_t)sizeof(int));
+        ret = HITLS_X509_CertCtrl(listArray[i], HITLS_X509_REF_UP, (void *)&ref, (int32_t)sizeof(int));
         if (ret != HITLS_SUCCESS) {
-            BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+            BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
             return ret;
         }
         ret = BSL_LIST_AddElement(*list, listArray[i], BSL_LIST_POS_END);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+            BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
             return ret;
         }
     }
@@ -78,12 +71,12 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
     (void)config;
     *num = 0;
     HITLS_X509_List *certChain = NULL;
-    int32_t ret = HITLS_X509_BuildCertChain((HITLS_X509_StoreCtx *)store, cert, &certChain);
+    int32_t ret = HITLS_X509_CertChainBuild((HITLS_X509_StoreCtx *)store, cert, &certChain);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
     ret = BuildArrayFromList(certChain, list, num);
-    BSL_LIST_FREE(certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_LIST_FREE(certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     return ret;
 }
 
@@ -95,12 +88,12 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    ret = HITLS_X509_VerifyCert((HITLS_X509_StoreCtx *)store, certList);
+    ret = HITLS_X509_CertVerify((HITLS_X509_StoreCtx *)store, certList);
     if (ret != HITLS_SUCCESS) {
-        BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+        BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return ret;
     }
 
-    BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeCert);
+    BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     return HITLS_SUCCESS;
 }
