@@ -3130,6 +3130,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_EXTENSION_FUNC_TC002()
      *  supportedversion extension */
     FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
     serverMsg->supportedVersion.exState = MISSING_FIELD;
+    serverMsg->secRenego.exState = INITIAL_FIELD;
+    serverMsg->secRenego.exType.state = INITIAL_FIELD;
+    serverMsg->secRenego.exType.data = 0xFF01u;
+    serverMsg->secRenego.exLen.state = INITIAL_FIELD;
+    serverMsg->secRenego.exLen.data = 1;
+    serverMsg->secRenego.exDataLen.state = INITIAL_FIELD;
+    serverMsg->secRenego.exDataLen.data = 0u;
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};

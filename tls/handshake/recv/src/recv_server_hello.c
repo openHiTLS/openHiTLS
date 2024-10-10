@@ -262,6 +262,9 @@ static int32_t ClientCheckRenegoInfoDuringFirstHandshake(TLS_Ctx *ctx, const Ser
 {
     /* If the peer does not support the negotiation, return */
     if (!serverHello->haveSecRenego) {
+        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+            return HITLS_SUCCESS;
+        }
         if (ctx->config.tlsConfig.noSecRenegotiationCb != NULL) {
             /* The user can determine whether to terminate when the peer does not support security renegotiation */
             int32_t ret = ctx->config.tlsConfig.noSecRenegotiationCb(ctx);
@@ -272,8 +275,12 @@ static int32_t ClientCheckRenegoInfoDuringFirstHandshake(TLS_Ctx *ctx, const Ser
                 BSL_ERR_PUSH_ERROR(ret);
                 return ret;
             }
+            return HITLS_SUCCESS;
         }
-        return HITLS_SUCCESS;
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16070, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Legacy renegotiate is not allowed.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+        return HITLS_MSG_HANDLE_RENEGOTIATION_FAIL;
     }
 
     /* For the first handshake, if the security renegotiation information is not empty, return an error code.
