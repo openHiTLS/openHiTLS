@@ -69,7 +69,7 @@ ERR:
     return NULL;
 }
 
-uint32_t CRYPT_HMAC_GetMacLen(const CRYPT_HMAC_Ctx *ctx)
+static int32_t CRYPT_HMAC_GetMacLen(const CRYPT_HMAC_Ctx *ctx)
 {
     if (ctx == NULL || ctx->method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -186,6 +186,24 @@ void CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)
     method->deinit(ctx->mdCtx);
     method->deinit(ctx->iCtx);
     method->deinit(ctx->oCtx);
+}
+
+int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint32_t len)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    (void) val;
+    (void) len;
+    switch (opt) {
+        case CRYPT_CTRL_GET_MACLEN:
+            return CRYPT_HMAC_GetMacLen(ctx);
+        default:
+            break;
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_ECC_HMAC_ERR_UNSUPPORTED_CTRL_OPTION);
+    return CRYPT_ECC_HMAC_ERR_UNSUPPORTED_CTRL_OPTION;
 }
 
 void CRYPT_HMAC_FreeCtx(CRYPT_HMAC_Ctx *ctx)

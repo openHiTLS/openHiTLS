@@ -32,7 +32,7 @@
         (MacFinal)CRYPT_##name##_Final,              \
         (MacDeinit)CRYPT_##name##_Deinit,            \
         (MacReinit)CRYPT_##name##_Reinit,            \
-        (MacGetMacLen)CRYPT_##name##_GetMacLen,      \
+        (MacCtrl)CRYPT_##name##_Ctrl,                \
         (MacFreeCtx)CRYPT_##name##_FreeCtx           \
     }
 

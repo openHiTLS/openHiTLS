@@ -30,7 +30,7 @@ int32_t CRYPT_HMAC_Update(CRYPT_HMAC_Ctx *ctx, const uint8_t *in, uint32_t len);
 int32_t CRYPT_HMAC_Final(CRYPT_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len);
 void    CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx);
 void    CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx);
-uint32_t  CRYPT_HMAC_GetMacLen(const CRYPT_HMAC_Ctx *ctx);
+int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint32_t len);
 void CRYPT_HMAC_FreeCtx(CRYPT_HMAC_Ctx *ctx);
 
 #ifdef __cplusplus
