@@ -30,7 +30,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7Data(BSL_Buffer *encode, BSL_Buffer *dataValue);
 int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest);
 
 // encode PKCS7-DigestInfo：only support hash.
-int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer **encode);
+int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode);
 
 #ifdef __cplusplus
 }

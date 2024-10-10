@@ -76,10 +76,17 @@ typedef struct _HTILS_PKCS12_PwdParam {
     BSL_Buffer *encPwd;
 } HTILS_PKCS12_PwdParam;
 
-typedef struct {
-    CRYPT_CIPHER_AlgId certEncAlg;
-    CRYPT_CIPHER_AlgId keyEncAlg;
-    HTILS_PKCS12_PwdParam *pwd;
+typedef struct _HTILS_PKCS12_MacParam {
+    uint32_t saltLen;
+    uint32_t itCnt;
+    CRYPT_MD_AlgId macId;
+    uint8_t *pwd;
+    uint32_t pwdLen;
+} HTILS_PKCS12_MacParam;
+
+typedef struct _HTILS_PKCS12_EncodeParam{
+    CRYPT_EncodeParam encParam;
+    HTILS_PKCS12_MacParam macParam;
 } HTILS_PKCS12_EncodeParam;
 
 HTILS_PKCS12_SafeBag *HTILS_PKCS12_SafeBagNew();
@@ -90,9 +97,9 @@ HTILS_PKCS12_p12Info *HTILS_PKCS12_p12_InfoNew(void);
 
 void HTILS_PKCS12_p12_InfoFree(HTILS_PKCS12_p12Info *p12);
 
-HTILS_PKCS12_MacData *HTILS_PKCS12_p12_macDataNew(void);
+HTILS_PKCS12_MacData *HTILS_PKCS12_p12_MacDataNew(void);
 
-void HTILS_PKCS12_p12_macDataFree(HTILS_PKCS12_MacData *macData);
+void HTILS_PKCS12_p12_MacDataFree(HTILS_PKCS12_MacData *macData);
 
 void HTILS_PKCS12_AttributesFree(void *attribute);
 typedef enum {
@@ -150,6 +157,24 @@ int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *passwo
  * Parse MacData of a p12, and convert decode data to the real data.
 */
 int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HTILS_PKCS12_MacData *macData);
+
+/*
+ * Encode MacData of a p12.
+*/
+int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, BSL_Buffer *macPwd, HTILS_PKCS12_MacData *p12Mac,
+    BSL_Buffer *encode);
+
+/*
+ * Encode contentInfo.
+*/
+int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, CRYPT_EncodeParam *encryptParam,
+    BSL_Buffer *encode);
+
+/*
+ * Encode list, including contentInfo-list, safeContent-list.
+*/
+int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, CRYPT_EncodeParam *encryptParam,
+    BSL_Buffer *encode);
 
 #ifdef __cplusplus
 }

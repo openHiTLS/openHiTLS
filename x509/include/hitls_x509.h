@@ -44,6 +44,10 @@ typedef struct _HTILS_PKCS12_p12Info HTILS_PKCS12_p12Info;
 
 typedef struct _HTILS_PKCS12_PwdParam HTILS_PKCS12_PwdParam;
 
+typedef struct _HTILS_PKCS12_EncodeParam HTILS_PKCS12_EncodeParam;
+
+typedef struct _HTILS_PKCS12_MacParam HTILS_PKCS12_MacParam;
+
 #define HITLS_CERT_VERSION_1 0
 #define HITLS_CERT_VERSION_2 1
 #define HITLS_CERT_VERSION_3 2
@@ -657,7 +661,7 @@ int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t
  * @par Description: parse p12 buffer, and set the p12 struct.
 
  * @attention Only support to parse p12 files in key-integrity and key-privacy protection mode.
- * @param format         [IN] Encoding format: BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
+ * @param format         [IN] Decoding format: BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode         [IN] encode data
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
@@ -666,6 +670,22 @@ int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t
  */
 int32_t HITLS_PKCS12_ParseBuffer(int32_t format, BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *pwdParam,
     HTILS_PKCS12_p12Info *p12, bool needMacVerify);
+
+/**
+ * @ingroup pkcs12
+ * @brief pkcs12 gen
+ * @par Description: gen p12 buffer.
+
+ * @attention Generate a p12 buffer based on the existing information.
+ * @param format          [IN] Encoding format: BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
+ * @param p12             [IN] p12 struct, including entityCert, CA-cert, prvkey, and so on.
+ * @param encodeParam     [IN] encode data
+ * @param isNeedMac       [IN] Identifies whether macData is required.
+ * @param encode          [OUT] result.
+ * @return Error code
+ */
+int32_t HITLS_PKCS12_GenBuff(int32_t format, HTILS_PKCS12_p12Info *p12, HTILS_PKCS12_EncodeParam *encodeParam,
+    bool isNeedMac, BSL_Buffer *encode);
 
 #ifdef __cplusplus
 }

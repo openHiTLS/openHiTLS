@@ -2387,7 +2387,7 @@ static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, CRYPT_EncodePar
  * @return CRYPT_SUCCESS: 编码成功
  * @return other: 编码失败
  */
-int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, void *encodeParam, BSL_Buffer **encode)
+int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, void *encodeParam, BSL_Buffer *encode)
 {
     if (data == NULL || encodeParam == NULL || encode == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -2406,20 +2406,15 @@ int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, void *encodeParam
         {0, 0, 0},
     };
     BSL_ASN1_Template templ = {encryptedDataTempl, sizeof(encryptedDataTempl) / sizeof(encryptedDataTempl[0])};
-    BSL_Buffer *tmp = (BSL_Buffer *)BSL_SAL_Calloc(sizeof(BSL_Buffer), 1);
-    if (tmp == NULL) {
-        BSL_SAL_FREE(contentInfo.data);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_P7_ENCRYPTDATA_MAX_IDX, &tmp->data, &tmp->dataLen);
+    BSL_Buffer tmp = {0};
+    ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_P7_ENCRYPTDATA_MAX_IDX, &tmp.data, &tmp.dataLen);
     BSL_SAL_FREE(contentInfo.data);
     if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(tmp);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *encode = tmp;
+    encode->data = tmp.data;
+    encode->dataLen = tmp.dataLen;
     return ret;
 }
 

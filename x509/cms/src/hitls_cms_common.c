@@ -121,57 +121,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_
     return CRYPT_SUCCESS;
 }
 
-static int32_t GenDigestBuffer(const BslCid cid, const BSL_Buffer *in, BSL_Buffer *outBuff)
-{
-    CRYPT_EAL_MdCTX *mdCtx = CRYPT_EAL_MdNewCtx((CRYPT_MD_AlgId)cid);
-    if (mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
-        return CRYPT_ERR_ALGID;
-    }
-    int32_t ret;
-    uint8_t *out = NULL;
-    uint32_t outLen = 0;
-    do {
-        ret = CRYPT_EAL_MdInit(mdCtx);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            break;
-        }
-        if (in->dataLen != 0) {
-            ret = CRYPT_EAL_MdUpdate(mdCtx, in->data, in->dataLen);
-            if (ret != CRYPT_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
-                break;
-            }
-        }
-        outLen = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)cid);
-        if (outLen == 0) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
-            ret = CRYPT_ERR_ALGID;
-            break;
-        }
-        out = (uint8_t *)BSL_SAL_Malloc(outLen);
-        if (out == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            ret = CRYPT_MEM_ALLOC_FAIL;
-            break;
-        }
-        ret = CRYPT_EAL_MdFinal(mdCtx, out, &outLen);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            break;
-        }
-        outBuff->data = out;
-        outBuff->dataLen = outLen;
-        CRYPT_EAL_MdFreeCtx(mdCtx);
-        return CRYPT_SUCCESS;
-    } while (0);
-    BSL_SAL_FREE(out);
-    CRYPT_EAL_MdFreeCtx(mdCtx);
-    return ret;
-}
-
-int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer **encode)
+int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
 {
     if (in == NULL || encode == NULL || (in->data == NULL && in->dataLen != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -183,32 +133,19 @@ int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buff
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
     }
-    BSL_Buffer outBuff = {0};
-    ret = GenDigestBuffer(cid, in, &outBuff);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
     BSL_ASN1_Buffer asn1[HITLS_P7_DIGESTINFO_MAX_IDX] = {
         {BSL_ASN1_TAG_OBJECT_ID, oidstr->octetLen, (uint8_t *)oidstr->octs},
         {BSL_ASN1_TAG_NULL, 0, NULL},
-        {BSL_ASN1_TAG_OCTETSTRING, outBuff.dataLen, outBuff.data},
+        {BSL_ASN1_TAG_OCTETSTRING, in->dataLen, in->data},
     };
-    BSL_Buffer *tmp = (BSL_Buffer *)BSL_SAL_Calloc(sizeof(BSL_Buffer), 1);
-    if (tmp == NULL) {
-        BSL_SAL_FREE(outBuff.data);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
+    BSL_Buffer tmp = {0};
     BSL_ASN1_Template templ = {digestInfoTempl, sizeof(digestInfoTempl) / sizeof(digestInfoTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_P7_DIGESTINFO_MAX_IDX, &tmp->data, &tmp->dataLen);
-    BSL_SAL_FREE(outBuff.data);
+    ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_P7_DIGESTINFO_MAX_IDX, &tmp.data, &tmp.dataLen);
     if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(tmp);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *encode = tmp;
+    encode->data = tmp.data;
+    encode->dataLen = tmp.dataLen;
     return CRYPT_SUCCESS;
 }
