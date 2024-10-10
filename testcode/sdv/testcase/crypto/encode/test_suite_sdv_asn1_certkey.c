@@ -597,3 +597,22 @@ exit:
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_RSAPSS_PUBLICKEY_BUFF_TC001(char *path, Hex *asn1)
+{
+    RegisterLogFunc();
+    CRYPT_RandRegist(RandFunc);
+
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, CRYPT_PUBKEY_SUBKEY, path, NULL, 0, &pkeyCtx),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodeAsn1.data);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
