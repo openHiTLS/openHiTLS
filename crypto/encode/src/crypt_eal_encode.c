@@ -854,13 +854,21 @@ static int32_t DecryptEncData(BSL_Buffer *ivData, BSL_Buffer *enData, int32_t al
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
+    (void)CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_DES_NOKEYCHECK, NULL, 0);
     int32_t ret = CRYPT_EAL_CipherInit(ctx, key->data, key->dataLen, ivData->data, ivData->dataLen, isEnc);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
-    ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
+    uint32_t blockSize;
+    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, &blockSize, sizeof(blockSize));
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
+    }
+    if (blockSize != 1) {
+        ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
+        if (ret != CRYPT_SUCCESS) {
+            goto ERR;
+        }
     }
     ret = CRYPT_EAL_CipherUpdate(ctx, enData->data, enData->dataLen, output, dataLen);
     if (ret != CRYPT_SUCCESS) {
@@ -888,7 +896,7 @@ static int32_t ParseEncDataAsn1(BslCid symAlg, EncryptPara *encPara, const uint8
 {
     int32_t iter, prfId;
     int32_t keylen = 0;
-    uint8_t key[32]; // The maximum length of the symmetry algorithm
+    uint8_t key[512]; // The maximum length of the symmetry algorithm
     BSL_Buffer salt = {0};
     int32_t ret = ParseDeriveKeyParam(encPara->derivekeyData, &iter, &keylen, &salt, &prfId);
     if (ret != CRYPT_SUCCESS) {
@@ -1636,6 +1644,10 @@ static int32_t GenRandIv(CRYPT_Pbkdf2Param *pkcsParam, BSL_ASN1_Buffer *asn1)
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
+    }
+    if (ivLen == 0) {
+        asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].tag = BSL_ASN1_TAG_OCTETSTRING;
+        return CRYPT_SUCCESS;
     }
     uint8_t *iv = (uint8_t *)BSL_SAL_Malloc(ivLen);
     if (iv == NULL) {

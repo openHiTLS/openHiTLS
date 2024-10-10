@@ -1166,3 +1166,33 @@ exit:
     BSL_SAL_Free(encode);
 }
 /* END_CASE */
+
+/**
+ * For test bmpString.
+*/
+/* BEGIN_CASE */
+void SDV_PKCS7_BMPSTRING_TC001(Hex *enc, char *dec)
+{
+    int32_t ret;
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BMPSTRING, enc->len, enc->x};
+    BSL_ASN1_Buffer decode = {BSL_ASN1_TAG_BMPSTRING, 0, NULL};
+    BSL_ASN1_Buffer encode = {0};
+
+    ret = BSL_ASN1_DecodePrimitiveItem(&asn, &decode);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+    uint32_t decLen = (uint32_t)strlen(dec);
+    ASSERT_COMPARE("Decode String", decode.buff, decode.len, dec, decLen);
+
+    BSL_ASN1_TemplateItem testTempl[] = {
+        {BSL_ASN1_TAG_BMPSTRING, 0, 0}
+    };
+    BSL_ASN1_Template templ = {testTempl, sizeof(testTempl) / sizeof(testTempl[0])};
+    ret = BSL_ASN1_EncodeTemplate(&templ, &decode, 1, &encode.buff, &encode.len);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+    ASSERT_COMPARE("Encode String", encode.buff + 2, encode.len - 2, enc->x, enc->len); // skip 2 bytes header
+exit:
+    BSL_SAL_FREE(decode.buff);
+    BSL_SAL_FREE(encode.buff);
+    return;
+}
+/* END_CASE */
