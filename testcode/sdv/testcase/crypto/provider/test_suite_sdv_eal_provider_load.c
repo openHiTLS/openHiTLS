@@ -14,6 +14,7 @@
 #include "crypt_eal_provider.h"
 #include "crypt_provider_local.h"
 #include "crypt_eal_implprovider.h"
+#include "crypt_provider.h"
 #include "test.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
@@ -167,6 +168,133 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     ret = CRYPT_EAL_SetLoadProviderPath(libCtx, overpath);
     ASSERT_EQ(ret, CRYPT_INVALID_ARG);
     BSL_SAL_Free(overpath);
+
+exit:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001
+ * @title Test the normal scenarios of provider lookup mechanism
+ * @precon None
+ * @brief
+ *    1. Test if the corresponding funcs can be found based on the attribute
+ * @expect
+ *    1. CRYPT_SUCCESS for loading providers and getting functions
+ *    2. The result of mdInitCtx matches the expected result
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2, int cmd, char *attribute, int result)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    int32_t ret;
+
+    libCtx = CRYPT_EAL_NewLibCtx();
+    ASSERT_TRUE(libCtx != NULL);
+    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    const CRYPT_EAL_Func *funcs;
+    void *provCtx;
+    // Test if the corresponding funcs can be found based on the attribute
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, attribute, &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(funcs != NULL);
+    CRYPT_EAL_ImplMdInitCtx mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
+    ASSERT_TRUE(mdInitCtx != NULL);
+    ret = mdInitCtx(provCtx);
+    ASSERT_EQ(ret, result);
+
+    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test1);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test2);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+exit:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    return;
+}
+/* END_CASE */
+
+#define RIGHT_RESULT 1415926
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002
+ * @title Test special scenarios of provider lookup mechanism
+ * @precon None
+ * @brief
+ *    1. Test when attribute is NULL
+ *    2. Test when no provider can meet the attribute requirements
+ *    3. Test when operaid and operaid are out of range
+ * @expect
+ *    1. CRYPT_SUCCESS for loading providers and getting functions
+ *    2. CRYPT_NOT_SUPPORT when no provider meets the requirements or operaid is out of range
+ *    3. The result of mdInitCtx matches the expected result
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2, int cmd, int result)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    int32_t ret;
+
+    libCtx = CRYPT_EAL_NewLibCtx();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL), CRYPT_SUCCESS);
+
+    const CRYPT_EAL_Func *funcs;
+    void *provCtx;
+    // Demonstrate normal scenario
+    ASSERT_EQ(CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1",
+        &funcs, &provCtx), CRYPT_SUCCESS);
+    CRYPT_EAL_ImplMdInitCtx mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
+    ASSERT_EQ(mdInitCtx(provCtx), RIGHT_RESULT);
+    ASSERT_EQ(CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5,
+        "provider=test1,provider!=test2", &funcs, &provCtx), CRYPT_SUCCESS);
+    mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
+    ASSERT_EQ(mdInitCtx(provCtx), RIGHT_RESULT);
+
+    // Test 1: Test when attribute is NULL
+    ASSERT_EQ(CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, NULL, &funcs, &provCtx),
+        CRYPT_SUCCESS);
+    mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
+    ASSERT_EQ(mdInitCtx(provCtx), result);
+    funcs = provCtx = NULL;
+
+    // Test 2: Test when no provider can meet the attribute requirements
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "n_atr=test3", &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
+    // Test 3: Test when both operaid and operaid are out of range
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, 0, CRYPT_MD_MD5, "provider=test1", &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, 0, "provider=test1", &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
+    // Test 4: Test when attribute format is non-standard
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider", &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1provider!=test2",
+        &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider!test2",
+        &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
+    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "!=tesst2", &funcs, &provCtx);
+    ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
 
 exit:
     if (libCtx != NULL) {

@@ -425,7 +425,7 @@
             "provider": {
                 ".features": ["provider"],
                 ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
-                ".deps": ["bsl::sal","bsl::err"],
+                ".deps": ["bsl::sal", "bsl::hash", "bsl::err"],
                 ".include": [
                     "crypto/ealinit/include",
                     "crypto/sha1/include",

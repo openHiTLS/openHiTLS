@@ -49,6 +49,8 @@ struct EalProviderMgrCtx {
 int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, CRYPT_Param *param,
     CRYPT_EAL_ImplProviderInit providerInit);
 CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtxInternal();
+int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
+    int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
 
 #ifdef __cplusplus
 }

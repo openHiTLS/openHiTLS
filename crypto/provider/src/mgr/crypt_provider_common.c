@@ -15,32 +15,9 @@
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
-// The ability to parse and compare attributes in the subsequent upgrade
-static const CRYPT_EAL_Func *CRYPT_EAL_CompareAlgAndAttr(int32_t algId, const char *attribute,
-    CRYPT_EAL_AlgInfo *algInfos)
-{
-    int index = 0;
-    while (algInfos[index].algId != 0) {
-        if (attribute == NULL) { // No attribute is specified, any algorithm matching can be used
-            if (algInfos[index].algId == algId) {
-                return algInfos[index].implFunc;
-            }
-            index++;
-            continue;
-        }
-        // attribute is not null
-        if (algInfos[index].algId == algId && strcmp(attribute, algInfos[index].attr) == 0) {
-            return algInfos[index].implFunc;
-        }
-        index++;
-    }
-    return NULL;
-}
-
 int32_t CRYPT_EAL_GetFuncsFromProvider(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx)
 {
-    int32_t ret = CRYPT_NOT_SUPPORT;
     CRYPT_EAL_LibCtx *localCtx = libCtx;
     if (localCtx == NULL) {
         localCtx = g_libCtx;
@@ -49,31 +26,8 @@ int32_t CRYPT_EAL_GetFuncsFromProvider(CRYPT_EAL_LibCtx *libCtx, int32_t operaId
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    ret = BSL_SAL_ThreadWriteLock(localCtx->lock);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    CRYPT_EAL_ProvMgrCtx *node = BSL_LIST_GET_FIRST(localCtx->providers);
-    while (node != NULL) {
-        CRYPT_EAL_AlgInfo *algInfos = NULL;
-        ret = node->provQueryCb(node->provCtx, operaId, &algInfos);
-        if (ret != CRYPT_SUCCESS) {
-            node = BSL_LIST_GET_NEXT(localCtx->providers);
-            continue;
-        }
-        const CRYPT_EAL_Func *temp = CRYPT_EAL_CompareAlgAndAttr(algId, attribute, algInfos);
-        if (temp != NULL) {
-            *funcs = temp;
-            *provCtx = node->provCtx;
-            BSL_SAL_ThreadUnlock(localCtx->lock);
-            return BSL_SUCCESS;
-        }
-        ret = CRYPT_NOT_SUPPORT;
-        node = BSL_LIST_GET_NEXT(localCtx->providers);
-    }
-    BSL_SAL_ThreadUnlock(localCtx->lock);
-    return ret;
+
+    return CRYPT_EAL_CompareAlgAndAttr(localCtx, operaId, algId, attribute, funcs, provCtx);
 }
 
 // Function to get provider methods
