@@ -434,11 +434,14 @@ void SDV_CRYPT_HMAC_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *data, 
     uint32_t macLen = GetMacLen(algId);
     uint8_t *mac = BSL_SAL_Calloc(1, macLen);
     ASSERT_TRUE(mac != NULL);
+    ASSERT_EQ(CRYPT_EAL_GetMacLen(ctx), GetMacLen(algId));
 
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("mac1 result cmp", mac, macLen, vecMac->x, vecMac->len);
+    CRYPT_EAL_MacDeinit(ctx);
+    ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
 exit:
     CRYPT_EAL_MacFreeCtx(ctx);

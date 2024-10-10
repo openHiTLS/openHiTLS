@@ -35,8 +35,8 @@ static void EalMacCopyMethod(const EAL_MacMethod *src, EAL_MacUnitaryMethod *dst
     dst->final = src->final;
     dst->deinit = src->deinit;
     dst->reinit = src->reinit;
-    dst->getLen = src->getLen;
     dst->newCtx = src->newCtx;
+    dst->ctrl = src->ctrl;
     dst->freeCtx = src->freeCtx;
 }
 
@@ -343,30 +343,6 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx)
     return CRYPT_SUCCESS;
 }
 
-uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
-{
-    if (ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
-        return 0;
-    }
-    if (ctx->macMeth == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_NULL_INPUT);
-        return 0;
-    }
-
-    if (ctx->macMeth == NULL || ctx->macMeth->getLen == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return 0;
-    }
-    return ctx->macMeth->getLen(ctx->ctx);
-}
-
-bool CRYPT_EAL_MacIsValidAlgId(CRYPT_MAC_AlgId id)
-{
-    EAL_MacMethLookup method;
-    return EAL_MacFindMethod(id, &method) == CRYPT_SUCCESS;
-}
-
 int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
 {
     if (ctx == NULL || ctx->macMeth == NULL || ctx->macMeth->ctrl== NULL) {
@@ -374,12 +350,22 @@ int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_
         return CRYPT_NULL_INPUT;
     }
 
-    int32_t ret = ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
+    return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
+}
 
-    return ret;
+int32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
+{
+    if (ctx == NULL || ctx->macMeth == NULL || ctx->macMeth->ctrl== NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
+        return 0;
+    }
+    return CRYPT_EAL_MacCtrl((CRYPT_EAL_MacCtx *)ctx, CRYPT_CTRL_GET_MACLEN, NULL, 0);
+}
+
+bool CRYPT_EAL_MacIsValidAlgId(CRYPT_MAC_AlgId id)
+{
+    EAL_MacMethLookup method;
+    return EAL_MacFindMethod(id, &method) == CRYPT_SUCCESS;
 }
 
 #endif

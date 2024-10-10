@@ -331,7 +331,7 @@ DRBG_Ctx *DRBG_NewHmacCtx(const EAL_MacMethod *hmacMeth, CRYPT_MAC_AlgId macId,
     }
     ctx->hmacCtx = macCtx;
 
-    ctx->blockLen = hmacMeth->getLen(ctx->hmacCtx);
+    ctx->blockLen = hmacMeth->ctrl(ctx->hmacCtx, CRYPT_CTRL_GET_MACLEN, NULL, 0);
 
     if (DRBG_NewHmacCtxBase(ctx->blockLen, drbg) != CRYPT_SUCCESS) {
         hmacMeth->freeCtx(ctx->hmacCtx);

@@ -185,6 +185,7 @@ enum CRYPT_ERROR {
 
     CRYPT_HMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x010B0001, /**< The length of the buffer that storing
                                                           the output result is insufficient. */
+    CRYPT_ECC_HMAC_ERR_UNSUPPORTED_CTRL_OPTION,  /**< Unsupport the control type. */
 
     CRYPT_DH_BUFF_LEN_NOT_ENOUGH = 0x010C0001,   /**< The buffer length is insufficient. */
     CRYPT_DH_PARA_ERROR,                         /**< The value of the key parameter does not meet

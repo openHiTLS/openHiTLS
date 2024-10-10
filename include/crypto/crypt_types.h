@@ -410,6 +410,15 @@ typedef enum {
 } CRYPT_PkeyCtrl;
 
 /**
+ * @ingroup crypt_ctrl_param
+ *
+ * Set and obtain internal parameters of mac.
+ */
+typedef enum {
+    CRYPT_CTRL_GET_MACLEN             /* Mac get maxlen . */
+} CRYPT_MacCtrl;
+
+/**
  * @ingroup crypt_padding_type
  *
  * Padding mode enumerated type

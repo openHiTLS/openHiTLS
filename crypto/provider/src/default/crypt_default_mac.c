@@ -41,23 +41,13 @@ void *CRYPT_EAL_DefMacNewCtx(void *provCtx, int32_t algId)
     return macCtx;
 }
 
-int32_t CRYPT_EAL_DefMacCtrl(void *ctx, int32_t cmd, void *val, uint32_t valLen)
-{
-    (void) ctx;
-    (void) cmd;
-    (void) val;
-    (void) valLen;
-    BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-    return CRYPT_NOT_SUPPORT;
-}
-
 const CRYPT_EAL_Func defMacHmac[] = {
     {CRYPT_EAL_IMPLMAC_NEWCTX, CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, CRYPT_HMAC_Init},
     {CRYPT_EAL_IMPLMAC_UPDATE, CRYPT_HMAC_Update},
     {CRYPT_EAL_IMPLMAC_FINAL, CRYPT_HMAC_Final},
     {CRYPT_EAL_IMPLMAC_REINITCTX, CRYPT_HMAC_Reinit},
-    {CRYPT_EAL_IMPLMAC_CTRL, CRYPT_EAL_DefMacCtrl},
+    {CRYPT_EAL_IMPLMAC_CTRL, CRYPT_HMAC_Ctrl},
     {CRYPT_EAL_IMPLMAC_FREECTX, CRYPT_HMAC_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };

@@ -228,7 +228,6 @@ typedef int32_t (*MacFinal)(void *ctx, const uint8_t *out, uint32_t *len);
 typedef void    (*MacDeinit)(void *ctx);
 // The action is opposite to the initCtx. Sensitive data is deleted.
 typedef void    (*MacReinit)(void *ctx);
-typedef uint32_t (*MacGetMacLen)(void *ctx);
 typedef int32_t (*MacCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*MacFreeCtx)(void *ctx);
 
@@ -241,7 +240,7 @@ typedef struct {
     MacDeinit deinit;       // Clear the key information in MAC context.
     // Re-initialize the key. This method is used where the keys are the same during multiple MAC calculations.
     MacReinit reinit;
-    MacGetMacLen getLen;    // Obtain the data length of the MAC calculation result.
+    MacCtrl ctrl;
     MdFreeCtx freeCtx;
 } EAL_MacMethod;
 
@@ -255,7 +254,6 @@ typedef struct {
     MacDeinit deinit;       // Clear the key information in MAC context.
     // Re-initialize the key. This method is used where the keys are the same during multiple MAC calculations.
     MacReinit reinit;
-    MacGetMacLen getLen;    // Obtain the data length of the MAC calculation result.
     MacCtrl ctrl;
 } EAL_MacUnitaryMethod;
 
