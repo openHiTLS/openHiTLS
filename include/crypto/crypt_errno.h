@@ -362,6 +362,7 @@ enum CRYPT_ERROR {
     CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */
     CRYPT_PROVIDER_ERR_NEWCTX,
     CRYPT_PROVIDER_NOT_SUPPORT,
+    CRYPT_PROVIDER_ERR_ATTRIBUTE,
 };
 #ifdef __cplusplus
 }

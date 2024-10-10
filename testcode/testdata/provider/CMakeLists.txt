@@ -14,6 +14,20 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -shared")
 # Set output directory
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Define a function to recursively include directories
+function(include_directories_recursive dir)
+    include_directories(${dir})
+    file(GLOB children RELATIVE ${dir} ${dir}/*)
+    foreach(child ${children})
+        if(IS_DIRECTORY ${dir}/${child})
+            include_directories_recursive(${dir}/${child})
+        endif()
+    endforeach()
+endfunction()
+
+# Call the function to recursively include the specified directory
+include_directories_recursive(${CMAKE_SOURCE_DIR}/../../..)
+
 # Define four file areas
 set(SOURCE_FILES_PATH1_SO
     provider_load_test1.c
@@ -44,11 +58,6 @@ foreach(SOURCE_FILE ${SOURCE_FILES_PATH1_SO})
             OUTPUT_NAME "${FILE_NAME}"
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path1"
         )
-        target_include_directories(${FILE_NAME}_path1
-            PRIVATE
-                ${CMAKE_SOURCE_DIR}/../../include
-                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
-        )
     endif()
 endforeach()
 
@@ -61,11 +70,6 @@ foreach(SOURCE_FILE ${SOURCE_FILES_PATH1_LIBSO})
             PREFIX ""
             OUTPUT_NAME "lib${FILE_NAME}"
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path1"
-        )
-        target_include_directories(lib${FILE_NAME}_path1
-            PRIVATE
-                ${CMAKE_SOURCE_DIR}/../../include
-                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
         )
     endif()
 endforeach()
@@ -80,11 +84,6 @@ foreach(SOURCE_FILE ${SOURCE_FILES_PATH2_SO})
             OUTPUT_NAME "${FILE_NAME}"
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path2"
         )
-        target_include_directories(${FILE_NAME}_path2
-            PRIVATE
-                ${CMAKE_SOURCE_DIR}/../../include
-                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
-        )
     endif()
 endforeach()
 
@@ -97,11 +96,6 @@ foreach(SOURCE_FILE ${SOURCE_FILES_PATH2_LIBSO})
             PREFIX ""
             OUTPUT_NAME "lib${FILE_NAME}"
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path2"
-        )
-        target_include_directories(lib${FILE_NAME}_path2
-            PRIVATE
-                ${CMAKE_SOURCE_DIR}/../../include
-                ${CMAKE_SOURCE_DIR}/../../platform/Secure_C/include
         )
     endif()
 endforeach()
