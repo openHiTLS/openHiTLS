@@ -1412,7 +1412,7 @@ static int32_t GetPssParamInfo(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_RSA_PssPara *
 }
 
 static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitStr,
-    BSL_ASN1_Buffer *algoId, CRYPT_RsaPadType *padOut, CRYPT_PKEY_AlgId *cidOut)
+    BSL_ASN1_Buffer *algoId, CRYPT_PKEY_AlgId *cidOut)
 {
     int32_t ret;
     BSL_Buffer tmp = {0};
@@ -1437,6 +1437,7 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitSt
                 ret = CRYPT_EAL_EncodeRsaPssAlgParam(&rsaPssParam, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].buff,
                     &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].len);
                 algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag = BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED;
+                cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
                 break;
             default:
                 ret = EncodeRsaPrikeyAsn1Buff(ealPriKey, CRYPT_PKEY_RSA, &tmp);
@@ -1456,7 +1457,6 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitSt
     }
     bitStr->data = tmp.data;
     bitStr->dataLen = tmp.dataLen;
-    *padOut = pad;
     *cidOut = cid;
     return ret;
 }
@@ -1469,17 +1469,9 @@ static int32_t EncodePk8PriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *asn
     BSL_ASN1_Buffer algo = {0};
     BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
     do {
-        CRYPT_RsaPadType pad;
-        ret = EncodePk8AlgidAny(ealPriKey, &bitStr, algoId, &pad, &cid);
+        ret = EncodePk8AlgidAny(ealPriKey, &bitStr, algoId, &cid);
         if (ret != CRYPT_SUCCESS) {
             break;
-        }
-        if (cid == CRYPT_PKEY_ECDSA) {
-            cid = (CRYPT_PKEY_AlgId)BSL_CID_EC_PUBLICKEY;
-        } else { // cid == CRYPT_PKEY_RSA
-            if (pad == CRYPT_PKEY_EMSA_PSS) {
-                cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
-            }
         }
         BslOidString *oidStr = BSL_OBJ_GetOidFromCID((BslCid)cid);
         if (oidStr == NULL) {
