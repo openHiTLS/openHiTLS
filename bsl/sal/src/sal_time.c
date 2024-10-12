@@ -143,7 +143,8 @@ int64_t BSL_SAL_CurrentSysTimeGet(void)
 #ifdef HITLS_BSL_SAL_LINUX
     return TIME_GetSysTime();
 #else
-    return BSL_SAL_TIME_NO_REG_FUNC;
+    BSL_ERR_PUSH_ERROR(BSL_SAL_TIME_NO_REG_FUNC);
+    return 0;
 #endif
 }
 

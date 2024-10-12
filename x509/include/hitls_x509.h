@@ -129,6 +129,8 @@ typedef enum {
     HITLS_X509_GN_DNNAME, // directoryName             [4] Name
     HITLS_X509_GN_URI,    // uniformResourceIdentifier [6] IA5String
     HITLS_X509_GN_IP,     // iPAddress                 [7] Octet String
+
+    HITLS_X509_GN_MAX
 } HITLS_X509_GeneralNameType;
 
 /* Distinguish name */

@@ -25,7 +25,7 @@
 
 static int64_t TestBslSysTimeFunc(void)
 {
-    return (time_t)0;
+    return (time_t)1;
 }
 
 static int64_t TestBslSysTimeFunc1(void)
@@ -116,15 +116,15 @@ void SDV_BSL_TIME_FUNC_REGISTER_TC001(void)
 {
     /* 1.Registering System Time Hooks */
     BSL_SAL_SysTimeFuncReg(TestBslSysTimeFunc);
-    ASSERT_EQ(BSL_SAL_CurrentSysTimeGet(), 0);
+    ASSERT_EQ(BSL_SAL_CurrentSysTimeGet(), 1);
 
     /* 2.Unregistered system time hook */
     BSL_SAL_SysTimeFuncReg(NULL);
-    ASSERT_EQ(BSL_SAL_CurrentSysTimeGet(), 0);
+    ASSERT_EQ(BSL_SAL_CurrentSysTimeGet(), 1);
 
     BSL_SysTimeFuncUnReg();
 
-    ASSERT_NE(BSL_SAL_CurrentSysTimeGet(), 0);
+    ASSERT_NE(BSL_SAL_CurrentSysTimeGet(), 1);
 exit:
     return;
 }

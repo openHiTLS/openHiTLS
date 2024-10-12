@@ -137,6 +137,10 @@ int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name);
 
 int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *list);
 
+void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data);
+
+void HITLS_X509_FreeGeneralNames(BslList *names);
+
 void HITLS_X509_ClearGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
