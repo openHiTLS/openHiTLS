@@ -223,7 +223,7 @@ static int32_t ProcRsaSignInfo(CRYPT_EAL_PkeyCtx *privKey, CRYPT_MD_AlgId mdId, 
         return ret;
     }
     CRYPT_MD_AlgId pssMd;
-    switch (pad) {
+    switch ((int32_t)pad) {
         case CRYPT_PKEY_EMSA_PSS:
             ret = CRYPT_EAL_PkeyCtrl(privKey, CRYPT_CTRL_GET_RSA_MD, &pssMd, sizeof(BslCid));
             if (ret != CRYPT_SUCCESS) {
@@ -247,6 +247,7 @@ static int32_t ProcRsaSignInfo(CRYPT_EAL_PkeyCtx *privKey, CRYPT_MD_AlgId mdId, 
             }
             x509Alg->algId = BSL_CID_RSASSAPSS;
             return HITLS_X509_SUCCESS;
+        case 0: // The padding type is not setted, default to EMSA_PKCSV15
         case CRYPT_PKEY_EMSA_PKCSV15:
             x509Alg->algId = BSL_OBJ_GetSignIdFromHashAndAsymId(BSL_CID_RSA, (BslCid)mdId);
             if (x509Alg->algId == BSL_CID_UNKNOWN) {

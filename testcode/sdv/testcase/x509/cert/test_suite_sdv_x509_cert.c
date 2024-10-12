@@ -1275,7 +1275,7 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, Hex *expect)
+void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, int ret, Hex *expect)
 {
     TestRandInit();
 
@@ -1285,7 +1285,7 @@ void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, Hex *expect)
     ASSERT_NE(cert, NULL);
 
     ASSERT_EQ(HITLS_X509_CsrParseFile(inForm, inCsr, &csr), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, csr, 0), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, csr, 0), ret);
     ASSERT_EQ(HITLS_X509_EncodeExt(0, cert->tbs.ext.list, &encodeExt), 0);
     if (expect->len != 0) {
         ASSERT_TRUE((cert->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_PARSE) == 0);

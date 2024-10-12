@@ -313,12 +313,32 @@ static void FreeGenernalName(void *data)
     BSL_SAL_Free(data);
 }
 
+void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data)
+{
+    if (data == NULL) {
+        return;
+    }
+    if (data->type == HITLS_X509_GN_DNNAME) {
+        BSL_LIST_DeleteAll((BslList *)data->value.data, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+    }
+    BSL_SAL_Free(data->value.data);
+    BSL_SAL_Free(data);
+}
+
+void HITLS_X509_FreeGeneralNames(BslList *names)
+{
+    if (names == NULL) {
+        return;
+    }
+    BSL_LIST_DeleteAll(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+}
+
 void HITLS_X509_ClearGeneralNames(BslList *names)
 {
     if (names == NULL) {
         return;
     }
-    BSL_LIST_DeleteAll(names, FreeGenernalName);
+    BSL_LIST_DeleteAll(names, (BSL_LIST_PFUNC_FREE)FreeGenernalName);
 }
 
 HITLS_X509_Ext *HITLS_X509_ExtNew(void)

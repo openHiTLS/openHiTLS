@@ -117,6 +117,7 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
         BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
         BSL_LIST_FREE(csr->reqInfo.attributes, (BSL_LIST_PFUNC_FREE)HITLS_X509_AttrEntryFree);
         BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
+        BSL_SAL_FREE(csr->signature.buff);
     } else {
         BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
         BSL_LIST_FREE(csr->reqInfo.attributes, NULL);
@@ -440,8 +441,7 @@ static int32_t EncodeCsrReqInfo(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *re
     return ret;
 }
 
-static int32_t SignCsrReqInfo(HITLS_X509_Csr *csr, BSL_ASN1_Buffer *reqInfo,
-    BSL_ASN1_BitString *signBs)
+static int32_t SignCsrReqInfo(HITLS_X509_Csr *csr, BSL_ASN1_Buffer *reqInfo, BSL_ASN1_BitString *signBs)
 {
     BSL_Buffer rawSignBuff = {NULL, 0};
     int32_t ret = CRYPT_EAL_PkeyPairCheck((CRYPT_EAL_PkeyCtx *)csr->reqInfo.ealPubKey,
@@ -479,7 +479,6 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr, BSL_Buffer *buff)
 {
     BSL_ASN1_Buffer reqInfo = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
     BSL_ASN1_Buffer signAlg = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    BSL_ASN1_BitString signBs = {NULL, 0, 0};
     /* encode csr request info */
     int32_t ret = EncodeCsrReqInfo(&csr->reqInfo, &reqInfo);
     if (ret != HITLS_X509_SUCCESS) {
@@ -499,7 +498,7 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr, BSL_Buffer *buff)
         goto EXIT;
     }
 
-    ret = SignCsrReqInfo(csr, &reqInfo, &signBs);
+    ret = SignCsrReqInfo(csr, &reqInfo, &csr->signature);
     if (ret != HITLS_X509_SUCCESS) {
         goto EXIT;
     }
@@ -507,18 +506,18 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr, BSL_Buffer *buff)
     BSL_ASN1_Buffer csrAsn1Buff[HITLS_X509_CSR_BRIEF_SIZE] = {
         reqInfo,
         signAlg,
-        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&signBs }
+        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&csr->signature}
     };
     BSL_ASN1_Template csrTempl = { g_briefCsrTempl, sizeof(g_briefCsrTempl) / sizeof(g_briefCsrTempl[0]) };
     ret = BSL_ASN1_EncodeTemplate(&csrTempl, csrAsn1Buff, HITLS_X509_CSR_BRIEF_SIZE, &buff->data, &buff->dataLen);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
+        BSL_SAL_FREE(csr->signature.buff);
     }
 
 EXIT:
     BSL_SAL_FREE(reqInfo.buff);
     BSL_SAL_FREE(signAlg.buff);
-    BSL_SAL_FREE(signBs.buff);
     return ret;
 }
 

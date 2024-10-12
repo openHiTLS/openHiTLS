@@ -744,7 +744,7 @@ static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
     int32_t ret = HITLS_X509_AttrCtrl(
         csr->reqInfo.attributes, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &attr, sizeof(HITLS_X509_Attr));
     if (ret == HITLS_X509_ERR_ATTR_NOT_FOUND) {
-        return HITLS_X509_SUCCESS;
+        return ret;
     }
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1100,7 +1100,8 @@ static int32_t CheckCertValid(HITLS_X509_Cert *cert)
     if ((cert->tbs.validTime.flag & BSL_TIME_BEFORE_SET) == 0 || (cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) == 0) {
         return HITLS_X509_ERR_CERT_INVALID_TIME;
     }
-    if (BSL_SAL_DateTimeCompare(&cert->tbs.validTime.start, &cert->tbs.validTime.end, NULL) != BSL_TIME_DATE_BEFORE) {
+    int32_t ret = BSL_SAL_DateTimeCompare(&cert->tbs.validTime.start, &cert->tbs.validTime.end, NULL);
+    if (ret != BSL_TIME_DATE_BEFORE && ret != BSL_TIME_CMP_EQUAL) {
         return HITLS_X509_ERR_CERT_START_TIME_LATER;
     }
     if (cert->signMdId == 0) {
