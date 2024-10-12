@@ -1406,8 +1406,8 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitSt
     int32_t ret;
     BSL_Buffer tmp = {0};
     CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(ealPriKey);
-    CRYPT_RsaPadType pad;
     if (cid == CRYPT_PKEY_RSA) {
+        CRYPT_RsaPadType pad = CRYPT_PKEY_RSA_PADDINGMAX;
         ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(pad));
         if (ret != CRYPT_SUCCESS) {
             return ret;
