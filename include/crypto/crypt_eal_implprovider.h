@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include "crypt_types.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,9 +36,6 @@ typedef struct {
     const CRYPT_EAL_Func *implFunc; // implemented algorithm callback
     const char *attr; // implemented algorithm attribute
 } CRYPT_EAL_AlgInfo;
-
-/* The hitls framework generates context for each provider */
-typedef struct EalProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 
 typedef void (CRYPT_EAL_CvtVoid)(void);
 

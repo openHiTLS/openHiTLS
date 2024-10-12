@@ -80,11 +80,11 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test CRYPT_EAL_LoadProvider
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test loading the same provider consecutively
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Verify only one EalProviderMgrCtx structure for this provider in the providers list,and ref == 2
@@ -94,7 +94,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
     // Test if loading the same name with different cmd is successful and not recognized as the same provider
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd2, test1, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd2, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
@@ -102,27 +102,27 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     // and not recognized as the same provider。
     ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path2);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
     ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test loading a non-existent provider
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, "non_existent_provider", NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, "non_existent_provider", NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, BSL_SAL_ERR_DL_NOT_FOUND);
 
     // Test loading a provider without initialization function
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoInit, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoInit, NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, BSL_SAL_ERR_DL_NON_FUNCTION);
 
     // Test loading a provider without complete return methods
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoFullfunc, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoFullfunc, NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
 
@@ -207,9 +207,9 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2
     ASSERT_TRUE(libCtx != NULL);
     ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     const CRYPT_EAL_Func *funcs;
@@ -262,8 +262,8 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2
     libCtx = CRYPT_EAL_NewLibCtx();
     ASSERT_TRUE(libCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
 
     const CRYPT_EAL_Func *funcs;
     void *provCtx;
@@ -327,7 +327,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, 
     libCtx = CRYPT_EAL_NewLibCtx();
     ASSERT_TRUE(libCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoInit, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoInit, NULL, NULL), CRYPT_SUCCESS);
 
     CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
     ASSERT_TRUE(kdfCtx == NULL);
@@ -361,7 +361,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
     libCtx = CRYPT_EAL_NewLibCtx();
     ASSERT_TRUE(libCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoFree, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoFree, NULL, NULL), CRYPT_SUCCESS);
 
     CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
     ASSERT_TRUE(kdfCtx != NULL);
