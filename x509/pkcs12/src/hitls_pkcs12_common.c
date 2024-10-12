@@ -38,7 +38,7 @@ BSL_ASN1_TemplateItem g_pk12CommonBagTempl[] = {
         {BSL_ASN1_TAG_OBJECT_ID, 0, 1},
         /* bagValue */
         {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION, 0, 1},
-            {BSL_ASN1_TAG_OCTETSTRING, 0, 1},
+            {BSL_ASN1_TAG_OCTETSTRING, 0, 2},
 };
 
 typedef enum {
@@ -258,7 +258,6 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HTILS_PKCS12_SafeBag *safeBag)
     }
     ret = HITLS_PKCS12_ParseSafeBagAttr(asnArr + HITLS_PKCS12_SAFEBAG_BAGATTRIBUTES_IDX, attributes);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_LIST_FREE(attributes, HTILS_PKCS12_AttributesFree);
         goto err;
     }
     safeBag->attributes = attributes;
@@ -311,7 +310,7 @@ static int32_t ParseCertBagAndAddList(HTILS_PKCS12_p12Info *p12, HTILS_PKCS12_Sa
         return BSL_MALLOC_FAIL;
     }
     bagData->attributes = safeBag->attributes;
-    bagData->value.entityCert = cert;
+    bagData->value.cert = cert;
     ret = BSL_LIST_AddElement(p12->certList, bagData, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         bagData->attributes = NULL;
@@ -455,7 +454,7 @@ static int32_t SetEntityCert(HTILS_PKCS12_p12Info *p12)
         if (certId != NULL && certId->dataLen == keyId->dataLen) {
             if (memcmp(certId->data, keyId->data, keyId->dataLen) == 0) {
                 p12->entityCert->attributes = node->attributes;
-                p12->entityCert->value.entityCert = node->value.entityCert;
+                p12->entityCert->value.cert = node->value.cert;
                 BSL_LIST_DeleteCurrent(bags, NULL);
                 return HITLS_X509_SUCCESS;
             }
@@ -626,7 +625,7 @@ typedef enum {
 
 int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HTILS_PKCS12_MacData *macData)
 {
-    if (encode == NULL) { // encode may == NULL
+    if (encode == NULL || encode->data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
@@ -741,7 +740,7 @@ static int32_t ParseAsn1PKCS12(BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *
     uint32_t version = 0;
     uint8_t *temp = encode->data;
     uint32_t  tempLen = encode->dataLen;
-    BSL_ASN1_Buffer asn1[HITLS_PKCS12_MACDATA_MAX_IDX] = {0};
+    BSL_ASN1_Buffer asn1[HITLS_PKCS12_TOPLEVEL_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_p12TopLevelTempl, sizeof(g_p12TopLevelTempl) / sizeof(g_p12TopLevelTempl[0])};
     HTILS_PKCS12_MacData *p12Mac = p12->macData;
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, asn1, HITLS_PKCS12_TOPLEVEL_MAX_IDX);

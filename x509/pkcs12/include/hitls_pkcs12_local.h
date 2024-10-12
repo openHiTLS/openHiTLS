@@ -42,7 +42,7 @@ typedef struct {
 typedef struct {
     union {
         CRYPT_EAL_PkeyCtx *key;
-        HITLS_X509_Cert *entityCert;
+        HITLS_X509_Cert *cert;
     } value;
     BSL_ASN1_List *attributes; // locatedId, friendly-name...
 } HTILS_PKCS12_Bag;

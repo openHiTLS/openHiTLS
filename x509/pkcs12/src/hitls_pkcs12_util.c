@@ -150,7 +150,7 @@ static void CertBagFree(void *value)
         return;
     }
     HTILS_PKCS12_Bag *bag = (HTILS_PKCS12_Bag *)value;
-    HITLS_X509_CertFree(bag->value.entityCert);
+    HITLS_X509_CertFree(bag->value.cert);
     BSL_LIST_DeleteAll(bag->attributes, HTILS_PKCS12_AttributesFree);
     BSL_SAL_FREE(bag->attributes);
     BSL_SAL_FREE(bag);
@@ -162,7 +162,7 @@ void HTILS_PKCS12_p12_InfoFree(HTILS_PKCS12_p12Info *p12)
         return;
     }
 
-    HITLS_X509_CertFree(p12->entityCert->value.entityCert);
+    HITLS_X509_CertFree(p12->entityCert->value.cert);
     BSL_LIST_DeleteAll(p12->entityCert->attributes, HTILS_PKCS12_AttributesFree);
     BSL_SAL_FREE(p12->entityCert->attributes);
     BSL_SAL_Free(p12->entityCert);

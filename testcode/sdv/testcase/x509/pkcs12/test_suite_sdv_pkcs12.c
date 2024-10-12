@@ -352,7 +352,7 @@ void SDV_PKCS12_PARSE_P12_TC001(Hex *encode, Hex *cert)
     ASSERT_NE(p12->key, NULL);
     ASSERT_NE(p12->entityCert, NULL);
     BSL_Buffer encodeCert = {0};
-    ret = HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, p12->entityCert->value.entityCert, &encodeCert);
+    ret = HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, p12->entityCert->value.cert, &encodeCert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(memcmp(encodeCert.data, cert->x, cert->len), 0);
 exit:
@@ -383,7 +383,7 @@ void SDV_PKCS12_PARSE_P12_TC002(Hex *encode, Hex *cert)
     ASSERT_NE(p12->key, NULL);
     ASSERT_NE(p12->entityCert, NULL);
     BSL_Buffer encodeCert = {0};
-    ret = HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, p12->entityCert->value.entityCert, &encodeCert);
+    ret = HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, p12->entityCert->value.cert, &encodeCert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(memcmp(encodeCert.data, cert->x, cert->len), 0);
 exit:
