@@ -37,6 +37,9 @@ int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Sym
         BSL_ERR_PUSH_ERROR(BSL_PEM_INVALID);
         return BSL_PEM_INVALID;
     }
+    if (!BSL_PEM_IsPemFormat(*encode, *encodeLen)) {
+        return BSL_PEM_INVALID;
+    }
     char *begin = strstr(*encode, symbol->head);
     if (begin == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_PEM_SYMBOL_NOT_FOUND);

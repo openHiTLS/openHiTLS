@@ -301,17 +301,6 @@ static int32_t EncodeAlgoIdAsn1Buff(BSL_ASN1_Buffer *algoId, uint32_t algoIdNum,
     return BSL_ASN1_EncodeTemplate(&templ, algoId, algoIdNum, buff, buffLen);
 }
 
-static int32_t GetCidByRsaPubKeyPadType(CRYPT_RsaPadType type)
-{
-    if (type == CRYPT_PKEY_EMSA_PKCSV15) {
-        return BSL_CID_RSA;
-    } else if (type == CRYPT_PKEY_EMSA_PSS) {
-        return BSL_CID_RSASSAPSS;
-    }
-
-    return BSL_CID_UNKNOWN;
-}
-
 static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_EAL_PkeyCtx *ealPriKey)
 {
     CRYPT_RSA_PssPara para = {0};
@@ -1845,6 +1834,7 @@ static int32_t EncodeEccPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Bu
     }
     ecParamOid->buff = (uint8_t *)oid->octs;
     ecParamOid->len = oid->octetLen;
+    ecParamOid->tag = BSL_ASN1_TAG_OBJECT_ID;
 
     uint32_t pubLen = CRYPT_EAL_PkeyGetKeyLen(ealPubKey);
     if (pubLen == 0) {
@@ -1868,17 +1858,32 @@ static int32_t EncodeEccPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Bu
     return ret;
 }
 
-static int32_t EncodeRsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BslCid *cid, BSL_Buffer *encodePub)
+static int32_t EncodePssParam(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *pssParam)
+{
+    if (pssParam == NULL) {
+        return CRYPT_SUCCESS;
+    }
+    int32_t padType = 0;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (padType != CRYPT_PKEY_EMSA_PSS) {
+        pssParam->tag = BSL_ASN1_TAG_NULL;
+        return CRYPT_SUCCESS;
+    }
+    CRYPT_RSA_PssPara rsaPssParam = {0};
+    ret = GetPssParamInfo(ealPubKey, &rsaPssParam);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    pssParam->tag = BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED;
+    return CRYPT_EAL_EncodeRsaPssAlgParam(&rsaPssParam, &pssParam->buff, &pssParam->len);
+}
+
+static int32_t EncodeRsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *pssParam, BSL_Buffer *encodePub)
 {
     int32_t ret;
-    if (cid != NULL) {
-        int32_t padType = 0;
-        ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-        *cid = GetCidByRsaPubKeyPadType(padType);
-    }
     BSL_ASN1_Buffer pubAsn1[CRYPT_RSA_PUB_E_IDX + 1] = {0};
     uint32_t bnLen = CRYPT_EAL_PkeyGetKeyLen(ealPubKey);
     if (bnLen == 0) {
@@ -1915,6 +1920,13 @@ static int32_t EncodeRsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BslCid *cid
     ret = BSL_ASN1_EncodeTemplate(&pubTempl, pubAsn1, CRYPT_RSA_PUB_E_IDX + 1, &encodePub->data, &encodePub->dataLen);
     BSL_SAL_FREE(pub.key.rsaPub.n);
     BSL_SAL_FREE(pub.key.rsaPub.e);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = EncodePssParam(ealPubKey, pssParam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(encodePub->data);
+    }
     return ret;
 }
 
@@ -1925,12 +1937,13 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     BSL_Buffer bitTmp = {0};
     BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
     if (cid == CRYPT_PKEY_RSA) {
-        ret = EncodeRsaPubkeyAsn1Buff(ealPubKey, NULL, &bitTmp);
-        algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag = BSL_ASN1_TAG_NULL;
+        ret = EncodeRsaPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
+        if (algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag == (BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED)) {
+            cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
+        }
     } else if (cid == CRYPT_PKEY_ECDSA || cid == CRYPT_PKEY_SM2) {
         cid = (CRYPT_PKEY_AlgId)BSL_CID_EC_PUBLICKEY;
         ret = EncodeEccPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
-        algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
     } else {
         return CRYPT_ERR_ALGID;
     }
@@ -1940,7 +1953,8 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     BslOidString *oidStr = BSL_OBJ_GetOidFromCID((BslCid)cid);
     if (oidStr == NULL) {
         BSL_SAL_FREE(bitTmp.data);
-        return CRYPT_ERR_ALGID;
+        ret = CRYPT_ERR_ALGID;
+        goto end;
     }
     algoId[BSL_ASN1_TAG_ALGOID_IDX].buff = (uint8_t *)oidStr->octs;
     algoId[BSL_ASN1_TAG_ALGOID_IDX].len = oidStr->octetLen;
@@ -1948,10 +1962,14 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     ret = EncodeAlgoIdAsn1Buff(algoId, BSL_ASN1_TAG_ALGOID_ANY_IDX + 1, &algo->buff, &algo->len);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(bitTmp.data);
-        return ret;
+        goto end;
     }
     bitStr->data = bitTmp.data;
     bitStr->dataLen = bitTmp.dataLen;
+end:
+    if (cid == (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS) {
+        BSL_SAL_FREE(algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].buff);
+    }
     return ret;
 }
 

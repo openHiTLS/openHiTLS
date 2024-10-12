@@ -499,10 +499,19 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
 
 /**
  * @ingroup x509
- * @brief Ctrl function to process StoreCtx.
+ * @brief Generic function to process StoreCtx.
  *
  * @param storeCtx [IN] StoreCtx.
- * @param cmd [IN] HITLS_X509_Cmd
+ * @param cmd [IN] HITLS_X509_Cmd                       data type
+ *        HITLS_X509_STORECTX_SET_PARAM_DEPTH           int32_t
+ *        HITLS_X509_STORECTX_SET_PARAM_FLAGS           int64_t
+ *        HITLS_X509_STORECTX_SET_TIME                  int64_t
+ *        HITLS_X509_STORECTX_SET_SECBITS               uint32_t
+ *        HITLS_X509_STORECTX_CLR_PARAM_FLAGS           int64_t
+ *        HITLS_X509_STORECTX_DEEP_COPY_SET_CA          HITLS_X509_Cert
+ *        HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA       HITLS_X509_Cert
+ *        HITLS_X509_STORECTX_SET_CRL                   HITLS_X509_Crl
+ *        HITLS_X509_STORECTX_REF_UP                    int
  * @param val [IN/OUT] input and output value.
  * @param valLen [IN] value length.
  * @retval #HITLS_X509_SUCCESS, success.
@@ -512,7 +521,7 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
 
 /**
  * @ingroup x509
- * @brief StoreCtx verify function.
+ * @brief Certificate chain verify function.
  *
  * @param storeCtx [IN] StoreCtx.
  * @param chain [IN] certificate chain.
@@ -523,7 +532,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
 
 /**
  * @ingroup x509
- * @brief StoreCtx build chain function.
+ * @brief Certificate chain build function.
  *
  * @param storeCtx [IN] StoreCtx.
  * @param cert [IN] certificate.
