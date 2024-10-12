@@ -39,7 +39,6 @@ typedef struct {
     uint32_t dataLen;
 } BSL_Buffer;
 
-
 #ifdef __cplusplus
 }
 #endif
