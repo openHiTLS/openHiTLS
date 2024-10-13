@@ -30,10 +30,10 @@ openHiTLS依赖于Secure C，因此需将Secure C下载到${openHiTLS_dir}/platf
 * 下载安全函数库
 ```bash
 # 方式1 与openHiTLS代码仓一起拉去
-git clone --recurse-submodules https://gitee.com/openhitls/openhitls.git
+git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
 
 # 方式2 单独拉取安全函数库
-git clone https://gitee.com/openhitls/openhitls.git
+git clone https://gitcode.com/openhitls/openhitls.git
 cd ${openHiTLS_dir} 
 git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
 ```
@@ -49,13 +49,13 @@ make -j
 正式版本的源码镜像尚未正式开放、还在规划当中。
 
 
-官方代码仓库托管在<https://gitee.com/openhitls>，您可以通过如下命令将Git库克隆为一个本地副本进行使用： 
+官方代码仓库托管在<https://gitcode.com/openhitls>，您可以通过如下命令将Git库克隆为一个本地副本进行使用： 
 ```
-git clone https://gitee.com/openhitls/openhitls.git
+git clone https://gitcode.com/openhitls/openhitls.git
 ```
-如果您有意贡献代码，请在gitee上复制openhitls库，再克隆您的公共副本： 
+如果您有意贡献代码，请在gitcode上复制openhitls库，再克隆您的公共副本： 
 ```
-git clone https://gitee.com/"your gitee name"/openhitls.git
+git clone https://gitcode.com/"your gitcode name"/openhitls.git
 ```
 
 ## 文档
