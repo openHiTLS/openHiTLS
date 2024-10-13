@@ -30,10 +30,10 @@ openHiTLS depends on Secure C which should be downloaded to ${openHiTLS_dir}/pla
 
 ```bash
 # Method 1: Pull it with the openHiTLS code repository
-git clone --recurse-submodules https://gitee.com/openhitls/openhitls.git
+git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
 
 # Method 2: Pull the security library separately
-git clone https://gitee.com/openhitls/openhitls.git
+git clone https://gitcode.com/openhitls/openhitls.git
 cd ${openHiTLS_dir} 
 git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
 ```
@@ -49,13 +49,13 @@ make -j
 Source code mirroring of the official releases is pending for planning.
 
 
-The official source code repository is located at <https://gitee.com/openhitls>. A local copy of the git repository can be obtained by cloning it using:
+The official source code repository is located at <https://gitcode.com/openhitls>. A local copy of the git repository can be obtained by cloning it using:
 ```
-git clone https://gitee.com/openhitls/openhitls.git
+git clone https://gitcode.com/openhitls/openhitls.git
 ```
 If you are going to contribute, you need to fork the openhitls repository on gitee and clone your public fork instead:
 ```
-git clone https://gitee.com/"your gitee name"/openhitls.git
+git clone https://gitcode.com/"your gitcode name"/openhitls.git
 ```
 
 ## Document
