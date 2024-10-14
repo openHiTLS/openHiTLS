@@ -171,7 +171,7 @@ int32_t HITLS_X509_ParseExtItem(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *e
 
 void HITLS_X509_ExtEntryFree(HITLS_X509_ExtEntry *entry);
 
-int32_t HITLS_X509_ParseItemDefault(void *item, uint32_t len,  BSL_ASN1_List *list);
+int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *list);
 
 int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HITLS_X509_ValidTime *time);
 

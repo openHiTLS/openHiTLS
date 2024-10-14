@@ -146,7 +146,7 @@ int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list)
     return ret;
 }
 
-int32_t HITLS_X509_ParseItemDefault(void *item, uint32_t len, BSL_ASN1_List *list)
+int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *list)
 {
     void *node = BSL_SAL_Malloc(len);
     if (node == NULL) {

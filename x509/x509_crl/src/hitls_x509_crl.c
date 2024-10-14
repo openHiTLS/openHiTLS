@@ -170,7 +170,7 @@ int32_t HITLS_CRL_ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_Li
         return ret;
     }
 
-    return HITLS_X509_ParseItemDefault(&extEntry, sizeof(HITLS_X509_ExtEntry), list);
+    return HITLS_X509_AddListItemDefault(&extEntry, sizeof(HITLS_X509_ExtEntry), list);
 }
 
 int32_t HITLS_CRL_ParseExtSeqof(uint32_t layer, BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List *list)
@@ -264,7 +264,7 @@ int32_t HITLS_CRL_ParseCrlAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *pa
         return ret;
     }
 
-    return HITLS_X509_ParseItemDefault(&crlEntry, sizeof(HITLS_X509_CrlEntry), list);
+    return HITLS_X509_AddListItemDefault(&crlEntry, sizeof(HITLS_X509_CrlEntry), list);
 }
 
 int32_t HITLS_X509_ParseCrlList(BSL_ASN1_Buffer *crl, BSL_ASN1_List *list)

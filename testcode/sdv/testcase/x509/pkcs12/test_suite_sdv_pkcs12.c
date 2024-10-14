@@ -71,7 +71,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_PKCS8SHROUDEDKEYBAG_TC001(int algId, Hex *buff
     // parse contentInfo
     int32_t ret = HITLS_PKCS12_ParseContentInfo((BSL_Buffer *)buff, NULL, 0, &safeContent);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
 
     // get the safeBag of safeContents, and put in list.
@@ -92,7 +92,7 @@ exit:
     BSL_SAL_Free(safeContent.data);
     BSL_LIST_DeleteAll(bagLists, BagListsDestroyCb);
     BSL_SAL_Free(bagLists);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
 }
 /* END_CASE */
 
@@ -105,7 +105,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_CERTBAGS_TC001(Hex *buff)
     BSL_ASN1_List *bagLists = BSL_LIST_New(sizeof(HTILS_PKCS12_SafeBag));
     ASSERT_NE(bagLists, NULL);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
 
     char *pwd = "123456";
@@ -127,7 +127,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_CERTBAGS_TC001(Hex *buff)
 exit:
     BSL_SAL_Free(safeContent.data);
     BSL_LIST_DeleteAll(bagLists, BagListsDestroyCb);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     BSL_SAL_Free(bagLists);
 }
 /* END_CASE */
@@ -222,7 +222,7 @@ void SDV_PKCS12_PARSE_AUTHSAFE_TC001(Hex *wrongCert)
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
     // parse authSafe
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     int32_t ret = HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)wrongCert, (const uint8_t *)pwd, pwdlen, p12);
     ASSERT_NE(ret, HITLS_X509_SUCCESS);
 
@@ -237,7 +237,7 @@ void SDV_PKCS12_PARSE_AUTHSAFE_TC001(Hex *wrongCert)
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 
 exit:
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -248,7 +248,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_PARSE_AUTHSAFE_TC002(Hex *buff)
 {
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
 
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
@@ -258,7 +258,7 @@ void SDV_PKCS12_PARSE_AUTHSAFE_TC002(Hex *buff)
     ASSERT_NE(p12->key->value.key, NULL);
     ASSERT_NE(p12->entityCert->value.cert, NULL);
 exit:
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -269,7 +269,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_PARSE_MACDATA_TC001(Hex *buff, int alg, Hex *digest, Hex *salt, int iterations)
 {
-    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_p12_MacDataNew();
+    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_P12_MacDataNew();
     int32_t ret = HITLS_PKCS12_ParseMacData((BSL_Buffer *)buff, macData);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(macData->alg, alg);
@@ -288,7 +288,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_PARSE_MACDATA_TC002(Hex *buff)
 {
-    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_p12_MacDataNew();
+    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_P12_MacDataNew();
     int32_t ret = HITLS_PKCS12_ParseMacData(NULL, macData);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
@@ -306,7 +306,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_CAL_MACDATA_TC001(Hex *initData, Hex *salt, int alg, int iter, Hex *mac)
 {
-    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_p12_MacDataNew();
+    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_P12_MacDataNew();
     macData->alg = alg;
     macData->macSalt->data = salt->x;
     macData->macSalt->dataLen = salt->len;
@@ -333,7 +333,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_CAL_KDF_TC001(Hex *pwd, Hex *salt, int alg, int iter, Hex *key)
 {
-    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_p12_MacDataNew();
+    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_P12_MacDataNew();
     macData->alg = alg;
     macData->macSalt->data = salt->x;
     macData->macSalt->dataLen = salt->len;
@@ -362,13 +362,13 @@ void SDV_PKCS12_PARSE_P12_TC001(Hex *encode, Hex *cert)
     encPwd.data = (uint8_t *)pwd;
     encPwd.dataLen = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
         .macPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(p12->key->value.key, NULL);
     ASSERT_NE(p12->entityCert->value.cert, NULL);
@@ -378,7 +378,7 @@ void SDV_PKCS12_PARSE_P12_TC001(Hex *encode, Hex *cert)
     ASSERT_EQ(memcmp(encodeCert.data, cert->x, cert->len), 0);
 exit:
     BSL_SAL_Free(encodeCert.data);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -394,14 +394,14 @@ void SDV_PKCS12_PARSE_P12_TC002(Hex *encode, Hex *cert)
     encPwd.data = (uint8_t *)pwd;
     encPwd.dataLen = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_NE(ret, HITLS_X509_SUCCESS);
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, false);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, false);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(p12->key->value.key, NULL);
     ASSERT_NE(p12->entityCert->value.cert, NULL);
@@ -411,7 +411,7 @@ void SDV_PKCS12_PARSE_P12_TC002(Hex *encode, Hex *cert)
     ASSERT_EQ(memcmp(encodeCert.data, cert->x, cert->len), 0);
 exit:
     BSL_SAL_Free(encodeCert.data);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -431,38 +431,38 @@ void SDV_PKCS12_PARSE_P12_WRONG_CONDITIONS_TC001(Hex *encode)
     macPwd.data = (uint8_t *)pwd2;
     macPwd.dataLen = strlen(pwd2);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
         .macPwd = &macPwd,
     };
 
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, NULL, &param, p12, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, NULL, &param, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, NULL, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, NULL, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, NULL, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, NULL, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_VERIFY_FAIL);
 
     char *pwd3 = "";
     macPwd.data = (uint8_t *)pwd3;
     macPwd.dataLen = strlen(pwd3);
     param.macPwd = &macPwd;
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_VERIFY_FAIL);
 
     param.macPwd = NULL;
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_VERIFY_FAIL);
 
     param.encPwd = NULL;
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
     char *pwd4 = "123456";
@@ -470,19 +470,19 @@ void SDV_PKCS12_PARSE_P12_WRONG_CONDITIONS_TC001(Hex *encode)
     macPwd.data = (uint8_t *)pwd4;
     macPwd.dataLen = strlen(pwd4);
     param.macPwd = &macPwd;
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 
     encPwd.data = (uint8_t *)pwd4;
     encPwd.dataLen = strlen(pwd4);
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     encode->x[6] = 0x04; // Modify the version = 4.
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_PFX);
 exit:
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -507,25 +507,25 @@ void SDV_PKCS12_PARSE_P12_WRONG_P12FILE_TC001(Hex *encode)
         .macPwd = &macPwd,
     };
 
-    HTILS_PKCS12_p12Info *p12_1 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12_1 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12_1, NULL);
-    HTILS_PKCS12_p12Info *p12_2 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12_2 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12_2, NULL);
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12_1, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12_1, true);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     encode->x[encode->len - 2] = 0x04; // modify the iteration = 1024;
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12_2, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12_2, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_VERIFY_FAIL);
 
     encode->x[encode->len - 2] = 0x08; // recover the iteration = 2048;
     (void)memset_s(encode->x + 96, 16, 0, 16); // modify the contentInfo
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12_2, true);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12_2, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_VERIFY_FAIL);
 
 exit:
-    HTILS_PKCS12_p12_InfoFree(p12_1);
-    HTILS_PKCS12_p12_InfoFree(p12_2);
+    HTILS_PKCS12_P12_InfoFree(p12_1);
+    HTILS_PKCS12_P12_InfoFree(p12_2);
     return;
 }
 /* END_CASE */
@@ -550,15 +550,15 @@ void SDV_PKCS12_PARSE_P12_WRONG_P12FILE_TC002(Hex *encode)
         .macPwd = &macPwd,
     };
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, true);
     ASSERT_NE(ret, HITLS_X509_SUCCESS);
 
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, false);
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)encode, &param, p12, false);
     ASSERT_NE(ret, HITLS_X509_SUCCESS);
 exit:
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -576,7 +576,7 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_PKCS8SHROUDEDKEYBAG_TC001(Hex *buff)
     char *pwd = "123456";
     uint32_t len = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
 
     // get the safeBag of safeContents, and put in list.
@@ -609,17 +609,16 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_PKCS8SHROUDEDKEYBAG_TC001(Hex *buff)
     BSL_Buffer encode = {0};
     ret = HITLS_PKCS12_EncodeAsn1List(list, BSL_CID_PKCS8SHROUDEDKEYBAG, &paramEx, &encode);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ASSERT_EQ(encode.dataLen, buff->len); // 最外层交给上层编码
+    ASSERT_EQ(encode.dataLen, buff->len);
     ret = memcmp(encode.data + encode.dataLen - 37, buff->x + buff->len - 37, 37);
     ASSERT_EQ(ret, 0);
-    // PrintHex(encode.data, encode.dataLen);
 
 exit:
     BSL_SAL_Free(encode.data);
     BSL_LIST_DeleteAll(bagLists, BagListsDestroyCb);
     BSL_SAL_Free(bagLists);
     BSL_LIST_FREE(list, NULL);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
 }
 /* END_CASE */
 
@@ -633,7 +632,7 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_CERTBAGS_TC001(Hex *buff)
     BSL_ASN1_List *bagLists = BSL_LIST_New(sizeof(HTILS_PKCS12_SafeBag));
     ASSERT_NE(bagLists, NULL);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
 
     char *pwd = "123456";
@@ -671,7 +670,7 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_CERTBAGS_TC001(Hex *buff)
     ret = HITLS_PKCS12_EncodeContentInfo(&encode, BSL_CID_ENCRYPTEDDATA, &paramEx, &output);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(output.dataLen, buff->len);
-    ret = memcmp(output.data, buff->x, 69); // 数据加密具有随机性
+    ret = memcmp(output.data, buff->x, 69);
     ASSERT_EQ(ret, 0);
 
 exit:
@@ -679,7 +678,7 @@ exit:
     BSL_SAL_Free(encode.data);
     BSL_SAL_Free(output.data);
     BSL_LIST_DeleteAll(bagLists, BagListsDestroyCb);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     BSL_SAL_Free(bagLists);
 }
 /* END_CASE */
@@ -691,7 +690,7 @@ exit:
 void SDV_PKCS12_ENCODE_AUTHSAFE_TC001(Hex *buff)
 {
     TestRandInit();
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
 
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
@@ -769,7 +768,7 @@ exit:
     BSL_SAL_Free(encode5.data);
     BSL_LIST_FREE(list, NULL);
     BSL_LIST_FREE(keyList, NULL);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -786,23 +785,47 @@ void SDV_PKCS12_ENCODE_MACDATA_TC001(Hex *buff, Hex *initData, Hex *expectData)
     encPwd.data = (uint8_t *)pwd;
     encPwd.dataLen = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
         .macPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, true);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
+    HTILS_PKCS12_HmacParam hmacParam = {0};
+    hmacParam.macId = CRYPT_MD_SHA224;
+    hmacParam.pwd = (uint8_t *)pwd;
+    hmacParam.saltLen = p12->macData->macSalt->dataLen;
+    hmacParam.pwdLen = strlen(pwd);
+    hmacParam.itCnt = 2048;
     BSL_Buffer output = {0};
-    ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, param.macPwd, p12->macData, &output);
+    BSL_Buffer output1 = {0};
+
+    ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, &hmacParam, p12->macData, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret = memcmp(output.data, expectData->x, expectData->len);
     ASSERT_EQ(ret, 0);
-exit:
 
+    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_P12_MacDataNew();
+    hmacParam.itCnt = 999;
+    ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, &hmacParam, macData, &output);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_INTERATION);
+
+    hmacParam.itCnt = 1024;
+    hmacParam.saltLen = 0;
+    ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, &hmacParam, macData, &output);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_SALTLEN);
+
+    hmacParam.saltLen = 16;
+    ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, &hmacParam, macData, &output1);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+exit:
     BSL_SAL_Free(output.data);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    BSL_SAL_Free(output1.data);
+    HTILS_PKCS12_p12_MacDataFree(macData);
+    HTILS_PKCS12_P12_InfoFree(p12);
     return;
 }
 /* END_CASE */
@@ -819,13 +842,13 @@ void SDV_PKCS12_ENCODE_P12_TC001(Hex *buff, Hex *cert)
     encPwd.data = (uint8_t *)pwd;
     encPwd.dataLen = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
         .macPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, true);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, true);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     HTILS_PKCS12_EncodeParam encodeParam = {0};
@@ -843,19 +866,20 @@ void SDV_PKCS12_ENCODE_P12_TC001(Hex *buff, Hex *cert)
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
     encodeParam.encParam = encParam;
 
-    HTILS_PKCS12_MacParam macParam = {0};
-    macParam.macId = CRYPT_MD_SHA224;
+    HTILS_PKCS12_HmacParam macParam = {0};
+    macParam.macId = p12->macData->alg;
     macParam.pwd = (uint8_t *)pwd;
-    macParam.saltLen = 16;
+    macParam.saltLen = p12->macData->macSalt->dataLen;
     macParam.pwdLen = strlen(pwd);
     macParam.itCnt = 2048;
     encodeParam.macParam = macParam;
     BSL_Buffer output = {0};
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(output.dataLen, buff->len);
 
-    HTILS_PKCS12_p12Info *p12_1 = HTILS_PKCS12_p12_InfoNew();
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, &output, &param, p12_1, true);
+    HTILS_PKCS12_P12Info *p12_1 = HTILS_PKCS12_P12_InfoNew();
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &param, p12_1, true);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(p12_1->key->value.key, NULL);
     ASSERT_NE(p12_1->entityCert->value.cert, NULL);
@@ -888,8 +912,8 @@ exit:
     BSL_SAL_Free(output.data);
     BSL_SAL_Free(encodeCert1.data);
     BSL_SAL_Free(encodeCert2.data);
-    HTILS_PKCS12_p12_InfoFree(p12);
-    HTILS_PKCS12_p12_InfoFree(p12_1);
+    HTILS_PKCS12_P12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12_1);
     return;
 }
 /* END_CASE */
@@ -906,13 +930,13 @@ void SDV_PKCS12_ENCODE_P12_TC002(Hex *buff, Hex *cert)
     encPwd.data = (uint8_t *)pwd;
     encPwd.dataLen = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
         .macPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, false);
+    int32_t ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, false);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     HTILS_PKCS12_EncodeParam encodeParam = {0};
@@ -930,10 +954,10 @@ void SDV_PKCS12_ENCODE_P12_TC002(Hex *buff, Hex *cert)
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
     encodeParam.encParam = encParam;
 
-    HTILS_PKCS12_MacParam macParam = {0};
-    macParam.macId = CRYPT_MD_SHA224;
+    HTILS_PKCS12_HmacParam macParam = {0};
+    macParam.macId = p12->macData->alg;
     macParam.pwd = (uint8_t *)pwd;
-    macParam.saltLen = 16;
+    macParam.saltLen = 8;
     macParam.pwdLen = strlen(pwd);
     macParam.itCnt = 2048;
     encodeParam.macParam = macParam;
@@ -945,8 +969,8 @@ void SDV_PKCS12_ENCODE_P12_TC002(Hex *buff, Hex *cert)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(output.dataLen, buff->len);
 
-    HTILS_PKCS12_p12Info *p12_1 = HTILS_PKCS12_p12_InfoNew();
-    ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, &output, &param, p12_1, false);
+    HTILS_PKCS12_P12Info *p12_1 = HTILS_PKCS12_P12_InfoNew();
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &param, p12_1, false);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(p12_1->key->value.key, NULL);
     ASSERT_NE(p12_1->entityCert->value.cert, NULL);
@@ -965,8 +989,8 @@ exit:
     BSL_SAL_Free(output.data);
     BSL_SAL_Free(encodeCert1.data);
     BSL_SAL_Free(encodeCert2.data);
-    HTILS_PKCS12_p12_InfoFree(p12);
-    HTILS_PKCS12_p12_InfoFree(p12_1);
+    HTILS_PKCS12_P12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12_1);
     return;
 }
 /* END_CASE */
@@ -983,14 +1007,12 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     encPwd.data = (uint8_t *)pwd;
     encPwd.dataLen = strlen(pwd);
 
-    HTILS_PKCS12_p12Info *p12 = HTILS_PKCS12_p12_InfoNew();
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
     ASSERT_NE(p12, NULL);
     HTILS_PKCS12_PwdParam param = {
         .encPwd = &encPwd,
         .macPwd = &encPwd,
     };
-    int32_t ret = HITLS_PKCS12_ParseBuffer(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, true);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     HTILS_PKCS12_EncodeParam encodeParam = {0};
 
@@ -1007,52 +1029,73 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
     encodeParam.encParam = encParam;
 
-    HTILS_PKCS12_MacParam macParam = {0};
-    macParam.macId = CRYPT_MD_SHA224;
+    BSL_Buffer output1 = {0};
+
+    // For test p12 has none data, isNeedMac = true.
+    int32_t ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, false, &output1);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NONE_DATA);
+    // For test p12 has none data, isNeedMac = false.
+    ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output1);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NONE_DATA);
+    // For test gen p12 of mac iteration < 1000.
+    ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output1);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NONE_DATA);
+
+    ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, (BSL_Buffer *)buff, &param, p12, true);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    HTILS_PKCS12_HmacParam macParam = {0};
+    macParam.macId = p12->macData->alg;
     macParam.pwd = (uint8_t *)pwd;
-    macParam.saltLen = 16;
+    macParam.saltLen = 8;
     macParam.pwdLen = strlen(pwd);
     macParam.itCnt = 2048;
     encodeParam.macParam = macParam;
-    HTILS_PKCS12_p12Info p12_1 = {0};
-    BSL_Buffer output1 = {0};
-    (void)memcpy(&p12_1, p12, sizeof(HTILS_PKCS12_p12Info));
+    HTILS_PKCS12_P12Info p12_1 = {0};
 
+    //  For test gen p12 of wrong input
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_UNKNOWN, &p12_1, &encodeParam, true, &output1);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT);
 
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, NULL, true, &output1);
-    ASSERT_EQ(ret, HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, NULL);
-    ASSERT_EQ(ret, HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
+    (void)memcpy(&p12_1, p12, sizeof(HTILS_PKCS12_P12Info));
     CRYPT_EAL_PkeyCtx *temKey = p12_1.key->value.key;
+    HITLS_X509_Cert *entityCert = p12_1.entityCert->value.cert;
     p12_1.key->value.key = NULL;
+    p12_1.entityCert->value.cert = NULL; // test p12-encode of key and entityCert = NULL.
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output1);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
-    p12_1.key->value.key = temKey;
-    HITLS_X509_Cert *entityCert = p12_1.entityCert->value.cert;
-    p12_1.entityCert->value.cert = NULL;
     BSL_Buffer output2 = {0};
+    p12_1.key->value.key = NULL; // test p12-encode of key = NULL.
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output2);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
-    p12_1.entityCert->value.cert = entityCert;
+    p12_1.key->value.key = temKey;
+    p12_1.entityCert->value.cert = NULL; // test p12-encode of entityCert = NULL.
     BSL_Buffer output3 = {0};
-    BSL_LIST_DeleteAll(p12_1.entityCert->attributes, AttributesFree);
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output3);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
+    p12_1.entityCert->value.cert = entityCert;
     BSL_Buffer output4 = {0};
-    BSL_LIST_DeleteAll(p12_1.key->attributes, AttributesFree);
+    BSL_LIST_DeleteAll(p12_1.entityCert->attributes, AttributesFree); // test p12-encode of entityCert attribute = NULL.
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output4);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
-    BSL_LIST_DeleteAll(p12_1.certList, BagFree);
     BSL_Buffer output5 = {0};
+    BSL_LIST_DeleteAll(p12_1.key->attributes, AttributesFree); // test p12-encode of key attribute = NULL.
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output5);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    BSL_LIST_DeleteAll(p12_1.certList, BagFree); // test p12-encode of key attribute = NULL.
+    BSL_Buffer output6 = {0};
+    ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output6);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 exit:
     BSL_SAL_Free(output1.data);
@@ -1060,7 +1103,74 @@ exit:
     BSL_SAL_Free(output3.data);
     BSL_SAL_Free(output4.data);
     BSL_SAL_Free(output5.data);
-    HTILS_PKCS12_p12_InfoFree(p12);
+    BSL_SAL_Free(output6.data);
+    HTILS_PKCS12_P12_InfoFree(p12);
+    return;
+}
+/* END_CASE */
+
+/**
+ * For test gen and parse p12-file.
+*/
+/* BEGIN_CASE */
+void SDV_PKCS12_GEN_PARASE_P12FILE_TC003(void)
+{
+    TestRandInit();
+    char *pwd = "123456";
+    BSL_Buffer encPwd;
+    encPwd.data = (uint8_t *)pwd;
+    encPwd.dataLen = strlen(pwd);
+
+    HTILS_PKCS12_P12Info *p12 = HTILS_PKCS12_P12_InfoNew();
+    ASSERT_NE(p12, NULL);
+    HTILS_PKCS12_PwdParam param = {
+        .encPwd = &encPwd,
+        .macPwd = &encPwd,
+    };
+
+    HTILS_PKCS12_EncodeParam encodeParam = {0};
+
+    CRYPT_Pbkdf2Param pbParam = {0};
+    pbParam.pbesId = BSL_CID_PBES2;
+    pbParam.pbkdfId = BSL_CID_PBKDF2;
+    pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
+    pbParam.symId = CRYPT_CIPHER_AES256_CBC;
+    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.saltLen = 16;
+    pbParam.pwdLen = strlen(pwd);
+    pbParam.itCnt = 2048;
+
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    encodeParam.encParam = encParam;
+
+    const char *path = "../testdata/cert/asn1/pkcs12/chain.p12";
+    const char *writePath = "../testdata/cert/asn1/pkcs12/chain_cp.p12";
+
+    int32_t ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, NULL, &param, p12, true);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
+    ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, path, &param, p12, true);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    HTILS_PKCS12_HmacParam macParam = {0};
+    macParam.macId = p12->macData->alg;
+    macParam.pwd = (uint8_t *)pwd;
+    macParam.saltLen = 8;
+    macParam.pwdLen = strlen(pwd);
+    macParam.itCnt = 2048;
+    encodeParam.macParam = macParam;
+
+    ret = HITLS_PKCS12_GenFile(BSL_FORMAT_ASN1, p12, &encodeParam, true, NULL);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
+    ret = HITLS_PKCS12_GenFile(BSL_FORMAT_ASN1, p12, &encodeParam, true, writePath);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+
+    HTILS_PKCS12_P12Info *p12_1 = HTILS_PKCS12_P12_InfoNew();
+    ASSERT_NE(p12_1, NULL);
+    ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, writePath, &param, p12_1, true);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+exit:
+    HTILS_PKCS12_P12_InfoFree(p12);
+    HTILS_PKCS12_P12_InfoFree(p12_1);
     return;
 }
 /* END_CASE */

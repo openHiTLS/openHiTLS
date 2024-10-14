@@ -105,10 +105,11 @@ static int32_t DecodeFriendlyName(BSL_ASN1_Buffer *buffer, BSL_Buffer *output)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BSL_ASN1_Buffer input = {0};
-    input.buff = temp;
-    input.len = valueLen;
-    input.tag = BSL_ASN1_TAG_BMPSTRING;
+    BSL_ASN1_Buffer input = {
+        .buff = temp,
+        .len = valueLen,
+        .tag = BSL_ASN1_TAG_BMPSTRING,
+    };
     BSL_ASN1_Buffer decode = {0};
     ret = BSL_ASN1_DecodePrimitiveItem(&input, &decode);
     if (ret != BSL_SUCCESS) {
@@ -163,7 +164,7 @@ static int32_t ParseAttr(HITLS_X509_AttrEntry *entry, BSL_ASN1_List *list)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_ParseItemDefault(&attr, sizeof(HTILS_PKCS12_SafeBagAttr), list);
+    ret = HITLS_X509_AddListItemDefault(&attr, sizeof(HTILS_PKCS12_SafeBagAttr), list);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_Free(attr.attrValue->data);
@@ -287,7 +288,7 @@ err:
     return ret;
 }
 
-static int32_t ParsePKCS8ShroudedKeyBags(HTILS_PKCS12_p12Info *p12, const uint8_t *pwd, uint32_t pwdlen,
+static int32_t ParsePKCS8ShroudedKeyBags(HTILS_PKCS12_P12Info *p12, const uint8_t *pwd, uint32_t pwdlen,
     HTILS_PKCS12_SafeBag *safeBag)
 {
     CRYPT_EAL_PkeyCtx *prikey = NULL;
@@ -303,7 +304,7 @@ static int32_t ParsePKCS8ShroudedKeyBags(HTILS_PKCS12_p12Info *p12, const uint8_
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t ParseCertBagAndAddList(HTILS_PKCS12_p12Info *p12, HTILS_PKCS12_SafeBag *safeBag)
+static int32_t ParseCertBagAndAddList(HTILS_PKCS12_P12Info *p12, HTILS_PKCS12_SafeBag *safeBag)
 {
     HTILS_PKCS12_CommonSafeBag bag = {0};
     int32_t ret = ParseCommonSafeBag(safeBag->bag, &bag);
@@ -339,7 +340,7 @@ static int32_t ParseCertBagAndAddList(HTILS_PKCS12_p12Info *p12, HTILS_PKCS12_Sa
 
 /* Parse a Safebag to the data we need, such as a private key, etc */
 int32_t HITLS_PKCS12_ConverSafeBag(HTILS_PKCS12_SafeBag *safeBag, const uint8_t *pwd, uint32_t pwdlen,
-    HTILS_PKCS12_p12Info *p12)
+    HTILS_PKCS12_P12Info *p12)
 {
     if (safeBag == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
@@ -418,7 +419,7 @@ int32_t HITLS_PKCS12_ParseContentInfo(BSL_Buffer *encode, const uint8_t *passwor
 
 /* Parse each safebag from list, and extract the data we need, such as a private key, etc */
 int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *password,
-    uint32_t passLen, HTILS_PKCS12_p12Info *p12)
+    uint32_t passLen, HTILS_PKCS12_P12Info *p12)
 {
     if (bagList == NULL || BSL_LIST_COUNT(bagList) == 0) {
         return HITLS_X509_SUCCESS;
@@ -451,7 +452,7 @@ static BSL_Buffer *FindLocatedId(BSL_ASN1_List *attributes)
     return NULL;
 }
 
-static int32_t SetEntityCert(HTILS_PKCS12_p12Info *p12)
+static int32_t SetEntityCert(HTILS_PKCS12_P12Info *p12)
 {
     if (p12->key == NULL) {
         return HITLS_X509_SUCCESS;
@@ -499,7 +500,7 @@ static int32_t ParseSafeBagList(BSL_Buffer *node, const uint8_t *password, uint3
 
 // The caller guarantees that the input is not empty
 int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *password, uint32_t passLen,
-    HTILS_PKCS12_p12Info *p12)
+    HTILS_PKCS12_P12Info *p12)
 {
     BSL_ASN1_List *bagLists = NULL;
     BSL_Buffer *node = NULL;
@@ -550,7 +551,7 @@ static int32_t ParseContentInfoAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, voi
         return HITLS_X509_SUCCESS;
     }
     BSL_Buffer buffer = {asn->buff, asn->len};
-    return HITLS_X509_ParseItemDefault(&buffer, sizeof(BSL_Buffer), list);
+    return HITLS_X509_AddListItemDefault(&buffer, sizeof(BSL_Buffer), list);
 }
 
 static int32_t ParseSafeContentAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *param,
@@ -567,7 +568,7 @@ static int32_t ParseSafeContentAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, voi
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_ParseItemDefault(&safeBag, sizeof(HTILS_PKCS12_SafeBag), list);
+    ret = HITLS_X509_AddListItemDefault(&safeBag, sizeof(HTILS_PKCS12_SafeBag), list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_FREE(safeBag.bag);
         BSL_ERR_PUSH_ERROR(ret);
@@ -750,7 +751,7 @@ static int32_t ParseMacDataAndVerify(BSL_Buffer *initData, BSL_Buffer *macData, 
 }
 
 static int32_t ParseAsn1PKCS12(BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *pwdParam,
-    HTILS_PKCS12_p12Info *p12, bool needMacVerify)
+    HTILS_PKCS12_P12Info *p12, bool needMacVerify)
 {
     uint32_t version = 0;
     uint8_t *temp = encode->data;
@@ -798,8 +799,8 @@ static int32_t ParseAsn1PKCS12(BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_PKCS12_ParseBuffer(int32_t format, BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *pwdParam,
-    HTILS_PKCS12_p12Info *p12, bool needMacVerify)
+int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *pwdParam,
+    HTILS_PKCS12_P12Info *p12, bool needMacVerify)
 {
     if (encode == NULL || pwdParam == NULL || pwdParam->encPwd == NULL || pwdParam->encPwd->data == NULL
         || p12 == NULL) {
@@ -814,6 +815,27 @@ int32_t HITLS_PKCS12_ParseBuffer(int32_t format, BSL_Buffer *encode, const HTILS
             BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT);
             return HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT;
     }
+}
+
+int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HTILS_PKCS12_PwdParam *pwdParam,
+    HTILS_PKCS12_P12Info *p12, bool needMacVerify)
+{
+    if (path == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
+        return HITLS_PKCS12_ERR_NULL_POINTER;
+    }
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    BSL_Buffer encode = {data, dataLen};
+    ret = HITLS_PKCS12_ParseBuff(format, &encode, pwdParam, p12, needMacVerify);
+    BSL_SAL_Free(data);
+    return ret;
 }
 
 static void FreeListBuff(BSL_ASN1_Buffer *asnBuf, int32_t count)
@@ -837,26 +859,21 @@ static int32_t EncodeAttrValue(HTILS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *
             BSL_ASN1_TemplateItem nameTemplItem = {BSL_ASN1_TAG_BMPSTRING, 0, 0};
             BSL_ASN1_Template nameTempl = {&nameTemplItem, 1};
             ret = BSL_ASN1_EncodeTemplate(&nameTempl, &asnArr, 1, &encode->data, &encode->dataLen);
-            if (ret != HITLS_X509_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
-                return ret;
-            }
             break;
         case BSL_CID_LOCATEDID:
             asnArr.tag = BSL_ASN1_TAG_OCTETSTRING;
             BSL_ASN1_TemplateItem locatedIdTemplItem = {BSL_ASN1_TAG_OCTETSTRING, 0, 0};
             BSL_ASN1_Template locatedIdTempl = {&locatedIdTemplItem, 1};
             ret = BSL_ASN1_EncodeTemplate(&locatedIdTempl, &asnArr, 1, &encode->data, &encode->dataLen);
-            if (ret != HITLS_X509_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
-                return ret;
-            }
             break;
         default:
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
-        return HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;
+            BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
+            return HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;
     }
-    return HITLS_X509_SUCCESS;
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
 }
 
 int32_t HITLS_PKCS12_EncodeAttrList(BSL_ASN1_List *list, BSL_ASN1_Buffer *attr)
@@ -897,8 +914,9 @@ int32_t HITLS_PKCS12_EncodeAttrList(BSL_ASN1_List *list, BSL_ASN1_Buffer *attr)
         entry.attrValue.buff = buffer.data;
         entry.attrValue.len = buffer.dataLen;
         entry.cid = node->attrId;
-        ret = HITLS_X509_ParseItemDefault(&entry, sizeof(HITLS_X509_AttrEntry), attrList);
+        ret = HITLS_X509_AddListItemDefault(&entry, sizeof(HITLS_X509_AttrEntry), attrList);
         if (ret != HITLS_X509_SUCCESS) {
+            BSL_SAL_FREE(buffer.data);
             BSL_ERR_PUSH_ERROR(ret);
             goto err;
         }
@@ -914,59 +932,55 @@ err:
 
 static int32_t EncodeCertBag(HITLS_X509_Cert *cert, uint32_t certType, uint8_t **encode, uint32_t *encodeLen)
 {
-    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_COMMON_SAFEBAG_MAX_IDX] = {0};
     int32_t ret;
     BslOidString *oidStr = BSL_OBJ_GetOidFromCID(certType);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ALGO);
         return HITLS_PKCS12_ERR_INVALID_ALGO;
     }
-    asnArr[0].buff = (uint8_t *)oidStr->octs;
-    asnArr[0].len = oidStr->octetLen;
-    asnArr[0].tag = BSL_ASN1_TAG_OBJECT_ID;
     BSL_Buffer certBuff = {0};
     ret = HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &certBuff);
-    if (ret != BSL_SUCCESS) {
+    if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    asnArr[1].tag = BSL_ASN1_TAG_OCTETSTRING;
-    asnArr[1].buff = certBuff.data;
-    asnArr[1].len = certBuff.dataLen;
+    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_COMMON_SAFEBAG_MAX_IDX] = {
+        {
+            .buff = (uint8_t *)oidStr->octs,
+            .len = oidStr->octetLen,
+            .tag = BSL_ASN1_TAG_OBJECT_ID,
+        }, {
+            .buff = certBuff.data,
+            .len = certBuff.dataLen,
+            .tag = BSL_ASN1_TAG_OCTETSTRING,
+        }};
+
     BSL_ASN1_Template templ = {g_pk12CommonBagTempl, sizeof(g_pk12CommonBagTempl) / sizeof(g_pk12CommonBagTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, HITLS_PKCS12_COMMON_SAFEBAG_MAX_IDX, encode, encodeLen);
-    BSL_SAL_Free(asnArr[1].buff);
+    BSL_SAL_Free(certBuff.data);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
 
-static int32_t EncodeSafeBag(HTILS_PKCS12_Bag *bag, uint32_t encodeType, CRYPT_EncodeParam *encryptParam,
+static int32_t EncodeSafeBag(HTILS_PKCS12_Bag *bag, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
     uint8_t **output, uint32_t *outputLen)
 {
-    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_SAFEBAG_MAX_IDX] = {0};
     int32_t ret;
     BslOidString *oidStr = BSL_OBJ_GetOidFromCID(encodeType);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ALGO);
         return HITLS_PKCS12_ERR_INVALID_ALGO;
     }
-    asnArr[0].buff = (uint8_t *)oidStr->octs;
-    asnArr[0].len = oidStr->octetLen;
-    asnArr[0].tag = BSL_ASN1_TAG_OBJECT_ID;
     BSL_Buffer encode = {0};
     switch (encodeType) {
         case BSL_CID_PKCS8SHROUDEDKEYBAG:
             ret = CRYPT_EAL_EncodeBuffKey(bag->value.key, encryptParam, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
                 &encode);
-            asnArr[1].buff = encode.data;
-            asnArr[1].len = encode.dataLen;
             break;
         case BSL_CID_CERTBAG:
             ret = EncodeCertBag(bag->value.cert, BSL_CID_X509CERTIFICATE, &encode.data, &encode.dataLen);
-            asnArr[1].buff = encode.data;
-            asnArr[1].len = encode.dataLen;
             break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE);
@@ -976,11 +990,20 @@ static int32_t EncodeSafeBag(HTILS_PKCS12_Bag *bag, uint32_t encodeType, CRYPT_E
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_SAFEBAG_MAX_IDX] = {
+        {
+            .buff = (uint8_t *)oidStr->octs,
+            .len = oidStr->octetLen,
+            .tag = BSL_ASN1_TAG_OBJECT_ID,
+        }, {
+            .buff = encode.data,
+            .len = encode.dataLen,
+            .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION,
+        }};
 
-    asnArr[1].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION;
     ret = HITLS_PKCS12_EncodeAttrList(bag->attributes, &asnArr[HITLS_PKCS12_SAFEBAG_BAGATTRIBUTES_IDX]);
     if (ret != BSL_SUCCESS) {
-        BSL_SAL_Free(asnArr[HITLS_PKCS12_SAFEBAG_BAGVALUES_IDX].buff);
+        BSL_SAL_Free(encode.data);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -988,12 +1011,12 @@ static int32_t EncodeSafeBag(HTILS_PKCS12_Bag *bag, uint32_t encodeType, CRYPT_E
 
     BSL_ASN1_Template templ = {g_pk12SafeBagTempl, sizeof(g_pk12SafeBagTempl) / sizeof(g_pk12SafeBagTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, HITLS_PKCS12_SAFEBAG_MAX_IDX, output, outputLen);
-    BSL_SAL_Free(asnArr[HITLS_PKCS12_SAFEBAG_BAGVALUES_IDX].buff);
+    BSL_SAL_Free(encode.data);
     BSL_SAL_Free(asnArr[HITLS_PKCS12_SAFEBAG_BAGATTRIBUTES_IDX].buff);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-    return HITLS_X509_SUCCESS;
+    return ret;
 }
 
 static int32_t EncodeP7Data(BSL_Buffer *input, BSL_Buffer *encode)
@@ -1011,19 +1034,15 @@ static int32_t EncodeP7Data(BSL_Buffer *input, BSL_Buffer *encode)
     return ret;
 }
 
-int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, CRYPT_EncodeParam *encryptParam,
+int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
     BSL_Buffer *encode)
 {
-    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_CONTENT_MAX_IDX] = {0};
     int32_t ret;
     BslOidString *oidStr = BSL_OBJ_GetOidFromCID(encodeType);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ALGO);
         return HITLS_PKCS12_ERR_INVALID_ALGO;
     }
-    asnArr[0].buff = (uint8_t *)oidStr->octs;
-    asnArr[0].len = oidStr->octetLen;
-    asnArr[0].tag = BSL_ASN1_TAG_OBJECT_ID;
     BSL_Buffer initData = {0};
     switch (encodeType) {
         case BSL_CID_DATA:
@@ -1040,13 +1059,21 @@ int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, C
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    asnArr[1].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION;
-    asnArr[1].buff = initData.data;
-    asnArr[1].len = initData.dataLen;
+    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_CONTENT_MAX_IDX] = {
+        {
+            .buff = (uint8_t *)oidStr->octs,
+            .len = oidStr->octetLen,
+            .tag = BSL_ASN1_TAG_OBJECT_ID,
+        }, {
+            .buff = initData.data,
+            .len = initData.dataLen,
+            .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION,
+        }};
+
     BSL_ASN1_Template templ = {g_pk12ContentInfoTempl,
         sizeof(g_pk12ContentInfoTempl) / sizeof(g_pk12ContentInfoTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, HITLS_PKCS12_CONTENT_MAX_IDX, &encode->data, &encode->dataLen);
-    BSL_SAL_Free(asnArr[1].buff);
+    BSL_SAL_Free(initData.data);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -1054,7 +1081,7 @@ int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, C
 }
 
 static int32_t EncodeSafeContent(BSL_ASN1_Buffer **output, BSL_ASN1_List *list, uint32_t encodeType,
-    CRYPT_EncodeParam *encryptParam)
+    const CRYPT_EncodeParam *encryptParam)
 {
     BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(list->count, sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
@@ -1101,14 +1128,10 @@ static int32_t EncodeContentInfoList(BSL_ASN1_Buffer **output, BSL_ASN1_List *li
     return ret;
 }
 
-int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, CRYPT_EncodeParam *encryptParam,
+int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
     BSL_Buffer *encode)
 {
     int32_t count = BSL_LIST_COUNT(list);
-    if (count <= 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     BSL_ASN1_Buffer *asnBuf = NULL;
     int32_t ret;
     switch (encodeType) {
@@ -1134,7 +1157,6 @@ int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, CR
     static BSL_ASN1_TemplateItem listTempl = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0 };
     BSL_ASN1_Template templ = {&listTempl, 1};
     BSL_ASN1_Buffer out = {0};
-    out.tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, count, &out);
     if (ret != HITLS_X509_SUCCESS) {
         FreeListBuff(asnBuf, count);
@@ -1150,12 +1172,16 @@ int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, CR
     return ret;
 }
 
-int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, BSL_Buffer *macPwd, HTILS_PKCS12_MacData *p12Mac, BSL_Buffer *encode)
+int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HTILS_PKCS12_HmacParam *macParam,
+    HTILS_PKCS12_MacData *p12Mac, BSL_Buffer *encode)
 {
     BSL_Buffer mac = {0};
     BSL_Buffer digestInfo = {0};
-
-    int32_t ret = HTILS_PKCS12_CalMac(&mac, macPwd, initData, p12Mac);
+    p12Mac->alg = macParam->macId;
+    p12Mac->interation = macParam->itCnt;
+    p12Mac->macSalt->dataLen = macParam->saltLen;
+    BSL_Buffer macPwd = {macParam->pwd, macParam->pwdLen};
+    int32_t ret = HTILS_PKCS12_CalMac(&mac, &macPwd, initData, p12Mac);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1167,31 +1193,34 @@ int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, BSL_Buffer *macPwd, HTI
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_MACDATA_MAX_IDX] = {
+        {
+            .buff = digestInfo.data,
+            .len = digestInfo.dataLen,
+            .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        }, {
+            .buff = p12Mac->macSalt->data,
+            .len = p12Mac->macSalt->dataLen,
+            .tag = BSL_ASN1_TAG_OCTETSTRING,
+        }};
 
-    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_MACDATA_MAX_IDX] = {0};
-    asnArr[HITLS_PKCS12_MACDATA_DIGESTINFO_IDX].buff = digestInfo.data;
-    asnArr[HITLS_PKCS12_MACDATA_DIGESTINFO_IDX].len = digestInfo.dataLen;
-    asnArr[HITLS_PKCS12_MACDATA_DIGESTINFO_IDX].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-    asnArr[HITLS_PKCS12_MACDATA_SALT_IDX].buff = p12Mac->macSalt->data;
-    asnArr[HITLS_PKCS12_MACDATA_SALT_IDX].len = p12Mac->macSalt->dataLen;
-    asnArr[HITLS_PKCS12_MACDATA_SALT_IDX].tag = BSL_ASN1_TAG_OCTETSTRING;
-
-    uint8_t itCnt[4]; // 'int' needs 4 bytes.
-    BSL_Uint32ToByte(p12Mac->interation, itCnt);
-    asnArr[HITLS_PKCS12_MACDATA_ITER_IDX].buff = itCnt;
-    asnArr[HITLS_PKCS12_MACDATA_ITER_IDX].len = sizeof(itCnt);
-    asnArr[HITLS_PKCS12_MACDATA_ITER_IDX].tag = BSL_ASN1_TAG_INTEGER;
-
+    ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, p12Mac->interation, &asnArr[HITLS_PKCS12_MACDATA_ITER_IDX]);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_SAL_Free(digestInfo.data);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     BSL_ASN1_Template templ = {g_p12MacDataTempl, sizeof(g_p12MacDataTempl) / sizeof(g_p12MacDataTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, HITLS_PKCS12_MACDATA_MAX_IDX, &encode->data, &encode->dataLen);
-    BSL_SAL_Free(asnArr[0].buff);
+    BSL_SAL_Free(digestInfo.data);
+    BSL_SAL_Free(asnArr[HITLS_PKCS12_MACDATA_ITER_IDX].buff);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
 
-static int32_t EncodeCertListAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodeParam *encParam, BSL_ASN1_List *list,
+static int32_t EncodeCertListAddList(HTILS_PKCS12_P12Info *p12, const CRYPT_EncodeParam *encParam, BSL_ASN1_List *list,
     bool isNeedMac)
 {
     int32_t ret;
@@ -1212,7 +1241,9 @@ static int32_t EncodeCertListAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodePara
             return ret;
         }
     }
-
+    if (BSL_LIST_COUNT(p12->certList) <= 0) {
+        return HITLS_X509_SUCCESS;
+    }
     ret = HITLS_PKCS12_EncodeAsn1List(p12->certList, BSL_CID_CERTBAG, NULL, &certEncode);
     if (p12->entityCert->value.cert != NULL) {
         BSL_LIST_First(p12->certList);
@@ -1234,7 +1265,7 @@ static int32_t EncodeCertListAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodePara
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_ParseItemDefault(&contentInfoEncode, sizeof(BSL_Buffer), list);
+    ret = HITLS_X509_AddListItemDefault(&contentInfoEncode, sizeof(BSL_Buffer), list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_FREE(contentInfoEncode.data);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1242,7 +1273,7 @@ static int32_t EncodeCertListAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodePara
     return ret;
 }
 
-static int32_t EncodeKeyAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodeParam *encParam, BSL_ASN1_List *list)
+static int32_t EncodeKeyAddList(HTILS_PKCS12_P12Info *p12, const CRYPT_EncodeParam *encParam, BSL_ASN1_List *list)
 {
     if (p12->key->value.key == NULL) {
         return HITLS_X509_SUCCESS;
@@ -1258,7 +1289,7 @@ static int32_t EncodeKeyAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodeParam *en
     BSL_Buffer contentInfoEncode = {0};
     bag.attributes = p12->key->attributes;
     bag.value.key = p12->key->value.key;
-    int32_t ret = HITLS_X509_ParseItemDefault(&bag, sizeof(HTILS_PKCS12_Bag), keyList);
+    int32_t ret = HITLS_X509_AddListItemDefault(&bag, sizeof(HTILS_PKCS12_Bag), keyList);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_FREE(keyList);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1277,7 +1308,7 @@ static int32_t EncodeKeyAddList(HTILS_PKCS12_p12Info *p12, CRYPT_EncodeParam *en
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_ParseItemDefault(&contentInfoEncode, sizeof(BSL_Buffer), list);
+    ret = HITLS_X509_AddListItemDefault(&contentInfoEncode, sizeof(BSL_Buffer), list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_FREE(contentInfoEncode.data);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1298,31 +1329,38 @@ static void FreeBuffer(void *buffer)
 
 static int32_t EncodePkcs12(uint32_t version, BSL_Buffer *authSafe, BSL_Buffer *macData, BSL_Buffer *encode)
 {
-    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_TOPLEVEL_MAX_IDX] = {0};
-    uint8_t itCnt[4];
-    BSL_Uint32ToByte(version, itCnt);
-    asnArr[HITLS_PKCS12_TOPLEVEL_VERSION_IDX].buff = itCnt;
-    asnArr[HITLS_PKCS12_TOPLEVEL_VERSION_IDX].len = sizeof(itCnt);
-    asnArr[HITLS_PKCS12_TOPLEVEL_VERSION_IDX].tag = BSL_ASN1_TAG_INTEGER;
-    
-    asnArr[HITLS_PKCS12_TOPLEVEL_AUTHSAFE_IDX].buff = authSafe->data;
-    asnArr[HITLS_PKCS12_TOPLEVEL_AUTHSAFE_IDX].len = authSafe->dataLen;
-    asnArr[HITLS_PKCS12_TOPLEVEL_AUTHSAFE_IDX].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+    BSL_ASN1_Buffer asnArr[HITLS_PKCS12_TOPLEVEL_MAX_IDX] = {
+        {
+            .buff = NULL,
+            .len = 0,
+            .tag = BSL_ASN1_TAG_INTEGER,
+        }, {
+            .buff = authSafe->data,
+            .len = authSafe->dataLen,
+            .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        }, {
+            .buff = macData->data,
+            .len = macData->dataLen,
+            .tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        }};
 
-    asnArr[HITLS_PKCS12_TOPLEVEL_MACDATA_IDX].buff = macData->data;
-    asnArr[HITLS_PKCS12_TOPLEVEL_MACDATA_IDX].len = macData->dataLen;
-    asnArr[HITLS_PKCS12_TOPLEVEL_MACDATA_IDX].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
+    int32_t ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, version, asnArr);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
 
     BSL_ASN1_Template templ = {g_p12TopLevelTempl, sizeof(g_p12TopLevelTempl) / sizeof(g_p12TopLevelTempl[0])};
-    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, HITLS_PKCS12_TOPLEVEL_MAX_IDX,
+    ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, HITLS_PKCS12_TOPLEVEL_MAX_IDX,
         &encode->data, &encode->dataLen);
+    BSL_SAL_Free(asnArr[HITLS_PKCS12_TOPLEVEL_VERSION_IDX].buff);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
 
-static int32_t EncodeP12Info(HTILS_PKCS12_EncodeParam *encodeParam, HTILS_PKCS12_p12Info *p12, bool isNeedMac,
+static int32_t EncodeP12Info(HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_EncodeParam *encodeParam, bool isNeedMac,
     BSL_Buffer *encode)
 {
     int32_t ret;
@@ -1342,6 +1380,11 @@ static int32_t EncodeP12Info(HTILS_PKCS12_EncodeParam *encodeParam, HTILS_PKCS12
         BSL_LIST_FREE(list, FreeBuffer);
         return ret;
     }
+    if (BSL_LIST_COUNT(list) <= 0) {
+        BSL_LIST_FREE(list, FreeBuffer);
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NONE_DATA);
+        return HITLS_PKCS12_ERR_NONE_DATA;
+    }
     BSL_Buffer initData = {0};
     ret = HITLS_PKCS12_EncodeAsn1List(list, BSL_CID_CONTENTINFO, &encodeParam->encParam, &initData);
     BSL_LIST_FREE(list, FreeBuffer);
@@ -1351,8 +1394,7 @@ static int32_t EncodeP12Info(HTILS_PKCS12_EncodeParam *encodeParam, HTILS_PKCS12
 
     BSL_Buffer macData = {0};
     if (isNeedMac) {
-        BSL_Buffer macPwd = {encodeParam->macParam.pwd, encodeParam->macParam.pwdLen};
-        ret = HITLS_PKCS12_EncodeMacData(&initData, &macPwd, p12->macData, &macData);
+        ret = HITLS_PKCS12_EncodeMacData(&initData, &encodeParam->macParam, p12->macData, &macData);
         if (ret != HITLS_X509_SUCCESS) {
             BSL_SAL_FREE(initData.data);
             return ret;
@@ -1373,19 +1415,37 @@ static int32_t EncodeP12Info(HTILS_PKCS12_EncodeParam *encodeParam, HTILS_PKCS12
     return ret;
 }
 
-int32_t HITLS_PKCS12_GenBuff(int32_t format, HTILS_PKCS12_p12Info *p12, HTILS_PKCS12_EncodeParam *encodeParam,
+int32_t HITLS_PKCS12_GenBuff(int32_t format, HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_EncodeParam *encodeParam,
     bool isNeedMac, BSL_Buffer *encode)
 {
     if (p12 == NULL || encodeParam == NULL || encode == NULL || encode->data != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
+        return HITLS_PKCS12_ERR_NULL_POINTER;
     }
     switch (format) {
         case BSL_FORMAT_ASN1:
-            return EncodeP12Info(encodeParam, p12, isNeedMac, encode);
+            return EncodeP12Info(p12, encodeParam, isNeedMac, encode);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT);
             return HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT;
     }
 }
 
+int32_t HITLS_PKCS12_GenFile(int32_t format, HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_EncodeParam *encodeParam,
+    bool isNeedMac, const char *path)
+{
+    if (path == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
+        return HITLS_PKCS12_ERR_NULL_POINTER;
+    }
+
+    BSL_Buffer encode = {0};
+    int32_t ret = HITLS_PKCS12_GenBuff(format, p12, encodeParam, isNeedMac, &encode);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = BSL_SAL_WriteFile(path, encode.data, encode.dataLen);
+    BSL_SAL_Free(encode.data);
+    return ret;
+}
