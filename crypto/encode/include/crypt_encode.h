@@ -72,7 +72,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(BSL_Buffer *encode, const uint8_t 
     BSL_Buffer *encryptData);
 
 // encode PKCS7-EncryptData：only support PBES2 + PBKDF2.
-int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, void *encodeParam, BSL_Buffer **encode);
+int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, const void *encodeParam, BSL_Buffer *encode);
 
 #ifdef __cplusplus
 }

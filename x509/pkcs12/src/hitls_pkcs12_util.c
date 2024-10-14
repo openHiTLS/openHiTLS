@@ -23,6 +23,8 @@
 #include "crypt_eal_mac.h"
 #include "crypt_eal_md.h"
 #include "hitls_cert_local.h"
+#include "crypt_eal_rand.h"
+#include "crypt_errno.h"
 
 HTILS_PKCS12_SafeBag *HTILS_PKCS12_SafeBagNew()
 {
@@ -60,7 +62,7 @@ void HTILS_PKCS12_SafeBagFree(HTILS_PKCS12_SafeBag *safeBag)
     return;
 }
 
-HTILS_PKCS12_MacData *HTILS_PKCS12_p12_macDataNew(void)
+HTILS_PKCS12_MacData *HTILS_PKCS12_P12_MacDataNew(void)
 {
     HTILS_PKCS12_MacData *macData = BSL_SAL_Calloc(1u, sizeof(HTILS_PKCS12_MacData));
     if (macData == NULL) {
@@ -87,7 +89,7 @@ HTILS_PKCS12_MacData *HTILS_PKCS12_p12_macDataNew(void)
     return macData;
 }
 
-void HTILS_PKCS12_p12_macDataFree(HTILS_PKCS12_MacData *macData)
+void HTILS_PKCS12_p12_MacDataFree(HTILS_PKCS12_MacData *macData)
 {
     if (macData == NULL) {
         return;
@@ -99,33 +101,34 @@ void HTILS_PKCS12_p12_macDataFree(HTILS_PKCS12_MacData *macData)
     }
 
     if (macData->macSalt != NULL) {
+        BSL_SAL_CleanseData(macData->macSalt->data, macData->macSalt->dataLen);
         BSL_SAL_FREE(macData->macSalt->data);
         BSL_SAL_Free(macData->macSalt);
     }
     BSL_SAL_Free(macData);
 }
 
-HTILS_PKCS12_p12Info *HTILS_PKCS12_p12_InfoNew(void)
+HTILS_PKCS12_P12Info *HTILS_PKCS12_P12_InfoNew(void)
 {
-    HTILS_PKCS12_p12Info *p12 = BSL_SAL_Calloc(1u, sizeof(HTILS_PKCS12_p12Info));
+    HTILS_PKCS12_P12Info *p12 = BSL_SAL_Calloc(1u, sizeof(HTILS_PKCS12_P12Info));
     if (p12 == NULL) {
         return NULL;
     }
-    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_p12_macDataNew();
+    HTILS_PKCS12_MacData *macData = HTILS_PKCS12_P12_MacDataNew();
     if (macData == NULL) {
         BSL_SAL_Free(p12);
         return NULL;
     }
     HTILS_PKCS12_Bag *key = BSL_SAL_Calloc(1u, sizeof(HTILS_PKCS12_Bag));
     if (key == NULL) {
-        HTILS_PKCS12_p12_macDataFree(macData);
+        HTILS_PKCS12_p12_MacDataFree(macData);
         BSL_SAL_Free(p12);
         return NULL;
     }
     HTILS_PKCS12_Bag *entityCert = BSL_SAL_Calloc(1u, sizeof(HTILS_PKCS12_Bag));
     if (key == NULL) {
         BSL_SAL_Free(entityCert);
-        HTILS_PKCS12_p12_macDataFree(macData);
+        HTILS_PKCS12_p12_MacDataFree(macData);
         BSL_SAL_Free(p12);
         return NULL;
     }
@@ -134,9 +137,10 @@ HTILS_PKCS12_p12Info *HTILS_PKCS12_p12_InfoNew(void)
         BSL_SAL_Free(entityCert);
         BSL_SAL_Free(key);
         BSL_SAL_Free(p12);
-        HTILS_PKCS12_p12_macDataFree(macData);
+        HTILS_PKCS12_p12_MacDataFree(macData);
         return NULL;
     }
+    p12->version = 3; // RFC7292 required the version = 3;
     p12->key = key;
     p12->entityCert = entityCert;
     p12->certList = certList;
@@ -156,7 +160,7 @@ static void CertBagFree(void *value)
     BSL_SAL_FREE(bag);
 }
 
-void HTILS_PKCS12_p12_InfoFree(HTILS_PKCS12_p12Info *p12)
+void HTILS_PKCS12_P12_InfoFree(HTILS_PKCS12_P12Info *p12)
 {
     if (p12 == NULL) {
         return;
@@ -174,7 +178,7 @@ void HTILS_PKCS12_p12_InfoFree(HTILS_PKCS12_p12Info *p12)
 
     BSL_LIST_DeleteAll(p12->certList, CertBagFree);
     BSL_SAL_Free(p12->certList);
-    HTILS_PKCS12_p12_macDataFree(p12->macData);
+    HTILS_PKCS12_p12_MacDataFree(p12->macData);
     BSL_SAL_Free(p12);
 }
 
@@ -232,22 +236,22 @@ static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCTX *ctx, const Pkcs12Kdf
     uint32_t tempLen = param->u;
     /* A = H(H(H(... H(D || I)))) */
     ret = CRYPT_EAL_MdInit(ctx);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = CRYPT_EAL_MdUpdate(ctx, D, param->v);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = CRYPT_EAL_MdUpdate(ctx, I, param->v * 2); // len(I) = 2 * v.
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = CRYPT_EAL_MdFinal(ctx, A, &tempLen);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -255,17 +259,17 @@ static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCTX *ctx, const Pkcs12Kdf
 
     for (uint32_t j = 0; j < LoopTimes - 1; j++) {
         ret = CRYPT_EAL_MdInit(ctx);
-        if (ret != HITLS_X509_SUCCESS) {
+        if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         ret = CRYPT_EAL_MdUpdate(ctx, A, dataLen);
-        if (ret != HITLS_X509_SUCCESS) {
+        if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         ret = CRYPT_EAL_MdFinal(ctx, A, &dataLen);
-        if (ret != HITLS_X509_SUCCESS) {
+        if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -464,7 +468,7 @@ static int32_t GetHmacKey(BSL_Buffer *pwd, uint32_t macSize, HTILS_PKCS12_MacDat
     return ret;
 }
 
-static int32_t ParamCheck(HTILS_PKCS12_MacData *macData, BSL_Buffer *pwd)
+static int32_t ParamCheckAndInit(HTILS_PKCS12_MacData *macData, BSL_Buffer *pwd)
 {
     if (macData == NULL || macData->macSalt == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
@@ -475,12 +479,35 @@ static int32_t ParamCheck(HTILS_PKCS12_MacData *macData, BSL_Buffer *pwd)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
+    if (macData->interation < 1000) { // The nist sp800-132 required the minimum iteration count = 1000.
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_INTERATION);
+        return HITLS_PKCS12_ERR_INVALID_INTERATION;
+    }
+
+    if (macData->macSalt->data == NULL) {
+        if (macData->macSalt->dataLen == 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SALTLEN);
+            return HITLS_PKCS12_ERR_INVALID_SALTLEN;
+        }
+        uint8_t *salt = BSL_SAL_Malloc(macData->macSalt->dataLen);
+        if (salt == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+        int32_t ret = CRYPT_EAL_Randbytes(salt, macData->macSalt->dataLen);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_Free(salt);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        macData->macSalt->data = salt;
+    }
     return HITLS_X509_SUCCESS;
 }
 
 int32_t HTILS_PKCS12_CalMac(BSL_Buffer *output, BSL_Buffer *pwd, BSL_Buffer *initData, HTILS_PKCS12_MacData *macData)
 {
-    int32_t ret = ParamCheck(macData, pwd);
+    int32_t ret = ParamCheckAndInit(macData, pwd);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }

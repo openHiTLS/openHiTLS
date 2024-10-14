@@ -638,7 +638,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
     uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnArr, uint32_t arrNum)
 {
     int32_t ret;
-    if (IsInvalidTempl(templ) || encode == NULL || encLen == NULL || IsInvalidAsns(asnArr, arrNum)) {
+    if (IsInvalidTempl(templ) || encode == NULL || *encode == NULL || encLen == NULL || IsInvalidAsns(asnArr, arrNum)) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;

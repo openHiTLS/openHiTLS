@@ -44,16 +44,16 @@ typedef struct {
         CRYPT_EAL_PkeyCtx *key;
         HITLS_X509_Cert *cert;
     } value;
-    BSL_ASN1_List *attributes; // locatedId, friendly-name...
+    BSL_ASN1_List *attributes; // locatedId, friendly-name, ...
 } HTILS_PKCS12_Bag;
 
-typedef struct _HTILS_PKCS12_p12Info {
+typedef struct _HTILS_PKCS12_P12Info {
     uint32_t version;
     HTILS_PKCS12_Bag *key;
     HTILS_PKCS12_Bag *entityCert;
     BSL_ASN1_List *certList;
     HTILS_PKCS12_MacData *macData;
-} HTILS_PKCS12_p12Info;
+} HTILS_PKCS12_P12Info;
 
 typedef struct {
     BslCid bagId;
@@ -76,23 +76,30 @@ typedef struct _HTILS_PKCS12_PwdParam {
     BSL_Buffer *encPwd;
 } HTILS_PKCS12_PwdParam;
 
-typedef struct {
-    CRYPT_CIPHER_AlgId certEncAlg;
-    CRYPT_CIPHER_AlgId keyEncAlg;
-    HTILS_PKCS12_PwdParam *pwd;
+typedef struct _HTILS_PKCS12_HmacParam {
+    uint32_t saltLen;
+    uint32_t itCnt;
+    uint32_t macId;
+    uint8_t *pwd;
+    uint32_t pwdLen;
+} HTILS_PKCS12_HmacParam;
+
+typedef struct _HTILS_PKCS12_EncodeParam {
+    CRYPT_EncodeParam encParam;
+    HTILS_PKCS12_HmacParam macParam;
 } HTILS_PKCS12_EncodeParam;
 
 HTILS_PKCS12_SafeBag *HTILS_PKCS12_SafeBagNew();
 
 void HTILS_PKCS12_SafeBagFree(HTILS_PKCS12_SafeBag *safeBag);
 
-HTILS_PKCS12_p12Info *HTILS_PKCS12_p12_InfoNew(void);
+HTILS_PKCS12_P12Info *HTILS_PKCS12_P12_InfoNew(void);
 
-void HTILS_PKCS12_p12_InfoFree(HTILS_PKCS12_p12Info *p12);
+void HTILS_PKCS12_P12_InfoFree(HTILS_PKCS12_P12Info *p12);
 
-HTILS_PKCS12_MacData *HTILS_PKCS12_p12_macDataNew(void);
+HTILS_PKCS12_MacData *HTILS_PKCS12_P12_MacDataNew(void);
 
-void HTILS_PKCS12_p12_macDataFree(HTILS_PKCS12_MacData *macData);
+void HTILS_PKCS12_p12_MacDataFree(HTILS_PKCS12_MacData *macData);
 
 void HTILS_PKCS12_AttributesFree(void *attribute);
 typedef enum {
@@ -133,7 +140,7 @@ int32_t HITLS_PKCS12_ParseAsn1AddList(BSL_Buffer *encode, BSL_ASN1_List *list, u
  * Parse each safeBags of list, and convert decode data to the cert or key.
 */
 int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *password, uint32_t passLen,
-    HTILS_PKCS12_p12Info *p12);
+    HTILS_PKCS12_P12Info *p12);
 
 /*
  * Parse attributes of a safeBag, and convert decode data to the real data.
@@ -144,12 +151,30 @@ int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attribute, BSL_ASN1_List 
  * Parse AuthSafeData of a p12, and convert decode data to the real data.
 */
 int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *password, uint32_t passLen,
-    HTILS_PKCS12_p12Info *p12);
+    HTILS_PKCS12_P12Info *p12);
 
 /*
  * Parse MacData of a p12, and convert decode data to the real data.
 */
 int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HTILS_PKCS12_MacData *macData);
+
+/*
+ * Encode MacData of a p12.
+*/
+int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HTILS_PKCS12_HmacParam *macParam,
+    HTILS_PKCS12_MacData *p12Mac, BSL_Buffer *encode);
+
+/*
+ * Encode contentInfo.
+*/
+int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
+    BSL_Buffer *encode);
+
+/*
+ * Encode list, including contentInfo-list, safeContent-list.
+*/
+int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
+    BSL_Buffer *encode);
 
 #ifdef __cplusplus
 }

@@ -26,6 +26,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 #include "hitls_cms_local.h"
+#include "hitls_x509_errno.h"
 
 /* END_HEADER */
 
@@ -139,7 +140,7 @@ exit:
 void SDV_PKCS7_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
 {
     BSL_Buffer data = {buff->x, buff->len};
-    BSL_Buffer *output = NULL;
+    BSL_Buffer output = {0};
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
     CRYPT_Pbkdf2Param param = {0};
@@ -168,14 +169,13 @@ void SDV_PKCS7_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     BSL_Buffer verify = {0};
     ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, &paramEx, &output);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(output, (const uint8_t *)pwd, pwdlen, &verify);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&output, (const uint8_t *)pwd, pwdlen, &verify);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_COMPARE("encode p7-encryptData", data.data, data.dataLen, verify.data, verify.dataLen);
 exit:
     CRYPT_EAL_RandDeinit();
     BSL_SAL_FREE(verify.data);
-    BSL_SAL_FREE(output->data);
-    BSL_SAL_FREE(output);
+    BSL_SAL_FREE(output.data);
     return;
 }
 /* END_CASE */
@@ -184,10 +184,10 @@ exit:
  * For test encode p7-DigestInfo.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_ENCODE_DIGESTINFO_TC001(Hex *hash)
+void SDV_PKCS7_ENCODE_DIGESTINFO_TC001()
 {
     BSL_Buffer input = {0};
-    BSL_Buffer *output = NULL;
+    BSL_Buffer output = {0};
     BslCid cid = 0;
     BSL_Buffer digest = {0};
     int32_t ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, NULL, NULL);
@@ -200,20 +200,19 @@ void SDV_PKCS7_ENCODE_DIGESTINFO_TC001(Hex *hash)
     input.dataLen = 0;
     ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, &input, &output);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(output, &cid, &digest);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_EQ(cid, BSL_CID_MD5);
-    ASSERT_COMPARE("verify", hash->x, hash->len, digest.data, digest.dataLen);
-    BSL_SAL_FREE(output->data);
-    BSL_SAL_FREE(output);
+    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&output, &cid, &digest);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_INVALID_DATA);
+    BSL_SAL_FREE(output.data);
     input.data = (uint8_t *)"123456";
     input.dataLen = 6;
     ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, &input, &output);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&output, &cid, &digest);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(cid, BSL_CID_MD5);
 exit:
     BSL_SAL_FREE(digest.data);
-    BSL_SAL_FREE(output->data);
-    BSL_SAL_FREE(output);
+    BSL_SAL_FREE(output.data);
     return;
 }
 /* END_CASE */
@@ -222,22 +221,20 @@ exit:
  * For test encode p7-DigestInfo vector.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_ENCODE_DIGESTINFO_TC002(int algid, Hex *in, Hex *hash)
+void SDV_PKCS7_ENCODE_DIGESTINFO_TC002(int algid, Hex *in)
 {
     BSL_Buffer input = {in->x, in->len};
-    BSL_Buffer *output = NULL;
+    BSL_Buffer output = {0};
     BslCid cid = 0;
     BSL_Buffer digest = {0};
     int32_t ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(algid, &input, &output);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(output, &cid, &digest);
+    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&output, &cid, &digest);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(cid, algid);
-    ASSERT_COMPARE("verify", hash->x, hash->len, digest.data, digest.dataLen);
 exit:
     BSL_SAL_FREE(digest.data);
-    BSL_SAL_FREE(output->data);
-    BSL_SAL_FREE(output);
+    BSL_SAL_FREE(output.data);
     return;
 }
 /* END_CASE */

@@ -670,7 +670,7 @@ static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List 
     }
 
     // Add the extension to list.
-    ret =  HITLS_X509_ParseItemDefault(&extEntry, sizeof(HITLS_X509_ExtEntry), list);
+    ret =  HITLS_X509_AddListItemDefault(&extEntry, sizeof(HITLS_X509_ExtEntry), list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

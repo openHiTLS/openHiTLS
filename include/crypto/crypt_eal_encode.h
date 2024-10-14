@@ -109,7 +109,7 @@ int32_t CRYPT_EAL_DecodeFileKey(BSL_ParseFormat format, int32_t type, const char
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodeParam *encodeParam,
+int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
     BSL_ParseFormat format, int32_t type, BSL_Buffer *encode);
 
 /**
@@ -125,7 +125,7 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodeParam *e
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodeParam *encodeParam,
+int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
     BSL_ParseFormat format, int32_t type, const char *path);
 
 #ifdef __cplusplus
