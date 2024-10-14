@@ -17,6 +17,7 @@
 #include "crypt_encode.h"
 #include "dsa_local.h"
 #include "crypt_dsa.h"
+#include "eal_md_local.h"
 
 CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void)
 {
@@ -728,7 +729,7 @@ OK:
 }
 
 // Data with a value of 0 can also be signed.
-int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_DSA_SignData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
     if (ctx == NULL || sign == NULL || signLen == NULL || (data == NULL && dataLen != 0)) {
@@ -759,6 +760,19 @@ int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t d
     BN_Destroy(r);
     BN_Destroy(s);
     return ret;
+}
+
+int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen)
+{
+    uint8_t hash[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_DSA_SignData(ctx, hash, hashLen, sign, signLen);
 }
 
 static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign *sign)
@@ -821,7 +835,7 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_DSA_VerifyData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
     if (ctx == NULL || sign == NULL || signLen == 0 || (data == NULL && dataLen != 0)) {
@@ -848,6 +862,19 @@ ERR:
     SignFree(s);
     BN_Destroy(d);
     return ret;
+}
+
+int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen)
+{
+    uint8_t hash[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_DSA_VerifyData(ctx, hash, hashLen, sign, signLen);
 }
 
 int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b)

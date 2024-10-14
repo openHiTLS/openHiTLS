@@ -163,6 +163,7 @@ int32_t CRYPT_ECDSA_Gen(CRYPT_ECDSA_Ctx *ctx);
  * @brief ECDSA Signature
  *
  * @param ctx [IN] ecdsa context structure
+ * @param algId [IN] md algId
  * @param data [IN] Data to be signed
  * @param dataLen [IN] Length of the data to be signed
  * @param sign [OUT] Signature data
@@ -178,8 +179,53 @@ int32_t CRYPT_ECDSA_Gen(CRYPT_ECDSA_Ctx *ctx);
  * @retval ECC error.                       An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                    Signed successfully.
  */
-int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
+
+/**
+ * @ingroup ecdsa
+ * @brief ECDSA Signature
+ *
+ * @param ctx [IN] ecdsa context structure
+ * @param data [IN] Data to be signed
+ * @param dataLen [IN] Length of the data to be signed
+ * @param sign [OUT] Signature data
+ * @param signLen [IN/OUT] The input parameter is the space length of the sign,
+ *                         and the output parameter is the valid length of the sign.
+ *                         The required space can be obtained by calling CRYPT_ECDSA_GetSignLen.
+ *
+ * @retval CRYPT_NULL_INPUT                 Error null pointer input
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+ * @retval CRYPT_ECDSA_ERR_EMPTY_KEY        The key cannot be empty.
+ * @retval CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH  The buffer length is insufficient.
+ * @retval BN error.                        An error occurs in the internal BigNum operation.
+ * @retval ECC error.                       An error occurred in the internal ECC calculation.
+ * @retval CRYPT_SUCCESS                    Signed successfully.
+ */
+int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen);
+
+/**
+ * @ingroup ecdsa
+ * @brief ECDSA Verification
+ *
+ * @param ctx [IN] ecdsa context structure
+ * @param algId [IN] md algId
+ * @param data [IN] Data to be signed
+ * @param dataLen [IN] Length of the data to be signed
+ * @param sign [IN] Signature data
+ * @param signLen [IN] Valid length of the sign
+ *
+ * @retval CRYPT_NULL_INPUT         Error null pointer input
+ * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
+ * @retval CRYPT_ECDSA_VERIFY_FAIL  Failed to verify the signature.
+ * @retval BN error.                An error occurs in the internal BigNum operation.
+ * @retval ECC error.               An error occurred in the internal ECC calculation.
+ * @retval DSA error.               An error occurs in the DSA encoding and decoding part.
+ * @retval CRYPT_SUCCESS            The signature is verified successfully.
+ */
+int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen);
 
 /**
  * @ingroup ecdsa
@@ -199,7 +245,7 @@ int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32
  * @retval DSA error.               An error occurs in the DSA encoding and decoding part.
  * @retval CRYPT_SUCCESS            The signature is verified successfully.
  */
-int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
 
 /**

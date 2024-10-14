@@ -21,6 +21,7 @@
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "crypt_ecdsa.h"
+#include "eal_md_local.h"
 
 CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)
 {
@@ -352,7 +353,7 @@ OK:
 }
 
 // Data with a value of 0 can also be signed.
-int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
     if ((ctx == NULL) || (ctx->para == NULL) || (sign == NULL) || (signLen == NULL) ||
@@ -383,6 +384,19 @@ int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32
     BN_Destroy(r);
     BN_Destroy(s);
     return ret;
+}
+
+int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen)
+{
+    uint8_t hash[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_ECDSA_SignData(ctx, hash, hashLen, sign, signLen);
 }
 
 static int32_t VrifyCheckSign(const CRYPT_ECDSA_Ctx *ctx, const DSA_Sign *sign)
@@ -462,7 +476,7 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
     if ((ctx == NULL) || (ctx->para == NULL) || ((data == NULL) && (dataLen != 0)) ||
@@ -499,6 +513,19 @@ ERR:
     BN_Destroy(paraN);
     BN_Destroy(d);
     return ret;
+}
+
+int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen)
+{
+    uint8_t hash[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_ECDSA_VerifyData(ctx, hash, hashLen, sign, signLen);
 }
 
 int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)

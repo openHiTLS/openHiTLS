@@ -236,16 +236,6 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
  */
 int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
 
-/**
- * @ingroup dh
- * @brief Check the key pair consistency.
- *
- * @param ctx [IN] dh Context structure
- *
- * @return CRYPT_SUCCESS succeeded.
- * For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_DH_Check(const CRYPT_DH_Ctx *ctx);
 
 /**
  * @ingroup dh

@@ -383,7 +383,8 @@ int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
 
 /**
  * @ingroup crypt_eal_pkey
- * @brief   Check whether the public and private keys match.
+ * @brief Check whether the public and private keys match.
+ *  Currently not supported in the provider, supported in the future
  *
  * @param   pubKey      [IN] Public key
  * @param   prvKey      [IN] private key
@@ -487,16 +488,6 @@ CRYPT_PKEY_AlgId CRYPT_EAL_PkeyGetId(const CRYPT_EAL_PkeyCtx *pkey);
  */
 CRYPT_PKEY_ParaId CRYPT_EAL_PkeyGetParaId(const CRYPT_EAL_PkeyCtx *pkey);
 
-/**
- * @ingroup crypt_eal_pkey
- * @brief   Check the key pair consistency. only supports CRYPT_PKEY_DH.
- *
- * @param   pkey [IN] Key session
- *
- * @retval  #CRYPT_SUCCESS, if successful.
- *          For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_EAL_PkeyCheck(const CRYPT_EAL_PkeyCtx *pkey);
 
 /**
  * @ingroup crypt_eal_pkey

@@ -146,6 +146,7 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx);
  * @brief DSA Signature
  *
  * @param ctx [IN] DSA context structure
+ * @param algId [IN] md algId
  * @param data [IN] Data to be signed
  * @param dataLen [IN] Length of the data to be signed
  * @param sign [OUT] Signature data
@@ -161,7 +162,30 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx);
  * @retval BN error                         An error occurred in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    Signed successfully.
  */
-int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen);
+
+/**
+ * @ingroup dsa
+ * @brief DSA Signature
+ *
+ * @param ctx [IN] DSA context structure
+ * @param data [IN] Data to be signed
+ * @param dataLen [IN] Length of the data to be signed
+ * @param sign [OUT] Signature data
+ * @param signLen [IN/OUT] The input parameter is the space length of the sign,
+ *                         and the output parameter is the valid length of the sign.
+ *                         The required space can be obtained by calling CRYPT_DSA_GetSignLen.
+ *
+ * @retval CRYPT_NULL_INPUT                 Invalid null pointer input.
+ * @retval CRYPT_DSA_BUFF_LEN_NOT_ENOUGH    The buffer length is insufficient.
+ * @retval CRYPT_DSA_ERR_KEY_INFO           The key information is incorrect.
+ * @retval CRYPT_DSA_ERR_TRY_CNT            Unable to generate results within the specified number of attempts.
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure.
+ * @retval BN error                         An error occurred in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS                    Signed successfully.
+ */
+int32_t CRYPT_DSA_SignData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
 
 /**
@@ -182,7 +206,29 @@ int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t d
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            The signature is verified successfully.
  */
-int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_DSA_VerifyData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen);
+
+/**
+ * @ingroup dsa
+ * @brief DSA verification
+ *
+ * @param ctx [IN] DSA context structure
+ * @param algId [IN] md algId
+ * @param data [IN] Data to be signed
+ * @param dataLen [IN] Length of the data to be signed
+ * @param sign [IN] Signature data
+ * @param signLen [IN] Valid length of the sign
+ *
+ * @retval CRYPT_NULL_INPUT         Error null pointer input.
+ * @retval CRYPT_DSA_ERR_KEY_INFO   The key information is incorrect.
+ * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure.
+ * @retval CRYPT_DSA_DECODE_FAIL    Signature Data Decoding Failure.
+ * @retval CRYPT_DSA_VERIFY_FAIL    Failed to verify the signature.
+ * @retval BN error.                An error occurs in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS            The signature is verified successfully.
+ */
+int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
 
 /**

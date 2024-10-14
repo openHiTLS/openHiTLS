@@ -381,10 +381,15 @@ int32_t KeyCheckAndPubGen(const CRYPT_SM2_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
     int32_t ret;
+    if (algId != CRYPT_MD_SM3) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    
     if ((ctx == NULL) || (sign == NULL) || (signLen == NULL) || ((data == NULL) && (dataLen != 0))) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -511,9 +516,13 @@ static int32_t IsParaVaild(const CRYPT_SM2_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SM2_Verify(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_SM2_Verify(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
+    if (algId != CRYPT_MD_SM3) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     if ((ctx == NULL) || ((data == NULL) && (dataLen != 0)) || (sign == NULL) || (signLen == 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

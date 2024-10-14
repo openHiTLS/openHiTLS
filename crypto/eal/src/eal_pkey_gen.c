@@ -41,7 +41,9 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->getPub = method->getPub;
     dest->getPrv = method->getPrv;
     dest->sign = method->sign;
+    dest->signData = method->signData;
     dest->verify = method->verify;
+    dest->verifyData = method->verifyData;
     dest->computeShareKey = method->computeShareKey;
     dest->encrypt = method->encrypt;
     dest->decrypt = method->decrypt;
@@ -500,20 +502,6 @@ CRYPT_PKEY_ParaId CRYPT_EAL_PkeyGetParaId(const CRYPT_EAL_PkeyCtx *pkey)
     return pkey->method->ctrl(pkey->key, CRYPT_CTRL_GET_PARAID, NULL, 0); // setparam
 }
 
-int32_t CRYPT_EAL_PkeyCheck(const CRYPT_EAL_PkeyCtx *pkey)
-{
-    if (pkey == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (pkey->method == NULL || pkey->method->check == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-
-    return pkey->method->check(pkey->key);
-}
 
 int32_t CRYPT_EAL_PkeyCmp(const CRYPT_EAL_PkeyCtx *a, const CRYPT_EAL_PkeyCtx *b)
 {
@@ -694,8 +682,14 @@ static int32_t CRYPT_EAL_SetSignMethod(CRYPT_EAL_Func *funcSign, EAL_PkeyUnitary
                 case CRYPT_EAL_IMPLPKEYSIGN_SIGN:
                     method->sign = funcSign[index].func;
                     break;
+                case CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA:
+                    method->signData = funcSign[index].func;
+                    break;
                 case CRYPT_EAL_IMPLPKEYSIGN_VERIFY:
                     method->verify = funcSign[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA:
+                    method->verifyData = funcSign[index].func;
                     break;
                 case CRYPT_EAL_IMPLPKEYSIGN_RECOVER:
                     method->recover = funcSign[index].func;

@@ -1663,42 +1663,6 @@ exit:
 }
 /* END_CASE */
 
-/**
- * @test   SDV_CRYPTO_DH_CHECK_FUNC_TC001
- * @title  Verify the consistency of the DH key pair.
- * @precon Registering memory-related functions.
- *         DH vectors.
- * @brief
- *    1. Create the contexts of the dh algorithm, expected result 1.
- *    2. Set parameters, public key, and private key, expected result 2
- *    3. Check the consistency of key pairs, expected result 3
- * @expect
- *    1. Success, and context is not NULL.
- *    2. CRYPT_SUCCESS
- *    3. The returned value is the same as expected.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_DH_CHECK_FUNC_TC001(Hex *p, Hex *g, Hex *q, Hex *prvBuf, Hex *pubBuf, int ret)
-{
-    CRYPT_EAL_PkeyPara para = {0};
-    CRYPT_EAL_PkeyPrv prv = {0};
-    CRYPT_EAL_PkeyPub pub = {0};
-    Set_DH_Para(&para, p->x, q->x, g->x, p->len, q->len, g->len);
-    Set_DH_Prv(&prv, prvBuf->x, prvBuf->len);
-    Set_DH_Pub(&pub, pubBuf->x, pubBuf->len);
-
-    TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
-    ASSERT_TRUE(pkey != NULL);
-
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey, &prv) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pub) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCheck(pkey) == ret);
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-}
-/* END_CASE */
 
 /**
  * @test   SDV_CRYPTO_DH_DUP_CTX_FUNC_TC001

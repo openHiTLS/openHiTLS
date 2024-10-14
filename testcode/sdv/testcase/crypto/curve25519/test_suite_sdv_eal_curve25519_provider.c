@@ -56,21 +56,18 @@ static void Set_Curve25519_Pub(CRYPT_EAL_PkeyPub *pub, int id, uint8_t *key, uin
  *    3. Call the CRYPT_EAL_PkeySign method to sign, expected result 2.
  *    4. Call the CRYPT_EAL_PkeyVerify method, where all parameters are valid, expected result 2
  *    5. Call the CRYPT_EAL_PkeyVerify method, where other parameters are valid, but :
- *        (1) hashId != CRYPT_MD_SHA512, expected result 3
- *        (2) data = NULL, expected result 4
- *        (3) sign = NULL, expected result 4
- *        (4) signLen = 0 | 63 | 65, expected result 5
+ *        (1) data = NULL, expected result 3
+ *        (2) sign = NULL, expected result 3
+ *        (3) signLen = 0 | 63 | 65, expected result 4
  * @expect
  *    1. Success, and context is not NULL.
  *    2. CRYPT_SUCCESS
- *    3. CRYPT_CURVE25519_HASH_METH_ERROR
- *    4. CRYPT_NULL_INPUT
- *    5. CRYPT_CURVE25519_SIGNLEN_ERROR
+ *    3. CRYPT_NULL_INPUT/CRYPT_INVALID_ARG
+ *    4. CRYPT_CURVE25519_SIGNLEN_ERROR
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_CURVE25519_VERIFY_PROVIDER_API_TC001(void)
 {
-    int hashId = CRYPT_MD_SHA512;
     uint8_t data[CRYPT_CURVE25519_KEYLEN] = {0};
     uint8_t sign[CRYPT_CURVE25519_SIGNLEN] = {0};
     uint32_t signLen = sizeof(sign);
@@ -81,26 +78,25 @@ void SDV_CRYPTO_CURVE25519_VERIFY_PROVIDER_API_TC001(void)
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, hashId, data, sizeof(data), sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, data, sizeof(data), sign, &signLen), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, signLen),
-        CRYPT_CURVE25519_HASH_METH_ERROR);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, data, sizeof(data), sign, signLen), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, hashId, data, sizeof(data), sign, signLen), CRYPT_SUCCESS);
-
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, hashId, NULL, sizeof(data), sign, signLen), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, hashId, data, sizeof(data), NULL, signLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, NULL, sizeof(data), sign, signLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, data, sizeof(data), NULL, signLen), CRYPT_NULL_INPUT);
 
     signLen = 0;
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, hashId, data, sizeof(data), sign, signLen), CRYPT_CURVE25519_SIGNLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, data, sizeof(data), sign, signLen), CRYPT_CURVE25519_SIGNLEN_ERROR);
     signLen = CRYPT_CURVE25519_SIGNLEN - 1;
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, hashId, data, sizeof(data), sign, signLen), CRYPT_CURVE25519_SIGNLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, data, sizeof(data), sign, signLen), CRYPT_CURVE25519_SIGNLEN_ERROR);
     signLen = CRYPT_CURVE25519_SIGNLEN + 1;
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, hashId, data, sizeof(data), sign, signLen), CRYPT_CURVE25519_SIGNLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, data, sizeof(data), sign, signLen), CRYPT_CURVE25519_SIGNLEN_ERROR);
 exit:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
