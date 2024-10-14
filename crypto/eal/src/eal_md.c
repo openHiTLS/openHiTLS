@@ -32,6 +32,11 @@ static CRYPT_EAL_MdCTX *MdAllocCtx(CRYPT_MD_AlgId id, const EAL_MdUnitaryMethod 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    if (method->newCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_FREE(ctx);
+        return NULL;
+    }
     void *data = method->newCtx();
     if (data == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
@@ -127,7 +132,7 @@ static int32_t CRYPT_EAL_SetMdMethod(CRYPT_EAL_MdCTX *ctx, CRYPT_EAL_Func *funcs
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
+CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
     CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
@@ -241,7 +246,8 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
         return NULL;
     }
-    if (ctx->method == NULL || ctx->method->newCtx == NULL || ctx->method->freeCtx == NULL) {
+    if (ctx->method == NULL || ctx->method->newCtx == NULL ||
+        ctx->method->freeCtx == NULL || ctx->method->copyCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_NULL_INPUT);
         return NULL;
     }
@@ -277,10 +283,13 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx)
     if (ctx == NULL) {
         return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
+    if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return;
+    }
+    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
     ctx->method->freeCtx(ctx->data);
     BSL_SAL_FREE(ctx->method);
-    
     BSL_SAL_FREE(ctx);
     return;
 }

@@ -36,7 +36,7 @@ typedef struct EalKdfCtx CRYPT_EAL_KdfCTX;
  * @retval Success: cipher ctx.
  *         Fails: NULL.
  */
-CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
+CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_kdf

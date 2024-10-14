@@ -23,3 +23,9 @@ SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_lo
 
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:1415926
+
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001:"../testdata/provider/path1":"provider_load_test_providerNoInit":2
+
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002:"../testdata/provider/path1":"provider_load_test_providerNoFree":2

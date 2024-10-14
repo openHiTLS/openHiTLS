@@ -151,7 +151,7 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCopyParam)(const void *src, void *dest);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx, const CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtEncode)(const void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
+typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 
 // CRYPT_EAL_OPERAID_SIGN
 #define CRYPT_EAL_IMPLPKEYSIGN_SIGN     1
@@ -176,7 +176,7 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyEncrypt)(const void *ctx, const uint8_t *dat
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyDecrypt)(const void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyCrypt)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyCryptCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 // CRYPT_EAL_OPERAID_KEYEXCH
 #define CRYPT_EAL_IMPLPKEYEXCH_EXCH  1

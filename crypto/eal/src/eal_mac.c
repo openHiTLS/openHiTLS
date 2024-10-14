@@ -82,7 +82,7 @@ static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, CRYPT_EAL_Func *fun
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
+CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
     CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
@@ -186,19 +186,11 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
     if (ctx == NULL) {
         return;
     }
-
-    if (ctx->macMeth == NULL) {
-        BSL_SAL_FREE(ctx);
-        return;
-    }
-
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
-
     if (ctx->macMeth == NULL || ctx->macMeth->freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        BSL_SAL_FREE(ctx);
         return;
     }
+    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
     ctx->macMeth->freeCtx(ctx->ctx);
     BSL_SAL_FREE(ctx->macMeth);
     BSL_SAL_FREE(ctx);

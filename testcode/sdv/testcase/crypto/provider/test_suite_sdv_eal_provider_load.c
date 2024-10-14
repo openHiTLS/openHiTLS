@@ -15,6 +15,14 @@
 #include "crypt_provider_local.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
+#include "crypt_eal_mac.h"
+#include "eal_mac_local.h"
+#include "crypt_eal_kdf.h"
+#include "eal_kdf_local.h"
+#include "crypt_eal_md.h"
+#include "eal_md_local.h"
+#include "crypt_eal_pkey.h"
+#include "eal_pkey_local.h"
 #include "test.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
@@ -295,6 +303,90 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
     ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "!=tesst2", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
+
+exit:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001
+ * @title Test whether the external interface of each algorithm reports an error
+ * when using the provider method provided by a third party that does not contain newctx
+ * @precon None
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    libCtx = CRYPT_EAL_NewLibCtx();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoInit, NULL), CRYPT_SUCCESS);
+
+    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
+    ASSERT_TRUE(kdfCtx == NULL);
+    CRYPT_EAL_MacCtx *macCtx = CRYPT_EAL_ProviderMacNewCtx(libCtx, CRYPT_MAC_HMAC_MD5, NULL);
+    ASSERT_TRUE(macCtx == NULL);
+    CRYPT_EAL_MdCTX *mdCtx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_MD5, NULL);
+    ASSERT_TRUE(mdCtx == NULL);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, NULL);
+    ASSERT_TRUE(pkeyCtx == NULL);
+
+exit:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002
+ * @title Test whether the external interfaces of each algorithm run normally
+ * when using the provider method provided by a third party without freectx
+ * @precon None
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    libCtx = CRYPT_EAL_NewLibCtx();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoFree, NULL), CRYPT_SUCCESS);
+
+    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
+    ASSERT_TRUE(kdfCtx != NULL);
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
+    BSL_SAL_FREE(kdfCtx->method);
+    BSL_SAL_FREE(kdfCtx->data);
+    BSL_SAL_FREE(kdfCtx);
+    CRYPT_EAL_MacCtx *macCtx = CRYPT_EAL_ProviderMacNewCtx(libCtx, CRYPT_MAC_HMAC_MD5, NULL);
+    ASSERT_TRUE(macCtx != NULL);
+    CRYPT_EAL_MacFreeCtx(macCtx);
+    BSL_SAL_FREE(macCtx->macMeth);
+    BSL_SAL_FREE(macCtx->ctx);
+    BSL_SAL_FREE(macCtx);
+    CRYPT_EAL_MdCTX *mdCtx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_MD5, NULL);
+    ASSERT_TRUE(mdCtx != NULL);
+    CRYPT_EAL_MdFreeCtx(mdCtx);
+    BSL_SAL_FREE(mdCtx->method);
+    BSL_SAL_FREE(mdCtx->data);
+    BSL_SAL_FREE(mdCtx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, NULL);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(pkeyCtx->method);
+    BSL_SAL_FREE(pkeyCtx->key);
+    BSL_SAL_FREE(pkeyCtx);
 
 exit:
     if (libCtx != NULL) {

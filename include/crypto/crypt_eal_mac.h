@@ -60,7 +60,7 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtx(CRYPT_MAC_AlgId id);
  * @retval  CRYPT_EAL_MacCtx pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx,  int32_t algId, const char *attrName);
+CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx,  int32_t algId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_mac

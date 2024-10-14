@@ -390,7 +390,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC004(int id, Hex *msg, Hex *hash)
     TestMemInit();
     uint8_t output[SHA1_DIGEST_LEN];
     uint32_t outLen = SHA1_DIGEST_LEN;
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtxWithLib(NULL, id, "provider=default");
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);

@@ -121,7 +121,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t operId,
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t pkeyOperType,
     const char *attrName);
 
 /**
