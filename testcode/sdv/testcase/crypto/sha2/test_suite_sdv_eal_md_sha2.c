@@ -460,7 +460,7 @@ exit:
 void SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtxWithLib(NULL, id, "provider=default");
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[SHA2_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA2_OUTPUT_MAXSIZE;

@@ -769,7 +769,7 @@ void SDV_CRYPTO_ECDH_DUP_CTX_PROVIDER_API_TC001(int paraId)
     CRYPT_EAL_PkeyCtx *pKeyCtx = NULL;
     CRYPT_EAL_PkeyCtx *newCtx = NULL;
 
-    pKeyCtx = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    pKeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
     ASSERT_TRUE(pKeyCtx != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pKeyCtx, (CRYPT_PKEY_ParaId)paraId) == CRYPT_SUCCESS);
 
@@ -850,8 +850,8 @@ void SDV_CRYPTO_ECDH_EXCH_PROVIDER_FUNC_TC001(    int eccId, Hex *prvKeyVector, 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    ecdhPkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
-    peerEcdhPubPkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    ecdhPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    peerEcdhPubPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
     ASSERT_TRUE(ecdhPkey != NULL && peerEcdhPubPkey != NULL);
 
     /* Local: Set elliptic curve type and private key. */

@@ -159,19 +159,19 @@ void CRYPT_EAL_PkeyFreeCtx(CRYPT_EAL_PkeyCtx *pkey)
     if (pkey == NULL) {
         return;
     }
+    if (pkey->method == NULL || pkey->method->freeCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return;
+    }
+    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, pkey->id, CRYPT_SUCCESS);
     int ref = 0;
     BSL_SAL_AtomicDownReferences(&(pkey->references), &ref);
     if (ref > 0) {
         return;
     }
     BSL_SAL_ReferencesFree(&(pkey->references));
-    if (pkey->method != NULL) {
-        if (pkey->method->freeCtx != NULL) {
-            pkey->method->freeCtx(pkey->key);
-        }
-        BSL_SAL_FREE(pkey->method);
-    }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_PKEY, pkey->id, CRYPT_SUCCESS);
+    pkey->method->freeCtx(pkey->key);
+    BSL_SAL_FREE(pkey->method);
     BSL_SAL_FREE(pkey);
     return;
 }
@@ -750,7 +750,7 @@ static int32_t CRYPT_EAL_SetPkeyMethod(CRYPT_EAL_PkeyCtx *ctx, CRYPT_EAL_Func *f
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t operId,
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t pkeyOperType,
     const char *attrName)
 {
     CRYPT_EAL_Func *funcsKeyMgmt = NULL;
@@ -765,7 +765,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
-    if ((operId & CRYPT_EAL_PKEY_CIPHER_OPERATE) == CRYPT_EAL_PKEY_CIPHER_OPERATE) {
+    if ((pkeyOperType & CRYPT_EAL_PKEY_CIPHER_OPERATE) == CRYPT_EAL_PKEY_CIPHER_OPERATE) {
         ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_ASYMCIPHER, algId, attrName,
             (const CRYPT_EAL_Func **)&funcsAsyCipher, &provCtx);
         if (ret != CRYPT_SUCCESS) {
@@ -773,7 +773,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t
             return NULL;
         }
     }
-    if ((operId & CRYPT_EAL_PKEY_EXCH_OPERATE) == CRYPT_EAL_PKEY_EXCH_OPERATE) {
+    if ((pkeyOperType & CRYPT_EAL_PKEY_EXCH_OPERATE) == CRYPT_EAL_PKEY_EXCH_OPERATE) {
         ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_KEYEXCH, algId, attrName,
             (const CRYPT_EAL_Func **)&funcsExch, &provCtx);
         if (ret != CRYPT_SUCCESS) {
@@ -781,7 +781,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t
             return NULL;
         }
     }
-    if ((operId & CRYPT_EAL_PKEY_SIGN_OPERATE) == CRYPT_EAL_PKEY_SIGN_OPERATE) {
+    if ((pkeyOperType & CRYPT_EAL_PKEY_SIGN_OPERATE) == CRYPT_EAL_PKEY_SIGN_OPERATE) {
         ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_SIGN, algId, attrName,
             (const CRYPT_EAL_Func **)&funcSign, &provCtx);
         if (ret != CRYPT_SUCCESS) {

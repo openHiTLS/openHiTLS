@@ -1490,7 +1490,7 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_PROVIDER_FUNC_TC001(int eccId, int mdId, Hex *
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE_AND_LOG("New ECDSA Pkey", ecdsaPkey != NULL);
 
     /* Set para by curve id */

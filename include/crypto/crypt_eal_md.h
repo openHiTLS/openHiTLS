@@ -50,7 +50,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id);
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
+CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_md

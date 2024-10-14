@@ -365,7 +365,7 @@ exit:
 void SDV_CRYPTO_SM3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtxWithLib(NULL, id, "provider=default");
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[32]; // SM3 digest length is 32
     uint32_t outLen = sizeof(output);

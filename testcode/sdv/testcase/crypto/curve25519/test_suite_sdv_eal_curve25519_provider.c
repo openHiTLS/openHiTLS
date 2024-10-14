@@ -81,7 +81,7 @@ void SDV_CRYPTO_CURVE25519_VERIFY_PROVIDER_API_TC001(void)
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_ED25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
@@ -125,7 +125,7 @@ void SDV_CRYPTO_CURVE25519_SET_PARA_PROVIDER_API_TC001(int id)
 {
     TestMemInit();
     CRYPT_EAL_PkeyPara para;
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     para.id = id;
@@ -155,7 +155,7 @@ exit:
 void SDV_CRYPTO_CURVE25519_KEY_GEN_PROVIDER_API_TC001(int id)
 {
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(NULL), CRYPT_NULL_INPUT);
@@ -195,7 +195,7 @@ void SDV_CRYPTO_CURVE25519_SET_PUB_PROVIDER_API_TC001(int id)
     Set_Curve25519_Pub(&pub, id, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(NULL, &pub), CRYPT_NULL_INPUT);
@@ -245,7 +245,7 @@ void SDV_CRYPTO_CURVE25519_KEY_GEN_PROVIDER_API_TC002(int id)
     Set_Curve25519_Prv(&prv, id, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     /* Sets the entropy source. */
@@ -285,7 +285,7 @@ void SDV_CRYPTO_CURVE25519_DUP_CTX_PROVIDER_API_TC001(int id)
     Set_Curve25519_Pub(&pub, id, key1, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
@@ -334,8 +334,8 @@ void SDV_CRYPTO_CURVE25519_CMP_PROVIDER_FUNC_TC001(int algId, Hex *pubKey)
 
     TestMemInit();
 
-    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_PkeyNewCtxWithLib(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_PkeyNewCtxWithLib(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_CURVE25519_NO_PUBKEY);
@@ -380,8 +380,8 @@ void SDV_CRYPTO_X25519_EXCH_PROVIDER_FUNC_TC001(void)
     uint32_t share2Len = sizeof(share2);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey1 = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_X25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
-    CRYPT_EAL_PkeyCtx *pkey2 = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_X25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_X25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_X25519, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
     ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
 
     // Sets the entropy source.

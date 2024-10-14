@@ -38,6 +38,8 @@ set(SOURCE_FILES_PATH1_LIBSO
     provider_load_test_no_fullfunc.c
     provider_load_test_no_init.c
     provider_load_test1.c
+    provider_load_test_providerNoInit.c
+    provider_load_test_providerNoFree.c
 )
 
 set(SOURCE_FILES_PATH2_SO

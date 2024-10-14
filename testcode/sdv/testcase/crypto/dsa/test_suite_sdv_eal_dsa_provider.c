@@ -174,7 +174,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_PROVIDER_FUNC_TC001(
     STUB_Replace(&tmpRpInfo, BN_RandRange, STUB_RandRangeK);
 
     TestMemInit();
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
@@ -258,7 +258,7 @@ void SDV_CRYPTO_DSA_GEN_PROVIDER_FUNC_TC001(Hex *p, Hex *q, Hex *g, Hex *data)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    ctx = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(ctx, &para), CRYPT_SUCCESS);
@@ -320,7 +320,7 @@ void SDV_CRYPTO_DSA_DUP_CTX_PROVIDER_FUNC_TC001(Hex *p, Hex *q, Hex *g)
     Set_DSA_Para(&para, NULL, NULL, p, q, g, NULL, NULL);
 
     TestMemInit();
-    ctx = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
@@ -398,7 +398,7 @@ void SDV_CRYPTO_DSA_SET_PARAEX_PROVIDER_API_TC001(Hex *p, Hex *q, Hex *g)
     para.param = &dsaPara;
     para.paramLen = sizeof(dsaPara);
     TestMemInit();
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(pkey, NULL), CRYPT_NULL_INPUT);
 

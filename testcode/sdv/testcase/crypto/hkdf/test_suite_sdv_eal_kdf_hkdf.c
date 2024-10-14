@@ -249,7 +249,7 @@ void SDV_CRYPTO_HKDF_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *salt,
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
 
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtxWithLib(NULL, CRYPT_KDF_HKDF, "provider=default");
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_HKDF, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;

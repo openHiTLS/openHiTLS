@@ -79,7 +79,7 @@ void SDV_CRYPTO_RSA_CRYPT_PROVIDER_FUNC_TC001(Hex *n, Hex *e, Hex *d, Hex *plain
 
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     CRYPT_RandRegist(RandFunc);
@@ -147,7 +147,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PKCSV15_PROVIDER_FUNC_TC001(int bits)
     const uint32_t hashLen = sizeof(hash);
     uint8_t e[] = {1, 0, 1};
 
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
     CRYPT_RSA_PkcsV15Para pkcsv15 = {mdId};
     CRYPT_EAL_PkeyPara para = {0};
@@ -213,7 +213,7 @@ void SDV_CRYPTO_RSA_DUP_CTX_PROVIDER_API_TC001(Hex *e, int bits)
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
 
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), 0);
@@ -284,7 +284,7 @@ void SDV_CRYPTO_RSA_GET_PUB_PROVIDER_API_TC001(void)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing public key */
@@ -359,7 +359,7 @@ void SDV_CRYPTO_RSA_GET_PRV_PROVIDER_API_TC001(void)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing private key */
@@ -422,8 +422,8 @@ void SDV_CRYPTO_RSA_CMP_PROVIDER_API_TC001(Hex *n, Hex *e)
     SetRsaPubKey(&pub, n->x, n->len, e->x, e->len);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_RSA_NO_KEY_INFO);  // no key
@@ -474,7 +474,7 @@ void SDV_CRYPTO_RSA_SET_PARAEX_API_TC001(void)
     param.paramLen = sizeof(para.para.rsaPara);
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     para.para.rsaPara.e = NULL;
@@ -526,7 +526,7 @@ void SDV_CRYPTO_RSA_SET_PARAEX_API_TC002(int bits)
     param.paramLen = sizeof(para.para.rsaPara);
     TestMemInit();
 
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(pkey, &param), CRYPT_EAL_ERR_NEW_PARA_FAIL);
@@ -555,7 +555,7 @@ void SDV_CRYPTO_RSA_SET_PARAEX_API_TC003(void)
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtxWithLib(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     SetRsaPara(&para, e3, 3, 1024);  // Valid parameters: elen = 3, bits =1024

@@ -77,6 +77,7 @@ static const CRYPT_EAL_AlgInfo defSigns[] = {
     {CRYPT_PKEY_RSA, defSignRsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_ECDSA, defSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, defSignSm2, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
 };
 
 static const CRYPT_EAL_AlgInfo defMacs[] = {

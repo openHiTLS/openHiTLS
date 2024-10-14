@@ -108,7 +108,7 @@ static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, CRYPT_EAL_Func *fun
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
+CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
     CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
@@ -240,6 +240,10 @@ int32_t CRYPT_EAL_KdfCtrl(CRYPT_EAL_KdfCTX *ctx, int32_t cmd, void *val, uint32_
 void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
 {
     if (ctx == NULL) {
+        return;
+    }
+    if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return;
     }
     EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);

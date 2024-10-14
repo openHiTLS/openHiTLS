@@ -351,7 +351,7 @@ void SDV_CRYPTO_MD5_FUNC_TC005(int id, Hex *msg, Hex *hash)
     TestMemInit();
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtxWithLib(NULL, id, "provider=default");
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
