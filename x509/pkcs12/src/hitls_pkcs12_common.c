@@ -1369,13 +1369,13 @@ static int32_t EncodeP12Info(HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_Encod
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    ret = EncodeCertListAddList(p12, &encodeParam->encParam, list, isNeedMac);
+    ret = EncodeCertListAddList(p12, &encodeParam->certEncParam, list, isNeedMac);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_LIST_FREE(list, FreeBuffer);
         return ret;
     }
 
-    ret = EncodeKeyAddList(p12, &encodeParam->encParam, list);
+    ret = EncodeKeyAddList(p12, &encodeParam->keyEncParam, list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_LIST_FREE(list, FreeBuffer);
         return ret;
@@ -1386,7 +1386,7 @@ static int32_t EncodeP12Info(HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_Encod
         return HITLS_PKCS12_ERR_NONE_DATA;
     }
     BSL_Buffer initData = {0};
-    ret = HITLS_PKCS12_EncodeAsn1List(list, BSL_CID_CONTENTINFO, &encodeParam->encParam, &initData);
+    ret = HITLS_PKCS12_EncodeAsn1List(list, BSL_CID_CONTENTINFO, NULL, &initData);
     BSL_LIST_FREE(list, FreeBuffer);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
