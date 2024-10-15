@@ -1,0 +1,715 @@
+{
+    "libs":{
+        "hitls_bsl": {
+            "features": {
+                "c": {
+                    "err": null,
+                    "hash": null,
+                    "init": {"deps": ["err"]},
+                    "base64": null,
+                    "pem": null,
+                    "list": null,
+                    "log": null,
+                    "obj":null,
+                    "sal": null,
+                    "sal_mem": null,
+                    "sal_thread": null,
+                    "sal_lock": null,
+                    "sal_time": null,
+                    "sal_file": null,
+                    "sal_net": null,
+                    "sal_str": null,
+                    "tlv": null,
+                    "uio_plt": null,
+                    "uio": {
+                        "uio_plt": null,
+                        "uio_buffer": {"deps": ["uio_plt"]},
+                        "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
+                        "uio_tcp": {"deps": ["uio_plt", "sal_net"]}
+                    },
+                    "usrdata": null,
+                    "asn1":null
+                }
+            }
+        },
+        "hitls_crypto":{
+            "lang": "C ASM",
+            "features": {
+                "c": {
+                    "eal": {"deps": ["init"]},
+                    "ealinit": null,
+                    "md": {
+                        "md5": null,
+                        "sm3": null,
+                        "sha1": null,
+                        "sha2": {
+                            "sha224": null,
+                            "sha256": null,
+                            "sha384": null,
+                            "sha512": null
+                        },
+                        "sha3": null
+                    },
+                    "mac": {
+                        "hmac": null
+                    },
+                    "kdf": {
+                        "scrypt": {"deps": ["sha256", "pbkdf2"]},
+                        "hkdf": null,
+                        "pbkdf2": null,
+                        "kdftls12": null,
+                        "deps": ["hmac"]
+                    },
+                    "drbg": {
+                        "drbg_hash": null,
+                        "drbg_hmac": {"deps": ["hmac"]},
+                        "drbg_ctr": {"deps": ["aes"]}
+                    },
+                    "entropy": {
+                        "opts": ["drbg", "drbg_hash", "drbg_hmac", "drbg_ctr"]
+                    },
+                    "modes": {
+                        "cbc": null,
+                        "xts": null,
+                        "ctr": null,
+                        "ofb": null,
+                        "cfb": null,
+                        "ccm": null,
+                        "gcm": null,
+                        "chacha20poly1305": null
+                    },
+                    "cipher": {
+                        "aes": null,
+                        "sm4": null,
+                        "chacha20": {"deps": ["chacha20poly1305"]}
+                    },
+                    "ecc": {"deps": ["bn"]},
+                    "pkey": {
+                        "ecc": {"deps": ["bn"]},
+                        "rsa": {"deps": ["bn"]},
+                        "dsa": {"deps": ["bn"]},
+                        "dh": {"deps": ["bn"]},
+                        "paillier": {"deps":["bn"]},
+                        "ecdh": {"deps": ["ecc"]},
+                        "ecdsa": {"deps": ["ecc"]},
+                        "curve25519": {
+                            "ed25519": {"deps": ["sha512"]},
+                            "x25519": null
+                        },
+                        "sm2": {
+                            "sm2_crypt": null,
+                            "sm2_sign": null,
+                            "sm2_exch": null,
+                            "deps": ["ecc", "sm3"]
+                        }
+                    },
+                    "bn": null
+                },
+                "x8664": {
+                    "sha1": {"ins_set":["x8664", "avx512"]},
+                    "sha2": {"ins_set":["x8664", "avx512"]},
+                    "md5": {"ins_set":["x8664", "avx512"]},
+                    "sm3": null,
+                    "modes": {"ins_set":["x8664", "avx512"]},
+                    "aes": {"ins_set":["x8664", "avx512"]},
+                    "sm4": {"ins_set":["x8664", "avx512"]},
+                    "ecc": {"ins_set":["x8664", "avx512"]}
+                },
+                "armv8": {
+                    "sm3": null,
+                    "aes": null,
+                    "chacha20": null,
+                    "sm4": null,
+                    "ecc": null
+                }
+            }
+        },
+        "hitls_tls": {
+            "Note": "Currently, hitls_tls does not support feature division. 'all_tls' is a temporary solution.",
+            "features": {
+                "c": {
+                    "all_tls": null
+                }
+            }
+        },
+        "hitls_x509":{
+            "lang" : "C",
+            "features" : {
+                "c": {
+                    "all_x509" : null
+                }
+            }
+        }
+    },
+    "modules":{
+        "crypto":{
+            "eal": {
+                ".features": ["eal"],
+                ".srcs": "crypto/eal/src/*.c",
+                ".deps": ["bsl::sal"],
+                ".include": [
+                    "crypto/ealinit/include",
+                    "crypto/sha1/include",
+                    "crypto/sha2/include",
+                    "crypto/sha3/include",
+                    "crypto/md5/include",
+                    "crypto/sm3/include",
+                    "crypto/hmac/include",
+                    "crypto/scrypt/include",
+                    "crypto/hkdf/include",
+                    "crypto/kdf/include",
+                    "crypto/pbkdf2/include",
+                    "crypto/drbg/include",
+                    "crypto/entropy/include",
+                    "crypto/modes/include",
+                    "crypto/aes/include",
+                    "crypto/sm4/include",
+                    "crypto/chacha20/include",
+                    "crypto/bn/include",
+                    "crypto/encode/include",
+                    "crypto/ecc/include",
+                    "crypto/rsa/include",
+                    "crypto/dh/include",
+                    "crypto/dsa/include",
+                    "crypto/ecdsa/include",
+                    "crypto/ecdh/include",
+                    "crypto/curve25519/include",
+                    "crypto/sm2/include",
+                    "crypto/paillier/include"
+                ]
+            },
+            "ealinit": {
+                ".features": ["ealinit"],
+                ".srcs": "crypto/ealinit/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "sha1": {
+                ".features": ["sha1"],
+                ".srcs": {
+                    "public":"crypto/sha1/src/sha1*.c",
+                    "no_asm": "crypto/sha1/src/noasm_*.c",
+                    "armv8": "crypto/sha1/src/asm/*_armv8.S",
+                    "x8664": {
+                        "x8664": "crypto/sha1/src/asm/*_x86_64.S",
+                        "avx512": "crypto/sha1/src/asm/*_x86_64.S"
+                    }
+                },
+                ".deps": ["platform::Secure_C"]
+            },
+            "sha2": {
+                ".features": ["sha224", "sha256", "sha384", "sha512"],
+                ".srcs": {
+                    "public": "crypto/sha2/src/sha2*.c",
+                    "no_asm": "crypto/sha2/src/noasm_*.c",
+                    "armv8": ["crypto/sha2/src/asm_*.c", "crypto/sha2/src/asm/*_armv8.S"],
+                    "x8664":{
+                        "x8664":["crypto/sha2/src/asm_*.c", "crypto/sha2/src/asm/*_x86_64.S"],
+                        "avx512":["crypto/sha2/src/asm_*.c", "crypto/sha2/src/asm/*_x86_64.S"]
+                    }
+                },
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "sha3": {
+                ".features": ["sha3"],
+                ".srcs": {
+                    "public":"crypto/sha3/src/sha3*.c",
+                    "no_asm": "crypto/sha3/src/noasm_*.c",
+                    "armv8": "crypto/sha3/src/asm/*_armv8.S"
+                },
+                ".deps": ["platform::Secure_C"]
+            },
+            "md5": {
+                ".features": ["md5"],
+                ".srcs": {
+                    "public":"crypto/md5/src/md5*.c",
+                    "no_asm": "crypto/md5/src/noasm_*.c",
+                    "x8664": {
+                        "x8664": "crypto/md5/src/asm/*_x86_64.S",
+                        "avx512": "crypto/md5/src/asm/*_x86_64.S"
+                    }
+                },
+                ".deps": ["platform::Secure_C"]
+            },
+            "sm3": {
+                ".features": ["sm3"],
+                ".srcs": {
+                    "public": "crypto/sm3/src/sm3_public.c",
+                    "no_asm": ["crypto/sm3/src/noasm_sm3.c"],
+                    "armv8": ["crypto/sm3/src/asm/*armv8.S", "crypto/sm3/src/asm_sm3.c"],
+                    "x8664": ["crypto/sm3/src/asm/*x86_64.s", "crypto/sm3/src/asm_sm3.c"]
+                },
+                ".deps": ["platform::Secure_C"]
+            },
+            "hmac": {
+                ".features": ["hmac"],
+                ".srcs": "crypto/hmac/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "scrypt": {
+                ".features": ["scrypt"],
+                ".srcs": "crypto/scrypt/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "hkdf": {
+                ".features": ["hkdf"],
+                ".srcs": "crypto/hkdf/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "kdf": {
+                ".features": ["kdftls12"],
+                ".srcs": "crypto/kdf/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "pbkdf2": {
+                ".features": ["pbkdf2"],
+                ".srcs": "crypto/pbkdf2/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "modes": {
+                ".features": ["cbc", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "chacha20poly1305"],
+                ".srcs": {
+                    "public": "crypto/modes/src/modes*.c",
+                    "no_asm": "crypto/modes/src/noasm_*.c",
+                    "armv8": [
+                        "crypto/modes/src/noasm_poly1305.c",
+                        "crypto/modes/src/noasm_aes_gcm.c",
+                        "crypto/modes/src/asm_aes_cbc.c",
+                        "crypto/modes/src/asm_aes_ecb.c",
+                        "crypto/modes/src/asm_aes_ctr.c",
+                        "crypto/modes/src/asm/ghash_armv8.S",
+                        "crypto/modes/src/noasm_aes_ccm.c",
+                        "crypto/modes/src/asm_aes_cfb.c",
+                        "crypto/modes/src/asm_sm4_xts.c",
+                        "crypto/modes/src/asm_sm4_ecb.c",
+                        "crypto/modes/src/asm_sm4_cbc.c",
+                        "crypto/modes/src/asm_sm4_cfb.c",
+                        "crypto/modes/src/asm_sm4_ofb_armv8.c",
+                        "crypto/modes/src/asm_sm4_ctr.c",
+                        "crypto/modes/src/asm_sm4_setkey.c",
+                        "crypto/modes/src/asm_sm4_gcm.c"
+                    ],
+                    "x8664": {
+                        "x8664":[
+                            "crypto/modes/src/asm_aes_ctr.c",
+                            "crypto/modes/src/noasm_aes_gcm.c",
+                            "crypto/modes/src/asm_aes_cbc.c",
+                            "crypto/modes/src/asm_aes_ecb.c",
+                            "crypto/modes/src/asm/ghash_x86_64.S",
+                            "crypto/modes/src/asm_aes_ccm.c",
+                            "crypto/modes/src/asm/aes_ccm_x86_64.S",
+                            "crypto/modes/src/noasm_poly1305.c",
+                            "crypto/modes/src/noasm_aes_cfb.c",
+                            "crypto/modes/src/asm_sm4_xts.c",
+                            "crypto/modes/src/asm_sm4_ecb.c",
+                            "crypto/modes/src/asm_sm4_cbc.c",
+                            "crypto/modes/src/asm_sm4_cfb.c",
+                            "crypto/modes/src/asm_sm4_ofb_x86_64.c",
+                            "crypto/modes/src/asm_sm4_ctr.c",
+                            "crypto/modes/src/asm_sm4_setkey.c",
+                            "crypto/modes/src/asm_sm4_gcm.c"
+                        ],
+                        "avx512":[
+                            "crypto/modes/src/asm_aes_ctr.c",
+                            "crypto/modes/src/noasm_aes_gcm.c",
+                            "crypto/modes/src/asm_aes_cbc.c",
+                            "crypto/modes/src/asm_aes_ecb.c",
+                            "crypto/modes/src/asm/ghash_x86_64.S",
+                            "crypto/modes/src/asm_aes_ccm.c",
+                            "crypto/modes/src/asm/aes_ccm_x86_64.S",
+                            "crypto/modes/src/noasm_poly1305.c",
+                            "crypto/modes/src/noasm_aes_cfb.c",
+                            "crypto/modes/src/asm_sm4_xts.c"
+                        ]
+                    }
+                },
+                ".deps": ["bsl::sal"],
+                ".include": ["crypto/sm4/include", "crypto/aes/include"]
+            },
+            "aes": {
+                ".features": ["aes"],
+                ".srcs": {
+                    "no_asm":["crypto/aes/src/crypt_aes.c"],
+                    "public": "crypto/aes/src/crypt_aes_setkey.c",
+                    "armv8":[
+                        "crypto/aes/src/asm/crypt_aes_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_ecb_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_cbc_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_ctr_armv8.S",
+                        "crypto/aes/src/asm/crypt_aes_cfb_armv8.S"
+                    ],
+                   "x8664": {
+                        "x8664": [
+                            "crypto/aes/src/asm/crypt_aes_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ecb_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_cbc_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ctr_x86_64.S"
+                        ],
+                        "avx512": [
+                            "crypto/aes/src/asm/crypt_aes_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ecb_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_cbc_x86_64.S",
+                            "crypto/aes/src/asm/crypt_aes_ctr_x86_64.S"
+                        ]
+                    }
+                },
+                ".deps": ["platform::Secure_C"]
+            },
+            "chacha20": {
+                ".features": ["chacha20"],
+                ".srcs": {
+                    "public": "crypto/chacha20/src/chacha20.c",
+                    "no_asm": "crypto/chacha20/src/chacha20block.c",
+                    "armv8": "crypto/chacha20/src/chacha20block.c"
+                },
+                ".deps": ["bsl::sal"]
+            },
+            "sm4": {
+                ".features": ["sm4"],
+                ".srcs": {
+                    "public": [
+                        "crypto/sm4/src/crypt_sm4_public.c",
+                        "crypto/sm4/src/crypt_sm4.c",
+                        "crypto/sm4/src/sm4_key.c"
+                    ],
+                    "no_asm":[
+                        "crypto/sm4/src/crypt_sm4.c",
+                        "crypto/sm4/src/sm4_key.c"
+                    ],
+                    "armv8":[
+                        "crypto/sm4/src/asm/crypt_sm4_xts_armv8.S",
+                        "crypto/sm4/src/asm/crypt_sm4_armv8.S",
+                        "crypto/sm4/src/crypt_sm4_armv8.c"
+                    ],
+                    "x8664":{
+                        "x8664":[
+                            "crypto/sm4/src/asm/crypt_sm4_macro_x86_64.s",
+                            "crypto/sm4/src/asm/crypt_sm4_setkey_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_xts_x86_64.S",
+                            "crypto/sm4/src/crypt_sm4_x86_64.c",
+                            "crypto/sm4/src/asm/crypt_sm4_modes_macro_x86_64.s",
+                            "crypto/sm4/src/asm/crypt_sm4_modes_x86_64.S"
+                        ],
+                        "avx512":[
+                            "crypto/sm4/src/asm/crypt_sm4_macro_x86_64.s",
+                            "crypto/sm4/src/asm/crypt_sm4_setkey_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_x86_64.S",
+                            "crypto/sm4/src/asm/crypt_sm4_xts_x86_64.S",
+                            "crypto/sm4/src/crypt_sm4_x86_64.c"
+                        ]
+                    }
+                },
+                ".deps": ["bsl::sal"]
+            },
+            "entropy":{
+                ".features": ["entropy"],
+                ".srcs": "crypto/entropy/src/*.c",
+                ".deps": ["bsl::sal"]
+            },
+            "drbg": {
+                ".features": ["drbg_hash", "drbg_hmac", "drbg_ctr"],
+                ".srcs": "crypto/drbg/src/*.c",
+                ".deps": ["bsl::sal"]
+            },
+            "bn": {
+                ".features": ["bn"],
+                ".srcs": {
+                    "public": [
+                        "crypto/bn/src/bn_*.c"
+                    ],
+                    "no_asm": "crypto/bn/src/noasm_*.c"
+                },
+                ".deps": ["bsl::sal"]
+            },
+            "rsa": {
+                ".features": ["rsa"],
+                ".srcs": "crypto/rsa/src/*.c",
+                ".deps" : ["crypto::bn"]
+            },
+            "curve25519": {
+                ".features": ["ed25519", "x25519"],
+                ".srcs": {
+                    "public": "crypto/curve25519/src/curve25519*.c",
+		            "no_asm": "crypto/curve25519/src/noasm_*.c"
+                },
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "dsa": {
+                ".features": ["dsa"],
+                ".srcs": "crypto/dsa/src/*.c",
+                ".deps": ["crypto::bn", "crypto::encode"]
+            },
+            "dh": {
+                ".features": ["dh"],
+                ".srcs": "crypto/dh/src/*.c",
+                ".deps": ["crypto::bn"]
+            },
+            "encode": {
+                ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign", "sm2_exch"],
+                ".srcs": "crypto/encode/src/*.c",
+                ".deps": ["crypto::bn", "bsl::asn1", "bsl::pem", "crypto::ecc", "bsl::obj"]
+            },
+            "util": {
+                ".features": [
+                    "sha1", "sha224", "sha256", "sha384", "sha512",
+                    "bn",
+                    "drbg_hash", "drbg_hmac", "drbg_ctr",
+                    "rsa", "ed25519", "x25519"
+                ],
+                ".srcs": "crypto/util/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "ecc": {
+                ".features": ["ecc"],
+                ".srcs": {
+                    "public": "crypto/ecc/src/ec*.c",
+                    "no_asm": "crypto/ecc/src/noasm_*.c",
+                    "armv8": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*armv8.S"],
+                    "x8664": {
+                        "x8664": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"],
+                        "avx512": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"]
+                    }
+                },
+                ".deps": ["crypto::bn", "bsl::sal"]
+            },
+            "ecdh": {
+                ".features": ["ecdh"],
+                ".srcs": "crypto/ecdh/src/*.c",
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::ecc"]
+            },
+            "ecdsa": {
+                ".features": ["ecdsa"],
+                ".srcs": "crypto/ecdsa/src/*.c",
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"]
+            },
+            "sm2": {
+                ".features": ["sm2_crypt", "sm2_sign", "sm2_exch"],
+                ".srcs": "crypto/sm2/src/*.c",
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"]
+            },
+            "paillier": {
+                ".features": ["paillier"],
+                ".srcs": "crypto/paillier/src/*.c",
+                ".deps": ["crypto::bn"]
+            }
+        },
+        "bsl":{
+            "log": {
+                ".features": ["log"],
+                ".srcs": "bsl/log/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "sal": {
+                ".features": ["sal", "sal_mem", "sal_lock", "sal_thread", "sal_time", "sal_file", "sal_str"],
+                ".srcs": [
+                    "bsl/sal/src/*.c",
+                    "bsl/sal/src/linux/*.c"
+                ],
+                ".deps": ["platform::Secure_C"]
+            },
+            "err": {
+                ".features": ["err"],
+                ".srcs": "bsl/err/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "tlv": {
+                ".features": ["tlv"],
+                ".srcs": "bsl/tlv/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "list": {
+                ".features": ["list"],
+                ".srcs": "bsl/list/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "obj": {
+                ".features":["obj"],
+                ".srcs":"bsl/obj/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "base64": {
+                ".features": ["base64"],
+                ".srcs": "bsl/base64/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "pem": {
+                ".features": ["pem"],
+                ".srcs": "bsl/pem/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::base64"]
+            },
+            "hash": {
+                ".features": ["hash"],
+                ".srcs": "bsl/hash/src/*.c",
+                ".deps": ["platform::Secure_C"]
+            },
+            "uio": {
+                ".features": [
+                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp"
+                ],
+                ".srcs": "bsl/uio/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "usrdata": {
+                ".features": ["usrdata"],
+                ".srcs": "bsl/usrdata/src/*.c"
+            },
+            "asn1": {
+                ".features": ["asn1"],
+                ".srcs": "bsl/asn1/src/*.c",
+                ".deps": ["bsl::sal"]
+            },
+            "init": {
+                ".features": ["init"],
+                ".srcs": "bsl/init/*.c"
+            }
+        },
+        "platform": {
+            "Secure_C": {
+            }
+        },
+        "tls": {
+            "cm": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/cm/src/*.c",
+                ".deps": ["bsl::tlv", "tls::alert", "tls::handshake", "tls::ccs", "bsl::log", "tls::app", "tls::config"],
+                ".include": [
+                    "include",
+                    "tls/handshake/include",
+                    "tls/handshake/common/include",
+                    "tls/handshake/recv/include",
+                    "tls/handshake/send/include"
+                ]
+            },
+            "crypt": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/crypt/crypt_adapt/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal"]
+            },
+            "crypt_self": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/crypt/crypt_self/*.c",
+                ".deps": ["tls::crypt", "crypto::eal"],
+                ".include": [
+                    "include"
+                ]
+            },
+            "cert": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/cert/**/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal"],
+                ".include": [
+                    "include",
+                    "include/tls",
+                    "include/bsl",
+                    "bsl/asn1/include",
+                    "x509/include",
+                    "x509/x509_cert/include",
+                    "x509/x509_common/include",
+                    "tls/cert/hitls_x509_adapt"
+                ]
+            },
+            "config": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/config/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "tls::cert", "tls::crypt"]
+
+            },
+            "record": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/record/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "bsl::tlv", "bsl::uio", "tls::config", "tls::crypt"],
+                ".include": [
+                    "tls/handshake/include",
+                    "tls/handshake/common/include"
+                ]
+            },
+            "ccs": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/ccs/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "tls::record", "bsl::uio"],
+                ".include": [
+                    "tls/handshake/include"
+                ]
+            },
+            "alert": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/alert/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "tls::record"]
+            },
+            "handshake": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/handshake/**/*.c",
+                ".include": [
+                    "tls/include",
+                    "tls/cert/include",
+                    "tls/crypt/include",
+                    "tls/record/include",
+                    "tls/handshake/common/include",
+                    "tls/handshake/pack/include",
+                    "tls/handshake/parse/include",
+                    "tls/handshake/recv/include",
+                    "tls/handshake/send/include",
+                    "tls/handshake/reass/include",
+                    "tls/handshake/cookie/include"
+                ],
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
+            },
+            "app": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/app/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "tls::record"]
+            },
+            "feature": {
+                ".features": ["all_tls"],
+                ".srcs": "tls/feature/**/*.c",
+                ".deps": ["platform::Secure_C", "bsl::log", "bsl::sal", "bsl::err", "bsl::tlv", "bsl::hash", "bsl::uio", "tls::cm", "tls::crypt"],
+                ".include": [
+                    "include",
+                    "bsl/uio/src",
+                    "bsl/obj/include",
+                    "tls/cert/cert_adapt",
+                    "tls/handshake/parse/src",
+                    "tls/handshake/common/include"
+                ]
+            }
+        },
+        "x509" : {
+            "x509_cert": {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_cert/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".include": ["x509/x509_csr/include"]
+            },
+            "x509_crl" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_crl/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "x509_common" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_common/src/*",
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem", "crypto::encode"]
+            },
+            "x509_verify" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_verify/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_cert", "x509::x509_crl", "x509::x509_common"]
+            },
+            "x509_csr" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/x509_csr/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+            },
+            "pkcs12" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/pkcs12/src/*",
+                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "x509::x509_cert", "x509::cms"]
+            },
+            "cms" : {
+                ".features" : ["all_x509"],
+                ".srcs" : "x509/cms/src/*",
+                ".deps" : ["platform::Secure_C", "crypto::encode"]
+            }
+        }
+    }
+}

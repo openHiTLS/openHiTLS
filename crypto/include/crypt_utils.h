@@ -1,0 +1,423 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
+#ifndef CRYPT_UTILS_H
+#define CRYPT_UTILS_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "crypt_algid.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+#define BITS_PER_BYTE   8
+#define SHIFTS_PER_BYTE 3
+#define BITSIZE(t)      (sizeof(t) * BITS_PER_BYTE)
+
+#define PUT_UINT32_BE(v, p, i)               \
+do {                                         \
+    (p)[(i) + 0] = (uint8_t)((v) >> 24);     \
+    (p)[(i) + 1] = (uint8_t)((v) >> 16);     \
+    (p)[(i) + 2] = (uint8_t)((v) >>  8);     \
+    (p)[(i) + 3] = (uint8_t)((v) >>  0);     \
+} while (0)
+
+#define GET_UINT32_BE(p, i)                  \
+(                                            \
+    ((uint32_t)(p)[(i) + 0] << 24) |         \
+    ((uint32_t)(p)[(i) + 1] << 16) |         \
+    ((uint32_t)(p)[(i) + 2] <<  8) |         \
+    ((uint32_t)(p)[(i) + 3] <<  0)           \
+)
+
+#define PUT_UINT32_LE(v, p, i)               \
+do {                                         \
+    (p)[(i) + 3] = (uint8_t)((v) >> 24);     \
+    (p)[(i) + 2] = (uint8_t)((v) >> 16);     \
+    (p)[(i) + 1] = (uint8_t)((v) >>  8);     \
+    (p)[(i) + 0] = (uint8_t)((v) >>  0);     \
+} while (0)
+
+#define PUT_UINT64_LE(v, p, i) do {          \
+    (p)[(i) + 7] = (uint8_t)((v) >> 56);     \
+    (p)[(i) + 6] = (uint8_t)((v) >> 48);     \
+    (p)[(i) + 5] = (uint8_t)((v) >> 40);     \
+    (p)[(i) + 4] = (uint8_t)((v) >> 32);     \
+    (p)[(i) + 3] = (uint8_t)((v) >> 24);     \
+    (p)[(i) + 2] = (uint8_t)((v) >> 16);     \
+    (p)[(i) + 1] = (uint8_t)((v) >>  8);     \
+    (p)[(i) + 0] = (uint8_t)((v) >>  0);     \
+} while (0)
+
+#define GET_UINT64_LE(p, i)                                            \
+(                                                                      \
+    ((uint64_t)(p)[(i) + 7] << 56) | ((uint64_t)(p)[(i) + 6] << 48) |  \
+    ((uint64_t)(p)[(i) + 5] << 40) | ((uint64_t)(p)[(i) + 4] << 32) |  \
+    ((uint64_t)(p)[(i) + 3] << 24) | ((uint64_t)(p)[(i) + 2] << 16) |  \
+    ((uint64_t)(p)[(i) + 1] <<  8) | ((uint64_t)(p)[(i) + 0] <<  0)    \
+)
+
+/**
+ * Check whether conditions are met. If yes, an error code is returned.
+ */
+#define RETURN_RET_IF(condition, ret) \
+    do {                              \
+        if (condition) {              \
+            BSL_ERR_PUSH_ERROR(ret);  \
+            return ret;               \
+        }                             \
+    } while (0)
+
+/**
+ * If the return value of func is not CRYPT_SUCCESS, go to the label ERR.
+ */
+#define GOTO_ERR_IF(func, ret) do { \
+        (ret) = (func); \
+        if ((ret) != CRYPT_SUCCESS) { \
+            BSL_ERR_PUSH_ERROR((ret)); \
+            goto ERR; \
+        } \
+    } while (0)
+
+#define GOTO_ERR_IF_EX(func, ret) do { \
+        (ret) = (func); \
+        if ((ret) != CRYPT_SUCCESS) { \
+            goto ERR; \
+        } \
+    } while (0)
+
+/**
+ * Check whether conditions are met. If conditions are met, go to the label EXIT.
+ */
+#define GOTO_EXIT_IF(condition, ret) \
+    do {                        \
+        if (condition) {        \
+            BSL_ERR_PUSH_ERROR((ret));   \
+            goto EXIT;          \
+        }                       \
+    } while (0)
+
+#define GOTO_EXIT_IF_EX(condition, ret) \
+    do {                        \
+        if (condition) {        \
+            goto EXIT;          \
+        }                       \
+    } while (0)
+
+#define BREAK_IF(condition) \
+    do {                    \
+        if (condition) {    \
+            break;          \
+        }                   \
+    } while (0)
+
+/**
+ * If src is not NULL, then execute the fun function. If the operation fails, go to the label ERR.
+ */
+#define GOTO_ERR_IF_SRC_NOT_NULL(dest, src, func, ret)                  \
+    do {                                                    \
+        if ((src) != NULL) {                                \
+            (dest) = (func);                                \
+            if ((dest) == NULL) {                           \
+                BSL_ERR_PUSH_ERROR((ret));                           \
+                goto ERR;                                   \
+            }                                               \
+        }                                                   \
+    } while (0)
+
+/**
+ * @brief Perform the XOR operation on the data of two arrays.
+ *
+ * @param a [IN] Input data a
+ * @param b [IN] Input data b
+ * @param r [out] Output the result data.
+ * @param len [IN] Output result data length
+ */
+#define DATA_XOR(a, b, r, len)       \
+    do {                             \
+        uint32_t subscript;          \
+        for (subscript = 0; subscript < (len); subscript++) { \
+            (r)[subscript] = (a)[subscript] ^ (b)[subscript]; \
+        }                             \
+    } while (0)
+
+/**
+ * @brief Perform the XOR operation on the data of 32 bits in two arrays each time.
+ * Ensure that the input and output are integer multiples of 32 bits.
+ * Type conversion is performed only when the address is 4-byte aligned.
+ *
+ * @param a [IN] Input data a
+ * @param b [IN] Input data b
+ * @param r [out] Output the result data.
+ * @param len [IN] Output result data length
+ */
+#define DATA32_XOR(a, b, r, len)                                \
+    do {                                                        \
+        uint32_t ii;                                            \
+        uintptr_t aPtr = (uintptr_t)(a);                        \
+        uintptr_t bPtr = (uintptr_t)(b);                        \
+        uintptr_t rPtr = (uintptr_t)(r);                        \
+        if (((aPtr & 0x3) != 0) || ((bPtr & 0x3) != 0) || ((rPtr & 0x3) != 0)) {     \
+            for (ii = 0; ii < (len); ii++) {                    \
+                (r)[ii] = (a)[ii] ^ (b)[ii];                    \
+            }                                                   \
+        } else {                                                \
+            for (ii = 0; ii < (len); ii += 4) {                 \
+                *(uint32_t *)((r) + ii) = (*(const uint32_t *)((a) + ii)) ^ (*(const uint32_t *)((b) + ii)); \
+            }                                                   \
+        }                                                       \
+    } while (0)
+
+/**
+ * @brief Perform the XOR operation on 64 bits of data in two arrays each time.
+ * Ensure that the input and output are integer multiples of 64 bits.
+ * Type conversion is performed only when the address is 8-byte aligned.
+ *
+ * @param a [IN] Input data a
+ * @param b [IN] Input data b
+ * @param r [out] Output the result data.
+ * @param len [IN] Output result data length
+ */
+#define DATA64_XOR(a, b, r, len)                                \
+    do {                                                        \
+        uint32_t ii;                                            \
+        uintptr_t aPtr = (uintptr_t)(a);                        \
+        uintptr_t bPtr = (uintptr_t)(b);                        \
+        uintptr_t rPtr = (uintptr_t)(r);                        \
+        if (((aPtr & 0x7) != 0) || ((bPtr & 0x7) != 0) || ((rPtr & 0x7) != 0)) {     \
+            for (ii = 0; ii < (len); ii++) {                    \
+                (r)[ii] = (a)[ii] ^ (b)[ii];                    \
+            }                                                   \
+        } else {                                                \
+            for (ii = 0; ii < (len); ii += 8) {                 \
+                *(uint64_t *)((r) + ii) = (*(const uint64_t *)((a) + ii)) ^ (*(const uint64_t *)((b) + ii)); \
+            }                                                   \
+        }                                                       \
+    } while (0)
+
+/* Assumes that x is uint32_t and 0 < n < 32 */
+#define ROTL32(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
+
+#define ROTR64(x, n) (((x) << (64 - (n))) | ((x) >> (n))) // Assumes that x is uint64_t and 0 < n < 64
+
+#define IS_BUF_NON_ZERO(out, outLen)  (((out) != NULL) && ((outLen) > 0))
+#define CRYPT_IS_BUF_NON_ZERO(out, outLen)  (((out) != NULL) && ((outLen) > 0))
+#define CRYPT_CHECK_DATA_INVALID(d) (((d)->data == NULL && (d)->len != 0))
+#define CRYPT_IsDataNull(d) ((d) == NULL || (d)->data == NULL || (d)->len == 0)
+#define CRYPT_IN_RANGE(x, range) ((x) >= (range)->min && (x) <= (range)->max)
+#define CRYPT_CHECK_BUF_INVALID(buf, len) (((buf) == NULL && (len) != 0))
+#define CRYPT_SWAP32(x) ((((x) & 0xff000000) >> 24) | \
+                         (((x) & 0x00ff0000) >> 8) | \
+                         (((x) & 0x0000ff00) << 8) | \
+                         (((x) & 0x000000ff) << 24))
+#ifdef HITLS_BIG_ENDIAN
+
+#define CRYPT_HTONL(x) (x)
+
+// Interpret p + i as little endian order. The type of p must be uint8_t *.
+#define GET_UINT32_LE(p, i)                                            \
+(                                                                      \
+    ((uint32_t)((const uint8_t *)(p))[(i) + 3] << 24) |             \
+    ((uint32_t)((const uint8_t *)(p))[(i) + 2] << 16) |             \
+    ((uint32_t)((const uint8_t *)(p))[(i) + 1] <<  8) |             \
+    ((uint32_t)((const uint8_t *)(p))[(i) + 0] <<  0)               \
+)
+
+// Convert little-endian order to host order
+#define CRYPT_LE32TOH(x)    CRYPT_SWAP32(x)
+// Convert host order to little-endian order
+#define CRYPT_HTOLE32(x)    CRYPT_SWAP32(x)
+
+#else
+
+#define CRYPT_HTONL(x) CRYPT_SWAP32(x)
+
+// Interpret p + i as little endian.
+#define GET_UINT32_LE(p, i)         \
+(                                   \
+    (((uintptr_t)(p) & 0x7) != 0) ? ((uint32_t)((const uint8_t *)(p))[(i) + 3] << 24) |    \
+                                    ((uint32_t)((const uint8_t *)(p))[(i) + 2] << 16) |    \
+                                    ((uint32_t)((const uint8_t *)(p))[(i) + 1] <<  8) |    \
+                                    ((uint32_t)((const uint8_t *)(p))[(i) + 0] <<  0)      \
+                                  : (*(uint32_t *)((uint8_t *)(uintptr_t)(p) + (i)))       \
+)
+// Convert little-endian order to host order
+#define CRYPT_LE32TOH(x)    (x)
+// Convert host order to little-endian order
+#define CRYPT_HTOLE32(x)    (x)
+
+#endif
+
+#ifdef HITLS_BIG_ENDIAN
+
+// Interpret p + i as little endian. The type of p must be uint8_t *.
+#define GET_UINT16_LE(p, i)                                            \
+(                                                                      \
+    ((uint16_t)((const uint8_t *)(p))[(i) + 1] <<  8) |                \
+    ((uint16_t)((const uint8_t *)(p))[(i) + 0] <<  0)                  \
+)
+#else
+// Interpret p + i as little endian.
+#define GET_UINT16_LE(p, i)         \
+(                                   \
+    (((uintptr_t)(p) & 0x7) != 0) ? ((uint16_t)((const uint8_t *)(p))[(i) + 1] <<  8) |     \
+                                    ((uint16_t)((const uint8_t *)(p))[(i) + 0] <<  0)       \
+                                  : (*(uint16_t *)((uint8_t *)(uintptr_t)(p) + (i)))        \
+)
+#endif
+
+#define PUT_UINT16_LE(v, p, i)                                \
+    do                                                        \
+    {                                                         \
+        (p)[(i) + 1] = (uint8_t)((v) >> 8);                   \
+        (p)[(i) + 0] = (uint8_t)((v) >> 0);                   \
+    } while (0)
+
+/**
+ * 64-bit integer manipulation functions (big endian)
+ */
+static inline uint64_t Uint64FromBeBytes(const uint8_t *bytes)
+{
+    return (((uint64_t)bytes[0] << 56) |
+            ((uint64_t)bytes[1] << 48) |
+            ((uint64_t)bytes[2] << 40) |
+            ((uint64_t)bytes[3] << 32) |
+            ((uint64_t)bytes[4] << 24) |
+            ((uint64_t)bytes[5] << 16) |
+            ((uint64_t)bytes[6] << 8) |
+            (uint64_t)bytes[7]);
+}
+
+static inline void Uint64ToBeBytes(uint64_t v, uint8_t *bytes)
+{
+    bytes[0] = (uint8_t)(v >> 56);
+    bytes[1] = (uint8_t)(v >> 48);
+    bytes[2] = (uint8_t)(v >> 40);
+    bytes[3] = (uint8_t)(v >> 32);
+    bytes[4] = (uint8_t)(v >> 24);
+    bytes[5] = (uint8_t)(v >> 16);
+    bytes[6] = (uint8_t)(v >> 8);
+    bytes[7] = (uint8_t)(v & 0xffu);
+}
+
+#ifdef HITLS_CRYPTO_RSA
+uint32_t CRYPT_MD_GetSizeById(CRYPT_MD_AlgId id);
+#endif
+
+static inline bool ParamIdIsValid(uint32_t id, const uint32_t *list, uint32_t num)
+{
+    for (uint32_t i = 0; i < num; i++) {
+        if (id == list[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static inline uint32_t Uint32ConstTimeMsb(uint32_t a)
+{
+    // 31 == (4 * 8 - 1)
+    return 0u - (a >> 31);
+}
+
+static inline uint32_t Uint32ConstTimeIsZero(uint32_t a)
+{
+    return Uint32ConstTimeMsb(~a & (a - 1));
+}
+
+static inline uint32_t Uint32ConstTimeEqual(uint32_t a, uint32_t b)
+{
+    return Uint32ConstTimeIsZero(a ^ b);
+}
+// (mask & a) | (~mask & b)
+static inline uint32_t Uint32ConstTimeSelect(uint32_t mask, uint32_t a, uint32_t b)
+{
+    return ((mask) & a) | ((~mask) & b);
+}
+
+static inline uint32_t Uint32ConstTimeLt(uint32_t a, uint32_t b)
+{
+    return Uint32ConstTimeMsb(a ^ ((a ^ b) | ((a - b) ^ a)));
+}
+
+static inline uint32_t Uint32ConstTimeGt(uint32_t a, uint32_t b)
+{
+    return ~Uint32ConstTimeLt(a, b);
+}
+
+void GetCpuInstrSupportState(void);
+
+#ifdef __x86_64__
+#define CPU_ID_OUT_U32_CNT      4
+#define EAX_OUT_IDX             0
+#define EBX_OUT_IDX             1
+#define ECX_OUT_IDX             2
+#define EDX_OUT_IDX             3
+
+/* %eax */
+#define XCR0_BIT_SSE            (1ULL << 1)
+#define XCR0_BIT_AVX            (1ULL << 2)
+#define XCR0_BIT_OPMASK         (1ULL << 5)
+#define XCR0_BIT_ZMM_LOW        (1ULL << 6)
+#define XCR0_BIT_ZMM_HIGH       (1ULL << 7)
+
+typedef struct {
+    uint32_t code1Out[CPU_ID_OUT_U32_CNT];
+    uint32_t code7Out[CPU_ID_OUT_U32_CNT];
+    bool osSupportAVX;      /* input ecx = 0, output edx:eax bit 2 */
+    bool osSupportAVX512;   /* input ecx = 0, output edx:eax bit 6 */
+} CpuInstrSupportState;
+
+bool IsSupportAES(void);
+bool IsSupportBMI1(void);
+bool IsSupportBMI2(void);
+bool IsSupportAVX(void);
+bool IsSupportAVX2(void);
+bool IsSupportSSE(void);
+bool IsSupportSSE2(void);
+bool IsSupportSSE3(void);
+bool IsSupportMOVBE(void);
+bool IsSupportAVX512F(void);
+bool IsSupportAVX512VL(void);
+bool IsSupportAVX512BW(void);
+bool IsSupportAVX512DQ(void);
+bool IsSupportXSAVE(void);
+bool IsSupportOSXSAVE(void);
+bool IsOSSupportAVX(void);
+bool IsOSSupportAVX512(void);
+
+void GetCpuId(uint32_t eax, uint32_t ecx, uint32_t cpuId[CPU_ID_OUT_U32_CNT]);
+
+#elif defined(__arm__) || defined(__arm) || defined(__aarch64__)
+
+bool IsSupportAES(void);
+bool IsSupportPMULL(void);
+bool IsSupportSHA1(void);
+bool IsSupportSHA256(void);
+bool IsSupportNEON(void);
+
+#if defined(__aarch64__)
+bool IsSupportSHA512(void);
+#endif // __aarch64__
+
+#endif // __arm__ || __arm || __aarch64__
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#endif // CRYPT_UTILS_H

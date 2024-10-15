@@ -1,0 +1,7 @@
+.vscode
+build
+__pycache__
+*/build/*
+testcode/framework/tls/lib/
+testcode/output/
+platform/*

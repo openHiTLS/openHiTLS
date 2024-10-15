@@ -1,0 +1,46 @@
+{
+    "compileFlag": {
+        "CC_OPT_LEVEL": [
+            "-D_FORTIFY_SOURCE=2",
+            "-O2"
+        ],
+        "CC_OVERALL_FLAGS": ["-pipe"],
+        "CC_WARN_FLAGS": [
+            "-Werror",
+            "-Wextra",
+            "-Wall",
+            "-Wdate-time",
+            "-Wfloat-equal",
+            "-Wshadow",
+            "-Wformat=2"
+        ],
+        "CC_LANGUAGE_FLAGS": [
+            "-fsigned-char"
+        ],
+        "CC_CDG_FLAGS": ["-fno-common"],
+        "CC_MD_DEPENDENT_FLAGS": [],
+        "CC_OPT_FLAGS": [
+            "-fno-strict-aliasing",
+            "-fno-omit-frame-pointer"
+        ],
+        "CC_SEC_FLAGS": [
+            "-fPIC",
+            "-fstack-protector-strong",
+            "--param=ssp-buffer-size=4"
+        ],
+        "CC_DEFINE_FLAGS": [],
+        "CC_DEBUG_FLAGS": [],
+        "CC_USER_DEFINE_FLAGS": []
+    },
+    "linkFlag": {
+        "PUBLIC": [
+            "-shared",
+            "-Wl,-z,noexecstack",
+            "-Wl,-z,relro",
+            "-Wl,-z,now",
+            "-Wl,--build-id=none"
+        ],
+        "SHARED": [],
+        "EXE": []
+    }
+}
