@@ -752,41 +752,6 @@ uint32_t CRYPT_DH_GetBits(const CRYPT_DH_Ctx *ctx)
     return BN_Bits(ctx->para->p);
 }
 
-int32_t CRYPT_DH_Check(const CRYPT_DH_Ctx *ctx)
-{
-    int32_t ret;
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ctx->x == NULL || ctx->y == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
-        return CRYPT_DH_KEYINFO_ERROR;
-    }
-    BN_Mont *mont = BN_MontCreate(ctx->para->p);
-    BN_Optimizer *opt = BN_OptimizerCreate();
-    BN_BigNum *y = BN_Create(BN_Bits(ctx->para->p));
-    if (y == NULL || mont == NULL || opt == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    // SP800-56A R3 Section 5.6.2.1.4 Owner Assurance of Pair-wise Consistency
-    ret = BN_MontExpConsttime(y, ctx->para->g, ctx->x, mont, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    if (BN_Cmp(y, ctx->y) != 0) {
-        ret = CRYPT_DH_PAIRWISE_CHECK_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-ERR:
-    BN_Destroy(y);
-    BN_MontDestroy(mont);
-    BN_OptimizerDestroy(opt);
-    return ret;
-}
 
 int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
 {

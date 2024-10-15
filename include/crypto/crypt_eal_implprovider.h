@@ -145,7 +145,7 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, const CRYPT_Param *pa
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPrv)(const void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPub)(const void *ctx, CRYPT_Param *param);
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtDupCtx)(const void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCheck)(const void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCheck)(const void *prv, const void *pub);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCompare)(const void *ctx1, const void *ctx2);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCopyParam)(const void *src, void *dest);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx, const CRYPT_Param *param);
@@ -154,14 +154,20 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCtrl)(void *ctx, int32_t cmd, void *val,
 typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 
 // CRYPT_EAL_OPERAID_SIGN
-#define CRYPT_EAL_IMPLPKEYSIGN_SIGN     1
-#define CRYPT_EAL_IMPLPKEYSIGN_VERIFY   2
-#define CRYPT_EAL_IMPLPKEYSIGN_RECOVER  3
-#define CRYPT_EAL_IMPLPKEYSIGN_CTRL     4
+#define CRYPT_EAL_IMPLPKEYSIGN_SIGN       1
+#define CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA   2
+#define CRYPT_EAL_IMPLPKEYSIGN_VERIFY     3
+#define CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA 4
+#define CRYPT_EAL_IMPLPKEYSIGN_RECOVER    5
+#define CRYPT_EAL_IMPLPKEYSIGN_CTRL       6
 
-typedef int32_t (*CRYPT_EAL_ImplPkeySign)(const void *ctx, const uint8_t *data, uint32_t dataLen,
+typedef int32_t (*CRYPT_EAL_ImplPkeySign)(const void *ctx, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyVerify)(const void *ctx, const uint8_t *data, uint32_t dataLen,
+typedef int32_t (*CRYPT_EAL_ImplPkeySignData)(const void *ctx, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyVerify)(const void *ctx, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t signLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyVerifyData)(const void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t signLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen,
     uint8_t *data, uint32_t *dataLen);

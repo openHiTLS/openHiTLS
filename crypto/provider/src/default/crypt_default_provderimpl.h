@@ -70,7 +70,6 @@ extern const CRYPT_EAL_Func defKeyMgmtSm2[];
 
 extern const CRYPT_EAL_Func defSignDsa[];
 extern const CRYPT_EAL_Func defSignEd25519[];
-extern const CRYPT_EAL_Func defSignX25519[];
 extern const CRYPT_EAL_Func defSignRsa[];
 extern const CRYPT_EAL_Func defSignEcdsa[];
 extern const CRYPT_EAL_Func defSignSm2[];

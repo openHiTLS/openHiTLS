@@ -353,8 +353,8 @@ exit:
  *    2. Set para by curve id(P-224) and set private key, expected result 2
  *    3. Call the CRYPT_EAL_PkeySignData method:
  *       (1) pkey = null, expected result 3
- *       (2) msg = null, msgLen != 0, expected result 4
- *       (3) msg != NULL, msgLen = 0, expected result 5
+ *       (2) msg = null, msgLen != 0, expected result 3
+ *       (3) msg != NULL, msgLen = 0, expected result 3
  *       (4) sign = NULL, signLen != 0, expected result 6
  *       (5) sign != NULL, signLen = NULL, expected result 7
  *       (6) Correct parameters, expected result 8
@@ -362,7 +362,8 @@ exit:
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_SUCCESS
- *    3-7. CRYPT_NULL_INPUT
+ *    3-4. CRYPT_ERR_ALGID
+ *    5-7. CRYPT_NULL_INPUT
  *    8. CRYPT_NO_REGIST_RAND
  *    9. CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH
  */
@@ -390,8 +391,8 @@ void SDV_CRYPTO_ECDSA_SIGN_DATA_API_TC001(Hex *prvKeyVector, Hex *msg)
     ASSERT_TRUE(hitlsSign != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySignData(NULL, msg->x, msg->len, hitlsSign, &hitlsSignLen), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, NULL, msg->len, hitlsSign, &hitlsSignLen), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, msg->x, 0, hitlsSign, &hitlsSignLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, NULL, msg->len, hitlsSign, &hitlsSignLen), CRYPT_INVALID_ARG);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, msg->x, 0, hitlsSign, &hitlsSignLen), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, msg->x, msg->len, NULL, &hitlsSignLen), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, msg->x, msg->len, hitlsSign, NULL), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, msg->x, msg->len, hitlsSign, &hitlsSignLen), CRYPT_NO_REGIST_RAND);
@@ -906,16 +907,16 @@ exit:
  *    4. Set public key, expected result 4
  *    5. Call the CRYPT_EAL_PkeyVerify method:
  *       (1) pkey = null, expected result 5
- *       (2) data = null, dataLen != 0, expected result 6
- *       (3) data = null or data != null, and dataLen = 0, expected result 7
- *       (4) sign = null, signLen != 0 or signLen = 0, expected result 8
- *       (5) sign != null, signLen = 0, expected result 9
+ *       (2) data = null, dataLen != 0 || data != null, dataLen == 0 expected result 5
+ *       (3) sign = null, signLen != 0 or signLen = 0, expected result 8
+ *       (4) sign != null, signLen = 0, expected result 9
  * @expect
  *    1. Success, and the context is not null.
  *    2. CRYPT_SUCCESS
  *    3. CRYPT_ECDSA_ERR_EMPTY_KEY
  *    4. CRYPT_SUCCESS
- *    5-9. CRYPT_NULL_INPUT
+ *    5. CRYPT_INVALID_ARG
+ *    6-9. CRYPT_NULL_INPUT
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDSA_VERIFY_DATA_API_TC001(int paraId, Hex *hashData, Hex *pubKeyX, Hex *pubKeyY, Hex *sign)
@@ -942,9 +943,8 @@ void SDV_CRYPTO_ECDSA_VERIFY_DATA_API_TC001(int paraId, Hex *hashData, Hex *pubK
 
     /* Input parameter test of CRYPT_EAL_PkeyVerifyData. */
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(NULL, hashData->x, hashData->len, sign->x, sign->len) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, NULL, hashData->len, sign->x, sign->len) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, hashData->x, 0, sign->x, sign->len) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, NULL, 0, sign->x, sign->len) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, NULL, hashData->len, sign->x, sign->len) == CRYPT_INVALID_ARG);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, hashData->x, 0, sign->x, sign->len) == CRYPT_INVALID_ARG);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, hashData->x, hashData->len, NULL, sign->len) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, hashData->x, hashData->len, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyData(pkey, hashData->x, hashData->len, sign->x, 0) == CRYPT_NULL_INPUT);
@@ -1393,26 +1393,6 @@ exit:
 }
 /* END_CASE */
 
-/* @
-* @test  SDV_CRYPTO_ECDSA_API_TC027
-* @title  ECDSA pkey check test
-* @brief
-1.create ECDSA context. Expect result 1
-2.set curve. expect result 2
-3.get key length. expect result 3
-* @expect  1. context created successfully
-2. CRYPT_EAL_ALG_NOT_SUPPORT
-@ */
-/* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_API_TC027(int algId)
-{
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-    pkey = CRYPT_EAL_PkeyNewCtx(algId);
-    ASSERT_EQ(CRYPT_EAL_PkeyCheck(pkey), CRYPT_EAL_ALG_NOT_SUPPORT);
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-}
-/* END_CASE */
 
 /**
  * @test   SDV_CRYPTO_GETSECURITYBITS_API_TC001

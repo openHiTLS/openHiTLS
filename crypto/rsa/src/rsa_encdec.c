@@ -576,7 +576,7 @@ static int32_t PssPad(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLe
     return ret;
 }
 
-int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_RSA_SignData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
     int32_t ret = SignInputCheck(ctx, data, dataLen, sign, signLen);
@@ -617,6 +617,19 @@ ERR:
     return ret;
 }
 
+int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen)
+{
+    uint8_t hash[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_RSA_SignData(ctx, hash, hashLen, sign, signLen);
+}
+
 static int32_t VerifyInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign)
 {
@@ -642,7 +655,7 @@ static int32_t VerifyInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, u
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
     uint8_t *pad = NULL;
@@ -688,6 +701,19 @@ ERR:
     (void)memset_s(pad, padLen, 0, padLen);
     BSL_SAL_FREE(pad);
     return ret;
+}
+
+int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen)
+{
+    uint8_t hash[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_RSA_VerifyData(ctx, hash, hashLen, sign, signLen);
 }
 
 static int32_t EncryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,

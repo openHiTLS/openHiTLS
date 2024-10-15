@@ -92,6 +92,7 @@ uint32_t CRYPT_SM2_GetSignLen(const CRYPT_SM2_Ctx *ctx);
  * @brief SM2 Signature
  *
  * @param ctx [IN] sm2 context structure
+ * @param algId [IN] md algId
  * @param data [IN] Data to be signed
  * @param dataLen [IN] Length of the data to be signed
  * @param sign [OUT] Signature data
@@ -107,7 +108,7 @@ uint32_t CRYPT_SM2_GetSignLen(const CRYPT_SM2_Ctx *ctx);
  * @retval ECC error.                       An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                    Signed successfully.
  */
-int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
 
 /**
@@ -115,6 +116,7 @@ int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t d
  * @brief SM2 Verify the signature.
  *
  * @param ctx [IN] sm2 context structure
+ * @param algId [IN] md algId
  * @param data [IN] Data to be signed
  * @param dataLen [IN] Length of the data to be signed
  * @param sign [IN] Signature data
@@ -128,7 +130,7 @@ int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t d
  * @retval DSA error.               An error occurs in the DSA encoding and decoding part.
  * @retval CRYPT_SUCCESS            The signature verification is successful.
  */
-int32_t CRYPT_SM2_Verify(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+int32_t CRYPT_SM2_Verify(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
 #endif
 

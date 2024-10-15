@@ -46,6 +46,8 @@ struct EAL_MdCtx {
  */
 const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id);
 
+int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

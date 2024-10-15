@@ -369,7 +369,7 @@ static int32_t SignInputCheck(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *m
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_SignData(CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
     uint32_t msgLen, uint8_t *sign, uint32_t *signLen)
 {
     int32_t ret;
@@ -486,7 +486,7 @@ static bool VerifyCheckSValid(const uint8_t s[CRYPT_CURVE25519_KEYLEN])
     return false;
 }
 
-int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_VerifyData(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
     uint32_t msgLen, const uint8_t *sign, uint32_t signLen)
 {
     int32_t ret;

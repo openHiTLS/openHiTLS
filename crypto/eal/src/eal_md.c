@@ -406,50 +406,6 @@ uint32_t CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id)
 
 int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    int32_t ret;
-    if (out == NULL || outLen == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (in == NULL && inLen != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    const EAL_MdMethod *method = EAL_MdFindMethod(id);
-    if (method == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
-
-    void *data = method->newCtx();
-    if (data == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    ret = method->init(data);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        method->freeCtx(data);
-        return ret;
-    }
-    if (inLen != 0) {
-        ret = method->update(data, in, inLen);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
-        }
-    }
-
-    ret = method->final(data, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    *outLen = method->mdSize;
-
-ERR:
-    method->freeCtx(data);
-    return ret;
+    return EAL_Md(id, in, inLen, out, outLen);
 }
 #endif
