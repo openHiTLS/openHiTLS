@@ -183,9 +183,9 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC003()
     CRYPT_EAL_MdFreeCtx(ctx);
 #if defined(HITLS_CRYPTO_ASM_CHECK)
 #if defined(__x86_64__)
+#if defined(HITLS_CRYPTO_SM3_ASM)
     FuncStubInfo tmpStubInfo = {0};
     STUB_Init();
-#if defined(HITLS_CRYPTO_SM3_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportMOVBE, STUB_IsSupportMOVBE);
     ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SM3);
     ASSERT_TRUE(ctx == NULL);

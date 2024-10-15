@@ -44,7 +44,7 @@ typedef struct {
         CRYPT_EAL_PkeyCtx *key;
         HITLS_X509_Cert *cert;
     } value;
-    BSL_ASN1_List *attributes; // locatedId, friendly-name, ...
+    BSL_ASN1_List *attributes; // localKeyId, friendlyName, ...
 } HTILS_PKCS12_Bag;
 
 typedef struct _HTILS_PKCS12_P12Info {
@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     BslCid bagId;
     BSL_Buffer *bag; // encode data
-    BSL_ASN1_List *attributes; // Currently, only support locatedId, friendly name.
+    BSL_ASN1_List *attributes; // Currently, only support localKeyId, friendly name.
 } HTILS_PKCS12_SafeBag;
 
 typedef struct _HTILS_PKCS12_PwdParam {
@@ -85,7 +85,8 @@ typedef struct _HTILS_PKCS12_HmacParam {
 } HTILS_PKCS12_HmacParam;
 
 typedef struct _HTILS_PKCS12_EncodeParam {
-    CRYPT_EncodeParam encParam;
+    CRYPT_EncodeParam certEncParam;
+    CRYPT_EncodeParam keyEncParam;
     HTILS_PKCS12_HmacParam macParam;
 } HTILS_PKCS12_EncodeParam;
 

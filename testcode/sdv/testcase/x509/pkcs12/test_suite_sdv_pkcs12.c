@@ -136,7 +136,7 @@ exit:
  * For test parse attributes of correct data.
 */
 /* BEGIN_CASE */
-void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, Hex *locatedId)
+void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, Hex *localKeyId)
 {
     BSL_ASN1_List *attrbutes = BSL_LIST_New(sizeof(HTILS_PKCS12_SafeBagAttr));
     ASSERT_NE(attrbutes, NULL);
@@ -160,7 +160,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, 
         BSL_SAL_FREE(encode.buff);
     }
     if (firstAttr->attrId == BSL_CID_LOCATEDID) {
-        ASSERT_EQ(memcmp(firstAttr->attrValue->data, locatedId->x, locatedId->len), 0);
+        ASSERT_EQ(memcmp(firstAttr->attrValue->data, localKeyId->x, localKeyId->len), 0);
     }
     if (second == NULL) {
         ASSERT_EQ(friendlyName->len, 0);
@@ -175,7 +175,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, 
             BSL_SAL_FREE(encode.buff);
         }
         if (second->attrId == BSL_CID_LOCATEDID) {
-            ASSERT_EQ(memcmp(second->attrValue->data, locatedId->x, locatedId->len), 0);
+            ASSERT_EQ(memcmp(second->attrValue->data, localKeyId->x, localKeyId->len), 0);
         }
     }
 exit:
@@ -864,7 +864,8 @@ void SDV_PKCS12_ENCODE_P12_TC001(Hex *buff, Hex *cert)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.encParam = encParam;
+    encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     HTILS_PKCS12_HmacParam macParam = {0};
     macParam.macId = p12->macData->alg;
@@ -952,7 +953,8 @@ void SDV_PKCS12_ENCODE_P12_TC002(Hex *buff, Hex *cert)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.encParam = encParam;
+    encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     HTILS_PKCS12_HmacParam macParam = {0};
     macParam.macId = p12->macData->alg;
@@ -1027,7 +1029,8 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.encParam = encParam;
+    encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     BSL_Buffer output1 = {0};
 
@@ -1035,9 +1038,6 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     int32_t ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, false, &output1);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NONE_DATA);
     // For test p12 has none data, isNeedMac = false.
-    ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output1);
-    ASSERT_EQ(ret, HITLS_PKCS12_ERR_NONE_DATA);
-    // For test gen p12 of mac iteration < 1000.
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output1);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NONE_DATA);
 
@@ -1141,7 +1141,8 @@ void SDV_PKCS12_GEN_PARASE_P12FILE_TC003(void)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.encParam = encParam;
+    encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     const char *path = "../testdata/cert/asn1/pkcs12/chain.p12";
     const char *writePath = "../testdata/cert/asn1/pkcs12/chain_cp.p12";
