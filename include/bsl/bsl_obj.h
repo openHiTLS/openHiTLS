@@ -219,7 +219,7 @@ typedef enum {
 
     /* Attributes: rfc4519, rfc5280 */
     BSL_CID_COMMONNAME = 130301,
-    BSL_CID_SUNAME,
+    BSL_CID_SURNAME,
     BSL_CID_SERIALNUMBER,
     BSL_CID_COUNTRYNAME,
     BSL_CID_LOCALITYNAME,

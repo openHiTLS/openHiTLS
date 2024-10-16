@@ -567,7 +567,7 @@ static BSL_ASN1_TemplateItem g_rsaPssTempl[] = {
             {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
                 {BSL_ASN1_TAG_OBJECT_ID, 0, 3},
                 {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 3},
-    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTlEN,
+    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN,
     BSL_ASN1_FLAG_DEFAULT, 0},
         {BSL_ASN1_TAG_INTEGER, 0, 1},
     {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED,
@@ -1040,7 +1040,6 @@ int32_t CRYPT_EAL_ParseUnknownPubKey(int32_t type, BSL_Buffer *encode, CRYPT_EAL
 int32_t CRYPT_EAL_PubKeyParseBuff(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode,
     CRYPT_EAL_PkeyCtx **ealPubKey)
 {
-    int32_t ret;
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || ealPubKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -1048,19 +1047,14 @@ int32_t CRYPT_EAL_PubKeyParseBuff(BSL_ParseFormat format, int32_t type, BSL_Buff
 
     switch (format) {
         case BSL_FORMAT_ASN1:
-            ret = CRYPT_EAL_ParseAsn1PubKey(type, encode, ealPubKey);
-            break;
+            return CRYPT_EAL_ParseAsn1PubKey(type, encode, ealPubKey);
         case BSL_FORMAT_PEM:
-            ret = CRYPT_EAL_ParsePemPubKey(type, encode, ealPubKey);
-            break;
+            return CRYPT_EAL_ParsePemPubKey(type, encode, ealPubKey);
         case BSL_FORMAT_UNKNOWN:
-            ret = CRYPT_EAL_ParseUnknownPubKey(type, encode, ealPubKey);
-            break;
+            return CRYPT_EAL_ParseUnknownPubKey(type, encode, ealPubKey);
         default:
-            ret = CRYPT_DECODE_NO_SUPPORT_FORMAT;
-            break;
+            return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
-    return ret;
 }
 
 int32_t CRYPT_EAL_PubKeyParseFile(BSL_ParseFormat format, int32_t type, const char *path, CRYPT_EAL_PkeyCtx **ealPubKey)
@@ -1156,7 +1150,6 @@ int32_t CRYPT_EAL_ParseUnkownPriKey(int32_t type, BSL_Buffer *encode, const uint
 int32_t CRYPT_EAL_PriKeyParseBuff(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode,
     const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
-    int32_t ret;
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || ealPriKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -1164,19 +1157,14 @@ int32_t CRYPT_EAL_PriKeyParseBuff(BSL_ParseFormat format, int32_t type, BSL_Buff
 
     switch (format) {
         case BSL_FORMAT_ASN1:
-            ret = CRYPT_EAL_ParseAsn1PriKey(type, encode, pwd, pwdlen, ealPriKey);
-            break;
+            return CRYPT_EAL_ParseAsn1PriKey(type, encode, pwd, pwdlen, ealPriKey);
         case BSL_FORMAT_PEM:
-            ret = CRYPT_EAL_ParsePemPriKey(type, encode, pwd, pwdlen, ealPriKey);
-            break;
+            return CRYPT_EAL_ParsePemPriKey(type, encode, pwd, pwdlen, ealPriKey);
         case BSL_FORMAT_UNKNOWN:
-            ret = CRYPT_EAL_ParseUnkownPriKey(type, encode, pwd, pwdlen, ealPriKey);
-            break;
+            return CRYPT_EAL_ParseUnkownPriKey(type, encode, pwd, pwdlen, ealPriKey);
         default:
-            ret = CRYPT_DECODE_NO_SUPPORT_FORMAT;
-            break;
+            return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
-    return ret;
 }
 
 int32_t CRYPT_EAL_PriKeyParseFile(BSL_ParseFormat format, int32_t type, const char *path, uint8_t *pwd, uint32_t pwdlen,
@@ -1536,11 +1524,10 @@ static int32_t EncodeDeriveKeyParam(CRYPT_Pbkdf2Param *param, BSL_Buffer *encode
         return CRYPT_ERR_ALGID;
     }
     BSL_Buffer algo = {0};
-    BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
-    algoId[BSL_ASN1_TAG_ALGOID_IDX].buff = (uint8_t *)oidHmac->octs;
-    algoId[BSL_ASN1_TAG_ALGOID_IDX].len = oidHmac->octetLen;
-    algoId[BSL_ASN1_TAG_ALGOID_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
-    algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag = BSL_ASN1_TAG_NULL;
+    BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {
+        {BSL_ASN1_TAG_OBJECT_ID, oidHmac->octetLen, (uint8_t *)oidHmac->octs},
+        {BSL_ASN1_TAG_NULL, 0, NULL},
+    };
     ret = EncodeAlgoIdAsn1Buff(algoId, BSL_ASN1_TAG_ALGOID_ANY_IDX + 1, &algo.data, &algo.dataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2052,13 +2039,10 @@ int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
     switch (format) {
         case BSL_FORMAT_ASN1:
             return CRYPT_EAL_EncodeAsn1PubKey(ealPubKey, type, isComplete, encode);
-            break;
         case BSL_FORMAT_PEM:
             return CRYPT_EAL_EncodePemPubKey(ealPubKey, type, isComplete, encode);
-            break;
         default:
             return CRYPT_ENCODE_NO_SUPPORT_FORMAT;
-            break;
     }
 }
 

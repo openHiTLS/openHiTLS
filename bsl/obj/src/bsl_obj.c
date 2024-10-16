@@ -92,7 +92,7 @@ BslOidInfo g_oidTable[] = {
     {{9, "\52\206\110\206\367\15\1\1\10", BSL_OID_GLOBAL}, "MGF1", BSL_CID_MGF1},
     {{7, "\52\206\110\316\75\2\1", BSL_OID_GLOBAL}, "EC-PUBLICKEY", BSL_CID_EC_PUBLICKEY}, // ecc subkey
     {{3, "\125\4\3", BSL_OID_GLOBAL}, "CN", BSL_CID_COMMONNAME},
-    {{3, "\125\4\4", BSL_OID_GLOBAL}, "SN", BSL_CID_SUNAME},
+    {{3, "\125\4\4", BSL_OID_GLOBAL}, "SN", BSL_CID_SURNAME},
     {{3, "\125\4\5", BSL_OID_GLOBAL}, "serialNumber", BSL_CID_SERIALNUMBER},
     {{3, "\125\4\6", BSL_OID_GLOBAL}, "C", BSL_CID_COUNTRYNAME},
     {{3, "\125\4\7", BSL_OID_GLOBAL}, "L", BSL_CID_LOCALITYNAME},
@@ -156,7 +156,7 @@ static BslSignIdMap g_signIdMap[] = {
 
 static const BslAsn1StrInfo g_asn1StrTab[] = {
     {BSL_CID_COMMONNAME, 1, 64}, // ub-common-name INTEGER ::= 64
-    {BSL_CID_SUNAME, 1, 40}, // ub-surname-length INTEGER ::= 40
+    {BSL_CID_SURNAME, 1, 40}, // ub-surname-length INTEGER ::= 40
     {BSL_CID_SERIALNUMBER, 1, 64}, // ub-serial-number INTEGER ::= 64
     {BSL_CID_COUNTRYNAME, 2, 2}, // ub-country-name-alpha-length INTEGER ::= 2
     {BSL_CID_LOCALITYNAME, 1, 128}, // ub-locality-name INTEGER ::= 128
