@@ -153,6 +153,7 @@ enum CRYPT_ERROR {
     CRYPT_DRBG_FAIL_GET_NONCE,          /**< Failed to obtain the nonce. */
     CRYPT_DRBG_ALG_NOT_SUPPORT,         /**< Does not support the given algorithm. */
     CRYPT_DRBG_INVALID_LEN,             /**< Incorrect data length. */
+    CRYPT_DRBG_PARAM_ERROR,             /**< Incorrect input parameter. */
 
     CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,         /**< No public key. */
     CRYPT_CURVE25519_NO_PRVKEY,                      /**< No private key. */

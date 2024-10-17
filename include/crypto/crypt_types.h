@@ -600,11 +600,23 @@ typedef enum {
     CRYPT_KDF_HKDF_MODE_EXPAND,
 } CRYPT_HKDF_MODE;
 
+#define DEFAULT_PROVIDER_PARAM_TYPE 0
+
 typedef struct {
     int32_t type;
     void *param;
     uint32_t paramLen;
 } CRYPT_Param;
+
+typedef struct {
+    CRYPT_RandSeedMethod *seedMeth;
+    void *seedCtx;
+    const uint8_t *pers;
+    uint32_t persLen;
+    const uint8_t *adin;
+    uint32_t adinLen;
+    bool predictionResistant;
+} CRYPT_RndParam;
 
 #ifdef __cplusplus
 }

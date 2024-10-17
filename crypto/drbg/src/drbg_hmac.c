@@ -45,6 +45,7 @@ typedef struct {
     void *hmacCtx;
 } DRBG_HmacCtx;
 
+
 static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *provData[], int32_t provDataLen)
 {
     int32_t ret;

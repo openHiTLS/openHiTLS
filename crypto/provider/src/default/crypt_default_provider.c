@@ -103,6 +103,26 @@ static const CRYPT_EAL_AlgInfo defMacs[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
+static const CRYPT_EAL_AlgInfo defRands[] = {
+    {CRYPT_RAND_SHA1, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA224, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA256, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA384, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA512, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA1, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA224, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA256, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA384, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA512, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES128_CTR, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES192_CTR, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES256_CTR, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES128_CTR_DF, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES192_CTR_DF, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES256_CTR_DF, defRand, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
 static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
     (void) provCtx;
@@ -134,6 +154,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             *algInfos = defKdfs;
             break;
         case CRYPT_EAL_OPERAID_RAND:
+            *algInfos = defRands;
             break;
         default:
             ret = CRYPT_NOT_SUPPORT;

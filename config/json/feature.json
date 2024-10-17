@@ -424,7 +424,12 @@
             "drbg": {
                 ".features": ["drbg_hash", "drbg_hmac", "drbg_ctr"],
                 ".srcs": "crypto/drbg/src/*.c",
-                ".deps": ["bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "crypto/eal/src",
+                    "crypto/entropy/include",
+                    "crypto/ealinit/include"
+                ]
             },
             "provider": {
                 ".features": ["provider"],
@@ -452,7 +457,8 @@
                     "crypto/bn/include",
                     "crypto/ecc/include",
                     "crypto/hmac/include",
-                    "crypto/paillier/include"
+                    "crypto/paillier/include",
+                    "crypto/drbg/include"
                 ]
             },
             "bn": {

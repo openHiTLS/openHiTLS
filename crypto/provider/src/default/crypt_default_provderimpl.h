@@ -77,6 +77,8 @@ extern const CRYPT_EAL_Func defSignEcdsa[];
 extern const CRYPT_EAL_Func defSignSm2[];
 extern const CRYPT_EAL_Func defMacHmac[];
 
+extern const CRYPT_EAL_Func defRand[];
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
