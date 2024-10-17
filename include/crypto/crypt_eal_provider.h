@@ -24,6 +24,8 @@ extern "C" {
 #endif // __cplusplus
 
 typedef struct EalLibCtx CRYPT_EAL_LibCtx;
+/* The hitls framework generates context for each provider */
+typedef struct EalProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 
 /**
  * @ingroup crypt_eal_provider
@@ -56,13 +58,27 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
  *                 - BSL_SAL_CONVERTER_LIBDLL: Convert to lib*.dll format
  *                 - BSL_SAL_CONVERTER_DLL: Convert to .dll format
  *                 The specific conversion is handled by the BSL_SAL_ConverterName function.
+ * @param mgrCtx [OUT] Provider context
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
 int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
-    const char *providerName, CRYPT_Param *param);
+    const char *providerName, CRYPT_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
+/**
+ * @ingroup crypt_eal_provider
+ * @brief Control provider interface
+ *
+ * @param ctx [IN] Provider context
+ * @param cmd [IN] Control command
+ * @param val [IN/OUT] Value associated with the command
+ * @param valLen [IN] Length of the value
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+*/
+int32_t CRYPT_EAL_CtrlProvider(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup crypt_eal_provider

@@ -428,6 +428,7 @@
                 ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
                 ".deps": ["bsl::sal", "bsl::hash", "bsl::err"],
                 ".include": [
+                    "crypto/provider/include",
                     "crypto/ealinit/include",
                     "crypto/sha1/include",
                     "crypto/sha2/include",
