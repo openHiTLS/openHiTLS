@@ -527,7 +527,7 @@ int32_t HTILS_PKCS12_CalMac(BSL_Buffer *output, BSL_Buffer *pwd, BSL_Buffer *ini
         BSL_SAL_CleanseData(keyData, macSize);
         BSL_SAL_FREE(keyData);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return ret;
+        return BSL_MALLOC_FAIL;
     }
     ret = CRYPT_EAL_MacInit(ctx, keyData, macSize);
     BSL_SAL_CleanseData(keyData, macSize);

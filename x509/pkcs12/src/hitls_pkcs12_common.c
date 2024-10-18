@@ -740,7 +740,7 @@ static int32_t ParseMacDataAndVerify(BSL_Buffer *initData, BSL_Buffer *macData, 
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (p12Mac->mac->dataLen != verify.dataLen || memcmp(verify.data, p12Mac->mac->data, verify.dataLen != 0)) {
+    if (p12Mac->mac->dataLen != verify.dataLen || memcmp(verify.data, p12Mac->mac->data, verify.dataLen) != 0) {
         ClearMacData(p12Mac);
         BSL_SAL_Free(verify.data);
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_VERIFY_FAIL);
@@ -888,6 +888,7 @@ int32_t HITLS_PKCS12_EncodeAttrList(BSL_ASN1_List *list, BSL_ASN1_Buffer *attr)
     int32_t ret;
     BSL_ASN1_List *attrList = BSL_LIST_New(sizeof(HITLS_X509_AttrEntry));
     if (list == NULL) {
+        ret = BSL_MALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         goto err;
     }
