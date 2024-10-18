@@ -103,19 +103,18 @@ int32_t STUB_CRYPT_POLY1305_AsmCheck()
 /* BEGIN_CASE */
 void SDV_CRYPT_INIT_FUNC_TC001()
 {
+#if defined(HITLS_EAL_INIT_OPTS) 
     uint8_t output[DATA_LEN];
     uint32_t len = DATA_LEN;
     int32_t ret = CRYPT_SUCCESS;
-#if defined(HITLS_EAL_INIT_OPTS) 
     if(CRYPT_INIT_SUPPORT_ABILITY(HITLS_EAL_INIT_OPTS, CRYPT_INIT_ABILITY_RAND_POS)) {
         ret = CRYPT_EAL_ERR_DRBG_REPEAT_INIT;
     }
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0) == ret);
     ASSERT_TRUE(CRYPT_EAL_Randbytes(output, len) == CRYPT_SUCCESS);
-#endif
-
 exit:
     ResetStatus();
+#endif
 }
 /* END_CASE */
 
