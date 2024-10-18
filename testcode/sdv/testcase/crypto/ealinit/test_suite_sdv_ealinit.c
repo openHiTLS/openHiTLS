@@ -112,10 +112,9 @@ void SDV_CRYPT_INIT_FUNC_TC001()
     }
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0) == ret);
     ASSERT_TRUE(CRYPT_EAL_Randbytes(output, len) == CRYPT_SUCCESS);
-#endif
-
 exit:
     ResetStatus();
+#endif
 }
 /* END_CASE */
 
