@@ -1975,7 +1975,7 @@ void UT_TLS_TLCP_CONSISTENCY_NONZERO_MESSAGELEN_TC001()
     memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
 
     ASSERT_TRUE(client->ssl != NULL);
-    ASSERT_EQ(HITLS_Connect(client->ssl), HTILS_PARSE_EXCESSIVE_MESSAGE_SIZE);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
