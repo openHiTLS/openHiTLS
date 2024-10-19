@@ -523,7 +523,7 @@ int32_t ParseKeyShare(KeyShare *keyshare, const uint8_t *buf, uint32_t bufLen, A
         bufOffset += sizeof(uint16_t);
         if (!KeyShareGroupAdd(groupSet, bufLen / sizeof(uint16_t), &groupSetSize, node->group)) {
             *alert = ALERT_ILLEGAL_PARAMETER;
-            ret = HTILS_PARSE_DUPLICATED_KEY_SHARE;
+            ret = HITLS_PARSE_DUPLICATED_KEY_SHARE;
             break;
         }
         node->keyExchangeSize = BSL_ByteToUint16(&buf[bufOffset]);
@@ -1260,11 +1260,11 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         Servers MUST check that it is the last extension and otherwise fail
         the handshake with an "illegal_parameter" alert. */
         if (extMsgType == HS_EX_TYPE_PRE_SHARED_KEY && bufOffset != bufLen) {
-            BSL_ERR_PUSH_ERROR(HTILS_PARSE_PRE_SHARED_KEY_FAILED);
+            BSL_ERR_PUSH_ERROR(HITLS_PARSE_PRE_SHARED_KEY_FAILED);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15163, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "psk is not the last extension.", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            return HTILS_PARSE_PRE_SHARED_KEY_FAILED;
+            return HITLS_PARSE_PRE_SHARED_KEY_FAILED;
         }
     }
 
