@@ -100,7 +100,7 @@ def get_cfg_args():
         # Compilation Feature Configuration
         parser.add_argument('--enable', metavar='feature', nargs='+', default=[],
                             help='enable some libs or features, such as --enable sha256 aes gcm_asm, default is "all"')
-        parser.add_argument('--disable', action='extend', metavar='feature', nargs='+', default=['uio_sctp'],
+        parser.add_argument('--disable', metavar='feature', nargs='+', default=['uio_sctp'],
                             help='disable some libs or features, such as --disable aes gcm_asm, default is disable "uio_sctp" ')
         parser.add_argument('--enable-sctp', action="store_true", help='enable sctp which is used in DTLS')
         parser.add_argument('--asm_type', type=str, help='Assembly Type, default is "no_asm".')
