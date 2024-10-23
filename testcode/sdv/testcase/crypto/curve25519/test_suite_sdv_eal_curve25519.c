@@ -23,6 +23,7 @@
 #include "crypt_eal_rand.h"
 #include "securec.h"
 
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 void *malloc_fail(uint32_t size)
 {
     (void)size;
@@ -58,11 +59,16 @@ static void Set_Curve25519_Pub(CRYPT_EAL_PkeyPub *pub, int id, uint8_t *key, uin
  *    3. CRYPT_EAL_ERR_ALGID
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_SET_PARA_API_TC001(int id)
+void SDV_CRYPTO_CURVE25519_SET_PARA_API_TC001(int id, int isProvider)
 {
     TestMemInit();
     CRYPT_EAL_PkeyPara para;
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     para.id = id;
@@ -96,14 +102,19 @@ exit:
  *    5. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_SET_PRV_API_TC001(int id)
+void SDV_CRYPTO_CURVE25519_SET_PRV_API_TC001(int id, int isProvider)
 {
     uint8_t key[CRYPT_CURVE25519_KEYLEN] = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
     Set_Curve25519_Prv(&prv, id, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(NULL, &prv), CRYPT_NULL_INPUT);
@@ -210,14 +221,19 @@ exit:
  *    7. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_GET_PRV_API_TC001(int id)
+void SDV_CRYPTO_CURVE25519_GET_PRV_API_TC001(int id, int isProvider)
 {
     uint8_t key[CRYPT_CURVE25519_KEYLEN] = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
     Set_Curve25519_Prv(&prv, id, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_CURVE25519_NO_PRVKEY);
@@ -267,14 +283,19 @@ exit:
  *    7. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_GET_PUB_API_TC001(int id)
+void SDV_CRYPTO_CURVE25519_GET_PUB_API_TC001(int id, int isProvider)
 {
     uint8_t key[CRYPT_CURVE25519_KEYLEN] = {0};
     CRYPT_EAL_PkeyPub pub;
     Set_Curve25519_Pub(&pub, id, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pub), CRYPT_CURVE25519_NO_PUBKEY);
@@ -313,10 +334,15 @@ exit:
  *    3. Return CRYPT_CURVE25519_KEYLEN(32)
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_GET_KEY_LEN_API_TC001(int id)
+void SDV_CRYPTO_CURVE25519_GET_KEY_LEN_API_TC001(int id, int isProvider)
 {
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyGetKeyLen(NULL), 0);
     ASSERT_EQ(CRYPT_EAL_PkeyGetKeyLen(pkey), CRYPT_CURVE25519_KEYLEN);
@@ -367,7 +393,7 @@ exit:
  *    2. Success
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_KEY_GEN_API_TC002(int id)
+void SDV_CRYPTO_CURVE25519_KEY_GEN_API_TC002(int id, int isProvider)
 {
     uint8_t key[CRYPT_CURVE25519_KEYLEN] = {0};
     CRYPT_EAL_PkeyPub pub;
@@ -376,7 +402,12 @@ void SDV_CRYPTO_CURVE25519_KEY_GEN_API_TC002(int id)
     Set_Curve25519_Prv(&prv, id, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     /* Sets the entropy source. */
@@ -414,7 +445,7 @@ exit:
  *    6. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(void)
+void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(int isProvider)
 {
     uint8_t key[CRYPT_CURVE25519_KEYLEN] = {0};
     uint8_t data[CRYPT_CURVE25519_KEYLEN] = {0};
@@ -424,7 +455,13 @@ void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(void)
     Set_Curve25519_Prv(&prv, CRYPT_PKEY_ED25519, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, data, sizeof(data), sign, &signLen), CRYPT_CURVE25519_NO_PRVKEY);
@@ -470,7 +507,7 @@ exit:
  *    4. CRYPT_CURVE25519_SIGNLEN_ERROR
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_VERIFY_API_TC001(void)
+void SDV_CRYPTO_CURVE25519_VERIFY_API_TC001(int isProvider)
 {
     uint8_t data[CRYPT_CURVE25519_KEYLEN] = {0};
     uint8_t sign[CRYPT_CURVE25519_SIGNLEN] = {0};
@@ -482,7 +519,13 @@ void SDV_CRYPTO_CURVE25519_VERIFY_API_TC001(void)
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, key, CRYPT_CURVE25519_KEYLEN);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
@@ -569,7 +612,7 @@ exit:
  *    3. The signature calculation result is the same as the signature vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ED25519_SIGN_FUNC_TC001(Hex *key, Hex *msg, Hex *sign)
+void SDV_CRYPTO_ED25519_SIGN_FUNC_TC001(Hex *key, Hex *msg, Hex *sign, int isProvider)
 {
     uint8_t *out = NULL;
     uint32_t outLen = sizeof(out);
@@ -577,7 +620,13 @@ void SDV_CRYPTO_ED25519_SIGN_FUNC_TC001(Hex *key, Hex *msg, Hex *sign)
     Set_Curve25519_Prv(&prv, CRYPT_PKEY_ED25519, key->x, key->len);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    if (isProvider == 1) {
+        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv), CRYPT_SUCCESS);
@@ -608,13 +657,19 @@ exit:
  *    2. Success.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ED25519_VERIFY_FUNC_TC001(Hex *key, Hex *msg, Hex *sign)
+void SDV_CRYPTO_ED25519_VERIFY_FUNC_TC001(Hex *key, Hex *msg, Hex *sign, int isProvider)
 {
     CRYPT_EAL_PkeyPub pub = {0};
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, key->x, key->len);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, msg->x, msg->len, sign->x, sign->len), CRYPT_SUCCESS);
@@ -642,7 +697,7 @@ exit:
  *    3. The signature calculation result is the same as the signature vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ED25519_SIGN_VERIFY_FUNC_TC001(Hex *prvKey, Hex *pubKey, Hex *msg, Hex *sign)
+void SDV_CRYPTO_ED25519_SIGN_VERIFY_FUNC_TC001(Hex *prvKey, Hex *pubKey, Hex *msg, Hex *sign, int isProvider)
 {
 #ifndef HITLS_CRYPTO_ED25519
     SKIP_TEST();
@@ -657,7 +712,13 @@ void SDV_CRYPTO_ED25519_SIGN_VERIFY_FUNC_TC001(Hex *prvKey, Hex *pubKey, Hex *ms
     Set_Curve25519_Prv(&prv, CRYPT_PKEY_ED25519, prvKey->x, prvKey->len);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
@@ -696,7 +757,7 @@ exit:
  *    3. The two shared keys are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_X25519_EXCH_FUNC_TC001(void)
+void SDV_CRYPTO_X25519_EXCH_FUNC_TC001(int isProvider)
 {
 #ifndef HITLS_CRYPTO_X25519
     SKIP_TEST();
@@ -707,8 +768,20 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC001(void)
     uint32_t share2Len = sizeof(share2);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
-    CRYPT_EAL_PkeyCtx *pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    CRYPT_EAL_PkeyCtx *pkey1 = NULL;
+    if (isProvider == 1) {
+        pkey1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    } else {
+        pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    }
+    CRYPT_EAL_PkeyCtx *pkey2 = NULL;
+    if (isProvider == 1) {
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    } else {
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    }
     ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
 
     // Sets the entropy source.
@@ -745,7 +818,7 @@ exit:
  *    3. The two shared keys are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_X25519_EXCH_FUNC_TC002(Hex *pubkey, Hex *prvkey, Hex *share)
+void SDV_CRYPTO_X25519_EXCH_FUNC_TC002(Hex *pubkey, Hex *prvkey, Hex *share, int isProvider)
 {
 #ifndef HITLS_CRYPTO_X25519
     SKIP_TEST();
@@ -761,8 +834,20 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC002(Hex *pubkey, Hex *prvkey, Hex *share)
     Set_Curve25519_Prv(&prv, CRYPT_PKEY_X25519, prvkey->x, prvkey->len);
 
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
-    CRYPT_EAL_PkeyCtx *pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    CRYPT_EAL_PkeyCtx *pkey1 = NULL;
+    if (isProvider == 1) {
+        pkey1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    } else {
+        pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    }
+    CRYPT_EAL_PkeyCtx *pkey2 = NULL;
+    if (isProvider == 1) {
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    } else {
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    }
     ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey1, &prv), CRYPT_SUCCESS);
@@ -811,15 +896,24 @@ exit:
  *    5-6. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_CMP_FUNC_TC001(int algId, Hex *pubKey)
+void SDV_CRYPTO_CURVE25519_CMP_FUNC_TC001(int algId, Hex *pubKey, int isProvider)
 {
     CRYPT_EAL_PkeyPub pub = {0};
     Set_Curve25519_Pub(&pub, algId, pubKey->x, pubKey->len);
 
     TestMemInit();
-
-    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_PkeyNewCtx(algId);
-    CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_PkeyNewCtx(algId);
+    CRYPT_EAL_PkeyCtx *ctx1 = NULL;
+    if (isProvider == 1) {
+        ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ctx1 = CRYPT_EAL_PkeyNewCtx(algId);
+    }
+    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
+    if (isProvider == 1) {
+        ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ctx2 = CRYPT_EAL_PkeyNewCtx(algId);
+    }
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_CURVE25519_NO_PUBKEY);
@@ -852,7 +946,7 @@ exit:
  *    4. Return CRYPT_SUCCESS when expect is 1, CRYPT_CURVE25519_VERIFY_FAIL otherwise.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int expect)
+void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int expect, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pubCtx = NULL;
     CRYPT_EAL_PkeyCtx *prvCtx = NULL;
@@ -863,8 +957,18 @@ void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, pubkey->x, pubkey->len);
 
     TestMemInit();
-    pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
-    prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    if (isProvider == 1) {
+        pubCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
+    if (isProvider == 1) {
+        prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(pubCtx != NULL && prvCtx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pub), CRYPT_SUCCESS);
@@ -889,12 +993,18 @@ exit:
  *    2. Equal to keyBits.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_CURVE25519_GET_KEY_BITS_FUNC_TC001(int id, int keyBits)
+void SDV_CRYPTO_CURVE25519_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, int isProvider)
 {
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+

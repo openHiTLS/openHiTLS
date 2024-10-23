@@ -156,7 +156,8 @@ static void Ecc_SetPrvKey(CRYPT_EAL_PkeyPrv *prv, int id, uint8_t *key, uint32_t
     prv->key.eccPrv.len = len;
 }
 
-static int Ecc_GenKey(int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat)
+static int Ecc_GenKey(
+    int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
     int ret;
     FuncStubInfo tmpRpInfo;
@@ -169,7 +170,11 @@ static int Ecc_GenKey(int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex
     TestMemInit();
 
     /* Create a key structure. */
-    pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, eccId), CRYPT_SUCCESS);
@@ -696,14 +701,18 @@ exit:
     return ret;
 }
 
-int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey)
+int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPub pub = {0};
 
     TestMemInit();
     /* Create a key structure. */
-    pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    }
     ASSERT_TRUE_AND_LOG("NewCtx", pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pkey, eccId) == CRYPT_SUCCESS);
 
@@ -919,3 +928,4 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
+

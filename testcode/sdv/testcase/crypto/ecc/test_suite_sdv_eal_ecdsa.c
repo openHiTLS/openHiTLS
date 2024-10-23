@@ -28,7 +28,7 @@ exit:
     return ret;
 }
 /* END_HEADER */
-
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 /**
  * @test   SDV_CRYPTO_ECDSA_NEW_CTX_API_TC001
  * @title  ECDSA CRYPT_EAL_PkeyNewCtx test.
@@ -97,7 +97,7 @@ exit:
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
-    int paraId, int mdId, Hex *prvKeyVector, Hex *plainText, Hex *signR, Hex *signS, Hex *randVector)
+    int paraId, int mdId, Hex *prvKeyVector, Hex *plainText, Hex *signR, Hex *signS, Hex *randVector, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
     FuncStubInfo tmpRpInfo;
@@ -108,7 +108,12 @@ void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
 
     TestMemInit();
 
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(ecdsaPkey != NULL);
     ASSERT_TRUE_AND_LOG(
         "SetParaById NISTP224", CRYPT_EAL_PkeySetParaById(ecdsaPkey, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
@@ -175,7 +180,8 @@ exit:
  *    10. Both are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SIGN_API_TC001(int mdId, Hex *prvKeyVector, Hex *msg, Hex *signR, Hex *signS, Hex *randVector)
+void SDV_CRYPTO_ECDSA_SIGN_API_TC001(
+    int mdId, Hex *prvKeyVector, Hex *msg, Hex *signR, Hex *signS, Hex *randVector, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
     FuncStubInfo tmpRpInfo;
@@ -193,7 +199,12 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC001(int mdId, Hex *prvKeyVector, Hex *msg, Hex 
     STUB_Init();
     STUB_Replace(&tmpRpInfo, BN_RandRange, STUB_RandRangeK);
 
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(ecdsaPkey != NULL);
     /* Set para by curve id and set private key. */
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(ecdsaPkey, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
@@ -252,7 +263,7 @@ exit:
  *    3. CRYPT_ECDSA_ERR_EMPTY_KEY
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SIGN_API_TC002(int mdId, Hex *plainText)
+void SDV_CRYPTO_ECDSA_SIGN_API_TC002(int mdId, Hex *plainText, int isProvider)
 {
     uint32_t hitlsSignLen;
     uint8_t *hitlsSign = NULL;
@@ -260,7 +271,12 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC002(int mdId, Hex *plainText)
 
     TestMemInit();
 
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(ecdsaPkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(ecdsaPkey, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
 
@@ -297,7 +313,8 @@ exit:
  *    4. CRYPT_ECDSA_ERR_TRY_CNT on randVector is 0, otherwise CRYPT_SUCCESS.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SIGN_API_TC003(int mdId, Hex *prvKeyVector, Hex *plainText, Hex *randVector, int result)
+void SDV_CRYPTO_ECDSA_SIGN_API_TC003(
+    int mdId, Hex *prvKeyVector, Hex *plainText, Hex *randVector, int result, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
     FuncStubInfo tmpRpInfo;
@@ -308,7 +325,12 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC003(int mdId, Hex *prvKeyVector, Hex *plainText
     /* Register memory */
     TestMemInit();
 
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(ecdsaPkey != NULL);
 
     /* Set para by curve id and set private key */
@@ -368,7 +390,7 @@ exit:
  *    9. CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SIGN_DATA_API_TC001(Hex *prvKeyVector, Hex *msg)
+void SDV_CRYPTO_ECDSA_SIGN_DATA_API_TC001(Hex *prvKeyVector, Hex *msg, int isProvider)
 {
     uint32_t hitlsSignLen;
     uint8_t *hitlsSign = NULL;
@@ -377,7 +399,12 @@ void SDV_CRYPTO_ECDSA_SIGN_DATA_API_TC001(Hex *prvKeyVector, Hex *msg)
 
     TestMemInit();
 
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(ecdsaPkey != NULL);
 
     /* Set para by curve id and set private key */
@@ -681,9 +708,9 @@ exit:
  *    3. CRYPT_ECC_ERR_POINT_CODE
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SET_PUB_API_TC003(int eccId, Hex *pubKey, Hex *errorPubKey)
+void SDV_CRYPTO_ECDSA_SET_PUB_API_TC003(int eccId, Hex *pubKey, Hex *errorPubKey, int isProvider)
 {
-    ASSERT_TRUE(EAL_PkeySetPub_Api_TC003(CRYPT_PKEY_ECDSA, eccId, pubKey, errorPubKey) == 0);
+    ASSERT_TRUE(EAL_PkeySetPub_Api_TC003(CRYPT_PKEY_ECDSA, eccId, pubKey, errorPubKey, isProvider) == 0);
 exit:
     return;
 }
@@ -775,7 +802,7 @@ exit:
  *    11. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_VERIFY_API_TC001(Hex *data, Hex *pubKeyX, Hex *pubKeyY, Hex *sign)
+void SDV_CRYPTO_ECDSA_VERIFY_API_TC001(Hex *data, Hex *pubKeyX, Hex *pubKeyY, Hex *sign, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPub ecdsaPubkey;
@@ -784,7 +811,12 @@ void SDV_CRYPTO_ECDSA_VERIFY_API_TC001(Hex *data, Hex *pubKeyX, Hex *pubKeyY, He
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("New ECDSA Pkey", pkey != NULL);
 
     /* Set para by curve id. */
@@ -835,8 +867,8 @@ exit:
  *    5-6. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(
-    int eccId, Hex *prvKeyVector, Hex *hashData, Hex *randVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat)
+void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *hashData,
+    Hex *randVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
     uint32_t hitlsSignLen;
     FuncStubInfo tmpRpInfo;
@@ -851,7 +883,12 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(
     TestMemInit();
 
     /* Create an ECDSA context for signing*/
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(ecdsaPkey != NULL);
 
     /* Set para by curve id and set private key */
@@ -875,7 +912,12 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(
     STUB_Reset(&tmpRpInfo);
 
     /* Create an ESA context for signature verification. */
-    ecdsaPkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("CRYPT_EAL_PkeyNewCtx", ecdsaPkey2 != NULL);
 
     /* Set para by curve id and set public key */
@@ -919,7 +961,8 @@ exit:
  *    6-9. CRYPT_NULL_INPUT
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_VERIFY_DATA_API_TC001(int paraId, Hex *hashData, Hex *pubKeyX, Hex *pubKeyY, Hex *sign)
+void SDV_CRYPTO_ECDSA_VERIFY_DATA_API_TC001(
+    int paraId, Hex *hashData, Hex *pubKeyX, Hex *pubKeyY, Hex *sign, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPub ecdsaPubkey;
@@ -927,7 +970,12 @@ void SDV_CRYPTO_ECDSA_VERIFY_DATA_API_TC001(int paraId, Hex *hashData, Hex *pubK
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     /* Set para by curve id */
@@ -971,14 +1019,19 @@ exit:
  *    4. The return value is not 0.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_GET_SECURITY_BITS_API_TC001(int paraId, int securitybits)
+void SDV_CRYPTO_ECDSA_GET_SECURITY_BITS_API_TC001(int paraId, int securitybits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
 
     TestMemInit();
 
     /* Create an ECDSA context */
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("New ECDSA Pkey", ecdsaPkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdsaPkey, paraId), CRYPT_SUCCESS);
 
@@ -1008,14 +1061,19 @@ exit:
  *    4. The return value is not 0.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_GET_KEY_BITS_API_TC001(int paraId, int keyBitsLen)
+void SDV_CRYPTO_ECDSA_GET_KEY_BITS_API_TC001(int paraId, int keyBitsLen, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
 
     TestMemInit();
 
     /* Create an ECDSA context */
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("New ECDSA Pkey", ecdsaPkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdsaPkey, paraId), CRYPT_SUCCESS);
 
@@ -1049,14 +1107,18 @@ exit:
  *    6. CRYPT_EAL_ERR_NEW_PARA_FAIL
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SET_PARA_API_TC001(int paraId)
+void SDV_CRYPTO_ECDSA_SET_PARA_API_TC001(int paraId, int isProvider)
 {
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraId), CRYPT_SUCCESS);
 
@@ -1093,14 +1155,18 @@ exit:
  *    6. CRYPT_EAL_ERR_NEW_PARA_FAIL
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SET_PARAEX_API_TC001(int paraId)
+void SDV_CRYPTO_ECDSA_SET_PARAEX_API_TC001(int paraId, int isProvider)
 {
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraId), CRYPT_SUCCESS);
     CRYPT_Param param;
@@ -1141,7 +1207,7 @@ exit:
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVector, Hex *msg, Hex *signR, Hex *signS,
-    Hex *randVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat)
+    Hex *randVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
     if (IsMdAlgDisabled(mdId)) {
         SKIP_TEST();
@@ -1158,7 +1224,12 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("New ECDSA Pkey", ecdsaPkey != NULL);
 
     /* Set para by curve id */
@@ -1238,7 +1309,8 @@ exit:
  *    5. CRYPT_SUCCESS on result=1
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SET_PUB_FUNC_TC001(int eccId, Hex *publicX, Hex *publicY, int result, int pointFormat)
+void SDV_CRYPTO_ECDSA_SET_PUB_FUNC_TC001(
+    int eccId, Hex *publicX, Hex *publicY, int result, int pointFormat, int isProvider)
 {
     int ret;
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
@@ -1247,7 +1319,12 @@ void SDV_CRYPTO_ECDSA_SET_PUB_FUNC_TC001(int eccId, Hex *publicX, Hex *publicY, 
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("New ECDSA Pkey", ecdsaPkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdsaPkey, eccId), CRYPT_SUCCESS);
@@ -1310,9 +1387,10 @@ exit:
  *    7. The getted key and vector are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_GEN_KEY_FUNC_TC001(int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat)
+void SDV_CRYPTO_ECDSA_GEN_KEY_FUNC_TC001(
+    int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
-    Ecc_GenKey(CRYPT_PKEY_ECDSA, eccId, prvKeyVector, pubKeyX, pubKeyY, pointFormat);
+    Ecc_GenKey(CRYPT_PKEY_ECDSA, eccId, prvKeyVector, pubKeyX, pubKeyY, pointFormat, isProvider);
 }
 /* END_CASE */
 
@@ -1382,10 +1460,15 @@ exit:
 3.Success
 @ */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_API_TC026(int paraId, int keyLen)
+void SDV_CRYPTO_ECDSA_API_TC026(int paraId, int keyLen, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdsaPkey, paraId), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetKeyLen(ecdsaPkey), keyLen);
 exit:
@@ -1408,12 +1491,17 @@ exit:
  *    4. The security bits are correct.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_GETSECURITYBITS_API_TC001(int eccId, Hex *prvKeyVector, int secBits)
+void SDV_CRYPTO_GETSECURITYBITS_API_TC001(int eccId, Hex *prvKeyVector, int secBits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
     CRYPT_EAL_PkeyPrv ecdsaPrvkey = {0};
 
-    ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    if (isProvider == 1) {
+        ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        ecdsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    }
     ASSERT_TRUE_AND_LOG("New ECDH Pkey", ecdsaPkey != NULL);
     // Set elliptic curve type CRYPT_ECC_NISTP224 = 13
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdsaPkey, eccId), CRYPT_SUCCESS);
@@ -1430,201 +1518,3 @@ exit:
 }
 /* END_CASE */
 
-
-/**
- * @test   SDV_CRYPTO_ECDSA_SIGN_VERIFY_PROVIDER_FUNC_TC001
- * @title  ECDSA sign and verify test: different hash and curve for the default provider.
- * @precon nan
- * @brief
- *    1. Init the drbg, expected result 1
- *    2. Create context(ecdsaPkey) of the ECDSA algorithm using the default provider, expected result 2
- *    3. Set elliptic curve type, private key and public key, expected result 3
- *    4. Take over random numbers, mock BN_RandRange to generate randVector.
- *    5. Compute the signature by ecdsaPkey, expected result 4
- *    6. Compares the hitls signature, expected result 5
- *    7. Verify the signature by ecdsaPkey, expected result 6
- *    8. Call the CRYPT_EAL_PkeyCopyCtx method to copy the context, expected result 7
- *    9. Use the copied context for signing and verification, expected result 8
- * @expect
- *    1. Success, and two contexts are not NULL.
- *    2-4. CRYPT_SUCCESS
- *    5. Both are the same.
- *    6-8. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SIGN_VERIFY_PROVIDER_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVector, Hex *msg, Hex *signR, Hex *signS,
-    Hex *randVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat)
-{
-    if (IsMdAlgDisabled(mdId)) {
-        SKIP_TEST();
-    }
-    int ret, vectorSignLen, hitlsSginLen;
-    uint8_t *vectorSign = NULL;
-    uint8_t *hitlsSign = NULL;
-    CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
-    CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
-    CRYPT_EAL_PkeyPrv ecdsaPrvkey = {0};
-    CRYPT_EAL_PkeyPub ecdsaPubkey;
-    KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
-    FuncStubInfo tmpRpInfo;
-
-    TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    ecdsaPkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    ASSERT_TRUE_AND_LOG("New ECDSA Pkey", ecdsaPkey != NULL);
-
-    /* Set para by curve id */
-    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ecdsaPkey, eccId), CRYPT_SUCCESS);
-    /* Set private key */
-    Ecc_SetPrvKey(&ecdsaPrvkey, CRYPT_PKEY_ECDSA, prvKeyVector->x, prvKeyVector->len);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ecdsaPkey, &ecdsaPrvkey), CRYPT_SUCCESS);
-    /* Set public key */
-    ret = EccPointToBuffer(pubKeyX, pubKeyY, pointFormat, &pubKeyVector);
-    ASSERT_TRUE_AND_LOG("EccPointToBuffer", ret == CRYPT_SUCCESS);
-    Ecc_SetPubKey(&ecdsaPubkey, CRYPT_PKEY_ECDSA, pubKeyVector.data, pubKeyVector.len);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ecdsaPkey, &ecdsaPubkey), CRYPT_SUCCESS);
-
-    /* Take over random numbers. */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
-    gkRandBufLen = randVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRange, STUB_RandRangeK);
-
-    /* Signature */
-    hitlsSginLen = CRYPT_EAL_PkeyGetSignLen(ecdsaPkey);
-    hitlsSign = (uint8_t *)malloc(hitlsSginLen);
-    ASSERT_TRUE(hitlsSign != NULL);
-    ret = CRYPT_EAL_PkeySign(ecdsaPkey, mdId, msg->x, msg->len, hitlsSign, (uint32_t *)&hitlsSginLen);
-    ASSERT_TRUE_AND_LOG("CRYPT_EAL_PkeySign", ret == CRYPT_SUCCESS);
-
-    /* Encode the R and S of the vector. */
-    vectorSignLen = CRYPT_EAL_PkeyGetSignLen(ecdsaPkey);
-    vectorSign = (uint8_t *)malloc(vectorSignLen);
-    ASSERT_TRUE(vectorSign != NULL);
-    ret = SignEncode(signR, signS, vectorSign, (uint32_t *)&vectorSignLen);
-    ASSERT_TRUE_AND_LOG("SignEncode", ret == CRYPT_SUCCESS);
-
-    /* Compare the results of HiTLS vs. Vector. */
-    ASSERT_EQ(hitlsSginLen, vectorSignLen);
-    ASSERT_TRUE(memcmp(vectorSign, hitlsSign, hitlsSginLen) == 0);
-
-    STUB_Reset(&tmpRpInfo);
-
-    /* Verify */
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ecdsaPkey, mdId, msg->x, msg->len, hitlsSign, hitlsSginLen) == CRYPT_SUCCESS);
-
-    /* Copy the contexts: sign and verify */
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
-    ASSERT_TRUE(cpyCtx != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, ecdsaPkey), CRYPT_SUCCESS);
-    hitlsSginLen = CRYPT_EAL_PkeyGetSignLen(cpyCtx);
-    ASSERT_EQ(CRYPT_EAL_PkeySign(cpyCtx, mdId, msg->x, msg->len, hitlsSign, (uint32_t *)&hitlsSginLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, mdId, msg->x, msg->len, hitlsSign, hitlsSginLen), CRYPT_SUCCESS);
-
-exit:
-    STUB_Reset(&tmpRpInfo);
-    free(hitlsSign);
-    free(vectorSign);
-    CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
-    CRYPT_EAL_PkeyFreeCtx(cpyCtx);
-    CRYPT_EAL_RandDeinit();
-    return;
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_ECDSA_GET_PRV_PROVIDER_API_TC001
- * @title  ECDSA CRYPT_EAL_PkeyGetPrv: Test the validity of parameters for the default provider.
- * @precon private key
- * @brief
- *    1. Create the context of the ecdsa algorithm using the default provider, expected result 1
- *    2. Set the para by eccId(p-224), expected result 2
- *    3. Get the private key when there is no private key, expected result 3
- *    4. Set the private key, expected result 4
- *    5. Call the CRYPT_EAL_PkeyGetPrv method:
- *       (1) pkey = null, expected result 5
- *       (2) prv = null, expected result 6
- *       (3) pkey.id != prv.id, expected result 7
- *       (4) Correct parameters, expected result 8
- * @expect
- *    1. Success, and the context is not NULL.
- *    2. CRYPT_SUCCESS
- *    3. CRYPT_ECC_PKEY_ERR_EMPTY_KEY
- *    4. CRYPT_SUCCESS
- *    5-6. CRYPT_NULL_INPUT
- *    7. CRYPT_EAL_ERR_ALGID
- *    8. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_GET_PRV_PROVIDER_API_TC001(Hex *prvKey)
-{
-    ASSERT_TRUE(EAL_PkeyGetPrv_Provider_Api_TC001(CRYPT_PKEY_ECDSA, prvKey) == 0);
-exit:
-    return;
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_ECDSA_GET_PUB_PROVIDER_API_TC001
- * @title  ECDSA CRYPT_EAL_PkeyGetPub: Test the validity of parameters for the default provider.
- * @precon public key point
- * @brief
- *    1. Create the context of the ecdsa algorithm using the default provider, expected result 1
- *    2. Set the para by eccId(p-224), expected result 2
- *    3. Get the public key when there is no public key, expected result 3
- *    4. Set the public key, expected result 4
- *    5. Call the CRYPT_EAL_PkeyGetPub method:
- *       (1) pkey = null, expected result 5
- *       (2) pub = null, expected result 6
- *       (3) pkey.id != pub.id, expected result 7
- *       (4) Correct parameters, expected result 8
- * @expect
- *    1. Success, and the context is not NULL.
- *    2. CRYPT_SUCCESS
- *    3. CRYPT_ECC_PKEY_ERR_EMPTY_KEY
- *    4. CRYPT_SUCCESS
- *    5-6. CRYPT_NULL_INPUT
- *    7. CRYPT_EAL_ERR_ALGID
- *    8. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_GET_PUB_PROVIDER_API_TC001(Hex *pubKeyX, Hex *pubKeyY)
-{
-    ASSERT_TRUE(EAL_PkeyGetPub_Provider_Api_TC001(CRYPT_PKEY_ECDSA, pubKeyX, pubKeyY) == 0);
-exit:
-    return;
-}
-/* END_CASE */
-
-
-/**
- * @test   SDV_CRYPTO_ECDSA_CMP_PROVIDER_FUNC_TC001
- * @title  ECDSA: CRYPT_EAL_PkeyCmp test for the default provider.
- * @precon Registering memory-related functions.
- * @brief
- *    1. Create the contexts(ctx1, ctx2) of the ecdsa algorithm using the default provider, expected result 1
- *    2. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 2
- *    3. Set para id CRYPT_ECC_NISTP224 and public key for ctx1, expected result 3
- *    4. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 4
- *    5. Set para id CRYPT_ECC_NISTP256 for ctx2, expected result 5
- *    6. Set public key for ctx2, expected result 6
- *    7. Set para id CRYPT_ECC_NISTP224 and public key for ctx2, expected result 7
- *    8. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 8
- * @expect
- *    1. Success, and contexts are not NULL.
- *    2. CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL
- *    3. CRYPT_SUCCESS
- *    4. CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL
- *    5. CRYPT_SUCCESS
- *    6. CRYPT_ECC_ERR_POINT_CODE
- *    7. CRYPT_SUCCESS
- *    8. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_CMP_PROVIDER_FUNC_TC001(Hex *pubKeyX, Hex *pubKeyY)
-{
-    ASSERT_TRUE(EAL_PkeyCmp_Provider_Api_TC001(CRYPT_PKEY_ECDSA, pubKeyX, pubKeyY) == 0);
-exit:
-    return;
-}
-/* END_CASE */
