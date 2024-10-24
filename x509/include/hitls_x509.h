@@ -23,6 +23,7 @@
 #include "bsl_uio.h"
 #include "bsl_obj.h"
 #include "crypt_algid.h"
+#include "crypt_eal_encode.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,13 +41,9 @@ typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
 
 typedef struct _HITLS_X509_Csr HITLS_X509_Csr;
 
-typedef struct _HTILS_PKCS12_P12Info HTILS_PKCS12_P12Info;
+typedef struct _HITLS_PKCS12 HITLS_PKCS12;
 
-typedef struct _HTILS_PKCS12_PwdParam HTILS_PKCS12_PwdParam;
-
-typedef struct _HTILS_PKCS12_EncodeParam HTILS_PKCS12_EncodeParam;
-
-typedef struct _HTILS_PKCS12_HmacParam HTILS_PKCS12_HmacParam;
+typedef struct _HITLS_PKCS12_Bag HITLS_PKCS12_Bag;
 
 #define HITLS_CERT_VERSION_1 0
 #define HITLS_CERT_VERSION_2 1
@@ -125,6 +122,13 @@ typedef enum {
 
     HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0800,
     HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
+
+    HITLS_PKCS12_SET_LOCALKEYID = 0x0900,       /** Set localKeyId in p12-ctx. */
+    HITLS_PKCS12_SET_ENTITY_KEYBAG,             /** Set entity key-Bag to p12-ctx. */
+    HITLS_PKCS12_SET_ENTITY_CERTBAG,            /** Set entity cert-Bag to p12-ctx. */
+    HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
+    HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
+    HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
 } HITLS_X509_Cmd;
 
 typedef enum {
@@ -655,6 +659,95 @@ int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
  */
 int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t valLen);
 
+typedef struct {
+    BSL_Buffer *macPwd;
+    BSL_Buffer *encPwd;
+} HITLS_PKCS12_PwdParam;
+
+typedef struct {
+    uint32_t saltLen;
+    uint32_t itCnt;
+    uint32_t macId;
+    uint8_t *pwd;
+    uint32_t pwdLen;
+} HITLS_PKCS12_HmacParam;
+
+typedef struct {
+    CRYPT_EncodeParam certEncParam;
+    CRYPT_EncodeParam keyEncParam;
+    HITLS_PKCS12_HmacParam macParam;
+} HITLS_PKCS12_EncodeParam;
+
+/**
+ * @ingroup pkcs12
+ * @brief Allocate a pkcs12 struct.
+ *
+ * @retval HITLS_PKCS12 *
+ */
+HITLS_PKCS12 *HITLS_PKCS12_New(void);
+
+/**
+ * @ingroup pkcs12
+ * @brief Release the pkcs12 context.
+ *
+ * @param csr    [IN] p12 context.
+ * @retval void
+ */
+void HITLS_PKCS12_Free(HITLS_PKCS12 *p12);
+
+/**
+ * @ingroup pkcs12
+ * @brief Allocate a bag struct, which could store a cert or key and its attributes.
+ *
+ * @param bagType          [IN] BagType, BSL_CID_PKCS8SHROUDEDKEYBAG/BSL_CID_CERTBAG
+ * @param bagValue         [IN] bagValue, the bagValue must match the bag-type. Each Bag only holds one piece of
+ *                              information -- a key or a certificate...
+ * @retval HITLS_PKCS12_Bag *
+ */
+HITLS_PKCS12_Bag *HITLS_PKCS12_BagNew(uint32_t bagType, void *bagValue);
+
+/**
+ * @ingroup pkcs12
+ * @brief Release the bag context.
+ *
+ * @param bag    [IN] bag context.
+ * @retval void
+ */
+void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag);
+
+/**
+ * @ingroup pkcs12
+ * @brief Add attributes to a bag.
+ *
+ * @attention A bag can have multiple properties, but each property only contains one value.
+ * @param bag          [IN] bag
+ * @param type         [IN] BSL_CID_LOCALKEYID/BSL_CID_FRIENDLYNAME
+ * @param attrValue    [IN] the attr buffer
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
+ */
+int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_Buffer *attrValue);
+
+/**
+ * @ingroup pkcs12
+ * @brief Generic function to set a p12 context.
+ *
+ * @param p12    [IN] p12 context.
+ * @param cmd    [IN] HITLS_PKCS12_XXX
+ *        cmd                                   val type
+ *        HITLS_PKCS12_SET_LOCALKEYID           none
+ *        HITLS_PKCS12_SET_ENTITY_KEYBAG        a pkey bag
+ *        HITLS_PKCS12_SET_ENTITY_CERTBAG       a cert bag
+ *        HITLS_PKCS12_ADD_CERTBAG              a cert bag
+ *        HITLS_PKCS12_GET_ENTITY_CERT          HITLS_X509_Cert**
+ *        HITLS_PKCS12_GET_ENTITY_KEY           CRYPT_EAL_PkeyCtx**
+ * @param val    [IN/OUT] input and output value
+ * @param valLen [In] value length
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
+ */
+int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t valLen);
+
 /**
  * @ingroup pkcs12
  * @brief pkcs12 parse
@@ -666,10 +759,11 @@ int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
- * @return Error code
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
  */
-int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HTILS_PKCS12_PwdParam *pwdParam,
-    HTILS_PKCS12_P12Info *p12, bool needMacVerify);
+int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
+    HITLS_PKCS12 *p12, bool needMacVerify);
 
 /**
  * @ingroup pkcs12
@@ -684,8 +778,8 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HTILS_P
  * @retval #HITLS_X509_SUCCESS, success.
  *         error codes see the hitls_x509_errno.h
  */
-int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HTILS_PKCS12_PwdParam *pwdParam,
-    HTILS_PKCS12_P12Info *p12, bool needMacVerify);
+int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKCS12_PwdParam *pwdParam,
+    HITLS_PKCS12 *p12, bool needMacVerify);
 
 /**
  * @ingroup pkcs12
@@ -698,9 +792,10 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HTILS_PKC
  * @param encodeParam     [IN] encode data
  * @param isNeedMac       [IN] Identifies whether macData is required.
  * @param encode          [OUT] result.
- * @return Error code
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         error codes see the hitls_x509_errno.h
  */
-int32_t HITLS_PKCS12_GenBuff(int32_t format, HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_EncodeParam *encodeParam,
+int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,
     bool isNeedMac, BSL_Buffer *encode);
 
 /**
@@ -716,7 +811,7 @@ int32_t HITLS_PKCS12_GenBuff(int32_t format, HTILS_PKCS12_P12Info *p12, const HT
  * @retval #HITLS_X509_SUCCESS, success.
  *         error codes see the hitls_x509_errno.h
  */
-int32_t HITLS_PKCS12_GenFile(int32_t format, HTILS_PKCS12_P12Info *p12, const HTILS_PKCS12_EncodeParam *encodeParam,
+int32_t HITLS_PKCS12_GenFile(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,
     bool isNeedMac, const char *path);
 
 #ifdef __cplusplus
