@@ -199,9 +199,9 @@ typedef enum {
     HITLS_PARSE_DH_PUBKEY_ERR,                      /**< Failed to parse the DHE public key. */
     HITLS_PARSE_DH_SIGN_ERR,                        /**< Failed to parse the DHE signature. */
     HITLS_PARSE_UNSUPPORTED_EXTENSION,              /**< Unsupported extended fields. */
-    HTILS_PARSE_EXCESSIVE_MESSAGE_SIZE,             /**< The length of the parsing exceeds the maximum. */
-    HTILS_PARSE_PRE_SHARED_KEY_FAILED,              /**< Failed to parse the PSK extension. */
-    HTILS_PARSE_DUPLICATED_KEY_SHARE,               /**< duplicated key share entry. */
+    HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE,             /**< The length of the parsing exceeds the maximum. */
+    HITLS_PARSE_PRE_SHARED_KEY_FAILED,              /**< Failed to parse the PSK extension. */
+    HITLS_PARSE_DUPLICATED_KEY_SHARE,               /**< duplicated key share entry. */
 
     HITLS_REASS_FAIL_START = 0x02070001,            /**< Reassembly module error code start bit. */
     HITLS_REASS_INVALID_FRAGMENT,                   /**< Receives invalid fragmented messages. */

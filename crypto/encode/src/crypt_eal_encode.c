@@ -2310,16 +2310,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(BSL_Buffer *encode, const uint8_t 
     return ret;
 }
 
-/**
- * @brief 编码PKCS7-EncryptData：只支持编码PBES2 + PBKDF2的Buffer，校验参考CheckEncodeParam
- *
- * @param data [IN] 待加密和编码的明文
- * @param encodeParam [IN] 加密参数
- * @param encode [OUT] 编码数据，内存由本接口分配
- *
- * @return CRYPT_SUCCESS: 编码成功
- * @return other: 编码失败
- */
+/* Encode PKCS7-EncryptData：only support PBES2 + PBKDF2, the param check ref CheckEncodeParam. */
 static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, const CRYPT_EncodeParam *encodeParam,
     BSL_Buffer *encode)
 {
@@ -2368,16 +2359,6 @@ static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, const CRYPT_Enc
     return ret;
 }
 
-/**
- * @brief 编码PKCS7-EncryptData：只支持编码PBES2 + PBKDF2的Buffer，校验参考CheckEncodeParam
- *
- * @param data [IN] 待加密和编码的明文
- * @param encodeParam [IN] 加密参数
- * @param encode [OUT] 编码数据，内存由本接口分配
- *
- * @return CRYPT_SUCCESS: 编码成功
- * @return other: 编码失败
- */
 int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, const void *encodeParam, BSL_Buffer *encode)
 {
     if (data == NULL || encodeParam == NULL || encode == NULL) {

@@ -111,10 +111,10 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_
     }
     uint8_t *output = BSL_SAL_Dump(asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].buff,
             asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len);
-        if (output == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
-        }
+    if (output == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
     digest->data = output;
     digest->dataLen = asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len;
     *cid = parseCid;
