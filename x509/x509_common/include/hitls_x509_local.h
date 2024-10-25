@@ -167,8 +167,6 @@ int32_t HITLS_X509_EncodeExt(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *
 
 int32_t HITLS_X509_ParseExtItem(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *extEntry);
 
-int32_t HITLS_X509_ParseExtItem(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *extEntry);
-
 void HITLS_X509_ExtEntryFree(HITLS_X509_ExtEntry *entry);
 
 int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *list);

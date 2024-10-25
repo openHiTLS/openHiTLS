@@ -177,11 +177,11 @@ static int32_t DtlsParseHsMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t 
 
     uint32_t maxMsgLen = HS_MaxMessageSize(ctx, hsMsgInfo->type);
     if (hsMsgInfo->length > maxMsgLen) {
-        BSL_ERR_PUSH_ERROR(HTILS_PARSE_EXCESSIVE_MESSAGE_SIZE);
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15937, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DTLS handshake msg parsed length: %u, max length: %u.", hsMsgInfo->length, maxMsgLen, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HTILS_PARSE_EXCESSIVE_MESSAGE_SIZE;
+        return HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE;
     }
     hsMsgInfo->headerAndBodyLen = hsMsgInfo->length + DTLS_HS_MSG_HEADER_SIZE;
 
@@ -199,12 +199,12 @@ static int32_t CheckHsMsgLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS
     int32_t ret = HITLS_SUCCESS;
     uint32_t hsMsgOfSpecificTypeMaxSize = HS_MaxMessageSize(ctx, hsMsgInfo->type);
     if (hsMsgInfo->length > hsMsgOfSpecificTypeMaxSize) {
-        BSL_ERR_PUSH_ERROR(HTILS_PARSE_EXCESSIVE_MESSAGE_SIZE);
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15800, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "TLS HS msg type: %d, parsed length: %u, max length: %u.", (int)hsMsgInfo->type, hsMsgInfo->length,
             hsMsgOfSpecificTypeMaxSize, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HTILS_PARSE_EXCESSIVE_MESSAGE_SIZE;
+        return HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE;
     }
     uint32_t hsPlaintextLen = HS_MSG_HEADER_SIZE + hsMsgInfo->length;
     uint32_t expansionLen =
