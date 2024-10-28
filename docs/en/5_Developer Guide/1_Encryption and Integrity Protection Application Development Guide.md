@@ -657,7 +657,7 @@ int32_t CRYPT_EAL_RandSeed(void);
 
 /*The deterministic random bit generator (DRBG) context of the multi-instance random number interfaces is returned to the user. This is the main difference between the two types of interfaces.
  * Multiple DRBG contexts can be created. Different contexts do not interfere with each other during entropy source setting and internal status change.*/
-CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 void CRYPT_EAL_DrbgDeinit(CRYPT_EAL_RndCtx *ctx);
 ```
 

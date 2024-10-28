@@ -341,7 +341,7 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
+CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
 {
     CRYPT_RndParam randParam = {
         .seedMeth = seedMeth,
@@ -539,7 +539,7 @@ bool CRYPT_EAL_RandIsValidAlgId(CRYPT_RAND_AlgId id)
     return (GetDrbgIdMap(id) != NULL);
 }
 
-int32_t CRYPT_EAL_RandCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
+int32_t CRYPT_EAL_DrbgCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
 {
     if (ctx == NULL || ctx->meth == NULL || ctx->meth->ctrl== NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, CRYPT_RAND_ALGID_MAX, CRYPT_NULL_INPUT);

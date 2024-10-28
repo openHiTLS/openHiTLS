@@ -283,7 +283,7 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC005()
     CRYPT_EAL_RndCtx  *ctx = NULL;
 
     STUB_Init();
-    ctx = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, NULL, NULL);
+    ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, NULL, NULL);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(ctx, NULL, 0) == CRYPT_SUCCESS);
     CRYPT_EAL_DrbgDeinit(ctx);
@@ -291,31 +291,31 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC005()
 #if defined(__x86_64__)
 #if defined(HITLS_CRYPT_SHA1_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportAVX, STUB_IsSupportAVX);
-    ctx = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA1, NULL, NULL);
+    ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA1, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA1, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
 #endif
 #if defined(HITLS_CRYPT_SHA2_ASM)
-    ctx = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, NULL, NULL);
+    ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
 #endif
 #if defined(HITLS_CRYPT_AES_ASM)
-    ctx = CRYPT_EAL_DrbgInit(CRYPT_RAND_AES128_CTR, NULL, NULL);
+    ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_AES128_CTR, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
     STUB_Reset(&tmpStubInfo);
 #endif
 #if defined(HITLS_CRYPT_SHA2_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportMOVBE, STUB_IsSupportMOVBE);
-    ctx = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, NULL, NULL);
+    ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
 #endif
 #elif defined(__aarch64__)
 #if defined(HITLS_CRYPT_AES_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportAES, STUB_IsSupportAES);
-    ctx = CRYPT_EAL_DrbgInit(CRYPT_RAND_AES128_CTR, NULL, NULL);
+    ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_AES128_CTR, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
     STUB_Reset(&tmpStubInfo);

@@ -144,7 +144,7 @@ int32_t CRYPT_EAL_RandSeed(void);
 typedef struct EAL_RndCtx CRYPT_EAL_RndCtx;
 
 /**
- * @ingroup CRYPT_EAL_DrbgInit
+ * @ingroup CRYPT_EAL_DrbgNew
  * @brief Random number initialization interface, and this interface does not support multiple threads.
  *
  *      Initial DRBG with HiTLS, entropy source and addtional random number in the seed material
@@ -168,7 +168,7 @@ typedef struct EAL_RndCtx CRYPT_EAL_RndCtx;
  * @retval  DRBG handle, if successful.
  *          NULL, if failed.
  */
-CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 
 /**
  * @ingroup crypt_eal_rand
@@ -285,7 +285,7 @@ int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *ctx, const uint8_t *pers, ui
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_RandCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
+int32_t CRYPT_EAL_DrbgCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 #ifdef __cplusplus
 }
