@@ -151,6 +151,7 @@ typedef void *(*BSL_LIST_PFUNC_DUP)(const void *);
         BSL_LIST_DeleteAll((pList), pFreeFunc); \
         if (NULL != (pList)) {             \
             BSL_SAL_Free(pList);                  \
+            (pList) = NULL;                       \
         }                                      \
     } while (0)
 
