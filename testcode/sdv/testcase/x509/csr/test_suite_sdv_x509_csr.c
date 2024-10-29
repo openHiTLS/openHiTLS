@@ -881,3 +881,15 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(privKey);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CSR_PARSE_FUNC_TC004(int format, char *path, int expectedRet)
+{
+    TestMemInit();
+    HITLS_X509_Csr *csr = NULL;
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), expectedRet);
+
+exit:
+    HITLS_X509_CsrFree(csr);
+}
+/* END_CASE */
