@@ -591,3 +591,36 @@ exit:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+    HITLS_X509_Cert *entity = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/cert.der", store, &entity);
+    ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
+    HITLS_X509_Cert *ca = NULL;
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/ca.der", store, &ca);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_CertChainBuildWithRoot(store, entity, &chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    HITLS_X509_Cert *root = NULL;
+    ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/rootca.der", store, &root);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    ret = HITLS_X509_CertChainBuildWithRoot(store, entity, &chain);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 3);
+
+exit:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
