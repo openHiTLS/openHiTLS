@@ -284,36 +284,32 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL // copyPara
     ), // CRYPT_PKEY_SM2
 #endif
-// #ifdef HITLS_CRYPTO_PAILLIER
-//     EAL_PKEY_METHOD_DEFINE(
-//         CRYPT_PKEY_PAILLIER,
-//         CRYPT_PAILLIER_NewCtx,
-//         CRYPT_PAILLIER_DupCtx,
-//         CRYPT_PAILLIER_FreeCtx,
-//         CRYPT_PAILLIER_SetPara,
-//         NULL,
-//         CRYPT_PAILLIER_Gen,
-//         CRYPT_PAILLIER_GetBits,
-//         NULL,
-//         NULL,  // ctrl,
-//         NULL,
-//         NULL,
-//         CRYPT_PAILLIER_FreePara,
-//         CRYPT_PAILLIER_NewPara,
-//         CRYPT_PAILLIER_SetPubKey,
-//         CRYPT_PAILLIER_SetPrvKey,
-//         CRYPT_PAILLIER_GetPubKey,
-//         CRYPT_PAILLIER_GetPrvKey,
-//         NULL,
-//         NULL,
-//         NULL,
-//         CRYPT_PAILLIER_Encrypt,
-//         CRYPT_PAILLIER_Decrypt,
-//         NULL,
-//         NULL,  // cmp
-//         CRYPT_PAILLIER_GetSecBits
-//     ), // CRYPT_PKEY_PAILLIER
-// #endif
+#ifdef HITLS_CRYPTO_PAILLIER
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_PAILLIER,
+        CRYPT_PAILLIER_NewCtx,
+        CRYPT_PAILLIER_DupCtx,
+        CRYPT_PAILLIER_FreeCtx,
+        CRYPT_PAILLIER_SetPara,
+        NULL,
+        CRYPT_PAILLIER_Gen,
+        CRYPT_PAILLIER_Ctrl,
+        CRYPT_PAILLIER_SetPubKey,
+        CRYPT_PAILLIER_SetPrvKey,
+        CRYPT_PAILLIER_GetPubKey,
+        CRYPT_PAILLIER_GetPrvKey,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        CRYPT_PAILLIER_Encrypt,
+        CRYPT_PAILLIER_Decrypt,
+        NULL,
+        NULL,  // cmp
+        NULL // copyPara
+    ), // CRYPT_PKEY_PAILLIER
+#endif
 };
 
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id)

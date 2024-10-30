@@ -35,6 +35,11 @@
 #include "crypt_encode.h"
 /* END_HEADER */
 
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
+#define CRYPT_EAL_PKEY_CIPHER_OPERATE  1
+#define CRYPT_EAL_PKEY_EXCH_OPERATE    2
+#define CRYPT_EAL_PKEY_SIGN_OPERATE    4
+
 void *malloc_fail(uint32_t size)
 {
     (void)size;
@@ -81,150 +86,7 @@ int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
 }
 
 /**
- * @test   SDV_CRYPTO_PAILLIER_NEW_API_TC001
- * @title  PAILLIER CRYPT_EAL_PkeyNewCtx test.
- * @precon nan
- * @brief
- *    1. Call the CRYPT_EAL_PkeyNewCtx method to create ctx, algId is CRYPT_PKEY_PAILLIER, expected result 1.
- *    2. Release the ctx.
- *    3. Repeat steps 1 to 2 for 100 times.
- * @expect
- *    1. The returned result is not empty.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_NEW_API_TC001(void)
-{
-    TestMemInit();
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-
-    /* Run 100 times */
-    for (int i = 0; i < 100; i++) {
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-        ASSERT_TRUE(pkey != NULL);
-
-        CRYPT_EAL_PkeyFreeCtx(pkey);
-    }
-exit:
-    return;
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_NEW_API_TC002
- * @title  PAILLIER CRYPT_EAL_PkeyNewCtx test: Malloc failed.
- * @precon Mock BSL_SAL_Malloc to malloc_fail.
- * @brief
- *    1. Call the CRYPT_EAL_PkeyNewCtx method to create ctx, algId is CRYPT_PKEY_PAILLIER, expected result 1.
- *    2. Release the ctx.
- *    3. Reset the BSL_SAL_Malloc.
- * @expect
- *    1. Failed to create the ctx.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_NEW_API_TC002(void)
-{
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-    FuncStubInfo tmpRpInfo = {0};
-
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, malloc_fail) == 0);
-
-    TestMemInit();
-
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey == NULL);
-
-exit:
-    STUB_Reset(&tmpRpInfo);
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_SET_PARA_API_TC001
- * @title  PAILLIER CRYPT_EAL_PkeySetPara test.
- * @precon Create the context of the paillier algorithm.
- * 
- * @brief
- *   1. Call the CRYPT_EAL_PkeySetPara method:
- *     (1) para = NULL, expected result 1.
- *     (2) pLen != BN_BITS_TO_BYTES(bits), expected result 2.
- *     (3) qLen != BN_BITS_TO_BYTES(bits), expected result 2.
- *     (4) p = NULL, q = NULL, bits = 0, expected result 2.
- *     (4) pLen = BN_BITS_TO_BYTES(bits) qLen = BN_BITS_TO_BYTES(bits), bits != 0, expected result 3.
- * @expect
- *    1. CRYPT_NULL_INPUT
- *    2. CRYPT_EAL_ERR_NEW_PARA_FAIL
- *    3. CRYPT_SUCCESS 
-*/
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PARA_API_TC001(Hex *p, Hex *q, int bits)
-{
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-    CRYPT_EAL_PkeyPara para = {0};
-
-    SetPaillierPara(&para, p, q, bits);
-
-    TestMemInit();
-
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, NULL), CRYPT_NULL_INPUT);
-
-    uint32_t bytes = BN_BITS_TO_BYTES(bits);
-    if (p->len != bytes)
-    {
-        ASSERT_TRUE_AND_LOG("pLen != BN_BITS_TO_BYTES(bits)", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_MEM_ALLOC_FAIL);
-    }
-    if (q->len != bytes)
-    {
-        ASSERT_TRUE_AND_LOG("qLen != BN_BITS_TO_BYTES(bits)", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_MEM_ALLOC_FAIL);
-    }
-    if (p->len == bytes && q->len == bytes && bits == 0)
-    {
-        ASSERT_TRUE_AND_LOG("p = NULL, q = NULL, bits = 0", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_MEM_ALLOC_FAIL);
-    }
-    if (p->len == bytes && q->len == bytes && bits != 0)
-    {
-        ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
-    }
-    
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_GEN_API_TC001
- * @title  PAILLIER CRYPT_EAL_PkeyGen: No regist rand.
- * @precon Create the contexts of the paillier algorithm and set para.
- * @brief
- *    1. Call the CRYPT_EAL_PkeyGen method to generate a key pair, expected result 1.
- * @expect
- *    1. Failed to generate a key pair, the return value is CRYPT_NO_REGIST_RAND.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GEN_API_TC001(Hex *p, Hex *q, int bits)
-{
-    CRYPT_EAL_PkeyPara para = {0};
-    SetPaillierPara(&para, p, q, bits);
-
-    TestMemInit();
-
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey != NULL);
-
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
-
-    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_NO_REGIST_RAND);
-
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_GET_PUB_API_TC001
+ * @test   SDV_CRYPTO_PAILLIER_GET_PUB_PROVIDER_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyGetPub test.
  * @precon 1. Create the context of the paillier algorithm.
  *         2. Initialize the DRBG.
@@ -244,7 +106,7 @@ exit:
  *    3. CRYPT_BN_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GET_PUB_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_GET_PUB_PROVIDER_API_TC001(Hex *p, Hex *q, int bits)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPara para = {0};
@@ -259,7 +121,7 @@ void SDV_CRYPTO_PAILLIER_GET_PUB_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing public key */
@@ -297,7 +159,7 @@ exit:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001
+ * @test   SDV_CRYPTO_PAILLIER_GET_PRV_PROVIDER_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyGetPrv: Bad private key.
  * @precon 1. Create the context of the paillier algorithm.
  *         2. Initialize the DRBG.
@@ -318,7 +180,7 @@ exit:
  *    3. CRYPT_BN_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_GET_PRV_PROVIDER_API_TC001(Hex *p, Hex *q, int bits)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPrv prvKey = {0};
@@ -333,7 +195,7 @@ void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing private key */
@@ -375,7 +237,7 @@ exit:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_PAILLIER_SET_PRV_API_TC001
+ * @test   SDV_CRYPTO_PAILLIER_SET_PRV_PROVIDER_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeySetPrv: Bad private key.
  * @precon Create the contexts of the paillier algorithm and set para:
  *         pkey1: Generate a key pair.
@@ -396,7 +258,7 @@ exit:
  *    2. CRYPT_PAILLIER_ERR_INPUT_VALUE
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PRV_PROVIDER_API_TC001(Hex *p, Hex *q, int bits)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
@@ -413,7 +275,8 @@ void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    ASSERT_TRUE(pkey != NULL);
     pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
 
@@ -483,65 +346,7 @@ exit:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_PAILLIER_SET_PRV_API_TC002
- * @title  PAILLIER CRYPT_EAL_PkeySetPrv: Specification test.
- * @precon Create the contexts of the paillier algorithm and set para:
- *         pkey1: Generate a key pair.
- *         pkey2: set the private key.
- * @brief
- *    1. Call the CRYPT_EAL_PkeySetPrv method:
- *       (1) n2 is not equal to n^2, expected result 1.
- *       (2) n2 is equal to n^2, expceted result 2.
- * @expect
- *    1. CRYPT_PAILLIER_ERR_INPUT_VALUE
- *    2. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int bits)
-{
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-    CRYPT_EAL_PkeyCtx *pkey2 = NULL;
-    CRYPT_EAL_PkeyPara para = {0};
-    CRYPT_EAL_PkeyPrv prvKey = {0};
-    uint8_t prvMu[256];
-    uint8_t prvLambda[256];
-
-    SetPaillierPrvKey(&prvKey, prvLambda, 256, prvMu, 256);
-    SetPaillierPara(&para, p, q, bits);
-
-    TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
-    
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey2, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
-
-    prvKey.key.paillierPrv.n = n->x;
-    prvKey.key.paillierPrv.nLen = n->len;
-
-    prvKey.key.paillierPrv.n2 = n->x;
-    prvKey.key.paillierPrv.n2Len = n->len;
-
-    ASSERT_TRUE_AND_LOG("n2 is not equal to n^2", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_PAILLIER_ERR_INPUT_VALUE);
-
-    prvKey.key.paillierPrv.n2 = n2->x;
-    prvKey.key.paillierPrv.n2Len = n2->len;
-    ASSERT_TRUE_AND_LOG("set success", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_SUCCESS);
-
-exit:
-    CRYPT_EAL_RandDeinit();
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_EAL_PkeyFreeCtx(pkey2);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001
+ * @test   SDV_CRYPTO_PAILLIER_SET_PUB_PROVIDER_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyGetPub: Bad public key.
  * @precon Create the contexts of the paillier algorithm and set para:
  *         pkey1: Generate a key pair.
@@ -557,7 +362,7 @@ exit:
  *    1. CRYPT_NULL_INPUT
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PUB_PROVIDER_API_TC001(Hex *p, Hex *q, int bits)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
@@ -572,9 +377,10 @@ void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    ASSERT_TRUE(pkey != NULL);
+    pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    ASSERT_TRUE(pkey2 != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey2, &para) == CRYPT_SUCCESS);
@@ -616,58 +422,7 @@ exit:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_PAILLIER_SET_PUB_API_TC002
- * @title  PAILLIER CRYPT_EAL_PkeyGetPub: Bad public key.
- * @precon Create the contexts of the paillier algorithm and set para:
- *         pkey1: Generate a key pair.
- *         pkey2: Set the public key.
- * @brief
- *    1. Call the CRYPT_EAL_PkeyGetPub method:
- *       (1) n2 is not equal to n^2, expected result 1.
- *       (2) n2 is equal to n^2, expceted result 2.
- * @expect
- *    1. CRYPT_PAILLIER_ERR_INPUT_VALUE
- *    2. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int bits)
-{
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-    CRYPT_EAL_PkeyCtx *pkey2 = NULL;
-    CRYPT_EAL_PkeyPara para = {0};
-    CRYPT_EAL_PkeyPub pubKey;
-    uint8_t pubG[128];
-    SetPaillierPara(&para, p, q, bits);
-    SetPaillierPubKey(&pubKey, pubG, 128, n->x, n->len, n2->x, n2->len);
-
-    TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
-
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey2, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
-    
-    pubKey.key.paillierPub.n2 = n->x;
-    pubKey.key.paillierPub.n2Len = n->len;
-    ASSERT_TRUE_AND_LOG("n2 is not equal to n^2", CRYPT_EAL_PkeySetPub(pkey2, &pubKey) == CRYPT_PAILLIER_ERR_INPUT_VALUE);
-
-    pubKey.key.paillierPub.n2 = n2->x;
-    pubKey.key.paillierPub.n2Len = n2->len;
-    ASSERT_TRUE_AND_LOG("set success", CRYPT_EAL_PkeySetPub(pkey2, &pubKey) == CRYPT_SUCCESS);
-
-exit:
-    CRYPT_EAL_RandDeinit();
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_EAL_PkeyFreeCtx(pkey2);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_ENC_API_TC001
+ * @test   SDV_CRYPTO_PAILLIER_ENC_PROVIDER_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyEncrypt: Test the validity of input parameters.
  * @precon Create the context of the paillier algorithm:
  * @brief
@@ -689,7 +444,7 @@ exit:
  *    5. CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_ENC_API_TC001(Hex *n, Hex *g, Hex *n2, Hex *in)
+void SDV_CRYPTO_PAILLIER_ENC_PROVIDER_API_TC001(Hex *n, Hex *g, Hex *n2, Hex *in)
 {
     uint8_t crypt[512];
     uint32_t cryptLen = 512;
@@ -700,7 +455,7 @@ void SDV_CRYPTO_PAILLIER_ENC_API_TC001(Hex *n, Hex *g, Hex *n2, Hex *in)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, in->x, in->len, crypt, &cryptLen), CRYPT_PAILLIER_NO_KEY_INFO);
@@ -725,7 +480,7 @@ exit:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_PAILLIER_DEC_API_TC001
+ * @test   SDV_CRYPTO_PAILLIER_DEC_PROVIDER_API_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyDecrypt: Test the validity of input parameters.
  * @precon Create the context of the paillier algorithm:
  * @brief
@@ -748,7 +503,7 @@ exit:
  *    5. CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_DEC_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *n2, Hex *in)
+void SDV_CRYPTO_PAILLIER_DEC_PROVIDER_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *n2, Hex *in)
 {
     uint8_t crypt[256];
     uint32_t cryptLen = 256;
@@ -763,7 +518,7 @@ void SDV_CRYPTO_PAILLIER_DEC_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *n2, He
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_PAILLIER_NO_KEY_INFO);
@@ -787,175 +542,8 @@ exit:
 }
 /* END_CASE */
 
-int Compare_PubKey(CRYPT_EAL_PkeyPub *pubKey1, CRYPT_EAL_PkeyPub *pubKey2)
-{
-    if (pubKey1->key.paillierPub.nLen != pubKey2->key.paillierPub.nLen || pubKey1->key.paillierPub.gLen != pubKey2->key.paillierPub.gLen) {
-        return -1;  // -1 indicates failure
-    }
-    if (memcmp(pubKey1->key.paillierPub.n, pubKey2->key.paillierPub.n, pubKey1->key.paillierPub.nLen) != 0 ||
-        memcmp(pubKey1->key.paillierPub.g, pubKey2->key.paillierPub.g, pubKey1->key.paillierPub.gLen) != 0) {
-        return -1;  // -1 indicates failure
-    }
-    return 0;
-}
-
-int Compare_PrvKey(CRYPT_EAL_PkeyPrv *prvKey1, CRYPT_EAL_PkeyPrv *prvKey2)
-{
-    if (prvKey1->key.paillierPrv.nLen != prvKey2->key.paillierPrv.nLen || prvKey1->key.paillierPrv.muLen != prvKey2->key.paillierPrv.muLen ||
-        prvKey1->key.paillierPrv.lambdaLen != prvKey2->key.paillierPrv.lambdaLen) {
-        return -1;  // -1 indicates failure
-    }
-    if (memcmp(prvKey1->key.paillierPrv.lambda, prvKey2->key.paillierPrv.lambda, prvKey1->key.paillierPrv.lambdaLen) != 0 ||
-        memcmp(prvKey1->key.paillierPrv.mu, prvKey2->key.paillierPrv.mu, prvKey1->key.paillierPrv.muLen) != 0 ||
-        memcmp(prvKey1->key.paillierPrv.n, prvKey2->key.paillierPrv.n, prvKey1->key.paillierPrv.nLen) != 0) {
-        return -1;  // -1 indicates failure
-    }
-    return 0;
-}
-
 /**
- * @test   SDV_CRYPTO_PAILLIER_SET_KEY_API_TC001
- * @title  PAILLIER Set the public key and private key multiple times.
- * @precon Create the contexts of the paillier algorithm and:
- *         pkey1: Set paran and generate a key pair: test obtaining the key.
- *         pkey2: Test set keys, and verify that the public and private keys can exist at the same time.
- * @brief
- *    1. pkey1: Get public key and get private key, expected result 1
- *    2. pkey2:
- *       (1) Set public key and set private key, expected result 1
- *       (2) Get public key, get private key and check private key, expected result 2
- *       (3) Set private key and set public key, expected result 3
- *       (4) Get private key, get public key and check public key, expected result 4
- * @expect
- *    1. CRYPT_SUCCESS
- *    2. The obtained private key is equal to the set private key.
- *    3. CRYPT_SUCCESS
- *    4. The obtained public key is equal to the set public key.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_KEY_API_TC001(Hex *p, Hex *q, int bits)
-{
-    uint8_t pubN[600];
-    uint8_t pubG[600];
-    uint8_t pubN2[600];
-    uint8_t prvN[600];
-    uint8_t prvLambda[600];
-    uint8_t prvMu[600];
-    uint8_t prvN2[600];
-    CRYPT_EAL_PkeyPara para = {0};
-    CRYPT_EAL_PkeyPub pubKey = {0};
-    CRYPT_EAL_PkeyPrv prvKey = {0};
-
-    SetPaillierPara(&para, p, q, bits);
-    SetPaillierPubKey(&pubKey, pubG, 600, pubN, 600, pubN2, 600);
-    SetPaillierPrvKey(&prvKey, prvLambda, 600, prvMu, 600);
-    prvKey.key.paillierPrv.n = prvN;
-    prvKey.key.paillierPrv.nLen = 600;
-    prvKey.key.paillierPrv.n2 = prvN2;
-    prvKey.key.paillierPrv.n2Len = 600;
-
-    TestMemInit();
-    CRYPT_RandRegist(RandFunc);
-
-    CRYPT_EAL_PkeyCtx *pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    CRYPT_EAL_PkeyCtx *pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
-
-    /* pkey1 */
-    /* Generate a key pair. */
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey1, &para) == CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey1), CRYPT_SUCCESS);
-
-    /* Get keys. */
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey1, &pubKey), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey1, &prvKey), CRYPT_SUCCESS);
-
-    /* pkey2 */
-    /* Set public key and set private key. */
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey2, &pubKey), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey2, &prvKey), CRYPT_SUCCESS);
-
-    /* Get public key, get private key and check private key.*/
-    SetPaillierPubKey(&pubKey, pubG, 600, pubN, 600, pubN2, 600);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey2, &pubKey), CRYPT_SUCCESS);
-    SetPaillierPrvKey(&prvKey, prvLambda, 600, prvMu, 600);
-    prvKey.key.paillierPrv.n = prvN;
-    prvKey.key.paillierPrv.nLen = 600;
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey), CRYPT_SUCCESS);
-    ASSERT_EQ(Compare_PrvKey(&prvKey, &prvKey), 0);
-
-    /* Set private key and set public key. */
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey2, &pubKey), CRYPT_SUCCESS);
-    /* Get private key, get public key and check public key.*/
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey), CRYPT_SUCCESS);
-    SetPaillierPubKey(&pubKey, pubG, 600, pubN, 600, pubN2, 600);
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey2, &pubKey), CRYPT_SUCCESS);
-    ASSERT_EQ(Compare_PubKey(&pubKey, &pubKey), 0);
-
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey1);
-    CRYPT_EAL_PkeyFreeCtx(pkey2);
-    CRYPT_EAL_RandDeinit();
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_DUP_CTX_API_TC001
- * @title  PAILLIER CRYPT_EAL_PkeyDupCtx test.
- * @precon Create the contexts of the paillier algorithm, set para and generate a key pair.
- * @brief
- *    1. Call the CRYPT_EAL_PkeyDupCtx mehod to dup paillier, expected result 1
- * @expect
- *    1. Success.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_DUP_CTX_API_TC001(Hex *p, Hex *q, int bits)
-{
-    CRYPT_EAL_PkeyPara para = {0};
-    CRYPT_EAL_PkeyCtx *newPkey = NULL;
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-    SetPaillierPara(&para, p, q, bits);
-
-    TestMemInit();
-    CRYPT_RandRegist(RandFunc);
-
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    ASSERT_TRUE(pkey != NULL);
-
-    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), 0);
-
-    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-    CRYPT_PAILLIER_Ctx *paillierCtx = (CRYPT_PAILLIER_Ctx *)pkey->key;
-    ASSERT_TRUE(paillierCtx != NULL);
-
-    newPkey = CRYPT_EAL_PkeyDupCtx(pkey);
-    ASSERT_TRUE(newPkey != NULL);
-    ASSERT_EQ(newPkey->references.count, 1);
-    CRYPT_PAILLIER_Ctx *paillierCtx2 = (CRYPT_PAILLIER_Ctx *)newPkey->key;
-    ASSERT_TRUE(paillierCtx2 != NULL);
-
-    ASSERT_COMPARE("paillier compare lambda",
-        paillierCtx->prvKey->lambda->data,
-        paillierCtx->prvKey->lambda->size * sizeof(BN_UINT),
-        paillierCtx2->prvKey->lambda->data,
-        paillierCtx2->prvKey->lambda->size * sizeof(BN_UINT));
-
-    ASSERT_COMPARE("paillier compare mu",
-        paillierCtx->prvKey->mu->data,
-        paillierCtx->prvKey->mu->size * sizeof(BN_UINT),
-        paillierCtx2->prvKey->mu->data,
-        paillierCtx2->prvKey->mu->size * sizeof(BN_UINT));
-
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_EAL_PkeyFreeCtx(newPkey);
-    CRYPT_EAL_RandDeinit();
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001
+ * @test   SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_PROVIDER_FUNC_TC001
  * @title  PAILLIER CRYPT_EAL_PkeyGetSecurityBits test.
  * @precon nan
  * @brief
@@ -968,7 +556,7 @@ exit:
  *    3. The return value is not 0.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *g, Hex *n2, int securityBits)
+void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_PROVIDER_FUNC_TC001(Hex *n, Hex *g, Hex *n2, int securityBits)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPub pubkey = {0};
@@ -976,7 +564,7 @@ void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *g, Hex *n2, i
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubkey), CRYPT_SUCCESS);
 

@@ -75,8 +75,9 @@ if(ENABLE_TLS)
 endif()
 
 if(ENABLE_CRYPTO OR ENABLE_TLS)
-    target_link_libraries(${sdv_exe} "-Wl,--whole-archive" hitls_crypto "Wl,--no-whole-archive")
-
+    target_link_libraries(${sdv_exe}
+        -lhitls_crypto
+    )
 endif()
 
 target_link_libraries(${sdv_exe}

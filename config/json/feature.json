@@ -451,7 +451,8 @@
                     "crypto/sm2/include",
                     "crypto/bn/include",
                     "crypto/ecc/include",
-                    "crypto/hmac/include"
+                    "crypto/hmac/include",
+                    "crypto/paillier/include"
                 ]
             },
             "bn": {
@@ -541,7 +542,8 @@
             "paillier": {
                 ".features": ["paillier"],
                 ".srcs": "crypto/paillier/src/*.c",
-                ".deps": ["crypto::bn"]
+                ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
             }
         },
         "bsl":{

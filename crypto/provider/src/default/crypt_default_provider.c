@@ -60,12 +60,14 @@ static const CRYPT_EAL_AlgInfo defKeyMgmt[] = {
     {CRYPT_PKEY_ECDSA, defKeyMgmtEcdsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_ECDH, defKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, defKeyMgmtSm2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_PAILLIER, defKeyMgmtPaillier, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
 static const CRYPT_EAL_AlgInfo defAsymCiphers[] = {
     {CRYPT_PKEY_RSA, defAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, defAsymCipherSm2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_PAILLIER, defAsymCipherPaillier, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
