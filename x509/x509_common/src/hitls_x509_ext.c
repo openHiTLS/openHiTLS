@@ -256,6 +256,7 @@ static int32_t ParseDirName(uint8_t **encode, uint32_t *encLen, BslList **list)
         *encLen -= valueLen;
     } else {
         BSL_LIST_DeleteAll(*list, NULL);
+        BSL_SAL_Free(*list);
         *list = NULL;
     }
     return ret;
