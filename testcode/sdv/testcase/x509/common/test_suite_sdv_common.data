@@ -49,6 +49,9 @@ SDV_HITLS_X509_VerifyCert_TC001
 SDV_HITLS_X509_BuildCertChain_TC001
 SDV_HITLS_X509_BuildCertChain_TC001
 
+SDV_HITLS_X509_BuildCertChainWithRoot_TC001
+SDV_HITLS_X509_BuildCertChainWithRoot_TC001
+
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem rsa pss private key: default
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/keypem/rsa_pss.key"
 
