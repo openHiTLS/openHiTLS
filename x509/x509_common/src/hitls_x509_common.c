@@ -402,7 +402,7 @@ int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseUnkonw(BSL_Buffer *encode, bool isCopy, bool isCert, X509_ParseFuncCbk *parsefun,
+int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCopy, bool isCert, X509_ParseFuncCbk *parsefun,
     HITLS_X509_List *list)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
@@ -425,7 +425,7 @@ int32_t HITLS_X509_ParseX509(int32_t format, BSL_Buffer *encode, bool isCert, X5
             ret = HITLS_X509_ParsePem(encode, isCert, parsefun, list);
             break;
         case BSL_FORMAT_UNKNOWN:
-            ret = HITLS_X509_ParseUnkonw(encode, true, isCert, parsefun, list);
+            ret = HITLS_X509_ParseUnknown(encode, true, isCert, parsefun, list);
             break;
         default:
             ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
