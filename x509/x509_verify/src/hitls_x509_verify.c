@@ -509,6 +509,38 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert
     return HITLS_X509_SUCCESS;
 }
 
+int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_List **chain)
+{
+    if (storeCtx == NULL || cert == NULL || chain == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
+        return HITLS_INVALID_INPUT;
+    }
+    HITLS_X509_List *tmpChain = X509_NewCertChain(cert);
+    if (tmpChain == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    HITLS_X509_Cert *root = NULL;
+    int32_t ret = X509_BuildChain(storeCtx, NULL, cert, tmpChain, &root);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        return ret;
+    }
+    if (root == NULL) {
+        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        return HITLS_X509_ERR_ROOT_CERT_NOT_FOUND;
+    }
+    if (X509_CertCmp(cert, root) != 0) {
+        ret = X509_AddCertToChain(tmpChain, root);
+        if (ret != HITLS_X509_SUCCESS) {
+            BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+            return ret;
+        }
+    }
+    *chain = tmpChain;
+    return HITLS_X509_SUCCESS;
+}
+
 static int32_t HITLS_X509_SecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert)
 {
     uint32_t secBits = CRYPT_EAL_PkeyGetSecurityBits(cert->tbs.ealPubKey);
