@@ -545,8 +545,8 @@ static int32_t X509_CrlCheckValid(HITLS_X509_Crl *crl)
 {
     if (crl->tbs.crlExt.extList != NULL && BSL_LIST_COUNT(crl->tbs.crlExt.extList) != 0) {
         if (crl->tbs.version != 1) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCRACY_VERSION);
-            return HITLS_X509_ERR_CRL_INACCRACY_VERSION;
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+            return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
         }
     }
 

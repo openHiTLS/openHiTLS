@@ -1091,16 +1091,16 @@ static int32_t EAL_GetPemPriKeySymbol(int32_t type, BSL_PEM_Symbol *symbol)
 {
     switch (type) {
         case CRYPT_PRIKEY_ECC:
-            symbol->head = BSL_PEM_EC_PIR_KEY_BEGIN_STR;
-            symbol->tail = BSL_PEM_EC_PIR_KEY_END_STR;
+            symbol->head = BSL_PEM_EC_PRI_KEY_BEGIN_STR;
+            symbol->tail = BSL_PEM_EC_PRI_KEY_END_STR;
             return CRYPT_SUCCESS;
         case CRYPT_PRIKEY_RSA:
-            symbol->head = BSL_PEM_RSA_PIR_KEY_BEGIN_STR;
-            symbol->tail = BSL_PEM_RSA_PIR_KEY_END_STR;
+            symbol->head = BSL_PEM_RSA_PRI_KEY_BEGIN_STR;
+            symbol->tail = BSL_PEM_RSA_PRI_KEY_END_STR;
             return CRYPT_SUCCESS;
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
-            symbol->head = BSL_PEM_PIR_KEY_BEGIN_STR;
-            symbol->tail = BSL_PEM_PIR_KEY_END_STR;
+            symbol->head = BSL_PEM_PRI_KEY_BEGIN_STR;
+            symbol->tail = BSL_PEM_PRI_KEY_END_STR;
             return CRYPT_SUCCESS;
         case CRYPT_PRIKEY_PKCS8_ENCRYPT:
             symbol->head = BSL_PEM_P8_PRI_KEY_BEGIN_STR;
@@ -1136,7 +1136,7 @@ int32_t CRYPT_EAL_ParsePemPriKey(int32_t type, BSL_Buffer *encode, const uint8_t
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_ParseUnkownPriKey(int32_t type, BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
+int32_t CRYPT_EAL_ParseUnknownPriKey(int32_t type, BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
     CRYPT_EAL_PkeyCtx **ealPriKey)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
@@ -1161,7 +1161,7 @@ int32_t CRYPT_EAL_PriKeyParseBuff(BSL_ParseFormat format, int32_t type, BSL_Buff
         case BSL_FORMAT_PEM:
             return CRYPT_EAL_ParsePemPriKey(type, encode, pwd, pwdlen, ealPriKey);
         case BSL_FORMAT_UNKNOWN:
-            return CRYPT_EAL_ParseUnkownPriKey(type, encode, pwd, pwdlen, ealPriKey);
+            return CRYPT_EAL_ParseUnknownPriKey(type, encode, pwd, pwdlen, ealPriKey);
         default:
             return CRYPT_DECODE_NO_SUPPORT_FORMAT;
     }
