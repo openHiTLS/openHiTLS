@@ -123,7 +123,7 @@ typedef enum {
     HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0800,
     HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
 
-    HITLS_PKCS12_SET_LOCALKEYID = 0x0900,       /** Set localKeyId in p12-ctx. */
+    HITLS_PKCS12_GEN_LOCALKEYID = 0x0900,       /** Gen and set localKeyId in p12-ctx. */
     HITLS_PKCS12_SET_ENTITY_KEYBAG,             /** Set entity key-Bag to p12-ctx. */
     HITLS_PKCS12_SET_ENTITY_CERTBAG,            /** Set entity cert-Bag to p12-ctx. */
     HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
@@ -735,7 +735,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
  * @param p12    [IN] p12 context.
  * @param cmd    [IN] HITLS_PKCS12_XXX
  *        cmd                                   val type
- *        HITLS_PKCS12_SET_LOCALKEYID           none
+ *        HITLS_PKCS12_GEN_LOCALKEYID           none
  *        HITLS_PKCS12_SET_ENTITY_KEYBAG        a pkey bag
  *        HITLS_PKCS12_SET_ENTITY_CERTBAG       a cert bag
  *        HITLS_PKCS12_ADD_CERTBAG              a cert bag
@@ -763,7 +763,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
  *         error codes see the hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
-    HITLS_PKCS12 *p12, bool needMacVerify);
+    HITLS_PKCS12 **p12, bool needMacVerify);
 
 /**
  * @ingroup pkcs12
@@ -779,7 +779,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_P
  *         error codes see the hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKCS12_PwdParam *pwdParam,
-    HITLS_PKCS12 *p12, bool needMacVerify);
+    HITLS_PKCS12 **p12, bool needMacVerify);
 
 /**
  * @ingroup pkcs12
