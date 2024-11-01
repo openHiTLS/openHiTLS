@@ -807,25 +807,42 @@ static int32_t ParseAsn1PKCS12(BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *
 }
 
 int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
-    HITLS_PKCS12 *p12, bool needMacVerify)
+    HITLS_PKCS12 **p12, bool needMacVerify)
 {
     if (encode == NULL || pwdParam == NULL || pwdParam->encPwd == NULL || pwdParam->encPwd->data == NULL
         || p12 == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
-
+    if (*p12 != NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
+        return HITLS_PKCS12_ERR_INVALID_PARAM;
+    }
+    int32_t ret;
+    HITLS_PKCS12 *temP12 = HITLS_PKCS12_New();
+    if (temP12 == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
     switch (format) {
         case BSL_FORMAT_ASN1:
-            return ParseAsn1PKCS12(encode, pwdParam, p12, needMacVerify);
+            ret = ParseAsn1PKCS12(encode, pwdParam, temP12, needMacVerify);
+            break;
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT);
-            return HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT;
+            ret = HITLS_PKCS12_ERR_NOT_SUPPORT_FORMAT;
+            break;
     }
+    if (ret != HITLS_X509_SUCCESS) {
+        HITLS_PKCS12_Free(temP12);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *p12 = temP12;
+    return HITLS_X509_SUCCESS;
 }
 
 int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKCS12_PwdParam *pwdParam,
-    HITLS_PKCS12 *p12, bool needMacVerify)
+    HITLS_PKCS12 **p12, bool needMacVerify)
 {
     if (path == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
@@ -1548,8 +1565,8 @@ static void *AttrCopy(const void *val)
     }
     output->attrValue->data = BSL_SAL_Dump(input->attrValue->data, input->attrValue->dataLen);
     if (output->attrValue->data == NULL) {
-        BSL_SAL_Free(output);
         BSL_SAL_Free(output->attrValue);
+        BSL_SAL_Free(output);
         return NULL;
     }
     output->attrValue->dataLen = input->attrValue->dataLen;
@@ -1609,8 +1626,8 @@ static int32_t PKCS12_SetEntityKey(HITLS_PKCS12 *p12, void *val)
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
     if (p12->key != NULL) {
-        HITLS_PKCS12_BagFree(p12->key);
-        p12->key = NULL;
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_ERR_REPEATED_SET_KEY);
+        return HITLS_PKCS12_ERR_ERR_REPEATED_SET_KEY;
     }
 
     HITLS_PKCS12_Bag *input = (HITLS_PKCS12_Bag *)val;
@@ -1637,8 +1654,8 @@ static int32_t PKCS12_SetEntityCert(HITLS_PKCS12 *p12, void *val)
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
     if (p12->entityCert != NULL) {
-        HITLS_PKCS12_BagFree(p12->entityCert);
-        p12->entityCert = NULL;
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_ERR_REPEATED_SET_ENTITYCERT);
+        return HITLS_PKCS12_ERR_ERR_REPEATED_SET_ENTITYCERT;
     }
 
     HITLS_PKCS12_Bag *input = (HITLS_PKCS12_Bag *)val;
@@ -1765,7 +1782,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
     switch (cmd) {
-        case HITLS_PKCS12_SET_LOCALKEYID:
+        case HITLS_PKCS12_GEN_LOCALKEYID:
             return PKCS12_SetLocalKeyId(p12);
         case HITLS_PKCS12_SET_ENTITY_KEYBAG:
             return PKCS12_SetEntityKey(p12, val);

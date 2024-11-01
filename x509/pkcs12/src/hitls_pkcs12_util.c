@@ -279,7 +279,7 @@ static int32_t InitKdfParam(const Pkcs12KdfParam *param, uint8_t **D, uint8_t **
 }
 
 static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCTX *ctx, const Pkcs12KdfParam *param, uint8_t *D,
-    uint8_t *I, uint8_t *A, uint32_t dataLen)
+    uint8_t *I, uint8_t *A, uint32_t k, uint32_t dataLen)
 {
     int32_t ret;
     uint32_t tempLen = param->u;
@@ -294,7 +294,7 @@ static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCTX *ctx, const Pkcs12Kdf
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_EAL_MdUpdate(ctx, I, param->v * 2); // len(I) = 2 * v.
+    ret = CRYPT_EAL_MdUpdate(ctx, I, k);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -306,25 +306,47 @@ static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCTX *ctx, const Pkcs12Kdf
     }
     CRYPT_EAL_MdDeinit(ctx);
 
-    for (uint32_t j = 0; j < LoopTimes - 1; j++) {
-        ret = CRYPT_EAL_MdInit(ctx);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+    if (LoopTimes != 0) {
+        for (uint32_t j = 0; j < LoopTimes - 1; j++) {
+            ret = CRYPT_EAL_MdInit(ctx);
+            if (ret != CRYPT_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            ret = CRYPT_EAL_MdUpdate(ctx, A, dataLen);
+            if (ret != CRYPT_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            ret = CRYPT_EAL_MdFinal(ctx, A, &dataLen);
+            if (ret != CRYPT_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            CRYPT_EAL_MdDeinit(ctx);
         }
-        ret = CRYPT_EAL_MdUpdate(ctx, A, dataLen);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        ret = CRYPT_EAL_MdFinal(ctx, A, &dataLen);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        CRYPT_EAL_MdDeinit(ctx);
     }
     return ret;
+}
+
+static void KdfUpdate(uint8_t *I, uint8_t *A, uint8_t *B, uint32_t k, const Pkcs12KdfParam *param)
+{
+    /* Concatenate copies of Ai to create a string B */
+    for (uint32_t l = 0; l < param->v; l++) {
+            B[l] = A[l % param->u];
+    }
+    /* I_j = (I_j + B + 1) mod 2^v */
+    for (uint32_t m = 0; m < k; m++) { /* K = ceiling(s/v) + ceiling(p/v) */
+        uint8_t *tempI = I + m * param->v;
+        uint8_t carry = 1;
+        for (int32_t r = (uint32_t)param->v - 1; r >= 0; r--) {
+            uint8_t temp = tempI[r] + carry;
+            carry = temp < tempI[r] ? 1 : 0;
+            temp += B[r];
+            carry = temp < B[r] ? 1 : 0;
+            tempI[r] = temp;
+        }
+    }
 }
 
 int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen, HITLS_PKCS12_KDF_IDX id,
@@ -367,10 +389,16 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
         return ret;
     }
     (void)memset_s(D, param->v, id, param->v);
-
-    /* K = ceiling(s/v) + ceiling(p/v) */
-    uint64_t k = (pwdLen + param->v - 1) / param->v + (saltLen + param->v - 1) / param->v;
-    I = BSL_SAL_Calloc(1u, k * param->v);
+    uint32_t SLen = param->v * ((saltLen + param->v - 1) / param->v);
+    uint32_t PLen = param->v * ((pwdLen + param->v - 1) / param->v);
+    if (SLen + PLen < SLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT);
+        ret = HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT;
+        goto ERR;
+    }
+    
+    uint32_t k = SLen + PLen;
+    I = BSL_SAL_Calloc(1u, k);
     if (I == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         ret = BSL_MALLOC_FAIL;
@@ -379,21 +407,21 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
 
     /* I = S||P */
     if (salt != NULL) {
-        for (uint32_t i = 0; i < param->v; i++) {
+        for (uint32_t i = 0; i < SLen; i++) {
             I[i] = salt[i % saltLen];
         }
     }
 
     if (pwd != NULL) {
-        for (uint32_t i = 0; i < param->v; i++) {
-            I[i + param->v] = pwd[i % pwdLen];
+        for (uint32_t i = 0; i < PLen; i++) {
+            I[i + SLen] = pwd[i % pwdLen];
         }
     }
 
     /* C = ceiling(n/u) */
     uint32_t c = (n + param->u - 1) / param->u;
     for (uint32_t i = 0; i < c; i++) {
-        ret = MacLoop(iter, ctx, param, D, I, A, param->u);
+        ret = MacLoop(iter, ctx, param, D, I, A, k, param->u);
         if (ret != HITLS_X509_SUCCESS) {
             goto ERR; // has pushed err code.
         }
@@ -410,22 +438,7 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
             goto ERR;
         }
         key = key + copyLen;
-        /* Concatenate copies of Ai to create a string B */
-        for (uint32_t l = 0; l < param->v; l++) {
-            B[l] = A[l % param->u];
-        }
-        /* I_j = (I_j + B + 1) mod 2^v */
-        for (uint32_t m = 0; m < k; m++) {
-            uint8_t *tempI = I + m * param->v;
-            uint8_t carry = 1;
-            for (int32_t r = (uint32_t)param->v - 1; r >= 0; r--) {
-                uint8_t temp = tempI[r] + carry;
-                carry = temp < tempI[r] ? 1 : 0;
-                temp += B[r];
-                carry = temp < B[r] ? 1 : 0;
-                tempI[r] = temp;
-            }
-        }
+        KdfUpdate(I, A, B, k / param->v, param);
     }
 
 ERR:
