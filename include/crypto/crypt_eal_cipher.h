@@ -26,7 +26,7 @@
 #include <stdbool.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +54,19 @@ bool CRYPT_EAL_CipherIsValidAlgId(CRYPT_CIPHER_AlgId id);
  * @retval Success: cipher ctx.
  *         Fails: NULL.
  */
-CRYPT_EAL_CipherCtx* CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id);
+CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id);
+
+/**
+ * @ingroup crypt_eal_cipher
+ * @brief Generate symmetric encryption and decryption handles in the providers
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] Symmetric encryption/decryption algorithm ID.
+ * @param attrName [IN] Specify expected attribute values
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtxWithLib(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_cipher

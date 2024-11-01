@@ -22,10 +22,37 @@
 #include "crypt_utils.h"
 #include "md5_core.h"
 #include "crypt_md5.h"
+#include "bsl_sal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
+
+#define CRYPT_MD5_DIGESTSIZE 16
+#define CRYPT_MD5_BLOCKSIZE  64
+
+/* md5 ctx */
+struct CryptMdCtx {
+    uint32_t h[CRYPT_MD5_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
+    uint8_t block[CRYPT_MD5_BLOCKSIZE];                  /* store the remaining data of less than one block */
+    uint32_t hNum, lNum;                                 /* input data counter, maximum value 2 ^ 64 bits */
+    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
+    uint32_t num;
+};
+
+CRYPT_MD5_Ctx *CRYPT_MD5_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_MD5_Ctx));
+}
+
+void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx)
+{
+    CRYPT_MD5_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_MD5_Ctx));
+}
 
 int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx)
 {
@@ -184,7 +211,7 @@ int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src)
+int32_t CRYPT_MD5_CopyCtx(const CRYPT_MD5_Ctx *src, CRYPT_MD5_Ctx *dst)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

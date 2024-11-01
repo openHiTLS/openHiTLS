@@ -121,7 +121,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC001(void)
     for (i = 0; i < 5; i++) {
         ASSERT_TRUE(BSL_HASH_Insert(hash, key[i], 0, (uintptr_t)&value[i], sizeof(UserData)) == BSL_SUCCESS);
     }
-    ASSERT_TRUE(BSL_HASH_Put(hash, key[i], 0, (uintptr_t)&value[i], sizeof(UserData)) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_HASH_Put(hash, key[i], 0, (uintptr_t)&value[i], sizeof(UserData), NULL) == BSL_SUCCESS);
 
     ASSERT_TRUE(BSL_HASH_Size(hash) == (size_t)6);
 
@@ -198,7 +198,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC002(void)
             BSL_SUCCESS);
     }
 
-    ASSERT_TRUE(BSL_HASH_Put(hash, (uintptr_t)key[1], strlen(key[1]) + 1, (uintptr_t)&value[1], sizeof(UserData))
+    ASSERT_TRUE(BSL_HASH_Put(hash, (uintptr_t)key[1], strlen(key[1]) + 1, (uintptr_t)&value[1], sizeof(UserData), NULL)
         == BSL_SUCCESS);
     ASSERT_TRUE(BSL_HASH_Empty(hash) == false);
     ASSERT_TRUE(BSL_HASH_Size(hash) == (size_t)6);
