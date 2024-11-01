@@ -1078,7 +1078,7 @@ EXIT:
         cert->tbs.tbsRawData = tbsBuff.data;
         cert->tbs.tbsRawDataLen = tbsBuff.dataLen;
     } else {
-        BSL_SAL_FREE(tbsBuff.data);
+        BSL_SAL_Free(tbsBuff.data);
     }
     return ret;
 }
@@ -1089,7 +1089,7 @@ static int32_t CheckCertValid(HITLS_X509_Cert *cert)
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     if (BSL_LIST_COUNT(cert->tbs.ext.list) != 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
-        return HITLS_X509_ERR_CERT_INACCRACY_VERSION;
+        return HITLS_X509_ERR_CERT_INACCURACY_VERSION;
     }
     if (cert->tbs.serialNum.buff == NULL || cert->tbs.serialNum.len == 0) {
         return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
@@ -1147,7 +1147,7 @@ int32_t HITLS_X509_EncodeAsn1Cert(HITLS_X509_Cert *cert, BSL_Buffer *buff)
     }
 
     cert->rawData = BSL_SAL_Dump(buff->data, buff->dataLen);
-    if (buff->data == NULL) {
+    if (cert->rawData == NULL) {
         BSL_SAL_FREE(buff->data);
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
         return BSL_DUMP_FAIL;

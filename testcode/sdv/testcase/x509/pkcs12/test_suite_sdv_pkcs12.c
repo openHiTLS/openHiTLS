@@ -274,7 +274,7 @@ void SDV_PKCS12_PARSE_MACDATA_TC001(Hex *buff, int alg, Hex *digest, Hex *salt, 
     int32_t ret = HITLS_PKCS12_ParseMacData((BSL_Buffer *)buff, macData);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(macData->alg, alg);
-    ASSERT_EQ(macData->interation, iterations);
+    ASSERT_EQ(macData->iteration, iterations);
     ASSERT_EQ(memcmp(macData->macSalt->data, salt->x, salt->len), 0);
     ASSERT_EQ(memcmp(macData->mac->data, digest->x, digest->len), 0);
 exit:
@@ -313,7 +313,7 @@ void SDV_PKCS12_CAL_MACDATA_TC001(Hex *initData, Hex *salt, int alg, int iter, H
     macData->alg = alg;
     macData->macSalt->data = salt->x;
     macData->macSalt->dataLen = salt->len;
-    macData->interation = iter;
+    macData->iteration = iter;
     char *pwdData = "123456";
     uint32_t pwdlen = strlen(pwdData);
     BSL_Buffer pwd = {(uint8_t *)pwdData, pwdlen};
@@ -340,7 +340,7 @@ void SDV_PKCS12_CAL_KDF_TC001(Hex *pwd, Hex *salt, int alg, int iter, Hex *key)
     macData->alg = alg;
     macData->macSalt->data = salt->x;
     macData->macSalt->dataLen = salt->len;
-    macData->interation = iter;
+    macData->iteration = iter;
     uint8_t outData[64] = {0};
     BSL_Buffer output = {outData, 64};
     int32_t ret = HITLS_PKCS12_KDF(&output, pwd->x, pwd->len, HITLS_PKCS12_KDF_MACKEY_ID, macData);

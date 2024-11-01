@@ -365,7 +365,7 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
     uint8_t *salt = macData->macSalt->data;
     uint32_t saltLen = macData->macSalt->dataLen;
     uint32_t n = output->dataLen;
-    uint32_t iter = macData->interation;
+    uint32_t iter = macData->iteration;
     uint8_t *key = output->data;
 
     const Pkcs12KdfParam *param = FindKdfParam((CRYPT_MD_AlgId)macData->alg);
@@ -543,7 +543,7 @@ static int32_t ParamCheckAndInit(HITLS_PKCS12_MacData *macData, BSL_Buffer *pwd,
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
-    if (macData->interation < 1000) { // The nist sp800-132 required the minimum iteration count = 1000.
+    if (macData->iteration < 1000) { // The nist sp800-132 required the minimum iteration count = 1000.
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_INTERATION);
         return HITLS_PKCS12_ERR_INVALID_INTERATION;
     }

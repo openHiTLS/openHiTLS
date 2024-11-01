@@ -550,7 +550,7 @@ static int32_t X509EncodeAsn1Csr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
     }
 
     csr->rawData = BSL_SAL_Dump(buff->data, buff->dataLen);
-    if (buff->data == NULL) {
+    if (csr->rawData == NULL) {
         BSL_SAL_FREE(buff->data);
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
         return BSL_DUMP_FAIL;
