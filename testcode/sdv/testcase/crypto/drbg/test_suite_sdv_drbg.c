@@ -19,7 +19,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include "crypt_method.h"
+#include "crypt_eal_init.h"
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
@@ -27,6 +27,7 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "crypt_eal_rand.h"
+#include "crypt_eal_implprovider.h"
 #include "drbg_local.h"
 #include "eal_md_local.h"
 #include "eal_drbg_local.h"
@@ -477,8 +478,9 @@ static int sdvCryptEalDrbgSeedAdinApiTest(uint8_t *addin, uint32_t addinLen)
 
     seedCtx.entropy = &data;
     seedCtx.nonce = &data;
-    drbgCtx = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, &seedCtx, NULL, 0);
+    drbgCtx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbgCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
 
     output = malloc(sizeof(uint8_t) * DRBG_OUTPUT_SIZE);
     ASSERT_TRUE(output != NULL);
@@ -548,7 +550,7 @@ exit:
  * @brief
  *    1.Initialize the random number seed, expected result 1.
  *    2.Call CRYPT_EAL_RandInit, expected result 2.
- *    3.Call CRYPT_EAL_DrbgInit, expected result 3.
+ *    3.Call CRYPT_EAL_DrbgNew, expected result 3.
  * @expect
  *    1.successful.
  *    2.Success with or without a random number seed.
@@ -574,8 +576,9 @@ void SDV_CRYPT_DRBG_RAND_INIT_API_TC001(int algId)
     CRYPT_EAL_RandDeinit();
     ASSERT_EQ(CRYPT_EAL_RandInit(algId, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    drbg = CRYPT_EAL_DrbgInit(algId, &seedMeth, &seedCtx, NULL, 0);
+    drbg = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0) == CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_RandDeinit();
@@ -592,7 +595,7 @@ exit:
  * @brief
  *    1.Initialize the random number seed, expected result 1.
  *    2.Call CRYPT_EAL_RandInit, expected result 2.
- *    3.Call CRYPT_EAL_DrbgInit, expected result 3.
+ *    3.Call CRYPT_EAL_DrbgNew, expected result 3.
  * @expect
  *    1.successful.
  *    2.successful.
@@ -618,7 +621,7 @@ void SDV_CRYPT_DRBG_RAND_INIT_API_TC002(int agId, int value, int size)
 
     ASSERT_EQ(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, pers, size), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    drbg = CRYPT_EAL_DrbgInit(agId, &seedMeth, &seedCtx, pers, size);
+    drbg = CRYPT_EAL_DrbgNew(agId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
     CRYPT_EAL_DrbgDeinit(drbg);
 
@@ -637,7 +640,7 @@ exit:
  * @brief
  *    1.Initialize the random number seed, expected result 1.
  *    2.Call CRYPT_EAL_RandInit, expected result 2.
- *    3.Call CRYPT_EAL_DrbgInit, expected result 3.
+ *    3.Call CRYPT_EAL_DrbgNew, expected result 3.
  * @expect
  *    1.successful.
  *    2.successful.
@@ -662,7 +665,7 @@ void SDV_CRYPT_DRBG_RAND_INIT_API_TC003(int agId, int size)
 
     ASSERT_EQ(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, pers, size), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    drbg = CRYPT_EAL_DrbgInit(agId, &seedMeth, &seedCtx, pers, size);
+    drbg = CRYPT_EAL_DrbgNew(agId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
     CRYPT_EAL_DrbgDeinit(drbg);
 
@@ -719,7 +722,7 @@ exit:
  * @brief
  *    1.Initialize the random number seed, expected result 1.
  *    2.Call CRYPT_EAL_RandInit, expected result 2.
- *    3.Call CRYPT_EAL_DrbgInit, expected result 3.
+ *    3.Call CRYPT_EAL_DrbgNew, expected result 3.
  * @expect
  *    1.successful.
  *    2.successful.
@@ -733,11 +736,11 @@ void SDV_CRYPT_DRBG_RAND_INIT_API_TC005(int algId)
 
     ASSERT_EQ(CRYPT_EAL_RandInit(algId, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    ASSERT_EQ(CRYPT_EAL_RandInit(algId, NULL, &seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
-    drbg = CRYPT_EAL_DrbgInit(algId, NULL, NULL, NULL, 0);
+    ASSERT_NE(CRYPT_EAL_RandInit(algId, NULL, &seedCtx, NULL, 0), CRYPT_SUCCESS);
+    drbg = CRYPT_EAL_DrbgNew(algId, NULL, NULL);
     ASSERT_TRUE(drbg != NULL);
     CRYPT_EAL_DrbgDeinit(drbg);
-    drbg = CRYPT_EAL_DrbgInit(algId, NULL, &seedCtx, NULL, 0);
+    drbg = CRYPT_EAL_DrbgNew(algId, NULL, &seedCtx);
     ASSERT_TRUE(drbg == NULL);
 exit:
     CRYPT_EAL_RandDeinit();
@@ -753,7 +756,7 @@ exit:
  * @brief
  *    1.Initialize the random number seed, expected result 1.
  *    2.Call CRYPT_EAL_RandInit, expected result 2.
- *    3.Call CRYPT_EAL_DrbgInit, expected result 3.
+ *    3.Call CRYPT_EAL_DrbgNew, expected result 3.
  * @expect
  *    1.successful.
  *    2.return failed.
@@ -775,12 +778,14 @@ void SDV_CRYPT_DRBG_RAND_INIT_API_TC006(int algId, int keyLen)
     drbgDataInit(&data, keyLen + 16);
     seedCtx.entropy = &data;
     seedCtx.nonce = &data;
-    ASSERT_EQ(CRYPT_EAL_RandInit(algId, &seedMeth, (void *)&seedCtx, pers, keyLen + 16 + 1), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+    ASSERT_NE(CRYPT_EAL_RandInit(algId, &seedMeth, (void *)&seedCtx, pers, keyLen + 16 + 1), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    drbg = CRYPT_EAL_DrbgInit(algId, &seedMeth, &seedCtx, pers, keyLen + 16 + 1);
-    ASSERT_TRUE(drbg == NULL);
+    drbg = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, pers, keyLen + 16 + 1), CRYPT_SUCCESS);
+    CRYPT_EAL_DrbgDeinit(drbg);
     ASSERT_EQ(CRYPT_EAL_RandInit(algId, &seedMeth, (void *)&seedCtx, pers, keyLen + 16), CRYPT_SUCCESS);
-    drbg = CRYPT_EAL_DrbgInit(algId, &seedMeth, &seedCtx, pers, keyLen + 16);
+    drbg = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
 exit:
     CRYPT_EAL_DrbgDeinit(drbg);
@@ -905,8 +910,9 @@ void SDV_CRYPT_DRBG_RAND_BYTES_ADIN_ERR_PARA_API_TC001(int algId)
     seedCtx.nonce = &data;
 
     TestMemInit();
-    CRYPT_EAL_RndCtx *drbgCtx = CRYPT_EAL_DrbgInit(algId, &seedMeth, &seedCtx, NULL, 0);
+    CRYPT_EAL_RndCtx *drbgCtx = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbgCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
 
     memset_s(addin, DRBG_MAX_ADIN_SIZE, 0, DRBG_MAX_ADIN_SIZE);
     ASSERT_EQ(CRYPT_EAL_DrbgbytesWithAdin(drbgCtx, output, DRBG_MAX_OUTPUT_SIZE, addin, DRBG_MAX_ADIN_SIZE),
@@ -1008,8 +1014,9 @@ void SDV_CRYPT_DRBG_BYTES_ERR_PARA_API_TC001(void)
 
     seedCtx.nonce = &data;
     seedCtx.entropy = &data;
-    drbg = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, &seedCtx, NULL, 0);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0) == CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_OUTPUT_SIZE), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
@@ -1094,8 +1101,9 @@ void SDV_CRYPT_DRBG_SEED_ADIN_ERR_PARA_API_TC001(void)
 
     seedCtx.nonce = &data;
     seedCtx.entropy = &data;
-    drbg = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, &seedCtx, NULL, 0);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0) == CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_DrbgSeedWithAdin(drbg, addin, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DrbgSeedWithAdin(drbg, addin, addinLen), CRYPT_SUCCESS);
@@ -1187,8 +1195,9 @@ void SDV_CRYPT_DRBG_NUM_FUNC_TC001(int agId, int num, int dataSize)
 
     seedCtx.entropy = &data;
     seedCtx.nonce = &data;
-    drbgCtx = CRYPT_EAL_DrbgInit(agId, &seedMeth, &seedCtx, NULL, 0);
+    drbgCtx = CRYPT_EAL_DrbgNew(agId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbgCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
 
     output = malloc(sizeof(uint8_t) * DRBG_OUTPUT_SIZE);
     ASSERT_TRUE(output != NULL);
@@ -1265,12 +1274,16 @@ void SDV_CRYPT_DRBG_CLEANENTROPY_FUNC_TC001(int agId)
         .getNonce = getNonceError,
         .cleanNonce = cleanNonceError,
     };
+    void *drbg = NULL;
 
     TestMemInit();
     seedCtx.entropyState = 1;
-    ASSERT_EQ(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    ASSERT_NE(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
+    drbg = CRYPT_EAL_DrbgNew(agId, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
 exit:
+    CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();
     return;
 }
@@ -1297,12 +1310,15 @@ void SDV_CRYPT_DRBG_GETENTROPY_FUNC_TC001(int agId)
         .getNonce = getNonceError,
         .cleanNonce = cleanNonceError,
     };
+    void *drbg = NULL;
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
-
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    ASSERT_NE(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
+    drbg = CRYPT_EAL_DrbgNew(agId, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
 exit:
+    CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();
     return;
 }
@@ -1331,17 +1347,24 @@ void SDV_CRYPT_DRBG_GETENTROPY_FUNC_TC002(void)
         .getNonce = NULL,
         .cleanNonce = NULL,
     };
+    void *drbg = NULL;
 
     TestMemInit();
     seedCtx.entropy = calloc(1u, sizeof(CRYPT_Data));
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+    ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
+    CRYPT_EAL_DrbgDeinit(drbg);
     seedCtx.entropy->len = 1; // Set the entropy length to 1 verify that the data is empty but the data length is not 0.
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
 
 exit:
+    CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();
     DRBG_FREE(seedCtx.entropy);
     return;
@@ -1371,17 +1394,25 @@ void SDV_CRYPT_DRBG_GETNONCE_FUNC_TC001(void)
         .getNonce = getNonceUnCheckPara,
         .cleanNonce = cleanNonceError,
     };
+    void *drbg = NULL;
 
     TestMemInit();
     seedCtx.nonce = calloc(1u, sizeof(CRYPT_Data));
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+    ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
+    CRYPT_EAL_DrbgDeinit(drbg);
+
     seedCtx.nonce->len = 1; // Set the nonce length to 1 verify that the data is empty but the data length is not 0.
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
 
 exit:
+    CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();
     DRBG_FREE(seedCtx.nonce);
     return;
@@ -1409,14 +1440,18 @@ void SDV_CRYPT_DRBG_GETNONCE_FUNC_TC002(void)
         .getNonce = getNonce,
         .cleanNonce = cleanNonce,
     };
+    void *drbg = NULL;
 
     TestMemInit();
     seedCtx.nonce = calloc(1u, sizeof(CRYPT_Data));
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+    ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
 
 exit:
+    CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();
     DRBG_FREE(seedCtx.nonce);
     return;
@@ -1444,13 +1479,18 @@ void SDV_CRYPT_DRBG_GETNONCE_FUNC_TC003(void)
         .getEntropy = getEntropyError,
         .cleanEntropy = cleanEntropyError,
     };
+    void *drbg = NULL;
     TestMemInit();
 
     seedCtx.nonceState = 1;
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA224, &seedMeth, (void *)&seedCtx, NULL, 0) != CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA224, &seedMeth, (void *)&seedCtx, NULL, 0) == NULL);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA224, &seedMeth, (void *)&seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
+
 exit:
+    CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();
     return;
 }
@@ -1463,8 +1503,10 @@ exit:
  * @brief
  *    1.set the personal data is empty.
  *    2.Initializing the DRBG, expected result 1.
+ *    3.Uninitializing the DRBG, expected result 2.
  * @expect
  *    1.The DRBG is successfully initialized regardless of whether the data field is empty.
+ *    2.The DRBG is successfully uninitialized.
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_DRBG_INSTANTIATE_FUNC_TC001(void)
@@ -1480,19 +1522,22 @@ void SDV_CRYPT_DRBG_INSTANTIATE_FUNC_TC001(void)
 
     TestMemInit();
     pers = calloc(1u, sizeof(CRYPT_Data));
+
     ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, pers->data, pers->len),
         CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    void *drbg = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, pers->data, pers->len);
+    void *drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
     ASSERT_TRUE(drbg != NULL);
+    ASSERT_EQ(CRYPT_EAL_DrbgInstantiate(drbg, pers->data, pers->len), CRYPT_SUCCESS);
     CRYPT_EAL_DrbgDeinit(drbg);
     drbg = NULL;
     pers->data = calloc(DRBG_MAX_ADIN_SIZE + 1, sizeof(uint8_t));
     pers->len = DRBG_MAX_ADIN_SIZE + 1;
     ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, pers->data, pers->len),
         CRYPT_SUCCESS);
-    drbg = CRYPT_EAL_DrbgInit(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx, pers->data, pers->len);
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, (void *)&seedCtx);
     ASSERT_TRUE(drbg != NULL);
+    ASSERT_EQ(CRYPT_EAL_DrbgInstantiate(drbg, pers->data, pers->len), CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_DrbgDeinit(drbg);
@@ -1529,7 +1574,7 @@ void SDV_CRYPT_DRBG_DUP_API_TC001(int algId)
 
     seedCtx.nonce = &data;
     seedCtx.entropy = &data;
-    CRYPT_EAL_RndCtx *drbg = CRYPT_EAL_DrbgInit(algId, &seedMeth, &seedCtx, NULL, 0);
+    CRYPT_EAL_RndCtx *drbg = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbg != NULL);
     DRBG_Ctx *ctx = (DRBG_Ctx*)(drbg->ctx);
     DRBG_Ctx *newCtx = ctx->meth->dup(ctx);
@@ -1570,8 +1615,9 @@ void SDV_CRYPT_DRBG_PTHREAD_FUNC_TC002(int agId)
     seedCtx.nonce = &data;
     for (uint32_t iter = 0; iter < 10; iter++) {
         pthread_t thrd;
-        void *drbgCtx = CRYPT_EAL_DrbgInit(agId, &seedMeth, &seedCtx, NULL, 0);
+        void *drbgCtx = CRYPT_EAL_DrbgNew(agId, &seedMeth, &seedCtx);
         ASSERT_TRUE(drbgCtx != NULL);
+        ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
         ASSERT_EQ(pthread_create(&thrd, NULL, (void *)sdvCryptEalThreadTest, drbgCtx), 0);
         pthread_join(thrd, NULL);
         CRYPT_EAL_DrbgDeinit(drbgCtx);
@@ -1608,8 +1654,9 @@ void SDV_CRYPT_DRBG_PTHREAD_FUNC_TC003(int agId)
 
     seedCtx.entropy = &data;
     seedCtx.nonce = &data;
-    void *drbgCtx = CRYPT_EAL_DrbgInit(agId, &seedMeth, &seedCtx, NULL, 0);
+    void *drbgCtx = CRYPT_EAL_DrbgNew(agId, &seedMeth, &seedCtx);
     ASSERT_TRUE(drbgCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
     for (uint32_t iter = 0; iter < 10; iter++) {
         pthread_t thrd;
         ASSERT_EQ(pthread_create(&thrd, NULL, (void *)sdvCryptEalThreadTest, drbgCtx), 0);
@@ -1732,8 +1779,9 @@ void SDV_CRYPT_EAL_DRBG_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *
     seedCtx = seedCtxMem();
     ASSERT_TRUE(seedCtx != NULL);
     seedCtxCfg(seedCtx, entropy, nonce, pers, addin1, entropyPR1, addin2, entropyPR2, retBits);
-    drbgCtx = CRYPT_EAL_DrbgInit(id, &seedMeth, seedCtx, NULL, 0);
+    drbgCtx = CRYPT_EAL_DrbgNew(id, &seedMeth, seedCtx);
     ASSERT_TRUE(drbgCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
 
     output = malloc(sizeof(uint8_t) * retBits->len);
     ASSERT_TRUE(output != NULL);
@@ -1790,6 +1838,198 @@ void SDV_CRYPT_EAL_RAND_BYTES_FUNC_TC002(int id)
         seedMeth.cleanNonce = NULL;
     }
     ASSERT_EQ(CRYPT_EAL_RandInit((CRYPT_RAND_AlgId)id, &seedMeth, NULL, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+
+exit:
+    CRYPT_EAL_RandDeinit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ * Generating random numbers based on entropy sources
+ *    1.Initialize the random number seed, expected result 1.
+ *    2.Call CRYPT_EAL_RandbytesWithAdin, expected result 2.
+ *    3.Call CRYPT_EAL_Randbytes get random numbers, expected result 3.
+ * @expect
+ *    1.init successful.
+ *    2.successful.
+ *    3.Random number generated successfully.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *pers,
+    Hex *addin1, Hex *entropyPR1, Hex *addin2, Hex *entropyPR2, Hex *retBits)
+{
+    if (IsRandAlgDisabled(id)) {
+        SKIP_TEST();
+    }
+    uint8_t output[DRBG_MAX_OUTPUT_SIZE];
+    CRYPT_RandSeedMethod seedMeth = { 0 };
+    DRBG_Vec_t *seedCtx;
+    regSeedMeth(&seedMeth);
+
+    TestMemInit();
+
+    seedCtx = seedCtxMem();
+    ASSERT_TRUE(seedCtx != NULL);
+    seedCtxCfg(seedCtx, entropy, nonce, pers, addin1, entropyPR1, addin2, entropyPR2, retBits);
+
+    CRYPT_RndParam randParam = {
+        .seedMeth = &seedMeth,
+        .seedCtx = (void *)seedCtx,
+        .pers = seedCtx->pers->data,
+        .persLen = seedCtx->pers->len
+    };
+    CRYPT_Param param = {
+        .type = DEFAULT_PROVIDER_PARAM_TYPE,
+        .param = &randParam,
+        .paramLen = sizeof(CRYPT_RndParam)
+    };
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default",
+        seedCtx->pers->data, seedCtx->pers->len, &param), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesWithAdin(output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
+        CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_Randbytes(output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandIsValidAlgId(id), true);
+exit:
+    CRYPT_EAL_RandDeinit();
+    seedCtxFree(seedCtx);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_DRBG_DEFAULT_PROVIDER_BYTES_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ * Generating random numbers based on entropy sources.
+ *    1.Initialize the random number seed, expected result 1.
+ *    2.Call CRYPT_EAL_DrbgbytesWithAdin, expected result 2.
+ *    3.Call CRYPT_EAL_Drbgbytes get random numbers, expected result 3.
+ * @expect
+ *    1.Init successful.
+ *    2.Successful.
+ *    3.Random number generated successfully.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_DRBG_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *pers,
+    Hex *addin1, Hex *entropyPR1, Hex *addin2, Hex *entropyPR2, Hex *retBits)
+{
+    if (IsRandAlgDisabled(id)) {
+        SKIP_TEST();
+    }
+    uint8_t *output = NULL;
+    CRYPT_RandSeedMethod seedMeth = { 0 };
+    DRBG_Vec_t *seedCtx;
+    void *drbgCtx = NULL;
+    regSeedMeth(&seedMeth);
+
+    TestMemInit();
+
+    seedCtx = seedCtxMem();
+    ASSERT_TRUE(seedCtx != NULL);
+    seedCtxCfg(seedCtx, entropy, nonce, pers, addin1, entropyPR1, addin2, entropyPR2, retBits);
+    CRYPT_RndParam randParam = {
+        .seedMeth = &seedMeth,
+        .seedCtx = (void *)seedCtx,
+        .pers = NULL,
+        .persLen = 0
+    };
+    CRYPT_Param param = {
+        .type = DEFAULT_PROVIDER_PARAM_TYPE,
+        .param = &randParam,
+        .paramLen = sizeof(CRYPT_RndParam)
+    };
+    drbgCtx = CRYPT_EAL_ProviderDrbgInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", &param);
+    ASSERT_TRUE(drbgCtx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
+
+    output = malloc(sizeof(uint8_t) * retBits->len);
+    ASSERT_TRUE(output != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_DrbgbytesWithAdin(drbgCtx, output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbgCtx, output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
+
+exit:
+    CRYPT_EAL_DrbgDeinit(drbgCtx);
+    seedCtxFree(seedCtx);
+    free(output);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ * Generating random numbers based on entropy sources,the user only provides the seed method,
+ * not the seed context.
+ *    1.Initialize the random number seed, expected result 1.
+ *    2.Call CRYPT_EAL_RandSeed, expected result 2.
+ *    3.Call CRYPT_EAL_Randbytes get random numbers, expected result 3.
+ *    4.Initialize the random number without seedMeth, expected result 4.
+ * @expect
+ *    1.init successful.
+ *    2.successful.
+ *    3.Random number generated successfully.
+ *    4.init successful.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
+{
+    if (IsRandAlgDisabled(id)) {
+        SKIP_TEST();
+    }
+    uint8_t output[DRBG_MAX_OUTPUT_SIZE];
+    CRYPT_RandSeedMethod seedMeth = {
+        .getEntropy = getEntropyWithoutSeedCtx,
+        .cleanEntropy = cleanEntropyError,
+        .getNonce = getNonceWithoutSeedCtx,
+        .cleanNonce = cleanNonceError,
+    };
+
+    TestMemInit();
+
+    /* The DRBG-CTR mode requires the entropy source length of a specific length, and seedMeth needs to generate
+       entropy of the corresponding length.(DRBG-CTR AES128/AES192/AES256 length is 32, 40, 48).
+    */
+    if (id == CRYPT_RAND_AES128_CTR || id == CRYPT_RAND_AES192_CTR || id == CRYPT_RAND_AES256_CTR) {
+        seedMeth.getEntropy = getEntropyWithoutSeedCtxSpecial;
+        seedMeth.getNonce = NULL;
+        seedMeth.cleanNonce = NULL;
+    }
+    CRYPT_RndParam randParam = {
+        .seedMeth = &seedMeth,
+        .seedCtx = NULL,
+        .pers = NULL,
+        .persLen = 0
+    };
+    CRYPT_Param param = {
+        .type = DEFAULT_PROVIDER_PARAM_TYPE,
+        .param = &randParam,
+        .paramLen = sizeof(CRYPT_RndParam)
+    };
+    param.type += 1;
+    ASSERT_NE(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, &param), CRYPT_SUCCESS);
+    param.type = DEFAULT_PROVIDER_PARAM_TYPE;
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, &param), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+    CRYPT_EAL_RandDeinit();
+    randParam.seedMeth = NULL;
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, &param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 

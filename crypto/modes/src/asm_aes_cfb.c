@@ -19,10 +19,10 @@
 #include "bsl_err_internal.h"
 #include "crypt_aes.h"
 #include "crypt_errno.h"
-#include "crypt_modes_cfb.h"
+#include "modes_local.h"
 
 /* Decrypt the 128-bit CFB. Here, len indicates the number of bytes to be processed. */
-static int32_t CRYPT_AES_CFB16_Decrypt(MODE_CFB_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+static int32_t CRYPT_AES_CFB16_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx->modeCtx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -73,7 +73,7 @@ static int32_t CRYPT_AES_CFB16_Decrypt(MODE_CFB_Ctx *ctx, const uint8_t *in, uin
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_AES_CFB_Decrypt(MODE_CFB_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODE_AES_CFB_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || ctx->modeCtx == NULL || in == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -82,7 +82,13 @@ int32_t MODE_AES_CFB_Decrypt(MODE_CFB_Ctx *ctx, const uint8_t *in, uint8_t *out,
     if (ctx->feedbackBits == 128) { // feedbackBits 128 has assembly optimization
         return CRYPT_AES_CFB16_Decrypt(ctx, in, out, len);
     } else { // no optimization
-        return MODE_CFB_Decrypt(ctx, in, out, len);
+        return MODES_CFB_Decrypt(ctx, in, out, len);
     }
+}
+
+int32_t AES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherStreamProcess(modeCtx->enc ? MODES_CFB_Encrypt : MODE_AES_CFB_Decrypt, &modeCtx->cfbCtx,
+        in, inLen, out, outLen);
 }
 #endif

@@ -19,6 +19,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
+#include "eal_common.h"
 #include "entropy.h"
 #include "eal_entropy.h"
 

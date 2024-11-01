@@ -42,6 +42,7 @@
 #define PUBKEY_MAX_LEN 133  // 521(The public key length of the longest curve.) * 2 + 1 1043
 #define PRVKEY_MAX_LEN 65
 #define ECC_MAX_BIT_LEN 521
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 static uint8_t gkRandBuf[80];
 static uint32_t gkRandBufLen = 0;
 
@@ -162,7 +163,8 @@ static void Ecc_SetPrvKey(CRYPT_EAL_PkeyPrv *prv, int id, uint8_t *key, uint32_t
     prv->key.eccPrv.len = len;
 }
 
-static int Ecc_GenKey(int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat)
+static int Ecc_GenKey(
+    int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
     int ret;
     FuncStubInfo tmpRpInfo;
@@ -175,7 +177,11 @@ static int Ecc_GenKey(int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex
     TestMemInit();
 
     /* Create a key structure. */
-    pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, eccId), CRYPT_SUCCESS);
@@ -191,7 +197,7 @@ static int Ecc_GenKey(int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
     /* Set point format*/
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, 4, &pointFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_ECC_POINT_FORMAT, &pointFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
 
     /* Get public key */
     ecdsaPubKey.id = algId;
@@ -446,6 +452,43 @@ exit:
     return ret;
 }
 
+int EAL_PkeyGetPrv_Provider_Api_TC001(int algId, Hex *prvKey)
+{
+    int ret = ERROR;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPrv prv1 = {0};
+    CRYPT_EAL_PkeyPrv prv2 = {0};
+    KeyData prvKeyBuffer = {{0}, KEY_MAX_LEN};
+
+    TestMemInit();
+
+    /* Create a key structure. */
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
+    ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
+
+    /* Get the private key when there is no private key. */
+    Ecc_SetPrvKey(&prv2, algId, prvKeyBuffer.data, GetPrvKeyLen(CRYPT_ECC_NISTP224));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
+
+    /* Set the private key. */
+    Ecc_SetPrvKey(&prv1, algId, prvKey->x, prvKey->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv1), CRYPT_SUCCESS);
+
+    /* Input parameter test of CRYPT_EAL_PkeyGetPrv. */
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(NULL, &prv2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, NULL), CRYPT_NULL_INPUT);
+    prv2.id = CRYPT_PKEY_DH;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_EAL_ERR_ALGID);
+    prv2.id = algId;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_SUCCESS);
+
+    ret = SUCCESS;
+exit:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return ret;
+}
+
 int EAL_PkeyGetPub_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
 {
     int ret = ERROR;
@@ -458,6 +501,45 @@ int EAL_PkeyGetPub_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
 
     /* Create a key structure. */
     ctx = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
+    ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
+
+    /* Get the public key when there is no public key. */
+    Ecc_SetPubKey(&pub2, algId, pubKeyVector2.data, GetPubKeyLen(CRYPT_ECC_NISTP224));
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub2), CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
+
+    /* Set the public key. */
+    ASSERT_TRUE_AND_LOG("EccPointToBuffer",
+        EccPointToBuffer(pubKeyX, pubKeyY, CRYPT_POINT_UNCOMPRESSED, &pubKeyVector1) == CRYPT_SUCCESS);
+    Ecc_SetPubKey(&pub1, algId, pubKeyVector1.data, pubKeyVector1.len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub1), CRYPT_SUCCESS);
+
+    /* Input parameter test of CRYPT_EAL_PkeyGetPub. */
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(NULL, &pub2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, NULL), CRYPT_NULL_INPUT);
+    pub2.id = CRYPT_PKEY_DH;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub2), CRYPT_EAL_ERR_ALGID);
+    pub2.id = algId;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub2), CRYPT_SUCCESS);
+
+    ret = SUCCESS;
+exit:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return ret;
+}
+
+int EAL_PkeyGetPub_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
+{
+    int ret = ERROR;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pub1, pub2;
+    KeyData pubKeyVector1 = {{0}, KEY_MAX_LEN};
+    KeyData pubKeyVector2 = {{0}, KEY_MAX_LEN};
+
+    TestMemInit();
+
+    /* Create a key structure. */
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
     ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
     ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
 
@@ -626,14 +708,18 @@ exit:
     return ret;
 }
 
-int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey)
+int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPub pub = {0};
 
     TestMemInit();
     /* Create a key structure. */
-    pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    }
     ASSERT_TRUE_AND_LOG("NewCtx", pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pkey, eccId) == CRYPT_SUCCESS);
 
@@ -709,6 +795,43 @@ int EAL_PkeyCmp_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
 
     CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_PkeyNewCtx(algId);
     CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL);
+
+    ASSERT_EQ(EccPointToBuffer(pubKeyX, pubKeyY, CRYPT_POINT_COMPRESSED, &pubkey), CRYPT_SUCCESS);
+    Ecc_SetPubKey(&pub, algId, pubkey.data, pubkey.len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx1, CRYPT_ECC_NISTP224), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx1, &pub), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, CRYPT_ECC_NISTP256), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx2, &pub), CRYPT_ECC_ERR_POINT_CODE);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, CRYPT_ECC_NISTP224), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx2, &pub), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
+    ret = SUCCESS;
+exit:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(ctx1);
+    CRYPT_EAL_PkeyFreeCtx(ctx2);
+    return ret;
+}
+
+int EAL_PkeyCmp_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
+{
+    int ret = ERROR;
+    CRYPT_EAL_PkeyPub pub = {0};
+    KeyData pubkey = {{0}, KEY_MAX_LEN};
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    CRYPT_EAL_PkeyCtx *ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    CRYPT_EAL_PkeyCtx *ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL);
@@ -812,3 +935,4 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
+

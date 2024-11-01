@@ -1,0 +1,31 @@
+SDV_CRYPTO_PROVIDER_LOAD_TC001
+SDV_CRYPTO_PROVIDER_LOAD_TC001:"../testdata/provider/path1":"../testdata/provider/path2":"provider_load_test1":"provider_load_test2":"provider_load_test_no_init":"provider_load_test_no_fullfunc":2:1
+SDV_CRYPTO_PROVIDER_LOAD_TC002
+SDV_CRYPTO_PROVIDER_LOAD_TC002:
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #1
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #2
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test2":5358979
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #3
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider!=test2":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #4
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,provider!=test2":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #5
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,compare2?two":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #6
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,provider=test1,compare2?two":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #7
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,compare2?two,compare4?four":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #8
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"compare1?one,compare2?two":5358979
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #9
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"compare1?one,cpmpare3?three,cpmpare3?three,compare2?two":1415926
+
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:1415926
+
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001:"../testdata/provider/path1":"provider_load_test_providerNoInit":2
+
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002:"../testdata/provider/path1":"provider_load_test_providerNoFree":2

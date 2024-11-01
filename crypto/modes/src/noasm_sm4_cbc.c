@@ -16,19 +16,23 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_CBC)
 
-#include "bsl_err_internal.h"
-#include "crypt_sm4.h"
-#include "crypt_modes.h"
 #include "crypt_modes_cbc.h"
 
-int32_t MODE_SM4_CBC_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+
+int32_t SM4_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODE_CBC_Encrypt(ctx, in, out, len);
+    return MODES_CBC_Update(modeCtx, in, inLen, out, outLen);
 }
 
-int32_t MODE_SM4_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
-    return MODE_CBC_Decrypt(ctx, in, out, len);
+    return MODES_CBC_Final(modeCtx, out, outLen);
+}
+
+int32_t SM4_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
+{
+    return MODES_CBC_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
 }
 
 #endif

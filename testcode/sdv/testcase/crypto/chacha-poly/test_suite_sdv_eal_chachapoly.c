@@ -45,8 +45,8 @@ void SDV_CRYPTO_CHACHA20POLY1305_INIT_API_TC001(void)
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(NULL, key, sizeof(key), iv, sizeof(iv), true) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, NULL, sizeof(key), iv, sizeof(iv), true) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), NULL, sizeof(iv), true) == CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, NULL, sizeof(key), iv, sizeof(iv), true), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), NULL, sizeof(iv), true), CRYPT_NULL_INPUT);
 
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -81,18 +81,18 @@ void SDV_CRYPTO_CHACHA20POLY1305_INIT_API_TC002(void)
     uint8_t iv[12] = {0};
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, (uint8_t *)key, 33, iv, sizeof(iv), true) ==
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, (uint8_t *)key, 33, iv, sizeof(iv), true),
         CRYPT_CHACHA20_KEYLEN_ERROR);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, (uint8_t *)key, 31, iv, sizeof(iv), true) ==
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, (uint8_t *)key, 31, iv, sizeof(iv), true),
         CRYPT_CHACHA20_KEYLEN_ERROR);
 
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 13, true) ==
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 13, true),
         CRYPT_MODES_IVLEN_ERROR);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 11, true) ==
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 11, true),
         CRYPT_MODES_IVLEN_ERROR);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 9, true) ==
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 9, true),
         CRYPT_MODES_IVLEN_ERROR);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 7, true) ==
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), (uint8_t *)iv, 7, true),
         CRYPT_MODES_IVLEN_ERROR);
 
 exit:
@@ -268,10 +268,10 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_API_TC002(void)
     uint32_t outLen = sizeof(data) - 1;
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
-    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)), CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, sizeof(data), (uint8_t *)out, &outLen) != CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_CipherUpdate(ctx, data, sizeof(data), (uint8_t *)out, &outLen), CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -421,7 +421,6 @@ void SDV_CRYPTO_CHACHA20POLY1305_CTRL_API_TC003(void)
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_IV, (uint8_t *)buf, 12) != CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, (uint8_t *)buf, 12) != CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, &num, sizeof(uint8_t)) != CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &num32, sizeof(uint32_t)) != CRYPT_SUCCESS);
@@ -449,7 +448,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_CTRL_API_TC004(void)
     uint8_t aad[20] = {0};
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
-    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_EAL_ERR_STATE);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)), CRYPT_EAL_ERR_STATE);
 
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -506,8 +505,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_CTRL_API_TC006(void)
     const uint32_t tagLen = 16; // chacha-poly tag len is 16
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
-    ASSERT_TRUE_AND_LOG("get tag after new",
-        CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) != CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen), CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -548,7 +546,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, dataLen, out, &outLen) == CRYPT_SUCCESS);
 
     outLen = sizeof(out);
-    ASSERT_TRUE(CRYPT_EAL_CipherFinal(ctx, out, &outLen) != CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -942,8 +940,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC006(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == cipher->len);
     ASSERT_TRUE(memcmp(out, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
-
-    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) != CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen), CRYPT_EAL_ERR_STATE);
 
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);

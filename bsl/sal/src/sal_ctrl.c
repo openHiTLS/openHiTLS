@@ -26,6 +26,9 @@
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_fileimpl.h"
 #endif
+#ifdef HITLS_BSL_SAL_DL
+#include "sal_dlimpl.h"
+#endif
 
 /* The prefix of BSL_SAL_CB_FUNC_TYPE */
 #ifdef HITLS_BSL_SAL_NET
@@ -38,6 +41,10 @@
 
 #ifdef HITLS_BSL_SAL_FILE
 #define BSL_SAL_FILE_CB     0x0500
+#endif
+
+#ifdef HITLS_BSL_SAL_DL
+#define BSL_SAL_DL_CB       0x0700
 #endif
 
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
@@ -55,6 +62,10 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
 #ifdef HITLS_BSL_SAL_FILE
     case BSL_SAL_FILE_CB:
         return SAL_FileCallback_Ctrl(funcType, funcCb);
+#endif
+#ifdef HITLS_BSL_SAL_DL
+    case BSL_SAL_DL_CB:
+        return SAL_DlCallback_Ctrl(funcType, funcCb);
 #endif
     default:
         return BSL_SAL_ERR_BAD_PARAM;
