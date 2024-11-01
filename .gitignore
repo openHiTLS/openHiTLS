@@ -5,3 +5,4 @@ __pycache__
 testcode/framework/tls/lib/
 testcode/output/
 platform/*
+.DS_Store

@@ -21,8 +21,9 @@
 #include "crypt_errno.h"
 #include "crypt_sm4.h"
 #include "crypt_modes_ctr.h"
+#include "modes_local.h"
 
-int32_t MODE_SM4_CTR_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODE_SM4_CTR_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || in == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -33,7 +34,7 @@ int32_t MODE_SM4_CTR_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    uint32_t offset = MODE_CTR_LastHandle(ctx, in, out, len);
+    uint32_t offset = MODES_CTR_LastHandle(ctx, in, out, len);
     uint32_t left = len - offset;
     const uint8_t *tmpIn = in + offset;
     uint8_t *tmpOut = out + offset;
@@ -59,12 +60,23 @@ int32_t MODE_SM4_CTR_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
             MODE_IncCounter(ctx->iv, blockSize - 4);
         }
     }
-    MODE_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
+    MODES_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_SM4_CTR_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
 {
-    return MODE_SM4_CTR_Encrypt(ctx, in, out, len);
+    return MODES_CipherInitCtx(modeCtx, MODES_SM4_SetEncryptKey, &modeCtx->commonCtx, key, keyLen, iv, ivLen, enc);
 }
+
+int32_t SM4_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return MODES_CipherStreamProcess(MODE_SM4_CTR_Encrypt, &modeCtx->commonCtx, in, inLen, out, outLen);
+}
+
 #endif

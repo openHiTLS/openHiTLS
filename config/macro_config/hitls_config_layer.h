@@ -172,6 +172,9 @@
     #ifndef HITLS_CRYPTO_CBC
         #define HITLS_CRYPTO_CBC
     #endif
+    #ifndef HITLS_CRYPTO_ECB
+        #define HITLS_CRYPTO_ECB
+    #endif
     #ifndef HITLS_CRYPTO_GCM
         #define HITLS_CRYPTO_GCM
     #endif

@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,36 +49,27 @@ extern "C" {
 #define CRYPT_SHA2_512_DIGESTSIZE 64
 #endif // HITLS_CRYPTO_SHA512
 
-#ifdef HITLS_CRYPTO_SHA256
-typedef struct {
-    uint32_t h[CRYPT_SHA2_256_DIGESTSIZE / sizeof(uint32_t)]; /* 256 bits for SHA256 state */
-    uint32_t block[CRYPT_SHA2_256_BLOCKSIZE / sizeof(uint32_t)]; /* 512 bits block cache */
-    uint32_t lNum, hNum;                                           /* input bits counter, max 2^64 bits */
-    uint32_t blocklen;                                     /* block length */
-    uint32_t outlen;                                       /* digest output length */
-    uint32_t errorCode; /* error Code */
-} CRYPT_SHA2_256_Ctx;
-#endif // HITLS_CRYPTO_SHA256
-
 #ifdef HITLS_CRYPTO_SHA224
-typedef CRYPT_SHA2_256_Ctx CRYPT_SHA2_224_Ctx;
-#endif // HITLS_CRYPTO_SHA224
 
-#ifdef HITLS_CRYPTO_SHA512
-typedef struct {
-    uint64_t h[CRYPT_SHA2_512_DIGESTSIZE / sizeof(uint64_t)];
-    uint8_t block[CRYPT_SHA2_512_BLOCKSIZE];
-    uint64_t lNum, hNum;
-    uint32_t num, mdlen;
-    uint32_t errorCode; /* error Code */
-} CRYPT_SHA2_512_Ctx;
-#endif // HITLS_CRYPTO_SHA512
+typedef struct CryptSha256Ctx CRYPT_SHA2_224_Ctx;
 
-#ifdef HITLS_CRYPTO_SHA384
-typedef CRYPT_SHA2_512_Ctx CRYPT_SHA2_384_Ctx;
-#endif // HITLS_CRYPTO_SHA384
+/**
+ * @ingroup SHA2_224
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_SHA2_224_Ctx *CRYPT_SHA2_224_NewCtx(void);
 
-#ifdef HITLS_CRYPTO_SHA224
+/**
+ * @ingroup SHA2_224
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_SHA2_224_FreeCtx(CRYPT_SHA2_224_Ctx *ctx);
+
 /**
  * @defgroup CRYPT_SHA2_224_Init
  * @ingroup LLF Low Level Functions
@@ -96,11 +88,12 @@ typedef CRYPT_SHA2_512_Ctx CRYPT_SHA2_384_Ctx;
  * (either locally or dynamically allocated).
  *
  * @param[in] ctx The sha224 ctx
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx);
+int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @defgroup CRYPT_SHA2_224_Update
@@ -157,6 +150,26 @@ int32_t CRYPT_SHA2_224_Final(CRYPT_SHA2_224_Ctx *ctx, uint8_t *digest, uint32_t 
 #endif // HITLS_CRYPTO_SHA224
 
 #ifdef HITLS_CRYPTO_SHA256
+
+typedef struct CryptSha256Ctx CRYPT_SHA2_256_Ctx;
+
+/**
+ * @ingroup SHA2_256
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_SHA2_256_Ctx *CRYPT_SHA2_256_NewCtx(void);
+
+/**
+ * @ingroup SHA2_256
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_SHA2_256_FreeCtx(CRYPT_SHA2_256_Ctx *ctx);
+
 /**
  * @defgroup CRYPT_SHA2_256_Init
  * @ingroup LLF Low Level Functions
@@ -177,11 +190,12 @@ int32_t CRYPT_SHA2_224_Final(CRYPT_SHA2_224_Ctx *ctx, uint8_t *digest, uint32_t 
  * (either locally or dynamically allocated).
  *
  * @param[in] ctx The sha256 ctx
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx);
+int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @defgroup CRYPT_SHA2_256_Update
@@ -242,6 +256,26 @@ int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t 
 #endif // HITLS_CRYPTO_SHA256
 
 #ifdef HITLS_CRYPTO_SHA384
+
+typedef struct CryptSha2512Ctx CRYPT_SHA2_384_Ctx;
+
+/**
+ * @ingroup SHA2_384
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_SHA2_384_Ctx *CRYPT_SHA2_384_NewCtx(void);
+
+/**
+ * @ingroup SHA2_384
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_SHA2_384_FreeCtx(CRYPT_SHA2_384_Ctx *ctx);
+
 /**
  * @ingroup LLF Low Level Functions
  * @par Prototype
@@ -259,11 +293,12 @@ int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t 
  * (either locally or dynamically allocated).
  *
  * @param[in,out] ctx The sha384 ctx
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx);
+int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup LLF Low Level Functions
@@ -319,6 +354,26 @@ int32_t CRYPT_SHA2_384_Final(CRYPT_SHA2_384_Ctx *ctx, uint8_t *digest, uint32_t 
 #endif // HITLS_CRYPTO_SHA384
 
 #ifdef HITLS_CRYPTO_SHA512
+
+typedef struct CryptSha2512Ctx CRYPT_SHA2_512_Ctx;
+
+/**
+ * @ingroup SHA2_512
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_SHA2_512_Ctx *CRYPT_SHA2_512_NewCtx(void);
+
+/**
+ * @ingroup SHA2_512
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx);
+
 /**
  * @ingroup LLF Low Level Functions
  * @par Prototype
@@ -336,11 +391,12 @@ int32_t CRYPT_SHA2_384_Final(CRYPT_SHA2_384_Ctx *ctx, uint8_t *digest, uint32_t 
  * (either locally or dynamically allocated).
  *
  * @param[in,out] ctx The sha512 ctx
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx);
+int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup LLF Low Level Functions
@@ -405,7 +461,7 @@ int32_t CRYPT_SHA2_512_Final(CRYPT_SHA2_512_Ctx *ctx, uint8_t *digest, uint32_t 
  */
 void CRYPT_SHA2_224_Deinit(CRYPT_SHA2_224_Ctx *ctx);
 
-int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, CRYPT_SHA2_224_Ctx *src);
+int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, const CRYPT_SHA2_224_Ctx *src);
 #endif // HITLS_CRYPTO_SHA224
 
 #ifdef HITLS_CRYPTO_SHA256
@@ -418,7 +474,7 @@ int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, CRYPT_SHA2_224_Ctx *src)
  */
 void CRYPT_SHA2_256_Deinit(CRYPT_SHA2_256_Ctx *ctx);
 
-int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, CRYPT_SHA2_256_Ctx *src);
+int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx *src);
 #endif // HITLS_CRYPTO_SHA256
 
 #ifdef HITLS_CRYPTO_SHA384
@@ -431,7 +487,7 @@ int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, CRYPT_SHA2_256_Ctx *src)
  */
 void CRYPT_SHA2_384_Deinit(CRYPT_SHA2_384_Ctx *ctx);
 
-int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, CRYPT_SHA2_384_Ctx *src);
+int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, const CRYPT_SHA2_384_Ctx *src);
 #endif // HITLS_CRYPTO_SHA384
 
 #ifdef HITLS_CRYPTO_SHA512
@@ -444,7 +500,7 @@ int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, CRYPT_SHA2_384_Ctx *src)
  */
 void CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx);
 
-int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, CRYPT_SHA2_512_Ctx *src);
+int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, const CRYPT_SHA2_512_Ctx *src);
 #endif // HITLS_CRYPTO_SHA512
 
 #ifdef __cplusplus

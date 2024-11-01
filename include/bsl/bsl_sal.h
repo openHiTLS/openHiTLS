@@ -983,6 +983,12 @@ typedef enum {
     BSL_SAL_FILE_READ_CB_FUNC,
     BSL_SAL_FILE_WRITE_CB_FUNC,
     BSL_SAL_FILE_LENGTH_CB_FUNC,
+
+    BSL_SAL_DL_LOADLIB_CB_FUNC = 0x0700,
+    BSL_SAL_DL_UNLOADLIB_CB_FUNC,
+    BSL_SAL_DL_GETFUNC_CB_FUNC,
+
+    BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;
 
 /**
@@ -1230,7 +1236,111 @@ typedef int32_t (*BslSalSockGetLastSocketError)(void);
  * @retval Other error codes specific to the SAL module
  */
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb);
+/**
+ * @ingroup bsl_sal
+ * @brief Load a dynamic library for dl.
+ *
+ * Load a dynamic library for dl.
+ *
+ * @attention None.
+ * @param fileName [IN] Name of the file to be loaded.
+ * @param handle [OUT] Pointer to store the handle of the loaded library.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_LoadLib(const char *fileName, void **handle);
 
+/**
+ * @ingroup bsl_sal
+ * @brief Unload a dynamic library for dl.
+ *
+ * Unload a dynamic library for dl.
+ *
+ * @attention None.
+ * @param handle [IN] Handle of the library to be unloaded.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_UnLoadLib(void *handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get the address of the initialization function for dl.
+ *
+ * Get the address of the initialization function for dl.
+ *
+ * @attention None.
+ * @param handle [IN] Handle of the loaded library.
+ * @param funcName [IN] Name of the function.
+ * @param func [OUT] Pointer to store the address of the function.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func);
+
+// Define command enumeration
+typedef enum {
+    BSL_SAL_CONVERTER_SO = 1,
+    BSL_SAL_CONVERTER_LIBSO = 2,
+    BSL_SAL_CONVERTER_LIBDLL = 3,
+    BSL_SAL_CONVERTER_DLL = 4
+} BSL_SAL_ConverterCmd;
+
+/**
+ * @ingroup bsl_sal
+ * @brief Convert filename to full library path for dl.
+ *
+ * Convert filename to full library name for dl according to the specified format and directory.
+ *
+ * @attention None.
+ * @param cmd [IN] Command specifying the conversion format.
+ * @param fileName [IN] Original filename.
+ * @param name [OUT] Pointer to store the converted full name.
+ * @retval If the operation is successful, BSL_OK is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_LibNameFormat(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Loading dynamic libraries.
+ *
+ * Loading dynamic libraries.
+ *
+ * @param fileName [IN] Path of dl
+ * @param handle [OUT] Dynamic library handle
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_NOT_FOUND Library file not found.
+ * @retval #BSL_SAL_ERR_DL_LOAD_FAIL Failed to load the library.
+ */
+typedef int32_t (*BslSalLoadLib)(const char *fileName, void **handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Close dynamic library.
+ *
+ * Close dynamic library.
+ *
+ * @param handle [IN] Dynamic library handle
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_UNLOAAD_FAIL Failed to unload the library.
+ */
+typedef int32_t (*BslSalUnLoadLib)(void *handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get function symbol from dynamic library.
+ *
+ * Get function symbol from dynamic library.
+ *
+ * @param handle [IN] Dynamic library handle
+ * @param funcName [IN] Function name
+ * @param func [OUT] Function pointer
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_NON_FUNCTION Symbol found but is not a function.
+ * @retval #BSL_SAL_ERR_DL_LOOKUP_METHOD Failed to lookup the function.
+ */
+typedef int32_t (*BslSalGetFunc)(void *handle, const char *funcName, void **func);
 
 #ifdef __cplusplus
 }

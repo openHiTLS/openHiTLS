@@ -18,11 +18,11 @@
 
 #include "bsl_err_internal.h"
 #include "crypt_aes.h"
-#include "modes_local.h"
 #include "crypt_errno.h"
 #include "crypt_modes_cbc.h"
+#include "modes_local.h"
 
-int32_t AES_CBC_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CBC_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -36,7 +36,7 @@ int32_t AES_CBC_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
     return CRYPT_SUCCESS;
 }
 
-int32_t AES_CBC_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CBC_DecryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -49,4 +49,16 @@ int32_t AES_CBC_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
     (void)CRYPT_AES_CBC_Decrypt(ctx->ciphCtx, in, out, len, ctx->iv);
     return CRYPT_SUCCESS;
 }
+
+int32_t AES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherUpdate(modeCtx, modeCtx->enc ? AES_CBC_EncryptBlock : AES_CBC_DecryptBlock,
+        in, inLen, out, outLen);
+}
+
+int32_t AES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherFinal(modeCtx, modeCtx->enc ? AES_CBC_EncryptBlock : AES_CBC_DecryptBlock, out, outLen);
+}
+
 #endif

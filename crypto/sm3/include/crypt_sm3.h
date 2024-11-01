@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,24 +30,36 @@ extern "C" {
 #define CRYPT_SM3_BLOCKSIZE 64
 #define CRYPT_SM3_DIGESTSIZE 32
 
-typedef struct {
-    uint32_t h[CRYPT_SM3_DIGESTSIZE / sizeof(uint32_t)];  /* store the intermediate data of the hash value */
-    uint32_t hNum, lNum;                                  /* input data counter, maximum value 2 ^ 64 bits */
-    uint8_t block[CRYPT_SM3_BLOCKSIZE];                   /* store the remaining data which less than one block */
-    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
-    uint32_t num;
-} CRYPT_SM3_Ctx;
+typedef struct CryptSm3Ctx CRYPT_SM3_Ctx;
+
+/**
+ * @ingroup SM3
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_SM3_Ctx *CRYPT_SM3_NewCtx(void);
+
+/**
+ * @ingroup SM3
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx);
 
 /**
  * @ingroup SM3
  * @brief This API is used to initialize the SM3 context.
  *
  * @param ctx [in,out] SM3 context pointer.
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS    initialization succeeded.
  * @retval #CRYPT_NULL_INPUT Pointer ctx is NULL
  */
-int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx);
+int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup SM3
