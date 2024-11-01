@@ -66,7 +66,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
 {
-    BSL_PEM_Symbol sym = {BSL_PEM_EC_PIR_KEY_BEGIN_STR, BSL_PEM_EC_PIR_KEY_END_STR};
+    BSL_PEM_Symbol sym = {BSL_PEM_EC_PRI_KEY_BEGIN_STR, BSL_PEM_EC_PRI_KEY_END_STR};
     char *pemdata = "-----BEGIN EC PRIVATE KEY-----\n"
                     "MHcCAQEEIAadtjyegBKXLH9xvNDvH24j7cn3PsaNSXSMIVmvJZM7oAoGCCqGSM49\n"
                     "AwEHoUQDQgAEPFKNDGyE7HES1hPd8mXydX4QunGvk37ISPOhXJStzxTt8sWdcEtV\n"

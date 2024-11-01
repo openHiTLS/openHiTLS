@@ -145,7 +145,7 @@ typedef struct {
     int32_t type;
 } HITLS_X509_GeneralNameMap;
 
-static HITLS_X509_GeneralNameMap g_gernalNameMap[] = {
+static HITLS_X509_GeneralNameMap g_generalNameMap[] = {
     {HITLS_X509_GENERALNAME_OTHER_TAG, HITLS_X509_GN_OTHER},
     {HITLS_X509_GENERALNAME_RFC822_TAG, HITLS_X509_GN_EMAIL},
     {HITLS_X509_GENERALNAME_DNS_TAG, HITLS_X509_GN_DNS},
@@ -203,7 +203,7 @@ static int32_t ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Ext *e
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t ParseExtBasicContaints(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Ext *ext)
+static int32_t ParseExtBasicConstraints(HITLS_X509_ExtEntry *extEntry, HITLS_X509_Ext *ext)
 {
     uint8_t *temp = extEntry->extnValue.buff;
     uint32_t tempLen = extEntry->extnValue.len;
@@ -256,20 +256,21 @@ static int32_t ParseDirName(uint8_t **encode, uint32_t *encLen, BslList **list)
         *encLen -= valueLen;
     } else {
         BSL_LIST_DeleteAll(*list, NULL);
+        BSL_SAL_Free(*list);
         *list = NULL;
     }
     return ret;
 }
 
-static int32_t ParseGernalName(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t nameLen, BslList *list)
+static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t nameLen, BslList *list)
 {
     int32_t type = -1;
     int32_t ret;
     BslList *dirNames = NULL;
     BSL_Buffer value = {0};
-    for (uint32_t i = 0; i < sizeof(g_gernalNameMap) / sizeof(g_gernalNameMap[0]); i++) {
-        if (g_gernalNameMap[i].tag == tag) {
-            type = g_gernalNameMap[i].type;
+    for (uint32_t i = 0; i < sizeof(g_generalNameMap) / sizeof(g_generalNameMap[0]); i++) {
+        if (g_generalNameMap[i].tag == tag) {
+            type = g_generalNameMap[i].type;
             break;
         }
     }
@@ -289,6 +290,10 @@ static int32_t ParseGernalName(uint8_t tag, uint8_t **encode, uint32_t *encLen, 
     }
     HITLS_X509_GeneralName *name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
     if (name == NULL) {
+        if (dirNames != NULL) {
+            BSL_LIST_DeleteAll(dirNames, NULL);
+            BSL_SAL_Free(dirNames);
+        }
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
@@ -391,7 +396,7 @@ int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *
             continue;
         }
         // value
-        ret = ParseGernalName(tag, &buff, &buffLen, nameValueLen, list);
+        ret = ParseGeneralName(tag, &buff, &buffLen, nameValueLen, list);
         if (ret != BSL_SUCCESS) {
             break;
         }
@@ -681,7 +686,7 @@ static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List 
         case BSL_CID_CE_KEYUSAGE:
             return ParseExtKeyUsage(&extEntry, ext);
         case BSL_CID_CE_BASICCONSTRAINTS:
-            return ParseExtBasicContaints(&extEntry, ext);
+            return ParseExtBasicConstraints(&extEntry, ext);
         default:
             return HITLS_X509_SUCCESS;
     }
