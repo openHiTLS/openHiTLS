@@ -95,8 +95,9 @@ uint32_t ECC_PkeyGetBits(const ECC_Pkey *ctx)
     return (bytes * 2 + 1) * 8;
 }
 
-int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const CRYPT_EccPrv *prv)
+int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const CRYPT_Param *para)
 {
+    CRYPT_EccPrv *prv = (CRYPT_EccPrv *)para->param;
     if ((ctx == NULL) || (ctx->para == NULL) || (prv == NULL) || (prv->data == NULL) || (prv->len == 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -136,8 +137,9 @@ ERR:
     return ret;
 }
 
-int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const CRYPT_EccPub *pub)
+int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const CRYPT_Param *para)
 {
+    CRYPT_EccPub *pub = (CRYPT_EccPub *)para->param;
     if ((ctx == NULL) || (ctx->para == NULL) || (pub == NULL) || (pub->data == NULL) || (pub->len == 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -189,8 +191,9 @@ ERR:
     return ret;
 }
 
-int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_EccPrv *prv)
+int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_Param *para)
 {
+    CRYPT_EccPrv *prv = (CRYPT_EccPrv *)para->param;
     if ((ctx == NULL) || (prv == NULL) || (prv->data == NULL) || (prv->len == 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -204,8 +207,9 @@ int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_EccPrv *prv)
     return BN_Bn2Bin(ctx->prvkey, prv->data, &prv->len);
 }
 
-int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_EccPub *pub)
+int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_Param *para)
 {
+    CRYPT_EccPub *pub = (CRYPT_EccPub *)para->param;
     if ((ctx == NULL) || (ctx->para == NULL) || (pub == NULL) || (pub->data == NULL) || (pub->len == 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

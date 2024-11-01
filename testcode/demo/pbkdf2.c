@@ -23,6 +23,8 @@
 #include "crypt_algid.h"
 #include "crypt_eal_kdf.h"
 
+#define PBKDF2_PARAM_LEN (4)
+
 void *StdMalloc(uint32_t len) {
     return malloc((size_t)len);
 }
@@ -66,19 +68,44 @@ int main(void)
     */
     BSL_SAL_RegMemCallback(&cb);
 
-    ret = CRYPT_EAL_Pbkdf2(CRYPT_MAC_HMAC_SHA256, key, sizeof(key), salt, sizeof(salt), iterations, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        printf("pbkdf2 error code is %x\n", ret);
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    if (ctx == NULL) {
         PrintLastError();
         goto exit;
     }
+    CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
+    CRYPT_Param PBKDF2_PARAM[PBKDF2_PARAM_LEN] = {
+        {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, sizeof(id)},
+        {CRYPT_KDF_PARAM_PASSWORD, key, sizeof(key)},
+        {CRYPT_KDF_PARAM_SALT, salt, sizeof(salt)},
+        {CRYPT_KDF_PARAM_ITER, &iterations, sizeof(iterations)},
+    };
+
+    for (int i = 0; i < PBKDF2_PARAM_LEN; i++) {
+        ret = CRYPT_EAL_KdfSetParam(ctx, PBKDF2_PARAM + i);
+        if (ret != CRYPT_SUCCESS) {
+            printf("error code is %x\n", ret);
+            PrintLastError();
+            goto exit;
+        }
+    }
+
+    ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        PrintLastError();
+        goto exit;
+    }
+
     if (memcmp(out, result, sizeof(result)) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
         goto exit;
     }
     printf("pass \n");
+
 exit:
     BSL_ERR_DeInit();
+    CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;
 }

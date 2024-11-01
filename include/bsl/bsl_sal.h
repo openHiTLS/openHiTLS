@@ -168,6 +168,13 @@ typedef struct ThreadCallback {
 
 /**
  * @ingroup bsl_sal
+ *
+ * Registrable function structure for loading dynamic libraries.
+ */
+typedef struct DlCallback BSL_SAL_DlCallback;
+
+/**
+ * @ingroup bsl_sal
  * @brief   Interface for registering memory-related callback functions
  *
  * Register the memory application and release functions.
@@ -1230,6 +1237,82 @@ typedef int32_t (*BslSalSockGetLastSocketError)(void);
  * @retval Other error codes specific to the SAL module
  */
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb);
+/**
+ * @ingroup bsl_sal
+ * @brief Load a dynamic library for dl.
+ *
+ * Load a dynamic library for dl.
+ *
+ * @attention None.
+ * @param fileName [IN] Name of the file to be loaded.
+ * @param handle [OUT] Pointer to store the handle of the loaded library.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_LoadLib(const char *fileName, void **handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Unload a dynamic library for dl.
+ *
+ * Unload a dynamic library for dl.
+ *
+ * @attention None.
+ * @param handle [IN] Handle of the library to be unloaded.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_UnLoadLib(void *handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get the address of the initialization function for dl.
+ *
+ * Get the address of the initialization function for dl.
+ *
+ * @attention None.
+ * @param handle [IN] Handle of the loaded library.
+ * @param funcName [IN] Name of the function.
+ * @param func [OUT] Pointer to store the address of the function.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func);
+
+// Define command enumeration
+typedef enum {
+    BSL_SAL_CONVERTER_SO = 1,
+    BSL_SAL_CONVERTER_LIBSO = 2,
+    BSL_SAL_CONVERTER_LIBDLL = 3,
+    BSL_SAL_CONVERTER_DLL = 4
+} BSL_SAL_ConverterCmd;
+
+/**
+ * @ingroup bsl_sal
+ * @brief Convert filename to full library path for dl.
+ *
+ * Convert filename to full library name for dl according to the specified format and directory.
+ *
+ * @attention None.
+ * @param cmd [IN] Command specifying the conversion format.
+ * @param fileName [IN] Original filename.
+ * @param name [OUT] Pointer to store the converted full name.
+ * @retval If the operation is successful, BSL_OK is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name);
+
+/**
+ * @ingroup bsl_sal
+ * @brief   Interface for registering operation of dynamic library callback functions
+ *
+ * @attention None
+ * @param cb [IN] Pointer to the dynamic library callback function
+ * @retval #BSL_SUCCESS, functions of dynamic library are successfully registered.
+ * @retval #BSL_SAL_ERR_BAD_PARAM. If the cb is null or the cb members have null, caution fill
+ * the input parameter cb.
+ */
+int32_t BSL_SAL_RegdlCallback(BSL_SAL_DlCallback *cb);
 
 
 #ifdef __cplusplus

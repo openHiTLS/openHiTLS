@@ -24,7 +24,6 @@
 #include "crypt_errno.h"
 #include "eal_cipher_local.h"
 #include "eal_common.h"
-#include "crypt_method.h"
 #include "crypt_utils.h"
 #include "crypt_ealinit.h"
 

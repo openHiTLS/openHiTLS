@@ -174,15 +174,15 @@ void SDV_CRYPTO_PAILLIER_SET_PARA_API_TC001(Hex *p, Hex *q, int bits)
     uint32_t bytes = BN_BITS_TO_BYTES(bits);
     if (p->len != bytes)
     {
-        ASSERT_TRUE_AND_LOG("pLen != BN_BITS_TO_BYTES(bits)", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        ASSERT_TRUE_AND_LOG("pLen != BN_BITS_TO_BYTES(bits)", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_MEM_ALLOC_FAIL);
     }
     if (q->len != bytes)
     {
-        ASSERT_TRUE_AND_LOG("qLen != BN_BITS_TO_BYTES(bits)", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        ASSERT_TRUE_AND_LOG("qLen != BN_BITS_TO_BYTES(bits)", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_MEM_ALLOC_FAIL);
     }
     if (p->len == bytes && q->len == bytes && bits == 0)
     {
-        ASSERT_TRUE_AND_LOG("p = NULL, q = NULL, bits = 0", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        ASSERT_TRUE_AND_LOG("p = NULL, q = NULL, bits = 0", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_MEM_ALLOC_FAIL);
     }
     if (p->len == bytes && q->len == bytes && bits != 0)
     {

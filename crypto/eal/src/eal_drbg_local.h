@@ -21,45 +21,39 @@
 
 #include <stdint.h>
 #include "bsl_sal.h"
-
+#include "crypt_algid.h"
+#include "crypt_local_types.h"
 #include "crypt_eal_rand.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-typedef union {
-    uintptr_t ptr;
-} CRYPT_RndParam;
-
-typedef struct {
-    /**
-     * @brief Memory application and initialization of DRBG context. If it is not registered, the input ctx is null.
-     */
-    void* (*newCtx)(CRYPT_RndParam *param);
-    /**
-     * @brief Free the DRBG context memory. If it is not registered, this interface is not invoked in the deinit.
-     */
-    void (*freeCtx)(void *ctx);
-    /**
-     * @brief Generate random numbers.This hook must be implemented otherwise it will fail at initialization.
-     *        (The internal initialization is specified by default.)
-     */
-    int32_t (*rand)(void *ctx, uint8_t *bytes, uint32_t len, const uint8_t *addin, uint32_t adinLen);
-    /**
-     * @brief DRBG seed interface. If it is not registered internally, the seed and seedwithAdin directly fail,
-     *        but the DRBG generation is not affected because it's specified by default during internal initialization.
-     */
-    int32_t (*seed)(void *ctx, const uint8_t *addin, uint32_t adinLen);
-} EalRndMeth;
+#define RAND_TYPE_MD 1
+#define RAND_TYPE_MAC 2
+#define RAND_TYPE_AES 3
+#define RAND_TYPE_AES_DF 4
 
 struct EAL_RndCtx {
+    bool isProvider;
     CRYPT_RAND_AlgId id;
-    EalRndMeth meth;
+    EAL_RandUnitaryMethod *meth;
     void *ctx;
     bool working; // whether the system is in the working state
     BSL_SAL_ThreadLockHandle lock; // thread lock
 };
+
+typedef struct {
+    CRYPT_RAND_AlgId  drbgId;
+    uint32_t depId;
+    uint32_t type;
+} DrbgIdMap;
+
+const DrbgIdMap *GetDrbgIdMap(CRYPT_RAND_AlgId id);
+
+EAL_RandUnitaryMethod* EAL_RandGetMethod();
+
+int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu);
 
 /**
  * @brief Set the method for global random number
@@ -68,7 +62,7 @@ struct EAL_RndCtx {
  * @return Success: CRYPT_SUCCESS
  * For other error codes, see crypt_errno.h.
  */
-int32_t EAL_RandSetMeth(EalRndMeth *meth, CRYPT_EAL_RndCtx *ctx);
+int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx);
 
 /**
  * @brief Global DRBG initialization. After initialization is complete,
@@ -77,7 +71,7 @@ int32_t EAL_RandSetMeth(EalRndMeth *meth, CRYPT_EAL_RndCtx *ctx);
  * @return Success: CRYPT_SUCCESS
  * For other error codes, see crypt_errno.h.
  */
-int32_t EAL_RandInit(CRYPT_RndParam *param, CRYPT_EAL_RndCtx *ctx);
+int32_t EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx);
 
 /**
  * @brief Global random deinitialization
