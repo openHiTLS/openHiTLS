@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,15 +54,7 @@ extern "C" {
 #define CRYPT_SHAKE256_BLOCKSIZE   136  // ((1600 - 256 * 2) / 8)
 #define CRYPT_SHAKE256_DIGESTSIZE  0
 
-typedef struct {
-    uint8_t state[200];     // State array, 200bytes is 1600bits
-    uint32_t num;           // Data length in the remaining buffer.
-    uint32_t blockSize;     // For example, BlockSize(sha3-224) = ((1600 - 224 * 2) / 8) bytes
-    uint32_t mdSize;     // sha3-224 corresponds to 28 bytes, sha3-256: 32 bytes, sha3-384: 48 bytes, sha3-512: 64 bytes
-    // Non-integer multiple data cache. 168 = (1600 - 128 * 2) / 8, that is maximum block size used by shake_*
-    uint8_t buf[168];
-    uint8_t padChr;         // char for padding, sha3_* use 0x06 and shake_* use 0x1f
-} CRYPT_SHA3_Ctx;
+typedef struct CryptSha3Ctx CRYPT_SHA3_Ctx;
 
 typedef CRYPT_SHA3_Ctx CRYPT_SHA3_224_Ctx;
 
@@ -74,17 +67,34 @@ typedef CRYPT_SHA3_Ctx CRYPT_SHA3_512_Ctx;
 typedef CRYPT_SHA3_Ctx CRYPT_SHAKE128_Ctx;
 
 typedef CRYPT_SHA3_Ctx CRYPT_SHAKE256_Ctx;
+// new context
+CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_NewCtx(void);
+CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_NewCtx(void);
+CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_NewCtx(void);
+CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_NewCtx(void);
+CRYPT_SHAKE128_Ctx *CRYPT_SHAKE128_NewCtx(void);
+CRYPT_SHAKE256_Ctx *CRYPT_SHAKE256_NewCtx(void);
+
+// free context
+void CRYPT_SHA3_224_FreeCtx(CRYPT_SHA3_224_Ctx* ctx);
+void CRYPT_SHA3_256_FreeCtx(CRYPT_SHA3_256_Ctx* ctx);
+void CRYPT_SHA3_384_FreeCtx(CRYPT_SHA3_384_Ctx* ctx);
+void CRYPT_SHA3_512_FreeCtx(CRYPT_SHA3_512_Ctx* ctx);
+void CRYPT_SHAKE128_FreeCtx(CRYPT_SHAKE128_Ctx* ctx);
+void CRYPT_SHAKE256_FreeCtx(CRYPT_SHAKE256_Ctx* ctx);
+
+// free context
 
 // Initialize the context
-int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx);
+int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, CRYPT_Param *param);
 
-int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx);
+int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, CRYPT_Param *param);
 
-int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx);
+int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, CRYPT_Param *param);
 
-int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx);
-int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx);
-int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx);
+int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, CRYPT_Param *param);
 
 // Data update API
 int32_t CRYPT_SHA3_224_Update(CRYPT_SHA3_224_Ctx *ctx, const uint8_t *in, uint32_t len);
@@ -120,17 +130,12 @@ void CRYPT_SHAKE128_Deinit(CRYPT_SHAKE128_Ctx *ctx);
 void CRYPT_SHAKE256_Deinit(CRYPT_SHAKE256_Ctx *ctx);
 
 // Copy the context
-int32_t CRYPT_SHA3_224_CopyCtx(CRYPT_SHA3_224_Ctx *dst, CRYPT_SHA3_224_Ctx *src);
-
-int32_t CRYPT_SHA3_256_CopyCtx(CRYPT_SHA3_256_Ctx *dst, CRYPT_SHA3_256_Ctx *src);
-
-int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, CRYPT_SHA3_384_Ctx *src);
-
-int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, CRYPT_SHA3_512_Ctx *src);
-
-#define CRYPT_SHAKE128_CopyCtx NULL
-#define CRYPT_SHAKE256_CopyCtx NULL
-
+int32_t CRYPT_SHA3_224_CopyCtx(CRYPT_SHA3_224_Ctx *dst, const CRYPT_SHA3_224_Ctx *src);
+int32_t CRYPT_SHA3_256_CopyCtx(CRYPT_SHA3_256_Ctx *dst, const CRYPT_SHA3_256_Ctx *src);
+int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src);
+int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src);
+int32_t CRYPT_SHAKE128_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src);
+int32_t CRYPT_SHAKE256_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src);
 #ifdef __cplusplus
 }
 #endif

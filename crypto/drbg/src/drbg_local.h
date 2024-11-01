@@ -69,6 +69,60 @@ struct DrbgCtx {
     void *seedCtx; /* Seed context */
 };
 
+#ifdef HITLS_CRYPTO_DRBG_HMAC
+/**
+ * @ingroup drbg
+ * @brief Apply for a context for the HMAC_DRBG.
+ * @brief This API does not support multiple threads.
+ *
+ * @param hmacMeth  HMAC method
+ * @param mdMeth    hash algid
+ * @param seedMeth  DRBG seed hook
+ * @param seedCtx   DRBG seed context
+ *
+ * @retval DRBG_Ctx* Success
+ * @retval NULL      failure
+ */
+DRBG_Ctx *DRBG_NewHmacCtx(const EAL_MacMethod *hmacMeth, CRYPT_MAC_AlgId macId,
+    const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+#endif
+
+#ifdef HITLS_CRYPTO_DRBG_HASH
+/**
+ * @ingroup drbg
+ * @brief Apply for a context for the Hash_DRBG.
+ * @brief This API does not support multiple threads.
+ *
+ * @param md        HASH method
+ * @param seedMeth  DRBG seed hook
+ * @param seedCtx   DRBG seed context
+ *
+ * @retval DRBG_Ctx* Success
+ * @retval NULL      failure
+ */
+DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+#endif
+
+
+#ifdef HITLS_CRYPTO_DRBG_CTR
+/**
+ * @ingroup drbg
+ * @brief Apply for a context for the CTR_DRBG.
+ * @brief This API does not support multiple threads.
+ *
+ * @param ciphMeth  AES method
+ * @param keyLen    Key length
+ * @param isUsedDf  Indicates whether to use derivation function.
+ * @param seedMeth  DRBG seed hook
+ * @param seedCtx   DRBG seed context
+ *
+ * @retval DRBG_Ctx* Success
+ * @retval NULL      failure
+ */
+DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, const bool isUsedDf,
+    const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

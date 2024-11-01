@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
+#include "crypt_eal_provider.h"
 #include "crypt_eal_pkey.h"
 
 #ifdef __cplusplus
@@ -49,6 +49,10 @@ typedef struct {
         CRYPT_PaillierPub paillierPub; /**< Paillier public key structure */
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
+
+#define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
+#define CRYPT_EAL_PKEY_EXCH_OPERATE     2
+#define CRYPT_EAL_PKEY_SIGN_OPERATE     4
 
 /**
  * @ingroup crypt_eal_pkey
@@ -114,6 +118,21 @@ bool CRYPT_EAL_PkeyIsValidAlgId(CRYPT_PKEY_AlgId id);
  *          NULL, if the operation fails.
  */
 CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Create an asymmetric key pair structure in the providers.
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] Symmetric encryption/decryption algorithm ID.
+ * @param type [IN] Specify operation type.
+ * @param attrName [IN] Specify expected attribute values
+ *
+ * @retval  CRYPT_EAL_PkeyCtx pointer.
+ *          NULL, if the operation fails.
+ */
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t pkeyOperType,
+    const char *attrName);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -351,7 +370,8 @@ int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
 
 /**
  * @ingroup crypt_eal_pkey
- * @brief   Check whether the public and private keys match.
+ * @brief Check whether the public and private keys match.
+ *  Currently not supported in the provider, supported in the future
  *
  * @param   pubKey      [IN] Public key
  * @param   prvKey      [IN] private key
@@ -455,16 +475,6 @@ CRYPT_PKEY_AlgId CRYPT_EAL_PkeyGetId(const CRYPT_EAL_PkeyCtx *pkey);
  */
 CRYPT_PKEY_ParaId CRYPT_EAL_PkeyGetParaId(const CRYPT_EAL_PkeyCtx *pkey);
 
-/**
- * @ingroup crypt_eal_pkey
- * @brief   Check the key pair consistency. only supports CRYPT_PKEY_DH.
- *
- * @param   pkey [IN] Key session
- *
- * @retval  #CRYPT_SUCCESS, if successful.
- *          For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_EAL_PkeyCheck(const CRYPT_EAL_PkeyCtx *pkey);
 
 /**
  * @ingroup crypt_eal_pkey

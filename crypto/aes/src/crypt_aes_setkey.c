@@ -113,5 +113,6 @@ void CRYPT_AES_Clean(CRYPT_AES_Key *ctx)
         return;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_AES_Key));
+    return;
 }
 #endif /* HITLS_CRYPTO_AES */

@@ -531,7 +531,6 @@ class FeatureConfigParser:
         macros = set()
         for lib, lib_value in self.libs.items():
             lib_upper = lib.upper()
-
             for fea in lib_value.get('c', []):
                 macros.add("-D%s_%s" % (lib_upper, fea.upper()))
             for fea in lib_value.get('asm', []):

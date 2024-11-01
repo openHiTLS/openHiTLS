@@ -19,49 +19,35 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_OFB
 
-#include "crypt_modes.h"
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "crypt_types.h"
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-/**
- * @brief OFB mode encryption/decryption. Any byte length can be encrypted/decrypted.
- *
- * @param [IN] ctx  Context of ofb mode encryption
- * @param [IN] in   Data to be encrypted/decrypted
- * @param [OUT] out Encrypted/decrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_OFB_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+typedef struct ModesCipherCtx MODES_CipherCtx;
 
-#ifdef HITLS_CRYPTO_SM4
-/**
- * @brief SM4-OFB mode encryption
- *
- * @param [IN] ctx  Context of ofb mode encryption
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_OFB_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+// OFB mode universal implementation
+MODES_CipherCtx *MODES_OFB_NewCtx(int32_t algId);
+int32_t MODES_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
 
-/**
- * @brief SM4-OFB mode decryption
- *
- * @param ctx [IN]  Context of ofb mode encryption
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Decrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_OFB_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
+int32_t MODES_OFB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_OFB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_OFB_DeInitCtx(MODES_CipherCtx *modeCtx);
+int32_t MODES_OFB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
+void MODES_OFB_FreeCtx(MODES_CipherCtx *modeCtx);
+
+// SM4 OFB optimization implementation
+int32_t SM4_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
+int32_t SM4_OFB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+
+int32_t MODES_OFB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc);
+
+int32_t MODES_OFB_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus
 }

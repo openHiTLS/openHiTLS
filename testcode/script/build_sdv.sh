@@ -94,8 +94,24 @@ build_generate()
     make GEN_TESTCASE ${ENABLE_VERBOSE} -j
 }
 
+# Function: Compile provider .so file
+build_provider_so()
+{
+    # Enter provider directory
+    cd ${HITLS_ROOT_DIR}/testcode/testdata/provider
+    # Create build directory
+    mkdir -p build && cd build
+    # Execute cmake
+    cmake ..
+    # Compile
+    make
+    # Return to original directory
+    cd ${HITLS_ROOT_DIR}/testcode/build
+}
+
 build_test_suite()
 {
+    build_provider_so
     procNum=$(grep -c ^processor /proc/cpuinfo)
     echo "procNum = $procNum"
     tmpPipe="$$.fifo"
@@ -161,6 +177,9 @@ clean()
     rm -rf ${HITLS_ROOT_DIR}/testcode/sdv/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/framework/process/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/framework/gen_test/build
+    rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/build
+    rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path1
+    rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path2
     mkdir ${HITLS_ROOT_DIR}/testcode/output/log
 }
 

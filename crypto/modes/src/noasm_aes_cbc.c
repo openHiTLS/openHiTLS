@@ -18,13 +18,13 @@
 
 #include "crypt_modes_cbc.h"
 
-int32_t AES_CBC_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODE_CBC_Encrypt(ctx, in, out, len);
+    return MODES_CBC_Update(modeCtx, in, inLen, out, outLen);
 }
 
-int32_t AES_CBC_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
-    return MODE_CBC_Decrypt(ctx, in, out, len);
+    return MODES_CBC_Final(modeCtx, out, outLen);
 }
 #endif

@@ -24,20 +24,19 @@
 #include "modes_local.h"
 #include "crypt_modes_gcm.h"
 
-int32_t MODES_SM4_GCM_SetKey(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODES_SM4_GCM_SetKey(MODES_CipherGCMCtx *ctx, const uint8_t *key, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     uint8_t gcmKey[GCM_BLOCKSIZE] = { 0 };
-    MODES_GCM_Clean(ctx);
     int32_t ret = CRYPT_SM4_SetEncryptKey(ctx->ciphCtx, key, len);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, gcmKey, gcmKey, GCM_BLOCKSIZE);
+    ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, gcmKey, gcmKey, GCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -48,9 +47,9 @@ int32_t MODES_SM4_GCM_SetKey(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t le
     return CRYPT_SUCCESS;
 }
 
-static void GcmRemHandle(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+static void GcmRemHandle(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
-    (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->iv, ctx->last, GCM_BLOCKSIZE);
+    (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, ctx->last, GCM_BLOCKSIZE);
     uint32_t i;
     if (enc) {
         for (i = 0; i < len; i++) {
@@ -70,10 +69,10 @@ static void GcmRemHandle(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, ui
     ctx->lastLen = GCM_BLOCKSIZE - len;
 }
 
-int32_t MODES_SM4_GCM_EncryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_SM4_GCM_EncryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     ctx->plaintextLen += len;
-    uint32_t lastLen = LastHandle(ctx, in, out, len, true);
+    uint32_t lastLen = MODES_GCM_LastHandle(ctx, in, out, len, true);
     // Data processing is complete. Exit.
     if (lastLen == len) {
         return CRYPT_SUCCESS;
@@ -95,10 +94,10 @@ int32_t MODES_SM4_GCM_EncryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_
     return CRYPT_SUCCESS;
 }
 
-int32_t MODES_SM4_GCM_DecryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_SM4_GCM_DecryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     ctx->plaintextLen += len;
-    uint32_t lastLen = LastHandle(ctx, in, out, len, false);
+    uint32_t lastLen = MODES_GCM_LastHandle(ctx, in, out, len, false);
     // Data processing is complete. Exit.
     if (lastLen == len) {
         return CRYPT_SUCCESS;
@@ -118,5 +117,30 @@ int32_t MODES_SM4_GCM_DecryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_
         GcmRemHandle(ctx, tmpIn, tmpOut, clen, false);
     }
     return CRYPT_SUCCESS;
+}
+
+int32_t SM4_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
+{
+    int32_t ret = MODES_SM4_GCM_SetKey(&modeCtx->gcmCtx, key, keyLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    
+    ret = MODES_GCM_SetIv(&modeCtx->gcmCtx, iv, ivLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        MODES_GCM_DeInitCtx(modeCtx);
+        return ret;
+    }
+    modeCtx->enc = enc;
+    return ret;
+}
+
+int32_t SM4_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherStreamProcess(modeCtx->enc ? MODES_SM4_GCM_EncryptBlock : MODES_SM4_GCM_DecryptBlock,
+        &modeCtx->gcmCtx, in, inLen, out, outLen);
 }
 #endif
