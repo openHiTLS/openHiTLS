@@ -127,7 +127,7 @@ static int32_t ConvertAttributes(BslCid cid, BSL_ASN1_Buffer *buffer, BSL_Buffer
     switch (cid) {
         case BSL_CID_FRIENDLYNAME:
             return DecodeFriendlyName(buffer, output);
-        case BSL_CID_LOCALKEYID:
+        case BSL_CID_LOCATEDID:
             ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_OCTETSTRING, &temp, &tempLen, &valueLen);
             if (ret != BSL_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
@@ -447,7 +447,7 @@ static BSL_Buffer *FindLocatedId(BSL_ASN1_List *attributes)
     }
     HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(attributes);
     while (node != NULL) {
-        if (node->attrId == BSL_CID_LOCALKEYID) {
+        if (node->attrId == BSL_CID_LOCATEDID) {
             return node->attrValue;
         }
         node = BSL_LIST_GET_NEXT(attributes);
@@ -692,7 +692,7 @@ int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HITLS_PKCS12_MacData *macD
     macData->alg = cid;
     macData->macSalt->data = salt;
     macData->macSalt->dataLen = asn1[HITLS_PKCS12_MACDATA_SALT_IDX].len;
-    macData->iteration = iter;
+    macData->interation = iter;
     return HITLS_X509_SUCCESS;
 }
 
@@ -728,7 +728,7 @@ static void ClearMacData(HITLS_PKCS12_MacData *p12Mac)
     p12Mac->mac->dataLen = 0;
     p12Mac->mac->data = NULL;
     p12Mac->macSalt->data = NULL;
-    p12Mac->iteration = 0;
+    p12Mac->interation = 0;
     p12Mac->alg = BSL_CID_UNKNOWN;
 }
 
@@ -884,7 +884,7 @@ static int32_t EncodeAttrValue(HITLS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *
             BSL_ASN1_Template nameTempl = {&nameTemplItem, 1};
             ret = BSL_ASN1_EncodeTemplate(&nameTempl, &asnArr, 1, &encode->data, &encode->dataLen);
             break;
-        case BSL_CID_LOCALKEYID:
+        case BSL_CID_LOCATEDID:
             asnArr.tag = BSL_ASN1_TAG_OCTETSTRING;
             BSL_ASN1_TemplateItem locatedIdTemplItem = {BSL_ASN1_TAG_OCTETSTRING, 0, 0};
             BSL_ASN1_Template locatedIdTempl = {&locatedIdTemplItem, 1};
@@ -1202,7 +1202,7 @@ int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_Hmac
     BSL_Buffer mac = {0};
     BSL_Buffer digestInfo = {0};
     p12Mac->alg = macParam->macId;
-    p12Mac->iteration = macParam->itCnt;
+    p12Mac->interation = macParam->itCnt;
     p12Mac->macSalt->dataLen = macParam->saltLen;
     BSL_Buffer macPwd = {macParam->pwd, macParam->pwdLen};
     int32_t ret = HITLS_PKCS12_CalMac(&mac, &macPwd, initData, p12Mac);
@@ -1228,7 +1228,7 @@ int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_Hmac
             .tag = BSL_ASN1_TAG_OCTETSTRING,
         }};
 
-    ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, p12Mac->iteration, &asnArr[HITLS_PKCS12_MACDATA_ITER_IDX]);
+    ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, p12Mac->interation, &asnArr[HITLS_PKCS12_MACDATA_ITER_IDX]);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_Free(digestInfo.data);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1510,7 +1510,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
-    if (type != BSL_CID_LOCALKEYID && type != BSL_CID_FRIENDLYNAME) {
+    if (type != BSL_CID_LOCATEDID && type != BSL_CID_FRIENDLYNAME) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
         return HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;
     }
@@ -1760,16 +1760,16 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12)
         return ret;
     }
     BSL_Buffer buffer = {.data = md, .dataLen = mdLen};
-    ret = HITLS_PKCS12_BagAddAttr(p12->key, BSL_CID_LOCALKEYID, &buffer);
+    ret = HITLS_PKCS12_BagAddAttr(p12->key, BSL_CID_LOCATEDID, &buffer);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = HITLS_PKCS12_BagAddAttr(p12->entityCert, BSL_CID_LOCALKEYID, &buffer);
+    ret = HITLS_PKCS12_BagAddAttr(p12->entityCert, BSL_CID_LOCATEDID, &buffer);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        DeleteAttribute(p12->key, BSL_CID_LOCALKEYID);
+        DeleteAttribute(p12->key, BSL_CID_LOCATEDID);
     }
     return ret;
 }

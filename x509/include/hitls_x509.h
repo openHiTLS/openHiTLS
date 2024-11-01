@@ -552,19 +552,6 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
  */
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_List **chain);
 
-/**
- * @ingroup x509
- * @brief Certificate chain build with root cert function.
- *
- * @param storeCtx [IN] StoreCtx.
- * @param cert [IN] certificate.
- * @param chain [OUT] certificate chain.
- * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
- */
-int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert,
-    HITLS_X509_List **chain);
-
 typedef struct _HITLS_X509_Attr {
     BslCid cid;
     void *value;
@@ -734,7 +721,7 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag);
  *
  * @attention A bag can have multiple properties, but each property only contains one value.
  * @param bag          [IN] bag
- * @param type         [IN] BSL_CID_LOCALKEYID/BSL_CID_FRIENDLYNAME
+ * @param type         [IN] BSL_CID_LOCATEDID/BSL_CID_FRIENDLYNAME
  * @param attrValue    [IN] the attr buffer
  * @retval #HITLS_X509_SUCCESS, success.
  *         error codes see the hitls_x509_errno.h

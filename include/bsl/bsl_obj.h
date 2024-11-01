@@ -249,7 +249,7 @@ typedef enum {
 
     /* PKCS9  */
     BSL_CID_FRIENDLYNAME = 130801,
-    BSL_CID_LOCALKEYID,
+    BSL_CID_LOCATEDID,
     BSL_CID_X509CERTIFICATE,
 
     /* rfc7292 */

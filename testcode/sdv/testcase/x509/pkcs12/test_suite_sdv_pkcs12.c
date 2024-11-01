@@ -160,7 +160,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, 
             encode.buff, encode.len);
         BSL_SAL_FREE(encode.buff);
     }
-    if (firstAttr->attrId == BSL_CID_LOCALKEYID) {
+    if (firstAttr->attrId == BSL_CID_LOCATEDID) {
         ASSERT_EQ(memcmp(firstAttr->attrValue->data, localKeyId->x, localKeyId->len), 0);
     }
     if (second == NULL) {
@@ -175,7 +175,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, 
                 encode.buff, encode.len);
             BSL_SAL_FREE(encode.buff);
         }
-        if (second->attrId == BSL_CID_LOCALKEYID) {
+        if (second->attrId == BSL_CID_LOCATEDID) {
             ASSERT_EQ(memcmp(second->attrValue->data, localKeyId->x, localKeyId->len), 0);
         }
     }
@@ -274,7 +274,7 @@ void SDV_PKCS12_PARSE_MACDATA_TC001(Hex *buff, int alg, Hex *digest, Hex *salt, 
     int32_t ret = HITLS_PKCS12_ParseMacData((BSL_Buffer *)buff, macData);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(macData->alg, alg);
-    ASSERT_EQ(macData->iteration, iterations);
+    ASSERT_EQ(macData->interation, iterations);
     ASSERT_EQ(memcmp(macData->macSalt->data, salt->x, salt->len), 0);
     ASSERT_EQ(memcmp(macData->mac->data, digest->x, digest->len), 0);
 exit:
@@ -313,7 +313,7 @@ void SDV_PKCS12_CAL_MACDATA_TC001(Hex *initData, Hex *salt, int alg, int iter, H
     macData->alg = alg;
     macData->macSalt->data = salt->x;
     macData->macSalt->dataLen = salt->len;
-    macData->iteration = iter;
+    macData->interation = iter;
     char *pwdData = "123456";
     uint32_t pwdlen = strlen(pwdData);
     BSL_Buffer pwd = {(uint8_t *)pwdData, pwdlen};
@@ -340,7 +340,7 @@ void SDV_PKCS12_CAL_KDF_TC001(Hex *pwd, Hex *salt, int alg, int iter, Hex *key)
     macData->alg = alg;
     macData->macSalt->data = salt->x;
     macData->macSalt->dataLen = salt->len;
-    macData->iteration = iter;
+    macData->interation = iter;
     uint8_t outData[64] = {0};
     BSL_Buffer output = {outData, 64};
     int32_t ret = HITLS_PKCS12_KDF(&output, pwd->x, pwd->len, HITLS_PKCS12_KDF_MACKEY_ID, macData);
@@ -900,8 +900,8 @@ void SDV_PKCS12_ENCODE_P12_TC001(Hex *buff, Hex *cert)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.certEncParam = encParam;
     encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     HITLS_PKCS12_HmacParam macParam = {0};
     macParam.macId = p12->macData->alg;
@@ -989,8 +989,8 @@ void SDV_PKCS12_ENCODE_P12_TC002(Hex *buff, Hex *cert)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.certEncParam = encParam;
     encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     HITLS_PKCS12_HmacParam macParam = {0};
     macParam.macId = p12->macData->alg;
@@ -1059,8 +1059,8 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.certEncParam = encParam;
     encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     BSL_Buffer output1 = {0};
     BSL_Buffer output2 = {0};
@@ -1175,8 +1175,8 @@ void SDV_PKCS12_GEN_PARASE_P12FILE_TC001(void)
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
-    encodeParam.certEncParam = encParam;
     encodeParam.keyEncParam = encParam;
+    encodeParam.certEncParam = encParam;
 
     const char *path = "../testdata/cert/asn1/pkcs12/chain.p12";
     const char *writePath = "../testdata/cert/asn1/pkcs12/chain_cp.p12";
@@ -1458,7 +1458,7 @@ void SDV_PKCS12_BAG_TEST_TC003(char *pkeyPath, char *certPath)
     uint8_t keyId[32] = {0};
     uint32_t idLen = 32;
     BSL_Buffer attr = {.data = keyId, .dataLen = idLen};
-    ret = HITLS_PKCS12_BagAddAttr(certBag, BSL_CID_LOCALKEYID, &attr);
+    ret = HITLS_PKCS12_BagAddAttr(certBag, BSL_CID_LOCATEDID, &attr);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_KEYBAG, keyBag, 0);

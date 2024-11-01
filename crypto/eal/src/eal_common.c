@@ -20,7 +20,6 @@
 #include "crypt_types.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_mac.h"
-#include "crypt_method.h"
 #include "eal_cipher_local.h"
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"

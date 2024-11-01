@@ -127,21 +127,28 @@ exit:
  * @title  update and final test.
  * @precon nan
  * @brief
- *    1.Call CRYPT_EAL_MdNewCtx create the CTX, expected result 1.
- *    2.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal before initialization, expected result 2.
- *    3.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal use null pointer, expected result 3.
- *    4.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal normally, expected result 4.
+ *    1.Call CRYPT_EAL_MdDeinit the null CTX, expected result 1.
+ *    2.Call CRYPT_EAL_MdNewCtx create the CTX, expected result 2.
+ *    3.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal before initialization, expected result 3.
+ *    4.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal use null pointer, expected result 4.
+ *    5.Call CRYPT_EAL_MdUpdate and CRYPT_EAL_MdFinal normally, expected result 5.
+ *    6.Call CRYPT_EAL_MdDeinit the CTX, expected result 6.
  * @expect
- *    1.Create successful.
- *    2.Return CRYPT_EAL_ERR_STATE.
- *    3.Return CRYPT_NULL_INPUT.
- *    4.Successful.
+ *    1.Return CRYPT_NULL_INPUT
+ *    2.Create successful.
+ *    3.Return CRYPT_EAL_ERR_STATE.
+ *    4.Return CRYPT_NULL_INPUT.
+ *    5.Successful.
+ *    6.Return CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_SHA2_API_TC003(int id)
 {
     TestMemInit();
     CRYPT_EAL_MdCTX *ctx = NULL;
+
+    ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_NULL_INPUT);
+
     ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
 
@@ -169,6 +176,10 @@ void SDV_CRYPT_EAL_SHA2_API_TC003(int id)
     ASSERT_EQ(CRYPT_EAL_MdGetId(ctx), id);
     ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdIsValidAlgId(id), true);
+
+    ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(ctx->state, CRYPT_MD_STATE_NEW);
+
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -274,9 +285,11 @@ exit:
  * @title  standard vector test.
  * @precon nan
  * @brief
- *    Calculate the hash of the data and compare it with the standard vector.
+ *    1.Calculate the hash of the data and compare it with the standard vector, expected result 1.
+ *    2.Call CRYPT_EAL_Md to calculate the hash of the data and compare it with the standard vector, expected result 2.
  * @expect
- *    The results are the same.
+ *    1.The results are the same.
+ *    2.The results are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003(int algId, Hex *in, Hex *digest)
@@ -297,7 +310,9 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003(int algId, Hex *in, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), CRYPT_SUCCESS);
 
     ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
-
+  
+    ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -385,24 +400,38 @@ exit:
  * @brief
  *    1. Create the context ctx of md algorithm, expected result 1
  *    2. Call to CRYPT_EAL_MdCopyCtx method to copy ctx, expected result 2
- *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 3
+ *    2. Call to CRYPT_EAL_MdCopyCtx method to copy a null ctx, expected result 3
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 4
+ *    4. Call to CRYPT_EAL_MdDupCtx method to copy ctx, expected result 5
+ *    3. Calculate the hash of msg, and compare the calculated result with hash vector, expected result 6
  * @expect
- *    1. Successful, the context is not null.
+ *    1. Success, the context is not null.
  *    2. CRYPT_SUCCESS
- *    3. Successful, the hashs are the same.
+ *    3. CRYPT_NULL_INPUT
+ *    4. Success, the context is not null.
+ *    5. CRYPT_SUCCESS
+ *    6. Success, the hashs are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
     CRYPT_EAL_MdCTX *cpyCtx = NULL;
+    CRYPT_EAL_MdCTX *dupCtx = NULL;
     CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[SHA2_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA2_OUTPUT_MAXSIZE;
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MdCTX));
+    dupCtx=CRYPT_EAL_MdDupCtx(cpyCtx);
+    ASSERT_TRUE(dupCtx == NULL);
+    ASSERT_EQ(CRYPT_MD_MAX, CRYPT_EAL_MdGetId(dupCtx));
+    
+    ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_NULL_INPUT);
+    cpyCtx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(cpyCtx != NULL);
+    ASSERT_TRUE(dupCtx == NULL);
+    ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, dupCtx), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(cpyCtx), CRYPT_SUCCESS);
@@ -411,9 +440,44 @@ void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, cpyCtx->id);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+    
+    dupCtx=CRYPT_EAL_MdDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdInit(dupCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(dupCtx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(dupCtx, output, &outLen), CRYPT_SUCCESS);
 
+    ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 exit:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
+    CRYPT_EAL_MdFreeCtx(dupCtx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
+{
+    TestMemInit();
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+    uint8_t output[SHA2_OUTPUT_MAXSIZE];
+    uint32_t outLen = SHA2_OUTPUT_MAXSIZE;
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+
+exit:
+    CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
