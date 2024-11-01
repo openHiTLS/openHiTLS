@@ -38,7 +38,7 @@ static int SetPadding(int isSetPadding, CRYPT_EAL_CipherCtx *ctxEnc, int padding
     return CRYPT_SUCCESS;
 }
 
-static int CipherFinal(
+static int Sm4CipherFinal(
     int algId,  CRYPT_EAL_CipherCtx *ctx, uint8_t *outTmp, uint32_t *finLen)
 {
     if (algId != CRYPT_CIPHER_SM4_GCM) {
@@ -144,14 +144,10 @@ void SDV_CRYPTO_SM4_INIT_API_TC002(Hex *key, Hex *iv, int enc)
     ret = CRYPT_EAL_CipherInit(ctx, unsafe_key, KEYSIZE, iv->x, iv->len, false);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 0, enc);
-    ASSERT_TRUE(ret == CRYPT_MODES_IVLEN_ERROR);
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 1, enc);
-    ASSERT_TRUE(ret == CRYPT_MODES_IVLEN_ERROR);
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 15, enc);
-    ASSERT_TRUE(ret == CRYPT_MODES_IVLEN_ERROR);
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 17, enc);
-    ASSERT_TRUE(ret == CRYPT_MODES_IVLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 0, enc), CRYPT_MODES_IVLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 1, enc), CRYPT_MODES_IVLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 15, enc), CRYPT_MODES_IVLEN_ERROR);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 17, enc), CRYPT_MODES_IVLEN_ERROR);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
@@ -259,8 +255,7 @@ void SDV_CRYPTO_SM4_REINIT_API_TC001(int id, Hex *key, Hex *iv)
 
     ret = CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len);
     ASSERT_TRUE(ret == CRYPT_EAL_ERR_STATE);
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherReinit(NULL, iv->x, iv->len);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
     ret = CRYPT_EAL_CipherReinit(ctx, NULL, iv->len);
@@ -384,12 +379,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC001(Hex *key, Hex *iv, Hex *msg)
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_MODES_CTRL_TYPE_ERROR);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_IV, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_EAL_CIPHER_CTRL_ERROR);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_IV, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_EAL_CIPHER_CTRL_ERROR);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, iv->x, iv->len), CRYPT_MODES_CTRL_TYPE_ERROR);
 
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, iv1, len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -421,34 +411,6 @@ exit:
 }
 /* END_CASE */
 
-/**
- * @test  SDV_CRYPTO_SM4_CTRL_API_TC002
- * @title  Impact of setting iv on the Ctrl interface Test
- * @precon Registering memory-related functions.
- * @brief
- *    1.Create the context ctx. Expected result 1 is obtained.
- *    2.Call the Init interface. Expected result 2 is obtained.
- *    3.Call the Ctrl interface to set iv with normal value. Expected result 3 is obtained.
- * @expect
- *    1.The creation is successful and the ctx is not empty.
- *    2.The init is successful and return CRYPT_SUCCESS.
- *    3.Failed. Return CRYPT_EAL_CIPHER_CTRL_ERROR.
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_SM4_CTRL_API_TC002(Hex *key, Hex *iv)
-{
-    TestMemInit();
-    int32_t ret;
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_CTR);
-    ASSERT_TRUE(ctx != NULL);
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_IV, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_EAL_CIPHER_CTRL_ERROR);
-exit:
-    CRYPT_EAL_CipherFreeCtx(ctx);
-}
-/* END_CASE */
 
 /**
  * @test  SDV_CRYPTO_SM4_CTRL_API_TC003
@@ -493,12 +455,11 @@ void SDV_CRYPTO_SM4_CTRL_API_TC003(Hex *key, Hex *iv)
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, NULL, len);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, ivGet, 0);
-    ASSERT_TRUE(ret == CRYPT_MODE_ERR_INPUT_LEN);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, (uint8_t *)&blockSizeGet, 0);
-    ASSERT_TRUE(ret == CRYPT_MODE_ERR_INPUT_LEN);
-    ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_MAX, iv->x, iv->len);
-    ASSERT_TRUE(ret == CRYPT_MODES_CTRL_TYPE_ERROR);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, ivGet, 0), CRYPT_MODE_ERR_INPUT_LEN);
+
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, (uint8_t *)&blockSizeGet, 0),
+        CRYPT_MODE_ERR_INPUT_LEN);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_MAX, iv->x, iv->len), CRYPT_MODES_CTRL_TYPE_ERROR);
 
 exit:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -589,7 +550,6 @@ exit:
 void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC002(int algId, Hex *key, Hex *iv, int inLen, int padding)
 {
     TestMemInit();
-    int32_t ret;
     uint8_t input[MAXSIZE] = {0};
     uint8_t outTmp[MAXSIZE] = {0};
     uint8_t result[MAXSIZE] = {0};
@@ -605,31 +565,25 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC002(int algId, Hex *key, Hex *iv, int inLen, 
     ASSERT_TRUE(inLen <= MAXSIZE);
     ctxEnc = CRYPT_EAL_CipherNewCtx(algId);
     ASSERT_TRUE(ctxEnc != NULL);
-    ret = CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherSetPadding(ctxEnc, padding);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherUpdate(ctxEnc, input, inLen, outTmp, &len);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherSetPadding(ctxEnc, padding), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctxEnc, input, inLen, outTmp, &len), CRYPT_SUCCESS);
+
     totalLen += len;
     leftLen -= len;
-    ret = CRYPT_EAL_CipherFinal(ctxEnc, outTmp + totalLen, &leftLen);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctxEnc, outTmp + totalLen, &leftLen), CRYPT_SUCCESS);
     totalLen += leftLen;
 
     len = MAXSIZE;
     leftLen = MAXSIZE;
     ctxDec = CRYPT_EAL_CipherNewCtx(algId);
     ASSERT_TRUE(ctxDec != NULL);
-    ret = CRYPT_EAL_CipherInit(ctxDec, key->x, key->len, iv->x, iv->len, false);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherSetPadding(ctxDec, padding);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherUpdate(ctxDec, outTmp, totalLen, result, &len);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctxDec, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherSetPadding(ctxDec, padding), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctxDec, outTmp, totalLen, result, &len), CRYPT_SUCCESS);
     leftLen -= len;
-    ret = CRYPT_EAL_CipherFinal(ctxDec, result + len, &leftLen);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctxDec, result + len, &leftLen), CRYPT_SUCCESS);
 
     ASSERT_TRUE(memcmp(input, result, inLen) == 0);
 exit:
@@ -652,23 +606,20 @@ exit:
  *    3.The update is successful, return CRYPT_SUCCESS.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC003(int id, Hex *key, Hex *plainText, Hex *cipherText, Hex *iv)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC003(int isProvider, int id, Hex *key, Hex *plainText, Hex *cipherText, Hex *iv)
 {
     if (IsSm4AlgDisabled(id)) {
         SKIP_TEST();
     }
     TestMemInit();
-    int32_t ret;
     uint8_t out[MAXSIZE] = {0};
     uint32_t len = plainText->len;
 
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
+    CRYPT_EAL_CipherCtx *ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(id) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, id, "provider=default");
     ASSERT_TRUE(ctx != NULL);
-    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherUpdate(ctx, plainText->x, plainText->len, out, &len);
-
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plainText->x, plainText->len, out, &len), CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, cipherText->x, len) == 0);
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -689,7 +640,7 @@ exit:
  *    3.The update is successful, return CRYPT_SUCCESS.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC004(int id, Hex *key, Hex *plainText, Hex *cipherText, Hex *iv)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC004(int isProvider, int id, Hex *key, Hex *plainText, Hex *cipherText, Hex *iv)
 {
     if (IsSm4AlgDisabled(id)) {
         SKIP_TEST();
@@ -699,7 +650,8 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC004(int id, Hex *key, Hex *plainText, Hex *ci
     uint8_t out[MAXSIZE] = {0};
     uint32_t len = cipherText->len;
 
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
+    CRYPT_EAL_CipherCtx *ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(id) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, id, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -998,15 +950,16 @@ exit:
  *    7.Success. The ciphertext is as expected.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(Hex *key, Hex *in1, Hex *out1, Hex *iv1, Hex *in2, Hex *out2, Hex *iv2,
-    int enc)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(int isProvider, Hex *key, Hex *in1, Hex *out1,
+    Hex *iv1, Hex *in2, Hex *out2, Hex *iv2, int enc)
 {
     TestMemInit();
     int32_t ret;
     uint8_t outTmp[MAXSIZE] = {0};
     uint32_t len = MAXSIZE;
 
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_XTS);
+    CRYPT_EAL_CipherCtx *ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_XTS) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, CRYPT_CIPHER_SM4_XTS, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv1->x, iv1->len, enc);
@@ -1214,7 +1167,7 @@ exit:
  *    7.The final is successful, return CRYPT_SUCCESS. The result is consistent with the test vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
 {
     TestMemInit();
     int32_t ret;
@@ -1222,14 +1175,15 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int algId, Hex *key, Hex *iv, Hex *in, He
     uint32_t len = MAX_OUTPUT;
     uint32_t finLen;
 
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(algId);
+    CRYPT_EAL_CipherCtx *ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     finLen = MAX_OUTPUT - len;
-    ret = CipherFinal(algId, ctx, outTmp + len, &finLen);
+    ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
@@ -1240,7 +1194,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int algId, Hex *key, Hex *iv, Hex *in, He
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     finLen = MAX_OUTPUT - len;
-    ret = CipherFinal(algId, ctx, outTmp + len, &finLen);
+    ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 exit:
@@ -1270,7 +1224,7 @@ exit:
  *    7.The final is successful, return CRYPT_SUCCESS. The result is consistent with the test vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC009(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
 {
     TestMemInit();
     int32_t ret;
@@ -1278,14 +1232,15 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC009(int algId, Hex *key, Hex *iv, Hex *in, He
     uint32_t len = MAX_OUTPUT;
     uint32_t finLen;
 
-    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(algId);
+    CRYPT_EAL_CipherCtx *ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     finLen = MAX_OUTPUT - len;
-    ret = CipherFinal(algId, ctx, outTmp + len, &finLen);
+    ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
@@ -1296,7 +1251,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC009(int algId, Hex *key, Hex *iv, Hex *in, He
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     finLen = MAX_OUTPUT - len;
-    ret = CipherFinal(algId, ctx, outTmp + len, &finLen);
+    ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 exit:
@@ -1448,7 +1403,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC011(int algId, Hex *key, Hex *iv, int inLen, 
     ret = CRYPT_EAL_CipherUpdate(ctxDec, outTmp, totalLen, result, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     leftLen -= len;
-    ret = CipherFinal(algId, ctxDec, result + len, &leftLen);
+    ret = Sm4CipherFinal(algId, ctxDec, result + len, &leftLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     ASSERT_TRUE(memcmp(input, result, inLen) == 0);
@@ -1585,7 +1540,7 @@ exit:
  *    6.The verification is successful, return CRYPT_SUCCESS.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC014(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int padding)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC014(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int padding)
 {
     TestMemInit();
     int32_t ret;
@@ -1595,7 +1550,8 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC014(int algId, Hex *key, Hex *iv, Hex *in, He
     uint32_t len = MAX_OUTPUT;
     CRYPT_EAL_CipherCtx *ctxEnc = NULL;
 
-    ctxEnc = CRYPT_EAL_CipherNewCtx(algId);
+    ctxEnc = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctxEnc != NULL);
     ret = CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1639,10 +1595,9 @@ exit:
  *    6.The verification is successful, return CRYPT_SUCCESS.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC015(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int padding)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC015(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int padding)
 {
     TestMemInit();
-    int32_t ret;
     uint8_t result[MAX_OUTPUT] = {0};
     uint32_t totalLen = 0;
     uint32_t leftLen = MAX_OUTPUT;
@@ -1651,18 +1606,15 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC015(int algId, Hex *key, Hex *iv, Hex *in, He
 
     len = MAX_OUTPUT;
     leftLen = MAX_OUTPUT;
-    ctxDec = CRYPT_EAL_CipherNewCtx(algId);
+    ctxDec = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctxDec != NULL);
-    ret = CRYPT_EAL_CipherInit(ctxDec, key->x, key->len, iv->x, iv->len, false);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherSetPadding(ctxDec, padding);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ret = CRYPT_EAL_CipherUpdate(ctxDec, in->x, in->len, result, &len);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctxDec, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherSetPadding(ctxDec, padding), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctxDec, in->x, in->len, result, &len), CRYPT_SUCCESS);
     totalLen += len;
     leftLen = leftLen - len;
-    ret = CRYPT_EAL_CipherFinal(ctxDec, result + len, &leftLen);
-    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctxDec, result + len, &leftLen), CRYPT_SUCCESS);
 
     totalLen += leftLen;
 

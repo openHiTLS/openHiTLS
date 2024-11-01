@@ -256,5 +256,6 @@ void CRYPT_SM4_Clean(CRYPT_SM4_Ctx *ctx)
         return;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SM4_Ctx));
+    return;
 }
 #endif // HITLS_CRYPTO_SM4

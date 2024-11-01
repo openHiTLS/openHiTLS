@@ -551,6 +551,8 @@ The PBKDF2, HKDF, SCRYPT, and KDFTLS12 algorithms can be used for key derivation
 #include "crypt_algid.h"
 #include "crypt_eal_kdf.h"
 
+#define PBKDF2_PARAM_LEN (4)
+
 void *StdMalloc(uint32_t len) {
     return malloc((size_t)len);
 }
@@ -590,20 +592,45 @@ int main(void)
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_RegMemCallback(&cb);
 
-    ret = CRYPT_EAL_Pbkdf2(CRYPT_MAC_HMAC_SHA256, key, sizeof(key), salt, sizeof(salt), iterations, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        printf("pbkdf2 error code is %x\n", ret);
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    if (ctx == NULL) {
         PrintLastError();
         goto exit;
     }
+    CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
+    CRYPT_Param PBKDF2_PARAM[PBKDF2_PARAM_LEN] = {
+        {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, sizeof(id)},
+        {CRYPT_KDF_PARAM_PASSWORD, key, sizeof(key)},
+        {CRYPT_KDF_PARAM_SALT, salt, sizeof(salt)},
+        {CRYPT_KDF_PARAM_ITER, &iterations, sizeof(iterations)},
+    };
+
+    for (int i = 0; i < PBKDF2_PARAM_LEN; i++) {
+        ret = CRYPT_EAL_KdfSetParam(ctx, PBKDF2_PARAM + i);
+        if (ret != CRYPT_SUCCESS) {
+            printf("error code is %x\n", ret);
+            PrintLastError();
+            goto exit;
+        }
+    }
+
+    ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        PrintLastError();
+        goto exit;
+    }
+
     if (memcmp(out, result, sizeof(result)) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
         goto exit;
     }
     printf("pass \n");
+
 exit:
     BSL_ERR_DeInit();
+    CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;
 }
 ```
@@ -615,7 +642,7 @@ exit:
 The DRBG-SHA, DRBG-HMAC, and DRBG-CTR algorithms can be used for random number generation. The interfaces include global random number interfaces and multi-instance random number interfaces.
 
 ```c
-/* 
+/*
 *  Global random number initializing and deinitializing interfaces.
  * The **seedMeth** value of initializing interfaces is the entropy source of the callback, and the **seedCtx** value is the context called back by the user.
 *  Users can set their own entropy source. If it is not set, the default entropy source is used.
@@ -630,7 +657,7 @@ int32_t CRYPT_EAL_RandSeed(void);
 
 /*The deterministic random bit generator (DRBG) context of the multi-instance random number interfaces is returned to the user. This is the main difference between the two types of interfaces.
  * Multiple DRBG contexts can be created. Different contexts do not interfere with each other during entropy source setting and internal status change.*/
-CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx, const uint8_t *pers, uint32_t persLen);
+CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 void CRYPT_EAL_DrbgDeinit(CRYPT_EAL_RndCtx *ctx);
 ```
 

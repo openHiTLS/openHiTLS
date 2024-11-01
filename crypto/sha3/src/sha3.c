@@ -24,7 +24,29 @@
 #include "bsl_sal.h"
 #include "sha3_core.h"
 #include "crypt_sha3.h"
+struct CryptSha3Ctx {
+    uint8_t state[200];     // State array, 200bytes is 1600bits
+    uint32_t num;           // Data length in the remaining buffer.
+    uint32_t blockSize;     // For example, BlockSize(sha3-224) = ((1600 - 224 * 2) / 8) bytes
+    uint32_t mdSize;     // sha3-224 corresponds to 28 bytes, sha3-256: 32 bytes, sha3-384: 48 bytes, sha3-512: 64 bytes
+    // Non-integer multiple data cache. 168 = (1600 - 128 * 2) / 8, that is maximum block size used by shake_*
+    uint8_t buf[168];
+    uint8_t padChr;         // char for padding, sha3_* use 0x06 and shake_* use 0x1f
+};
 
+static CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA3_Ctx));
+}
+
+static void CRYPT_SHA3_FreeCtx(CRYPT_SHA3_Ctx *ctx)
+{
+    CRYPT_SHA3_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA3_Ctx));
+}
 
 static int32_t CRYPT_SHA3_Init(CRYPT_SHA3_Ctx *ctx, uint32_t mdSize, uint32_t blockSize, uint8_t padChr)
 {
@@ -112,7 +134,7 @@ static void CRYPT_SHA3_Deinit(CRYPT_SHA3_Ctx *ctx)
     BSL_SAL_CleanseData(ctx, sizeof(CRYPT_SHA3_Ctx));
 }
 
-static int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, CRYPT_SHA3_Ctx *src)
+static int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -121,6 +143,58 @@ static int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, CRYPT_SHA3_Ctx *src)
 
     (void)memcpy_s(dst, sizeof(CRYPT_SHA3_Ctx), src, sizeof(CRYPT_SHA3_Ctx));
     return CRYPT_SUCCESS;
+}
+
+// new context
+CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_NewCtx(void)
+{
+    return CRYPT_SHA3_NewCtx();
+}
+CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_NewCtx(void)
+{
+    return CRYPT_SHA3_NewCtx();
+}
+CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_NewCtx(void)
+{
+    return CRYPT_SHA3_NewCtx();
+}
+CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_NewCtx(void)
+{
+    return CRYPT_SHA3_NewCtx();
+}
+CRYPT_SHAKE128_Ctx* CRYPT_SHAKE128_NewCtx(void)
+{
+    return CRYPT_SHA3_NewCtx();
+}
+CRYPT_SHAKE256_Ctx* CRYPT_SHAKE256_NewCtx(void)
+{
+    return CRYPT_SHA3_NewCtx();
+}
+
+// free context
+void CRYPT_SHA3_224_FreeCtx(CRYPT_SHA3_224_Ctx* ctx)
+{
+    CRYPT_SHA3_FreeCtx(ctx);
+}
+void CRYPT_SHA3_256_FreeCtx(CRYPT_SHA3_256_Ctx* ctx)
+{
+    CRYPT_SHA3_FreeCtx(ctx);
+}
+void CRYPT_SHA3_384_FreeCtx(CRYPT_SHA3_384_Ctx* ctx)
+{
+    CRYPT_SHA3_FreeCtx(ctx);
+}
+void CRYPT_SHA3_512_FreeCtx(CRYPT_SHA3_512_Ctx* ctx)
+{
+    CRYPT_SHA3_FreeCtx(ctx);
+}
+void CRYPT_SHAKE128_FreeCtx(CRYPT_SHAKE128_Ctx* ctx)
+{
+    CRYPT_SHA3_FreeCtx(ctx);
+}
+void CRYPT_SHAKE256_FreeCtx(CRYPT_SHAKE256_Ctx* ctx)
+{
+    CRYPT_SHA3_FreeCtx(ctx);
 }
 
 int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx)
@@ -249,22 +323,32 @@ void CRYPT_SHAKE256_Deinit(CRYPT_SHAKE256_Ctx *ctx)
     CRYPT_SHA3_Deinit(ctx);
 }
 
-int32_t CRYPT_SHA3_224_CopyCtx(CRYPT_SHA3_224_Ctx *dst, CRYPT_SHA3_224_Ctx *src)
+int32_t CRYPT_SHA3_224_CopyCtx(const CRYPT_SHA3_224_Ctx *src, CRYPT_SHA3_224_Ctx *dst)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHA3_256_CopyCtx(CRYPT_SHA3_256_Ctx *dst, CRYPT_SHA3_256_Ctx *src)
+int32_t CRYPT_SHA3_256_CopyCtx(const CRYPT_SHA3_256_Ctx *src, CRYPT_SHA3_256_Ctx *dst)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, CRYPT_SHA3_384_Ctx *src)
+int32_t CRYPT_SHA3_384_CopyCtx(const CRYPT_SHA3_384_Ctx *src, CRYPT_SHA3_384_Ctx *dst)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, CRYPT_SHA3_512_Ctx *src)
+int32_t CRYPT_SHA3_512_CopyCtx(const CRYPT_SHA3_512_Ctx *src, CRYPT_SHA3_512_Ctx *dst)
+{
+    return CRYPT_SHA3_CopyCtx(dst, src);
+}
+
+int32_t CRYPT_SHAKE128_CopyCtx(const CRYPT_SHA3_384_Ctx *src, CRYPT_SHA3_384_Ctx *dst)
+{
+    return CRYPT_SHA3_CopyCtx(dst, src);
+}
+
+int32_t CRYPT_SHAKE256_CopyCtx(const CRYPT_SHA3_512_Ctx *src, CRYPT_SHA3_512_Ctx *dst)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
