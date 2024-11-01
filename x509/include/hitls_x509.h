@@ -721,7 +721,7 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag);
  *
  * @attention A bag can have multiple properties, but each property only contains one value.
  * @param bag          [IN] bag
- * @param type         [IN] BSL_CID_LOCALKEYID/BSL_CID_FRIENDLYNAME
+ * @param type         [IN] BSL_CID_LOCATEDID/BSL_CID_FRIENDLYNAME
  * @param attrValue    [IN] the attr buffer
  * @retval #HITLS_X509_SUCCESS, success.
  *         error codes see the hitls_x509_errno.h

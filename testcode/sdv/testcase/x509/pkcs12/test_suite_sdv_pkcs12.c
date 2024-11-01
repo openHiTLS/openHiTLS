@@ -1438,7 +1438,7 @@ void SDV_PKCS12_BAG_TEST_TC003(char *pkeyPath, char *certPath)
     uint8_t keyId[32] = {0};
     uint32_t idLen = 32;
     BSL_Buffer attr = {.data = keyId, .dataLen = idLen};
-    ret = HITLS_PKCS12_BagAddAttr(certBag, BSL_CID_LOCALKEYID, &attr);
+    ret = HITLS_PKCS12_BagAddAttr(certBag, BSL_CID_LOCATEDID, &attr);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_KEYBAG, keyBag, 0);

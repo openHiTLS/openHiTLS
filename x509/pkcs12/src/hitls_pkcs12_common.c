@@ -1493,7 +1493,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
-    if (type != BSL_CID_LOCALKEYID && type != BSL_CID_FRIENDLYNAME) {
+    if (type != BSL_CID_LOCATEDID && type != BSL_CID_FRIENDLYNAME) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
         return HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;
     }
@@ -1743,16 +1743,16 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12)
         return ret;
     }
     BSL_Buffer buffer = {.data = md, .dataLen = mdLen};
-    ret = HITLS_PKCS12_BagAddAttr(p12->key, BSL_CID_LOCALKEYID, &buffer);
+    ret = HITLS_PKCS12_BagAddAttr(p12->key, BSL_CID_LOCATEDID, &buffer);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = HITLS_PKCS12_BagAddAttr(p12->entityCert, BSL_CID_LOCALKEYID, &buffer);
+    ret = HITLS_PKCS12_BagAddAttr(p12->entityCert, BSL_CID_LOCATEDID, &buffer);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        DeleteAttribute(p12->key, BSL_CID_LOCALKEYID);
+        DeleteAttribute(p12->key, BSL_CID_LOCATEDID);
     }
     return ret;
 }
