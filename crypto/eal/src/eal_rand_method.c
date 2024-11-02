@@ -31,6 +31,7 @@
 #ifdef HITLS_CRYPTO_CIPHER
 #include "eal_cipher_local.h"
 #endif
+#include "crypt_modes.h"
 
 static EAL_RandUnitaryMethod g_randMethod = {
     .newCtx = (RandNewCtx)DRBG_New,
@@ -59,12 +60,12 @@ static const DrbgIdMap DRBG_METHOD_MAP[] = {
     { CRYPT_RAND_HMAC_SHA512, CRYPT_MAC_HMAC_SHA512, RAND_TYPE_MAC },
 #endif
 #ifdef HITLS_CRYPTO_DRBG_CTR
-    { CRYPT_RAND_AES128_CTR, CRYPT_SYM_AES128, RAND_TYPE_AES },
-    { CRYPT_RAND_AES192_CTR, CRYPT_SYM_AES192, RAND_TYPE_AES },
-    { CRYPT_RAND_AES256_CTR, CRYPT_SYM_AES256, RAND_TYPE_AES },
-    { CRYPT_RAND_AES128_CTR_DF, CRYPT_SYM_AES128, RAND_TYPE_AES_DF },
-    { CRYPT_RAND_AES192_CTR_DF, CRYPT_SYM_AES192, RAND_TYPE_AES_DF },
-    { CRYPT_RAND_AES256_CTR_DF, CRYPT_SYM_AES256, RAND_TYPE_AES_DF }
+    { CRYPT_RAND_AES128_CTR, CRYPT_CIPHER_AES128_CTR, RAND_TYPE_AES },
+    { CRYPT_RAND_AES192_CTR, CRYPT_CIPHER_AES192_CTR, RAND_TYPE_AES },
+    { CRYPT_RAND_AES256_CTR, CRYPT_CIPHER_AES256_CTR, RAND_TYPE_AES },
+    { CRYPT_RAND_AES128_CTR_DF, CRYPT_CIPHER_AES128_CTR, RAND_TYPE_AES_DF },
+    { CRYPT_RAND_AES192_CTR_DF, CRYPT_CIPHER_AES192_CTR, RAND_TYPE_AES_DF },
+    { CRYPT_RAND_AES256_CTR_DF, CRYPT_CIPHER_AES256_CTR, RAND_TYPE_AES_DF }
 #endif
 };
 
@@ -116,7 +117,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
 #ifdef HITLS_CRYPTO_DRBG_CTR
         case RAND_TYPE_AES:
         case RAND_TYPE_AES_DF: {
-            const EAL_CipherMethod *ciphMeth = EAL_FindSymMethod(map->depId);
+            const EAL_SymMethod *ciphMeth = MODES_GetSymMethod(map->depId);
             if (ciphMeth == NULL) {
                 BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;

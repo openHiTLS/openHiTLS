@@ -20,8 +20,7 @@
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CCM)
 
 #include "crypt_utils.h"
-#include "crypt_modes.h"
-#include "crypt_modes_ccm.h"
+#include "modes_local.h"
 
 #ifdef __cplusplus
 extern "C" {

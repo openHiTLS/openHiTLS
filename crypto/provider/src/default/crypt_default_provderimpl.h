@@ -79,6 +79,16 @@ extern const CRYPT_EAL_Func defMacHmac[];
 
 extern const CRYPT_EAL_Func defRand[];
 
+extern const CRYPT_EAL_Func defCbc[];
+extern const CRYPT_EAL_Func defCcm[];
+extern const CRYPT_EAL_Func defCfb[];
+extern const CRYPT_EAL_Func defChaCha[];
+extern const CRYPT_EAL_Func defCtr[];
+extern const CRYPT_EAL_Func defEcb[];
+extern const CRYPT_EAL_Func defGcm[];
+extern const CRYPT_EAL_Func defOfb[];
+extern const CRYPT_EAL_Func defXts[];
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

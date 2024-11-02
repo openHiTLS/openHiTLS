@@ -389,11 +389,8 @@ typedef struct {
  * Set and obtain internal mode parameters.
  */
 typedef enum {
-    CRYPT_CTRL_SET_IV = 0,        /**< Set IV data, the data type is uint8_t type.. */
     CRYPT_CTRL_GET_IV,            /**< Obtains the IV data, the data type is uint8_t type. */
     CRYPT_CTRL_GET_BLOCKSIZE,     /**< Obtain the block size, the data type is uint8_t type. */
-    CRYPT_CTRL_SET_COUNT,         /**< Set the counter information, the input is a four-byte little-endian byte stream,
-                                       the algorithm required is chacha20. */
     CRYPT_CTRL_SET_AAD,           /**< Set the ADD information in AEAD encryption and decryption mode. */
     CRYPT_CTRL_GET_TAG,           /**< Obtain the tag at the end in AEAD encryption or decryption. */
     CRYPT_CTRL_SET_TAGLEN,        /**< Set the tag length before the encryption/decryption starts in AEAD
@@ -403,10 +400,9 @@ typedef enum {
                                        type is int64_t. */
     CRYPT_CTRL_SET_FEEDBACKSIZE,  /**< Setting the ciphertext feedback length in CFB mode. */
     CRYPT_CTRL_GET_FEEDBACKSIZE,  /**< Obtaining the ciphertext feedback length in CFB mode. */
-    CRYPT_CTRL_DES_NOKEYCHECK,    /**< DES does not verify the key. */
-    CRYPT_CTRL_RC2_SETEFFLEN,     /**< RC2 Change the valid length of the key. */
     CRYPT_CTRL_SET_SM4_CONSTTIME, /**< SM4 selects the side channel security implementation, which reduces
                                        the performance. Valid only when ARM assembly implementation is enabled. */
+    CRYPT_CTRL_REINIT_STATUS,
     CRYPT_CTRL_MAX
 } CRYPT_CipherCtrl;
 

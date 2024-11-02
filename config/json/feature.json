@@ -338,7 +338,7 @@
                     }
                 },
                 ".deps": ["bsl::sal"],
-                ".include": ["crypto/sm4/include", "crypto/aes/include"]
+                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include"]
             },
             "aes": {
                 ".features": ["aes"],
@@ -458,7 +458,8 @@
                     "crypto/ecc/include",
                     "crypto/hmac/include",
                     "crypto/paillier/include",
-                    "crypto/drbg/include"
+                    "crypto/drbg/include",
+                    "crypto/modes/include"
                 ]
             },
             "bn": {

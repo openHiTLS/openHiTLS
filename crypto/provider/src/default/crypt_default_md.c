@@ -26,11 +26,6 @@
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
 
-typedef struct {
-    void *mdCtx;
-    int32_t algId;
-} CRYPT_EAL_DefMdCtx;
-
 static void *CRYPT_EAL_DefMdNewCtx(void *provCtx, int32_t algId)
 {
     (void) provCtx;

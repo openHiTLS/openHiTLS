@@ -28,6 +28,7 @@ void GcmTableGen4bitAsm(const MODES_GCM_GF128 *H, MODES_GCM_GF128 hTable[16]);
 
 void GcmMultH4bitAsm(uint8_t t[GCM_BLOCKSIZE], const MODES_GCM_GF128 hTable[16]);
 
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

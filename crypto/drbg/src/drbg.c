@@ -161,16 +161,16 @@ ERR:
 }
 
 #ifdef HITLS_CRYPTO_DRBG_CTR
-static uint32_t GetAesKeyLen(CRYPT_SYM_AlgId id, uint32_t *keyLen)
+static uint32_t GetAesKeyLen(int32_t id, uint32_t *keyLen)
 {
     switch (id) {
-        case CRYPT_SYM_AES128:
+        case CRYPT_CIPHER_AES128_CTR:
             *keyLen = RAND_AES128_KEYLEN;
             break;
-        case CRYPT_SYM_AES192:
+        case CRYPT_CIPHER_AES192_CTR:
             *keyLen = RAND_AES192_KEYLEN;
             break;
-        case CRYPT_SYM_AES256:
+        case CRYPT_CIPHER_AES256_CTR:
             *keyLen = RAND_AES256_KEYLEN;
             break;
         default:
@@ -265,12 +265,12 @@ DRBG_Ctx *DRBG_New(int32_t algId, CRYPT_Param *param)
     switch (lu.type) {
 #ifdef HITLS_CRYPTO_DRBG_HASH
         case RAND_TYPE_MD:
-            drbg = DRBG_NewHashCtx((const EAL_MdMethod*)(lu.method), p->seedMeth, p->seedCtx);
+            drbg = DRBG_NewHashCtx((const EAL_MdMethod *)(lu.method), p->seedMeth, p->seedCtx);
             break;
 #endif
 #ifdef HITLS_CRYPTO_DRBG_HMAC
         case RAND_TYPE_MAC:
-            drbg = DRBG_NewHmacCtx((const EAL_MacMethod*)(lu.method), lu.methodId, p->seedMeth, p->seedCtx);
+            drbg = DRBG_NewHmacCtx((const EAL_MacMethod *)(lu.method), lu.methodId, p->seedMeth, p->seedCtx);
             break;
 #endif
 #ifdef HITLS_CRYPTO_DRBG_CTR
@@ -281,7 +281,7 @@ DRBG_Ctx *DRBG_New(int32_t algId, CRYPT_Param *param)
             if (GetAesKeyLen(lu.methodId, &keyLen) != CRYPT_SUCCESS) {
                 return NULL;
             }
-            drbg = DRBG_NewCtrCtx((const EAL_CipherMethod*)(lu.method), keyLen, isUsedDF, p->seedMeth, p->seedCtx);
+            drbg = DRBG_NewCtrCtx((const EAL_SymMethod *)(lu.method), keyLen, isUsedDF, p->seedMeth, p->seedCtx);
             break;
         }
 #endif
