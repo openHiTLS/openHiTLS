@@ -155,39 +155,41 @@ static const EAL_CheckAsm HITLS_ASM_SYM_ALG_CHECK[] = {
     {.id = CRYPT_CIPHER_SM4_CFB, .callback = {CRYPT_SM4_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_SM4_OFB, .callback = {CRYPT_SM4_AsmCheck, NULL}},
 #endif // HITLS_CRYPTO_SM4
+    {.id = CRYPT_CIPHER_MAX, .callback = {NULL, NULL}},
 };
 
 int32_t CRYPT_ASMCAP_Cipher(CRYPT_CIPHER_AlgId  id)
 {
     return CryptCheckCapId((BslCid)id, HITLS_ASM_SYM_ALG_CHECK,
-        sizeof(HITLS_ASM_SYM_ALG_CHECK) / sizeof(HITLS_ASM_SYM_ALG_CHECK[0]));
+        sizeof(HITLS_ASM_SYM_ALG_CHECK) / sizeof(EAL_CheckAsm));
 }
 
 #if defined(HITLS_CRYPTO_MD)
 static const EAL_CheckAsm HITLS_ASM_MD_ALG_CHECK[] = {
     /* hash algorithm ID */
-    #if defined(HITLS_CRYPTO_MD5_ASM)
-        {.id = CRYPT_MD_MD5, .callback = {CRYPT_MD5_AsmCheck, NULL}},
-    #endif
-    #if defined(HITLS_CRYPTO_SHA1_ASM)
-        {.id = CRYPT_MD_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
-    #endif
-    #if defined(HITLS_CRYPTO_SHA2_ASM)
-        {.id = CRYPT_MD_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_MD_SHA256, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_MD_SHA384, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_MD_SHA512, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-    #endif
-    #if defined(HITLS_CRYPTO_SM3_ASM)
-        {.id = CRYPT_MD_SM3, .callback = {CRYPT_SM3_AsmCheck, NULL}},
-    #endif
+#if defined(HITLS_CRYPTO_MD5_ASM)
+    {.id = CRYPT_MD_MD5, .callback = {CRYPT_MD5_AsmCheck, NULL}},
+#endif
+#if defined(HITLS_CRYPTO_SHA1_ASM)
+    {.id = CRYPT_MD_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
+#endif
+#if defined(HITLS_CRYPTO_SHA2_ASM)
+    {.id = CRYPT_MD_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_MD_SHA256, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_MD_SHA384, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_MD_SHA512, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+#endif
+#if defined(HITLS_CRYPTO_SM3_ASM)
+    {.id = CRYPT_MD_SM3, .callback = {CRYPT_SM3_AsmCheck, NULL}},
+#endif
+    {.id = CRYPT_MD_MAX, .callback = {NULL, NULL}},
 };
 #endif
 
 int32_t CRYPT_ASMCAP_Md(CRYPT_MD_AlgId id)
 {
     return CryptCheckCapId((BslCid)id, HITLS_ASM_MD_ALG_CHECK,
-        sizeof(HITLS_ASM_MD_ALG_CHECK) / sizeof(HITLS_ASM_MD_ALG_CHECK[0]));
+        sizeof(HITLS_ASM_MD_ALG_CHECK) / sizeof(EAL_CheckAsm));
 }
 
 #if defined(HITLS_CRYPTO_PKEY)
@@ -197,46 +199,48 @@ static const EAL_CheckAsm HITLS_ASM_PKEY_ALG_CHECK[] = {
     {.id = CRYPT_PKEY_ECDSA, .callback = {NULL, CRYPT_ECP256_AsmCheck}},
     {.id = CRYPT_PKEY_ECDH, .callback = {NULL, CRYPT_ECP256_AsmCheck}},
 #endif
+    {.id = CRYPT_PKEY_MAX, .callback = {NULL, NULL}},
 };
 
 int32_t CRYPT_ASMCAP_Pkey(CRYPT_PKEY_AlgId id)
 {
     return CryptCheckCapId((BslCid)id, HITLS_ASM_PKEY_ALG_CHECK,
-        sizeof(HITLS_ASM_PKEY_ALG_CHECK) / sizeof(HITLS_ASM_PKEY_ALG_CHECK[0]));
+        sizeof(HITLS_ASM_PKEY_ALG_CHECK) / sizeof(EAL_CheckAsm));
 }
 #endif // HITLS_CRYPTO_PKEY
 
 #if defined(HITLS_CRYPTO_DRBG)
 static const EAL_CheckAsm HITLS_ASM_DRBG_ALG_CHECK[] = {
     /* RAND algorithm ID */
-    #if defined(HITLS_CRYPTO_SHA1_ASM)
-        {.id = CRYPT_RAND_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_HMAC_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
-    #endif
-    #if defined(HITLS_CRYPTO_SHA2_ASM)
-        {.id = CRYPT_RAND_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_SHA256, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_SHA384, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_SHA512, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_HMAC_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_HMAC_SHA256, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_HMAC_SHA384, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_HMAC_SHA512, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
-    #endif
-    #if defined(HITLS_CRYPTO_AES_ASM)
-        {.id = CRYPT_RAND_AES128_CTR, .callback = {CRYPT_AES_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_AES192_CTR, .callback = {CRYPT_AES_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_AES256_CTR, .callback = {CRYPT_AES_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_AES128_CTR_DF, .callback = {CRYPT_AES_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_AES192_CTR_DF, .callback = {CRYPT_AES_AsmCheck, NULL}},
-        {.id = CRYPT_RAND_AES256_CTR_DF, .callback = {CRYPT_AES_AsmCheck, NULL}},
-    #endif
+#if defined(HITLS_CRYPTO_SHA1_ASM)
+    {.id = CRYPT_RAND_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_HMAC_SHA1, .callback = {CRYPT_SHA1_AsmCheck, NULL}},
+#endif
+#if defined(HITLS_CRYPTO_SHA2_ASM)
+    {.id = CRYPT_RAND_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_SHA256, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_SHA384, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_SHA512, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_HMAC_SHA224, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_HMAC_SHA256, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_HMAC_SHA384, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_HMAC_SHA512, .callback = {CRYPT_SHA2_AsmCheck, NULL}},
+#endif
+#if defined(HITLS_CRYPTO_AES_ASM)
+    {.id = CRYPT_RAND_AES128_CTR, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_AES192_CTR, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_AES256_CTR, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_AES128_CTR_DF, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_AES192_CTR_DF, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_RAND_AES256_CTR_DF, .callback = {CRYPT_AES_AsmCheck, NULL}},
+#endif
+    {.id = CRYPT_RAND_ALGID_MAX, .callback = {NULL, NULL}},
 };
 
 int32_t CRYPT_ASMCAP_Drbg(CRYPT_RAND_AlgId id)
 {
     return CryptCheckCapId((BslCid)id, HITLS_ASM_DRBG_ALG_CHECK,
-        sizeof(HITLS_ASM_DRBG_ALG_CHECK) / sizeof(HITLS_ASM_DRBG_ALG_CHECK[0]));
+        sizeof(HITLS_ASM_DRBG_ALG_CHECK) / sizeof(EAL_CheckAsm));
 }
 #endif // HITLS_CRYPTO_DRBG
 
@@ -258,12 +262,13 @@ static const EAL_CheckAsm HITLS_ASM_MAC_ALG_CHECK[] = {
 #if defined(HITLS_CRYPTO_SM3_ASM)
     {.id = CRYPT_MAC_HMAC_SM3, .callback = {CRYPT_SM3_AsmCheck, NULL}},
 #endif
+    {.id = CRYPT_MAC_MAX, .callback = {NULL, NULL}},
 };
 
 int32_t CRYPT_ASMCAP_Mac(CRYPT_MAC_AlgId id)
 {
     return CryptCheckCapId((BslCid)id, HITLS_ASM_MAC_ALG_CHECK,
-        sizeof(HITLS_ASM_MAC_ALG_CHECK) / sizeof(HITLS_ASM_MAC_ALG_CHECK[0]));
+        sizeof(HITLS_ASM_MAC_ALG_CHECK) / sizeof(EAL_CheckAsm));
 }
 
 #endif // HITLS_CRYPTO_MAC
