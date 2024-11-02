@@ -119,7 +119,7 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *se
  * @retval DRBG_Ctx* Success
  * @retval NULL      failure
  */
-DRBG_Ctx *DRBG_NewCtrCtx(const EAL_CipherMethod *ciphMeth, const uint32_t keyLen, const bool isUsedDf,
+DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, const bool isUsedDf,
     const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 #endif
 

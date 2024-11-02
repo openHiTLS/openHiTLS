@@ -98,7 +98,7 @@ int32_t CRYPT_SM4_Decrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *out, u
  *
  * @param [IN] ctx sm4 context
  */
-void CRYPT_SM4_Clean(CRYPT_SM4_Ctx *ctx);
+int32_t CRYPT_SM4_Clean(CRYPT_SM4_Ctx *ctx);
 
 #ifdef HITLS_CRYPTO_XTS
 /**

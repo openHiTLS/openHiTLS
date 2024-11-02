@@ -16,13 +16,19 @@
 #ifndef CRYPT_LOCAL_TYPES_H
 #define CRYPT_LOCAL_TYPES_H
 
-#include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+typedef enum {
+    CRYPT_CTRL_SET_IV = -1,
+    CRYPT_CTRL_SET_COUNT = -2,
+    CRYPT_CTRL_SET_PADDING = -3,
+    CRYPT_CTRL_GET_PADDING = -4,
+} CRYPT_CipherCtrlLocal;
 
 /* Prototype of the MD algorithm operation functions */
 typedef void* (*MdNewCtx)(void);
@@ -178,60 +184,57 @@ typedef enum {
     CRYPT_SYM_MAX
 } CRYPT_SYM_AlgId;
 
-typedef struct EAL_CipherMethod {
-    /**
-     * @ingroup crypt_type
-     * @brief Initialize the handle and register other modules.
-     * @return 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*initCtx)(void *ctx, const struct EAL_CipherMethod *m);
-    /**
-     * @ingroup crypt_type
-     * @brief Deinitialize the handle, return to the state after init is called, including releasing memory.
-     * @return void
-     */
-    void (*deinitCtx)(void *ctx);
-    /**
-     * @ingroup crypt_type
-     * @brief Clear the key and sensitive information, but do not release the memory, return to the state after initCtx.
-     * @return void
-     */
-    void (*clean)(void *ctx);
-    /**
-     * @ingroup crypt_type
-     * @brief Set the encryption key and key length.
-     * @return 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*setEncryptKey)(void *ctx, const uint8_t *key, uint32_t len);
-    /**
-     * @ingroup crypt_type
-     * @brief Set the decryption key and key length.
-     * @return 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*setDecryptKey)(void *ctx, const uint8_t *key, uint32_t len);
-    /**
-     * @ingroup crypt_type
-     * @brief Encrypt the input data. The lengths of the encrypted and decrypted data are the same.
-     * @return 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*encrypt)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-    /**
-     * @ingroup crypt_type
-     * @brief Decrypt the input data. The lengths of the encrypted and decrypted data are the same.
-     * @return 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*decrypt)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-    /**
-     * @ingroup crypt_type
-     * @brief Set parameters for the CTX.
-     * @return 0 indicates success, and other values indicate failure.
-     */
-    int32_t (*ctrl)(void *ctx, uint32_t opt, void *val, uint32_t len);
+typedef void *(*CipherNewCtx)(int32_t alg);
+typedef void *(*CipherProvNewCtx)(void *provCtx, int32_t alg);
+typedef int32_t (*CipherInitCtx)(void *ctx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc);
+typedef int32_t (*CipherDeInitCtx)(void *ctx);
+typedef int32_t (*CipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CipherFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CipherCtrl)(void *ctx, int32_t opt, void *val, uint32_t len);
+typedef void (*CipherFreeCtx)(void *ctx);
 
-    uint8_t blockSize;   /**< block size in bytes */
-    uint16_t ctxSize;    /**< ctx size. The maximum size is 65535 bytes. */
-    CRYPT_SYM_AlgId algId;      /**< algorithm ID */
+typedef int32_t (*SetEncryptKey)(void *ctx, const uint8_t *key, uint32_t len);
+typedef int32_t (*SetDecryptKey)(void *ctx, const uint8_t *key, uint32_t len);
+typedef int32_t (*SetKey)(void *ctx, const uint8_t *key, uint32_t len);
+// process block or blocks
+typedef int32_t (*EncryptBlock)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+typedef int32_t (*DecryptBlock)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+
+typedef int32_t (*CipherStreamProcess)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+
+typedef struct {
+    SetEncryptKey setEncryptKey;
+    SetDecryptKey setDecryptKey;
+    EncryptBlock encryptBlock;
+    DecryptBlock decryptBlock;
+    CipherDeInitCtx cipherDeInitCtx;
+    CipherCtrl CipherCtrl;
+    uint8_t blockSize;
+    uint16_t ctxSize;
+    CRYPT_SYM_AlgId algId;
+} EAL_SymMethod;
+
+typedef struct {
+    CipherNewCtx newCtx;
+    CipherInitCtx initCtx;
+    CipherDeInitCtx deinitCtx;
+    CipherUpdate update;
+    CipherFinal final;
+    CipherCtrl ctrl;
+    CipherFreeCtx freeCtx;
 } EAL_CipherMethod;
+
+typedef struct {
+    CipherNewCtx newCtx;
+    CipherProvNewCtx provNewCtx;
+    CipherInitCtx initCtx;
+    CipherDeInitCtx deinitCtx;
+    CipherUpdate update;
+    CipherFinal final;
+    CipherCtrl ctrl;
+    CipherFreeCtx freeCtx;
+} EAL_CipherUnitaryMethod;
 
 /* prototype of MAC algorithm operation functions */
 typedef void* (*MacNewCtx)(CRYPT_MAC_AlgId id);
@@ -283,8 +286,8 @@ typedef struct {
  */
 typedef enum {
     CRYPT_MODE_CBC = 0,
-    CRYPT_MODE_CTR,
     CRYPT_MODE_ECB,
+    CRYPT_MODE_CTR,
     CRYPT_MODE_XTS,
     CRYPT_MODE_CCM,
     CRYPT_MODE_GCM,

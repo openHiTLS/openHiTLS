@@ -172,11 +172,12 @@ void SDV_CRYPTO_GCM_API_TC005(int id, int keyLen)
     TestMemInit();
     uint8_t key[32] = { 0 }; // The maximum length of the key is 32 bytes.
     uint8_t iv[13] = { 0 };
+    uint64_t add[16] = { 0 };
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, (uint8_t *)key, keyLen, iv, sizeof(iv), true) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, NULL, 0) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, NULL, 0) != CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, add, sizeof(add)) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, add, sizeof(add)), CRYPT_MODES_AAD_REPEAT_SET_ERROR);
 exit:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
