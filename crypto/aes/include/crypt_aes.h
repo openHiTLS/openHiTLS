@@ -120,8 +120,6 @@ int32_t CRYPT_AES_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *
 */
 int32_t CRYPT_AES_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
-int32_t CRYPT_AES_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
 #ifdef HITLS_CRYPTO_CBC
 /**
  * @ingroup aes
@@ -208,7 +206,7 @@ int32_t CRYPT_AES_CFB_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8
  * @param ctx [IN]  AES handle, storing keys
  * @return void
 */
-int32_t CRYPT_AES_Clean(CRYPT_AES_Key *ctx);
+void CRYPT_AES_Clean(CRYPT_AES_Key *ctx);
 
 #ifdef __cplusplus
 }

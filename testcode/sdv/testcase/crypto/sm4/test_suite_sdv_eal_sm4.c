@@ -381,7 +381,6 @@ void SDV_CRYPTO_SM4_CTRL_API_TC001(Hex *key, Hex *iv, Hex *msg)
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, iv->x, iv->len), CRYPT_MODES_CTRL_TYPE_ERROR);
 
-
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, iv1, len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(iv1, iv->x, iv->len) == 0);
@@ -458,7 +457,8 @@ void SDV_CRYPTO_SM4_CTRL_API_TC003(Hex *key, Hex *iv)
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, ivGet, 0), CRYPT_MODE_ERR_INPUT_LEN);
 
-    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, (uint8_t *)&blockSizeGet, 0), CRYPT_MODE_ERR_INPUT_LEN);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, (uint8_t *)&blockSizeGet, 0),
+        CRYPT_MODE_ERR_INPUT_LEN);
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_MAX, iv->x, iv->len), CRYPT_MODES_CTRL_TYPE_ERROR);
 
 exit:
@@ -950,8 +950,8 @@ exit:
  *    7.Success. The ciphertext is as expected.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(int isProvider, Hex *key, Hex *in1, Hex *out1, Hex *iv1, Hex *in2, Hex *out2, Hex *iv2,
-    int enc)
+void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(int isProvider, Hex *key, Hex *in1, Hex *out1,
+    Hex *iv1, Hex *in2, Hex *out2, Hex *iv2, int enc)
 {
     TestMemInit();
     int32_t ret;

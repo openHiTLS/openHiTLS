@@ -473,7 +473,7 @@ int32_t MODES_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t k
     }
     
     ret = MODES_GCM_SetIv(&modeCtx->gcmCtx, iv, ivLen);
-   if (ret != CRYPT_SUCCESS) {
+    if (ret != CRYPT_SUCCESS) {
         MODES_GCM_DeInitCtx(modeCtx);
         return ret;
     }

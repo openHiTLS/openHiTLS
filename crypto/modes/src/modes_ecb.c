@@ -111,14 +111,16 @@ int32_t MODES_ECB_DeinitCtx(MODES_CipherCtx *modeCtx)
 
 int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
 {
+    int ret;
     if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     switch (cmd) {
         case CRYPT_CTRL_SET_PADDING:
-            if (*(int32_t *) val >= CRYPT_PADDING_MAX_COUNT || *(int32_t *) val < CRYPT_PADDING_NONE) {
-                return CRYPT_EAL_PADDING_NOT_SUPPORT;
+            ret = MODES_SetPaddingCheck(*(int32_t *)val);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
             }
             modeCtx->pad = *(int32_t *)val;
             return CRYPT_SUCCESS;

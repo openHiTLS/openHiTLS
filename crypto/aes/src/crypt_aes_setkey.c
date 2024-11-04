@@ -107,12 +107,12 @@ int32_t CRYPT_AES_SetDecryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_AES_Clean(CRYPT_AES_Key *ctx)
+void CRYPT_AES_Clean(CRYPT_AES_Key *ctx)
 {
     if (ctx == NULL) {
-        return CRYPT_NULL_INPUT;
+        return;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_AES_Key));
-    return CRYPT_SUCCESS;
+    return;
 }
 #endif /* HITLS_CRYPTO_AES */

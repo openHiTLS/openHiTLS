@@ -49,12 +49,6 @@ typedef struct {
     CRYPT_MODE_AlgId modeId;
 } EAL_SymAlgMap;
 
-
-typedef struct {
-    uint32_t id;
-    const EAL_CipherMethod *modeMeth;
-} EAL_SymAlgMapAsm;
-
 /**
 * @ingroup  EAL
 *
@@ -75,7 +69,7 @@ struct CryptEalCipherCtx {
     CRYPT_CIPHER_AlgId id;
     EAL_CipherStates states;                        /**< record status */
     void *ctx;                                      /**< handle of the mode */
-    const EAL_CipherUnitaryMethod *method;                 /**< method corresponding to the encryption/decryption mode */
+    const EAL_CipherUnitaryMethod *method;          /**< method corresponding to the encryption/decryption mode */
 };
 
 /**

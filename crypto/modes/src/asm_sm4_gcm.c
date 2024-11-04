@@ -129,7 +129,7 @@ int32_t SM4_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t key
     }
     
     ret = MODES_GCM_SetIv(&modeCtx->gcmCtx, iv, ivLen);
-   if (ret != CRYPT_SUCCESS) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         MODES_GCM_DeInitCtx(modeCtx);
         return ret;
@@ -140,7 +140,7 @@ int32_t SM4_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t key
 
 int32_t SM4_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODES_CipherStreamProcess(modeCtx->enc ? MODES_SM4_GCM_EncryptBlock : MODES_SM4_GCM_DecryptBlock, &modeCtx->gcmCtx,
-        in, inLen, out, outLen);
+    return MODES_CipherStreamProcess(modeCtx->enc ? MODES_SM4_GCM_EncryptBlock : MODES_SM4_GCM_DecryptBlock,
+        &modeCtx->gcmCtx, in, inLen, out, outLen);
 }
 #endif

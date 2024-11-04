@@ -155,6 +155,7 @@ int32_t MODES_CBC_DeInitCtx(MODES_CipherCtx *modeCtx)
 
 int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
 {
+    int32_t ret;
     if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -162,11 +163,10 @@ int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
     
     switch (cmd) {
         case CRYPT_CTRL_SET_PADDING:
-            if (*(int32_t *) val >= CRYPT_PADDING_MAX_COUNT || *(int32_t *) val < CRYPT_PADDING_NONE) {
-                BSL_ERR_PUSH_ERROR(CRYPT_EAL_PADDING_NOT_SUPPORT);
-                return CRYPT_EAL_PADDING_NOT_SUPPORT;
+            ret = MODES_SetPaddingCheck(*(int32_t *)val);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
             }
-
             modeCtx->pad = *(int32_t *)val;
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_GET_PADDING:

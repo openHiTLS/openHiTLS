@@ -333,7 +333,8 @@ int32_t MODES_XTS_SetIv(MODES_CipherXTSCtx *ctx, const uint8_t *val, uint32_t le
     }
 
     // Use key2 and i to encrypt to obtain the tweak.
-    ret = ctx->ciphMeth->encryptBlock((uint8_t*)ctx->ciphCtx + ctx->ciphMeth->ctxSize, ctx->iv, ctx->tweak, ctx->blockSize);
+    ret = ctx->ciphMeth->encryptBlock((uint8_t*)ctx->ciphCtx + ctx->ciphMeth->ctxSize,
+        ctx->iv, ctx->tweak, ctx->blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

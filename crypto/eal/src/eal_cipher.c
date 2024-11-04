@@ -131,29 +131,30 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, in
     int32_t ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_SYMMCIPHER, algId, attrName,
         (const CRYPT_EAL_Func **)&funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, ret);
         return NULL;
     }
     CRYPT_EAL_CipherCtx *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_CipherCtx));
     if (ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, algId, CRYPT_MEM_ALLOC_FAIL);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
     
     ret = CRYPT_EAL_SetCipherMethod(ctx, funcs);
     if (ret != BSL_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, ret);
         BSL_SAL_FREE(ctx);
         return NULL;
     }
     if (ctx->method->provNewCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_IMPL_NULL);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, CRYPT_PROVIDER_ERR_IMPL_NULL);
         BSL_SAL_FREE(ctx->method);
         BSL_SAL_FREE(ctx);
         return NULL;
     }
     ctx->ctx = ctx->method->provNewCtx(provCtx, algId);
     if (ctx->ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, CRYPT_MEM_ALLOC_FAIL);
         BSL_SAL_FREE(ctx->method);
         BSL_SAL_FREE(ctx);
         return NULL;
@@ -207,13 +208,13 @@ int32_t CRYPT_EAL_CipherInit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *key, uint3
     }
     CRYPT_EAL_CipherDeinit(ctx);
     if (ctx->states != EAL_CIPHER_STATE_NEW) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_STATE);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
 
     ret = ctx->method->initCtx(ctx->ctx, key, keyLen, iv, ivLen, NULL, enc);
     if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
     }
     
@@ -233,7 +234,11 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
         return;
     }
 
-    ctx->method->deinitCtx(ctx->ctx);
+    int32_t ret = ctx->method->deinitCtx(ctx->ctx);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
+    }
+    
     // Restore the state to the state after the new is successful.
     ctx->states = EAL_CIPHER_STATE_NEW;
     EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_SUCCESS);

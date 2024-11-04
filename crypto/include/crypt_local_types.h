@@ -28,6 +28,7 @@ typedef enum {
     CRYPT_CTRL_SET_COUNT = -2,
     CRYPT_CTRL_SET_PADDING = -3,
     CRYPT_CTRL_GET_PADDING = -4,
+    CRYPT_CTRL_REINIT_STATUS = -5,
 } CRYPT_CipherCtrlLocal;
 
 /* Prototype of the MD algorithm operation functions */
@@ -200,7 +201,7 @@ typedef int32_t (*SetKey)(void *ctx, const uint8_t *key, uint32_t len);
 // process block or blocks
 typedef int32_t (*EncryptBlock)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 typedef int32_t (*DecryptBlock)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
+typedef void (*DeInitBlockCtx)(void *ctx);
 typedef int32_t (*CipherStreamProcess)(void *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
 typedef struct {
@@ -208,7 +209,7 @@ typedef struct {
     SetDecryptKey setDecryptKey;
     EncryptBlock encryptBlock;
     DecryptBlock decryptBlock;
-    CipherDeInitCtx cipherDeInitCtx;
+    DeInitBlockCtx cipherDeInitCtx;
     CipherCtrl CipherCtrl;
     uint8_t blockSize;
     uint16_t ctxSize;
