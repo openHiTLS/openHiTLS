@@ -61,12 +61,9 @@ int32_t SM4_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t key
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-
     (void)memcpy_s(modeCtx->cfbCtx.modeCtx.iv, MODES_MAX_IV_LENGTH, iv, ivLen);
-
     modeCtx->enc = enc;
     return ret;
-
 }
 
 int32_t SM4_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)

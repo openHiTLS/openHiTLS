@@ -243,9 +243,13 @@ int32_t CRYPT_CHACHA20_Ctrl(CRYPT_CHACHA20_Ctx *ctx, int32_t opt,
     }
 }
 
-int32_t CRYPT_CHACHA20_Clean(CRYPT_CHACHA20_Ctx *ctx)
+void CRYPT_CHACHA20_Clean(CRYPT_CHACHA20_Ctx *ctx)
 {
+    if (ctx == NULL) {
+        return;
+    }
+    
     memset_s(ctx, sizeof(CRYPT_CHACHA20_Ctx), 0, sizeof(CRYPT_CHACHA20_Ctx));
-    return CRYPT_SUCCESS;
+    return;
 }
 #endif // HITLS_CRYPTO_CHACHA20

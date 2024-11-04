@@ -35,20 +35,6 @@
 #include "crypt_provider.h"
 #include "crypt_modes.h"
 
-typedef enum {
-    RAND_AES128_KEYLEN = 16,
-    RAND_AES192_KEYLEN = 24,
-    RAND_AES256_KEYLEN = 32,
-} RAND_AES_KeyLen;
-
-typedef struct {
-    CRYPT_RAND_AlgId id;
-    CRYPT_RandSeedMethod *seedMeth;
-    void *seedCtx;
-    const uint8_t *pers;
-    uint32_t persLen;
-} CRYPT_RAND_DrbgParam;
-
 static CRYPT_EAL_RndCtx *g_globalRndCtx = NULL;
 
 #define RETURN_RAND_LOCK(ctx, ret)                              \

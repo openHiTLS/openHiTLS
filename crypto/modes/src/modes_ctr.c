@@ -64,7 +64,6 @@ void MODES_CTR_RemHandle(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t 
 
 int32_t MODES_CTR_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-
     uint32_t offset = MODES_CTR_LastHandle(ctx, in, out, len);
     uint32_t left = len - offset;
     const uint8_t *tmpIn = in + offset;

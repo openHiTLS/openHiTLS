@@ -57,9 +57,8 @@ static void *CRYPT_EAL_DefCipherNewCtx(void *provCtx, int32_t algId)
         if (cipherNewCtxFunc[i].id == algId) {
             return ((CipherNewCtx)cipherNewCtxFunc[i].func)(algId);
         }
-        
     }
-    
+
     return NULL;
 }
 

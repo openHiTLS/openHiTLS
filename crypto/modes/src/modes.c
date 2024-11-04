@@ -33,7 +33,7 @@ static const EAL_SymMethod AES128_METHOD = {
     (SetDecryptKey)CRYPT_AES_SetDecryptKey128,
     (EncryptBlock)CRYPT_AES_Encrypt,
     (DecryptBlock)CRYPT_AES_Decrypt,
-    (CipherDeInitCtx)CRYPT_AES_Clean,
+    (DeInitBlockCtx)CRYPT_AES_Clean,
     NULL,
     16,
     sizeof(CRYPT_AES_Key),
@@ -45,7 +45,7 @@ static const EAL_SymMethod AES192_METHOD = {
     (SetDecryptKey)CRYPT_AES_SetDecryptKey192,
     (EncryptBlock)CRYPT_AES_Encrypt,
     (DecryptBlock)CRYPT_AES_Decrypt,
-    (CipherDeInitCtx)CRYPT_AES_Clean,
+    (DeInitBlockCtx)CRYPT_AES_Clean,
     NULL,
     16,
     sizeof(CRYPT_AES_Key),
@@ -57,7 +57,7 @@ static const EAL_SymMethod AES256_METHOD = {
     (SetDecryptKey)CRYPT_AES_SetDecryptKey256,
     (EncryptBlock)CRYPT_AES_Encrypt,
     (DecryptBlock)CRYPT_AES_Decrypt,
-    (CipherDeInitCtx)CRYPT_AES_Clean,
+    (DeInitBlockCtx)CRYPT_AES_Clean,
     NULL,
     16,
     sizeof(CRYPT_AES_Key),
@@ -71,7 +71,7 @@ static const EAL_SymMethod CHACHA20_METHOD = {
     (SetDecryptKey)CRYPT_CHACHA20_SetKey,
     (EncryptBlock)CRYPT_CHACHA20_Update,
     (DecryptBlock)CRYPT_CHACHA20_Update,
-    (CipherDeInitCtx)CRYPT_CHACHA20_Clean,
+    (DeInitBlockCtx)CRYPT_CHACHA20_Clean,
     (CipherCtrl)CRYPT_CHACHA20_Ctrl,
     1,
     sizeof(CRYPT_CHACHA20_Ctx),
@@ -85,7 +85,7 @@ static const EAL_SymMethod SM4_METHOD = {
     (SetDecryptKey)CRYPT_SM4_SetKey,
     (EncryptBlock)CRYPT_SM4_Encrypt,
     (DecryptBlock)CRYPT_SM4_Decrypt,
-    (CipherDeInitCtx)CRYPT_SM4_Clean,
+    (DeInitBlockCtx)CRYPT_SM4_Clean,
     NULL,
     16,
     sizeof(CRYPT_SM4_Ctx),
@@ -413,7 +413,7 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
     }
 
     if (modeCtx->enc) {
-        ret = MODES_BlockPadding(modeCtx->algId, modeCtx->pad, 
+        ret = MODES_BlockPadding(modeCtx->algId, modeCtx->pad,
             modeCtx->commonCtx.blockSize, modeCtx->data, &modeCtx->dataLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -494,7 +494,7 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
         }
     }
     // Process the new cache.
-    if (left > 0 ) {
+    if (left > 0) {
         (void)memcpy_s(modeCtx->data, modeCtx->commonCtx.blockSize, tmpIn + len, left);
         modeCtx->dataLen = left;
     }
@@ -605,6 +605,17 @@ int32_t MODES_CipherStreamProcess(void *processFuncs, void *ctx, const uint8_t *
         return ret;
     }
     *outLen = inLen;
+    return CRYPT_SUCCESS;
+}
+
+// Note that CRYPT_PADDING_ZEROS cannot restore the plaintext length.
+// If uses it, need to maintain the length themselves
+int32_t MODES_SetPaddingCheck(int32_t pad)
+{
+    if (pad >= CRYPT_PADDING_MAX_COUNT || pad < CRYPT_PADDING_NONE) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_PADDING_NOT_SUPPORT);
+        return CRYPT_MODES_PADDING_NOT_SUPPORT;
+    }
     return CRYPT_SUCCESS;
 }
 

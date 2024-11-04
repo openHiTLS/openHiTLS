@@ -491,7 +491,7 @@ int32_t MODES_CCM_Ctrl(MODES_CCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
         case CRYPT_CTRL_REINIT_STATUS:
             return SetIv(&modeCtx->ccmCtx, val, len);
         case CRYPT_CTRL_GET_BLOCKSIZE:
-         if (val == NULL || len != sizeof(uint32_t)) {
+            if (val == NULL || len != sizeof(uint32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
                 return CRYPT_MODE_ERR_INPUT_LEN;
             }

@@ -358,12 +358,9 @@ int32_t MODES_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t k
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
     (void)memcpy_s(modeCtx->cfbCtx.modeCtx.iv, MODES_MAX_IV_LENGTH, iv, ivLen);
-
     modeCtx->enc = enc;
     return ret;
-
 }
 
 int32_t MODES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)

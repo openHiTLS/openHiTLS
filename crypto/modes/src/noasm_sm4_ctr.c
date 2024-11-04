@@ -18,16 +18,6 @@
 
 #include "crypt_modes_ctr.h"
 
-// int32_t MODE_SM4_CTR_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-// {
-//     return MODES_CTR_Crypt(ctx, in, out, len);
-// }
-
-// int32_t MODE_SM4_CTR_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-// {
-//     return MODES_CTR_Crypt(ctx, in, out, len);
-// }
-
 int32_t SM4_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {

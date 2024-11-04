@@ -400,9 +400,9 @@ typedef enum {
                                        type is int64_t. */
     CRYPT_CTRL_SET_FEEDBACKSIZE,  /**< Setting the ciphertext feedback length in CFB mode. */
     CRYPT_CTRL_GET_FEEDBACKSIZE,  /**< Obtaining the ciphertext feedback length in CFB mode. */
+    CRYPT_CTRL_DES_NOKEYCHECK,    /**< DES does not verify the key. */
     CRYPT_CTRL_SET_SM4_CONSTTIME, /**< SM4 selects the side channel security implementation, which reduces
                                        the performance. Valid only when ARM assembly implementation is enabled. */
-    CRYPT_CTRL_REINIT_STATUS,
     CRYPT_CTRL_MAX
 } CRYPT_CipherCtrl;
 

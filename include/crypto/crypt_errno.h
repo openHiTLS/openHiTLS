@@ -131,11 +131,8 @@ enum CRYPT_ERROR {
                                              if this requirement is not met,an error will be reported.
                                              For ISO7816, the first bit of padding data is 0x80, and the other bits
                                              are 0, if this requirement is not met, an error will be reported. */
-    CRYPT_EAL_PADDING_NOT_SUPPORT,      /**< Unsupported padding. */
     CRYPT_EAL_CIPHER_CTRL_ERROR,        /**< CRYPT_EAL_CipherCtrl interface unsupported CTRL type. */
-    CRYPT_EAL_CIPHER_FIANL_WITH_AEAD_ERROR,  /**< An error occurs when the final operation is performed on the
-                                                  AEAD algorithm. */
-    CRYPT_EAL_CIPHER_ERR_NEWCTX,                                              
+    CRYPT_EAL_CIPHER_ERR_NEWCTX,
     CRYPT_EAL_PKEY_CTRL_ERROR,          /**< When the CRYPT_EAL_PkeyCtrl interface performs CTRL,
                                              the function is not supported or the input length is incorrect. */
     CRYPT_EAL_PKEY_DUP_ERROR,           /**< Pkey context duplicate failure. */
@@ -266,8 +263,8 @@ enum CRYPT_ERROR {
                                                           on which the pattern depends on. */
     CRYPT_MODES_METHODS_NOT_SUPPORT,                 /**< Mode depends does not support the behavior. */
 	CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
-    CRYPT_MODES_ERR_STREAM_FINAL,
-
+    CRYPT_MODES_ERR_STREAM_FINAL,                    /**< streaming encryption not support final */
+    CRYPT_MODES_PADDING_NOT_SUPPORT,                 /**< Unsupported padding. */
     CRYPT_HKDF_DKLEN_OVERFLOW = 0x01100001,          /**< The length of the derived key exceeds the maximum. */
     CRYPT_HKDF_NOT_SUPPORTED,                        /**< Unsupport HKDF algorithm. */
     CRYPT_HKDF_PARAM_ERROR,                          /**< Incorrect input parameter. */

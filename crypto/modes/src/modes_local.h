@@ -250,6 +250,7 @@ int32_t MODES_GCM_SetIv(MODES_CipherGCMCtx *ctx, const uint8_t *iv, uint32_t ivL
 int32_t MODES_XTS_CheckPara(const uint8_t *key, uint32_t len, const uint8_t *iv);
 int32_t MODES_XTS_SetIv(MODES_CipherXTSCtx *ctx, const uint8_t *val, uint32_t len);
 
+int32_t MODES_SetPaddingCheck(int32_t pad);
 
 #ifdef __cplusplus
 }
