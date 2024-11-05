@@ -106,12 +106,12 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
     // Test if loading the same provider name with the same cmd from different paths is successful
-    // and not recognized as the same provider。
+    // and will recognized as the same provider。
     ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path2);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
+    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2+1);
 
     ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -132,6 +132,12 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoFullfunc, NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+
+    setenv("LD_LIBRARY_PATH", path, 1);
+    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test CRYPT_EAL_UnloadProvider
     ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test1);
