@@ -30,8 +30,6 @@
 
 // Name of the dl initialization function
 #define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInitcb"
-// Default path: current directory
-#define DEFAULT_PROVIDER_PATH "."
 // Maximum length of provider name
 #define DEFAULT_PROVIDER_NAME_LEN_MAX 255
 // Maximum length of search path
@@ -40,20 +38,7 @@
 
 CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtx()
 {
-    CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_NewLibCtxInternal();
-    if (libCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    libCtx->searchProviderPath = realpath(DEFAULT_PROVIDER_PATH, NULL);
-    if (libCtx->searchProviderPath == NULL) {
-        BSL_SAL_ThreadLockFree(libCtx->lock);
-        BSL_LIST_FREE(libCtx->providers, NULL);
-        BSL_SAL_FREE(libCtx);
-        return NULL;
-    }
-
-    return libCtx;
+    return CRYPT_EAL_NewLibCtxInternal();
 }
 
 
@@ -121,41 +106,28 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx)
 
 
 // Comparison function for searching providers in the list
-static int32_t CompareProvider(const CRYPT_EAL_ProvMgrCtx *ctx, const char *providerName, const char *providerPath)
+static int32_t CompareProvider(const CRYPT_EAL_ProvMgrCtx *ctx, const char *providerName)
 {
     int32_t nameResult = strcmp(ctx->providerName, providerName);
-    int32_t pathResult = strcmp(ctx->providerPath, providerPath);
     if (nameResult != 0) {
         return nameResult > 0 ? 1 : -1;
-    }
-    if (pathResult != 0) {
-        return pathResult > 0 ? 1 : -1;
     }
     return 0;
 }
 
 // Write a function to search for providers according to BSL_LIST_Search requirements,
-// comparing the input providerName and providerPath with the providerName and providerPath
-// in EalProviderMgrCtx for an exact match
+// comparing the input providerName with the providerName in EalProviderMgrCtx for an exact match
 static int32_t ListCompareProvider(const void *a, const void *b)
 {
-    const CRYPT_EAL_ProvMgrCtx *ctx = (const CRYPT_EAL_ProvMgrCtx *)a;
-    const char **searchData = (const char **)b;
-    const char *providerName = searchData[0];
-    const char *providerPath = searchData[1];
-
-    return CompareProvider(ctx, providerName, providerPath);
+    return CompareProvider((const CRYPT_EAL_ProvMgrCtx *)a, (const char *)b);
 }
 
 // Function to search for a provider
-static int32_t SearchProvider(CRYPT_EAL_LibCtx *libCtx, const char *providerName, const char *providerPath,
-    CRYPT_EAL_ProvMgrCtx **result)
+static int32_t SearchProvider(CRYPT_EAL_LibCtx *libCtx, const char *providerName, CRYPT_EAL_ProvMgrCtx **result)
 {
     int32_t ret = BSL_SUCCESS;
     CRYPT_EAL_ProvMgrCtx *tempResult = NULL;
-
-    const char *searchData[2] = {providerName, providerPath};
-    tempResult = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_Search(libCtx->providers, searchData, ListCompareProvider, &ret);
+    tempResult = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_Search(libCtx->providers, providerName, ListCompareProvider, &ret);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -187,11 +159,13 @@ static int32_t MountEalProviderMgrCtxParams(CRYPT_EAL_LibCtx *libCtx, void *hand
         return HITLS_MEMALLOC_FAIL;
     }
 
-    ctx->providerPath = BSL_SAL_Dump(providerPath,
-                                     BSL_SAL_Strnlen(providerPath, DEFAULT_PROVIDER_PATH_LEN_MAX) + 1);
-    if (ctx->providerPath == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
+    if (providerPath != NULL) {
+        ctx->providerPath = BSL_SAL_Dump(providerPath,
+                                        BSL_SAL_Strnlen(providerPath, DEFAULT_PROVIDER_PATH_LEN_MAX) + 1);
+        if (ctx->providerPath == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+            return HITLS_MEMALLOC_FAIL;
+        }
     }
 
     // Get the address of the initialization function
@@ -211,7 +185,7 @@ static int32_t MountEalProviderMgrCtxParams(CRYPT_EAL_LibCtx *libCtx, void *hand
 }
 
 static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx,
-    const char *providerName, const char *providerPath, CRYPT_EAL_ProvMgrCtx **providerMgr)
+    const char *providerName, CRYPT_EAL_ProvMgrCtx **providerMgr)
 {
     int32_t ret;
     CRYPT_EAL_ProvMgrCtx *tempProviderMgr = NULL;
@@ -221,7 +195,7 @@ static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx,
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = SearchProvider(libCtx, providerName, providerPath, &tempProviderMgr);
+    ret = SearchProvider(libCtx, providerName, &tempProviderMgr);
     if (ret != BSL_SUCCESS) {
         BSL_SAL_ThreadUnlock(libCtx->lock);
         return ret;
@@ -274,7 +248,7 @@ static int32_t AddProviderToList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx 
 }
 
 // Create a new mgr context and initialize various parameters
-static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, const char *providerName, CRYPT_Param *param,
+static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, char *providerName, CRYPT_Param *param,
     CRYPT_EAL_ProvMgrCtx **ctx)
 {
     int32_t ret;
@@ -290,26 +264,29 @@ static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, const char *provid
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-
+    char *providerPath = providerName;
     // Construct the full path of the provider
-    char *providerPath = (char *)BSL_SAL_Calloc(pathLen + 1, sizeof(char));
-    if (providerPath == NULL) {
-        BSL_SAL_FREE(tempCtx);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+    if (libCtx->searchProviderPath != NULL) {
+        providerPath = (char *)BSL_SAL_Calloc(pathLen + 1, sizeof(char));
+        if (providerPath == NULL) {
+            BSL_SAL_FREE(tempCtx);
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        ret = snprintf_s(providerPath, pathLen + 1, pathLen, "%s/%s", libCtx->searchProviderPath, providerName);
+        if (ret < 0) {
+            BSL_SAL_FREE(tempCtx);
+            BSL_SAL_FREE(providerPath);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
     }
-    ret = snprintf_s(providerPath, pathLen + 1, pathLen, "%s/%s", libCtx->searchProviderPath, providerName);
-    if (ret < 0) {
-        BSL_SAL_FREE(tempCtx);
-        BSL_SAL_FREE(providerPath);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
     // Attempt to load the dynamic library
     void *handle = NULL;
     ret = BSL_SAL_LoadLib(providerPath, &handle);
-    BSL_SAL_FREE(providerPath);
+    if (libCtx->searchProviderPath != NULL) {
+        BSL_SAL_FREE(providerPath);
+    }
     if (ret != BSL_SUCCESS) {
         BSL_SAL_FREE(tempCtx);
         BSL_ERR_PUSH_ERROR(ret);
@@ -346,7 +323,7 @@ int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cm
     }
 
     // Check if the provider is already loaded
-    ret = CheckProviderLoaded(libCtx, providerFullName, libCtx->searchProviderPath, &providerMgr);
+    ret = CheckProviderLoaded(libCtx, providerFullName, &providerMgr);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(providerFullName);
         return ret;
@@ -422,7 +399,7 @@ int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd 
         BSL_SAL_FREE(providerFullName);
         return ret;
     }
-    ret = SearchProvider(libCtx, providerFullName, libCtx->searchProviderPath, &providerMgr);
+    ret = SearchProvider(libCtx, providerFullName, &providerMgr);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ThreadUnlock(libCtx->lock);
         BSL_SAL_FREE(providerFullName);
@@ -454,18 +431,21 @@ int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd 
 // Set the path for loading providers
 int32_t CRYPT_EAL_SetLoadProviderPath(CRYPT_EAL_LibCtx *libCtx, const char *searchPath)
 {
-    if (libCtx == NULL || searchPath == NULL ||
+    if (libCtx == NULL ||
         BSL_SAL_Strnlen(searchPath, DEFAULT_PROVIDER_PATH_LEN_MAX) >= DEFAULT_PROVIDER_PATH_LEN_MAX) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
     char *tempPath = NULL;
-    tempPath = realpath(searchPath, NULL);
-    if (tempPath == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
+    if (searchPath != NULL) {
+        tempPath = BSL_SAL_Dump(searchPath,
+            BSL_SAL_Strnlen(searchPath, DEFAULT_PROVIDER_PATH_LEN_MAX) + 1);
+        if (tempPath == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+            return HITLS_MEMALLOC_FAIL;
+        }
     }
-    BSL_SAL_Free(libCtx->searchProviderPath);
+    BSL_SAL_FREE(libCtx->searchProviderPath);
     libCtx->searchProviderPath = tempPath;
     return CRYPT_SUCCESS;
 }
