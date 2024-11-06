@@ -285,6 +285,9 @@ SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.crt.der
 
 SDV_X509_CRL_Sign_Func_TC001 v2 cert rsa -- rsa_pss.crt.der
 SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:1:"tmp-rsa-pss.crl"
+<<<<<<< HEAD
 
 SDV_X509_CRL_Sign_Func_TC001 v2 cert rsa -- rsa_pss-aki.crt.der
 SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"../testdata/cert/asn1/rsa_cert/inter2.mul.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:1:"tmp-rsa-pss-aki.crl"
+=======
+>>>>>>> 1b9ac4af18357bcaa02679a85a3da4c5177bb50d
