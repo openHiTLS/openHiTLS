@@ -687,9 +687,9 @@ void SDV_X509_CSR_AttrCtrl_API_TC001(void)
     attr.value = &ext;
 
     // encode ext failed
-    ext.list->count = 2;
+    ext.extList->count = 2;
     ASSERT_EQ(HITLS_X509_AttrCtrl(attrList, cmd, &attr, sizeof(HITLS_X509_Attr)), BSL_INVALID_ARG);
-    ext.list->count = 1;
+    ext.extList->count = 1;
 
     // success
     ASSERT_EQ(HITLS_X509_AttrCtrl(attrList, cmd, &attr, sizeof(HITLS_X509_Attr)), 0);
@@ -703,10 +703,11 @@ void SDV_X509_CSR_AttrCtrl_API_TC001(void)
     ASSERT_NE(getAttr.value, NULL);
     ASSERT_EQ(getAttr.cid, BSL_CID_REQ_EXTENSION);
     HITLS_X509_Ext *getExt = getAttr.value;
-    ASSERT_EQ(getExt->keyUsage, HITLS_X509_EXT_KU_NON_REPUDIATION);
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)getExt->extData;
+    ASSERT_EQ(certExt->keyUsage, HITLS_X509_EXT_KU_NON_REPUDIATION);
 
     // not found
-    HITLS_X509_ExtFree(getExt);
+    HITLS_X509_ExtFree(getExt, true);
     getExt = NULL;
     getAttr.value = NULL;
     BSL_LIST_DeleteAll(attrList, (BSL_LIST_PFUNC_FREE)HITLS_X509_AttrEntryFree);
@@ -715,8 +716,9 @@ void SDV_X509_CSR_AttrCtrl_API_TC001(void)
 
 exit:
     HITLS_X509_CsrFree(csr);
-    BSL_LIST_FREE(ext.list, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
-    HITLS_X509_ExtFree(getExt);
+    // BSL_LIST_FREE(ext.extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+    HITLS_X509_ExtFree(&ext, false);
+    HITLS_X509_ExtFree(getExt, true);
 }
 /* END_CASE */
 
@@ -752,7 +754,8 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC001(int critical1, int maxPath, int crit
 exit:
     HITLS_X509_CsrFree(csr);
     BSL_SAL_Free(encode.buff);
-    BSL_LIST_FREE(ext.list, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+    // BSL_LIST_FREE(ext.extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+    HITLS_X509_ExtFree(&ext, false);
 }
 /* END_CASE */
 
@@ -791,7 +794,8 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC002(void)
 
 exit:
     HITLS_X509_CsrFree(csr);
-    BSL_LIST_FREE(ext.list, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+    // BSL_LIST_FREE(ext.extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+    HITLS_X509_ExtFree(&ext, false);
 }
 /* END_CASE */
 
