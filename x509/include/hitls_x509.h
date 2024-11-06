@@ -78,7 +78,6 @@ typedef enum {
     HITLS_X509_GET_AFTER_TIME,         /** Get the string of after time. */
     HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the subject name list. */
     HITLS_X509_GET_ISSUER_DNNAME,      /** Get the issuer name list. */
-    HITLS_X509_GET_EXT,                /** Get the extension from cert. */
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
     HITLS_X509_GET_REVOKELIST,            /** Get the version from cert or crl. */
     HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
@@ -105,24 +104,25 @@ typedef enum {
     HITLS_X509_SET_ISSUER_DNNAME,      /** Set the issuer name list. */
     HITLS_X509_SET_CSR_EXT,            /** Replace the cert's ext with csr's */
     HITLS_X509_ADD_SUBJECT_NAME,       /** Add the subject name for the cert/csr. */
-    HITLS_X509_CRL_ADD_REVOKED_CERT,   /** Add the subject name for the cert/csr. */
+    HITLS_X509_CRL_ADD_REVOKED_CERT,   /** Add the revoke cert to crl. */
 
     HITLS_X509_EXT_KU_KEYENC = 0x0300,
     HITLS_X509_EXT_KU_DIGITALSIGN,
     HITLS_X509_EXT_KU_CERTSIGN,
     HITLS_X509_EXT_KU_KEYAGREEMENT,
 
-    HITLS_X509_EXT_SET_SKI = 0x0400,
-    HITLS_X509_EXT_SET_AKI,
-    HITLS_X509_EXT_SET_KUSAGE,
-    HITLS_X509_EXT_SET_SAN,
-    HITLS_X509_EXT_SET_BCONS,
-    HITLS_X509_EXT_SET_EXKUSAGE,
-    HITLS_X509_EXT_SET_CRLNUMBER,
+    HITLS_X509_EXT_SET_SKI = 0x0400,             /** Set the subject key identifier extension. */
+    HITLS_X509_EXT_SET_AKI,                      /** Set the authority key identifier extension. */
+    HITLS_X509_EXT_SET_KUSAGE,                   /** Set the key usage extension. */
+    HITLS_X509_EXT_SET_SAN,                      /** Set the subject alternative name extension. */
+    HITLS_X509_EXT_SET_BCONS,                    /** Set the basic constraints extension. */
+    HITLS_X509_EXT_SET_EXKUSAGE,                 /** Set the extended key usage extension. */
+    HITLS_X509_EXT_SET_CRLNUMBER,                /** Set the crlnumber extension. */
 
-    HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get aki from extensions.
+    HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
-    HITLS_X509_EXT_GET_CRLNUMBER,
+    HITLS_X509_EXT_GET_CRLNUMBER,               /** get the crlnumber form the crl. */
+    HITLS_X509_EXT_GET_AKI,                     /** get the Authority Key Identifier form the crl/cert/csr. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -137,17 +137,6 @@ typedef enum {
     HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
-
-    HITLS_X509_CRL_SET_REVOKED_SERIALNUM = 0x0a00,
-    HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME,
-    HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
-    HITLS_X509_CRL_SET_REVOKED_REASON,
-    HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
-    HITLS_X509_CRL_GET_REVOKED_SERIALNUM  = 0x0a10,
-    HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME,
-    HITLS_X509_CRL_GET_REVOKED_INVAILD_TIME,
-    HITLS_X509_CRL_GET_REVOKED_REASON,
-    HITLS_X509_CRL_GET_REVOKED_CERTISSUER,
 } HITLS_X509_Cmd;
 
 typedef enum {
@@ -238,6 +227,33 @@ typedef struct {
     bool critical;
     BSL_TIME time;
 } HITLS_X509_RevokeExtTime;
+
+typedef enum {
+    HITLS_X509_CRL_SET_REVOKED_SERIALNUM = 0,    /** Set the revoked serial number. */
+    HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME,      /** Set the revoke time. */
+    HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,     /** Set the invalid time extension. */
+    HITLS_X509_CRL_SET_REVOKED_REASON,           /** Set the revoke reason extension. */
+    HITLS_X509_CRL_SET_REVOKED_CERTISSUER,       /** Set the revoke cert issuer extension. */
+
+    HITLS_X509_CRL_GET_REVOKED_SERIALNUM,        /** Get the revoked serial number. */
+    HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME,      /** Get the revoke time. */
+    HITLS_X509_CRL_GET_REVOKED_INVAILD_TIME,     /** Get the invalid time extension. */
+    HITLS_X509_CRL_GET_REVOKED_REASON,           /** Get the revoke reason extension. */
+    HITLS_X509_CRL_GET_REVOKED_CERTISSUER,       /** Get the revoke cert issuer extension. */
+} HITLS_X509_RevokeCmd;
+
+typedef enum {
+    HITLS_X509_REVOKED_REASON_UNSPECIFIED = 0,         /** CRLReason: Unspecified. */   
+    HITLS_X509_REVOKED_REASON_KEY_COMPROMISE,          /** CRLReason: Key compromise. */
+    HITLS_X509_REVOKED_REASON_CA_COMPROMISE,           /** CRLReason: CA compromise. */
+    HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED,     /** CRLReason: Affiliation changed. */
+    HITLS_X509_REVOKED_REASON_SUPERSEDED,              /** CRLReason: Superseded. */
+    HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION,  /** CRLReason: Cessation of operation. */
+    HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD,        /** CRLReason: Certificate hold. */
+    HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL,         /** CRLReason: Remove from CRL. */
+    HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN,     /** CRLReason: Privilege withdrawn. */
+    HITLS_X509_REVOKED_REASON_AA_COMPROMISE,           /** CRLReason: aA compromise. */
+} HITLS_X509_RevokeReason;
 
 typedef struct {
     bool critical;
@@ -539,7 +555,8 @@ typedef struct {
     };
 } HITLS_X509_SignAlgParam;
 
-int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl, const HITLS_X509_SignAlgParam *algParam);
+int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl,
+    const HITLS_X509_SignAlgParam *algParam);
 
 /** 
  * @ingroup x509 crl

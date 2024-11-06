@@ -553,7 +553,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
     ASSERT_EQ(strcmp((char *)issuerName.data, expectedIssueName), 0);
 
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM, &serialNum, sizeof(BSL_Buffer));
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM_STR, &serialNum, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(serialNum.data, NULL);
     ASSERT_EQ(serialNum.dataLen, strlen(expectedSerialNum));
@@ -1226,7 +1226,6 @@ void SDV_X509_GEN_CERT_ERROR_TC003(char *derCertPath)
     HITLS_X509_Cert *parse = NULL;
     HITLS_X509_Cert *new = NULL;
     int32_t ver = 0;
-    HITLS_X509_Ext *ext = NULL;
 
     // Test: Set after parse
     ASSERT_EQ(HITLS_ParseCertTest(derCertPath, BSL_FORMAT_ASN1, &parse), HITLS_X509_SUCCESS);
@@ -1234,9 +1233,8 @@ void SDV_X509_GEN_CERT_ERROR_TC003(char *derCertPath)
     ASSERT_EQ(HITLS_X509_CertCtrl(parse, HITLS_X509_SET_VERSION, &ver, sizeof(int32_t)),
         HITLS_X509_ERR_SET_AFTER_PARSE);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(parse, HITLS_X509_GET_EXT, &ext, sizeof(HITLS_X509_Ext *)), 0);
     HITLS_X509_ExtBCons bCons = {true, true, 1};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)),
+    ASSERT_EQ(HITLS_X509_CertCtrl(parse, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)),
         HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
 
     // Test: Parse after set

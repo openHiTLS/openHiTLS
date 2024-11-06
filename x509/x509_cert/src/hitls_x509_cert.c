@@ -653,16 +653,6 @@ static int32_t X509_GetAsn1BslTimeStr(HITLS_X509_Cert *cert, BSL_Buffer *val, in
     }
 }
 
-static int32_t X509_GetCertExt(HITLS_X509_Ext *ext, HITLS_X509_Ext **val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(HITLS_X509_Ext *)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    *val = ext;
-    return HITLS_X509_SUCCESS;
-}
-
 static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen)
 {
     switch (cmd) {
@@ -690,8 +680,6 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_BEFORE_TIME);
         case HITLS_X509_GET_AFTER_TIME:
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_AFTER_TIME);
-        case HITLS_X509_GET_EXT:
-            return X509_GetCertExt(&cert->tbs.ext, val, valLen);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -834,14 +822,16 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
         return HITLS_X509_RefUp(&cert->references, val, valLen);
     } else if (cmd >= HITLS_X509_GET_ENCODELEN && cmd < HITLS_X509_SET_VERSION) {
         return X509_CertGetCtrl(cert, cmd, val, valLen);
-    } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
+    } else if (cmd >= HITLS_X509_SET_VERSION && cmd < HITLS_X509_EXT_KU_KEYENC) {
         if (cert->flag == HITLS_X509_CERT_PARSE_FLAG) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_AFTER_PARSE);
             return HITLS_X509_ERR_SET_AFTER_PARSE;
         }
         return X509_CertSetCtrl(cert, cmd, val, valLen);
-    } else {
+    } else if (cmd >= HITLS_X509_EXT_KU_KEYENC && cmd < HITLS_X509_EXT_SET_SKI) {
         return X509_CertExtCtrl(cert, cmd, val, valLen);
+    } else {
+        return HITLS_X509_ExtCtrl(&cert->tbs.ext, cmd, val, valLen);
     }
 }
 
@@ -872,10 +862,21 @@ int32_t HITLS_X509_CertDup(HITLS_X509_Cert *src, HITLS_X509_Cert **dest)
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res)
 {
     int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
-    if (ret != 0) {
+    if (ret != HITLS_X509_SUCCESS) {
         *res = false;
         return HITLS_X509_SUCCESS;
     }
+    if (issue->tbs.version == HITLS_CERT_VERSION_3 && subject->tbs.version == HITLS_CERT_VERSION_3) {
+        ret = HITLS_X509_AkiSki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
+        if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+            return ret;
+        }
+        if (ret == HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+            *res = false;
+            return HITLS_X509_SUCCESS;
+        }
+    }
+
     /**
      * If the basic constraints extension is not present in a version 3 certificate,
      * or the extension is present but the cA boolean is not asserted,
