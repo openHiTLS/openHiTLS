@@ -92,7 +92,7 @@ int32_t HITLS_X509_GetEncodeData(uint8_t *rawData, uint8_t **val)
     return HITLS_X509_SUCCESS;
 }
 
-static bool IsValidHashAlg(CRYPT_MD_AlgId id)
+bool X509_IsValidHashAlg(CRYPT_MD_AlgId id)
 {
     return id == CRYPT_MD_MD5 || id == CRYPT_MD_SHA1 || id == CRYPT_MD_SHA224 || id == CRYPT_MD_SHA256 ||
         id == CRYPT_MD_SHA384 || id == CRYPT_MD_SHA512 || id == CRYPT_MD_SM3;
@@ -105,7 +105,7 @@ int32_t HITLS_X509_SetSignMdId(CRYPT_MD_AlgId *mdAlgId, void *val, int32_t valLe
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     CRYPT_MD_AlgId id = *(CRYPT_MD_AlgId *)val;
-    if (!IsValidHashAlg(id)) {
+    if (!X509_IsValidHashAlg(id)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

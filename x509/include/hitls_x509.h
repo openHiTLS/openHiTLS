@@ -37,6 +37,8 @@ typedef struct _HITLS_X509_Ext HITLS_X509_Ext;
 
 typedef struct _HITLS_X509_Crl HITLS_X509_Crl;
 
+typedef struct _HITLS_X509_CrlEntry HITLS_X509_CrlEntry;
+
 typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
 
 typedef struct _HITLS_X509_Csr HITLS_X509_Csr;
@@ -71,12 +73,15 @@ typedef enum {
     HITLS_X509_GET_SIGNALG,            /** Get the signature algorithm for the cert. */
     HITLS_X509_GET_SUBJECT_DNNAME_STR, /** Get the string of subject name. */
     HITLS_X509_GET_ISSUER_DNNAME_STR,  /** Get the string of issuer name. */
-    HITLS_X509_GET_SERIALNUM,          /** Get the string of serial number. */
+    HITLS_X509_GET_SERIALNUM_STR,          /** Get the string of serial number. */
     HITLS_X509_GET_BEFORE_TIME,        /** Get the string of before time. */
     HITLS_X509_GET_AFTER_TIME,         /** Get the string of after time. */
     HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the subject name list. */
     HITLS_X509_GET_ISSUER_DNNAME,      /** Get the issuer name list. */
     HITLS_X509_GET_EXT,                /** Get the extension from cert. */
+    HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
+    HITLS_X509_GET_REVOKELIST,            /** Get the version from cert or crl. */
+    HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
@@ -100,6 +105,7 @@ typedef enum {
     HITLS_X509_SET_ISSUER_DNNAME,      /** Set the issuer name list. */
     HITLS_X509_SET_CSR_EXT,            /** Replace the cert's ext with csr's */
     HITLS_X509_ADD_SUBJECT_NAME,       /** Add the subject name for the cert/csr. */
+    HITLS_X509_CRL_ADD_REVOKED_CERT,   /** Add the subject name for the cert/csr. */
 
     HITLS_X509_EXT_KU_KEYENC = 0x0300,
     HITLS_X509_EXT_KU_DIGITALSIGN,
@@ -112,9 +118,11 @@ typedef enum {
     HITLS_X509_EXT_SET_SAN,
     HITLS_X509_EXT_SET_BCONS,
     HITLS_X509_EXT_SET_EXKUSAGE,
+    HITLS_X509_EXT_SET_CRLNUMBER,
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get aki from extensions.
                                                     Note: Kid is a shallow copy. */
+    HITLS_X509_EXT_GET_CRLNUMBER,
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -129,6 +137,17 @@ typedef enum {
     HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
+
+    HITLS_X509_CRL_SET_REVOKED_SERIALNUM = 0x0a00,
+    HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME,
+    HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
+    HITLS_X509_CRL_SET_REVOKED_REASON,
+    HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
+    HITLS_X509_CRL_GET_REVOKED_SERIALNUM  = 0x0a10,
+    HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME,
+    HITLS_X509_CRL_GET_REVOKED_INVAILD_TIME,
+    HITLS_X509_CRL_GET_REVOKED_REASON,
+    HITLS_X509_CRL_GET_REVOKED_CERTISSUER,
 } HITLS_X509_Cmd;
 
 typedef enum {
@@ -206,6 +225,42 @@ typedef struct {
     bool isCa;          // Default to false.
     int32_t maxPathLen; // Greater than or equal to 0. -1: no check, 0: no intermediate certificate
 } HITLS_X509_ExtBCons;
+
+/**
+ * Crl number
+ */
+typedef struct {
+    bool critical;        // Default to false.
+    BSL_Buffer crlNumber; // crlNumber
+} HITLS_X509_ExtCrlNumber;
+
+typedef struct {
+    bool critical;
+    BSL_TIME time;
+} HITLS_X509_RevokeExtTime;
+
+typedef enum {
+    HITLS_X509_REVOKED_REASON_UNSPECIFIED = 0,
+    HITLS_X509_REVOKED_REASON_KEY_COMPROMISE,
+    HITLS_X509_REVOKED_REASON_CA_COMPROMISE,
+    HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED,
+    HITLS_X509_REVOKED_REASON_SUPERSEDED,
+    HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION,
+    HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD,
+    HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL,
+    HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN,
+    HITLS_X509_REVOKED_REASON_AA_COMPROMISE,
+} HITLS_X509_RevokeReason;
+
+typedef struct {
+    bool critical;
+    int32_t reason;
+} HITLS_X509_RevokeExtReason;
+
+typedef struct {
+    bool critical;
+    BslList *issuerName;
+} HITLS_X509_RevokeExtCertIssuer;
 
 /**
  * @ingroup x509
@@ -286,7 +341,8 @@ int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t 
  * @brief Parse the CERT in the buffer.
  * @par Description: Parse the CERT in the buffer.
  *  If the encoding is successful, the memory for the crl is requested from within the function,
- *  and the user needs to free it after using it.
+ *  and the user needs to free it after using it. When the parameter is BSL_FORMAT_PEM and
+ *  BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
  * @attention None
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode [IN] CERT data.
@@ -366,10 +422,13 @@ int32_t HITLS_X509_CertGenFile(int32_t format, HITLS_X509_Cert *cert, const char
  */
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size);
 
-typedef enum {
-    HITLS_X509_CRL_REF_UP,
-} HITLS_X509_CrlCmd;
-
+/**
+ * @ingroup x509
+ * @brief Allocate a crl.
+ *
+ * @retval HITLS_X509_Crl *
+ */
+HITLS_X509_Crl *HITLS_X509_CrlNew(void);
 /**
  * @ingroup x509
  * @brief Release the CRL.
@@ -386,8 +445,8 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl);
  * @brief Crl setting interface.
  * @par Description: Set CRL information.
  *         parameter           data type         Length(len):number of data bytes
- * HITLS_X509_CRL_REF_UP       int           The length is sizeof(int), which is used to increase the
- *                                            number of CRL references.
+ * HITLS_X509_REF_UP       int           The length is sizeof(int), which is used to increase the
+ *                                       number of CRL references.
  * @attention None
  * @param crl            [IN] CRL data
  * @param cmd            [IN] Set type.
@@ -402,7 +461,8 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
  * @brief Parse the CRL in the buffer.
  * @par Description: Parse the CRL in the buffer.
  *  If the encoding is successful, the memory for the crl is requested from within the function,
- *  and the user needs to free it after using it.
+ *  and the user needs to free it after using it. When the parameter is BSL_FORMAT_PEM and
+ *  BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
  * @attention None
  * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/
  *                            BSL_FORMAT_UNKNOWN.
@@ -470,6 +530,62 @@ int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, uint8_t **enc
  * @return Error code
  */
 int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *path);
+
+/**
+ * @ingroup x509
+ * @brief Generate a CRL and encode it to specific file.
+ * @par Description: This function encodes the CRL into the specified format.
+ *  If the encoding is successful, the memory for the encode data is requested from within the function,
+ *  and the user needs to free it after using it.
+ * @attention None
+ * @param pubkey         [IN] pubkey.
+ * @param crl            [IN] CRL info.
+ * @return Error code
+ */
+int32_t HITLS_X509_CrlVerify(void *pubkey, HITLS_X509_Crl *crl);
+
+typedef struct {
+    uint32_t algId;
+    union {
+        CRYPT_RSA_PssPara rsaPss;
+        CRYPT_RSA_PkcsV15Para pkcsV15;
+    };
+} HITLS_X509_SignAlgParam;
+
+int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl, const HITLS_X509_SignAlgParam *algParam);
+
+/** 
+ * @ingroup x509 crl
+ * @brief Allocate a revoked certificate.
+ * 
+ * @attention None
+ * @return HITLS_X509_CrlEntry *
+ */
+HITLS_X509_CrlEntry *HITLS_X509_CrlRevokedNew(void);
+
+/**
+ * @ingroup x509
+ * @brief Release the CRL certificateRevoke struct .
+ * @par Description: Release the memory of the CRL certificateRevoke struct.
+ *
+ * @attention None
+ * @param entry            [IN] entry info.
+ * @return Error code
+ */
+void HITLS_X509_CrlRevokedFree(HITLS_X509_CrlEntry *entry);
+
+/**
+ * @ingroup x509
+ * @brief Generate a CRL and encode it to specific file.
+ * @par Description: This function encodes the CRL into the specified format.
+ *  If the encoding is successful, the memory for the encode data is requested from within the function,
+ *  and the user needs to free it after using it.
+ * @attention None
+ * @param pubkey         [IN] pubkey.
+ * @param crl            [IN] CRL info.
+ * @return Error code
+ */
+int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, int32_t valLen);
 
 typedef enum {
     HITLS_X509_VFY_FLAG_CRL_ALL = 1,
@@ -626,7 +742,8 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
 
 /**
  * @ingroup x509
- * @brief Parse the csr in the buffer
+ * @brief Parse the csr in the buffer.When the parameter is BSL_FORMAT_PEM and
+ *  BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
  *
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param encode [IN] The csr data
@@ -764,8 +881,9 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
 /**
  * @ingroup pkcs12
  * @brief pkcs12 parse
- * @par Description: parse p12 buffer, and set the p12 struct.
-
+ * @par Description: parse p12 buffer, and set the p12 struct. When the parameter is
+ *  BSL_FORMAT_PEM and BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
+ *
  * @attention Only support to parse p12 buffer in key-integrity and key-privacy protection mode.
  * @param format         [IN] Decoding format: BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode         [IN] encode data
