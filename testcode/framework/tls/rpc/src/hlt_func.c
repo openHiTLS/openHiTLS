@@ -200,6 +200,7 @@ int HLT_GetTlsAcceptResult(HLT_Tls_Res* tlsRes)
     } else {
         // Indicates that the local process accepts the request.
         pthread_join(tlsRes->acceptId, NULL);
+        tlsRes->acceptId = 0;
         return SUCCESS;
     }
     tlsRes->acceptId = 0;
