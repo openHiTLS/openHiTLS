@@ -218,7 +218,7 @@ static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ce
         return HITLS_X509_ERR_CERT_NOT_CA;
     }
     HITLS_X509_List *certStore = storeCtx->store;
-    HITLS_X509_Cert * tmp = BSL_LIST_SearchEx(certStore, cert, (BSL_LIST_PFUNC_CMP)X509_CertCmp);
+    HITLS_X509_Cert *tmp = BSL_LIST_SearchEx(certStore, cert, (BSL_LIST_PFUNC_CMP)X509_CertCmp);
     if (tmp != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_EXIST);
         return HITLS_X509_ERR_CERT_EXIST;
