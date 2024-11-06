@@ -660,17 +660,18 @@ void SDV_X509_CERT_PARSE_EXTENSIONS_FUNC_TC001(char *path, int extNum, int isCA,
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtEntry **node = NULL;
     ASSERT_EQ(HITLS_ParseCertTest(path, BSL_FORMAT_ASN1, &cert), HITLS_X509_SUCCESS);
-    ASSERT_EQ(cert->tbs.ext.isCa, isCA);
-    ASSERT_EQ(cert->tbs.ext.maxPathLen, maxPathLen);
-    ASSERT_EQ(cert->tbs.ext.keyUsage, keyUsage);
-    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.ext.list), extNum);
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    ASSERT_EQ(certExt->isCa, isCA);
+    ASSERT_EQ(certExt->maxPathLen, maxPathLen);
+    ASSERT_EQ(certExt->keyUsage, keyUsage);
+    ASSERT_EQ(BSL_LIST_COUNT(cert->tbs.ext.extList), extNum);
 
     HITLS_X509_ExtEntry arr[] = {
         {cid1, {BSL_ASN1_TAG_OBJECT_ID, oid1->len, oid1->x}, cr1, {BSL_ASN1_TAG_OCTETSTRING, val1->len, val1->x}},
         {cid2, {BSL_ASN1_TAG_OBJECT_ID, oid2->len, oid2->x}, cr2, {BSL_ASN1_TAG_OCTETSTRING, val2->len, val2->x}},
         {cid3, {BSL_ASN1_TAG_OBJECT_ID, oid3->len, oid3->x}, cr3, {BSL_ASN1_TAG_OCTETSTRING, val3->len, val3->x}},
     };
-    node = BSL_LIST_First(cert->tbs.ext.list);
+    node = BSL_LIST_First(cert->tbs.ext.extList);
     for (int i = 0; i < 3; i++) { // Check the first 3 extensions
         ASSERT_NE((*node), NULL);
         ASSERT_EQ((*node)->critical, arr[i].critical);
@@ -679,7 +680,7 @@ void SDV_X509_CERT_PARSE_EXTENSIONS_FUNC_TC001(char *path, int extNum, int isCA,
         ASSERT_EQ((*node)->extnValue.tag, arr[i].extnValue.tag);
         ASSERT_COMPARE(
             "value", (*node)->extnValue.buff, (*node)->extnValue.len, arr[i].extnValue.buff, arr[i].extnValue.len);
-        node = BSL_LIST_Next(cert->tbs.ext.list);
+        node = BSL_LIST_Next(cert->tbs.ext.extList);
     }
 exit:
     HITLS_X509_CertFree(cert);
@@ -986,7 +987,7 @@ void SDV_X509_ENCODE_CERT_EXT_TC001(char *path, Hex *expectExt)
 
     ASSERT_EQ(HITLS_ParseCertTest(path, BSL_FORMAT_ASN1, &cert), HITLS_X509_SUCCESS);
     uint8_t tag = 0xA3;
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.list, &ext), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &ext), HITLS_X509_SUCCESS);
 
     ASSERT_EQ(ext.len, expectExt->len);
     if (expectExt->len != 0) {
@@ -1016,7 +1017,7 @@ void SDV_X509_CERT_GEN_BUFF_API_TC001(void)
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
     cert->tbs.version = HITLS_CERT_VERSION_1;
-    cert->tbs.ext.list->count = 1;
+    cert->tbs.ext.extList->count = 1;
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_INACCURACY_VERSION);
 
 exit:
@@ -1109,8 +1110,8 @@ void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyTyp
     new = HITLS_X509_CertNew();
     ASSERT_TRUE(new != NULL);
     ASSERT_EQ(SetCert(raw, new, privKey, mdId), 0);
-    tmp = new->tbs.ext.list;
-    new->tbs.ext.list = raw->tbs.ext.list;
+    tmp = new->tbs.ext.extList;
+    new->tbs.ext.extList = raw->tbs.ext.extList;
     if (pkeyId == CRYPT_PKEY_RSA) {
         ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SIGN_RSA_PADDING, &pad, sizeof(int32_t)), 0);
         if (pad == CRYPT_PKEY_EMSA_PSS) {
@@ -1130,7 +1131,7 @@ exit:
     HITLS_X509_CertFree(raw);
     BSL_SAL_Free(encodeRaw.data);
     if (tmp != NULL) {
-        new->tbs.ext.list = tmp;
+        new->tbs.ext.extList = tmp;
     }
     HITLS_X509_CertFree(new);
     HITLS_X509_CertFree(parse);
@@ -1154,8 +1155,8 @@ void SDV_X509_GEN_CERT_ERROR_TC001(char *derCertPath, char *privPath, int keyTyp
     new = HITLS_X509_CertNew();
     ASSERT_TRUE(new != NULL);
     ASSERT_EQ(SetCert(raw, new, privKey, mdId), 0);
-    tmp = new->tbs.ext.list;
-    new->tbs.ext.list = raw->tbs.ext.list;
+    tmp = new->tbs.ext.extList;
+    new->tbs.ext.extList = raw->tbs.ext.extList;
 
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, new, &encodeCert), ret);
 
@@ -1163,7 +1164,7 @@ exit:
     raw->flag = HITLS_X509_CERT_PARSE_FLAG;
     HITLS_X509_CertFree(raw);
     if (tmp != NULL) {
-        new->tbs.ext.list = tmp;
+        new->tbs.ext.extList = tmp;
     }
     HITLS_X509_CertFree(new);
     CRYPT_EAL_PkeyFreeCtx(privKey);
@@ -1188,8 +1189,8 @@ void SDV_X509_GEN_CERT_ERROR_TC002(char *derCertPath, char *privPath, int keyTyp
     new = HITLS_X509_CertNew();
     ASSERT_TRUE(new != NULL);
     ASSERT_EQ(SetCert(raw, new, privKey, mdId), 0);
-    tmp = new->tbs.ext.list;
-    new->tbs.ext.list = raw->tbs.ext.list;
+    tmp = new->tbs.ext.extList;
+    new->tbs.ext.extList = raw->tbs.ext.extList;
 
     tmpBuff = new->tbs.serialNum.buff;
     new->tbs.serialNum.buff = NULL;
@@ -1212,7 +1213,7 @@ exit:
     HITLS_X509_CertFree(raw);
     BSL_SAL_Free(encodeRaw.data);
     if (tmp != NULL) {
-        new->tbs.ext.list = tmp;
+        new->tbs.ext.extList = tmp;
     }
     HITLS_X509_CertFree(new);
     CRYPT_EAL_PkeyFreeCtx(privKey);
@@ -1286,10 +1287,10 @@ void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, int ret, Hex 
 
     ASSERT_EQ(HITLS_X509_CsrParseFile(inForm, inCsr, &csr), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, csr, 0), ret);
-    ASSERT_EQ(HITLS_X509_EncodeExt(0, cert->tbs.ext.list, &encodeExt), 0);
+    ASSERT_EQ(HITLS_X509_EncodeExt(0, cert->tbs.ext.extList, &encodeExt), 0);
     if (expect->len != 0) {
-        ASSERT_TRUE((cert->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_PARSE) == 0);
-        ASSERT_TRUE((cert->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_SET) != 0);
+        ASSERT_TRUE((cert->tbs.ext.extFlag & HITLS_X509_EXT_FLAG_PARSE) == 0);
+        ASSERT_TRUE((cert->tbs.ext.extFlag & HITLS_X509_EXT_FLAG_GEN) != 0);
         ASSERT_COMPARE("Csr ext", encodeExt.buff, encodeExt.len, expect->x, expect->len);
     }
 exit:

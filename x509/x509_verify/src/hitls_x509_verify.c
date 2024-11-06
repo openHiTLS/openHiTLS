@@ -279,7 +279,7 @@ static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t val
         return ret;
     }
     int ref;
-    ret = HITLS_X509_CrlCtrl(val, HITLS_X509_CRL_REF_UP, &ref, sizeof(int));
+    ret = HITLS_X509_CrlCtrl(val, HITLS_X509_REF_UP, &ref, sizeof(int));
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -576,7 +576,7 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert)
     if (cert->tbs.version != 2) { // no ext v1 cert
         return HITLS_X509_SUCCESS;
     }
-    return HITLS_X509_TrvList(cert->tbs.ext.list,
+    return HITLS_X509_TrvList(cert->tbs.ext.extList,
         (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, NULL);
 }
 
@@ -607,8 +607,9 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
 {
     int32_t ret = HITLS_X509_ERR_CRL_NOT_FOUND;
     HITLS_X509_Crl *crl = BSL_LIST_GET_FIRST(storeCtx->crl);
-    if (parent->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_KUSAGE) {
-        if (!(parent->tbs.ext.keyUsage & HITLS_X509_EXT_KU_CRL_SIGN)) {
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)parent->tbs.ext.extData;
+    if (certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) {
+        if (!(certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN)) {
             return HITLS_X509_ERR_VFY_KU_NO_CRLSIGN;
         }
     }
@@ -645,7 +646,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     return ret;
 }
 
-int32_t HITLS_X509_CrlVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
+int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     // Only the self-signed certificate, and the CRL is not verified
     if (BSL_LIST_COUNT(chain) == 1) {
@@ -744,7 +745,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return ret;
     }
-    ret = HITLS_X509_CrlVerify(storeCtx, tmpChain);
+    ret = HITLS_X509_VerifyCrl(storeCtx, tmpChain);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return ret;

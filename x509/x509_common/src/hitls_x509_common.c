@@ -513,12 +513,33 @@ int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name)
     return 0;
 }
 
+static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *pubkey, HITLS_X509_Asn1AlgId *subAlg)
+{
+    (void)pubkey;
+    if (subAlg->algId != BSL_CID_RSASSAPSS) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_PUBKEY_ALGID);
+        return HITLS_X509_ERR_VFY_PUBKEY_ALGID;
+    }
+    return HITLS_X509_SUCCESS;
+}
+
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, HITLS_X509_Asn1AlgId *subAlg)
 {
     uint32_t pubKeyId = CRYPT_EAL_PkeyGetId(pubkey);
     if (pubKeyId == BSL_CID_UNKNOWN) {      
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
         return HITLS_X509_ERR_VFY_GET_SIGNID;
+    }
+    if (pubKeyId == CRYPT_PKEY_RSA) {
+        CRYPT_RsaPadType pad;
+        int32_t ret = CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(pad));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        if (pad == CRYPT_PKEY_EMSA_PSS) {
+            return X509_CheckPssParam(pubkey, subAlg);
+        }
     }
     BslCid subSignAlg = BSL_OBJ_GetAsymIdFromSignId(subAlg->algId);
     if (subSignAlg == BSL_CID_UNKNOWN) {
@@ -622,4 +643,78 @@ int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawD
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
+}
+
+
+int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
+{
+    if (valLen <= 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
+        return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
+    }
+    const uint8_t *src = (const uint8_t *)val;
+    serial->buff = BSL_SAL_Dump(src, valLen);
+    if (serial->buff == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
+    }
+    serial->len = valLen;
+    serial->tag = BSL_ASN1_TAG_INTEGER;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
+{
+    if (valLen != sizeof(BSL_Buffer)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (serial->buff == NULL || serial->len == 0 || serial->tag != BSL_ASN1_TAG_INTEGER) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    BSL_Buffer *buff = (BSL_Buffer *)val;
+    buff->data = serial->buff;
+    buff->dataLen = serial->len;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t X509_SetSignAlgParm(CRYPT_EAL_PkeyCtx *signKey, const HITLS_X509_SignAlgParam *algParam)
+{
+    int32_t ret;
+    CRYPT_RsaPadType pad;
+    switch (algParam->algId) {
+        case BSL_CID_RSASSAPSS:
+            if (!X509_IsValidHashAlg(algParam->rsaPss.mdId)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            if (!X509_IsValidHashAlg(algParam->rsaPss.mgfId)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            pad = CRYPT_PKEY_EMSA_PSS;
+            ret = HITLS_X509_SetRsaPadding(signKey, &pad, sizeof(CRYPT_RsaPadType));
+            if (ret != HITLS_X509_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            return CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_SET_RSA_EMSA_PSS,
+                                    (void *)&algParam->rsaPss, sizeof(CRYPT_RSA_PssPara));
+        case BSL_CID_RSA:
+            if (!X509_IsValidHashAlg(algParam->pkcsV15.mdId)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            pad = CRYPT_PKEY_EMSA_PKCSV15;
+            ret = HITLS_X509_SetRsaPadding(signKey, &pad, sizeof(CRYPT_RsaPadType));
+            if (ret != HITLS_X509_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            return CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
+                                    (void *)&algParam->pkcsV15, sizeof(CRYPT_RSA_PkcsV15Para));
+        default:
+            return HITLS_X509_SUCCESS;
+    }
 }
