@@ -211,21 +211,21 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC003(char *path, int count, int num,
     int32_t ret = HITLS_ParseCrlTest(BSL_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.revokedCerts), count);
-    HITLS_X509_CrlEntry **nameNode = NULL;
-    nameNode = BSL_LIST_First(crl->tbs.revokedCerts);
+    HITLS_X509_CrlEntry *nameNode = NULL;
+    nameNode = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
     for (int i = 1; i < num; i++) {
-        nameNode = BSL_LIST_Next(crl->tbs.revokedCerts);
+        nameNode = BSL_LIST_GET_NEXT(crl->tbs.revokedCerts);
     }
 
-    ASSERT_EQ((*nameNode)->serialNumber.tag, tag1);
-    ASSERT_COMPARE("", (*nameNode)->serialNumber.buff, (*nameNode)->serialNumber.len,
+    ASSERT_EQ(nameNode->serialNumber.tag, tag1);
+    ASSERT_COMPARE("", nameNode->serialNumber.buff, nameNode->serialNumber.len,
         value1->x, value1->len);
-    ASSERT_EQ((*nameNode)->time.year, year1);
-    ASSERT_EQ((*nameNode)->time.month, month1);
-    ASSERT_EQ((*nameNode)->time.day, day1);
-    ASSERT_EQ((*nameNode)->time.hour, hour1);
-    ASSERT_EQ((*nameNode)->time.minute, minute1);
-    ASSERT_EQ((*nameNode)->time.second, second1);
+    ASSERT_EQ(nameNode->time.year, year1);
+    ASSERT_EQ(nameNode->time.month, month1);
+    ASSERT_EQ(nameNode->time.day, day1);
+    ASSERT_EQ(nameNode->time.hour, hour1);
+    ASSERT_EQ(nameNode->time.minute, minute1);
+    ASSERT_EQ(nameNode->time.second, second1);
 exit:
     HITLS_X509_CrlFree(crl);
     BSL_GLOBAL_DeInit();
@@ -1023,6 +1023,7 @@ exit:
 void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2, char *tmp)
 {
     HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Crl *parseCrl = NULL;
     HITLS_X509_Cert *issuerCert = NULL;
     CRYPT_EAL_PkeyCtx *pivKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
@@ -1059,6 +1060,10 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
     ASSERT_NE(crl->signature.buff, NULL);
     ASSERT_NE(crl->signature.len, 0);
     ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_X509_SUCCESS);
+    ASSERT_NE(parseCrl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_X509_SUCCESS);
+    HITLS_X509_CrlFree(parseCrl);
 exit:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(issuerCert);

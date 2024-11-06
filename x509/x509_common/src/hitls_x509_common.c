@@ -719,13 +719,12 @@ int32_t X509_SetSignAlgParm(CRYPT_EAL_PkeyCtx *signKey, const HITLS_X509_SignAlg
     }
 }
 
-int32_t HITLS_X509_AkiSki(HITLS_X509_Cert *cert, HITLS_X509_Ext *subjectExt)
+int32_t HITLS_X509_AkiSki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName, BSL_ASN1_Buffer *serialNum)
 {
     HITLS_X509_ExtAki aki = {0};
     HITLS_X509_ExtSki ski = {0};
-    HITLS_X509_Ext *issueExt = &cert->tbs.ext;
     int32_t ret = HITLS_X509_ExtCtrl(issueExt, HITLS_X509_EXT_GET_SKI, (void *)&ski, sizeof(HITLS_X509_ExtSki));
-    if (ret != HITLS_X509_SUCCESS || ret != HITLS_X509_ERR_EXT_NOT_FOUND) {
+    if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_EXT_NOT_FOUND) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -733,7 +732,7 @@ int32_t HITLS_X509_AkiSki(HITLS_X509_Cert *cert, HITLS_X509_Ext *subjectExt)
         return HITLS_X509_SUCCESS;
     }
     ret = HITLS_X509_ExtCtrl(subjectExt, HITLS_X509_EXT_GET_AKI, (void *)&aki, sizeof(HITLS_X509_ExtAki));
-    if (ret != HITLS_X509_SUCCESS || ret != HITLS_X509_ERR_EXT_NOT_FOUND) {
+    if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_EXT_NOT_FOUND) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -744,14 +743,14 @@ int32_t HITLS_X509_AkiSki(HITLS_X509_Cert *cert, HITLS_X509_Ext *subjectExt)
         return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
     }
     if (aki.issuerName != NULL) {
-        ret = HITLS_X509_CmpNameNode(aki.issuerName, cert->tbs.subjectName);
+        ret = HITLS_X509_CmpNameNode(aki.issuerName, subName);
         if (ret != 0) {
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }
     }
     if (aki.serialNum.dataLen != 0 && aki.serialNum.data != NULL) {
-        if (aki.serialNum.dataLen != cert->tbs.serialNum.len ||
-            memcmp(aki.serialNum.data, cert->tbs.serialNum.buff, aki.serialNum.dataLen) != 0) {
+        if (aki.serialNum.dataLen != serialNum->len ||
+            memcmp(aki.serialNum.data, serialNum->buff, aki.serialNum.dataLen) != 0) {
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }
     }

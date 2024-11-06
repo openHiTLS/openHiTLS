@@ -1000,7 +1000,6 @@ static HITLS_X509_CrlEntry *X509_CrlEntryDup(const HITLS_X509_CrlEntry *src)
     }
     (void)memset_s(dest, sizeof(HITLS_X509_CrlEntry), 0, sizeof(HITLS_X509_CrlEntry));
 
-    // �������к�
     dest->serialNumber.buff = BSL_SAL_Malloc(src->serialNumber.len);
     if (dest->serialNumber.buff == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -1011,13 +1010,11 @@ static HITLS_X509_CrlEntry *X509_CrlEntryDup(const HITLS_X509_CrlEntry *src)
     dest->serialNumber.len = src->serialNumber.len;
     dest->serialNumber.tag = src->serialNumber.tag;
 
-    // ���Ƶ���ʱ��
     dest->time = src->time;
     dest->flag = src->flag;
     dest->flag &= ~HITLS_X509_CRL_PARSE_FLAG;
     dest->flag |= HITLS_X509_CRL_GEN_FLAG;
 
-    // �������չ�������չ��
     if (src->extList != NULL) {
         dest->extList = BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)DupExtEntry, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
         if (dest->extList == NULL) {
@@ -1051,19 +1048,16 @@ int32_t HITLS_X509_CrlAddRevokedCert(HITLS_X509_Crl *crl, void *val, int32_t val
 
     HITLS_X509_CrlEntry *entry = (HITLS_X509_CrlEntry *)val;
 
-    // ������к��Ƿ���Ч
     if (entry->serialNumber.buff == NULL || entry->serialNumber.len == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_ENTRY);
         return HITLS_X509_ERR_CRL_ENTRY;
     }
 
-    // ���ʱ���Ƿ���Ч
     if (!BSL_DateTimeCheck(&entry->time)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_ENTRY);
         return HITLS_X509_ERR_CRL_ENTRY;
     }
 
-    // ����ǵ�һ����������֤�飬��Ҫ��ʼ���б�
     if (crl->tbs.revokedCerts == NULL) {
         crl->tbs.revokedCerts = BSL_LIST_New(sizeof(HITLS_X509_CrlEntry));
         if (crl->tbs.revokedCerts == NULL) {
@@ -1076,7 +1070,7 @@ int32_t HITLS_X509_CrlAddRevokedCert(HITLS_X509_Crl *crl, void *val, int32_t val
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    // ���ӵ��б���
+
     int32_t ret = BSL_LIST_AddElement(crl->tbs.revokedCerts, newEntry, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         X509_CrlEntryFree(newEntry);
@@ -1084,7 +1078,7 @@ int32_t HITLS_X509_CrlAddRevokedCert(HITLS_X509_Crl *crl, void *val, int32_t val
         return ret;
     }
 
-    // ��� CRL �汾�� v1���������˴���չ�ĵ���֤�飬��Ҫ������ v2
+    // If the CRL version is v1 and an extended revocation certificate is added, it needs to be upgraded to v2
     if (crl->tbs.version == 0 && entry->extList != NULL) {
         crl->tbs.version = 1;  // v2
     }
@@ -1221,10 +1215,8 @@ HITLS_X509_CrlEntry *HITLS_X509_CrlRevokedNew(void)
         return NULL;
     }
 
-    // ��ʼ�������ֶ�Ϊ0
     (void)memset_s(entry, sizeof(HITLS_X509_CrlEntry), 0, sizeof(HITLS_X509_CrlEntry));
 
-    // ��ʼ��Ĭ��ֵ
     entry->flag |= HITLS_X509_CRL_GEN_FLAG;
     return entry;
 }
@@ -1296,13 +1288,12 @@ static int32_t SetExtReason(void *param, HITLS_X509_ExtEntry *extEntry, void *va
 {
     (void)param;
     HITLS_X509_RevokeExtReason *reason = (HITLS_X509_RevokeExtReason *)val;
-    // if (reason->reason < 0 || reason->reason > HITLS_X509_CRL_REASON_MAX) {
-    //     BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-    //     return HITLS_X509_ERR_INVALID_PARAM;
-    // }
+    if (reason->reason < HITLS_X509_REVOKED_REASON_UNSPECIFIED || reason->reason > HITLS_X509_REVOKED_REASON_AA_COMPROMISE) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
     extEntry->critical = reason->critical;
     BSL_ASN1_Buffer asns = {BSL_ASN1_TAG_ENUMERATED, sizeof(int8_t), (uint8_t *)&reason->reason};
-    // ׼�� ASN.1 ģ��
     BSL_ASN1_TemplateItem items = {BSL_ASN1_TAG_ENUMERATED, 0, 0};
     BSL_ASN1_Template reasonTempl = {&items, 1};
 

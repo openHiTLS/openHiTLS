@@ -553,7 +553,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
     ASSERT_EQ(strcmp((char *)issuerName.data, expectedIssueName), 0);
 
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM, &serialNum, sizeof(BSL_Buffer));
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM_STR, &serialNum, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(serialNum.data, NULL);
     ASSERT_EQ(serialNum.dataLen, strlen(expectedSerialNum));

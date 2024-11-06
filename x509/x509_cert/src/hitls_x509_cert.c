@@ -876,9 +876,9 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
         *res = false;
         return HITLS_X509_SUCCESS;
     }
-    if (issue->tbs.version == HITLS_CERT_VERSION_3) {
-        ret = HITLS_X509_AkiSki(issue, &subject->tbs.ext);
-        if (ret != HITLS_X509_SUCCESS || ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+    if (issue->tbs.version == HITLS_CERT_VERSION_3 && subject->tbs.version == HITLS_CERT_VERSION_3) {
+        ret = HITLS_X509_AkiSki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
+        if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
             return ret;
         }
         if (ret == HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
