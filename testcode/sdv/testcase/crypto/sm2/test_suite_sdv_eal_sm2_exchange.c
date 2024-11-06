@@ -562,7 +562,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM2_CTRL_API_TC002(Hex *R, int isProvider)
 {
-    uint8_t zero[65];
+    uint8_t zero[65] = {0};
 
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx = NULL;
