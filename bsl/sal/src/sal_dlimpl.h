@@ -20,11 +20,21 @@
 #ifdef HITLS_BSL_SAL_DL
 
 #include <stdint.h>
+#include "bsl_sal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct {
+    BslSalLoadLib pfLoadLib;
+    BslSalUnLoadLib pfUnLoadLib;
+    BslSalGetFunc pfGetFunc;
+} BSL_SAL_DlCallback;
+
+int32_t SAL_DlCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+
+#ifdef HITLS_BSL_SAL_LINUX
 /**
  * @brief Load a dynamic library
  * @param fileName Name of the library file to load
@@ -48,11 +58,11 @@ int32_t SAL_UnLoadLib(void *handle);
  * @return 0 on success, non-zero error code on failure
  */
 int32_t SAL_GetFunc(void *handle, const char *funcName, void **func);
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* HITLS_BSL_SAL_DL */
-
 #endif // SAL_DLIMPL_H

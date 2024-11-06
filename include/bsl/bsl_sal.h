@@ -168,13 +168,6 @@ typedef struct ThreadCallback {
 
 /**
  * @ingroup bsl_sal
- *
- * Registrable function structure for loading dynamic libraries.
- */
-typedef struct DlCallback BSL_SAL_DlCallback;
-
-/**
- * @ingroup bsl_sal
  * @brief   Interface for registering memory-related callback functions
  *
  * Register the memory application and release functions.
@@ -1304,16 +1297,125 @@ int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, ch
 
 /**
  * @ingroup bsl_sal
- * @brief   Interface for registering operation of dynamic library callback functions
+ * @brief Get the canonicalized absolute pathname.
+ *
+ * Get the canonicalized absolute pathname.
+ *
+ * @attention None.
+ * @param path [IN] The path to be resolved.
+ * @param result [OUT] Pointer to store the resolved absolute path.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_RealPath(const char *path, char **result);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get the current working directory.
+ *
+ * Get the current working directory.
+ *
+ * @attention None.
+ * @param result [OUT] Pointer to store the current working directory.
+ * @retval If the operation is successful, BSL_SUCCESS is returned;
+ * Otherwise, an error code is returned.
+ */
+int32_t BSL_SAL_GetCwd(char **result);
+
+
+typedef enum {
+    BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,
+    BSL_SAL_NET_READ_CB_FUNC,
+    BSL_SAL_NET_SOCKET_CB_FUNC,
+    BSL_SAL_NET_SOCKCLOSE_CB_FUNC,
+    BSL_SAL_NET_SETSOCKOPT_CB_FUNC,
+    BSL_SAL_NET_GETSOCKOPT_CB_FUNC,
+    BSL_SAL_NET_SOCKLISTEN_CB_FUNC,
+    BSL_SAL_NET_SOCKBIND_CB_FUNC,
+    BSL_SAL_NET_SOCKCONNECT_CB_FUNC,
+    BSL_SAL_NET_SOCKSEND_CB_FUNC,
+    BSL_SAL_NET_SOCKRECV_CB_FUNC,
+    BSL_SAL_NET_SELECT_CB_FUNC,
+    BSL_SAL_NET_IOCTLSOCKET_CB_FUNC,
+    BSL_SAL_NET_SOCKGETLASTSOCKETERROR_CB_FUNC,
+
+    BSL_SAL_TIME_GET_SYS_TIME_CB_FUNC = 0x0400,
+    BSL_SAL_TIME_DATE_TO_STR_CONVERT_CB_FUNC,
+    BSL_SAL_TIME_SYS_TIME_GET_CB_FUNC,
+    BSL_SAL_TIME_UTC_TIME_TO_DATE_CONVERT_CB_FUNC,
+    BSL_SAL_TIME_SLEEP_CB_FUNC,
+    BSL_SAL_TIME_TICK_CB_FUNC,
+    BSL_SAL_TIME_TICKS_PER_SEC_CB_FUNC,
+
+    BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,
+    BSL_SAL_FILE_CLOSE_CB_FUNC,
+    BSL_SAL_FILE_READ_CB_FUNC,
+    BSL_SAL_FILE_WRITE_CB_FUNC,
+    BSL_SAL_FILE_LENGTH_CB_FUNC,
+
+    BSL_SAL_DL_LOADLIB_CB_FUNC = 0x0700,
+    BSL_SAL_DL_UNLOADLIB_CB_FUNC,
+    BSL_SAL_DL_GETFUNC_CB_FUNC,
+
+    BSL_SAL_MAX_FUNC_CB = 0xffff
+} BSL_SAL_CB_FUNC_TYPE;
+
+/**
+ * @ingroup bsl_sal
+ * @brief Control callback functions for SAL (System Abstraction Layer).
+ *
+ * This function is used to control and register callback functions for different SAL modules
+ * such as network, time, and file operations.
  *
  * @attention None
- * @param cb [IN] Pointer to the dynamic library callback function
- * @retval #BSL_SUCCESS, functions of dynamic library are successfully registered.
- * @retval #BSL_SAL_ERR_BAD_PARAM. If the cb is null or the cb members have null, caution fill
- * the input parameter cb.
+ * @param funcType [IN] Type of the callback function to be controlled
+ * @param funcCb [IN] Pointer to the callback function
+ * @retval #BSL_SUCCESS Callback function controlled successfully
+ * @retval #BSL_SAL_ERR_BAD_PARAM Invalid function type or callback pointer
+ * @retval Other error codes specific to the SAL module
  */
-int32_t BSL_SAL_RegdlCallback(BSL_SAL_DlCallback *cb);
+int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb);
 
+/**
+ * @ingroup bsl_sal
+ * @brief Loading dynamic libraries.
+ *
+ * Loading dynamic libraries.
+ *
+ * @param fileName [IN] Path of dl
+ * @param handle [OUT] Dynamic library handle
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_NOT_FOUND Library file not found.
+ * @retval #BSL_SAL_ERR_DL_LOAD_FAIL Failed to load the library.
+ */
+typedef int32_t (*BslSalLoadLib)(const char *fileName, void **handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Close dynamic library.
+ *
+ * Close dynamic library.
+ *
+ * @param handle [IN] Dynamic library handle
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_UNLOAAD_FAIL Failed to unload the library.
+ */
+typedef int32_t (*BslSalUnLoadLib)(void *handle);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get function symbol from dynamic library.
+ *
+ * Get function symbol from dynamic library.
+ *
+ * @param handle [IN] Dynamic library handle
+ * @param funcName [IN] Function name
+ * @param func [OUT] Function pointer
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_NON_FUNCTION Symbol found but is not a function.
+ * @retval #BSL_SAL_ERR_DL_LOOKUP_METHOD Failed to lookup the function.
+ */
+typedef int32_t (*BslSalGetFunc)(void *handle, const char *funcName, void **func);
 
 #ifdef __cplusplus
 }
