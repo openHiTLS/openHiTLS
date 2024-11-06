@@ -160,7 +160,7 @@ static int32_t EncodeReqExtAttr(void *attrItem, BSL_ASN1_Buffer *attrValue)
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     HITLS_X509_Ext *ext = (HITLS_X509_Ext *)attrItem;
-    return HITLS_X509_EncodeExt(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, ext->list, attrValue);
+    return HITLS_X509_EncodeExt(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, ext->extList, attrValue);
 }
 
 static int32_t SetAttr(BSL_ASN1_List *attributes, void *val, uint32_t valLen, EncodeAttrCb encodeAttrCb)
@@ -207,7 +207,7 @@ ERR:
 
 static int32_t DecodeReqExtAttr(HITLS_X509_AttrEntry *attrEntry, void *attrItem)
 {
-    HITLS_X509_Ext *ext = HITLS_X509_ExtNew();
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     if (ext == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
