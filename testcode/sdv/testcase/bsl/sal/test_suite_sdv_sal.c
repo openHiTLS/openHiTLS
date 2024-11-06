@@ -755,7 +755,7 @@ void SDV_BSL_SAL_THREAD_DEFAULT_FUNC_TC001(void)
         BSL_SAL_ThreadClose(pid[j]);
     }
     for (size_t n = 0; n < m; n++) {
-        BSL_SAL_ThreadClose(pid[n]);
+        BSL_SAL_ThreadClose(pid2[n]);
     }
     ASSERT_EQ(g_threadDefaultWrite001, TEST_READ_PID_CNT * TEST_THREAD_DEFAULT_TC001_WRITE_CNT);
     // Concurrent reads. The read result is uncertain and does not determine whether to perform the read operation.

@@ -16,6 +16,9 @@ SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sh
 SDV_X509_CRL_PARSE_FUNC_TC001
 SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"
 
+SDV_X509_CRL_PARSE_FUNC_TC001 revokelist ext
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.mul3.crl"
+
 SDV_X509_CRL_CTRL_FUNC_TC001
 SDV_X509_CRL_CTRL_FUNC_TC001:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der"
 
@@ -222,3 +225,66 @@ SDV_X509_CRL_EncodeFile_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/sm2_crl/crl
 
 SDV_X509_CRL_EncodeFile_TC001 sm2 crl(pem)
 SDV_X509_CRL_EncodeFile_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"
+
+SDV_X509_CRL_Check_TC001 success rsa
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_SUCCESS
+
+SDV_X509_CRL_Check_TC001 success ecdsa
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/crl_v2.old.der":HITLS_X509_SUCCESS
+
+SDV_X509_CRL_Check_TC001 success rsa-pss
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-pss-v3/rootca.crt":"../testdata/cert/chain/rsa-pss-v3/crl.der":HITLS_X509_SUCCESS
+
+SDV_X509_CRL_Check_TC001 success sm2
+SDV_X509_CRL_Check_TC001:"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/crl_v2.mul.der":HITLS_X509_SUCCESS
+
+SDV_X509_CRL_CTRL_ParamCheck_TC001
+SDV_X509_CRL_CTRL_ParamCheck_TC001:
+
+SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001
+SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001:"../testdata/cert/pem/crl/crl_v2.mul3.crl":3
+
+SDV_X509_CRL_CTRL_RevokedParamCheck_TC001
+SDV_X509_CRL_CTRL_RevokedParamCheck_TC001:
+
+SDV_X509_CRL_CTRL_GetFunc_TC001
+SDV_X509_CRL_CTRL_GetFunc_TC001:
+
+SDV_X509_CRL_ExtCtrl_FuncTest_TC001
+SDV_X509_CRL_ExtCtrl_FuncTest_TC001:
+
+SDV_X509_CRL_CTRL_SetFunc_TC001
+SDV_X509_CRL_CTRL_SetFunc_TC001:"../testdata/cert/pem/crl/inter.mul.crt"
+
+SDV_X509_CRL_Sign_ParamCheck_TC001
+SDV_X509_CRL_Sign_ParamCheck_TC001:
+
+SDV_X509_CRL_Sign_AlgParamCheck_TC001
+SDV_X509_CRL_Sign_AlgParamCheck_TC001:
+
+SDV_X509_CRL_Sign_CrlFieldCheck_TC001
+SDV_X509_CRL_Sign_CrlFieldCheck_TC001:
+
+SDV_X509_CRL_Sign_RevokedCheck_TC001
+SDV_X509_CRL_Sign_RevokedCheck_TC001:
+
+SDV_X509_CRL_Sign_Func_TC001 v1 cert rsa_p1_v1.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p1.key.der":CRYPT_PRIKEY_RSA:CRYPT_PRIKEY_RSA:CRYPT_PKEY_EMSA_PKCSV15:CRYPT_MD_SHA256:0:"tmp-rsav1.crl"
+
+SDV_X509_CRL_Sign_Func_TC001 v3 cert rsa_p8.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PKCSV15:CRYPT_MD_SHA256:1:"tmp-rsav2.crl"
+
+SDV_X509_CRL_Sign_Func_TC001 v3 cert sm2.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/sm2_cert/sm2.crt.der":"../testdata/cert/asn1/sm2_cert/sm2.key.der":CRYPT_PRIKEY_ECC:CRYPT_PKEY_SM2:0:CRYPT_MD_SM3:1:"tmp-sm2.crl"
+
+SDV_X509_CRL_Sign_Func_TC001 v3 cert ecdsa_sha384.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_ECDSA:0:CRYPT_MD_SHA384:1:"tmp-ec.crl"
+
+SDV_X509_CRL_Sign_Func_TC001 v3 cert rsa_pss.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.crt.der":"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:0:"tmp-pss.crl"
+
+SDV_X509_CRL_Sign_Func_TC001 v3 cert rsa -- rsa_pss.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:1:"tmp-rsa-pss.crl"
+
+SDV_X509_CRL_Sign_Func_TC001 v2 cert rsa -- rsa_pss-aki.crt.der
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"../testdata/cert/asn1/rsa_cert/inter2.mul.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:1:"tmp-rsa-pss-aki.crl"
