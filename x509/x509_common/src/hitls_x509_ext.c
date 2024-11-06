@@ -1241,6 +1241,9 @@ static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t v
         case HITLS_X509_EXT_GET_SKI:
             return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_SUBJECTKEYID, &buff, sizeof(HITLS_X509_ExtSki),
                 (DecodeExtCb)HITLS_X509_ParseSubjectKeyId);
+        case HITLS_X509_EXT_GET_AKI:
+            return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_AUTHORITYKEYID, &buff, sizeof(HITLS_X509_ExtAki),
+                (DecodeExtCb)HITLS_X509_ParseAuthorityKeyId);
         case HITLS_X509_EXT_GET_CRLNUMBER:
             return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
                 (DecodeExtCb)HITLS_X509_ParseCrlNumber);

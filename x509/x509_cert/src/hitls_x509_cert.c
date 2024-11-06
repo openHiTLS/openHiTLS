@@ -872,10 +872,21 @@ int32_t HITLS_X509_CertDup(HITLS_X509_Cert *src, HITLS_X509_Cert **dest)
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res)
 {
     int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
-    if (ret != 0) {
+    if (ret != HITLS_X509_SUCCESS) {
         *res = false;
         return HITLS_X509_SUCCESS;
     }
+    if (issue->tbs.version == HITLS_CERT_VERSION_3) {
+        ret = HITLS_X509_AkiSki(issue, &subject->tbs.ext);
+        if (ret != HITLS_X509_SUCCESS || ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+            return ret;
+        }
+        if (ret == HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+            *res = false;
+            return HITLS_X509_SUCCESS;
+        }
+    }
+
     /**
      * If the basic constraints extension is not present in a version 3 certificate,
      * or the extension is present but the cA boolean is not asserted,

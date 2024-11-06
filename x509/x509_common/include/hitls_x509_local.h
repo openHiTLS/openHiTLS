@@ -248,6 +248,8 @@ bool X509_IsValidHashAlg(CRYPT_MD_AlgId id);
 
 int32_t HITLS_X509_EncodeExtEntry(BSL_ASN1_List *list, BSL_ASN1_Buffer *ext);
 
+int32_t HITLS_X509_AkiSki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt);
+
 #ifdef __cplusplus
 }
 #endif

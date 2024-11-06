@@ -686,30 +686,24 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
 
     HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
-    HITLS_X509_Ext *ext = NULL;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_EXT, &ext, sizeof(HITLS_X509_Ext *)), HITLS_X509_SUCCESS);
-    ASSERT_NE(ext, NULL);
-    ASSERT_EQ(ext->type, HITLS_X509_EXT_TYPE_CRL);
-    ASSERT_NE(ext->extList, NULL);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 0);
 
     // 测试设置 CRL Number
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
               HITLS_X509_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumExt = {0};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
     ASSERT_EQ(crlNumExt.critical, crlNumberExt.critical);
     ASSERT_EQ(crlNumExt.crlNumber.dataLen, crlNumberExt.crlNumber.dataLen);
     ASSERT_EQ(memcmp(crlNumExt.crlNumber.data, crlNumberExt.crlNumber.data, crlNumberExt.crlNumber.dataLen), 0);
 
-    HITLS_X509_ExtSki ski = {false, {keyId, sizeof(keyId)}};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
-    HITLS_X509_ExtSki getski = {0};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_SKI, &getski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(getski.critical, ski.critical);
-    ASSERT_EQ(getski.kid.dataLen, ski.kid.dataLen);
-    ASSERT_EQ(memcmp(getski.kid.data, ski.kid.data, ski.kid.dataLen), 0);
+    HITLS_X509_ExtAki aki = {false, {keyId, sizeof(keyId)}, NULL, {NULL, 0}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    HITLS_X509_ExtAki getaki = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_AKI, &getaki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(getaki.critical, aki.critical);
+    ASSERT_EQ(getaki.kid.dataLen, aki.kid.dataLen);
+    ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
 
 exit:
     HITLS_X509_CrlFree(crl);
@@ -754,9 +748,10 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     ASSERT_EQ(ext->type, HITLS_X509_EXT_TYPE_CRL);
     ASSERT_NE(ext->extList, NULL);
     ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 0);
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
+    HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, cert->tbs.issuerName, {cert->tbs.serialNum.buff, cert->tbs.serialNum.len}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
               HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_CertFree(cert);
@@ -976,7 +971,6 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     BslList *issuerDN = NULL;
     uint8_t crlNumber[1] = {0x01}; 
     HITLS_X509_Ext *certExt = NULL;
-    HITLS_X509_Ext *crlExt = NULL;
      // Set CRL version (v2)
     uint32_t version = 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
@@ -1002,17 +996,12 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     if (isV2) {
         ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_EXT, &certExt, sizeof(HITLS_X509_Ext *)), 
             HITLS_X509_SUCCESS);
-        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_EXT, &crlExt, sizeof(HITLS_X509_Ext *)), 
-            HITLS_X509_SUCCESS);
-        ASSERT_NE(crlExt, NULL);
-        ASSERT_EQ(crlExt->type, HITLS_X509_EXT_TYPE_CRL);
-        ASSERT_NE(crlExt->extList, NULL);
-        ASSERT_EQ(BSL_LIST_COUNT(crlExt->extList), 0);
         HITLS_X509_ExtSki ski = {0};
         int32_t ret = HITLS_X509_ExtCtrl(certExt, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki));
         if (ret == HITLS_X509_SUCCESS) {
+            HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, NULL, {NULL, 0}};
             // Set SKI extension
-            ASSERT_EQ(HITLS_X509_ExtCtrl(crlExt, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), 
+            ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 
                 HITLS_X509_SUCCESS);
         }
 
@@ -1021,7 +1010,7 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
             false,  // non-critical
             {crlNumber, sizeof(crlNumber)}
         };
-        ASSERT_EQ(HITLS_X509_ExtCtrl(crlExt, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, 
+        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, 
             sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
     }
     return HITLS_X509_SUCCESS;

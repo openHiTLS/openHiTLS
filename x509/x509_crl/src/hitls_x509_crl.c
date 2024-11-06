@@ -1135,22 +1135,6 @@ int32_t X509_CrlSetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t val
     }
 }
 
-static int32_t X509_CrlExtCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
-{
-    (void)crl;
-    (void)val;
-    (void)valLen;
-    switch (cmd) {
-        // case HITLS_X509_EXT_CRL_SET_CRLNUMBER:
-        //     return X509_CrlSetCrlNumber(crl, val, valLen, HITLS_X509_EXT_KU_DIGITAL_SIGN);
-        // case HITLS_X509_EXT_CRL_SET_AKI:
-        //     return X509_CrlSetAki(crl, val, valLen, HITLS_X509_EXT_KU_KEY_CERT_SIGN);
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            return HITLS_X509_ERR_INVALID_PARAM;
-    }
-}
-
 int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
 {
     if (crl == NULL) {
@@ -1164,7 +1148,7 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
         return X509_CrlSetCtrl(crl, cmd, val, valLen);
     } else {
-        return X509_CrlExtCtrl(crl, cmd, val, valLen);
+        return HITLS_X509_ExtCtrl(&crl->tbs.crlExt, cmd, val, valLen);
     }
 }
 

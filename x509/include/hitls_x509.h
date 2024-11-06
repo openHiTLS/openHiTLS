@@ -123,6 +123,7 @@ typedef enum {
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get aki from extensions.
                                                     Note: Kid is a shallow copy. */
     HITLS_X509_EXT_GET_CRLNUMBER,
+    HITLS_X509_EXT_GET_AKI,
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
