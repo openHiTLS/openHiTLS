@@ -519,10 +519,10 @@ int32_t HITLS_X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtC
     }
 
     // Check CRL Number length
-    // if (valueLen < HITLS_X509_CRLNUMBER_MIN_LEN || valueLen > HITLS_X509_CRLNUMBER_MAX_LEN) {
-    //     BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_CRLNUMBER);
-    //     return HITLS_X509_ERR_EXT_CRLNUMBER;
-    // }
+    if (valueLen < HITLS_X509_CRLNUMBER_MIN_LEN || valueLen > HITLS_X509_CRLNUMBER_MAX_LEN) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_CRLNUMBER);
+        return HITLS_X509_ERR_EXT_CRLNUMBER;
+    }
 
     // Store CRL Number value
     crlNumber->crlNumber.data = temp;
