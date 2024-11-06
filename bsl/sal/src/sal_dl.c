@@ -25,8 +25,6 @@
 
 #include "string.h"
 #include "sal_dlimpl.h"
-#include "sal_dl_local.h"
-#include "bsl_binlog_id.h"
 #include "bsl_log_internal.h"
 
 static BSL_SAL_DlCallback g_dlCallback = {0};
@@ -81,24 +79,22 @@ int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, ch
     *name = tempName;
     return BSL_SUCCESS;
 }
-    
+
 int32_t BSL_SAL_LoadLib(const char *fileName, void **handle)
 {
     if (fileName == NULL || handle == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_dlCallback.pdlopen != NULL) {
-        return g_dlCallback.pdlopen(fileName, handle);
+    if (g_dlCallback.pfLoadLib != NULL && g_dlCallback.pfLoadLib != BSL_SAL_LoadLib) {
+        return g_dlCallback.pfLoadLib(fileName, handle);
     }
-#ifdef HITLS_BSL_SAL_DL
+#ifdef HITLS_BSL_SAL_LINUX
     return SAL_LoadLib(fileName, handle);
 #else
-    BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_LOAD_FAIL);
-    return BSL_SAL_ERR_DL_LOAD_FAIL;
+    return BSL_SAL_DL_NO_REG_FUNC;
 #endif
 }
-
 
 int32_t BSL_SAL_UnLoadLib(void *handle)
 {
@@ -106,14 +102,13 @@ int32_t BSL_SAL_UnLoadLib(void *handle)
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_dlCallback.pdlclose != NULL) {
-        return g_dlCallback.pdlclose(handle);
+    if (g_dlCallback.pfUnLoadLib != NULL && g_dlCallback.pfUnLoadLib != BSL_SAL_UnLoadLib) {
+        return g_dlCallback.pfUnLoadLib(handle);
     }
-#ifdef HITLS_BSL_SAL_DL
+#ifdef HITLS_BSL_SAL_LINUX
     return SAL_UnLoadLib(handle);
 #else
-    BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_UNLOAAD_FAIL);
-    return BSL_SAL_ERR_DL_UNLOAAD_FAIL;
+    return BSL_SAL_DL_NO_REG_FUNC;
 #endif
 }
 
@@ -123,31 +118,24 @@ int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func)
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_dlCallback.pdlsym != NULL) {
-        return g_dlCallback.pdlsym(handle, funcName, func);
+    if (g_dlCallback.pfGetFunc != NULL && g_dlCallback.pfGetFunc != BSL_SAL_GetFuncAddress) {
+        return g_dlCallback.pfGetFunc(handle, funcName, func);
     }
-#ifdef HITLS_BSL_SAL_DL
+#ifdef HITLS_BSL_SAL_LINUX
     return SAL_GetFunc(handle, funcName, func);
 #else
-    BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_LOOKUP_METHOD);
-    return BSL_SAL_ERR_DL_LOOKUP_METHOD;
+    return BSL_SAL_DL_NO_REG_FUNC;
 #endif
 }
 
-
-int32_t BSL_SAL_RegdlCallback(BSL_SAL_DlCallback *cb)
+int32_t SAL_DlCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if ((cb == NULL) || (cb->pdlopen == NULL) || (cb->pdlclose == NULL) || (cb->pdlsym == NULL)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05066, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "invalid params", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
+    if (type > BSL_SAL_DL_GETFUNC_CB_FUNC || type < BSL_SAL_DL_LOADLIB_CB_FUNC) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    g_dlCallback.pdlopen = cb->pdlopen;
-    g_dlCallback.pdlclose = cb->pdlclose;
-    g_dlCallback.pdlsym = cb->pdlsym;
+    uint32_t offset = (uint32_t)(type - BSL_SAL_DL_LOADLIB_CB_FUNC);
+    ((void **)&g_dlCallback)[offset] = funcCb;
     return BSL_SUCCESS;
 }
-
 
 #endif /* HITLS_BSL_SAL_DL */
