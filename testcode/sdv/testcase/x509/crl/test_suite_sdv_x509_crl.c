@@ -21,9 +21,13 @@
 #include "hitls_x509_errno.h"
 #include "bsl_type.h"
 #include "bsl_log.h"
+#include "bsl_obj.h"
+#include "crypt_encode.h"
 #include "sal_file.h"
 #include "bsl_init.h"
+#include "crypt_errno.h"
 #include "hitls_crl_local.h"
+#include "hitls_cert_local.h"
 
 
 /* END_HEADER */
@@ -94,7 +98,7 @@ void SDV_X509_CRL_CTRL_FUNC_TC001(char *path)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     int32_t ref = 0;
-    ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_REF_UP, &ref, sizeof(ref));
+    ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_REF_UP, &ref, sizeof(ref));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(ref, 2);
     HITLS_X509_CrlFree(crl);
@@ -207,21 +211,21 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC003(char *path, int count, int num,
     int32_t ret = HITLS_ParseCrlTest(BSL_FORMAT_ASN1, path, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.revokedCerts), count);
-    HITLS_X509_CrlEntry **nameNode = NULL;
-    nameNode = BSL_LIST_First(crl->tbs.revokedCerts);
+    HITLS_X509_CrlEntry *nameNode = NULL;
+    nameNode = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
     for (int i = 1; i < num; i++) {
-        nameNode = BSL_LIST_Next(crl->tbs.revokedCerts);
+        nameNode = BSL_LIST_GET_NEXT(crl->tbs.revokedCerts);
     }
 
-    ASSERT_EQ((*nameNode)->serialNumber.tag, tag1);
-    ASSERT_COMPARE("", (*nameNode)->serialNumber.buff, (*nameNode)->serialNumber.len,
+    ASSERT_EQ(nameNode->serialNumber.tag, tag1);
+    ASSERT_COMPARE("", nameNode->serialNumber.buff, nameNode->serialNumber.len,
         value1->x, value1->len);
-    ASSERT_EQ((*nameNode)->time.year, year1);
-    ASSERT_EQ((*nameNode)->time.month, month1);
-    ASSERT_EQ((*nameNode)->time.day, day1);
-    ASSERT_EQ((*nameNode)->time.hour, hour1);
-    ASSERT_EQ((*nameNode)->time.minute, minute1);
-    ASSERT_EQ((*nameNode)->time.second, second1);
+    ASSERT_EQ(nameNode->time.year, year1);
+    ASSERT_EQ(nameNode->time.month, month1);
+    ASSERT_EQ(nameNode->time.day, day1);
+    ASSERT_EQ(nameNode->time.hour, hour1);
+    ASSERT_EQ(nameNode->time.minute, minute1);
+    ASSERT_EQ(nameNode->time.second, second1);
 exit:
     HITLS_X509_CrlFree(crl);
     BSL_GLOBAL_DeInit();
@@ -433,5 +437,641 @@ exit:
     BSL_SAL_Free(data);
     HITLS_X509_CrlFree(crl);
     BSL_SAL_Free(res);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Check_TC001(char *capath, char *crlpath, int res)
+{
+    BSL_GLOBAL_Init();
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    void *pubKey = NULL;
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, crlpath, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(void *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), res);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(cert);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    BSL_TIME time = {0};
+    BSL_ASN1_List *issuer = NULL;
+    uint32_t version = 1;
+
+    // Test null pointer parameter
+    ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, HITLS_X509_SET_VERSION, &version, sizeof(version)),
+        HITLS_X509_ERR_INVALID_PARAM);
+
+    // Create a CRL object for subsequent tests
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+
+    // Test invalid command
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, 0x7FFFFFFF, &version, sizeof(version)), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test null value pointer
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, NULL, sizeof(uint8_t)), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test incorrect length for version parameter
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, 0), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test invalid version number
+    version = 3;  // Out of valid range
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test incorrect length for time parameter
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(time) - 1),
+        HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test incorrect length for issuer parameter
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuer, sizeof(BSL_ASN1_List) - 1),
+        HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test empty buffer for get command
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, NULL, sizeof(version)), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test incorrect buffer length for get command
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, 0), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test normal parameters - set version number
+    version = 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
+
+    // Test normal parameters - get version number
+    uint32_t getVersion = 0;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &getVersion, sizeof(getVersion)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(getVersion, version);
+
+    // Test normal parameters - set last update time
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&time), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(time)), HITLS_X509_SUCCESS);
+
+    // Test normal parameters - get last update time
+    BSL_TIME getTime = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &getTime, sizeof(getTime)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(memcmp(&getTime, &time, sizeof(BSL_TIME)), 0);
+exit:
+    // Clean up resources
+    HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_CTRL_RevokedParamCheck_TC001(void)
+{
+    HITLS_X509_CrlEntry *entry = NULL;
+    BSL_TIME time = {0};
+
+    // Test HITLS_X509_CrlRevokedNew
+    entry = HITLS_X509_CrlRevokedNew();
+    ASSERT_NE(entry, NULL);
+
+    // Test HITLS_X509_CrlRevokedCtrl with invalid command
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, 0xFFFF, &time, sizeof(time)), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test HITLS_X509_CrlRevokedCtrl with NULL entry
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(NULL, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
+        HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test HITLS_X509_CrlRevokedCtrl with NULL value pointer
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, NULL, sizeof(time)),
+        HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test HITLS_X509_CrlRevokedCtrl with invalid value length
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, 0),
+        HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test setting/getting revoke time
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&time), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
+        HITLS_X509_SUCCESS);
+
+    BSL_TIME getTime = {0};
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &getTime, sizeof(getTime)),
+        HITLS_X509_SUCCESS);
+    ASSERT_EQ(memcmp(&time, &getTime, sizeof(BSL_TIME)), 0);
+
+    // Test setting/getting reason
+    HITLS_X509_RevokeExtReason reasonExt = {false, 1};
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reasonExt,
+        sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
+
+    int32_t getReason = 0;
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, &getReason, sizeof(getReason)),
+        HITLS_X509_SUCCESS);
+    ASSERT_EQ(reasonExt.reason, getReason);
+
+    // Test setting/getting serial number
+    uint8_t serial[] = {0x01, 0x02, 0x03, 0x04};
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serial, 4),
+        HITLS_X509_SUCCESS);
+
+    BSL_Buffer getSerial = {0};
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &getSerial, sizeof(getSerial)),
+        HITLS_X509_SUCCESS);
+    ASSERT_EQ(4, getSerial.dataLen);
+    ASSERT_EQ(memcmp(serial, getSerial.data, getSerial.dataLen), 0);
+
+    // Test HITLS_X509_CrlRevokedFree with NULL
+    HITLS_X509_CrlRevokedFree(NULL);  // Should not crash
+
+    // Test HITLS_X509_CrlRevokedFree with valid entry
+    HITLS_X509_CrlRevokedFree(entry);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001(char *parh, int revokedNum)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_CrlEntry *entry = NULL;
+    BslList *revokeList = NULL;
+    BSL_TIME time = {0};
+    int32_t reason = 0;
+    BSL_Buffer serialNum = {0};
+
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, parh, &crl), HITLS_X509_SUCCESS);
+    ASSERT_NE(crl, NULL);
+
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_NE(revokeList, NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(revokeList), revokedNum);
+    for (entry = (HITLS_X509_CrlEntry *)BSL_LIST_GET_FIRST(revokeList); entry != NULL; entry =
+        (HITLS_X509_CrlEntry *)BSL_LIST_GET_NEXT(revokeList)) {
+        ASSERT_TRUE(entry->serialNumber.buff != NULL);
+        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &serialNum,
+            sizeof(BSL_Buffer)), HITLS_X509_SUCCESS);
+        ASSERT_TRUE(serialNum.dataLen > 0 && serialNum.dataLen <= 20);
+        ASSERT_NE(serialNum.data, NULL);
+        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(BSL_TIME)),
+            HITLS_X509_SUCCESS);
+        ASSERT_NE(time.year, 0);
+        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON,
+            &reason, sizeof(int32_t)), HITLS_X509_SUCCESS);
+        ASSERT_TRUE(reason >= 0 && reason <= 11);
+        reason = 0;
+        memset(&time, 0, sizeof(BSL_TIME));
+        memset(&serialNum, 0, sizeof(serialNum));
+    }
+exit:
+    HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    uint32_t version = 0;
+    BSL_TIME beforeTime = {0};
+    BSL_TIME afterTime = {0};
+    BslList *issuerDN = NULL;
+    BslList *revokeList = NULL;
+
+    // Parse the test CRL file
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, "../testdata/cert/pem/crl/crl_v2.mul3.crl", &crl),
+        HITLS_X509_SUCCESS);
+    ASSERT_NE(crl, NULL);
+
+    // Test getting the version number
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
+    // The CRL version should be 0 (v1) or 1 (v2)
+    ASSERT_TRUE(version == 1);
+
+    // Test getting the last update time
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_NE(beforeTime.year, 0);
+
+    // Test getting the next update time
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    // The next update time should be later than the last update time
+    ASSERT_TRUE(afterTime.month > beforeTime.month);
+
+    // Test getting the issuer DN name
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_NE(issuerDN, NULL);
+    ASSERT_NE(BSL_LIST_COUNT(issuerDN), 0);
+
+    // Test getting extensions (using CRL Number as an example)
+    ASSERT_NE(crl->tbs.crlExt.extList, NULL);
+    ASSERT_EQ(crl->tbs.crlExt.type, HITLS_X509_EXT_TYPE_CRL);
+    ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.crlExt.extList), 1);
+
+    // Test getting the revoke list
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_NE(revokeList, NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(revokeList), 3);
+
+exit:
+    HITLS_X509_CrlFree(crl);
+}
+
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
+{
+    uint8_t keyId[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+
+    HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+
+    // set CRL Number
+    HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
+        HITLS_X509_SUCCESS);
+    HITLS_X509_ExtCrlNumber crlNumExt = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)),
+        HITLS_X509_SUCCESS);
+    ASSERT_EQ(crlNumExt.critical, crlNumberExt.critical);
+    ASSERT_EQ(crlNumExt.crlNumber.dataLen, crlNumberExt.crlNumber.dataLen);
+    ASSERT_EQ(memcmp(crlNumExt.crlNumber.data, crlNumberExt.crlNumber.data, crlNumberExt.crlNumber.dataLen), 0);
+
+    HITLS_X509_ExtAki aki = {false, {keyId, sizeof(keyId)}, NULL, {NULL, 0}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    HITLS_X509_ExtAki getaki = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_AKI, &getaki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(getaki.critical, aki.critical);
+    ASSERT_EQ(getaki.kid.dataLen, aki.kid.dataLen);
+    ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
+
+exit:
+    HITLS_X509_CrlFree(crl);
+}
+
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
+{
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    BSL_TIME beforeTime = {0};
+    BSL_TIME afterTime = {0};
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_X509_SUCCESS);
+    ASSERT_NE(crl, NULL);
+    uint32_t version = 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
+    BslList *issuerDN = NULL;
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)),
+        HITLS_X509_SUCCESS);
+    ASSERT_NE(issuerDN, NULL);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+
+    afterTime = beforeTime;
+    afterTime.year += 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+
+    HITLS_X509_ExtSki ski = {0};
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
+    ASSERT_TRUE(ski.kid.data != NULL);
+    HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, cert->tbs.issuerName,
+        {cert->tbs.serialNum.buff, cert->tbs.serialNum.len}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
+              HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Sign_ParamCheck_TC001(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+
+    // Create a basic CRL object
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+
+    // Test null parameters
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, NULL, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, NULL, crl), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test invalid digest algorithm
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_UNKNOWN, pivKey, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_MAX, pivKey, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+
+exit:
+    HITLS_X509_CrlFree(crl);
+    CRYPT_EAL_PkeyFreeCtx(pivKey);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+
+    // Create a basic CRL object
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+
+    // Read private key file for signing
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
+
+    // Test missing RSA-PSS parameters
+    algParam.algId = BSL_CID_RSASSAPSS;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test invalid hash algorithm
+    algParam.rsaPss.mdId = (CRYPT_MD_AlgId)BSL_CID_UNKNOWN;
+    algParam.rsaPss.mgfId = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+    algParam.rsaPss.saltLen = 32;
+
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+
+    // Test invalid MGF1 hash algorithm
+    algParam.rsaPss.mdId = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+    algParam.rsaPss.mgfId = (CRYPT_MD_AlgId)BSL_CID_UNKNOWN;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+
+exit:
+    HITLS_X509_CrlFree(crl);
+    CRYPT_EAL_PkeyFreeCtx(pivKey);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Sign_CrlFieldCheck_TC001(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    BSL_TIME beforeTime = {0};
+    BSL_TIME afterTime = {0};
+
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der", &cert),
+        HITLS_X509_SUCCESS);
+
+    // Create a basic CRL object
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    BslList *issueList = crl->tbs.issuerName;
+    // Test CRL without necessary fields set
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
+        HITLS_X509_ERR_CRL_ISSUER_EMPTY);
+
+    // Set invalid version number
+    crl->tbs.version = 2;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
+        HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+    crl->tbs.version = 1;
+    crl->tbs.issuerName = cert->tbs.subjectName;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
+        HITLS_X509_ERR_CRL_THISUPDATE_UNEXIST);
+    // Set invalid time
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+
+    afterTime = beforeTime;
+    afterTime.year -= 1;  // Set to past time
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
+        HITLS_X509_ERR_CRL_TIME_INVALID);
+
+    // Set valid time but missing issuer
+    afterTime = beforeTime;
+    afterTime.year += 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    crl->tbs.issuerName = NULL;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_ISSUER_EMPTY);
+    crl->tbs.issuerName = cert->tbs.subjectName;
+    crl->tbs.version = 0;
+    BslList *extList = crl->tbs.crlExt.extList;
+    crl->tbs.crlExt.extList = cert->tbs.ext.extList;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+    crl->tbs.crlExt.extList = extList;
+exit:
+    crl->tbs.issuerName = issueList;
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(cert);
+    CRYPT_EAL_PkeyFreeCtx(pivKey);
+}
+/* END_CASE */
+
+static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
+{
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    serialNum[3] = ser;
+    HITLS_X509_CrlEntry *entry = HITLS_X509_CrlRevokedNew();
+    ASSERT_NE(entry, NULL);
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM,
+        serialNum, sizeof(serialNum)), HITLS_X509_SUCCESS);
+
+    BSL_TIME revokeTime = {0};
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&revokeTime), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)),
+        HITLS_X509_SUCCESS);
+    HITLS_X509_RevokeExtReason reason = {0, 1};  // keyCompromise
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason,
+        sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
+
+    // Set invalid time (optional)
+    BSL_TIME invalidTime = revokeTime;
+    invalidTime.day -= 1;  // Set invalid time to 1 day before revocation
+    HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
+        &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_X509_SUCCESS);
+
+    // Set certificate issuer (optional, only needed for indirect CRLs)
+    HITLS_X509_RevokeExtCertIssuer certIssuer = {
+        false,  // non-critical
+        issuerDN  // Use the same DN as CRL issuer for this test
+    };
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
+        &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, sizeof(HITLS_X509_CrlEntry)),
+        HITLS_X509_SUCCESS);
+    HITLS_X509_CrlRevokedFree(entry);
+    return HITLS_X509_SUCCESS;
+exit:
+    return -1;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    HITLS_X509_CrlEntry *entry = NULL;
+    BSL_TIME beforeTime = {0};
+    BSL_TIME afterTime = {0};
+
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der", &cert),
+        HITLS_X509_SUCCESS);
+
+    // Create a basic CRL object and set necessary fields
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    BslList *issueList = crl->tbs.issuerName;
+    // Set basic fields (version, time, issuer, etc.)
+    crl->tbs.version = 1;
+    crl->tbs.issuerName = cert->tbs.subjectName;
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+
+    afterTime = beforeTime;
+    afterTime.year += 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(SetCrlRevoked(crl, cert->tbs.subjectName, 1), HITLS_X509_SUCCESS);
+    entry = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
+    ASSERT_TRUE(entry != NULL);
+
+    crl->tbs.version = 0;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+
+    crl->tbs.version = 1;
+    uint8_t *serialNum = entry->serialNumber.buff;
+    entry->serialNumber.buff = NULL;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_ENTRY);
+
+    entry->serialNumber.buff = serialNum;
+    uint32_t year = entry->time.year;
+    entry->time.year = 0;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_TIME_INVALID);
+
+    entry->time.year = year;
+exit:
+    crl->tbs.issuerName = issueList;
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(cert);
+    CRYPT_EAL_PkeyFreeCtx(pivKey);
+}
+/* END_CASE */
+
+static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
+{
+    BSL_TIME beforeTime = {0};
+    BSL_TIME afterTime = {0};
+    BslList *issuerDN = NULL;
+    uint8_t crlNumber[1] = {0x01};
+    // Set CRL version (v2)
+    uint32_t version = 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
+
+    // Set issuer DN from certificate
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME, &issuerDN, sizeof(BslList *)),
+        HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)),
+        HITLS_X509_SUCCESS);
+
+    // Set validity period
+    ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)),
+        HITLS_X509_SUCCESS);
+
+    afterTime = beforeTime;
+    afterTime.year += 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
+        HITLS_X509_SUCCESS);
+    for (int i = 0; i < 3; i++) {
+        ASSERT_EQ(SetCrlRevoked(crl, issuerDN, i), HITLS_X509_SUCCESS);
+    }
+    if (isV2) {
+        HITLS_X509_ExtSki ski = {0};
+        int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki));
+        if (ret == HITLS_X509_SUCCESS) {
+            HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, NULL, {NULL, 0}};
+            // Set SKI extension
+            ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)),
+                HITLS_X509_SUCCESS);
+        }
+
+        // Set CRL Number extension
+        HITLS_X509_ExtCrlNumber crlNumberExt = {
+            false,  // non-critical
+            {crlNumber, sizeof(crlNumber)}
+        };
+        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt,
+            sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
+    }
+    return HITLS_X509_SUCCESS;
+exit:
+    return -1;
+}
+
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2,
+    char *tmp)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Crl *parseCrl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    (void)pkeyId;
+    TestRandInit();
+    // Parse issuer certificate and private key
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &pivKey), 0);
+
+    // Create and initialize CRL
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetCrl(crl, issuerCert, (bool)isV2), 0);
+    // Set signature algorithm parameters
+    if (pad == CRYPT_PKEY_EMSA_PSS) {
+        algParam.algId = BSL_CID_RSASSAPSS;
+        CRYPT_RSA_PssPara pssParam = {0};
+        pssParam.mdId = mdId;
+        pssParam.mgfId = mdId;
+        pssParam.saltLen = 32;
+        algParam.rsaPss = pssParam;
+    } else if (pad == CRYPT_PKEY_EMSA_PKCSV15) {
+        algParam.algId = BSL_CID_RSA;
+        algParam.pkcsV15.mdId = mdId;
+    }
+
+    if (pad == CRYPT_PKEY_EMSA_PSS || pad == CRYPT_PKEY_EMSA_PKCSV15) {
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, &algParam, crl), HITLS_X509_SUCCESS);
+    } else {
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_SUCCESS);
+    }
+
+    // Verify the signature is present
+    ASSERT_NE(crl->signature.buff, NULL);
+    ASSERT_NE(crl->signature.len, 0);
+    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_X509_SUCCESS);
+    ASSERT_NE(parseCrl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_X509_SUCCESS);
+    HITLS_X509_CrlFree(parseCrl);
+exit:
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(pivKey);
 }
 /* END_CASE */
