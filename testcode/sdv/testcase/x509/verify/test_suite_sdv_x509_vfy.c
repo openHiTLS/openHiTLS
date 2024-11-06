@@ -160,7 +160,7 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
     ret = HITLS_BuildChain(storeCtx->crl, 1, crl1, crl2, NULL, NULL, NULL);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
-    ret = HITLS_X509_CrlVerify(storeCtx, chain);
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain);
     ASSERT_EQ(ret, expResult);
 exit:
     HITLS_X509_FreeStoreCtxMock(storeCtx);

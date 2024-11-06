@@ -307,8 +307,8 @@ void SDV_HITLS_X509_CtrlCrl_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     HITLS_X509_Crl crl = {0};
     ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_CRL_REF_UP, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_CRL_REF_UP, &crl, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, &crl, 0), HITLS_X509_ERR_INVALID_PARAM);
 exit:
     BSL_GLOBAL_DeInit();
 }
@@ -531,19 +531,20 @@ void SDV_X509_EXT_SetBCons_TC001(void)
     ASSERT_NE(cert, NULL);
 
     HITLS_X509_Ext *ext = &cert->tbs.ext;
-    ASSERT_EQ(ext->extFlags, 0);
-    ASSERT_EQ(ext->isCa, false);
-    ASSERT_EQ(ext->maxPathLen, -1);
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)ext->extData;
+    ASSERT_EQ(certExt->extFlags, 0);
+    ASSERT_EQ(certExt->isCa, false);
+    ASSERT_EQ(certExt->maxPathLen, -1);
 
     HITLS_X509_ExtBCons bCons = {true, true, 1};
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_INVALID_PARAM);
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->list), 1);
-    ASSERT_NE(ext->extFlags & HITLS_X509_EXT_FLAG_BCONS, 0);
-    ASSERT_EQ(ext->isCa, true);
-    ASSERT_EQ(ext->maxPathLen, 1);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    ASSERT_NE(certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS, 0);
+    ASSERT_EQ(certExt->isCa, true);
+    ASSERT_EQ(certExt->maxPathLen, 1);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -575,10 +576,10 @@ void SDV_X509_EXT_SetAkiSki_TC001(Hex *kid)
     ski.kid.dataLen = kid->len;
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 0);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->list), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), 0);
-    ASSERT_NE(ext->extFlags & HITLS_X509_EXT_FLAG_SET, 0);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->list), 1 + 1);
+    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1 + 1);
 exit:
     HITLS_X509_CertFree(cert);
     BSL_GLOBAL_DeInit();
@@ -594,7 +595,8 @@ void SDV_X509_EXT_SetKeyUsage_TC001(void)
     ASSERT_NE(cert, NULL);
 
     HITLS_X509_Ext *ext = &cert->tbs.ext;
-    ASSERT_EQ(ext->keyUsage, 0);
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)ext->extData;
+    ASSERT_EQ(certExt->keyUsage, 0);
 
     HITLS_X509_ExtKeyUsage ku = {true, 0};
 
@@ -613,9 +615,9 @@ void SDV_X509_EXT_SetKeyUsage_TC001(void)
 
     ku.keyUsage = ~ku.keyUsage;
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->list), 1);
-    ASSERT_NE(ext->extFlags & HITLS_X509_EXT_FLAG_KUSAGE, 0);
-    ASSERT_NE(ext->extFlags & HITLS_X509_EXT_FLAG_SET, 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    ASSERT_NE(certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE, 0);
+    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -658,7 +660,7 @@ void SDV_X509_EXT_SetExtendKeyUsage_TC001(void)
     BSL_Buffer oidBuff = {(uint8_t *)oid->octs, oid->octetLen};
     ASSERT_EQ(BSL_LIST_AddElement(oidList, &oidBuff, BSL_LIST_POS_END), 0);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_EXKUSAGE, &exku, sizeof(HITLS_X509_ExtExKeyUsage)), 0);
-    ASSERT_NE(ext->extFlags & HITLS_X509_EXT_FLAG_SET, 0);
+    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -705,7 +707,7 @@ void SDV_X509_EXT_SetSan_TC001(void)
     HITLS_X509_GeneralName nomal = {HITLS_X509_GN_EMAIL, {(uint8_t *)email, (uint32_t)strlen(email)}};
     ASSERT_EQ(BSL_LIST_AddElement(list, &nomal, BSL_LIST_POS_END), 0);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), 0);
-    ASSERT_NE(ext->extFlags & HITLS_X509_EXT_FLAG_SET, 0);
+    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -727,7 +729,7 @@ void SDV_X509_EXT_EncodeBCons_TC001(int critical, int isCa, int maxPathLen, Hex 
     ASSERT_NE(cert, NULL);
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.list, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: bCons", encode.buff, encode.len, expect->x, expect->len);
 exit:
@@ -755,7 +757,7 @@ void SDV_X509_EXT_EncodeExtendKeyUsage_TC001(int critical, Hex *oid1, Hex *oid2,
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_SET_EXKUSAGE, &exku, sizeof(HITLS_X509_ExtExKeyUsage)),
               0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.list, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: extendKeyUsage", encode.buff, encode.len, expect->x, expect->len);
 
@@ -803,7 +805,7 @@ void SDV_X509_EXT_EncodeSan_TC001(int critical, int type1, int type2, int type3,
 
     // set san and encode ext
     ASSERT_EQ(HITLS_X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.list, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: san", encode.buff, encode.len, expect->x, expect->len);
 
@@ -829,7 +831,7 @@ void SDV_X509_EXT_EncodeKeyUsage_TC001(int critical, int usage, Hex *expect)
     ASSERT_NE(cert, NULL);
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.list, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: keyUsage", encode.buff, encode.len, expect->x, expect->len);
 exit:
@@ -854,7 +856,7 @@ void SDV_X509_EXT_EncodeAKiSki_TC001(int critical1, int critical2, Hex *kid1, He
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), 0);
     ASSERT_EQ(HITLS_X509_ExtCtrl(&cert->tbs.ext, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.list, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext:aki ski", encode.buff, encode.len, expect->x, expect->len);
 exit:
@@ -1027,7 +1029,7 @@ void SDV_X509_EXT_GetSki_TC001(Hex *encode, int ret, int critical, Hex *kid)
     bool getIsExist;
     HITLS_X509_ExtSki ski = {0};
 
-    HITLS_X509_Ext *ext = HITLS_X509_ExtNew();
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
     ASSERT_NE(ext, NULL);
     ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), 0);
 
@@ -1039,6 +1041,6 @@ void SDV_X509_EXT_GetSki_TC001(Hex *encode, int ret, int critical, Hex *kid)
     ASSERT_COMPARE("Get ski", ski.kid.data, ski.kid.dataLen, kid->x, kid->len);
 
 exit:
-    HITLS_X509_ExtFree(ext);
+    HITLS_X509_ExtFree(ext, true);
 }
 /* END_CASE */
