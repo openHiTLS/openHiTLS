@@ -118,6 +118,12 @@ parse_option()
             "shared")
                 LIB_TYPE="shared"
                 ;;
+            "libfuzzer")
+                add_options="${add_options} -fsanitize=fuzzer-no-link -fsanitize=signed-integer-overflow -fsanitize-coverage=trace-cmp"
+                del_options="${del_options} -Wtrampolines -O2 -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fomit-frame-pointer -fdump-rtl-expand"
+                export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1:log_path=asan.log
+                export CC=clang
+                ;;
             "help")
                 printf "%-50s %-30s\n" "Build openHiTLS Code"                      "sh build_hitls.sh"
                 printf "%-50s %-30s\n" "Build openHiTLS Code With Gcov"            "sh build_hitls.sh gcov"
