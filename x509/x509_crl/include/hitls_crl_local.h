@@ -26,15 +26,16 @@
 extern "C" {
 #endif
 
-typedef struct {
-    BSL_ASN1_List *extList;
-} HITLS_X509_CrlExt;
+#define HITLS_X509_CRL_PARSE_FLAG  0x01
+#define HITLS_X509_CRL_GEN_FLAG    0x02
 
-typedef struct {
+#define BSL_TIME_REVOKE_TIME_IS_GMT  0x4
+
+typedef struct _HITLS_X509_CrlEntry {
     uint8_t flag;
     BSL_ASN1_Buffer serialNumber;
     BSL_TIME time;
-    BSL_ASN1_Buffer entryExt;
+    BSL_ASN1_List *extList;
 } HITLS_X509_CrlEntry;
 
 typedef struct {
@@ -48,11 +49,11 @@ typedef struct {
     HITLS_X509_ValidTime validTime;
 
     BSL_ASN1_List *revokedCerts;
-    HITLS_X509_CrlExt crlExt;
+    HITLS_X509_Ext crlExt;
 } HITLS_X509_CrlTbs;
 
 typedef struct _HITLS_X509_Crl {
-    bool isCopy;
+    uint8_t flag;
     uint8_t *rawData;
     uint32_t rawDataLen;
     HITLS_X509_CrlTbs tbs;
@@ -61,9 +62,7 @@ typedef struct _HITLS_X509_Crl {
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
-HITLS_X509_Crl *HITLS_X509_CrlNew(void);
 int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist);
-int32_t HITLS_X509_EncodeCrlTbs(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *asn);
 #ifdef __cplusplus
 }
 #endif

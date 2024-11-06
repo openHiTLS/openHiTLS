@@ -164,17 +164,16 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
     }
 
     if (cert->flag == HITLS_X509_CERT_GEN_FLAG) {
-        BSL_LIST_FREE(cert->tbs.ext.list, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
         BSL_SAL_FREE(cert->tbs.serialNum.buff);
         BSL_SAL_FREE(cert->tbs.tbsRawData);
         BSL_SAL_FREE(cert->signature.buff);
         BSL_LIST_FREE(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
         BSL_LIST_FREE(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
     } else {
-        BSL_LIST_FREE(cert->tbs.ext.list, NULL);
         BSL_LIST_FREE(cert->tbs.issuerName, NULL);
         BSL_LIST_FREE(cert->tbs.subjectName, NULL);
     }
+    X509_ExtFree(&cert->tbs.ext, false);
     BSL_SAL_FREE(cert->rawData);
     CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
     CRYPT_EAL_PkeyFreeCtx(cert->ealPrivKey);
@@ -188,7 +187,7 @@ HITLS_X509_Cert *HITLS_X509_CertNew(void)
     HITLS_X509_Cert *cert = NULL;
     BSL_ASN1_List *issuerName = NULL;
     BSL_ASN1_List *subjectName = NULL;
-    BSL_ASN1_List *extList = NULL;
+    HITLS_X509_Ext *ext = NULL;
     cert = (HITLS_X509_Cert *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Cert));
     if (cert == NULL) {
         return NULL;
@@ -203,15 +202,14 @@ HITLS_X509_Cert *HITLS_X509_CertNew(void)
     if (subjectName == NULL) {
         goto ERR;
     }
-    extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry));
-    if (extList == NULL) {
+
+    ext = X509_ExtNew(&cert->tbs.ext, HITLS_X509_EXT_TYPE_CERT);
+    if (ext == NULL) {
         goto ERR;
     }
     BSL_SAL_ReferencesInit(&(cert->references));
     cert->tbs.issuerName = issuerName;
     cert->tbs.subjectName = subjectName;
-    cert->tbs.ext.list = extList;
-    cert->tbs.ext.maxPathLen = -1;
     cert->flag = HITLS_X509_CERT_GEN_FLAG;
     return cert;
 ERR:
@@ -292,13 +290,12 @@ ERR:
     return ret;
 }
 
-int32_t HITLS_X509_ParseAsn1Cert(bool isCopy, uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Cert *cert)
+int32_t HITLS_X509_ParseAsn1Cert(uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Cert *cert)
 {
     uint8_t *temp = *encode;
     uint32_t tempLen = *encodeLen;
-    if (isCopy) {
-        cert->flag = HITLS_X509_CERT_PARSE_FLAG;
-    }
+    cert->flag = HITLS_X509_CERT_PARSE_FLAG;
+
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CERT_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_certTempl, sizeof(g_certTempl) / sizeof(g_certTempl[0])};
@@ -317,8 +314,7 @@ int32_t HITLS_X509_ParseAsn1Cert(bool isCopy, uint8_t **encode, uint32_t *encode
     // parse tbs
     ret = HITLS_X509_ParseCertTbs(asnArr, cert);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "cert: failed to parse tbs.", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // parse sign alg
@@ -345,7 +341,7 @@ ERR:
     cert->tbs.ealPubKey = NULL;
     BSL_LIST_DeleteAll(cert->tbs.issuerName, NULL);
     BSL_LIST_DeleteAll(cert->tbs.subjectName, NULL);
-    BSL_LIST_DeleteAll(cert->tbs.ext.list, NULL);
+    BSL_LIST_DeleteAll(cert->tbs.ext.extList, NULL);
     return ret;
 }
 
@@ -440,7 +436,8 @@ static int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valL
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    *val = (cert->tbs.ext.keyUsage & exp);
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    *val = (certExt->keyUsage & exp);
     return HITLS_X509_SUCCESS;
 }
 
@@ -654,16 +651,6 @@ static int32_t X509_GetAsn1BslTimeStr(HITLS_X509_Cert *cert, BSL_Buffer *val, in
     }
 }
 
-static int32_t X509_GetCertExt(HITLS_X509_Ext *ext, HITLS_X509_Ext **val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(HITLS_X509_Ext *)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    *val = ext;
-    return HITLS_X509_SUCCESS;
-}
-
 static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen)
 {
     switch (cmd) {
@@ -683,14 +670,14 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return X509_GetDistinguishNameStr(cert, val, HITLS_X509_SUBJECT_DN_NAME);
         case HITLS_X509_GET_ISSUER_DNNAME_STR:
             return X509_GetDistinguishNameStr(cert, val, HITLS_X509_ISSUER_DN_NAME);
-        case HITLS_X509_GET_SERIALNUM:
+        case HITLS_X509_GET_SERIALNUM_STR:
             return X509_GetSerialNumStr(cert, val);
+        case HITLS_X509_GET_SERIALNUM:
+            return HITLS_X509_GetSerial(&cert->tbs.serialNum, val, valLen);
         case HITLS_X509_GET_BEFORE_TIME:
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_BEFORE_TIME);
         case HITLS_X509_GET_AFTER_TIME:
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_AFTER_TIME);
-        case HITLS_X509_GET_EXT:
-            return X509_GetCertExt(&cert->tbs.ext, val, valLen);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -752,7 +739,7 @@ static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
     }
     HITLS_X509_Ext *csrExt = (HITLS_X509_Ext *)attr.value;
     ret = HITLS_X509_ExtReplace(ext, csrExt);
-    HITLS_X509_ExtFree(csrExt);
+    X509_ExtFree(csrExt, true);
     return ret;
 }
 
@@ -833,14 +820,27 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
         return HITLS_X509_RefUp(&cert->references, val, valLen);
     } else if (cmd >= HITLS_X509_GET_ENCODELEN && cmd < HITLS_X509_SET_VERSION) {
         return X509_CertGetCtrl(cert, cmd, val, valLen);
-    } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
+    } else if (cmd >= HITLS_X509_SET_VERSION && cmd < HITLS_X509_EXT_KU_KEYENC) {
         if (cert->flag == HITLS_X509_CERT_PARSE_FLAG) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_AFTER_PARSE);
             return HITLS_X509_ERR_SET_AFTER_PARSE;
         }
         return X509_CertSetCtrl(cert, cmd, val, valLen);
-    } else {
+    } else if (cmd >= HITLS_X509_EXT_KU_KEYENC && cmd < HITLS_X509_EXT_SET_SKI) {
         return X509_CertExtCtrl(cert, cmd, val, valLen);
+    } else if (cmd <= HITLS_X509_EXT_CHECK_SKI) {
+        static int32_t cmdSet[] = {HITLS_X509_EXT_SET_SKI, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_SET_KUSAGE,
+            HITLS_X509_EXT_SET_SAN, HITLS_X509_EXT_SET_BCONS, HITLS_X509_EXT_SET_EXKUSAGE, HITLS_X509_EXT_GET_SKI,
+            HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_CHECK_SKI, HITLS_X509_EXT_KU_KEYENC, HITLS_X509_EXT_KU_DIGITALSIGN,
+            HITLS_X509_EXT_KU_CERTSIGN, HITLS_X509_EXT_KU_KEYAGREEMENT};
+        if (!X509_CheckCmdVaild(cmdSet, sizeof(cmdSet) / sizeof(int32_t), cmd)) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_SUPPORT);
+            return HITLS_X509_ERR_EXT_NOT_SUPPORT;
+        }
+        return X509_ExtCtrl(&cert->tbs.ext, cmd, val, valLen);
+    } else {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
     }
 }
 
@@ -871,17 +871,29 @@ int32_t HITLS_X509_CertDup(HITLS_X509_Cert *src, HITLS_X509_Cert **dest)
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res)
 {
     int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
-    if (ret != 0) {
+    if (ret != HITLS_X509_SUCCESS) {
         *res = false;
         return HITLS_X509_SUCCESS;
     }
+    if (issue->tbs.version == HITLS_CERT_VERSION_3 && subject->tbs.version == HITLS_CERT_VERSION_3) {
+        ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
+        if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+            return ret;
+        }
+        if (ret == HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+            *res = false;
+            return HITLS_X509_SUCCESS;
+        }
+    }
+
     /**
      * If the basic constraints extension is not present in a version 3 certificate,
      * or the extension is present but the cA boolean is not asserted,
      * then the certified public key MUST NOT be used to verify certificate signatures.
      */
-    if (issue->tbs.version == HITLS_CERT_VERSION_3 && !(issue->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_BCONS) &&
-        !issue->tbs.ext.isCa) {
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)issue->tbs.ext.extData;
+    if (issue->tbs.version == HITLS_CERT_VERSION_3 && !(certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) &&
+        !certExt->isCa) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_CA);
         return HITLS_X509_ERR_CERT_NOT_CA;
     }
@@ -896,8 +908,8 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
      * in certificates that contain public keys that are used to validate digital signatures on
      * other public key certificates or CRLs.
      */
-    if (issue->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_KUSAGE) {
-        if (((issue->tbs.ext.keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN)) == 0) {
+    if (certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) {
+        if (((certExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN)) == 0) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
             return HITLS_X509_ERR_VFY_KU_NO_CERTSIGN;
         }
@@ -909,11 +921,12 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
 int32_t HITLS_X509_CertIsCA(HITLS_X509_Cert *cert, bool *res)
 {
     *res = true;
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
     if (cert->tbs.version == HITLS_CERT_VERSION_3) {
-        if (!(cert->tbs.ext.extFlags & HITLS_X509_EXT_FLAG_BCONS)) {
+        if (!(certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS)) {
             *res = false;
         } else {
-            *res = cert->tbs.ext.isCa;
+            *res = certExt->isCa;
         }
     }
     return HITLS_X509_SUCCESS;
@@ -944,7 +957,7 @@ static int32_t EncodeTbsItems(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *issuer, 
 
     if (tbs->version == HITLS_CERT_VERSION_3) {
         ret = HITLS_X509_EncodeExt(BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
-            HITLS_CERT_CTX_SPECIFIC_TAG_EXTENSION, tbs->ext.list, ext);
+            HITLS_CERT_CTX_SPECIFIC_TAG_EXTENSION, tbs->ext.extList, ext);
         if (ret != HITLS_X509_SUCCESS) {
             BSL_SAL_Free(issuer->buff);
             BSL_SAL_Free(subject->buff);
@@ -1088,7 +1101,7 @@ static int32_t CheckCertValid(HITLS_X509_Cert *cert)
     if (cert == NULL) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (BSL_LIST_COUNT(cert->tbs.ext.list) != 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
+    if (BSL_LIST_COUNT(cert->tbs.ext.extList) != 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
         return HITLS_X509_ERR_CERT_INACCURACY_VERSION;
     }
     if (cert->tbs.serialNum.buff == NULL || cert->tbs.serialNum.len == 0) {

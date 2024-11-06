@@ -57,10 +57,15 @@ extern "C" {
 #define BSL_TIME_BEFORE_IS_UTC      0x04
 #define BSL_TIME_AFTER_IS_UTC       0x08
 
+/* Identifies the current ext as a parsed state */
 #define HITLS_X509_EXT_FLAG_PARSE (1 << 0)
-#define HITLS_X509_EXT_FLAG_SET (1 << 1)
-#define HITLS_X509_EXT_FLAG_KUSAGE (1 << 2)
-#define HITLS_X509_EXT_FLAG_BCONS (1 << 3)
+/* Identifies the current ext as a generated state */
+#define HITLS_X509_EXT_FLAG_GEN (1 << 1)
+
+/* Identifies the keyusage extension in the current structure */
+#define HITLS_X509_EXT_FLAG_KUSAGE (1 << 0)
+/* Identifies the basic constraints extension in the current structure */
+#define HITLS_X509_EXT_FLAG_BCONS (1 << 1)
 
 #define HITLS_X509_GN_OTHER (HITLS_X509_GN_IP + 1)
 #define HITLS_X509_GN_X400  (HITLS_X509_GN_OTHER + 1)
@@ -80,15 +85,26 @@ typedef struct _HITLS_X509_ExtEntry {
     BSL_ASN1_Buffer extnValue;
 } HITLS_X509_ExtEntry;
 
-typedef struct _HITLS_X509_Ext {
-    BslList *list;
-    uint32_t extFlags;
+typedef struct _HITLS_X509_CertExt {
+    uint32_t extFlags; // Indicates which extensions exist
     // basic usage ext
     bool isCa;
     // -1 no check, 0 no intermediate certificate
     int32_t maxPathLen;
     // key usage ext
     uint32_t keyUsage;
+} HITLS_X509_CertExt;
+
+typedef enum {
+    HITLS_X509_EXT_TYPE_CERT = 1,
+    HITLS_X509_EXT_TYPE_CRL,
+} HITLS_X509_ExtInnerType;
+
+typedef struct _HITLS_X509_Ext {
+    uint32_t flag; // Identifies the status of the current ext, generate or parse
+    BslList *extList;
+    uint32_t type;
+    void *extData;
 } HITLS_X509_Ext;
 
 typedef struct _HITLS_X509_AttrEntry {
@@ -110,7 +126,7 @@ typedef struct _HITLS_X509_Asn1AlgId {
     };
 } HITLS_X509_Asn1AlgId;
 
-typedef int32_t (*HITLS_X509_Asn1Parse)(bool isCopy, uint8_t **encode, uint32_t *encodeLen, void *out);
+typedef int32_t (*HITLS_X509_Asn1Parse)(uint8_t **encode, uint32_t *encodeLen, void *out);
 typedef void *(*HITLS_X509_New)(void);
 typedef void (*HITLS_X509_Free)(void *elem);
 
@@ -145,8 +161,6 @@ void HITLS_X509_ClearGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
 
-void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
-
 int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtSki *ski);
 
 int32_t HITLS_X509_ParseExtendedKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtExKeyUsage *exku);
@@ -157,9 +171,9 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry,  HITLS_X50
 
 void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san);
 
-HITLS_X509_Ext *HITLS_X509_ExtNew(void);
+HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type);
 
-void HITLS_X509_ExtFree(HITLS_X509_Ext *ext);
+void X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut);
 
 int32_t HITLS_X509_ParseExt(BSL_ASN1_Buffer *ext, HITLS_X509_Ext *certExt);
 
@@ -214,6 +228,33 @@ int32_t HITLS_X509_SetRsaPssPara(CRYPT_EAL_PkeyCtx *privKey, void *val, int32_t 
 int32_t HITLS_X509_SetSignMdId(CRYPT_MD_AlgId *mdAlgId, void *val, int32_t valLen);
 
 int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src);
+
+int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen);
+
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen);
+
+typedef int32_t (*EncodeExtCb)(void *, HITLS_X509_ExtEntry *, const void *);
+
+int32_t HITLS_X509_SetExtList(void *param, BslList *extList, BslCid cid, BSL_Buffer *val, EncodeExtCb encodeExt);
+
+typedef int32_t (*DecodeExtCb)(HITLS_X509_ExtEntry *, void *);
+
+int32_t HITLS_X509_GetExt(BslList *ext, BslCid cid, BSL_Buffer *val, uint32_t expectLen, DecodeExtCb decodeExt);
+
+HITLS_X509_ExtEntry *X509_DupExtEntry(const HITLS_X509_ExtEntry *src);
+
+int32_t X509_SetSignAlgParm(CRYPT_EAL_PkeyCtx *signKey, const HITLS_X509_SignAlgParam *algParam);
+
+bool X509_IsValidHashAlg(CRYPT_MD_AlgId id);
+
+int32_t HITLS_X509_EncodeExtEntry(BSL_ASN1_List *list, BSL_ASN1_Buffer *ext);
+
+int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName,
+    BSL_ASN1_Buffer *serialNum);
+
+bool X509_CheckCmdVaild(int32_t *cmdSet, uint32_t cmdSize, int32_t cmd);
+
+int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen);
 
 #ifdef __cplusplus
 }

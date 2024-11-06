@@ -51,7 +51,7 @@ int32_t HITLS_X509_VerifyParamAndExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_L
  * Verify the CRL, which is the default full certificate chain validation.
  * You can configure not to verify or only verify the terminal certificate
  */
-int32_t HITLS_X509_CrlVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
+int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
 
 #ifdef __cplusplus
 }
