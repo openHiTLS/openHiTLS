@@ -1017,7 +1017,7 @@ void SDV_X509_CERT_GEN_BUFF_API_TC001(void)
 
     cert->tbs.version = HITLS_CERT_VERSION_1;
     cert->tbs.ext.list->count = 1;
-    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_INACCRACY_VERSION);
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_INACCURACY_VERSION);
 
 exit:
     HITLS_X509_CertFree(cert);
