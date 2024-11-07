@@ -78,7 +78,7 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
     (void)config;
     *num = 0;
     HITLS_X509_List *certChain = NULL;
-    int32_t ret = HITLS_X509_CertChainBuild((HITLS_X509_StoreCtx *)store, cert, &certChain);
+    int32_t ret = HITLS_X509_CertChainBuild((HITLS_X509_StoreCtx *)store, false, cert, &certChain);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
