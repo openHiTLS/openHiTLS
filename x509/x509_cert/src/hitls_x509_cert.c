@@ -653,16 +653,6 @@ static int32_t X509_GetAsn1BslTimeStr(HITLS_X509_Cert *cert, BSL_Buffer *val, in
     }
 }
 
-static int32_t X509_GetCertExt(HITLS_X509_Ext *ext, HITLS_X509_Ext **val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(HITLS_X509_Ext *)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    *val = ext;
-    return HITLS_X509_SUCCESS;
-}
-
 static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen)
 {
     switch (cmd) {
@@ -690,8 +680,6 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_BEFORE_TIME);
         case HITLS_X509_GET_AFTER_TIME:
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_AFTER_TIME);
-        case HITLS_X509_GET_EXT:
-            return X509_GetCertExt(&cert->tbs.ext, val, valLen);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -834,14 +822,16 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
         return HITLS_X509_RefUp(&cert->references, val, valLen);
     } else if (cmd >= HITLS_X509_GET_ENCODELEN && cmd < HITLS_X509_SET_VERSION) {
         return X509_CertGetCtrl(cert, cmd, val, valLen);
-    } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
+    } else if (cmd >= HITLS_X509_SET_VERSION && cmd < HITLS_X509_EXT_KU_KEYENC) {
         if (cert->flag == HITLS_X509_CERT_PARSE_FLAG) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_AFTER_PARSE);
             return HITLS_X509_ERR_SET_AFTER_PARSE;
         }
         return X509_CertSetCtrl(cert, cmd, val, valLen);
-    } else {
+    } else if (cmd >= HITLS_X509_EXT_KU_KEYENC && cmd < HITLS_X509_EXT_SET_SKI) {
         return X509_CertExtCtrl(cert, cmd, val, valLen);
+    } else {
+        return HITLS_X509_ExtCtrl(&cert->tbs.ext, cmd, val, valLen);
     }
 }
 

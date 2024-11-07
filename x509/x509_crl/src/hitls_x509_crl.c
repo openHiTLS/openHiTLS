@@ -913,16 +913,6 @@ static int32_t X509_CrlGetVersion(HITLS_X509_Crl *crl, int32_t *val, int32_t val
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_CrlGetExt(HITLS_X509_Ext *ext, HITLS_X509_Ext **val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(HITLS_X509_Ext *)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    *val = ext;
-    return HITLS_X509_SUCCESS;
-}
-
 static int32_t X509_CrlGetRevokeList(HITLS_X509_Crl *crl, BSL_ASN1_List **val, int32_t valLen)
 {
     if (val == NULL || valLen != sizeof(BSL_ASN1_List *)) {
@@ -951,8 +941,6 @@ static int32_t X509_CrlGetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int3
             return X509_CrlGetNextUpdate(crl, val, valLen);
         case HITLS_X509_GET_ISSUER_DNNAME:
             return HITLS_X509_GetList(crl->tbs.issuerName, val, valLen);
-        case HITLS_X509_GET_EXT:
-            return X509_CrlGetExt(&crl->tbs.crlExt, val, valLen);
         case HITLS_X509_GET_REVOKELIST:
             return X509_CrlGetRevokeList(crl, val, valLen);
         default:
@@ -1142,6 +1130,7 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
         return X509_CrlSetCtrl(crl, cmd, val, valLen);
     } else {
+
         return HITLS_X509_ExtCtrl(&crl->tbs.crlExt, cmd, val, valLen);
     }
 }
@@ -1441,13 +1430,10 @@ int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, voi
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (cmd >= HITLS_X509_CRL_SET_REVOKED_SERIALNUM && cmd < HITLS_X509_CRL_GET_REVOKED_SERIALNUM) {
+    if (cmd < HITLS_X509_CRL_GET_REVOKED_SERIALNUM) {
         return RevokedSet(revoked, cmd, val, valLen);
-    } else if (cmd >= HITLS_X509_CRL_GET_REVOKED_SERIALNUM && cmd <= HITLS_X509_CRL_GET_REVOKED_CERTISSUER) {
-        return RevokedGet(revoked, cmd, val, valLen);
     } else {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+        return RevokedGet(revoked, cmd, val, valLen);
     }
 }
 

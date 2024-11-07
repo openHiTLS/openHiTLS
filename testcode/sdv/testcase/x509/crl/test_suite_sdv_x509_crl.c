@@ -660,12 +660,9 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     ASSERT_NE(BSL_LIST_COUNT(issuerDN), 0);
 
     // 测试获取扩展项（以 CRL Number 为例）
-    HITLS_X509_Ext *ext = NULL;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_EXT, &ext, sizeof(HITLS_X509_Ext *)), HITLS_X509_SUCCESS);
-    ASSERT_NE(ext, NULL);
-    ASSERT_EQ(ext->type, HITLS_X509_EXT_TYPE_CRL);
-    ASSERT_NE(ext->extList, NULL);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    ASSERT_NE(crl->tbs.crlExt.extList, NULL);
+    ASSERT_EQ(crl->tbs.crlExt.type, HITLS_X509_EXT_TYPE_CRL);
+    ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.crlExt.extList), 1);
 
     // 测试获取吊销列表
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_X509_SUCCESS);
@@ -718,8 +715,6 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
     HITLS_X509_Cert *cert = NULL;
-    HITLS_X509_Ext *certExt = NULL;
-    HITLS_X509_Ext *ext = NULL;
     HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_X509_SUCCESS);
     ASSERT_NE(crl, NULL);
@@ -735,19 +730,10 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     afterTime = beforeTime;
     afterTime.year += 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_EXT, &certExt, sizeof(HITLS_X509_Ext *)), HITLS_X509_SUCCESS);
-    ASSERT_NE(certExt, NULL);
-    ASSERT_EQ(certExt->type, HITLS_X509_EXT_TYPE_CERT);
-    ASSERT_NE(certExt->extList, NULL);
-    HITLS_X509_ExtSki ski = {0};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(certExt, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
-    ASSERT_TRUE(ski.kid.data != NULL);
 
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_EXT, &ext, sizeof(HITLS_X509_Ext *)), HITLS_X509_SUCCESS);
-    ASSERT_NE(ext, NULL);
-    ASSERT_EQ(ext->type, HITLS_X509_EXT_TYPE_CRL);
-    ASSERT_NE(ext->extList, NULL);
-    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 0);
+    HITLS_X509_ExtSki ski = {0};
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
+    ASSERT_TRUE(ski.kid.data != NULL);
     HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, cert->tbs.issuerName, {cert->tbs.serialNum.buff, cert->tbs.serialNum.len}};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
@@ -970,8 +956,7 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     BSL_TIME afterTime = {0};
     BslList *issuerDN = NULL;
     uint8_t crlNumber[1] = {0x01}; 
-    HITLS_X509_Ext *certExt = NULL;
-     // Set CRL version (v2)
+    // Set CRL version (v2)
     uint32_t version = 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
 
@@ -994,10 +979,8 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
         ASSERT_EQ(SetCrlRevoked(crl, issuerDN, i), HITLS_X509_SUCCESS);
     }
     if (isV2) {
-        ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_EXT, &certExt, sizeof(HITLS_X509_Ext *)), 
-            HITLS_X509_SUCCESS);
         HITLS_X509_ExtSki ski = {0};
-        int32_t ret = HITLS_X509_ExtCtrl(certExt, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki));
+        int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki));
         if (ret == HITLS_X509_SUCCESS) {
             HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, NULL, {NULL, 0}};
             // Set SKI extension
