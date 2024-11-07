@@ -38,7 +38,7 @@ typedef struct {
     BSL_HASH_Hash *hash;                // Hash table
     uint32_t attributeNum;              // Number of attributes
     uint32_t mustAttributeNum;          // Number of mandatory attributes
-    uint32_t repentSign;                // Repeat search flag
+    bool repeatFlag;                    // Repeat search flag
 } InputAttributeStrInfo;
 
 // Define the data structure for values
@@ -409,7 +409,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
     BSL_HASH_Hash *hash = attrInfo.hash;
     uint32_t attributeNum = attrInfo.attributeNum;
     uint32_t mustAttributeNum = attrInfo.mustAttributeNum;
-    uint32_t repentSign = attrInfo.repentSign;
+    uint32_t repeatFlag = attrInfo.repeatFlag;
 
     CRYPT_EAL_ProvMgrCtx *node = BSL_LIST_GET_FIRST(localCtx->providers);
     for (; node!= NULL; node = BSL_LIST_GET_NEXT(localCtx->providers)) {
@@ -435,7 +435,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
             totalScore = tempScore;
             *implFunc = algInfos[index].implFunc;
             *ctx = node->provCtx;
-            if (repentSign) {
+            if (repeatFlag) {
                 continue;
             }
             return;
@@ -457,7 +457,7 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
         if (ret != BSL_SUCCESS) {
             return ret;
         }
-        attrInfo.repentSign = (attrInfo.attributeNum != attrInfo.mustAttributeNum) ? 1 : 0;
+        attrInfo.repeatFlag = (attrInfo.attributeNum != attrInfo.mustAttributeNum) ? true : false;
     }
     ret = BSL_SAL_ThreadWriteLock(localCtx->lock);
     if (ret != BSL_SUCCESS) {

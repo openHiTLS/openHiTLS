@@ -29,7 +29,7 @@ int32_t CRYPT_EAL_GetFuncsFromProvider(CRYPT_EAL_LibCtx *libCtx, int32_t operaId
     if (localCtx == NULL) {
         localCtx = g_libCtx;
     }
-    if (localCtx == NULL) {
+    if (localCtx == NULL || strlen(attribute) > (INT32_MAX/2)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
