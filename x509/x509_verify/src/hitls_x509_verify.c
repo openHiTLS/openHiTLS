@@ -482,39 +482,9 @@ static HITLS_X509_List *X509_NewCertChain(HITLS_X509_Cert *cert)
     return tmpChain;
 }
 
-int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_List **chain)
+static int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert,
+    HITLS_X509_List **chain)
 {
-    if (storeCtx == NULL || cert == NULL || chain == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
-        return HITLS_INVALID_INPUT;
-    }
-    HITLS_X509_List *tmpChain = X509_NewCertChain(cert);
-    if (tmpChain == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
-    bool selfSigned = false;
-    int32_t ret = X509_SelfSigned(cert, &selfSigned);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        return ret;
-    }
-    if (selfSigned) {
-        *chain = tmpChain;
-        return HITLS_X509_SUCCESS;
-    }
-    (void)X509_BuildChain(storeCtx, NULL, cert, tmpChain, NULL);
-    *chain = tmpChain;
-
-    return HITLS_X509_SUCCESS;
-}
-
-int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_List **chain)
-{
-    if (storeCtx == NULL || cert == NULL || chain == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
-        return HITLS_INVALID_INPUT;
-    }
     HITLS_X509_List *tmpChain = X509_NewCertChain(cert);
     if (tmpChain == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
@@ -538,6 +508,37 @@ int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, HITLS_X
         }
     }
     *chain = tmpChain;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot, HITLS_X509_Cert *cert,
+    HITLS_X509_List **chain)
+{
+    if (storeCtx == NULL || cert == NULL || chain == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
+        return HITLS_INVALID_INPUT;
+    }
+    if (isWithRoot) {
+        return HITLS_X509_CertChainBuildWithRoot(storeCtx, cert, chain);
+    }
+    HITLS_X509_List *tmpChain = X509_NewCertChain(cert);
+    if (tmpChain == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    bool selfSigned = false;
+    int32_t ret = X509_SelfSigned(cert, &selfSigned);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        return ret;
+    }
+    if (selfSigned) {
+        *chain = tmpChain;
+        return HITLS_X509_SUCCESS;
+    }
+    (void)X509_BuildChain(storeCtx, NULL, cert, tmpChain, NULL);
+    *chain = tmpChain;
+
     return HITLS_X509_SUCCESS;
 }
 
