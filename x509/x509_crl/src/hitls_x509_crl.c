@@ -247,7 +247,8 @@ static int32_t DecodeCrlRevokeExt(BSL_ASN1_Buffer *asnArr, HITLS_X509_CrlEntry *
     }
     uint8_t expTag = (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE);
     BSL_ASN1_DecodeListParam listParam = {1, &expTag};
-    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, asnArr, (BSL_ASN1_ParseListAsnItem)HITLS_CRL_ParseExtAsnItem, NULL, list);
+    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, asnArr, (BSL_ASN1_ParseListAsnItem)HITLS_CRL_ParseExtAsnItem,
+        NULL, list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
         return ret;
@@ -430,7 +431,8 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    (void)memset_s(asnBuf, count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER,0, count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
+    (void)memset_s(asnBuf, count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER,0,
+        count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
     HITLS_X509_CrlEntry *crlEntry = NULL;
     uint32_t iter = 0;
     uint32_t ret;
@@ -913,16 +915,6 @@ static int32_t X509_CrlGetVersion(HITLS_X509_Crl *crl, int32_t *val, int32_t val
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_CrlGetExt(HITLS_X509_Ext *ext, HITLS_X509_Ext **val, int32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(HITLS_X509_Ext *)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    *val = ext;
-    return HITLS_X509_SUCCESS;
-}
-
 static int32_t X509_CrlGetRevokeList(HITLS_X509_Crl *crl, BSL_ASN1_List **val, int32_t valLen)
 {
     if (val == NULL || valLen != sizeof(BSL_ASN1_List *)) {
@@ -951,8 +943,6 @@ static int32_t X509_CrlGetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int3
             return X509_CrlGetNextUpdate(crl, val, valLen);
         case HITLS_X509_GET_ISSUER_DNNAME:
             return HITLS_X509_GetList(crl->tbs.issuerName, val, valLen);
-        case HITLS_X509_GET_EXT:
-            return X509_CrlGetExt(&crl->tbs.crlExt, val, valLen);
         case HITLS_X509_GET_REVOKELIST:
             return X509_CrlGetRevokeList(crl, val, valLen);
         default:
@@ -1016,7 +1006,8 @@ static HITLS_X509_CrlEntry *X509_CrlEntryDup(const HITLS_X509_CrlEntry *src)
     dest->flag |= HITLS_X509_CRL_GEN_FLAG;
 
     if (src->extList != NULL) {
-        dest->extList = BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)DupExtEntry, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+        dest->extList = BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)DupExtEntry,
+            (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
         if (dest->extList == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET);
             goto ERR;
@@ -1129,22 +1120,6 @@ int32_t X509_CrlSetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t val
     }
 }
 
-static int32_t X509_CrlExtCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
-{
-    (void)crl;
-    (void)val;
-    (void)valLen;
-    switch (cmd) {
-        // case HITLS_X509_EXT_CRL_SET_CRLNUMBER:
-        //     return X509_CrlSetCrlNumber(crl, val, valLen, HITLS_X509_EXT_KU_DIGITAL_SIGN);
-        // case HITLS_X509_EXT_CRL_SET_AKI:
-        //     return X509_CrlSetAki(crl, val, valLen, HITLS_X509_EXT_KU_KEY_CERT_SIGN);
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            return HITLS_X509_ERR_INVALID_PARAM;
-    }
-}
-
 int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
 {
     if (crl == NULL) {
@@ -1158,7 +1133,8 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
         return X509_CrlSetCtrl(crl, cmd, val, valLen);
     } else {
-        return X509_CrlExtCtrl(crl, cmd, val, valLen);
+
+        return HITLS_X509_ExtCtrl(&crl->tbs.crlExt, cmd, val, valLen);
     }
 }
 
@@ -1261,7 +1237,8 @@ static int32_t X509_CrlGetRevokedRevokeTime(HITLS_X509_CrlEntry *entry, void *va
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_CrlSetRevokedExt(HITLS_X509_CrlEntry *entry, BslCid cid, BSL_Buffer *buff, uint32_t excpetLen, EncodeExtCb encodeExt)
+static int32_t X509_CrlSetRevokedExt(HITLS_X509_CrlEntry *entry, BslCid cid, BSL_Buffer *buff, uint32_t excpetLen,
+    EncodeExtCb encodeExt)
 {
     if (entry->extList == NULL) {
         entry->extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry));
@@ -1304,7 +1281,8 @@ static int32_t SetExtReason(void *param, HITLS_X509_ExtEntry *extEntry, void *va
 {
     (void)param;
     HITLS_X509_RevokeExtReason *reason = (HITLS_X509_RevokeExtReason *)val;
-    if (reason->reason < HITLS_X509_REVOKED_REASON_UNSPECIFIED || reason->reason > HITLS_X509_REVOKED_REASON_AA_COMPROMISE) {
+    if (reason->reason < HITLS_X509_REVOKED_REASON_UNSPECIFIED ||
+        reason->reason > HITLS_X509_REVOKED_REASON_AA_COMPROMISE) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -1420,11 +1398,14 @@ static int32_t RevokedSet(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, 
         case HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME:
             return CrlSetTime(&revoked->time, val, valLen);
         case HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME:
-            return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_INVALIDITYDATE, &buff, sizeof(HITLS_X509_RevokeExtTime), (EncodeExtCb)SetExtInvaildTime);
+            return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_INVALIDITYDATE, &buff, sizeof(HITLS_X509_RevokeExtTime),
+                (EncodeExtCb)SetExtInvaildTime);
         case HITLS_X509_CRL_SET_REVOKED_REASON:
-            return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_CRLREASON, &buff, sizeof(HITLS_X509_RevokeExtReason), (EncodeExtCb)SetExtReason);
+            return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_CRLREASON, &buff, sizeof(HITLS_X509_RevokeExtReason),
+                (EncodeExtCb)SetExtReason);
         case HITLS_X509_CRL_SET_REVOKED_CERTISSUER:
-            return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_CERTIFICATEISSUER, &buff, sizeof(HITLS_X509_RevokeExtCertIssuer), (EncodeExtCb)SetExtCertIssuer);
+            return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_CERTIFICATEISSUER, &buff,
+                sizeof(HITLS_X509_RevokeExtCertIssuer), (EncodeExtCb)SetExtCertIssuer);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -1440,11 +1421,14 @@ static int32_t RevokedGet(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, 
         case HITLS_X509_CRL_GET_REVOKED_SERIALNUM:
             return HITLS_X509_GetSerial(&revoked->serialNumber, val, valLen);
         case HITLS_X509_CRL_GET_REVOKED_INVAILD_TIME:
-            return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_INVALIDITYDATE, &buff, sizeof(BSL_TIME), (DecodeExtCb)DecodeExtInvaildTime);
+            return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_INVALIDITYDATE, &buff, sizeof(BSL_TIME),
+                (DecodeExtCb)DecodeExtInvaildTime);
         case HITLS_X509_CRL_GET_REVOKED_REASON:
-            return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_CRLREASON, &buff, sizeof(int32_t), (DecodeExtCb)DecodeExtReason);
+            return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_CRLREASON, &buff, sizeof(int32_t),
+                (DecodeExtCb)DecodeExtReason);
         case HITLS_X509_CRL_GET_REVOKED_CERTISSUER:
-            return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_CERTIFICATEISSUER, &buff, sizeof(BslList *), (DecodeExtCb)DecodeExtCertIssuer);
+            return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_CERTIFICATEISSUER, &buff, sizeof(BslList *),
+                (DecodeExtCb)DecodeExtCertIssuer);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -1457,17 +1441,15 @@ int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, voi
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (cmd >= HITLS_X509_CRL_SET_REVOKED_SERIALNUM && cmd < HITLS_X509_CRL_GET_REVOKED_SERIALNUM) {
+    if (cmd < HITLS_X509_CRL_GET_REVOKED_SERIALNUM) {
         return RevokedSet(revoked, cmd, val, valLen);
-    } else if (cmd >= HITLS_X509_CRL_GET_REVOKED_SERIALNUM && cmd <= HITLS_X509_CRL_GET_REVOKED_CERTISSUER) {
-        return RevokedGet(revoked, cmd, val, valLen);
     } else {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+        return RevokedGet(revoked, cmd, val, valLen);
     }
 }
 
-int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl, const HITLS_X509_SignAlgParam *algParam)
+int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl,
+    const HITLS_X509_SignAlgParam *algParam)
 {
     CRYPT_EAL_PkeyCtx *signKey = pivKey;
     CRYPT_EAL_PkeyCtx *tmp = NULL;
