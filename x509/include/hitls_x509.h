@@ -555,7 +555,8 @@ typedef struct {
     };
 } HITLS_X509_SignAlgParam;
 
-int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl, const HITLS_X509_SignAlgParam *algParam);
+int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl,
+    const HITLS_X509_SignAlgParam *algParam);
 
 /** 
  * @ingroup x509 crl

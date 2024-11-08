@@ -410,8 +410,8 @@ int32_t X509_GetIssueFromChain(HITLS_X509_List *certChain, HITLS_X509_Cert *cert
     return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
 }
 
-int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert, HITLS_X509_Cert **issue,
-    bool *issueInTrust)
+int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
+    HITLS_X509_Cert **issue, bool *issueInTrust)
 {
     HITLS_X509_List *store = storeCtx->store;
     int32_t ret = X509_GetIssueFromChain(store, cert, issue);
@@ -430,7 +430,8 @@ int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certC
     return ret;
 }
 
-int32_t X509_BuildChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert, HITLS_X509_List *chain, HITLS_X509_Cert **root)
+int32_t X509_BuildChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
+    HITLS_X509_List *chain, HITLS_X509_Cert **root)
 {
     HITLS_X509_Cert *cur = cert;
     int32_t ret;
@@ -619,7 +620,8 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             continue;
         }
         if (cert->tbs.version == HITLS_CERT_VERSION_3 && crl->tbs.version == 1) {
-            if (HITLS_X509_AkiSki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName, &parent->tbs.serialNum) != HITLS_X509_SUCCESS) {
+            if (HITLS_X509_AkiSki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName, &parent->tbs.serialNum)
+                != HITLS_X509_SUCCESS) {
                 crl = BSL_LIST_GET_NEXT(storeCtx->crl);
                 continue;
             }
@@ -685,7 +687,8 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
                 return ret;
             }
         }
-        ret = HITLS_X509_CheckSignature(issue->tbs.ealPubKey, cur->tbs.tbsRawData, cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
+        ret = HITLS_X509_CheckSignature(issue->tbs.ealPubKey, cur->tbs.tbsRawData, cur->tbs.tbsRawDataLen,
+            &cur->signAlgId, &cur->signature);
         if (ret != HITLS_X509_SUCCESS) {
             return ret;
         }
@@ -695,7 +698,8 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain, HITLS_X509_List **comChain)
+static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain,
+    HITLS_X509_List **comChain)
 {
     HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(chain);
     if (cert == NULL) {

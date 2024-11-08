@@ -1087,7 +1087,8 @@ static int32_t SetExtCrlNumber(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, 
     const HITLS_X509_ExtCrlNumber *crlNumber = (const HITLS_X509_ExtCrlNumber *)val;
     entry->critical = crlNumber->critical;
 
-    if (crlNumber->crlNumber.dataLen < HITLS_X509_CRLNUMBER_MIN_LEN || crlNumber->crlNumber.dataLen > HITLS_X509_CRLNUMBER_MAX_LEN) {
+    if (crlNumber->crlNumber.dataLen < HITLS_X509_CRLNUMBER_MIN_LEN ||
+        crlNumber->crlNumber.dataLen > HITLS_X509_CRLNUMBER_MAX_LEN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_CRLNUMBER);
         return HITLS_X509_ERR_EXT_CRLNUMBER;
     }
@@ -1177,7 +1178,8 @@ static int32_t SetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t v
     int32_t ret;
     switch (cmd) {
         case HITLS_X509_EXT_SET_BCONS:
-            ret = SetExt(ext, BSL_CID_CE_BASICCONSTRAINTS, &buff, sizeof(HITLS_X509_ExtBCons), (EncodeExtCb)SetExtBCons);
+            ret = SetExt(ext, BSL_CID_CE_BASICCONSTRAINTS, &buff, sizeof(HITLS_X509_ExtBCons),
+                (EncodeExtCb)SetExtBCons);
             break;
         case HITLS_X509_EXT_SET_KUSAGE:
             ret = SetExt(ext, BSL_CID_CE_KEYUSAGE, &buff, sizeof(HITLS_X509_ExtKeyUsage), (EncodeExtCb)SetExtKeyUsage);
@@ -1192,10 +1194,12 @@ static int32_t SetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t v
             ret = SetExt(ext, BSL_CID_CE_SUBJECTALTNAME, &buff, sizeof(HITLS_X509_ExtSan), (EncodeExtCb)SetExtSan);
             break;
         case HITLS_X509_EXT_SET_EXKUSAGE:
-            ret = SetExt(ext, BSL_CID_CE_EXTENDEDKEYUSAGE, &buff, sizeof(HITLS_X509_ExtExKeyUsage), (EncodeExtCb)SetExtExKeyUsage);
+            ret = SetExt(ext, BSL_CID_CE_EXTENDEDKEYUSAGE, &buff, sizeof(HITLS_X509_ExtExKeyUsage),
+                (EncodeExtCb)SetExtExKeyUsage);
             break;
         case HITLS_X509_EXT_SET_CRLNUMBER:
-            ret = SetExt(ext, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber), (EncodeExtCb)SetExtCrlNumber);
+            ret = SetExt(ext, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
+                (EncodeExtCb)SetExtCrlNumber);
             break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);

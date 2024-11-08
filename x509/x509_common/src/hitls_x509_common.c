@@ -758,7 +758,8 @@ int32_t X509_SetSignAlgParm(CRYPT_EAL_PkeyCtx *signKey, const HITLS_X509_SignAlg
     }
 }
 
-int32_t HITLS_X509_AkiSki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName, BSL_ASN1_Buffer *serialNum)
+int32_t HITLS_X509_AkiSki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName,
+    BSL_ASN1_Buffer *serialNum)
 {
     HITLS_X509_ExtAki aki = {0};
     HITLS_X509_ExtSki ski = {0};
