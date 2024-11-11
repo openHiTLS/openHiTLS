@@ -303,16 +303,19 @@ static int32_t EncodeAlgoIdAsn1Buff(BSL_ASN1_Buffer *algoId, uint32_t algoIdNum,
 
 static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_EAL_PkeyCtx *ealPriKey)
 {
-    CRYPT_RSA_PssPara para = {0};
-    int32_t ret = CRYPT_EAL_ParseRsaPssAlgParam(rsaPssParam, &para);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
     CRYPT_RsaPadType padType = CRYPT_PKEY_EMSA_PSS;
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType));
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (rsaPssParam == NULL || rsaPssParam->buff == NULL) {
+        return CRYPT_SUCCESS;
+    }
+
+    CRYPT_RSA_PssPara para = {0};
+    ret = CRYPT_EAL_ParseRsaPssAlgParam(rsaPssParam, &para);
+    if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
@@ -602,9 +605,6 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
     para->mdId = (CRYPT_MD_AlgId)BSL_CID_SHA1;  // hashAlgorithm     [0] HashAlgorithm DEFAULT sha1Identifier,
     para->mgfId = (CRYPT_MD_AlgId)BSL_CID_SHA1; // maskGenAlgorithm  [1] MaskGenAlgorithm DEFAULT mgf1SHA1Identifier,
     para->saltLen = 20;                         // saltLength        [2] INTEGER DEFAULT 20
-    if (param == NULL || param->buff == NULL) {
-        return CRYPT_SUCCESS;
-    }
 
     uint8_t *temp = param->buff;
     uint32_t tempLen = param->len;

@@ -1287,8 +1287,8 @@ void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, int ret, Hex 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, csr, 0), ret);
     ASSERT_EQ(HITLS_X509_EncodeExt(0, cert->tbs.ext.extList, &encodeExt), 0);
     if (expect->len != 0) {
-        ASSERT_TRUE((cert->tbs.ext.extFlag & HITLS_X509_EXT_FLAG_PARSE) == 0);
-        ASSERT_TRUE((cert->tbs.ext.extFlag & HITLS_X509_EXT_FLAG_GEN) != 0);
+        ASSERT_TRUE((cert->tbs.ext.flag & HITLS_X509_EXT_FLAG_PARSE) == 0);
+        ASSERT_TRUE((cert->tbs.ext.flag & HITLS_X509_EXT_FLAG_GEN) != 0);
         ASSERT_COMPARE("Csr ext", encodeExt.buff, encodeExt.len, expect->x, expect->len);
     }
 exit:

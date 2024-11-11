@@ -190,7 +190,7 @@ int32_t HITLS_CRL_ParseExtSeqof(uint32_t layer, BSL_ASN1_Buffer *asn, void *para
 
 int32_t HITLS_X509_ParseCrlExt(BSL_ASN1_Buffer *ext, HITLS_X509_Crl *crl)
 {
-    if ((crl->tbs.crlExt.extFlag & HITLS_X509_EXT_FLAG_GEN) != 0) {
+    if ((crl->tbs.crlExt.flag & HITLS_X509_EXT_FLAG_GEN) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_PARSE_AFTER_SET);
         return HITLS_X509_ERR_EXT_PARSE_AFTER_SET;
     }
@@ -203,7 +203,7 @@ int32_t HITLS_X509_ParseCrlExt(BSL_ASN1_Buffer *ext, HITLS_X509_Crl *crl)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    crl->tbs.crlExt.extFlag |= HITLS_X509_EXT_FLAG_PARSE;
+    crl->tbs.crlExt.flag |= HITLS_X509_EXT_FLAG_PARSE;
     return ret;
 }
 
@@ -1006,7 +1006,7 @@ static HITLS_X509_CrlEntry *X509_CrlEntryDup(const HITLS_X509_CrlEntry *src)
     dest->flag |= HITLS_X509_CRL_GEN_FLAG;
 
     if (src->extList != NULL) {
-        dest->extList = BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)DupExtEntry,
+        dest->extList = BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)X509_DupExtEntry,
             (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
         if (dest->extList == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET);
@@ -1448,8 +1448,8 @@ int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, voi
     }
 }
 
-int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl,
-    const HITLS_X509_SignAlgParam *algParam)
+int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam, 
+    HITLS_X509_Crl *crl)
 {
     CRYPT_EAL_PkeyCtx *signKey = pivKey;
     CRYPT_EAL_PkeyCtx *tmp = NULL;
