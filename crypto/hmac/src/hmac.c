@@ -93,12 +93,13 @@ static void HmacCleanseData(uint8_t *tmp, uint32_t tmpLen, uint8_t *ipad, uint32
     BSL_SAL_CleanseData(opad, opadLen);
 }
 
-int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
+int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param)
 {
     if (ctx == NULL || ctx->method == NULL || (key == NULL && len != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     const EAL_MdMethod *method = ctx->method;
     uint32_t blockSize = method->blockSize;
     uint8_t tmp[HMAC_MAXBLOCKSIZE];

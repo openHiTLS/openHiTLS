@@ -93,13 +93,14 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx);
  *                   CMAC: The length of CMAC-AES128 must be 128 bits, and the length of CMAC-AES192 must be 192 bits.
  *                         The length of CMAC-AES256 must be 256 bits.
  * @param   len [IN] Key length
+ * @param   param [IN] parameters
  *
  * @retval #CRYPT_SUCCESS, initialization succeeded.
  * @retval #CRYPT_NULL_INPUT, pointer ctx parameter or key parameter is NULL.
  * @retval #CRYPT_AES_ERR_KEYLEN, the key length of the AES & CMAC algorithm is incorrect.
  *         Other error codes see the crypt_errno.h.
  */
-int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len);
+int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
 
 /**
  * @ingroup crypt_eal_mac

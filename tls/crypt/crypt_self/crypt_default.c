@@ -166,7 +166,7 @@ HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *
         return NULL;
     }
 
-    int32_t ret = CRYPT_EAL_MacInit(ctx, key, len);
+    int32_t ret = CRYPT_EAL_MacInit(ctx, key, len, NULL);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_MacFreeCtx(ctx);
         return NULL;
@@ -230,7 +230,7 @@ int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t
         return HITLS_CRYPT_ERR_HMAC;
     }
 
-    ret = CRYPT_EAL_MacInit(ctx, key, keyLen);
+    ret = CRYPT_EAL_MacInit(ctx, key, keyLen, NULL);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_MacFreeCtx(ctx);
         return ret;

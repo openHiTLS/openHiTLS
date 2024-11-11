@@ -48,7 +48,7 @@ static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out,
      * secrecy to accomplish their purpose so may be hard-coded, fixed, or all zeros.
      */
     (void)memset_s(ecfKey, keyLen, 0, keyLen);
-    int32_t ret = CRYPT_EAL_MacInit(ctx, ecfKey, keyLen);
+    int32_t ret = CRYPT_EAL_MacInit(ctx, ecfKey, keyLen, NULL);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_MacFreeCtx(ctx);
         BSL_SAL_FREE(ecfKey);

@@ -204,7 +204,7 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
     return;
 }
 
-int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
@@ -222,7 +222,7 @@ int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t le
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    ret = ctx->macMeth->init(ctx->ctx, key, len);
+    ret = ctx->macMeth->init(ctx->ctx, key, len, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
         return ret;
