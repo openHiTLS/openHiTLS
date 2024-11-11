@@ -582,3 +582,36 @@ ERR:
     BSL_LIST_FREE(dnNameList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
     return ret;
 }
+
+int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
+{
+    if (valLen <= 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
+        return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
+    }
+    const uint8_t *src = (const uint8_t *)val;
+    serial->buff = BSL_SAL_Dump(src, valLen);
+    if (serial->buff == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
+    }
+    serial->len = valLen;
+    serial->tag = BSL_ASN1_TAG_INTEGER;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
+{
+    if (valLen != sizeof(BSL_Buffer)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (serial->buff == NULL || serial->len == 0 || serial->tag != BSL_ASN1_TAG_INTEGER) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    BSL_Buffer *buff = (BSL_Buffer *)val;
+    buff->data = serial->buff;
+    buff->dataLen = serial->len;
+    return HITLS_X509_SUCCESS;
+}
