@@ -130,11 +130,11 @@ exit:
  * @title BSL SAL ConverterName functionality test
  * @precon None
  * @brief
- *    1. Call BSL_SAL_ConverterName with valid inputs. Expected result 1 is obtained.
- *    2. Call BSL_SAL_ConverterName with insufficient buffer size. Expected result 2 is obtained.
- *    3. Call BSL_SAL_ConverterName with NULL filename. Expected result 3 is obtained.
- *    4. Call BSL_SAL_ConverterName with NULL output name pointer. Expected result 4 is obtained.
- *    5. Call BSL_SAL_ConverterName with invalid command. Expected result 5 is obtained.
+ *    1. Call BSL_SAL_LibNameFormat with valid inputs. Expected result 1 is obtained.
+ *    2. Call BSL_SAL_LibNameFormat with insufficient buffer size. Expected result 2 is obtained.
+ *    3. Call BSL_SAL_LibNameFormat with NULL filename. Expected result 3 is obtained.
+ *    4. Call BSL_SAL_LibNameFormat with NULL output name pointer. Expected result 4 is obtained.
+ *    5. Call BSL_SAL_LibNameFormat with invalid command. Expected result 5 is obtained.
  * @expect
  *    1. BSL_SUCCESS, converted name matches aimResult
  *    2. BSL_SAL_ERR_DL_PATH_EXCEED
@@ -150,21 +150,21 @@ void SDV_BSL_SAL_CONVERTER_NAME_TC001(char *name, int cmd, char *aimResult)
     char *convertedName = NULL;
     int32_t ret;
 
-    ret = BSL_SAL_ConverterName(cmd, name, &convertedName);
+    ret = BSL_SAL_LibNameFormat(cmd, name, &convertedName);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(convertedName != NULL);
     ASSERT_TRUE(strcmp(convertedName, aimResult) == 0);
     BSL_SAL_FREE(convertedName);
 
     // Test with NULL inputs
-    ret = BSL_SAL_ConverterName(cmd, NULL, &convertedName);
+    ret = BSL_SAL_LibNameFormat(cmd, NULL, &convertedName);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
 
-    ret = BSL_SAL_ConverterName(cmd, name, NULL);
+    ret = BSL_SAL_LibNameFormat(cmd, name, NULL);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
 
     // Test with invalid command
-    ret = BSL_SAL_ConverterName(INVALID_COMMEND, name, &convertedName);
+    ret = BSL_SAL_LibNameFormat(INVALID_COMMEND, name, &convertedName);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
 
 exit:

@@ -22,6 +22,8 @@
 #ifndef CRYPT_EAL_DEFAULT_PROVIDER_H
 #define CRYPT_EAL_DEFAULT_PROVIDER_H
 
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include <stdint.h>
 #include "crypt_eal_implprovider.h"
 
@@ -37,4 +39,5 @@ typedef struct EalDefProvCtx {
 }
 #endif // __cplusplus
 
+#endif /* HITLS_CRYPTO_PROVIDER */
 #endif // CRYPT_EAL_DEFAULT_PROVIDER_H

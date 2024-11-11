@@ -298,7 +298,7 @@ int32_t CRYPT_PAILLIER_GetSecBits(const CRYPT_PAILLIER_Ctx *ctx);
  * @retval CRYPT_EAL_ALG_NOT_SUPPORT            Operation not supported
  * @retval CRYPT_SUCCESS                        Operation succeeded
  */
-int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 #ifdef __cplusplus
 }

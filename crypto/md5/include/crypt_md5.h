@@ -95,10 +95,10 @@ int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen);
 /**
  * @ingroup MD5
  * @brief MD5 copy CTX function
- * @param src [in]   Pointer to the original MD5 context.
  * @param dst [out]  Pointer to the new MD5 context.
+ * @param src [in]   Pointer to the original MD5 context.
  */
-int32_t CRYPT_MD5_CopyCtx(const CRYPT_MD5_Ctx *src, CRYPT_MD5_Ctx *dst);
+int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src);
 
 #ifdef __cplusplus
 }

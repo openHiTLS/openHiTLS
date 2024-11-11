@@ -1248,7 +1248,7 @@ static int32_t EalSetPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
     return SetEmsaPss(ctx, &padPara, sizeof(RSA_PadingPara));
 }
 
-int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

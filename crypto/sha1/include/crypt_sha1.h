@@ -97,7 +97,7 @@ int32_t CRYPT_SHA1_Final(CRYPT_SHA1_Ctx *ctx, uint8_t *out, uint32_t *len);
  */
 void CRYPT_SHA1_Deinit(CRYPT_SHA1_Ctx *ctx);
 
-int32_t CRYPT_SHA1_CopyCtx(const CRYPT_SHA1_Ctx *src, CRYPT_SHA1_Ctx *dst);
+int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src);
 
 #ifdef __cplusplus
 }

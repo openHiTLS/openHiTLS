@@ -22,6 +22,7 @@
 #ifndef CRYPT_EAL_PROVIDER_LOCAL_H
 #define CRYPT_EAL_PROVIDER_LOCAL_H
 
+#ifdef HITLS_CRYPTO_PROVIDER
 #include <stdint.h>
 #include "sal_atomic.h"
 #include "crypt_eal_implprovider.h"
@@ -31,20 +32,20 @@
 extern "C" {
 #endif // __cplusplus
 
-struct EalLibCtx {
+struct EAL_LibCtx {
     BslList *providers; // managing providers
     BSL_SAL_ThreadLockHandle lock;
     char *searchProviderPath;
 };
 
-struct EalProviderMgrCtx {
+struct EAL_ProviderMgrCtx {
     void *handle; // so handle
     void *provCtx;
     BSL_SAL_RefCount ref;
     char *providerName;
     char *providerPath;
     void *seedCtx; // entropy ctx
-    struct EalLibCtx *libCtx;
+    struct EAL_LibCtx *libCtx;
     CRYPT_EAL_ImplProviderInit provInitFunc;
 
     // out funcs
@@ -55,7 +56,7 @@ struct EalProviderMgrCtx {
 
 int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, CRYPT_Param *param,
     CRYPT_EAL_ImplProviderInit providerInit);
-CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtxInternal();
+CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal();
 int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
     int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
 
@@ -63,4 +64,5 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
 }
 #endif // __cplusplus
 
+#endif /* HITLS_CRYPTO_PROVIDER */
 #endif // CRYPT_EAL_PROVIDER_LOCAL_H

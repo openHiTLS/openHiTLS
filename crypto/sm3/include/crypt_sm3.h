@@ -100,7 +100,7 @@ void CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx);
  * @param dst [out]   SM3 context pointer.
  * @param src [in]   Pointer to the original SM3 context.
  */
-int32_t CRYPT_SM3_CopyCtx(const CRYPT_SM3_Ctx *src, CRYPT_SM3_Ctx *dst);
+int32_t CRYPT_SM3_CopyCtx(CRYPT_SM3_Ctx *dst, const CRYPT_SM3_Ctx *src);
 
 #ifdef __cplusplus
 }

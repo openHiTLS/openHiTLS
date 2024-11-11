@@ -128,7 +128,7 @@ int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
     GOTO_ERR_IF(method->update(ctx->iCtx, ipad, method->blockSize), ret);
     GOTO_ERR_IF(method->init(ctx->oCtx), ret);
     GOTO_ERR_IF(method->update(ctx->oCtx, opad, method->blockSize), ret);
-    GOTO_ERR_IF(method->copyCtx(ctx->iCtx, ctx->mdCtx), ret);
+    GOTO_ERR_IF(method->copyCtx(ctx->mdCtx, ctx->iCtx), ret);
 
     HmacCleanseData(tmp, HMAC_MAXBLOCKSIZE, ipad, HMAC_MAXBLOCKSIZE, opad, HMAC_MAXBLOCKSIZE);
     return CRYPT_SUCCESS;
@@ -166,7 +166,7 @@ int32_t CRYPT_HMAC_Final(CRYPT_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
     uint32_t tmpLen = sizeof(tmp);
     int32_t ret;
     GOTO_ERR_IF(method->final(ctx->mdCtx, tmp, &tmpLen), ret);
-    GOTO_ERR_IF(method->copyCtx(ctx->oCtx, ctx->mdCtx), ret);
+    GOTO_ERR_IF(method->copyCtx(ctx->mdCtx, ctx->oCtx), ret);
     GOTO_ERR_IF(method->update(ctx->mdCtx, tmp, tmpLen), ret);
     return method->final(ctx->mdCtx, out, len);
 ERR:
@@ -180,7 +180,7 @@ void CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx)
         return;
     }
     const EAL_MdMethod *method = ctx->method;
-    method->copyCtx(ctx->iCtx, ctx->mdCtx);
+    method->copyCtx(ctx->mdCtx, ctx->iCtx);
 }
 
 void CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)

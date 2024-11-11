@@ -45,7 +45,7 @@ typedef struct {
     const char *attr; // implemented algorithm attribute
 } CRYPT_EAL_AlgInfo;
 
-typedef struct EalProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
+typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 
 void CRYPT_EAL_ProvFreeCb(void *provCtx)
 {

@@ -328,7 +328,7 @@ int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b);
  * @retval CRYPT_NULL_INPUT Invalid null pointer input
  * @retval CRYPT_SUCCESS    obtained successfully.
  */
-int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 
 /**

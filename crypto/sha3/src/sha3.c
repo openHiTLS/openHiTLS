@@ -323,32 +323,32 @@ void CRYPT_SHAKE256_Deinit(CRYPT_SHAKE256_Ctx *ctx)
     CRYPT_SHA3_Deinit(ctx);
 }
 
-int32_t CRYPT_SHA3_224_CopyCtx(const CRYPT_SHA3_224_Ctx *src, CRYPT_SHA3_224_Ctx *dst)
+int32_t CRYPT_SHA3_224_CopyCtx(CRYPT_SHA3_224_Ctx *dst, const CRYPT_SHA3_224_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHA3_256_CopyCtx(const CRYPT_SHA3_256_Ctx *src, CRYPT_SHA3_256_Ctx *dst)
+int32_t CRYPT_SHA3_256_CopyCtx(CRYPT_SHA3_256_Ctx *dst, const CRYPT_SHA3_256_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHA3_384_CopyCtx(const CRYPT_SHA3_384_Ctx *src, CRYPT_SHA3_384_Ctx *dst)
+int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHA3_512_CopyCtx(const CRYPT_SHA3_512_Ctx *src, CRYPT_SHA3_512_Ctx *dst)
+int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHAKE128_CopyCtx(const CRYPT_SHA3_384_Ctx *src, CRYPT_SHA3_384_Ctx *dst)
+int32_t CRYPT_SHAKE128_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }
 
-int32_t CRYPT_SHAKE256_CopyCtx(const CRYPT_SHA3_512_Ctx *src, CRYPT_SHA3_512_Ctx *dst)
+int32_t CRYPT_SHAKE256_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
 }

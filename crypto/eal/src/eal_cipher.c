@@ -86,7 +86,7 @@ static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, CRYPT_EAL_Fun
     int32_t index = 0;
     EAL_CipherUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_CipherUnitaryMethod));
     if (method == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     
@@ -115,7 +115,7 @@ static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, CRYPT_EAL_Fun
                 break;
             default:
                 BSL_SAL_FREE(method);
-                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                 return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         }
         index++;
@@ -128,7 +128,7 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, in
 {
     CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
-    int32_t ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_SYMMCIPHER, algId, attrName,
+    int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_SYMMCIPHER, algId, attrName,
         (const CRYPT_EAL_Func **)&funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, ret);
@@ -169,7 +169,7 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id)
 {
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Cipher(id) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return NULL;
     }
 #endif
@@ -291,17 +291,17 @@ int32_t CheckUpdateParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint
     const uint32_t *outLen)
 {
     if (ctx == NULL || out == NULL || outLen == NULL || (in == NULL && inLen != 0)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, (ctx == NULL) ? CRYPT_CIPHER_MAX : ctx->id, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     if ((in != NULL && inLen != 0) && IsPartialOverLap(out, in, inLen)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_PART_OVERLAP);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_PART_OVERLAP);
         return CRYPT_EAL_ERR_PART_OVERLAP;
     }
     // If the state is not init or update, the state is regarded as an error.
     // If the state is final or new, update cannot be directly invoked.
     if (!(ctx->states == EAL_CIPHER_STATE_INIT || ctx->states == EAL_CIPHER_STATE_UPDATE)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_STATE);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
     if (ctx->method == NULL || ctx->method->update == NULL) {
@@ -333,18 +333,18 @@ int32_t CRYPT_EAL_CipherUpdate(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint
 int32_t CheckFinalParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *out, const uint32_t *outLen)
 {
     if (ctx == NULL || out == NULL || outLen == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, (ctx == NULL) ? CRYPT_CIPHER_MAX : ctx->id, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     // If the state is not init or update, the state is regarded as an error.
     // If the state is final or new, update cannot be directly invoked.
     if (!(ctx->states == EAL_CIPHER_STATE_UPDATE || ctx->states == EAL_CIPHER_STATE_INIT)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_STATE);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
 
     if (ctx->method == NULL || ctx->method->final == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     return CRYPT_SUCCESS;

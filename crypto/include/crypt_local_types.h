@@ -89,7 +89,7 @@ typedef int32_t (*PkeyGetPara)(const void *key, void *para);
 typedef int32_t (*PkeyGen)(void *key);
 typedef uint32_t (*PkeyBits)(void *key);
 typedef uint32_t (*PkeyGetSignLen)(void *key);
-typedef int32_t (*PkeyCtrl)(void *key, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+typedef int32_t (*PkeyCtrl)(void *key, int32_t opt, void *val, uint32_t len);
 typedef int32_t (*PkeySetPrv)(void *key, const void *para);
 typedef int32_t (*PkeySetPub)(void *key, const void *para);
 typedef int32_t (*PkeyGetPrv)(const void *key, void *para);
@@ -111,8 +111,6 @@ typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
 typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
-typedef int32_t (*PkeyParse)(void *ctx, const void *para);
-typedef int32_t (*PkeyEncode)(const void *ctx, void *para);
 typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
 /**
 * @ingroup  EAL
@@ -168,8 +166,6 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
     PkeyCopyParam copyPara;                 // Copy parameter from source to destination
-    PkeyParse parse;
-    PkeyEncode encode;
     PkeyRecover recover;
 } EAL_PkeyUnitaryMethod;
 /**

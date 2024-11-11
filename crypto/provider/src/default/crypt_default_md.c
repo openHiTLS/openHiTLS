@@ -14,6 +14,8 @@
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_md5.h"
 #include "crypt_sha1.h"
@@ -94,7 +96,7 @@ int32_t CRYPT_EAL_DefMdCtrl(void *ctx, int32_t cmd, void *val, uint32_t valLen)
     return CRYPT_NOT_SUPPORT;
 }
 
-const CRYPT_EAL_Func defMdMd5[] = {
+const CRYPT_EAL_Func g_defMdMd5[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_MD5_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_MD5_Update},
@@ -106,7 +108,7 @@ const CRYPT_EAL_Func defMdMd5[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha1[] = {
+const CRYPT_EAL_Func g_defMdSha1[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA1_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA1_Update},
@@ -118,7 +120,7 @@ const CRYPT_EAL_Func defMdSha1[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha224[] = {
+const CRYPT_EAL_Func g_defMdSha224[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA2_224_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA2_224_Update},
@@ -130,7 +132,7 @@ const CRYPT_EAL_Func defMdSha224[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha256[] = {
+const CRYPT_EAL_Func g_defMdSha256[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA2_256_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA2_256_Update},
@@ -142,7 +144,7 @@ const CRYPT_EAL_Func defMdSha256[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha384[] = {
+const CRYPT_EAL_Func g_defMdSha384[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA2_384_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA2_384_Update},
@@ -154,7 +156,7 @@ const CRYPT_EAL_Func defMdSha384[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha512[] = {
+const CRYPT_EAL_Func g_defMdSha512[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA2_512_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA2_512_Update},
@@ -166,7 +168,7 @@ const CRYPT_EAL_Func defMdSha512[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha3224[] = {
+const CRYPT_EAL_Func g_defMdSha3224[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA3_224_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA3_224_Update},
@@ -178,7 +180,7 @@ const CRYPT_EAL_Func defMdSha3224[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha3256[] = {
+const CRYPT_EAL_Func g_defMdSha3256[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA3_256_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA3_256_Update},
@@ -190,7 +192,7 @@ const CRYPT_EAL_Func defMdSha3256[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha3384[] = {
+const CRYPT_EAL_Func g_defMdSha3384[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA3_384_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA3_384_Update},
@@ -202,7 +204,7 @@ const CRYPT_EAL_Func defMdSha3384[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSha3512[] = {
+const CRYPT_EAL_Func g_defMdSha3512[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHA3_512_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHA3_512_Update},
@@ -214,7 +216,7 @@ const CRYPT_EAL_Func defMdSha3512[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdShake128[] = {
+const CRYPT_EAL_Func g_defMdShake128[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHAKE128_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHAKE128_Update},
@@ -226,7 +228,7 @@ const CRYPT_EAL_Func defMdShake128[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdShake256[] = {
+const CRYPT_EAL_Func g_defMdShake256[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SHAKE256_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SHAKE256_Update},
@@ -238,7 +240,7 @@ const CRYPT_EAL_Func defMdShake256[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defMdSm3[] = {
+const CRYPT_EAL_Func g_defMdSm3[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, CRYPT_EAL_DefMdNewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, CRYPT_SM3_Init},
     {CRYPT_EAL_IMPLMD_UPDATE, CRYPT_SM3_Update},
@@ -249,3 +251,5 @@ const CRYPT_EAL_Func defMdSm3[] = {
     {CRYPT_EAL_IMPLMD_FREECTX, CRYPT_SM3_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */

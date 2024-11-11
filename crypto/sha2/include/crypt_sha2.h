@@ -456,7 +456,7 @@ int32_t CRYPT_SHA2_512_Final(CRYPT_SHA2_512_Ctx *ctx, uint8_t *digest, uint32_t 
  */
 void CRYPT_SHA2_224_Deinit(CRYPT_SHA2_224_Ctx *ctx);
 
-int32_t CRYPT_SHA2_224_CopyCtx(const CRYPT_SHA2_224_Ctx *src, CRYPT_SHA2_224_Ctx *dst);
+int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, const CRYPT_SHA2_224_Ctx *src);
 #endif // HITLS_CRYPTO_SHA224
 
 #ifdef HITLS_CRYPTO_SHA256
@@ -469,7 +469,7 @@ int32_t CRYPT_SHA2_224_CopyCtx(const CRYPT_SHA2_224_Ctx *src, CRYPT_SHA2_224_Ctx
  */
 void CRYPT_SHA2_256_Deinit(CRYPT_SHA2_256_Ctx *ctx);
 
-int32_t CRYPT_SHA2_256_CopyCtx(const CRYPT_SHA2_256_Ctx *src, CRYPT_SHA2_256_Ctx *dst);
+int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx *src);
 #endif // HITLS_CRYPTO_SHA256
 
 #ifdef HITLS_CRYPTO_SHA384
@@ -482,7 +482,7 @@ int32_t CRYPT_SHA2_256_CopyCtx(const CRYPT_SHA2_256_Ctx *src, CRYPT_SHA2_256_Ctx
  */
 void CRYPT_SHA2_384_Deinit(CRYPT_SHA2_384_Ctx *ctx);
 
-int32_t CRYPT_SHA2_384_CopyCtx(const CRYPT_SHA2_384_Ctx *src, CRYPT_SHA2_384_Ctx *dst);
+int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, const CRYPT_SHA2_384_Ctx *src);
 #endif // HITLS_CRYPTO_SHA384
 
 #ifdef HITLS_CRYPTO_SHA512
@@ -495,7 +495,7 @@ int32_t CRYPT_SHA2_384_CopyCtx(const CRYPT_SHA2_384_Ctx *src, CRYPT_SHA2_384_Ctx
  */
 void CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx);
 
-int32_t CRYPT_SHA2_512_CopyCtx(const CRYPT_SHA2_512_Ctx *src, CRYPT_SHA2_512_Ctx *dst);
+int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, const CRYPT_SHA2_512_Ctx *src);
 #endif // HITLS_CRYPTO_SHA512
 
 #ifdef __cplusplus

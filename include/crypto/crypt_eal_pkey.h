@@ -180,18 +180,6 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
 
 /**
  * @ingroup crypt_eal_pkey
- * @brief   Set the key parameters, the key parameter marked as "para" is applied for and released by the caller.
- *
- * @param   pkey [IN/OUT] Structure of the key pair to be set
- * @param   para [IN] Parameter
- *
- * @retval  #CRYPT_SUCCESS.
- *          For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_EAL_PkeySetParaEx(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_Param *para);
-
-/**
- * @ingroup crypt_eal_pkey
  * @brief   Obtain the key parameter, the key parameter marked as "para" is applied for and released by the caller.
  *
  * @param   pkey [IN] Key pair structure
@@ -202,17 +190,6 @@ int32_t CRYPT_EAL_PkeySetParaEx(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_Param *para
  */
 int32_t CRYPT_EAL_PkeyGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para);
 
-/**
- * @ingroup crypt_eal_pkey
- * @brief   Obtain the key parameter, the key parameter marked as "para" is applied for and released by the caller.
- *
- * @param   pkey [IN] Key pair structure
- * @param   para [OUT] Parameter to be received
- *
- * @retval  #CRYPT_SUCCESS.
- *          For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_EAL_PkeyGetParaEx(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_Param *para);
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Set key parameters.

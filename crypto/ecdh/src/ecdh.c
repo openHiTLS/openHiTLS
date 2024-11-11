@@ -27,6 +27,7 @@
 #include "crypt_ecc_pkey.h"
 #include "crypt_ecdh.h"
 #include "sal_atomic.h"
+#include "eal_pkey_local.h"
 
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
 {
@@ -240,7 +241,7 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

@@ -31,6 +31,7 @@
 #include "crypt_sm2.h"
 #include "sm2_local.h"
 #include "eal_md_local.h"
+#include "eal_pkey_local.h"
 
 static int32_t Sm2SetUserId(CRYPT_SM2_Ctx *ctx, const uint8_t *val, uint32_t len)
 {
@@ -804,7 +805,7 @@ static int32_t SM2UpReferences(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_NULL_INPUT;
 }
 
-int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

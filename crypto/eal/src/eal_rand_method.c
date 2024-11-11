@@ -1,9 +1,16 @@
-/*---------------------------------------------------------------------------------------------
- *  This file is part of the openHiTLS project.
- *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
- *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
- *  for license information.
- *---------------------------------------------------------------------------------------------
+ /*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 
 #include "hitls_build.h"
@@ -17,6 +24,7 @@
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "eal_common.h"
 #include "crypt_types.h"
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
@@ -93,7 +101,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
         case RAND_TYPE_MD: {
             const EAL_MdMethod *md = EAL_MdFindMethod(map->depId);
             if (md == NULL) {
-                BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
@@ -106,7 +114,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
             EAL_MacMethLookup hmac;
             int32_t ret = EAL_MacFindMethod(map->depId, &hmac);
             if (ret != CRYPT_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
@@ -119,7 +127,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
         case RAND_TYPE_AES_DF: {
             const EAL_SymMethod *ciphMeth = MODES_GetSymMethod(map->depId);
             if (ciphMeth == NULL) {
-                BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
@@ -128,7 +136,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
         }
 #endif
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
             return CRYPT_EAL_ERR_ALGID;
     }
     return CRYPT_SUCCESS;
@@ -137,13 +145,13 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
 int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu)
 {
     if (lu == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, id, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
     const DrbgIdMap *map = GetDrbgIdMap(id);
     if (map == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
 
@@ -155,5 +163,4 @@ int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu)
     lu->type = map->type;
     return CRYPT_SUCCESS;
 }
-
 #endif

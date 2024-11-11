@@ -246,7 +246,7 @@ int32_t CRYPT_ECDH_GetPubKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *para);
  * @retval CRYPT_ECC_PKEY_ERR_CTRL_LEN                  The len is incorrect.
  * @retval CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION   opt mode not supported
  */
-int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup ecdh

@@ -30,9 +30,14 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct EalLibCtx CRYPT_EAL_LibCtx;
+typedef struct EAL_LibCtx CRYPT_EAL_LibCtx;
 /* The hitls framework generates context for each provider */
-typedef struct EalProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
+typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
+
+typedef struct {
+    int32_t id;
+    void *func;
+} CRYPT_EAL_Func;
 
 /**
  * @ingroup crypt_eal_provider
@@ -40,7 +45,7 @@ typedef struct EalProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
  *
  * @retval return Library context
 */
-CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtx(void);
+CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNew(void);
 
 /**
  * @ingroup crypt_eal_provider
@@ -64,13 +69,13 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
  *                 - BSL_SAL_CONVERTER_LIBSO: Convert to lib*.so format
  *                 - BSL_SAL_CONVERTER_LIBDLL: Convert to lib*.dll format
  *                 - BSL_SAL_CONVERTER_DLL: Convert to .dll format
- *                 The specific conversion is handled by the BSL_SAL_ConverterName function.
+ *                 The specific conversion is handled by the BSL_SAL_LibNameFormat function.
  * @param mgrCtx [OUT] Provider context
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
+int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
     const char *providerName, CRYPT_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
 /**
@@ -85,7 +90,7 @@ int32_t CRYPT_EAL_LoadProvider(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cm
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_CtrlProvider(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
+int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup crypt_eal_provider
@@ -99,13 +104,13 @@ int32_t CRYPT_EAL_CtrlProvider(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val
  *                 - BSL_SAL_CONVERTER_LIBSO: Convert to lib*.so format
  *                 - BSL_SAL_CONVERTER_LIBDLL: Convert to lib*.dll format
  *                 - BSL_SAL_CONVERTER_DLL: Convert to .dll format
- *                 The specific conversion is handled by the BSL_SAL_ConverterName function.
+ *                 The specific conversion is handled by the BSL_SAL_LibNameFormat function.
  * @param providerName [IN] provider name
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libctx, BSL_SAL_ConverterCmd cmd, const char *providerName);
+int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libctx, BSL_SAL_ConverterCmd cmd, const char *providerName);
 
 
 /**
@@ -119,7 +124,24 @@ int32_t CRYPT_EAL_UnloadProvider(CRYPT_EAL_LibCtx *libctx, BSL_SAL_ConverterCmd 
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_SetLoadProviderPath(CRYPT_EAL_LibCtx *libCtx, const char *searchPath);
+int32_t CRYPT_EAL_ProviderSetLoadPath(CRYPT_EAL_LibCtx *libCtx, const char *searchPath);
+
+/**
+ * @ingroup crypt_eal_provider
+ * @brief Get function implementations from provider based on operation ID, algorithm ID and attributes
+ *
+ * @param libCtx [IN] Library context
+ * @param operaId [IN] Operation ID
+ * @param algId [IN] Algorithm ID
+ * @param attribute [IN] Attribute string for matching provider capabilities
+ * @param funcs [OUT] Retrieved function implementations
+ * @param provCtx [OUT] Provider context associated with the functions
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+*/
+int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+    const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
 
 #ifdef __cplusplus
 }

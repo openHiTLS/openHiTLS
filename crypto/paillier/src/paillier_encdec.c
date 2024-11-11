@@ -23,6 +23,7 @@
 #include "bsl_sal.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "eal_pkey_local.h"
 
 int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
@@ -337,7 +338,7 @@ OUT:
     return ret;
 }
 
-int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

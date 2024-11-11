@@ -50,22 +50,24 @@ typedef struct {
 // Define a function to free AttributeValue resources
 static void AttributeValueFree(void *ptr)
 {
-    AttributeValue *value = (AttributeValue *)ptr;
-    if (value != NULL) {
-        BSL_SAL_FREE(value->judgeStr);
-        BSL_SAL_FREE(value->valueStr);
-        BSL_SAL_FREE(value);
+    if (ptr == NULL) {
+        return;
     }
+    AttributeValue *value = (AttributeValue *)ptr;
+    BSL_SAL_FREE(value->judgeStr);
+    BSL_SAL_FREE(value->valueStr);
+    BSL_SAL_Free(value);
 }
 
 // Define a function to free the value list
 static void FreeValueList(void *ptr)
 {
-    BslList *valueList = (BslList *)ptr;
-    if (valueList != NULL) {
-        BSL_LIST_DeleteAll(valueList, AttributeValueFree);
-        BSL_SAL_FREE(valueList);
+    if (ptr == NULL) {
+        return;
     }
+    BslList *valueList = (BslList *)ptr;
+    BSL_LIST_DeleteAll(valueList, AttributeValueFree);
+    BSL_SAL_FREE(valueList);
 }
 
 // Value copy callback function, essentially a function to create a new value list
@@ -109,7 +111,7 @@ ERR:
     if (newValue!= NULL) {
         AttributeValueFree(newValue);
     }
-    BSL_SAL_FREE(newList);
+    BSL_SAL_Free(newList);
     return NULL;
 }
 
@@ -142,8 +144,7 @@ static int32_t UpdateAttributeValueNode(BSL_HASH_Hash *hash, BSL_HASH_Iterator n
     AttributeValue *newValue = BSL_SAL_Calloc(1, sizeof(AttributeValue));
     if (newValue == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        ret =  CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     newValue->judgeStr = BSL_SAL_Dump(srcValue->judgeStr, BSL_SAL_Strnlen(srcValue->judgeStr, UINT32_MAX) + 1);
     newValue->valueStr = BSL_SAL_Dump(srcValue->valueStr, BSL_SAL_Strnlen(srcValue->valueStr, UINT32_MAX) + 1);
@@ -175,37 +176,38 @@ ERR:
 static int32_t GetAttributePositions(const char *attribute, int32_t start, int32_t *keyStart, int32_t *keyEnd,
                                      int32_t *judgeStart, int32_t *judgeEnd, int32_t *valueStart, int32_t *valueEnd)
 {
-    *keyStart = *keyEnd = *judgeStart = *judgeEnd = *valueStart = *valueEnd = start;
+    int32_t temp = start;
+    *keyStart = *keyEnd = *judgeStart = *judgeEnd = *valueStart = *valueEnd = temp;
 
     // Find key
-    while (attribute[start] != '\0' && attribute[start] != '=' && attribute[start] != '?' && attribute[start] != '!') {
-        start++;
+    while (attribute[temp] != '\0' && attribute[temp] != '=' && attribute[temp] != '?' && attribute[temp] != '!') {
+        temp++;
     }
-    *keyEnd = start;
+    *keyEnd = temp;
     if (*keyEnd <= *keyStart) {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
 
     // Find judge string
-    *judgeStart = start;
-    if (attribute[start] == '!' && attribute[start + 1] == '=') {
-        start = start + NOT_EQUAL_SIZE;
-    } else if (attribute[start] == '=' || attribute[start] == '?') {
-        start++;
+    *judgeStart = temp;
+    if (attribute[temp] == '!' && attribute[temp + 1] == '=') {
+        temp = temp + NOT_EQUAL_SIZE;
+    } else if (attribute[temp] == '=' || attribute[temp] == '?') {
+        temp++;
     } else {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
-    *judgeEnd = start;
+    *judgeEnd = temp;
     if (*judgeEnd <= *judgeStart) {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
 
     // Find value
-    *valueStart = start;
-    while (attribute[start] != '\0' && attribute[start] != ',') {
-        start++;
+    *valueStart = temp;
+    while (attribute[temp] != '\0' && attribute[temp] != ',') {
+        temp++;
     }
-    *valueEnd = start;
+    *valueEnd = temp;
     if (*valueEnd <= *valueStart) {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
@@ -365,7 +367,7 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
 
         BSL_HASH_Iterator it = BSL_HASH_Find(hash, (uintptr_t)key);
         if (it == BSL_HASH_IterEnd(hash)) {
-            BSL_SAL_FREE(key);
+            BSL_SAL_Free(key);
             AttributeValueFree(value);
             continue;
         }
@@ -376,19 +378,19 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
             ret = CompareAttributeValue(value, hashValue, &comparedCount,
                 &satisfiedMustCount, &totalScore);
             if (ret == -1) {
-                BSL_SAL_FREE(key);
+                BSL_SAL_Free(key);
                 AttributeValueFree(value);
                 return -1;
             }
 
             if (comparedCount == attributeNum) {
-                BSL_SAL_FREE(key);
+                BSL_SAL_Free(key);
                 AttributeValueFree(value);
                 return (satisfiedMustCount < mustAttributeNum) ? -1 : totalScore;
             }
         }
 
-        BSL_SAL_FREE(key);
+        BSL_SAL_Free(key);
         AttributeValueFree(value);
     }
 
@@ -475,7 +477,9 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
         return CRYPT_NOT_SUPPORT;
     }
     *funcs = implFunc;
-    *provCtx = ctx;
+    if (provCtx != NULL) {
+        *provCtx = ctx;
+    }
     return CRYPT_SUCCESS;
 }
 

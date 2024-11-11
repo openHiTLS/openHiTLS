@@ -14,6 +14,8 @@
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_curve25519.h"
 #include "crypt_dh.h"
@@ -26,26 +28,28 @@ typedef struct {
     int32_t index;
 } CRYPT_EAL_DefPkeyCtx;
 
-const CRYPT_EAL_Func defExchX25519[] = {
+const CRYPT_EAL_Func g_defExchX25519[] = {
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_CURVE25519_ComputeSharedKey},
     {CRYPT_EAL_IMPLPKEYEXCH_CTRL, CRYPT_CURVE25519_Ctrl},
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func defExchDh[] = {
+const CRYPT_EAL_Func g_defExchDh[] = {
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_DH_ComputeShareKey},
     {CRYPT_EAL_IMPLPKEYEXCH_CTRL, CRYPT_DH_Ctrl},
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func defExchEcdh[] = {
+const CRYPT_EAL_Func g_defExchEcdh[] = {
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_ECDH_ComputeShareKey},
     {CRYPT_EAL_IMPLPKEYEXCH_CTRL, CRYPT_ECDH_Ctrl},
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func defExchSm2[] = {
+const CRYPT_EAL_Func g_defExchSm2[] = {
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_SM2_KapComputeKey},
     {CRYPT_EAL_IMPLPKEYEXCH_CTRL, CRYPT_SM2_Ctrl},
     CRYPT_EAL_FUNC_END
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */

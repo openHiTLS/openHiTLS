@@ -28,6 +28,7 @@
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "crypt_ecdsa.h"
+#include "eal_pkey_local.h"
 #include "eal_md_local.h"
 
 CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)
@@ -535,7 +536,7 @@ int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint
     return CRYPT_ECDSA_VerifyData(ctx, hash, hashLen, sign, signLen);
 }
 
-int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

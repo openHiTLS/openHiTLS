@@ -1,12 +1,21 @@
-/*---------------------------------------------------------------------------------------------
- *  This file is part of the openHiTLS project.
- *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
- *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
- *  for license information.
- *---------------------------------------------------------------------------------------------
+ /*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_modes_cbc.h"
 #include "crypt_modes_ccm.h"
@@ -62,7 +71,7 @@ static void *CRYPT_EAL_DefCipherNewCtx(void *provCtx, int32_t algId)
     return NULL;
 }
 
-const CRYPT_EAL_Func defCbc[] = {
+const CRYPT_EAL_Func g_defCbc[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_CBC_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_CBC_UpdateEx},
@@ -73,7 +82,7 @@ const CRYPT_EAL_Func defCbc[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defCcm[] = {
+const CRYPT_EAL_Func g_defCcm[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_CCM_InitCtx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_CCM_UpdateEx},
@@ -84,7 +93,7 @@ const CRYPT_EAL_Func defCcm[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defCfb[] = {
+const CRYPT_EAL_Func g_defCfb[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_CFB_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_CFB_UpdateEx},
@@ -95,7 +104,7 @@ const CRYPT_EAL_Func defCfb[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defChaCha[] = {
+const CRYPT_EAL_Func g_defChaCha[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_CHACHA20POLY1305_InitCtx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_CHACHA20POLY1305_Update},
@@ -106,7 +115,7 @@ const CRYPT_EAL_Func defChaCha[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defCtr[] = {
+const CRYPT_EAL_Func g_defCtr[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_CTR_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_CTR_UpdateEx},
@@ -117,7 +126,7 @@ const CRYPT_EAL_Func defCtr[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defEcb[] = {
+const CRYPT_EAL_Func g_defEcb[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_ECB_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_ECB_UpdateEx},
@@ -128,7 +137,7 @@ const CRYPT_EAL_Func defEcb[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defGcm[] = {
+const CRYPT_EAL_Func g_defGcm[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_GCM_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_GCM_UpdateEx},
@@ -139,7 +148,7 @@ const CRYPT_EAL_Func defGcm[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defOfb[] = {
+const CRYPT_EAL_Func g_defOfb[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_OFB_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_OFB_UpdateEx},
@@ -150,7 +159,7 @@ const CRYPT_EAL_Func defOfb[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defXts[] = {
+const CRYPT_EAL_Func g_defXts[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, MODES_XTS_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, MODES_XTS_UpdateEx},
@@ -160,3 +169,5 @@ const CRYPT_EAL_Func defXts[] = {
     {CRYPT_EAL_IMPLCIPHER_FREECTX, MODES_XTS_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */
