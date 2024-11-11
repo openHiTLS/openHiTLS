@@ -64,7 +64,6 @@ typedef struct _HITLS_X509_Crl {
 } HITLS_X509_Crl;
 
 int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist);
-int32_t HITLS_X509_EncodeCrlTbs(HITLS_X509_CrlTbs *crlTbs, uint8_t **tobeSigned, uint32_t *tobeSignedLen);
 #ifdef __cplusplus
 }
 #endif
