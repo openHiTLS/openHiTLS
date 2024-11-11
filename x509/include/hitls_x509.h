@@ -79,7 +79,7 @@ typedef enum {
     HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the subject name list. */
     HITLS_X509_GET_ISSUER_DNNAME,      /** Get the issuer name list. */
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
-    HITLS_X509_GET_REVOKELIST,            /** Get the version from cert or crl. */
+    HITLS_X509_GET_REVOKELIST,         /** Get the certficate revoke list from the crl. */
     HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
@@ -536,10 +536,9 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
 
 /**
  * @ingroup x509
- * @brief Generate a CRL and encode it to specific file.
- * @par Description: This function encodes the CRL into the specified format.
- *  If the encoding is successful, the memory for the encode data is requested from within the function,
- *  and the user needs to free it after using it.
+ * @brief Verify the integrity of the CRL.
+ * @par Description: This function verifies the integrity of the CRL
+ *
  * @attention None
  * @param pubkey         [IN] pubkey.
  * @param crl            [IN] CRL info.
@@ -555,8 +554,22 @@ typedef struct {
     };
 } HITLS_X509_SignAlgParam;
 
-int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl,
-    const HITLS_X509_SignAlgParam *algParam);
+/**
+ * @ingroup x509
+ * @brief Signing a CRL.
+ * @par Description: This function is used to sign the CRL.
+ * For the newly generated CRL, you need to invoke the HITLS_X509_CrlGenBuff/HITLS_X509_CrlGenFile interface
+ * before invoking the interface.
+ *
+ * @attention The interface can be called multiple times, and the signature is regenerated on each call.
+ * @param mdId           [IN] hash algorithm.
+ * @param pivKey         [IN] private key.
+ * @param algParam       [IN] signature parameter, for example, rsa-pss parameter.
+ * @param crl            [IN/OUT] CRL info.
+ * @return Error code
+ */
+int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam, 
+    HITLS_X509_Crl *crl);
 
 /** 
  * @ingroup x509 crl

@@ -620,7 +620,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             continue;
         }
         if (cert->tbs.version == HITLS_CERT_VERSION_3 && crl->tbs.version == 1) {
-            if (HITLS_X509_AkiSki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName, &parent->tbs.serialNum)
+            if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName, &parent->tbs.serialNum)
                 != HITLS_X509_SUCCESS) {
                 crl = BSL_LIST_GET_NEXT(storeCtx->crl);
                 continue;
