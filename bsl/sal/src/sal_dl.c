@@ -35,7 +35,7 @@ static BSL_SAL_DlCallback g_dlCallback = {0};
 #define BSL_SAL_PATH_MAX 4095
 #define BSL_SAL_NAME_MAX 255
 
-int32_t BSL_SAL_ConverterName(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name)
+int32_t BSL_SAL_LibNameFormat(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name)
 {
     if (fileName == NULL || name == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);

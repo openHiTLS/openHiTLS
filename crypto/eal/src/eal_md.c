@@ -143,7 +143,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t al
 {
     CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
-    int32_t ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, algId, attrName,
+    int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, algId, attrName,
         (const CRYPT_EAL_Func **)&funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -235,7 +235,7 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = from->method->copyCtx(from->data, data);
+    int32_t ret = from->method->copyCtx(data, from->data);
     if (ret != CRYPT_SUCCESS) {
         from->method->freeCtx(data);
         return ret;
@@ -273,7 +273,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
     *method = *ctx->method;
     newCtx->method = method;
     
-    int32_t ret = ctx->method->copyCtx(ctx->data, newCtx->data);
+    int32_t ret = ctx->method->copyCtx(newCtx->data, ctx->data);
     if (ret != CRYPT_SUCCESS) {
         newCtx->method->freeCtx(newCtx->data);
         BSL_SAL_FREE(newCtx->method);

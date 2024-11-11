@@ -26,9 +26,10 @@
 #define CRYPT_EAL_DEFAULT_ATTR "provider=test1,compare1=one,cpmpare3=three"
 #define RESULT 1415926
 
-void *Provider_NewCtx(void *provCtx, int32_t algid)
+void *Provider_NewCtx(void *provCtx, int32_t algid, CRYPT_Param *param)
 {
     (void)provCtx;
+    (void)param;
     int *ctx = malloc(sizeof(int));
     return ctx;
 }
@@ -91,8 +92,6 @@ const CRYPT_EAL_Func defKeyMgmtDsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_CHECK, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM, NULL},
-    {CRYPT_EAL_IMPLPKEYMGMT_PARSE, NULL},
-    {CRYPT_EAL_IMPLPKEYMGMT_ENCODE, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, NULL},
     CRYPT_EAL_FUNC_END,

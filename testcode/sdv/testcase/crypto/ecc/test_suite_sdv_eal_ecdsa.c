@@ -1143,56 +1143,6 @@ exit:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPTO_ECDSA_SET_PARAEX_API_TC001
- * @title  ECDSA CRYPT_EAL_PkeySetParaEx: Test the validity of parameters.
- * @precon Prepare valid private key and invalid private key.
- * @brief
- *    1. Create the context of the ecdsa algorithm, expected result 1
- *    2. Set the para by eccId, expected result 2
- *    3. Call the CRYPT_EAL_PkeySetParaEx method:
- *       (1) pkey = null, expected result 3
- *       (2) para = null, expected result 4
- *       (3) pkey.id != para.id, expected result 5
- *       (4) The parameter structure is empty, expected result 6
- * @expect
- *    1. Success, and the context is not NULL.
- *    2. CRYPT_SUCCESS
- *    3-4. CRYPT_NULL_INPUT
- *    5. CRYPT_EAL_ERR_ALGID
- *    6. CRYPT_EAL_ERR_NEW_PARA_FAIL
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_ECDSA_SET_PARAEX_API_TC001(int paraId, int isProvider)
-{
-    CRYPT_EAL_PkeyPara para = {0};
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-
-    TestMemInit();
-
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
-    }
-    ASSERT_TRUE(pkey != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraId), CRYPT_SUCCESS);
-    CRYPT_Param param;
-    param.param = &para.para.eccPara;
-    param.paramLen = sizeof(para.para.eccPara);
-    /* Input parameter test of CRYPT_EAL_PkeySetPara. */
-    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(NULL, &param) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, NULL) == CRYPT_NULL_INPUT);
-    
-    para.id = CRYPT_PKEY_ECDSA;
-    param.param = &para.para.eccPara;
-    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey, &param) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
-
-exit:
-    CRYPT_EAL_PkeyFreeCtx(pkey);
-}
-/* END_CASE */
-
-/**
  * @test   SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001
  * @title  ECDSA sign and verify test: different hash and curve.
  * @precon nan

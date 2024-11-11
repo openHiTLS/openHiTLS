@@ -86,7 +86,7 @@ void CRYPT_SHA2_256_Deinit(CRYPT_SHA2_256_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_256_Ctx));
 }
 
-int32_t CRYPT_SHA2_256_CopyCtx(const CRYPT_SHA2_256_Ctx *src, CRYPT_SHA2_256_Ctx *dst)
+int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -308,7 +308,7 @@ void CRYPT_SHA2_224_Deinit(CRYPT_SHA2_224_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_224_Ctx));
 }
 
-int32_t CRYPT_SHA2_224_CopyCtx(const CRYPT_SHA2_224_Ctx *src, CRYPT_SHA2_224_Ctx *dst)
+int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, const CRYPT_SHA2_224_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

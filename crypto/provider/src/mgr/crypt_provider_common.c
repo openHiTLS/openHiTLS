@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_provider.h"
 #include "bsl_list.h"
 #include "crypt_provider_local.h"
@@ -22,9 +24,13 @@
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
-int32_t CRYPT_EAL_GetFuncsFromProvider(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx)
 {
+    if (funcs == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     CRYPT_EAL_LibCtx *localCtx = libCtx;
     if (localCtx == NULL) {
         localCtx = g_libCtx;
@@ -92,7 +98,7 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, CRYPT_Param *par
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtxInternal()
+CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal()
 {
     CRYPT_EAL_LibCtx *libCtx = (CRYPT_EAL_LibCtx *)BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_LibCtx));
     if (libCtx == NULL) {
@@ -101,7 +107,7 @@ CRYPT_EAL_LibCtx *CRYPT_EAL_NewLibCtxInternal()
     }
 
     // Initialize providers list
-    libCtx->providers = BSL_LIST_New(sizeof(struct EalProviderMgrCtx *));
+    libCtx->providers = BSL_LIST_New(sizeof(struct EAL_ProviderMgrCtx *));
     if (libCtx->providers == NULL) {
         goto ERR;
     }
@@ -122,13 +128,16 @@ ERR:
 
 void EalFreeProviderMgrCtx(void *data)
 {
+    if (data == NULL) {
+        return;
+    }
     CRYPT_EAL_ProvMgrCtx *mgrCtx = (CRYPT_EAL_ProvMgrCtx *)data;
     if (mgrCtx->provFreeCb != NULL) {
         mgrCtx->provFreeCb(mgrCtx->provCtx);
     }
 
     BSL_SAL_ReferencesFree(&mgrCtx->ref);
-    BSL_SAL_FREE(mgrCtx);
+    BSL_SAL_Free(mgrCtx);
 }
 
 int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
@@ -140,7 +149,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
     }
     int32_t ret = BSL_SAL_ReferencesInit(&mgrCtx->ref);
     if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(mgrCtx);
+        BSL_SAL_Free(mgrCtx);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -148,7 +157,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
     ret = BSL_LIST_AddElement(libCtx->providers, mgrCtx, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         BSL_SAL_ReferencesFree(&mgrCtx->ref);
-        BSL_SAL_FREE(mgrCtx);
+        BSL_SAL_Free(mgrCtx);
         return ret;
     }
     mgrCtx->libCtx = libCtx;
@@ -164,7 +173,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
 int32_t CRYPT_EAL_InitPreDefinedProviders()
 {
     int32_t ret;
-    CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_NewLibCtxInternal();
+    CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNewInternal();
     if (libCtx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
@@ -186,7 +195,7 @@ void CRYPT_EAL_FreePreDefinedProviders()
     if (libCtx == NULL) {
         return;
     }
-    // Free the providers list and each EalProviderMgrCtx in it
+    // Free the providers list and each EAL_ProviderMgrCtx in it
     if (libCtx->providers != NULL) {
         BSL_LIST_FREE(libCtx->providers, EalFreeProviderMgrCtx);
     }
@@ -200,3 +209,5 @@ void CRYPT_EAL_FreePreDefinedProviders()
     BSL_SAL_Free(libCtx);
     g_libCtx = NULL;
 }
+
+#endif /* HITLS_CRYPTO_PROVIDER */

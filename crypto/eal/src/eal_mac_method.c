@@ -90,13 +90,13 @@ static const EAL_MacAlgMap *EAL_FindMacAlgMap(CRYPT_MAC_AlgId id)
 int32_t EAL_MacFindMethod(CRYPT_MAC_AlgId id, EAL_MacMethLookup *lu)
 {
     if (lu == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
     const EAL_MacAlgMap *macAlgMap = EAL_FindMacAlgMap(id);
     if (macAlgMap == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
 
@@ -110,7 +110,7 @@ int32_t EAL_MacFindMethod(CRYPT_MAC_AlgId id, EAL_MacMethLookup *lu)
             break;
 #endif
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_EAL_ERR_ALGID);
             return CRYPT_EAL_ERR_ALGID;
     }
 

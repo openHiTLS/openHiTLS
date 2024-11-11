@@ -34,11 +34,6 @@ extern "C" {
 #define CRYPT_EAL_ALGINFO_END  {0, NULL, NULL}
 
 typedef struct {
-    int32_t id;
-    void *func;
-} CRYPT_EAL_Func;
-
-typedef struct {
     int32_t algId; // implemented algorithm id, such as aes128cbc, rsa sign
     const CRYPT_EAL_Func *implFunc; // implemented algorithm callback
     const char *attr; // implemented algorithm attribute
@@ -136,8 +131,6 @@ typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLPKEYMGMT_CHECK     10
 #define CRYPT_EAL_IMPLPKEYMGMT_COMPARE   11
 #define CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM 12
-#define CRYPT_EAL_IMPLPKEYMGMT_PARSE     13
-#define CRYPT_EAL_IMPLPKEYMGMT_ENCODE    14
 #define CRYPT_EAL_IMPLPKEYMGMT_CTRL      15
 #define CRYPT_EAL_IMPLPKEYMGMT_FREECTX   16
 

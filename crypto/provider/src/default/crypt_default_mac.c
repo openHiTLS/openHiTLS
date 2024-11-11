@@ -14,6 +14,8 @@
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_hmac.h"
 #include "bsl_sal.h"
@@ -48,7 +50,7 @@ void *CRYPT_EAL_DefMacNewCtx(void *provCtx, int32_t algId)
     return macCtx;
 }
 
-const CRYPT_EAL_Func defMacHmac[] = {
+const CRYPT_EAL_Func g_defMacHmac[] = {
     {CRYPT_EAL_IMPLMAC_NEWCTX, CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, CRYPT_HMAC_Init},
     {CRYPT_EAL_IMPLMAC_UPDATE, CRYPT_HMAC_Update},
@@ -58,3 +60,5 @@ const CRYPT_EAL_Func defMacHmac[] = {
     {CRYPT_EAL_IMPLMAC_FREECTX, CRYPT_HMAC_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */

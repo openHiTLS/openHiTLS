@@ -449,12 +449,6 @@ typedef enum {
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
-    CRYPT_CTRL_SET_PARA_BY_ID,          /* Asymmetric cipher set para by id. */
-    CRYPT_CTRL_GET_PARA,                /* Asymmetric cipher get para. */
-    CRYPT_CTRL_GET_PARAID,              /* Asymmetric cipher get id of para. */
-    CRYPT_CTRL_GET_BITS,            /* Asymmetric cipher get bits . */
-    CRYPT_CTRL_GET_SIGNLEN,             /* Asymmetric cipher get signlen . */
-    CRYPT_CTRL_GET_SECBITS              /* Asymmetric cipher get secure bits . */
 } CRYPT_PkeyCtrl;
 
 /**

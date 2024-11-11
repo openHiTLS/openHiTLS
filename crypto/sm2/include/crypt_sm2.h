@@ -210,7 +210,7 @@ int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Param *para);
  * @retval CRYPT_NULL_INPUT     If any input parameter is empty
  * @retval For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 #ifdef HITLS_CRYPTO_SM2_EXCH
 /**

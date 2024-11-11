@@ -25,6 +25,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
 #include "eal_md_local.h"
+#include "eal_pkey_local.h"
 
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
 {
@@ -82,7 +83,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
     return newCtx;
 }
 
-int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
     if (pkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -376,9 +377,13 @@ static int32_t SignInputCheck(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *m
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_SignData(CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
     uint32_t msgLen, uint8_t *sign, uint32_t *signLen)
 {
+    if (algid != CRYPT_MD_SHA512) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     int32_t ret;
     uint8_t prvKeyHash[CRYPT_CURVE25519_SIGNLEN];
     uint8_t r[CRYPT_CURVE25519_SIGNLEN];
@@ -493,9 +498,13 @@ static bool VerifyCheckSValid(const uint8_t s[CRYPT_CURVE25519_KEYLEN])
     return false;
 }
 
-int32_t CRYPT_CURVE25519_VerifyData(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
     uint32_t msgLen, const uint8_t *sign, uint32_t signLen)
 {
+    if (algid != CRYPT_MD_SHA512) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     int32_t ret;
     GeE geA, sG;
     uint8_t kHash[CRYPT_CURVE25519_SIGNLEN];

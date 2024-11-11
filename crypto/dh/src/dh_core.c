@@ -25,6 +25,7 @@
 #include "crypt_dh.h"
 #include "dh_local.h"
 #include "sal_atomic.h"
+#include "eal_pkey_local.h"
 
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
 {
@@ -793,7 +794,7 @@ int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
     return ret;
 }
 
-int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

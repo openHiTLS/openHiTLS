@@ -84,7 +84,7 @@ void CRYPT_SHA1_Deinit(CRYPT_SHA1_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA1_Ctx));
 }
 
-int32_t CRYPT_SHA1_CopyCtx(const CRYPT_SHA1_Ctx *src, CRYPT_SHA1_Ctx *dst)
+int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

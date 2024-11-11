@@ -218,7 +218,7 @@ static const EAL_CipherMethod *g_modeMethod[CRYPT_MODE_MAX] = {
 const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
 {
     if (id < 0 || id >= CRYPT_MODE_MAX) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_EAL_ERR_ALGID);
         return NULL;
     }
     return g_modeMethod[id];
@@ -275,13 +275,13 @@ int32_t EAL_FindCipher(CRYPT_CIPHER_AlgId id, const EAL_CipherMethod **modeMetho
     }
 
     if (symAlgMap == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
 
     *modeMethod = EAL_FindModeMethod(symAlgMap->modeId);
     if (*modeMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
     return CRYPT_SUCCESS;
@@ -345,7 +345,7 @@ int32_t EAL_GetCipherInfo(CRYPT_CIPHER_AlgId id, CRYPT_CipherInfo *info)
     }
 
     if (cipherInfoGet == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
     }
 

@@ -45,17 +45,17 @@
  * @title Provider load and unload functionality test
  * @precon None
  * @brief
- *    1. Call CRYPT_EAL_NewLibCtx to create a library context. Expected result 1 is obtained.
- *    2. Call CRYPT_EAL_SetLoadProviderPath to set the provider path. Expected result 2 is obtained.
- *    3. Call CRYPT_EAL_LoadProvider to load providers. Expected result 3 is obtained.
- *    4. Call CRYPT_EAL_LoadProvider with non-existent provider. Expected result 4 is obtained.
- *    5. Call CRYPT_EAL_LoadProvider with provider lacking init function. Expected result 5 is obtained.
- *    6. Call CRYPT_EAL_LoadProvider with provider lacking full functions. Expected result 6 is obtained.
- *    7. Call CRYPT_EAL_LoadProvider to load the same provider again. Expected result 7 is obtained.
- *    8. Call CRYPT_EAL_LoadProvider with different cmd for the same name. Expected result 8 is obtained.
- *    9. Call CRYPT_EAL_LoadProvider with same cmd and name but different path. Expected result 9 is obtained.
- *    10. Call CRYPT_EAL_UnloadProvider to unload providers. Expected result 10 is obtained.
- *    11. Call CRYPT_EAL_UnloadProvider with non-existent provider. Expected result 11 is obtained.
+ *    1. Call CRYPT_EAL_LibCtxNew to create a library context. Expected result 1 is obtained.
+ *    2. Call CRYPT_EAL_ProviderSetLoadPath to set the provider path. Expected result 2 is obtained.
+ *    3. Call CRYPT_EAL_ProviderLoad to load providers. Expected result 3 is obtained.
+ *    4. Call CRYPT_EAL_ProviderLoad with non-existent provider. Expected result 4 is obtained.
+ *    5. Call CRYPT_EAL_ProviderLoad with provider lacking init function. Expected result 5 is obtained.
+ *    6. Call CRYPT_EAL_ProviderLoad with provider lacking full functions. Expected result 6 is obtained.
+ *    7. Call CRYPT_EAL_ProviderLoad to load the same provider again. Expected result 7 is obtained.
+ *    8. Call CRYPT_EAL_ProviderLoad with different cmd for the same name. Expected result 8 is obtained.
+ *    9. Call CRYPT_EAL_ProviderLoad with same cmd and name but different path. Expected result 9 is obtained.
+ *    10. Call CRYPT_EAL_ProviderUnload to unload providers. Expected result 10 is obtained.
+ *    11. Call CRYPT_EAL_ProviderUnload with non-existent provider. Expected result 11 is obtained.
  * @expect
  *    1. Library context is created successfully.
  *    2. CRYPT_SUCCESS
@@ -63,7 +63,7 @@
  *    4. BSL_SAL_ERR_DL_NOT_FOUND
  *    5. CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL
  *    6. CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL
- *    7. CRYPT_SUCCESS, and only one EalProviderMgrCtx structure for the provider in list with ref == 2
+ *    7. CRYPT_SUCCESS, and only one EAL_ProviderMgrCtx structure for the provider in list with ref == 2
  *    8. CRYPT_SUCCESS
  *    9. CRYPT_SUCCESS
  *    10. CRYPT_SUCCESS
@@ -78,79 +78,79 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
-    // Test CRYPT_EAL_NewLibCtx
-    libCtx = CRYPT_EAL_NewLibCtx();
+    // Test CRYPT_EAL_LibCtxNew
+    libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
 
-    // Test CRYPT_EAL_SetLoadProviderPath
-    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
+    // Test CRYPT_EAL_ProviderSetLoadPath
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    // Test CRYPT_EAL_LoadProvider
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
+    // Test CRYPT_EAL_ProviderLoad
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test loading the same provider consecutively
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    // Verify only one EalProviderMgrCtx structure for this provider in the providers list,and ref == 2
+    // Verify only one EAL_ProviderMgrCtx structure for this provider in the providers list,and ref == 2
     ASSERT_EQ(BSL_LIST_COUNT(libCtx->providers), 1);
     CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_FIRST_ELMT(libCtx->providers);
     ASSERT_TRUE(providerMgr != NULL);
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
     // Test if loading the same name with different cmd is successful and not recognized as the same provider
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd2, test1, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd2, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
     // Test if loading the same provider name with the same cmd from different paths is successful
     // and will recognized as the same provider。
-    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path2);
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, path2);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2+1);
 
-    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test loading a non-existent provider
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, "non_existent_provider", NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, "non_existent_provider", NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, BSL_SAL_ERR_DL_NOT_FOUND);
 
     // Test loading a provider without initialization function
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoInit, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, testNoInit, NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, BSL_SAL_ERR_DL_NON_FUNCTION);
 
     // Test loading a provider without complete return methods
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, testNoFullfunc, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, testNoFullfunc, NULL, NULL);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
 
     setenv("LD_LIBRARY_PATH", path, 1);
-    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, NULL);
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Test CRYPT_EAL_UnloadProvider
-    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test1);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test1);
+    // Test CRYPT_EAL_ProviderUnload
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test2);
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test1);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test2);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test unloading a non-existent provider
-    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, "non_existent_provider");
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, "non_existent_provider");
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
 exit:
@@ -178,7 +178,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
-    libCtx = CRYPT_EAL_NewLibCtx();
+    libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
 
     // Test if an error is reported when the path length exceeds the maximum length in Linux
@@ -186,8 +186,8 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     ASSERT_TRUE(overpath != NULL);
     ret = memset_s(overpath, PATH_EXCEED, 'a', PATH_EXCEED - 1);
     ASSERT_EQ(ret, 0);
-    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, overpath);
-    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, overpath);
+    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
     BSL_SAL_Free(overpath);
 
 exit:
@@ -216,19 +216,19 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
-    libCtx = CRYPT_EAL_NewLibCtx();
+    libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
-    ret = CRYPT_EAL_SetLoadProviderPath(libCtx, path);
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     const CRYPT_EAL_Func *funcs;
     void *provCtx;
     // Test if the corresponding funcs can be found based on the attribute
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, attribute, &funcs, &provCtx);
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, attribute, &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(funcs != NULL);
     CRYPT_EAL_ImplMdInitCtx mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
@@ -236,9 +236,9 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2
     ret = mdInitCtx(provCtx);
     ASSERT_EQ(ret, result);
 
-    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test1);
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_UnloadProvider(libCtx, cmd, test2);
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test2);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
 exit:
@@ -272,49 +272,49 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
-    libCtx = CRYPT_EAL_NewLibCtx();
+    libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
-    ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
 
     const CRYPT_EAL_Func *funcs;
     void *provCtx;
     // Demonstrate normal scenario
-    ASSERT_EQ(CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1",
+    ASSERT_EQ(CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1",
         &funcs, &provCtx), CRYPT_SUCCESS);
     CRYPT_EAL_ImplMdInitCtx mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
     ASSERT_EQ(mdInitCtx(provCtx), RIGHT_RESULT);
-    ASSERT_EQ(CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5,
+    ASSERT_EQ(CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5,
         "provider=test1,provider!=test2", &funcs, &provCtx), CRYPT_SUCCESS);
     mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
     ASSERT_EQ(mdInitCtx(provCtx), RIGHT_RESULT);
 
     // Test 1: Test when attribute is NULL
-    ASSERT_EQ(CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, NULL, &funcs, &provCtx),
+    ASSERT_EQ(CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, NULL, &funcs, &provCtx),
         CRYPT_SUCCESS);
     mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
     ASSERT_EQ(mdInitCtx(provCtx), result);
     funcs = provCtx = NULL;
 
     // Test 2: Test when no provider can meet the attribute requirements
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "n_atr=test3", &funcs, &provCtx);
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "n_atr=test3", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
     // Test 3: Test when both operaid and operaid are out of range
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, 0, CRYPT_MD_MD5, "provider=test1", &funcs, &provCtx);
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, 0, CRYPT_MD_MD5, "provider=test1", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, 0, "provider=test1", &funcs, &provCtx);
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, 0, "provider=test1", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
     // Test 4: Test when attribute format is non-standard
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider", &funcs, &provCtx);
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1provider!=test2",
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1provider!=test2",
         &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_NOT_SUPPORT);
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider!test2",
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider!test2",
         &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
-    ret = CRYPT_EAL_GetFuncsFromProvider(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "!=tesst2", &funcs, &provCtx);
+    ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "!=tesst2", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
 
 exit:
@@ -337,10 +337,10 @@ exit:
 void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, int cmd)
 {
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    libCtx = CRYPT_EAL_NewLibCtx();
+    libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
-    ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoInit, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, providerNoInit, NULL, NULL), CRYPT_SUCCESS);
 
     CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
     ASSERT_TRUE(kdfCtx == NULL);
@@ -371,10 +371,10 @@ exit:
 void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, int cmd)
 {
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    libCtx = CRYPT_EAL_NewLibCtx();
+    libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
-    ASSERT_EQ(CRYPT_EAL_SetLoadProviderPath(libCtx, path), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_LoadProvider(libCtx, cmd, providerNoFree, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, providerNoFree, NULL, NULL), CRYPT_SUCCESS);
 
     CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
     ASSERT_TRUE(kdfCtx != NULL);

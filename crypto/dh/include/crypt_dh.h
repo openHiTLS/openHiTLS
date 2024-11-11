@@ -272,7 +272,7 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b);
  * @retval CRYPT_NULL_INPUT Error null pointer input
  * @retval CRYPT_SUCCESS    obtained successfully.
  */
-int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup dh

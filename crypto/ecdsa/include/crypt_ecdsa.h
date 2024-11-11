@@ -326,7 +326,7 @@ int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *para);
  * @retval CRYPT_ECC_PKEY_ERR_CTRL_LEN              The length of len is incorrect.
  * @retval CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION  The opt mode is not supported.
  */
-int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup ecdsa

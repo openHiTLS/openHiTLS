@@ -1,4 +1,21 @@
+ /*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_pbkdf2.h"
 #include "crypt_kdf_tls12.h"
@@ -46,7 +63,7 @@ int32_t CRYPT_EAL_DefKdfCtrl(void *ctx, int32_t cmd, void *val, uint32_t valLen)
     return CRYPT_NOT_SUPPORT;
 }
 
-const CRYPT_EAL_Func defKdfScrypt[] = {
+const CRYPT_EAL_Func g_defKdfScrypt[] = {
     {CRYPT_EAL_IMPLKDF_NEWCTX, CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, CRYPT_SCRYPT_SetParam},
     {CRYPT_EAL_IMPLKDF_DERIVE, CRYPT_SCRYPT_Derive},
@@ -56,7 +73,7 @@ const CRYPT_EAL_Func defKdfScrypt[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defKdfPBKdf2[] = {
+const CRYPT_EAL_Func g_defKdfPBKdf2[] = {
     {CRYPT_EAL_IMPLKDF_NEWCTX, CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, CRYPT_PBKDF2_SetParam},
     {CRYPT_EAL_IMPLKDF_DERIVE, CRYPT_PBKDF2_Derive},
@@ -66,7 +83,7 @@ const CRYPT_EAL_Func defKdfPBKdf2[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defKdfKdfTLS12[] = {
+const CRYPT_EAL_Func g_defKdfKdfTLS12[] = {
     {CRYPT_EAL_IMPLKDF_NEWCTX, CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, CRYPT_KDFTLS12_SetParam},
     {CRYPT_EAL_IMPLKDF_DERIVE, CRYPT_KDFTLS12_Derive},
@@ -76,7 +93,7 @@ const CRYPT_EAL_Func defKdfKdfTLS12[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defKdfHkdf[] = {
+const CRYPT_EAL_Func g_defKdfHkdf[] = {
     {CRYPT_EAL_IMPLKDF_NEWCTX, CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, CRYPT_HKDF_SetParam},
     {CRYPT_EAL_IMPLKDF_DERIVE, CRYPT_HKDF_Derive},
@@ -85,3 +102,5 @@ const CRYPT_EAL_Func defKdfHkdf[] = {
     {CRYPT_EAL_IMPLKDF_FREECTX, CRYPT_HKDF_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */

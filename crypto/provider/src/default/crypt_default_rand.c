@@ -1,12 +1,21 @@
-/*---------------------------------------------------------------------------------------------
- *  This file is part of the openHiTLS project.
- *  Copyright © 2024 Huawei Technologies Co.,Ltd. All rights reserved.
- *  Licensed under the openHiTLS Software license agreement 1.0. See LICENSE in the project root
- *  for license information.
- *---------------------------------------------------------------------------------------------
+ /*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_drbg.h"
 #include "bsl_sal.h"
@@ -26,7 +35,7 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, CRYPT_Param *param)
     return randCtx;
 }
 
-const CRYPT_EAL_Func defRand[] = {
+const CRYPT_EAL_Func g_defRand[] = {
     {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, CRYPT_EAL_DefRandNewCtx},
     {CRYPT_EAL_IMPLRAND_DRBGINST, DRBG_Instantiate},
     {CRYPT_EAL_IMPLRAND_DRBGUNINST, DRBG_Uninstantiate},
@@ -36,3 +45,5 @@ const CRYPT_EAL_Func defRand[] = {
     {CRYPT_EAL_IMPLRAND_DRBGFREECTX, DRBG_Free},
     CRYPT_EAL_FUNC_END,
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */

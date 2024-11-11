@@ -181,7 +181,7 @@ int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_Param *para);
  * @retval CRYPT_NULL_INPUT                      If any input parameter is empty
  * @retval ECC_Pkey_ERR_UNSUPPORTED_CTRL_OPTION  opt mode not supported
  */
-int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup ecc

@@ -82,7 +82,7 @@ void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey);
  * @retval CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION The opt mode is not supported.
  * @retval CRYPT_CURVE25519_HASH_METH_ERROR         The hash method is not SHA512
  */
-int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup curve25519
@@ -155,6 +155,7 @@ int32_t CRYPT_CURVE25519_GetBits(const CRYPT_CURVE25519_Ctx *pkey);
  *
  * @param pkey       [IN/OUT] curve25519 Key pair structure. A private key is required for signature.
  *                            After signature, a public key is generated.
+ * @param algid      [IN] md algid
  * @param msg        [IN] Data to be signed
  * @param msgLen     [IN] Data length: 0 <= msgLen <= (2^125 - 64) bytes
  * @param hashMethod [IN] SHA512 method
@@ -168,7 +169,7 @@ int32_t CRYPT_CURVE25519_GetBits(const CRYPT_CURVE25519_Ctx *pkey);
  * @retval CRYPT_CURVE25519_NO_HASH_METHOD      No hash method is set.
  * @retval CRYPT_CURVE25519_SIGNLEN_ERROR       signLen is less than the signature length of curve25519.
  */
-int32_t CRYPT_CURVE25519_SignData(CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
     uint32_t msgLen, uint8_t *sign, uint32_t *signLen);
 
 /**
@@ -186,6 +187,7 @@ int32_t CRYPT_CURVE25519_GetSignLen(const CRYPT_CURVE25519_Ctx *pkey);
  * @brief curve25519 Verification
  *
  * @param pkey    [IN] curve25519 Key pair structure. A public key is required for signature verification.
+ * @param algid   [IN] md algid
  * @param msg     [IN] Data
  * @param msgLen  [IN] Data length: 0 <= msgLen <= (2^125 - 64) bytes
  * @param sign    [IN] Signature
@@ -200,7 +202,7 @@ int32_t CRYPT_CURVE25519_GetSignLen(const CRYPT_CURVE25519_Ctx *pkey);
  * @retval CRYPT_CURVE25519_SIGNLEN_ERROR   signLen is not equal to curve25519 signature length
  * @retval CRYPT_CURVE25519_NO_HASH_METHOD  No hash method is set.
  */
-int32_t CRYPT_CURVE25519_VerifyData(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
     uint32_t msgLen, const uint8_t *sign, uint32_t signLen);
 
 /**

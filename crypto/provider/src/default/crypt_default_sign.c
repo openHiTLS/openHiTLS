@@ -14,6 +14,8 @@
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+
 #include "crypt_eal_implprovider.h"
 #include "crypt_dsa.h"
 #include "crypt_rsa.h"
@@ -21,7 +23,7 @@
 #include "crypt_sm2.h"
 #include "crypt_curve25519.h"
 
-const CRYPT_EAL_Func defSignDsa[] = {
+const CRYPT_EAL_Func g_defSignDsa[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, CRYPT_DSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, CRYPT_DSA_SignData},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, CRYPT_DSA_Verify},
@@ -30,16 +32,16 @@ const CRYPT_EAL_Func defSignDsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defSignEd25519[] = {
-    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, NULL},
-    {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, CRYPT_CURVE25519_SignData},
-    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, NULL},
-    {CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA, CRYPT_CURVE25519_VerifyData},
+const CRYPT_EAL_Func g_defSignEd25519[] = {
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, CRYPT_CURVE25519_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, NULL},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, CRYPT_CURVE25519_Verify},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA, NULL},
     {CRYPT_EAL_IMPLPKEYSIGN_CTRL, CRYPT_CURVE25519_Ctrl},
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defSignRsa[] = {
+const CRYPT_EAL_Func g_defSignRsa[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, CRYPT_RSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, CRYPT_RSA_SignData},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, CRYPT_RSA_Verify},
@@ -48,7 +50,7 @@ const CRYPT_EAL_Func defSignRsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defSignEcdsa[] = {
+const CRYPT_EAL_Func g_defSignEcdsa[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, CRYPT_ECDSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, CRYPT_ECDSA_SignData},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, CRYPT_ECDSA_Verify},
@@ -57,7 +59,7 @@ const CRYPT_EAL_Func defSignEcdsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func defSignSm2[] = {
+const CRYPT_EAL_Func g_defSignSm2[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, CRYPT_SM2_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, NULL},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, CRYPT_SM2_Verify},
@@ -65,3 +67,5 @@ const CRYPT_EAL_Func defSignSm2[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_CTRL, CRYPT_SM2_Ctrl},
     CRYPT_EAL_FUNC_END,
 };
+
+#endif /* HITLS_CRYPTO_PROVIDER */

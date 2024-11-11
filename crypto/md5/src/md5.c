@@ -211,7 +211,7 @@ int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_MD5_CopyCtx(const CRYPT_MD5_Ctx *src, CRYPT_MD5_Ctx *dst)
+int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

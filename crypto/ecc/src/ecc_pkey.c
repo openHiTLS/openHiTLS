@@ -336,7 +336,7 @@ ERR:
     return ret;
 }
 
-int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
 {
     if ((ctx == NULL) || (val == NULL && opt != CRYPT_CTRL_GEN_ECC_PUBLICKEY)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
