@@ -12,8 +12,7 @@
             "-Wdate-time",
             "-Wfloat-equal",
             "-Wshadow",
-            "-Wformat=2",
-            "-Wno-stringop-overread"
+            "-Wformat=2"
         ],
         "CC_LANGUAGE_FLAGS": [
             "-fsigned-char"

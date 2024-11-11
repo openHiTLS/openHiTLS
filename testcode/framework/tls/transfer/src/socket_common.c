@@ -230,6 +230,9 @@ uint8_t *GetNewBuf(const void *buf, uint32_t len, uint32_t *packLen)
                 g_frameHandle.userData = (void *)&frameType;
             }
             g_frameHandle.frameCallBack(&msg, g_frameHandle.userData);
+            if (g_frameHandle.userData == NULL) {
+                g_frameHandle.userData = NULL;
+            }
             /* Pack the newly constructed msg into a buffer */
             if (FRAME_PackMsg(&frameType, &msg, &newBuf[newOffset], MAX_LEN - newOffset, &packLenTmp) != HITLS_SUCCESS) {
                 FRAME_CleanMsg(&frameType, &msg);

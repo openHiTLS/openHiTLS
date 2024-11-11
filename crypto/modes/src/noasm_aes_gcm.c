@@ -17,14 +17,10 @@
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_GCM)
 
 #include "crypt_modes_gcm.h"
+#include "crypt_errno.h"
 
-int32_t AES_GCM_EncryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODES_GCM_Encrypt(ctx, in, out, len);
-}
-
-int32_t AES_GCM_DecryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-{
-    return MODES_GCM_Decrypt(ctx, in, out, len);
+    return MODES_GCM_Update(modeCtx, in, inLen, out, outLen);
 }
 #endif

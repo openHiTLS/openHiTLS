@@ -35,12 +35,22 @@ extern "C" {
 * Pkey session structure
 */
 struct EAL_PkeyCtx {
-    const EAL_PkeyMethod *method;
+    bool isProvider;
+    const EAL_PkeyUnitaryMethod *method;
     void *key;
     void *extData;
     CRYPT_PKEY_AlgId id;
     BSL_SAL_RefCount references;
 };
+
+typedef enum {
+    CRYPT_CTRL_SET_PARA_BY_ID = -1,          /* Asymmetric cipher set para by id. */
+    CRYPT_CTRL_GET_PARA = -2,                /* Asymmetric cipher get para. */
+    CRYPT_CTRL_GET_PARAID = -3,              /* Asymmetric cipher get id of para. */
+    CRYPT_CTRL_GET_BITS = -4,            /* Asymmetric cipher get bits . */
+    CRYPT_CTRL_GET_SIGNLEN = -5,             /* Asymmetric cipher get signlen . */
+    CRYPT_CTRL_GET_SECBITS = -6,              /* Asymmetric cipher get secure bits . */
+} EAL_PkeyCtrlCmd;
 
 /**
  * @ingroup crypt_method
@@ -52,7 +62,6 @@ struct EAL_PkeyCtx {
  * For other error codes, see crypt_errno.h.
  */
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id);
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus

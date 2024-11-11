@@ -69,7 +69,7 @@ static int32_t CryptRsaEmsaPairSet(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx 
 int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *prvKey)
 {
     if ((pubKey == NULL) || (prvKey == NULL)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
@@ -85,7 +85,6 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
     CRYPT_PKEY_AlgId algId = CRYPT_EAL_PkeyGetId(tempPubKey);
     switch (algId) {
         case CRYPT_PKEY_DSA:
-        case CRYPT_PKEY_ED25519:
         case CRYPT_PKEY_ECDSA:
             /* RFC8032 5.1.6: ECDSA supports only sha512 as the hash algorithm for signatures.
              * Other signature algorithms support sha512. Therefore, sha512 is always used here. */

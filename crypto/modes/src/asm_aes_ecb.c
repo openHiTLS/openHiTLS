@@ -20,8 +20,9 @@
 #include "crypt_aes.h"
 #include "crypt_errno.h"
 #include "crypt_modes_ecb.h"
+#include "modes_local.h"
 
-int32_t AES_ECB_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_ECB_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -35,7 +36,7 @@ int32_t AES_ECB_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
     return CRYPT_SUCCESS;
 }
 
-int32_t AES_ECB_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_ECB_DecryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -48,4 +49,16 @@ int32_t AES_ECB_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
     (void)CRYPT_AES_ECB_Decrypt(ctx->ciphCtx, in, out, len);
     return CRYPT_SUCCESS;
 }
+
+int32_t AES_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherUpdate(modeCtx, modeCtx->enc ? AES_ECB_EncryptBlock : AES_ECB_DecryptBlock,
+        in, inLen, out, outLen);
+}
+
+int32_t AES_ECB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherFinal(modeCtx, modeCtx->enc ? AES_ECB_EncryptBlock : AES_ECB_DecryptBlock, out, outLen);
+}
+
 #endif

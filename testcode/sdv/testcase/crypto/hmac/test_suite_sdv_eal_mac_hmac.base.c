@@ -93,7 +93,7 @@ void MultiThreadTest(void *arg)
     ctx = CRYPT_EAL_MacNewCtx(threadParameter->algId);
     ASSERT_TRUE(ctx != NULL);
     for (uint32_t i = 0; i < 10; i++) {
-        ASSERT_EQ(CRYPT_EAL_MacInit(ctx, threadParameter->key, threadParameter->keyLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_MacInit(ctx, threadParameter->key, threadParameter->keyLen, NULL), CRYPT_SUCCESS);
         ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, threadParameter->data, threadParameter->dataLen), CRYPT_SUCCESS);
         ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &outLen), CRYPT_SUCCESS);
         ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->mac, threadParameter->macLen);

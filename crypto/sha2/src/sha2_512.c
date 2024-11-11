@@ -49,6 +49,14 @@ static int32_t Add128Bit(uint64_t *num1h, uint64_t *num1l, uint64_t num2h, uint6
     return 0;
 }
 
+struct CryptSha2512Ctx {
+    uint64_t h[CRYPT_SHA2_512_DIGESTSIZE / sizeof(uint64_t)];
+    uint8_t block[CRYPT_SHA2_512_BLOCKSIZE];
+    uint64_t lNum, hNum;
+    uint32_t num, mdlen;
+    uint32_t errorCode; /* error Code */
+};
+
 static int32_t CheckIsCorrupted(CRYPT_SHA2_512_Ctx *ctx, uint32_t nbytes)
 {
     // bit len of data = len << 3, which may be 2^67, thus need to 2 uint64 to represent
@@ -62,6 +70,20 @@ static int32_t CheckIsCorrupted(CRYPT_SHA2_512_Ctx *ctx, uint32_t nbytes)
         return CRYPT_SHA2_INPUT_OVERFLOW;
     }
     return CRYPT_SUCCESS;
+}
+
+CRYPT_SHA2_512_Ctx *CRYPT_SHA2_512_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_512_Ctx));
+}
+
+void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx)
+{
+    CRYPT_SHA2_512_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_512_Ctx));
 }
 
 int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx)
@@ -95,7 +117,7 @@ void CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_512_Ctx));
 }
 
-int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, CRYPT_SHA2_512_Ctx *src)
+int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, const CRYPT_SHA2_512_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -228,6 +250,23 @@ int32_t CRYPT_SHA2_512_Final(CRYPT_SHA2_512_Ctx *ctx, uint8_t *digest, uint32_t 
 }
 
 #ifdef HITLS_CRYPTO_SHA384
+
+typedef CRYPT_SHA2_512_Ctx CRYPT_SHA2_384_Ctx;
+
+CRYPT_SHA2_384_Ctx *CRYPT_SHA2_384_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_384_Ctx));
+}
+
+void CRYPT_SHA2_384_FreeCtx(CRYPT_SHA2_384_Ctx *ctx)
+{
+    CRYPT_SHA2_384_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_384_Ctx));
+}
+
 int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -255,7 +294,7 @@ void CRYPT_SHA2_384_Deinit(CRYPT_SHA2_384_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_384_Ctx));
 }
 
-int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, CRYPT_SHA2_384_Ctx *src)
+int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, const CRYPT_SHA2_384_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

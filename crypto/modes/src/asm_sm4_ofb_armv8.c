@@ -16,22 +16,17 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_OFB)
 
-#include "crypt_errno.h"
 #include "crypt_modes_ofb.h"
 
-int32_t MODE_SM4_OFB_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
 {
-    if (ctx == NULL || in == NULL || out == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-    return MODE_OFB_Crypt(ctx, in, out, len);
+    return MODES_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc)
 }
 
-int32_t MODE_SM4_OFB_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_OFB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (ctx == NULL || in == NULL || out == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-    return MODE_OFB_Crypt(ctx, in, out, len);
+    return MODES_OFB_Update(modeCtx, in, inLen, out, outLen);
 }
+
 #endif

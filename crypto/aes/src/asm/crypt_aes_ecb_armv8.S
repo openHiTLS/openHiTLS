@@ -17,7 +17,6 @@
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_ECB)
 
 #include "crypt_aes_macro_armv8.s"
-#include "crypt_arm.h"
 
 .file    "crypt_aes_ecb_armv8.S"
 .text

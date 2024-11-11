@@ -33,11 +33,14 @@
 
 #define CRYPT_MAC_IMPL_METHOD_DECLARE(name)          \
     EAL_MacMethod g_macMethod_##name = {             \
-        (MacInitCtx)CRYPT_##name##_InitCtx, (MacInit)CRYPT_##name##_Init,           \
-        (MacUpdate)CRYPT_##name##_Update,   (MacFinal)CRYPT_##name##_Final,         \
-        (MacDeinit)CRYPT_##name##_Deinit,   (MacDeinitCtx)CRYPT_##name##_DeinitCtx, \
-        (MacReinit)CRYPT_##name##_Reinit,   (MacGetMacLen)CRYPT_##name##_GetMacLen, \
-        sizeof(CRYPT_##name##_Ctx)                   \
+        (MacNewCtx)CRYPT_##name##_NewCtx,            \
+        (MacInit)CRYPT_##name##_Init,                \
+        (MacUpdate)CRYPT_##name##_Update,            \
+        (MacFinal)CRYPT_##name##_Final,              \
+        (MacDeinit)CRYPT_##name##_Deinit,            \
+        (MacReinit)CRYPT_##name##_Reinit,            \
+        (MacCtrl)CRYPT_##name##_Ctrl,                \
+        (MacFreeCtx)CRYPT_##name##_FreeCtx           \
     }
 
 #ifdef HITLS_CRYPTO_HMAC
@@ -87,13 +90,13 @@ static const EAL_MacAlgMap *EAL_FindMacAlgMap(CRYPT_MAC_AlgId id)
 int32_t EAL_MacFindMethod(CRYPT_MAC_AlgId id, EAL_MacMethLookup *lu)
 {
     if (lu == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
     const EAL_MacAlgMap *macAlgMap = EAL_FindMacAlgMap(id);
     if (macAlgMap == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
 
@@ -107,13 +110,8 @@ int32_t EAL_MacFindMethod(CRYPT_MAC_AlgId id, EAL_MacMethLookup *lu)
             break;
 #endif
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_EAL_ERR_ALGID);
             return CRYPT_EAL_ERR_ALGID;
-    }
-
-    if (lu->masMeth == NULL || lu->depMeth == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
     }
 
     return CRYPT_SUCCESS;

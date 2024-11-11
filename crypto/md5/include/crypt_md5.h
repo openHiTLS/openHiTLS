@@ -29,15 +29,23 @@ extern "C" {
 #define CRYPT_MD5_DIGESTSIZE 16
 #define CRYPT_MD5_BLOCKSIZE  64
 
-/* md5 ctx */
-typedef struct {
-    uint32_t h[CRYPT_MD5_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
-    uint8_t block[CRYPT_MD5_BLOCKSIZE];                  /* store the remaining data of less than one block */
-    uint32_t hNum, lNum;                                 /* input data counter, maximum value 2 ^ 64 bits */
-    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
-    uint32_t num;
-} CRYPT_MD5_Ctx;
+typedef struct CryptMdCtx CRYPT_MD5_Ctx;
+/**
+ * @ingroup MD5
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_MD5_Ctx *CRYPT_MD5_NewCtx(void);
 
+/**
+ * @ingroup MD5
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx);
 /**
  * @ingroup MD5
  * @brief This API is used to initialize the MD5 context.

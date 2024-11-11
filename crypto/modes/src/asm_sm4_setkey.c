@@ -20,14 +20,15 @@
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_sm4.h"
-#include "crypt_modes.h"
+#include "modes_local.h"
 
-int32_t MODES_SM4_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODES_SM4_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     return CRYPT_SM4_SetEncryptKey(ctx->ciphCtx, key, len);
+}
+
+int32_t MODES_SM4_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    return CRYPT_SM4_SetDecryptKey(ctx->ciphCtx, key, len);
 }
 #endif

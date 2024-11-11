@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +58,19 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtx(CRYPT_MAC_AlgId id);
 
 /**
  * @ingroup crypt_eal_mac
+ * @brief   Create an MAC context in the providers.
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] mac algorithm ID.
+ * @param attrName [IN] Specify expected attribute values
+ *
+ * @retval  CRYPT_EAL_MacCtx pointer.
+ *          NULL, if the operation fails.
+ */
+CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx,  int32_t algId, const char *attrName);
+
+/**
+ * @ingroup crypt_eal_mac
  * @brief   Release the MAC context memory.
  *
  * @param   ctx [IN] MAC context, ctx set NULL by caller.
@@ -80,13 +93,14 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx);
  *                   CMAC: The length of CMAC-AES128 must be 128 bits, and the length of CMAC-AES192 must be 192 bits.
  *                         The length of CMAC-AES256 must be 256 bits.
  * @param   len [IN] Key length
+ * @param   param [IN] parameters
  *
  * @retval #CRYPT_SUCCESS, initialization succeeded.
  * @retval #CRYPT_NULL_INPUT, pointer ctx parameter or key parameter is NULL.
  * @retval #CRYPT_AES_ERR_KEYLEN, the key length of the AES & CMAC algorithm is incorrect.
  *         Other error codes see the crypt_errno.h.
  */
-int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len);
+int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
 
 /**
  * @ingroup crypt_eal_mac
@@ -166,7 +180,7 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx);
  * @param   ctx [IN] MAC context
  * @retval  The MAC length corresponding to the context.
  */
-uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx);
+int32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx);
 
 #ifdef __cplusplus
 }   // end extern "C"

@@ -19,6 +19,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
+#include "eal_common.h"
 #include "entropy.h"
 #include "eal_entropy.h"
 
@@ -46,12 +47,12 @@ static int32_t GetEntropy(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRY
     // '>' indicates that data with a length of lenRange->max cannot provide sufficient bit entropy.
     // Only data with a length of len can provide sufficient bit entropy.
     if (len > lenRange->max) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_RANGE_ERROR);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, 0, CRYPT_ENTROPY_RANGE_ERROR);
         return CRYPT_ENTROPY_RANGE_ERROR;
     }
     uint8_t *data = (uint8_t *)BSL_SAL_Malloc(len);
     if (data == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, 0, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     int32_t ret;
@@ -61,7 +62,7 @@ static int32_t GetEntropy(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRY
         ret = ENTROPY_GetRandom(data, len);
     }
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, 0, ret);
         BSL_SAL_FREE(data);
         return ret;
     }
@@ -90,12 +91,12 @@ static void CleanNonce(void *ctx, CRYPT_Data *nonce)
 int32_t EAL_SetDefaultEntropyMeth(CRYPT_RandSeedMethod *meth, void **seedCtx)
 {
     if (meth == NULL || seedCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, 0, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     *seedCtx = ENTROPY_GetCtx(EAL_EntropyGetECF(CRYPT_MAC_HMAC_SHA256), CRYPT_MAC_HMAC_SHA224);
     if (*seedCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, 0, CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
     }
     meth->getEntropy = GetEntropy;
