@@ -675,11 +675,6 @@ ERR:
 }
 
 static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
-{
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     int32_t ret;
     if (ctx->isSumValid != 1) {
         ret = CRYPT_SM2_ERR_S_NOT_SET;
@@ -794,15 +789,11 @@ static int32_t Sm2SetPKG(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t SM2UpReferences(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 {
-    if (val == NULL) {
+    if (val == NULL || len != (uint32_t)sizeof(int)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (val != NULL && len == (uint32_t)sizeof(int)) {
-        return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
-    }
-    BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-    return CRYPT_NULL_INPUT;
+    return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
 }
 
 int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)

@@ -29,6 +29,7 @@ typedef enum {
     CRYPT_CTRL_SET_PADDING = -3,
     CRYPT_CTRL_GET_PADDING = -4,
     CRYPT_CTRL_REINIT_STATUS = -5,
+    CRYPT_CTRL_GEN_ECC_PUBLICKEY = -6,
 } CRYPT_CipherCtrlLocal;
 
 /* Prototype of the MD algorithm operation functions */

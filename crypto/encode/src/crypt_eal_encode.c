@@ -24,6 +24,7 @@
 #include "bsl_pem_internal.h"
 #include "crypt_ecc.h"
 #include "crypt_eal_pkey.h"
+#include "eal_pkey_local.h"
 #include "crypt_errno.h"
 #include "bsl_obj_internal.h"
 #include "crypt_eal_encode.h"

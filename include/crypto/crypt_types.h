@@ -412,7 +412,6 @@ typedef enum {
  * Set and obtain internal parameters of pkey.
  */
 typedef enum {
-    CRYPT_CTRL_SET_ED25519_HASH_METHOD, /**< ED25519 Set the hash method. */
     CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,    /**< RSA set the signature padding mode to EMSA_PKCSV15. */
     CRYPT_CTRL_SET_RSA_EMSA_PSS,        /**< RSA set the signature padding mode to EMSA_PSS. */
     CRYPT_CTRL_SET_RSA_SALT,            /**< When the RSA algorithm is used for PSS signature, the salt data is
@@ -448,7 +447,6 @@ typedef enum {
 
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
-    CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**
