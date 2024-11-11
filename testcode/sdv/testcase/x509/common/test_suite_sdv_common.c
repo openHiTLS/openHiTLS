@@ -578,7 +578,7 @@ void SDV_X509_EXT_SetAkiSki_TC001(Hex *kid)
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 0);
     ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), 0);
-    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
+    ASSERT_NE(ext->flag & HITLS_X509_EXT_FLAG_GEN, 0);
     ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1 + 1);
 exit:
     HITLS_X509_CertFree(cert);
@@ -617,7 +617,7 @@ void SDV_X509_EXT_SetKeyUsage_TC001(void)
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
     ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
     ASSERT_NE(certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE, 0);
-    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
+    ASSERT_NE(ext->flag & HITLS_X509_EXT_FLAG_GEN, 0);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -660,7 +660,7 @@ void SDV_X509_EXT_SetExtendKeyUsage_TC001(void)
     BSL_Buffer oidBuff = {(uint8_t *)oid->octs, oid->octetLen};
     ASSERT_EQ(BSL_LIST_AddElement(oidList, &oidBuff, BSL_LIST_POS_END), 0);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_EXKUSAGE, &exku, sizeof(HITLS_X509_ExtExKeyUsage)), 0);
-    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
+    ASSERT_NE(ext->flag & HITLS_X509_EXT_FLAG_GEN, 0);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -707,7 +707,7 @@ void SDV_X509_EXT_SetSan_TC001(void)
     HITLS_X509_GeneralName nomal = {HITLS_X509_GN_EMAIL, {(uint8_t *)email, (uint32_t)strlen(email)}};
     ASSERT_EQ(BSL_LIST_AddElement(list, &nomal, BSL_LIST_POS_END), 0);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), 0);
-    ASSERT_NE(ext->extFlag & HITLS_X509_EXT_FLAG_GEN, 0);
+    ASSERT_NE(ext->flag & HITLS_X509_EXT_FLAG_GEN, 0);
 
 exit:
     HITLS_X509_CertFree(cert);
