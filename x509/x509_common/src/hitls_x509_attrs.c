@@ -207,14 +207,14 @@ ERR:
 
 static int32_t DecodeReqExtAttr(HITLS_X509_AttrEntry *attrEntry, void *attrItem)
 {
-    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CSR);
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     if (ext == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     int32_t ret = HITLS_X509_ParseExt(&attrEntry->attrValue, ext);
     if (ret != BSL_SUCCESS) {
-        HITLS_X509_ExtFree(ext, true);
+        HITLS_X509_ExtFree(ext);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

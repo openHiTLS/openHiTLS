@@ -173,7 +173,7 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
         BSL_LIST_FREE(cert->tbs.issuerName, NULL);
         BSL_LIST_FREE(cert->tbs.subjectName, NULL);
     }
-    HITLS_X509_ExtFree(&cert->tbs.ext, false);
+    X509_ExtFree(&cert->tbs.ext, false);
     BSL_SAL_FREE(cert->rawData);
     CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
     CRYPT_EAL_PkeyFreeCtx(cert->ealPrivKey);
@@ -203,7 +203,7 @@ HITLS_X509_Cert *HITLS_X509_CertNew(void)
         goto ERR;
     }
 
-    ext = HITLS_X509_ExtNew(&cert->tbs.ext, HITLS_X509_EXT_TYPE_CERT);
+    ext = X509_ExtNew(&cert->tbs.ext, HITLS_X509_EXT_TYPE_CERT);
     if (ext == NULL) {
         goto ERR;
     }
@@ -315,8 +315,7 @@ int32_t HITLS_X509_ParseAsn1Cert(bool isCopy, uint8_t **encode, uint32_t *encode
     // parse tbs
     ret = HITLS_X509_ParseCertTbs(asnArr, cert);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "cert: failed to parse tbs.", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // parse sign alg
@@ -741,7 +740,7 @@ static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
     }
     HITLS_X509_Ext *csrExt = (HITLS_X509_Ext *)attr.value;
     ret = HITLS_X509_ExtReplace(ext, csrExt);
-    HITLS_X509_ExtFree(csrExt, true);
+    X509_ExtFree(csrExt, true);
     return ret;
 }
 
@@ -830,8 +829,19 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
         return X509_CertSetCtrl(cert, cmd, val, valLen);
     } else if (cmd >= HITLS_X509_EXT_KU_KEYENC && cmd < HITLS_X509_EXT_SET_SKI) {
         return X509_CertExtCtrl(cert, cmd, val, valLen);
+    } else if (cmd <= HITLS_X509_EXT_CHECK_SKI) {
+        int32_t cmdSet[] = {HITLS_X509_EXT_SET_SKI, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_SET_KUSAGE,
+            HITLS_X509_EXT_SET_SAN, HITLS_X509_EXT_SET_BCONS, HITLS_X509_EXT_SET_EXKUSAGE, HITLS_X509_EXT_GET_SKI,
+            HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_CHECK_SKI, HITLS_X509_EXT_KU_KEYENC, HITLS_X509_EXT_KU_DIGITALSIGN,
+            HITLS_X509_EXT_KU_CERTSIGN, HITLS_X509_EXT_KU_KEYAGREEMENT};
+        if (!X509_CheckCmdVaild(cmdSet, sizeof(cmdSet) / sizeof(int32_t), cmd)) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_SUPPORT);
+            return HITLS_X509_ERR_EXT_NOT_SUPPORT;
+        }
+        return X509_ExtCtrl(&cert->tbs.ext, cmd, val, valLen);
     } else {
-        return HITLS_X509_ExtCtrl(&cert->tbs.ext, cmd, val, valLen);
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
     }
 }
 
@@ -867,7 +877,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
         return HITLS_X509_SUCCESS;
     }
     if (issue->tbs.version == HITLS_CERT_VERSION_3 && subject->tbs.version == HITLS_CERT_VERSION_3) {
-        ret = HITLS_X509_AkiSki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
+        ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
         if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
             return ret;
         }
@@ -1082,7 +1092,7 @@ EXIT:
         cert->tbs.tbsRawData = tbsBuff.data;
         cert->tbs.tbsRawDataLen = tbsBuff.dataLen;
     } else {
-        BSL_SAL_FREE(tbsBuff.data);
+        BSL_SAL_Free(tbsBuff.data);
     }
     return ret;
 }

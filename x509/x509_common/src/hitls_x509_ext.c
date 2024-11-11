@@ -347,7 +347,7 @@ void HITLS_X509_ClearGeneralNames(BslList *names)
     BSL_LIST_DeleteAll(names, (BSL_LIST_PFUNC_FREE)FreeGenernalName);
 }
 
-HITLS_X509_Ext *HITLS_X509_ExtNew(HITLS_X509_Ext *ext, HITLS_X509_ExtType type)
+HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, HITLS_X509_ExtType type)
 {
     HITLS_X509_Ext *tmp = NULL;
     if (ext == NULL) {
@@ -366,7 +366,8 @@ HITLS_X509_Ext *HITLS_X509_ExtNew(HITLS_X509_Ext *ext, HITLS_X509_ExtType type)
     if (type != HITLS_X509_EXT_TYPE_CRL) {
         ext->extData = BSL_SAL_Calloc(1, sizeof(HITLS_X509_CertExt));
         if (ext->extData == NULL) {
-            BSL_LIST_DeleteAll(ext->extList, NULL);
+            BSL_SAL_Free(ext->extList);
+            ext->extList = NULL;
             BSL_SAL_Free(tmp);
             return NULL;
         }
@@ -375,12 +376,12 @@ HITLS_X509_Ext *HITLS_X509_ExtNew(HITLS_X509_Ext *ext, HITLS_X509_ExtType type)
     return ext;
 }
 
-void HITLS_X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut)
+void X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut)
 {
     if (ext == NULL) {
         return;
     }
-    if ((ext->extFlag & HITLS_X509_EXT_FLAG_PARSE) != 0) {
+    if ((ext->flag & HITLS_X509_EXT_FLAG_PARSE) != 0) {
         BSL_LIST_FREE(ext->extList, NULL);
     } else {
         BSL_LIST_FREE(ext->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
@@ -500,13 +501,8 @@ int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_E
     return ret;
 }
 
-int32_t HITLS_X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCrlNumber *crlNumber)
+int32_t X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCrlNumber *crlNumber)
 {
-    if (extEntry == NULL || crlNumber == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
     uint8_t *temp = extEntry->extnValue.buff;
     uint32_t tempLen = extEntry->extnValue.len;
     uint32_t valueLen = 0;
@@ -753,7 +749,7 @@ int32_t HITLS_X509_ParseExt(BSL_ASN1_Buffer *ext, HITLS_X509_Ext *certExt)
         return HITLS_X509_ERR_EXT_PARSE_AFTER_SET;
     }
 
-    if ((certExt->extFlag & HITLS_X509_EXT_FLAG_GEN) != 0) {
+    if ((certExt->flag & HITLS_X509_EXT_FLAG_GEN) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_PARSE_AFTER_SET);
         return HITLS_X509_ERR_EXT_PARSE_AFTER_SET;
     }
@@ -771,7 +767,7 @@ int32_t HITLS_X509_ParseExt(BSL_ASN1_Buffer *ext, HITLS_X509_Ext *certExt)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    certExt->extFlag |= HITLS_X509_EXT_FLAG_PARSE;
+    certExt->flag |= HITLS_X509_EXT_FLAG_PARSE;
     return ret;
 }
 
@@ -1105,7 +1101,6 @@ static int32_t SetExtCrlNumber(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, 
 
 int32_t HITLS_X509_SetExtList(void *param, BslList *extList, BslCid cid, BSL_Buffer *val, EncodeExtCb encodeExt)
 {
-    (void)param;
     HITLS_X509_ExtEntry *extEntry = NULL;
     bool isNew;
     int32_t ret = GetExtEntryByCid(extList, cid, &extEntry, &isNew);
@@ -1135,7 +1130,7 @@ int32_t HITLS_X509_SetExtList(void *param, BslList *extList, BslCid cid, BSL_Buf
 
 static int32_t SetExt(HITLS_X509_Ext *ext, BslCid cid, BSL_Buffer *val, uint32_t expectLen, EncodeExtCb encodeExt)
 {
-    if (ext->extFlag & HITLS_X509_EXT_FLAG_PARSE) {
+    if (ext->flag & HITLS_X509_EXT_FLAG_PARSE) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
         return HITLS_X509_ERR_EXT_SET_AFTER_PARSE;
     }
@@ -1150,75 +1145,36 @@ static int32_t SetExt(HITLS_X509_Ext *ext, BslCid cid, BSL_Buffer *val, uint32_t
         return ret;
     }
 
-    ext->extFlag |= HITLS_X509_EXT_FLAG_GEN;
+    ext->flag |= HITLS_X509_EXT_FLAG_GEN;
     return ret;
 }
 
 static int32_t SetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
 {
-    bool isNew = false;
-    if (ext->extList == NULL) {
-        ext->extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry));
-        if (ext->extList == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
-        }
-        isNew = true;
-    }
-    bool isDataNew = false;
-    if (ext->extData == NULL && ext->type != HITLS_X509_EXT_TYPE_CRL) {
-        ext->extData = BSL_SAL_Calloc(1, sizeof(HITLS_X509_CertExt));
-        if (ext->extData == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
-        }
-        isDataNew = true;
-    }
     BSL_Buffer buff = {val, valLen};
-    int32_t ret;
     switch (cmd) {
         case HITLS_X509_EXT_SET_BCONS:
-            ret = SetExt(ext, BSL_CID_CE_BASICCONSTRAINTS, &buff, sizeof(HITLS_X509_ExtBCons),
+            return SetExt(ext, BSL_CID_CE_BASICCONSTRAINTS, &buff, sizeof(HITLS_X509_ExtBCons),
                 (EncodeExtCb)SetExtBCons);
-            break;
         case HITLS_X509_EXT_SET_KUSAGE:
-            ret = SetExt(ext, BSL_CID_CE_KEYUSAGE, &buff, sizeof(HITLS_X509_ExtKeyUsage), (EncodeExtCb)SetExtKeyUsage);
-            break;
+            return SetExt(ext, BSL_CID_CE_KEYUSAGE, &buff, sizeof(HITLS_X509_ExtKeyUsage), (EncodeExtCb)SetExtKeyUsage);
         case HITLS_X509_EXT_SET_AKI:
-            ret = SetExt(ext, BSL_CID_CE_AUTHORITYKEYID, &buff, sizeof(HITLS_X509_ExtAki), (EncodeExtCb)SetExtAki);
-            break;
+            return SetExt(ext, BSL_CID_CE_AUTHORITYKEYID, &buff, sizeof(HITLS_X509_ExtAki), (EncodeExtCb)SetExtAki);
         case HITLS_X509_EXT_SET_SKI:
-            ret = SetExt(ext, BSL_CID_CE_SUBJECTKEYID, &buff, sizeof(HITLS_X509_ExtSki), (EncodeExtCb)SetExtSki);
-            break;
+            return SetExt(ext, BSL_CID_CE_SUBJECTKEYID, &buff, sizeof(HITLS_X509_ExtSki), (EncodeExtCb)SetExtSki);
         case HITLS_X509_EXT_SET_SAN:
-            ret = SetExt(ext, BSL_CID_CE_SUBJECTALTNAME, &buff, sizeof(HITLS_X509_ExtSan), (EncodeExtCb)SetExtSan);
-            break;
+            return SetExt(ext, BSL_CID_CE_SUBJECTALTNAME, &buff, sizeof(HITLS_X509_ExtSan), (EncodeExtCb)SetExtSan);
         case HITLS_X509_EXT_SET_EXKUSAGE:
-            ret = SetExt(ext, BSL_CID_CE_EXTENDEDKEYUSAGE, &buff, sizeof(HITLS_X509_ExtExKeyUsage),
+            return SetExt(ext, BSL_CID_CE_EXTENDEDKEYUSAGE, &buff, sizeof(HITLS_X509_ExtExKeyUsage),
                 (EncodeExtCb)SetExtExKeyUsage);
-            break;
         case HITLS_X509_EXT_SET_CRLNUMBER:
-            ret = SetExt(ext, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
+            return SetExt(ext, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
                 (EncodeExtCb)SetExtCrlNumber);
-            break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (ret != HITLS_X509_SUCCESS) {
-        if (isNew) {
-            BSL_SAL_Free(ext->extList);
-            ext->extList = NULL;
-        }
-        if (isDataNew) {
-            BSL_SAL_Free(ext->extData);
-            ext->extData = NULL;
-        }
-    }
-    return ret;
 }
-
-
 
 int32_t HITLS_X509_GetExt(BslList *ext, BslCid cid, BSL_Buffer *val, uint32_t expectLen, DecodeExtCb decodeExt)
 {
@@ -1250,7 +1206,7 @@ static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t v
                 (DecodeExtCb)HITLS_X509_ParseAuthorityKeyId);
         case HITLS_X509_EXT_GET_CRLNUMBER:
             return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
-                (DecodeExtCb)HITLS_X509_ParseCrlNumber);
+                (DecodeExtCb)X509_ParseCrlNumber);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -1267,12 +1223,18 @@ static int32_t CheckExtByCid(HITLS_X509_Ext *ext, int32_t cid, bool *val, int32_
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+bool X509_CheckCmdVaild(int32_t *cmdSet, uint32_t cmdSize, int32_t cmd)
 {
-    if (ext == NULL || val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+    for (uint32_t i = 0; i < cmdSize; i++) {
+        if (cmd == cmdSet[i]) {
+            return true;
+        }
     }
+    return false;
+}
+
+int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+{
     if (cmd >= HITLS_X509_EXT_SET_SKI && cmd < HITLS_X509_EXT_GET_SKI) {
         return SetExtCtrl(ext, cmd, val, valLen);
     }
@@ -1284,6 +1246,28 @@ int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t 
     }
     BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
     return HITLS_X509_ERR_INVALID_PARAM;
+}
+
+int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+{
+    if (ext == NULL || val == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (ext->type == HITLS_X509_EXT_TYPE_CERT || ext->type == HITLS_X509_EXT_TYPE_CRL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_SUPPORT);
+        return HITLS_X509_ERR_EXT_NOT_SUPPORT;
+    }
+    int32_t cmdSet[] = {HITLS_X509_EXT_SET_SKI, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_SET_KUSAGE,
+        HITLS_X509_EXT_SET_SAN, HITLS_X509_EXT_SET_BCONS, HITLS_X509_EXT_SET_EXKUSAGE, HITLS_X509_EXT_GET_SKI,
+        HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_CHECK_SKI, HITLS_X509_EXT_KU_KEYENC, HITLS_X509_EXT_KU_DIGITALSIGN,
+        HITLS_X509_EXT_KU_CERTSIGN, HITLS_X509_EXT_KU_KEYAGREEMENT};
+    if (!X509_CheckCmdVaild(cmdSet, sizeof(cmdSet) / sizeof(int32_t), cmd)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_SUPPORT);
+        return HITLS_X509_ERR_EXT_NOT_SUPPORT;
+    }
+
+    return X509_ExtCtrl(ext, cmd, val, valLen);
 }
 
 void HITLS_X509_ExtEntryFree(HITLS_X509_ExtEntry *entry)
@@ -1352,7 +1336,7 @@ int32_t HITLS_X509_EncodeExt(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *
     return HITLS_X509_SUCCESS;
 }
 
-HITLS_X509_ExtEntry *DupExtEntry(const HITLS_X509_ExtEntry *src)
+HITLS_X509_ExtEntry *X509_DupExtEntry(const HITLS_X509_ExtEntry *src)
 {
     /* Src is not null. */
     HITLS_X509_ExtEntry *dest = BSL_SAL_Malloc(sizeof(HITLS_X509_ExtEntry));
@@ -1395,7 +1379,7 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (dest->extFlag & HITLS_X509_EXT_FLAG_PARSE) {
+    if (dest->flag & HITLS_X509_EXT_FLAG_PARSE) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
         return HITLS_X509_ERR_EXT_SET_AFTER_PARSE;
     }
@@ -1411,13 +1395,31 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
         return HITLS_X509_SUCCESS;
     }
     BslList *list =
-        BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)DupExtEntry, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
+        BSL_LIST_Copy(src->extList, (BSL_LIST_PFUNC_DUP)X509_DupExtEntry, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
     if (list == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET);
         return HITLS_X509_ERR_EXT_SET;
     }
     BSL_LIST_FREE(dest->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
     dest->extList = list;
-    dest->extFlag = HITLS_X509_EXT_FLAG_GEN;
+    dest->flag = HITLS_X509_EXT_FLAG_GEN;
     return HITLS_X509_SUCCESS;
+}
+
+
+HITLS_X509_Ext *HITLS_X509_ExtNew(int32_t type)
+{
+    if (type == HITLS_X509_EXT_TYPE_CERT || type == HITLS_X509_EXT_TYPE_CRL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return NULL;
+    }
+    return X509_ExtNew(NULL, type);
+}
+
+void HITLS_X509_ExtFree(HITLS_X509_Ext *ext)
+{
+    if (ext == NULL) {
+        return;
+    }
+    X509_ExtFree(ext, true);
 }
