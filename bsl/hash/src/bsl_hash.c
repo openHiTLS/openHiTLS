@@ -466,7 +466,8 @@ int32_t BSL_HASH_Insert(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, ui
     return BSL_HASH_InsertNode(hash, rawList, &inputKey, &inputValue);
 }
 
-int32_t BSL_HASH_Put(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, uintptr_t value, uint32_t valueSize)
+int32_t BSL_HASH_Put(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, uintptr_t value, uint32_t valueSize,
+    BSL_HASH_UpdateNodeFunc updateNodeFunc)
 {
     int32_t ret;
     uint32_t hashCode;
@@ -484,7 +485,11 @@ int32_t BSL_HASH_Put(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, uintp
     rawList = &hash->listArray[hashCode];
     hashNode = BSL_HASH_FindNode(rawList, key, hash->matchFunc);
     if (hashNode != NULL) {
-        return BSL_HASH_UpdateNode(hash, hashNode, value, valueSize);
+        if (updateNodeFunc != NULL) {
+            return updateNodeFunc(hash, hashNode, value, valueSize);
+        } else {
+            return BSL_HASH_UpdateNode(hash, hashNode, value, valueSize);
+        }
     }
 
     inputKey.inputData = key;

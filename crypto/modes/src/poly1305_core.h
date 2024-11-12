@@ -21,6 +21,7 @@
 #ifdef HITLS_CRYPTO_CHACHA20POLY1305
 
 #include "crypt_modes_chacha20poly1305.h"
+#include "modes_local.h"
 
 
 #ifdef __cplusplus

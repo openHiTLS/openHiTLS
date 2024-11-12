@@ -18,15 +18,14 @@
 
 #include "securec.h"
 #include "bsl_err_internal.h"
-#include "bsl_sal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
-#include "crypt_modes.h"
+#include "modes_local.h"
 #include "crypt_modes_ofb.h"
 
-int32_t MODE_OFB_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    if (ctx == NULL || in == NULL || out == NULL || len == 0) {
+    if (ctx == NULL || in == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -48,7 +47,7 @@ int32_t MODE_OFB_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uin
 
     while (left > 0) {
         // Encrypt the IV.
-        ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->iv, tmp, blockSize);
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, tmp, blockSize);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -74,6 +73,97 @@ int32_t MODE_OFB_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uin
     }
 
     return CRYPT_SUCCESS;
+}
+
+MODES_CipherCtx *MODES_OFB_NewCtx(int32_t algId)
+{
+    return MODES_CipherNewCtx(algId);
+}
+
+int32_t MODES_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
+{
+    return MODES_CipherInitCtx(modeCtx, modeCtx->commonCtx.ciphMeth->setEncryptKey,
+        modeCtx->commonCtx.ciphCtx, key, keyLen, iv, ivLen, enc);
+}
+
+int32_t MODES_OFB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherStreamProcess(MODES_OFB_Crypt, &modeCtx->commonCtx,
+        in, inLen, out, outLen);
+}
+
+int32_t MODES_OFB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    (void) modeCtx;
+    (void) out;
+    *outLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+int32_t MODES_OFB_DeInitCtx(MODES_CipherCtx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return MODES_CipherDeInitCtx(modeCtx);
+}
+
+int32_t MODES_OFB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (cmd) {
+        case CRYPT_CTRL_GET_BLOCKSIZE:
+            if (val == NULL || valLen != sizeof(uint32_t)) {
+                return CRYPT_INVALID_ARG;
+            }
+            *(int32_t *)val = 1;
+            return CRYPT_SUCCESS;
+        default:
+            return MODES_CipherCtrl(modeCtx, cmd, val, valLen);;
+    }
+}
+
+void MODES_OFB_FreeCtx(MODES_CipherCtx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return;
+    }
+    MODES_CipherFreeCtx(modeCtx);
+}
+
+int32_t MODES_OFB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc)
+{
+    (void) param;
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_SM4_OFB:
+            return SM4_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+        default:
+            return MODES_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+    }
+}
+
+int32_t MODES_OFB_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_SM4_OFB:
+            return SM4_OFB_Update(modeCtx, in, inLen, out, outLen);
+        default:
+            return MODES_OFB_Update(modeCtx, in, inLen, out, outLen);
+    }
 }
 
 #endif // HITLS_CRYPTO_OFB

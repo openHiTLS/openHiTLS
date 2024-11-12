@@ -20,102 +20,37 @@
 #ifdef HITLS_CRYPTO_GCM
 
 #include <stdint.h>
-#include "crypt_local_types.h"
+#include <stdbool.h>
 #include "crypt_types.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#define GCM_BLOCKSIZE 16
+typedef struct ModesGcmCtx MODES_GCM_Ctx;
 
-typedef struct {
-    uint64_t h;
-    uint64_t l;
-} MODES_GCM_GF128;
+// GCM mode universal implementation
+MODES_GCM_Ctx *MODES_GCM_NewCtx(int32_t algId);
+int32_t MODES_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
 
-typedef struct {
-    // The information can be set once and used multiple times.
-    uint8_t iv[GCM_BLOCKSIZE];      // Processed IV information. The length is 16 bytes.
-    uint8_t ghash[GCM_BLOCKSIZE];   // Intermediate data for tag calculation.
-    MODES_GCM_GF128 hTable[16]; // The window uses 4 bits, 2 ^ 4 = 16 entries need to be pre-calculated.
-    void *ciphCtx; // Context defined by each symmetric algorithm.
-    const EAL_CipherMethod *ciphMeth; // algorithm method
-    /**
-     * tagLen may be any one of the following five values: 16, 15, 14, 13, or 12 bytes
-     * For certain applications, tagLen may be 8 or 4 bytes
-     */
-    uint8_t tagLen;
-    uint32_t cryptCnt; // Indicate the number of encryption times that the key can be used.
+int32_t MODES_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_GCM_Final(MODES_GCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx);
+int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
+void MODES_GCM_FreeCtx(MODES_GCM_Ctx *modeCtx);
 
-    // Intermediate encryption/decryption information. The lifecycle is one encryption/decryption operation,
-    // and needs to be reset during each encryption/decryption operation.
-    uint8_t last[GCM_BLOCKSIZE];    // ctr mode last
-    uint8_t remCt[GCM_BLOCKSIZE];     // Remaining ciphertext
-    uint8_t ek0[GCM_BLOCKSIZE];     // ek0
-    uint64_t plaintextLen;  // use for calc tag
-    uint32_t aadLen;        // use for calc tag
-    uint32_t lastLen;       // ctr mode lastLen
-} MODES_GCM_Ctx;
+// AES GCM optimization implementation
+int32_t AES_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
-int32_t MODES_GCM_InitCtx(MODES_GCM_Ctx *ctx, const struct EAL_CipherMethod *m);
+// SM4 GCM optimization implementation
+int32_t SM4_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
+int32_t SM4_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
-void MODES_GCM_DeinitCtx(MODES_GCM_Ctx *ctx);
+int32_t MODES_GCM_InitCtxEx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc);
 
-void MODES_GCM_Clean(MODES_GCM_Ctx *ctx);
-
-int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len);
-
-int32_t MODES_GCM_SetKey(MODES_GCM_Ctx *ctx, const uint8_t *ciphCtx, uint32_t len);
-
-int32_t MODES_GCM_InitHashTable(MODES_GCM_Ctx *ctx);
-
-int32_t MODES_GCM_Encrypt(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-int32_t MODES_GCM_Decrypt(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-#ifdef HITLS_CRYPTO_AES
-int32_t AES_GCM_EncryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-int32_t AES_GCM_DecryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif  // HITLS_CRYPTO_AES
-
-#ifdef HITLS_CRYPTO_SM4
-/**
- * @brief SM4-GCM mode key setting
- *
- * @param ctx [IN] Mode handle
- * @param key [IN] Encryption key
- * @param len [IN] Encryption key length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODES_SM4_GCM_SetKey(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len);
-
-/**
- * @brief SM4-GCM mode encryption
- *
- * @param [IN] ctx  Mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODES_SM4_GCM_EncryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-/**
- * @brief SM4-GCM mode decryption
- *
- * @param ctx [IN]  Mode handle
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Decrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODES_SM4_GCM_DecryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif // HITLS_CRYPTO_SM4
+int32_t MODES_GCM_UpdateEx(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus
 }

@@ -42,13 +42,16 @@ typedef enum {
     BSL_CID_CHACHA20_POLY1305 = 1,
 
     // aes
-    BSL_CID_AES128_CBC = 16,       /**< identifies AES-128 algorithm in CBC mode */
+    BSL_CID_AES128_CBC = 16,        /**< identifies AES-128 algorithm in CBC mode */
+    BSL_CID_AES128_ECB,             /**< identifies AES-128 algorithm in ECB mode */
     BSL_CID_AES128_OFB,             /**< identifies AES-128 algorithm in OFB mode */
     BSL_CID_AES128_CFB,             /**< identifies AES-128 algorithm in CFB mode */
     BSL_CID_AES192_CBC,             /**< identifies AES-192 algorithm in CBC mode */
+    BSL_CID_AES192_ECB,             /**< identifies AES-192 algorithm in ECB mode */
     BSL_CID_AES192_OFB,             /**< identifies AES-192 algorithm in OFB mode */
     BSL_CID_AES192_CFB,             /**< identifies AES-192 algorithm in CFB mode */
     BSL_CID_AES256_CBC,             /**< identifies AES-256 algorithm in CBC mode */
+    BSL_CID_AES256_ECB,             /**< identifies AES-256 algorithm in ECB mode */
     BSL_CID_AES256_OFB,             /**< identifies AES-256 algorithm in OFB mode */
     BSL_CID_AES256_CFB,             /**< identifies AES-256 algorithm in CFB mode */
     BSL_CID_AES128_GCM,             /**< Identifies the AES128 algorithm in GCM mode */
@@ -68,6 +71,7 @@ typedef enum {
     BSL_CID_SM4_GCM,
     BSL_CID_SM4_CFB,
     BSL_CID_SM4_OFB,
+    BSL_CID_SM4_ECB,
 
     /* asymmetrical algorithm */
     BSL_CID_RSA = 5001,              /**< identifies the RSA algorithm */

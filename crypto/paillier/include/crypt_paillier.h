@@ -87,7 +87,7 @@ void CRYPT_PAILLIER_FreePara(CRYPT_PAILLIER_Para *para);
  * @brief Set the data of the key parameter structure to the key structure.
  *
  * @param ctx [OUT] Paillier context structure for which related parameters need to be set
- * @param para [IN] Key parameter structure
+ * @param param [IN] Key parameter structure
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input.
  * @retval CRYPT_PAILLIER_ERR_KEY_BITS  The expected key length does not meet the requirements.
@@ -95,7 +95,7 @@ void CRYPT_PAILLIER_FreePara(CRYPT_PAILLIER_Para *para);
  * @retval CRYPT_MEM_ALLOC_FAIL         internal memory allocation error
  * @retval CRYPT_SUCCESS                set successfully.
  */
-int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PAILLIER_Para *para);
+int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *param);
 
 /**
  * @ingroup paillier
@@ -182,7 +182,7 @@ int32_t CRYPT_PAILLIER_PrvDec(const CRYPT_PAILLIER_Ctx *ctx, const BN_BigNum *ci
  * @retval BN error                         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    The private key is successfully set.
  */
-int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPrv *prv);
+int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup paillier
@@ -198,7 +198,7 @@ int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPr
  * @retval BN error                         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    The public key is successfully set.
  */
-int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPub *pub);
+int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup paillier
@@ -211,7 +211,7 @@ int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPu
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The private key is obtained successfully.
  */
-int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPrv *prv);
+int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup paillier
@@ -224,7 +224,7 @@ int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPr
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The public key is obtained successfully.
  */
-int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPub *pub);
+int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup paillier
@@ -281,6 +281,24 @@ int32_t CRYPT_PAILLIER_Decrypt(CRYPT_PAILLIER_Ctx *ctx, const uint8_t *data, uin
  * @retval security bits
  */
 int32_t CRYPT_PAILLIER_GetSecBits(const CRYPT_PAILLIER_Ctx *ctx);
+
+/**
+ * @ingroup paillier
+ * @brief PAILLIER control function for various operations
+ *
+ * @param ctx [IN/OUT] PAILLIER context structure
+ * @param opt [IN] Control operation type
+ * @param val [IN/OUT] Parameter value for the operation
+ * @param len [IN] Length of the parameter value
+ *
+ * @retval CRYPT_NULL_INPUT                     Invalid null pointer input
+ * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE       The entered value does not meet the calculation conditions
+ * @retval CRYPT_PAILLIER_NO_KEY_INFO           Does not contain the key information
+ * @retval CRYPT_MEM_ALLOC_FAIL                 Memory allocation failure
+ * @retval CRYPT_EAL_ALG_NOT_SUPPORT            Operation not supported
+ * @retval CRYPT_SUCCESS                        Operation succeeded
+ */
+int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 #ifdef __cplusplus
 }

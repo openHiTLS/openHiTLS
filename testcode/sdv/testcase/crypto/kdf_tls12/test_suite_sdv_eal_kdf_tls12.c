@@ -23,9 +23,15 @@
 
 #define DATA_LEN (64)
 
+void KDFTLS12_SET_PARAM(CRYPT_Param *p, void *param, uint32_t paramLen)
+{
+    p->param = param;
+    p->paramLen = paramLen;
+}
+
 /**
  * @test   SDV_CRYPT_EAL_KDF_TLS12_API_TC001
- * @title  CRYPT_EAL_KdfTls12 interface test.
+ * @title  kdftls12 interface test.
  * @precon nan
  * @brief
  *    1.Normal parameter test,the key and label can be empty,parameter limitation see unction declaration,
@@ -46,31 +52,84 @@ void SDV_CRYPT_EAL_KDF_TLS12_API_TC001(int algId)
     uint8_t seed[DATA_LEN];
     uint32_t outLen = DATA_LEN;
     uint8_t out[DATA_LEN];
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(CRYPT_MAC_HMAC_SHA224, key, keyLen, label, labelLen, seed, seedLen, out, outLen),
-        CRYPT_EAL_ERR_ALGID);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, labelLen, seed, seedLen, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, NULL, 0, label, labelLen, seed, seedLen, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, 0, label, labelLen, seed, seedLen, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, NULL, keyLen, label, labelLen, seed, seedLen, out, outLen),
-        CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, NULL, 0, seed, seedLen, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, 0, seed, seedLen, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, NULL, labelLen, seed, seedLen, out, outLen), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, labelLen, NULL, 0, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, labelLen, seed, 0, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, labelLen, NULL, seedLen, out, outLen),
-        CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, labelLen, seed, seedLen, NULL, outLen),
-        CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key, keyLen, label, labelLen, seed, seedLen, out, 0), CRYPT_NULL_INPUT);
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_KDFTLS12);
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
+
+    CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key, keyLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_SUCCESS);
+
+    CRYPT_Param labelParam = {CRYPT_KDF_PARAM_LABEL, label, labelLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_SUCCESS);
+
+    CRYPT_Param seedParam = {CRYPT_KDF_PARAM_SEED, seed, seedLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&keyParam, NULL, keyLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_NULL_INPUT);
+
+    KDFTLS12_SET_PARAM(&keyParam, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&keyParam, key, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&keyParam, key, keyLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&labelParam, NULL, labelLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_NULL_INPUT);
+
+    KDFTLS12_SET_PARAM(&labelParam, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&labelParam, label, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&labelParam, label, labelLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&seedParam, NULL, seedLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_NULL_INPUT);
+
+    KDFTLS12_SET_PARAM(&seedParam, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&seedParam, seed, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    KDFTLS12_SET_PARAM(&seedParam, seed, seedLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, NULL, outLen), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, 0), CRYPT_NULL_INPUT);
+
+    CRYPT_MAC_AlgId macAlgIdFailed = CRYPT_MAC_HMAC_SHA224;
+    KDFTLS12_SET_PARAM(&macAlgIdParam, &macAlgIdFailed, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_KDFTLS12_PARAM_ERROR);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 exit:
-    return;
+    CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */
 
 /**
  * @test   SDV_CRYPT_EAL_KDF_TLS12_FUN_TC001
- * @title  CRYPT_EAL_Scrypt vector test.
+ * @title  kdftls12 vector test.
  * @precon nan
  * @brief
  *    1.Calculate the output using the given parameters, expected result 1.
@@ -89,12 +148,71 @@ void SDV_CRYPT_EAL_KDF_TLS12_FUN_TC001(int algId, Hex *key, Hex *label, Hex *see
     uint32_t outLen = result->len;
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
-    ASSERT_EQ(CRYPT_EAL_KdfTls12(algId, key->x, key->len, label->x, label->len, seed->x, seed->len, out, outLen),
-        CRYPT_SUCCESS);
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_KDFTLS12);
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
+
+    CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key->x, key->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_SUCCESS);
+
+    CRYPT_Param labelParam = {CRYPT_KDF_PARAM_LABEL, label->x, label->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_SUCCESS);
+
+    CRYPT_Param seedParam = {CRYPT_KDF_PARAM_SEED, seed->x, seed->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
 exit:
     if (out != NULL) {
         free(out);
     }
+    CRYPT_EAL_KdfFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_KDFTLS12_DEFAULT_PROVIDER_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_KDFTLS12_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *label, Hex *seed, Hex *result)
+{
+    if (IsHmacAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    uint32_t outLen = result->len;
+    uint8_t *out = malloc(outLen * sizeof(uint8_t));
+    ASSERT_TRUE(out != NULL);
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_KDFTLS12, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &algId, sizeof(algId)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
+
+    CRYPT_Param keyParam = {CRYPT_KDF_PARAM_KEY, key->x, key->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &keyParam), CRYPT_SUCCESS);
+
+    CRYPT_Param labelParam = {CRYPT_KDF_PARAM_LABEL, label->x, label->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &labelParam), CRYPT_SUCCESS);
+
+    CRYPT_Param seedParam = {CRYPT_KDF_PARAM_SEED, seed->x, seed->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &seedParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+exit:
+    if (out != NULL) {
+        free(out);
+    }
+    CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */

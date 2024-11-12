@@ -24,22 +24,46 @@
 #include "sha1_core.h"
 #include "bsl_sal.h"
 #include "crypt_sha1.h"
+#include "crypt_types.h"
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
 
+/* SHA-1 context structure */
+struct CryptSha1Ctx {
+    uint8_t m[CRYPT_SHA1_BLOCKSIZE];                      /* store the remaining data which less than one block */
+    uint32_t h[CRYPT_SHA1_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
+    uint32_t hNum, lNum;                                  /* input data counter, maximum value 2 ^ 64 bits */
+    int32_t errorCode;                                    /* Error code */
+    uint32_t count;       /* Number of remaining data bytes less than one block, corresponding to the length of the m */
+};
+
+CRYPT_SHA1_Ctx *CRYPT_SHA1_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA1_Ctx));
+}
+
+void CRYPT_SHA1_FreeCtx(CRYPT_SHA1_Ctx *ctx)
+{
+    CRYPT_SHA1_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA1_Ctx));
+}
+
 /* e767 is because H is defined in SHA1 and MD5.
 But the both the macros are different. So masked
 this error */
-
-int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx)
+int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SHA1_Ctx), 0, sizeof(CRYPT_SHA1_Ctx));
 
     /**
@@ -62,7 +86,7 @@ void CRYPT_SHA1_Deinit(CRYPT_SHA1_Ctx *ctx)
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA1_Ctx));
 }
 
-int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, CRYPT_SHA1_Ctx *src)
+int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

@@ -23,6 +23,7 @@
 #include "crypt_types.h"
 #include "crypt_algid.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
@@ -97,7 +98,7 @@ void CRYPT_DH_FreePara(CRYPT_DH_Para *dhPara);
  * @retval BN error code:           An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para);
+int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *param);
 
 /**
  * @ingroup dh
@@ -111,7 +112,7 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para);
  * @retval BN error code:       An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_DhPara *para);
+int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup dh
@@ -185,7 +186,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
  * @brief DH Set the private key.
  *
  * @param ctx [OUT] dh Context structure
- * @param prv [IN] Private key
+ * @param para [IN] Private key
  *
  * @retval CRYPT_NULL_INPUT         Invalid null pointer input
  * @retval CRYPT_DH_PARA_ERROR      The key parameter is incorrect.
@@ -194,14 +195,14 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv);
+int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup dh
  * @brief DH Set the public key data.
  *
  * @param ctx [OUT] dh Context structure
- * @param pub [IN] Public key data
+ * @param para [IN] Public key data
  *
  * @retval CRYPT_NULL_INPUT         Error null pointer input
  * @retval CRYPT_DH_PARA_ERROR      The key parameter data is incorrect.
@@ -210,14 +211,14 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPub *pub);
+int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup dh
  * @brief DH Obtain the private key data.
  *
  * @param ctx [IN] dh Context structure
- * @param prv [OUT] Private key data
+ * @param para [OUT] Private key data
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input
  * @retval CRYPT_DH_BUFF_LEN_NOT_ENOUGH The buffer length is insufficient.
@@ -225,14 +226,14 @@ int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPub *pub);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                obtained successfully.
  */
-int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv);
+int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup dh
  * @brief DH Obtain the public key data.
  *
  * @param ctx [IN] dh Context structure
- * @param pub [OUT] Public key data
+ * @param para [OUT] Public key data
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input
  * @retval CRYPT_DH_BUFF_LEN_NOT_ENOUGH The buffer length is insufficient.
@@ -240,18 +241,8 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPub *pub);
+int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
 
-/**
- * @ingroup dh
- * @brief Check the key pair consistency.
- *
- * @param ctx [IN] dh Context structure
- *
- * @return CRYPT_SUCCESS succeeded.
- * For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_DH_Check(const CRYPT_DH_Ctx *ctx);
 
 /**
  * @ingroup dh
@@ -281,7 +272,7 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b);
  * @retval CRYPT_NULL_INPUT Error null pointer input
  * @retval CRYPT_SUCCESS    obtained successfully.
  */
-int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup dh
