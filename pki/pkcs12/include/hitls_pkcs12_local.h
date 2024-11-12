@@ -46,7 +46,7 @@ typedef struct _HITLS_PKCS12_Bag {
         CRYPT_EAL_PkeyCtx *key;
         HITLS_X509_Cert *cert;
     } value;
-    BSL_ASN1_List *attributes; // localKeyId, friendlyName, ...
+    HITLS_X509_Attrs *attributes; // localKeyId, friendlyName, ect. Item is HITLS_PKCS12_SafeBagAttr.
 } HITLS_PKCS12_Bag;
 
 /*
@@ -70,17 +70,15 @@ typedef struct {
 /* SafeBag Attributes. */
 typedef struct {
     BslCid attrId;
-    BSL_Buffer *attrValue;
+    BSL_Buffer attrValue;
 } HITLS_PKCS12_SafeBagAttr;
 
 /* A safeBag defined in RFC 7292, which storing intermediate data in our decoding process. */
 typedef struct {
     BslCid bagId;
     BSL_Buffer *bag; // encode data
-    BSL_ASN1_List *attributes; // Currently, only support localKeyId, friendlyName.
+    HITLS_X509_Attrs *attributes; // Currently, only support localKeyId, friendlyName. Item is HITLS_PKCS12_SafeBagAttr.
 } HITLS_PKCS12_SafeBag;
-
-HITLS_PKCS12_SafeBag *HITLS_PKCS12_SafeBagNew();
 
 void HITLS_PKCS12_SafeBagFree(HITLS_PKCS12_SafeBag *safeBag);
 
@@ -132,7 +130,7 @@ int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *pas
 /*
  * Parse attributes of a safeBag, and convert decode data to the real data.
 */
-int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attribute, BSL_ASN1_List *attriList);
+int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attriList);
 
 /*
  * Parse AuthSafeData of a p12, and convert decode data to the real data.

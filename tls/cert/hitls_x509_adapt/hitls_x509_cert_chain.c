@@ -15,6 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_CALLBACK_CERT
 #include <stdint.h>
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "hitls_cert_type.h"
@@ -22,6 +23,7 @@
 #include "hitls_pki.h"
 #include "bsl_list.h"
 #include "hitls_error.h"
+
 
 static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listArray, uint32_t *num)
 {
@@ -87,6 +89,8 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
 int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT_X509 **list, uint32_t num)
 {
     (void)ctx;
+    /* The default user id as specified in GM/T 0009-2012 */
+    char sm2DefaultUserid[] = "1234567812345678";
     HITLS_X509_List *certList = NULL;
     int32_t ret = BuildCertListFromCertArray(list, num, &certList);
     if (ret != HITLS_SUCCESS) {
@@ -100,6 +104,12 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
     }
     ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_TIME, &sysTime,
         sizeof(sysTime));
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_VEY_SM2_USERID,
+        sm2DefaultUserid, strlen(sm2DefaultUserid));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;

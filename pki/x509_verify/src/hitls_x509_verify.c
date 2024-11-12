@@ -76,6 +76,8 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *ctx)
     if (ret > 0) {
         return;
     }
+
+    BSL_SAL_FREE(ctx->verifyParam.sm2UserId.data);
     BSL_LIST_FREE(ctx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_LIST_FREE(ctx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
     BSL_SAL_ReferencesFree(&ctx->references);
@@ -315,6 +317,8 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
             return X509_SetCRL(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_REF_UP:
             return X509_RefUp(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_SET_VEY_SM2_USERID:
+            return HITLS_X509_SetSm2UserId(&storeCtx->verifyParam.sm2UserId, val, valLen);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -580,6 +584,26 @@ int32_t HITLS_X509_CheckCertRevoked(HITLS_X509_Cert *cert, HITLS_X509_CrlEntry *
     return HITLS_X509_SUCCESS;
 }
 
+static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT_EAL_PkeyCtx *pubKey,
+    uint8_t *rawData, uint32_t rawDataLen, HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature)
+{
+    bool isHasUserId = true;
+    if (alg->sm2UserId.data == NULL) {
+        alg->sm2UserId = *sm2UserId;
+        isHasUserId = false;
+    }
+    int32_t ret = HITLS_X509_CheckSignature(pubKey, rawData, rawDataLen, alg, signature);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (!isHasUserId) {
+        alg->sm2UserId.data = NULL;
+        alg->sm2UserId.dataLen = 0;
+    }
+    return ret;
+}
+
 int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert *parent)
 {
     int32_t ret = HITLS_X509_ERR_CRL_NOT_FOUND;
@@ -613,8 +637,9 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        ret = HITLS_X509_CheckSignature(parent->tbs.ealPubKey, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen,
-            &(crl->signAlgId), &(crl->signature));
+
+        ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, parent->tbs.ealPubKey, crl->tbs.tbsRawData,
+            crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
         if (ret != HITLS_X509_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -664,8 +689,8 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
                 return ret;
             }
         }
-        ret = HITLS_X509_CheckSignature(issue->tbs.ealPubKey, cur->tbs.tbsRawData, cur->tbs.tbsRawDataLen,
-            &cur->signAlgId, &cur->signature);
+        ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
+            cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
         if (ret != HITLS_X509_SUCCESS) {
             return ret;
         }
@@ -717,7 +742,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (BSL_LIST_COUNT(chain) == 0) {
+    if (BSL_LIST_COUNT(chain) <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0);
         return HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0;
     }

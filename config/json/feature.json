@@ -7,6 +7,7 @@
                     "hash": null,
                     "init": {"deps": ["err"]},
                     "base64": null,
+                    "buffer": null,
                     "pem": null,
                     "list": null,
                     "log": null,
@@ -26,7 +27,8 @@
                         "uio_plt": null,
                         "uio_buffer": {"deps": ["uio_plt"]},
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
-                        "uio_tcp": {"deps": ["uio_plt", "sal_net"]}
+                        "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
+                        "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]}
                     },
                     "usrdata": null,
                     "params": null,
@@ -942,6 +944,11 @@
                 ".srcs": "bsl/base64/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             },
+            "buffer": {
+                ".features": ["buffer"],
+                ".srcs": "bsl/buffer/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
             "pem": {
                 ".features": ["pem"],
                 ".srcs": "bsl/pem/src/*.c",
@@ -954,10 +961,13 @@
             },
             "uio": {
                 ".features": [
-                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp"
+                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp", "uio_mem"
                 ],
                 ".srcs": "bsl/uio/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "bsl/buffer/include"
+                ]
             },
             "usrdata": {
                 ".features": ["usrdata"],
@@ -1110,7 +1120,7 @@
             "x509_cert": {
                 ".features" : ["all_pki"],
                 ".srcs" : "pki/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "pki::x509_print", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
                 ".include": ["pki/x509_csr/include"]
             },
             "x509_crl" : {
@@ -1122,6 +1132,12 @@
                 ".features" : ["all_pki"],
                 ".srcs" : "pki/x509_common/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem", "crypto::encode"]
+            },
+            "x509_print" : {
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/x509_print/src/*",
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::uio"],
+                ".include": ["pki/x509_common/include"]
             },
             "x509_verify" : {
                 ".features" : ["all_pki"],

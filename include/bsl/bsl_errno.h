@@ -45,6 +45,7 @@ enum BSL_ERROR {
     BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy_s. */
     BSL_INVALID_ARG,                        /**< Invalid arguments. */
     BSL_DUMP_FAIL,                          /**< Error occurs when duplicating memory */
+    BSL_MEMMOVE_FAIL,
 
     /* The return value of the SAL submodule starts from 0x03010001. */
     BSL_SAL_ERR_UNKNOWN = 0x03010001,        /**< Unknown error. */
@@ -101,6 +102,9 @@ enum BSL_ERROR {
     BSL_UIO_MEM_ALLOC_FAIL,
     BSL_UIO_IO_EOF,                         /**< I/O object has reached EOF */
     BSL_UIO_UNINITIALIZED,                  /**< UIO object is uninitialized */
+    BSL_UIO_WRITE_NOT_ALLOWED,
+    BSL_UIO_MEM_GROW_FAIL,
+    BSL_UIO_MEM_NOT_NULL,
 
     /* The return value of the LIST submodule starts from 0x03070001. */
     BSL_LIST_INVALID_LIST_CURRENT = 0x03060001, /**< Current node pointer is NULL */
@@ -133,6 +137,8 @@ enum BSL_ERROR {
     BSL_ASN1_ERR_ENCODE_BIT_STRING,
     BSL_ASN1_ERR_ENCODE_UTC_TIME,
     BSL_ASN1_ERR_ENCODE_GENERALIZED_TIME,
+    BSL_ASN1_ERR_PRINTF,
+    BSL_ASN1_ERR_PRINTF_IO_ERR,
 
     /* The return value of the BASE64 submodule starts from 0x030a0001. */
     BSL_BASE64_INVALID = 0x03080001,
