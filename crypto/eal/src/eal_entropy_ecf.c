@@ -33,14 +33,14 @@ static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out,
 {
     CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
     if (ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, algId, CRYPT_ENTROPY_CONDITION_FAILURE);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_ENTROPY_CONDITION_FAILURE;
     }
     uint32_t keyLen = ECF_ALG_KEY_LEN_128;
     uint8_t *ecfKey = (uint8_t *)BSL_SAL_Malloc(keyLen);
     if (ecfKey == NULL) {
         CRYPT_EAL_MacFreeCtx(ctx);
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, 0, algId, CRYPT_MEM_ALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     /* reference nist-800 90c-3pd section 3.3.1.1

@@ -52,7 +52,7 @@ static CRYPT_EAL_KdfCTX *KdfAllocCtx(CRYPT_KDF_AlgId id, EAL_KdfUnitaryMethod *m
 {
     CRYPT_EAL_KdfCTX *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_KdfCTX));
     if (ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
     void *data = method->newCtx();
@@ -80,7 +80,7 @@ static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, CRYPT_EAL_Func *fun
     int32_t index = 0;
     EAL_KdfUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_KdfUnitaryMethod));
     if (method == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, BSL_MALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
 
@@ -106,7 +106,7 @@ static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, CRYPT_EAL_Func *fun
                 break;
             default:
                 BSL_SAL_FREE(method);
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                 return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         }
         index++;

@@ -72,7 +72,7 @@ static CRYPT_EAL_MdCTX *MdNewDefaultCtx(CRYPT_MD_AlgId id)
 {
     const EAL_MdMethod *method = EAL_MdFindMethod(id);
     if (method == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_ERR_ALGID);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return NULL;
     }
     EAL_MdUnitaryMethod *temp = BSL_SAL_Calloc(1, sizeof(EAL_MdUnitaryMethod));

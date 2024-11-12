@@ -129,12 +129,12 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
 int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
 {
     if (to == NULL || from == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     if (to->key != NULL) {
         if (to->method->freeCtx == NULL) {
-            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_INVALID_ARG);
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
         }
         to->method->freeCtx(to->key);
@@ -189,12 +189,12 @@ static int32_t ParaIsVaild(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPa
 {
     bool isInputValid = (pkey == NULL) || (para == NULL);
     if (isInputValid) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
     if (pkey->id != para->id) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ERR_ALGID);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
     return CRYPT_SUCCESS;
@@ -584,7 +584,7 @@ static int32_t CRYPT_EAL_SetKeyMethod(CRYPT_EAL_Func *funcsKeyMgmt, EAL_PkeyUnit
                     method->freeCtx = funcsKeyMgmt[index].func;
                     break;
                 default:
-                    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                    BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                     return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         }
         index++;
@@ -609,7 +609,7 @@ static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_Func *funcsAsyCipher, EAL_Pke
                     method->ctrl = funcsAsyCipher[index].func;
                     break;
                 default:
-                    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                    BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                     return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
             }
         index++;
@@ -631,7 +631,7 @@ static int32_t CRYPT_EAL_SetExchMethod(CRYPT_EAL_Func *funcsExch, EAL_PkeyUnitar
                     method->ctrl = funcsExch[index].func;
                     break;
                 default:
-                    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                    BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                     return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
             }
         index++;
@@ -665,7 +665,7 @@ static int32_t CRYPT_EAL_SetSignMethod(CRYPT_EAL_Func *funcSign, EAL_PkeyUnitary
                     method->ctrl = funcSign[index].func;
                     break;
                 default:
-                    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                    BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                     return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
             }
         index++;
@@ -680,7 +680,7 @@ static int32_t CRYPT_EAL_SetPkeyMethod(CRYPT_EAL_PkeyCtx *ctx, CRYPT_EAL_Func *f
     int32_t ret;
     EAL_PkeyUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_PkeyUnitaryMethod));
     if (method == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, BSL_MALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
         return BSL_MALLOC_FAIL;
     }
     

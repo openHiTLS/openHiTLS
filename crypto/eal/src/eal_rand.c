@@ -98,7 +98,7 @@ static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, CRYPT_EAL_Func *fu
     int32_t index = 0;
     EAL_RandUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_RandUnitaryMethod));
     if (method == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, BSL_MALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     while (funcs[index].id != 0) {
@@ -126,7 +126,7 @@ static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, CRYPT_EAL_Func *fu
                 break;
             default:
                 BSL_SAL_Free(method);
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                 return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         }
         index++;
@@ -223,7 +223,7 @@ void CRYPT_RandDeinit(CRYPT_EAL_RndCtx *ctx)
 static int32_t CheckRndCtxState(CRYPT_EAL_RndCtx *ctx)
 {
     if (ctx->working == false) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, CRYPT_EAL_ERR_RAND_NO_WORKING);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_RAND_NO_WORKING);
         return CRYPT_EAL_ERR_RAND_NO_WORKING;
     }
 

@@ -52,7 +52,7 @@ static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, CRYPT_EAL_Func *fun
     int32_t index = 0;
     EAL_MacUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_MacUnitaryMethod));
     if (method == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, BSL_MALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     while (funcs[index].id != 0) {
@@ -80,7 +80,7 @@ static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, CRYPT_EAL_Func *fun
                 break;
             default:
                 BSL_SAL_Free(method);
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                 return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         }
         index++;

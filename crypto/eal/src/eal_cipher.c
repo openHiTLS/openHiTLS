@@ -47,26 +47,26 @@ static CRYPT_EAL_CipherCtx *CipherNewDefaultCtx(CRYPT_CIPHER_AlgId id)
     const EAL_CipherMethod *modeMethod = NULL;
     ret = EAL_FindCipher(id, &modeMethod);
     if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, ret);
+        BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
 
     CRYPT_EAL_CipherCtx *ctx = (CRYPT_EAL_CipherCtx *)BSL_SAL_Calloc(1u, sizeof(struct CryptEalCipherCtx));
     if (ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
     EAL_CipherUnitaryMethod *method = (EAL_CipherUnitaryMethod *)BSL_SAL_Calloc(1u, sizeof(EAL_CipherUnitaryMethod));
     if (method == NULL) {
         BSL_SAL_Free(ctx);
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
     void *modeCtx = modeMethod->newCtx(id);
     if (modeCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_EAL_CIPHER_ERR_NEWCTX);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_CIPHER_ERR_NEWCTX);
         BSL_SAL_Free(ctx);
         BSL_SAL_Free(method);
         return NULL;
@@ -86,7 +86,7 @@ static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, CRYPT_EAL_Fun
     int32_t index = 0;
     EAL_CipherUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_CipherUnitaryMethod));
     if (method == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, BSL_MALLOC_FAIL);
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     
@@ -115,7 +115,7 @@ static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, CRYPT_EAL_Fun
                 break;
             default:
                 BSL_SAL_FREE(method);
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                 return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         }
         index++;
@@ -291,21 +291,21 @@ int32_t CheckUpdateParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint
     const uint32_t *outLen)
 {
     if (ctx == NULL || out == NULL || outLen == NULL || (in == NULL && inLen != 0)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, (ctx == NULL) ? CRYPT_CIPHER_MAX : ctx->id, CRYPT_NULL_INPUT);
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     if ((in != NULL && inLen != 0) && IsPartialOverLap(out, in, inLen)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_PART_OVERLAP);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_PART_OVERLAP);
         return CRYPT_EAL_ERR_PART_OVERLAP;
     }
     // If the state is not init or update, the state is regarded as an error.
     // If the state is final or new, update cannot be directly invoked.
     if (!(ctx->states == EAL_CIPHER_STATE_INIT || ctx->states == EAL_CIPHER_STATE_UPDATE)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_STATE);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
     if (ctx->method == NULL || ctx->method->update == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     return CRYPT_SUCCESS;
@@ -333,18 +333,18 @@ int32_t CRYPT_EAL_CipherUpdate(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint
 int32_t CheckFinalParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *out, const uint32_t *outLen)
 {
     if (ctx == NULL || out == NULL || outLen == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, (ctx == NULL) ? CRYPT_CIPHER_MAX : ctx->id, CRYPT_NULL_INPUT);
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     // If the state is not init or update, the state is regarded as an error.
     // If the state is final or new, update cannot be directly invoked.
     if (!(ctx->states == EAL_CIPHER_STATE_UPDATE || ctx->states == EAL_CIPHER_STATE_INIT)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_STATE);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
 
     if (ctx->method == NULL || ctx->method->final == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     return CRYPT_SUCCESS;

@@ -101,7 +101,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
         case RAND_TYPE_MD: {
             const EAL_MdMethod *md = EAL_MdFindMethod(map->depId);
             if (md == NULL) {
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
+                BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
@@ -114,7 +114,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
             EAL_MacMethLookup hmac;
             int32_t ret = EAL_MacFindMethod(map->depId, &hmac);
             if (ret != CRYPT_SUCCESS) {
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
+                BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
@@ -127,7 +127,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
         case RAND_TYPE_AES_DF: {
             const EAL_SymMethod *ciphMeth = MODES_GetSymMethod(map->depId);
             if (ciphMeth == NULL) {
-                EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
+                BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
@@ -136,7 +136,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
         }
 #endif
         default:
-            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, map->drbgId, CRYPT_EAL_ERR_ALGID);
+            BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
             return CRYPT_EAL_ERR_ALGID;
     }
     return CRYPT_SUCCESS;
@@ -145,13 +145,13 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
 int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu)
 {
     if (lu == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, id, CRYPT_NULL_INPUT);
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
     const DrbgIdMap *map = GetDrbgIdMap(id);
     if (map == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, id, CRYPT_EAL_ERR_ALGID);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
 
