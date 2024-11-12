@@ -35,6 +35,7 @@
 #include "bsl_err_internal.h"
 #include "hitls_csr_local.h"
 #include "hitls_cert_local.h"
+#include "hitls_print_local.h"
 #include "crypt_encode.h"
 
 #define HITLS_CERT_CTX_SPECIFIC_TAG_VER       0
@@ -175,6 +176,9 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
     } else {
         BSL_LIST_FREE(cert->tbs.issuerName, NULL);
         BSL_LIST_FREE(cert->tbs.subjectName, NULL);
+    }
+    if (cert->signAlgId.algId == (BslCid)CRYPT_PKEY_SM2) {
+        BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
     }
     X509_ExtFree(&cert->tbs.ext, false);
     BSL_SAL_FREE(cert->rawData);
@@ -444,107 +448,43 @@ static int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valL
 }
 
 /* RFC2253 https://www.rfc-editor.org/rfc/rfc2253 */
-static int32_t X509GetPrintSNStr(const BSL_ASN1_Buffer *nameType, char *buff, int32_t buffLen, int32_t *usedLen)
-{
-    if (nameType == NULL || nameType->buff == NULL || nameType->len == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
-    BslOidString oid = {
-        .octs = (char *)nameType->buff,
-        .octetLen = nameType->len,
-    };
-    const char *oidName = BSL_OBJ_GetOidNameFromOid(&oid);
-    if (oidName == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
-        return HITLS_X509_ERR_CERT_INVALID_DN;
-    }
-    if (strcpy_s(buff, buffLen, oidName) != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
-        return HITLS_X509_ERR_CERT_INVALID_DN;
-    }
-
-    *usedLen = strlen(oidName);
-    return HITLS_X509_SUCCESS;
-}
-
-static int32_t X509PrintNameNode(const HITLS_X509_NameNode *nameNode, char *buff, int32_t buffLen, int32_t *usedLen)
-{
-    if (nameNode->layer == 1) {
-        return HITLS_X509_SUCCESS;
-    }
-    int offset = 0;
-    *usedLen = 0;
-    /* Get the printable type */
-    int32_t ret = X509GetPrintSNStr(&nameNode->nameType, buff, buffLen, &offset);
-    if (ret != HITLS_X509_SUCCESS) {
-        return ret;
-    }
-    /* print '=' between type and value */
-    if (buffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e '=' and '\0'
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    buff[offset] = '=';
-    offset++;
-    /* print 'value' */
-    if (nameNode->nameValue.buff == NULL || nameNode->nameValue.len == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    if (memcpy_s(buff + offset, buffLen - offset, nameNode->nameValue.buff, nameNode->nameValue.len) != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
-        return HITLS_X509_ERR_CERT_INVALID_DN;
-    }
-    offset += nameNode->nameValue.len;
-    *usedLen = offset;
-    return HITLS_X509_SUCCESS;
-}
-
 static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff)
 {
-    if (nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+    int64_t writeNum = 0;
+    uint8_t *dnBuf = NULL;
+    uint32_t dnBufLen = 0;
+    BSL_UIO *bufUio = BSL_UIO_New(BSL_UIO_MemMethod());
+    if (bufUio == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_UIO);
+        return HITLS_X509_ERR_PRINT_UIO;
     }
-    uint32_t offset = 0;
-    int32_t ret;
-    char tmpBuffStr[MAX_DN_STR_LEN] = {0};
-    char *tmpBuff = tmpBuffStr;
-    uint32_t tmpBuffLen = MAX_DN_STR_LEN;
-    (void)BSL_LIST_GET_FIRST(nameList);
-    HITLS_X509_NameNode *firstNameNode = BSL_LIST_GET_NEXT(nameList);
-    HITLS_X509_NameNode *nameNode = firstNameNode;
-    while (nameNode != NULL) {
-        if (tmpBuffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e ',' and '\0'
-            ret = HITLS_X509_ERR_INVALID_PARAM;
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            return HITLS_X509_ERR_INVALID_PARAM;
-        }
-        if (nameNode != firstNameNode && nameNode->layer == 2) {
-            *tmpBuff = ',';
-            tmpBuff++;
-            offset++;
-        }
-        int32_t eachUsedLen = 0;
-        ret = X509PrintNameNode(nameNode, tmpBuff, tmpBuffLen - offset, &eachUsedLen);
-        if (ret != HITLS_X509_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        tmpBuff += eachUsedLen;
-        offset += eachUsedLen;
-        nameNode = BSL_LIST_GET_NEXT(nameList);
+    int32_t ret = HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, nameList, sizeof(BslList), bufUio);
+    if (ret != HITLS_X509_SUCCESS) {
+        goto ERR;
     }
-    buff->data = BSL_SAL_Calloc(offset + 1, sizeof(char));
-    if (buff->data == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+    ret = BSL_UIO_Ctrl(bufUio, BSL_UIO_GET_WRITE_NUM, (int32_t)sizeof(writeNum), (void *)&writeNum);
+    if (ret != BSL_SUCCESS) {
+        goto ERR;
     }
-    (void)memcpy_s(buff->data, offset + 1, tmpBuffStr, offset);
-    buff->dataLen = offset;
+    dnBuf = BSL_SAL_Calloc(writeNum + 1, sizeof(uint8_t));
+    if (dnBuf == NULL) {
+        ret = BSL_MALLOC_FAIL;
+        goto ERR;
+    }
+    ret = BSL_UIO_Read(bufUio, dnBuf, writeNum + 1, &dnBufLen);
+    BSL_UIO_Free(bufUio);
+    if (ret != BSL_SUCCESS || dnBufLen != writeNum) {
+        ret = HITLS_X509_ERR_PRINT_UIO;
+        goto ERR;
+    }
+    buff->data = dnBuf;
+    buff->dataLen = dnBufLen;
     return HITLS_X509_SUCCESS;
+ERR:
+    BSL_SAL_Free(dnBuf);
+    BSL_UIO_Free(bufUio);
+    BSL_ERR_PUSH_ERROR(ret);
+    return ret;
 }
 
 static int32_t X509_GetDistinguishNameStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)
@@ -664,13 +604,13 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return HITLS_X509_GetPubKey(cert->tbs.ealPubKey, val);
         case HITLS_X509_GET_SIGNALG:
             return HITLS_X509_GetSignAlg(cert->signAlgId.algId, val, valLen);
-        case HITLS_X509_GET_SUBJECT_DNNAME:
+        case HITLS_X509_GET_SUBJECT_DN:
             return HITLS_X509_GetList(cert->tbs.subjectName, val, valLen);
-        case HITLS_X509_GET_ISSUER_DNNAME:
+        case HITLS_X509_GET_ISSUER_DN:
             return HITLS_X509_GetList(cert->tbs.issuerName, val, valLen);
-        case HITLS_X509_GET_SUBJECT_DNNAME_STR:
+        case HITLS_X509_GET_SUBJECT_DN_STR:
             return X509_GetDistinguishNameStr(cert, val, HITLS_X509_SUBJECT_DN_NAME);
-        case HITLS_X509_GET_ISSUER_DNNAME_STR:
+        case HITLS_X509_GET_ISSUER_DN_STR:
             return X509_GetDistinguishNameStr(cert, val, HITLS_X509_ISSUER_DN_NAME);
         case HITLS_X509_GET_SERIALNUM_STR:
             return X509_GetSerialNumStr(cert, val);
@@ -729,9 +669,9 @@ static int32_t CertSet(void *dest, int32_t size, void *val, int32_t valLen, SetP
 
 static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
 {
-    HITLS_X509_Attr attr = {0};
+    HITLS_X509_Ext *csrExt = NULL;
     int32_t ret = HITLS_X509_AttrCtrl(
-        csr->reqInfo.attributes, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &attr, sizeof(HITLS_X509_Attr));
+        csr->reqInfo.attributes, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &csrExt, sizeof(HITLS_X509_Ext *));
     if (ret == HITLS_X509_ERR_ATTR_NOT_FOUND) {
         return ret;
     }
@@ -739,7 +679,6 @@ static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    HITLS_X509_Ext *csrExt = (HITLS_X509_Ext *)attr.value;
     ret = HITLS_X509_ExtReplace(ext, csrExt);
     X509_ExtFree(csrExt, true);
     return ret;
@@ -781,9 +720,9 @@ static int32_t X509_CertSetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return ret;
         case HITLS_X509_SET_PUBKEY:
             return HITLS_X509_SetPkey(&cert->tbs.ealPubKey, val);
-        case HITLS_X509_SET_ISSUER_DNNAME:
+        case HITLS_X509_SET_ISSUER_DN:
             return HITLS_X509_SetNameList(&cert->tbs.issuerName, val, valLen);
-        case HITLS_X509_SET_SUBJECT_DNNAME:
+        case HITLS_X509_SET_SUBJECT_DN:
             return HITLS_X509_SetNameList(&cert->tbs.subjectName, val, valLen);
         case HITLS_X509_SET_CSR_EXT:
             return HITLS_X509_SetCsrExt(&cert->tbs.ext, val);
@@ -1084,13 +1023,13 @@ static int32_t CheckCertTbs(HITLS_X509_Cert *cert)
     if (cert == NULL) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (BSL_LIST_COUNT(cert->tbs.ext.extList) != 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
+    if (BSL_LIST_COUNT(cert->tbs.ext.extList) > 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
         return HITLS_X509_ERR_CERT_INACCURACY_VERSION;
     }
     if (cert->tbs.serialNum.buff == NULL || cert->tbs.serialNum.len == 0) {
         return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
     }
-    if (BSL_LIST_COUNT(cert->tbs.issuerName) == 0 || BSL_LIST_COUNT(cert->tbs.subjectName) == 0) {
+    if (BSL_LIST_COUNT(cert->tbs.issuerName) <= 0 || BSL_LIST_COUNT(cert->tbs.subjectName) <= 0) {
         return HITLS_X509_ERR_CERT_INVALID_DN;
     }
     if ((cert->tbs.validTime.flag & BSL_TIME_BEFORE_SET) == 0 || (cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) == 0) {
@@ -1267,5 +1206,9 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
     cert->tbs.tbsRawDataLen = 0;
     BSL_SAL_FREE(cert->rawData);
     cert->rawDataLen = 0;
+    if (cert->signAlgId.algId == (BslCid)CRYPT_PKEY_SM2) {
+        BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
+        cert->signAlgId.sm2UserId.dataLen = 0;
+    }
     return HITLS_X509_Sign(mdId, prvKey, algParam, cert, (HITLS_X509_SignCb)CertSignCb);
 }

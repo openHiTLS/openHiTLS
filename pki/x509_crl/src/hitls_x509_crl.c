@@ -123,6 +123,9 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     } else {
         BSL_LIST_FREE(crl->tbs.issuerName, NULL);
     }
+    if (crl->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
+        BSL_SAL_FREE(crl->signAlgId.sm2UserId.data);
+    }
     BSL_LIST_FREE(crl->tbs.revokedCerts, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlRevokedFree);
     X509_ExtFree(&crl->tbs.crlExt, false);
     BSL_SAL_ReferencesFree(&(crl->references));
@@ -407,7 +410,7 @@ static int32_t X509_EncodeCrlEntry(HITLS_X509_CrlEntry *crlEntry, BSL_ASN1_Buffe
         BSL_ASN1_TAG_GENERALIZEDTIME : BSL_ASN1_TAG_UTCTIME;
     asnBuf[1].buff = (uint8_t *)&(crlEntry->time);
     asnBuf[1].len = sizeof(BSL_TIME);
-    if (crlEntry->extList != NULL && BSL_LIST_COUNT(crlEntry->extList) != 0) {
+    if (crlEntry->extList != NULL && BSL_LIST_COUNT(crlEntry->extList) > 0) {
         return HITLS_X509_EncodeExtEntry(crlEntry->extList, &asnBuf[2]); // 2 ：extensions
     } else {
         asnBuf[2].tag = 0;  // 2 ：extensions
@@ -421,7 +424,7 @@ static int32_t X509_EncodeCrlEntry(HITLS_X509_CrlEntry *crlEntry, BSL_ASN1_Buffe
 int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *revokeBuf)
 {
     int32_t count = BSL_LIST_COUNT(crlList);
-    if (count == 0) {
+    if (count <= 0) {
         revokeBuf->buff = NULL;
         revokeBuf->len = 0;
         revokeBuf->tag = BSL_ASN1_TAG_SEQUENCE;
@@ -680,7 +683,7 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
         return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
     }
-    if (crl->tbs.crlExt.extList != NULL && BSL_LIST_COUNT(crl->tbs.crlExt.extList) != 0) {
+    if (crl->tbs.crlExt.extList != NULL && BSL_LIST_COUNT(crl->tbs.crlExt.extList) > 0) {
         if (crl->tbs.version != 1) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
             return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
@@ -688,7 +691,7 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
     }
 
     // Check issuer name
-    if (crl->tbs.issuerName == NULL || BSL_LIST_COUNT(crl->tbs.issuerName) == 0) {
+    if (crl->tbs.issuerName == NULL || BSL_LIST_COUNT(crl->tbs.issuerName) <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_ISSUER_EMPTY);
         return HITLS_X509_ERR_CRL_ISSUER_EMPTY;
     }
@@ -968,7 +971,7 @@ static int32_t X509_CrlGetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int3
             return X509_CrlGetThisUpdate(crl, val, valLen);
         case HITLS_X509_GET_AFTER_TIME:
             return X509_CrlGetNextUpdate(crl, val, valLen);
-        case HITLS_X509_GET_ISSUER_DNNAME:
+        case HITLS_X509_GET_ISSUER_DN:
             return HITLS_X509_GetList(crl->tbs.issuerName, val, valLen);
         case HITLS_X509_GET_REVOKELIST:
             return X509_CrlGetRevokeList(crl, val, valLen);
@@ -1133,7 +1136,7 @@ int32_t X509_CrlSetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t val
     switch (cmd) {
         case HITLS_X509_SET_VERSION:
             return X509_CrlSetVersion(crl, val, valLen);
-        case HITLS_X509_SET_ISSUER_DNNAME:
+        case HITLS_X509_SET_ISSUER_DN:
             return HITLS_X509_SetNameList(&crl->tbs.issuerName, val, valLen);
         case HITLS_X509_SET_BEFORE_TIME:
             return CrlSetThisUpdaeTime(&crl->tbs.validTime, val, valLen);
@@ -1155,6 +1158,12 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     }
     if (cmd == HITLS_X509_REF_UP) {
         return X509_CrlRefUp(crl, val, valLen);
+    } else if (cmd == HITLS_X509_SET_VEY_SM2_USER_ID) {
+        if (crl->signAlgId.algId != (BslCid)BSL_CID_SM2DSAWITHSM3) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+            return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
+        }
+        return HITLS_X509_SetSm2UserId(&crl->signAlgId.sm2UserId, val, valLen);
     } else if (cmd >= HITLS_X509_GET_ENCODELEN && cmd < HITLS_X509_SET_VERSION) {
         return X509_CrlGetCtrl(crl, cmd, val, valLen);
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
@@ -1517,5 +1526,9 @@ int32_t HITLS_X509_CrlSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const
     crl->tbs.tbsRawDataLen = 0;
     BSL_SAL_FREE(crl->rawData);
     crl->rawDataLen = 0;
+    if (crl->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
+        BSL_SAL_FREE(crl->signAlgId.sm2UserId.data);
+        crl->signAlgId.sm2UserId.dataLen = 0;
+    }
     return HITLS_X509_Sign(mdId, prvKey, algParam, crl, (HITLS_X509_SignCb)CrlSignCb);
 }
