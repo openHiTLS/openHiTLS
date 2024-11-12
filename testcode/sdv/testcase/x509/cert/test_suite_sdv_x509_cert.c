@@ -541,13 +541,13 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     int32_t ret = HITLS_ParseCertTest(path, BSL_FORMAT_ASN1, &cert);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME_STR, &subjectName, sizeof(BSL_Buffer));
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(subjectName.data, NULL);
     ASSERT_EQ(subjectName.dataLen, strlen(expectedSubjectName));
     ASSERT_EQ(strcmp((char *)subjectName.data, expectedSubjectName), 0);
 
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME_STR, &issuerName, sizeof(BSL_Buffer));
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN_STR, &issuerName, sizeof(BSL_Buffer));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(issuerName.data, NULL);
     ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
@@ -849,8 +849,8 @@ void SDV_X509_CERT_SET_DNNAME_FUNC_TC001(int unknownCid, int cid, Hex *oid, Hex 
     ASSERT_TRUE(cert->tbs.subjectName != NULL);
 
     BslList *list = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &list, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &list, sizeof(BslList **)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &list, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &list, sizeof(BslList **)), 0);
     ASSERT_TRUE(list != NULL);
     ASSERT_TRUE(list == cert->tbs.issuerName);
 
@@ -910,7 +910,7 @@ void SDV_X509_CERT_SET_DNNAME_ERROR_TC001(int cid, Hex *value)
     BslList *list = NULL;
     HITLS_X509_Cert *cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &list, sizeof(BslList **)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &list, sizeof(BslList **)), 0);
     ASSERT_TRUE(list != NULL);
 
     FuncStubInfo tmpRpInfo;
@@ -1076,11 +1076,11 @@ static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new, CRYPT_EAL_Pke
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SIGN_MD_ID, &mdId, sizeof(int32_t)), 0);
 
     BslList *rawSubject = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_SUBJECT_DNNAME, &rawSubject, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_SUBJECT_DN, &rawSubject, sizeof(BslList *)), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SUBJECT_DNNAME, rawSubject, sizeof(BslList)), 0);
 
     BslList *rawIssuer = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_ISSUER_DNNAME, &rawIssuer, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *)), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_ISSUER_DNNAME, rawIssuer, sizeof(BslList)), 0);
 
     ret = 0;

@@ -31,20 +31,14 @@ HITLS_PKCS12_SafeBag *HITLS_PKCS12_SafeBagNew()
     return BSL_SAL_Malloc(sizeof(HITLS_PKCS12_SafeBag));
 }
 
-static void AttributesFree(HITLS_PKCS12_SafeBagAttr *attribute)
+void HITLS_PKCS12_AttributesFree(void *attribute)
 {
     if (attribute == NULL) {
         return;
     }
-
-    BSL_SAL_FREE(attribute->attrValue->data);
-    BSL_SAL_FREE(attribute->attrValue);
-    BSL_SAL_FREE(attribute);
-}
-
-void HITLS_PKCS12_AttributesFree(void *attribute)
-{
-    AttributesFree((HITLS_PKCS12_SafeBagAttr *)attribute);
+    HITLS_PKCS12_SafeBagAttr *attr = attribute;
+    BSL_SAL_FREE(attr->attrValue.data);
+    BSL_SAL_FREE(attr);
     return;
 }
 
@@ -53,8 +47,8 @@ void HITLS_PKCS12_SafeBagFree(HITLS_PKCS12_SafeBag *safeBag)
     if (safeBag == NULL) {
         return;
     }
-    BSL_LIST_DeleteAll(safeBag->attributes, HITLS_PKCS12_AttributesFree);
-    BSL_SAL_FREE(safeBag->attributes);
+    HITLS_X509_AttrsFree(safeBag->attributes, HITLS_PKCS12_AttributesFree);
+    safeBag->attributes = NULL;
     BSL_SAL_CleanseData(safeBag->bag->data, safeBag->bag->dataLen);
     BSL_SAL_FREE(safeBag->bag->data);
     BSL_SAL_FREE(safeBag->bag);
@@ -138,8 +132,8 @@ static void CertBagFree(void *value)
     }
     HITLS_PKCS12_Bag *bag = (HITLS_PKCS12_Bag *)value;
     HITLS_X509_CertFree(bag->value.cert);
-    BSL_LIST_DeleteAll(bag->attributes, HITLS_PKCS12_AttributesFree);
-    BSL_SAL_FREE(bag->attributes);
+    HITLS_X509_AttrsFree(bag->attributes, HITLS_PKCS12_AttributesFree);
+    bag->attributes = NULL;
     BSL_SAL_FREE(bag);
 }
 
@@ -150,14 +144,14 @@ void HITLS_PKCS12_Free(HITLS_PKCS12 *p12)
     }
     if (p12->entityCert != NULL) {
         HITLS_X509_CertFree(p12->entityCert->value.cert);
-        BSL_LIST_DeleteAll(p12->entityCert->attributes, HITLS_PKCS12_AttributesFree);
-        BSL_SAL_FREE(p12->entityCert->attributes);
+        HITLS_X509_AttrsFree(p12->entityCert->attributes, HITLS_PKCS12_AttributesFree);
+        p12->entityCert->attributes = NULL;
         BSL_SAL_FREE(p12->entityCert);
     }
     if (p12->key != NULL) {
         CRYPT_EAL_PkeyFreeCtx(p12->key->value.key);
-        BSL_LIST_DeleteAll(p12->key->attributes, HITLS_PKCS12_AttributesFree);
-        BSL_SAL_FREE(p12->key->attributes);
+        HITLS_X509_AttrsFree(p12->key->attributes, HITLS_PKCS12_AttributesFree);
+        p12->key->attributes = NULL;
         BSL_SAL_FREE(p12->key);
     }
     BSL_LIST_DeleteAll(p12->certList, CertBagFree);
@@ -227,8 +221,8 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag)
         default:
             break;
     }
-    BSL_LIST_DeleteAll(bag->attributes, HITLS_PKCS12_AttributesFree);
-    BSL_SAL_FREE(bag->attributes);
+    HITLS_X509_AttrsFree(bag->attributes, HITLS_PKCS12_AttributesFree);
+    bag->attributes = NULL;
     BSL_SAL_FREE(bag);
     return;
 }

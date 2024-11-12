@@ -97,6 +97,15 @@ typedef struct _HITLS_X509_AttrEntry {
     BSL_ASN1_Buffer attrValue;
 } HITLS_X509_AttrEntry;
 
+typedef int32_t (*HITLS_X509_ParseAttrItemCb)(BslList *attrList, HITLS_X509_AttrEntry *attrEntry);
+
+typedef int32_t (*HITLS_X509_EncodeAttrItemCb)(void *attrNode, HITLS_X509_AttrEntry *attrEntry);
+
+typedef struct _HITLS_X509_Attrs {
+    int flag;
+    BslList *list; // The list of HITLS_X509_AttrEntry
+} HITLS_X509_Attrs;
+
 typedef struct _HITLS_X509_ValidTime {
     uint8_t flag;
     BSL_TIME start;
@@ -179,14 +188,22 @@ int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, HITLS_X509_Asn1AlgId *subAlg);
 
-int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrs, BSL_ASN1_List *list);
+int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attrs,
+    HITLS_X509_ParseAttrItemCb parseCb);
 
 void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr);
 
 int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     BSL_ASN1_Buffer *asn1Buff, BSL_Buffer *rawSignBuff, BSL_ASN1_BitString *sign);
 
-int32_t HITLS_X509_EncodeAttrList(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *attr);
+HITLS_X509_Attrs *HITLS_X509_AttrsNew(void);
+
+typedef void (*HITLS_X509_FreeAttrItemCb)(void *item);
+
+void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb freeItem);
+
+int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X509_EncodeAttrItemCb encodeCb,
+    BSL_ASN1_Buffer *attrAsn1);
 
 int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
     HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature);

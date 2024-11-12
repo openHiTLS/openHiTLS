@@ -675,13 +675,13 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return HITLS_X509_GetPubKey(cert->tbs.ealPubKey, val);
         case HITLS_X509_GET_SIGNALG:
             return HITLS_X509_GetSignAlg(cert->signAlgId.algId, val, valLen);
-        case HITLS_X509_GET_SUBJECT_DNNAME:
+        case HITLS_X509_GET_SUBJECT_DN:
             return HITLS_X509_GetList(cert->tbs.subjectName, val, valLen);
-        case HITLS_X509_GET_ISSUER_DNNAME:
+        case HITLS_X509_GET_ISSUER_DN:
             return HITLS_X509_GetList(cert->tbs.issuerName, val, valLen);
-        case HITLS_X509_GET_SUBJECT_DNNAME_STR:
+        case HITLS_X509_GET_SUBJECT_DN_STR:
             return X509_GetDistinguishNameStr(cert, val, HITLS_X509_SUBJECT_DN_NAME);
-        case HITLS_X509_GET_ISSUER_DNNAME_STR:
+        case HITLS_X509_GET_ISSUER_DN_STR:
             return X509_GetDistinguishNameStr(cert, val, HITLS_X509_ISSUER_DN_NAME);
         case HITLS_X509_GET_SERIALNUM:
             return X509_GetSerialNumStr(cert, val);
@@ -740,9 +740,9 @@ static int32_t CertSet(void *dest, int32_t size, void *val, int32_t valLen, SetP
 
 static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
 {
-    HITLS_X509_Attr attr = {0};
+    HITLS_X509_Ext *csrExt = NULL;
     int32_t ret = HITLS_X509_AttrCtrl(
-        csr->reqInfo.attributes, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &attr, sizeof(HITLS_X509_Attr));
+        csr->reqInfo.attributes, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &csrExt, sizeof(HITLS_X509_Ext *));
     if (ret == HITLS_X509_ERR_ATTR_NOT_FOUND) {
         return ret;
     }
@@ -750,8 +750,8 @@ static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    HITLS_X509_Ext *csrExt = (HITLS_X509_Ext *)attr.value;
     ret = HITLS_X509_ExtReplace(ext, csrExt);
+
     HITLS_X509_ExtFree(csrExt);
     return ret;
 }

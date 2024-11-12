@@ -382,7 +382,7 @@ int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *
     uint32_t nextEncodeLen = encode->dataLen;
     BSL_PEM_Symbol symbol = {0};
     X509_GetPemSymbol(isCert, &symbol);
-    while (nextEncodeLen > 0) {
+    while (nextEncodeLen > 1) {
         BSL_Buffer asn1Buf = {0};
         int32_t ret = BSL_PEM_ParsePem2Asn1(&nextEncode, &nextEncodeLen, &symbol, &(asn1Buf.data),
             &(asn1Buf.dataLen));

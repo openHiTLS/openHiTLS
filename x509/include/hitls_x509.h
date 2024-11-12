@@ -41,6 +41,8 @@ typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
 
 typedef struct _HITLS_X509_Csr HITLS_X509_Csr;
 
+typedef struct _HITLS_X509_Attrs HITLS_X509_Attrs;
+
 typedef struct _HITLS_PKCS12 HITLS_PKCS12;
 
 typedef struct _HITLS_PKCS12_Bag HITLS_PKCS12_Bag;
@@ -69,13 +71,13 @@ typedef enum {
     HITLS_X509_GET_ENCODE,             /** Get the ASN.1 DER encoded cert/csr. */
     HITLS_X509_GET_PUBKEY,             /** Get the public key for the cert/csr */
     HITLS_X509_GET_SIGNALG,            /** Get the signature algorithm for the cert. */
-    HITLS_X509_GET_SUBJECT_DNNAME_STR, /** Get the string of subject name. */
-    HITLS_X509_GET_ISSUER_DNNAME_STR,  /** Get the string of issuer name. */
+    HITLS_X509_GET_SUBJECT_DN_STR, /** Get the string of subject name. */
+    HITLS_X509_GET_ISSUER_DN_STR,  /** Get the string of issuer name. */
     HITLS_X509_GET_SERIALNUM,          /** Get the string of serial number. */
     HITLS_X509_GET_BEFORE_TIME,        /** Get the string of before time. */
     HITLS_X509_GET_AFTER_TIME,         /** Get the string of after time. */
-    HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the subject name list. */
-    HITLS_X509_GET_ISSUER_DNNAME,      /** Get the issuer name list. */
+    HITLS_X509_GET_SUBJECT_DN,     /** Get the subject name list. */
+    HITLS_X509_GET_ISSUER_DN,      /** Get the issuer name list. */
     HITLS_X509_GET_EXT,                /** Get the extension from cert. */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
@@ -120,9 +122,6 @@ typedef enum {
 
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
 
-    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0800,
-    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
-
     HITLS_PKCS12_GEN_LOCALKEYID = 0x0900,       /** Gen and set localKeyId in p12-ctx. */
     HITLS_PKCS12_SET_ENTITY_KEYBAG,             /** Set entity key-Bag to p12-ctx. */
     HITLS_PKCS12_SET_ENTITY_CERTBAG,            /** Set entity cert-Bag to p12-ctx. */
@@ -130,6 +129,13 @@ typedef enum {
     HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
 } HITLS_X509_Cmd;
+
+typedef enum {
+    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0100,
+
+    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS = 0x0200,
+
+} HITLS_X509_AttrCmd;
 
 typedef enum {
     HITLS_X509_GN_EMAIL,  // rfc822Name                [1] IA5String
@@ -554,11 +560,6 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot, HITLS_X509_Cert *cert,
     HITLS_X509_List **chain);
 
-typedef struct _HITLS_X509_Attr {
-    BslCid cid;
-    void *value;
-} HITLS_X509_Attr;
-
 /**
  * @ingroup x509
  * @brief Allocate a pkcs10 csr.
@@ -659,7 +660,7 @@ int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
  * @retval #HITLS_X509_SUCCESS, success.
  *         error codes see the hitls_x509_errno.h
  */
-int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, int32_t valLen);
 
 typedef struct {
     BSL_Buffer *macPwd;
