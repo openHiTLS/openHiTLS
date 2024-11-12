@@ -25,7 +25,7 @@
 #include "crypt_dh.h"
 #include "dh_local.h"
 #include "sal_atomic.h"
-#include "eal_pkey_local.h"
+#include "crypt_local_types.h"
 
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
 {

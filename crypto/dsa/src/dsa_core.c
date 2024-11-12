@@ -25,7 +25,6 @@
 #include "dsa_local.h"
 #include "crypt_dsa.h"
 #include "eal_md_local.h"
-#include "eal_pkey_local.h"
 
 CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void)
 {

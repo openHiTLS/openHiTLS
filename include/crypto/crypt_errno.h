@@ -384,7 +384,7 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
     CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When RSA is used for Ctrl. */
 
-    CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x011E0001,     /**< Unexpected impl */
+    CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01200001,     /**< Unexpected impl */
     CRYPT_PROVIDER_ERR_IMPL_NULL,
     CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */
     CRYPT_PROVIDER_ERR_NEWCTX,

@@ -692,7 +692,7 @@ int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HITLS_PKCS12_MacData *macD
     macData->alg = cid;
     macData->macSalt->data = salt;
     macData->macSalt->dataLen = asn1[HITLS_PKCS12_MACDATA_SALT_IDX].len;
-    macData->interation = iter;
+    macData->iteration = iter;
     return HITLS_X509_SUCCESS;
 }
 
@@ -728,7 +728,7 @@ static void ClearMacData(HITLS_PKCS12_MacData *p12Mac)
     p12Mac->mac->dataLen = 0;
     p12Mac->mac->data = NULL;
     p12Mac->macSalt->data = NULL;
-    p12Mac->interation = 0;
+    p12Mac->iteration = 0;
     p12Mac->alg = BSL_CID_UNKNOWN;
 }
 
@@ -1202,7 +1202,7 @@ int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_Hmac
     BSL_Buffer mac = {0};
     BSL_Buffer digestInfo = {0};
     p12Mac->alg = macParam->macId;
-    p12Mac->interation = macParam->itCnt;
+    p12Mac->iteration = macParam->itCnt;
     p12Mac->macSalt->dataLen = macParam->saltLen;
     BSL_Buffer macPwd = {macParam->pwd, macParam->pwdLen};
     int32_t ret = HITLS_PKCS12_CalMac(&mac, &macPwd, initData, p12Mac);
@@ -1228,7 +1228,7 @@ int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_Hmac
             .tag = BSL_ASN1_TAG_OCTETSTRING,
         }};
 
-    ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, p12Mac->interation, &asnArr[HITLS_PKCS12_MACDATA_ITER_IDX]);
+    ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, p12Mac->iteration, &asnArr[HITLS_PKCS12_MACDATA_ITER_IDX]);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_Free(digestInfo.data);
         BSL_ERR_PUSH_ERROR(ret);

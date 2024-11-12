@@ -27,7 +27,7 @@
 #include "crypt_ecc_pkey.h"
 #include "crypt_ecdh.h"
 #include "sal_atomic.h"
-#include "eal_pkey_local.h"
+#include "crypt_local_types.h"
 
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
 {

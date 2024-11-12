@@ -25,7 +25,6 @@
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
 #include "eal_md_local.h"
-#include "eal_pkey_local.h"
 
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
 {

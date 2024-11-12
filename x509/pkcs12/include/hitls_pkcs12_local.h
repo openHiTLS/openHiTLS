@@ -36,7 +36,7 @@ typedef struct {
     BslCid alg;
     BSL_Buffer *mac;
     BSL_Buffer *macSalt;
-    uint32_t interation;
+    uint32_t iteration;
 } HITLS_PKCS12_MacData;
 
 /* This struct is provided for users to create related bags and add them to the p12-ctx. */

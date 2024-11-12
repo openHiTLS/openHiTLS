@@ -23,7 +23,6 @@
 #include "bsl_sal.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
-#include "eal_pkey_local.h"
 
 int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)

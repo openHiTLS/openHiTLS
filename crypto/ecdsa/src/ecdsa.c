@@ -28,7 +28,6 @@
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "crypt_ecdsa.h"
-#include "eal_pkey_local.h"
 #include "eal_md_local.h"
 
 CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)

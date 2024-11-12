@@ -24,6 +24,15 @@ extern "C" {
 #endif // __cplusplus
 
 typedef enum {
+    CRYPT_CTRL_SET_PARA_BY_ID = -1,          /* Asymmetric cipher set para by id. */
+    CRYPT_CTRL_GET_PARA = -2,                /* Asymmetric cipher get para. */
+    CRYPT_CTRL_GET_PARAID = -3,              /* Asymmetric cipher get id of para. */
+    CRYPT_CTRL_GET_BITS = -4,            /* Asymmetric cipher get bits . */
+    CRYPT_CTRL_GET_SIGNLEN = -5,             /* Asymmetric cipher get signlen . */
+    CRYPT_CTRL_GET_SECBITS = -6,              /* Asymmetric cipher get secure bits . */
+} EAL_PkeyCtrlCmd;
+
+typedef enum {
     CRYPT_CTRL_SET_IV = -1,
     CRYPT_CTRL_SET_COUNT = -2,
     CRYPT_CTRL_SET_PADDING = -3,
