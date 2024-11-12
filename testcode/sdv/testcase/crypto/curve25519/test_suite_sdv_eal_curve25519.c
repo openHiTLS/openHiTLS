@@ -30,7 +30,11 @@
 #include "crypt_eal_rand.h"
 #include "securec.h"
 
-#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE  0
+#define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
+#define CRYPT_EAL_PKEY_EXCH_OPERATE     2
+#define CRYPT_EAL_PKEY_SIGN_OPERATE     4
+
 void *malloc_fail(uint32_t size)
 {
     (void)size;
@@ -438,18 +442,20 @@ exit:
  *    2. Call the CRYPT_EAL_PkeySign method, where all parameters are valid, expected result 2.
  *    3. Call the CRYPT_EAL_PkeySetPrv method to set private key, expected result 3.
  *    4. Call the CRYPT_EAL_PkeySign method, where other parameters are valid, but :
- *        (1) data = NULL, expected result 4
- *        (2) sign = NULL, expected result 4
- *        (3) signLen = NULL, expected result 4
- *        (4) signLen = 0 | 63, expected result 5
- *        (5) signLen = 64 | 65, expected result 6
+ *        (1) hashId != CRYPT_MD_SHA512, expected result 4
+ *        (2) data = NULL, expected result 4
+ *        (3) sign = NULL, expected result 4
+ *        (4) signLen = NULL, expected result 4
+ *        (5) signLen = 0 | 63, expected result 5
+ *        (6) signLen = 64 | 65, expected result 6
  * @expect
  *    1. Success, and context is not NULL.
  *    2. CRYPT_CURVE25519_NO_PRVKEY
  *    3. CRYPT_SUCCESS
- *    4. CRYPT_NULL_INPUT/CRYPT_INVALID_ARG
- *    5. CRYPT_CURVE25519_SIGNLEN_ERROR
- *    6. CRYPT_SUCCESS
+ *    4. CRYPT_EAL_ERR_ALGID
+ *    5. CRYPT_NULL_INPUT
+ *    6. CRYPT_CURVE25519_SIGNLEN_ERROR
+ *    7. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(int isProvider)
@@ -474,6 +480,7 @@ void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), sign, &signLen), CRYPT_CURVE25519_NO_PRVKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, &signLen), CRYPT_EAL_ERR_ALGID);
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, NULL, sizeof(data), sign, &signLen), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), NULL, &signLen), CRYPT_NULL_INPUT);
@@ -504,14 +511,16 @@ exit:
  *    3. Call the CRYPT_EAL_PkeySign method to sign, expected result 2.
  *    4. Call the CRYPT_EAL_PkeyVerify method, where all parameters are valid, expected result 2
  *    5. Call the CRYPT_EAL_PkeyVerify method, where other parameters are valid, but :
- *        (1) data = NULL, expected result 3
- *        (2) sign = NULL, expected result 3
- *        (3) signLen = 0 | 63 | 65, expected result 4
+ *        (1) hashId != CRYPT_MD_SHA512, expected result 3
+ *        (2) data = NULL, expected result 4
+ *        (3) sign = NULL, expected result 4
+ *        (4) signLen = 0 | 63 | 65, expected result 5
  * @expect
  *    1. Success, and context is not NULL.
  *    2. CRYPT_SUCCESS
- *    3. CRYPT_NULL_INPUT
- *    4. CRYPT_CURVE25519_SIGNLEN_ERROR
+ *    3. CRYPT_EAL_ERR_ALGID
+ *    4. CRYPT_NULL_INPUT
+ *    5. CRYPT_CURVE25519_SIGNLEN_ERROR
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_CURVE25519_VERIFY_API_TC001(int isProvider)
@@ -537,6 +546,7 @@ void SDV_CRYPTO_CURVE25519_VERIFY_API_TC001(int isProvider)
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, signLen), CRYPT_EAL_ERR_ALGID);
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA512, data, sizeof(data), sign, signLen), CRYPT_SUCCESS);
 
@@ -959,6 +969,7 @@ void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int
     CRYPT_EAL_PkeyCtx *prvCtx = NULL;
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
+    int expectRet = expect == 1 ? CRYPT_SUCCESS : CRYPT_CURVE25519_VERIFY_FAIL;
 
     Set_Curve25519_Prv(&prv, CRYPT_PKEY_ED25519, prvkey->x, prvkey->len);
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, pubkey->x, pubkey->len);
@@ -966,13 +977,13 @@ void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int
     TestMemInit();
     if (isProvider == 1) {
         pubCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
-            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     } else {
         pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
     }
     if (isProvider == 1) {
         prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
-            CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     } else {
         prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
     }
@@ -982,7 +993,7 @@ void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prv), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), expect);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), expectRet);
 exit:
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
