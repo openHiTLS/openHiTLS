@@ -18,111 +18,41 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ECB
-
-#include "crypt_modes.h"
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "crypt_types.h"
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-/**
- * @brief ECB mode encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_ECB_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+typedef struct ModesCipherCtx MODES_CipherCtx;
 
-/**
- * @brief ECB mode decryption
- *
- * @param ctx [IN]  mode handle
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Decrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_ECB_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+// ECB mode universal implementation
+MODES_CipherCtx *MODES_ECB_NewCtx(int32_t algId);
+int32_t MODES_ECB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
 
-#ifdef HITLS_CRYPTO_AES
-/**
- * @brief ECB mode assembly encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t AES_ECB_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODES_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_ECB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_ECB_DeinitCtx(MODES_CipherCtx *modeCtx);
+int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
+void MODES_ECB_FreeCtx(MODES_CipherCtx *modeCtx);
 
-/**
- * @brief ECB mode assembly decryption
- *
- * @param ctx [IN]  mode handle
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Decrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t AES_ECB_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
+// AES ECB optimization implementation
+int32_t AES_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t AES_ECB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
 
-/**
- * @brief Clear the ECB mode context, delete sensitive data. Preserve the memory and methods of algorithm modules
- *
- * @param ctx [IN]  mode handle
- * @return none
- */
-void MODE_ECB_Clean(MODE_CipherCtx *ctx);
+// SM4 ECB optimization implementation
+int32_t SM4_ECB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
+int32_t SM4_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t SM4_ECB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
 
-/**
- * @brief In ECB mode, perform parameter operations on mode.
- *
- * @param ctx [IN]  mode handle
- * @param opt [IN]  Operation
- * @param val [IN/OUT] Parameter, which can be an input parameter or an output parameter.
- * @param len [IN]  Parameter length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_ECB_Ctrl(MODE_CipherCtx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len);
+int32_t MODES_ECB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc);
 
-#ifdef HITLS_CRYPTO_SM4
-/**
- * @brief SM4-ECB mode encryption. When the value of len is not an integer multiple of 16,
- *        MODE_SM4_ECB_Encrypt cannot be invoked to encrypt new data.
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_ECB_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-/**
- * @brief SM4-ECB mode decryption. If the value of len is not an integer multiple of 16,
- *        this round of decryption is complete.
- *
- * @param ctx [IN]  mode handle
- * @param in [IN]   Data to be encrypted
- * @param out [OUT] Encrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_ECB_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
-
+int32_t MODES_ECB_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_ECB_FinalEx(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
 #ifdef __cplusplus
 }
 #endif // __cplusplus

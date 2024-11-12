@@ -109,8 +109,9 @@ static int32_t SetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Paill
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPrv *prv)
+int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_PaillierPrv *prv = (CRYPT_PaillierPrv *)para->param;
     int32_t ret = SetPrvBasicCheck(ctx, prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -151,8 +152,9 @@ static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Paill
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPub *pub)
+int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_PaillierPub *pub = (CRYPT_PaillierPub *)para->param;
     int32_t ret = SetPubBasicCheck(ctx, pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -185,8 +187,9 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPrv *prv)
+int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_PaillierPrv *prv = (CRYPT_PaillierPrv *)para->param;
     if (ctx == NULL || ctx->prvKey == NULL || prv == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -217,8 +220,9 @@ int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPr
     return ret;
 }
 
-int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPub *pub)
+int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_PaillierPub *pub = (CRYPT_PaillierPub *)para->param;
     if (ctx == NULL || ctx->pubKey == NULL || pub == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

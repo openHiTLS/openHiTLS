@@ -19,13 +19,20 @@
 #include "crypt_eal_kdf.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
+#include "crypt_pbkdf2.h"
 /* END_HEADER */
 
 #define DATA_LEN (16)
 
+void SCRYPT_SET_PARAM(CRYPT_Param *p, void *param, uint32_t paramLen)
+{
+    p->param = param;
+    p->paramLen = paramLen;
+}
+
 /**
  * @test   SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001
- * @title  CRYPT_EAL_Scrypt interface test.
+ * @title  Scrypt interface test.
  * @precon nan
  * @brief
  *    1.Normal parameter test,the key and salt can be empty, expected result 1.
@@ -47,25 +54,96 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001(void)
     uint32_t p = DATA_LEN;
     uint32_t outLen = DATA_LEN;
     uint8_t out[DATA_LEN];
-    ASSERT_EQ(CRYPT_EAL_Scrypt(NULL, 0, salt, saltLen, N, r, p, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, 0, salt, saltLen, N, r, p, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(NULL, keyLen, salt, saltLen, N, r, p, out, outLen), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, NULL, 0, N, r, p, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, 0, N, r, p, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, NULL, saltLen, N, r, p, out, outLen), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 0, r, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 3, r, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 4, r, p, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 6, r, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
-    // 65538 = 2^16 + 2
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 65538, r, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 0, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, r, 0, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, r, p, NULL, outLen), CRYPT_SCRYPT_PARAM_ERROR);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, r, p, out, 0), CRYPT_SCRYPT_PARAM_ERROR);
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+
+    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    SCRYPT_SET_PARAM(&passwordParam, NULL, keyLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_NULL_INPUT);
+
+    SCRYPT_SET_PARAM(&passwordParam, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    SCRYPT_SET_PARAM(&passwordParam, key, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    SCRYPT_SET_PARAM(&passwordParam, key, keyLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+
+    SCRYPT_SET_PARAM(&saltParam, NULL, saltLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_NULL_INPUT);
+
+    SCRYPT_SET_PARAM(&saltParam, NULL, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    SCRYPT_SET_PARAM(&saltParam, salt, 0);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    SCRYPT_SET_PARAM(&saltParam, salt, saltLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+
+    N = 0;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+
+    N = 3;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+
+    N = 6;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+
+    N = 65538;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+
+    N = 4;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    N = DATA_LEN;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+
+    r = 0;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SCRYPT_PARAM_ERROR);
+
+    r = DATA_LEN;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    p = 0;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SCRYPT_PARAM_ERROR);
+
+    p = DATA_LEN;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, NULL, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, 0), CRYPT_SCRYPT_PARAM_ERROR);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 exit:
-    return;
+    CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */
 
@@ -93,44 +171,104 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC002(void)
     uint32_t saltLen = DATA_LEN;
     uint8_t salt[DATA_LEN];
     uint32_t N = DATA_LEN;
+    uint32_t r = DATA_LEN;
     uint32_t p = DATA_LEN;
     uint32_t outLen = DATA_LEN;
     uint8_t out[DATA_LEN];
 
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+
+    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+
     // N is 2^16 = 65536, r is 1,Not satisfied N < 2^(128 * r / 8)
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 65536, 1, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    N = 65536;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    r = 1;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // N is 2^15 = 32768, r is 1,satisfied N < 2^(128 * r / 8)
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 32768, 1, p, out, outLen), CRYPT_SUCCESS);
+    N = 32768;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    r = 1;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
     // r = 2^16 = 65536, N = 2^9 = 512, Not satisfied N < ((UINT32_MAX / 128) / r)
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, 512, 65536, p, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    N = 512;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    r = 65536;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+
+    N = DATA_LEN;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
 
     // r  is 2^16 = 65536, p is 2^16 = 65536, Not satisfied p <= ((2^32-1) * 32) / (128 * r)
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 65536, 65536, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    r = 65536;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    p = 65536;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^16 = 65536, p = 2^14 = 16384, Not satisfied r * p <= 2^30 - 1
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 65536, 16384, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    r = 65536;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    p = 16384;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^16 = 65536, p = 2^9 = 512, Not satisfied p * 128 * r < UINT32_MAX
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 65536, 512, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    r = 65536;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    p = 512;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^8 = 256, p = 2^22 = 4194304, Not satisfied r * p <= 2^30 - 1
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 256, 4194304, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    r = 256;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    p = 4194304;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^4 = 16, p = 2^26 = 67108864, Not satisfied r * p <= 2^30 - 1
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 16, 67108864, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    r = 16;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    p = 67108864;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^4 = 16, p = 2^21 = 2097152, Not satisfied p * 128 * r < UINT32_MAX
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key, keyLen, salt, saltLen, N, 16, 2097152, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+    r = 16;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    p = 2097152;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 exit:
-    return;
+    CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */
 
 /**
  * @test   SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001
- * @title  CRYPT_EAL_Scrypt vector test.
+ * @title  Scrypt vector test.
  * @precon nan
  * @brief
  *    1.Calculate the output using the given parameters, expected result 1.
@@ -146,11 +284,74 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC001(Hex *key, Hex *salt, int N, int r, int p
     uint32_t outLen = result->len;
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
-    ASSERT_EQ(CRYPT_EAL_Scrypt(key->x, key->len, salt->x, salt->len, N, r, p, out, outLen), CRYPT_SUCCESS);
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+
+    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
 exit:
     if (out != NULL) {
         free(out);
     }
+    CRYPT_EAL_KdfFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SCRYPT_DEFAULT_PROVIDER_FUNC_TC001
+ * @title  Default provider testing
+ * @precon nan
+ * @brief
+ * Load the default provider and use the test vector to test its correctness
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SCRYPT_DEFAULT_PROVIDER_FUNC_TC001(Hex *key, Hex *salt, int N, int r, int p, Hex *result)
+{
+    TestMemInit();
+    uint32_t outLen = result->len;
+    uint8_t *out = malloc(outLen * sizeof(uint8_t));
+    ASSERT_TRUE(out != NULL);
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_SCRYPT, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+
+    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
+
+    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+
+    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+
+    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+exit:
+    if (out != NULL) {
+        free(out);
+    }
+    CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */

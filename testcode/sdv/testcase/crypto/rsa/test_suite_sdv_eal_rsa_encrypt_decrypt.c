@@ -16,7 +16,7 @@
 
 /* BEGIN_HEADER */
 /* END_HEADER */
-
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 /**
  * @test   SDV_CRYPTO_RSA_CRYPT_FUNC_TC001
  * @title  RSA: public key encryption and private key
@@ -43,7 +43,7 @@
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
-    int keyLen, int padMode, int hashId, Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex *ciphertext)
+    int keyLen, int padMode, int hashId, Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex *ciphertext, int isProvider)
 {
     if (IsMdAlgDisabled(hashId)) {
         SKIP_TEST();
@@ -77,7 +77,12 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
     ASSERT_TRUE(ciphertext->len == KEYLEN_IN_BYTES((uint32_t)keyLen));
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     if (padMode != CRYPT_CTRL_SET_RSA_PADDING) {
@@ -129,7 +134,7 @@ exit:
  *    8. Both are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext)
+void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int isProvider)
 {
     TestMemInit();
     uint8_t ct[MAX_CIPHERTEXT_LEN] = {0};
@@ -144,7 +149,12 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext)
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     CRYPT_RandRegist(RandFunc);
@@ -193,7 +203,7 @@ exit:
  *    7-9. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex *label)
+void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex *label, int isProvider)
 {
 #ifndef HITLS_CRYPTO_SHA2
     SKIP_TEST();
@@ -212,7 +222,12 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     CRYPT_RandRegist(RandFunc);
@@ -242,3 +257,4 @@ exit:
     CRYPT_EAL_PkeyFreeCtx(cpyCtx);
 }
 /* END_CASE */
+

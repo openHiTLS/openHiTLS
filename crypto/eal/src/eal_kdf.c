@@ -20,11 +20,15 @@
 #include "crypt_eal_kdf.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_local_types.h"
 #include "crypt_eal_mac.h"
+#include "crypt_eal_implprovider.h"
+#include "crypt_provider.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "eal_mac_local.h"
+#include "eal_kdf_local.h"
 #ifdef HITLS_CRYPTO_HMAC
 #include "crypt_hmac.h"
 #endif
@@ -44,308 +48,216 @@
 #include "crypt_utils.h"
 #include "crypt_ealinit.h"
 
-#ifdef HITLS_CRYPTO_PBKDF2
-static const uint32_t PBKDF_ID_LIST[] = {
-    CRYPT_MAC_HMAC_MD5,
-    CRYPT_MAC_HMAC_SHA1,
-    CRYPT_MAC_HMAC_SHA224,
-    CRYPT_MAC_HMAC_SHA256,
-    CRYPT_MAC_HMAC_SHA384,
-    CRYPT_MAC_HMAC_SHA512,
-    CRYPT_MAC_HMAC_SM3,
-    CRYPT_MAC_HMAC_SHA3_224,
-    CRYPT_MAC_HMAC_SHA3_256,
-    CRYPT_MAC_HMAC_SHA3_384,
-    CRYPT_MAC_HMAC_SHA3_512,
-};
-#endif
-
-#ifdef HITLS_CRYPTO_HKDF
-static const uint32_t HKDF_ID_LIST[] = {
-    CRYPT_MAC_HMAC_MD5,
-    CRYPT_MAC_HMAC_SHA1,
-    CRYPT_MAC_HMAC_SHA224,
-    CRYPT_MAC_HMAC_SHA256,
-    CRYPT_MAC_HMAC_SHA384,
-    CRYPT_MAC_HMAC_SHA512,
-};
-#endif
-
-#ifdef HITLS_CRYPTO_KDFTLS12
-static const uint32_t KDFTLS12_ID_LIST[] = {
-    CRYPT_MAC_HMAC_SHA256,
-    CRYPT_MAC_HMAC_SHA384,
-    CRYPT_MAC_HMAC_SHA512,
-};
-#endif
-
-bool CRYPT_EAL_HkdfIsValidAlgId(CRYPT_MAC_AlgId id)
+static CRYPT_EAL_KdfCTX *KdfAllocCtx(CRYPT_KDF_AlgId id, EAL_KdfUnitaryMethod *method)
 {
-#ifdef HITLS_CRYPTO_HKDF
-    return ParamIdIsValid(id, HKDF_ID_LIST, sizeof(HKDF_ID_LIST) / sizeof(HKDF_ID_LIST[0]));
-#else
-    (void)id;
-    return false;
-#endif
+    CRYPT_EAL_KdfCTX *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_KdfCTX));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    void *data = method->newCtx();
+    if (data == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_FREE(ctx);
+        return NULL;
+    }
+    ctx->data = data;
+    return ctx;
 }
 
-bool CRYPT_EAL_Pbkdf2IsValidAlgId(CRYPT_MAC_AlgId id)
+static void EalKdfCopyMethod(const EAL_KdfMethod *method, EAL_KdfUnitaryMethod *dest)
 {
-#ifdef HITLS_CRYPTO_PBKDF2
-    return ParamIdIsValid(id, PBKDF_ID_LIST, sizeof(PBKDF_ID_LIST) / sizeof(PBKDF_ID_LIST[0]));
-#else
-    (void)id;
-    return false;
-#endif
+    dest->newCtx = method->newCtx;
+    dest->setParam = method->setParam;
+    dest->derive = method->derive;
+    dest->deinit = method->deinit;
+    dest->freeCtx = method->freeCtx;
+    dest->ctrl = method->ctrl;
 }
 
-bool CRYPT_EAL_Kdftls12IsValidAlgId(CRYPT_MAC_AlgId id)
+static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, CRYPT_EAL_Func *funcs)
 {
-#ifdef HITLS_CRYPTO_KDFTLS12
-    return ParamIdIsValid(id, KDFTLS12_ID_LIST, sizeof(KDFTLS12_ID_LIST) / sizeof(KDFTLS12_ID_LIST[0]));
-#else
-    (void)id;
-    return false;
-#endif
-}
-
-int32_t CRYPT_EAL_Pbkdf2(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen, const uint8_t *salt,
-    uint32_t saltLen, uint32_t it, uint8_t *out, uint32_t len)
-{
-#ifdef HITLS_CRYPTO_PBKDF2
-#ifdef HITLS_CRYPTO_ASM_CHECK
-    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
-    }
-#endif
-    if (!ParamIdIsValid(id, PBKDF_ID_LIST, sizeof(PBKDF_ID_LIST) / sizeof(PBKDF_ID_LIST[0]))) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_PBKDF2, CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
-    /* According to GM/T 0091-2020, the salt length of pbkdf2-hmac-sm3 cannot be less than 64 bits (8 bytes)
-       and the number of iterations cannot be less than 1024. */
-    if (id == CRYPT_MAC_HMAC_SM3 && (saltLen < 8 || it < 1024)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_PBKDF2, CRYPT_PBKDF2_PARAM_ERROR);
-        return CRYPT_PBKDF2_PARAM_ERROR;
+    int32_t index = 0;
+    EAL_KdfUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_KdfUnitaryMethod));
+    if (method == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
     }
 
-    EAL_MacMethLookup method;
-    int32_t ret = EAL_MacFindMethod(id, &method);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
-        return CRYPT_EAL_ERR_METH_NULL_NUMBER;
+    while (funcs[index].id != 0) {
+        switch (funcs[index].id) {
+            case CRYPT_EAL_IMPLKDF_NEWCTX:
+                method->provNewCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_SETPARAM:
+                method->setParam = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_DERIVE:
+                method->derive = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_DEINITCTX:
+                method->deinit = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_CTRL:
+                method->ctrl = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_FREECTX:
+                method->freeCtx = funcs[index].func;
+                break;
+            default:
+                BSL_SAL_FREE(method);
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
+        }
+        index++;
     }
-
-    ret = CRYPT_PBKDF2_HMAC(method.macMethod, method.md, key, keyLen, salt, saltLen, it, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_PBKDF2, ret);
-        return ret;
-    }
-    EAL_EventReport(CRYPT_EVENT_KEYDERIVE, CRYPT_ALGO_KDF, CRYPT_KDF_PBKDF2, CRYPT_SUCCESS);
+    ctx->method = method;
     return CRYPT_SUCCESS;
-#else
-    (void)id;
-    (void)key;
-    (void)keyLen;
-    (void)salt;
-    (void)saltLen;
-    (void)it;
-    (void)out;
-    (void)len;
-    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_PBKDF2, CRYPT_PBKDF2_NOT_SUPPORTED);
-    return CRYPT_PBKDF2_NOT_SUPPORTED;
-#endif
 }
 
-int32_t CRYPT_EAL_HkdfExtract(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *salt, uint32_t saltLen, uint8_t *out, uint32_t *len)
+CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
-#ifdef HITLS_CRYPTO_HKDF
-    if (!ParamIdIsValid(id, HKDF_ID_LIST, sizeof(HKDF_ID_LIST) / sizeof(HKDF_ID_LIST[0]))) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
+    CRYPT_EAL_Func *funcs = NULL;
+    void *provCtx = NULL;
+    int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_KDF, algId, attrName,
+        (const CRYPT_EAL_Func **)&funcs, &provCtx);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, ret);
+        return NULL;
     }
-    EAL_MacMethLookup method;
-    if (EAL_MacFindMethod(id, &method) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
-        return CRYPT_EAL_ERR_METH_NULL_NUMBER;
+    CRYPT_EAL_KdfCTX *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_KdfCTX));
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
     }
 
-    int ret = CRYPT_HKDF_Extract(method.macMethod, method.md, key, keyLen, salt, saltLen, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, ret);
-        return ret;
+    ret = CRYPT_EAL_SetKdfMethod(ctx, funcs);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_FREE(ctx);
+        return NULL;
     }
-    EAL_EventReport(CRYPT_EVENT_KEYDERIVE, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_SUCCESS);
-    return CRYPT_SUCCESS;
-#else
-    (void)id;
-    (void)key;
-    (void)keyLen;
-    (void)salt;
-    (void)saltLen;
-    (void)out;
-    (void)len;
-    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_HKDF_NOT_SUPPORTED);
-    return CRYPT_HKDF_NOT_SUPPORTED;
-#endif
+    if (ctx->method->provNewCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, CRYPT_PROVIDER_ERR_IMPL_NULL);
+        BSL_SAL_FREE(ctx->method);
+        BSL_SAL_FREE(ctx);
+        return NULL;
+    }
+    ctx->data = ctx->method->provNewCtx(provCtx, algId);
+    if (ctx->data == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_FREE(ctx->method);
+        BSL_SAL_FREE(ctx);
+        return NULL;
+    }
+    ctx->id = algId;
+    ctx->isProvider = true;
+    return ctx;
 }
 
-int32_t CRYPT_EAL_HkdfExpand(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t len)
+CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId)
 {
-#ifdef HITLS_CRYPTO_HKDF
-    EAL_MacMethLookup method;
-    if (!ParamIdIsValid(id, HKDF_ID_LIST, sizeof(HKDF_ID_LIST) / sizeof(HKDF_ID_LIST[0]))) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
+    const EAL_KdfMethod *method = EAL_KdfFindMethod(algId);
+    if (method == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, CRYPT_EAL_ERR_ALGID);
+        return NULL;
+    }
+    EAL_KdfUnitaryMethod *temp = BSL_SAL_Calloc(1, sizeof(EAL_KdfUnitaryMethod));
+    if (temp == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, BSL_MALLOC_FAIL);
+        return NULL;
+    }
+    EalKdfCopyMethod(method, temp);
+    CRYPT_EAL_KdfCTX *ctx = KdfAllocCtx(algId, temp);
+    if (ctx == NULL) {
+        BSL_SAL_FREE(temp);
+        return NULL;
     }
 
-    int32_t ret = EAL_MacFindMethod(id, &method);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
-        return CRYPT_EAL_ERR_METH_NULL_NUMBER;
-    }
-
-    ret = CRYPT_HKDF_Expand(method.macMethod, method.md, key, keyLen, info, infoLen, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, ret);
-        return ret;
-    }
-    EAL_EventReport(CRYPT_EVENT_KEYDERIVE, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_SUCCESS);
-    return CRYPT_SUCCESS;
-#else
-    (void)id;
-    (void)key;
-    (void)keyLen;
-    (void)info;
-    (void)infoLen;
-    (void)out;
-    (void)len;
-    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_HKDF_NOT_SUPPORTED);
-    return CRYPT_HKDF_NOT_SUPPORTED;
-#endif
+    ctx->id = algId;
+    ctx->method = temp;
+    return ctx;
 }
 
-int32_t CRYPT_EAL_Hkdf(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen, const uint8_t *salt, uint32_t saltLen,
-    const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t len)
+int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, CRYPT_Param *param)
 {
-#ifdef HITLS_CRYPTO_HKDF
-#ifdef HITLS_CRYPTO_ASM_CHECK
-    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
-    }
-#endif
-    if (!ParamIdIsValid(id, HKDF_ID_LIST, sizeof(HKDF_ID_LIST) / sizeof(HKDF_ID_LIST[0]))) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
-    EAL_MacMethLookup method;
-    int32_t ret = EAL_MacFindMethod(id, &method);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
-        return CRYPT_EAL_ERR_METH_NULL_NUMBER;
-    }
-
-    ret = CRYPT_HKDF(method.macMethod, method.md, key, keyLen, salt, saltLen, info, infoLen, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, ret);
-        return ret;
-    }
-    EAL_EventReport(CRYPT_EVENT_KEYDERIVE, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_SUCCESS);
-    return CRYPT_SUCCESS;
-#else
-    (void)id;
-    (void)key;
-    (void)keyLen;
-    (void)info;
-    (void)infoLen;
-    (void)salt;
-    (void)saltLen;
-    (void)out;
-    (void)len;
-    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_HKDF, CRYPT_HKDF_NOT_SUPPORTED);
-    return CRYPT_HKDF_NOT_SUPPORTED;
-#endif
-}
-
-int32_t CRYPT_EAL_KdfTls12(CRYPT_MAC_AlgId id, const uint8_t *key, uint32_t keyLen, const uint8_t *label,
-    uint32_t labelLen, const uint8_t *seed, uint32_t seedLen,  uint8_t *out, uint32_t len)
-{
-#ifdef HITLS_CRYPTO_KDFTLS12
-#ifdef HITLS_CRYPTO_ASM_CHECK
-    if (CRYPT_ASMCAP_Mac(id) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
-    }
-#endif
-    // For KDF-TLS1.2, only HMAC-SHA256, HMAC-SHA384 and HMAC-SHA512 can be used.
-    if (!ParamIdIsValid(id, KDFTLS12_ID_LIST, sizeof(KDFTLS12_ID_LIST) / sizeof(KDFTLS12_ID_LIST[0]))) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_KDFTLS12, CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
     int32_t ret;
-    EAL_MacMethLookup method;
-    ret = EAL_MacFindMethod(id, &method);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
-        return CRYPT_EAL_ERR_METH_NULL_NUMBER;
+
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->method == NULL || ctx->method->setParam == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    ret = CRYPT_KDF_TLS12(method.macMethod, method.md, key, keyLen, label, labelLen, seed, seedLen, out, len);
+    ret = ctx->method->setParam(ctx->data, param);
     if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_KDFTLS12, ret);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, ret);
         return ret;
     }
-    EAL_EventReport(CRYPT_EVENT_KEYDERIVE, CRYPT_ALGO_KDF, CRYPT_KDF_KDFTLS12, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
-#else
-    (void)id;
-    (void)key;
-    (void)keyLen;
-    (void)label;
-    (void)labelLen;
-    (void)seed;
-    (void)seedLen;
-    (void)out;
-    (void)len;
-    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_KDFTLS12, CRYPT_KDFTLS12_NOT_SUPPORTED);
-    return CRYPT_KDFTLS12_NOT_SUPPORTED;
-#endif
 }
 
-int32_t CRYPT_EAL_Scrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *salt, uint32_t saltLen, uint32_t n,
-    uint32_t r, uint32_t p, uint8_t *out, uint32_t len)
+int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen)
 {
-#ifdef HITLS_CRYPTO_SCRYPT
-    EAL_MacMethLookup method;
-    int32_t ret = EAL_MacFindMethod(CRYPT_MAC_HMAC_SHA256, &method);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_NUMBER);
-        return CRYPT_EAL_ERR_METH_NULL_NUMBER;
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-
-    ret = CRYPT_SCRYPT(CRYPT_PBKDF2_HMAC, method.macMethod, method.md, key, keyLen, salt, saltLen, n, r, p, out, len);
+    if (ctx->method == NULL || ctx->method->derive == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    int32_t ret = ctx->method->derive(ctx->data, key, keyLen);
     if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_SCRYPT, ret);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, ret);
         return ret;
     }
-    EAL_EventReport(CRYPT_EVENT_KEYDERIVE, CRYPT_ALGO_KDF, CRYPT_KDF_SCRYPT, CRYPT_SUCCESS);
+    EAL_EventReport(CRYPT_EVENT_KDF, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
-#else
-    (void)key;
-    (void)keyLen;
-    (void)salt;
-    (void)saltLen;
-    (void)n;
-    (void)r;
-    (void)p;
-    (void)out;
-    (void)len;
-    EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_SCRYPT, CRYPT_SCRYPT_NOT_SUPPORTED);
-    return CRYPT_SCRYPT_NOT_SUPPORTED;
-#endif
 }
+
+int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCTX *ctx)
+{
+    if (ctx == NULL || ctx->method == NULL || ctx->method->deinit == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    ctx->method->deinit(ctx->data);
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_KdfCtrl(CRYPT_EAL_KdfCTX *ctx, int32_t cmd, void *val, uint32_t valLen)
+{
+    if (ctx == NULL || ctx->method == NULL || ctx->method->ctrl== NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    int32_t ret = ctx->method->ctrl(ctx->data, cmd, val, valLen);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, ret);
+    }
+
+    return ret;
+}
+
+void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return;
+    }
+    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
+    ctx->method->freeCtx(ctx->data);
+    BSL_SAL_FREE(ctx->method);
+    BSL_SAL_FREE(ctx);
+    return;
+}
+
 #endif

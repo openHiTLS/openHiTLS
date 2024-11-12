@@ -18,13 +18,8 @@
 
 #include "crypt_modes_ctr.h"
 
-int32_t AES_CTR_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODE_CTR_Crypt(ctx, in, out, len);
-}
-
-int32_t AES_CTR_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-{
-    return MODE_CTR_Crypt(ctx, in, out, len);
+    return MODES_CTR_Update(modeCtx, in, inLen, out, outLen);
 }
 #endif

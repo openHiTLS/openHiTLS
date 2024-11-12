@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,7 +48,20 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id);
 
 /**
  * @ingroup crypt_eal_md
- * @brief Check whether the id is valid MD algorithm ID.
+ * @brief   Create a md context in the providers.
+ *
+ * @param libCtx [IN] Library context, if NULL, use the default provider
+ * @param algId [IN] md algorithm ID.
+ * @param attrName [IN] Specify expected attribute values
+ *
+ * @retval  CRYPT_EAL_PkeyCtx pointer.
+ *          NULL, if the operation fails.
+ */
+CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
+
+/**
+ * @ingroup crypt_eal_md
+ * @brief Check whether the id is valid MD algorithm ID. Not supported in provider
  *
  * @param   id [IN] MD algorithm ID.
  * @retval  true, If the value is valid.
@@ -64,7 +77,7 @@ bool CRYPT_EAL_MdIsValidAlgId(CRYPT_MD_AlgId id);
  * @retval  ID, MD algorithm ID.
  *          CRYPT_MD_MAX, which indicates invalid ID or the input parameter is null.
  */
-CRYPT_MD_AlgId CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx);
+int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -142,7 +155,7 @@ int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len);
 
 /**
  * @ingroup crypt_eal_md
- * @brief   Obtain the digest length of the algorithm output.
+ * @brief   Obtain the digest length of the algorithm output. Not supported in provider
  *
  * @param   id [IN] Algorithm ID
  * @retval  Digest length, if successful.
@@ -152,7 +165,7 @@ uint32_t CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id);
 
 /**
  * @ingroup crypt_eal_md
- * @brief   Calculate the data digest
+ * @brief   Calculate the data digest. Not supported in provider
  *
  * @param   id [IN] Algorithm ID
  * @param   in [IN] Data to be digested
@@ -173,7 +186,21 @@ int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8
  *
  * @param   ctx [IN] Md Context
  */
-uint32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCTX *ctx);
+int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCTX *ctx);
+
+ /**
+ * @ingroup crypt_eal_md
+ * @brief get or set md param
+ *
+ * @param ctx [IN] md context
+ * @param cmd [IN] Option information
+ * @param val [IN/OUT] Data to be set/obtained
+ * @param valLen [IN] Length of the data marked as "val"
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_MdCtrl(CRYPT_EAL_MdCTX *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 #ifdef __cplusplus
 }
