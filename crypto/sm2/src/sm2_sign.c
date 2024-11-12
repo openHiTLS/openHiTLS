@@ -151,7 +151,7 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
     }
     CRYPT_Param tmpPara = {0, &pub, 0};
     CRYPT_SM2_GetPubKey(ctx, &tmpPara);
-    GOTO_ERR_IF(ctx->hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(ctx->hashMethod->init(mdCtx, NULL), ret);
     // User A has a distinguishable identifier IDA with a length of entlenA bits,
     // and ENTLA is two bytes converted from an integer entlenA
     // H256(ENTLA || IDA || a || b || xG || yG || xA || yA)
@@ -195,7 +195,7 @@ static int32_t Sm2ComputeMsgHash(const CRYPT_SM2_Ctx *ctx, const uint8_t *msg, u
         goto ERR;
     }
     GOTO_ERR_IF_EX(Sm2ComputeZDigest(ctx, out, &outLen), ret);
-    GOTO_ERR_IF(ctx->hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(ctx->hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(ctx->hashMethod->update(mdCtx, out, outLen), ret);
     GOTO_ERR_IF(ctx->hashMethod->update(mdCtx, msg, msgLen), ret);
     GOTO_ERR_IF(ctx->hashMethod->final(mdCtx, out, &outLen), ret);

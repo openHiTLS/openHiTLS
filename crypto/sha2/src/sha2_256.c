@@ -23,6 +23,7 @@
 #include "bsl_err_internal.h"
 #include "sha2_core.h"
 #include "bsl_sal.h"
+#include "crypt_types.h"
 
 struct CryptSha256Ctx {
     uint32_t h[CRYPT_SHA2_256_DIGESTSIZE / sizeof(uint32_t)]; /* 256 bits for SHA256 state */
@@ -47,12 +48,13 @@ void CRYPT_SHA2_256_FreeCtx(CRYPT_SHA2_256_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_256_Ctx));
 }
 
-int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx)
+int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SHA2_256_Ctx), 0, sizeof(CRYPT_SHA2_256_Ctx));
     /**
      * @RFC 4634 6.1 SHA-224 and SHA-256 Initialization
@@ -269,12 +271,13 @@ void CRYPT_SHA2_224_FreeCtx(CRYPT_SHA2_224_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_224_Ctx));
 }
 
-int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx)
+int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SHA2_224_Ctx), 0, sizeof(CRYPT_SHA2_224_Ctx));
     /**
      * @RFC 4634 6.1 SHA-224 and SHA-256 Initialization

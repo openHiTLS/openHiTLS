@@ -103,6 +103,31 @@ int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t le
 
 /**
  * @ingroup crypt_eal_mac
+ *
+ * MAC algorithm initialize the context, which is used after the CRYPT_EAL_MacNewCtx interface is called.
+ * The initialization interface can be used at any time during the calculation, note that the last calculation data
+ * is cleared after the initialization interface is called.
+ *
+ * @param   ctx [IN] MAC context
+ * @param   key [IN] Key, The length specifications are as follows:
+ *                   HMAC:Any integer greater than or equal to 0
+ *                        The length of HMAC-SHA1, HMAC-SHA224, and HMAC-SHA256 must be less than 2^64 bits,
+ *                        the length of HMAC-SHA384 and HMAC-SHA512 must be less than 2^128 bits.
+ *                        HMAC-SHA3 series has no limit on length
+ *                   CMAC: The length of CMAC-AES128 must be 128 bits, and the length of CMAC-AES192 must be 192 bits.
+ *                         The length of CMAC-AES256 must be 256 bits.
+ * @param   len [IN] Key length
+ * @param   param [IN] The parameter of the MAC algorithm.
+ *
+ * @retval #CRYPT_SUCCESS, initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT, pointer ctx parameter or key parameter is NULL.
+ * @retval #CRYPT_AES_ERR_KEYLEN, the key length of the AES & CMAC algorithm is incorrect.
+ *         Other error codes see the crypt_errno.h.
+ */
+int32_t CRYPT_EAL_MacInitEx(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
+
+/**
+ * @ingroup crypt_eal_mac
  * @brief   Continuously input the MAC data.
  *
  * This command is used only after the CRYPT_EAL_MacInit interface is successfully called.

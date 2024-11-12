@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,11 +56,12 @@ void CRYPT_SHA1_FreeCtx(CRYPT_SHA1_Ctx *ctx);
  * @brief This API is invoked to initialize the SHA-1 context.
  *
  * @param *ctx [in,out] Pointer to the SHA-1 context.
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS       initialization succeeded.
  * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
  */
-int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx);
+int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup SHA1

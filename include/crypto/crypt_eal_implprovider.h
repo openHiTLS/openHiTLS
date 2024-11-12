@@ -212,7 +212,7 @@ typedef int32_t CRYPT_EAL_ImplPkeyKemCtrl(void *ctx, int32_t cmd, void *val, uin
 #define CRYPT_EAL_IMPLMD_FREECTX     8
 
 typedef void *(*CRYPT_EAL_ImplMdNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplMdInitCtx)(void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplMdInitCtx)(void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplMdUpdate)(const void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMdFinal)(const void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplMdDeInitCtx)(void *ctx);
@@ -230,7 +230,7 @@ typedef void (*CRYPT_EAL_ImplMdFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLMAC_FREECTX     7
 
 typedef void *(*CRYPT_EAL_ImplMacNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len);
+typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplMacUpdate)(const void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMacFinal)(const void *ctx, uint8_t *out, uint32_t *outLen);
 typedef void (*CRYPT_EAL_ImplMacReInitCtx)(void *ctx);

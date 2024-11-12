@@ -38,7 +38,7 @@ static int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_Data *hashDa
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = hashMethod->init(mdCtx);
+    int32_t ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

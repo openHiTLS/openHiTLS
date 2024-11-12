@@ -61,7 +61,7 @@ static int32_t Sm3Hash(const EAL_MdMethod *hashMethod, const uint8_t *pbBuf, con
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    GOTO_ERR_IF(hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, pbBuf + 1,
         SM2_POINT_SINGLE_COORDINATE_LEN), ret); // Horizontal coordinate x2 of PB
     GOTO_ERR_IF(hashMethod->update(mdCtx, data, datalen), ret); // M

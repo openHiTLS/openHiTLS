@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,15 +86,15 @@ void CRYPT_SHAKE256_FreeCtx(CRYPT_SHAKE256_Ctx* ctx);
 // free context
 
 // Initialize the context
-int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx);
+int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, CRYPT_Param *param);
 
-int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx);
+int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, CRYPT_Param *param);
 
-int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx);
+int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, CRYPT_Param *param);
 
-int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx);
-int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx);
-int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx);
+int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, CRYPT_Param *param);
 
 // Data update API
 int32_t CRYPT_SHA3_224_Update(CRYPT_SHA3_224_Ctx *ctx, const uint8_t *in, uint32_t len);

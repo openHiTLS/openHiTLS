@@ -149,7 +149,7 @@ int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *ou
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = method->init(data);
+    ret = method->init(data, NULL);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
         method->freeCtx(data);

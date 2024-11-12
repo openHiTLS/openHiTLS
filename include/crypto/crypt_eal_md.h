@@ -124,6 +124,17 @@ int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx);
 
 /**
  * @ingroup crypt_eal_md
+ * @brief  Initialize the MD context.
+ *
+ * @param   ctx [IN/OUT] MD context, which is created by using the CRYPT_EAL_MdNewCtx interface.
+ * @param   param [in] Pointer to the parameter.
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_MdInitEx(CRYPT_EAL_MdCTX *ctx, CRYPT_Param *param);
+
+/**
+ * @ingroup crypt_eal_md
  * @brief   Continuously input the data to be digested.
  *
  * @param   ctx [IN/OUT] MD context, which is created by using the CRYPT_EAL_MdNewCtx interface.

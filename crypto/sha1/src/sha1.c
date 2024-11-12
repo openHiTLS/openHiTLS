@@ -24,6 +24,7 @@
 #include "sha1_core.h"
 #include "bsl_sal.h"
 #include "crypt_sha1.h"
+#include "crypt_types.h"
 
 
 #ifdef __cplusplus
@@ -56,12 +57,13 @@ void CRYPT_SHA1_FreeCtx(CRYPT_SHA1_Ctx *ctx)
 /* e767 is because H is defined in SHA1 and MD5.
 But the both the macros are different. So masked
 this error */
-int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx)
+int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SHA1_Ctx), 0, sizeof(CRYPT_SHA1_Ctx));
 
     /**

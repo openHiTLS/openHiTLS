@@ -312,7 +312,27 @@ int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx)
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    int32_t ret = ctx->method->init(ctx->data);
+    int32_t ret = ctx->method->init(ctx->data, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, ret);
+        return ret;
+    }
+    ctx->state = CRYPT_MD_STATE_INIT;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_MdInitEx(CRYPT_EAL_MdCTX *ctx, CRYPT_Param *param)
+{
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->method == NULL || ctx->method->init == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+
+    int32_t ret = ctx->method->init(ctx->data, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, ret);
         return ret;

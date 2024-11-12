@@ -240,7 +240,7 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx);
+    ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
@@ -276,7 +276,7 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx);
+    ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
@@ -319,7 +319,7 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx);
+    ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;

@@ -93,12 +93,13 @@ static void HmacCleanseData(uint8_t *tmp, uint32_t tmpLen, uint8_t *ipad, uint32
     BSL_SAL_CleanseData(opad, opadLen);
 }
 
-int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
+int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param)
 {
     if (ctx == NULL || ctx->method == NULL || (key == NULL && len != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     const EAL_MdMethod *method = ctx->method;
     uint32_t blockSize = method->blockSize;
     uint8_t tmp[HMAC_MAXBLOCKSIZE];
@@ -111,7 +112,7 @@ int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
 
     if (keyLen > blockSize) {
         keyTmp = tmp;
-        GOTO_ERR_IF(method->init(ctx->mdCtx), ret);
+        GOTO_ERR_IF(method->init(ctx->mdCtx, NULL), ret);
         GOTO_ERR_IF(method->update(ctx->mdCtx, key, keyLen), ret);
         GOTO_ERR_IF(method->final(ctx->mdCtx, tmp, &tmpLen), ret);
         keyLen = method->mdSize;
@@ -124,9 +125,9 @@ int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
         ipad[i] = 0x36;
         opad[i] = 0x5c;
     }
-    GOTO_ERR_IF(method->init(ctx->iCtx), ret);
+    GOTO_ERR_IF(method->init(ctx->iCtx, NULL), ret);
     GOTO_ERR_IF(method->update(ctx->iCtx, ipad, method->blockSize), ret);
-    GOTO_ERR_IF(method->init(ctx->oCtx), ret);
+    GOTO_ERR_IF(method->init(ctx->oCtx, NULL), ret);
     GOTO_ERR_IF(method->update(ctx->oCtx, opad, method->blockSize), ret);
     GOTO_ERR_IF(method->copyCtx(ctx->mdCtx, ctx->iCtx), ret);
 

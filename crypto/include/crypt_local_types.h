@@ -43,7 +43,7 @@ typedef enum {
 /* Prototype of the MD algorithm operation functions */
 typedef void* (*MdNewCtx)(void);
 typedef void* (*MdProvNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*MdInit)(void *data);
+typedef int32_t (*MdInit)(void *data, CRYPT_Param *param);
 typedef int32_t (*MdUpdate)(void *data, const uint8_t *input, uint32_t len);
 typedef int32_t (*MdFinal)(void *data, uint8_t *out, uint32_t *len);
 typedef void (*MdDeinit)(void *data);
@@ -246,7 +246,7 @@ typedef struct {
 typedef void* (*MacNewCtx)(CRYPT_MAC_AlgId id);
 typedef void* (*MacProvNewCtx)(void *provCtx, int32_t algId);
 // Complete key initialization.
-typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len);
+typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
 typedef int32_t (*MacUpdate)(void *ctx, const uint8_t *in, uint32_t len);
 typedef int32_t (*MacFinal)(void *ctx, const uint8_t *out, uint32_t *len);
 typedef void    (*MacDeinit)(void *ctx);

@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,11 +52,12 @@ void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx);
  * @brief This API is used to initialize the MD5 context.
  *
  * @param ctx [in,out] Pointer to the MD5 context.
+ * @param param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS       Initialization succeeded.
  * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
  */
-int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx);
+int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup MD5

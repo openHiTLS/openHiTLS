@@ -146,7 +146,7 @@ int32_t CRYPT_PBKDF2_GenDk(const CRYPT_PBKDF2_Ctx *pCtx, uint8_t *dk, uint32_t d
     uint32_t i;
     int32_t ret;
 
-    ret = pCtx->macMeth->init(pCtx->macCtx, pCtx->password, pCtx->passLen);
+    ret = pCtx->macMeth->init(pCtx->macCtx, pCtx->password, pCtx->passLen, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

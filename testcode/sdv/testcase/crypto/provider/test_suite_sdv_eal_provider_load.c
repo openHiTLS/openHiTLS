@@ -233,7 +233,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2
     ASSERT_TRUE(funcs != NULL);
     CRYPT_EAL_ImplMdInitCtx mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
     ASSERT_TRUE(mdInitCtx != NULL);
-    ret = mdInitCtx(provCtx);
+    ret = mdInitCtx(provCtx, NULL);
     ASSERT_EQ(ret, result);
 
     ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test1);
@@ -284,17 +284,17 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2
     ASSERT_EQ(CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "provider=test1",
         &funcs, &provCtx), CRYPT_SUCCESS);
     CRYPT_EAL_ImplMdInitCtx mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
-    ASSERT_EQ(mdInitCtx(provCtx), RIGHT_RESULT);
+    ASSERT_EQ(mdInitCtx(provCtx, NULL), RIGHT_RESULT);
     ASSERT_EQ(CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5,
         "provider=test1,provider!=test2", &funcs, &provCtx), CRYPT_SUCCESS);
     mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
-    ASSERT_EQ(mdInitCtx(provCtx), RIGHT_RESULT);
+    ASSERT_EQ(mdInitCtx(provCtx, NULL), RIGHT_RESULT);
 
     // Test 1: Test when attribute is NULL
     ASSERT_EQ(CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, NULL, &funcs, &provCtx),
         CRYPT_SUCCESS);
     mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
-    ASSERT_EQ(mdInitCtx(provCtx), result);
+    ASSERT_EQ(mdInitCtx(provCtx, NULL), result);
     funcs = provCtx = NULL;
 
     // Test 2: Test when no provider can meet the attribute requirements

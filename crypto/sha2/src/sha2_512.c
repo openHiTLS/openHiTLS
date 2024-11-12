@@ -23,6 +23,7 @@
 #include "bsl_err_internal.h"
 #include "sha2_core.h"
 #include "bsl_sal.h"
+#include "crypt_types.h"
 
 #define SHA2_512_PADSIZE    112
 
@@ -86,12 +87,13 @@ void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_512_Ctx));
 }
 
-int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx)
+int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
 
     (void)memset_s(ctx, sizeof(CRYPT_SHA2_512_Ctx), 0, sizeof(CRYPT_SHA2_512_Ctx));
 
@@ -267,12 +269,13 @@ void CRYPT_SHA2_384_FreeCtx(CRYPT_SHA2_384_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_384_Ctx));
 }
 
-int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx)
+int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SHA2_384_Ctx), 0, sizeof(CRYPT_SHA2_384_Ctx));
     ctx->h[0] = U64(0xcbbb9d5dc1059ed8);
     ctx->h[1] = U64(0x629a292a367cd507);

@@ -143,7 +143,7 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
 
     do {
         // temp = temp || Hash (counter || no_of_bits_to_return || input_string).
-        if ((ret = meth->init(mdCtx)) != CRYPT_SUCCESS) {
+        if ((ret = meth->init(mdCtx, NULL)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -203,7 +203,7 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
 
     while (len > 0) {
         uint8_t n = 1;
-        if ((ret = md->init(mdCtx)) != CRYPT_SUCCESS) {
+        if ((ret = md->init(mdCtx, NULL)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -281,7 +281,7 @@ static int32_t DRBG_HashAdinInHashGenerate(DRBG_HashCtx *ctx, const CRYPT_Data *
     uint8_t w[DRBG_HASH_MAX_MDSIZE];
     uint32_t wLen = DRBG_HASH_MAX_MDSIZE;
 
-    ret = md->init(mdCtx);
+    ret = md->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -349,7 +349,7 @@ int32_t DRBG_HashGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     // H = HASH(0x03 || V)
     uint8_t temp = 0x3;
 
-    ret = md->init(mdCtx);
+    ret = md->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

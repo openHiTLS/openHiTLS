@@ -54,7 +54,7 @@ int32_t KdfGmt0032012(uint8_t *out, const uint32_t *outlen, const uint8_t *z, ui
     }
     mdlen = (uint32_t)hashMethod->mdSize;
     for (counter = 1;; counter++) {
-        GOTO_ERR_IF(hashMethod->init(mdCtx), ret);
+        GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
         PUT_UINT32_BE(counter, ctr, 0);
         GOTO_ERR_IF(hashMethod->update(mdCtx, z, zlen), ret);
         GOTO_ERR_IF(hashMethod->update(mdCtx, ctr, sizeof(ctr)), ret);
@@ -172,7 +172,7 @@ static int32_t Sm3MsgHash(const EAL_MdMethod *hashMethod, const uint8_t *yBuf, c
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    GOTO_ERR_IF(hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, &tag, 1), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, yBuf, SM3_MD_SIZE), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, hashBuf, SM3_MD_SIZE), ret);
@@ -192,7 +192,7 @@ static int32_t Sm3InnerHash(const EAL_MdMethod *hashMethod, const uint8_t *coord
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    GOTO_ERR_IF(hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, coordinate, SM2_X_LEN), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, zBuf, zlen), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, rBuf, SM2_TWO_POINT_COORDINATE_LEN), ret);
@@ -270,7 +270,7 @@ static int SM2_PKG_Kdf(const CRYPT_SM2_Ctx *ctx, uint8_t *in, const uint32_t inL
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, in, inLen), ret);
     GOTO_ERR_IF(hashMethod->final(mdCtx, tmp, &tmpLen), ret);
     if (memcpy_s(out, *outLen, tmp, shareKeyLen) != EOK) {

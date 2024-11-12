@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,11 +54,12 @@ void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx);
  * @brief This API is used to initialize the SM3 context.
  *
  * @param ctx [in,out] SM3 context pointer.
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS    initialization succeeded.
  * @retval #CRYPT_NULL_INPUT Pointer ctx is NULL
  */
-int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx);
+int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup SM3

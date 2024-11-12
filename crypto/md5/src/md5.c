@@ -23,6 +23,7 @@
 #include "md5_core.h"
 #include "crypt_md5.h"
 #include "bsl_sal.h"
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,12 +55,13 @@ void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_MD5_Ctx));
 }
 
-int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx)
+int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_MD5_Ctx), 0, sizeof(CRYPT_MD5_Ctx));
     /* Set the initial values of A, B, C, and D according to step 3 in section 3.3 of RFC1321. */
     ctx->h[0] = 0x67452301;

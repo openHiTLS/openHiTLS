@@ -86,7 +86,7 @@ int32_t KDF_PHASH(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)
 
     while (len > totalLen) {
         if (totalLen == 0) {
-            GOTO_ERR_IF(macMeth->init(ctx->macCtx, ctx->key, ctx->keyLen), ret);
+            GOTO_ERR_IF(macMeth->init(ctx->macCtx, ctx->key, ctx->keyLen, NULL), ret);
             GOTO_ERR_IF(macMeth->update(ctx->macCtx, ctx->label, ctx->labelLen), ret);
             GOTO_ERR_IF(macMeth->update(ctx->macCtx, ctx->seed, ctx->seedLen), ret);
             GOTO_ERR_IF(macMeth->final(ctx->macCtx, nextIn, &nextInLen), ret);

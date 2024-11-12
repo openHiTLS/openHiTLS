@@ -81,7 +81,7 @@ int32_t CRYPT_HKDF_Extract(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, 
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    GOTO_ERR_IF(macMeth->init(macCtx, salt, saltLen), ret);
+    GOTO_ERR_IF(macMeth->init(macCtx, salt, saltLen, NULL), ret);
     GOTO_ERR_IF(macMeth->update(macCtx, key, keyLen), ret);
     GOTO_ERR_IF(macMeth->final(macCtx, prk, prkLen), ret);
 
@@ -143,7 +143,7 @@ int32_t CRYPT_HKDF_Expand(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, c
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    GOTO_ERR_IF(macMeth->init(macCtx, prk, prkLen), ret);
+    GOTO_ERR_IF(macMeth->init(macCtx, prk, prkLen, NULL), ret);
 
     /* ceil(a / b) = (a + b - 1) / b */
     n = (outLen + hashLen - 1) / hashLen;

@@ -25,6 +25,7 @@
 #include "crypt_sm3.h"
 #include "sm3_local.h"
 #include "bsl_sal.h"
+#include "crypt_types.h"
 
 struct CryptSm3Ctx {
     uint32_t h[CRYPT_SM3_DIGESTSIZE / sizeof(uint32_t)];  /* store the intermediate data of the hash value */
@@ -48,12 +49,13 @@ void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SM3_Ctx));
 }
 
-int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx)
+int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));
     /* GM/T 0004-2012 chapter 4.1 */
     ctx->h[0] = 0x7380166F;

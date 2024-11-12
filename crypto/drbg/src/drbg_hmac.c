@@ -53,7 +53,7 @@ static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *provData[
     uint32_t ctxVLen = sizeof(ctx->v);
     // K = HMAC (K, V || mark || provided_data). mark can be 0x00 or 0x01,
     // provided_data = in1 || in2 || in3, private_data can be NULL
-    if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS) {
+    if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
@@ -76,7 +76,7 @@ static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *provData[
         goto ERR;
     }
     // V = HMAC (K, V).
-    if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS) {
+    if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
@@ -214,7 +214,7 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
         temp = temp || V.
     */
     while (len > 0) {
-        if ((ret = hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen)) != CRYPT_SUCCESS ||
+        if ((ret = hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen, NULL)) != CRYPT_SUCCESS ||
             (ret = hmacMeth->update(ctx->hmacCtx, temp, ctx->blockLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
