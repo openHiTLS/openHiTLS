@@ -18,96 +18,38 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CTR
-
-#include "crypt_modes.h"
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "crypt_types.h"
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-/**
- * @brief CTR mode encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- * Other error codes are returned if the operation fails.
- */
-int32_t MODE_CTR_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+typedef struct ModesCipherCtx MODES_CipherCtx;
 
-#ifdef HITLS_CRYPTO_AES
-/**
- * @brief CTR mode encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- * Other error codes are returned if the operation fails.
- */
-int32_t AES_CTR_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+// CTR mode universal implementation
+MODES_CipherCtx *MODES_CTR_NewCtx(int32_t algId);
+int32_t MODES_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
 
-/**
- * @brief CTR mode decryption
- *
- * @param ctx [IN] mode handle
- * @param in [IN]  Data to be decrypted
- * @param out [OUT] Encrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- * Other error codes are returned if the operation fails.
- */
-int32_t AES_CTR_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
+int32_t MODES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_CTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_CTR_DeInitCtx(MODES_CipherCtx *modeCtx);
+int32_t MODES_CTR_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
+void MODES_CTR_FreeCtx(MODES_CipherCtx *modeCtx);
 
-/**
- * @brief Clear the content in CTR mode, delete sensitive data. Preserve the memory and methods of algorithm modules
- *
- * @param ctx [IN] mode handle
- * @return none
- */
-void MODE_CTR_Clean(MODE_CipherCtx *ctx);
+// AES CTR optimization implementation
+int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
-/**
- * @brief Process the case that the number of bytes is less than 16 in CTR mode.
- *
- */
-uint32_t MODE_CTR_LastHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+// SM4 CTR optimization implementation
+int32_t SM4_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t SM4_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
 
-/**
- * @brief Process the CTR mode tail.
- *
- */
-void MODE_CTR_RemHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODES_CTR_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc);
 
-#ifdef HITLS_CRYPTO_SM4
-/**
- * @brief SM4-CTR mode encryption
- *
- * @param [IN] ctx mode handle
- * @param [IN] in  Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_CTR_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-/**
- * @brief SM4-CTR mode decryption
- *
- * @param ctx [IN] mode handle
- * @param in [IN]  Data to be decrypted
- * @param out [OUT] Encrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_CTR_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
+int32_t MODES_CTR_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus
 }

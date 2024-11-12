@@ -192,7 +192,7 @@ void SDV_CRYPTO_MD_COPY_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(MdTest(ctx, msg, hash), 0);
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MdCTX));
+    cpyCtx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
     ASSERT_EQ(MdTest(cpyCtx, msg, hash), 0);

@@ -17,19 +17,13 @@
 #ifdef HITLS_CRYPTO_CTR
 
 #include "securec.h"
-#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
-#include "crypt_modes.h"
 #include "crypt_modes_ctr.h"
+#include "modes_local.h"
 
-void MODE_CTR_Clean(MODE_CipherCtx *ctx)
-{
-    MODE_Clean(ctx);
-}
-
-uint32_t MODE_CTR_LastHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+uint32_t MODES_CTR_LastHandle(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     uint32_t left = len;
     uint32_t blockSize = ctx->blockSize;
@@ -47,7 +41,7 @@ uint32_t MODE_CTR_LastHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
     return (len - left);
 }
 
-void MODE_CTR_RemHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+void MODES_CTR_RemHandle(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (len == 0) {
         return;
@@ -58,7 +52,7 @@ void MODE_CTR_RemHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, ui
     uint8_t *tmpOut = out;
     // Ensure that the length of IV is 16 when setting it, which will not cause encryption failures.
     // To optimize performance, the function does not determine the length of the IV.
-    (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->iv, ctx->buf, blockSize);
+    (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, ctx->buf, blockSize);
     MODE_IncCounter(ctx->iv, ctx->blockSize);
     ctx->offset = 0;
     while ((left) > 0) {
@@ -68,15 +62,9 @@ void MODE_CTR_RemHandle(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, ui
     }
 }
 
-int32_t MODE_CTR_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_CTR_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    // The ctx, in, and out pointers have been determined at the EAL layer and are not determined again.
-    if (len == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    uint32_t offset = MODE_CTR_LastHandle(ctx, in, out, len);
+    uint32_t offset = MODES_CTR_LastHandle(ctx, in, out, len);
     uint32_t left = len - offset;
     const uint8_t *tmpIn = in + offset;
     uint8_t *tmpOut = out + offset;
@@ -85,7 +73,7 @@ int32_t MODE_CTR_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uin
     while (left >= blockSize) {
         // Ensure that the length of IV is 16 when setting it, which will not cause encryption failures.
         // To optimize performance, the function does not determine the length of the IV.
-        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->iv, ctx->buf, blockSize);
+        (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, ctx->buf, blockSize);
         MODE_IncCounter(ctx->iv, ctx->blockSize);
         DATA64_XOR(tmpIn, ctx->buf, tmpOut, blockSize);
         left -= blockSize;
@@ -93,8 +81,100 @@ int32_t MODE_CTR_Crypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uin
         tmpIn += blockSize;
     }
 
-    MODE_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
+    MODES_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
 
     return CRYPT_SUCCESS;
 }
+
+MODES_CipherCtx *MODES_CTR_NewCtx(int32_t algId)
+{
+    return MODES_CipherNewCtx(algId);
+}
+
+int32_t MODES_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
+{
+    return MODES_CipherInitCtx(modeCtx, modeCtx->commonCtx.ciphMeth->setEncryptKey,
+        modeCtx->commonCtx.ciphCtx, key, keyLen, iv, ivLen, enc);
+}
+
+int32_t MODES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherStreamProcess(MODES_CTR_Crypt, &modeCtx->commonCtx, in, inLen, out, outLen);
+}
+
+int32_t MODES_CTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    (void) modeCtx;
+    (void) out;
+    *outLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+int32_t MODES_CTR_DeInitCtx(MODES_CipherCtx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return MODES_CipherDeInitCtx(modeCtx);
+}
+
+int32_t MODES_CTR_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (cmd) {
+        case CRYPT_CTRL_GET_BLOCKSIZE:
+            if (val == NULL || valLen != sizeof(uint32_t)) {
+                return CRYPT_INVALID_ARG;
+            }
+            *(int32_t *)val = 1;
+            return CRYPT_SUCCESS;
+        default:
+            return MODES_CipherCtrl(modeCtx, cmd, val, valLen);;
+    }
+}
+
+
+void MODES_CTR_FreeCtx(MODES_CipherCtx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return;
+    }
+    MODES_CipherFreeCtx(modeCtx);
+}
+
+int32_t MODES_CTR_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc)
+{
+    (void)param;
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_SM4_CTR:
+            return SM4_CTR_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+        default:
+            return MODES_CTR_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+    }
+}
+
+int32_t MODES_CTR_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_SM4_CTR:
+            return SM4_CTR_Update(modeCtx, in, inLen, out, outLen);
+        default:
+            return MODES_CTR_Update(modeCtx, in, inLen, out, outLen);
+    }
+}
+
 #endif

@@ -20,14 +20,15 @@
 #ifdef HITLS_CRYPTO_CCM
 
 #include "crypt_modes_ccm.h"
+#include "modes_local.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
 
-typedef int32_t (*CcmCore)(MODES_CCM_Ctx *, const uint8_t *, uint8_t *, uint32_t, bool);
+typedef int32_t (*CcmCore)(MODES_CipherCCMCtx *, const uint8_t *, uint8_t *, uint32_t, bool);
 
-int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc, const CcmCore func);
+int32_t CcmCrypt(MODES_CipherCCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc, const CcmCore func);
 
 #ifdef __cplusplus
 }

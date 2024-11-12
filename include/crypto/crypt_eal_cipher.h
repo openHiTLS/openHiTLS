@@ -26,7 +26,7 @@
 #include <stdbool.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_method.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,7 +35,7 @@ extern "C" {
 typedef struct CryptEalCipherCtx CRYPT_EAL_CipherCtx;
 
 /**
- * @ingroup crypt_eal_cipher
+ * @ingroup crypt_eal_cipher, Not supported in provider
  * @brief   Check whether the given symmetric algorithm ID is valid.
  *
  * @param   id [IN] Symmetric algorithm ID.
@@ -54,7 +54,19 @@ bool CRYPT_EAL_CipherIsValidAlgId(CRYPT_CIPHER_AlgId id);
  * @retval Success: cipher ctx.
  *         Fails: NULL.
  */
-CRYPT_EAL_CipherCtx* CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id);
+CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id);
+
+/**
+ * @ingroup crypt_eal_cipher
+ * @brief Generate symmetric encryption and decryption handles in the providers
+ *
+ * @param libCtx [IN] Library context
+ * @param algId [IN] Symmetric encryption/decryption algorithm ID.
+ * @param attrName [IN] Specify expected attribute values
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_cipher
@@ -185,13 +197,10 @@ int32_t CRYPT_EAL_CipherFinal(CRYPT_EAL_CipherCtx *ctx, uint8_t *out, uint32_t *
  *         parameter           data type         Length(len):number of data bytes
  * CRYPT_CTRL_GET_IV         uint8_t array   The length of the IV depends on the corresponding algorithm,
                                              see the mapping in CRYPT_EAL_CipherInit
- * CRYPT_CTRL_SET_IV         uint8_t array   The length of the IV depends on the corresponding algorithm,
-                                             see the mapping in CRYPT_EAL_CipherInit.
  * CRYPT_CTRL_SET_AAD        uint8_t array   It is used only for AEAD calculation.
                                              The length is related to the corresponding AEAD algorithm.
  * CRYPT_CTRL_GET_TAG        uint8_t array   It is used only for AEAD calculation.
                                              The length is the tagLen value set by the user.
- * CRYPT_CTRL_SET_COUNT      uint8_t[4]      length(len) 4
  * CRYPT_CTRL_SET_TAGLEN     uint32_t        length(len) 4
  * CRYPT_CTRL_SET_MSGLEN     uint64_t        length(len) 8
  * CRYPT_CTRL_SET_FEEDBACKSIZE     uint32_t            length(len) 4

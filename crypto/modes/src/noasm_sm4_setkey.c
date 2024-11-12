@@ -17,17 +17,40 @@
 #ifdef HITLS_CRYPTO_SM4
 
 #include "bsl_err_internal.h"
+#include "crypt_errno.h"
 #include "crypt_sm4.h"
-#include "crypt_modes.h"
+#include "modes_local.h"
 
-int32_t MODES_SM4_SetEncryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODES_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
 {
-    return MODE_SetEncryptKey(ctx, key, len);
+    // The ctx and key have been checked at the EAL layer and will not be checked again here.
+    // The keyMethod will support registration in the future. Therefore, this check is added.
+    if (ctx->ciphMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->ciphMeth->setEncryptKey(ctx->ciphCtx, key, len);
 }
 
-int32_t MODES_SM4_SetDecryptKey(MODE_CipherCtx *ctx, const uint8_t *key, uint32_t len)
+int32_t MODES_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
 {
-    return MODE_SetDecryptKey(ctx, key, len);
+    // The ctx and key have been checked at the EAL layer and will not be checked again here.
+    // The keyMethod will support registration in the future. Therefore, this check is added.
+    if (ctx->ciphMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->ciphMeth->setDecryptKey(ctx->ciphCtx, key, len);
+}
+
+int32_t MODES_SM4_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    return MODES_SetEncryptKey(ctx, key, len);
+}
+
+int32_t MODES_SM4_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    return MODES_SetDecryptKey(ctx, key, len);
 }
 
 #endif // HITLS_CRYPTO_SM4

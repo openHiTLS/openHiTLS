@@ -23,7 +23,7 @@
 
 #if defined(HITLS_BSL_SAL_MEM) || defined(HITLS_BSL_SAL_LOCK) || defined(HITLS_BSL_SAL_THREAD) || \
     defined(HITLS_BSL_SAL_TIME) || defined(HITLS_BSL_SAL_FILE) || defined(HITLS_BSL_SAL_NET) ||   \
-    defined(HITLS_BSL_SAL_STR)
+    defined(HITLS_BSL_SAL_STR) || defined(HITLS_BSL_SAL_DL)
     #ifndef HITLS_BSL_SAL_LINUX
     #error "[HiTLS] sal_* only work with HITLS_BSL_SAL_LINUX."
     #endif

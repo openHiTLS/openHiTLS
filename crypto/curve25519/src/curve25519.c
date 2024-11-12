@@ -24,9 +24,9 @@
 #include "curve25519_local.h"
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
+#include "eal_md_local.h"
 
-
-CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_NewCtx(void)
+CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
 {
     CRYPT_CURVE25519_Ctx *ctx = NULL;
     ctx = (CRYPT_CURVE25519_Ctx *)BSL_SAL_Malloc(sizeof(CRYPT_CURVE25519_Ctx));
@@ -38,6 +38,27 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_NewCtx(void)
 
     ctx->keyType = CURVE25519_NOKEY;
     ctx->hashMethod = NULL;
+    BSL_SAL_ReferencesInit(&(ctx->references));
+    return ctx;
+}
+
+CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
+{
+    CRYPT_CURVE25519_Ctx *ctx = NULL;
+    ctx = (CRYPT_CURVE25519_Ctx *)BSL_SAL_Malloc(sizeof(CRYPT_CURVE25519_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memset_s(ctx, sizeof(CRYPT_CURVE25519_Ctx), 0, sizeof(CRYPT_CURVE25519_Ctx));
+
+    ctx->hashMethod = EAL_MdFindMethod(CRYPT_MD_SHA512);
+    if (ctx->hashMethod == NULL) {
+        CRYPT_CURVE25519_FreeCtx(ctx);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return NULL;
+    }
+    ctx->keyType = CURVE25519_NOKEY;
     BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }
@@ -61,25 +82,27 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
     return newCtx;
 }
 
-int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
-    if (pkey == NULL || val == NULL) {
+    if (pkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (opt == CRYPT_CTRL_UP_REFERENCES && len == (uint32_t)sizeof(int)) {
-        return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
-    }
-
-    if (opt == CRYPT_CTRL_SET_ED25519_HASH_METHOD && len == sizeof(EAL_MdMethod)) {
-        const EAL_MdMethod *hashMethod = (const EAL_MdMethod *)val;
-        // SHA512 digest size is 64, no other hash has 64 md size
-        if (hashMethod->mdSize != 64) {
-            BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_HASH_METH_ERROR);
-            return CRYPT_CURVE25519_HASH_METH_ERROR;
-        }
-        pkey->hashMethod = (const EAL_MdMethod *)hashMethod;
-        return CRYPT_SUCCESS;
+    switch (opt) {
+        case CRYPT_CTRL_GET_BITS:
+            return CRYPT_CURVE25519_GetBits(pkey);
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return CRYPT_CURVE25519_GetSignLen(pkey);
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_CURVE25519_GetSecBits(pkey);
+        case CRYPT_CTRL_UP_REFERENCES:
+            if (val == NULL || len != (uint32_t)sizeof(int)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+                return CRYPT_INVALID_ARG;
+            }
+            return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
+        default:
+            break;
     }
     BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION);
     return CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION;
@@ -100,8 +123,9 @@ void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey)
     BSL_SAL_FREE(pkey);
 }
 
-int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Pub *pub)
+int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para)
 {
+    CRYPT_Curve25519Pub *pub = (CRYPT_Curve25519Pub *)para->param;
     if (pkey == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -120,8 +144,9 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Prv *prv)
+int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para)
 {
+    CRYPT_Curve25519Prv *prv = (CRYPT_Curve25519Prv *)para->param;
     if (pkey == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -141,8 +166,9 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Pub *pub)
+int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para)
 {
+    CRYPT_Curve25519Pub *pub = (CRYPT_Curve25519Pub *)para->param;
     if (pkey == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -167,8 +193,9 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Prv *prv)
+int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para)
 {
+    CRYPT_Curve25519Prv *prv = (CRYPT_Curve25519Prv *)para->param;
     if (pkey == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -207,13 +234,13 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
     int32_t ret;
     uint32_t hashLen = prvHashLen;
 
-    mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx);
+    ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
@@ -232,8 +259,7 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
     }
 
 END:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -244,13 +270,13 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
     int32_t ret;
     uint32_t hashLen = CRYPT_CURVE25519_SIGNLEN;
 
-    mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx);
+    ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
@@ -275,8 +301,7 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
     }
 
 END:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -288,13 +313,13 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
     int32_t ret;
     uint32_t hashLen = CRYPT_CURVE25519_SIGNLEN;
 
-    mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx);
+    ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
@@ -325,8 +350,7 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
     }
 
 END:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 
@@ -352,9 +376,13 @@ static int32_t SignInputCheck(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *m
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
     uint32_t msgLen, uint8_t *sign, uint32_t *signLen)
 {
+    if (algid != CRYPT_MD_SHA512) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     int32_t ret;
     uint8_t prvKeyHash[CRYPT_CURVE25519_SIGNLEN];
     uint8_t r[CRYPT_CURVE25519_SIGNLEN];
@@ -469,9 +497,13 @@ static bool VerifyCheckSValid(const uint8_t s[CRYPT_CURVE25519_KEYLEN])
     return false;
 }
 
-int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
     uint32_t msgLen, const uint8_t *sign, uint32_t signLen)
 {
+    if (algid != CRYPT_MD_SHA512) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     int32_t ret;
     GeE geA, sG;
     uint8_t kHash[CRYPT_CURVE25519_SIGNLEN];
