@@ -32,7 +32,7 @@ typedef struct _HITLS_X509_ReqInfo {
     int32_t version;
     BSL_ASN1_List *subjectName; /* Entry is HITLS_X509_NameNode */
     void *ealPubKey;
-    BSL_ASN1_List *attributes;
+    HITLS_X509_Attrs *attributes;
 } HITLS_X509_ReqInfo;
 
 typedef enum {

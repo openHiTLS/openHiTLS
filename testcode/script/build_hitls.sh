@@ -58,8 +58,8 @@ build_depend_code()
 
 build_hitls_code()
 {
-    bsl_features="err hash init list log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str sal_dl tlv \
-                  uio_plt uio_buffer uio_sctp uio_tcp usrdata asn1 obj base64 pem params"
+    bsl_features="err hash init list buffer log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str \
+                sal_dl tlv uio_plt uio_buffer uio_sctp uio_tcp uio_mem usrdata asn1 obj base64 pem params"
 
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
