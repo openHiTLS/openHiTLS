@@ -71,3 +71,8 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009:
 SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001
 SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001:
 
+SDV_X509_SM2_CERT_USERID_FUNC_TC001
+SDV_X509_SM2_CERT_USERID_FUNC_TC001:"../testdata/cert/sm2_with_userid/ca.crt":"../testdata/cert/sm2_with_userid/inter.crt":"../testdata/cert/sm2_with_userid/sign.crt":1
+
+SDV_X509_SM2_CERT_USERID_FUNC_TC001
+SDV_X509_SM2_CERT_USERID_FUNC_TC001:"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/sign.mul.der":0

@@ -28,6 +28,9 @@
 
 #define HITLS_X509_DNNAME_MAX_NUM  100
 
+#define SM2_MAX_ID_BITS 65535
+#define SM2_MAX_ID_LENGTH (SM2_MAX_ID_BITS / 8)
+
 int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, int32_t valLen)
 {
     if (val == NULL || valLen != sizeof(int)) {
@@ -387,6 +390,16 @@ static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
     return ret;
 }
 
+BslList *HITLS_X509_DnListNew()
+{
+    return BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+}
+
+void HITLS_X509_DnListFree(BslList *dnList)
+{
+    BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+}
+
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size)
 {
     if (list == NULL || dnNames == NULL || size <= 0) {
@@ -455,5 +468,23 @@ int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t v
     BSL_Buffer *buff = (BSL_Buffer *)val;
     buff->data = serial->buff;
     buff->dataLen = serial->len;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, int32_t valLen)
+{
+    if (valLen < 0 || valLen > SM2_MAX_ID_LENGTH) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    BSL_SAL_FREE(sm2UserId->data);
+    sm2UserId->data = BSL_SAL_Calloc(valLen, 1u);
+    if (sm2UserId->data == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    (void) memcpy_s(sm2UserId->data, valLen, (uint8_t *)val, valLen);
+    sm2UserId->dataLen = (uint32_t)valLen;
     return HITLS_X509_SUCCESS;
 }
