@@ -147,62 +147,27 @@ static int32_t ConvertAttributes(BslCid cid, BSL_ASN1_Buffer *buffer, BSL_Buffer
     }
 }
 
-static int32_t ParseAttr(HITLS_X509_AttrEntry *entry, BSL_ASN1_List *list)
+static int32_t X509_ParseP12AttrItem(BslList *attrList, HITLS_X509_AttrEntry *attrEntry)
 {
     HITLS_PKCS12_SafeBagAttr attr = {0};
-    attr.attrId = entry->cid;
-    attr.attrValue = BSL_SAL_Malloc(sizeof(BSL_Buffer));
-    if (attr.attrValue == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    int32_t ret = ConvertAttributes(entry->cid, &entry->attrValue, attr.attrValue);
+    attr.attrId = attrEntry->cid;
+    int32_t ret = ConvertAttributes(attrEntry->cid, &attrEntry->attrValue, &attr.attrValue);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_Free(attr.attrValue);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_AddListItemDefault(&attr, sizeof(HITLS_PKCS12_SafeBagAttr), list);
+    ret = HITLS_X509_AddListItemDefault(&attr, sizeof(HITLS_PKCS12_SafeBagAttr), attrList);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_Free(attr.attrValue->data);
-        BSL_SAL_Free(attr.attrValue);
+        BSL_SAL_Free(attr.attrValue.data);
     }
     return ret;
 }
 
-int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attribute, BSL_ASN1_List *attriList)
+int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attributes)
 {
-    if (attribute->len == 0) {
-        return HITLS_X509_SUCCESS; //  bagAttributes are OPTIONAL
-    }
-
-    BSL_ASN1_List *list = BSL_LIST_New(sizeof(HITLS_X509_AttrEntry));
-    if (list == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    int32_t ret = HITLS_X509_ParseAttrList(attribute, list);
-    if (ret != BSL_SUCCESS) {
-        BSL_LIST_FREE(list, NULL);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    BSL_ASN1_List *tmpList = list;
-    HITLS_X509_AttrEntry *node = BSL_LIST_GET_FIRST(tmpList);
-    while (node != NULL) {
-        ret = ParseAttr(node, attriList);
-        if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            goto err;
-        }
-        node = BSL_LIST_GET_NEXT(tmpList);
-    }
-err:
-    BSL_LIST_FREE(list, NULL);
-    return ret;
+    return HITLS_X509_ParseAttrList(attrBuff, attributes, X509_ParseP12AttrItem, HITLS_PKCS12_AttributesFree);
 }
-
 /*
  SafeBag ::= SEQUENCE {
      bagId          BAG-TYPE.&id ({PKCS12BagSet})
@@ -249,7 +214,7 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE);
         return HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE;
     }
-    BSL_ASN1_List *attributes = NULL;
+    HITLS_X509_Attrs *attributes = NULL;
     BSL_Buffer *bag = BSL_SAL_Calloc(1u, sizeof(BSL_Buffer));
     if (bag == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -264,7 +229,7 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
         goto err;
     }
     bag->dataLen = asnArr[HITLS_PKCS12_SAFEBAG_BAGVALUES_IDX].len;
-    attributes = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBagAttr));
+    attributes = HITLS_X509_AttrsNew();
     if (attributes == NULL) {
         ret = BSL_MALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -282,7 +247,7 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
 err:
     BSL_SAL_FREE(bag->data);
     BSL_SAL_FREE(bag);
-    BSL_LIST_FREE(attributes, HITLS_PKCS12_AttributesFree);
+    HITLS_X509_AttrsFree(attributes, HITLS_PKCS12_AttributesFree);
     return ret;
 }
 
@@ -436,17 +401,17 @@ int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *pas
     return HITLS_X509_SUCCESS;
 }
 
-static BSL_Buffer *FindLocatedId(BSL_ASN1_List *attributes)
+static BSL_Buffer *FindLocatedId(HITLS_X509_Attrs *attributes)
 {
     if (attributes == NULL) {
         return NULL;
     }
-    HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(attributes);
+    HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(attributes->list);
     while (node != NULL) {
         if (node->attrId == BSL_CID_LOCALKEYID) {
-            return node->attrValue;
+            return &node->attrValue;
         }
-        node = BSL_LIST_GET_NEXT(attributes);
+        node = BSL_LIST_GET_NEXT(attributes->list);
     }
     return NULL;
 }
@@ -867,8 +832,8 @@ static int32_t EncodeAttrValue(HITLS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *
     BSL_ASN1_Buffer asnArr = {0};
     int32_t ret;
 
-    asnArr.buff = attribute->attrValue->data;
-    asnArr.len = attribute->attrValue->dataLen;
+    asnArr.buff = attribute->attrValue.data;
+    asnArr.len = attribute->attrValue.dataLen;
     switch (attribute->attrId) {
         case BSL_CID_FRIENDLYNAME:
             asnArr.tag = BSL_ASN1_TAG_BMPSTRING;
@@ -892,58 +857,37 @@ static int32_t EncodeAttrValue(HITLS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *
     return ret;
 }
 
-int32_t HITLS_PKCS12_EncodeAttrList(BSL_ASN1_List *list, BSL_ASN1_Buffer *attr)
+static int32_t X509_EncodeP12AttrItem(void *attrNode, HITLS_X509_AttrEntry *attrEntry)
 {
-    int32_t count = BSL_LIST_COUNT(list);
-    /* no attributes */
-    if (count <= 0) {
-        attr->buff = NULL;
-        attr->len = 0;
-        return HITLS_X509_SUCCESS;
+    if (attrNode == NULL || attrEntry == NULL) {
+        return HITLS_X509_ERR_INVALID_PARAM;
     }
-    int32_t ret;
-    BSL_ASN1_List *attrList = BSL_LIST_New(sizeof(HITLS_X509_AttrEntry));
-    if (attrList == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+    HITLS_PKCS12_SafeBagAttr *p12Attr = attrNode;
+    BslOidString *oidStr = BSL_OBJ_GetOidFromCID(p12Attr->attrId);
+    if (oidStr == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
+        return HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;
     }
-
-    HITLS_PKCS12_SafeBagAttr *node = NULL;
-    for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list)) {
-        HITLS_X509_AttrEntry entry = {0};
-        BslOidString *oidStr = BSL_OBJ_GetOidFromCID(node->attrId);
-        if (oidStr == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES);
-            ret = HITLS_PKCS12_ERR_INVALID_SAFEBAG_ATTRIBUTES;
-            goto err;
-        }
-        entry.attrId.tag = BSL_ASN1_TAG_OBJECT_ID;
-        entry.attrId.buff = (uint8_t *)oidStr->octs;
-        entry.attrId.len = oidStr->octetLen;
-        BSL_Buffer buffer = {0};
-        ret = EncodeAttrValue(node, &buffer);
-        if (ret != HITLS_X509_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            goto err;
-        }
-        entry.attrValue.tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET;
-        entry.attrValue.buff = buffer.data;
-        entry.attrValue.len = buffer.dataLen;
-        entry.cid = node->attrId;
-        ret = HITLS_X509_AddListItemDefault(&entry, sizeof(HITLS_X509_AttrEntry), attrList);
-        if (ret != HITLS_X509_SUCCESS) {
-            BSL_SAL_FREE(buffer.data);
-            BSL_ERR_PUSH_ERROR(ret);
-            goto err;
-        }
-    }
-    ret = HITLS_X509_EncodeAttrList(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, attrList, attr);
+    attrEntry->attrId.tag = BSL_ASN1_TAG_OBJECT_ID;
+    attrEntry->attrId.buff = (uint8_t *)oidStr->octs;
+    attrEntry->attrId.len = oidStr->octetLen;
+    BSL_Buffer buffer = {0};
+    int32_t ret = EncodeAttrValue(p12Attr, &buffer);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-err:
-    BSL_LIST_FREE(attrList, (BSL_LIST_PFUNC_FREE)HITLS_X509_AttrEntryFree);
-    return ret;
+    attrEntry->attrValue.tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET;
+    attrEntry->attrValue.buff = buffer.data;
+    attrEntry->attrValue.len = buffer.dataLen;
+    attrEntry->cid = p12Attr->attrId;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_PKCS12_EncodeAttrList(HITLS_X509_Attrs *attrs, BSL_ASN1_Buffer *attrBuff)
+{
+    return HITLS_X509_EncodeAttrList(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, attrs,
+        X509_EncodeP12AttrItem, attrBuff);
 }
 
 static int32_t EncodeCertBag(HITLS_X509_Cert *cert, uint32_t certType, uint8_t **encode, uint32_t *encodeLen)
@@ -1520,7 +1464,10 @@ int32_t HITLS_PKCS12_GenFile(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS
 
 static void DeleteAttribute(HITLS_PKCS12_Bag *bag, uint32_t type)
 {
-    BSL_ASN1_List *list = bag->attributes;
+    if (bag->attributes == NULL) {
+        return;
+    }
+    BSL_ASN1_List *list = bag->attributes->list;
     HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(list);
     while (node != NULL) {
         if (node->attrId == type) {
@@ -1533,7 +1480,10 @@ static void DeleteAttribute(HITLS_PKCS12_Bag *bag, uint32_t type)
 
 static bool IsAttrExist(HITLS_PKCS12_Bag *bag, uint32_t type)
 {
-    BSL_ASN1_List *list = bag->attributes;
+    if (bag->attributes == NULL || bag->attributes->list == NULL) {
+        return false;
+    }
+    BSL_ASN1_List *list = bag->attributes->list;
     HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(list);
     while (node != NULL) {
         if (node->attrId == type) {
@@ -1565,31 +1515,23 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
 
     HITLS_PKCS12_SafeBagAttr attr = {0};
     attr.attrId = type;
-    attr.attrValue = BSL_SAL_Malloc(sizeof(BSL_Buffer));
-    if (attr.attrValue == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    attr.attrValue->data = BSL_SAL_Dump(attrValue->data, attrValue->dataLen);
-    if (attr.attrValue->data == NULL) {
-        BSL_SAL_FREE(attr.attrValue);
+    attr.attrValue.data = BSL_SAL_Dump(attrValue->data, attrValue->dataLen);
+    if (attr.attrValue.data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
         return BSL_DUMP_FAIL;
     }
-    attr.attrValue->dataLen = attrValue->dataLen;
+    attr.attrValue.dataLen = attrValue->dataLen;
     if (bag->attributes == NULL) {
-        bag->attributes = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBagAttr));
+        bag->attributes = HITLS_X509_AttrsNew();
         if (bag->attributes == NULL) {
-            BSL_SAL_FREE(attr.attrValue->data);
-            BSL_SAL_FREE(attr.attrValue);
+            BSL_SAL_FREE(attr.attrValue.data);
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             return BSL_MALLOC_FAIL;
         }
     }
-    int32_t ret = HITLS_X509_AddListItemDefault(&attr, sizeof(HITLS_PKCS12_SafeBagAttr), bag->attributes);
+    int32_t ret = HITLS_X509_AddListItemDefault(&attr, sizeof(HITLS_PKCS12_SafeBagAttr), bag->attributes->list);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_FREE(attr.attrValue->data);
-        BSL_SAL_FREE(attr.attrValue);
+        BSL_SAL_FREE(attr.attrValue.data);
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
@@ -1602,18 +1544,12 @@ static void *AttrCopy(const void *val)
     if (output == NULL) {
         return NULL;
     }
-    output->attrValue = BSL_SAL_Malloc(sizeof(BSL_Buffer));
-    if (output->attrValue == NULL) {
+    output->attrValue.data = BSL_SAL_Dump(input->attrValue.data, input->attrValue.dataLen);
+    if (output->attrValue.data == NULL) {
         BSL_SAL_Free(output);
         return NULL;
     }
-    output->attrValue->data = BSL_SAL_Dump(input->attrValue->data, input->attrValue->dataLen);
-    if (output->attrValue->data == NULL) {
-        BSL_SAL_Free(output->attrValue);
-        BSL_SAL_Free(output);
-        return NULL;
-    }
-    output->attrValue->dataLen = input->attrValue->dataLen;
+    output->attrValue.dataLen = input->attrValue.dataLen;
     output->attrId = input->attrId;
     return output;
 }
@@ -1650,14 +1586,13 @@ static HITLS_PKCS12_Bag *BagDump(HITLS_PKCS12_Bag *input)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    if (BSL_LIST_COUNT(input->attributes) > 0) {
-        BSL_ASN1_List *dumpList = BSL_LIST_Copy(input->attributes, AttrCopy, HITLS_PKCS12_AttributesFree);
-        if (dumpList == NULL) {
+    if (input->attributes != NULL) {
+        target->attributes = HITLS_X509_AttrsDup(input->attributes, AttrCopy, HITLS_PKCS12_AttributesFree);
+        if (target->attributes == NULL) {
             HITLS_PKCS12_BagFree(target);
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             return NULL;
         }
-        target->attributes = dumpList;
     }
     return target;
 }

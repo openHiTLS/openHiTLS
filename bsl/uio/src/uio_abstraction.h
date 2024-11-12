@@ -54,6 +54,11 @@ struct UIO_ControlBlock {
     BSL_SAL_RefCount references;    // reference count
 };
 
+typedef struct {
+    uint8_t *data;
+    uint64_t size;
+} BSL_UIO_CtrlGetInfoParam;
+
 /**
  * @brief Check whether a given error code is a fatal error.
  *
