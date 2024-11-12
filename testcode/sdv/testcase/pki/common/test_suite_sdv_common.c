@@ -26,11 +26,14 @@
 #include "hitls_crl_local.h"
 #include "bsl_init.h"
 #include "bsl_obj_internal.h"
+#include "bsl_uio.h"
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
 #include "crypt_eal_rand.h"
 #include "hitls_x509_local.h"
+#include "hitls_print_local.h"
 
+#define MAX_BUFF_SIZE 4096
 /* END_HEADER */
 
 static void FreeListData(void *data)
@@ -45,8 +48,7 @@ static void FreeSanListData(void *data)
     BSL_GLOBAL_Init();
     HITLS_X509_GeneralName *name = (HITLS_X509_GeneralName *)data;
     if (name->type == HITLS_X509_GN_DNNAME) {
-        BSL_LIST_DeleteAll((BslList *)name->value.data, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
-        BSL_SAL_Free(name->value.data);
+        HITLS_X509_DnListFree((BslList *)name->value.data);
     }
 }
 
@@ -187,8 +189,8 @@ void SDV_HITLS_X509_CtrlCert_TC001(void)
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_EXT_KU_CERTSIGN, &cert, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_EXT_KU_KEYAGREEMENT, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_EXT_KU_KEYAGREEMENT, &cert, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SUBJECT_DNNAME_STR, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_ISSUER_DNNAME_STR, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SUBJECT_DN_STR, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_ISSUER_DN_STR, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SERIALNUM, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_BEFORE_TIME, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_AFTER_TIME, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
@@ -728,7 +730,7 @@ void SDV_X509_EXT_EncodeSan_TC001(int critical, int type1, int type2, int type3,
     ASSERT_NE(san.names, NULL);
 
     // Generate san
-    BslList *dirNames = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    BslList *dirNames = HITLS_X509_DnListNew();
     ASSERT_NE(dirNames, NULL);
     HITLS_X509_DN dnName1[1] = {{(BslCid)dirCid1, value->x, value->len}};
     HITLS_X509_DN dnName2[1] = {{(BslCid)dirCid2, value->x, value->len}};
@@ -1091,5 +1093,109 @@ void SDV_X509_SIGN_Func_TC002(void)
 exit:
     CRYPT_EAL_PkeyFreeCtx(prvKey);
     CRYPT_EAL_RandDeinit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_X509_PrintCtrl_TC001(void)
+{
+    TestMemInit();
+
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_BufferMethod());
+    ASSERT_NE(uio, NULL);
+    uint32_t flag = 0;
+    BslList list = {0};
+
+    ASSERT_EQ(HITLS_X509_PrintCtrl(0xff, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
+
+    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_SET_PRINT_FLAG, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_SET_PRINT_FLAG, &flag, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    
+    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, NULL, sizeof(BslList), uio), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, &list, sizeof(BslList), NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, &list, 0, uio), HITLS_X509_ERR_INVALID_PARAM);
+
+exit:
+    BSL_UIO_Free(uio);
+    return;
+}
+/* END_CASE */
+
+static int32_t ReadFile(const char *filePath, uint8_t *buff, uint32_t buffLen, uint32_t *outLen)
+{
+    FILE *fp = NULL;
+    int32_t ret = -1;
+
+    fp = fopen(filePath, "rb");
+    if (fp == NULL) {
+        return ret;
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        goto exit;
+    }
+    long fileSize = ftell(fp);
+    if (fileSize < 0 || (uint32_t)fileSize > buffLen) {
+        goto exit;
+    }
+    rewind(fp);
+    size_t readSize = fread(buff, 1, fileSize, fp);
+    if (readSize != (size_t)fileSize) {
+        goto exit;
+    }
+    *outLen = (uint32_t)fileSize;
+    ret = 0;
+
+exit:
+    (void)fclose(fp);
+    return ret;
+}
+
+static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, bool isExpectFile)
+{
+    int32_t ret = -1;
+    uint8_t dnBuf[MAX_BUFF_SIZE] = {};
+    uint32_t dnBufLen = sizeof(dnBuf);
+    uint8_t expectBuf[MAX_BUFF_SIZE] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_NE(uio, NULL);
+    ASSERT_EQ(HITLS_X509_PrintCtrl(cmd, data->data, data->dataLen, uio),
+        HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, MAX_BUFF_SIZE, &dnBufLen), 0);
+    if (isExpectFile) {
+        ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
+        ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen);
+    } else {
+        ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen);
+    }
+    ret = 0;
+exit:
+    BSL_UIO_Free(uio);
+    return ret;
+}
+
+/* BEGIN_CASE */
+void SDV_HITLS_X509_PrintDn_TC002(char *certPath, int format, int printFlag, char *expect, Hex *multiExpect)
+{
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    BslList *rawIssuer = NULL;
+    Hex expectName = {};
+    if (printFlag == HITLS_X509_PRINT_DN_MULTILINE) {
+        expectName.x = multiExpect->x;
+        expectName.len = multiExpect->len;
+    } else {
+        expectName.x = (uint8_t *)expect;
+        expectName.len = strlen(expect);
+    }
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, certPath, &cert), HITLS_X509_SUCCESS);
+    ASSERT_NE(cert, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    BSL_Buffer data = {(uint8_t *)rawIssuer, sizeof(BslList)};
+    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_SET_PRINT_FLAG, &printFlag, sizeof(int), NULL), HITLS_X509_SUCCESS);
+    ASSERT_EQ(PrintBuffTest(HITLS_X509_PRINT_DN, &data, "Print Distinguish name", &expectName, false), 0);
+
+exit:
+    HITLS_X509_CertFree(cert);
 }
 /* END_CASE */

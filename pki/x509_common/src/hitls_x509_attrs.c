@@ -46,6 +46,47 @@ typedef enum {
 } HITLS_X509_ATTR_IDX;
 
 #define HITLS_X509_ATTR_MAX_NUM  20
+#define HITLS_X509_ATTRS_PARSE_FLAG  0x01
+#define HITLS_X509_ATTRS_GEN_FLAG    0x02
+
+HITLS_X509_Attrs *HITLS_X509_AttrsNew(void)
+{
+    HITLS_X509_Attrs *attrs = (HITLS_X509_Attrs *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Attrs));
+    if (attrs == NULL) {
+        return NULL;
+    }
+    attrs->list = BSL_LIST_New(sizeof(HITLS_X509_AttrEntry *));
+    if (attrs->list == NULL) {
+        BSL_SAL_Free(attrs);
+        return NULL;
+    }
+
+    attrs->flag = HITLS_X509_ATTRS_GEN_FLAG;
+    return attrs;
+}
+
+/*
+* For pkcs12, parsing and encoding operation uses deep copy, and it use callback function to free
+* For csr, parsing operation uses shallow copy, and encoding operation uses deep copy
+*/
+void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb freeItem)
+{
+    if (attrs == NULL) {
+        return;
+    }
+    if (freeItem != NULL) {
+        BSL_LIST_FREE(attrs->list, (BSL_LIST_PFUNC_FREE)freeItem);
+        BSL_SAL_Free(attrs);
+        return;
+    }
+
+    if (attrs->flag & HITLS_X509_ATTRS_PARSE_FLAG) {
+        BSL_LIST_FREE(attrs->list, NULL);
+    } else {
+        BSL_LIST_FREE(attrs->list, (BSL_LIST_PFUNC_FREE)HITLS_X509_AttrEntryFree);
+    }
+    BSL_SAL_Free(attrs);
+}
 
 int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 {
@@ -59,6 +100,35 @@ int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
     asnBuff->len = oidStr->octetLen;
 
     return HITLS_X509_SUCCESS;
+}
+
+HITLS_X509_Attrs *HITLS_X509_AttrsDup(const HITLS_X509_Attrs *src, HITLS_X509_DupAttrItemCb dupCb,
+    HITLS_X509_FreeAttrItemCb freeCb)
+{
+    if (src == NULL || BSL_LIST_COUNT(src->list) <= 0 ||
+        dupCb == NULL || freeCb == NULL) {
+        return NULL;
+    }
+    HITLS_X509_Attrs *dst = HITLS_X509_AttrsNew();
+    if (dst == NULL) {
+        return NULL;
+    }
+    void *node = NULL;
+    for (node = BSL_LIST_GET_FIRST(src->list); node != NULL; node = BSL_LIST_GET_NEXT(src->list)) {
+        void *dstEntry = dupCb(node);
+        if (dstEntry == NULL) {
+            HITLS_X509_AttrsFree(dst, freeCb);
+            return NULL;
+        }
+        int32_t ret = BSL_LIST_AddElement(dst->list, dstEntry, BSL_LIST_POS_END);
+        if (ret != BSL_SUCCESS) {
+            freeCb(dstEntry);
+            HITLS_X509_AttrsFree(dst, freeCb);
+            return NULL;
+        }
+    }
+    dst->flag = src->flag;
+    return dst;
 }
 
 void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr)
@@ -100,7 +170,7 @@ int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *at
 int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
 {
     (void)layer;
-    (void)cbParam;
+    HITLS_X509_ParseAttrItemCb parseCb = cbParam;
     HITLS_X509_AttrEntry *node = BSL_SAL_Calloc(1, sizeof(HITLS_X509_AttrEntry));
     if (node == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -111,34 +181,44 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
     int32_t ret = HITLS_X509_ParseAttr(asn, node);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
+    }
+    if (parseCb != NULL) {
+        ret = parseCb(list, node);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
+        goto EXIT;
     }
 
     ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_AFTER);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     return ret;
-ERR:
-    HITLS_X509_AttrEntryFree(node);
+EXIT:
+    BSL_SAL_FREE(node);
     return ret;
 }
 
-int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrs, BSL_ASN1_List *list)
+int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attrs, HITLS_X509_ParseAttrItemCb parseCb,
+    HITLS_X509_FreeAttrItemCb freeItem)
 {
-    if (attrs->tag == 0 || attrs->buff == NULL || attrs->len == 0) {
+    if (attrBuff->tag == 0 || attrBuff->buff == NULL || attrBuff->len == 0) {
         return HITLS_X509_SUCCESS;
     }
 
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {1, expTag};
-    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, attrs, HITLS_X509_ParseAttrsListAsnItem, NULL, list);
+    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, attrBuff, &HITLS_X509_ParseAttrsListAsnItem, parseCb,
+        attrs->list);
     if (ret != BSL_SUCCESS) {
-        BSL_LIST_DeleteAll(list, NULL);
-        BSL_ERR_PUSH_ERROR(ret);
+        BSL_LIST_DeleteAll(attrs->list, freeItem);
+        return ret;
     }
+    attrs->flag = HITLS_X509_ATTRS_PARSE_FLAG;
     return ret;
 }
 
@@ -150,30 +230,28 @@ static int32_t CmpAttrEntryByCid(const void *attrEntry, const void *cid)
     return node->cid == *(BslCid *)oid ? 0 : 1;
 }
 
-typedef int32_t (*EncodeAttrCb)(void *attrItem, BSL_ASN1_Buffer *attrValue);
+typedef int32_t (*EncodeAttrCb)(HITLS_X509_Attrs *attributes, void *val, int32_t valLen, BSL_ASN1_Buffer *attrValue);
 
-typedef int32_t (*DecodeAttrCb)(HITLS_X509_AttrEntry *attrEntry, void *attrItem);
+typedef int32_t (*DecodeAttrCb)(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
+    int32_t valLen);
 
-static int32_t EncodeReqExtAttr(void *attrItem, BSL_ASN1_Buffer *attrValue)
+static int32_t EncodeReqExtAttr(HITLS_X509_Attrs *attributes, void *val, int32_t valLen, BSL_ASN1_Buffer *attrValue)
 {
-    if (attrItem == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    HITLS_X509_Ext *ext = (HITLS_X509_Ext *)attrItem;
+    (void)valLen;
+    (void)attributes;
+    HITLS_X509_Ext *ext = (HITLS_X509_Ext *)val;
     return HITLS_X509_EncodeExt(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, ext->extList, attrValue);
 }
 
-static int32_t SetAttr(BSL_ASN1_List *attributes, void *val, uint32_t valLen, EncodeAttrCb encodeAttrCb)
+static int32_t SetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, uint32_t valLen, EncodeAttrCb encodeAttrCb)
 {
-    HITLS_X509_Attr *attr = (HITLS_X509_Attr *)val;
-    if (valLen != sizeof(HITLS_X509_Attr)) {
+    if (val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
     /* Check if the attribute already exists. */
-    if (BSL_LIST_Search(attributes, &attr->cid, CmpAttrEntryByCid, NULL) != NULL) {
+    if (BSL_LIST_Search(attributes->list, &cid, CmpAttrEntryByCid, NULL) != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_ATTR_REPEAT);
         return HITLS_X509_ERR_SET_ATTR_REPEAT;
     }
@@ -183,31 +261,39 @@ static int32_t SetAttr(BSL_ASN1_List *attributes, void *val, uint32_t valLen, En
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = HITLS_X509_EncodeObjIdentity(attr->cid, &attrEntry->attrId);
+    int32_t ret = HITLS_X509_EncodeObjIdentity(cid, &attrEntry->attrId);
     if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
-    ret = encodeAttrCb(attr->value, &attrEntry->attrValue);
+    ret = encodeAttrCb(attributes, val, valLen, &attrEntry->attrValue);
     if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    attrEntry->cid = attr->cid;
-    ret = BSL_LIST_AddElement(attributes, attrEntry, BSL_LIST_POS_END);
+    attrEntry->cid = cid;
+    ret = BSL_LIST_AddElement(attributes->list, attrEntry, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     return ret;
 
 ERR:
-    BSL_ERR_PUSH_ERROR(ret);
     HITLS_X509_AttrEntryFree(attrEntry);
     return ret;
 }
 
-static int32_t DecodeReqExtAttr(HITLS_X509_AttrEntry *attrEntry, void *attrItem)
+static int32_t DecodeReqExtAttr(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
+    int32_t valLen)
 {
+    (void)attributes;
+    if (valLen != sizeof(HITLS_X509_Ext *)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
     HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     if (ext == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -219,27 +305,27 @@ static int32_t DecodeReqExtAttr(HITLS_X509_AttrEntry *attrEntry, void *attrItem)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *(HITLS_X509_Ext **)attrItem = ext;
+    *(HITLS_X509_Ext **)val = ext;
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t GetAttr(BSL_ASN1_List *attributes, void *val, int32_t valLen, DecodeAttrCb decodeAttrCb)
+static int32_t GetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, int32_t valLen, DecodeAttrCb decodeAttrCb)
 {
-    HITLS_X509_Attr *attr = val;
-    if (attr->value != NULL || valLen != sizeof(HITLS_X509_Attr)) {
+    if (val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    HITLS_X509_AttrEntry *attrEntry = BSL_LIST_Search(attributes, &attr->cid, CmpAttrEntryByCid, NULL);
+    HITLS_X509_AttrEntry *attrEntry = BSL_LIST_Search(attributes->list, &cid, CmpAttrEntryByCid, NULL);
     if (attrEntry == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ATTR_NOT_FOUND);
         return HITLS_X509_ERR_ATTR_NOT_FOUND;
     }
-    return decodeAttrCb(attrEntry, &attr->value);
+
+    return decodeAttrCb(attributes, attrEntry, val, valLen);
 }
 
-int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t valLen)
+int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, int32_t valLen)
 {
     if (attributes == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -247,10 +333,9 @@ int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t
     }
     switch (cmd) {
         case HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS:
-            return SetAttr(attributes, val, valLen, EncodeReqExtAttr);
+            return SetAttr(attributes, BSL_CID_REQ_EXTENSION, val, valLen, EncodeReqExtAttr);
         case HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS:
-            ((HITLS_X509_Attr *)val)->cid = BSL_CID_REQ_EXTENSION;
-            return GetAttr(attributes, val, valLen, DecodeReqExtAttr);
+            return GetAttr(attributes, BSL_CID_REQ_EXTENSION, val, valLen, DecodeReqExtAttr);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -286,16 +371,17 @@ void FreeAsnAttrsBuff(BSL_ASN1_Buffer *asnBuf, int32_t count)
     BSL_SAL_FREE(asnBuf);
 }
 
-int32_t HITLS_X509_EncodeAttrList(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *attr)
+int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X509_EncodeAttrItemCb encodeCb,
+    BSL_ASN1_Buffer *attrAsn1)
 {
-    int32_t count = BSL_LIST_COUNT(list);
-    /* no attribute */
-    if (count <= 0) {
-        attr->tag = tag;
-        attr->buff = NULL;
-        attr->len = 0;
+    if (attrs == NULL || attrs->list == NULL || BSL_LIST_COUNT(attrs->list) <= 0) {
+        attrAsn1->tag = tag;
+        attrAsn1->buff = NULL;
+        attrAsn1->len = 0;
         return HITLS_X509_SUCCESS;
     }
+    int32_t count = BSL_LIST_COUNT(attrs->list);
+    /* no attribute */
     BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(count, sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -303,23 +389,36 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buf
     }
     int32_t iter = 0;
     int32_t ret;
-    HITLS_X509_AttrEntry *node = NULL;
-    for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), iter++) {
-        ret = HITLS_X509_EncodeAttrEntry(node, &asnBuf[iter]);
+    void *node = NULL;
+    for (node = BSL_LIST_GET_FIRST(attrs->list); node != NULL; node = BSL_LIST_GET_NEXT(attrs->list), iter++) {
+        HITLS_X509_AttrEntry attrEntry = {};
+        if (encodeCb != NULL) {
+            ret = encodeCb(node, &attrEntry);
+            if (ret != HITLS_X509_SUCCESS) {
+                FreeAsnAttrsBuff(asnBuf, count);
+                return ret;
+            }
+        } else {
+            attrEntry = *(HITLS_X509_AttrEntry *)node;
+        }
+        ret = HITLS_X509_EncodeAttrEntry(&attrEntry, &asnBuf[iter]);
+        if (encodeCb != NULL) {
+            BSL_SAL_FREE(attrEntry.attrValue.buff);
+        }
         if (ret != HITLS_X509_SUCCESS) {
             FreeAsnAttrsBuff(asnBuf, count);
-            return  ret;
+            return ret;
         }
     }
     static BSL_ASN1_TemplateItem attrSeqTempl = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0 };
     BSL_ASN1_Template templ = {&attrSeqTempl, 1};
-    ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, iter, attr);
+    ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, iter, attrAsn1);
     FreeAsnAttrsBuff(asnBuf, count);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    attr->tag = tag;
-    return HITLS_X509_SUCCESS;
+    attrAsn1->tag = tag;
+    return ret;
 }
