@@ -113,8 +113,9 @@ static int32_t SetPrvBnLenCheck(const CRYPT_RsaPrv *prv)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
+int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_RsaPrv *prv = (CRYPT_RsaPrv *)para->param;
     int32_t ret = SetPrvBasicCheck(ctx, prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -186,8 +187,9 @@ static int32_t SetPubBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pu
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub)
+int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_RsaPub *pub = (CRYPT_RsaPub *)para->param;
     int32_t ret = SetPubBasicCheck(ctx, pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -255,8 +257,9 @@ static int32_t GetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *pr
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPrv *prv)
+int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para)
 {
+    CRYPT_RsaPrv *prv = (CRYPT_RsaPrv *)para->param;
     int32_t ret = GetPrvBasicCheck(ctx, prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -299,8 +302,9 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPub *pub)
+int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para)
 {
+    CRYPT_RsaPub *pub = (CRYPT_RsaPub *)para->param;
     if (ctx == NULL || ctx->pubKey == NULL || pub == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

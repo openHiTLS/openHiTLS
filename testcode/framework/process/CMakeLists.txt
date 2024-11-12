@@ -52,6 +52,7 @@ target_link_directories(${PROCESS}
         ${HITLS_SRC}/testcode/framework/tls/lib
         ${HITLS_SRC}/platform/Secure_C/lib
 )
+
 target_link_libraries(${PROCESS}
     tls_hlt    
     tls_frame

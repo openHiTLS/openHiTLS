@@ -16,16 +16,11 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CCM)
 
-#include "crypt_modes.h"
+#include "modes_local.h"
 #include "crypt_modes_ccm.h"
 
-int32_t MODES_AES_CCM_Encrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CCM_Update(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODES_CCM_Encrypt(ctx, in, out, len);
-}
-
-int32_t MODES_AES_CCM_Decrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-{
-    return MODES_CCM_Decrypt(ctx, in, out, len);
+    return MODES_CCM_Update(modeCtx, in, inLen, out, outLen);
 }
 #endif

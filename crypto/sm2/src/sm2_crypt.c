@@ -55,13 +55,13 @@ static int32_t Sm3Hash(const EAL_MdMethod *hashMethod, const uint8_t *pbBuf, con
     uint8_t *c3Buf, uint32_t *c3BufLen)
 {
     int32_t ret;
-    void *mdCtx = BSL_SAL_Malloc(hashMethod->ctxSize);
+    void *mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    GOTO_ERR_IF(hashMethod->init(mdCtx), ret);
+    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, pbBuf + 1,
         SM2_POINT_SINGLE_COORDINATE_LEN), ret); // Horizontal coordinate x2 of PB
     GOTO_ERR_IF(hashMethod->update(mdCtx, data, datalen), ret); // M
@@ -70,8 +70,7 @@ static int32_t Sm3Hash(const EAL_MdMethod *hashMethod, const uint8_t *pbBuf, con
     // Calculated c3, in c3Buf
     GOTO_ERR_IF(hashMethod->final(mdCtx, c3Buf, c3BufLen), ret);
 ERR:
-    hashMethod->deinit(mdCtx);
-    BSL_SAL_FREE(mdCtx);
+    hashMethod->freeCtx(mdCtx);
     return ret;
 }
 

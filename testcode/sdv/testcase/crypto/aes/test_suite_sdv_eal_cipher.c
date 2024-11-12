@@ -105,8 +105,8 @@ exit:
  *    2.The decryption result and tag value are the same as expected, the verification is successful.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt1, Hex *pt2, Hex *pt3, Hex *ct,
-    Hex *tag)
+void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt1,
+    Hex *pt2, Hex *pt3, Hex *ct, Hex *tag)
 {
     TestMemInit();
     CRYPT_EAL_CipherCtx *ctx = NULL;
@@ -116,7 +116,8 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *a
     uint8_t tagResult[tagLen];
     uint32_t outLen = DATA_MAX_LEN;
     uint64_t count;
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
+    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true) == CRYPT_SUCCESS);
     if (algId == CRYPT_CIPHER_AES128_CCM || algId == CRYPT_CIPHER_AES192_CCM || algId == CRYPT_CIPHER_AES256_CCM) {

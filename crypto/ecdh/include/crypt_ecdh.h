@@ -115,7 +115,7 @@ void CRYPT_ECDH_FreePara(CRYPT_EcdhPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL internal memory allocation error
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPara *para);
+int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *param);
 
 /**
  * @ingroup ecdh
@@ -128,7 +128,7 @@ int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Get successfully.
  */
-int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, CRYPT_EccPara *para);
+int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup ecdh
@@ -187,7 +187,7 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDH_SetPrvKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPrv *prv);
+int32_t CRYPT_ECDH_SetPrvKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup ecdh
@@ -201,7 +201,7 @@ int32_t CRYPT_ECDH_SetPrvKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPrv *prv);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDH_SetPubKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPub *pub);
+int32_t CRYPT_ECDH_SetPubKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *para);
 
 /**
  * @ingroup ecdh
@@ -215,7 +215,7 @@ int32_t CRYPT_ECDH_SetPubKey(CRYPT_ECDH_Ctx *ctx, const CRYPT_EcdhPub *pub);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDH_GetPrvKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPrv *prv);
+int32_t CRYPT_ECDH_GetPrvKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup ecdh
@@ -229,7 +229,7 @@ int32_t CRYPT_ECDH_GetPrvKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPrv *prv);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDH_GetPubKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPub *pub);
+int32_t CRYPT_ECDH_GetPubKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *para);
 
 /**
  * @ingroup ecdh
@@ -246,7 +246,7 @@ int32_t CRYPT_ECDH_GetPubKey(const CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPub *pub);
  * @retval CRYPT_ECC_PKEY_ERR_CTRL_LEN                  The len is incorrect.
  * @retval CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION   opt mode not supported
  */
-int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup ecdh

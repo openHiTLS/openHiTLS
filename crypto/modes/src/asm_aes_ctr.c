@@ -21,15 +21,16 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "crypt_modes_ctr.h"
+#include "modes_local.h"
 
-int32_t AES_CTR_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CTR_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     // The ctx, in, and out pointers have been determined at the EAL layer and are not determined again.
     if (ctx->ciphCtx == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    uint32_t offset = MODE_CTR_LastHandle(ctx, in, out, len);
+    uint32_t offset = MODES_CTR_LastHandle(ctx, in, out, len);
     uint32_t left = len - offset;
     const uint8_t *tmpIn = in + offset;
     uint8_t *tmpOut = out + offset;
@@ -55,12 +56,16 @@ int32_t AES_CTR_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *ou
             MODE_IncCounter(ctx->iv, blockSize - 4);
         }
     }
-    MODE_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
+    MODES_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
     return CRYPT_SUCCESS;
 }
 
-int32_t AES_CTR_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return AES_CTR_EncryptBlock(ctx, in, out, len);
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return MODES_CipherStreamProcess(AES_CTR_EncryptBlock, &modeCtx->commonCtx, in, inLen, out, outLen);
 }
 #endif

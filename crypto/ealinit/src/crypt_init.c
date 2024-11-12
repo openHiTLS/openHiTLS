@@ -15,7 +15,7 @@
 
 #include "bsl_init.h"
 #include "bsl_err_internal.h"
-#include "crypt_method.h"
+#include "crypt_eal_init.h"
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
@@ -23,15 +23,106 @@
 #include "crypt_utils.h"
 #include "asmcap_local.h"
 #include "crypt_ealinit.h"
+#include "crypt_eal_provider.h"
+#include "crypt_provider.h"
 
 static bool g_trigger = false;
 
-#define CRYPT_INIT_ABILITY_CPU_POS   0
-#define CRYPT_INIT_ABILITY_BSL_POS   1
-#define CRYPT_INIT_ABILITY_RAND_POS  2
- 
-#define CRYPT_INIT_ABILITY_BITMAP(value, pos) (((value) >> (pos)) & 0x1)
-#define CRYPT_INIT_SUPPORT_ABILITY(cap, pos) (CRYPT_INIT_ABILITY_BITMAP(cap, pos) != 0)
+#define CRYPT_INIT_ABILITY_CPU        1
+#define CRYPT_INIT_ABILITY_BSL        2
+#define CRYPT_INIT_ABILITY_RAND       4
+#define CRYPT_INIT_ABILITY_PROVIDER   8
+
+
+#if defined(HITLS_CRYPTO_PROVIDER)
+static int32_t ProviderModuleInit(uint64_t initOpt)
+{
+    if (!(initOpt & CRYPT_INIT_ABILITY_PROVIDER)) {
+        return BSL_SUCCESS;
+    }
+    return CRYPT_EAL_InitPreDefinedProviders();
+}
+
+static void ProviderModuleFree(uint64_t initOpt)
+{
+    if (!(initOpt & CRYPT_INIT_ABILITY_PROVIDER)) {
+        return;
+    }
+    CRYPT_EAL_FreePreDefinedProviders();
+}
+#else
+static int32_t ProviderModuleInit(uint64_t initOpt)
+{
+    (void) initOpt;
+    return CRYPT_SUCCESS;
+}
+
+static void ProviderModuleFree(uint64_t initOpt)
+{
+    (void) initOpt;
+    return;
+}
+#endif
+
+#if defined(HITLS_BSL_INIT)
+static int32_t BslModuleInit(uint64_t initOpt)
+{
+    if (!(initOpt & CRYPT_INIT_ABILITY_BSL)) {
+        return BSL_SUCCESS;
+    }
+    return BSL_GLOBAL_Init();
+}
+
+static void BslModuleFree(uint64_t initOpt)
+{
+    if (!(initOpt & CRYPT_INIT_ABILITY_BSL)) {
+        return;
+    }
+    BSL_GLOBAL_DeInit();
+}
+#else
+static int32_t BslModuleInit(uint64_t initOpt)
+{
+    (void) initOpt;
+    return CRYPT_SUCCESS;
+}
+
+static void BslModuleFree(uint64_t initOpt)
+{
+    (void) initOpt;
+    return;
+}
+#endif
+
+#if defined(HITLS_CRYPTO_DRBG)
+static void RandModuleFree(uint64_t initOpt)
+{
+    if (!(initOpt & CRYPT_INIT_ABILITY_RAND)) {
+        return;
+    }
+    CRYPT_EAL_RandDeinit();
+}
+
+static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
+{
+    if (!(initOpt & CRYPT_INIT_ABILITY_RAND)) {
+        return BSL_SUCCESS;
+    }
+    return CRYPT_EAL_RandInit(alg, NULL, NULL, NULL, 0);
+}
+#else
+static void RandModuleFree(uint64_t initOpt)
+{
+    (void) initOpt;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
+{
+    (void) initOpt;
+    return;
+}
+#endif
 
 #if defined(HITLS_EAL_INIT_OPTS)
 __attribute__((constructor(102))) int32_t CRYPT_EAL_Init(uint64_t opts)
@@ -43,9 +134,9 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
         return CRYPT_SUCCESS;
     }
     int32_t ret = CRYPT_SUCCESS;
-    uint64_t initopt = opts;
+    uint64_t initOpt = opts;
 #if defined(HITLS_EAL_INIT_OPTS)
-    initopt = HITLS_EAL_INIT_OPTS;
+    initOpt = HITLS_EAL_INIT_OPTS;
 #endif
 
 #if defined(HITLS_CRYPTO_INIT_RAND_ALG)
@@ -54,32 +145,28 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     int32_t alg = CRYPT_RAND_SHA256;
 #endif
 
-    if (CRYPT_INIT_SUPPORT_ABILITY(initopt, CRYPT_INIT_ABILITY_CPU_POS)) {
+    if (initOpt & CRYPT_INIT_ABILITY_CPU) {
         GetCpuInstrSupportState();
     }
- 
-    if (CRYPT_INIT_SUPPORT_ABILITY(initopt, CRYPT_INIT_ABILITY_BSL_POS)) {
-#ifdef HITLS_BSL_INIT
-        ret = BSL_GLOBAL_Init();
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-#else
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return CRYPT_NOT_SUPPORT;
- 
-#endif
+
+    ret = BslModuleInit(initOpt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
- 
-    if (CRYPT_INIT_SUPPORT_ABILITY(initopt, CRYPT_INIT_ABILITY_RAND_POS)) {
-        ret = CRYPT_EAL_RandInit(alg, NULL, NULL, NULL, 0);
-        if (ret != CRYPT_SUCCESS) {
-            if (CRYPT_INIT_SUPPORT_ABILITY(initopt, CRYPT_INIT_ABILITY_BSL_POS)) {
-                BSL_GLOBAL_DeInit();
-            }
-            return ret;
-        }
+  
+    ret = RandModuleInit(initOpt, alg);
+    if (ret != CRYPT_SUCCESS) {
+        BslModuleFree(initOpt);
+        return ret;
     }
+
+    ret = ProviderModuleInit(initOpt);
+    if (ret != CRYPT_SUCCESS) {
+        RandModuleFree(initOpt);
+        BslModuleFree(initOpt);
+        return ret;
+    }
+
     g_trigger = true;
     return ret;
 }
@@ -90,19 +177,14 @@ __attribute__((destructor(101))) void CRYPT_EAL_Cleanup(uint64_t opts)
 void CRYPT_EAL_Cleanup(uint64_t opts)
 #endif
 {
-    uint64_t initopt = opts;
+    uint64_t initOpt = opts;
 #if defined(HITLS_EAL_INIT_OPTS)
-    initopt = HITLS_EAL_INIT_OPTS;
+    initOpt = HITLS_EAL_INIT_OPTS;
 #endif
-    if (CRYPT_INIT_SUPPORT_ABILITY(initopt, CRYPT_INIT_ABILITY_RAND_POS)) {
-        CRYPT_EAL_RandDeinit();
-    }
- 
-    if (CRYPT_INIT_SUPPORT_ABILITY(initopt, CRYPT_INIT_ABILITY_BSL_POS)) {
-#ifdef HITLS_BSL_INIT
-        BSL_GLOBAL_DeInit();
-#endif
-    }
+
+    ProviderModuleFree(initOpt);
+    RandModuleFree(initOpt);
+    BslModuleFree(initOpt);
 }
 
 #ifdef HITLS_CRYPTO_ASM_CHECK

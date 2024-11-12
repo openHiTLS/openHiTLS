@@ -25,7 +25,6 @@
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 
-
 CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
 {
     CRYPT_RSA_Ctx *keyCtx = NULL;
@@ -308,24 +307,27 @@ CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para)
     return paraCopy;
 }
 
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_RSA_Para *para)
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
 {
-    int32_t ret = IsRSASetParaVaild(ctx, para);
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_RSA_Para *rsaPara = CRYPT_RSA_NewPara((CRYPT_RsaPara *)para->param);
+    if (rsaPara == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = IsRSASetParaVaild(ctx, rsaPara);
     if (ret != CRYPT_SUCCESS) {
+        RSA_FREE_PARA(rsaPara);
         return ret;
     }
-
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
-    CRYPT_RSA_Para *paraCopy = CRYPT_RSA_DupPara(para);
-    if (paraCopy == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
     RSA_FREE_PARA(ctx->para);
     RSA_FREE_PRV_KEY(ctx->prvKey);
     RSA_FREE_PUB_KEY(ctx->pubKey);
-    ctx->para = paraCopy;
+    ctx->para = rsaPara;
     return CRYPT_SUCCESS;
 }
 
