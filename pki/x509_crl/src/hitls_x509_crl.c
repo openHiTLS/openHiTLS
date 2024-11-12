@@ -968,7 +968,7 @@ static int32_t X509_CrlGetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int3
             return X509_CrlGetThisUpdate(crl, val, valLen);
         case HITLS_X509_GET_AFTER_TIME:
             return X509_CrlGetNextUpdate(crl, val, valLen);
-        case HITLS_X509_GET_ISSUER_DNNAME:
+        case HITLS_X509_GET_ISSUER_DN:
             return HITLS_X509_GetList(crl->tbs.issuerName, val, valLen);
         case HITLS_X509_GET_REVOKELIST:
             return X509_CrlGetRevokeList(crl, val, valLen);
@@ -1133,7 +1133,7 @@ int32_t X509_CrlSetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t val
     switch (cmd) {
         case HITLS_X509_SET_VERSION:
             return X509_CrlSetVersion(crl, val, valLen);
-        case HITLS_X509_SET_ISSUER_DNNAME:
+        case HITLS_X509_SET_ISSUER_DN:
             return HITLS_X509_SetNameList(&crl->tbs.issuerName, val, valLen);
         case HITLS_X509_SET_BEFORE_TIME:
             return CrlSetThisUpdaeTime(&crl->tbs.validTime, val, valLen);

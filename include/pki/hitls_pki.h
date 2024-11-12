@@ -44,6 +44,8 @@ typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
 
 typedef struct _HITLS_X509_Csr HITLS_X509_Csr;
 
+typedef struct _HITLS_X509_Attrs HITLS_X509_Attrs;
+
 typedef struct _HITLS_PKCS12 HITLS_PKCS12;
 
 typedef struct _HITLS_PKCS12_Bag HITLS_PKCS12_Bag;
@@ -72,14 +74,14 @@ typedef enum {
     HITLS_X509_GET_ENCODE,             /** Get the ASN.1 DER encoded cert/csr data */
     HITLS_X509_GET_PUBKEY,             /** Get the public key contained in the cert/csr */
     HITLS_X509_GET_SIGNALG,            /** Get the signature algorithm used to sign the cert/csr */
-    HITLS_X509_GET_SUBJECT_DNNAME_STR, /** Get the subject distinguished name as a formatted string */
-    HITLS_X509_GET_ISSUER_DNNAME_STR,  /** Get the issuer distinguished name as a formatted string */
+    HITLS_X509_GET_SUBJECT_DN_STR, /** Get the subject distinguished name as a formatted string */
+    HITLS_X509_GET_ISSUER_DN_STR,  /** Get the issuer distinguished name as a formatted string */
     HITLS_X509_GET_SERIALNUM_STR,      /** Get the serial number as a string */
     HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time as a string */
     HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time as a string */
-    HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the list of subject distinguished name components.
+    HITLS_X509_GET_SUBJECT_DN,     /** Get the list of subject distinguished name components.
                                            Note: The list is read-only and should not be modified. */
-    HITLS_X509_GET_ISSUER_DNNAME,      /** Get the list of issuer distinguished name components.
+    HITLS_X509_GET_ISSUER_DN,      /** Get the list of issuer distinguished name components.
                                            Note: The list is read-only and should not be modified. */
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
     HITLS_X509_GET_REVOKELIST,         /** Get the certficate revoke list from the crl. */
@@ -90,8 +92,8 @@ typedef enum {
     HITLS_X509_SET_BEFORE_TIME,        /** Set the before time for the cert. */
     HITLS_X509_SET_AFTER_TIME,         /** Set the after time for the cert. */
     HITLS_X509_SET_PUBKEY,             /** Set the public key for the cert/csr. */
-    HITLS_X509_SET_SUBJECT_DNNAME,     /** Set the subject name list. */
-    HITLS_X509_SET_ISSUER_DNNAME,      /** Set the issuer name list. */
+    HITLS_X509_SET_SUBJECT_DN,     /** Set the subject name list. */
+    HITLS_X509_SET_ISSUER_DN,      /** Set the issuer name list. */
     HITLS_X509_SET_CSR_EXT,            /** Replace the cert's ext with csr's */
     HITLS_X509_ADD_SUBJECT_NAME,       /** Add the subject name for the cert/csr. */
     HITLS_X509_CRL_ADD_REVOKED_CERT,   /** Add the revoke cert to crl. */
@@ -143,6 +145,13 @@ typedef enum {
     // Other types are not supported yet
     HITLS_X509_GN_MAX
 } HITLS_X509_GeneralNameType;
+
+typedef enum {
+    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0100,
+
+    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS = 0x0200,
+
+} HITLS_X509_AttrCmd;
 
 /* Distinguish name */
 typedef struct {
@@ -740,11 +749,6 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot, HITLS_X509_Cert *cert,
     HITLS_X509_List **chain);
 
-typedef struct _HITLS_X509_Attr {
-    BslCid cid;
-    void *value;
-} HITLS_X509_Attr;
-
 /**
  * @ingroup pki
  * @brief Allocate a pkcs10 csr.
@@ -872,7 +876,7 @@ typedef enum {
  * @retval #HITLS_X509_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, int32_t valLen);
 
 typedef struct {
     BSL_Buffer *macPwd;

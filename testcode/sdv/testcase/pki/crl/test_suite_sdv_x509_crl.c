@@ -417,7 +417,7 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test incorrect length for issuer parameter
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuer, sizeof(BSL_ASN1_List) - 1),
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuer, sizeof(BSL_ASN1_List) - 1),
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test empty buffer for get command
@@ -583,7 +583,7 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     ASSERT_TRUE(afterTime.month > beforeTime.month);
 
     // Test getting the issuer DN name
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
     ASSERT_NE(BSL_LIST_COUNT(issuerDN), 0);
 
@@ -650,10 +650,10 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     uint32_t version = 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
     BslList *issuerDN = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)),
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)),
         HITLS_X509_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
 
@@ -723,8 +723,8 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
 
     /* Cannot set after parsing */
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &ver, sizeof(uint32_t)), HITLS_X509_ERR_SET_AFTER_PARSE);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DNNAME, &tmp, sizeof(BslList *)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, tmp, 0), HITLS_X509_ERR_SET_AFTER_PARSE);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &tmp, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, tmp, 0), HITLS_X509_ERR_SET_AFTER_PARSE);
 
     /* Generate crl after parsing is allowed. */
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
@@ -780,8 +780,8 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
 
     /* issuer name is empty */
     ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_ERR_CRL_ISSUER_EMPTY);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), 0);
 
     /* thisUpdate is not set */
     ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_ERR_CRL_THISUPDATE_UNEXIST);
@@ -855,8 +855,8 @@ void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), 0);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &thisUpdate, sizeof(BSL_TIME)), 0);
 
     /* Test invalid mdId */
@@ -989,9 +989,9 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
 
     // Set issuer DN from certificate
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME, &issuerDN, sizeof(BslList *)),
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN, &issuerDN, sizeof(BslList *)),
         HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)),
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)),
         HITLS_X509_SUCCESS);
 
     // Set validity period

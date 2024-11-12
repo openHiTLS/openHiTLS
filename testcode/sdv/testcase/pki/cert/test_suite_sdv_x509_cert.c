@@ -468,12 +468,14 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
 
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME_STR, &subjectName, sizeof(BSL_Buffer)), 0);
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(subjectName.data, NULL);
     ASSERT_EQ(subjectName.dataLen, strlen(expectedSubjectName));
     ASSERT_EQ(strcmp((char *)subjectName.data, expectedSubjectName), 0);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME_STR, &issuerName, sizeof(BSL_Buffer)), 0);
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN_STR, &issuerName, sizeof(BSL_Buffer));
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_NE(issuerName.data, NULL);
     ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
     ASSERT_EQ(strcmp((char *)issuerName.data, expectedIssueName), 0);
@@ -838,12 +840,12 @@ static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new)
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_PUBKEY, raw->tbs.ealPubKey, sizeof(void *)), 0);
 
     BslList *rawSubject = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_SUBJECT_DNNAME, &rawSubject, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SUBJECT_DNNAME, rawSubject, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_SUBJECT_DN, &rawSubject, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SUBJECT_DN, rawSubject, sizeof(BslList)), 0);
 
     BslList *rawIssuer = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_ISSUER_DNNAME, &rawIssuer, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_ISSUER_DNNAME, rawIssuer, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_ISSUER_DN, rawIssuer, sizeof(BslList)), 0);
 
     ret = 0;
 exit:
@@ -988,10 +990,10 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
     /* Cannot sign before setting issuer and subject */
     ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_DN);
 
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DNNAME, &tmp, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DNNAME, tmp, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &tmp, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, tmp, sizeof(BslList)), 0);
     ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_DN);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DNNAME, tmp, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, tmp, sizeof(BslList)), 0);
 
     /* Cannot sign before setting after time and before time */
     ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_TIME);
