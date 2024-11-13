@@ -26,11 +26,6 @@
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 
-HITLS_PKCS12_SafeBag *HITLS_PKCS12_SafeBagNew()
-{
-    return BSL_SAL_Malloc(sizeof(HITLS_PKCS12_SafeBag));
-}
-
 static void AttributesFree(HITLS_PKCS12_SafeBagAttr *attribute)
 {
     if (attribute == NULL) {
@@ -391,13 +386,14 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
     (void)memset_s(D, param->v, id, param->v);
     uint32_t SLen = param->v * ((saltLen + param->v - 1) / param->v);
     uint32_t PLen = param->v * ((pwdLen + param->v - 1) / param->v);
+    uint32_t k = 0;
     if (SLen + PLen < SLen) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT);
         ret = HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT;
         goto ERR;
     }
-    
-    uint32_t k = SLen + PLen;
+
+    k = SLen + PLen;
     I = BSL_SAL_Calloc(1u, k);
     if (I == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -444,6 +440,7 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
 ERR:
     CRYPT_EAL_MdFreeCtx(ctx);
     BSL_SAL_Free(D);
+    BSL_SAL_CleanseData(I, k);
     BSL_SAL_Free(I);
     BSL_SAL_Free(B);
     BSL_SAL_Free(A);
@@ -544,8 +541,8 @@ static int32_t ParamCheckAndInit(HITLS_PKCS12_MacData *macData, BSL_Buffer *pwd,
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
     if (macData->iteration < 1000) { // The nist sp800-132 required the minimum iteration count = 1000.
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_INTERATION);
-        return HITLS_PKCS12_ERR_INVALID_INTERATION;
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ITERATION);
+        return HITLS_PKCS12_ERR_INVALID_ITERATION;
     }
     *macId = GetMacId(macData->alg);
     *macSize = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)macData->alg);
