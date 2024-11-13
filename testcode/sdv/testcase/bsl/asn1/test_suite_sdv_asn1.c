@@ -1191,7 +1191,7 @@ exit:
  * For test bmpString.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_BMPSTRING_TC001(Hex *enc, char *dec)
+void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
 {
     int32_t ret;
     BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BMPSTRING, enc->len, enc->x};

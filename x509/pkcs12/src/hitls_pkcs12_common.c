@@ -410,7 +410,7 @@ int32_t HITLS_PKCS12_ParseContentInfo(BSL_Buffer *encode, const uint8_t *passwor
     BSL_Buffer asnArrData = {asnArr[HITLS_PKCS12_CONTENT_VALUE_IDX].buff, asnArr[HITLS_PKCS12_CONTENT_VALUE_IDX].len};
     switch (cid) {
         case BSL_CID_DATA:
-            return CRYPT_EAL_ParseAsn1PKCS7Data(&asnArrData, data);
+            return HITLS_CMS_ParseAsn1Data(&asnArrData, data);
         case BSL_CID_ENCRYPTEDDATA:
             return CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&asnArrData, password, passLen, data);
         default:
@@ -667,7 +667,7 @@ int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HITLS_PKCS12_MacData *macD
     BSL_Buffer digestInfo = {asn1[HITLS_PKCS12_MACDATA_DIGESTINFO_IDX].buff,
         asn1[HITLS_PKCS12_MACDATA_DIGESTINFO_IDX].len};
     BslCid cid = BSL_CID_UNKNOWN;
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&digestInfo, &cid, &mac);
+    ret = HITLS_CMS_ParseDigestInfo(&digestInfo, &cid, &mac);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1219,7 +1219,7 @@ int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_MacP
         return ret;
     }
 
-    ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(p12Mac->alg, &mac, &digestInfo);
+    ret = HITLS_CMS_EncodeDigestInfoBuff(p12Mac->alg, &mac, &digestInfo);
     BSL_SAL_FREE(mac.data);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1392,7 +1392,7 @@ static int32_t EncodePkcs12(uint32_t version, BSL_Buffer *authSafe, BSL_Buffer *
     return ret;
 }
 
-static int32_t PwdUnityCheck(const HITLS_PKCS12_EncodeParam *encodeParam, bool isNeedMac)
+static int32_t PwdConsistencyCheck(const HITLS_PKCS12_EncodeParam *encodeParam, bool isNeedMac)
 {
     CRYPT_Pbkdf2Param *keyParam = (CRYPT_Pbkdf2Param *)encodeParam->keyEncParam.param;
     CRYPT_Pbkdf2Param *certParam = (CRYPT_Pbkdf2Param *)encodeParam->certEncParam.param;
@@ -1414,11 +1414,7 @@ static int32_t PwdUnityCheck(const HITLS_PKCS12_EncodeParam *encodeParam, bool i
     if (certPwd == NULL && keyPwd == NULL) {
         return HITLS_X509_SUCCESS;
     }
-    if (certPwd == NULL && keyPwd != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-        return HITLS_PKCS12_ERR_INVALID_PARAM;
-    }
-    if (certPwd != NULL && keyPwd == NULL) {
+    if (certPwd == NULL || keyPwd == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
@@ -1433,7 +1429,7 @@ static int32_t PwdUnityCheck(const HITLS_PKCS12_EncodeParam *encodeParam, bool i
 static int32_t EncodeP12Info(HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam, bool isNeedMac,
     BSL_Buffer *encode)
 {
-    int32_t ret = PwdUnityCheck(encodeParam, isNeedMac);
+    int32_t ret = PwdConsistencyCheck(encodeParam, isNeedMac);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
