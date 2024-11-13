@@ -36,13 +36,15 @@
 #include "bsl_err_internal.h"
 #include "eal_common.h"
 #include "bsl_sal.h"
+#include "crypt_errno.h"
 
 #define CRYPT_MD_IMPL_METHOD_DECLARE(name)     \
     EAL_MdMethod g_mdMethod_##name = {         \
-        CRYPT_##name##_BLOCKSIZE,         CRYPT_##name##_DIGESTSIZE,         \
-        sizeof(CRYPT_##name##_Ctx),       (MdInit)CRYPT_##name##_Init,       \
-        (MdUpdate)CRYPT_##name##_Update,  (MdFinal)CRYPT_##name##_Final,     \
-        (MdDeinit)CRYPT_##name##_Deinit,  (MdCopyCtx)CRYPT_##name##_CopyCtx  \
+        CRYPT_##name##_BLOCKSIZE,         CRYPT_##name##_DIGESTSIZE,              \
+        (MdNewCtx)CRYPT_##name##_NewCtx,       (MdInit)CRYPT_##name##_Init,       \
+        (MdUpdate)CRYPT_##name##_Update,  (MdFinal)CRYPT_##name##_Final,          \
+        (MdDeinit)CRYPT_##name##_Deinit,  (MdCopyCtx)CRYPT_##name##_CopyCtx,      \
+        (MdFreeCtx)CRYPT_##name##_FreeCtx, NULL                                   \
     }
 
 #ifdef HITLS_CRYPTO_MD5
@@ -122,5 +124,54 @@ const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id)
     }
 
     return NULL;
+}
+
+int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    int32_t ret;
+    if (out == NULL || outLen == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (in == NULL && inLen != 0) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    const EAL_MdMethod *method = EAL_MdFindMethod(id);
+    if (method == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+
+    void *data = method->newCtx();
+    if (data == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    ret = method->init(data, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
+        method->freeCtx(data);
+        return ret;
+    }
+    if (inLen != 0) {
+        ret = method->update(data, in, inLen);
+        if (ret != CRYPT_SUCCESS) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
+            goto ERR;
+        }
+    }
+
+    ret = method->final(data, out, outLen);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
+        goto ERR;
+    }
+    *outLen = method->mdSize;
+
+ERR:
+    method->freeCtx(data);
+    return ret;
 }
 #endif

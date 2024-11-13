@@ -252,23 +252,27 @@ CRYPT_PAILLIER_Para *CRYPT_Paillier_DupPara(const CRYPT_PAILLIER_Para *para)
     return paraCopy;
 }
 
-int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PAILLIER_Para *para)
-{   
-    int32_t ret = IsPAILLIERSetParaVaild(ctx, para);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *param)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-
-    CRYPT_PAILLIER_Para *paraCopy = CRYPT_Paillier_DupPara(para);
-    if (paraCopy == NULL) {
+    CRYPT_PAILLIER_Para *para = CRYPT_PAILLIER_NewPara((const CRYPT_PaillierPara *)param->param);
+    if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = IsPAILLIERSetParaVaild(ctx, para);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_PAILLIER_FreePara(para);
+        return ret;
     }
 
     PAILLIER_FREE_PARA(ctx->para);
     PAILLIER_FREE_PUB_KEY(ctx->pubKey);
     PAILLIER_FREE_PRV_KEY(ctx->prvKey);
-    ctx->para = paraCopy;
+    ctx->para = para;
     return CRYPT_SUCCESS;
 }
 

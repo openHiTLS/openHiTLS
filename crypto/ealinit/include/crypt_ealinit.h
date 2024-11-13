@@ -16,13 +16,11 @@
 #define CRYPT_EALINIT_H
  
 #include "hitls_build.h"
- 
 #include <stdint.h>
  
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
- 
  
 #ifdef HITLS_CRYPTO_ASM_CHECK
 /**

@@ -70,6 +70,14 @@ enum BSL_ERROR {
     BSL_SAL_NET_NO_REG_FUNC,
 
     BSL_SAL_TIME_NO_REG_FUNC,
+    
+    BSL_SAL_ERR_DL_NOT_FOUND,                /**< dl not found. */
+    BSL_SAL_ERR_DL_LOAD_FAIL,                /**< Error occured when loading dynamic library. */
+    BSL_SAL_ERR_DL_UNLOAAD_FAIL,             /**< Error occured when unloading dynamic library. */
+    BSL_SAL_ERR_DL_NON_FUNCTION,             /**< dl doesn't find function. */
+    BSL_SAL_ERR_DL_LOOKUP_METHOD,            /**< Error occurred when looking up dl method. */
+    BSL_SAL_ERR_DL_PATH_EXCEED,              /**< Path exceeds the maximum length. */
+    BSL_SAL_DL_NO_REG_FUNC,                  /**< No registration function. */
 
     /* The return value of the LOG submodule starts from 0x03020001. */
     BSL_LOG_ERR_BAD_PARAM = 0x03020001,      /**< Bad parameter. */

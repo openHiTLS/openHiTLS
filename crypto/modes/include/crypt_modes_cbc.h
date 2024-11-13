@@ -19,96 +19,41 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CBC
 
-#include "crypt_modes.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-/**
- * @brief CBC mode encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_CBC_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+typedef struct ModesCipherCtx MODES_CipherCtx;
 
-/**
- * @brief CBC mode decryption
- *
- * @param ctx [IN]  mode handle
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Encrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+// CBC mode universal implementation
+MODES_CipherCtx *MODES_CBC_NewCtx(int32_t algId);
+int32_t MODES_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
+int32_t MODES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_CBC_DeInitCtx(MODES_CipherCtx *modeCtx);
+int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
+void MODES_CBC_FreeCtx(MODES_CipherCtx *modeCtx);
 
-#ifdef HITLS_CRYPTO_AES
-/**
- * @brief AES CBC mode encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t AES_CBC_EncryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+// AES CBC optimization implementation
+int32_t AES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t AES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
 
-/**
- * @brief AES CBC mode decryption
- *
- * @param ctx [IN]  mode handle
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Encrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t AES_CBC_DecryptBlock(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
+// SM4 CBC optimization implementation
+int32_t SM4_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t SM4_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t SM4_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc);
 
-/**
- * @brief Clear the content in CBC mode, delete sensitive data. Preserve the memory and methods of algorithm modules
- *
- * @param ctx [IN] mode handle
- * @return none
- */
-void MODE_CBC_Clean(MODE_CipherCtx *ctx);
 
-#ifdef HITLS_CRYPTO_SM4
-/**
- * @brief SM4-CBC mode encryption
- *
- * @param [IN] ctx  mode handle
- * @param [IN] in   Data to be encrypted
- * @param [OUT] out Encrypted data
- * @param [IN] len  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_CBC_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-
-/**
- * @brief SM4-CBC mode decryption
- *
- * @param ctx [IN]  mode handle
- * @param in [IN]   Data to be decrypted
- * @param out [OUT] Encrypted data
- * @param len [IN]  Data length
- * @return Success: CRYPT_SUCCESS
- *         Other error codes are returned if the operation fails.
- */
-int32_t MODE_SM4_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
-#endif
-
+int32_t MODES_CBC_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t MODES_CBC_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc);
+int32_t MODES_CBC_FinalEx(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
 #ifdef __cplusplus
 }
 #endif // __cplusplus

@@ -131,31 +131,11 @@ void SDV_HITLS_X509_BuildCertChain_TC001(void)
     func.varLenFunc = BinLogVarLenFunc;
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_CertChainBuild(NULL, NULL, NULL), HITLS_INVALID_INPUT);
+    ASSERT_EQ(HITLS_X509_CertChainBuild(NULL, false, NULL, NULL), HITLS_INVALID_INPUT);
     HITLS_X509_StoreCtx storeCtx = {0};
-    ASSERT_EQ(HITLS_X509_CertChainBuild(&storeCtx, NULL, NULL), HITLS_INVALID_INPUT);
+    ASSERT_EQ(HITLS_X509_CertChainBuild(&storeCtx, false, NULL, NULL), HITLS_INVALID_INPUT);
     HITLS_X509_Cert cert = {0};
-    ASSERT_EQ(HITLS_X509_CertChainBuild(&storeCtx, &cert, NULL), HITLS_INVALID_INPUT);
-exit:
-    BSL_GLOBAL_DeInit();
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_HITLS_X509_BuildCertChainWithRoot_TC001(void)
-{
-    TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
-    BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
-
-    ASSERT_EQ(HITLS_X509_CertChainBuildWithRoot(NULL, NULL, NULL), HITLS_INVALID_INPUT);
-    HITLS_X509_StoreCtx storeCtx = {0};
-    ASSERT_EQ(HITLS_X509_CertChainBuildWithRoot(&storeCtx, NULL, NULL), HITLS_INVALID_INPUT);
-    HITLS_X509_Cert cert = {0};
-    ASSERT_EQ(HITLS_X509_CertChainBuildWithRoot(&storeCtx, &cert, NULL), HITLS_INVALID_INPUT);
+    ASSERT_EQ(HITLS_X509_CertChainBuild(&storeCtx, false, &cert, NULL), HITLS_INVALID_INPUT);
 exit:
     BSL_GLOBAL_DeInit();
 }

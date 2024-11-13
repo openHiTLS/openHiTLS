@@ -54,7 +54,8 @@
  *    6.Tag is consistent with the test vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt, Hex *ct, Hex *tag, int result)
+void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001(int isProvider, int algId, Hex *key, Hex *iv,
+    Hex *aad, Hex *pt, Hex *ct, Hex *tag, int result)
 {
 #ifndef HITLS_CRYPTO_GCM
     SKIP_TEST();
@@ -76,7 +77,8 @@ void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *aad
         ASSERT_TRUE(out != NULL);
     }
 
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
+    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) == CRYPT_SUCCESS);
@@ -123,7 +125,7 @@ exit:
  *    6.Tag is consistent with the test vector.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002(int algId, Hex *key, Hex *iv,  Hex *aad, Hex *pt, Hex *ct, Hex *tag)
+void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key, Hex *iv,  Hex *aad, Hex *pt, Hex *ct, Hex *tag)
 {
 #ifndef HITLS_CRYPTO_GCM
     SKIP_TEST();
@@ -145,7 +147,8 @@ void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002(int algId, Hex *key, Hex *iv,  Hex *aa
         ASSERT_TRUE(out != NULL);
     }
 
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
+    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
+        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) == CRYPT_SUCCESS);

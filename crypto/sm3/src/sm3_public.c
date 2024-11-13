@@ -24,13 +24,38 @@
 #include "bsl_err_internal.h"
 #include "crypt_sm3.h"
 #include "sm3_local.h"
+#include "bsl_sal.h"
+#include "crypt_types.h"
 
-int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx)
+struct CryptSm3Ctx {
+    uint32_t h[CRYPT_SM3_DIGESTSIZE / sizeof(uint32_t)];  /* store the intermediate data of the hash value */
+    uint32_t hNum, lNum;                                  /* input data counter, maximum value 2 ^ 64 bits */
+    uint8_t block[CRYPT_SM3_BLOCKSIZE];                   /* store the remaining data which less than one block */
+    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
+    uint32_t num;
+};
+
+CRYPT_SM3_Ctx *CRYPT_SM3_NewCtx(void)
+{
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SM3_Ctx));
+}
+
+void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx)
+{
+    CRYPT_SM3_Ctx *mdCtx = ctx;
+    if (mdCtx == NULL) {
+        return;
+    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SM3_Ctx));
+}
+
+int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, CRYPT_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));
     /* GM/T 0004-2012 chapter 4.1 */
     ctx->h[0] = 0x7380166F;

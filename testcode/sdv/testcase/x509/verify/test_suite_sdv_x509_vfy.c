@@ -276,7 +276,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *ce
     ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_TRUE(ret == HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
     int64_t timeval = time(NULL);
@@ -312,13 +312,13 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002(void)
     ASSERT_TRUE(ret != HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_TRUE(ret == HITLS_X509_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     HITLS_X509_Cert *root = NULL;
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-pss-v3/ca.der", store, &root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ret = HITLS_X509_CertChainBuild(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
     int64_t timeval = time(NULL);
@@ -397,7 +397,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC004(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, root, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, root, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_TRUE(chain != NULL);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
@@ -422,7 +422,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC005(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, root, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, root, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_TRUE(chain != NULL);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
@@ -447,7 +447,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 0);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, root, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, root, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_TRUE(chain != NULL);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
@@ -484,7 +484,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007(void)
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &depth, sizeof(depth));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_TRUE(ret == HITLS_X509_SUCCESS);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -540,7 +540,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *ce
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &depth, sizeof(depth));
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     int64_t setFlag = (int64_t)flag;
@@ -605,13 +605,13 @@ void SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001(void)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuildWithRoot(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, true, entity, &chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
     HITLS_X509_Cert *root = NULL;
     ret = HITLS_AddCertToStoreTest("../testdata/cert/chain/rsa-v3/rootca.der", store, &root);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
-    ret = HITLS_X509_CertChainBuildWithRoot(store, entity, &chain);
+    ret = HITLS_X509_CertChainBuild(store, true, entity, &chain);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 3);
 

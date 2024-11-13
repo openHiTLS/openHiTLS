@@ -16,18 +16,16 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_CTR)
 
-#include "bsl_err_internal.h"
-#include "crypt_sm4.h"
-#include "crypt_modes.h"
 #include "crypt_modes_ctr.h"
 
-int32_t MODE_SM4_CTR_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
 {
-    return MODE_CTR_Crypt(ctx, in, out, len);
+    return MODES_CTR_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
 }
 
-int32_t MODE_SM4_CTR_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODE_CTR_Crypt(ctx, in, out, len);
+    return MODES_CTR_Update(modeCtx, in, inLen, out, outLen);
 }
 #endif

@@ -22,61 +22,11 @@
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
-#include "crypt_modes.h"
+#include "modes_local.h"
 #include "ccm_core.h"
 #include "crypt_modes_ccm.h"
+#include "crypt_modes.h"
 
-
-int32_t MODES_CCM_InitCtx(MODES_CCM_Ctx *ctx, const struct EAL_CipherMethod *m)
-{
-    if (ctx == NULL || m == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    (void)memset_s(ctx, sizeof(MODES_CCM_Ctx), 0, sizeof(MODES_CCM_Ctx));
-    ctx->ciphMeth = m;
-    ctx->ciphCtx = BSL_SAL_Malloc(m->ctxSize);
-    if (ctx->ciphCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
-}
-
-void MODES_CCM_DeinitCtx(MODES_CCM_Ctx *ctx)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    BSL_SAL_CleanseData(ctx->ciphCtx, ctx->ciphMeth->ctxSize);
-    BSL_SAL_FREE(ctx->ciphCtx);
-    BSL_SAL_CleanseData(ctx, sizeof(MODES_CCM_Ctx));
-}
-
-void MODES_CCM_Clean(MODES_CCM_Ctx *ctx)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    void *ciphCtx = ctx->ciphCtx;
-    const EAL_CipherMethod *ciphMeth = ctx->ciphMeth;
-    BSL_SAL_CleanseData((void *)(ctx->ciphCtx), ctx->ciphMeth->ctxSize);
-    BSL_SAL_CleanseData((void *)(ctx), sizeof(MODES_CCM_Ctx));
-
-    ctx->ciphCtx = ciphCtx;
-    ctx->ciphMeth = ciphMeth;
-}
-
-int32_t MODES_CCM_SetKey(MODES_CCM_Ctx *ctx, const uint8_t *key, uint32_t len)
-{
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    MODES_CCM_Clean(ctx);
-    ctx->tagLen = 16;
-    return ctx->ciphMeth->setEncryptKey(ctx->ciphCtx, key, len);
-}
 
 void XorInEncrypt(XorCryptData *data, uint32_t len)
 {
@@ -110,7 +60,7 @@ void XorInDecryptBlock(XorCryptData *data)
 }
 
 // Process the remaining data in the last update.
-static uint32_t LastHandle(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+static uint32_t CcmLastHandle(MODES_CipherCCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
     uint32_t lastLen = (ctx->lastLen < len) ? ctx->lastLen : len;
     if (ctx->lastLen > 0) {
@@ -132,7 +82,7 @@ static uint32_t LastHandle(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, 
     return lastLen;
 }
 
-static void RefreshNonce(MODES_CCM_Ctx *ctx)
+static void RefreshNonce(MODES_CipherCCMCtx *ctx)
 {
     if ((ctx->nonce[0] & (~0x07)) != 0) {
         /**
@@ -169,10 +119,10 @@ static void RefreshNonce(MODES_CCM_Ctx *ctx)
     }
 }
 
-static int32_t TagInit(MODES_CCM_Ctx *ctx)
+static int32_t TagInit(MODES_CipherCCMCtx *ctx)
 {
     if (ctx->tagInit == 0) {
-        int32_t ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->tag, CCM_BLOCKSIZE);
+        int32_t ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->nonce, ctx->tag, CCM_BLOCKSIZE);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -182,7 +132,7 @@ static int32_t TagInit(MODES_CCM_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
-static int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+static int32_t CcmBlocks(MODES_CipherCCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
     XorCryptData data;
     data.in = in;
@@ -195,16 +145,16 @@ static int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, ui
     void (*xorBlock)(XorCryptData *data) = enc ? XorInEncryptBlock : XorInDecryptBlock;
     void (*xor)(XorCryptData *data, uint32_t len) = enc ? XorInEncrypt : XorInDecrypt;
     while (dataLen >= CCM_BLOCKSIZE) { // process the integer multiple of 16bytes data
-        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
+        (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
         xorBlock(&data);
-        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+        (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
         MODE_IncCounter(ctx->nonce + CCM_BLOCKSIZE - countLen, countLen); // counter +1
         dataLen -= CCM_BLOCKSIZE;
         data.in += CCM_BLOCKSIZE;
         data.out += CCM_BLOCKSIZE;
     }
     if (dataLen > 0) { // process the integer multiple of 16bytes data
-        (void)ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
+        (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->nonce, ctx->last, CCM_BLOCKSIZE);
         xor(&data, dataLen);
         MODE_IncCounter(ctx->nonce + CCM_BLOCKSIZE - countLen, countLen); // counter +1
     }
@@ -212,7 +162,7 @@ static int32_t CcmBlocks(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, ui
 }
 
 // Enc: true for encryption and false for decryption.
-int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc, const CcmCore func)
+int32_t CcmCrypt(MODES_CipherCCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc, const CcmCore func)
 {
     if (ctx == NULL || ctx->ciphCtx == NULL || in == NULL || out == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -232,9 +182,9 @@ int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t l
     // Determine whether to start encryption and update the nonce information.
     RefreshNonce(ctx);
 
-    uint32_t lastLen = LastHandle(ctx, in, out, len, enc);
+    uint32_t lastLen = CcmLastHandle(ctx, in, out, len, enc);
     if (lastLen != 0 && ctx->lastLen == 0) {
-        ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -257,18 +207,18 @@ int32_t CcmCrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t l
     return CRYPT_SUCCESS;
 }
 
-int32_t MODES_CCM_Encrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_CCM_Encrypt(MODES_CipherCCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     return CcmCrypt(ctx, in, out, len, true, CcmBlocks);
 }
 
-int32_t MODES_CCM_Decrypt(MODES_CCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_CCM_Decrypt(MODES_CipherCCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     return CcmCrypt(ctx, in, out, len, false, CcmBlocks);
 }
 
 // 7 <= ivLen <= 13
-static int32_t SetIv(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
+static int32_t SetIv(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -288,9 +238,9 @@ static int32_t SetIv(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
 
     // Clear data.
     void *ciphCtx = ctx->ciphCtx; // Handle used by the method
-    const EAL_CipherMethod *ciphMeth = ctx->ciphMeth; // algorithm method
+    const EAL_SymMethod *ciphMeth = ctx->ciphMeth; // algorithm method
     uint8_t tagLen = ctx->tagLen;
-    (void)memset_s(ctx, sizeof(MODES_CCM_Ctx), 0, sizeof(MODES_CCM_Ctx));
+    (void)memset_s(ctx, sizeof(MODES_CipherCCMCtx), 0, sizeof(MODES_CipherCCMCtx));
     ctx->ciphCtx = ciphCtx;
     ctx->ciphMeth = ciphMeth;
     ctx->tagLen = tagLen;
@@ -304,7 +254,7 @@ static int32_t SetIv(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
 }
 
 // The input data is the uint64_t.
-static int32_t SetMsgLen(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
+static int32_t SetMsgLen(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -349,7 +299,7 @@ static int32_t SetMsgLen(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static int32_t SetTagLen(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
+static int32_t SetTagLen(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -381,7 +331,7 @@ static int32_t SetTagLen(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static uint32_t XorAadLen(MODES_CCM_Ctx *ctx, uint32_t aadLen)
+static uint32_t XorAadLen(MODES_CipherCCMCtx *ctx, uint32_t aadLen)
 {
     /**
      * RFC_3610-2.2
@@ -414,7 +364,7 @@ static uint32_t XorAadLen(MODES_CCM_Ctx *ctx, uint32_t aadLen)
 }
 
 // 0 < aadLen < 2^32
-static int32_t SetAad(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
+static int32_t SetAad(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
 {
     if ((ctx->nonce[0] & 0x40) != 0) {
         // If aad has been set, the setting cannot be repeated.
@@ -431,7 +381,7 @@ static int32_t SetAad(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
     // bit6 Adata
     ctx->nonce[0] |= 0x40;
     // X_1 := E( K, B_0 )
-    int32_t ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->tag, CCM_BLOCKSIZE);
+    int32_t ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->nonce, ctx->tag, CCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -449,7 +399,7 @@ static int32_t SetAad(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
     }
     aad += use;
     aadLen -= use;
-    ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+    ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -462,7 +412,7 @@ static int32_t SetAad(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
         }
         aad += blockLen;
         aadLen -= blockLen;
-        ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -471,7 +421,7 @@ static int32_t SetAad(MODES_CCM_Ctx *ctx, const void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static int32_t CtrTagCalc(MODES_CCM_Ctx *ctx)
+static int32_t CtrTagCalc(MODES_CipherCCMCtx *ctx)
 {
     /**
      * RFC_3610-2.3
@@ -481,14 +431,14 @@ static int32_t CtrTagCalc(MODES_CCM_Ctx *ctx)
     ctx->nonce[0] &= 0x07; // update the nonce
     uint8_t l = (ctx->nonce[0] & 0x07) + 1;
     (void)memset_s(ctx->nonce + CCM_BLOCKSIZE - l, l, 0, l);
-    int32_t ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->nonce, ctx->nonce, CCM_BLOCKSIZE);
+    int32_t ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->nonce, ctx->nonce, CCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
 
-static int32_t GetTag(MODES_CCM_Ctx *ctx, void *val, uint32_t len)
+static int32_t GetTag(MODES_CipherCCMCtx *ctx, void *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -513,7 +463,7 @@ static int32_t GetTag(MODES_CCM_Ctx *ctx, void *val, uint32_t len)
         return ret;
     }
     if (ctx->lastLen != 0) {
-        ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -531,26 +481,140 @@ static int32_t GetTag(MODES_CCM_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-int32_t MODES_CCM_Ctrl(MODES_CCM_Ctx *ctx, CRYPT_CipherCtrl opt, void *val, uint32_t len)
+int32_t MODES_CCM_Ctrl(MODES_CCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t len)
 {
-    if (ctx == NULL) {
+    if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
-        case CRYPT_CTRL_SET_IV:
-            return SetIv(ctx, val, len);
+        case CRYPT_CTRL_REINIT_STATUS:
+            return SetIv(&modeCtx->ccmCtx, val, len);
+        case CRYPT_CTRL_GET_BLOCKSIZE:
+            if (val == NULL || len != sizeof(uint32_t)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+                return CRYPT_MODE_ERR_INPUT_LEN;
+            }
+            *(int32_t *)val = 1;
+            return CRYPT_SUCCESS;
         case CRYPT_CTRL_SET_TAGLEN:
-            return SetTagLen(ctx, val, len);
+            return SetTagLen(&modeCtx->ccmCtx, val, len);
         case CRYPT_CTRL_SET_MSGLEN:
-            return SetMsgLen(ctx, val, len);
+            return SetMsgLen(&modeCtx->ccmCtx, val, len);
         case CRYPT_CTRL_SET_AAD:
-            return SetAad(ctx, val, len);
+            return SetAad(&modeCtx->ccmCtx, val, len);
         case CRYPT_CTRL_GET_TAG:
-            return GetTag(ctx, val, len);
+            return GetTag(&modeCtx->ccmCtx, val, len);
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_MODES_METHODS_NOT_SUPPORT);
-            return CRYPT_MODES_METHODS_NOT_SUPPORT;
+            BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
+            return CRYPT_MODES_CTRL_TYPE_ERROR;
     }
 }
+
+MODES_CCM_Ctx *MODES_CCM_NewCtx(int32_t algId)
+{
+    const EAL_SymMethod *method = MODES_GetSymMethod(algId);
+    if (method == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return NULL;
+    }
+    MODES_CCM_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(MODES_CCM_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+    ctx->algId = algId;
+    ctx->ccmCtx.ciphCtx = BSL_SAL_Calloc(1, method->ctxSize);
+    if (ctx->ccmCtx.ciphCtx  == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_FREE(ctx);
+        return NULL;
+    }
+
+    ctx->ccmCtx.ciphMeth = method;
+    return ctx;
+}
+
+int32_t MODES_CCM_InitCtx(MODES_CCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc)
+{
+    (void)param;
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    int32_t ret = modeCtx->ccmCtx.ciphMeth->setEncryptKey(modeCtx->ccmCtx.ciphCtx, key, keyLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    modeCtx->ccmCtx.tagLen = 16; // 16 default tag len, set iv need
+    ret = SetIv(&modeCtx->ccmCtx, iv, ivLen);
+    if (ret != CRYPT_SUCCESS) {
+        modeCtx->ccmCtx.ciphMeth->cipherDeInitCtx(modeCtx->ccmCtx.ciphCtx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    modeCtx->enc = enc;
+    return ret;
+}
+
+int32_t MODES_CCM_Update(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherStreamProcess(modeCtx->enc ? MODES_CCM_Encrypt : MODES_CCM_Decrypt, &modeCtx->ccmCtx,
+        in, inLen, out, outLen);
+}
+
+int32_t MODES_CCM_Final(MODES_CCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    (void) modeCtx;
+    (void) out;
+    *outLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+int32_t MODES_CCM_DeInitCtx(MODES_CCM_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    const EAL_SymMethod *ciphMeth = modeCtx->ccmCtx.ciphMeth;
+    void *ciphCtx = modeCtx->ccmCtx.ciphCtx;
+    modeCtx->ccmCtx.ciphMeth->cipherDeInitCtx(modeCtx->ccmCtx.ciphCtx);
+    BSL_SAL_CleanseData(&modeCtx->ccmCtx, sizeof(MODES_CipherCCMCtx));
+    modeCtx->ccmCtx.ciphMeth = ciphMeth;
+    modeCtx->ccmCtx.ciphCtx = ciphCtx;
+    return CRYPT_SUCCESS;
+}
+
+void MODES_CCM_FreeCtx(MODES_CCM_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return;
+    }
+    modeCtx->ccmCtx.ciphMeth->cipherDeInitCtx(modeCtx->ccmCtx.ciphCtx);
+    BSL_SAL_FREE(modeCtx->ccmCtx.ciphCtx);
+    BSL_SAL_CleanseData(&modeCtx->ccmCtx, sizeof(MODES_CipherCCMCtx));
+    BSL_SAL_FREE(modeCtx);
+}
+
+
+int32_t MODES_CCM_UpdateEx(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_AES128_CCM:
+        case CRYPT_CIPHER_AES192_CCM:
+        case CRYPT_CIPHER_AES256_CCM:
+            return AES_CCM_Update(modeCtx, in, inLen, out, outLen);
+        default:
+            return MODES_CCM_Update(modeCtx, in, inLen, out, outLen);
+    }
+}
+
 #endif
