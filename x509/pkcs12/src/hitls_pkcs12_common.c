@@ -28,7 +28,6 @@
 #include "crypt_eal_encode.h"
 #include "bsl_type.h"
 #include "bsl_bytes.h"
-#include "crypt_eal_md.h"
 
 #define HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION 0
 
@@ -246,14 +245,16 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
     BslOidString oid = {asnArr[HITLS_PKCS12_SAFEBAG_OID_IDX].len, (char *)asnArr[HITLS_PKCS12_SAFEBAG_OID_IDX].buff, 0};
     BslCid cid = BSL_OBJ_GetCIDFromOid(&oid);
     if (cid == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE);
-        return HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE;
+        ret = HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE;
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
     BSL_ASN1_List *attributes = NULL;
     BSL_Buffer *bag = BSL_SAL_Calloc(1u, sizeof(BSL_Buffer));
     if (bag == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+        ret = BSL_MALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
 
     bag->data = BSL_SAL_Dump(asnArr[HITLS_PKCS12_SAFEBAG_BAGVALUES_IDX].buff,
@@ -1195,24 +1196,15 @@ int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, co
     return ret;
 }
 
-int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_MacParam *macParam,
+int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_HmacParam *macParam,
     HITLS_PKCS12_MacData *p12Mac, BSL_Buffer *encode)
 {
-    if (macParam->algId != BSL_CID_PKCS12KDF) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ALGO);
-        return HITLS_PKCS12_ERR_INVALID_ALGO;
-    }
-    if (macParam->para == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     BSL_Buffer mac = {0};
     BSL_Buffer digestInfo = {0};
-    HITLS_PKCS12_KdfParam *param = (HITLS_PKCS12_KdfParam *)macParam->para;
-    p12Mac->alg = param->macId;
-    p12Mac->interation = param->itCnt;
-    p12Mac->macSalt->dataLen = param->saltLen;
-    BSL_Buffer macPwd = {param->pwd, param->pwdLen};
+    p12Mac->alg = macParam->macId;
+    p12Mac->interation = macParam->itCnt;
+    p12Mac->macSalt->dataLen = macParam->saltLen;
+    BSL_Buffer macPwd = {macParam->pwd, macParam->pwdLen};
     int32_t ret = HITLS_PKCS12_CalMac(&mac, &macPwd, initData, p12Mac);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1392,51 +1384,10 @@ static int32_t EncodePkcs12(uint32_t version, BSL_Buffer *authSafe, BSL_Buffer *
     return ret;
 }
 
-static int32_t PwdUnityCheck(const HITLS_PKCS12_EncodeParam *encodeParam, bool isNeedMac)
-{
-    CRYPT_Pbkdf2Param *keyParam = (CRYPT_Pbkdf2Param *)encodeParam->keyEncParam.param;
-    CRYPT_Pbkdf2Param *certParam = (CRYPT_Pbkdf2Param *)encodeParam->certEncParam.param;
-    if (!isNeedMac) {
-        // Certificates do not require encryption when integrity verification is disabled.
-        if (keyParam == NULL || keyParam->pwd == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-            return HITLS_PKCS12_ERR_INVALID_PARAM;
-        }
-        return HITLS_X509_SUCCESS;
-    }
-    if (keyParam == NULL || certParam == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-        return HITLS_PKCS12_ERR_INVALID_PARAM;
-    }
-    uint8_t *certPwd = certParam->pwd;
-    uint8_t *keyPwd = keyParam->pwd;
-    // Both certificate and key encryption passwords can be NULL simultaneously.
-    if (certPwd == NULL && keyPwd == NULL) {
-        return HITLS_X509_SUCCESS;
-    }
-    if (certPwd == NULL && keyPwd != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-        return HITLS_PKCS12_ERR_INVALID_PARAM;
-    }
-    if (certPwd != NULL && keyPwd == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-        return HITLS_PKCS12_ERR_INVALID_PARAM;
-    }
-    if (keyParam->pwdLen == certParam->pwdLen && memcmp(certPwd, keyPwd, certParam->pwdLen) == 0) {
-        return HITLS_X509_SUCCESS;
-    }
-    // Error if certificate and private key encryption passwords do not match.
-    BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-    return HITLS_PKCS12_ERR_INVALID_PARAM;
-}
-
 static int32_t EncodeP12Info(HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam, bool isNeedMac,
     BSL_Buffer *encode)
 {
-    int32_t ret = PwdUnityCheck(encodeParam, isNeedMac);
-    if (ret != HITLS_X509_SUCCESS) {
-        return ret;
-    }
+    int32_t ret;
     BSL_ASN1_List *list = BSL_LIST_New(sizeof(BSL_Buffer));
     if (list == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -1491,13 +1442,9 @@ static int32_t EncodeP12Info(HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *
 int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,
     bool isNeedMac, BSL_Buffer *encode)
 {
-    if (p12 == NULL || encodeParam == NULL || encode == NULL) {
+    if (p12 == NULL || encodeParam == NULL || encode == NULL || encode->data != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
-    if (encode->data != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-        return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
     switch (format) {
         case BSL_FORMAT_ASN1:
@@ -1524,9 +1471,6 @@ int32_t HITLS_PKCS12_GenFile(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS
     }
     ret = BSL_SAL_WriteFile(path, encode.data, encode.dataLen);
     BSL_SAL_Free(encode.data);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
     return ret;
 }
 
@@ -1798,9 +1742,9 @@ static int32_t PKCS12_AddCertBag(HITLS_PKCS12 *p12, void *val)
     return ret;
 }
 
-static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, void *val)
+static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12)
 {
-    if (val == NULL || p12->entityCert == NULL || p12->key == NULL) {
+    if (p12->entityCert == NULL || p12->key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
@@ -1808,33 +1752,21 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, void *val)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_PAIRED_CERT_AND_KEY);
         return HITLS_PKCS12_ERR_NO_PAIRED_CERT_AND_KEY;
     }
-    CRYPT_MD_AlgId algId = *(CRYPT_MD_AlgId *)val;
-    uint32_t mdSize = CRYPT_EAL_MdGetDigestSize(algId);
-    if (mdSize == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
-        return HITLS_PKCS12_ERR_INVALID_PARAM;
-    }
-    uint8_t *md = BSL_SAL_Malloc(mdSize);
-    if (md == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    int32_t ret = HITLS_X509_CertDigest(p12->entityCert->value.cert, algId, md, &mdSize);
+    uint8_t md[20] = {0}; // we choose sha1 to cal localKeyId, mdlen = 20.
+    uint32_t mdLen = 20; // sha1 md-len = 20.
+    int32_t ret = HITLS_X509_CertDigest(p12->entityCert->value.cert, CRYPT_MD_SHA1, md, &mdLen);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_Free(md);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BSL_Buffer buffer = {.data = md, .dataLen = mdSize};
+    BSL_Buffer buffer = {.data = md, .dataLen = mdLen};
     ret = HITLS_PKCS12_BagAddAttr(p12->key, BSL_CID_LOCALKEYID, &buffer);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_Free(md);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     ret = HITLS_PKCS12_BagAddAttr(p12->entityCert, BSL_CID_LOCALKEYID, &buffer);
-    BSL_SAL_Free(md);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         DeleteAttribute(p12->key, BSL_CID_LOCALKEYID);
@@ -1851,7 +1783,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
     }
     switch (cmd) {
         case HITLS_PKCS12_GEN_LOCALKEYID:
-            return PKCS12_SetLocalKeyId(p12, val);
+            return PKCS12_SetLocalKeyId(p12);
         case HITLS_PKCS12_SET_ENTITY_KEYBAG:
             return PKCS12_SetEntityKey(p12, val);
         case HITLS_PKCS12_SET_ENTITY_CERTBAG:
