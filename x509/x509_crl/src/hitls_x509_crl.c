@@ -124,9 +124,7 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     BSL_LIST_FREE(crl->tbs.revokedCerts, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlRevokedFree);
     X509_ExtFree(&crl->tbs.crlExt, false);
     BSL_SAL_ReferencesFree(&(crl->references));
-    if (crl->isCopy == true) {
-        BSL_SAL_FREE(crl->rawData);
-    }
+    BSL_SAL_FREE(crl->rawData);
     BSL_SAL_Free(crl);
     return;
 }
@@ -431,7 +429,7 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    (void)memset_s(asnBuf, count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER,0,
+    (void)memset_s(asnBuf, count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER, 0,
         count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
     HITLS_X509_CrlEntry *crlEntry = NULL;
     uint32_t iter = 0;
@@ -457,7 +455,7 @@ ERR:
         /**
          * The memory for the extension in CRLentry needs to be freed up.
          * The subscript 2 corresponds to the extension.
-         */ 
+         */
         BSL_SAL_Free(asnBuf[i * X509_CRLENTRY_ELEM_NUMBER + 2].buff);
     }
     BSL_SAL_Free(asnBuf);
@@ -646,7 +644,7 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
             return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
         }
     }
-     if (crl->tbs.signAlgId.algId == BSL_CID_UNKNOWN) {
+    if (crl->tbs.signAlgId.algId == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_SIGNALG);
         return HITLS_X509_ERR_INVALID_SIGNALG;
     }
@@ -736,7 +734,7 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
     return ret;
 }
 
-int32_t HITLS_X509_ParseAsn1Crl(bool isCopy, uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Crl *crl)
+int32_t HITLS_X509_ParseAsn1Crl(uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Crl *crl)
 {
     uint8_t *temp = *encode;
     uint32_t tempLen = *encodeLen;
@@ -744,7 +742,7 @@ int32_t HITLS_X509_ParseAsn1Crl(bool isCopy, uint8_t **encode, uint32_t *encodeL
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    crl->isCopy = isCopy;
+
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CRL_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_crlTempl, sizeof(g_crlTempl) / sizeof(g_crlTempl[0])};
@@ -1143,7 +1141,7 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
         return X509_CrlSetCtrl(crl, cmd, val, valLen);
     } else if (cmd <= HITLS_X509_EXT_CHECK_SKI) {
-        int32_t cmdSet[] = {HITLS_X509_EXT_SET_CRLNUMBER, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_GET_CRLNUMBER,
+        static int32_t cmdSet[] = {HITLS_X509_EXT_SET_CRLNUMBER, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_GET_CRLNUMBER,
             HITLS_X509_EXT_GET_AKI};
         if (!X509_CheckCmdVaild(cmdSet, sizeof(cmdSet) / sizeof(int32_t), cmd)) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_SUPPORT);
@@ -1253,10 +1251,10 @@ static int32_t X509_CrlGetRevokedRevokeTime(HITLS_X509_CrlEntry *entry, void *va
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_CrlSetRevokedExt(HITLS_X509_CrlEntry *entry, BslCid cid, BSL_Buffer *buff, uint32_t excpetLen,
+static int32_t X509_CrlSetRevokedExt(HITLS_X509_CrlEntry *entry, BslCid cid, BSL_Buffer *buff, uint32_t exceptLen,
     EncodeExtCb encodeExt)
 {
-    if (buff->dataLen != excpetLen) {
+    if (buff->dataLen != exceptLen) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -1391,7 +1389,7 @@ static int32_t DecodeExtCertIssuer(HITLS_X509_ExtEntry *extEntry, BslList **val)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_AKI);
         return HITLS_X509_ERR_PARSE_AKI;
     }
-    int32_t ret = HITLS_X509_ParseGeneralNames(extEntry->extnValue.buff, extEntry->extnValue.len, list); 
+    int32_t ret = HITLS_X509_ParseGeneralNames(extEntry->extnValue.buff, extEntry->extnValue.len, list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_Free(list);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1464,7 +1462,7 @@ int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, voi
     }
 }
 
-int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam, 
+int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Crl *crl)
 {
     CRYPT_EAL_PkeyCtx *signKey = pivKey;

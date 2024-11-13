@@ -467,7 +467,8 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
     uint32_t version = 1;
 
     // 测试空指针参数
-    ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, HITLS_X509_SET_VERSION, &version, sizeof(version)),
+        HITLS_X509_ERR_INVALID_PARAM);
 
     // 创建 CRL 对象用于后续测试
     crl = HITLS_X509_CrlNew();
@@ -487,10 +488,12 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_ERR_INVALID_PARAM);
 
     // 测试时间参数长度错误
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(time) - 1), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(time) - 1),
+        HITLS_X509_ERR_INVALID_PARAM);
 
     // 测试颁发者参数长度错误
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuer, sizeof(BSL_ASN1_List) - 1), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuer, sizeof(BSL_ASN1_List) - 1),
+        HITLS_X509_ERR_INVALID_PARAM);
 
     // 测试获取命令的空缓冲区
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, NULL, sizeof(version)), HITLS_X509_ERR_INVALID_PARAM);
@@ -535,44 +538,44 @@ void SDV_X509_CRL_CTRL_RevokedParamCheck_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, 0xFFFF, &time, sizeof(time)), HITLS_X509_ERR_INVALID_PARAM);
 
     // Test HITLS_X509_CrlRevokedCtrl with NULL entry
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(NULL, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(time)), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(NULL, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test HITLS_X509_CrlRevokedCtrl with NULL value pointer
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, NULL, sizeof(time)), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, NULL, sizeof(time)),
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test HITLS_X509_CrlRevokedCtrl with invalid value length
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, 0), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, 0),
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test setting/getting revoke time
     ASSERT_EQ(BSL_SAL_SysTimeGet(&time), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &time, sizeof(time)), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
         HITLS_X509_SUCCESS);
-    
+
     BSL_TIME getTime = {0};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &getTime, sizeof(getTime)), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &getTime, sizeof(getTime)),
         HITLS_X509_SUCCESS);
     ASSERT_EQ(memcmp(&time, &getTime, sizeof(BSL_TIME)), 0);
 
     // Test setting/getting reason
     HITLS_X509_RevokeExtReason reasonExt = {false, 1};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reasonExt, sizeof(HITLS_X509_RevokeExtReason)), 
-        HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reasonExt,
+        sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
 
     int32_t getReason = 0;
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, &getReason, sizeof(getReason)), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, &getReason, sizeof(getReason)),
         HITLS_X509_SUCCESS);
     ASSERT_EQ(reasonExt.reason, getReason);
 
     // Test setting/getting serial number
     uint8_t serial[] = {0x01, 0x02, 0x03, 0x04};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serial, 4), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serial, 4),
         HITLS_X509_SUCCESS);
 
     BSL_Buffer getSerial = {0};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &getSerial, sizeof(getSerial)), 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &getSerial, sizeof(getSerial)),
         HITLS_X509_SUCCESS);
     ASSERT_EQ(4, getSerial.dataLen);
     ASSERT_EQ(memcmp(serial, getSerial.data, getSerial.dataLen), 0);
@@ -605,15 +608,18 @@ void SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001(char *parh, int revokedNum)
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_X509_SUCCESS);
     ASSERT_NE(revokeList, NULL);
     ASSERT_EQ(BSL_LIST_COUNT(revokeList), revokedNum);
-    for (entry = (HITLS_X509_CrlEntry *)BSL_LIST_GET_FIRST(revokeList); entry != NULL; entry = (HITLS_X509_CrlEntry *)BSL_LIST_GET_NEXT(revokeList)) {
+    for (entry = (HITLS_X509_CrlEntry *)BSL_LIST_GET_FIRST(revokeList); entry != NULL; entry =
+        (HITLS_X509_CrlEntry *)BSL_LIST_GET_NEXT(revokeList)) {
         // 验证吊销时间
         ASSERT_TRUE(entry->serialNumber.buff != NULL);
-        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &serialNum, sizeof(BSL_Buffer)), HITLS_X509_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &serialNum,
+            sizeof(BSL_Buffer)), HITLS_X509_SUCCESS);
         ASSERT_TRUE(serialNum.dataLen > 0 && serialNum.dataLen <= 20);
         ASSERT_NE(serialNum.data, NULL);
-        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(BSL_TIME)),
+            HITLS_X509_SUCCESS);
         ASSERT_NE(time.year, 0);
-        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, 
+        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON,
                                         &reason, sizeof(int32_t)), HITLS_X509_SUCCESS);
         ASSERT_TRUE(reason >= 0 && reason <= 11);
         reason = 0;
@@ -637,7 +643,8 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     BslList *revokeList = NULL;
 
     // 解析测试用 CRL 文件
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, "../testdata/cert/pem/crl/crl_v2.mul3.crl", &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, "../testdata/cert/pem/crl/crl_v2.mul3.crl", &crl),
+        HITLS_X509_SUCCESS);
     ASSERT_NE(crl, NULL);
 
     // 测试获取版本号
@@ -686,10 +693,11 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
 
     // 测试设置 CRL Number
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
-              HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
+        HITLS_X509_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumExt = {0};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)),
+        HITLS_X509_SUCCESS);
     ASSERT_EQ(crlNumExt.critical, crlNumberExt.critical);
     ASSERT_EQ(crlNumExt.crlNumber.dataLen, crlNumberExt.crlNumber.dataLen);
     ASSERT_EQ(memcmp(crlNumExt.crlNumber.data, crlNumberExt.crlNumber.data, crlNumberExt.crlNumber.dataLen), 0);
@@ -721,7 +729,8 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     uint32_t version = 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
     BslList *issuerDN = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)),
+        HITLS_X509_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
@@ -734,10 +743,11 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     HITLS_X509_ExtSki ski = {0};
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
     ASSERT_TRUE(ski.kid.data != NULL);
-    HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, cert->tbs.issuerName, {cert->tbs.serialNum.buff, cert->tbs.serialNum.len}};
+    HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, cert->tbs.issuerName,
+        {cert->tbs.serialNum.buff, cert->tbs.serialNum.len}};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
               HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_CertFree(cert);
@@ -751,11 +761,11 @@ void SDV_X509_CRL_Sign_ParamCheck_TC001(void)
     HITLS_X509_Crl *crl = NULL;
     CRYPT_EAL_PkeyCtx *pivKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
-    
+
     // 创建基本的 CRL 对象
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
-    
+
     // 测试空参数
     ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, NULL, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, NULL), HITLS_X509_ERR_INVALID_PARAM);
@@ -777,13 +787,14 @@ void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
     CRYPT_EAL_PkeyCtx *pivKey = NULL;
-    
+
     // 创建基本的 CRL 对象
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
 
    // 读取私钥文件用于签名
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
 
     // 测试RSA-PSS参数缺失
     algParam.algId = BSL_CID_RSASSAPSS;
@@ -817,33 +828,35 @@ void SDV_X509_CRL_Sign_CrlFieldCheck_TC001(void)
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der", &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der", &cert),
+        HITLS_X509_SUCCESS);
 
     // 创建基本的 CRL 对象
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
     BslList *issueList = crl->tbs.issuerName;
     // 测试未设置必要字段的CRL
-    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), 
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
         HITLS_X509_ERR_CRL_ISSUER_EMPTY);
 
     // 设置无效版本号
     crl->tbs.version = 2;
-    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), 
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
         HITLS_X509_ERR_CRL_INACCURACY_VERSION);
     crl->tbs.version = 1;
     crl->tbs.issuerName = cert->tbs.subjectName;
-    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), 
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
         HITLS_X509_ERR_CRL_THISUPDATE_UNEXIST);
     // 设置无效的时间
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
-    
+
     afterTime = beforeTime;
     afterTime.year -= 1;  // 设置为过去时间
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), 
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl),
         HITLS_X509_ERR_CRL_TIME_INVALID);
 
     // 设置有效的时间但缺少颁发者
@@ -872,20 +885,22 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
     serialNum[3] = ser;
     HITLS_X509_CrlEntry *entry = HITLS_X509_CrlRevokedNew();
     ASSERT_NE(entry, NULL);
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM,
         serialNum, sizeof(serialNum)), HITLS_X509_SUCCESS);
-        
+
     BSL_TIME revokeTime = {0};
     ASSERT_EQ(BSL_SAL_SysTimeGet(&revokeTime), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)),
+        HITLS_X509_SUCCESS);
     HITLS_X509_RevokeExtReason reason = {0, 1};  // keyCompromise
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason, sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason,
+        sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
 
     // Set invalid time (optional)
     BSL_TIME invalidTime = revokeTime;
     invalidTime.day -= 1;  // Set invalid time to 1 day before revocation
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME, 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
             &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_X509_SUCCESS);
 
     // Set certificate issuer (optional, only needed for indirect CRLs)
@@ -893,10 +908,11 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
         false,  // non-critical
         issuerDN  // Use the same DN as CRL issuer for this test
     };
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER, 
+    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
         &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), HITLS_X509_SUCCESS);
-        
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, sizeof(HITLS_X509_CrlEntry)), HITLS_X509_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, sizeof(HITLS_X509_CrlEntry)),
+        HITLS_X509_SUCCESS);
     HITLS_X509_CrlRevokedFree(entry);
     return HITLS_X509_SUCCESS;
 exit:
@@ -913,9 +929,11 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     HITLS_X509_CrlEntry *entry = NULL;
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der", &cert), HITLS_X509_SUCCESS);
-    
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der", &cert),
+        HITLS_X509_SUCCESS);
+
     // 创建基本的 CRL 对象并设置必要字段
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
@@ -955,25 +973,25 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
     BslList *issuerDN = NULL;
-    uint8_t crlNumber[1] = {0x01}; 
+    uint8_t crlNumber[1] = {0x01};
     // Set CRL version (v2)
     uint32_t version = 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
 
     // Set issuer DN from certificate
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME, &issuerDN, sizeof(BslList *)), 
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME, &issuerDN, sizeof(BslList *)),
         HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)),
         HITLS_X509_SUCCESS);
 
     // Set validity period
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), 
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)),
         HITLS_X509_SUCCESS);
-    
+
     afterTime = beforeTime;
     afterTime.year += 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), 
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
         HITLS_X509_SUCCESS);
     for (int i = 0; i < 3; i++) {
         ASSERT_EQ(SetCrlRevoked(crl, issuerDN, i), HITLS_X509_SUCCESS);
@@ -984,7 +1002,7 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
         if (ret == HITLS_X509_SUCCESS) {
             HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, NULL, {NULL, 0}};
             // Set SKI extension
-            ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 
+            ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)),
                 HITLS_X509_SUCCESS);
         }
 
@@ -993,7 +1011,7 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
             false,  // non-critical
             {crlNumber, sizeof(crlNumber)}
         };
-        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, 
+        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt,
             sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
     }
     return HITLS_X509_SUCCESS;
@@ -1003,7 +1021,8 @@ exit:
 
 
 /* BEGIN_CASE */
-void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2, char *tmp)
+void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2,
+    char *tmp)
 {
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_Crl *parseCrl = NULL;

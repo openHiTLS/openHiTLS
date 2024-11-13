@@ -57,9 +57,9 @@ extern "C" {
 #define BSL_TIME_BEFORE_IS_UTC      0x04
 #define BSL_TIME_AFTER_IS_UTC       0x08
 
-/* Identifies the current ext as a generated state */
-#define HITLS_X509_EXT_FLAG_PARSE (1 << 0)
 /* Identifies the current ext as a parsed state */
+#define HITLS_X509_EXT_FLAG_PARSE (1 << 0)
+/* Identifies the current ext as a generated state */
 #define HITLS_X509_EXT_FLAG_GEN (1 << 1)
 
 /* Identifies the keyusage extension in the current structure */
@@ -96,10 +96,9 @@ typedef struct _HITLS_X509_CertExt {
 } HITLS_X509_CertExt;
 
 typedef enum {
-    HITLS_X509_EXT_TYPE_CERT,
-    HITLS_X509_EXT_TYPE_CSR,
+    HITLS_X509_EXT_TYPE_CERT = 1,
     HITLS_X509_EXT_TYPE_CRL,
-} HITLS_X509_ExtType;
+} HITLS_X509_ExtInnerType;
 
 typedef struct _HITLS_X509_Ext {
     uint32_t flag; // Identifies the status of the current ext, generate or parse
@@ -127,7 +126,7 @@ typedef struct _HITLS_X509_Asn1AlgId {
     };
 } HITLS_X509_Asn1AlgId;
 
-typedef int32_t (*HITLS_X509_Asn1Parse)(bool isCopy, uint8_t **encode, uint32_t *encodeLen, void *out);
+typedef int32_t (*HITLS_X509_Asn1Parse)(uint8_t **encode, uint32_t *encodeLen, void *out);
 typedef void *(*HITLS_X509_New)(void);
 typedef void (*HITLS_X509_Free)(void *elem);
 
@@ -162,8 +161,6 @@ void HITLS_X509_ClearGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
 
-void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
-
 int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtSki *ski);
 
 int32_t HITLS_X509_ParseExtendedKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtExKeyUsage *exku);
@@ -174,7 +171,7 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry,  HITLS_X50
 
 void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san);
 
-HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, HITLS_X509_ExtType type);
+HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type);
 
 void X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut);
 

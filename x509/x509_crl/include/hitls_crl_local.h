@@ -31,7 +31,7 @@ extern "C" {
 
 #define BSL_TIME_REVOKE_TIME_IS_GMT  0x4
 
-typedef struct _HITLS_X509_CrlEntry{
+typedef struct _HITLS_X509_CrlEntry {
     uint8_t flag;
     BSL_ASN1_Buffer serialNumber;
     BSL_TIME time;
@@ -53,8 +53,7 @@ typedef struct {
 } HITLS_X509_CrlTbs;
 
 typedef struct _HITLS_X509_Crl {
-    uint8_t flag; 
-    bool isCopy;
+    uint8_t flag;
     uint8_t *rawData;
     uint32_t rawDataLen;
     HITLS_X509_CrlTbs tbs;
