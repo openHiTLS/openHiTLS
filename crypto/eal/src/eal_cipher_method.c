@@ -317,7 +317,7 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
 #ifdef HITLS_CRYPTO_SM4
     {.id = CRYPT_CIPHER_SM4_XTS, .blockSize = 1, .keyLen = 32, .ivLen = 16},
     {.id = CRYPT_CIPHER_SM4_CBC, .blockSize = 16, .keyLen = 16, .ivLen = 16},
-    {.id = CRYPT_CIPHER_SM4_ECB, .blockSize = 16, .keyLen = 16, .ivLen = 16},
+    {.id = CRYPT_CIPHER_SM4_ECB, .blockSize = 16, .keyLen = 16, .ivLen = 0},
     {.id = CRYPT_CIPHER_SM4_CTR, .blockSize = 1, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_SM4_GCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
     {.id = CRYPT_CIPHER_SM4_CFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},

@@ -28,11 +28,11 @@
  *
  * https://datatracker.ietf.org/doc/html/rfc5652#page-7
  */
-int32_t CRYPT_EAL_ParseAsn1PKCS7Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
+int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
 {
     if (encode == NULL || dataValue == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
     }
     uint8_t *temp = encode->data;
     uint32_t tempLen = encode->dataLen;
@@ -49,13 +49,12 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
     }
     data = BSL_SAL_Dump(temp, decodeLen);
     if (data == NULL) {
-        ret = BSL_MALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
     }
     dataValue->data = data;
     dataValue->dataLen = decodeLen;
-    return CRYPT_SUCCESS;
+    return HITLS_X509_SUCCESS;
 }
 
 /**
@@ -83,11 +82,11 @@ typedef enum {
     HITLS_P7_DIGESTINFO_MAX_IDX,
 } HITLS_P7_DIGESTINFO_IDX;
 
-int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest)
+int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest)
 {
     if (encode == NULL || digest == NULL || cid == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
     }
     uint8_t *temp = encode->data;
     uint32_t  tempLen = encode->dataLen;
@@ -102,36 +101,36 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_
         (char *)asn1[HITLS_P7_DIGESTINFO_OID_IDX].buff, 0};
     BslCid parseCid = BSL_OBJ_GetCIDFromOid(&oidStr);
     if (parseCid == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
-        return CRYPT_DECODE_UNKNOWN_OID;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
+        return HITLS_CMS_ERR_PARSE_TYPE;
     }
     if (asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
         return HITLS_CMS_ERR_INVALID_DATA;
     }
     uint8_t *output = BSL_SAL_Dump(asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].buff,
-            asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len);
+        asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len);
     if (output == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
     }
     digest->data = output;
     digest->dataLen = asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len;
     *cid = parseCid;
-    return CRYPT_SUCCESS;
+    return HITLS_X509_SUCCESS;
 }
 
-int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
+int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
 {
     if (in == NULL || encode == NULL || (in->data == NULL && in->dataLen != 0)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
+        return HITLS_CMS_ERR_NULL_POINTER;
     }
     int32_t ret = CRYPT_SUCCESS;
     BslOidString *oidstr = BSL_OBJ_GetOidFromCID(cid);
     if (oidstr == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
-        return CRYPT_ERR_ALGID;
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+        return HITLS_CMS_ERR_INVALID_ALGO;
     }
     BSL_ASN1_Buffer asn1[HITLS_P7_DIGESTINFO_MAX_IDX] = {
         {BSL_ASN1_TAG_OBJECT_ID, oidstr->octetLen, (uint8_t *)oidstr->octs},
@@ -147,5 +146,5 @@ int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buff
     }
     encode->data = tmp.data;
     encode->dataLen = tmp.dataLen;
-    return CRYPT_SUCCESS;
+    return HITLS_X509_SUCCESS;
 }
