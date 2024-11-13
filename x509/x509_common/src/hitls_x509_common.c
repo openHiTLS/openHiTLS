@@ -752,10 +752,12 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
         return HITLS_X509_SUCCESS;
     }
     if (ski.kid.dataLen != aki.kid.dataLen || memcmp(ski.kid.data, aki.kid.data, ski.kid.dataLen) != 0) {
+        HITLS_X509_ClearAuthorityKeyId(&aki);
         return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
     }
     if (aki.issuerName != NULL) {
         ret = HITLS_X509_CmpNameNode(aki.issuerName, subName);
+        HITLS_X509_ClearAuthorityKeyId(&aki);
         if (ret != 0) {
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }

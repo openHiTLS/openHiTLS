@@ -549,11 +549,13 @@ void SDV_X509_EXT_SetAkiSki_TC001(Hex *kid)
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_AKI, &aki, 0), HITLS_X509_ERR_INVALID_PARAM);
 
     aki.kid.dataLen = 0;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_ERR_EXT_KID);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)),
+        HITLS_X509_ERR_EXT_KID);
     aki.kid.dataLen = kid->len;
 
     ski.kid.dataLen = 0;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_ERR_EXT_KID);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)),
+        HITLS_X509_ERR_EXT_KID);
     ski.kid.dataLen = kid->len;
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 0);
@@ -666,10 +668,12 @@ void SDV_X509_EXT_SetSan_TC001(void)
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, 0), HITLS_X509_ERR_INVALID_PARAM);
 
     // error: list is null
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), HITLS_X509_ERR_EXT_SAN);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)),
+        HITLS_X509_ERR_EXT_SAN);
     // error: list is empty
     san.names = list;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), HITLS_X509_ERR_EXT_SAN);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)),
+        HITLS_X509_ERR_EXT_SAN);
     // error: list data content is null
     HITLS_X509_GeneralName empty = {0};
     ASSERT_EQ(BSL_LIST_AddElement(list, &empty, BSL_LIST_POS_END), 0);

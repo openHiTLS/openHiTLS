@@ -162,8 +162,6 @@ void HITLS_X509_ClearGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
 
-void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
-
 int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtSki *ski);
 
 int32_t HITLS_X509_ParseExtendedKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtExKeyUsage *exku);
