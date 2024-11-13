@@ -148,7 +148,7 @@ int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HITLS_PKCS12_MacData *macD
 /*
  * Encode MacData of a p12.
 */
-int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_HmacParam *macParam,
+int32_t HITLS_PKCS12_EncodeMacData(BSL_Buffer *initData, const HITLS_PKCS12_MacParam *macParam,
     HITLS_PKCS12_MacData *p12Mac, BSL_Buffer *encode);
 
 /*

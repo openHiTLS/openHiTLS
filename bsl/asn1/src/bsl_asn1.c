@@ -28,7 +28,7 @@
 
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
-    if (encode == NULL || encLen == NULL || len == NULL) {
+    if (encode == NULL || *encode == NULL || encLen == NULL || len == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
@@ -96,7 +96,7 @@ int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen)
 
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen)
 {
-    if (encode == NULL || encLen == NULL || valLen == NULL) {
+    if (encode == NULL || *encode == NULL || encLen == NULL || valLen == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
@@ -126,7 +126,7 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
 
 int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem)
 {
-    if (encode == NULL || encLen == NULL || asnItem == NULL) {
+    if (encode == NULL || *encode == NULL || encLen == NULL || asnItem == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t tag;
