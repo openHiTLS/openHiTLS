@@ -457,7 +457,7 @@ ERR:
         /**
          * The memory for the extension in CRLentry needs to be freed up.
          * The subscript 2 corresponds to the extension.
-         */ 
+         */
         BSL_SAL_Free(asnBuf[i * X509_CRLENTRY_ELEM_NUMBER + 2].buff);
     }
     BSL_SAL_Free(asnBuf);
@@ -646,7 +646,7 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
             return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
         }
     }
-     if (crl->tbs.signAlgId.algId == BSL_CID_UNKNOWN) {
+    if (crl->tbs.signAlgId.algId == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_SIGNALG);
         return HITLS_X509_ERR_INVALID_SIGNALG;
     }
@@ -1391,7 +1391,7 @@ static int32_t DecodeExtCertIssuer(HITLS_X509_ExtEntry *extEntry, BslList **val)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_AKI);
         return HITLS_X509_ERR_PARSE_AKI;
     }
-    int32_t ret = HITLS_X509_ParseGeneralNames(extEntry->extnValue.buff, extEntry->extnValue.len, list); 
+    int32_t ret = HITLS_X509_ParseGeneralNames(extEntry->extnValue.buff, extEntry->extnValue.len, list);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_Free(list);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1464,7 +1464,7 @@ int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, voi
     }
 }
 
-int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam, 
+int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Crl *crl)
 {
     CRYPT_EAL_PkeyCtx *signKey = pivKey;

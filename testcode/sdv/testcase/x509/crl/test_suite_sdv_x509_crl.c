@@ -686,8 +686,8 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
 
     // 测试设置 CRL Number
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 
-              HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
+        HITLS_X509_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumExt = {0};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
     ASSERT_EQ(crlNumExt.critical, crlNumberExt.critical);
