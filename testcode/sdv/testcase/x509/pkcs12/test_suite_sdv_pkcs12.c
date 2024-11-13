@@ -844,7 +844,7 @@ void SDV_PKCS12_ENCODE_MACDATA_TC001(Hex *buff, Hex *initData, Hex *expectData)
 
     hmacParam.itCnt = 999;
     ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, &macParam, macData, &output);
-    ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_iteration);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_ITERATION);
 
     hmacParam.itCnt = 1024;
     hmacParam.saltLen = 0;
