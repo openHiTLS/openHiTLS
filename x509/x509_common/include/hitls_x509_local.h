@@ -57,9 +57,9 @@ extern "C" {
 #define BSL_TIME_BEFORE_IS_UTC      0x04
 #define BSL_TIME_AFTER_IS_UTC       0x08
 
-/* Identifies the current ext as a generated state */
-#define HITLS_X509_EXT_FLAG_PARSE (1 << 0)
 /* Identifies the current ext as a parsed state */
+#define HITLS_X509_EXT_FLAG_PARSE (1 << 0)
+/* Identifies the current ext as a generated state */
 #define HITLS_X509_EXT_FLAG_GEN (1 << 1)
 
 /* Identifies the keyusage extension in the current structure */
@@ -127,7 +127,7 @@ typedef struct _HITLS_X509_Asn1AlgId {
     };
 } HITLS_X509_Asn1AlgId;
 
-typedef int32_t (*HITLS_X509_Asn1Parse)(bool isCopy, uint8_t **encode, uint32_t *encodeLen, void *out);
+typedef int32_t (*HITLS_X509_Asn1Parse)(uint8_t **encode, uint32_t *encodeLen, void *out);
 typedef void *(*HITLS_X509_New)(void);
 typedef void (*HITLS_X509_Free)(void *elem);
 
@@ -161,8 +161,6 @@ void HITLS_X509_FreeGeneralNames(BslList *names);
 void HITLS_X509_ClearGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
-
-void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
 
 int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtSki *ski);
 

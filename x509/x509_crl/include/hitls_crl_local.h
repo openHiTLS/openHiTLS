@@ -54,7 +54,6 @@ typedef struct {
 
 typedef struct _HITLS_X509_Crl {
     uint8_t flag; 
-    bool isCopy;
     uint8_t *rawData;
     uint32_t rawDataLen;
     HITLS_X509_CrlTbs tbs;

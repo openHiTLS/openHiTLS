@@ -243,7 +243,7 @@ typedef enum {
 } HITLS_X509_RevokeCmd;
 
 typedef enum {
-    HITLS_X509_REVOKED_REASON_UNSPECIFIED = 0,         /** CRLReason: Unspecified. */   
+    HITLS_X509_REVOKED_REASON_UNSPECIFIED = 0,         /** CRLReason: Unspecified. */
     HITLS_X509_REVOKED_REASON_KEY_COMPROMISE,          /** CRLReason: Key compromise. */
     HITLS_X509_REVOKED_REASON_CA_COMPROMISE,           /** CRLReason: CA compromise. */
     HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED,     /** CRLReason: Affiliation changed. */
@@ -354,6 +354,16 @@ HITLS_X509_Ext *HITLS_X509_ExtNew(int32_t type);
  * @param ext [IN] The extension.
  */
 void HITLS_X509_ExtFree(HITLS_X509_Ext *ext);
+
+/**
+ * @ingroup x509
+ * @brief clear the HITLS_X509_ExtAki structure.
+ * @par Description: This interface needs to be called to clean up memory when obtaining AKI extensions from
+ *  certificates, CRLs, or CSRs using the macro HITLS_X509_EXT_GET_AKI.
+ *
+ * @param aki [IN] The HITLS_X509_ExtAki aki
+ */
+void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
 
 /**
  * @ingroup x509
@@ -590,7 +600,7 @@ int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS
 /** 
  * @ingroup x509 crl
  * @brief Allocate a revoked certificate.
- * 
+ *
  * @attention None
  * @return HITLS_X509_CrlEntry *
  */

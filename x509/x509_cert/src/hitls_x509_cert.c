@@ -290,13 +290,12 @@ ERR:
     return ret;
 }
 
-int32_t HITLS_X509_ParseAsn1Cert(bool isCopy, uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Cert *cert)
+int32_t HITLS_X509_ParseAsn1Cert(uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Cert *cert)
 {
     uint8_t *temp = *encode;
     uint32_t tempLen = *encodeLen;
-    if (isCopy) {
-        cert->flag = HITLS_X509_CERT_PARSE_FLAG;
-    }
+    cert->flag = HITLS_X509_CERT_PARSE_FLAG;
+
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CERT_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_certTempl, sizeof(g_certTempl) / sizeof(g_certTempl[0])};
@@ -830,7 +829,7 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
     } else if (cmd >= HITLS_X509_EXT_KU_KEYENC && cmd < HITLS_X509_EXT_SET_SKI) {
         return X509_CertExtCtrl(cert, cmd, val, valLen);
     } else if (cmd <= HITLS_X509_EXT_CHECK_SKI) {
-        int32_t cmdSet[] = {HITLS_X509_EXT_SET_SKI, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_SET_KUSAGE,
+        static int32_t cmdSet[] = {HITLS_X509_EXT_SET_SKI, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_SET_KUSAGE,
             HITLS_X509_EXT_SET_SAN, HITLS_X509_EXT_SET_BCONS, HITLS_X509_EXT_SET_EXKUSAGE, HITLS_X509_EXT_GET_SKI,
             HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_CHECK_SKI, HITLS_X509_EXT_KU_KEYENC, HITLS_X509_EXT_KU_DIGITALSIGN,
             HITLS_X509_EXT_KU_CERTSIGN, HITLS_X509_EXT_KU_KEYAGREEMENT};

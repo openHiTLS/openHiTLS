@@ -326,14 +326,14 @@ static void X509_GetPemSymbol(bool isCert, BSL_PEM_Symbol *symbol)
     }
 }
 
-static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, bool isCopy, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
 {
     void *res = parsefun->x509New();
     if (res == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = parsefun->asn1Parse(isCopy, &(asn1Buf->data), &(asn1Buf->dataLen), res);
+    int32_t ret = parsefun->asn1Parse(&(asn1Buf->data), &(asn1Buf->dataLen), res);
     if (ret != HITLS_X509_SUCCESS) {
         parsefun->x509Free(res);
         BSL_ERR_PUSH_ERROR(ret);
@@ -348,7 +348,7 @@ static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, bool isCopy, X509_ParseF
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, bool isCopy, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
@@ -359,13 +359,11 @@ int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, bool isCopy, X509_ParseFuncCbk 
             return ret;
         }
         BSL_Buffer asn1Buf = {data, elemLen};
-        if (isCopy) {
-            asn1Buf.data = BSL_SAL_Dump(data, elemLen);
-            if (asn1Buf.data == NULL) {
-                return BSL_DUMP_FAIL;
-            }
+        asn1Buf.data = BSL_SAL_Dump(data, elemLen);
+        if (asn1Buf.data == NULL) {
+            return BSL_DUMP_FAIL;
         }
-        ret = X509_ParseAndAddRes(&asn1Buf, isCopy, parsefun, list);
+        ret = X509_ParseAndAddRes(&asn1Buf, parsefun, list);
         if (ret != HITLS_X509_SUCCESS) {
             BSL_SAL_Free(asn1Buf.data);
             return ret;
@@ -389,7 +387,7 @@ int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *
         if (ret != HITLS_X509_SUCCESS) {
             break;
         }
-        ret = X509_ParseAndAddRes(&asn1Buf, true, parsefun, list);
+        ret = X509_ParseAndAddRes(&asn1Buf, parsefun, list);
         if (ret != HITLS_X509_SUCCESS) {
             BSL_SAL_Free(asn1Buf.data);
             return ret;
@@ -402,14 +400,14 @@ int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCopy, bool isCert, X509_ParseFuncCbk *parsefun,
+int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
     HITLS_X509_List *list)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
     if (isPem) {
         return HITLS_X509_ParsePem(encode, isCert, parsefun, list);
     } else {
-        return HITLS_X509_ParseAsn1(encode, isCopy, parsefun, list);
+        return HITLS_X509_ParseAsn1(encode, parsefun, list);
     }
 }
 
@@ -419,13 +417,13 @@ int32_t HITLS_X509_ParseX509(int32_t format, BSL_Buffer *encode, bool isCert, X5
     int32_t ret;
     switch (format) {
         case BSL_FORMAT_ASN1:
-            ret = HITLS_X509_ParseAsn1(encode, true, parsefun, list);
+            ret = HITLS_X509_ParseAsn1(encode, parsefun, list);
             break;
         case BSL_FORMAT_PEM:
             ret = HITLS_X509_ParsePem(encode, isCert, parsefun, list);
             break;
         case BSL_FORMAT_UNKNOWN:
-            ret = HITLS_X509_ParseUnknown(encode, true, isCert, parsefun, list);
+            ret = HITLS_X509_ParseUnknown(encode, isCert, parsefun, list);
             break;
         default:
             ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
@@ -752,10 +750,12 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
         return HITLS_X509_SUCCESS;
     }
     if (ski.kid.dataLen != aki.kid.dataLen || memcmp(ski.kid.data, aki.kid.data, ski.kid.dataLen) != 0) {
+        HITLS_X509_ClearAuthorityKeyId(&aki);
         return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
     }
     if (aki.issuerName != NULL) {
         ret = HITLS_X509_CmpNameNode(aki.issuerName, subName);
+        HITLS_X509_ClearAuthorityKeyId(&aki);
         if (ret != 0) {
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }
