@@ -294,7 +294,7 @@ void SDV_PKCS12_PARSE_MACDATA_TC002(Hex *buff)
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
     ret = HITLS_PKCS12_ParseMacData((BSL_Buffer *)buff, macData);
-    ASSERT_EQ(ret, CRYPT_DECODE_UNKNOWN_OID);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_PARSE_TYPE);
 exit:
     HITLS_PKCS12_MacDataFree(macData);
     return;
@@ -844,7 +844,7 @@ void SDV_PKCS12_ENCODE_MACDATA_TC001(Hex *buff, Hex *initData, Hex *expectData)
 
     hmacParam.itCnt = 999;
     ret = HITLS_PKCS12_EncodeMacData((BSL_Buffer *)initData, &macParam, macData, &output);
-    ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_iteration);
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_ITERATION);
 
     hmacParam.itCnt = 1024;
     hmacParam.saltLen = 0;

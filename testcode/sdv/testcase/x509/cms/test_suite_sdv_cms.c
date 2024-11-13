@@ -34,14 +34,14 @@
  * For test parse p7-encryptData of wrong conditions.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
+void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
 {
     BSL_Buffer output = {0};
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
 
     int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     BSL_SAL_Free(output.data);
     output.data = NULL;
 
@@ -77,13 +77,13 @@ exit:
  * For test parse p7-encryptData of right conditions.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_PARSE_ENCRYPTEDDATA_TC002(Hex *buff)
+void SDV_CMS_PARSE_ENCRYPTEDDATA_TC002(Hex *buff)
 {
     BSL_Buffer output = {0};
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
     int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 exit:
     BSL_SAL_Free(output.data);
     return;
@@ -94,18 +94,18 @@ exit:
  * For test parse p7-DigestInfo of wrong conditions.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_PARSE_DIGESTINFO_TC001(Hex *buff, int alg, Hex *digest)
+void SDV_CMS_PARSE_DIGESTINFO_TC001(Hex *buff, int alg, Hex *digest)
 {
     BSL_Buffer output = {0};
     BslCid cid = BSL_CID_UNKNOWN;
-    int32_t ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(NULL, &cid, &output);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    int32_t ret = HITLS_CMS_ParseDigestInfo(NULL, &cid, &output);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_NULL_POINTER);
 
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo((BSL_Buffer *)buff, &cid, NULL);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    ret = HITLS_CMS_ParseDigestInfo((BSL_Buffer *)buff, &cid, NULL);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_NULL_POINTER);
 
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo((BSL_Buffer *)buff, &cid, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = HITLS_CMS_ParseDigestInfo((BSL_Buffer *)buff, &cid, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ASSERT_EQ(alg, cid);
     ASSERT_EQ(memcmp(output.data, digest->x, digest->len), 0);
@@ -119,12 +119,12 @@ exit:
  * For test parse p7-DigestInfo of right conditions.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_PARSE_DIGESTINFO_TC002(Hex *buff, int alg, Hex *digest)
+void SDV_CMS_PARSE_DIGESTINFO_TC002(Hex *buff, int alg, Hex *digest)
 {
     BSL_Buffer output = {0};
     BslCid cid = BSL_CID_UNKNOWN;
-    int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7DigestInfo((BSL_Buffer *)buff, &cid, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    int32_t ret =  HITLS_CMS_ParseDigestInfo((BSL_Buffer *)buff, &cid, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(alg, cid);
     ASSERT_EQ(memcmp(output.data, digest->x, digest->len), 0);
 exit:
@@ -137,7 +137,7 @@ exit:
  * For test encode p7-encryptData.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
+void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
 {
     BSL_Buffer data = {buff->x, buff->len};
     BSL_Buffer output = {0};
@@ -154,7 +154,7 @@ void SDV_PKCS7_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
     
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0), HITLS_X509_SUCCESS);
     int32_t ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
     ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, NULL, NULL);
@@ -168,9 +168,9 @@ void SDV_PKCS7_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     BSL_Buffer verify = {0};
     ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, &paramEx, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&output, (const uint8_t *)pwd, pwdlen, &verify);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_COMPARE("encode p7-encryptData", data.data, data.dataLen, verify.data, verify.dataLen);
 exit:
     CRYPT_EAL_RandDeinit();
@@ -184,31 +184,31 @@ exit:
  * For test encode p7-DigestInfo.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_ENCODE_DIGESTINFO_TC001()
+void SDV_CMS_ENCODE_DIGESTINFO_TC001()
 {
     BSL_Buffer input = {0};
     BSL_Buffer output = {0};
     BslCid cid = 0;
     BSL_Buffer digest = {0};
-    int32_t ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, NULL, NULL);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-    ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, &input, NULL);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    int32_t ret = HITLS_CMS_EncodeDigestInfoBuff(BSL_CID_MD5, NULL, NULL);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_NULL_POINTER);
+    ret = HITLS_CMS_EncodeDigestInfoBuff(BSL_CID_MD5, &input, NULL);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_NULL_POINTER);
     input.dataLen = 1;
-    ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, &input, &output);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    ret = HITLS_CMS_EncodeDigestInfoBuff(BSL_CID_MD5, &input, &output);
+    ASSERT_EQ(ret, HITLS_CMS_ERR_NULL_POINTER);
     input.dataLen = 0;
-    ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, &input, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&output, &cid, &digest);
+    ret = HITLS_CMS_EncodeDigestInfoBuff(BSL_CID_MD5, &input, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_CMS_ParseDigestInfo(&output, &cid, &digest);
     ASSERT_EQ(ret, HITLS_CMS_ERR_INVALID_DATA);
     BSL_SAL_FREE(output.data);
     input.data = (uint8_t *)"123456";
     input.dataLen = 6;
-    ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(BSL_CID_MD5, &input, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&output, &cid, &digest);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = HITLS_CMS_EncodeDigestInfoBuff(BSL_CID_MD5, &input, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_CMS_ParseDigestInfo(&output, &cid, &digest);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cid, BSL_CID_MD5);
 exit:
     BSL_SAL_FREE(digest.data);
@@ -221,16 +221,16 @@ exit:
  * For test encode p7-DigestInfo vector.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_ENCODE_DIGESTINFO_TC002(int algid, Hex *in)
+void SDV_CMS_ENCODE_DIGESTINFO_TC002(int algid, Hex *in)
 {
     BSL_Buffer input = {in->x, in->len};
     BSL_Buffer output = {0};
     BslCid cid = 0;
     BSL_Buffer digest = {0};
-    int32_t ret = CRYPT_EAL_EncodePKCS7DigestInfoBuff(algid, &input, &output);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_ParseAsn1PKCS7DigestInfo(&output, &cid, &digest);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    int32_t ret = HITLS_CMS_EncodeDigestInfoBuff(algid, &input, &output);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ret = HITLS_CMS_ParseDigestInfo(&output, &cid, &digest);
+    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     ASSERT_EQ(cid, algid);
 exit:
     BSL_SAL_FREE(digest.data);
