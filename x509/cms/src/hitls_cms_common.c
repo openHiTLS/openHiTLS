@@ -28,7 +28,7 @@
  *
  * https://datatracker.ietf.org/doc/html/rfc5652#page-7
  */
-int32_t CRYPT_EAL_ParseAsn1PKCS7Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
+int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
 {
     if (encode == NULL || dataValue == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -83,7 +83,7 @@ typedef enum {
     HITLS_P7_DIGESTINFO_MAX_IDX,
 } HITLS_P7_DIGESTINFO_IDX;
 
-int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest)
+int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest)
 {
     if (encode == NULL || digest == NULL || cid == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -121,7 +121,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7DigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_EncodePKCS7DigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
+int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
 {
     if (in == NULL || encode == NULL || (in->data == NULL && in->dataLen != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
