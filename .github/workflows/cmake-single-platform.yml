@@ -27,7 +27,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: mkdir build && cd build && python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_x509 --lib_type static --bits=64 --system=linux && cmake ..
+      run: mkdir build && cd build && python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_x509 --lib_type static --bits=64 --system=linux --add_options="-DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK" --add_link_flags="-ldl" && cmake ..
 
     - name: Build
       # Build your program with the given configuration
