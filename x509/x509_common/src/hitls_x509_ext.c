@@ -695,7 +695,7 @@ static int32_t GetExtEntryByCid(BslList *extList, BslCid cid, HITLS_X509_ExtEntr
     if (extEntry->extnId.len != 0) {
         extEntry->extnId.buff = BSL_SAL_Dump(oid->octs, oid->octetLen);
         if (extEntry->extnId.buff == NULL) {
-            if (isNew) {
+            if (*isNew) {
                 BSL_SAL_Free(extEntry);
             }
             BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);

@@ -17,6 +17,8 @@
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "securec.h"
+#include "bsl_log_internal.h"
+#include "bsl_binlog_id.h"
 #include "hitls_x509_errno.h"
 #include "crypt_errno.h"
 #include "sal_time.h"
@@ -124,9 +126,7 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     BSL_LIST_FREE(crl->tbs.revokedCerts, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlRevokedFree);
     HITLS_X509_ExtFree(&crl->tbs.crlExt, false);
     BSL_SAL_ReferencesFree(&(crl->references));
-    if (crl->isCopy == true) {
-        BSL_SAL_FREE(crl->rawData);
-    }
+    BSL_SAL_FREE(crl->rawData);
     BSL_SAL_Free(crl);
     return;
 }
@@ -158,6 +158,7 @@ HITLS_X509_Crl *HITLS_X509_CrlNew()
     BSL_SAL_ReferencesInit(&(crl->references));
     crl->tbs.issuerName = issuerName;
     crl->tbs.revokedCerts = entryList;
+    crl->state = HITLS_X509_CRL_STATE_NEW;
     return crl;
 ERR:
     BSL_SAL_Free(crl);
@@ -508,8 +509,8 @@ int32_t HITLS_X509_EncodeCrlTbsRaw(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *a
     BSL_ASN1_Buffer *revokeBuf = NULL;
     BSL_ASN1_Buffer *crlExt = NULL;
     uint8_t version = (uint8_t)crlTbs->version;
-    X509_EncodeVersion(&version, asnArr);
-    BSL_ASN1_Buffer *signAlgAsn = &asnArr[1];
+    X509_EncodeVersion(&version, asnArr); // 0 is version
+    BSL_ASN1_Buffer *signAlgAsn = &asnArr[1];  // 1 is signAlg
     int32_t ret = HITLS_X509_EncodeSignAlgInfo(&crlTbs->signAlgId, signAlgAsn);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -549,49 +550,95 @@ EXIT:
 }
 
 #define X509_CRL_ELEM_NUMBER 3
-int32_t HITLS_X509_EncodeAsn1Crl(HITLS_X509_Crl *crl, uint8_t **encode, uint32_t *encodeLen)
+int32_t EncodeAsn1Crl(HITLS_X509_Crl *crl)
 {
-    BSL_ASN1_Buffer asnArr[X509_CRL_ELEM_NUMBER] = {0};
-    int32_t ret = HITLS_X509_EncodeCrlTbsRaw(&crl->tbs, asnArr);
+    if (crl->signature.buff == NULL || crl->signature.len == 0 ||
+        crl->tbs.tbsRawData == NULL || crl->tbs.tbsRawDataLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_NOT_SIGNED);
+        return HITLS_X509_ERR_CRL_NOT_SIGNED;
+    }
+    BSL_ASN1_Buffer tbsAsn1 = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        crl->tbs.tbsRawDataLen, crl->tbs.tbsRawData};
+    BSL_ASN1_Buffer signAlgAsn1 = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
+
+    int32_t ret = HITLS_X509_EncodeSignAlgInfo(&crl->signAlgId, &signAlgAsn1);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_EncodeSignAlgInfo(&crl->signAlgId, &asnArr[1]);
+    uint32_t valLen = 0;
+    ret = BSL_ASN1_DecodeTagLen(tbsAsn1.tag, &tbsAsn1.buff, &tbsAsn1.len, &valLen);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_Free(asnArr[0].buff);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    asnArr[2].tag = BSL_ASN1_TAG_BITSTRING; // 2 is signAlg
-    asnArr[2].len = sizeof(BSL_ASN1_BitString); // 2 is signAlg
-    asnArr[2].buff = (uint8_t *)&(crl->signature); // 2 is signAlg
+
+    BSL_ASN1_Buffer asnArr[X509_CRL_ELEM_NUMBER] = {
+        tbsAsn1,
+        signAlgAsn1,
+        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&crl->signature},
+    };
     BSL_ASN1_TemplateItem crlTempl[] = {
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* x509 */
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* crl */
             {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1}, /* tbs */
             {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1}, /* signAlg */
             {BSL_ASN1_TAG_BITSTRING, 0, 1} /* sig */
     };
     BSL_ASN1_Template templ = {crlTempl, sizeof(crlTempl) / sizeof(crlTempl[0])};
-    ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, X509_CRL_ELEM_NUMBER, encode, encodeLen);
-    BSL_SAL_Free(asnArr[0].buff);
-    BSL_SAL_Free(asnArr[1].buff);
+    ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, X509_CRL_ELEM_NUMBER, &crl->rawData, &crl->rawDataLen);
+    BSL_SAL_Free(signAlgAsn1.buff);
     return ret;
 }
 
-int32_t HITLS_X509_EncodePemCrl(HITLS_X509_Crl *crl, uint8_t **encode, uint32_t *encodeLen)
+/**
+ * @brief Encode ASN.1 crl
+ * 
+ * @param crl [IN] Pointer to the crl structure
+ * @param buff [OUT] Pointer to the buffer. 
+ *             If NULL, only the ASN.1 crl is encoded. 
+ *             If non-NULL, the DER encoding content of the crl is stored in buff
+ * @return int32_t Return value, 0 means success, other values mean failure
+ */
+int32_t HITLS_X509_EncodeAsn1Crl(HITLS_X509_Crl *crl, BSL_Buffer *buff)
 {
-    uint8_t *asn1 = NULL;
-    uint32_t asn1Len;
-    int32_t ret = HITLS_X509_EncodeAsn1Crl(crl, &asn1, &asn1Len);
+    int32_t ret;
+    if (crl->flag & HITLS_X509_CRL_GEN_FLAG) {
+        if (crl->state != HITLS_X509_CRL_STATE_SIGN && crl->state != HITLS_X509_CRL_STATE_GEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_NOT_SIGNED);
+            return HITLS_X509_ERR_CRL_NOT_SIGNED;
+        }
+        if (crl->state == HITLS_X509_CRL_STATE_SIGN) {
+            ret = EncodeAsn1Crl(crl);
+            if (ret != HITLS_X509_SUCCESS) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "crl: failed to encode the crl.", 0, 0, 0, 0);
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            crl->state = HITLS_X509_CRL_STATE_GEN;
+        }
+    }
+    if (buff == NULL) {
+        return HITLS_X509_SUCCESS;
+    }
+    buff->data = BSL_SAL_Dump(crl->rawData, crl->rawDataLen);
+    if (buff->data == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
+    }
+    buff->dataLen = crl->rawDataLen;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_EncodePemCrl(HITLS_X509_Crl *crl, BSL_Buffer *buff)
+{
+    int32_t ret = HITLS_X509_EncodeAsn1Crl(crl, NULL);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     BSL_PEM_Symbol symbol = {BSL_PEM_CRL_BEGIN_STR, BSL_PEM_CRL_END_STR};
-    ret = BSL_PEM_EncodeAsn1ToPem(asn1, asn1Len, &symbol, (char **)encode, encodeLen);
-    BSL_SAL_Free(asn1);
-    return ret;
+    return BSL_PEM_EncodeAsn1ToPem(crl->rawData, crl->rawDataLen, &symbol, (char **)&buff->data, &buff->dataLen);
 }
 
 static int32_t X509_CheckCrlRevoke(HITLS_X509_Crl *crl)
@@ -600,7 +647,6 @@ static int32_t X509_CheckCrlRevoke(HITLS_X509_Crl *crl)
     if (revokedCerts != NULL) {
         HITLS_X509_CrlEntry *entry = NULL;
         for (entry = BSL_LIST_GET_FIRST(revokedCerts); entry != NULL; entry = BSL_LIST_GET_NEXT(revokedCerts)) {
-            
             // Check serial number
             if (entry->serialNumber.buff == NULL || entry->serialNumber.len == 0 || entry->serialNumber.len > 20) {
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_ENTRY);
@@ -626,10 +672,6 @@ static int32_t X509_CheckCrlRevoke(HITLS_X509_Crl *crl)
 static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
 {
     int32_t ret;
-    if (crl == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
     if (crl->tbs.version != 0 && crl->tbs.version != 1) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
         return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
@@ -639,10 +681,6 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
             return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
         }
-    }
-     if (crl->tbs.signAlgId.algId == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_SIGNALG);
-        return HITLS_X509_ERR_INVALID_SIGNALG;
     }
 
     // Check issuer name
@@ -673,40 +711,21 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_CrlCheckValid(HITLS_X509_Crl *crl)
+int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, BSL_Buffer *buff)
 {
-    int32_t ret = X509_CheckCrlTbs(crl);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    if (crl->signature.buff == NULL || crl->signature.len == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_LACK_SIGNATURE);
-        return HITLS_X509_ERR_CRL_LACK_SIGNATURE;
-    }
-    if (crl->signAlgId.algId == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_SIGNALG);
-        return HITLS_X509_ERR_INVALID_SIGNALG;
-    }
-
-    return HITLS_X509_SUCCESS;
-}
-
-int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, uint8_t **encode, uint32_t *encodeLen)
-{
-    if (crl == NULL || encode == NULL || encodeLen == NULL) {
+    if (crl == NULL || buff == NULL || buff->data != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    int32_t ret = X509_CrlCheckValid(crl);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    switch (format) {
+        case BSL_FORMAT_ASN1:
+            return HITLS_X509_EncodeAsn1Crl(crl, buff);
+        case BSL_FORMAT_PEM:
+            return HITLS_X509_EncodePemCrl(crl, buff);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (format == BSL_FORMAT_PEM) {
-        return HITLS_X509_EncodePemCrl(crl, encode, encodeLen);
-    }
-    return HITLS_X509_EncodeAsn1Crl(crl, encode, encodeLen);
 }
 
 int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *path)
@@ -715,15 +734,14 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    uint8_t *encode = NULL;
-    uint32_t encodeLen;
-    int32_t ret = HITLS_X509_CrlGenBuff(format, crl, &encode, &encodeLen);
+    BSL_Buffer buff = {0};
+    int32_t ret = HITLS_X509_CrlGenBuff(format, crl, &buff);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BSL_SAL_WriteFile(path, encode, encodeLen);
-    BSL_SAL_Free(encode);
+    ret = BSL_SAL_WriteFile(path, buff.data, buff.dataLen);
+    BSL_SAL_Free(buff.data);
     return ret;
 }
 
@@ -813,7 +831,7 @@ int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X50
 int32_t HITLS_X509_CrlParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Crl **crl)
 {
     HITLS_X509_List *list = NULL;
-    if (crl == NULL) {
+    if (crl == NULL || *crl != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -1103,11 +1121,7 @@ static int32_t X509_CrlSetVersion(HITLS_X509_Crl *crl, uint8_t *val, uint8_t val
 
 int32_t X509_CrlSetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen)
 {
-    if (crl == NULL || val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    if (crl->flag &= HITLS_X509_CRL_PARSE_FLAG) {
+    if (val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -1140,6 +1154,11 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     } else if (cmd >= HITLS_X509_GET_ENCODELEN && cmd < HITLS_X509_SET_VERSION) {
         return X509_CrlGetCtrl(crl, cmd, val, valLen);
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
+        if (crl->flag &= HITLS_X509_CRL_PARSE_FLAG) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_AFTER_PARSE);
+            return HITLS_X509_ERR_SET_AFTER_PARSE;
+        }
+        crl->state = HITLS_X509_CRL_STATE_SET;
         return X509_CrlSetCtrl(crl, cmd, val, valLen);
     } else {
         return HITLS_X509_ExtCtrl(&crl->tbs.crlExt, cmd, val, valLen);
@@ -1163,43 +1182,23 @@ int32_t HITLS_X509_EncodeCrlTbs(HITLS_X509_CrlTbs *crlTbs, uint8_t **tobeSigned,
     return ret;
 }
 
-static int32_t X509_GetCrlTobeSignedData(HITLS_X509_Crl *crl, uint8_t **tobeSigned, uint32_t *tobeSignedLen)
-{
-    if (crl->tbs.tbsRawData != NULL) {
-        *tobeSigned = BSL_SAL_Malloc(crl->tbs.tbsRawDataLen);
-        if (*tobeSigned == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
-        }
-        (void)memcpy_s(*tobeSigned, crl->tbs.tbsRawDataLen, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen);
-        *tobeSignedLen = crl->tbs.tbsRawDataLen;
-        return HITLS_X509_SUCCESS;
-    }
-
-    return HITLS_X509_EncodeCrlTbs(&crl->tbs, tobeSigned, tobeSignedLen);
-}
-
 int32_t HITLS_X509_CrlVerify(void *pubkey, HITLS_X509_Crl *crl)
 {
     if (pubkey == NULL || crl == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
+    if (crl->flag & HITLS_X509_CRL_GEN_FLAG &&
+        crl->state != HITLS_X509_CRL_STATE_SIGN && crl->state != HITLS_X509_CRL_STATE_GEN) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_NOT_SIGNED);
+        return HITLS_X509_ERR_CRL_NOT_SIGNED;
+    }
     int32_t ret = HITLS_X509_CheckAlg(pubkey, &(crl->signAlgId));
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
 
-    uint8_t *tobeSigned = NULL;
-    uint32_t tobeSignedLen = 0;
-    ret = X509_GetCrlTobeSignedData(crl, &tobeSigned, &tobeSignedLen);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    
-    ret = HITLS_X509_CheckSignature(pubkey, tobeSigned, tobeSignedLen, &(crl->signAlgId), &crl->signature);
-    BSL_SAL_Free(tobeSigned);
+    ret = HITLS_X509_CheckSignature(pubkey, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen, &(crl->signAlgId), &crl->signature);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1451,60 +1450,56 @@ int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, voi
     }
 }
 
-int32_t HITLS_X509_CrlSign(CRYPT_EAL_PkeyCtx *pivKey, uint32_t mdId, HITLS_X509_Crl *crl, const HITLS_X509_SignAlgParam *algParam)
+static int32_t CrlSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, HITLS_X509_Crl *crl)
 {
-    CRYPT_EAL_PkeyCtx *signKey = pivKey;
-    CRYPT_EAL_PkeyCtx *tmp = NULL;
-    BSL_Buffer tbsRaw = {0};
-    BSL_ASN1_Buffer tobeSigned = {0};
-    uint32_t ret;
-    if (pivKey == NULL || crl == NULL || crl->flag & HITLS_X509_CRL_PARSE_FLAG) {
+    BSL_Buffer signBuff = {0};
+    BSL_ASN1_Buffer tbsCertList = {0};
+
+    crl->signAlgId = *signAlgId;
+    crl->tbs.signAlgId = *signAlgId;
+
+    int32_t ret = HITLS_X509_EncodeCrlTbsRaw(&crl->tbs, &tbsCertList);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_X509_SignAsn1Data(prvKey, mdId, &tbsCertList, &signBuff, &crl->signature);
+    BSL_SAL_Free(tbsCertList.buff);
+    if (ret != HITLS_X509_SUCCESS) {
+        return ret;
+    }
+    crl->tbs.tbsRawData = signBuff.data;
+    crl->tbs.tbsRawDataLen = signBuff.dataLen;
+    crl->state = HITLS_X509_CRL_STATE_SIGN;
+    return HITLS_X509_SUCCESS;
+}
+
+int32_t HITLS_X509_CrlSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+    HITLS_X509_Crl *crl)
+{
+    if (crl == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (!X509_IsValidHashAlg(mdId)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+    if (crl->flag & HITLS_X509_CRL_PARSE_FLAG) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_AFTER_PARSE);
+        return HITLS_X509_ERR_SIGN_AFTER_PARSE;
     }
-    if (algParam != NULL) {
-        tmp = CRYPT_EAL_PkeyDupCtx(pivKey);
-        if (tmp == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_DUP_PUBKEY);
-            return HITLS_X509_ERR_VFY_DUP_PUBKEY;
-        }
-        signKey = tmp;
-        ret = X509_SetSignAlgParm(signKey, algParam);
-        if (ret != HITLS_X509_SUCCESS) {
-            goto ERR;
-        }
+    if (crl->state == HITLS_X509_CRL_STATE_SIGN || crl->state == HITLS_X509_CRL_STATE_GEN) {
+        return HITLS_X509_SUCCESS;
     }
-    ret = HITLS_X509_SetSignAlgInfo(signKey, mdId, &crl->signAlgId);
+
+    int32_t ret = X509_CheckCrlTbs(crl);
     if (ret != HITLS_X509_SUCCESS) {
-        goto ERR;
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "crl: sign crl failed due to invalid tbs.", 0, 0, 0, 0);
+        return ret;
     }
-    ret = HITLS_X509_SetSignAlgInfo(signKey, mdId, &crl->tbs.signAlgId);
-    if (ret != HITLS_X509_SUCCESS) {
-        goto ERR;
-    }
-    ret = X509_CheckCrlTbs(crl);
-    if (ret != HITLS_X509_SUCCESS) {
-        goto ERR;
-    }
-    ret = HITLS_X509_EncodeCrlTbsRaw(&crl->tbs, &tobeSigned);
-    if (ret != HITLS_X509_SUCCESS) {
-        goto ERR;
-    }
-    ret = HITLS_X509_SignAsn1Data(signKey, mdId, &tobeSigned, &tbsRaw, &crl->signature);
-    if (ret != HITLS_X509_SUCCESS) {
-        goto ERR;
-    }
-    crl->tbs.tbsRawData = tbsRaw.data;
-    crl->tbs.tbsRawDataLen = tbsRaw.dataLen;
-ERR:
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    CRYPT_EAL_PkeyFreeCtx(tmp);
-    BSL_SAL_Free(tobeSigned.buff);
-    return ret;
+
+    BSL_SAL_FREE(crl->signature.buff);
+    crl->signature.len = 0;
+    BSL_SAL_FREE(crl->tbs.tbsRawData);
+    crl->tbs.tbsRawDataLen = 0;
+    BSL_SAL_FREE(crl->rawData);
+    crl->rawDataLen = 0;
+    return HITLS_X509_Sign(mdId, prvKey, algParam, crl, (HITLS_X509_SignCb)CrlSignCb);
 }

@@ -359,8 +359,7 @@ void SDV_X509_CRL_Encode_TC001(int format, char *path)
 {
     BSL_GLOBAL_Init();
     HITLS_X509_Crl *crl = NULL;
-    uint8_t *encode = NULL;
-    uint32_t encodeLen;
+    BSL_Buffer encode = {0};
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
     int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
@@ -369,19 +368,19 @@ void SDV_X509_CRL_Encode_TC001(int format, char *path)
     BSL_Buffer ori = {data, dataLen};
     ret = HITLS_X509_CrlParseBuff(format, &ori, &crl);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ret = HITLS_X509_CrlGenBuff(format, crl, &encode, &encodeLen);
+    ret = HITLS_X509_CrlGenBuff(format, crl, &encode);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
     if (format == BSL_FORMAT_ASN1) {
-        ASSERT_EQ(dataLen, encodeLen);
+        ASSERT_EQ(dataLen, encode.dataLen);
     } else {
-        ASSERT_EQ(dataLen, strlen((char *)encode));
+        ASSERT_EQ(dataLen, strlen((char *)encode.data));
     }
-    ASSERT_EQ(memcmp(encode, data, dataLen), 0);
+    ASSERT_EQ(memcmp(encode.data, data, dataLen), 0);
 
 exit:
     BSL_SAL_Free(data);
     HITLS_X509_CrlFree(crl);
-    BSL_SAL_Free(encode);
+    BSL_SAL_Free(encode.data);
 }
 /* END_CASE */
 
@@ -390,27 +389,21 @@ void SDV_X509_CRL_EncodeParam_TC001(void)
 {
     BSL_GLOBAL_Init();
     HITLS_X509_Crl *crl = NULL;
-    uint8_t *encode = NULL;
-    uint32_t encodeLen;
+    BSL_Buffer encode = {0};
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
-    int32_t ret = BSL_SAL_ReadFile("../testdata/cert/pem/crl/crl_v2.pem", &data, &dataLen);
-    ASSERT_EQ(ret, BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile("../testdata/cert/pem/crl/crl_v2.pem", &data, &dataLen), BSL_SUCCESS);
 
     BSL_Buffer ori = {data, dataLen};
-    ret = HITLS_X509_CrlParseBuff(BSL_FORMAT_PEM, &ori, &crl);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, NULL, &encode, &encodeLen), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, NULL, &encodeLen), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    crl->tbs.version = 0;
-    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode, &encodeLen),
-        HITLS_X509_ERR_CRL_INACCURACY_VERSION);
-    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_PEM, &ori, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, NULL, &encode), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_UNKNOWN, crl, &encode), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode), 0);
 exit:
     BSL_SAL_Free(data);
     HITLS_X509_CrlFree(crl);
-    BSL_SAL_Free(encode);
+    BSL_SAL_Free(encode.data);
 }
 /* END_CASE */
 
@@ -760,28 +753,135 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_CRL_Sign_ParamCheck_TC001(void)
+void SDV_X509_CRL_Gen_Process_TC001(void)
 {
     HITLS_X509_Crl *crl = NULL;
     CRYPT_EAL_PkeyCtx *pivKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
-    
-    // 创建基本的 CRL 对象
-    crl = HITLS_X509_CrlNew();
-    ASSERT_NE(crl, NULL);
-    
-    // 测试空参数
-    ASSERT_EQ(HITLS_X509_CrlSign(NULL, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, NULL, &algParam), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    const char *keyPath = "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der";
+    const char *crlPath = "../testdata/cert/asn1/rsa_crl/crl_v1.der";
+    uint32_t ver = 1;
+    BSL_Buffer encodeCrl = {0};
 
-    // 测试无效的摘要算法
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_UNKNOWN, crl, &algParam), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_MAX, crl, &algParam), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_X509_SUCCESS);
+
+    /* Cannot repeat parse */
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Cannot sign after parsing */
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_SIGN_AFTER_PARSE);
+
+    /* Cannot set after parsing */
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &ver, sizeof(uint32_t)), HITLS_X509_ERR_SET_AFTER_PARSE);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, NULL, 0), HITLS_X509_ERR_SET_AFTER_PARSE);
+
+    /* Generate crl after parsing is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
+    BSL_SAL_Free(encodeCrl.data);
+    encodeCrl.data = NULL;
+    encodeCrl.dataLen = 0;
+    /* Repeat generate is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
 
 exit:
     HITLS_X509_CrlFree(crl);
     CRYPT_EAL_PkeyFreeCtx(pivKey);
+    BSL_SAL_Free(encodeCrl.data);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_Gen_Process_TC002(void)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    const char *keyPath = "../testdata/cert/asn1/rsa_cert/rsa_p8.key.der";
+    const char *certPath = "../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der";
+    uint32_t mdId = BSL_CID_SHA256;
+    BSL_TIME thisUpdate = {2024, 8, 22, 1, 1, 0, 1, 0};
+    BSL_TIME nextUpdate = {2024, 8, 22, 1, 1, 0, 1, 0};
+    BslList *issuerDN = NULL;
+    BSL_Buffer encodeCrl = {0};
+
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
+
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+
+    /* Invalid parameters */
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Test Crl sign with invalid fields*/
+    /* Set invalid version number */
+    crl->tbs.version = 2;
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+
+    /* Set invalid version number in extensions */
+    crl->tbs.version = 0;
+    BslList *extList = crl->tbs.crlExt.extList;
+    crl->tbs.crlExt.extList = cert->tbs.ext.extList;
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+    crl->tbs.crlExt.extList = extList;
+
+    /* issuer name is empty */
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_ERR_CRL_ISSUER_EMPTY);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 0);
+
+    /* thisUpdate is not set */
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_ERR_CRL_THISUPDATE_UNEXIST);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &thisUpdate, sizeof(BSL_TIME)), 0);
+
+    /* nextUpdate is before thisUpdate */
+    nextUpdate.year = thisUpdate.year - 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &nextUpdate, sizeof(BSL_TIME)), 0);
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_ERR_CRL_TIME_INVALID);
+    nextUpdate.year = thisUpdate.year + 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &nextUpdate, sizeof(BSL_TIME)), 0);
+
+    /* Cannot generate before signing */
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), HITLS_X509_ERR_CRL_NOT_SIGNED);
+
+    /* Cannot verify before signing */
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(CRYPT_EAL_PkeyCtx *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), HITLS_X509_ERR_CRL_NOT_SIGNED);
+
+    /* Repeat sign is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), 0);
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), 0);
+
+    /* Verify after signing is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), 0);
+
+    /* Cannot parse after signing */
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_ASN1, &encodeCrl, &crl), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Repeat generate is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
+    BSL_SAL_Free(encodeCrl.data);
+    encodeCrl.data = NULL;
+    encodeCrl.dataLen = 0;
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
+
+    /* Sing after generating is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), 0);
+
+    /* Verify after generating is allowed. */
+    ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), 0);
+
+    /* Cannot parse after generating */
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_ASN1, &encodeCrl, &crl), HITLS_X509_ERR_INVALID_PARAM);
+
+exit:
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(cert);
+    CRYPT_EAL_PkeyFreeCtx(pivKey);
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    BSL_SAL_Free(encodeCrl.data);
 }
 /* END_CASE */
 
@@ -789,91 +889,41 @@ exit:
 void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
 {
     HITLS_X509_Crl *crl = NULL;
-    HITLS_X509_SignAlgParam algParam = {0};
-    CRYPT_EAL_PkeyCtx *pivKey = NULL;
-    
-    // 创建基本的 CRL 对象
-    crl = HITLS_X509_CrlNew();
-    ASSERT_NE(crl, NULL);
-
-   // 读取私钥文件用于签名
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
-
-    // 测试RSA-PSS参数缺失
-    algParam.algId = BSL_CID_RSASSAPSS;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_INVALID_PARAM);
-
-    // 测试无效的哈希算法
-    algParam.rsaPss.mdId = (CRYPT_MD_AlgId)BSL_CID_UNKNOWN;
-    algParam.rsaPss.mgfId = (CRYPT_MD_AlgId)BSL_CID_SHA256;
-    algParam.rsaPss.saltLen = 32;
-
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_INVALID_PARAM);
-
-    // 测试无效的MGF1哈希算法
-    algParam.rsaPss.mdId = (CRYPT_MD_AlgId)BSL_CID_SHA256;
-    algParam.rsaPss.mgfId = (CRYPT_MD_AlgId)BSL_CID_UNKNOWN;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_INVALID_PARAM);
-
-exit:
-    HITLS_X509_CrlFree(crl);
-    CRYPT_EAL_PkeyFreeCtx(pivKey);
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_X509_CRL_Sign_CrlFieldCheck_TC001(void)
-{
-    HITLS_X509_Crl *crl = NULL;
-    CRYPT_EAL_PkeyCtx *pivKey = NULL;
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
-    BSL_TIME beforeTime = {0};
-    BSL_TIME afterTime = {0};
+    CRYPT_EAL_PkeyCtx *pivKey = NULL;
+    const char *keyPath = "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der";
+    const char *certPath = "../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der";
+    BSL_TIME thisUpdate = {2024, 8, 22, 1, 1, 0, 1, 0};
+    BslList *issuerDN = NULL;
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &pivKey), 0);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der", &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &pivKey), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
 
-    // 创建基本的 CRL 对象
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
-    BslList *issueList = crl->tbs.issuerName;
-    // 测试未设置必要字段的CRL
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), 
-        HITLS_X509_ERR_CRL_ISSUER_EMPTY);
 
-    // 设置无效版本号
-    crl->tbs.version = 2;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), 
-        HITLS_X509_ERR_CRL_INACCURACY_VERSION);
-    crl->tbs.version = 1;
-    crl->tbs.issuerName = cert->tbs.subjectName;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), 
-        HITLS_X509_ERR_CRL_THISUPDATE_UNEXIST);
-    // 设置无效的时间
-    ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
-    
-    afterTime = beforeTime;
-    afterTime.year -= 1;  // 设置为过去时间
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), 
-        HITLS_X509_ERR_CRL_TIME_INVALID);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &thisUpdate, sizeof(BSL_TIME)), 0);
 
-    // 设置有效的时间但缺少颁发者
-    afterTime = beforeTime;
-    afterTime.year += 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
-    crl->tbs.issuerName = NULL;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_CRL_ISSUER_EMPTY);
-    crl->tbs.issuerName = cert->tbs.subjectName;
-    crl->tbs.version = 0;
-    BslList *extList = crl->tbs.crlExt.extList;
-    crl->tbs.crlExt.extList = cert->tbs.ext.extList;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
-    crl->tbs.crlExt.extList = extList;
+    /* Test invalid mdId */
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHAKE128, pivKey, &algParam, crl), HITLS_X509_ERR_HASHID);
+
+    /* Test empty algParam */
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Test invalid mdId for RSA-PSS */
+    algParam.algId = BSL_CID_RSASSAPSS;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_MD_NOT_MATCH);
+
+    /* Test invalid mgfId for RSA-PSS */
+    algParam.rsaPss.mdId = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+    algParam.rsaPss.mgfId = (CRYPT_MD_AlgId)BSL_CID_UNKNOWN;
+    algParam.rsaPss.saltLen = 32;
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), CRYPT_EAL_ERR_ALGID);
+
 exit:
-    crl->tbs.issuerName = issueList;
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(cert);
     CRYPT_EAL_PkeyFreeCtx(pivKey);
@@ -946,15 +996,15 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     entry = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
     ASSERT_TRUE(entry != NULL);
     crl->tbs.version = 0;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_INACCURACY_VERSION);
     crl->tbs.version = 1;
     uint8_t *serialNum = entry->serialNumber.buff;
     entry->serialNumber.buff = NULL;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_CRL_ENTRY);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_ENTRY);
     entry->serialNumber.buff = serialNum;
     uint32_t year = entry->time.year;
     entry->time.year = 0;
-    ASSERT_EQ(HITLS_X509_CrlSign(pivKey, BSL_CID_SHA256, crl, &algParam), HITLS_X509_ERR_CRL_TIME_INVALID);
+    ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, pivKey, &algParam, crl), HITLS_X509_ERR_CRL_TIME_INVALID);
     entry->time.year = year;
 exit:
     crl->tbs.issuerName = issueList;
@@ -1018,7 +1068,6 @@ exit:
     return -1;
 }
 
-
 /* BEGIN_CASE */
 void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2, char *tmp)
 {
@@ -1045,15 +1094,12 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
         pssParam.mgfId = mdId;
         pssParam.saltLen = 32;
         algParam.rsaPss = pssParam;
-    } else if (pad == CRYPT_PKEY_EMSA_PKCSV15) {
-        algParam.algId = BSL_CID_RSA;
-        algParam.pkcsV15.mdId = mdId;
     }
 
-    if (pad == CRYPT_PKEY_EMSA_PSS || pad == CRYPT_PKEY_EMSA_PKCSV15) {
-        ASSERT_EQ(HITLS_X509_CrlSign(pivKey, mdId, crl, &algParam), HITLS_X509_SUCCESS);
+    if (pad == CRYPT_PKEY_EMSA_PSS) {
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, &algParam, crl), HITLS_X509_SUCCESS);
     } else {
-        ASSERT_EQ(HITLS_X509_CrlSign(pivKey, mdId, crl, NULL), HITLS_X509_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, pivKey, NULL, crl), HITLS_X509_SUCCESS);
     }
 
     // Verify the signature is present
@@ -1063,9 +1109,9 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_X509_SUCCESS);
     ASSERT_NE(parseCrl, NULL);
     ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_X509_SUCCESS);
-    HITLS_X509_CrlFree(parseCrl);
 exit:
     HITLS_X509_CrlFree(crl);
+    HITLS_X509_CrlFree(parseCrl);
     HITLS_X509_CertFree(issuerCert);
     CRYPT_EAL_PkeyFreeCtx(pivKey);
 }

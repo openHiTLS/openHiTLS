@@ -218,14 +218,6 @@ int32_t HITLS_X509_GetEncodeData(uint8_t *rawData, uint8_t **val);
 
 int32_t HITLS_X509_SetPkey(void **pkey, void *val);
 
-int32_t HITLS_X509_SetSignAlgInfo(CRYPT_EAL_PkeyCtx *privKey, CRYPT_MD_AlgId mdId, HITLS_X509_Asn1AlgId *x509Alg);
-
-int32_t HITLS_X509_SetRsaPadding(CRYPT_EAL_PkeyCtx *privKey, void *val, int32_t valLen);
-
-int32_t HITLS_X509_SetRsaPssPara(CRYPT_EAL_PkeyCtx *privKey, void *val, int32_t valLen);
-
-int32_t HITLS_X509_SetSignMdId(CRYPT_MD_AlgId *mdAlgId, void *val, int32_t valLen);
-
 int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src);
 
 int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen);
@@ -242,13 +234,17 @@ int32_t HITLS_X509_GetExt(BslList *ext, BslCid cid, BSL_Buffer *val, uint32_t ex
 
 HITLS_X509_ExtEntry *DupExtEntry(const HITLS_X509_ExtEntry *src);
 
-int32_t X509_SetSignAlgParm(CRYPT_EAL_PkeyCtx *signKey, const HITLS_X509_SignAlgParam *algParam);
-
 bool X509_IsValidHashAlg(CRYPT_MD_AlgId id);
 
 int32_t HITLS_X509_EncodeExtEntry(BSL_ASN1_List *list, BSL_ASN1_Buffer *ext);
 
 int32_t HITLS_X509_AkiSki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName, BSL_ASN1_Buffer *serialNum);
+
+typedef int32_t (*HITLS_X509_SignCb)(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, HITLS_X509_Asn1AlgId *signAlgId,
+    void *obj);
+
+int32_t HITLS_X509_Sign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam, void *obj,
+    HITLS_X509_SignCb signCb);
 
 #ifdef __cplusplus
 }

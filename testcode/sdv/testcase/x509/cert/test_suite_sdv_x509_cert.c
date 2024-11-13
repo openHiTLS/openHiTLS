@@ -31,6 +31,9 @@
 #include "crypt_eal_encode.h"
 #include "hitls_x509_local.h"
 
+#define HITLS_X509_CERT_PARSE_FLAG  0x01
+#define HITLS_X509_CERT_GEN_FLAG    0x02
+
 /* END_HEADER */
 
 void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
@@ -818,28 +821,6 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_CERT_SET_SING_MD_FUNC_TC001(void)
-{
-    TestMemInit();
-    BSL_GLOBAL_Init();
-    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
-    ASSERT_NE(cert, NULL);
-
-    int32_t mdId = CRYPT_MD_SHA3_384;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_MD_ID, &mdId, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_MD_ID, &mdId, sizeof(int32_t)),
-              HITLS_X509_ERR_INVALID_PARAM);
-
-    mdId = CRYPT_MD_MD5;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_MD_ID, &mdId, sizeof(int32_t)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(cert->signMdId, mdId);
-
-exit:
-    HITLS_X509_CertFree(cert);
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
 void SDV_X509_CERT_SET_DNNAME_FUNC_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
 {
     TestMemInit();
@@ -929,55 +910,6 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_CERT_SET_RSAPARAM_FUNC_TC001(char *privPath, int keyType)
-{
-    TestMemInit();
-    BSL_GLOBAL_Init();
-
-    int32_t pad = CRYPT_PKEY_EMSA_PKCSV15;
-    CRYPT_RSA_PssPara para = {20, CRYPT_MD_SHA256, CRYPT_MD_SHA256}; // 20: saltlen
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-
-    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
-    ASSERT_NE(cert, NULL);
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &ctx), 0);
-
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PADDING, &pad, sizeof(int32_t)),
-              HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(int32_t)),
-              HITLS_X509_ERR_INVALID_PARAM);
-
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PRIVKEY, ctx, sizeof(void *)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PADDING, &pad, sizeof(int32_t)), 0);
-
-    pad = CRYPT_PKEY_EMSA_PSS;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PADDING, &pad, sizeof(int32_t)),
-              HITLS_X509_ERR_SET_RSA_PAD_DIFF);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(int32_t)),
-              HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(CRYPT_RSA_PssPara)),
-              HITLS_X509_ERR_SET_RSAPSS_PARA);
-
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PRIVKEY, ctx, sizeof(void *)), 0);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(int32_t)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PADDING, &pad, sizeof(int32_t)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(CRYPT_RSA_PssPara)), 0);
-    para.mdId = CRYPT_MD_SHA224;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(CRYPT_RSA_PssPara)),
-              HITLS_X509_ERR_MD_NOT_MATCH);
-    para.mdId = CRYPT_MD_SHA256;
-    para.mgfId = CRYPT_MD_SHA224;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(CRYPT_RSA_PssPara)),
-              HITLS_X509_ERR_MGF_NOT_MATCH);
-
-exit:
-    CRYPT_EAL_PkeyFreeCtx(ctx);
-    HITLS_X509_CertFree(cert);
-    BSL_GLOBAL_DeInit();
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
 void SDV_X509_ENCODE_CERT_EXT_TC001(char *path, Hex *expectExt)
 {
     TestMemInit();
@@ -1018,7 +950,7 @@ void SDV_X509_CERT_GEN_BUFF_API_TC001(void)
 
     cert->tbs.version = HITLS_CERT_VERSION_1;
     cert->tbs.ext.extList->count = 1;
-    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_INACCURACY_VERSION);
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_NOT_SIGNED);
 
 exit:
     HITLS_X509_CertFree(cert);
@@ -1065,7 +997,7 @@ exit:
 }
 /* END_CASE */
 
-static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new, CRYPT_EAL_PkeyCtx *priv, int32_t mdId)
+static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new)
 {
     int32_t ret = 1;
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_VERSION, &raw->tbs.version, sizeof(int32_t)), 0);
@@ -1073,8 +1005,6 @@ static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new, CRYPT_EAL_Pke
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_BEFORE_TIME, &raw->tbs.validTime.start, sizeof(BSL_TIME)), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_AFTER_TIME, &raw->tbs.validTime.end, sizeof(BSL_TIME)), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_PUBKEY, raw->tbs.ealPubKey, sizeof(void *)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_PRIVKEY, priv, sizeof(void *)), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SIGN_MD_ID, &mdId, sizeof(int32_t)), 0);
 
     BslList *rawSubject = NULL;
     ASSERT_EQ(HITLS_X509_CertCtrl(raw, HITLS_X509_GET_SUBJECT_DNNAME, &rawSubject, sizeof(BslList *)), 0);
@@ -1100,25 +1030,32 @@ void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyTyp
     BSL_Buffer encodeRaw = {0};
     BSL_Buffer encodeNew = {0};
     BslList *tmp = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    HITLS_X509_SignAlgParam *algParamPtr = NULL;
+    if (pad == 0) {
+        algParamPtr = NULL;
+    } else if (pad == CRYPT_PKEY_EMSA_PSS) {
+        algParam.algId = BSL_CID_RSASSAPSS;
+        algParam.rsaPss.mdId = mdId;
+        algParam.rsaPss.mgfId = mgfId;
+        algParam.rsaPss.saltLen = saltLen;
+        algParamPtr = &algParam;
+    }
 
     TestRandInit();
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
     ASSERT_EQ(BSL_SAL_ReadFile(derCertPath, &encodeRaw.data, &encodeRaw.dataLen), 0);
     ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &raw), 0);
 
-    // new cert
+    // generate new cert
     new = HITLS_X509_CertNew();
     ASSERT_TRUE(new != NULL);
-    ASSERT_EQ(SetCert(raw, new, privKey, mdId), 0);
+    ASSERT_EQ(SetCert(raw, new), 0);
+    // Skip extension settings, directly use the extensions from raw certificate
     tmp = new->tbs.ext.extList;
     new->tbs.ext.extList = raw->tbs.ext.extList;
-    if (pkeyId == CRYPT_PKEY_RSA) {
-        ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SIGN_RSA_PADDING, &pad, sizeof(int32_t)), 0);
-        if (pad == CRYPT_PKEY_EMSA_PSS) {
-            CRYPT_RSA_PssPara para = {saltLen, mdId, mgfId};
-            ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_SIGN_RSA_PSS_PARAM, &para, sizeof(CRYPT_RSA_PssPara)), 0);
-        }
-    }
+
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, algParamPtr, new), 0);
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, new, &encodeNew), 0);
     if (pad != CRYPT_PKEY_EMSA_PSS) {
         ASSERT_EQ(encodeRaw.dataLen, encodeNew.dataLen);
@@ -1141,111 +1078,164 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_GEN_CERT_ERROR_TC001(char *derCertPath, char *privPath, int keyType, int mdId, int ret)
+void SDV_X509_CERT_GEN_PROCESS_TC001(char *derCertPath, char *privPath, int keyType, int mdId)
 {
-    HITLS_X509_Cert *raw = NULL;
-    HITLS_X509_Cert *new = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Ext *ext = NULL;
     CRYPT_EAL_PkeyCtx *privKey = NULL;
+    int32_t ver = 0;
     BSL_Buffer encodeCert = {0};
-    BslList *tmp = NULL;
 
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
-    ASSERT_EQ(HITLS_ParseCertTest(derCertPath, BSL_FORMAT_ASN1, &raw), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, derCertPath, &cert), HITLS_X509_SUCCESS);
 
-    new = HITLS_X509_CertNew();
-    ASSERT_TRUE(new != NULL);
-    ASSERT_EQ(SetCert(raw, new, privKey, mdId), 0);
-    tmp = new->tbs.ext.extList;
-    new->tbs.ext.extList = raw->tbs.ext.extList;
+    /* Cannot repeat parse */
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, derCertPath, &cert), HITLS_X509_ERR_INVALID_PARAM);
 
-    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, new, &encodeCert), ret);
+    /* Sign with invalid parameters */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Cannot sign after parsing */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_SIGN_AFTER_PARSE);
+
+    /* Cannot set after parsing */
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &ver, sizeof(int32_t)), HITLS_X509_ERR_SET_AFTER_PARSE);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_EXT, &ext, sizeof(HITLS_X509_Ext *)), 0);
+    HITLS_X509_ExtBCons bCons = {true, true, 1};
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)),
+        HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
+
+    /* Generate cert after parsing is allowed. */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), 0);
+    BSL_SAL_Free(encodeCert.data);
+    encodeCert.data = NULL;
+    encodeCert.dataLen = 0;
+    /* Repeat generate is allowed. */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), 0);
 
 exit:
-    raw->flag = HITLS_X509_CERT_PARSE_FLAG;
-    HITLS_X509_CertFree(raw);
-    if (tmp != NULL) {
-        new->tbs.ext.extList = tmp;
-    }
-    HITLS_X509_CertFree(new);
     CRYPT_EAL_PkeyFreeCtx(privKey);
+    HITLS_X509_CertFree(cert);
     BSL_SAL_Free(encodeCert.data);
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_GEN_CERT_ERROR_TC002(char *derCertPath, char *privPath, int keyType, int mdId, char *destPath)
+void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType, int mdId, Hex *serial)
 {
-    HITLS_X509_Cert *raw = NULL;
-    HITLS_X509_Cert *new = NULL;
+    HITLS_X509_Csr *csr = NULL;
+    HITLS_X509_Cert *cert = NULL;
     CRYPT_EAL_PkeyCtx *privKey = NULL;
-    BSL_Buffer encodeRaw = {0};
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    uint8_t md[64] = {0}; // 64 : max md len
+    uint32_t mdLen = 64;  // 64 : max md len
     BslList *tmp = NULL;
-    uint8_t *tmpBuff = NULL;
+    BSL_TIME beforeTime = {2024, 8, 22, 1, 1, 0, 1, 0};
+    BSL_TIME afterTime = {2050, 8, 22, 1, 1, 0, 1, 0};
+    BSL_Buffer encodeCert = {0};
 
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
-    ASSERT_EQ(BSL_SAL_ReadFile(derCertPath, &encodeRaw.data, &encodeRaw.dataLen), 0);
-    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &raw), 0);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csrPath, &csr), HITLS_X509_SUCCESS);
 
-    new = HITLS_X509_CertNew();
-    ASSERT_TRUE(new != NULL);
-    ASSERT_EQ(SetCert(raw, new, privKey, mdId), 0);
-    tmp = new->tbs.ext.extList;
-    new->tbs.ext.extList = raw->tbs.ext.extList;
+    cert = HITLS_X509_CertNew();
+    ASSERT_TRUE(cert != NULL);
 
-    tmpBuff = new->tbs.serialNum.buff;
-    new->tbs.serialNum.buff = NULL;
-    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, new, destPath), HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
-    new->tbs.serialNum.buff = tmpBuff;
-    new->tbs.validTime.flag = 0;
-    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, new, destPath), HITLS_X509_ERR_CERT_INVALID_TIME);
-    new->tbs.validTime.flag = BSL_TIME_BEFORE_SET | BSL_TIME_AFTER_SET;
+    /* Cannot parse after new */
+    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeCert, &cert), HITLS_X509_ERR_INVALID_PARAM);
 
-    BSL_TIME time = {2050, 1, 1, 1, 1, 0, 1, 0};
-    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(BSL_TIME)), 0);
-    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, new, destPath), HITLS_X509_ERR_CERT_START_TIME_LATER);
-    ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_BEFORE_TIME, &raw->tbs.validTime.start, sizeof(BSL_TIME)),
-              0);
+    /* Cannot digest before signing */
+    ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, md, &mdLen), HITLS_X509_ERR_CERT_NOT_SIGNED);
 
-    new->signMdId = 0;
-    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, new, destPath), HITLS_X509_ERR_CERT_INVALID_SIGN_MD);
+    /* Cannot generate before signing */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), HITLS_X509_ERR_CERT_NOT_SIGNED);
+
+    /* Invalid parameters */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Cannot sign before setting serial number */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serial->x, serial->len), 0);
+
+    /* Cannot sign before setting issuer and subject */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_DN);
+
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DNNAME, &tmp, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DNNAME, tmp, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_DN);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DNNAME, tmp, sizeof(BslList)), 0);
+
+    /* Cannot sign before setting after time and before time */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_TIME);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), 0);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_TIME);
+
+    /* Before time is later than after time */
+    afterTime.year = beforeTime.year - 1;
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), 0);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_START_TIME_LATER);
+    afterTime.year = beforeTime.year + 1;
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), 0);
+
+    /* Cannot sign before setting public key */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), HITLS_X509_ERR_CERT_INVALID_PUBKEY);
+
+    /* Set public key */
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_PUBKEY, &pubKey, 0), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pubKey, 0), 0);
+
+    /* Cannot generate before signing */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), HITLS_X509_ERR_CERT_NOT_SIGNED);
+
+    /* Repeat sign is allowed. */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), 0);
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), 0);
+
+    /* Cannot parse after signing */
+    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeCert, &cert), HITLS_X509_ERR_INVALID_PARAM);
+
+    /* Sing after generating is allowed. */
+    ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, NULL, cert), 0);
+
+    /* Repeat digest is allowed. */
+    ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, md, &mdLen), 0);
+    ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, md, &mdLen), 0);
+
+    /* Repeat generate is allowed. */
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), 0);
+    BSL_SAL_Free(encodeCert.data);
+    encodeCert.data = NULL;
+    encodeCert.dataLen = 0;
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), 0);
+
+    /* Cannot parse after generating */
+    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeCert, &cert), HITLS_X509_ERR_INVALID_PARAM);
 
 exit:
-    HITLS_X509_CertFree(raw);
-    BSL_SAL_Free(encodeRaw.data);
-    if (tmp != NULL) {
-        new->tbs.ext.extList = tmp;
-    }
-    HITLS_X509_CertFree(new);
     CRYPT_EAL_PkeyFreeCtx(privKey);
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    HITLS_X509_CsrFree(csr);
+    HITLS_X509_CertFree(cert);
+    BSL_SAL_Free(encodeCert.data);
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_GEN_CERT_ERROR_TC003(char *derCertPath)
+void SDV_X509_CERT_DIGEST_API_TC001(char *inCert, int inForm, int mdId)
 {
-    HITLS_X509_Cert *parse = NULL;
-    HITLS_X509_Cert *new = NULL;
-    int32_t ver = 0;
-    HITLS_X509_Ext *ext = NULL;
+    TestRandInit();
+    HITLS_X509_Cert *cert = NULL;
+    uint8_t md[64] = {0}; // 64 : max md len
+    uint32_t mdLen = 64;  // 64 : max md len
 
-    // Test: Set after parse
-    ASSERT_EQ(HITLS_ParseCertTest(derCertPath, BSL_FORMAT_ASN1, &parse), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(inForm, inCert, &cert), 0);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(parse, HITLS_X509_SET_VERSION, &ver, sizeof(int32_t)),
-        HITLS_X509_ERR_SET_AFTER_PARSE);
+    /* Invalid parameters */
+    ASSERT_EQ(HITLS_X509_CertDigest(NULL, mdId, md, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, NULL, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, md, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(parse, HITLS_X509_GET_EXT, &ext, sizeof(HITLS_X509_Ext *)), 0);
-    HITLS_X509_ExtBCons bCons = {true, true, 1};
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)),
-        HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
-
-    // Test: Parse after set
-    new = HITLS_X509_CertNew();
-    ASSERT_NE(new, NULL);
-    ASSERT_EQ(HITLS_ParseCertTest(derCertPath, BSL_FORMAT_ASN1, &parse), HITLS_X509_ERR_INVALID_PARAM);
 exit:
-    HITLS_X509_CertFree(parse);
-    HITLS_X509_CertFree(new);
+    HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
 

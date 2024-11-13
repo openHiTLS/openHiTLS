@@ -28,6 +28,7 @@
 #include "bsl_obj_internal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
+#include "crypt_eal_rand.h"
 #include "hitls_x509_local.h"
 
 /* END_HEADER */
@@ -67,6 +68,20 @@ static void FreeSanListData(void *data)
         BSL_LIST_DeleteAll((BslList *)name->value.data, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
         BSL_SAL_Free(name->value.data);
     }
+}
+
+static int32_t TestSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
+{
+    (void)signAlgId;
+    uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(pivKey);
+    uint8_t *sign = (uint8_t *)BSL_SAL_Malloc(signLen);
+    if (sign == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    uint8_t *data = (uint8_t *)obj;
+    int32_t ret = CRYPT_EAL_PkeySign(pivKey, mdId, data, 1, sign, &signLen);
+    BSL_SAL_Free(sign);
+    return ret;
 }
 
 /* BEGIN_CASE */
@@ -1042,5 +1057,60 @@ void SDV_X509_EXT_GetSki_TC001(Hex *encode, int ret, int critical, Hex *kid)
 
 exit:
     HITLS_X509_ExtFree(ext, true);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_SIGN_Api_TC001(void)
+{
+    CRYPT_EAL_PkeyCtx *privKey = NULL;
+    uint32_t mdId = CRYPT_MD_SHA384;
+    uint8_t obj = 1;
+    TestMemInit();
+    privKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    ASSERT_NE(privKey, NULL);
+
+    ASSERT_EQ(HITLS_X509_Sign(mdId, NULL, NULL, &obj, TestSignCb), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_Sign(mdId, privKey, NULL, NULL, TestSignCb), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_Sign(mdId, privKey, NULL, &obj, NULL), HITLS_X509_ERR_INVALID_PARAM);
+
+    mdId = CRYPT_MD_SHA3_384;
+    ASSERT_EQ(HITLS_X509_Sign(mdId, privKey, NULL, &obj, TestSignCb), HITLS_X509_ERR_HASHID);
+
+    mdId = CRYPT_MD_SHA384;
+    ASSERT_EQ(HITLS_X509_Sign(mdId, privKey, NULL, &obj, TestSignCb), BSL_MALLOC_FAIL);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(privKey);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_SIGN_Func_TC001(char *keyPath, int keyFormat, int keyType, int mdId, int pad, int hashId, int mgfId,
+    int saltLen, int ret)
+{
+    CRYPT_EAL_PkeyCtx *privKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    HITLS_X509_SignAlgParam *algParamPtr = NULL;
+    uint8_t obj = 1;
+    if (pad == 0) {
+        algParamPtr = NULL;
+    } else if (pad == CRYPT_PKEY_EMSA_PSS) {
+        algParam.algId = BSL_CID_RSASSAPSS;
+        algParam.rsaPss.mdId = hashId;
+        algParam.rsaPss.mgfId = mgfId;
+        algParam.rsaPss.saltLen = saltLen;
+        algParamPtr = &algParam;
+    }
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, keyPath, NULL, 0, &privKey), 0);
+
+    ASSERT_EQ(HITLS_X509_Sign(mdId, privKey, algParamPtr, &obj, TestSignCb), ret);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(privKey);
+    CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */
