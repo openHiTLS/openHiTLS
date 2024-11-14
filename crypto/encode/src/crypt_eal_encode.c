@@ -448,7 +448,7 @@ static int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **e
     }
     BslOidString oidStr = {oid->len, (char *)oid->buff, 0};
     BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
-    if (cid == BSL_CID_EC_PUBLICKEY) {
+    if (cid == BSL_CID_EC_PUBLICKEY || cid == BSL_CID_SM2PRIME256) {
         return ParseEccPubkeyAsn1Buff(&bitPubkey, algParam, ealPubKey);
     } else if (cid == BSL_CID_RSA || cid == BSL_CID_RSASSAPSS) {
         return ParseRsaPubkeyAsn1Buff(bitPubkey.buff, bitPubkey.len, algParam, ealPubKey, cid);

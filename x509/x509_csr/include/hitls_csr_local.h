@@ -35,17 +35,25 @@ typedef struct _HITLS_X509_ReqInfo {
     BSL_ASN1_List *attributes;
 } HITLS_X509_ReqInfo;
 
+typedef enum {
+    HITLS_X509_CSR_STATE_NEW = 0,
+    HITLS_X509_CSR_STATE_SET,
+    HITLS_X509_CSR_STATE_SIGN,
+    HITLS_X509_CSR_STATE_GEN,
+} HITLS_X509_CSR_STATE;
+
 /* PKCS #10 */
 typedef struct _HITLS_X509_Csr {
-    int8_t flag; // Used to mark csr parsing or generation, indicating resource release behavior.
+    uint8_t flag; // Used to mark csr parsing or generation, indicating resource release behavior.
+    uint8_t state;
+
     uint8_t *rawData;
     uint32_t rawDataLen;
-    void *ealPrivKey; // used to sign csr
-    CRYPT_MD_AlgId signMdId;
 
     HITLS_X509_ReqInfo reqInfo;
     HITLS_X509_Asn1AlgId signAlgId;
     BSL_ASN1_BitString signature;
+
     BSL_SAL_RefCount references;
 } HITLS_X509_Csr;
 
