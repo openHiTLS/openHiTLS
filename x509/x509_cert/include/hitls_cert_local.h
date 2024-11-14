@@ -26,9 +26,6 @@
 extern "C" {
 #endif
 
-#define HITLS_X509_CERT_PARSE_FLAG  0x01
-#define HITLS_X509_CERT_GEN_FLAG    0x02
-
 typedef struct {
     uint8_t *tbsRawData;
     uint32_t tbsRawDataLen;
@@ -45,8 +42,16 @@ typedef struct {
     HITLS_X509_Ext ext;
 } HITLS_X509_CertTbs;
 
+typedef enum {
+    HITLS_X509_CERT_STATE_NEW = 0,
+    HITLS_X509_CERT_STATE_SET,
+    HITLS_X509_CERT_STATE_SIGN,
+    HITLS_X509_CERT_STATE_GEN,
+} HITLS_X509_CERT_STATE;
+
 typedef struct _HITLS_X509_Cert {
-    int8_t flag; // Used to mark certificate parsing or generation, indicating resource release behavior.
+    uint8_t flag; // Used to mark certificate parsing or generation, indicating resource release behavior.
+    uint8_t state;
 
     uint8_t *rawData;
     uint32_t rawDataLen;
@@ -54,8 +59,6 @@ typedef struct _HITLS_X509_Cert {
     HITLS_X509_Asn1AlgId signAlgId;
     BSL_ASN1_BitString signature;
 
-    void *ealPrivKey;         // Used to sign.
-    CRYPT_MD_AlgId signMdId;
     BSL_SAL_RefCount references;
 } HITLS_X509_Cert;
 

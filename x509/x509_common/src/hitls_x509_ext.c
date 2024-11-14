@@ -249,7 +249,8 @@ static int32_t ParseDirName(uint8_t **encode, uint32_t *encLen, BslList **list)
 
     *list = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
     if (*list == NULL) {
-        return HITLS_X509_ERR_PARSE_GENERALNAME_DIR;
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
     }
     BSL_ASN1_Buffer asn = {.buff = *encode, .len = valueLen};
     ret = HITLS_X509_ParseNameList(&asn, *list);
@@ -603,6 +604,7 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry, HITLS_X509
     int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &buff, &buffLen, &len);
     if (ret == BSL_SUCCESS && buffLen != len) {
         ret = HITLS_X509_ERR_PARSE_NO_ENOUGH;
+        BSL_ERR_PUSH_ERROR(ret);
     }
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1391,7 +1393,7 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
     certExt->keyUsage = srcExt->keyUsage;
     certExt->extFlags = srcExt->extFlags;
 
-    if (src->extList == NULL) {
+    if (BSL_LIST_COUNT(src->extList) == 0) {
         BSL_LIST_DeleteAll(dest->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
         return HITLS_X509_SUCCESS;
     }
