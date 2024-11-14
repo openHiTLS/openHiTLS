@@ -691,7 +691,7 @@ static int32_t GetExtEntryByCid(BslList *extList, BslCid cid, HITLS_X509_ExtEntr
     if (extEntry->extnId.len != 0) {
         extEntry->extnId.buff = BSL_SAL_Dump(oid->octs, oid->octetLen);
         if (extEntry->extnId.buff == NULL) {
-            if (isNew) {
+            if (*isNew) {
                 BSL_SAL_Free(extEntry);
             }
             BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
@@ -978,12 +978,13 @@ static int32_t AllocEncodeParam(BSL_ASN1_TemplateItem **items, uint32_t itemNum,
     uint32_t asnNum)
 {
     *items = BSL_SAL_Calloc(itemNum, sizeof(BSL_ASN1_TemplateItem)); // sequence + names
-    if (items == NULL) {
+    if (*items == NULL) {
         return BSL_MALLOC_FAIL;
     }
     *asns = BSL_SAL_Calloc(asnNum, sizeof(BSL_ASN1_Buffer));
-    if (asns == NULL) {
-        BSL_SAL_Free(items);
+    if (*asns == NULL) {
+        BSL_SAL_Free(*items);
+        *items = NULL;
         return BSL_MALLOC_FAIL;
     }
     return HITLS_X509_SUCCESS;

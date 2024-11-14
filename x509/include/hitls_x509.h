@@ -127,16 +127,6 @@ typedef enum {
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
-
-    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0800,
-    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
-
-    HITLS_PKCS12_GEN_LOCALKEYID = 0x0900,       /** Gen and set localKeyId in p12-ctx. */
-    HITLS_PKCS12_SET_ENTITY_KEYBAG,             /** Set entity key-Bag to p12-ctx. */
-    HITLS_PKCS12_SET_ENTITY_CERTBAG,            /** Set entity cert-Bag to p12-ctx. */
-    HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
-    HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
-    HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
 } HITLS_X509_Cmd;
 
 typedef enum {
@@ -811,6 +801,11 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
  */
 int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
 
+typedef enum {
+    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x01,
+    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
+} HITLS_X509_Attr_Cmd;
+
 /**
  * @ingroup x509
  * @brief Generic function to process attribute function
@@ -830,19 +825,42 @@ typedef struct {
     BSL_Buffer *encPwd;
 } HITLS_PKCS12_PwdParam;
 
+/**
+ * While the standard imposes no constraints on password length, (pwdLen + saltLen) should be kept below 2^31
+ * to avoid integer overflow in internal calculations.
+*/
 typedef struct {
     uint32_t saltLen;
     uint32_t itCnt;
     uint32_t macId;
     uint8_t *pwd;
     uint32_t pwdLen;
-} HITLS_PKCS12_HmacParam;
+} HITLS_PKCS12_KdfParam;
 
+typedef struct {
+    void *para;
+    int32_t algId;
+} HITLS_PKCS12_MacParam;
+
+/**
+ * Parameters for p12 file generation.
+ * Only PBES2 is supported, but different symmetric encryption algorithms can be used within certificates and keys.
+ * Additionally, the encryption key must be the same for both certificates and private keys.
+ */
 typedef struct {
     CRYPT_EncodeParam certEncParam;
     CRYPT_EncodeParam keyEncParam;
-    HITLS_PKCS12_HmacParam macParam;
+    HITLS_PKCS12_MacParam macParam;
 } HITLS_PKCS12_EncodeParam;
+
+typedef enum {
+    HITLS_PKCS12_GEN_LOCALKEYID = 0x01,          /** Gen and set localKeyId of entity-key and entity-cert in p12-ctx. */
+    HITLS_PKCS12_SET_ENTITY_KEYBAG,             /** Set entity key-Bag to p12-ctx. */
+    HITLS_PKCS12_SET_ENTITY_CERTBAG,            /** Set entity cert-Bag to p12-ctx. */
+    HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
+    HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
+    HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
+} HITLS_PKCS12_Cmd;
 
 /**
  * @ingroup pkcs12
@@ -901,7 +919,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
  * @param p12    [IN] p12 context.
  * @param cmd    [IN] HITLS_PKCS12_XXX
  *        cmd                                   val type
- *        HITLS_PKCS12_GEN_LOCALKEYID           none
+ *        HITLS_PKCS12_GEN_LOCALKEYID           AlgId of MD
  *        HITLS_PKCS12_SET_ENTITY_KEYBAG        a pkey bag
  *        HITLS_PKCS12_SET_ENTITY_CERTBAG       a cert bag
  *        HITLS_PKCS12_ADD_CERTBAG              a cert bag
