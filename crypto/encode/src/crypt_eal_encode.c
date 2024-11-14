@@ -501,6 +501,10 @@ static int32_t ParseEccPrikeyAsn1(BSL_ASN1_Buffer *encode, BSL_ASN1_Buffer *pk8A
             return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;
         }
     }
+    if (pubkey->len == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
+    }
     int32_t algId;
     CRYPT_EAL_PkeyCtx *pctx = NULL;
     int32_t ret = EccEalKeyNew(param, &algId, &pctx);
