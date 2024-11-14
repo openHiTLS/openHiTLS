@@ -120,6 +120,7 @@
                 "armv8": {
                     "sm3": null,
                     "aes": null,
+                    "modes": null,
                     "chacha20": null,
                     "sm4": null,
                     "ecc": null
