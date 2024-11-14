@@ -2139,7 +2139,7 @@ int32_t CRYPT_EAL_PubKeyEncodeFile(CRYPT_EAL_PkeyCtx *ealPubKey,
     return ret;
 }
 
-int32_t CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode,
+int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type, BSL_Buffer *encode,
     const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     switch (type) {
@@ -2156,7 +2156,7 @@ int32_t CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type, BSL_Buffer
     }
 }
 
-int32_t CRYPT_EAL_DecodeFileKey(BSL_ParseFormat format, int32_t type, const char *path,
+int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
     uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     if (path == NULL || strlen(path) > PATH_MAX_LEN) {
@@ -2177,7 +2177,7 @@ int32_t CRYPT_EAL_DecodeFileKey(BSL_ParseFormat format, int32_t type, const char
 }
 
 int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    BSL_ParseFormat format, int32_t type, BSL_Buffer *encode)
+    int32_t format, int32_t type, BSL_Buffer *encode)
 {
     switch (type) {
         case CRYPT_PRIKEY_PKCS8_UNENCRYPT:
@@ -2194,7 +2194,7 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
 }
 
 int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    BSL_ParseFormat format, int32_t type, const char *path)
+    int32_t format, int32_t type, const char *path)
 {
     if (path == NULL || strlen(path) > PATH_MAX_LEN) {
         return CRYPT_INVALID_ARG;
