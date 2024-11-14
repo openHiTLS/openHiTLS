@@ -94,7 +94,7 @@ HITLS_X509_Csr *HITLS_X509_CsrNew(void)
     BSL_SAL_ReferencesInit(&(csr->references));
     csr->reqInfo.subjectName = subjectName;
     csr->reqInfo.attributes = attributes;
-    csr->flag = HITLS_X509_CSR_GEN_FLAG;
+    csr->state = HITLS_X509_CSR_STATE_NEW;
     return csr;
 ERR:
     BSL_SAL_FREE(subjectName);
@@ -126,8 +126,6 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
     CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
     csr->reqInfo.ealPubKey = NULL;
 
-    CRYPT_EAL_PkeyFreeCtx(csr->ealPrivKey);
-    csr->ealPrivKey = NULL;
     BSL_SAL_FREE(csr);
 }
 
@@ -249,7 +247,10 @@ static int32_t X509CsrAsn1Parse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
     BSL_Buffer asn1Buff = {data, dataLen};
-    csr->flag = HITLS_X509_CSR_PARSE_FLAG;
+    if (csr->flag & HITLS_X509_CSR_GEN_FLAG) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
     asn1Buff.data = (uint8_t *)BSL_SAL_Dump(data, dataLen);
     if (asn1Buff.data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
@@ -258,7 +259,9 @@ static int32_t X509CsrAsn1Parse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
     int32_t ret = X509CsrBuffAsn1Parse(&asn1Buff.data, &asn1Buff.dataLen, csr);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_FREE(asn1Buff.data);
+        return ret;
     }
+    csr->flag |= HITLS_X509_CSR_PARSE_FLAG;
     return ret;
 }
 
@@ -285,7 +288,7 @@ static int32_t X509CsrPemParse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
 
 int32_t HITLS_X509_CsrParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Csr **csr)
 {
-    if (encode == NULL || csr == NULL || encode->data == NULL || encode->dataLen == 0) {
+    if (encode == NULL || csr == NULL || *csr != NULL || encode->data == NULL || encode->dataLen == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -338,22 +341,11 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
 
 static int32_t CheckCsrValid(HITLS_X509_Csr *csr)
 {
-    if (csr->reqInfo.version != HITLS_CSR_VERSION) {
-        return HITLS_X509_ERR_CSR_INVALID_VERSION;
-    }
     if (csr->reqInfo.ealPubKey == NULL) {
         return HITLS_X509_ERR_CSR_INVALID_PUBKEY;
     }
     if (csr->reqInfo.subjectName == NULL || BSL_LIST_COUNT(csr->reqInfo.subjectName) == 0) {
         return HITLS_X509_ERR_CSR_INVALID_SUBJECT_DN;
-    }
-    if (csr->reqInfo.attributes == NULL) {
-        return HITLS_X509_ERR_CSR_INVALID_ATTR;
-    }
-    // when generating csr, the private key or the signature must be set.
-    if (csr->ealPrivKey == NULL && csr->signature.buff == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
     }
 
     return HITLS_X509_SUCCESS;
@@ -414,7 +406,7 @@ static int32_t EncodeCsrReqInfo(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *re
 {
     BSL_ASN1_Buffer subject = {0,  0, NULL};
     BSL_ASN1_Buffer publicKey = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    BSL_ASN1_Buffer attributes = {0,  0, NULL};
+    BSL_ASN1_Buffer attributes = {0, 0, NULL};
     int ret = EncodeCsrReqInfoItem(reqInfo, &subject, &publicKey, &attributes);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
@@ -439,31 +431,6 @@ static int32_t EncodeCsrReqInfo(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *re
     return ret;
 }
 
-static int32_t SignCsrReqInfo(HITLS_X509_Csr *csr, BSL_ASN1_Buffer *reqInfo, BSL_ASN1_BitString *signBs)
-{
-    BSL_Buffer rawSignBuff = {NULL, 0};
-    int32_t ret = CRYPT_EAL_PkeyPairCheck((CRYPT_EAL_PkeyCtx *)csr->reqInfo.ealPubKey,
-        (CRYPT_EAL_PkeyCtx *)csr->ealPrivKey);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "csr: private key and public key don't match .", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    ret = HITLS_X509_SignAsn1Data(csr->ealPrivKey, csr->signMdId, reqInfo, &rawSignBuff, signBs);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05068, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "csr: failed to sign the csr.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    csr->reqInfo.reqInfoRawData = rawSignBuff.data;
-    csr->reqInfo.reqInfoRawDataLen = rawSignBuff.dataLen;
-    return ret;
-}
-
 BSL_ASN1_TemplateItem g_briefCsrTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* pkcs10 csr */
         {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, /* reqInfo */
@@ -473,88 +440,82 @@ BSL_ASN1_TemplateItem g_briefCsrTempl[] = {
 
 #define HITLS_X509_CSR_BRIEF_SIZE 3
 
-static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr, BSL_Buffer *buff)
+static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr)
 {
-    BSL_ASN1_Buffer reqInfo = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    BSL_ASN1_Buffer signAlg = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
-    /* encode csr request info */
-    int32_t ret = EncodeCsrReqInfo(&csr->reqInfo, &reqInfo);
+    if (csr->signature.buff == NULL || csr->signature.len == 0 ||
+        csr->reqInfo.reqInfoRawData == NULL || csr->reqInfo.reqInfoRawDataLen == 0 ||
+        csr->signAlgId.algId == BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
+        return HITLS_X509_ERR_CSR_NOT_SIGNED;
+    }
+
+    BSL_ASN1_Buffer asnArr[HITLS_X509_CSR_BRIEF_SIZE] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, csr->reqInfo.reqInfoRawDataLen, csr->reqInfo.reqInfoRawData},
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
+        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&csr->signature}
+    };
+    uint32_t valLen = 0;
+    int32_t ret = BSL_ASN1_DecodeTagLen(asnArr[0].tag, &asnArr[0].buff, &asnArr[0].len, &valLen); // 0 is reqInfo
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    /* encode csr sign alg */
-    ret = HITLS_X509_SetSignAlgInfo(csr->ealPrivKey, csr->signMdId, &csr->signAlgId);
+
+    ret = HITLS_X509_EncodeSignAlgInfo(&csr->signAlgId, &asnArr[1]); // 1 is signAlg
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        return ret;
     }
 
-    ret = HITLS_X509_EncodeSignAlgInfo(&csr->signAlgId, &signAlg);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = SignCsrReqInfo(csr, &reqInfo, &csr->signature);
-    if (ret != HITLS_X509_SUCCESS) {
-        goto EXIT;
-    }
-
-    BSL_ASN1_Buffer csrAsn1Buff[HITLS_X509_CSR_BRIEF_SIZE] = {
-        reqInfo,
-        signAlg,
-        {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&csr->signature}
-    };
     BSL_ASN1_Template csrTempl = { g_briefCsrTempl, sizeof(g_briefCsrTempl) / sizeof(g_briefCsrTempl[0]) };
-    ret = BSL_ASN1_EncodeTemplate(&csrTempl, csrAsn1Buff, HITLS_X509_CSR_BRIEF_SIZE, &buff->data, &buff->dataLen);
+    ret = BSL_ASN1_EncodeTemplate(&csrTempl, asnArr, HITLS_X509_CSR_BRIEF_SIZE, &csr->rawData, &csr->rawDataLen);
+    BSL_SAL_FREE(asnArr[1].buff);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
-        BSL_SAL_FREE(csr->signature.buff);
+        BSL_ERR_PUSH_ERROR(ret);
     }
-
-EXIT:
-    BSL_SAL_FREE(reqInfo.buff);
-    BSL_SAL_FREE(signAlg.buff);
     return ret;
 }
 
+/**
+ * @brief Encode ASN.1 csr
+ *
+ * @param csr [IN] Pointer to the csr structure
+ * @param buff [OUT] Pointer to the buffer.
+ *             If NULL, only the ASN.1 csr is encoded.
+ *             If non-NULL, the DER encoding content of the csr is stored in buff
+ * @return int32_t Return value, 0 means success, other values mean failure
+ */
 static int32_t X509EncodeAsn1Csr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
 {
-    /* Encoded after decoding. */
-    if (csr->rawData != NULL && csr->rawDataLen != 0) {
-        buff->data = BSL_SAL_Dump(csr->rawData, csr->rawDataLen);
-        if (buff->data == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
-            return BSL_DUMP_FAIL;
+    int32_t ret;
+    if (csr->flag & HITLS_X509_CSR_GEN_FLAG) {
+        if (csr->state != HITLS_X509_CSR_STATE_SIGN && csr->state != HITLS_X509_CSR_STATE_GEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
+            return HITLS_X509_ERR_CSR_NOT_SIGNED;
         }
-        buff->dataLen = csr->rawDataLen;
+        if (csr->state == HITLS_X509_CSR_STATE_SIGN) {
+            ret = X509EncodeAsn1CsrCore(csr);
+            if (ret != HITLS_X509_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                return ret;
+            }
+            csr->state = HITLS_X509_CSR_STATE_GEN;
+        }
+    }
+    if (csr->rawData == NULL || csr->rawDataLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
+        return HITLS_X509_ERR_CSR_NOT_SIGNED;
+    }
+    if (buff == NULL) {
         return HITLS_X509_SUCCESS;
     }
-
-    /* Generate a new csr. */
-    int32_t ret = CheckCsrValid(csr);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05066, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "csr: encode csr failed due to invalid parameters.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    ret = X509EncodeAsn1CsrCore(csr, buff);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    csr->rawData = BSL_SAL_Dump(buff->data, buff->dataLen);
-    if (csr->rawData == NULL) {
-        BSL_SAL_FREE(buff->data);
+    buff->data = BSL_SAL_Dump(csr->rawData, csr->rawDataLen);
+    if (buff->data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
         return BSL_DUMP_FAIL;
     }
-    csr->rawDataLen = buff->dataLen;
-    return ret;
+    buff->dataLen = csr->rawDataLen;
+    return HITLS_X509_SUCCESS;
 }
 
 static int32_t X509EncodePemCsr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
@@ -579,7 +540,7 @@ static int32_t X509EncodePemCsr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_CsrGenBuff(HITLS_X509_Csr *csr, int32_t format, BSL_Buffer *buff)
+int32_t HITLS_X509_CsrGenBuff(int32_t format, HITLS_X509_Csr *csr, BSL_Buffer *buff)
 {
     if (csr == NULL || buff == NULL || buff->data != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -597,7 +558,7 @@ int32_t HITLS_X509_CsrGenBuff(HITLS_X509_Csr *csr, int32_t format, BSL_Buffer *b
     }
 }
 
-int32_t HITLS_X509_CsrGenFile(HITLS_X509_Csr *csr, int32_t format, const char *path)
+int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *path)
 {
     if (path == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -605,7 +566,7 @@ int32_t HITLS_X509_CsrGenFile(HITLS_X509_Csr *csr, int32_t format, const char *p
     }
 
     BSL_Buffer encode = { NULL, 0};
-    int32_t ret = HITLS_X509_CsrGenBuff(csr, format, &encode);
+    int32_t ret = HITLS_X509_CsrGenBuff(format, csr, &encode);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -627,26 +588,23 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    if (csr->flag == HITLS_X509_CSR_PARSE_FLAG && cmd >= HITLS_X509_SET_VERSION
+    if ((csr->flag & HITLS_X509_CSR_PARSE_FLAG) && cmd >= HITLS_X509_SET_VERSION
         && cmd < HITLS_X509_EXT_KU_KEYENC) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_AFTER_PARSE);
         return HITLS_X509_ERR_SET_AFTER_PARSE;
     }
 
+    int32_t ret;
     switch (cmd) {
         case HITLS_X509_REF_UP:
             return HITLS_X509_RefUp(&csr->references, val, valLen);
         case HITLS_X509_SET_PUBKEY:
+            csr->flag |= HITLS_X509_CSR_GEN_FLAG;
+            csr->state = HITLS_X509_CSR_STATE_SET;
             return HITLS_X509_SetPkey(&csr->reqInfo.ealPubKey, val);
-        case HITLS_X509_SET_PRIVKEY:
-            return HITLS_X509_SetPkey(&csr->ealPrivKey, val);
-        case HITLS_X509_SET_SIGN_MD_ID:
-            return HITLS_X509_SetSignMdId(&csr->signMdId, val, valLen);
-        case HITLS_X509_SET_SIGN_RSA_PSS_PARAM:
-            return HITLS_X509_SetRsaPssPara(csr->ealPrivKey, val, valLen);
-        case HITLS_X509_SET_SIGN_RSA_PADDING:
-            return HITLS_X509_SetRsaPadding(csr->ealPrivKey, val, valLen);
         case HITLS_X509_ADD_SUBJECT_NAME:
+            csr->flag |= HITLS_X509_CSR_GEN_FLAG;
+            csr->state = HITLS_X509_CSR_STATE_SET;
             return HITLS_X509_AddDnName(csr->reqInfo.subjectName, (HITLS_X509_DN *)val, valLen);
         case HITLS_X509_GET_ENCODELEN:
             return HITLS_X509_GetEncodeLen(csr->rawDataLen, val, valLen);
@@ -659,7 +617,11 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
         case HITLS_X509_GET_SUBJECT_DNNAME:
             return HITLS_X509_GetList(csr->reqInfo.subjectName, val, valLen);
         case HITLS_X509_CSR_GET_ATTRIBUTES:
-            return HITLS_X509_GetList(csr->reqInfo.attributes, val, valLen);
+            ret = HITLS_X509_GetList(csr->reqInfo.attributes, val, valLen);
+            if (ret == HITLS_X509_SUCCESS && (csr->flag & HITLS_X509_CSR_PARSE_FLAG) == 0) {
+                csr->flag |= HITLS_X509_CSR_GEN_FLAG;
+            }
+            return ret;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -681,4 +643,64 @@ int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr)
     }
 
     return ret;
+}
+
+int32_t CsrSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId,
+    HITLS_X509_Csr *csr)
+{
+    BSL_ASN1_Buffer reqInfoAsn1 = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
+    BSL_Buffer signBuff = {NULL, 0};
+
+    csr->signAlgId = *signAlgId;
+    int32_t ret = CRYPT_EAL_PkeyPairCheck((CRYPT_EAL_PkeyCtx *)csr->reqInfo.ealPubKey, prvKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = EncodeCsrReqInfo(&csr->reqInfo, &reqInfoAsn1);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = HITLS_X509_SignAsn1Data(prvKey, mdId, &reqInfoAsn1, &signBuff, &csr->signature);
+    BSL_SAL_Free(reqInfoAsn1.buff);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    csr->reqInfo.reqInfoRawData = signBuff.data;
+    csr->reqInfo.reqInfoRawDataLen = signBuff.dataLen;
+    csr->state = HITLS_X509_CSR_STATE_SIGN;
+    return ret;
+}
+
+int32_t HITLS_X509_CsrSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+    HITLS_X509_Csr *csr)
+{
+    if (csr == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (csr->flag & HITLS_X509_CSR_PARSE_FLAG) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_AFTER_PARSE);
+        return HITLS_X509_ERR_SIGN_AFTER_PARSE;
+    }
+    if (csr->state == HITLS_X509_CSR_STATE_SIGN || csr->state == HITLS_X509_CSR_STATE_GEN) {
+        return HITLS_X509_SUCCESS;
+    }
+
+    int32_t ret = CheckCsrValid(csr);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    BSL_SAL_FREE(csr->signature.buff);
+    csr->signature.len = 0;
+    BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
+    csr->reqInfo.reqInfoRawDataLen = 0;
+    BSL_SAL_FREE(csr->rawData);
+    csr->rawDataLen = 0;
+    return HITLS_X509_Sign(mdId, prvKey, algParam, csr, (HITLS_X509_SignCb)CsrSignCb);
 }

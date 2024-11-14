@@ -259,20 +259,23 @@ SDV_X509_CRL_CTRL_SetFunc_TC001:"../testdata/cert/pem/crl/inter.mul.crt"
 SDV_X509_CRL_Sign_ParamCheck_TC001
 SDV_X509_CRL_Sign_ParamCheck_TC001:
 
+SDV_X509_CRL_Gen_Process_TC001: Parse crl
+SDV_X509_CRL_Gen_Process_TC001:
+
+SDV_X509_CRL_Gen_Process_TC002: Generate crl
+SDV_X509_CRL_Gen_Process_TC002:
+
 SDV_X509_CRL_Sign_AlgParamCheck_TC001
 SDV_X509_CRL_Sign_AlgParamCheck_TC001:
-
-SDV_X509_CRL_Sign_CrlFieldCheck_TC001
-SDV_X509_CRL_Sign_CrlFieldCheck_TC001:
 
 SDV_X509_CRL_Sign_RevokedCheck_TC001
 SDV_X509_CRL_Sign_RevokedCheck_TC001:
 
 SDV_X509_CRL_Sign_Func_TC001 v1 cert rsa_p1_v1.crt.der
-SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p1.key.der":CRYPT_PRIKEY_RSA:CRYPT_PRIKEY_RSA:CRYPT_PKEY_EMSA_PKCSV15:CRYPT_MD_SHA256:0:"tmp-rsav1.crl"
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p1.key.der":CRYPT_PRIKEY_RSA:CRYPT_PRIKEY_RSA:0:CRYPT_MD_SHA256:0:"tmp-rsav1.crl"
 
 SDV_X509_CRL_Sign_Func_TC001 v3 cert rsa_p8.crt.der
-SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PKCSV15:CRYPT_MD_SHA256:1:"tmp-rsav2.crl"
+SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:0:CRYPT_MD_SHA256:1:"tmp-rsav2.crl"
 
 SDV_X509_CRL_Sign_Func_TC001 v3 cert sm2.crt.der
 SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/sm2_cert/sm2.crt.der":"../testdata/cert/asn1/sm2_cert/sm2.key.der":CRYPT_PRIKEY_ECC:CRYPT_PKEY_SM2:0:CRYPT_MD_SM3:1:"tmp-sm2.crl"

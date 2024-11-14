@@ -37,6 +37,9 @@ SDV_X509_CSR_GEN_API_TC001:
 SDV_X509_CSR_GEN_API_TC002
 SDV_X509_CSR_GEN_API_TC002:
 
+SDV_X509_CSR_SIGN_API_TC001
+SDV_X509_CSR_SIGN_API_TC001:
+
 SDV_X509_CSR_GEN_FUNC_TC001: rsa pem to pem
 SDV_X509_CSR_GEN_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.csr":BSL_FORMAT_PEM
 
@@ -74,22 +77,16 @@ SDV_X509_CSR_GEN_FUNC_TC001: ec asn1 to pem
 SDV_X509_CSR_GEN_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_sha_csr/ec_app256SHA256.csr.der":BSL_FORMAT_PEM
 
 SDV_X509_CSR_GEN_FUNC_TC002
-SDV_X509_CSR_GEN_FUNC_TC002:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.key.pem":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_RSA:CRYPT_PKEY_EMSA_PKCSV15
-
-SDV_X509_CSR_GEN_FUNC_TC002: ec pem
-SDV_X509_CSR_GEN_FUNC_TC002:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/ecdsa_sha/ec_app256SHA256.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/ecdsa_sha/ec_app256SHA256.key.pem":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_ECDSA:0
-
-SDV_X509_CSR_GEN_FUNC_TC002: ec asn1
-SDV_X509_CSR_GEN_FUNC_TC002:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_sha_csr/ec_app256SHA256.csr.der":BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_sha_csr/ec_app256SHA256.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_ECDSA:0
+SDV_X509_CSR_GEN_FUNC_TC002:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.key.pem":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_EMSA_PKCSV15:CRYPT_MD_SHA256:CRYPT_MD_SHA256:0
 
 SDV_X509_CSR_GEN_FUNC_TC002
-SDV_X509_CSR_GEN_FUNC_TC002:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256
+SDV_X509_CSR_GEN_FUNC_TC002:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:CRYPT_MD_SHA256:0
 
-SDV_X509_CSR_GEN_FUNC_TC003
-SDV_X509_CSR_GEN_FUNC_TC003:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.key.pem":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_EMSA_PKCSV15:CRYPT_MD_SHA256:CRYPT_MD_SHA256:0
+SDV_X509_CSR_GEN_PROCESS_TC001:
+SDV_X509_CSR_GEN_PROCESS_TC001:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.key.pem":BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT
 
-SDV_X509_CSR_GEN_FUNC_TC003
-SDV_X509_CSR_GEN_FUNC_TC003:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.csr":BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_PKEY_EMSA_PSS:CRYPT_MD_SHA256:CRYPT_MD_SHA256:0
+SDV_X509_CSR_GEN_PROCESS_TC002:
+SDV_X509_CSR_GEN_PROCESS_TC002:"../testdata/cert/pem/csr/rsa_sha/rsa_sh256.key.pem":BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT
 
 SDV_X509_CSR_CTRL_SET_API_TC001 # input check test case for csr ctrl
 SDV_X509_CSR_CTRL_SET_API_TC001:"../testdata/cert/asn1/rsa_sha_csr/rsa_sh256.csr.der"
