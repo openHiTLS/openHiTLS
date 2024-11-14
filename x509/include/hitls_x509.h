@@ -23,6 +23,7 @@
 #include "bsl_uio.h"
 #include "bsl_obj.h"
 #include "crypt_algid.h"
+#include "crypt_types.h"
 #include "crypt_eal_encode.h"
 
 #ifdef __cplusplus
@@ -65,19 +66,21 @@ typedef struct _HITLS_PKCS12_Bag HITLS_PKCS12_Bag;
 #define HITLS_X509_EXT_KU_DECIPHER_ONLY         0x8000
 
 typedef enum {
-    HITLS_X509_REF_UP = 0,
+    HITLS_X509_REF_UP = 0,             /** Increase the reference count of the object */
 
-    HITLS_X509_GET_ENCODELEN = 0x0100, /** Get the length of the ASN.1 DER encoded cert/csr. */
-    HITLS_X509_GET_ENCODE,             /** Get the ASN.1 DER encoded cert/csr. */
-    HITLS_X509_GET_PUBKEY,             /** Get the public key for the cert/csr */
-    HITLS_X509_GET_SIGNALG,            /** Get the signature algorithm for the cert. */
-    HITLS_X509_GET_SUBJECT_DNNAME_STR, /** Get the string of subject name. */
-    HITLS_X509_GET_ISSUER_DNNAME_STR,  /** Get the string of issuer name. */
-    HITLS_X509_GET_SERIALNUM_STR,          /** Get the string of serial number. */
-    HITLS_X509_GET_BEFORE_TIME,        /** Get the string of before time. */
-    HITLS_X509_GET_AFTER_TIME,         /** Get the string of after time. */
-    HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the subject name list. */
-    HITLS_X509_GET_ISSUER_DNNAME,      /** Get the issuer name list. */
+    HITLS_X509_GET_ENCODELEN = 0x0100, /** Get the length in bytes of the ASN.1 DER encoded cert/csr */
+    HITLS_X509_GET_ENCODE,             /** Get the ASN.1 DER encoded cert/csr data */
+    HITLS_X509_GET_PUBKEY,             /** Get the public key contained in the cert/csr */
+    HITLS_X509_GET_SIGNALG,            /** Get the signature algorithm used to sign the cert/csr */
+    HITLS_X509_GET_SUBJECT_DNNAME_STR, /** Get the subject distinguished name as a formatted string */
+    HITLS_X509_GET_ISSUER_DNNAME_STR,  /** Get the issuer distinguished name as a formatted string */
+    HITLS_X509_GET_SERIALNUM_STR,      /** Get the serial number as a string */
+    HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time as a string */
+    HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time as a string */
+    HITLS_X509_GET_SUBJECT_DNNAME,     /** Get the list of subject distinguished name components.
+                                           Note: The list is read-only and should not be modified. */
+    HITLS_X509_GET_ISSUER_DNNAME,      /** Get the list of issuer distinguished name components.
+                                           Note: The list is read-only and should not be modified. */
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
     HITLS_X509_GET_REVOKELIST,         /** Get the certficate revoke list from the crl. */
     HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
@@ -86,19 +89,6 @@ typedef enum {
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
     HITLS_X509_SET_BEFORE_TIME,        /** Set the before time for the cert. */
     HITLS_X509_SET_AFTER_TIME,         /** Set the after time for the cert. */
-    HITLS_X509_SET_PRIVKEY,            /** Set the private key for signing the cert/csr. */
-    HITLS_X509_SET_SIGN_MD_ID,         /** Set the hash algorithm for signing the cert/csr。 */
-    HITLS_X509_SET_SIGN_RSA_PADDING,   /** Set the padding mode(CRYPT_PKEY_EMSA_PKCSV15 or CRYPT_PKEY_EMSA_PSS)
-                                           for the RSA signature algorithm.
-                                           Before that, you need to use cmd HITLS_X509_SET_PRIVKEY
-                                           to set the private key.
-                                           If the padding mode is already set, setting different mode will fail. */
-    HITLS_X509_SET_SIGN_RSA_PSS_PARAM, /** Set the parameters for the RSA-PSS signature algorithm.
-                                           Before that, you need to use cmd HITLS_X509_SET_PRIVKEY
-                                           to set the private key.
-                                           If the padding mode is not rsa pss, it will fail.
-                                           If the parameter has already been set in the private key, this setting
-                                           can be omitted, or the same parameter must be set, except for saltLen */
     HITLS_X509_SET_PUBKEY,             /** Set the public key for the cert/csr. */
     HITLS_X509_SET_SUBJECT_DNNAME,     /** Set the subject name list. */
     HITLS_X509_SET_ISSUER_DNNAME,      /** Set the issuer name list. */
@@ -106,10 +96,10 @@ typedef enum {
     HITLS_X509_ADD_SUBJECT_NAME,       /** Add the subject name for the cert/csr. */
     HITLS_X509_CRL_ADD_REVOKED_CERT,   /** Add the revoke cert to crl. */
 
-    HITLS_X509_EXT_KU_KEYENC = 0x0300,
-    HITLS_X509_EXT_KU_DIGITALSIGN,
-    HITLS_X509_EXT_KU_CERTSIGN,
-    HITLS_X509_EXT_KU_KEYAGREEMENT,
+    HITLS_X509_EXT_KU_KEYENC = 0x0300,          /** Check if key encipherment usage is set in key usage extension */
+    HITLS_X509_EXT_KU_DIGITALSIGN,              /** Check if digital signature usage is set in key usage extension */
+    HITLS_X509_EXT_KU_CERTSIGN,                 /** Check if certificate signing usage is set in key usage extension */
+    HITLS_X509_EXT_KU_KEYAGREEMENT,             /** Check if key agreement usage is set in key usage extension */
 
     HITLS_X509_EXT_SET_SKI = 0x0400,             /** Set the subject key identifier extension. */
     HITLS_X509_EXT_SET_AKI,                      /** Set the authority key identifier extension. */
@@ -129,6 +119,20 @@ typedef enum {
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
 } HITLS_X509_Cmd;
 
+/**
+ * GeneralName types defined in RFC 5280 Section 4.2.1.6
+ * Reference: https://tools.ietf.org/html/rfc5280#section-4.2.1.6
+ * GeneralName ::= CHOICE {
+ *   otherName                       [0]     OtherName,
+ *   rfc822Name                      [1]     IA5String,
+ *   dNSName                         [2]     IA5String,
+ *   x400Address                     [3]     ORAddress,
+ *   directoryName                   [4]     Name,
+ *   ediPartyName                    [5]     EDIPartyName,
+ *   uniformResourceIdentifier       [6]     IA5String,
+ *   iPAddress                       [7]     OCTET STRING,
+ *   registeredID                    [8]     OBJECT IDENTIFIER }
+ */
 typedef enum {
     HITLS_X509_GN_EMAIL,  // rfc822Name                [1] IA5String
     HITLS_X509_GN_DNS,    // dNSName                   [2] IA5String
@@ -136,6 +140,7 @@ typedef enum {
     HITLS_X509_GN_URI,    // uniformResourceIdentifier [6] IA5String
     HITLS_X509_GN_IP,     // iPAddress                 [7] Octet String
 
+    // Other types are not supported yet
     HITLS_X509_GN_MAX
 } HITLS_X509_GeneralNameType;
 
@@ -204,6 +209,16 @@ typedef struct {
     bool isCa;          // Default to false.
     int32_t maxPathLen; // Greater than or equal to 0. -1: no check, 0: no intermediate certificate
 } HITLS_X509_ExtBCons;
+
+/**
+ * @brief Signature algorithm parameters.
+ */
+typedef struct {
+    uint32_t algId;    /**< Algorithm identifier */
+    union {
+        CRYPT_RSA_PssPara rsaPss;       /**< RSA PSS padding parameters */
+    };
+} HITLS_X509_SignAlgParam;
 
 /**
  * Crl number
@@ -282,20 +297,39 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert);
  * @param src  [IN] Source certificate.
  * @param dest [OUT] Destination certificate.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertDup(HITLS_X509_Cert *src, HITLS_X509_Cert **dest);
 
 /**
  * @ingroup x509
+ * @brief Sign a certificate.
+ *
+ * @attention 1. This function can only be used when generating a new certificate.
+ *            2. You need to first call interfaces HITLS_X509_CertCtrl to set cert information.
+ *
+ * @param mdId     [IN] The message digest algorithm ID.
+ * @param prvKey   [IN] The private key context used for signing.
+ * @param algParam [IN] The signature algorithm parameters.
+ * @param cert     [IN] The certificate to be signed.
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         Error codes can be found in hitls_x509_errno.h
+ */
+int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+    HITLS_X509_Cert *cert);
+
+/**
+ * @ingroup x509
  * @brief Compute the digest of the certificate.
+ *
+ * @attention This function must be called after generating or parsing a certificate.
  *
  * @param cert  [IN] The certificate.
  * @param mdId [IN] Digest algorithm.
  * @param data [IN/OUT] The digest result.
  * @param dataLen [IN/OUT] The length of the digest.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_t *data, uint32_t *dataLen);
 
@@ -308,7 +342,7 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen);
 
@@ -329,7 +363,7 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen);
 
@@ -371,7 +405,7 @@ void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
  * @param encode [IN] CERT data.
  * @param cert   [OUT] CERT after parse.
  * @return #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Cert **cert);
 
@@ -386,7 +420,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_
  * @param path   [IN] CERT file path.
  * @param cert   [OUT] CERT after parse.
  * @return #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Cert **cert);
 
@@ -401,35 +435,35 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  * @param path    [IN] CRL file path.
  * @param crllist [OUT] CRL list after parse.
  * @return #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertMulParseFile(int32_t format, const char *path, HITLS_X509_List **certlist);
 
 /**
  * @ingroup x509
- * @brief Generate a encoded certificate.
- * @attention You need to first call interfaces HITLS_X509_CertCtrl and HITLS_X509_ExtCtrl to set
- *            certificate information.
+ * @brief Generates an encoded certificate.
+ *
+ * @attention This function is used after parsing the certificate or after signing.
  *
  * @param format [IN] Encoding format: BSL_FORMAT_ASN1 or BSL_FORMAT_PEM
  * @param cert   [IN] cert
  * @param buff   [OUT] encode result
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertGenBuff(int32_t format, HITLS_X509_Cert *cert, BSL_Buffer *buff);
 
 /**
  * @ingroup x509
  * @brief Generate a certificate file.
- * @attention You need to first call interfaces HITLS_X509_CertCtrl and HITLS_X509_ExtCtrl to set
- *            certificate information.
+ *
+ * @attention This function is used after parsing the certificate or after signing.
  *
  * @param format [IN] Encoding format: BSL_FORMAT_ASN1 or BSL_FORMAT_PEM
  * @param cert   [IN] cert
  * @param path   [IN] file path
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertGenFile(int32_t format, HITLS_X509_Cert *cert, const char *path);
 
@@ -441,7 +475,7 @@ int32_t HITLS_X509_CertGenFile(int32_t format, HITLS_X509_Cert *cert, const char
  * @param dnNames   [IN] dnName array
  * @param size   [IN] The count of dnName array
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size);
 
@@ -531,14 +565,16 @@ int32_t HITLS_X509_CrlMulParseFile(int32_t format, const char *path, HITLS_X509_
  * @par Description: This function encodes the CRL into the specified format.
  *  If the encoding is successful, the memory for the encode data is requested from within the function,
  *  and the user needs to free it after using it.
+ *
+ * @attention This function is used after parsing the crl or after signing.
+ *
  * @attention None
  * @param format        [IN] Encoding format: BSL_FORMAT_PEM or BSL_FORMAT_ASN1.
  * @param crl           [IN] CRL raw data.
- * @param encode       [OUT] Encode data.
- * @param encodeLen    [OUT] Number of encoded bytes excluding the terminator.
+ * @param buff          [OUT] Encode data.
  * @return Error code
  */
-int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, uint8_t **encode, uint32_t *encodeLen);
+int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, BSL_Buffer *buff);
 
 /**
  * @ingroup x509
@@ -546,6 +582,9 @@ int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, uint8_t **enc
  * @par Description: This function encodes the CRL into the specified format.
  *  If the encoding is successful, the memory for the encode data is requested from within the function,
  *  and the user needs to free it after using it.
+ *
+ * @attention This function is used after parsing the crl or after signing.
+ *
  * @attention None
  * @param format         [IN] Encoding format: BSL_FORMAT_PEM or BSL_FORMAT_ASN1.
  * @param crl            [IN] CRL raw data.
@@ -559,6 +598,8 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
  * @brief Verify the integrity of the CRL.
  * @par Description: This function verifies the integrity of the CRL
  *
+ * @attention For generated CRLs, must be called after signing.
+ *
  * @attention None
  * @param pubkey         [IN] pubkey.
  * @param crl            [IN] CRL info.
@@ -566,29 +607,22 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
  */
 int32_t HITLS_X509_CrlVerify(void *pubkey, HITLS_X509_Crl *crl);
 
-typedef struct {
-    uint32_t algId;
-    union {
-        CRYPT_RSA_PssPara rsaPss;
-        CRYPT_RSA_PkcsV15Para pkcsV15;
-    };
-} HITLS_X509_SignAlgParam;
-
 /**
  * @ingroup x509
  * @brief Signing a CRL.
  * @par Description: This function is used to sign the CRL.
- * For the newly generated CRL, you need to invoke the HITLS_X509_CrlGenBuff/HITLS_X509_CrlGenFile interface
- * before invoking the interface.
+ *
+ * @attention 1. This function can only be used when generating a new crl.
+ *            2. Before signing, you need to call the HITLS_X509_CrlCtrl interface to set the CRL information.
  *
  * @attention The interface can be called multiple times, and the signature is regenerated on each call.
  * @param mdId           [IN] hash algorithm.
- * @param pivKey         [IN] private key.
+ * @param prvKey         [IN] private key.
  * @param algParam       [IN] signature parameter, for example, rsa-pss parameter.
  * @param crl            [IN/OUT] CRL info.
  * @return Error code
  */
-int32_t HITLS_X509_CrlSign(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, const HITLS_X509_SignAlgParam *algParam,
+int32_t HITLS_X509_CrlSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Crl *crl);
 
 /**
@@ -678,7 +712,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  * @param val [IN/OUT] input and output value.
  * @param valLen [IN] value length.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t valLen);
 
@@ -689,7 +723,7 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
  * @param storeCtx [IN] StoreCtx.
  * @param chain [IN] certificate chain.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
 
@@ -702,7 +736,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
  * @param cert [IN] certificate.
  * @param chain [OUT] certificate chain.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot, HITLS_X509_Cert *cert,
     HITLS_X509_List **chain);
@@ -731,27 +765,48 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr);
 
 /**
  * @ingroup x509
+ * @brief Sign a CSR (Certificate Signing Request).
+ *
+* @attention 1. This function can only be used when generating a new csr.
+ *            2. You need to first call interfaces HITLS_X509_CsrCtrl and HITLS_X509_AttrCtrl to set csr information.
+ *
+ * @param mdId     [IN] The message digest algorithm ID.
+ * @param prvKey   [IN] The private key context used for signing.
+ * @param algParam [IN] The signature algorithm parameters.
+ * @param csr      [IN] The CSR to be signed.
+ * @retval #HITLS_X509_SUCCESS, success.
+ *         Error codes can be found in hitls_x509_errno.h
+ */
+int32_t HITLS_X509_CsrSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+    HITLS_X509_Csr *csr);
+
+/**
+ * @ingroup x509
  * @brief Generate csr to store in buffer
  *
- * @param csr    [IN] The csr context
+ * @attention This function is used after parsing the csr or after signing.
+ *
  * @param format [IN] The format of the generated csr.
+ * @param csr    [IN] The csr context
  * @param buff   [OUT] The buffer of the generated csr.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
-int32_t HITLS_X509_CsrGenBuff(HITLS_X509_Csr *csr, int32_t format, BSL_Buffer *buff);
+int32_t HITLS_X509_CsrGenBuff(int32_t format, HITLS_X509_Csr *csr, BSL_Buffer *buff);
 
 /**
  * @ingroup x509
  * @brief Generate csr to store in file
  *
- * @param csr    [IN] The csr context
+ * @attention This function is used after parsing the csr or after signing.
+ *
  * @param format [IN] The format of the generated csr.
+ * @param csr    [IN] The csr context
  * @param path   [IN] The path of the generated csr.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
-int32_t HITLS_X509_CsrGenFile(HITLS_X509_Csr *csr, int32_t format, const char *path);
+int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *path);
 
 /**
  * @ingroup x509
@@ -762,7 +817,7 @@ int32_t HITLS_X509_CsrGenFile(HITLS_X509_Csr *csr, int32_t format, const char *p
  * @param val [IN/OUT] input and output value.
  * @param valLen [IN] value length.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t valLen);
 
@@ -775,7 +830,7 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
  * @param encode [IN] The csr data
  * @param csr [OUT] The csr context after parsing
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CsrParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Csr **csr);
 
@@ -787,7 +842,7 @@ int32_t HITLS_X509_CsrParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_C
  * @param path [IN] The csr file path
  * @param csr [OUT] The csr context after parsing
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr **csr);
 
@@ -797,7 +852,7 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
  *
  * @param csr [OUT] The csr context
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
 
@@ -816,7 +871,7 @@ typedef enum {
  *        HITLS_X509_ATTR_XX_REQUESTED_EXTENSIONS         HITLS_X509_Ext
  * @param valLen  The length of value.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_X509_AttrCtrl(BslList *attributes, int32_t cmd, void *val, int32_t valLen);
 
@@ -908,7 +963,7 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag);
  * @param type         [IN] BSL_CID_LOCALKEYID/BSL_CID_FRIENDLYNAME
  * @param attrValue    [IN] the attr buffer
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_Buffer *attrValue);
 
@@ -928,7 +983,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t valLen);
 
@@ -945,7 +1000,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
     HITLS_PKCS12 **p12, bool needMacVerify);
@@ -961,7 +1016,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_P
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKCS12_PwdParam *pwdParam,
     HITLS_PKCS12 **p12, bool needMacVerify);
@@ -978,7 +1033,7 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKC
  * @param isNeedMac       [IN] Identifies whether macData is required.
  * @param encode          [OUT] result.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,
     bool isNeedMac, BSL_Buffer *encode);
@@ -994,7 +1049,7 @@ int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS
  * @param isNeedMac       [IN] Identifies whether macData is required.
  * @param path            [IN] The path of the generated p12-file.
  * @retval #HITLS_X509_SUCCESS, success.
- *         error codes see the hitls_x509_errno.h
+ *         Error codes can be found in hitls_x509_errno.h
  */
 int32_t HITLS_PKCS12_GenFile(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,
     bool isNeedMac, const char *path);
