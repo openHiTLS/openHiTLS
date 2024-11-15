@@ -902,6 +902,17 @@ int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b)
     return CRYPT_SUCCESS;
 }
 
+static int32_t CRYPT_DSA_GetLen(const CRYPT_DSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -910,11 +921,11 @@ int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     }
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_DSA_GetBits(ctx);
+            return CRYPT_DSA_GetLen(ctx, (GetLenFunc)CRYPT_DSA_GetBits, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_DSA_GetSignLen(ctx);
+            return CRYPT_DSA_GetLen(ctx, (GetLenFunc)CRYPT_DSA_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_DSA_GetSecBits(ctx);
+            return CRYPT_DSA_GetLen(ctx, (GetLenFunc)CRYPT_DSA_GetSecBits, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
             if (val == NULL || len != (uint32_t)sizeof(int)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);

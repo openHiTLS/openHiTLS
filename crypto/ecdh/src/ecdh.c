@@ -241,6 +241,17 @@ ERR:
     return ret;
 }
 
+static int32_t CRYPT_ECDH_GetLen(const CRYPT_ECDH_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -249,11 +260,11 @@ int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t le
     }
     switch (opt) {
         case CRYPT_CTRL_GET_PARAID:
-            return CRYPT_ECDH_GetParaId(ctx);
+            return CRYPT_ECDH_GetLen(ctx, (GetLenFunc)CRYPT_ECDH_GetParaId, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_ECDH_GetBits(ctx);
+            return CRYPT_ECDH_GetLen(ctx, (GetLenFunc)CRYPT_ECDH_GetBits, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_ECDH_GetSecBits(ctx);
+            return CRYPT_ECDH_GetLen(ctx, (GetLenFunc)CRYPT_ECDH_GetSecBits, val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return CRYPT_ECDH_SetParaEx(ctx, CRYPT_ECDH_NewParaById(*(CRYPT_PKEY_ParaId *)val));
         default:
