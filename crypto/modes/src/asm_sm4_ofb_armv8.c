@@ -21,7 +21,7 @@
 int32_t SM4_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {
-    return MODES_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc)
+    return MODES_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
 }
 
 int32_t SM4_OFB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
