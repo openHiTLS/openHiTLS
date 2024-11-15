@@ -1248,6 +1248,17 @@ static int32_t EalSetPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
     return SetEmsaPss(ctx, &padPara, sizeof(RSA_PadingPara));
 }
 
+static int32_t CRYPT_RSA_GetLen(const CRYPT_RSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -1280,11 +1291,11 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_UP_REFERENCES:
             return RsaUpReferences(ctx, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_RSA_GetBits(ctx);
+            return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetBits, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_RSA_GetSignLen(ctx);
+            return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_RSA_GetSecBits(ctx);
+            return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetSecBits, val, len);
         case CRYPT_CTRL_SET_RSA_EMSA_PSS:
             return EalSetPss(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_RSAES_OAEP:
