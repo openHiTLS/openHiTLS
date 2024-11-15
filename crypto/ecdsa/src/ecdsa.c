@@ -535,6 +535,17 @@ int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint
     return CRYPT_ECDSA_VerifyData(ctx, hash, hashLen, sign, signLen);
 }
 
+static int32_t CRYPT_ECDSA_GetLen(const CRYPT_ECDSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -546,13 +557,13 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
             BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION;
         case CRYPT_CTRL_GET_PARAID:
-            return CRYPT_ECDSA_GetParaId(ctx);
+            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetParaId, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_ECDSA_GetBits(ctx);
+            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetBits, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_ECDSA_GetSignLen(ctx);
+            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_ECDSA_GetSecBits(ctx);
+            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetSecBits, val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return CRYPT_ECDSA_SetParaEx(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)val));
         default:

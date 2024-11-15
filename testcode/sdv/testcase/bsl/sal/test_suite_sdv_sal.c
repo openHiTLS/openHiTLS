@@ -141,8 +141,8 @@ exit:
  *    1. Call BSL_SAL_Malloc to allocate 0-byte space. Expected result 1 is obtained.
  *    2. Call BSL_SAL_Malloc to allocate 1-byte space. Expected result 2 is obtained.
  *    3. Call BSL_SAL_Calloc to allocate a large memory space. Expected result 3 is obtained.
- *    4. Call BSL_SAL_RegMemCallback to transfer an exception parameter. Expected result 4 is obtained.
- *    5. Call BSL_SAL_RegMemCallback to transfer an normal parameter. Expected result 5 is obtained.
+ *    4. Call BSL_SAL_CallBack_Ctrl to transfer an exception parameter. Expected result 4 is obtained.
+ *    5. Call BSL_SAL_CallBack_Ctrl to transfer an normal parameter. Expected result 5 is obtained.
  *    6. Call BSL_SAL_Malloc to allocate 8-byte space. Expected result 6 is obtained.
  *    7. Call BSL_SAL_FREE to free 8-byte space. Expected result 7 is obtained.
  * @expect
@@ -170,22 +170,12 @@ void SDV_BSL_SAL_REGMEM_API_TC001(void)
     ptr = BSL_SAL_Calloc(0xFFFFFFFF, 0xFFFFFFFF);
     ASSERT_TRUE(ptr == NULL);
 
-    ASSERT_TRUE(BSL_SAL_RegMemCallback(NULL) == BSL_SAL_ERR_BAD_PARAM);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(0, NULL) == BSL_SAL_ERR_BAD_PARAM);
 
-    BSL_SAL_MemCallback cb = {NULL, NULL};
-    ASSERT_TRUE(BSL_SAL_RegMemCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, NULL) == BSL_SUCCESS);
 
-    cb.pfMalloc = StdMalloc;
-    cb.pfFree = NULL;
-    ASSERT_TRUE(BSL_SAL_RegMemCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfMalloc = NULL;
-    cb.pfFree = free;
-    ASSERT_TRUE(BSL_SAL_RegMemCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfMalloc = StdMalloc;
-    cb.pfFree = free;
-    ASSERT_TRUE(BSL_SAL_RegMemCallback(&cb) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free) == BSL_SUCCESS);
 
     ptr = BSL_SAL_Malloc(0);
     ASSERT_TRUE(ptr != NULL);
@@ -202,8 +192,8 @@ exit:
  * @title Register thread-related functions.
  * @precon nan
  * @brief
- *    1. Call BSL_SAL_RegThreadCallback to transfer an exception parameter. Expected result 1 is obtained.
- *    2. Call BSL_SAL_RegMemCallback to transfer an normal parameter. Expected result 2 is obtained.
+ *    1. Call BSL_SAL_CallBack_Ctrl to transfer an exception parameter. Expected result 1 is obtained.
+ *    2. Call BSL_SAL_CallBack_Ctrl to transfer an normal parameter. Expected result 2 is obtained.
  *    3. Call BSL_SAL_ThreadLockNew to transfer an exception parameter. Expected result 3 is obtained.
  *    4. Call BSL_SAL_ThreadReadLock to transfer an exception parameter. Expected result 4 is obtained.
  *    5. Call BSL_SAL_ThreadWriteLock to transfer an exception parameter. Expected result 5 is obtained.
@@ -221,28 +211,16 @@ exit:
 /* BEGIN_CASE */
 void SDV_BSL_SAL_REG_THREAD_API_TC001(void)
 {
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(NULL) == BSL_SAL_ERR_BAD_PARAM);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(0, NULL) == BSL_SAL_ERR_BAD_PARAM);
 
-    BSL_SAL_ThreadCallback cb = { 0 };
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(0, NULL) == BSL_SAL_ERR_BAD_PARAM);
 
-    cb.pfThreadLockNew = pthreadRWLockNew;
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfThreadLockFree = pthreadRWLockFree;
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfThreadReadLock = pthreadRWLockReadLock;
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfThreadWriteLock = pthreadRWLockWriteLock;
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfThreadUnlock = pthreadRWLockUnlock;
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SAL_ERR_BAD_PARAM);
-
-    cb.pfThreadGetId = pthreadGetId;
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, pthreadRWLockNew) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, pthreadRWLockFree) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_READ_LOCK_CB_FUNC, pthreadRWLockReadLock) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_WRITE_LOCK_CB_FUNC, pthreadRWLockWriteLock) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_UNLOCK_CB_FUNC, pthreadRWLockUnlock) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, pthreadGetId) == BSL_SUCCESS);
 
     // Cannot create a lock handle because the pointer of the pointer is NULL.
     ASSERT_TRUE(BSL_SAL_ThreadLockNew(NULL) == BSL_SAL_ERR_BAD_PARAM);
