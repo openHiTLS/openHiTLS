@@ -82,6 +82,17 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
     return newCtx;
 }
 
+static int32_t CRYPT_CURVE25519_GetLen(CRYPT_CURVE25519_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
     if (pkey == NULL) {
@@ -90,11 +101,11 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
     }
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_CURVE25519_GetBits(pkey);
+            return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetBits, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_CURVE25519_GetSignLen(pkey);
+            return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_CURVE25519_GetSecBits(pkey);
+            return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSecBits, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
             if (val == NULL || len != (uint32_t)sizeof(int)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);

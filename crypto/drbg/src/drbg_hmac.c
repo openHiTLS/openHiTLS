@@ -339,7 +339,14 @@ DRBG_Ctx *DRBG_NewHmacCtx(const EAL_MacMethod *hmacMeth, CRYPT_MAC_AlgId macId,
     }
     ctx->hmacCtx = macCtx;
 
-    ctx->blockLen = hmacMeth->ctrl(ctx->hmacCtx, CRYPT_CTRL_GET_MACLEN, NULL, 0);
+    int32_t tempLen = 0;
+    int32_t ret = hmacMeth->ctrl(ctx->hmacCtx, CRYPT_CTRL_GET_MACLEN, &tempLen, sizeof(tempLen));
+    if (ret != CRYPT_SUCCESS) {
+        hmacMeth->freeCtx(ctx->hmacCtx);
+        BSL_SAL_FREE(drbg);
+        return NULL;
+    }
+    ctx->blockLen = tempLen;
 
     if (DRBG_NewHmacCtxBase(ctx->blockLen, drbg) != CRYPT_SUCCESS) {
         hmacMeth->freeCtx(ctx->hmacCtx);

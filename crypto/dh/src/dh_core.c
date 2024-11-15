@@ -794,6 +794,17 @@ int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
     return ret;
 }
 
+static int32_t CRYPT_DH_GetLen(const CRYPT_DH_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -802,11 +813,11 @@ int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     }
     switch (opt) {
         case CRYPT_CTRL_GET_PARAID:
-            return CRYPT_DH_GetParaId(ctx);
+            return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetParaId, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_DH_GetBits(ctx);
+            return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetBits, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_DH_GetSecBits(ctx);
+            return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetSecBits, val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return CRYPT_DH_SetParamById(ctx, *(CRYPT_PKEY_ParaId *)val);
         case CRYPT_CTRL_UP_REFERENCES:

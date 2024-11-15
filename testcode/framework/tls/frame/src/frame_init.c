@@ -44,8 +44,8 @@ static void *StdMallocFail(uint32_t len)
 
 void FRAME_Init(void)
 {
-    BSL_SAL_MemCallback memMthod = {StdMalloc, StdFree};
-    BSL_SAL_RegMemCallback(&memMthod);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, StdFree);
     BSL_ERR_Init();
     HITLS_CertMethodInit();
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
@@ -55,8 +55,8 @@ void FRAME_Init(void)
 
 void FRAME_DeInit(void)
 {
-    BSL_SAL_MemCallback memMthod = {StdMallocFail, StdFree};
-    BSL_SAL_RegMemCallback(&memMthod);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMallocFail);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, StdFree);
 
     BSL_ERR_DeInit();
     return;

@@ -134,7 +134,7 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
-    if (saltLen == (uint32_t)SALTLEN_PSS_AUTOLEN_TYPE) {
+    if (saltLen == (uint32_t)CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
         return CRYPT_SUCCESS;
     }
     if (saltLen > RSA_MAX_MODULUS_LEN) {
@@ -156,9 +156,10 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
 int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
 {
     uint32_t hashLen = mdMethod->mdSize;
-    if (saltLen == SALTLEN_PSS_HASHLEN_TYPE) { // saltLen is -1
+    if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
         salt->len = hashLen;
-    } else if (saltLen == SALTLEN_PSS_MAXLEN_TYPE || saltLen == SALTLEN_PSS_AUTOLEN_TYPE) { // saltLen is -2 or -3
+    } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN ||
+        saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) { // saltLen is -2 or -3
         salt->len = padBuffLen - hashLen - 2; // salt, obtains from the DRBG
     } else {
         salt->len = (uint32_t)saltLen;
@@ -311,7 +312,7 @@ static int32_t GetAndVerifyDB(const EAL_MdMethod *mgfMethod, const CRYPT_Data *e
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (tmpSaltLen == (uint32_t)SALTLEN_PSS_AUTOLEN_TYPE) {
+    if (tmpSaltLen == (uint32_t)CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
         ret = GetVerifySaltLen(emData->data, dbBuff->data, maskedDBLen, msBit, &tmpSaltLen);
         if (ret != CRYPT_SUCCESS) {
             return ret;
@@ -784,7 +785,7 @@ static int32_t OaepDecodeSeedMask(const EAL_MdMethod *mgfMethod, const uint8_t *
 static int32_t OaepDecodeMaskedDB(const EAL_MdMethod *mgfMethod, const CRYPT_Data *in, const uint8_t *seedMask,
     uint32_t hashLen, const CRYPT_Data *dbMaskData)
 {
-    int32_t ret;
+    int32_t ret = 0;
     uint32_t i;
     const uint8_t *maskedDB = in->data + 1 + hashLen;
     uint32_t maskedDBLen = in->len - hashLen - 1;
@@ -804,7 +805,7 @@ static int32_t OaepDecodeMaskedDB(const EAL_MdMethod *mgfMethod, const CRYPT_Dat
 static int32_t OaepVerifyHashMaskDB(const EAL_MdMethod *hashMethod, CRYPT_Data *paramData, CRYPT_Data *dbMaskData,
     uint32_t hashLen, uint32_t *offset)
 {
-    int32_t ret;
+    int32_t ret = 0;
     uint8_t hashVal[HASH_MAX_MDSIZE];
     ret = CalcHash(hashMethod, paramData, 1, hashVal, hashLen);
     if (ret != CRYPT_SUCCESS) {
@@ -848,7 +849,7 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMe
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
     uint32_t maskedDBLen = inLen - hashLen - 1;
-    int32_t ret;
+    int32_t ret = 0;
     uint32_t offset;
     uint8_t seedMask[HASH_MAX_MDSIZE];
     CRYPT_Data seedData = { (uint8_t *)(uintptr_t)seedMask, HASH_MAX_MDSIZE };

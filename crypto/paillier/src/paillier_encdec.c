@@ -337,19 +337,28 @@ OUT:
     return ret;
 }
 
+static int32_t CRYPT_PAILLIER_GetLen(const CRYPT_PAILLIER_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void) val;
-    (void) len;
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_PAILLIER_GetBits(ctx);
+            return CRYPT_PAILLIER_GetLen(ctx, (GetLenFunc)CRYPT_PAILLIER_GetBits, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_PAILLIER_GetSecBits(ctx);
+            return CRYPT_PAILLIER_GetLen(ctx, (GetLenFunc)CRYPT_PAILLIER_GetSecBits, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR);
             return CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR;
