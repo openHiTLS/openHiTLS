@@ -63,6 +63,12 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
 
 int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
 {
+    if (opt == CRYPT_CTRL_GEN_X25519_PUBLICKEY && (pkey->keyType & CURVE25519_PRVKEY)) {
+        CRYPT_X25519_PublicFromPrivate(pkey->prvKey, pkey->pubKey);
+        pkey->keyType |= CURVE25519_PUBKEY;
+        return CRYPT_SUCCESS;
+    }
+
     if (pkey == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
