@@ -39,7 +39,7 @@ include_directories(${SECUREC_INCLUDE}
                     ${HITLS_SRC}/bsl/async/include
                     ${HITLS_SRC}/bsl/uio/include
                     ${HITLS_SRC}/bsl/uio/src
-                    ${HITLS_SRC}/x509/x509_cert/include
+                    ${HITLS_SRC}/pki/x509_cert/include
                     ${HITLS_SRC}/tls/cert/hitls_x509_adapt
                     ${HITLS_SRC}/tls/include
                     ${HITLS_SRC}/tls/cert/cert_self

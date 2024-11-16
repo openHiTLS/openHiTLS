@@ -9,7 +9,7 @@ The architecture of openHiTLS is highly modular, and openHiTLS can be configured
 
 ## Feature Introduction
 
-1. Functional feature: TLS1.2, TLS1.3, DTLS1.2. TLCP; AES, SM4, Chacha20, RSA, ECDSA, ECDH, SM2, DRBG, HKDF, SCRYPT, PBKDF2, SHA2, SHA3, MD5, SM3, HMAC; X509
+1. Functional feature: TLS1.2, TLS1.3, DTLS1.2. TLCP; AES, SM4, Chacha20, RSA, ECDSA, ECDH, SM2, DRBG, HKDF, SCRYPT, PBKDF2, SHA2, SHA3, MD5, SM3, HMAC; PKI
 2. DFX feature: highly modular with features configured, performance optimization on ARM, x86 maintainability and testability with logs and error stacks.
 
 ## Component Introduction
@@ -18,7 +18,7 @@ openHiTLS include 4 components currently. The BSL component will be used with ot
 - The bsl is short for Base Support Layer, which provides the base C standand enhanced functions and OS adapter. It will be used with other modules
 - The crypto is short for cryptographic algorithms, which provides the full cryptographic functions with high performance. It will be used by tls, and can also be used with bsl
 - The tls is short for Transport Layer Security, which provides all tls protocol versions up to tls1.3. It will be used with crypto and bsl or other third-party crypto and pki libraries
-- The X509 component currently provides basic functions that can support TLS to work, and will gradually improve the functions in the future
+- The pki component currently provides basic functions that can support TLS to work, and will gradually improve the functions in the future
 
 ## Development
 
@@ -76,12 +76,12 @@ python3 ../configure.py ["option"]
 
 * C Full build:
 ```
-python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_x509 --lib_type static --bits=64 --system=linux
+python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki --lib_type static --bits=64 --system=linux
 ```
 
 * x8664 Optimize the full build：
 ```
-python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_x509 --lib_type static --bits=64 --system=linux --asm_type x8664
+python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki --lib_type static --bits=64 --system=linux --asm_type x8664
 ```
 The options are described in [Build Installation Guide](docs/en/4_User%20Guide/1_Build%20and%20Installation%20Guide.md)
 
