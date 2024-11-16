@@ -473,6 +473,7 @@ typedef enum {
     CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,      /**< Set the random bytes for RSA-BSSA. */
     CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R,      /**< Get the inv-random of current blinding parameter
                                                     from RSA-BSSA context. */
+    CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**
