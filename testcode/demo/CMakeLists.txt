@@ -19,7 +19,7 @@ set(HITLS_ROOT ../..)
 set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
                   ${HITLS_ROOT}/include/crypto
                   ${HITLS_ROOT}/include/tls
-                  ${HITLS_ROOT}/x509/include
+                  ${HITLS_ROOT}/include/pki
                   ${HITLS_ROOT}/platform/Secure_C/include)
 
 add_library(DEMO_INTF INTERFACE)

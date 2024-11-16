@@ -57,8 +57,8 @@ target_link_libraries(${PROCESS}
     tls_hlt    
     tls_frame
     hitls_tls
+    hitls_pki
     hitls_crypto
-    hitls_x509
     hitls_bsl
     boundscheck
     pthread

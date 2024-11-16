@@ -122,7 +122,7 @@ ExternalProject_Add(${TESTCASE}
     UPDATE_COMMAND        ""
     CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DENABLE_CRYPTO=${ENABLE_CRYPTO}
                                 -DENABLE_TLS=${ENABLE_TLS}
-                                -DENABLE_X509=${ENABLE_X509} -DGEN_TEST_FILES=${GEN_TEST_FILES}
+                                -DENABLE_PKI=${ENABLE_PKI} -DGEN_TEST_FILES=${GEN_TEST_FILES}
                                 -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} ../..
     BUILD_COMMAND         make
     INSTALL_COMMAND       ""

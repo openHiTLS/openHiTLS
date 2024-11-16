@@ -58,9 +58,9 @@ target_link_directories(${sdv_exe}
         ${openHiTLS_SRC}/testcode/framework/tls/lib
         ${openHiTLS_SRC}/platform/Secure_C/lib
         )
-if(ENABLE_X509)
+if(ENABLE_PKI)
     target_link_libraries(${sdv_exe}
-        -lhitls_x509
+        -lhitls_pki
     )
 endif()
 
@@ -69,7 +69,7 @@ if(ENABLE_TLS)
         -ltls_hlt
         -ltls_frame
         -lhitls_tls
-        -lhitls_x509
+        -lhitls_pki
         -lrec_wrapper
     )
 endif()
@@ -188,14 +188,14 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/tls/record/src
         ${openHiTLS_SRC}/bsl/uio/src
         ${openHiTLS_SRC}/bsl/asn1/include
-        ${openHiTLS_SRC}/x509/include
-        ${openHiTLS_SRC}/x509/x509_cert/include
-        ${openHiTLS_SRC}/x509/x509_csr/include
-        ${openHiTLS_SRC}/x509/x509_common/include
-        ${openHiTLS_SRC}/x509/x509_crl/include
-        ${openHiTLS_SRC}/x509/pkcs12/include
-        ${openHiTLS_SRC}/x509/cms/include
-        ${openHiTLS_SRC}/x509/x509_verify/include
+        ${openHiTLS_SRC}/include/pki
+        ${openHiTLS_SRC}/pki/x509_cert/include
+        ${openHiTLS_SRC}/pki/x509_csr/include
+        ${openHiTLS_SRC}/pki/x509_common/include
+        ${openHiTLS_SRC}/pki/x509_crl/include
+        ${openHiTLS_SRC}/pki/pkcs12/include
+        ${openHiTLS_SRC}/pki/cms/include
+        ${openHiTLS_SRC}/pki/x509_verify/include
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/include
         ${openHiTLS_SRC}/tls/handshake/common/include

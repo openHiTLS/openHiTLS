@@ -135,11 +135,11 @@
                 }
             }
         },
-        "hitls_x509":{
+        "hitls_pki":{
             "lang" : "C",
             "features" : {
                 "c": {
-                    "all_x509" : null
+                    "all_pki" : null
                 }
             }
         }
@@ -662,10 +662,10 @@
                     "include",
                     "include/tls",
                     "include/bsl",
+                    "include/pki",
                     "bsl/asn1/include",
-                    "x509/include",
-                    "x509/x509_cert/include",
-                    "x509/x509_common/include",
+                    "pki/x509_cert/include",
+                    "pki/x509_common/include",
                     "tls/cert/hitls_x509_adapt"
                 ]
             },
@@ -734,41 +734,41 @@
                 ]
             }
         },
-        "x509" : {
+        "pki" : {
             "x509_cert": {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
-                ".include": ["x509/x509_csr/include"]
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/x509_cert/src/*",
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".include": ["pki/x509_csr/include"]
             },
             "x509_crl" : {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/x509_crl/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/x509_crl/src/*",
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
             },
             "x509_common" : {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/x509_common/src/*",
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/x509_common/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem", "crypto::encode"]
             },
             "x509_verify" : {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/x509_verify/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_cert", "x509::x509_crl", "x509::x509_common"]
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/x509_verify/src/*",
+                ".deps" : ["platform::Secure_C", "pki::x509_cert", "pki::x509_crl", "pki::x509_common"]
             },
             "x509_csr" : {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/x509_csr/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/x509_csr/src/*",
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
             },
             "pkcs12" : {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/pkcs12/src/*",
-                ".deps" : ["platform::Secure_C", "x509::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "x509::x509_cert", "x509::cms"]
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/pkcs12/src/*",
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
             },
             "cms" : {
-                ".features" : ["all_x509"],
-                ".srcs" : "x509/cms/src/*",
+                ".features" : ["all_pki"],
+                ".srcs" : "pki/cms/src/*",
                 ".deps" : ["platform::Secure_C", "crypto::encode"]
             }
         }
