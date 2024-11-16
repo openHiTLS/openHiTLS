@@ -57,6 +57,9 @@
                     "mac": {
                         "hmac": null
                     },
+                    "hpke": {
+                        "deps": ["bn", "hmac", "sha2"]
+                    },
                     "kdf": {
                         "scrypt": {"deps": ["sha256", "pbkdf2"]},
                         "hkdf": null,
@@ -530,7 +533,8 @@
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
                     "crypto/paillier/include",
-                    "crypto/provider/include"
+                    "crypto/provider/include",
+                    "crypto/hpke/include"
                 ]
             },
             "ealinit": {
@@ -601,6 +605,11 @@
                 ".srcs": "crypto/hmac/src/*.c",
                 ".deps": ["platform::Secure_C"],
                 ".include": ["crypto/eal/src"]
+            },
+            "hpke": {
+                ".features": ["hpke"],
+                ".srcs": "crypto/hpke/src/*.c",
+                ".deps": ["platform::Secure_C", "crypto::bn"]
             },
             "scrypt": {
                 ".features": ["scrypt"],
