@@ -396,6 +396,11 @@ enum CRYPT_ERROR {
     CRYPT_PROVIDER_NOT_SUPPORT,
     CRYPT_PROVIDER_ERR_ATTRIBUTE,
     CRYPT_PROVIDER_INVALID_LIB_CTX,
+
+    CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01210001,            /**< HPKE Generate asymmetric key error. */
+    CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
+    CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
+    CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
 };
 #ifdef __cplusplus
 }
