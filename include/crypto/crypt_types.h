@@ -469,6 +469,7 @@ typedef enum {
     CRYPT_CTRL_SM2_DO_CHECK,            /* SM2 check the shared key. */
     CRYPT_CTRL_SM2_GENE_R,              /* SM2 obtain the R value. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey generate pubkey. */
+    CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**
