@@ -1604,13 +1604,13 @@ void SDV_PKCS12_BAG_TEST_TC003(char *pkeyPath, char *certPath)
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_KEYBAG, keyBag, 0);
-    ASSERT_EQ(ret, HITLS_PKCS12_ERR_ERR_REPEATED_SET_KEY); // Repeat setting.
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_REPEATED_SET_KEY); // Repeat setting.
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_CERTBAG, certBag, 0);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_CERTBAG, certBag, 0);
-    ASSERT_EQ(ret, HITLS_PKCS12_ERR_ERR_REPEATED_SET_ENTITYCERT); // Repeat setting.
+    ASSERT_EQ(ret, HITLS_PKCS12_ERR_REPEATED_SET_ENTITYCERT); // Repeat setting.
 
     // The key bag has pushed the localKey-id attribute.
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, 0);

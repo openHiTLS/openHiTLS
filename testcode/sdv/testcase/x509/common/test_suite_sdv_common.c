@@ -28,29 +28,10 @@
 #include "bsl_obj_internal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
+#include "crypt_eal_rand.h"
 #include "hitls_x509_local.h"
 
 /* END_HEADER */
-
-void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
-    void *format, void *para1, void *para2, void *para3, void *para4)
-{
-    (void)logLevel;
-    (void)logType;
-    printf("logId:%u\t", logId);
-    printf(format, para1, para2, para3, para4);
-    printf("\n");
-}
-
-void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
-    void *format, void *para)
-{
-    (void)logLevel;
-    (void)logType;
-    printf("logId:%u\t", logId);
-    printf(format, para);
-    printf("\n");
-}
 
 static void FreeListData(void *data)
 {
@@ -69,19 +50,27 @@ static void FreeSanListData(void *data)
     }
 }
 
+static int32_t TestSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
+{
+    (void)signAlgId;
+    uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(prvKey);
+    uint8_t *sign = (uint8_t *)BSL_SAL_Malloc(signLen);
+    if (sign == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    uint8_t *data = (uint8_t *)obj;
+    int32_t ret = CRYPT_EAL_PkeySign(prvKey, mdId, data, 1, sign, &signLen);
+    BSL_SAL_Free(sign);
+    return ret;
+}
+
 /* BEGIN_CASE */
 void SDV_HITLS_X509_FreeStoreCtx_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     HITLS_X509_StoreCtxFree(NULL);
-exit:
-    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -89,11 +78,7 @@ exit:
 void SDV_HITLS_X509_CtrlStoreCtx_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(NULL, 0, NULL, 0), HITLS_INVALID_INPUT);
     HITLS_X509_StoreCtx storeCtx = {0};
@@ -107,11 +92,7 @@ exit:
 void SDV_HITLS_X509_VerifyCert_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CertVerify(NULL, NULL), HITLS_INVALID_INPUT);
     HITLS_X509_StoreCtx storeCtx = {0};
@@ -125,11 +106,7 @@ exit:
 void SDV_HITLS_X509_BuildCertChain_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CertChainBuild(NULL, false, NULL, NULL), HITLS_INVALID_INPUT);
     HITLS_X509_StoreCtx storeCtx = {0};
@@ -145,15 +122,9 @@ exit:
 void SDV_HITLS_X509_FreeCert_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     HITLS_X509_CertFree(NULL);
-exit:
-    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -161,13 +132,9 @@ exit:
 void SDV_HITLS_X509_ParseBuffCert_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     HITLS_X509_Cert *cert = NULL;
     uint8_t buffData[10] = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CertParseBuff(0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     BSL_Buffer buff = {0};
@@ -186,11 +153,7 @@ exit:
 void SDV_HITLS_X509_ParseFileCert_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, NULL, NULL), BSL_NULL_INPUT);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/nist384ca.crt", NULL),
@@ -204,11 +167,7 @@ exit:
 void SDV_HITLS_X509_CtrlCert_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(NULL, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     HITLS_X509_Cert cert = {0};
@@ -242,11 +201,7 @@ exit:
 void SDV_HITLS_X509_DupCert_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     HITLS_X509_Cert src = {0};
     HITLS_X509_Cert *dest = NULL;
@@ -261,16 +216,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_HITLS_X509_FreeCrl_TC001(void)
 {
-    TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
-    BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
-
     HITLS_X509_CrlFree(NULL);
-exit:
-    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 
@@ -278,11 +224,7 @@ exit:
 void SDV_HITLS_X509_CtrlCrl_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     HITLS_X509_Crl crl = {0};
@@ -298,13 +240,9 @@ exit:
 void SDV_HITLS_X509_ParseBuffCrl_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     HITLS_X509_Crl *crl = NULL;
     uint8_t buffData[10] = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CrlParseBuff(0, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     BSL_Buffer buff = {0};
@@ -323,11 +261,7 @@ exit:
 void SDV_HITLS_X509_ParseFileCrl_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, NULL, NULL), BSL_NULL_INPUT);
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/ca-1-rsa-sha256-v2.der",
@@ -341,11 +275,7 @@ exit:
 void SDV_CRYPT_EAL_ParseBuffPubKey_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     BSL_Buffer buff = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -365,11 +295,7 @@ exit:
 void SDV_CRYPT_EAL_ParseFilePubKey_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(0xff, 0, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
@@ -387,11 +313,7 @@ exit:
 void SDV_CRYPT_EAL_ParseBuffPriKey_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     BSL_Buffer buff = {0};
     uint8_t pwd = 0;
@@ -422,11 +344,7 @@ exit:
 void SDV_CRYPT_EAL_ParseFilePriKey_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(0xff, 0, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_ECC, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
@@ -452,11 +370,7 @@ exit:
 void SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001(int format, int type, char *path)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
     CRYPT_EAL_PkeyCtx *key = NULL;
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
 exit:
@@ -469,11 +383,7 @@ exit:
 void SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001(int format, int type, char *path)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
     CRYPT_EAL_PkeyCtx *key = NULL;
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
 exit:
@@ -751,6 +661,55 @@ exit:
     BSL_LIST_DeleteAll(exku.oidList, FreeListData);
     BSL_SAL_Free(exku.oidList);
     BSL_SAL_Free(encode.buff);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_AddDnName_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+
+    BslList *list = BSL_LIST_New(1);
+    ASSERT_TRUE(list != NULL);
+
+    HITLS_X509_DN unknownName[1] = {{unknownCid, value->x, value->len}};
+    HITLS_X509_DN dnName[1] = {{cid, value->x, value->len}};
+    HITLS_X509_DN dnNullName[1] = {{cid, NULL, value->len}};
+    HITLS_X509_DN dnZeroLenName[1] = {{cid, value->x, 0}};
+    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
+
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnNullName, 1), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnZeroLenName, 1), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(list), 2); // layer 1 and layer 2
+
+    HITLS_X509_NameNode **node = BSL_LIST_First(list);
+    ASSERT_EQ((*node)->layer, 1); // layer 1
+    ASSERT_EQ((*node)->nameType.tag, 0);
+    ASSERT_EQ((*node)->nameType.buff, NULL);
+    ASSERT_EQ((*node)->nameType.len, 0);
+    ASSERT_EQ((*node)->nameValue.tag, 0);
+    ASSERT_EQ((*node)->nameValue.buff, NULL);
+    ASSERT_EQ((*node)->nameValue.len, 0);
+    node = BSL_LIST_Next(list);
+    ASSERT_EQ((*node)->layer, 2); // layer 2
+    ASSERT_EQ((*node)->nameType.tag, BSL_ASN1_TAG_OBJECT_ID);
+    ASSERT_COMPARE("nameOid", (*node)->nameType.buff, (*node)->nameType.len, oid->x, oid->len);
+    ASSERT_EQ((*node)->nameValue.tag, BSL_ASN1_TAG_UTF8STRING);
+    ASSERT_COMPARE("nameValue", (*node)->nameValue.buff, (*node)->nameValue.len, value->x, value->len);
+
+    /* subject name can add repeat name */
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_X509_SUCCESS);
+
+    list->count = 100; // 100: the max number of name type.
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_X509_ERR_SET_DNNAME_TOOMUCH);
+
+exit:
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
@@ -1034,11 +993,7 @@ exit:
 void SDV_HITLS_X509_ExtParamCheck_TC001(void)
 {
     TestMemInit();
-    BSL_LOG_BinLogFuncs func = {0};
     BSL_GLOBAL_Init();
-    func.fixLenFunc = BinLogFixLenFunc;
-    func.varLenFunc = BinLogVarLenFunc;
-    ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CERT), NULL);
     ASSERT_EQ(HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CRL), NULL);
@@ -1047,5 +1002,96 @@ void SDV_HITLS_X509_ExtParamCheck_TC001(void)
     HITLS_X509_ExtFree(ext);
 exit:
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_X509_SIGN_Api_TC001(void)
+{
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    uint8_t obj = 1;
+    TestMemInit();
+    prvKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    ASSERT_NE(prvKey, NULL);
+
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA3_384, prvKey, NULL, &obj, TestSignCb), HITLS_X509_ERR_HASHID);
+
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA384, prvKey, NULL, &obj, TestSignCb), BSL_MALLOC_FAIL);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_SIGN_Func_TC001(char *keyPath, int keyFormat, int keyType, int mdId, int pad, int hashId, int mgfId,
+    int saltLen, int ret)
+{
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    HITLS_X509_SignAlgParam *algParamPtr = NULL;
+    uint8_t obj = 1;
+    if (pad == 0) {
+        algParamPtr = NULL;
+    } else if (pad == CRYPT_PKEY_EMSA_PSS) {
+        algParam.algId = BSL_CID_RSASSAPSS;
+        algParam.rsaPss.mdId = hashId;
+        algParam.rsaPss.mgfId = mgfId;
+        algParam.rsaPss.saltLen = saltLen;
+        algParamPtr = &algParam;
+    }
+
+    TestMemInit();
+    TestRandInit();
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, keyPath, NULL, 0, &prvKey), 0);
+
+    ASSERT_EQ(HITLS_X509_Sign(mdId, prvKey, algParamPtr, &obj, TestSignCb), ret);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    CRYPT_EAL_RandDeinit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_SIGN_Func_TC002(void)
+{
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    uint8_t obj = 1;
+    CRYPT_RsaPadType pad = CRYPT_PKEY_EMSA_PKCSV15;
+    CRYPT_EAL_PkeyPara para = {0};
+    uint8_t e[] = {1, 0, 1};
+    para.id = CRYPT_PKEY_RSA;
+    para.para.rsaPara.e = e;
+    para.para.rsaPara.eLen = 3;
+    para.para.rsaPara.bits = 1024;
+
+    TestMemInit();
+    TestRandInit();
+    prvKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    ASSERT_NE(prvKey, NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(prvKey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), 0);
+
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, &algParam, &obj, TestSignCb), HITLS_X509_ERR_SIGN_PARAM);
+
+    pad = CRYPT_PKEY_EMSA_PSS;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), 0);
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
+
+    CRYPT_RSA_PssPara pssPara = {1, CRYPT_MD_SHA256, CRYPT_MD_SHA256};
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssPara, sizeof(CRYPT_RSA_PssPara)), 0);
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), HITLS_X509_ERR_MD_NOT_MATCH);
+
+    ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA256, prvKey, NULL, &obj, TestSignCb), 0);
+
+exit:
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */

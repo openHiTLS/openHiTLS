@@ -41,7 +41,7 @@ typedef struct _HITLS_X509_CrlEntry {
 typedef struct {
     uint8_t *tbsRawData;
     uint32_t tbsRawDataLen;
-    
+
     int32_t version;
     HITLS_X509_Asn1AlgId signAlgId;
 
@@ -52,13 +52,23 @@ typedef struct {
     HITLS_X509_Ext crlExt;
 } HITLS_X509_CrlTbs;
 
+typedef enum {
+    HITLS_X509_CRL_STATE_NEW = 0,
+    HITLS_X509_CRL_STATE_SET,
+    HITLS_X509_CRL_STATE_SIGN,
+    HITLS_X509_CRL_STATE_GEN,
+} HITLS_X509_CRL_STATE;
+
 typedef struct _HITLS_X509_Crl {
     uint8_t flag;
+    uint8_t state;
+
     uint8_t *rawData;
     uint32_t rawDataLen;
     HITLS_X509_CrlTbs tbs;
     HITLS_X509_Asn1AlgId signAlgId;
     BSL_ASN1_BitString signature;
+
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
