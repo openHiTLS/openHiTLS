@@ -116,6 +116,8 @@ feature_testfiles=(
     ["sm2_exch"]="test_suite_sdv_eal_sm2_exchange"
     ["sm2_sign"]="test_suite_sdv_eal_sm2_sign"
     ["sm2_crypt"]="test_suite_sdv_eal_sm2_crypt"
+    #hpke
+    # ["hpke"]="test_suite_sdv_eal_hpke"
 )
 
 testfile_testcases=(
@@ -164,6 +166,8 @@ testfile_testcases=(
     ["test_suite_sdv_eal_sm2_exchange"]="SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001 SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003"
     ["test_suite_sdv_eal_sm2_sign"]="SDV_CRYPTO_SM2_SIGN_FUNC_TC001 SDV_CRYPTO_SM2_VERIFY_FUNC_TC001 SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001"
     ["test_suite_sdv_eal_sm2_crypt"]="SDV_CRYPTO_SM2_ENC_FUNC_TC001 SDV_CRYPTO_SM2_DEC_FUNC_TC001 SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC001"
+    #hpke
+    # ["test_suite_sdv_eal_hpke"]="SDV_CRYPT_EAL_HPKE_API_TC001"
 )
 
 print_usage() {

@@ -450,6 +450,7 @@ typedef enum {
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
+    CRYPT_CTRL_GEN_X25519_PUBLICKEY,       /**< Use prikey genarate pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**
