@@ -57,6 +57,7 @@
                     "mac": {
                         "hmac": null
                     },
+                    "hpke": null,
                     "kdf": {
                         "scrypt": {"deps": ["sha256", "pbkdf2"]},
                         "hkdf": null,
@@ -601,6 +602,11 @@
                 ".srcs": "crypto/hmac/src/*.c",
                 ".deps": ["platform::Secure_C"],
                 ".include": ["crypto/eal/src"]
+            },
+            "hpke": {
+                ".features": ["hpke"],
+                ".srcs": "crypto/hpke/src/*.c",
+                ".deps": ["platform::Secure_C", "crypto::bn"]
             },
             "scrypt": {
                 ".features": ["scrypt"],
