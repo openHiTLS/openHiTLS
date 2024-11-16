@@ -607,7 +607,6 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
         return HITLS_X509_ERR_SET_AFTER_PARSE;
     }
 
-    int32_t ret;
     switch (cmd) {
         case HITLS_X509_REF_UP:
             return HITLS_X509_RefUp(&csr->references, val, valLen);

@@ -387,6 +387,16 @@ static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
     return ret;
 }
 
+BslList *HITLS_X509_DnListNew()
+{
+    return BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+}
+
+void HITLS_X509_DnListFree(BslList *dnList)
+{
+    BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+}
+
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size)
 {
     if (list == NULL || dnNames == NULL || size <= 0) {

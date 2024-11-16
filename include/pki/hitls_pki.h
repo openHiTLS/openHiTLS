@@ -121,6 +121,13 @@ typedef enum {
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
 } HITLS_X509_Cmd;
 
+typedef enum {
+    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0100,
+
+    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS = 0x0200,
+
+} HITLS_X509_AttrCmd;
+
 /**
  * GeneralName types defined in RFC 5280 Section 4.2.1.6
  * Reference: https://tools.ietf.org/html/rfc5280#section-4.2.1.6
@@ -135,6 +142,7 @@ typedef enum {
  *   iPAddress                       [7]     OCTET STRING,
  *   registeredID                    [8]     OBJECT IDENTIFIER }
  */
+
 typedef enum {
     HITLS_X509_GN_EMAIL,  // rfc822Name                [1] IA5String
     HITLS_X509_GN_DNS,    // dNSName                   [2] IA5String
@@ -145,13 +153,6 @@ typedef enum {
     // Other types are not supported yet
     HITLS_X509_GN_MAX
 } HITLS_X509_GeneralNameType;
-
-typedef enum {
-    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x0100,
-
-    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS = 0x0200,
-
-} HITLS_X509_AttrCmd;
 
 /* Distinguish name */
 typedef struct {
@@ -477,6 +478,25 @@ int32_t HITLS_X509_CertGenFile(int32_t format, HITLS_X509_Cert *cert, const char
 
 /**
  * @ingroup pki
+ * @brief New a list of distinguish name, the list.
+ * @attention You need to HITLS_X509_DnListFree to free list, after the end of use
+ *
+ * @retval #BslList *, success.
+ *         error return NULL.
+ */
+BslList *HITLS_X509_DnListNew(void);
+
+/**
+ * @ingroup pki
+ * @brief New a list of distinguish name, the list .
+ *
+ * @param list [IN] The name list
+ * @retval  void
+ */
+void HITLS_X509_DnListFree(BslList *dnList);
+
+/**
+ * @ingroup x509
  * @brief Add a distinguish name array to list.
  *
  * @param list [IN] The name list
@@ -858,11 +878,6 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
-
-typedef enum {
-    HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS = 0x01,
-    HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
-} HITLS_X509_Attr_Cmd;
 
 /**
  * @ingroup pki

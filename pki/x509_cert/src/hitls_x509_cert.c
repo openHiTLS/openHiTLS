@@ -481,7 +481,6 @@ ERR:
     BSL_UIO_Free(bufUio);
     BSL_ERR_PUSH_ERROR(ret);
     return ret;
-
 }
 
 static int32_t X509_GetDistinguishNameStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)

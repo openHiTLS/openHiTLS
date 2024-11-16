@@ -713,38 +713,38 @@ void SDV_X509_CSR_AttrCtrl_API_TC001(void)
 {
     TestMemInit();
     HITLS_X509_Ext *getExt = NULL;
-    HITLS_X509_Ext ext = {0};
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
     HITLS_X509_ExtKeyUsage ku = {0, HITLS_X509_EXT_KU_NON_REPUDIATION};
     int32_t cmd = HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS;
     HITLS_X509_Attrs *attrs = NULL;
 
     HITLS_X509_Csr *csr = HITLS_X509_CsrNew();
-    ASSERT_NE(ext, NULL);
     ASSERT_NE(csr, NULL);
-    ASSERT_EQ(HITLS_X509_ExtCtrl(&ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
 
     // invalid param
-    ASSERT_EQ(HITLS_X509_AttrCtrl(NULL, cmd, &ext, sizeof(HITLS_X509_Ext *)), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, -1, &ext, sizeof(HITLS_X509_Ext *)), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, NULL, sizeof(HITLS_X509_Ext *)), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(NULL, cmd, ext, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, -1, ext, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     // encode ext failed
-    ext.list->count = 2;
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, &ext, 0), BSL_INVALID_ARG);
-    ext.list->count = 1;
+    ext->extList->count = 2;
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, ext, 0), BSL_INVALID_ARG);
+    ext->extList->count = 1;
 
     // success
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, &ext, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, ext, 0), HITLS_X509_SUCCESS);
 
     // repeat
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, &ext, 0), HITLS_X509_ERR_SET_ATTR_REPEAT);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, ext, 0), HITLS_X509_ERR_SET_ATTR_REPEAT);
 
     // get attr
     ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
         &getExt, sizeof(HITLS_X509_Ext *)), HITLS_X509_SUCCESS);
     ASSERT_NE(getExt, NULL);
-    ASSERT_EQ(getExt->keyUsage, HITLS_X509_EXT_KU_NON_REPUDIATION);
-
+    HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)getExt->extData;
+    ASSERT_EQ(certExt->keyUsage, HITLS_X509_EXT_KU_NON_REPUDIATION);
     // not found
     X509_ExtFree(getExt, true);
     getExt = NULL;
@@ -764,14 +764,14 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC001(int critical1, int maxPath, int crit
 {
     TestMemInit();
 
-    HITLS_X509_Ext ext = {0};
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
     HITLS_X509_Attrs *attrs = NULL;
     HITLS_X509_ExtBCons bCons = {critical1, false, maxPath};
     HITLS_X509_ExtKeyUsage ku = {critical2, keyUsage};
     BSL_ASN1_Buffer encode = {0};
 
     HITLS_X509_Csr *csr = HITLS_X509_CsrNew();
-    ASSERT_NE(ext, NULL);
     ASSERT_NE(csr, NULL);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
     ASSERT_NE(attrs, NULL);
@@ -781,7 +781,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC001(int critical1, int maxPath, int crit
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
 
     // Set ext into attr
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, &ext, sizeof(HITLS_X509_Ext *)),
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0),
               0);
 
     // Test: Encode and check
@@ -800,7 +800,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC002(void)
 {
     TestMemInit();
 
-    HITLS_X509_Ext ext = {0};
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     HITLS_X509_Attrs *attrs = NULL;
     HITLS_X509_ExtKeyUsage ku = {0, HITLS_X509_EXT_KU_NON_REPUDIATION};
     BSL_ASN1_Buffer encode = {0};
@@ -810,7 +810,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC002(void)
     ASSERT_NE(csr, NULL);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
     ASSERT_NE(attrs->list, NULL);
-    ASSERT_EQ(HITLS_X509_ExtCtrl(&ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
 
     // Test 1: no attr
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), 0);
@@ -822,7 +822,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC002(void)
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), BSL_INVALID_ARG);
 
     // Set ext into attr
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, &ext, sizeof(HITLS_X509_Ext *)), 0);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0), 0);
 
     // Test 3: encode list item failed
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), BSL_INVALID_ARG);

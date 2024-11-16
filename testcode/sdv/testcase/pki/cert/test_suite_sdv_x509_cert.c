@@ -468,14 +468,12 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
 
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
 
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer));
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer)), 0);
     ASSERT_NE(subjectName.data, NULL);
     ASSERT_EQ(subjectName.dataLen, strlen(expectedSubjectName));
     ASSERT_EQ(strcmp((char *)subjectName.data, expectedSubjectName), 0);
 
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN_STR, &issuerName, sizeof(BSL_Buffer));
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN_STR, &issuerName, sizeof(BSL_Buffer)), 0);
     ASSERT_NE(issuerName.data, NULL);
     ASSERT_EQ(issuerName.dataLen, strlen(expectedIssueName));
     ASSERT_EQ(strcmp((char *)issuerName.data, expectedIssueName), 0);

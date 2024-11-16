@@ -3140,8 +3140,8 @@ SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/sm2/chai
 SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 3 unknown(pem) certs (with redundant symbols)
 SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/sm2/chain-red.pem":3
 
-SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 1 pem certs (with redundant symbols)
-SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/sha256Rsaca.crt":1
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001 with 1 der cert
+SDV_X509_MUL_CERT_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/sha256Rsaca.crt":1
 
 SDV_X509_CERT_SET_VERIOSN_FUNC_TC001
 SDV_X509_CERT_SET_VERIOSN_FUNC_TC001:

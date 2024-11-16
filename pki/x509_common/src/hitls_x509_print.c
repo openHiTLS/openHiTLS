@@ -22,7 +22,7 @@
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "hitls_x509_local.h"
-#include "hitls_x509_errno.h"
+#include "hitls_pki_errno.h"
 
 static uint32_t g_nameFlag = HITLS_X509_PRINT_DN_RFC2253;
 
