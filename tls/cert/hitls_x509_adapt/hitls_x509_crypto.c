@@ -20,7 +20,7 @@
 #include "crypt_errno.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
-#include "hitls_x509.h"
+#include "hitls_pki.h"
 #include "hitls_cert_type.h"
 #include "hitls_crypt_type.h"
 #include "crypt_algid.h"
