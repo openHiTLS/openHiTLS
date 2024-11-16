@@ -612,6 +612,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)parent->tbs.ext.extData;
     if (certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) {
         if (!(certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN)) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
             return HITLS_X509_ERR_VFY_KU_NO_CRLSIGN;
         }
     }
