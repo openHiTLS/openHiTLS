@@ -135,6 +135,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/crypto/kdf/include
         ${openHiTLS_SRC}/crypto/scrypt/include
         ${openHiTLS_SRC}/crypto/hmac/include
+        ${openHiTLS_SRC}/crypto/hpke/include
         ${openHiTLS_SRC}/crypto/aes/include
         ${openHiTLS_SRC}/crypto/sm4/include
         ${openHiTLS_SRC}/crypto/drbg/include

@@ -378,6 +378,10 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
     CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
+
+    CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01200001,          /**< HPKE Generate asymmetric key error. */
+    CRYPT_HPKE_ERR_AEAD_TAG,                           /**< Failed to verify AEAD tag when decrypt. */
+    CRYPT_HPKE_ERR_CALL,                               /**< It is not appropriate to call this function. */
 };
 
 #ifdef __cplusplus
