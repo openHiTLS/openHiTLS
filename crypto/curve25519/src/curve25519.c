@@ -113,6 +113,12 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
                 return CRYPT_INVALID_ARG;
             }
             return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
+        case CRYPT_CTRL_GEN_X25519_PUBLICKEY:
+            if ((pkey->keyType & CURVE25519_PRVKEY) && !(pkey->keyType & CURVE25519_PUBKEY)) {
+                CRYPT_X25519_PublicFromPrivate(pkey->prvKey, pkey->pubKey);
+                pkey->keyType |= CURVE25519_PUBKEY;
+            }
+            return CRYPT_SUCCESS;
         default:
             break;
     }
