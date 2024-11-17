@@ -881,20 +881,6 @@ void BN_MontDestroy(BN_Mont *mont);
  */
 int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
 
-/**
- * @ingroup bn
- * @brief shift a BigNum to the left
- *
- * @param r [OUT] Shift result
- * @param a [IN] Source data
- * @param n [IN] Shift bit num
- *
- * @retval CRYPT_SUCCESS            succeeded.
- * @retval CRYPT_NULL_INPUT         Invalid null pointer
- * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL       The security function returns an error.
- */
-int32_t BN_Lshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
 
 int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1, const BN_BigNum *a2, const BN_BigNum *e2,
     BN_Mont *mont, BN_Optimizer *opt);
