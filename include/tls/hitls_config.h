@@ -216,7 +216,7 @@ typedef enum {
         HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
         HITLS_DHE_DSS_WITH_AES_128_GCM_SHA256, HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519
+    groups:secp256r1, secp384r1, secp521r1, x25519, x448
     Extended Master Key: Not Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -231,7 +231,6 @@ typedef enum {
  */
 HITLS_Config *HITLS_CFG_NewDTLS12Config(void);
 
-#ifndef HITLS_NO_TLCP11
 /**
  * @ingroup hitls_config
  * @brief   Create TLCP configuration items, including default settings.
@@ -255,7 +254,6 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void);
  * @retval  NULL, object application failed.
  */
 HITLS_Config *HITLS_CFG_NewTLCPConfig(void);
-#endif
 
 /**
  * @ingroup hitls_config
@@ -272,7 +270,7 @@ HITLS_Config *HITLS_CFG_NewTLCPConfig(void);
         HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
         HITLS_DHE_DSS_WITH_AES_128_GCM_SHA256, HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519
+    groups:secp256r1, secp384r1, secp521r1, x25519, x448
     Extended Master Key: Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -296,7 +294,7 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void);
     Version number: HITLS_VERSION_TLS13
     Algorithm suite: HITLS_AES_128_GCM_SHA256, HITLS_CHACHA20_POLY1305_SHA256, HITLS_AES_128_GCM_SHA256
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519
+    groups:secp256r1, secp384r1, secp521r1, x25519, x448
     Extended Master Key: Enabled
     Signature algorithm: rsa, ecdsa, eddsa
     Dual-ended check: Disabled
@@ -328,7 +326,7 @@ HITLS_Config *HITLS_CFG_NewTLS13Config(void);
             HITLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, HITLS_DHE_RSA_WITH_AES_128_CBC_SHA,
             HITLS_RSA_WITH_AES_256_CBC_SHA, HITLS_RSA_WITH_AES_128_CBC_SHA,
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, brainpool256r1, brainpool384r1, brainpool521r1
+    groups:secp256r1, secp384r1, secp521r1, x25519, x448, brainpool256r1, brainpool384r1, brainpool521r1
     Extended Master Key: Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -357,7 +355,7 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void);
             HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, HITLS_DHE_DSS_WITH_AES_128_GCM_SHA256,
             HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
-    groups:secp256r1, secp384r1, secp521r1, x25519, brainpool256r1, brainpool384r1, brainpool521r1
+    groups:secp256r1, secp384r1, secp521r1, x25519, x448, brainpool256r1, brainpool384r1, brainpool521r1
     Extended Master Key: Enabled
     Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
     Dual-ended check: Disabled
@@ -432,9 +430,28 @@ int32_t HITLS_CFG_SetRenegotiationSupport(HITLS_Config *config, bool support);
 
 /**
  * @ingroup hitls_config
- * @brief   Set whether to support session restoration during renegotiation.By default, session restoration is not
- * supported.
- *
+ * @brief   Set whether to allow a renegotiate request from the client
+ * @param   config   [OUT] Config handle
+ * @param   support  [IN] Whether to support the function. The options are as follows: True: yes; False: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_CFG_SetClientRenegotiateSupport(HITLS_Config *config, bool support);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether to abort handshake when server doesn't support SecRenegotiation
+ * @param   config   [OUT] Config handle
+ * @param   support  [IN] Whether to support the function. The options are as follows: True: yes; False: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_CFG_SetLegacyRenegotiateSupport(HITLS_Config *config, bool support);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether to support session restoration during renegotiation.
+ * By default, session restoration is not supported.
  * @param   config   [OUT] Config handle
  * @param   support  [IN] Whether to support the function. The options are as follows: True: yes; False: no.
  * @retval  HITLS_SUCCESS, if successful.
@@ -521,6 +538,7 @@ int32_t HITLS_CFG_SetTmpDh(HITLS_Config *config, HITLS_CRYPT_Key *dhPkey);
  * @retval  HITLS_NULL_INPUT, config is null.
  */
 int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, uint8_t *isSupport);
+
 
 /**
  * @ingroup hitls_config
@@ -642,13 +660,12 @@ int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, uint8_t *isSu
 
 /**
  * @ingroup hitls_config
- * @brief  Set the supported key suites. The sequence of the key suites affects the priority of the selected
- * key suites. The key suite with the highest priority is the first.
- *
+ * @brief  Set the supported cipher suites. The sequence of the cipher suites affects the priority of the selected
+ * cipher suites. The cipher suite with the highest priority is the first.
  * @attention This setting will automatically filter out unsupported cipher suites.
  * @param   config [OUT] Config handle.
- * @param   cipherSuites [IN] Key suite array, corresponding to the HITLS_CipherSuite enumerated value.
- * @param   cipherSuitesSize [IN] Key suite array length.
+ * @param   cipherSuites [IN] cipher suite array, corresponding to the HITLS_CipherSuite enumerated value.
+ * @param   cipherSuitesSize [IN] cipher suite array length.
  * @retval  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
@@ -730,6 +747,14 @@ HITLS_TrustedCAList *HITLS_CFG_GetCAList(const HITLS_Config *config);
 
 /**
  * @ingroup hitls_config
+ * @brief   Clear the CA list.
+ * @param   config [OUT] TLS link configuration
+ * @retval  CA list
+ */
+void HITLS_CFG_ClearCAList(HITLS_Config *config);
+
+/**
+ * @ingroup hitls_config
  * @brief   Set the key exchange mode, which is used by TLS1.3.
  *
  * @param   config  [OUT] TLS link configuration
@@ -776,29 +801,6 @@ typedef int32_t (*HITLS_ClientHelloCb)(HITLS_Ctx *ctx, int32_t *alert, void *arg
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetClientHelloCb(HITLS_Config *config, HITLS_ClientHelloCb callback, void *arg);
-
-/**
- * @ingroup hitls_config
- * @brief   Callback function when the peer end does not support security renegotiation
- *
- * @attention   If the user returns a failure message, the HITLS sends a handshake_failure alarm
- *              to the peer end and disconnects the link. If the user does not register the callback,
- *              the link establishment continues when the peer end does not support security renegotiation by default.
- * @param   ctx  [IN] Ctx context
- * @retval  0 indicates success. Other values indicate failure.
- */
-typedef int32_t (*HITLS_NoSecRenegotiationCb)(HITLS_Ctx *ctx);
-
-/**
- * @ingroup hitls_config
- * @brief   Set the callback function when the peer end does not support security renegotiation.
- *
- * @param   config [OUT] Config context
- * @param   callback [IN] Callback function when the peer end does not support security renegotiation
- * @retval  HITLS_SUCCESS, if successful.
- *          For details about other error codes, see hitls_error.h.
- */
-int32_t HITLS_CFG_SetNoSecRenegotiationCb(HITLS_Config *config, HITLS_NoSecRenegotiationCb callback);
 
 /**
  * @ingroup hitls_config
@@ -897,6 +899,17 @@ const uint8_t* HITLS_CFG_GetCipherSuiteName(const HITLS_Cipher *cipher);
  * @retval  RFC standard name for the given cipher suite
  */
 const uint8_t* HITLS_CFG_GetCipherSuiteStdName(const HITLS_Cipher *cipher);
+
+/**
+ * @ingroup hitls_config
+ * @brief Obtain the corresponding cipher suite pointer based on the RFC Standard Name.
+ *
+ * @param stdName [IN] RFC Standard Name
+ *
+ * @retval NULL. Failed to obtain the cipher suite.
+ * @retval Pointer to the obtained cipher suite information.
+ */
+const HITLS_Cipher* HITLS_CFG_GetCipherSuiteByStdName(const uint8_t* stdName);
 
 /**
  * @ingroup hitls_config
@@ -1023,7 +1036,7 @@ int32_t HITLS_CFG_GetQuietShutdown(const HITLS_Config *config, int32_t *mode);
  * @brief   Set the Encrypt-Then-Mac mode.
  *
  * @param   config [IN] TLS link configuration
- * @param   isEncryptThenMac [IN] Indicates whether to enable the Encrypt-Then-Mac mode.
+ * @param   encryptThenMacType [IN] Current Encrypt-Then-Mac mode.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
@@ -1041,7 +1054,7 @@ int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, uint32_t encryptThenMa
 int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, uint32_t *encryptThenMacType);
 
 /**
- * @ingroup hitls
+ * @ingroup hitls_config
  * @brief   Obtain the user data from the HiTLS Config object.
  * Generally, this function is called during the callback registered with the HiTLS.
  *
@@ -1055,7 +1068,7 @@ int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, uint32_t *encryp
 void *HITLS_CFG_GetConfigUserData(const HITLS_Config *config);
 
 /**
- * @ingroup hitls
+ * @ingroup hitls_config
  * @brief   User data is stored in the HiTLS Config. The user data can be obtained
  * from the callback registered with the HiTLS.
  *
@@ -1071,13 +1084,13 @@ void *HITLS_CFG_GetConfigUserData(const HITLS_Config *config);
 int32_t HITLS_CFG_SetConfigUserData(HITLS_Config *config, void *userData);
 
 /**
- * @ingroup hitls
+ * @ingroup hitls_config
  * @brief   UserData free callback
  */
 typedef void (*HITLS_ConfigUserDataFreeCb)(void *);
 
 /**
- * @ingroup hitls
+ * @ingroup hitls_config
  * @brief   Sets the UserData free callback
  *
  * @param   config [OUT] TLS connection handle
@@ -1146,15 +1159,25 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
 
 /**
  * @ingroup hitls_config
- * @brief   Obtain whether to enable the miniaturization function.
- *  By default, the miniaturization function is disabled.
+ * @brief   Set the max empty records number can be received
  *
- * @param   config [IN] TLS link configuration.
- * @param   isEnable [OUT] Indicates whether to enable the miniaturization function.
+ * @param   config [IN/OUT] TLS link configuration
+ * @param   emptyNum [IN] Indicates the max number of empty records can be received
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetMiniaturizationSwitch(const HITLS_Config *config, uint8_t *isEnable);
+int32_t HITLS_CFG_SetEmptyRecordsNum(HITLS_Config *config, uint32_t emptyNum);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Obtain the max empty records number can be received
+ *
+ * @param   config [IN] TLS link configuration.
+ * @param   emptyNum [OUT] Indicates the max number of empty records can be received
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_GetEmptyRecordsNum(const HITLS_Config *config, uint32_t *emptyNum);
 
 /**
  * @ingroup hitls_config
@@ -1177,6 +1200,18 @@ int32_t HITLS_CFG_SetMaxCertList(HITLS_Config *config, uint32_t maxSize);
  * @retval  HITLS_SUCCESS, if successful.
  */
 int32_t HITLS_CFG_GetMaxCertList(const HITLS_Config *config, uint32_t *maxSize);
+
+typedef HITLS_CRYPT_Key *(*HITLS_DhTmpCb)(HITLS_Ctx *ctx, int32_t isExport, uint32_t keyLen);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the TmpDh callback, cb can be NULL.
+ * @param   config [OUT] Config Context.
+ * @param   callback [IN] TmpDh Callback.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_SetTmpDhCb(HITLS_Config *config, HITLS_DhTmpCb callback);
 
 typedef uint64_t (*HITLS_RecordPaddingCb)(HITLS_Ctx *ctx, int32_t type, uint64_t length, void *arg);
 
@@ -1227,11 +1262,32 @@ void *HITLS_CFG_GetRecordPaddingCbArg(HITLS_Config *config);
  * @brief   Disables the verification of keyusage in the certificate. This function is enabled by default.
  *
  * @param   config [OUT] Config context
- * @param   close [IN] Sets whether to disable verification.
+ * @param   isCheck [IN] Sets whether to check key usage.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_SetCloseCheckKeyUsage(HITLS_Config *config, bool isClose);
+int32_t HITLS_CFG_SetCheckKeyUsage(HITLS_Config *config, bool isCheck);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set read ahead flag to indicate whether read more data than user required to buffer in advance
+ * @param   config [OUT] Hitls config
+ * @param   onOff [IN] Read ahead flag, nonzero value indicates open, zero indicates close
+ * @retval  HITLS_NULL_INPUT
+ * @retval  HITLS_SUCCESS
+ */
+int32_t HITLS_CFG_SetReadAhead(HITLS_Config *config, int32_t onOff);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Get whether reading ahead has been set or not
+ *
+ * @param   config [IN] Hitls config
+ * @param   onOff [OUT] Read ahead flag
+ * @retval  HITLS_NULL_INPUT
+ * @retval  HITLS_SUCCESS
+ */
+int32_t HITLS_CFG_GetReadAhead(HITLS_Config *config, int32_t *onOff);
 
 #ifdef __cplusplus
 }

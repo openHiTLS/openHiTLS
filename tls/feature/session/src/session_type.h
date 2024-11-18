@@ -35,11 +35,13 @@ struct TlsSessionManager {
     void *hash;                                            /* hash table */
 
     uint64_t sessTimeout;                                  /* Session timeout interval, in seconds */
+#ifdef HITLS_TLS_FEATURE_SESSION
     uint32_t sessCacheSize;                                /* session cache size: maximum number of sessions */
     HITLS_SESS_CACHE_MODE sessCacheMode;                   /* session cache mode */
 
     /* TLS1.2 session ticket */
     HITLS_TicketKeyCb ticketKeyCb;                         /* allows users to customize ticket keys through callback */
+#endif
     /* key_name: is used to identify a specific set of keys used to protect tickets */
     uint8_t ticketKeyName[HITLS_TICKET_KEY_NAME_SIZE];
     uint8_t ticketAesKey[HITLS_TICKET_KEY_SIZE];           /* aes key */
@@ -59,9 +61,10 @@ struct TlsSessCtx {
 
     uint64_t startTime;                                 /* Start time */
     uint64_t timeout;                                   /* Timeout interval */
-
+#ifdef HITLS_TLS_FEATURE_SNI
     uint32_t hostNameSize;                              /* Length of the host name */
     uint8_t *hostName;                                  /* Host name */
+#endif
 
     uint32_t sessionIdCtxSize;                                  /* Session ID Context Length */
     uint8_t sessionIdCtx[HITLS_SESSION_ID_CTX_MAX_SIZE];        /* Session ID Context */
@@ -76,8 +79,6 @@ struct TlsSessCtx {
     uint16_t cipherSuite;                               /* Cipher suite */
     uint32_t masterKeySize;                             /* length of the master key */
     uint8_t masterKey[MAX_MASTER_KEY_SIZE];             /* Master Key */
-    uint32_t pskIdentitySize;                           /* pskIdentity length */
-    uint8_t *pskIdentity;                               /* pskIdentity */
 
     uint32_t ticketSize;                                /* Session ticket length */
     uint8_t *ticket;                                    /* Session ticket */

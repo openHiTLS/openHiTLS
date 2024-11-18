@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 
 /**
  * @brief Create a message reassembly queue.
@@ -65,7 +65,7 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo);
  */
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len);
 
-#endif /* end #ifndef HITLS_NO_DTLS12 */
+#endif /* end #ifdef HITLS_TLS_PROTO_DTLS12 */
 
 #ifdef __cplusplus
 }

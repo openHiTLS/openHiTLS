@@ -17,6 +17,7 @@
 #define CHANGE_CIPHER_SPEC_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 #include "tls.h"
 
 #ifdef __cplusplus
@@ -56,17 +57,6 @@ bool CCS_IsRecv(const TLS_Ctx *ctx);
 
 /**
  * @ingroup change cipher spec
- * @brief CCS packet received
- *
- * @param ctx [IN] TLS context
- * @param buf [IN] CCS message body
- * @param len [IN] CCS message length
- *
- */
-void CCS_Recv(TLS_Ctx *ctx, const uint8_t *buf, uint32_t len);
-
-/**
- * @ingroup change cipher spec
  * @brief Send a packet for changing the cipher suite.
  *
  * @param ctx [IN] TLS context
@@ -90,6 +80,27 @@ int32_t CCS_Send(TLS_Ctx *ctx);
  */
 int32_t CCS_Ctrl(TLS_Ctx *ctx, CCS_Cmd cmd);
 
+/**
+ * @brief Process CCS message after decryption
+ *
+ * @attention ctx cannot be empty.
+ * @param ctx [IN] tls Context
+ * @param data [IN] ccs data
+ * @param dataLen [IN] ccs data length
+ * @retval HITLS_REC_NORMAL_RECV_UNEXPECT_MSG
+ */
+int32_t ProcessDecryptedCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
+
+/**
+ * @brief Process plaintext CCS message in TLS13
+ *
+ * @attention ctx cannot be empty.
+ * @param ctx [IN] tls Context
+ * @param data [IN] ccs data
+ * @param dataLen [IN] ccs data length
+ * @retval HITLS_REC_NORMAL_RECV_UNEXPECT_MSG
+ */
+int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
 #ifdef __cplusplus
 }
 #endif

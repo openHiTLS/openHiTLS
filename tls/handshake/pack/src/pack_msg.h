@@ -72,7 +72,7 @@ int32_t PackEncryptedExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLe
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t Tls13PackCertificate(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t Tls13PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
 /**
  * @brief   Pack certificate message
  *
@@ -84,7 +84,7 @@ int32_t Tls13PackCertificate(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackCertificate(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
 
 /**
  * @brief   Pack CertificateRequest message
@@ -160,7 +160,7 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackServerKeyExchange(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackServerKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
 
 /**
  * @brief   Pack ClientKeyExchange message
@@ -173,7 +173,7 @@ int32_t PackServerKeyExchange(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen,
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackClientKeyExchange(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackClientKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
 
 /**
  * @brief   Pack Finished message

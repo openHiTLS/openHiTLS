@@ -18,9 +18,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "hitls.h"
 #include "tls.h"
 #include "session.h"
+#include "tls_config.h"
 
 #ifdef __cplusplus
 extern "C" {

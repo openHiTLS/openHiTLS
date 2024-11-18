@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "hitls_cert_type.h"
 #include "hitls_cert.h"
 #include "hitls_debug.h"
@@ -49,10 +50,11 @@ typedef struct TlsSessionManager TLS_SessionMgr;
 
 #define HITLS_TICKET_KEY_NAME_SIZE  16u
 #define HITLS_TICKET_KEY_SIZE       32u
+#define HITLS_TICKET_IV_SIZE  16u
 
 /* the default number of tickets of TLS1.3 server is 2 */
 #define HITLS_TLS13_TICKET_NUM_DEFAULT 2u
-
+#define HITLS_MAX_EMPTY_RECORDS 32
 /* max cert list is 100k */
 #define HITLS_MAX_CERT_LIST_DEFAULT (1024 * 100)
 
@@ -88,6 +90,9 @@ typedef struct TlsConfig {
     uint8_t *serverName;                /* server name */
     uint32_t serverNameSize;            /* server name size */
 
+    int32_t readAhead;                  /* need read more data into user buffer, nonzero indicates yes, otherwise no */
+    uint32_t emptyRecordsNum;           /* the max number of empty records can be received */
+
     /* TLS1.2 psk */
     uint8_t *pskIdentityHint;           /* psk identity hint */
     uint32_t hintSize;
@@ -98,10 +103,9 @@ typedef struct TlsConfig {
     HITLS_PskFindSessionCb pskFindSessionCb;    /* TLS1.3 PSK server callback */
     HITLS_PskUseSessionCb pskUseSessionCb;      /* TLS1.3 PSK client callback */
 
-    HITLS_NoSecRenegotiationCb noSecRenegotiationCb;     /* callback for the peer unsupported security renegotiation */
 
     HITLS_CRYPT_Key *dhTmp;             /* Temporary DH key set by the user */
-    HITLS_CRYPT_Key *ecdhTmp;           /* Temporary ECDH key set by the user */
+    HITLS_DhTmpCb dhTmpCb;              /* Temporary ECDH key set by the user */
 
     HITLS_InfoCb infoCb;                /* information indicator callback */
     HITLS_MsgCb msgCb;                  /* message callback function cb for observing all SSL/TLS protocol messages */
@@ -129,6 +133,8 @@ typedef struct TlsConfig {
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */
     bool isSupportRenegotiation;        /* support renegotiation */
+    bool allowClientRenegotiate;      /* allow a renegotiation initiated by the client */
+    bool allowLegacyRenegotiate;        /* whether to abort handshake when server doesn't support SecRenegotiation */
     bool isResumptionOnRenego;          /* supports session resume during renegotiation */
     bool isSupportDhAuto;               /* the DH parameter to be automatically selected */
 
@@ -163,6 +169,8 @@ typedef struct TlsConfig {
     HITLS_ClientHelloCb clientHelloCb;          /* ClientHello callback */
     void *clientHelloCbArg;                     /* the args for ClientHello callback */
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
+    HITLS_KeyLogCb keyLogCb;            /* the key log callback */
+    bool isKeepPeerCert;                /* whether to save the peer certificate */
 } TLS_Config;
 
 #ifdef __cplusplus

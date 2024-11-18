@@ -94,7 +94,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -171,7 +171,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -245,7 +245,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -321,7 +321,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -402,7 +402,7 @@ void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, Port, false);
     ASSERT_TRUE(remoteProcess != NULL);
 

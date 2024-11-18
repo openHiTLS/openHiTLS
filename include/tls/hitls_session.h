@@ -99,7 +99,7 @@ uint32_t HITLS_CFG_GetTicketNums(HITLS_Config *config);
  * If the number is greater than or equal to 1, only one ticket is sent after the session is resumed.
  * When this parameter is set to 0, tickets will not be sent for the complete handshake and session recovery.
  *
- * @param   config     [OUT] ctx context
+ * @param   ctx        [OUT] ctx context
  * @param   ticketNums [IN] Number of sent new session tickets.
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is null.
@@ -135,7 +135,7 @@ typedef int32_t (*HITLS_NewSessionCb) (HITLS_Ctx *ctx, HITLS_Session *session);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, HITLS_NewSessionCb newSessionCb);
+int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, const HITLS_NewSessionCb newSessionCb);
 
 #define HITLS_TICKET_KEY_RET_NEED_ALERT    (-1)   // callback fails. A fatal error occurs.
                                                   // You need to send an alert
@@ -514,7 +514,7 @@ int32_t HITLS_SESS_SetCipherSuite(HITLS_Session *sess, uint16_t cipherSuite);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For other error codes, see hitls_error.h.
  */
-int32_t HITLS_SESS_GetCipherSuite(HITLS_Session *sess, uint16_t *cipherSuite);
+int32_t HITLS_SESS_GetCipherSuite(const HITLS_Session *sess, uint16_t *cipherSuite);
 
 /**
  * @ingroup hitls_session

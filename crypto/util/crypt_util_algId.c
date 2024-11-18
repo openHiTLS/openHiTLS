@@ -27,7 +27,6 @@ uint32_t CRYPT_MD_GetSizeById(CRYPT_MD_AlgId id)
 {
     // need synchronize with enum CRYPT_MD_AlgId
     static CRYPT_MdInfo mdInfo[] = {
-        {.id = CRYPT_MD_MD4, .mdSize = 16},
         {.id = CRYPT_MD_MD5, .mdSize = 16},
         {.id = CRYPT_MD_SHA1, .mdSize = 20},
         {.id = CRYPT_MD_SHA224, .mdSize = 28},

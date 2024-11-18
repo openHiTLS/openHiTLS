@@ -1067,54 +1067,6 @@ exit:
 }
 /* END_CASE */
 
-/**
- * @test   SDV_CRYPTO_RSA_CTRL_API_TC003
- * @title  Rsa CRYPT_EAL_PkeyCtrl test: Set unsupported hash id to padding.
- * @precon  Create the context of the rsa algorithm, set the public key(n, e).
- * @brief
- *    1. Call the CRYPT_EAL_PkeyCtrl method:
- *       (1) opt = CRYPT_CTRL_SET_RSA_EMSA_PSS, the hash algorithm is md4, expected result 1
- *       (2) opt = CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, the hash algorithm is md4,expected result 2
- *       (3) opt = CRYPT_CTRL_SET_RSA_RSAES_OAEP, the hash algorithm is md4, expected result 3
- *       (4) opt = CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, the hash algorithm is md4, expected result 4
- * @expect
- *    1. CRYPT_EAL_ERR_ALGID
- *    2. CRYPT_RSA_ERR_MD_ALGID
- *    3. CRYPT_EAL_ERR_ALGID
- *    4. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_RSA_CTRL_API_TC003(int mdAlgId, Hex *n, Hex *e, int isProvider)
-{
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-    CRYPT_EAL_PkeyPub publicKey;
-    CRYPT_RSA_PssPara padPss = {.saltLen = -1, .mdId = mdAlgId, .mgfId = mdAlgId};
-    CRYPT_RSA_OaepPara padOaep = {.mdId = mdAlgId, .mgfId = mdAlgId};
-    CRYPT_RSA_PkcsV15Para padPkcs = {.mdId = mdAlgId};
-
-    SetRsaPubKey(&publicKey, n->x, n->len, e->x, e->len);
-
-    // Register memory and thread hooks.
-    TestMemInit();
-
-    if (isProvider == 1) {
-        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
-        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
-    }
-    ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &publicKey), CRYPT_SUCCESS);
-
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, &padPss, PSS_SIZE), CRYPT_EAL_ERR_ALGID);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &padPkcs, PKCSV15_SIZE), CRYPT_RSA_ERR_MD_ALGID);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, &padOaep, OAEP_SIZE), CRYPT_EAL_ERR_ALGID);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &padPkcs, PKCSV15_SIZE), CRYPT_SUCCESS);
-
-exit:
-    CRYPT_EAL_PkeyFreeCtx(ctx);
-}
-/* END_CASE */
-
 int Compare_PubKey(CRYPT_EAL_PkeyPub *pubKey1, CRYPT_EAL_PkeyPub *pubKey2)
 {
     if (pubKey1->key.rsaPub.nLen != pubKey2->key.rsaPub.nLen || pubKey1->key.rsaPub.eLen != pubKey2->key.rsaPub.eLen) {
