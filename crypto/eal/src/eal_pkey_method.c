@@ -52,12 +52,13 @@
 
 #define EAL_PKEY_METHOD_DEFINE(id, newCtx, dupCtx, freeCtx, setPara, getPara, gen, ctrl, \
     setPub, setPrv, getPub, getPrv, sign, signData, verify, verifyData, computeShareKey, encrypt, \
-    decrypt, check, cmp) { \
+    decrypt, check, cmp, blind, unBlind) { \
     id, (PkeyNew)(newCtx), (PkeyDup)(dupCtx), (PkeyFree)(freeCtx), (PkeySetPara)(setPara), \
     (PkeyGetPara)(getPara), (PkeyGen)(gen), (PkeyCtrl)(ctrl), (PkeySetPub)(setPub), \
     (PkeySetPrv)(setPrv), (PkeyGetPub)(getPub), (PkeyGetPrv)(getPrv), (PkeySign)(sign), (PkeySignData)(signData), \
     (PkeyVerify)(verify), (PkeyVerifyData)(verifyData), (PkeyComputeShareKey)(computeShareKey), (PkeyCrypt)(encrypt), \
-    (PkeyCrypt)(decrypt), (PkeyCheck)(check), (PkeyCmp)(cmp)}
+    (PkeyCrypt)(decrypt), (PkeyCheck)(check), (PkeyCmp)(cmp), (PkeyBlind)(blind), \
+    (PkeyUnBlind)(unBlind)}
 
 static const EAL_PkeyMethod METHODS[] = {
 #ifdef HITLS_CRYPTO_DSA
@@ -82,7 +83,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,
         NULL,
         NULL,
-        CRYPT_DSA_Cmp
+        CRYPT_DSA_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_DSA
 #endif
 #ifdef HITLS_CRYPTO_ED25519
@@ -107,7 +110,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,
         NULL,
         NULL,
-        CRYPT_CURVE25519_Cmp
+        CRYPT_CURVE25519_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_ED25519
 #endif
 #ifdef HITLS_CRYPTO_X25519
@@ -132,7 +137,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,
         NULL,
         NULL,
-        CRYPT_CURVE25519_Cmp
+        CRYPT_CURVE25519_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_X25519
 #endif
 #ifdef HITLS_CRYPTO_RSA
@@ -157,7 +164,9 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_RSA_Encrypt,
         CRYPT_RSA_Decrypt,
         NULL,
-        CRYPT_RSA_Cmp
+        CRYPT_RSA_Cmp,
+        CRYPT_RSA_Blind,
+        CRYPT_RSA_UnBlind
     ), // CRYPT_PKEY_RSA
 #endif
 #ifdef HITLS_CRYPTO_DH
@@ -182,7 +191,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,
         NULL,
         NULL,
-        CRYPT_DH_Cmp
+        CRYPT_DH_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_DH
 #endif
 #ifdef HITLS_CRYPTO_ECDSA
@@ -207,7 +218,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,   // encrypt
         NULL,   // decrypt
         NULL,
-        CRYPT_ECDSA_Cmp
+        CRYPT_ECDSA_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_ECDSA
 #endif
 #ifdef HITLS_CRYPTO_ECDH
@@ -232,7 +245,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,   // encrypt
         NULL,   // decrypt
         NULL,
-        CRYPT_ECDH_Cmp
+        CRYPT_ECDH_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_ECDH
 #endif
 #ifdef HITLS_CRYPTO_SM2
@@ -273,7 +288,9 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL,
 #endif
         NULL,
-        CRYPT_SM2_Cmp
+        CRYPT_SM2_Cmp,
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_SM2
 #endif
 #ifdef HITLS_CRYPTO_PAILLIER
@@ -298,7 +315,9 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_PAILLIER_Encrypt,
         CRYPT_PAILLIER_Decrypt,
         NULL,
-        NULL
+        NULL,  // cmp
+        NULL, // blind
+        NULL  // unBlind
     ), // CRYPT_PKEY_PAILLIER
 #endif
 };

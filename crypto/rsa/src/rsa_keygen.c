@@ -130,6 +130,22 @@ ERR:
     return NULL;
 }
 
+static RSA_BlindParam *RSABssADupCtx(RSA_BlindParam *blind)
+{
+    RSA_BlindParam *newBlind = BSL_SAL_Calloc(1u, sizeof(RSA_BlindParam));
+    if (newBlind == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->para.bssa, blind->para.bssa,
+        RSABlindDupCtx(blind->para.bssa), CRYPT_MEM_ALLOC_FAIL);
+    newBlind->type = RSABSSA;
+    return newBlind;
+ERR:
+    BSL_SAL_FREE(newBlind);
+    return NULL;
+}
+
 CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
 {
     if (keyCtx == NULL) {
@@ -150,8 +166,12 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
 
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->prvKey, keyCtx->prvKey, RSAPriKeyDupCtx(keyCtx->prvKey), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->pubKey, keyCtx->pubKey, RSAPubKeyDupCtx(keyCtx->pubKey), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->blind, keyCtx->blind, RSABlindDupCtx(keyCtx->blind), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->scBlind, keyCtx->scBlind, RSABlindDupCtx(keyCtx->scBlind), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, keyCtx->para, RSAParaDupCtx(keyCtx->para), CRYPT_MEM_ALLOC_FAIL);
+    if (keyCtx->blindParam != NULL && keyCtx->blindParam->type == RSABSSA) {
+        GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->blindParam, keyCtx->blindParam,
+            RSABssADupCtx(keyCtx->blindParam), CRYPT_MEM_ALLOC_FAIL);
+    }
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
@@ -299,8 +319,14 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx)
     RSA_FREE_PARA(ctx->para);
     RSA_FREE_PRV_KEY(ctx->prvKey);
     RSA_FREE_PUB_KEY(ctx->pubKey);
-    RSA_BlindFreeCtx(ctx->blind);
-    ctx->blind = NULL;
+    RSA_BlindFreeCtx(ctx->scBlind);
+    ctx->scBlind = NULL;
+    if (ctx->blindParam != NULL) {
+        if (ctx->blindParam->type == RSABSSA) {
+            RSA_BlindFreeCtx(ctx->blindParam->para.bssa);
+        }
+        BSL_SAL_FREE(ctx->blindParam);
+    }
     BSL_SAL_CleanseData((void *)(&(ctx->pad)), sizeof(RSAPad));
     BSL_SAL_FREE(ctx->label.data);
     BSL_SAL_FREE(ctx);
@@ -695,13 +721,13 @@ void ShallowCopyCtx(CRYPT_RSA_Ctx *ctx, CRYPT_RSA_Ctx *newCtx)
     RSA_FREE_PARA(ctx->para);
     RSA_FREE_PRV_KEY(ctx->prvKey);
     RSA_FREE_PUB_KEY(ctx->pubKey);
-    RSA_BlindFreeCtx(ctx->blind);
+    RSA_BlindFreeCtx(ctx->scBlind);
     BSL_SAL_ReferencesFree(&(newCtx->references));
 
     ctx->prvKey = newCtx->prvKey;
     ctx->pubKey = newCtx->pubKey;
     ctx->para = newCtx->para;
-    ctx->blind = newCtx->blind;
+    ctx->scBlind = newCtx->scBlind;
     ctx->pad = newCtx->pad;
     ctx->flags = newCtx->flags;
 }
