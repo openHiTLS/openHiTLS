@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <string.h>
 
+#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_asn1.h"
 #include "bsl_err.h"
@@ -613,6 +614,23 @@ void SDV_BSL_ASN1_ENCODE_RSAPSS_PUBLICKEY_BUFF_TC001(char *path, Hex *asn1)
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(encodeAsn1.data);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FAIL_TC001(Hex *asn1)
+{
+    RegisterLogFunc();
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    uint8_t *buff = (uint8_t *)BSL_SAL_Calloc(asn1->len + 1, 1);
+    ASSERT_TRUE(buff != NULL);
+    (void)memcpy_s(buff, asn1->len, asn1->x, asn1->len);
+    BSL_Buffer encode = {buff, asn1->len};
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_UNKNOWN, CRYPT_PRIKEY_ECC, &encode, NULL, 0, &pkeyCtx),
+        CRYPT_DECODE_ASN1_BUFF_FAILED);
+exit:
+    BSL_SAL_FREE(buff);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
