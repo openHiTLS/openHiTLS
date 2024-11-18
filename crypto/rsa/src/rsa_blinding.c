@@ -90,7 +90,7 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
     return ret;
 }
 
-static int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
+int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
 {
     b->a = BN_Create(bits);
     if (b->a == NULL) {
@@ -100,6 +100,8 @@ static int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
 
     b->ai = BN_Create(bits);
     if (b->ai == NULL) {
+        BN_Destroy(b->a);
+        b->a = NULL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
