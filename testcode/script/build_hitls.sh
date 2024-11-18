@@ -65,7 +65,7 @@ build_hitls_code()
     cd ${HITLS_ROOT_DIR}/build
 
     add_options="${add_options} -DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK" # Get CPU capability
-    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_x509 --bits=$BITS --system=linux --add_link_flags="-ldl" ${enable_sctp}
+    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_pki --bits=$BITS --system=linux --add_link_flags="-ldl" ${enable_sctp}
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
