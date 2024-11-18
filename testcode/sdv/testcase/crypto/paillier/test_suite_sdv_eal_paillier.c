@@ -35,6 +35,11 @@
 #include "crypt_encode.h"
 /* END_HEADER */
 
+#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
+#define CRYPT_EAL_PKEY_CIPHER_OPERATE  1
+#define CRYPT_EAL_PKEY_EXCH_OPERATE    2
+#define CRYPT_EAL_PKEY_SIGN_OPERATE    4
+
 void *malloc_fail(uint32_t size)
 {
     (void)size;
@@ -92,14 +97,18 @@ int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
  *    1. The returned result is not empty.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_NEW_API_TC001(void)
+void SDV_CRYPTO_PAILLIER_NEW_API_TC001(int isProvider)
 {
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
     /* Run 100 times */
     for (int i = 0; i < 100; i++) {
-        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        if (isProvider == 1) {
+            pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+        } else {
+            pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        }
         ASSERT_TRUE(pkey != NULL);
 
         CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -121,7 +130,7 @@ exit:
  *    1. Failed to create the ctx.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_NEW_API_TC002(void)
+void SDV_CRYPTO_PAILLIER_NEW_API_TC002(int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     FuncStubInfo tmpRpInfo = {0};
@@ -131,7 +140,11 @@ void SDV_CRYPTO_PAILLIER_NEW_API_TC002(void)
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey == NULL);
 
 exit:
@@ -158,7 +171,7 @@ exit:
  *    3. CRYPT_SUCCESS 
 */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PARA_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PARA_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPara para = {0};
@@ -167,7 +180,11 @@ void SDV_CRYPTO_PAILLIER_SET_PARA_API_TC001(Hex *p, Hex *q, int bits)
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, NULL), CRYPT_NULL_INPUT);
 
@@ -204,14 +221,18 @@ exit:
  *    1. Failed to generate a key pair, the return value is CRYPT_NO_REGIST_RAND.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GEN_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_GEN_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyPara para = {0};
     SetPaillierPara(&para, p, q, bits);
 
     TestMemInit();
-
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    CRYPT_EAL_PkeyCtx *pkey;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -244,7 +265,7 @@ exit:
  *    3. CRYPT_BN_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GET_PUB_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_GET_PUB_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPara para = {0};
@@ -259,7 +280,12 @@ void SDV_CRYPTO_PAILLIER_GET_PUB_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
+
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing public key */
@@ -318,7 +344,7 @@ exit:
  *    3. CRYPT_BN_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPrv prvKey = {0};
@@ -333,7 +359,11 @@ void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing private key */
@@ -396,7 +426,7 @@ exit:
  *    2. CRYPT_PAILLIER_ERR_INPUT_VALUE
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
@@ -413,8 +443,13 @@ void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -497,7 +532,7 @@ exit:
  *    2. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
@@ -512,8 +547,13 @@ void SDV_CRYPTO_PAILLIER_SET_PRV_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
     
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -557,7 +597,7 @@ exit:
  *    1. CRYPT_NULL_INPUT
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
@@ -572,8 +612,13 @@ void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -630,7 +675,7 @@ exit:
  *    2. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int bits)
+void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
@@ -643,8 +688,13 @@ void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -689,7 +739,7 @@ exit:
  *    5. CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_ENC_API_TC001(Hex *n, Hex *g, Hex *n2, Hex *in)
+void SDV_CRYPTO_PAILLIER_ENC_API_TC001(Hex *n, Hex *g, Hex *n2, Hex *in, int isProvider)
 {
     uint8_t crypt[512];
     uint32_t cryptLen = 512;
@@ -700,7 +750,11 @@ void SDV_CRYPTO_PAILLIER_ENC_API_TC001(Hex *n, Hex *g, Hex *n2, Hex *in)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, in->x, in->len, crypt, &cryptLen), CRYPT_PAILLIER_NO_KEY_INFO);
@@ -748,7 +802,7 @@ exit:
  *    5. CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_DEC_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *n2, Hex *in)
+void SDV_CRYPTO_PAILLIER_DEC_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *n2, Hex *in, int isProvider)
 {
     uint8_t crypt[256];
     uint32_t cryptLen = 256;
@@ -763,7 +817,11 @@ void SDV_CRYPTO_PAILLIER_DEC_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *n2, He
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_PAILLIER_NO_KEY_INFO);
@@ -833,7 +891,7 @@ int Compare_PrvKey(CRYPT_EAL_PkeyPrv *prvKey1, CRYPT_EAL_PkeyPrv *prvKey2)
  *    4. The obtained public key is equal to the set public key.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_SET_KEY_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_SET_KEY_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     uint8_t pubN[600];
     uint8_t pubG[600];
@@ -857,8 +915,15 @@ void SDV_CRYPTO_PAILLIER_SET_KEY_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
 
-    CRYPT_EAL_PkeyCtx *pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
-    CRYPT_EAL_PkeyCtx *pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    CRYPT_EAL_PkeyCtx *pkey1;
+    CRYPT_EAL_PkeyCtx *pkey2;
+    if (isProvider == 1) {
+        pkey1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+        pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+        pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
 
     /* pkey1 */
@@ -910,7 +975,7 @@ exit:
  *    1. Success.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_DUP_CTX_API_TC001(Hex *p, Hex *q, int bits)
+void SDV_CRYPTO_PAILLIER_DUP_CTX_API_TC001(Hex *p, Hex *q, int bits, int isProvider)
 {
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyCtx *newPkey = NULL;
@@ -920,7 +985,11 @@ void SDV_CRYPTO_PAILLIER_DUP_CTX_API_TC001(Hex *p, Hex *q, int bits)
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), 0);
@@ -968,7 +1037,7 @@ exit:
  *    3. The return value is not 0.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *g, Hex *n2, int securityBits)
+void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *g, Hex *n2, int securityBits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPub pubkey = {0};
@@ -976,7 +1045,11 @@ void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *g, Hex *n2, i
 
     TestMemInit();
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_PAILLIER, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_PAILLIER);
+    }
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubkey), CRYPT_SUCCESS);
 
