@@ -57,7 +57,7 @@ typedef struct {
 
 static int32_t DoHandshake(ResumeTestInfo *testInfo)
 {
-    HITLS_CFG_SetCloseCheckKeyUsage(testInfo->config, false);
+    HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
 
     testInfo->client = FRAME_CreateLink(testInfo->config, testInfo->uioType);
     if (testInfo->client == NULL) {
@@ -1382,7 +1382,7 @@ static void ErrorServerVersion(uint16_t version)
         ALERT_Info alert = { 0 };
         ALERT_GetInfo(testInfo.client->ssl, &alert);
         ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
-        ASSERT_EQ(alert.description, ALERT_PROTOCOL_VERSION);
+        ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
     }
 exit:
     ClearWrapper();

@@ -15,7 +15,7 @@
 
 #ifndef INDICATOR_H
 #define INDICATOR_H
-
+#include "hitls_build.h"
 #include "hitls_type.h"
 
 #ifdef __cplusplus

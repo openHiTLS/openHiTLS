@@ -45,10 +45,11 @@
 #include "cert_callback.h"
 #include "change_cipher_spec.h"
 #include "common_func.h"
+#include "crypt_util_rand.h"
 /* END_HEADER */
 
+static uint32_t g_uiPort = 16888;
 #define READ_BUF_SIZE (18 * 1024)       /* Maximum length of the read message buffer */
-#define REC_TLS_RECORD_HEADER_LEN 5     /* recode header length */
 #define REC_CONN_SEQ_SIZE 8u            /* SN size */
 #define PORT 11111
 typedef struct {
@@ -1201,5 +1202,140 @@ exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test    SDV_TLS_TLCP1_1_TRANSPORT_FUNC_TC01
+* @title   decrypt the app data with length 16384.
+* @precon  nan
+* @brief  1. Establish the connection. Expected result 1
+          2. Perform the a handshake. Expected result 2
+          3. Send the app data with length 16384. Expected result 3
+* @expect 1. Return success
+          2. The handshake is complete
+          3. The app data is decrypted successfully
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLCP1_1_TRANSPORT_FUNC_TC01(void)
+{
+    CRYPT_RandRegist(TestSimpleRand);
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+    ASSERT_TRUE(serverCtxConfig != NULL);
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLCP1_1, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    ASSERT_TRUE(clientCtxConfig != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLCP1_1, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+    uint8_t writeBuf[READ_BUF_SIZE] = {0};
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, writeBuf, 16384) == 0);
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen;
+    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
+    ASSERT_TRUE(readLen == 16384);
+
+exit:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+static void TEST_Client_SessionidLength_TooLong(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLCP11;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    clientMsg->sessionIdSize.data = 33;
+    BSL_SAL_Free(clientMsg->sessionId.data);
+    clientMsg->sessionId.data = BSL_SAL_Calloc(33, sizeof(uint8_t));
+    clientMsg->sessionId.size = 0;
+    clientMsg->sessionId.state = ASSIGNED_FIELD;
+    const uint8_t sessionId_temp[33] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+    ASSERT_TRUE(memcpy_s(clientMsg->sessionId.data, sizeof(sessionId_temp) / sizeof(uint8_t),
+    sessionId_temp, sizeof(sessionId_temp) / sizeof(uint8_t)) == 0);
+
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/* @
+* @test    SDV_TLS_TLCP1_1_RESUME_FAILED_TC001
+* @title   test wrong session id length client hello.
+* @precon  nan
+* @brief  1. Establish the connection. Expected result 1
+          2. Client send a client hello with wrong session id length. Expected result 2
+* @expect 1. Return success
+          2. Server return HITLS_PARSE_INVALID_MSG_LEN error
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLCP1_1_RESUME_FAILED_TC001(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverConfig = NULL;
+    HLT_Ctx_Config *clientConfig = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, 8888, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+    ASSERT_TRUE(serverConfig != NULL);
+    clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    ASSERT_TRUE(clientConfig != NULL);
+
+     RecWrapper wrapper = {
+        TRY_SEND_CLIENT_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        TEST_Client_SessionidLength_TooLong
+    };
+    RegisterWrapper(wrapper);
+
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLCP1_1, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLCP1_1, clientConfig, NULL);
+    ASSERT_TRUE(clientRes == NULL);
+
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes) , HITLS_PARSE_INVALID_MSG_LEN);
+exit:
+    ClearWrapper();
+    HLT_FreeAllProcess();
 }
 /* END_CASE */

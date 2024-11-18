@@ -22,48 +22,8 @@
  *    if there is no parent feature, such interfaces will be unavailable.
  */
 
-#ifndef HITLS_CONFIG_LAYER_H
-#define HITLS_CONFIG_LAYER_H
-
-/* BSL_INIT */
-#if defined(HITLS_CRYPTO_EAL) && !defined(HITLS_BSL_INIT)
-    #define HITLS_BSL_INIT
-#endif
-
-#if defined(HITLS_BSL_INIT) && !defined(HITLS_BSL_ERR)
-    #define HITLS_BSL_ERR
-#endif
-
-/* BSL_UIO */
-/* Derive the child-features of uio. */
-#ifdef HITLS_BSL_UIO
-    #ifndef HITLS_BSL_UIO_PLT
-        #define HITLS_BSL_UIO_PLT
-    #endif
-    #ifndef HITLS_BSL_UIO_BUFFER
-        #define HITLS_BSL_UIO_BUFFER
-    #endif
-    #ifndef HITLS_BSL_UIO_SCTP
-        #define HITLS_BSL_UIO_SCTP
-    #endif
-    #ifndef HITLS_BSL_UIO_TCP
-        #define HITLS_BSL_UIO_TCP
-    #endif
-#endif
-
-/* Derive the dependency features of uio_tcp and uio_sctp. */
-#if defined(HITLS_BSL_UIO_TCP) || defined(HITLS_BSL_UIO_SCTP)
-    #ifndef HITLS_BSL_SAL_NET
-        #define HITLS_BSL_SAL_NET
-    #endif
-#endif
-
-/* Derive parent feature from child features. */
-#if defined(HITLS_BSL_UIO_BUFFER) || defined(HITLS_BSL_UIO_SCTP) || defined(HITLS_BSL_UIO_TCP)
-    #ifndef HITLS_BSL_UIO_PLT
-        #define HITLS_BSL_UIO_PLT
-    #endif
-#endif
+#ifndef HITLS_CONFIG_LAYER_CRYPTO_H
+#define HITLS_CONFIG_LAYER_CRYPTO_H
 
 /* KDF */
 #ifdef HITLS_CRYPTO_KDF
@@ -429,4 +389,4 @@
 #define HITLS_CRYPTO_MODES_ASM
 #endif
 
-#endif /* HITLS_CONFIG_LAYER_H */
+#endif /* HITLS_CONFIG_LAYER_CRYPTO_H */

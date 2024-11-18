@@ -81,6 +81,8 @@ typedef enum {
     RSAES_OAEP,          /**< OAEP complies with RFC8017 */
     RSAES_PKCSV15,       /**< RSAES_PKCSV15 complies with RFC8017 */
     RSA_NO_PAD,
+    RSAES_PKCSV15_TLS, /* Specific RSA pkcs1.5 padding verification process
+                          to prevent possible Bleichenbacher attacks */
 } RSA_PadType;
 
 typedef struct {

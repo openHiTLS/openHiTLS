@@ -91,40 +91,6 @@ int32_t MODES_XTS_SetDecryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uin
     return CRYPT_SUCCESS;
 }
 
-#ifdef HITLS_BIG_ENDIAN
-// AES XTS IEEE P1619/D16 Annex C
-// Pseudocode for XTS-AES-128 and XTS-AES-256 Encryption
-void GF128Mul(uint8_t *a, uint32_t len)
-{
-    uint8_t in;
-    uint8_t out = 0;
-    in = 0;
-    // xts blocksize MODES_XTS_BLOCKSIZE
-    for (uint32_t j = 0; j < len; j++) {
-        out = (a[j] >> 7) & 1;  // >> 7
-        a[j] = (uint8_t)((a[j] << 1) + in) & 0xFFu;  // << 1
-        in = out;
-    }
-    if (out > 0) {
-        a[0] ^= 0x87;  // 0x87 gf 128
-    }
-}
-#else
-// AES XTS IEEE P1619/D16 5.2
-// Multiplication by a primitive element α
-void GF128Mul(uint8_t *a, uint32_t len)
-{
-    (void)len;
-    uint64_t *t = (uint64_t *)a;
-    uint8_t c = (t[1] >> 63) & 0xff; // 63 is the last bit of the last eight bytes.
-    t[1] = t[1] << 1 | t[0] >> 63; // 63 is the last bit of the first eight bytes
-    t[0] = t[0] << 1;
-    if (c != 0) {
-        t[0] ^= 0x87;
-    }
-}
-#endif
-
 void GF128Mul_GM(uint8_t *a, uint32_t len)
 {
     uint8_t in = 0;
@@ -177,7 +143,7 @@ int32_t BlocksCrypt(MODES_CipherXTSCtx *ctx, const uint8_t **in, uint8_t **out, 
         if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
             GF128Mul_GM(ctx->tweak, blockSize);
         } else {
-            GF128Mul(ctx->tweak, blockSize);
+            return CRYPT_NOT_SUPPORT;
         }
     }
     *in = tmpIn;
@@ -212,7 +178,7 @@ int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
         if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
         GF128Mul_GM(ctx->tweak, blockSize);
         } else {
-        GF128Mul(ctx->tweak, blockSize);
+            return CRYPT_NOT_SUPPORT;
         }
     if (tmpLen == 0) {
         return CRYPT_SUCCESS;
@@ -270,7 +236,7 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
         if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
             GF128Mul_GM(ctx->tweak, blockSize);
         } else {
-            GF128Mul(ctx->tweak, blockSize);
+            return CRYPT_NOT_SUPPORT;
         }
         return CRYPT_SUCCESS;
     }
@@ -280,7 +246,7 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
         GF128Mul_GM(ctx->tweak, blockSize);
     } else {
-        GF128Mul(ctx->tweak, blockSize);
+        return CRYPT_NOT_SUPPORT;
     }
     ret = BlockCrypt(ctx, tmpIn, ctx->tweak, pp, false);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);

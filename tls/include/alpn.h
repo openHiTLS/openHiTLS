@@ -17,6 +17,8 @@
 #define ALPN_H
 
 #include <stdint.h>
+#include "hitls_build.h"
+#include "tls.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +26,9 @@ extern "C" {
 
 int32_t ALPN_SelectProtocol(uint8_t **out, uint32_t *outLen, uint8_t *clientAlpnList, uint32_t clientAlpnListLen,
     uint8_t *servAlpnList, uint32_t servAlpnListLen);
+
+int32_t ClientCheckNegotiatedAlpn(
+    TLS_Ctx *ctx, bool haveSelectedAlpn, uint8_t *alpnSelected, uint16_t alpnSelectedSize);
 
 #ifdef __cplusplus
 }
