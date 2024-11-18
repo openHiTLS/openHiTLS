@@ -78,6 +78,7 @@ typedef struct {
 
 typedef enum {
     CRYPT_RSA_BLINDING = 0x00000001,            /**< Enable the RSA blinding function for signature. */
+    CRYPT_RSA_BSSA = 0x00000002,                /**< The signature process is rsa blind signature. */
     CRYPT_RSA_MAXFLAG
 } CRYPT_RSA_Flag;
 
@@ -469,6 +470,9 @@ typedef enum {
     CRYPT_CTRL_SM2_DO_CHECK,            /* SM2 check the shared key. */
     CRYPT_CTRL_SM2_GENE_R,              /* SM2 obtain the R value. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey generate pubkey. */
+    CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,      /**< Set the random bytes for RSA-BSSA. */
+    CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R,      /**< Get the inv-random of current blinding parameter
+                                                    from RSA-BSSA context. */
 } CRYPT_PkeyCtrl;
 
 /**
@@ -527,6 +531,8 @@ typedef enum {
     CRYPT_EVENT_ERR,          /**< An error occurred. */
     CRYPT_EVENT_SETSSP,       /**< Adding and Modifying Password Data and SSP. */
     CRYPT_EVENT_GETSSP,       /**< Access password data and SSP. */
+    CRYPT_EVENT_BLIND,        /**< Message blinding. */
+    CRYPT_EVENT_UNBLIND,      /**< Signature unblinding. */
     CRYPT_EVENT_MAX
 } CRYPT_EVENT_TYPE;
 

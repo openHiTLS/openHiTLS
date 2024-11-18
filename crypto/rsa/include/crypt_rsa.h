@@ -466,6 +466,39 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
  */
 int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx);
 
+/**
+ * @ingroup RSA
+ * @brief RSA blind operation for blind signature
+ *
+ * @param ctx [IN] RSA Context structure
+ * @param algId [IN] hash Id for input
+ * @param input [IN] Message to be blinded
+ * @param inputLen [IN] Length of input message
+ * @param out [OUT] Blinded message
+ * @param outLen [OUT] Length of blinded message
+ *
+ * @retval CRYPT_SUCCESS on success
+ *          For other error codes, see crypt_errno.h.
+
+ */
+int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup RSA
+ * @brief RSA unblind operation for blind signature
+ *
+ * @param ctx [IN] RSA Context structure
+ * @param input [IN] Blind signature to be unblinded
+ * @param inputLen [IN] Length of blind signature
+ * @param out [OUT] Final unblinded signature
+ * @param outLen [OUT] Length of unblinded signature
+ *
+ * @retval CRYPT_SUCCESS on success
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_RSA_UnBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus
 }
