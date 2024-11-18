@@ -1914,15 +1914,13 @@ exit:
  * @title  Barrett reduction test.
  * @precon Initialize BN_BigNum objects and set up initial parameters.
  * @brief
- *    1. Test the `BN_BarrettReduction` function handling NULL inputs:
- *       (1) The parameter `x` is NULL.
- *       (2) The parameter `m` is NULL.
+ *    1. Test the `BN_BarrettReduction_ecc` function handling NULL inputs:
+ *        The parameter `m` is NULL.
  *    2. Perform Barrett reduction on two large numbers:
- *       Barrett reduction result is calculated correctly.
+ *       (1) Barrett reduction result is calculated correctly.
  * @expect
  *    1. CRYPT_NULL_INPUT.
  *    2. CRYPT_SUCCESS.
- *    
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_BN_BARRETT_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, Hex *m, Hex *r, int expectRet)
@@ -1930,6 +1928,7 @@ void SDV_CRYPTO_BN_BARRETT_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, H
     TestMemInit();
    
     BN_BigNum *resBn = NULL;
+    BN_BigNum *mu = NULL;
     BN_Optimizer *opt = NULL;
     
     BN_BigNum *bn1 = TEST_VectorToBN(sign1, a->x, a->len);
@@ -1938,12 +1937,15 @@ void SDV_CRYPTO_BN_BARRETT_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, H
 
    
     resBn = BN_Create(LONG_LONG_BN_BITS_2048);
+    mu = BN_Create(LONG_LONG_BN_BITS_2048);
     opt = BN_OptimizerCreate();
     ASSERT_TRUE(opt != NULL);
     ASSERT_TRUE(resBn != NULL);
-   
-    
-    ASSERT_EQ(BN_BarrettReduction(resBn, bn1, bn2, opt), expectRet);
+    ASSERT_TRUE(mu != NULL);
+
+    ASSERT_EQ(BarrettContextInit(mu, bn2, opt), expectRet);
+  
+    ASSERT_EQ(BN_BarrettReduction_ecc(resBn, bn1, bn2, mu,opt), expectRet);
     if (expectRet == CRYPT_SUCCESS) {
         if (r->len == 0) {
             ASSERT_EQ(BN_IsZero(resBn), 1);
@@ -1957,6 +1959,8 @@ exit:
     BN_Destroy(bn2);
     BN_Destroy(expected);
     BN_Destroy(resBn);
+    BN_Destroy(mu);
+    BN_OptimizerDestroy(opt);
 }
 /* END_CASE */
 
