@@ -77,6 +77,7 @@ typedef struct {
 
 typedef enum {
     CRYPT_RSA_BLINDING = 0x00000001,            /**< Enable the RSA blinding function for signature. */
+    CRYPT_RSA_BSSA = 0x00000002,                /**< The signature process is rsa blind signature. */
     CRYPT_RSA_MAXFLAG
 } CRYPT_RSA_Flag;
 
@@ -449,6 +450,8 @@ typedef enum {
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
+    CRYPT_CTRL_SET_RSA_BSSA_PARAM,      /**< Set the random bytes for RSA-BSSA (Blind RSA Signature Scheme). */
+    CRYPT_CTRL_GET_RSA_BSSA_PARAM,      /**< Get the inv-random of current blinding parameter from RSA-BSSA context. */
 } CRYPT_PkeyCtrl;
 
 /**
@@ -507,6 +510,8 @@ typedef enum {
     CRYPT_EVENT_ERR,          /**< An error occurred. */
     CRYPT_EVENT_SETSSP,       /**< Adding and Modifying Password Data and SSP. */
     CRYPT_EVENT_GETSSP,       /**< Access password data and SSP. */
+    CRYPT_EVENT_BLIND,        /**< Message blinding. */
+    CRYPT_EVENT_UNBLIND,      /**< Signature unblinding. */
     CRYPT_EVENT_MAX
 } CRYPT_EVENT_TYPE;
 
