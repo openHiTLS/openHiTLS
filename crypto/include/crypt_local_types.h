@@ -121,6 +121,11 @@ typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
 typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
 typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
+typedef int32_t (*PkeyBlind)(void *pkey, int32_t algId, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
+typedef int32_t (*PkeyUnBlind)(const void *pkey, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
+
 /**
 * @ingroup  EAL
 *
@@ -150,6 +155,8 @@ typedef struct EAL_PkeyMethod {
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
     PkeyCopyParam copyPara;                 // copy parameter from source to destination
+    PkeyBlind blind;                        // 消息盲化
+    PkeyUnBlind unBlind;                    // 消息去盲
 } EAL_PkeyMethod;
 
 typedef struct EAL_PkeyUnitaryMethod {
@@ -176,6 +183,8 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyCmp cmp;                            // Compare keys and parameters.
     PkeyCopyParam copyPara;                 // Copy parameter from source to destination
     PkeyRecover recover;
+    PkeyBlind blind;                        // 消息盲化
+    PkeyUnBlind unBlind;                    // 消息去盲
 } EAL_PkeyUnitaryMethod;
 /**
  * @ingroup  sym_algid
