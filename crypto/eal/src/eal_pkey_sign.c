@@ -112,4 +112,37 @@ int32_t CRYPT_EAL_PkeyVerifyData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *h
     EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_VERIFY : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
+
+int32_t CRYPT_EAL_PkeyBlind(CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen)
+{
+    if (pkey == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pkey->method == NULL || pkey->method->blind == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    int32_t ret = pkey->method->blind(pkey->key, id, input, inputLen, out, outLen);
+    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_BLIND : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    return ret;
+}
+
+int32_t CRYPT_EAL_PkeyUnBlind(CRYPT_EAL_PkeyCtx *pkey, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen)
+{
+    if (pkey == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pkey->method == NULL || pkey->method->unBlind == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    int32_t ret = pkey->method->unBlind(pkey->key, input, inputLen, out, outLen);
+    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_UNBLIND : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    return ret;
+}
+
 #endif
