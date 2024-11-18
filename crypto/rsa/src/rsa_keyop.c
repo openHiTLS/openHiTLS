@@ -184,10 +184,10 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
     }
 
     RSA_FREE_PRV_KEY(ctx->prvKey);
-    RSA_BlindFreeCtx(ctx->blind);
+    RSA_BlindFreeCtx(ctx->scBlind);
 
     ctx->prvKey = newCtx->prvKey;
-    ctx->blind = newCtx->blind;
+    ctx->scBlind = newCtx->scBlind;
     ctx->pad = newCtx->pad;
 
     BSL_SAL_FREE(newCtx);
