@@ -13,8 +13,10 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "tls_binlog_id.h"
 #include "bsl_log.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
@@ -23,34 +25,34 @@
 #include "app.h"
 #include "conn_common.h"
 #include "hs.h"
+#include "hs_ctx.h"
+#include "record.h"
 
 int32_t HITLS_GetMaxWriteSize(const HITLS_Ctx *ctx, uint32_t *len)
 {
     if (ctx == NULL || len == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return APP_GetMaxWriteSize(ctx, len);
 }
 
-static int32_t WriteEventInIdleState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t WriteEventInIdleState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     (void)ctx;
     (void)data;
     (void)dataLen;
-    BSL_ERR_PUSH_ERROR(HITLS_CM_LINK_UNESTABLISHED);
+    (void)writeLen;
     return HITLS_CM_LINK_UNESTABLISHED;
 }
 
-static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     int32_t ret;
     int32_t alertRet;
-    uint32_t alertCount = 0;
 
     do {
-        ret = APP_Write(ctx, data, dataLen);
+        ret = APP_Write(ctx, data, dataLen, writeLen);
         if (ret == HITLS_SUCCESS) {
             /* The message is sent successfully */
             break;
@@ -61,14 +63,15 @@ static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data
             break;
         }
 
-        alertCount++;
-        if (alertCount >= MAX_ALERT_COUNT) {
+        if (ALERT_HaveExceeded(ctx, MAX_ALERT_COUNT)) {
             /* If multiple consecutive alerts exist, the link is abnormal and needs to be disconnected */
             ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         }
 
         alertRet = AlertEventProcess(ctx);
         if (alertRet != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16546, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "AlertEventProcess fail", 0, 0, 0, 0);
             /* If the alert fails to be sent, a response is returned to the user */
             return alertRet;
         }
@@ -82,7 +85,7 @@ static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data
     return ret;
 }
 
-static int32_t WriteEventInHandshakingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t WriteEventInHandshakingState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     // The link is being established. Therefore, the link establishment is triggered first. If the link is successfully
     // established, the message is directly sent.
@@ -91,12 +94,17 @@ static int32_t WriteEventInHandshakingState(HITLS_Ctx *ctx, const uint8_t *data,
         return ret;
     }
 
-    return WriteEventInTransportingState(ctx, data, dataLen);
+    return WriteEventInTransportingState(ctx, data, dataLen, writeLen);
 }
 
-static int32_t WriteEventInRenegotiationState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t WriteEventInRenegotiationState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     int32_t ret;
+    if (ctx->recCtx->pendingData != NULL) {
+        // Send the app data first.
+        return WriteEventInTransportingState(ctx, data, dataLen, writeLen);
+    }
     do {
         /* If an unexpected message is received, the system ignores the return value and continues to establish a link.
          * Otherwise, the system returns the return value to the user for processing */
@@ -113,30 +121,51 @@ static int32_t WriteEventInRenegotiationState(HITLS_Ctx *ctx, const uint8_t *dat
          */
     }
 
-    ctx->userRenego = false;
-    return WriteEventInTransportingState(ctx, data, dataLen);
+    return WriteEventInTransportingState(ctx, data, dataLen, writeLen);
+#else
+    (void)ctx;
+    (void)data;
+    (void)dataLen;
+    (void)writeLen;
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15583, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+        "invalid conn states %d", CM_STATE_RENEGOTIATION, NULL, NULL, NULL);
+    return HITLS_INTERNAL_EXCEPTION;
+#endif
 }
 
-static int32_t WriteEventInAlertedState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t WriteEventInAlertedState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     (void)ctx;
     (void)data;
     (void)dataLen;
+    (void)writeLen;
     // Directly return a message indicating that the link status is abnormal.
-    BSL_ERR_PUSH_ERROR(HITLS_CM_LINK_FATAL_ALERTED);
     return HITLS_CM_LINK_FATAL_ALERTED;
 }
 
-static int32_t WriteEventInClosedState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t WriteEventInClosedState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
-    (void)ctx;
-    (void)data;
-    (void)dataLen;
+    if ((ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0) {
+        ALERT_CleanInfo(ctx);
+        int ret = APP_Write(ctx, data, dataLen, writeLen);
+        if (ret == HITLS_SUCCESS || ret == HITLS_REC_NORMAL_IO_BUSY) {
+            return ret;
+        }
+        // There is no alert message to be processed.
+        if (ALERT_GetFlag(ctx) == false) {
+            return ret;
+        }
+
+        int32_t alertRet = AlertEventProcess(ctx);
+        if (alertRet != HITLS_SUCCESS) {
+            return alertRet;
+        }
+        return ret;
+    }
     // Directly return a message indicating that the link status is abnormal.
-    BSL_ERR_PUSH_ERROR(HITLS_CM_LINK_CLOSED);
     return HITLS_CM_LINK_CLOSED;
 }
-
+#ifdef HITLS_TLS_FEATURE_PHA
 int32_t CommonCheckPostHandshakeAuth(TLS_Ctx *ctx)
 {
     if (!ctx->isClient && ctx->phaState == PHA_PENDING && ctx->state == CM_STATE_TRANSPORTING) {
@@ -145,7 +174,7 @@ int32_t CommonCheckPostHandshakeAuth(TLS_Ctx *ctx)
     }
     return HITLS_SUCCESS;
 }
-
+#endif
 static int32_t HITLS_WritePreporcess(HITLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -159,30 +188,21 @@ static int32_t HITLS_WritePreporcess(HITLS_Ctx *ctx)
         }
     }
 
-    /* Process the key update message that is not sent, and then enter the corresponding state processing function
-     * according to the processing resul */
-    if (ctx->isKeyUpdateRequest) {
-        ret = HS_CheckKeyUpdateState(ctx, ctx->keyUpdateType);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        ret = HS_SendKeyUpdate(ctx);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-    }
-
+#ifdef HITLS_TLS_FEATURE_PHA
     return CommonCheckPostHandshakeAuth(ctx);
+#else
+    return ret;
+#endif
 }
 
-int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
-    int32_t ret;
-    if (ctx == NULL || data == NULL || dataLen == 0) {
+    if (ctx == NULL || data == NULL || dataLen == 0 || writeLen == NULL) {
         return HITLS_NULL_INPUT;
     }
+    ctx->allowAppOut = false;
 
-    ret = HITLS_WritePreporcess(ctx);
+    int32_t ret = HITLS_WritePreporcess(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -198,14 +218,18 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
     };
 
     if ((GetConnState(ctx) >= CM_STATE_END) || (GetConnState(ctx) == CM_STATE_ALERTING)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16548, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "internal exception occurs", 0, 0, 0, 0);
         /* If the alert message is sent successfully, the system switches to another state. Otherwise, an internal
          * exception occurs */
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         return HITLS_INTERNAL_EXCEPTION;
     }
 
     WriteEventProcess proc = writeEventProcess[GetConnState(ctx)];
 
-    ret = proc(ctx, data, dataLen);
+    ret = proc(ctx, data, dataLen, writeLen);
+    if (ret != HITLS_SUCCESS) {
+        *writeLen = 0;
+    }
     return ret;
 }

@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#if defined(HITLS_TLS_HOST_CLIENT) && defined(HITLS_TLS_PROTO_TLS13)
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -22,8 +23,12 @@
 #include "bsl_bytes.h"
 #include "hitls_error.h"
 #include "tls.h"
+#include "rec.h"
+#include "hs.h"
 #include "hs_extensions.h"
+#include "hs_common.h"
 #include "parse_extensions.h"
+#include "parse_common.h"
 
 /**
  * @brief   Release the memory in the message structure.
@@ -36,53 +41,44 @@ void CleanEncryptedExtensions(EncryptedExtensions *msg)
         return;
     }
     BSL_SAL_FREE(msg->supportedGroups);
+#ifdef HITLS_TLS_FEATURE_ALPN
+    BSL_SAL_FREE(msg->alpnSelected);
+#endif /* HITLS_TLS_FEATURE_ALPN */
     return;
 }
 
-static int32_t ParseEncryptedSupportGroups(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, EncryptedExtensions *msg)
+static int32_t ParseEncryptedSupportGroups(ParsePacket *pkt, EncryptedExtensions *msg)
 {
     /* Has parsed extensions of the same type */
     if (msg->haveSupportedGroups == true) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15709, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "external message type ClientSupportGroups in encrypted extension message is repeated.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
-        return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_DUPLICATE_EXTENDED_MSG, BINLOG_ID15709,
+            BINGLOG_STR("ClientSupportGroups repeated"), ALERT_ILLEGAL_PARAMETER);
     }
 
-    if (bufLen < sizeof(uint16_t)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15710, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "external message length (supported groups) in encrypted extension message is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    uint16_t groupLen = 0;
+    const char *logStr = BINGLOG_STR("parse supported groups len fail.");
+    int32_t ret = ParseBytesToUint16(pkt, &groupLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15710, logStr, ALERT_DECODE_ERROR);
+    }
+    groupLen /= sizeof(uint16_t);
+
+    /* If the length of the message does not match the extended length, or the length is 0,
+       the handshake message error is returned */
+    if (((groupLen * sizeof(uint16_t)) != (pkt->bufLen - sizeof(uint16_t))) || (groupLen == 0)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15711, logStr, ALERT_DECODE_ERROR);
     }
 
-    uint32_t bufOffset = 0u;
-    uint16_t groupLen = BSL_ByteToUint16(&buf[bufOffset]) / sizeof(uint16_t);
-    bufOffset += sizeof(uint16_t);
-
-    /* If the length of the message does not match the extended length, or the length is 0, return
-       the handshake message error. */
-    if (((groupLen * sizeof(uint16_t)) != (bufLen - sizeof(uint16_t))) || (groupLen == 0)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15711, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "external message length (supported groups) in encrypted extension message is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-
+    BSL_SAL_FREE(msg->supportedGroups);
     msg->supportedGroups = (uint16_t *)BSL_SAL_Malloc(groupLen * sizeof(uint16_t));
     if (msg->supportedGroups == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15712, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "supportedGroups malloc fail when parse extensions msg.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15712,
+            BINGLOG_STR("supportedGroups malloc fail"), ALERT_UNKNOWN);
     }
 
     for (uint32_t i = 0; i < groupLen; i++) {
-        msg->supportedGroups[i] = BSL_ByteToUint16(&buf[bufOffset]);
-        bufOffset += sizeof(uint16_t);
+        msg->supportedGroups[i] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
+        *pkt->bufOffset += sizeof(uint16_t);
     }
 
     msg->supportedGroupsSize = groupLen;
@@ -94,9 +90,11 @@ static int32_t ParseEncryptedSupportGroups(TLS_Ctx *ctx, const uint8_t *buf, uin
 static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     EncryptedExtensions *msg)
 {
+    uint32_t bufOffset = 0u;
+    ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = extMsgLen, .bufOffset = &bufOffset};
     switch (extMsgType) {
         case HS_EX_TYPE_SUPPORTED_GROUPS:
-            return ParseEncryptedSupportGroups(ctx, buf, extMsgLen, msg);
+            return ParseEncryptedSupportGroups(&pkt, msg);
         case HS_EX_TYPE_EARLY_DATA:
             return ParseEmptyExtension(ctx, HS_EX_TYPE_EARLY_DATA, extMsgLen, &msg->haveEarlyData);
         case HS_EX_TYPE_SERVER_NAME:
@@ -109,22 +107,22 @@ static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uin
         case HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES:
         case HS_EX_TYPE_COOKIE:
         case HS_EX_TYPE_SUPPORTED_VERSIONS:
-        case HS_EX_TYPE_TRUSTED_CA_LIST:
-        case HS_EX_TYPE_OID_FILTERS:
+        case HS_EX_TYPE_CERTIFICATE_AUTHORITIES:
         case HS_EX_TYPE_POST_HS_AUTH:
         case HS_EX_TYPE_SIGNATURE_ALGORITHMS_CERT:
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "Illegal extension received", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORTED_EXTENSION);
-            return HITLS_PARSE_UNSUPPORTED_EXTENSION;
+            return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, BINLOG_ID16239,
+                BINGLOG_STR("Illegal extension received"), ALERT_ILLEGAL_PARAMETER);
+#ifdef HITLS_TLS_FEATURE_ALPN
+        case HS_EX_TYPE_APP_LAYER_PROTOCOLS:
+            return ParseServerSelectedAlpnProtocol(
+                &pkt, &msg->haveSelectedAlpn, &msg->alpnSelected, &msg->alpnSelectedSize);
+#endif /* HITLS_TLS_FEATURE_ALPN */
         default:
             break;
     }
 
-    ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNSUPPORTED_EXTENSION);
-    BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORTED_EXTENSION);
-    return HITLS_PARSE_UNSUPPORTED_EXTENSION;
+    return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, BINLOG_ID16982,
+        "unknow extension received", ALERT_UNSUPPORTED_EXTENSION);
 }
 
 // Parse the EncryptedExtensions extension message
@@ -138,26 +136,20 @@ int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *
         uint16_t extMsgType = HS_EX_TYPE_END;
         ret = ParseExHeader(ctx, &buf[bufOffset], bufLen - bufOffset, &extMsgType, &extMsgLen);
         if (ret != HITLS_SUCCESS) {
-            CleanEncryptedExtensions(msg);
             return ret;
         }
         bufOffset += HS_EX_HEADER_LEN;
-
+        msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
         ret = ParseEncryptedExBody(ctx, extMsgType, &buf[bufOffset], extMsgLen, msg);
         if (ret != HITLS_SUCCESS) {
-            CleanEncryptedExtensions(msg);
             return ret;
         }
         bufOffset += extMsgLen;
     }
 
     if (bufOffset != bufLen) {
-        CleanEncryptedExtensions(msg);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15714, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the extension len of encrypted extensions msg is incorrect", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16239,
+            BINGLOG_STR("encrypted extensions len incorrect"), ALERT_DECODE_ERROR);
     }
 
     return HITLS_SUCCESS;
@@ -167,33 +159,28 @@ int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *
 int32_t ParseEncryptedExtensions(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
 {
     if ((buf == NULL) || (hsMsg == NULL)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16983, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
-    }
-
-    if (bufLen < sizeof(uint16_t)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15908, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the length of handshake message (encrypted Extensions) is not enough for version.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        return HITLS_PARSE_INVALID_MSG_LEN;
     }
 
     /* Parse the EncryptedExtensions extension message */
     EncryptedExtensions *msg = &hsMsg->body.encryptedExtensions;
     uint32_t bufOffset = 0u;
+    ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &bufOffset};
 
     /* Obtain the extended message length */
-    uint16_t exMsgLen = BSL_ByteToUint16(&buf[bufOffset]);
-    bufOffset += sizeof(uint16_t);
-
-    if (bufLen - bufOffset != exMsgLen) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15715, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the external message length of handshake message (encrypted extensions) is incorrect", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    uint16_t exMsgLen = 0;
+    const char *logStr = BINGLOG_STR("parse encrypted Extensions len fail.");
+    int32_t ret = ParseBytesToUint16(&pkt, &exMsgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16128, logStr, ALERT_DECODE_ERROR);
     }
 
-    return ParseEncryptedEx(ctx, msg, &buf[bufOffset], exMsgLen);
+    if (pkt.bufLen - *pkt.bufOffset != exMsgLen) {
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15715, logStr, ALERT_DECODE_ERROR);
+    }
+
+    return ParseEncryptedEx(pkt.ctx, msg, &pkt.buf[*pkt.bufOffset], exMsgLen);
 }
+#endif /* HITLS_TLS_HOST_CLIENT && HITLS_TLS_PROTO_TLS13 */

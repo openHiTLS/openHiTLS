@@ -27,7 +27,7 @@ extern "C" {
 void CFG_CleanConfig(HITLS_Config *config);
 
 /** copy the TLS configuration */
-int32_t CFG_DumpConfig(HITLS_Ctx *ctx, const HITLS_Config *srcConfig);
+int32_t DumpConfig(HITLS_Ctx *ctx, const HITLS_Config *srcConfig);
 
 #ifdef __cplusplus
 }

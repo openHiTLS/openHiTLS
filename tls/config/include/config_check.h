@@ -24,10 +24,10 @@ extern "C" {
 #endif
 
 /** check the version */
-int32_t CFG_CheckVersion(uint16_t minVersion, uint16_t maxVersion);
+int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion);
 
 /** check whether the TLS configuration is valid */
-int32_t CFG_CheckConfig(const HITLS_Config *config);
+int32_t CheckConfig(const HITLS_Config *config);
 
 #ifdef __cplusplus
 }

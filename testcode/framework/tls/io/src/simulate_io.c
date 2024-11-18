@@ -82,13 +82,14 @@ int32_t FRAME_Read(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
         ioUserData->userInsertMsg.len = 0;
         return BSL_SUCCESS;
     } else if (ioUserData->recMsg.len != 0) {
-        if (len < ioUserData->recMsg.len) {
-            return BSL_UIO_FAIL;
+        uint32_t copyLen = len < ioUserData->recMsg.len ? len : ioUserData->recMsg.len;
+        memcpy_s(buf, len, ioUserData->recMsg.msg, copyLen);
+        *readLen = copyLen;
+        if (copyLen < ioUserData->recMsg.len) {
+            memmove_s(ioUserData->recMsg.msg, ioUserData->recMsg.len,
+                &ioUserData->recMsg.msg[copyLen], ioUserData->recMsg.len - copyLen);
         }
-
-        memcpy_s(buf, len, ioUserData->recMsg.msg, ioUserData->recMsg.len);
-        *readLen = ioUserData->recMsg.len;
-        ioUserData->recMsg.len = 0;
+        ioUserData->recMsg.len -= copyLen;
         return BSL_SUCCESS;
     }  // If there is no data in the receive buffer, a success message is returned and *readLen is set to 0.
 

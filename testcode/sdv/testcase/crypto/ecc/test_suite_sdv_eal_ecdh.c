@@ -699,3 +699,27 @@ exit:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_CRYPTO_ECDH_GET_SEC_BITS_FUNC_TC001
+ * @title  ECDH CRYPT_EAL_PkeyGetSecurityBits test.
+ * @precon nan
+ * @brief
+ *    1. Create the context of the ecdh algorithm, expected result 1
+ *    2. Set ecdh para, expected result 2
+ *    3. Call the CRYPT_EAL_PkeyGetSecurityBits Obtains secbits, expected result 3
+ * @expect
+ *    1. Success, and the context is not null.
+ *    2. CRYPT_SUCCESS
+ *    3. The return value is secBits.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_GET_SEC_BITS_FUNC_TC001(int paraid, int secBits)
+{
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), secBits);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */

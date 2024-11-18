@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_CLIENT
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -32,229 +34,25 @@
 #include "hs_msg.h"
 #include "hs_common.h"
 #include "parse_msg.h"
+#include "parse_common.h"
 
-int32_t ParseEcdhNamedCurve(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, uint16_t *namedCurve, uint32_t *useLen)
+// Parse signature algorithm in the context message.
+int32_t ParseSignAlgorithm(ParsePacket *pkt, uint16_t *signAlg)
 {
-    if (len < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15291, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server keyExMsg is incorrect when parse named curve.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    uint16_t signScheme = 0;
+    TLS_Ctx *ctx = pkt->ctx;
+    int32_t ret = ParseBytesToUint16(pkt, &signScheme);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15306,
+            BINGLOG_STR("parse signAlgorithm failed in serverKeyEx."), ALERT_DECODE_ERROR);
     }
 
-    *namedCurve = BSL_ByteToUint16(data);
-    *useLen = sizeof(uint16_t);
-
-    return HITLS_SUCCESS;
-}
-
-int32_t ParseEcParameters(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, ServerEcdh *ecdh, uint32_t *useLen)
-{
-    if (len < (sizeof(uint8_t))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15292, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server keyExMsg is incorrect when parse curve type.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    ret = CheckPeerSignScheme(ctx, ctx->hsCtx->peerCert, signScheme);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, ret, 0, NULL, ALERT_ILLEGAL_PARAMETER);
     }
 
-    int32_t ret;
-    uint32_t bufOffset = 0;
-    HITLS_ECCurveType curveType = data[bufOffset];
-    bufOffset += sizeof(uint8_t);
-
-    /* In the TLCP, this content can choose not to be sent. */
-    if (curveType == HITLS_EC_CURVE_TYPE_NAMED_CURVE) {
-        uint16_t namedCurve = 0;
-        uint32_t offset = 0;
-        ret = ParseEcdhNamedCurve(ctx, &data[bufOffset], len - bufOffset, &namedCurve, &offset);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        bufOffset += offset;
-        ecdh->ecPara.param.namedcurve = namedCurve;
-    } else {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORT_KX_CURVE_TYPE);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15293, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "unsupport curve type when parse server key exchange msg.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_PARSE_UNSUPPORT_KX_CURVE_TYPE;
-    }
-
-    ecdh->ecPara.type = curveType;
-    *useLen = bufOffset;
-
-    return HITLS_SUCCESS;
-}
-
-/**
- * @brief Parse the p or g parameter in the DHE kx message.
- *
- * @param ctx [IN] TLS context
- * @param data [IN] message buffer
- * @param len [IN] message buffer length
- * @param paraLen [OUT] Parsed parameter length
- * @param useLen [OUT] Parsed length
- *
- * @return Return the applied parameter memory. If the parameter memory is NULL, the parsing fails.
- */
-uint8_t *ParseDhePara(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, uint16_t *paraLen, uint32_t *useLen)
-{
-    if (len < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15294, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server keyExMsg is incorrect when parse dhe para.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
-    }
-
-    uint32_t bufOffset = 0;
-    uint16_t tmpParaLen = BSL_ByteToUint16(&data[bufOffset]);
-    bufOffset += sizeof(uint16_t);
-
-    if (tmpParaLen > (len - bufOffset)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15295, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of dhe para is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
-    }
-
-    if (tmpParaLen == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15296, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of dhe para is 0.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return NULL;
-    }
-
-    uint8_t *dhePara = (uint8_t *)BSL_SAL_Dump(&data[bufOffset], tmpParaLen);
-    if (dhePara == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15297, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "dhePara malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-        return NULL;
-    }
-
-    bufOffset += tmpParaLen;
-    *useLen = bufOffset;
-    *paraLen = tmpParaLen;
-    return dhePara;
-}
-
-int32_t ParseEcdhePublicKey(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, ServerEcdh *ecdh, uint32_t *useLen)
-{
-    if (len < sizeof(uint8_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15298, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse ecdhe server pubkey length error, remain len = %u, less than one byte.", len, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-
-    uint32_t offset = 0;
-    uint32_t pubKeySize = data[offset];
-    offset += sizeof(uint8_t);
-
-    if (pubKeySize > (len - offset)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15299, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "check ecdhe server pubkey length error, pubkey len = %u, remain len = %u.",
-            pubKeySize, len - offset, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
-        ecdh->ecPara.param.namedcurve = HITLS_EC_GROUP_SM2;
-    }
-
-    if ((ecdh->ecPara.type == HITLS_EC_CURVE_TYPE_NAMED_CURVE) &&
-        (pubKeySize != HS_GetNamedCurvePubkeyLen(ecdh->ecPara.param.namedcurve))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_ECDH_PUBKEY_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "check ecdhe server pubkey length error, curve id = %u, pubkey len = %u.",
-            ecdh->ecPara.param.namedcurve, pubKeySize, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_PARSE_ECDH_PUBKEY_ERR;
-    }
-
-    uint8_t *pubKey = BSL_SAL_Malloc(pubKeySize);
-    if (pubKey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15301, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pubKey malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-    (void)memcpy_s(pubKey, pubKeySize, &data[offset], pubKeySize);
-    offset += pubKeySize;
-
-    ecdh->pubKey = pubKey;
-    ecdh->pubKeySize = pubKeySize;
-    *useLen = offset;
-    return HITLS_SUCCESS;
-}
-
-// Parse the public key in the Kx message of the DHE server.
-uint8_t *ParseDhePublicKey(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, uint32_t *pubKeySize, uint32_t *useLen)
-{
-    if (len < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15302, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse dhe server pubkey length error, remain len = %u, less than one byte.", len, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
-    }
-
-    uint32_t bufOffset = 0;
-    uint32_t msgPubKeySize = BSL_ByteToUint16(&data[bufOffset]);
-    bufOffset += sizeof(uint16_t);
-
-    if (msgPubKeySize > (len - bufOffset)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15303, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server kx pubKeySize is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
-    }
-
-    if (msgPubKeySize == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15304, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server kx pubKeySize is 0.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return NULL;
-    }
-
-    uint8_t *pubKey = BSL_SAL_Malloc(msgPubKeySize);
-    if (pubKey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15305, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pubKey malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-        return NULL;
-    }
-    (void)memcpy_s(pubKey, msgPubKeySize, &data[bufOffset], msgPubKeySize);
-    bufOffset += msgPubKeySize;
-    *useLen = bufOffset;
-    *pubKeySize = msgPubKeySize;
-
-    return pubKey;
-}
-
-// Parse SignAlgorithm in the kx message.
-int32_t ParseSignAlgorithm(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, uint16_t *signAlg, uint32_t *useLen)
-{
-    if (len < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15306, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server keyExMsg is incorrect when parse signAlgorithm.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-
-    uint16_t signScheme = BSL_ByteToUint16(data);
-    uint32_t i;
+    uint32_t i = 0;
     /* If the client_hello message contains the signature_algorithms extension, the server_key_exchange message must use
      * the signature algorithm in the extension. */
     for (i = 0; i < ctx->config.tlsConfig.signAlgorithmsSize; i++) {
@@ -264,64 +62,48 @@ int32_t ParseSignAlgorithm(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, uint
     }
     if (i == ctx->config.tlsConfig.signAlgorithmsSize) {
         /* Handshake failed because it is not an extended signature algorithm. */
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORT_SIGN_ALG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15307, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "check server key exchange signature algo fail: 0x%x is not included in client hello.",
+            "check serverKeyEx signature algo fail: 0x%x is not included in client hello.",
             signScheme, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
-        return HITLS_PARSE_UNSUPPORT_SIGN_ALG;
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_HANDSHAKE_FAILURE);
     }
 
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, signScheme, NULL) != SECURITY_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17132, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "signScheme 0x%x SslCheck fail", signScheme, 0, 0, 0);
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_HANDSHAKE_FAILURE);
+    }
+#endif
+
     *signAlg = signScheme;
-    *useLen = sizeof(uint16_t);
 
     return HITLS_SUCCESS;
 }
 
 // Parse the signature in the ECDHE kx message.
-uint8_t *ParseSignature(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, uint16_t *signSize, uint32_t *useLen)
+int32_t ParseSignature(ParsePacket *pkt, uint16_t *signSize, uint8_t **signData)
 {
-    if (len < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15308, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server keyExMsg is incorrect when parse signature.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
+    int32_t ret = ParseTwoByteLengthField(pkt, signSize, signData);
+    if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15308,
+            BINGLOG_STR("parse serverkeyEx signature failed."), ALERT_DECODE_ERROR);
+    } else if (ret == HITLS_MEMALLOC_FAIL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15311,
+            BINGLOG_STR("signData malloc fail."), ALERT_UNKNOWN);
     }
 
-    uint32_t bufOffset = 0;
-    uint16_t tmpSignSize = BSL_ByteToUint16(&data[bufOffset]);
-    bufOffset += sizeof(uint16_t);
-
-    if (tmpSignSize != (len - bufOffset)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15309, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server signSize is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
+    if (pkt->bufLen != *pkt->bufOffset) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15308,
+            BINGLOG_STR("parse serverkeyEx signature failed."), ALERT_DECODE_ERROR);
     }
 
-    if (tmpSignSize == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15310, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of server signSize is 0.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return NULL;
+    if (*signSize == 0) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15310,
+            BINGLOG_STR("length of server signSize is 0."), ALERT_ILLEGAL_PARAMETER);
     }
 
-    uint8_t *signData = BSL_SAL_Malloc(tmpSignSize);
-    if (signData == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15311, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "signData malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-        return NULL;
-    }
-    (void)memcpy_s(signData, tmpSignSize, &data[bufOffset], tmpSignSize);
-    bufOffset += tmpSignSize;
-    *useLen = bufOffset;
-    *signSize = tmpSignSize;
-
-    return signData;
+    return HITLS_SUCCESS;
 }
 
 static void GetServerKeyExSignParam(const ServerKeyExchangeMsg *msg,
@@ -349,81 +131,117 @@ int32_t VerifySignature(TLS_Ctx *ctx, const uint8_t *kxData, uint32_t kxDataLen,
 
     /* Obtain the signature algorithm and hash algorithm */
     if (!CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signParam.signAlgo, &signParam.hashAlgo)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_GET_SIGN_PARA_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15312, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get sign param fail when parse server key exchange msg.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_PARSE_GET_SIGN_PARA_ERR;
+        return ParseErrorProcess(ctx, HITLS_PARSE_GET_SIGN_PARA_ERR, BINLOG_ID15312,
+            BINGLOG_STR("get sign param fail."), ALERT_ILLEGAL_PARAMETER);
     }
-
     /* Obtain all signature data (random number + server kx content). */
-    signParam.data = HS_PrepareSignData(ctx, kxData, kxDataLen, &signParam.dataLen);
-    if (signParam.data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15313, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "data malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return HITLS_MEMALLOC_FAIL;
+    uint8_t *data = HS_PrepareSignData(ctx, kxData, kxDataLen, &signParam.dataLen);
+    if (data == NULL) {
+        return ParseErrorProcess(ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15313,
+            BINGLOG_STR("data malloc fail."), ALERT_INTERNAL_ERROR);
     }
 
-    CERT_Pair *peerCert = ctx->hsCtx->peerCert;
-    if (peerCert == NULL) {
-        BSL_SAL_FREE(signParam.data);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_CERTIFICATE_REQUIRED);
-        return HITLS_PARSE_VERIFY_SIGN_FAIL;
+    if (ctx->hsCtx->peerCert == NULL) {
+        BSL_SAL_FREE(data);
+        return ParseErrorProcess(ctx, HITLS_PARSE_VERIFY_SIGN_FAIL, BINLOG_ID17013,
+            BINGLOG_STR("peerCert null"), ALERT_CERTIFICATE_REQUIRED);
     }
 
-    HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(peerCert);
+    HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(ctx->hsCtx->peerCert);
     HITLS_CERT_Key *pubkey = NULL;
     int32_t ret = SAL_CERT_X509Ctrl(&(ctx->config.tlsConfig), cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(signParam.data);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17014, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GET_PUB_KEY fail", 0, 0, 0, 0);
+        BSL_SAL_FREE(data);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 
+    signParam.data = data;
     ret = SAL_CERT_VerifySign(ctx, pubkey, &signParam);
     SAL_CERT_KeyFree(ctx->config.tlsConfig.certMgrCtx, pubkey);
-    BSL_SAL_FREE(signParam.data);
+    BSL_SAL_FREE(data);
     if (ret != HITLS_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_VERIFY_SIGN_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15314, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "verify signature fail when parse server key exchange msg.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECRYPT_ERROR);
-        return HITLS_PARSE_VERIFY_SIGN_FAIL;
+        return ParseErrorProcess(ctx, HITLS_PARSE_VERIFY_SIGN_FAIL, BINLOG_ID15314,
+            BINGLOG_STR("verify signature fail."), ALERT_DECRYPT_ERROR);
     }
     return HITLS_SUCCESS;
 }
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
 
-static int32_t ParseEcParametersWrapper(TLS_Ctx *ctx, const uint8_t *data, uint32_t len,
-    ServerEcdh *ecdh, uint32_t *useLen)
+static int32_t ParseEcdhePublicKey(ParsePacket *pkt, ServerEcdh *ecdh)
 {
-    int32_t ret = ParseEcParameters(ctx, data, len, ecdh, useLen);
+    const char *logStr = BINGLOG_STR("parse ecdhe public key fail.");
+    uint8_t pubKeySize = 0;
+    int32_t ret = ParseBytesToUint8(pkt, &pubKeySize);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15315, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse ecdhe curve type fail.", 0, 0, 0, 0);
-        return ret;
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15298,
+            logStr, ALERT_DECODE_ERROR);
     }
+
+#ifdef HITLS_TLS_PROTO_TLCP11
+    if (pkt->ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+        ecdh->ecPara.param.namedcurve = HITLS_EC_GROUP_SM2;
+    }
+#endif /* HITLS_TLS_PROTO_TLCP11 */
+
+    if ((ecdh->ecPara.type == HITLS_EC_CURVE_TYPE_NAMED_CURVE) &&
+        (pubKeySize != HS_GetNamedCurvePubkeyLen(ecdh->ecPara.param.namedcurve))) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ecdhe server pubkey length error, curve id = %u, pubkey len = %u.",
+            ecdh->ecPara.param.namedcurve, pubKeySize, 0, 0);
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_ECDH_PUBKEY_ERR, 0,
+            NULL, ALERT_ILLEGAL_PARAMETER);
+    }
+
+    uint8_t *pubKey = NULL;
+    ret = ParseBytesToArray(pkt, &pubKey, pubKeySize);
+    if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15299,
+            logStr, ALERT_DECODE_ERROR);
+    } else if (ret == HITLS_MEMALLOC_FAIL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15301,
+            BINGLOG_STR("pubKey malloc fail."), ALERT_UNKNOWN);
+    }
+
+    ecdh->pubKey = pubKey;
+    ecdh->pubKeySize = pubKeySize;
     return HITLS_SUCCESS;
 }
 
-int32_t ParseEcdhePublicKeyWrapper(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, ServerEcdh *ecdh, uint32_t *useLen)
+int32_t ParseEcParameters(ParsePacket *pkt, ServerEcdh *ecdh)
 {
-    int32_t ret = ParseEcdhePublicKey(ctx, data, len, ecdh, useLen);
+    const char *logStr = BINGLOG_STR("parse ecdhe curve type fail.");
+    uint8_t curveType = 0;
+    int32_t ret = ParseBytesToUint8(pkt, &curveType);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15316, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse ecdhe public key fail.", 0, 0, 0, 0);
-        return ret;
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15292,
+            logStr, ALERT_DECODE_ERROR);
     }
+
+    /* In the TLCP, this content can choose not to be sent. */
+    if (curveType == HITLS_EC_CURVE_TYPE_NAMED_CURVE) {
+        uint16_t namedCurve = 0;
+        ret = ParseBytesToUint16(pkt, &namedCurve);
+        if (ret != HITLS_SUCCESS) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15291,
+                logStr, ALERT_DECODE_ERROR);
+        }
+        ecdh->ecPara.param.namedcurve = namedCurve;
+    } else {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_UNSUPPORT_KX_CURVE_TYPE, BINLOG_ID15293,
+            BINGLOG_STR("unsupport curve type in server key exchange."), ALERT_ILLEGAL_PARAMETER);
+    }
+
+    ecdh->ecPara.type = curveType;
     return HITLS_SUCCESS;
 }
 
 /**
  * @brief Parse the server ecdh message.
  *
- * @param ctx [IN] TLS context
- * @param data [IN] message buffer
- * @param len [IN] message buffer length
+ * @param pkt [IN] Context for parsing
  * @param msg [OUT] Parsed message structure
  *
  * @retval HITLS_SUCCESS Parsing succeeded.
@@ -434,208 +252,201 @@ int32_t ParseEcdhePublicKeyWrapper(TLS_Ctx *ctx, const uint8_t *data, uint32_t l
  * @retval HITLS_PARSE_GET_SIGN_PARA_ERR Failed to obtain the signature algorithm and hash algorithm.
  * @retval HITLS_PARSE_VERIFY_SIGN_FAIL Failed to verify the signature.
  */
-static int32_t ParseServerEcdhe(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, ServerKeyExchangeMsg *msg)
+static int32_t ParseServerEcdhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
 {
-    uint32_t useLen = 0;
-    uint32_t bufOffset = 0;
-
+    TLS_Ctx *ctx = pkt->ctx;
     /* Parse the EC parameter in the ECDH message on the server */
-    int32_t ret = ParseEcParametersWrapper(ctx, data, len, &msg->keyEx.ecdh, &useLen);
+    int32_t ret = ParseEcParameters(pkt, &msg->keyEx.ecdh);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    bufOffset += useLen;
 
     /* Parse DH public key from peer */
-    ret = ParseEcdhePublicKeyWrapper(ctx, &data[bufOffset], len - bufOffset, &msg->keyEx.ecdh, &useLen);
+    ret = ParseEcdhePublicKey(pkt, &msg->keyEx.ecdh);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    bufOffset += useLen;
 
     /*  ECDHE_PSK and ANON_ECDHE key exchange are not signed */
     if (ctx->hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_ECDHE_PSK ||
         ctx->negotiatedInfo.cipherSuiteInfo.authAlg == HITLS_AUTH_NULL) {
-        if (len != bufOffset) {
-            BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15323, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "parse serverkeyEx signature failed.", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-            return HITLS_PARSE_INVALID_MSG_LEN;
+        if (pkt->bufLen != *pkt->bufOffset) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15317,
+                BINGLOG_STR("parse serverkeyEx signature failed."), ALERT_DECODE_ERROR);
         }
         return HITLS_SUCCESS;
     }
 
-    uint32_t keyExDataLen = bufOffset;
+    uint32_t keyExDataLen = *pkt->bufOffset;
     uint16_t signAlgorithm = ctx->negotiatedInfo.cipherSuiteInfo.signScheme;
 
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11) {
-        ret = ParseSignAlgorithm(ctx, &data[bufOffset], len - bufOffset, &signAlgorithm, &useLen);
+        ret = ParseSignAlgorithm(pkt, &signAlgorithm);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15317, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "parse ecdhe sign algorithm fail.", 0, 0, 0, 0);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17015, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "ParseSignAlgorithm fail", 0, 0, 0, 0);
             return ret;
         }
-        bufOffset += useLen;
     }
 
     msg->keyEx.ecdh.signAlgorithm = signAlgorithm;
 
-    uint16_t signSize = 0;
-    uint8_t *signData = ParseSignature(ctx, &data[bufOffset], len - bufOffset, &signSize, &useLen);
-    if (signData == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_ECDH_SIGN_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15318, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse ecdhe signature fail.", 0, 0, 0, 0);
-        return HITLS_PARSE_ECDH_SIGN_ERR;
-    }
-    msg->keyEx.ecdh.signData = signData;
-    msg->keyEx.ecdh.signSize = signSize;
-
-    ret = VerifySignature(ctx, data, keyExDataLen, msg);
+    ret = ParseSignature(pkt, &msg->keyEx.ecdh.signSize, &msg->keyEx.ecdh.signData);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15319, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "verify signature fail when parse server key exchange msg.", 0, 0, 0, 0);
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_ECDH_SIGN_ERR, BINLOG_ID15318,
+            BINGLOG_STR("parse ecdhe signature fail."), ALERT_UNKNOWN);
+    }
+
+    ret = VerifySignature(pkt->ctx, pkt->buf, keyExDataLen, msg);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17016, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "VerifySignature fail", 0, 0, 0, 0);
         return ret;
     }
 
     ctx->peerInfo.peerSignHashAlg = signAlgorithm;
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
 
-static uint8_t *ParseDheParaPWithLog(TLS_Ctx *ctx, const uint8_t *data, uint32_t len,
-    uint16_t *paraLen, uint32_t *useLen)
+/**
+ * @brief Parse the p or g parameter in the DHE kx message.
+ *
+ * @param pkt [IN] Context for parsing
+ * @param paraLen [OUT] Parsed parameter length
+ * @param para [OUT] Parsed parameter
+ *
+ * @return The allocated parameter memory. If the parameter memory is NULL, the parsing fails.
+ */
+int32_t ParseDhePara(ParsePacket *pkt, uint16_t *paraLen, uint8_t **para)
 {
-    uint8_t *ret = ParseDhePara(ctx, data, len, paraLen, useLen);
-    if (ret == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15320, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "p param malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
+    int32_t ret = ParseTwoByteLengthField(pkt, paraLen, para);
+    if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15294,
+            BINGLOG_STR("dhe para length error."), ALERT_DECODE_ERROR);
+    } else if (ret == HITLS_MEMALLOC_FAIL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15297,
+            BINGLOG_STR("dhePara malloc fail."), ALERT_UNKNOWN);
     }
-    return ret;
+
+    if (*paraLen == 0) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15296,
+            BINGLOG_STR("length of dhe para is 0."), ALERT_ILLEGAL_PARAMETER);
+    }
+
+    return HITLS_SUCCESS;
 }
 
-static uint8_t *ParseDheParaGWithLog(TLS_Ctx *ctx, const uint8_t *data, uint32_t len,
-    uint16_t *paraLen, uint32_t *useLen)
+static int32_t ParseServerDhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
 {
-    uint8_t *ret = ParseDhePara(ctx, data, len, paraLen, useLen);
-    if (ret == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15321, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "g param malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-    }
-    return ret;
-}
-
-static int32_t ParseServerDhe(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, ServerKeyExchangeMsg *msg)
-{
-    int32_t ret;
-    uint32_t useLen, offset = 0u;
     ServerDh *dh = &msg->keyEx.dh;
-
-    dh->p = ParseDheParaPWithLog(ctx, data, len, &dh->plen, &useLen);
-    if (dh->p == NULL) {
+    const char *logStr = BINGLOG_STR("parse dhe param or PubKey fail. ret %d");
+    TLS_Ctx *ctx = pkt->ctx;
+    int32_t ret = ParseDhePara(pkt, &dh->plen, &dh->p);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15320, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, logStr, ret, 0, 0, 0);
         return HITLS_PARSE_DH_P_ERR;
     }
-    offset += useLen;
 
-    dh->g = ParseDheParaGWithLog(ctx, &data[offset], len - offset, &dh->glen, &useLen);
-    if (dh->g == NULL) {
+    ret = ParseDhePara(pkt, &dh->glen, &dh->g);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15321, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, logStr, ret, 0, 0, 0);
         return HITLS_PARSE_DH_G_ERR;
     }
-    offset += useLen;
 
     /* Parse DH public key from peer */
-    dh->pubkey = ParseDhePublicKey(ctx, &data[offset], len - offset, &dh->pubKeyLen, &useLen);
-    if (dh->pubkey == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15322, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse dh public key fail.", 0, 0, 0, 0);
+    ret = ParseDhePara(pkt, &dh->pubKeyLen, &dh->pubkey);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15322, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, logStr, ret, 0, 0, 0);
         return HITLS_PARSE_DH_PUBKEY_ERR;
     }
-    offset += useLen;
 
-    /* DHE_PSK, ANON_DHE key exchange is not signed */
+    /* DHE_PSK | ANON_DHE key exchange is not signed */
     if (ctx->hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_DHE_PSK ||
         ctx->negotiatedInfo.cipherSuiteInfo.authAlg == HITLS_AUTH_NULL) {
+        if (pkt->bufLen != *pkt->bufOffset) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15323,
+                BINGLOG_STR("parse serverkeyEx signature failed."), ALERT_DECODE_ERROR);
+        }
         return HITLS_SUCCESS;
     }
 
-    uint32_t kxDataLen = offset;
+    uint32_t kxDataLen = *pkt->bufOffset;
 
     dh->signAlgorithm = ctx->negotiatedInfo.cipherSuiteInfo.signScheme;
-    ret = ParseSignAlgorithm(ctx, &data[offset], len - offset, &dh->signAlgorithm, &useLen);
+    ret = ParseSignAlgorithm(pkt, &dh->signAlgorithm);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15323, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse dh sign algorithm fail.", 0, 0, 0, 0);
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17017, "ParseSignAlgorithm fail");
     }
-    offset += useLen;
 
-    dh->signData = ParseSignature(ctx, &data[offset], len - offset, &dh->signSize, &useLen);
-    if (dh->signData == NULL) {
+
+    ret = ParseSignature(pkt, &dh->signSize, &dh->signData);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17018, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ParseSignature fail, ret %d", ret, 0, 0, 0);
         return HITLS_PARSE_DH_SIGN_ERR;
     }
 
-    ret = VerifySignature(ctx, data, kxDataLen, msg);
+    ret = VerifySignature(pkt->ctx, pkt->buf, kxDataLen, msg);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17019, "VerifySignature fail");
     }
 
     ctx->peerInfo.peerSignHashAlg = dh->signAlgorithm;
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_FEATURE_PSK
 /* In the case of psk negotiation, if ServerKeyExchange is received, the length of the identity hint must be parseed,
  * but the length may be empty */
-static int32_t ParseServerIdentityHint(
-    const uint8_t *data, uint32_t len, ServerKeyExchangeMsg *msg, uint32_t *usedLen)
+static int32_t ParseServerIdentityHint(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
 {
-    if (len < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_LENGTH);
-        return HITLS_CONFIG_INVALID_LENGTH;
-    }
-
-    uint32_t offset = 0u;
-    uint16_t identityHintLen = BSL_ByteToUint16(&data[offset]);
-    offset += sizeof(uint16_t);
-
-    if (identityHintLen > len - offset) {
-        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_LENGTH);
-        return HITLS_CONFIG_INVALID_LENGTH;
-    }
-
-    /* may receive no identity hint */
+    uint16_t identityHintLen = 0;
     uint8_t *identityHint = NULL;
+
+    int32_t ret = ParseTwoByteLengthField(pkt, &identityHintLen, &identityHint);
+    if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17020, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Parse fail, ret %d", ret, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_LENGTH);
+        return HITLS_CONFIG_INVALID_LENGTH;
+    } else if (ret == HITLS_MEMALLOC_FAIL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17021, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Parse fail, ret %d", ret, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
     if (identityHintLen != 0) {
-        identityHint = (uint8_t *)BSL_SAL_Dump(&data[offset], identityHintLen);
-        if (identityHint == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            return HITLS_MEMALLOC_FAIL;
-        }
         BSL_LOG_BINLOG_VARLEN(BINLOG_ID15324, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "receive server identity hint: %s.", identityHint);
     }
+
     msg->pskIdentityHint = identityHint;
     msg->hintSize = identityHintLen;
 
-    *usedLen = sizeof(uint16_t) + identityHintLen;
-
     return HITLS_SUCCESS;
 }
-
-#ifndef HITLS_NO_TLCP11
-static int32_t VerifyServerKxMsgEcc(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, CERT_SignParam *signParam)
+#endif /* HITLS_TLS_FEATURE_PSK */
+#ifdef HITLS_TLS_PROTO_TLCP11
+static int32_t VerifyServerKxMsgEcc(ParsePacket *pkt, CERT_SignParam *signParam)
 {
     uint8_t *sign = NULL;
     uint16_t signSize = 0;
-    uint32_t useLen = 0;
+    TLS_Ctx *ctx = pkt->ctx;
     /* Parse the signature data. The signature data is released after it is used up. The information is not maintained
      * in the ServerKeyExchangeMsg.keyEx.ecdh file */
-    sign = ParseSignature(ctx, &data[0], len, &signSize, &useLen);
-    if (sign == NULL) {
+    int32_t ret = ParseSignature(pkt, &signSize, &sign);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(sign);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16223, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "parse ecc signature fail.", 0, 0, 0, 0);
         return HITLS_PARSE_ECDH_SIGN_ERR;
     }
     HITLS_CERT_X509 *signCert = SAL_CERT_PairGetX509(ctx->hsCtx->peerCert);
     HITLS_CERT_Key *pubkey = NULL;
-    int32_t ret = SAL_CERT_X509Ctrl(&(ctx->config.tlsConfig), signCert,
+    ret = SAL_CERT_X509Ctrl(&(ctx->config.tlsConfig), signCert,
         CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(sign);
@@ -652,11 +463,11 @@ static int32_t VerifyServerKxMsgEcc(TLS_Ctx *ctx, const uint8_t *data, uint32_t 
 }
 
 /* Signature verification is complete and does not need to be exported to the ServerKeyExchangeMsg structure */
-static int32_t ParseServerKxMsgEcc(TLS_Ctx *ctx, const uint8_t *data, uint32_t len)
+static int32_t ParseServerKxMsgEcc(ParsePacket *pkt)
 {
     HITLS_SignAlgo signAlgo;
     HITLS_HashAlgo hashAlgo;
-
+    TLS_Ctx *ctx = pkt->ctx;
     /* The algorithm suite has been determined. The error probability of this function is low. Therefore, the alert is
      * not required. */
     if (!CFG_GetSignParamBySchemes(
@@ -667,29 +478,23 @@ static int32_t ParseServerKxMsgEcc(TLS_Ctx *ctx, const uint8_t *data, uint32_t l
     uint32_t certLen = 0;
     uint8_t *cert = SAL_CERT_ClntGmEncodeEncCert(ctx, ctx->hsCtx->peerCert, &certLen);
     if (cert == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15326, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "encode encrypt cert failed.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return HITLS_CERT_ERR_ENCODE;
+        return ParseErrorProcess(pkt->ctx, HITLS_CERT_ERR_ENCODE, BINLOG_ID16206,
+            BINGLOG_STR("encode encrypt cert failed."), ALERT_INTERNAL_ERROR);
     }
     uint32_t signDataLen = 0;
     uint8_t *signData = HS_PrepareSignDataTlcp(ctx, cert, certLen, &signDataLen);
     BSL_SAL_FREE(cert);
     if (signData == NULL) {
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15327, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "data malloc fail when parse server key exchange msg.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID16207,
+            BINGLOG_STR("data malloc fail."), ALERT_INTERNAL_ERROR);
     }
 
     CERT_SignParam signParam = {signAlgo, hashAlgo, signData, signDataLen, NULL, 0};
-    int32_t ret = VerifyServerKxMsgEcc(ctx, data, len, &signParam);
+    int32_t ret = VerifyServerKxMsgEcc(pkt, &signParam);
     BSL_SAL_FREE(signData);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15328, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "verify signature fail when parse server key exchange msg.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECRYPT_ERROR);
-        return HITLS_PARSE_VERIFY_SIGN_FAIL;
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_VERIFY_SIGN_FAIL, BINLOG_ID16208,
+            BINGLOG_STR("verify signature fail."), ALERT_DECRYPT_ERROR);
     }
     return HITLS_SUCCESS;
 }
@@ -702,31 +507,39 @@ int32_t ParseServerKeyExchange(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, 
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     ServerKeyExchangeMsg *msg = &hsMsg->body.serverKeyExchange;
     msg->keyExType = hsCtx->kxCtx->keyExchAlgo;
-
+    ParsePacket pkt = {.ctx = ctx, .buf = data, .bufLen = len, .bufOffset = &offset};
+    (void)pkt;
+#ifdef HITLS_TLS_FEATURE_PSK
     if (IsPskNegotiation(ctx)) {
-        ret = ParseServerIdentityHint(data, len, msg, &offset);
-        if (ret != HITLS_SUCCESS) {
+        if ((ret = ParseServerIdentityHint(&pkt, msg)) != HITLS_SUCCESS) {
+            // log here
             return ret;
         }
     }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
     switch (hsCtx->kxCtx->keyExchAlgo) {
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE: /** contains the TLCP */
         case HITLS_KEY_EXCH_ECDHE_PSK:
-            ret = ParseServerEcdhe(ctx, &data[offset], len - offset, msg);
+            ret = ParseServerEcdhe(&pkt, msg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
-            ret = ParseServerDhe(ctx, &data[offset], len - offset, msg);
+            ret = ParseServerDhe(&pkt, msg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
         /* PSK & RSA_PSK nego may pack identity hint inside ServerKeyExchange msg */
         case HITLS_KEY_EXCH_PSK:
         case HITLS_KEY_EXCH_RSA_PSK:
             ret = HITLS_SUCCESS;
             break;
-#ifndef HITLS_NO_TLCP11
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
-            ret = ParseServerKxMsgEcc(ctx, &data[offset], len - offset);
+            ret = ParseServerKxMsgEcc(&pkt);
             break;
 #endif
         default:
@@ -736,12 +549,10 @@ int32_t ParseServerKeyExchange(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, 
     }
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15325, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "parse server key exchange msg fail.", 0, 0, 0, 0);
-        CleanServerKeyExchange(msg);
-        return ret;
+            "parse serverKeyExMsg fail. keyExchAlgo is %d", hsCtx->kxCtx->keyExchAlgo, 0, 0, 0);
     }
 
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 void CleanServerKeyExchange(ServerKeyExchangeMsg *msg)
@@ -749,18 +560,23 @@ void CleanServerKeyExchange(ServerKeyExchangeMsg *msg)
     if (msg == NULL) {
         return;
     }
-
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
     if (msg->keyExType == HITLS_KEY_EXCH_ECDHE || msg->keyExType == HITLS_KEY_EXCH_ECDHE_PSK) {
         BSL_SAL_FREE(msg->keyEx.ecdh.pubKey);
         BSL_SAL_FREE(msg->keyEx.ecdh.signData);
-    } else if (msg->keyExType == HITLS_KEY_EXCH_DHE || msg->keyExType == HITLS_KEY_EXCH_DHE_PSK) {
+    }
+#endif
+#ifdef HITLS_TLS_SUITE_KX_DHE
+    if (msg->keyExType == HITLS_KEY_EXCH_DHE || msg->keyExType == HITLS_KEY_EXCH_DHE_PSK) {
         BSL_SAL_FREE(msg->keyEx.dh.p);
         BSL_SAL_FREE(msg->keyEx.dh.g);
         BSL_SAL_FREE(msg->keyEx.dh.pubkey);
         BSL_SAL_FREE(msg->keyEx.dh.signData);
     }
-
+#endif
     BSL_SAL_FREE(msg->pskIdentityHint);
 
     return;
 }
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_HOST_CLIENT */

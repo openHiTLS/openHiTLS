@@ -72,7 +72,7 @@ int main(int32_t argc, char *argv[])
         printf("HITLS_CFG_NewTLS12Config failed.\n");
         goto exit;
     }
-    ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false); // disable cert keyusage check
+    ret = HITLS_CFG_SetCheckKeyUsage(config, false); // disable cert keyusage check
     if (ret != HITLS_SUCCESS) {
         printf("Disable check KeyUsage failed.\n");
         goto exit;

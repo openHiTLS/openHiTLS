@@ -29,7 +29,9 @@ extern "C" {
 
 #define REC_MAX_PLAIN_TEXT_LENGTH 16384     /* Plain content length */
 
-#define REC_MAX_ENCRYPTED_OVERHEAD 2048u                                              /* Maximum Encryption Overhead */
+#define REC_MAX_ENCRYPTED_OVERHEAD 2048u                  /* Maximum Encryption Overhead rfc5246 */
+#define REC_MAX_READ_ENCRYPTED_OVERHEAD REC_MAX_ENCRYPTED_OVERHEAD
+#define REC_MAX_WRITE_ENCRYPTED_OVERHEAD REC_MAX_ENCRYPTED_OVERHEAD
 #define REC_MAX_CIPHER_TEXT_LEN (REC_MAX_PLAIN_LENGTH + REC_MAX_ENCRYPTED_OVERHEAD)   /* Maximum ciphertext length */
 
 #define REC_MAX_AES_GCM_ENCRYPTION_LIMIT 23726566u   /* RFC 8446 5.5 Limits on Key Usage AES-GCM SHOULD under 2^24.5 */
@@ -39,7 +41,8 @@ typedef struct {
     RecConnState *currentState;
     RecConnState *pendingState;
 } RecConnStates;
-
+typedef int32_t (*REC_ReadFunc)(TLS_Ctx *, REC_Type, uint8_t *, uint32_t *, uint32_t);
+typedef int32_t (*REC_WriteFunc)(TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
 typedef struct {
     ListHead head;          /* Linked list header */
     bool isExistCcsMsg;     /* Check whether CCS messages exist in the retransmission message queue */
@@ -51,11 +54,12 @@ typedef struct {
 typedef struct RecCtx {
     RecBuf *inBuf;                  /* Buffer for reading data */
     RecBuf *outBuf;                 /* Buffer for writing data */
-    bool hasReadBufDecrypted;
     RecConnStates readStates;
     RecConnStates writeStates;
-
-#ifndef HITLS_NO_DTLS12
+    RecBufList *hsRecList;      /* hs plaintext data cache */
+    RecBufList *appRecList;     /* app plaintext data cache */
+    uint32_t emptyRecordCnt;        /* Count of empty records */
+#ifdef HITLS_TLS_PROTO_DTLS12
     uint16_t writeEpoch;
     uint16_t readEpoch;
 
@@ -66,6 +70,13 @@ typedef struct RecCtx {
     /* unprocessed app message: app messages received in the CCS and finished receiving phases */
     UnprocessedAppMsg unprocessedAppMsgList;
 #endif
+    REC_ReadFunc recRead;
+    void *rUserData;
+    REC_WriteFunc recWrite;
+    void *wUserData;
+    REC_Type unexpectedMsgType;
+    uint32_t pendingDataSize;               /* Data length */
+    const uint8_t *pendingData;             /* Plain Data content */
 } RecCtx;
 
 
@@ -73,11 +84,16 @@ typedef struct RecCtx {
  * @brief   Obtain the size of the buffer for read and write operations
  *
  * @param   ctx [IN] TLS_Ctx context
+ * @param   isRead [IN] is read buffer
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_INTERNAL_EXCEPTION Access a null pointer
  */
-uint32_t RecGetInitBufferSize(const TLS_Ctx *ctx);
+uint32_t RecGetInitBufferSize(const TLS_Ctx *ctx, bool isRead);
+
+int32_t RecDerefBufList(TLS_Ctx *ctx);
+
+void RecClearAlertCount(TLS_Ctx *ctx, REC_Type recordType);
 
 #ifdef __cplusplus
 }

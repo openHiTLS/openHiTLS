@@ -87,6 +87,7 @@ HITLS_CERT_Store *SAL_CERT_GetVerifyStore(CERT_MgrCtx *mgrCtx)
 
 int32_t SAL_CERT_SetCurrentCert(HITLS_Config *config, HITLS_CERT_X509 *cert, bool isTlcpEncCert)
 {
+    (void)isTlcpEncCert;
     if (cert == NULL || config == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
@@ -94,30 +95,26 @@ int32_t SAL_CERT_SetCurrentCert(HITLS_Config *config, HITLS_CERT_X509 *cert, boo
     CERT_MgrCtx *mgrCtx = config->certMgrCtx;
     if (mgrCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16286, "unregistered callback");
     }
 
     int32_t ret;
     HITLS_CERT_Key *pubkey = NULL;
     ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15468, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "set certificate error: unable to get pubkey.", 0, 0, 0, 0);
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16099, "GET PUB KEY fail");
     }
 
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
     ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
     SAL_CERT_KeyFree(mgrCtx, pubkey);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15419, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "set certificate error: pubkey type unknown.", 0, 0, 0, 0);
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16100, "GET KEY TYPE fail");
     }
 
-    uint32_t index = (isTlcpEncCert == false) ? keyType : keyType + 1;
+    uint32_t index = isTlcpEncCert ? keyType + 1 : keyType;
     if (index >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15420, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16102, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "set certificate error: pubkey type = %u is invalid.", keyType, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_INVALID_KEY_TYPE);
         return HITLS_CERT_ERR_INVALID_KEY_TYPE;
@@ -141,10 +138,12 @@ int32_t SAL_CERT_SetCurrentCert(HITLS_Config *config, HITLS_CERT_X509 *cert, boo
 HITLS_CERT_X509 *SAL_CERT_GetCurrentCert(CERT_MgrCtx *mgrCtx)
 {
     if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16287, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
     uint32_t idx = mgrCtx->currentCertIndex;
     if (idx >= TLS_CERT_KEY_TYPE_NUM) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16288, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
     return mgrCtx->certPair[idx].cert;
@@ -153,10 +152,12 @@ HITLS_CERT_X509 *SAL_CERT_GetCurrentCert(CERT_MgrCtx *mgrCtx)
 HITLS_CERT_X509 *SAL_CERT_GetCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType)
 {
     if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16289, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
 
     if (keyType >= TLS_CERT_KEY_TYPE_NUM) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16290, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
 
@@ -165,6 +166,7 @@ HITLS_CERT_X509 *SAL_CERT_GetCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyTyp
 
 int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key, bool isTlcpEncCertPriKey)
 {
+    (void)isTlcpEncCertPriKey;
     if (key == NULL || config == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
@@ -178,14 +180,16 @@ int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key,
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
     int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15421, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "set private key error: key type unknown.", 0, 0, 0, 0);
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16104, "get key type fail");
     }
 
-    uint32_t index = (isTlcpEncCertPriKey == false) ? keyType : keyType + 1;
+    uint32_t index =
+#ifdef HITLS_TLS_PROTO_TLCP11
+        isTlcpEncCertPriKey ? keyType + 1 :
+#endif
+        keyType;
     if (index >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15338, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16105, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "set private key error: key type = %u is invalid.", keyType, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_INVALID_KEY_TYPE);
         return HITLS_CERT_ERR_INVALID_KEY_TYPE;
@@ -195,7 +199,7 @@ int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key,
     if (certPair->cert != NULL) {
         ret = SAL_CERT_CheckPrivateKey(config, certPair->cert, key);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15339, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "set private key error: cert and key mismatch, key type = %u.", keyType, 0, 0, 0);
             /* If the certificate does not match the private key, release the certificate. */
             SAL_CERT_X509Free(certPair->cert);
@@ -211,11 +215,18 @@ int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key,
 
 HITLS_CERT_Key *SAL_CERT_GetCurrentPrivateKey(CERT_MgrCtx *mgrCtx, bool isTlcpEncCert)
 {
+    (void)isTlcpEncCert;
     if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16291, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
-    uint32_t index = isTlcpEncCert ? mgrCtx->currentCertIndex + 1 : mgrCtx->currentCertIndex;
+    uint32_t index =
+#ifdef HITLS_TLS_PROTO_TLCP11
+        isTlcpEncCert ? mgrCtx->currentCertIndex + 1 :
+#endif
+        mgrCtx->currentCertIndex;
     if (index >= TLS_CERT_KEY_TYPE_NUM) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16292, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
     return mgrCtx->certPair[index].privateKey;
@@ -224,10 +235,12 @@ HITLS_CERT_Key *SAL_CERT_GetCurrentPrivateKey(CERT_MgrCtx *mgrCtx, bool isTlcpEn
 HITLS_CERT_Key *SAL_CERT_GetPrivateKey(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType)
 {
     if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16293, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
 
     if (keyType >= TLS_CERT_KEY_TYPE_NUM) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16294, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
 
@@ -254,7 +267,7 @@ int32_t SAL_CERT_AddChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
         newChain = SAL_CERT_ChainNew();
         if (newChain == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            return HITLS_MEMALLOC_FAIL;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16295, "ChainNew fail");
         }
         chain = newChain;
     }
@@ -271,11 +284,13 @@ int32_t SAL_CERT_AddChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
 HITLS_CERT_Chain *SAL_CERT_GetCurrentChainCerts(CERT_MgrCtx *mgrCtx)
 {
     if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16296, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
 
     uint32_t id = mgrCtx->currentCertIndex;
     if (id >= TLS_CERT_KEY_TYPE_NUM) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16297, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
 
@@ -331,7 +346,7 @@ int32_t SAL_CERT_AddExtraChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
         newChain = SAL_CERT_ChainNew();
         if (newChain == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            return HITLS_MEMALLOC_FAIL;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16298, "ChainNew fail");
         }
         chain = newChain;
     }

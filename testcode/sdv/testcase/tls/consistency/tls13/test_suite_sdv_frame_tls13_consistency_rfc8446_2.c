@@ -43,10 +43,15 @@
 #include "hs_extensions.h"
 #include "hitls_crypt_init.h"
 #include "alert.h"
+#include "record.h"
+#include "hs_kx.h"
+#include "bsl_log.h"
+#include "cert_callback.h"
 /* END_HEADER */
 
 #define PORT 23456
 #define READ_BUF_SIZE (18 * 1024)
+#define ALERT_BODY_LEN 2u
 
 typedef struct {
     uint16_t version;
@@ -1393,7 +1398,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC002()
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     uint8_t isReused = 0;
     ASSERT_EQ(HITLS_IsSessionReused(testInfo.client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, 1);
 exit:
     ClearWrapper();
     STUB_Reset(&stubInfo);
@@ -2713,12 +2718,12 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC005()
     testInfo.uioType = BSL_UIO_TCP;
     testInfo.c_config = HITLS_CFG_NewTLS13Config();
     testInfo.s_config = HITLS_CFG_NewTLS13Config();
- 
+
     // The PSK is generated during link establishment. Configure the default 384 algorithm suite on the client.
     ASSERT_EQ(DoHandshake(&testInfo), HITLS_SUCCESS);
     testInfo.clientSession = HITLS_GetDupSession(testInfo.client->ssl);
     ASSERT_TRUE(testInfo.clientSession != NULL);
- 
+
     FRAME_FreeLink(testInfo.client);
     testInfo.client = NULL;
     FRAME_FreeLink(testInfo.server);
@@ -2994,6 +2999,452 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_PROCESS_TC001()
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_ALERTED);
 
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_HELLO_REQUEST_TC001
+* @spec  -
+* @title  Send a hello request when the link status is CM_STATE_IDLE.
+* @precon  nan
+* @brief  1. Use the configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Construct a HelloRequest message and send it to the client. The client invokes the HITLS_Connect interface
+    to receive the message. Expected result 2 is obtained.
+* @expect 1. The initialization is successful.
+*         2. After receiving the HelloRequest message, the client ignores the message and stays in the
+    TRY_RECV_SERVER_HELLO state after sending the ClientHello message.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_HELLO_REQUEST_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    // Construct a HelloRequest message and send it to the client.
+    uint8_t buf[HS_MSG_HEADER_SIZE] = {0u};
+    size_t len = HS_MSG_HEADER_SIZE;
+    REC_Write(server->ssl, REC_TYPE_HANDSHAKE, buf, len);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(client->ssl != NULL);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(client->ssl->hsCtx->state == TRY_RECV_SERVER_HELLO);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+void SetFrameType(FRAME_Type *frametype, uint16_t versionType, REC_Type recordType, HS_MsgType handshakeType,
+    HITLS_KeyExchAlgo keyExType)
+{
+    frametype->versionType = versionType;
+    frametype->recordType = recordType;
+    frametype->handshakeType = handshakeType;
+    frametype->keyExType = keyExType;
+}
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_MODIFIED_SESSID_FROM_SH_TC002
+* @spec  -
+* @title  Send a empty session id to client.
+* @precon  nan
+* @brief  1. Use the configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Construct a server hello message with empty session id and send it to the client.
+             Expected result 2 is obtained.
+* @expect 1. The initialization is successful.
+*         2. After receiving the HelloRequest message, the client send a ILLEGAL_PARAMETER alert.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_MODIFIED_SESSID_FROM_SH_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+    FRAME_Msg parsedSH = {0};
+    uint32_t parseLen = 0;
+    FRAME_Type frameType = {0};
+    SetFrameType(&frameType, HITLS_VERSION_TLS13, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &parsedSH, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerHelloMsg *shMsg = &parsedSH.body.hsMsg.body.serverHello;
+    shMsg->sessionId.size = 0;
+    shMsg->sessionId.state = MISSING_FIELD;
+    shMsg->sessionIdSize.data = 0;
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &parsedSH, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+exit:
+    FRAME_CleanMsg(&frameType, &parsedSH);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_MUTI_CCS_TC001
+* @spec  -
+* @title  IN TLS1.3, mutiple ccs can be received.
+* @precon  nan
+* @brief  1. Use the configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Construct a ChangeCipherSpec message and send it to the client five times. Expected result 2 is obtained.
+* @expect 1. The initialization is successful.
+*         2. return HITLS_REC_NORMAL_RECV_BUF_EMPTY.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* IN TLS1.3, mutiple ccs can be received*/
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_MUTI_CCS_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_CERTIFICATE_VERIFY) == HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    uint32_t sendLenccs = 6;
+    uint8_t sendBufccs[6] = {0x14, 0x03, 0x03, 0x00, 0x01, 0x01};
+    uint32_t writeLen;
+    for (int i = 0; i < 5; i++) {
+        BSL_UIO_Write(serverTlsCtx->uio, sendBufccs, sendLenccs, &writeLen);
+        ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+        ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    }
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static int32_t SendCcs(HITLS_Ctx *ctx, uint8_t *data, uint8_t len)
+{
+    /** Write records. */
+    int32_t ret = REC_Write(ctx, REC_TYPE_CHANGE_CIPHER_SPEC, data, len);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
+    uint8_t isFlightTransmitEnable;
+    (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
+    if (isFlightTransmitEnable == 1) {
+        ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
+        if (ret == BSL_UIO_IO_BUSY) {
+            return HITLS_REC_NORMAL_IO_BUSY;
+        }
+        if (ret != BSL_SUCCESS) {
+            return HITLS_REC_ERR_IO_EXCEPTION;
+        }
+    }
+    return HITLS_SUCCESS;
+}
+
+static int32_t SendAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
+{
+    uint8_t data[ALERT_BODY_LEN];
+    /** Obtain the alert level. */
+    data[0] = level;
+    data[1] = description;
+    /** Write records. */
+    int32_t ret = REC_Write(ctx, REC_TYPE_ALERT, data, ALERT_BODY_LEN);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
+    uint8_t isFlightTransmitEnable;
+    (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
+    if (isFlightTransmitEnable == 1) {
+        ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
+        if (ret == BSL_UIO_IO_BUSY) {
+            return HITLS_REC_NORMAL_IO_BUSY;
+        }
+        if (ret != BSL_SUCCESS) {
+            return HITLS_REC_ERR_IO_EXCEPTION;
+        }
+    }
+    return HITLS_SUCCESS;
+}
+
+/** @
+* @test  UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_RECEIVES_ENCRYPTED_CCS_TC001
+* @spec  -
+* @title  The encrypted CCS is received when the plaintext CCS is received.
+* @precon  nan
+* @brief  1. Use the configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Construct encrypted CCS and send it to the client. Expected result 2 is obtained.
+* @expect 1. The initialization is successful.
+*         2. After receiving the CCS message, the client send a UNEXPECTED_MESSAGE alert.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_RECEIVES_ENCRYPTED_CCS_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_IDLE);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO) == HITLS_SUCCESS);
+    // Sends serverhello to the peer end.
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    // Processing serverhello
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    serverTlsCtx->recCtx->outBuf->end = 0;
+    uint32_t hashLen = SAL_CRYPT_DigestSize(serverTlsCtx->negotiatedInfo.cipherSuiteInfo.hashAlg);
+    ASSERT_EQ(HS_SwitchTrafficKey(serverTlsCtx, serverTlsCtx->hsCtx->serverHsTrafficSecret, hashLen, true),
+        HITLS_SUCCESS);
+    uint8_t data = 1;
+    // send crypto ccs
+    ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
+    FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
+    ioServerData->sndMsg.msg[0] = REC_TYPE_APP;
+    FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
+    ioClientData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    // process crypto ccs
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ALERT_Info info = {0};
+    ALERT_GetInfo(client->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+#define ALERT_UNKNOWN_DESCRIPTION 254
+
+/** @
+* @test  UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_UNKNOWN_DESCRIPTION_TC001
+* @spec  -
+* @title  RFC8446 6.2 All alerts defined below in this section, as well as all unknown alerts,
+        are universally considered fatal as of TLS 1.3 (see Section 6).
+* @precon  nan
+* @brief  1. Use the configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Construct alert message with alert level warning and ALERT_UNKNOWN_DESCRIPTION, and send it to the server.
+            Expected result 2 is obtained.
+* @expect 1. The initialization is successful.
+*         2. After receiving the alert message, the server send a FATAL alert.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_UNKNOWN_DESCRIPTION_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    tlsConfig->isSupportClientVerify = true;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_SEND_FINISH) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(SendAlert(client->ssl, ALERT_LEVEL_WARNING, ALERT_UNKNOWN_DESCRIPTION) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    HITLS_Ctx *Ctx = FRAME_GetTlsCtx(server);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(Ctx, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNKNOWN_DESCRIPTION);
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_TLS13_RFC8446_REQUEST_CLIENT_HELLO_TC008
+* @brief 2.1.  Incorrect DHE Share
+* @spec  If the client has not provided a sufficient "key_share" extension (e.g., it includes only DHE or ECDHE groups
+    unacceptable to or unsupported by the server), the server corrects the mismatch with a HelloRetryRequest and the
+    client needs to restart the handshake with an appropriate "key_share" extension, as shown in Figure 2. If no common
+    cryptographic parameters can be negotiated, the server MUST abort the handshake with an appropriate alert.
+* @title  Configure groups_list:"brainpoolP512r1:X25519" on the client and groups_list:"brainpoolP512r1:X25519" on the
+    server. Observe the link setup result and check whether the server sends Hello_Retry_Requset.
+* @precon  nan
+* @brief
+1. Configure groups_list:"brainpoolP512r1:X25519" on the client and groups_list:"brainpoolP512r1:X25519" on the
+    server.
+* @expect
+1. Send clienthello with X25519 keyshare. The link is established successfully.
+2. The server does not send Hello_Retry_Requset.
+* @prior  Level 2
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_REQUEST_CLIENT_HELLO_TC001()
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientconfig = NULL;
+    HITLS_Config *serverconfig = NULL;
+    clientconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientconfig != NULL);
+    serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+
+    uint16_t clientgroups[] = {HITLS_EC_GROUP_BRAINPOOLP512R1, HITLS_EC_GROUP_CURVE25519};
+    uint16_t servergroups[] = {HITLS_EC_GROUP_BRAINPOOLP512R1, HITLS_EC_GROUP_CURVE25519};
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverconfig, servergroups, sizeof(servergroups)/sizeof(uint16_t)) , HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientconfig, clientgroups, sizeof(clientgroups)/sizeof(uint16_t)) , HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recBuf = ioUserData->recMsg.msg;
+    uint32_t recLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recLen != 0);
+
+    uint32_t parseLen = 0;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recBuf, recLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerHelloMsg *serverHello = &frameMsg.body.hsMsg.body.serverHello;
+    ASSERT_TRUE(serverHello->keyShare.data.group.data == HITLS_EC_GROUP_CURVE25519);
+    ASSERT_EQ(server->ssl->hsCtx->haveHrr, false);
+
+    // Continue to establish the link.
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+exit:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+
+/** @
+* @test     UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_Legacy_Version_TC001
+* @spec     For TLS 1.3, the legacy_record_version set to 0x0403 to server will get alert
+* @title    For TLS 1.3, the legacy_record_version set to 0x0403 to server will get alert
+* @precon   nan
+* @brief    5.1.  Record Layer line 190
+*           legacy_record_version: MUST be set to 0x0303 for all records generated by a TLS 1.3
+            implementation other than an initial ClientHello (i.e., one not generated after a HelloRetryRequest),
+            where it MAY also be 0x0301 for compatibility purposes. This field is deprecated and MUST be ignored
+            for all purposes. Previous versions of TLS would use other values in this field under some circumstances.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_Legacy_Version_TC001(int statehs)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportClientVerify = true;
+    tlsConfig->isSupportNoClientCert = true;
+
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    /* Configure the server to support only the non-default curve. The server sends the HRR message. */
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
+    uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
+    HITLS_CFG_SetGroups(tlsConfig, groups, groupsSize);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_IDLE);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, statehs) == HITLS_SUCCESS);
+    ASSERT_TRUE(serverTlsCtx->hsCtx->state == (HITLS_HandshakeState)statehs);
+    FrameUioUserData *ioClientData = BSL_UIO_GetUserData(server->io);
+    ioClientData->recMsg.msg[1] = 0x04u;
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_INVALID_PROTOCOL_VERSION);
+    ALERT_Info info = {0};
+    ALERT_GetInfo(server->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    if (statehs == TRY_RECV_CLIENT_HELLO) {
+        ASSERT_EQ(info.description, ALERT_PROTOCOL_VERSION);
+    } else {
+        ASSERT_EQ(info.description, ALERT_DECODE_ERROR);
+    }
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

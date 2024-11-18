@@ -17,6 +17,7 @@
 #define CONN_COMMON_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 #include "tls.h"
 #include "hitls_type.h"
 
@@ -29,15 +30,17 @@ extern "C" {
 
 typedef int32_t (*ManageEventProcess)(HITLS_Ctx *ctx);
 
-typedef int32_t (*WriteEventProcess)(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
+typedef int32_t (*WriteEventProcess)(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen);
 
 typedef int32_t (*ReadEventProcess)(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen);
+
 static inline CM_State GetConnState(const HITLS_Ctx *ctx)
 {
     return ctx->state;
 }
-
+#ifdef HITLS_TLS_FEATURE_PHA
 int32_t CommonCheckPostHandshakeAuth(TLS_Ctx *ctx);
+#endif
 /**
  * @ingroup hitls
  * @brief   General processing of all events in alerting state
@@ -60,6 +63,7 @@ int32_t AlertEventProcess(HITLS_Ctx *ctx);
 
 void ChangeConnState(HITLS_Ctx *ctx, CM_State state);
 
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 /**
  * @ingroup hitls
  * @brief   In the renegotiation state, process the renegotiation event and attempt to establish a connection
@@ -70,17 +74,7 @@ void ChangeConnState(HITLS_Ctx *ctx, CM_State state);
  * @retval  For other error codes, see hitls_error.h
  */
 int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx);
-
-typedef struct {
-    HITLS_Ctx *ctx;
-    uint8_t *buf;
-    uint32_t bufSize;
-    uint32_t *size;
-    enum { READ_EVENT, WRITE_EVENT, MANAGER_EVENT } evenType;
-    void *func;
-} HITLSAsyncArgs;
-
-int HITLS_EventProcWrapper(void *arg);
+#endif
 
 #ifdef __cplusplus
 }
