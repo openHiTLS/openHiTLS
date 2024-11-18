@@ -96,15 +96,28 @@ typedef struct {
     CRYPT_Data salt; // Used for the KAT test.
 } RSAPad;
 
+typedef enum {
+    RSABSSA = 1, /**< RSA Blind Signature */
+    RSAPBSSA,
+} RSA_BlindType;
+
+typedef struct {
+    RSA_BlindType type; /**< padding id */
+    union {
+        RSA_Blind *bssa;
+    } para;
+} RSA_BlindParam;
+
 struct RSA_Ctx {
     CRYPT_RSA_PrvKey *prvKey;
     CRYPT_RSA_PubKey *pubKey;
     CRYPT_RSA_Para *para;
-    RSA_Blind *blind;
+    RSA_Blind *scBlind; // Preventing side channel attacks
     RSAPad pad;
     uint32_t flags;
     CRYPT_Data label; // Used for oaep padding
     BSL_SAL_RefCount references;
+    RSA_BlindParam *blindParam;
 };
 
 CRYPT_RSA_PrvKey *RSA_NewPrvKey(uint32_t bits);
@@ -170,6 +183,8 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
  * @retval Return the error code.
  */
 int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt);
+
+int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits);
 
 #define RSA_FREE_PRV_KEY(prvKey_)               \
 do {                                            \

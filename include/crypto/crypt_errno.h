@@ -109,6 +109,9 @@ enum CRYPT_ERROR {
                                              during PSS signature. */
     CRYPT_RSA_ERR_ENC_INPUT_NOT_ENOUGH, /**< The plaintext length is too short for RSA NO PAD encryption. */
     CRYPT_RSA_PUBKEY_NOT_EQUAL,         /**< RSA public keys are not equal. */
+    CRYPT_RSA_ERR_BLIND_TYPE,           /**< Invalid RSA blinding type. Only RSA-BSSA is currently supported. */
+    CRYPT_RSA_ERR_NO_BLIND_INFO,        /**< RSA blinding information is missing.
+                                            The blind/unblind operation requires previous blinding parameters. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
     CRYPT_EAL_ERR_ALGID,                /**< Incorrect algorithm ID. */
