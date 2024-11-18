@@ -202,6 +202,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/tls/handshake/cookie/include
         ${openHiTLS_SRC}/tls/handshake/parse/include
         ${openHiTLS_SRC}/tls/handshake/pack/include
+        ${openHiTLS_SRC}/tls/handshake/pack/src
         ${openHiTLS_SRC}/tls/handshake/send/src
         ${openHiTLS_SRC}/tls/handshake/recv/src
         ${openHiTLS_SRC}/tls/handshake/recv/include

@@ -767,6 +767,7 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     }
 
     switch (ctx->pad.type) {
+        case RSAES_PKCSV15_TLS:
         case RSAES_PKCSV15:
             ret = CRYPT_RSA_SetPkcsV15Type2(data, dataLen, pad, padLen);
             if (ret != CRYPT_SUCCESS) {
@@ -857,6 +858,9 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
             break;
         case RSAES_PKCSV15:
             ret = CRYPT_RSA_VerifyPkcsV15Type2(pad, padLen, out, outLen);
+            break;
+        case RSAES_PKCSV15_TLS:
+            ret = CRYPT_RSA_VerifyPkcsV15Type2TLS(pad, padLen, out, outLen);
             break;
         case RSA_NO_PAD:
             if (memcpy_s(out, *outLen, pad, padLen) != EOK) {
@@ -1010,6 +1014,17 @@ static int32_t SetRsaesPkcsV15(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len
     ctx->pad.type = RSAES_PKCSV15;
     return CRYPT_SUCCESS;
 }
+
+static int32_t SetRsaesPkcsV15Tls(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
+{
+    int32_t ret = SetRsaesPkcsV15(ctx, val, len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ctx->pad.type = RSAES_PKCSV15_TLS;
+    return CRYPT_SUCCESS;
+}
+
 static int32_t SetSalt(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
     if (val == NULL || len == 0) {
@@ -1271,6 +1286,8 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return SetOaepLabel(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_RSAES_PKCSV15:
             return SetRsaesPkcsV15(ctx, val, len);
+        case CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS:
+            return SetRsaesPkcsV15Tls(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_FLAG:
             return SetFlag(ctx, val, len);
         case CRYPT_CTRL_CLR_RSA_FLAG:

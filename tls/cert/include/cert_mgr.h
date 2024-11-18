@@ -92,15 +92,6 @@ bool SAL_CERT_MgrIsEnable(void);
 HITLS_CERT_MgrMethod *SAL_CERT_GetMgrMethod(void);
 
 /**
- * @brief   obtain the user key callback
- *
- * @param   NA
- *
- * @return  Certificate callback
- */
-HITLS_CERT_UserKeyMgrMethod *SAL_CERT_GetUserKeyMgrMethod(void);
-
-/**
  * @brief   Create a certificate management struct
  *
  * @param   void

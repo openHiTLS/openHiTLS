@@ -12,7 +12,6 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
 #ifndef CERT_MGR_CTX_H
 #define CERT_MGR_CTX_H
 
@@ -34,8 +33,10 @@ struct CertVerifyParamInner {
 
 struct CertPairInner {
     HITLS_CERT_X509 *cert;      /* device certificate */
+#ifdef HITLS_TLS_PROTO_TLCP11
     /* encrypted device cert. Currently this field is used only when the peer-end encrypted certificate is stored. */
     HITLS_CERT_X509 *encCert;
+#endif
     HITLS_CERT_Key *privateKey; /* private key corresponding to the certificate */
     HITLS_CERT_Chain *chain;    /* certificate chain */
 };
@@ -56,8 +57,6 @@ struct CertMgrCtxInner {
 };
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType);
-
-HITLS_CERT_KeyType SignScheme2CertKeyType(HITLS_SignHashAlgo signScheme);
 
 int32_t CheckSignScheme(HITLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
     HITLS_CERT_KeyType checkedKeyType, bool isNegotiateSignAlgo);

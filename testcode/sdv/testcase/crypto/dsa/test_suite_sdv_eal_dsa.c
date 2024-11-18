@@ -800,3 +800,36 @@ exit:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_CRYPTO_DSA_GET_SEC_BITS_FUNC_TC001
+ * @title  DSA CRYPT_EAL_PkeyGetSecurityBits test.
+ * @precon nan
+ * @brief
+ *    1. Create the context of the dsa algorithm, expected result 1
+ *    2. Set dsa para, expected result 2
+ *    3. Call the CRYPT_EAL_PkeyGetSecurityBits Obtains secbits, expected result 3
+ * @expect
+ *    1. Success, and the context is not null.
+ *    2. CRYPT_SUCCESS
+ *    3. The return value is secBits.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DSA_GET_SEC_BITS_FUNC_TC001(int id, int secBits, Hex *P, Hex *Q, Hex *G)
+{
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    ASSERT_TRUE(pkey != NULL);
+    CRYPT_EAL_PkeyPara para;
+    para.id = CRYPT_PKEY_DSA;
+    para.para.dsaPara.p = P->x;
+    para.para.dsaPara.pLen = P->len;
+    para.para.dsaPara.q = Q->x;
+    para.para.dsaPara.qLen = Q->len;
+    para.para.dsaPara.g = G->x;
+    para.para.dsaPara.gLen = G->len;
+
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), secBits);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */

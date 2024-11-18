@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "hitls_build.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -121,17 +122,17 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
     int32_t ret;
     ret = ClientCheckPeerCert(ctx, SAL_CERT_PairGetX509(peerCert));
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15911, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16224, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client check peer cert failed", 0, 0, 0, 0);
         return ret;
     }
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     /* The encryption certificate is required for TLS of TLCP. Both ECDHE and ECC of the client depend on the encryption
      * certificate. */
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
         HITLS_CERT_Key *cert = SAL_CERT_GetTlcpEncCert(peerCert);
         if (cert == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15918, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16225, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "client check peer enc cert failed.", 0, 0, 0, 0);
             return HITLS_CERT_ERR_EXP_CERT;
         }
@@ -139,7 +140,11 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
          * That is, the encryption public key type matches the negotiation cipher suite. */
         CERT_ExpectInfo expectCertInfo = {0};
         expectCertInfo.certType = CFG_GetCertTypeByCipherSuite(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
-        return SAL_CERT_CheckCertInfo(ctx, &expectCertInfo, cert, false, false);
+        ret = SAL_CERT_CheckCertInfo(ctx, &expectCertInfo, cert, false, false);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17041, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CheckCertInfo fail, ret = %d.", ret, 0, 0, 0);
+        }
     }
 #endif
     return ret;
@@ -150,17 +155,17 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
     int32_t ret;
     ret = ServerCheckPeerCert(ctx, SAL_CERT_PairGetX509(peerCert));
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15921, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16226, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server check peer cert failed.", 0, 0, 0, 0);
         return ret;
     }
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     /* Service processing logic. The ECDHE exchange algorithm logic requires the encryption certificate */
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 &&
         ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE) {
         HITLS_CERT_Key *cert = SAL_CERT_GetTlcpEncCert(peerCert);
         if (cert == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15923, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16227, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "service check peer enc cert failed", 0, 0, 0, 0);
             return HITLS_CERT_ERR_EXP_CERT;
         }
@@ -168,17 +173,23 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
          * That is, the encryption public key type matches the negotiation cipher suite. */
         CERT_ExpectInfo expectCertInfo = {0};
         expectCertInfo.certType = CFG_GetCertTypeByCipherSuite(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
-        return SAL_CERT_CheckCertInfo(ctx, &expectCertInfo, cert, false, false);
+        ret = SAL_CERT_CheckCertInfo(ctx, &expectCertInfo, cert, false, false);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17042, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CheckCertInfo fail, ret = %d.", ret, 0, 0, 0);
+        }
     }
 #endif
     return ret;
 }
-
-bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+static bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
     bool checkUsageRec = false;
     HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(peerCert);
+#ifdef HITLS_TLS_PROTO_TLCP11
     HITLS_CERT_X509 *encCert = SAL_CERT_GetTlcpEncCert(peerCert);
+#endif
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
     }
@@ -195,11 +206,13 @@ bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
             case HITLS_KEY_EXCH_RSA:
             case HITLS_KEY_EXCH_ECC:
             case HITLS_KEY_EXCH_RSA_PSK:
+#ifdef HITLS_TLS_PROTO_TLCP11
                 if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
                     checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE) &&
                                     SAL_CERT_CheckCertKeyUsage(ctx, encCert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
                     break;
                 }
+#endif
                 checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
                 break;
             case HITLS_KEY_EXCH_ECDH:
@@ -222,7 +235,7 @@ bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
     }
     return checkUsageRec;
 }
-
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
 /**
 * @brief Process the peer certificate, check, and save it.
 *
@@ -244,13 +257,15 @@ static int32_t ProcessPeerCertificate(TLS_Ctx *ctx, const CertificateMsg *certs)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_CERTIFICATE);
         return ret;
     }
-
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
     if (ctx->config.tlsConfig.needCheckKeyUsage == true && !CheckCertKeyUsage(ctx, peerCert)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17043, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CheckCertKeyUsage fail", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_CERTIFICATE);
         SAL_CERT_PairFree(ctx->config.tlsConfig.certMgrCtx, peerCert);
         return HITLS_CERT_ERR_KEYUSAGE;
     }
-
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
     if (ctx->isClient) {
         ret = ClientCheckCert(ctx, peerCert);
     } else {
@@ -265,25 +280,24 @@ static int32_t ProcessPeerCertificate(TLS_Ctx *ctx, const CertificateMsg *certs)
     ctx->hsCtx->peerCert = peerCert;
     return HITLS_SUCCESS;
 }
-
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t VerifyCertChain(TLS_Ctx *ctx)
 {
     int32_t ret = SAL_CERT_VerifyCertChain(ctx, ctx->hsCtx->peerCert, false);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15924, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16228, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "process peer certificate fail, ret = 0x%x.", (uint32_t)ret, 0, 0, 0);
         return ret;
     }
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11) {
         return ret;
     }
     if (ctx->isClient) {
         ret = SAL_CERT_VerifyCertChain(ctx, ctx->hsCtx->peerCert, true);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15925, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16229, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "process client enc certificate fail, ret = 0x%x.", (uint32_t)ret, 0, 0, 0);
-            return ret;
         }
         return ret;
     }
@@ -291,9 +305,8 @@ static int32_t VerifyCertChain(TLS_Ctx *ctx)
     if (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE) {
         ret = SAL_CERT_VerifyCertChain(ctx, ctx->hsCtx->peerCert, true);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15932, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16230, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "process server enc certificate fail, ret = 0x%x.", (uint32_t)ret, 0, 0, 0);
-            return ret;
         }
         return ret;
     }
@@ -305,7 +318,7 @@ static int32_t VerifyCertChain(TLS_Ctx *ctx)
 * @brief Process the certificate.
 *
 * @param ctx [IN/OUT] TLS context
-* @param msg [IN] message structure
+* @param msg [IN] Packet structure
 *
 * @retval HITLS_SUCCESS succeeded.
 * @retval For other error codes, see hitls_error.h.
@@ -316,13 +329,15 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     const CertificateMsg *certs = &msg->body.certificate;
 
     /**
-     * RFC 5426 7.4.6: If no suitable certificate is available,
+     * RFC 5426 7.4.6：If no suitable certificate is available,
      * the client MUST send a certificate message containing no certificates.
      */
     if (certs->certCount == 0) {
         /** Only the server allows the peer certificate to be empty */
         if ((ctx->isClient == false) &&
             (ctx->config.tlsConfig.isSupportClientVerify && ctx->config.tlsConfig.isSupportNoClientCert)) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17105, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+                "server recv empty cert", 0, 0, 0, 0);
             return HS_ChangeState(ctx, TRY_RECV_CLIENT_KEY_EXCHANGE);
         }
 
@@ -361,9 +376,11 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     }
     return HS_ChangeState(ctx, TRY_RECV_CLIENT_KEY_EXCHANGE);
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#ifdef HITLS_TLS_PROTO_TLS13
 static int32_t CertificateReqCtxCheck(TLS_Ctx *ctx, const CertificateMsg *certs)
 {
+#ifdef HITLS_TLS_FEATURE_PHA
     /* In the handshake phase, certificate_request_context must be empty. */
     if (ctx->phaState != PHA_REQUESTED && certs->certificateReqCtxSize != 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15726, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -374,30 +391,42 @@ static int32_t CertificateReqCtxCheck(TLS_Ctx *ctx, const CertificateMsg *certs)
     /* pha phase, which must be non-empty and equal */
     if (ctx->certificateReqCtxSize != 0 && (ctx->certificateReqCtxSize != certs->certificateReqCtxSize ||
                 memcmp(ctx->certificateReqCtx, certs->certificateReqCtx, certs->certificateReqCtxSize) != 0)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17044, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "certificateReqCtx is not equal", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_MSG_HANDLE_INVALID_CERT_REQ_CTX;
     }
+#else
+    if (certs->certificateReqCtxSize != 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15732, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "server receive a non-zero certificateReqCtx.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        return HITLS_MSG_HANDLE_INVALID_CERT_REQ_CTX;
+    }
+#endif /* HITLS_TLS_FEATURE_PHA */
     return HITLS_SUCCESS;
 }
 
 int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
-    int32_t ret;
     const CertificateMsg *certs = &msg->body.certificate;
 
-    ret = CertificateReqCtxCheck(ctx, certs);
+    if (ctx->isClient == false) {
+        ctx->plainAlertForbid = true;
+    }
+    int32_t ret = CertificateReqCtxCheck(ctx, certs);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
     /**
-     * RFC 5426 7.4.6: If no suitable certificate is available,
+     * RFC 5426 7.4.6：If no suitable certificate is available,
      * the client MUST send a certificate message containing no certificates.
      */
     if (certs->certCount == 0) {
         if (ctx->isClient) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15930, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16126, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "peer certificate is needed!", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
             return HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE;
@@ -433,6 +462,8 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     ret = SAL_CERT_VerifyCertChain(ctx, ctx->hsCtx->peerCert, false);
     if (ret != HITLS_SUCCESS) {
         if (!ctx->config.tlsConfig.isSupportVerifyNone) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17045, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "VerifyCertChain fail, ret = 0x%x.", (uint32_t)ret, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, GetAlertfromX509Err(ctx->peerInfo.verifyResult));
             return ret;
         }
@@ -440,3 +471,4 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 
     return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_VERIFY);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */

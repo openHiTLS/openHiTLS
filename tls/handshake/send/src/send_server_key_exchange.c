@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_SERVER
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -22,16 +23,20 @@
 #include "hitls_crypt_type.h"
 #include "hitls_security.h"
 #include "tls.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
+#endif
 #include "cert_method.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
 #include "pack.h"
 #include "send_process.h"
-
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+#ifdef HITLS_TLS_SUITE_KX_DHE
 #define DEFAULT_DHE_PSK_BIT_NUM 128
 #define TLS_DHE_PARAM_MAX_LEN 1024
 
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
 static HITLS_CRYPT_Key *GenerateDhEphemeralKey(HITLS_CRYPT_Key *priKey)
 {
     uint8_t p[TLS_DHE_PARAM_MAX_LEN] = {0};
@@ -45,52 +50,87 @@ static HITLS_CRYPT_Key *GenerateDhEphemeralKey(HITLS_CRYPT_Key *priKey)
     }
     return SAL_CRYPT_GenerateDhKeyByParams(p, pLen, g, gLen);
 }
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
+
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+static HITLS_CRYPT_Key *GetDhKeyByDhTmp(TLS_Ctx *ctx)
+{
+    HITLS_CRYPT_Key *key = NULL;
+    int32_t ret = HITLS_SUCCESS;
+    int32_t secBits = 0;
+    HITLS_Config *config = &ctx->config.tlsConfig;
+    key = ctx->config.tlsConfig.dhTmp;
+    if (key != NULL) {
+        key = GenerateDhEphemeralKey(key);
+    }
+    if ((key == NULL) && (ctx->config.tlsConfig.dhTmpCb != NULL)) {
+        key = ctx->config.tlsConfig.dhTmpCb(ctx, 0, TLS_DHE_PARAM_MAX_LEN);
+    }
+    /* Temporary DH security check */
+    ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17161, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GET_SECBITS fail", 0, 0, 0, 0);
+        SAL_CRYPT_FreeDhKey(key);
+        return NULL;
+    }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_TMP_DH, secBits, 0, key);
+    if (ret != SECURITY_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17162, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "SslCheck fail", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
+        SAL_CRYPT_FreeDhKey(key);
+        return NULL;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    return key;
+}
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
+
+static HITLS_CRYPT_Key *GetDhKeyBySecBits(TLS_Ctx *ctx)
+{
+    int32_t ret = HITLS_SUCCESS;
+    int32_t secBits = 0;
+    HITLS_Config *config = &ctx->config.tlsConfig;
+    CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
+    KeyExchCtx *keyExCtx = ctx->hsCtx->kxCtx;
+    CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
+    HITLS_CERT_X509 *cert = SAL_CERT_GetCurrentCert(certMgrCtx);
+
+    if ((keyExCtx->keyExchAlgo == HITLS_KEY_EXCH_DHE_PSK) ||
+        ((keyExCtx->keyExchAlgo == HITLS_KEY_EXCH_DHE) && (cipherSuiteInfo->authAlg == HITLS_AUTH_NULL))) {
+        secBits =
+#ifdef HITLS_TLS_FEATURE_SECURITY
+                    (SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel) != 0)
+                    ? SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel)
+                    :
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+                DEFAULT_DHE_PSK_BIT_NUM;
+    } else if (cert != NULL) {
+        HITLS_CERT_Key *pubkey = NULL;
+        (void)SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
+        ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
+        SAL_CERT_KeyFree(certMgrCtx, pubkey);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17163, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "GET_SECBITS fail", 0, 0, 0, 0);
+            return NULL;
+        }
+    }
+    return SAL_CRYPT_GenerateDhKeyBySecbits(secBits);
+}
 
 static HITLS_CRYPT_Key *GetDhKey(TLS_Ctx *ctx)
 {
-    int32_t ret = HITLS_SUCCESS;
-    HITLS_Config *config = &ctx->config.tlsConfig;
-    CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
     HITLS_CRYPT_Key *key = NULL;
-    int32_t secBits = 0;
-
-    if (ctx->config.tlsConfig.isSupportDhAuto) {
-        KeyExchCtx *keyExCtx = ctx->hsCtx->kxCtx;
-        CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
-        HITLS_CERT_X509 *cert = SAL_CERT_GetCurrentCert(certMgrCtx);
-
-        if ((keyExCtx->keyExchAlgo == HITLS_KEY_EXCH_DHE_PSK) ||
-            ((keyExCtx->keyExchAlgo == HITLS_KEY_EXCH_DHE) && (cipherSuiteInfo->authAlg == HITLS_AUTH_NULL))) {
-            secBits = (SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel) == 0)
-                          ? DEFAULT_DHE_PSK_BIT_NUM
-                          : SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel);
-        } else if (cert != NULL) {
-            HITLS_CERT_Key *pubkey = NULL;
-            (void)SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
-            ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
-            SAL_CERT_KeyFree(certMgrCtx, pubkey);
-            if (ret != HITLS_SUCCESS) {
-                return NULL;
-            }
-        }
-        key = SAL_CRYPT_GenerateDhKeyBySecbits(secBits);
-    } else {
-        key = ctx->config.tlsConfig.dhTmp;
-        if (key != NULL) {
-            key = GenerateDhEphemeralKey(key);
-        }
-        /* Temporary DH security check */
-        ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
-        if (ret != HITLS_SUCCESS) {
-            SAL_CRYPT_FreeDhKey(key);
-            return NULL;
-        }
-        ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_TMP_DH, secBits, 0, key);
-        if (ret != SECURITY_SUCCESS) {
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
-            SAL_CRYPT_FreeDhKey(key);
-            return NULL;
-        }
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+    if (!ctx->config.tlsConfig.isSupportDhAuto) {
+        key = GetDhKeyByDhTmp(ctx);
+    } else
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
+    {
+        key = GetDhKeyBySecBits(ctx);
     }
     return key;
 }
@@ -119,20 +159,22 @@ static int32_t GenDhCipherSuiteParams(TLS_Ctx *ctx)
             "get dh parameters error when processing dh cipher suite.", 0, 0, 0, 0);
         return HITLS_MSG_HANDLE_ERR_GET_DH_PARAMETERS;
     }
+    BSL_SAL_FREE(ctx->hsCtx->kxCtx->keyExchParam.dh.p);
     ctx->hsCtx->kxCtx->keyExchParam.dh.p = BSL_SAL_Dump(p, pLen);
     if (ctx->hsCtx->kxCtx->keyExchParam.dh.p == NULL) {
         SAL_CRYPT_FreeDhKey(key);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ERR_GET_DH_PARAMETERS);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15334, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16209, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get dh parameters error when processing dh cipher suite.", 0, 0, 0, 0);
         return HITLS_MSG_HANDLE_ERR_GET_DH_PARAMETERS;
     }
+    BSL_SAL_FREE(ctx->hsCtx->kxCtx->keyExchParam.dh.g);
     ctx->hsCtx->kxCtx->keyExchParam.dh.g = BSL_SAL_Dump(g, gLen);
     if (ctx->hsCtx->kxCtx->keyExchParam.dh.g == NULL) {
             BSL_SAL_FREE(ctx->hsCtx->kxCtx->keyExchParam.dh.p);
             SAL_CRYPT_FreeDhKey(key);
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ERR_GET_DH_PARAMETERS);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15333, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16210, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "get dh parameters error when processing dh cipher suite.", 0, 0, 0, 0);
             return HITLS_MSG_HANDLE_ERR_GET_DH_PARAMETERS;
     }
@@ -141,14 +183,16 @@ static int32_t GenDhCipherSuiteParams(TLS_Ctx *ctx)
     ctx->hsCtx->kxCtx->key = key;
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_DHE */
 static int32_t PackExchMsgPrepare(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HITLS_CRYPT_Key *key = NULL;
-
+    (void)ret;
+    (void)key;
     switch (ctx->hsCtx->kxCtx->keyExchAlgo) {
-        case HITLS_KEY_EXCH_ECDHE: /** TLCP is included here. */
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
+        case HITLS_KEY_EXCH_ECDHE: /* TLCP is included here. */
         case HITLS_KEY_EXCH_ECDHE_PSK:
             key = SAL_CRYPT_GenEcdhKeyPair(&ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
             if (key == NULL) {
@@ -158,6 +202,8 @@ static int32_t PackExchMsgPrepare(TLS_Ctx *ctx)
             }
             ctx->hsCtx->kxCtx->key = key;
             break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
             ret = GenDhCipherSuiteParams(ctx);
@@ -167,9 +213,10 @@ static int32_t PackExchMsgPrepare(TLS_Ctx *ctx)
                 return ret;
             }
             break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
         case HITLS_KEY_EXCH_PSK:
         case HITLS_KEY_EXCH_RSA_PSK:
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
 #endif
             break;
@@ -188,12 +235,12 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
-    /** Determine whether the message needs to be packed */
+    /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
         ret = PackExchMsgPrepare(ctx);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15941, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Fail to PackExchMsgPrepare, ret = %d.", ret, 0, 0, 0);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15948, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Fail to PackExchMsgPrepare, ret = %d.", ret, 0, 0, 0);
             return ret;
         }
 
@@ -213,7 +260,7 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15750, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "server send keyExchange msg success.", 0, 0, 0, 0);
 
-    /** Update the state machine. If the CertificateRequest message does not need to be sent, the system directly
+    /* Update the state machine. If the CertificateRequest message does not need to be sent, the system directly
      * switches to theSend_SERVER_HELLO_DONE state */
     if (ctx->negotiatedInfo.cipherSuiteInfo.authAlg != HITLS_AUTH_NULL &&
         ctx->negotiatedInfo.cipherSuiteInfo.authAlg != HITLS_AUTH_PSK &&
@@ -225,8 +272,7 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
     }
     /* Make sure the client will always send a certificate message, because ECDHE relies on the client's encrypted
      * certificate, even if the client does not require authentication (isSupportClientVerify equals false). */
-
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 &&
         ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_ECDHE_SM4_CBC_SM3) {
         return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
@@ -234,3 +280,5 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
 #endif
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO_DONE);
 }
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_HOST_SERVER */

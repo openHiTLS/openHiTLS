@@ -46,21 +46,21 @@ static HITLS_Config *GetHitlsConfigViaVersion(int ver)
     switch (ver) {
         case HITLS_VERSION_TLS12:
             config = HITLS_CFG_NewTLS12Config();
-            ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+            ret = HITLS_CFG_SetCheckKeyUsage(config, false);
             if (ret != HITLS_SUCCESS) {
                 return NULL;
             }
             return config;
         case HITLS_VERSION_TLS13:
             config = HITLS_CFG_NewTLS13Config();
-            ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+            ret = HITLS_CFG_SetCheckKeyUsage(config, false);
             if (ret != HITLS_SUCCESS) {
                 return NULL;
             }
             return config;
         case HITLS_VERSION_DTLS12:
             config = HITLS_CFG_NewDTLS12Config();
-            ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+            ret = HITLS_CFG_SetCheckKeyUsage(config, false);
             if (ret != HITLS_SUCCESS) {
                 return NULL;
             }
@@ -127,13 +127,15 @@ void SDV_TLS_CM_KEYUPDATE_FUNC_TC001(int version)
     ASSERT_EQ(ret, HITLS_KEY_UPDATE_REQ_END);
     ret = HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_NOT_REQUESTED);
     ASSERT_EQ(ret, HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_SUCCESS);
     ret = HITLS_GetKeyUpdateType(client->ssl);
     ASSERT_EQ(ret, HITLS_KEY_UPDATE_REQ_END);
 
     FuncStubInfo tmpRpInfo = {0};
     STUB_Replace(&tmpRpInfo, BSL_UIO_Write, STUB_BSL_UIO_Write);
     ret = HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_REQUESTED);
-    ASSERT_EQ(ret, HITLS_REC_ERR_IO_EXCEPTION);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_IO_EXCEPTION);
     ret = HITLS_GetKeyUpdateType(client->ssl);
     ASSERT_EQ(ret, HITLS_UPDATE_REQUESTED);
 exit:

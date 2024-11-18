@@ -179,9 +179,7 @@ int32_t HITLS_X509_LoadEECertList(HITLS_Config *tlsCfg, const char *eeFileList, 
             return ERROR;
         }
         if (isEnc == true) {
-#ifndef HITLS_NO_TLCP11
             ret = HITLS_CFG_SetTlcpCertificate(tlsCfg, cert, 0, isEnc);
-#endif
         } else {
             ret = HITLS_CFG_SetCertificate(tlsCfg, cert, 0);
         }
@@ -226,9 +224,7 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
             return ERROR;
         }
         if (isEnc == true) {
-#ifndef HITLS_NO_TLCP11
             ret = HITLS_CFG_SetTlcpPrivateKey(tlsCfg, key, 0, isEnc);
-#endif
         } else {
             ret = HITLS_CFG_SetPrivateKey(tlsCfg, key, 0);
         }

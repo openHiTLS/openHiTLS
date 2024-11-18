@@ -410,54 +410,6 @@ exit:
 }
 /* END_CASE */
 
-int32_t UT_NoSecRenegotiation(HITLS_Ctx *ctx)
-{
-    (void)ctx;
-    return HITLS_SUCCESS;
-}
-
-/** @
-* @test  UT_TLS_CFG_SET_NOSECRENEGOTIATIONCB_API_TC001
-* @titleTest the HITLS_CFG_SetNoSecRenegotiationCb interface.
-* @precon nan
-* @brief HITLS_CFG_SetNoSecRenegotiationCb
-* 1. Import empty configuration information. Expected result 1 is obtained.
-* 2. Transfer non-empty configuration information and leave callback empty. Expected result 1 is obtained.
-* 3. Transfer non-empty configuration information and set callback to a non-empty value. Expected result 2 is obtained.
-* @expect
-* 1. Returns HITLS_NULL_INPUT
-* 2. Returns HITLS_SUCCES
-@ */
-
-/* BEGIN_CASE */
-void UT_TLS_CFG_SET_NOSECRENEGOTIATIONCB_API_TC001(int tlsVersion)
-{
-    FRAME_Init();
-    HITLS_Config *config = NULL;
-
-    ASSERT_TRUE(HITLS_CFG_SetNoSecRenegotiationCb(config, UT_NoSecRenegotiation) == HITLS_NULL_INPUT);
-
-    switch (tlsVersion) {
-        case HITLS_VERSION_TLS12:
-            config = HITLS_CFG_NewTLS12Config();
-            break;
-        case HITLS_VERSION_TLS13:
-            config = HITLS_CFG_NewTLS13Config();
-            break;
-        default:
-            config = NULL;
-            break;
-    }
-
-    ASSERT_TRUE(HITLS_CFG_SetNoSecRenegotiationCb(config, NULL) == HITLS_NULL_INPUT);
-
-    ASSERT_TRUE(HITLS_CFG_SetNoSecRenegotiationCb(config, UT_NoSecRenegotiation) == HITLS_SUCCESS);
-
-exit:
-    HITLS_CFG_FreeConfig(config);
-}
-/* END_CASE */
-
 /** @
 * @test  UT_TLS_CFG_SET_GET_VERSION_API_TC001
 * @title  Test the HITLS_CFG_SetVersion, HITLS_CFG_GetMinVersion, and HITLS_CFG_GetMaxVersion interfaces.

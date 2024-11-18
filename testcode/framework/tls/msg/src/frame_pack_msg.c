@@ -1039,14 +1039,12 @@ static int32_t PackClientEcdheMsg(FRAME_Type *type, const FRAME_ClientKeyExchang
     uint32_t bufLen, uint32_t *usedLen)
 {
     uint32_t offset = 0;
-#ifndef HITLS_NO_TLCP11
     if (type->versionType == HITLS_VERSION_TLCP11) { /* Three bytes are added to the client key exchange. */
         buf[offset] = HITLS_EC_CURVE_TYPE_NAMED_CURVE;
         offset += sizeof(uint8_t);
         BSL_Uint16ToByte(HITLS_EC_GROUP_SM2, &buf[offset]);
         offset += sizeof(uint16_t);
     }
-#endif
     PackInteger8(&clientKeyExchange->pubKeySize, &buf[offset], bufLen, &offset);
     PackArray8(&clientKeyExchange->pubKey, &buf[offset], bufLen - offset, &offset);
 

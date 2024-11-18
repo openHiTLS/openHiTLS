@@ -64,7 +64,6 @@ typedef enum {
  * Hash algorithm ID
  */
 typedef enum {
-    CRYPT_MD_MD4 = BSL_CID_MD4,
     CRYPT_MD_MD5 = BSL_CID_MD5,
     CRYPT_MD_SHA1 = BSL_CID_SHA1,
     CRYPT_MD_SHA224 = BSL_CID_SHA224,

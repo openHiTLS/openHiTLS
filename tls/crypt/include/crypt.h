@@ -37,6 +37,42 @@ typedef struct {
     uint32_t seedLen;           /* Seed length */
 } CRYPT_KeyDeriveParameters;
 
+enum HITLS_CryptoCallBack {
+    HITLS_CRYPT_CALLBACK_RAND_BYTES = 0,
+    HITLS_CRYPT_CALLBACK_HMAC_SIZE,
+    HITLS_CRYPT_CALLBACK_HMAC_INIT,
+    HITLS_CRYPT_CALLBACK_HMAC_FREE,
+    HITLS_CRYPT_CALLBACK_HMAC_UPDATE,
+    HITLS_CRYPT_CALLBACK_HMAC_FINAL,
+    HITLS_CRYPT_CALLBACK_HMAC,
+    HITLS_CRYPT_CALLBACK_DIGEST_SIZE,
+    HITLS_CRYPT_CALLBACK_DIGEST_INIT,
+    HITLS_CRYPT_CALLBACK_DIGEST_COPY,
+    HITLS_CRYPT_CALLBACK_DIGEST_FREE,
+    HITLS_CRYPT_CALLBACK_DIGEST_UPDATE,
+    HITLS_CRYPT_CALLBACK_DIGEST_FINAL,
+    HITLS_CRYPT_CALLBACK_DIGEST,
+    HITLS_CRYPT_CALLBACK_ENCRYPT,
+    HITLS_CRYPT_CALLBACK_DECRYPT,
+
+    HITLS_CRYPT_CALLBACK_GENERATE_ECDH_KEY_PAIR,
+    HITLS_CRYPT_CALLBACK_FREE_ECDH_KEY,
+    HITLS_CRYPT_CALLBACK_GET_ECDH_ENCODED_PUBKEY,
+    HITLS_CRYPT_CALLBACK_CALC_ECDH_SHARED_SECRET,
+    HITLS_CRYPT_CALLBACK_SM2_CALC_ECDH_SHARED_SECRET,
+
+    HITLS_CRYPT_CALLBACK_GENERATE_DH_KEY_BY_SECBITS,
+    HITLS_CRYPT_CALLBACK_GENERATE_DH_KEY_BY_PARAMS,
+    HITLS_CRYPT_CALLBACK_DUP_DH_KEY,
+    HITLS_CRYPT_CALLBACK_FREE_DH_KEY,
+    HITLS_CRYPT_CALLBACK_DH_GET_PARAMETERS,
+    HITLS_CRYPT_CALLBACK_GET_DH_ENCODED_PUBKEY,
+    HITLS_CRYPT_CALLBACK_CALC_DH_SHARED_SECRET,
+
+    HITLS_CRYPT_CALLBACK_HKDF_EXTRACT,
+    HITLS_CRYPT_CALLBACK_HKDF_EXPAND,
+};
+
 /**
  * @brief Generate a random number.
  *
@@ -68,6 +104,15 @@ uint32_t SAL_CRYPT_HmacSize(HITLS_HashAlgo hashAlgo);
  * @return HMAC context
  */
 HITLS_HMAC_Ctx *SAL_CRYPT_HmacInit(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len);
+
+/**
+ * @brief ReInitialize the HMAC context.
+ *
+ * @param ctx [IN] HMAC context
+ *
+ * @retval HITLS_SUCCESS       succeeded.
+ */
+int32_t SAL_CRYPT_HmacReInit(HITLS_HMAC_Ctx *ctx);
 
 /**
  * @brief   Release the HMAC context.
@@ -242,6 +287,13 @@ int32_t SAL_CRYPT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_t *i
     uint8_t *out, uint32_t *outLen);
 
 /**
+ * @brief Release the cipher ctx.
+ *
+ * @param ctx [IN] cipher ctx handle
+ */
+void SAL_CRYPT_CipherFree(HITLS_Cipher_Ctx *ctx);
+
+/**
  * @brief Generate the ECDH key pair.
  *
  * @param curveParams [IN] Elliptic curve parameter
@@ -249,15 +301,6 @@ int32_t SAL_CRYPT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_t *i
  * @return Key handle
  */
 HITLS_CRYPT_Key *SAL_CRYPT_GenEcdhKeyPair(const HITLS_ECParameters *curveParams);
-
-/**
- * @brief Deep Copy ECDH Key Pair
- *
- * @param key [IN] Key handle
- *
- * @return Key handle
- */
-HITLS_CRYPT_Key *SAL_CRYPT_DupEcdhKey(HITLS_CRYPT_Key *key);
 
 /**
  * @brief Release the ECDH key.

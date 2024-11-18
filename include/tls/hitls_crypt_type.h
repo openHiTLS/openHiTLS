@@ -51,6 +51,15 @@ typedef void HITLS_HMAC_Ctx;
 
 /**
  * @ingroup hitls_crypt_type
+ * @brief   cipher context. The user converts the cipher context into the corresponding structure
+ * based on the algorithm library.
+ */
+typedef void HITLS_Cipher_Ctx;
+
+typedef struct BslList HITLS_CIPHER_List;
+
+/**
+ * @ingroup hitls_crypt_type
  * @brief   Enumerated value of the symmetric encryption algorithm type.
  */
 typedef enum {
@@ -138,10 +147,10 @@ typedef enum {
     HITLS_KEY_EXCH_ECDH,
     HITLS_KEY_EXCH_DH,
     HITLS_KEY_EXCH_RSA,
-    HITLS_KEY_EXCH_ECDHE_PSK,
-    HITLS_KEY_EXCH_DHE_PSK,
-    HITLS_KEY_EXCH_RSA_PSK,
     HITLS_KEY_EXCH_PSK,
+    HITLS_KEY_EXCH_DHE_PSK,
+    HITLS_KEY_EXCH_ECDHE_PSK,
+    HITLS_KEY_EXCH_RSA_PSK,
     HITLS_KEY_EXCH_ECC, /* sm2 encrypt */
     HITLS_KEY_EXCH_BUTT = 255
 } HITLS_KeyExchAlgo;
@@ -152,11 +161,12 @@ typedef enum {
  */
 typedef enum {
     HITLS_SIGN_RSA_PKCS1_V15,
-    HITLS_SIGN_DSA,                 /**< Signature algorithm: DSA */
+    HITLS_SIGN_DSA,                 /* Signature algorithm: DSA */
     HITLS_SIGN_ECDSA,
     HITLS_SIGN_RSA_PSS_RSAE,
-    HITLS_SIGN_ED25519,
     HITLS_SIGN_RSA_PSS_PSS,
+    HITLS_SIGN_ED25519,
+    HITLS_SIGN_ED448,
     HITLS_SIGN_SM2,
     HITLS_SIGN_BUTT = 255
 } HITLS_SignAlgo;
@@ -172,7 +182,7 @@ typedef enum {
 
 /**
  * @ingroup hitls_crypt_type
- * @brief   Elliptic curve ID.
+ * @brief   Named Group enumerated value
  */
 typedef enum {
     HITLS_EC_GROUP_SECP256R1 = 23,
@@ -222,13 +232,14 @@ typedef struct {
     HITLS_CipherAlgo algo;              /**< Symmetric encryption algorithm. */
     const uint8_t *key;                 /**< Symmetry key. */
     uint32_t keyLen;                    /**< Symmetry key length. */
-    const uint8_t *hmacKey;             /**< Hmac key. */
-    uint32_t hmacKeyLen;                /**< Hmac key length. */
     const uint8_t *iv;                  /**< IV. */
     uint32_t ivLen;                     /**< IV length. */
     uint8_t *aad;                       /**< Aad: AEAD: one of the input parameters for encryption and decryption.
                                              additional data. */
     uint32_t aadLen;                    /**< Aad length. */
+    const uint8_t *hmacKey;             /**< Hmac key. */
+    uint32_t hmacKeyLen;                /**< Hmac key length. */
+    HITLS_Cipher_Ctx **ctx;             /**< HITLS_Cipher_Ctx handle */
 } HITLS_CipherParameters;
 
 /**
@@ -236,14 +247,14 @@ typedef struct {
  * @brief   sm2  ecdhe negotiation key parameters
  */
 typedef struct {
-    HITLS_CRYPT_Key *tmpPriKey;        /**<  Local temporary private key. */
-    uint8_t *tmpPeerPubkey;            /**<  Peer temporary public key. */
-    uint32_t tmpPeerPubKeyLen;         /**< Length of the peer temporary public key. */
-    HITLS_CRYPT_Key *priKey;           /**<  Local private key, which is used for SM2 algorithm negotiation.
+    HITLS_CRYPT_Key *tmpPriKey;        /* Local temporary private key. */
+    uint8_t *tmpPeerPubkey;            /* Peer temporary public key. */
+    uint32_t tmpPeerPubKeyLen;         /* Length of the peer temporary public key. */
+    HITLS_CRYPT_Key *priKey;           /* Local private key, which is used for SM2 algorithm negotiation.
                                           It is the private key of the encryption certificate. */
-    HITLS_CRYPT_Key *peerPubKey;       /**< Peer public key, which is used for SM2 algorithm negotiation.
+    HITLS_CRYPT_Key *peerPubKey;       /* Peer public key, which is used for SM2 algorithm negotiation.
                                           It is the public key in the encryption certificate. */
-    bool isClient;                     /**< Client ID, which is used by the SM2 algorithm negotiation key. */
+    bool isClient;                     /* Client ID, which is used by the SM2 algorithm negotiation key. */
 } HITLS_Sm2GenShareKeyParameters;
 
 /**
@@ -251,11 +262,11 @@ typedef struct {
  * @brief   HKDF-Extract Input
  */
 typedef struct {
-    HITLS_HashAlgo hashAlgo;    /**< Hash algorithm. */
-    const uint8_t *salt;        /**< Salt value. */
-    uint32_t saltLen;           /**< Salt value length. */
-    const uint8_t *ikm;         /**< Input Keying Material. */
-    uint32_t ikmLen;            /**< Ikm length. */
+    HITLS_HashAlgo hashAlgo;    /* Hash algorithm. */
+    const uint8_t *salt;        /* Salt value. */
+    uint32_t saltLen;           /* Salt value length. */
+    const uint8_t *inputKeyMaterial;         /* Input Keying Material. */
+    uint32_t inputKeyMaterialLen;            /* Ikm length. */
 } HITLS_CRYPT_HkdfExtractInput;
 
 /**
@@ -263,12 +274,13 @@ typedef struct {
  * @brief   HKDF-Expand Input
  */
 typedef struct {
-    HITLS_HashAlgo hashAlgo;    /**< Hash algorithm. */
-    const uint8_t *prk;         /**< A pseudorandom key of at least HashLen octets. */
-    uint32_t prkLen;            /**< Prk length. */
-    const uint8_t *info;        /**< Extended data. */
-    uint32_t infoLen;           /**< Extend the data length. */
+    HITLS_HashAlgo hashAlgo;    /* Hash algorithm. */
+    const uint8_t *prk;         /* A pseudorandom key of at least HashLen octets. */
+    uint32_t prkLen;            /* Prk length. */
+    const uint8_t *info;        /* Extended data. */
+    uint32_t infoLen;           /* Extend the data length. */
 } HITLS_CRYPT_HkdfExpandInput;
+
 
 #ifdef __cplusplus
 }

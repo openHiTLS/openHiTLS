@@ -12,7 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -29,18 +29,33 @@
 #include "hs_ctx.h"
 #include "hs.h"
 #include "send_process.h"
+#ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
+#endif /* HITLS_TLS_FEATURE_INDICATOR */
 
-
+#ifdef HITLS_TLS_PROTO_TLS
 static int32_t TlsSendHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
-    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen);
+    uint32_t maxRecPayloadLen = 0;
+    ret = REC_GetMaxWriteSize(ctx, &maxRecPayloadLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17125, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetMaxWriteSize fail", 0, 0, 0, 0);
         return ret;
     }
+    do {
+        uint32_t singleWrite = hsCtx->msgLen - hsCtx->msgOffset;
+        singleWrite = (singleWrite > maxRecPayloadLen) ? maxRecPayloadLen : singleWrite;
+        ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, &hsCtx->msgBuf[hsCtx->msgOffset], singleWrite);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        hsCtx->msgOffset += singleWrite;
+    } while (hsCtx->msgOffset != hsCtx->msgLen);
+    hsCtx->msgOffset = 0;
 
     /* Add hash data */
     ret = VERIFY_Append(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen);
@@ -49,31 +64,29 @@ static int32_t TlsSendHandShakeMsg(TLS_Ctx *ctx)
             "verify append fail when send handshake msg.", 0, 0, 0, 0);
         return ret;
     }
-
+#ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen,
                               ctx, ctx->config.tlsConfig.msgArg);
+#endif /* HITLS_TLS_FEATURE_INDICATOR */
 
     hsCtx->msgLen = 0;
     return HITLS_SUCCESS;
 }
-
-#ifndef HITLS_NO_DTLS12
+#endif /* HITLS_TLS_PROTO_TLS */
+#ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = ctx->hsCtx;
     uint8_t *data = (uint8_t *)BSL_SAL_Calloc(1u, maxRecPayloadLen);
     if (data == NULL) {
-        return HITLS_MEMALLOC_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17126, "Calloc fail");
     }
 
     /* Copy the fragment header */
     if (memcpy_s(data, maxRecPayloadLen, hsCtx->msgBuf, DTLS_HS_MSG_HEADER_SIZE) != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15796, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "send handshake msg to record fail.", 0, 0, 0, 0);
         BSL_SAL_FREE(data);
-        return HITLS_MEMCPY_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID15796, "memcpy fail");
     }
 
     uint32_t fragmentOffset = 0;
@@ -94,25 +107,23 @@ int32_t DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen)
         if (memcpy_s(&data[DTLS_HS_MSG_HEADER_SIZE], maxRecPayloadLen - DTLS_HS_MSG_HEADER_SIZE,
             &hsCtx->msgBuf[DTLS_HS_MSG_HEADER_SIZE + fragmentOffset], fragmentLen) != EOK) {
             BSL_SAL_FREE(data);
-            return HITLS_MEMCPY_FAIL;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID17127, "memcpy fail");
         }
 
         /* Send to the record layer */
         ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, data, fragmentLen + DTLS_HS_MSG_HEADER_SIZE);
         if (ret != HITLS_SUCCESS) {
             BSL_SAL_FREE(data);
-            return ret;
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17128, "Write fail");
         }
         fragmentOffset += fragmentLen;
         packetLen -= fragmentLen;
     }
 
     BSL_SAL_FREE(data);
-    return HITLS_SUCCESS;
+    return ret;
 }
-#endif
 
-#ifndef HITLS_NO_DTLS12
 static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret;
@@ -120,6 +131,8 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
     uint32_t maxRecPayloadLen = 0;
     ret = REC_GetMaxWriteSize(ctx, &maxRecPayloadLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17129, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetMaxWriteSize fail", 0, 0, 0, 0);
         return ret;
     }
 
@@ -146,28 +159,31 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
             "verify append fail when send handshake msg.", 0, 0, 0, 0);
         return ret;
     }
-
+#ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen,
                               ctx, ctx->config.tlsConfig.msgArg);
+#endif /* HITLS_TLS_FEATURE_INDICATOR */
 
     hsCtx->msgLen = 0;
     hsCtx->nextSendSeq++;
 
     return HITLS_SUCCESS;
 }
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS12 */
 
 int32_t HS_SendMsg(TLS_Ctx *ctx)
 {
     uint32_t version = HS_GetVersion(ctx);
     switch (version) {
+#ifdef HITLS_TLS_PROTO_TLS
         case HITLS_VERSION_TLS12:
         case HITLS_VERSION_TLS13:
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_VERSION_TLCP11:
 #endif
             return TlsSendHandShakeMsg(ctx);
-#ifndef HITLS_NO_DTLS12
+#endif /* HITLS_TLS_PROTO_TLS */
+#ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             return DtlsSendHandShakeMsg(ctx);
 #endif

@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
 #include <stdbool.h>
 #include "securec.h"
 #include "bsl_sal.h"
@@ -31,11 +32,12 @@
 #include "session_mgr.h"
 
 #define SESSION_DEFAULT_TIMEOUT 7200u
+#ifdef HITLS_TLS_FEATURE_SESSION
 #define SESSION_DEFAULT_CACHE_SIZE 256u
+#endif
+#define SESSION_GERNERATE_RETRY_MAX_TIMES 10
 
 #define SESSION_DEFAULT_HASH_BKT_SZIE 64u
-
-#define SESSION_GERNERATE_RETRY_MAX_TIMES 10
 
 typedef struct {
     uint32_t sessionIdSize;
@@ -101,10 +103,13 @@ TLS_SessionMgr *SESSMGR_New(void)
 {
     TLS_SessionMgr *mgr = (TLS_SessionMgr *)BSL_SAL_Calloc(1u, sizeof(TLS_SessionMgr));
     if (mgr == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16702, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return NULL;
     }
 
     if (BSL_SAL_ThreadLockNew(&mgr->lock) != BSL_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16703, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ThreadLockNew fail", 0, 0, 0, 0);
         BSL_SAL_FREE(mgr);
         return NULL;
     }
@@ -113,6 +118,7 @@ TLS_SessionMgr *SESSMGR_New(void)
     if (SAL_CRYPT_Rand(mgr->ticketKeyName, sizeof(mgr->ticketKeyName)) != HITLS_SUCCESS ||
         SAL_CRYPT_Rand(mgr->ticketAesKey, sizeof(mgr->ticketAesKey)) != HITLS_SUCCESS ||
         SAL_CRYPT_Rand(mgr->ticketHmacKey, sizeof(mgr->ticketHmacKey)) != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16704, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Rand fail", 0, 0, 0, 0);
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_FREE(mgr);
         return NULL;
@@ -124,13 +130,17 @@ TLS_SessionMgr *SESSMGR_New(void)
     mgr->hash = BSL_HASH_Create(SESSION_DEFAULT_HASH_BKT_SZIE,
         SessKeyHashCodeCal, SessKeyHashMacth, &keyFunc, &valueFunc);
     if (mgr->hash == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16705, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HASH_Create fail", 0, 0, 0, 0);
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_FREE(mgr);
         return NULL;
     }
 
+#ifdef HITLS_TLS_FEATURE_SESSION
     mgr->sessCacheMode = HITLS_SESS_CACHE_SERVER;
     mgr->sessCacheSize = SESSION_DEFAULT_CACHE_SIZE;
+#endif
     mgr->sessTimeout = SESSION_DEFAULT_TIMEOUT;
     mgr->references = 1;
     return mgr;
@@ -194,6 +204,7 @@ uint64_t SESSMGR_GetTimeout(TLS_SessionMgr *mgr)
     return sessTimeout;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION
 void SESSMGR_SetCacheMode(TLS_SessionMgr *mgr, HITLS_SESS_CACHE_MODE mode)
 {
     if (mgr != NULL) {
@@ -235,7 +246,9 @@ uint32_t SESSMGR_GetCacheSize(TLS_SessionMgr *mgr)
 
     return sessCacheSize;
 }
+#endif
 
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isClient)
 {
     if (mgr == NULL || sess == NULL) {
@@ -273,16 +286,22 @@ void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isClie
     if (BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
         /* Insert a session node */
         BSL_HASH_Insert(mgr->hash, (uintptr_t)&key, sizeof(key), (uintptr_t)sess, 0);
+    } else {
+        BSL_LOG_BINLOG_FIXLEN(
+            BINLOG_ID15305, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN, "over sess cache size", 0, 0, 0, 0);
     }
 
     BSL_SAL_ThreadUnlock(mgr->lock);
     return;
 }
+#endif /* #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 
+#ifdef HITLS_TLS_FEATURE_SESSION_ID
 /* Find the matching session */
 HITLS_Session *SESSMGR_Find(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t sessionIdSize)
 {
     if (mgr == NULL || sessionId == NULL || sessionIdSize == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16706, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         return NULL;
     }
     BSL_SAL_ThreadReadLock(mgr->lock);
@@ -292,19 +311,27 @@ HITLS_Session *SESSMGR_Find(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t ses
     key.sessionIdSize = sessionIdSize;
     if (memcpy_s(key.sessionId, sizeof(key.sessionId), sessionId, sessionIdSize) == EOK) {
         // Query the session corresponding to the key
-        BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&sess);
+        if (BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&sess) != BSL_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(
+                BINLOG_ID15353, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN, "not find sess", 0, 0, 0, 0);
+                sess = NULL;
+                goto exit;
+        }
     }
 
     uint64_t curTime = (uint64_t)BSL_SAL_CurrentSysTimeGet();
     /* Check whether the validity is valid */
     if (SESS_CheckValidity(sess, curTime) == false) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16707, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "sess time out", 0, 0, 0, 0);
         sess = NULL;
     }
 
+exit:
     BSL_SAL_ThreadUnlock(mgr->lock);
     return sess;
 }
 
+#endif /* HITLS_TLS_FEATURE_SESSION_ID */
 /* Search for the matched session without checking the validity of the session */
 bool SESSMGR_HasMacthSessionId(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t sessionIdSize)
 {
@@ -344,7 +371,8 @@ void SESSMGR_ClearTimeout(TLS_SessionMgr *mgr)
         if (SESS_CheckValidity(sess, curTime) == false) {
             /* Delete the node if it is invalid */
             uintptr_t tmpKey = BSL_HASH_HashIterKey(mgr->hash, it);
-            it = BSL_HASH_Erase(mgr->hash, tmpKey);  // Returns the next iterator of the iterator where the key resides
+            // Returns the next iterator of the iterator where the key resides
+            it = BSL_HASH_Erase(mgr->hash, tmpKey);
         } else {
             it = BSL_HASH_IterNext(mgr->hash, it);
         }
@@ -379,6 +407,7 @@ int32_t SESSMGR_GernerateSessionId(TLS_Ctx *ctx, uint8_t *sessionId, uint32_t se
     return HITLS_SESS_ERR_SESSION_ID_GENRATE;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 void SESSMGR_SetTicketKeyCb(TLS_SessionMgr *mgr, HITLS_TicketKeyCb ticketKeyCb)
 {
     if (mgr != NULL) {
@@ -405,6 +434,7 @@ HITLS_TicketKeyCb SESSMGR_GetTicketKeyCb(TLS_SessionMgr *mgr)
 int32_t SESSMGR_GetTicketKey(const TLS_SessionMgr *mgr, uint8_t *key, uint32_t keySize, uint32_t *outSize)
 {
     if (mgr == NULL || key == NULL || outSize == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16708, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -413,6 +443,7 @@ int32_t SESSMGR_GetTicketKey(const TLS_SessionMgr *mgr, uint8_t *key, uint32_t k
 
     uint32_t offset = 0;
     if (memcpy_s(key, keySize, mgr->ticketKeyName, HITLS_TICKET_KEY_NAME_SIZE) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16709, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_SAL_ThreadUnlock(mgr->lock);
         return HITLS_MEMCPY_FAIL;
@@ -420,6 +451,7 @@ int32_t SESSMGR_GetTicketKey(const TLS_SessionMgr *mgr, uint8_t *key, uint32_t k
     offset += HITLS_TICKET_KEY_NAME_SIZE;
 
     if (memcpy_s(&key[offset], keySize - offset, mgr->ticketAesKey, HITLS_TICKET_KEY_SIZE) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16710, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_SAL_ThreadUnlock(mgr->lock);
         return HITLS_MEMCPY_FAIL;
@@ -427,6 +459,7 @@ int32_t SESSMGR_GetTicketKey(const TLS_SessionMgr *mgr, uint8_t *key, uint32_t k
     offset += HITLS_TICKET_KEY_SIZE;
 
     if (memcpy_s(&key[offset], keySize - offset, mgr->ticketHmacKey, HITLS_TICKET_KEY_SIZE) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16711, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_SAL_ThreadUnlock(mgr->lock);
         return HITLS_MEMCPY_FAIL;
@@ -444,6 +477,7 @@ int32_t SESSMGR_SetTicketKey(TLS_SessionMgr *mgr, const uint8_t *key, uint32_t k
 {
     if (mgr == NULL || key == NULL ||
         (keySize != HITLS_TICKET_KEY_NAME_SIZE + HITLS_TICKET_KEY_SIZE + HITLS_TICKET_KEY_SIZE)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16712, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -463,3 +497,5 @@ int32_t SESSMGR_SetTicketKey(TLS_SessionMgr *mgr, const uint8_t *key, uint32_t k
 
     return HITLS_SUCCESS;
 }
+#endif /* #ifdef HITLS_TLS_FEATURE_SESSION_TICKET */
+#endif /* HITLS_TLS_FEATURE_SESSION */

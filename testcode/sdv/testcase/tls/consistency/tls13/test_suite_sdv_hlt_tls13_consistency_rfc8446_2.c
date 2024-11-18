@@ -42,6 +42,8 @@
 #include "conn_init.h"
 #include "hs_extensions.h"
 #include "hitls_crypt_init.h"
+#include "crypt_util_rand.h"
+#include "alert.h"
 /* END_HEADER */
 
 #define PORT 23456
@@ -429,6 +431,142 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_VERSION_FUNC_TC001()
 
 exit:
     HLT_CleanFrameHandle();
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+static void TEST_Server13_33_Err(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)data;
+    (void)len;
+    (void)bufSize;
+    uint32_t writeLen;
+    uint32_t sendLen = 5;
+    if (ctx->isClient==false){
+        uint8_t sendBuf[5] = {*(int *)user, 0x03, 0x03, 0x00, 0x00};
+    for (int i = 0; i < 33; i++) {
+        ASSERT_EQ(BSL_UIO_Write(ctx->uio, sendBuf, sendLen, &writeLen),0);
+    }
+    return;
+    }
+exit:
+    return;
+}
+
+/** @
+* @test  SDV_TLS_TLS13_RFC8446_CONSISTENCY_EMPTY_RECORDS_FUNC_TC001
+* @title  0-length CCS or handshake is received during tls13 handshake proccess.
+* @precon  nan
+* @brief   1. Start a handshake with tls13 config, Expected result 1
+*          2. Modify the server hello message. Expected result 2
+* @expect  1. Return success
+*          2. Handshake fails
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_EMPTY_RECORDS_FUNC_TC001(int rec_type)
+{
+    CRYPT_RandRegist(TestSimpleRand);
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, 8889, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    // Configure link information on the server.
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+
+    serverCtxConfig->needCheckKeyUsage = true;
+
+    RecWrapper wrapper = {
+        TRY_SEND_SERVER_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        &rec_type,
+        TEST_Server13_33_Err
+    };
+    RegisterWrapper(wrapper);
+
+    // The server listens on the TLS link.
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    // Configure link information on the client.
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+
+    clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_3, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_EQ(HLT_RpcTlsConnect(remoteProcess, clientRes->sslId), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
+
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+    ASSERT_EQ(HLT_RpcTlsGetAlertFlag(remoteProcess, clientRes->sslId), ALERT_FLAG_SEND);
+    ASSERT_EQ(
+        (ALERT_Description)HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId),ALERT_UNEXPECTED_MESSAGE);
+exit:
+    ClearWrapper();
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_TLS_TLS13_RFC8446_CONSISTENCY_APPDATA_MAX_LENGTH
+* @spec  -
+* @title  In the TLS1.3 scenario, after the link is established, the app data with the maximum length is sent.
+    It is expected that the app data can be properly processed.
+* @precon  nan
+* @brief  1.Configuring TLS1.3 Link Establishment. Expected result 1 is displayed.
+          2.Sending large packets. Expected result 2 is obtained.
+* @expect 1.Return success
+          2.Return success
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_APPDATA_MAX_LENGTH(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverConfig = NULL;
+    HLT_Ctx_Config *clientConfig = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, 8888, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+    clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
+
+    uint8_t writeData[REC_MAX_PLAIN_LENGTH] = {1};
+    uint32_t writeLen = REC_MAX_PLAIN_LENGTH;
+    uint8_t readData[REC_MAX_PLAIN_LENGTH] = {0};
+    uint32_t readLen = REC_MAX_PLAIN_LENGTH;
+
+    ASSERT_EQ(HLT_ProcessTlsWrite(localProcess, clientRes, writeData, writeLen) , 0);
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, serverRes, readData, readLen, &readLen) , 0);
+    ASSERT_EQ(readLen , REC_MAX_PLAIN_LENGTH);
+    ASSERT_EQ(memcmp(writeData, readData, readLen) , 0);
+exit:
     HLT_FreeAllProcess();
 }
 /* END_CASE */

@@ -12,11 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
 #include "securec.h"
 #include "bsl_err_internal.h"
-#include "bsl_log_internal.h"
-#include "bsl_log.h"
 #include "tls_binlog_id.h"
 #include "bsl_sal.h"
 #include "bsl_errno.h"
@@ -29,8 +26,10 @@
 #include "tls.h"
 #include "tls_config.h"
 #include "cert.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
 #include "session.h"
 #include "session_mgr.h"
+#endif
 #include "bsl_uio.h"
 #include "config.h"
 #include "config_check.h"
@@ -39,19 +38,20 @@
 #include "crypt.h"
 #include "cipher_suite.h"
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 static int32_t PeerInfoInit(HITLS_Ctx *ctx)
 {
     /* The peerInfo.caList is used to adapt to the OpenSSL behavior. When creating the SSL_CTX object, OpenSSL
      * initializes the member so that the member is not null */
     ctx->peerInfo.caList = BSL_LIST_New(sizeof(HITLS_TrustedCANode *));
     if (ctx->peerInfo.caList == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16468, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "LIST_New fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
 
     return HITLS_SUCCESS;
 }
-
+#endif
 /**
  * @ingroup    hitls
  * @brief      Create a TLS object and deep Copy the HITLS_Config to the HITLS_Ctx.
@@ -62,42 +62,46 @@ static int32_t PeerInfoInit(HITLS_Ctx *ctx)
 HITLS_Ctx *HITLS_New(HITLS_Config *config)
 {
     if (config == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16469, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "config null", 0, 0, 0, 0);
         return NULL;
     }
-
-    int32_t ret;
 
     HITLS_Ctx *newCtx = (HITLS_Ctx *)BSL_SAL_Calloc(1u, sizeof(HITLS_Ctx));
     if (newCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16470, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return NULL;
     }
 
-    ret = CFG_CheckConfig(config);
+    int32_t ret = CheckConfig(config);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16471, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CheckConfig fail, ret %d", ret, 0, 0, 0);
         BSL_SAL_FREE(newCtx);
         return NULL;
     }
 
-    ret = CFG_DumpConfig(newCtx, config);
+    ret = DumpConfig(newCtx, config);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16472, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "DumpConfig fail, ret %d", ret, 0, 0, 0);
         BSL_SAL_FREE(newCtx);
         return NULL;
     }
-    HITLS_CFG_UpRef(config);
+    (void)HITLS_CFG_UpRef(config);
     newCtx->globalConfig = config;
-
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
     ret = PeerInfoInit(newCtx);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16473, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PeerInfoInit fail, ret %d", ret, 0, 0, 0);
         HITLS_Free(newCtx);
         return NULL;
     }
-
+#endif
     ChangeConnState(newCtx, CM_STATE_IDLE);
     return newCtx;
 }
-
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 static void CaListNodeDestroy(void *data)
 {
     HITLS_TrustedCANode *tmpData = (HITLS_TrustedCANode *)data;
@@ -109,15 +113,23 @@ static void CaListNodeDestroy(void *data)
 static void CleanPeerInfo(PeerInfo *peerInfo)
 {
     BSL_SAL_FREE(peerInfo->groups);
+    BSL_SAL_FREE(peerInfo->cipherSuites);
     BSL_LIST_FREE(peerInfo->caList, CaListNodeDestroy);
 }
+#endif
 
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN)
 static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 {
+#ifdef HITLS_TLS_EXTENSION_COOKIE
     BSL_SAL_FREE(negotiatedInfo->cookie);
+#endif
+#ifdef HITLS_TLS_FEATURE_ALPN
     BSL_SAL_FREE(negotiatedInfo->alpnSelected);
+#endif
     return;
 }
+#endif
 
 /**
  * @ingroup hitls
@@ -130,20 +142,29 @@ void HITLS_Free(HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return;
     }
-
+#ifdef HITLS_TLS_CONFIG_STATE
     ctx->rwstate = HITLS_NOTHING;
+#endif
     CONN_Deinit(ctx);
     BSL_UIO_Free(ctx->uio);
+#ifdef HITLS_TLS_FEATURE_FLIGHT
     BSL_UIO_Free(ctx->rUio);
     ctx->rUio = NULL;
+#endif
     ctx->uio = NULL;
-
+#ifdef HITLS_TLS_FEATURE_SESSION
     /* Release certificate resources before releasing the config file. Otherwise, memory leakage occurs */
     HITLS_SESS_Free(ctx->session);
+#endif
     CFG_CleanConfig(&ctx->config.tlsConfig);
     HITLS_CFG_FreeConfig(ctx->globalConfig);
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
     CleanPeerInfo(&(ctx->peerInfo));
+#endif
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN)
     CleanNegotiatedInfo(&ctx->negotiatedInfo);
+#endif
+#ifdef HITLS_TLS_FEATURE_PHA
     SAL_CRYPT_DigestFree(ctx->phaHash);
     ctx->phaHash = NULL;
     SAL_CRYPT_DigestFree(ctx->phaCurHash);
@@ -151,20 +172,20 @@ void HITLS_Free(HITLS_Ctx *ctx)
     ctx->phaState = PHA_NONE;
     BSL_SAL_FREE(ctx->certificateReqCtx);
     ctx->certificateReqCtxSize = 0;
+#endif
     BSL_SAL_FREE(ctx);
     return;
 }
 
+#ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
 {
     if ((ctx == NULL) || (uio == NULL)) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     int32_t ret = BSL_UIO_UpRef(uio);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_UIO_FAIL);
         return HITLS_UIO_FAIL;
     }
 
@@ -180,6 +201,19 @@ int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
 
     return HITLS_SUCCESS;
 }
+#endif
+
+static void ConfigPmtu(HITLS_Ctx *ctx, BSL_UIO *uio)
+{
+    (void)ctx;
+    (void)uio;
+#ifdef HITLS_TLS_PROTO_DTLS12
+    /* The PMTU needs to be set for DTLS. If the PMTU is not set, use the default value */
+    if ((ctx->config.pmtu == 0) && IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+        ctx->config.pmtu = DTLS_SCTP_PMTU;
+    }
+#endif
+}
 
 /**
  * @ingroup hitls
@@ -193,27 +227,27 @@ int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
  */
 int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio)
 {
-    int32_t ret;
     if ((ctx == NULL) || (uio == NULL)) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     /* The UIO count increases by 1, and the reference counting is performed for the write UIO */
-    ret = BSL_UIO_UpRef(uio);
+    int32_t ret = BSL_UIO_UpRef(uio);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_UIO_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16474, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+            "UIO_UpRef fail, ret %d", ret, 0, 0, 0);
         return HITLS_UIO_FAIL;
     }
-
+#ifdef HITLS_TLS_FEATURE_FLIGHT
     /* The UIO count increases by 1, and the reference counting is performed for reading the UIO */
     ret = BSL_UIO_UpRef(uio);
     if (ret != BSL_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16475, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+            "UIO_UpRef fail, ret %d", ret, 0, 0, 0);
         BSL_UIO_Free(uio); // free Drop the one on the top.
-        BSL_ERR_PUSH_ERROR(HITLS_UIO_FAIL);
         return HITLS_UIO_FAIL;
     }
-
+#endif
     /* The original write uio is not empty */
     if (ctx->uio != NULL) {
         /* A message is displayed, warning the user that the UIO is set repeatedly. */
@@ -226,11 +260,13 @@ int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio)
         BSL_UIO_FreeChain(ctx->uio);
     }
     ctx->uio = uio;
+#ifdef HITLS_TLS_FEATURE_FLIGHT
     if (ctx->bUio != NULL) {
         ret = BSL_UIO_Append(ctx->bUio, ctx->uio);
         if (ret != BSL_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16476, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+                "UIO_Append fail, ret %d", ret, 0, 0, 0);
             BSL_UIO_Free(uio); // free Drop the one on the top.
-            BSL_ERR_PUSH_ERROR(HITLS_UIO_FAIL);
             return HITLS_UIO_FAIL;
         }
         ctx->uio = ctx->bUio;
@@ -244,12 +280,8 @@ int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio)
         BSL_UIO_Free(ctx->rUio);
     }
     ctx->rUio = uio;
-
-    /* The PMTU needs to be set for DTLS. If the PMTU is not set, use the default value */
-    if ((ctx->config.pmtu == 0) && IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
-        ctx->config.pmtu = DTLS_SCTP_PMTU;
-    }
-
+#endif
+    ConfigPmtu(ctx, uio);
     return HITLS_SUCCESS;
 }
 
@@ -258,10 +290,12 @@ BSL_UIO *HITLS_GetUio(const HITLS_Ctx *ctx)
     if (ctx == NULL) {
         return NULL;
     }
+#ifdef HITLS_TLS_FEATURE_FLIGHT
     /* If |bUio| is active, the true caller-configured uio is its |next_uio|. */
     if (ctx->config.tlsConfig.isFlightTransmitEnable == true && ctx->bUio != NULL) {
         return BSL_UIO_Next(ctx->bUio);
     }
+#endif
     return ctx->uio;
 }
 
@@ -307,7 +341,6 @@ void *HITLS_GetUserData(const HITLS_Ctx *ctx)
 int32_t HITLS_SetUserData(HITLS_Ctx *ctx, void *userData)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -318,7 +351,6 @@ int32_t HITLS_SetUserData(HITLS_Ctx *ctx, void *userData)
 int32_t HITLS_SetErrorCode(HITLS_Ctx *ctx, int32_t errorCode)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -329,22 +361,20 @@ int32_t HITLS_SetErrorCode(HITLS_Ctx *ctx, int32_t errorCode)
 int32_t HITLS_GetErrorCode(const HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return ctx->errorCode;
 }
 
+#ifdef HITLS_TLS_FEATURE_ALPN
 int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *protoLen)
 {
     if (ctx == NULL || proto == NULL || protoLen == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     if (ctx->negotiatedInfo.alpnSelected == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -353,11 +383,11 @@ int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *pr
 
     return HITLS_SUCCESS;
 }
+#endif
 
 int32_t HITLS_IsServer(const HITLS_Ctx *ctx, uint8_t *isServer)
 {
     if (ctx == NULL || isServer == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -369,11 +399,11 @@ int32_t HITLS_IsServer(const HITLS_Ctx *ctx, uint8_t *isServer)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION
 /* Configure the handle for the session information about the HITLS link */
 int32_t HITLS_SetSession(HITLS_Ctx *ctx, HITLS_Session *session)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -403,20 +433,20 @@ HITLS_Session *HITLS_GetDupSession(HITLS_Ctx *ctx)
     }
     return HITLS_SESS_Dup(ctx->session);
 }
+#endif
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetPeerSignatureType(const HITLS_Ctx *ctx, HITLS_SignAlgo *sigType)
 {
     HITLS_SignAlgo signAlg = HITLS_SIGN_BUTT;
     HITLS_HashAlgo hashAlg = HITLS_HASH_BUTT;
 
     if (ctx == NULL || sigType == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, ctx->peerInfo.peerSignHashAlg,
         &signAlg, &hashAlg) == false) {
-        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE);
         return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
     }
 
@@ -424,33 +454,35 @@ int32_t HITLS_GetPeerSignatureType(const HITLS_Ctx *ctx, HITLS_SignAlgo *sigType
 
     return HITLS_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetLocalSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *localSignScheme)
 {
     if (ctx == NULL || localSignScheme == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     *localSignScheme = ctx->negotiatedInfo.signScheme;
     return HITLS_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetPeerSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *peerSignScheme)
 {
     if (ctx == NULL || peerSignScheme == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     *peerSignScheme = ctx->peerInfo.peerSignHashAlg;
     return HITLS_SUCCESS;
 }
+#endif
 
 int32_t HITLS_SetEcGroups(HITLS_Ctx *ctx, uint16_t *lst, uint32_t groupSize)
 {
-    if (ctx == NULL || lst == NULL || groupSize == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -459,28 +491,27 @@ int32_t HITLS_SetEcGroups(HITLS_Ctx *ctx, uint16_t *lst, uint32_t groupSize)
 
 int32_t HITLS_SetSigalgsList(HITLS_Ctx *ctx, const uint16_t *signAlgs, uint16_t signAlgsSize)
 {
-    if (ctx == NULL || signAlgs == NULL || signAlgsSize == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetSignature(&(ctx->config.tlsConfig), signAlgs, signAlgsSize);
 }
 
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSupportRenegotiation)
 {
-    if (ctx == NULL || isSupportRenegotiation == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetRenegotiationSupport(&(ctx->config.tlsConfig), isSupportRenegotiation);
 }
+#endif
 
 int32_t HITLS_SetEcPointFormats(HITLS_Ctx *ctx, const uint8_t *pointFormats, uint32_t pointFormatsSize)
 {
-    if (ctx == NULL || pointFormats == NULL || pointFormatsSize == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
     return HITLS_CFG_SetEcPointFormats(&(ctx->config.tlsConfig), pointFormats, pointFormatsSize);
@@ -489,21 +520,16 @@ int32_t HITLS_SetEcPointFormats(HITLS_Ctx *ctx, const uint8_t *pointFormats, uin
 int32_t HITLS_ClearChainCerts(HITLS_Ctx *ctx)
 {
     if (ctx == NULL || ctx->config.tlsConfig.certMgrCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
-    int32_t ret = HITLS_CFG_ClearChainCerts(&(ctx->config.tlsConfig));
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    return HITLS_SUCCESS;
+    return HITLS_CFG_ClearChainCerts(&(ctx->config.tlsConfig));
 }
 
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_SetClientVerifySupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
     return HITLS_CFG_SetClientVerifySupport(&(ctx->config.tlsConfig), support);
@@ -512,47 +538,46 @@ int32_t HITLS_SetClientVerifySupport(HITLS_Ctx *ctx, bool support)
 int32_t HITLS_SetNoClientCertSupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetNoClientCertSupport(&(ctx->config.tlsConfig), support);
 }
-
+#endif
+#ifdef HITLS_TLS_FEATURE_PHA
 int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetPostHandshakeAuthSupport(&(ctx->config.tlsConfig), support);
 }
-
+#endif
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_SetVerifyNoneSupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetVerifyNoneSupport(&(ctx->config.tlsConfig), support);
 }
-
+#endif
+#if defined(HITLS_TLS_FEATURE_CERT_MODE) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
 int32_t HITLS_SetClientOnceVerifySupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetClientOnceVerifySupport(&(ctx->config.tlsConfig), support);
 }
-
+#endif
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
 int32_t HITLS_SetDhAutoSupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -561,48 +586,146 @@ int32_t HITLS_SetDhAutoSupport(HITLS_Ctx *ctx, bool support)
 
 int32_t HITLS_SetTmpDh(HITLS_Ctx *ctx, HITLS_CRYPT_Key *dhPkey)
 {
-    if (ctx == NULL || dhPkey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetTmpDh(&(ctx->config.tlsConfig), dhPkey);
 }
-
+#endif
+#if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
 HITLS_CERT_Chain *HITLS_GetPeerCertChain(const HITLS_Ctx *ctx)
 {
-    int32_t ret;
     CERT_Pair *certPair = NULL;
-
-    if (ctx == NULL || ctx->session == NULL) {
+    if (ctx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16477, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null", 0, 0, 0, 0);
         return NULL;
     }
 
-    ret = SESS_GetPeerCert(ctx->session, &certPair);
+    int32_t ret = SESS_GetPeerCert(ctx->session, &certPair);
     if (ret != HITLS_SUCCESS || certPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16478, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ret %d, GetPeerCert fail", ret, 0, 0, 0);
         return NULL;
     }
 
     HITLS_CERT_Chain *certChain = SAL_CERT_PairGetChain(certPair);
     return certChain;
 }
-
+#endif
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 HITLS_TrustedCAList *HITLS_GetClientCAList(const HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
         return NULL;
     }
 
-    return ctx->peerInfo.caList;
+    if (ctx->isClient) {
+        return ctx->peerInfo.caList;
+    }
+    return ctx->globalConfig->caList;
 }
-
+#endif
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSecureRenegotiation)
 {
     if (ctx == NULL || isSecureRenegotiation == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     *isSecureRenegotiation = (uint8_t)ctx->negotiatedInfo.isSecureRenegotiation;
     return HITLS_SUCCESS;
 }
+#endif
+#ifdef HITLS_TLS_MAINTAIN_KEYLOG
+static int32_t Uint8ToHex(const uint8_t *srcBuf, size_t srcLen, size_t *offset,
+    size_t destMaxSize, uint8_t *destBuf)
+{
+    if (destMaxSize < 1) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16479, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "destMaxSize err", 0, 0, 0, 0);
+        return HITLS_NULL_INPUT;
+    }
+    size_t length = (destMaxSize - 1) / 2;
+    if (destBuf == NULL || offset == NULL || srcLen == 0 || srcBuf == NULL || length < srcLen) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16480, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
+        return HITLS_NULL_INPUT;
+    }
+    /* Initialize Offset */
+    size_t offsetTemp = 0u;
+    /* Converting an Array to a Hexadecimal Character String */
+    for (size_t i = 0u; i < srcLen; i++) {
+        if (sprintf_s((char *)&destBuf[offsetTemp], (destMaxSize - offsetTemp), "%02x", srcBuf[i]) == -1) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16481, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "sprintf_s fail", 0, 0, 0, 0);
+            return HITLS_INVALID_INPUT;
+        }
+        offsetTemp += sizeof(uint16_t);
+        if (offsetTemp >= destMaxSize) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16482, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "There's not enough memory", 0, 0, 0, 0);
+            return HITLS_INVALID_INPUT;
+        }
+    }
+    /* Update Offset */
+    *offset = offsetTemp;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_LogSecret(HITLS_Ctx *ctx, const char *label, const uint8_t *secret, size_t secretLen)
+{
+    if (ctx == NULL || label == NULL || secret == NULL || secretLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16483, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
+        return HITLS_NULL_INPUT;
+    }
+    if (ctx->globalConfig->keyLogCb == NULL) {
+        return HITLS_SUCCESS;
+    }
+    size_t offset = 0;
+    uint8_t *random = ctx->negotiatedInfo.clientRandom;
+    uint32_t randomLen = RANDOM_SIZE;
+    size_t labelLen = strlen(label);
+    const uint8_t blankSpace = 0x20;
+    // The lengths of random and secret need to be converted into hexadecimal so they are doubled.
+    size_t outLen = labelLen + randomLen + randomLen + secretLen + secretLen + 3;
+    uint8_t *outBuffer = (uint8_t *)BSL_SAL_Calloc((uint32_t)outLen, sizeof(uint8_t));
+    if (outBuffer == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16484, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    // Combine label, random, and secret into a character string separated by spaces and end with '\0'.
+    (void)memcpy_s(outBuffer, outLen, label, labelLen);
+    offset += labelLen;
+    outBuffer[offset++] = blankSpace;
+    size_t index = 0;
+
+    // Convert random to a hexadecimal character string.
+    int32_t ret = Uint8ToHex(random, randomLen, &index, outLen - offset, &outBuffer[offset]);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16485, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "random Uint8ToHex fail", 0, 0, 0, 0);
+        BSL_SAL_FREE(outBuffer);
+        return ret;
+    }
+    offset += index;
+    outBuffer[offset++] = blankSpace;
+
+    // Convert the master key buffer to a hexadecimal character string.
+    ret = Uint8ToHex(secret, secretLen, &index, outLen - offset, &outBuffer[offset]);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16486, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "secret Uint8ToHex fail", 0, 0, 0, 0);
+        BSL_SAL_FREE(outBuffer);
+        return ret;
+    }
+    offset += index;
+    ctx->globalConfig->keyLogCb(ctx, (const char *)outBuffer);
+
+    BSL_SAL_CleanseData(outBuffer, outLen);
+    BSL_SAL_FREE(outBuffer);
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_MAINTAIN_KEYLOG */

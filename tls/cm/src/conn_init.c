@@ -14,8 +14,10 @@
  */
 
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "hitls_error.h"
 #include "bsl_err_internal.h"
+#include "tls_binlog_id.h"
 #include "hitls_type.h"
 #include "rec.h"
 #include "hs.h"
@@ -24,70 +26,44 @@
 #include "change_cipher_spec.h"
 #include "conn_common.h"
 #include "hs_ctx.h"
-
 // an instance of unexpectedMsgProcessCb
-int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data, uint32_t dataLen)
+int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data, uint32_t dataLen, bool isPlain)
 {
+    (void)isPlain;
     if (ctx == NULL || data == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16509, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
-
-    int32_t ret = HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
-    CM_State linkState = ctx->state;
-
-    /* In closed state, only unexpected alert messages are received. */
-    if (GetConnState(ctx) == CM_STATE_CLOSED) {
-        if (msgType == REC_TYPE_ALERT) {
-            ALERT_Recv(ctx, data, dataLen);
-        }
-        BSL_ERR_PUSH_ERROR(HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-        return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+    if (msgType != REC_TYPE_ALERT) {
+        ALERT_ClearWarnCount(ctx);
     }
-
+    int32_t ret = HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (isPlain) { // tls13
+        if (msgType == REC_TYPE_CHANGE_CIPHER_SPEC) {
+            return ProcessPlainCCS(ctx, data, dataLen);
+        }
+        return ProcessPlainAlert(ctx, data, dataLen);
+    }
+#endif
     switch (msgType) {
         case REC_TYPE_CHANGE_CIPHER_SPEC:
-            CCS_Recv(ctx, data, dataLen);
-            break;
+            return ProcessDecryptedCCS(ctx, data, dataLen);
         case REC_TYPE_ALERT:
-            if (ctx->hsCtx != NULL && ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP11 &&
-                ctx->hsCtx->state == TRY_RECV_CLIENT_HELLO && ctx->negotiatedInfo.version == 0 &&
-                data[0] == ALERT_LEVEL_WARNING) {
-                ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-                return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
-            }
-            ALERT_Recv(ctx, data, dataLen);
-            break;
-        case REC_TYPE_HANDSHAKE:
-            ret = HS_RecvUnexpectedMsgProcess(ctx, data, dataLen, &linkState);
-            ChangeConnState(ctx, linkState);
-            if (ret == HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE) {
-                return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
-            }
-            break;
-        case REC_TYPE_APP:
-            if (HS_IsAppDataAllowed(ctx)) {
-                APP_RecvUnexpectedMsgProcess(ctx, data, dataLen);
-                break;
-            }
-            /* If app messages are not allowed to be received, needs send an alert message */
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-            break;
+            return ProcessDecryptedAlert(ctx, data, dataLen);
         default:
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16512, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "unknown msgType", 0, 0, 0, 0);
             ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
             break;
-    }
-    if (ret == HITLS_SUCCESS) {
-        ret = HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
     }
     return ret;
 }
 
 int32_t CONN_Init(TLS_Ctx *ctx)
 {
-    int32_t ret;
-
-    ret = REC_Init(ctx);
+    int32_t ret = REC_Init(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -107,26 +83,21 @@ int32_t CONN_Init(TLS_Ctx *ctx)
         return ret;
     }
 
-    ret = APP_Init(ctx);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
     ctx->method.isRecvCCS = CCS_IsRecv;
     ctx->method.sendCCS = CCS_Send;
     ctx->method.ctrlCCS = CCS_Ctrl;
     ctx->method.sendAlert = ALERT_Send;
     ctx->method.getAlertFlag = ALERT_GetFlag;
     ctx->method.unexpectedMsgProcessCb = ConnUnexpectedMsg;
-
+#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
     ctx->keyUpdateType = HITLS_KEY_UPDATE_REQ_END;
     ctx->isKeyUpdateRequest = false;
-
+#endif
     // default value is X509_V_OK(0)
     ctx->peerInfo.verifyResult = 0;
-
+#ifdef HITLS_TLS_CONFIG_STATE
     ctx->rwstate = HITLS_NOTHING;
-
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -136,6 +107,5 @@ void CONN_Deinit(TLS_Ctx *ctx)
     ALERT_Deinit(ctx);
     CCS_DeInit(ctx);
     HS_DeInit(ctx);
-    APP_DeInit(ctx);
     return;
 }

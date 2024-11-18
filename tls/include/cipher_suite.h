@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "hitls_config.h"
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
@@ -121,20 +122,6 @@ const SignSchemeInfo *CFG_GetSignSchemeList(uint32_t *len);
  * @return  Pointer to the signature hash algorithm list
  */
 const SignSchemeInfo *CFG_GetSignSchemeListTlcp(uint32_t *len);
-
-/**
- * @brief   Obtain the algorithm suite based on the specified information.
- *
- * @param   version [IN] TLS version
- * @param   kxAlgo [IN] Key exchange algorithm
- * @param   authAlgo [IN] Authentication algorithm
- * @param   cipherAlgo [IN] Symmetric-key algorithm
- * @param   hashAlgo [IN] Hash algorithm
- *
- * @return  cipher suite ID
- */
-uint16_t CFG_GetCipherSuite(uint16_t version, HITLS_KeyExchAlgo kxAlgo, HITLS_AuthAlgo authAlgo,
-    HITLS_CipherAlgo cipherAlgo, HITLS_HashAlgo hashAlgo);
 
 /**
  * @brief   Obtain the cipher suite information.

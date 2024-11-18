@@ -107,9 +107,10 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     "%s|%s|%s|%d|"
     "%d|%s|%d|%s|"
     "%s|%s|%s|%s|"
-    "%s|%d|%d|%s|"
+    "%s|%d|%d|"
     "%u|%d|%d|"
-    "%d|%d|",
+    "%d|%d|%d|"
+    "%d|%u|%d|",
     g_cmdIndex, __FUNCTION__, ctxId,
     config->minVersion, config->maxVersion, config->cipherSuites, config->tls13CipherSuites,
     config->pointFormats, config->groups, config->signAlgorithms, config->isSupportRenegotiation,
@@ -118,9 +119,10 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     config->signCert, config->signPrivKey, config->psk, config->isSupportSessionTicket,
     config->setSessionCache, config->ticketKeyCb, config->isFlightTransmitEnable, config->serverName,
     config->sniDealCb, config->sniArg, config->alpnList, config->alpnSelectCb,
-    config->alpnUserData, config->securitylevel, config->isSupportDhAuto, config->noSecRenegotiationCb,
+    config->alpnUserData, config->securitylevel, config->isSupportDhAuto,
     config->keyExchMode, config->SupportType, config->isSupportPostHandshakeAuth,
-    config->needCheckKeyUsage, config->isSupportVerifyNone);
+    config->readAhead, config->needCheckKeyUsage, config->isSupportVerifyNone,
+    config->allowClientRenegotiate, config->emptyRecordsNum, config->allowLegacyRenegotiate);
     dataBuf.dataLen = strlen(dataBuf.data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
