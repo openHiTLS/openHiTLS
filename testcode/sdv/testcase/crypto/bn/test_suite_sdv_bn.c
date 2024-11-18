@@ -1929,6 +1929,10 @@ void SDV_CRYPTO_BN_BARRETT_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, H
    
     BN_BigNum *resBn = NULL;
     BN_BigNum *mu = NULL;
+<<<<<<< HEAD
+=======
+    uint32_t k = 0;
+>>>>>>> 8a054e3 (Modify the code, precompute the mu, and optimize the mod operation)
     BN_Optimizer *opt = NULL;
     
     BN_BigNum *bn1 = TEST_VectorToBN(sign1, a->x, a->len);
