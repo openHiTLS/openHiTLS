@@ -57,6 +57,8 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->check = method->check;
     dest->cmp = method->cmp;
     dest->copyPara = method->copyPara;
+    dest->blind = method->blind;
+    dest->unBlind = method->unBlind;
 }
 
 CRYPT_EAL_PkeyCtx *PkeyNewDefaultCtx(CRYPT_PKEY_AlgId id)
