@@ -97,7 +97,7 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
     if (linkObj == NULL) {
         return NULL;
     }
-
+    HITLS_CFG_SetReadAhead(config, 1);
     HITLS_Ctx *sslObj = HITLS_New(config);
     if (sslObj == NULL) {
         goto exception;
@@ -125,7 +125,7 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
     if (ret != HITLS_SUCCESS) {
         goto exception;
     }
-    BSL_UIO_SetInit(io, 1);
+    BSL_UIO_SetInit(io, true);
     // must return success
     ret = HITLS_SetUio(sslObj, io);
     if (ret != HITLS_SUCCESS) {
@@ -141,10 +141,16 @@ exception:
     BSL_SAL_FREE(linkObj);
     return NULL;
 }
-
+#ifdef HITLS_TLS_PROTO_TLCP11
 FRAME_LinkObj *FRAME_CreateTLCPLink(HITLS_Config *config, BSL_UIO_TransportType type, bool isClient)
 {
-    HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+#endif
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    HITLS_CFG_SetSecurityLevel(config, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     int32_t ret;
     if (isClient) {
         ret = HiTLS_X509_LoadCertAndKey(config, SM2_VERIFY_PATH, SM2_CHAIN_PATH, SM2_CLIENT_ENC_CERT_PATH,
@@ -159,8 +165,8 @@ FRAME_LinkObj *FRAME_CreateTLCPLink(HITLS_Config *config, BSL_UIO_TransportType 
 
     return CreateLink(config, type);
 }
-
-// Set certificate and creating a connection
+#endif /* HITLS_TLS_PROTO_TLCP11 */
+//Set certificate and creating a connection
 FRAME_LinkObj *FRAME_CreateLinkBase(HITLS_Config *config, BSL_UIO_TransportType type, bool setCertFlag)
 {
     int32_t ret;
@@ -193,19 +199,39 @@ FRAME_LinkObj *FRAME_CreateLinkBase(HITLS_Config *config, BSL_UIO_TransportType 
 
 FRAME_LinkObj *FRAME_CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
 {
-    HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    HITLS_CFG_SetSecurityLevel(config, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     return FRAME_CreateLinkBase(config, type, true);
 }
 
 FRAME_LinkObj *FRAME_CreateLinkEx(HITLS_Config *config, BSL_UIO_TransportType type)
 {
-    HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    HITLS_CFG_SetSecurityLevel(config, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     return FRAME_CreateLinkBase(config, type, false);
 }
 
 FRAME_LinkObj *FRAME_CreateLinkWithCert(HITLS_Config *config, BSL_UIO_TransportType type, const FRAME_CertInfo* certInfo)
 {
-    HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    if (config->securityLevel == HITLS_SECURITY_LEVEL_ONE) {
+        HITLS_CFG_SetSecurityLevel(config, HITLS_SECURITY_LEVEL_ZERO);
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     int32_t ret;
     ret = HiTLS_X509_LoadCertAndKey(config,
         certInfo->caFile,
@@ -227,14 +253,17 @@ void FRAME_FreeLink(FRAME_LinkObj *linkObj)
     }
     FRAME_IO_FreeUserData(BSL_UIO_GetUserData(linkObj->io));
     // BSL_UIO_Free is automatically invoked twice in HITLS_Free
+#ifdef HITLS_TLS_FEATURE_FLIGHT
     if (linkObj->io != NULL && linkObj->io->references.count >= 2) {
         while (linkObj->io->references.count > 2) {
             BSL_UIO_Free(linkObj->io);
         }
     } else {
+#endif
         BSL_UIO_Free(linkObj->io);
+#ifdef HITLS_TLS_FEATURE_FLIGHT
     }
-
+#endif
     HITLS_Free(linkObj->ssl);
     BSL_SAL_FREE(linkObj);
     return;

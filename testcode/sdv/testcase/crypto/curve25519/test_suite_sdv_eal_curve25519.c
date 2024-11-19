@@ -1026,3 +1026,24 @@ exit:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_CRYPTO_CURVE25519_GET_SECURITY_BITS_FUNC_TC001
+ * @title  CURVE25519 CRYPT_EAL_PkeyGetSecurityBits test.
+ * @precon nan
+ * @brief
+ *    1. Create the context of the X25519 algorithm, expected result 1
+ *    2. Call the CRYPT_EAL_PkeyGetSecurityBits Obtains secbits, expected result 2
+ * @expect
+ *    1. Success, and the context is not null.
+ *    2. The return value is secBits.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_GET_SECURITY_BITS_FUNC_TC001(int id, int secBits)
+{
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(id);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetSecurityBits(pkey) == (uint32_t)secBits);
+exit:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */

@@ -18,6 +18,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "hitls_build.h"
 #include "tls.h"
 
 #ifdef __cplusplus
@@ -98,7 +99,7 @@ void ALERT_CleanInfo(const TLS_Ctx *ctx);
  * @param description [IN] alert Description
  *
  */
-void ALERT_Send(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description);
+void ALERT_Send(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description);
 
 /**
  * @brief Send the alert message cached by the alert module to the network layer.
@@ -112,16 +113,57 @@ void ALERT_Send(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description);
 int32_t ALERT_Flush(TLS_Ctx *ctx);
 
 /**
- * @ingroup alert
- * @brief Alert receiving interface
+ * @brief Process alert message after decryption
  *
  * @attention ctx cannot be empty.
  * @param ctx [IN] tls Context
- * @param data [IN] Alert message body
- * @param len [IN] Alert message length
- *
+ * @param data [IN] alert data
+ * @param dataLen [IN] alert data length
+ * @retval HITLS_REC_NORMAL_RECV_UNEXPECT_MSG
  */
-void ALERT_Recv(TLS_Ctx *ctx, const uint8_t *data, uint32_t len);
+int32_t ProcessDecryptedAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
+
+/**
+ * @brief Process plaintext alert message in TLS13
+ *
+ * @attention ctx cannot be empty.
+ * @param ctx [IN] tls Context
+ * @param data [IN] alert data
+ * @param dataLen [IN] alert data length
+ * @retval HITLS_REC_NORMAL_RECV_UNEXPECT_MSG
+ */
+int32_t ProcessPlainAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
+
+/**
+ * @ingroup alert
+ * @brief Clear the number of consecutive received warnings
+ *
+ * @param ctx [IN] tls Context
+ */
+void ALERT_ClearWarnCount(TLS_Ctx *ctx);
+
+/**
+ * @ingroup alert
+ * @brief Increase the number of alert and check whether it has exceeded the threshold or not
+ *
+ * @param ctx [IN] tls Context
+ * @param threshold [IN] alert number threshold
+ * @retval the number of alert has exceeded the threshold or not
+ */
+bool ALERT_HaveExceeded(TLS_Ctx *ctx, uint8_t threshold);
+
+#ifdef HITLS_BSL_LOG
+int32_t ReturnAlertProcess(TLS_Ctx *ctx, int32_t err, uint32_t logId, const void *logStr,
+    ALERT_Description description);
+
+#define RETURN_ALERT_PROCESS(ctx, err, logId, logStr, description) \
+    ReturnAlertProcess(ctx, err, logId, LOG_STR(logStr), description)
+
+#else
+
+#define RETURN_ALERT_PROCESS(ctx, err, logId, logStr, description) \
+    (ctx)->method.sendAlert(ctx, ALERT_LEVEL_FATAL, description), (err)
+#endif /* HITLS_BSL_LOG */
 
 #ifdef __cplusplus
 }

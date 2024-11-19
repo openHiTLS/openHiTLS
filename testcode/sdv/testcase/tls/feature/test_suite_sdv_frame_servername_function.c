@@ -42,6 +42,7 @@
 #include "frame_link.h"
 #include "common_func.h"
 #include "hitls_crypt_init.h"
+#include "alert.h"
 
 #define TEST_SERVERNAME_LENGTH 20
 #define READ_BUF_SIZE 18432
@@ -66,7 +67,8 @@ typedef struct {
 
 
 static SNI_Arg *sniArg = NULL;
-static char *g_serverName = "www.example.com";
+static char *g_serverName = "huawei.com";
+static char *g_serverNameErr = "www.huawei.com";
 static uint8_t *g_sessionId;
 static uint32_t g_sessionIdSize;
 
@@ -79,7 +81,7 @@ int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
     return HITLS_ACCEPT_SNI_ERR_OK;
 }
 
-void STUB_SendAlert(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
+void STUB_SendAlert(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
 {
     (void)ctx;
     (void)level;
@@ -104,7 +106,7 @@ typedef struct {
     BSL_UIO_TransportType type;
 } HandshakeTestInfo;
 
-int32_t CreateConfig(HITLS_Config **cfg, uint16_t version)
+int32_t TestCreateConfig(HITLS_Config **cfg, uint16_t version)
 {
 
     switch (version) {
@@ -160,7 +162,7 @@ void SetCommonConfig(HITLS_Config **config)
     HITLS_CFG_SetPskServerCallback(*config, (HITLS_PskServerCb)ExampleServerCb);
     HITLS_CFG_SetPskClientCallback(*config, (HITLS_PskClientCb)ExampleClientCb);
     HITLS_CFG_SetSessionTicketSupport(*config, false);
-    HITLS_CFG_SetCloseCheckKeyUsage(*config, false);
+    HITLS_CFG_SetCheckKeyUsage(*config, false);
 }
 
 static int32_t CreateLink(HandshakeTestInfo *testInfo)
@@ -188,7 +190,7 @@ static int32_t DefaultCfgAndLink(HandshakeTestInfo *testInfo)
 {
     FRAME_Init();
 
-    CreateConfig(&(testInfo->clientConfig), testInfo->version);
+    TestCreateConfig(&(testInfo->clientConfig), testInfo->version);
     if (testInfo->clientConfig == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
@@ -196,7 +198,7 @@ static int32_t DefaultCfgAndLink(HandshakeTestInfo *testInfo)
     HITLS_CFG_SetServerName(testInfo->clientConfig, (uint8_t *)g_serverName, (uint32_t)strlen(g_serverName));
 
 
-    CreateConfig(&(testInfo->serverConfig), testInfo->version);
+    TestCreateConfig(&(testInfo->serverConfig), testInfo->version);
     if (testInfo->serverConfig == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
@@ -257,7 +259,8 @@ int32_t FirstHandshake(HandshakeTestInfo *testInfo)
     }
 
     uint8_t data[] = "Hello World";
-    ret = HITLS_Write(testInfo->server->ssl, data, sizeof(data));
+    uint32_t writeLen;
+    ret = HITLS_Write(testInfo->server->ssl, data, sizeof(data), &writeLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -289,7 +292,7 @@ int32_t FirstHandshake(HandshakeTestInfo *testInfo)
 * @title  During session resumption, the serverName extension of clientHello
           is different from that in first handshake
 * @precon  nan
-* @brief  1. For the first handshake, set serverName to www.example.com in the clientHello. 
+* @brief  1. For the first handshake, set serverName to huawei.com in the clientHello.
           Expected result 1
           2. During session resumption, changed serverName of clientHello to www.sss.com. Expected result 2
           3. process the client hello. Expected result 2
@@ -323,7 +326,7 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC001(int version, int type)
 
     FRAME_Msg frameMsg = {0};
     uint32_t parseLen = 0;
-
+    HS_Init(testInfo.server->ssl);
     ASSERT_TRUE(ParserTotalRecord(testInfo.server, &frameMsg, buffer, len, &parseLen) == HITLS_SUCCESS);
     ASSERT_TRUE(frameMsg.body.handshakeMsg.type == CLIENT_HELLO);
 
@@ -334,7 +337,7 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC001(int version, int type)
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverName = (uint8_t *)hostName;
 
     testInfo.server->ssl->method.sendAlert = STUB_SendAlert;
-    HS_Init(testInfo.server->ssl);
+    CONN_Init(testInfo.server->ssl);
 
     if (testInfo.type == BSL_UIO_TCP) {
         ASSERT_TRUE(Tls12ServerRecvClientHelloProcess(testInfo.server->ssl, &frameMsg.body.handshakeMsg) ==
@@ -355,5 +358,100 @@ exit:
     FRAME_FreeLink(testInfo.server);
     HITLS_SESS_Free(testInfo.clientSession);
     FreeSNIArg(sniArg);
+}
+/* END_CASE */
+
+void *ExampleServerNameArg1(void)
+{
+    return sniArg;
+}
+
+int32_t ExampleServerNameCb1(HITLS_Ctx *ctx, int *alert, void *arg)
+{
+    (void)arg;
+    (void)alert;
+    const char *server_servername = "huawei.com";
+    const char *client_servername = HITLS_GetServerName(ctx, HITLS_SNI_HOSTNAME_TYPE);
+
+    if (client_servername != NULL && server_servername != NULL) {
+        if (strcmp(client_servername, server_servername) == 0){
+            printf("\nHiTLS ServerNameCb return HITLS_ACCEPT_SNI_ERR_OK\n");
+            return HITLS_ACCEPT_SNI_ERR_OK;
+        }
+        else {
+            printf("\nHiTLS ServerNameCb return HITLS_ACCEPT_SNI_ERR_ALERT_FATAL\n");
+            return HITLS_ACCEPT_SNI_ERR_ALERT_FATAL;
+        }
+    } else{
+        if (client_servername == NULL)
+        {
+            printf("\nHiTLS Server get client_servername is NULL!\n");
+        } else if (server_servername == NULL){
+            printf("\nHiTLS Server get server_servername is NULL!\n");
+        }
+    }
+
+    printf("\nHiTLS ServerNameCb return HITLS_ACCEPT_SNI_ERR_NOACK\n");
+    return HITLS_ACCEPT_SNI_ERR_NOACK;
+}
+
+/* @
+* @test  UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC002
+* @title  The TLS13 session is resumed. The client hello message carries the SNI, and the SNI value is different from
+            that of the first connection setup.
+* @precon  nan
+* @brief  1. For the first handshake, set serverName to huawei.com in the clientHello. Expected result 1
+          2. During session resumption, changed serverName of clientHello to www.huawei.com. Expected result 2
+          3. process the client hello. Expected result 2
+* @expect 1. The serverName extension is set successfully and the handshake succeeds
+          2. return success
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC002()
+{
+    FRAME_Init();
+
+    HITLS_Config *clientconfig = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+    ASSERT_TRUE(clientconfig != NULL);
+    HITLS_CFG_SetServerNameCb(serverconfig, ExampleServerNameCb1);
+    HITLS_CFG_SetServerNameArg(serverconfig, ExampleServerNameArg1);
+
+    HITLS_CFG_SetServerName(clientconfig, (uint8_t *)g_serverName, strlen(g_serverName));
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    HITLS_Session *Session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(Session != NULL);
+
+    FRAME_FreeLink(client);
+    client = NULL;
+    FRAME_FreeLink(server);
+    server = NULL;
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSession(client->ssl, Session), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_SetServerName(client->ssl, (uint8_t *)g_serverNameErr, strlen(g_serverNameErr)) == HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME);
+    ALERT_Info alertInfo = { 0 };
+    ALERT_GetInfo(server->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_UNRECOGNIZED_NAME);
+exit:
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_SESS_Free(Session);
 }
 /* END_CASE */

@@ -89,18 +89,6 @@ int32_t VERIFY_VerifySignData(TLS_Ctx *ctx, HITLS_CERT_Key *pubkey, HITLS_SignHa
                               const uint8_t *signData, uint16_t signDataLen);
 
 /**
- * @brief   Set the verify data
- *
- * @param   ctx [IN] verify context
- * @param   verifyData [IN]
- * @param   verifyDataLen [IN]
- *
- * @retval  HITLS_SUCCESS
- * @retval  HITLS_MEMCPY_FAIL Memory copy failed
- */
-int32_t VERIFY_SetVerifyData(VerifyCtx *ctx, const uint8_t *verifyData, uint32_t verifyDataLen);
-
-/**
  * @brief   Obtain the verify data
  *
  * @param   ctx [IN] verify context

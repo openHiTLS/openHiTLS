@@ -328,37 +328,6 @@ static inline bool ParamIdIsValid(uint32_t id, const uint32_t *list, uint32_t nu
     return false;
 }
 
-static inline uint32_t Uint32ConstTimeMsb(uint32_t a)
-{
-    // 31 == (4 * 8 - 1)
-    return 0u - (a >> 31);
-}
-
-static inline uint32_t Uint32ConstTimeIsZero(uint32_t a)
-{
-    return Uint32ConstTimeMsb(~a & (a - 1));
-}
-
-static inline uint32_t Uint32ConstTimeEqual(uint32_t a, uint32_t b)
-{
-    return Uint32ConstTimeIsZero(a ^ b);
-}
-// (mask & a) | (~mask & b)
-static inline uint32_t Uint32ConstTimeSelect(uint32_t mask, uint32_t a, uint32_t b)
-{
-    return ((mask) & a) | ((~mask) & b);
-}
-
-static inline uint32_t Uint32ConstTimeLt(uint32_t a, uint32_t b)
-{
-    return Uint32ConstTimeMsb(a ^ ((a ^ b) | ((a - b) ^ a)));
-}
-
-static inline uint32_t Uint32ConstTimeGt(uint32_t a, uint32_t b)
-{
-    return ~Uint32ConstTimeLt(a, b);
-}
-
 void GetCpuInstrSupportState(void);
 
 #ifdef __x86_64__

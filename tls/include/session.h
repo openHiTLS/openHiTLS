@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "sal_time.h"
 #include "hitls_session.h"
 #include "cert.h"
@@ -57,9 +58,6 @@ int32_t SESS_GetHostName(HITLS_Session *sess, uint32_t *hostNameSize, uint8_t **
 
 /* Check the validity of the session */
 bool SESS_CheckValidity(HITLS_Session *sess, uint64_t curTime);
-
-/* tls1.3 Checking the Validity of Client Sessions and ObfuscatedTicketAge */
-bool SESS_CheckObfuscatedTicketAge(HITLS_Session *sess, uint64_t curTime, uint64_t obfuscatedTicketAge);
 
 uint64_t SESS_GetStartTime(HITLS_Session *sess);
 

@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 
 /**
  * @brief   Read a record in the DTLS protocol

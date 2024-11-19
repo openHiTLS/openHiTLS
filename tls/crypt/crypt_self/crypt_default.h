@@ -54,6 +54,16 @@ uint32_t CRYPT_DEFAULT_HMAC_Size(HITLS_HashAlgo hashAlgo);
 HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len);
 
 /**
+ * @brief ReInitialize the HMAC context.
+ *
+ * @param ctx [IN] HMAC context.
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ * @retval Other         failure
+ */
+int32_t CRYPT_DEFAULT_HMAC_ReInit(HITLS_HMAC_Ctx *ctx);
+
+/**
  * @brief Release the HMAC context.
  *
  * @param hmac [IN] HMAC context. The CTX is set NULL by the invoker.
@@ -205,6 +215,12 @@ int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_
     uint8_t *out, uint32_t *outLen);
 
 /**
+ * @brief Release the cipher ctx.
+ *
+ * @param ctx [IN] cipher ctx handle. The handle is set NULL by the invoker.
+ */
+void CRYPT_DEFAULT_CipherFree(HITLS_Cipher_Ctx *ctx);
+/**
  * @brief Generate the ECDH key pair.
  *
  * @param curveParams [IN] ECDH parameter
@@ -274,7 +290,7 @@ void CRYPT_DEFAULT_FreeKey(HITLS_CRYPT_Key *key);
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *usedLen);
+int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen);
 
 /**
  * @brief Calculate the shared key.

@@ -853,7 +853,7 @@ exit:
 * @brief 1. Use the default configuration items to configure the client and server. Expected result 1.
 * 2. When the server expects to receive the Client Hello packet, the server constructs the Client Hello packet with the compressed field value being 1. Check the behavior of the server. Expected result 2.
 * @expect 1. The initialization is successful.
-* 2. The server sends an ALERT message. The ALERT level is ALERT_LEVEL_FATAL and the description is ALERT_ILLEGAL_PARAMETER.
+* 2. The server sends an ALERT message. The ALERT level is ALERT_LEVEL_FATAL and the description is ALERT_DECODE_ERROR.
 * @prior Level 1
 * @auto TRUE
 @ */
@@ -899,7 +899,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_COMPRESSED_TC001(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_DECODE_ERROR);
 
 exit:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1721,7 +1721,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC001(void)
     uint32_t writeLen = strlen("abcd1234");
     uint8_t readData[MAX_RECORD_LENTH] = {0};
     uint32_t readLen = MAX_RECORD_LENTH;
-    ASSERT_EQ(HITLS_Write(testInfo.server->ssl, writeData, writeLen), HITLS_SUCCESS);
+    uint32_t sendNum;
+    ASSERT_EQ(HITLS_Write(testInfo.server->ssl, writeData, writeLen, &sendNum), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, writeLen);
@@ -1893,7 +1894,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC005(void)
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_SUCCESS);
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(testInfo.server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(testInfo.server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(testInfo.server);
     ASSERT_EQ(serverTlsCtx->state, CM_STATE_ALERTED);
 
@@ -1935,7 +1936,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC006(void)
     uint32_t writeLen = strlen("abcd1234");
     uint8_t readData[MAX_RECORD_LENTH] = {0};
     readLen = MAX_RECORD_LENTH;
-    ASSERT_EQ(HITLS_Write(testInfo.server->ssl, writeData, writeLen), HITLS_SUCCESS);
+    uint32_t sendNum;
+    ASSERT_EQ(HITLS_Write(testInfo.server->ssl, writeData, writeLen, &sendNum), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, writeLen);
@@ -2199,7 +2201,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC004(void)
     uint32_t writeLen = strlen("abcd1234");
     uint8_t readData[MAX_RECORD_LENTH] = {0};
     uint32_t readLen = MAX_RECORD_LENTH;
-    ASSERT_EQ(HITLS_Write(testInfo.server->ssl, writeData, writeLen), HITLS_SUCCESS);
+    uint32_t sendNum;
+    ASSERT_EQ(HITLS_Write(testInfo.server->ssl, writeData, writeLen, &sendNum), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, writeLen);
@@ -2339,7 +2342,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC001(void)
     uint32_t readLen = MAX_RECORD_LENTH;
     uint8_t tmpData[MAX_RECORD_LENTH];
     uint32_t tmpLen;
-    ASSERT_TRUE(HITLS_Write(testInfo.server->ssl, writeData, writeLen) == HITLS_SUCCESS);
+    uint32_t sendNum;
+    ASSERT_TRUE(HITLS_Write(testInfo.server->ssl, writeData, writeLen, &sendNum) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TransportSendMsg(testInfo.server->io, tmpData, MAX_RECORD_LENTH, &tmpLen) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, tmpData, tmpLen) == HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
@@ -2391,7 +2395,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC002(void)
     uint32_t readLen = MAX_RECORD_LENTH;
     uint8_t tmpData[MAX_RECORD_LENTH];
     uint32_t tmpLen;
-    ASSERT_TRUE(HITLS_Write(testInfo.server->ssl, writeData, writeLen) == HITLS_SUCCESS);
+    uint32_t sendNum;
+    ASSERT_TRUE(HITLS_Write(testInfo.server->ssl, writeData, writeLen, &sendNum) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TransportSendMsg(testInfo.server->io, tmpData, MAX_RECORD_LENTH, &tmpLen) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, tmpData, tmpLen) == HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
@@ -2450,7 +2455,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_CLIENT_HELLO_TC001(void)
     uint32_t readLen = MAX_RECORD_LENTH;
     uint8_t tmpData[MAX_RECORD_LENTH];
     uint32_t tmpLen;
-    ASSERT_EQ(HITLS_Write(testInfo.client->ssl, writeData, writeLen), HITLS_SUCCESS);
+    uint32_t sendNum;
+    ASSERT_EQ(HITLS_Write(testInfo.client->ssl, writeData, writeLen, &sendNum), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TransportSendMsg(testInfo.client->io, tmpData, MAX_RECORD_LENTH, &tmpLen) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, tmpData, tmpLen) == HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(testInfo.server->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
@@ -2615,8 +2621,8 @@ void UT_DTLS_RFC6347_RECV_ALERT_AFTER_CCS_TC001()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
-    
-    // client receive ccs, wait to receive finish 
+
+    // client receive ccs, wait to receive finish
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     uint8_t alertdata[2] = {0x02, 0x0a};
     ASSERT_EQ(REC_Write(serverTlsCtx, REC_TYPE_ALERT, alertdata, sizeof(alertdata)), HITLS_SUCCESS);
@@ -2676,9 +2682,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_TC001()
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     uint8_t readData[MAX_RECORD_LENTH] = {0};
     uint32_t readLen = MAX_RECORD_LENTH;
-    ASSERT_EQ(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    ASSERT_EQ(clientTlsCtx->state, CM_STATE_RENEGOTIATION);
-    ASSERT_TRUE(clientTlsCtx->hsCtx->state == TRY_RECV_SERVER_HELLO);
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_MSG_HANDLE_UNMATCHED_SEQUENCE);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

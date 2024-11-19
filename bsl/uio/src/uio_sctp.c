@@ -443,7 +443,7 @@ int32_t SctpCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return BslSctpSetFd(uio, larg, parg);
         case BSL_UIO_GET_FD:
             return BslSctpGetFd(parameters, parg, larg);
-        case BSL_UIO_SCTP_MARK_APP_MESSAGE:
+        case BSL_UIO_SCTP_MASK_APP_MESSAGE:
             return BslSctpMaskAppMsg(parameters, parg, larg);
         case BSL_UIO_SCTP_CHECK_PEER_AUTH:
             return BslSctpCheckPeerAuth(uio, parg, larg);

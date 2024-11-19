@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#if defined(HITLS_TLS_FEATURE_SESSION_TICKET) && defined(HITLS_TLS_HOST_SERVER)
+#include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -27,17 +29,18 @@
 #include "session_mgr.h"
 #include "pack.h"
 #include "send_process.h"
-#include "securec.h"
 
+#ifdef HITLS_TLS_PROTO_TLS13
 #define HITLS_ONE_WEEK_SECONDS (604800)
-
+#endif
+#ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
     HS_Ctx *hsCtx = ctx->hsCtx;
     TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
 
-    /** determine whether to assemble a message */
+    /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
         hsCtx->ticketLifetimeHint = (uint32_t)SESSMGR_GetTimeout(sessMgr);
         BSL_SAL_FREE(hsCtx->ticket);
@@ -58,7 +61,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
         }
     }
 
-    /** writing Handshake message */
+    /* writing Handshake message */
     ret = HS_SendMsg(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -66,11 +69,12 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15979, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "send new session ticket msg success.", 0, 0, 0, 0);
-    /** update the state machine */
+    /* update the state machine */
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
-
-static int32_t Tls13TicketGenerateConfigSesson(TLS_Ctx *ctx, HITLS_Session **sessionPtr,
+#endif /* HITLS_TLS_PROTO_TLS_BASIC */
+#ifdef HITLS_TLS_PROTO_TLS13
+static int32_t Tls13TicketGenerateConfigSession(TLS_Ctx *ctx, HITLS_Session **sessionPtr,
     uint8_t *resumePsk, uint32_t hashLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -119,17 +123,21 @@ int32_t Tls13TicketGenerate(TLS_Ctx *ctx)
     uint8_t resumePsk[MAX_DIGEST_SIZE] = {0};
     uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
     if (hashLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17154, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "DigestSize err", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_DIGEST;
     }
+
     uint8_t ticketNonce[sizeof(hsCtx->nextTicketNonce)] = {0};
     BSL_Uint64ToByte(hsCtx->nextTicketNonce, ticketNonce);
     ret = HS_TLS13DeriveResumePsk(ctx, ticketNonce, sizeof(ticketNonce), resumePsk, hashLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17155, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "DeriveResumePsk fail", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
         return ret;
     }
-    ret = Tls13TicketGenerateConfigSesson(ctx, &newSession, resumePsk, hashLen);
+    ret = Tls13TicketGenerateConfigSession(ctx, &newSession, resumePsk, hashLen);
     if (ret != HITLS_SUCCESS) {
         (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
         return ret;
@@ -156,7 +164,7 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
     int32_t ret;
     HS_Ctx *hsCtx = ctx->hsCtx;
 
-    /** determine whether to assemble a message */
+    /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
         ret = Tls13TicketGenerate(ctx);
         if (ret != HITLS_SUCCESS) {
@@ -172,7 +180,7 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
         }
     }
 
-    /** After the handshake message is written and sent successfully, hsCtx->msgLen is set to 0. */
+    /* After the handshake message is written and sent successfully, hsCtx->msgLen is set to 0. */
     ret = HS_SendMsg(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -189,3 +197,5 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_NEW_SESSION_TICKET);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET && HITLS_TLS_HOST_SERVER */

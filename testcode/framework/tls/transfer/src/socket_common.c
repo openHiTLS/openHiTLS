@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include "hitls_error.h"
 #include "hitls_type.h"
@@ -192,6 +193,7 @@ void FreeNewBuf(void *newBuf)
 {
     if (newBuf != NULL) {
         free(newBuf);
+        newBuf = NULL;
     }
 }
 
@@ -212,9 +214,9 @@ uint8_t *GetNewBuf(const void *buf, uint32_t len, uint32_t *packLen)
     uint32_t newOffset = 0;
 
     while (offset < *packLen) {
-        /* Currently, encryption and decryption are not performed.
-         * Therefore, the return value is not determined
-         * because the encrypted messages such as finished messages will fail to be parsed
+        /* Currently, encryption and decryption are not performed. 
+         * Therefore, the return value is not determined 
+         * because the encrypted messages such as finished messages will fail to be parsed 
          */
         (void)FRAME_ParseMsg(&frameType, &((uint8_t*)buf)[offset], len - offset, &msg, &parseLen);
 
@@ -230,7 +232,7 @@ uint8_t *GetNewBuf(const void *buf, uint32_t len, uint32_t *packLen)
                 g_frameHandle.userData = (void *)&frameType;
             }
             g_frameHandle.frameCallBack(&msg, g_frameHandle.userData);
-            if (g_frameHandle.userData == NULL) {
+            if (g_frameHandle.userData == (void *)&frameType) {
                 g_frameHandle.userData = NULL;
             }
             /* Pack the newly constructed msg into a buffer */

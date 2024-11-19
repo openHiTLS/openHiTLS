@@ -17,6 +17,7 @@
 #define CONN_INIT_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 #include "tls.h"
 
 #ifdef __cplusplus

@@ -691,7 +691,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC002(int version, int conn
     ASSERT_EQ(HLT_RpcTlsConnect(remoteProcess, clientRes->sslId), HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
     ASSERT_EQ(HLT_RpcTlsGetAlertFlag(remoteProcess, clientRes->sslId), ALERT_FLAG_SEND);
     ASSERT_EQ(HLT_RpcTlsGetAlertLevel(remoteProcess, clientRes->sslId), ALERT_LEVEL_FATAL);
-    ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_PROTOCOL_VERSION);
+    ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_ILLEGAL_PARAMETER);
 
 exit:
     ClearWrapper();
@@ -766,7 +766,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC003()
     ASSERT_EQ(HLT_RpcTlsConnect(remoteProcess, clientRes->sslId), HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
     ASSERT_EQ(HLT_RpcTlsGetAlertFlag(remoteProcess, clientRes->sslId), ALERT_FLAG_SEND);
     ASSERT_EQ(HLT_RpcTlsGetAlertLevel(remoteProcess, clientRes->sslId), ALERT_LEVEL_FATAL);
-    ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_UNSUPPORTED_EXTENSION);
+    ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_ILLEGAL_PARAMETER);
 exit:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();

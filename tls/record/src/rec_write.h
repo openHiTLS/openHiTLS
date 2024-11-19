@@ -39,7 +39,7 @@ extern "C" {
  */
 int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t plainLen);
 
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 
 /**
  * @brief   Write a record in DTLS

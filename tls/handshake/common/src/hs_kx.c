@@ -14,6 +14,7 @@
  */
 
 #include <string.h>
+#include "hitls_build.h"
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -26,7 +27,9 @@
 #include "crypt.h"
 #include "cert_method.h"
 #include "session.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
+#endif
 #include "hs_ctx.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
@@ -50,13 +53,16 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
     if (keyExchCtx == NULL) {
         return;
     }
-
+#ifdef HITLS_TLS_FEATURE_PSK
     if (keyExchCtx->pskInfo != NULL) {
+        BSL_SAL_CleanseData(keyExchCtx->pskInfo->psk, keyExchCtx->pskInfo->pskLen);
         BSL_SAL_FREE(keyExchCtx->pskInfo->identity);
         BSL_SAL_FREE(keyExchCtx->pskInfo->psk);
         BSL_SAL_FREE(keyExchCtx->pskInfo);
     }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
+#ifdef HITLS_TLS_PROTO_TLS13
+    BSL_SAL_CleanseData(keyExchCtx->pskInfo13.psk, keyExchCtx->pskInfo13.pskLen);
     BSL_SAL_FREE(keyExchCtx->pskInfo13.psk);
     HITLS_SESS_Free(keyExchCtx->pskInfo13.resumeSession);
     keyExchCtx->pskInfo13.resumeSession = NULL;
@@ -66,7 +72,7 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
         BSL_SAL_FREE(keyExchCtx->pskInfo13.userPskSess->identity);
         BSL_SAL_FREE(keyExchCtx->pskInfo13.userPskSess);
     }
-
+#endif /* HITLS_TLS_PROTO_TLS13 */
     switch (keyExchCtx->keyExchAlgo) {
         case HITLS_KEY_EXCH_NULL:
         case HITLS_KEY_EXCH_ECDHE:
@@ -90,7 +96,8 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
     BSL_SAL_FREE(keyExchCtx);
     return;
 }
-
+#ifdef HITLS_TLS_HOST_CLIENT
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
 static bool NamedCurveSupport(HITLS_NamedGroup inNamedGroup, const TLS_Config *config)
 {
     for (uint32_t i = 0u; i < config->groupsSize; i++) {
@@ -160,7 +167,8 @@ int32_t HS_ProcessServerKxMsgEcdhe(TLS_Ctx *ctx, const ServerKeyExchangeMsg *ser
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
     return HITLS_MSG_HANDLE_UNKNOWN_CURVE_TYPE;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
 int32_t HS_ProcessServerKxMsgDhe(TLS_Ctx *ctx, const ServerKeyExchangeMsg *serverKxMsg)
 {
     const ServerDh *dh = &serverKxMsg->keyEx.dh;
@@ -188,7 +196,10 @@ int32_t HS_ProcessServerKxMsgDhe(TLS_Ctx *ctx, const ServerKeyExchangeMsg *serve
     ctx->hsCtx->kxCtx->pubKeyLen = dh->pubKeyLen;
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#endif /* HITLS_TLS_HOST_CLIENT */
+#ifdef HITLS_TLS_HOST_SERVER
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
 static int32_t ProcessClientKxMsgNamedCurve(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
 {
     uint32_t peerPubkeyLen = clientKxMsg->dataSize;
@@ -222,7 +233,8 @@ int32_t HS_ProcessClientKxMsgEcdhe(TLS_Ctx *ctx, const ClientKeyExchangeMsg *cli
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
     return HITLS_MSG_HANDLE_UNKNOWN_CURVE_TYPE;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
 int32_t HS_ProcessClientKxMsgDhe(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
 {
     uint32_t peerPubkeyLen = clientKxMsg->dataSize;
@@ -238,12 +250,19 @@ int32_t HS_ProcessClientKxMsgDhe(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     ctx->hsCtx->kxCtx->pubKeyLen = peerPubkeyLen;
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
 int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = ctx->hsCtx;
     KeyExchCtx *keyExchCtx = hsCtx->kxCtx;
+    if (clientKxMsg->dataSize < MASTER_SECRET_LEN) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17327, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "invalid kx msg len", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
     uint8_t *premasterSecret = BSL_SAL_Calloc(1u, clientKxMsg->dataSize);
     if (premasterSecret == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
@@ -253,36 +272,37 @@ int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     }
     uint32_t secretLen = clientKxMsg->dataSize;
 
+    uint8_t premaster[MASTER_SECRET_LEN];
+    ret = SAL_CRYPT_Rand(premaster, MASTER_SECRET_LEN);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
     CERT_MgrCtx *certMgrCtx = ctx->config.tlsConfig.certMgrCtx;
     HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(certMgrCtx, false);
-    ret = SAL_CERT_KeyDecrypt(ctx, privateKey, clientKxMsg->data, clientKxMsg->dataSize, premasterSecret, &secretLen);
-    if ((ret != HITLS_SUCCESS) || (secretLen != MASTER_SECRET_LEN)) {
-        /* If the server processing fails, the alert is disallowed and the handshake must continue with a randomly
-         * generated premaster secret */
-        SAL_CRYPT_Rand(keyExchCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN);
-        BSL_SAL_FREE(premasterSecret);
-        return HITLS_SUCCESS;
-    }
+    uint32_t valid = ~(uint32_t)SAL_CERT_KeyDecrypt(ctx, privateKey, clientKxMsg->data,
+        clientKxMsg->dataSize, premasterSecret, &secretLen);
+    valid &= Uint32ConstTimeEqual(secretLen, MASTER_SECRET_LEN);
+    // Check the version in the premaster secret
+    uint16_t version = ctx->negotiatedInfo.clientVersion;
+    uint32_t versionCheck = Uint32ConstTimeEqual(version, HITLS_VERSION_TLS11) |
+                            Uint32ConstTimeEqual(version, HITLS_VERSION_TLS12) |
+                            Uint32ConstTimeEqual(version, HITLS_VERSION_DTLS12) |
+                            ~Uint32ConstTimeIsZero((uint32_t)ctx->config.tlsConfig.needCheckPmsVersion);
+    valid = (~versionCheck) | Uint32ConstTimeEqual(version, BSL_ByteToUint16(premasterSecret));
 
-    // logic: Check the version in the premaster secret
-    uint16_t tempVersion = ctx->negotiatedInfo.clientVersion;
-    if (tempVersion == HITLS_VERSION_TLS12 ||
-        ctx->config.tlsConfig.needCheckPmsVersion == true) {  // Not related to dtls
-                                                              // Shift right by 8 bits to get the most significant bit
-        if (((tempVersion & 0xff00) >> 8) != premasterSecret[0] || (tempVersion & 0x00ff) != premasterSecret[1]) {
-            SAL_CRYPT_Rand(keyExchCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN);
-            BSL_SAL_FREE(premasterSecret);
-            return HITLS_SUCCESS;
-        }
+    for (uint32_t i = 0; i < MASTER_SECRET_LEN; i++) {
+        uint32_t mask = valid & Uint32ConstTimeLt(i, secretLen);
+        keyExchCtx->keyExchParam.rsa.preMasterSecret[i] =
+            Uint8ConstTimeSelect(mask, premasterSecret[i & mask], premaster[i]);
     }
-
-    (void)memcpy_s(keyExchCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, premasterSecret, secretLen);
     BSL_SAL_CleanseData(premasterSecret, secretLen);
     BSL_SAL_FREE(premasterSecret);
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_SUITE_KX_RSA */
 
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
 int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -291,6 +311,8 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     uint8_t *preMasterSecret = BSL_SAL_Calloc(1u, clientKxMsg->dataSize);
     if (preMasterSecret == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16213, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Decrypt SM2-Encrypted PremasterSecret error: out of memory", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
     uint32_t secretLen = clientKxMsg->dataSize;
@@ -311,7 +333,7 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         // If the version does not match, a 46-byte preMasterSecret is randomly generated
         uint16_t version = ctx->negotiatedInfo.clientVersion;
         uint32_t offset = 0u;
-        // 8: right shift a byte
+        // 8：right shift a byte
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version >> 8);
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version);
         SAL_CRYPT_Rand(keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
@@ -329,7 +351,8 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     return HITLS_SUCCESS;
 }
 #endif
-
+#endif /* HITLS_TLS_HOST_SERVER */
+#ifdef HITLS_TLS_FEATURE_PSK
 static int32_t AppendPsk(uint8_t *pskPmsBuf, uint32_t pskPmsBufLen, uint8_t *psk, uint32_t pskLen)
 {
     uint32_t offset = 0u;
@@ -339,6 +362,7 @@ static int32_t AppendPsk(uint8_t *pskPmsBuf, uint32_t pskPmsBufLen, uint8_t *psk
     offset += sizeof(uint16_t);
 
     if (memcpy_s(&pskPmsBufTmp[offset], pskPmsBufLen - offset, psk, pskLen) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16828, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
 
@@ -355,7 +379,7 @@ static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_
     uint32_t pskLen = ctx->hsCtx->kxCtx->pskInfo->pskLen;
 
     if (psk == NULL || pskLen > HS_PSK_MAX_LEN) {
-        return HITLS_NULL_INPUT;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_NULL_INPUT, BINLOG_ID16829, "input null");
     }
 
     switch (ctx->hsCtx->kxCtx->keyExchAlgo) {
@@ -389,19 +413,23 @@ static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_
             break;
         default:
             /* no key exchange algo matched */
-            return HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG, BINLOG_ID16830, "unknow keyExchAlgo");
     }
 
     if (ret != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16831, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "key exchange algo is %d, memcpy fail", ctx->hsCtx->kxCtx->keyExchAlgo, 0, 0, 0);
         goto memFail;
     }
 
     if (AppendPsk(&tmpPskPmsBufTmp[offset], MAX_PRE_MASTER_SECRET_SIZE - offset, psk, pskLen) != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16832, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "AppendPsk fail", 0, 0, 0, 0);
         goto memFail;
     }
     offset += (sizeof(uint16_t) + pskLen);
 
     if (memcpy_s(pmsBuf, pmsBufLen, tmpPskPmsBufTmp, offset) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16833, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         goto memFail;
     }
     *pmsUsedLen = offset;
@@ -414,6 +442,7 @@ memFail:
     BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
     return HITLS_MEMCPY_FAIL;
 }
+#endif /* HITLS_TLS_FEATURE_PSK */
 
 int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_t len)
 {
@@ -453,19 +482,27 @@ int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_
             "failed to invoke the PRF function.", 0, 0, 0, 0);
         return ret;
     }
-
+#ifdef HITLS_TLS_MAINTAIN_KEYLOG
+    if (HITLS_LogSecret(ctx, MASTER_SECRET_LABEL, ctx->hsCtx->masterKey,
+        MASTER_SECRET_LEN) != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16196, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "failed to LogSecret, MASTER_SECRET_LABEL.", 0, 0, 0, 0);
+    }
+#endif /* HITLS_TLS_MAINTAIN_KEYLOG */
     return HITLS_SUCCESS;
 }
-
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
 static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
 {
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     int32_t ret = HITLS_SUCCESS;
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
         HITLS_Config *config = &ctx->config.tlsConfig;
         CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
         HITLS_CERT_Key *priKey = SAL_CERT_GetCurrentPrivateKey(certMgrCtx, true);
         if (priKey == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16834, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "GetCurrentPrivateKey fail", 0, 0, 0, 0);
             BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_EXP_CERT);
             return HITLS_CERT_ERR_EXP_CERT;
         }
@@ -473,6 +510,8 @@ static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecre
         HITLS_CERT_X509 *cert = SAL_CERT_GetTlcpEncCert(ctx->hsCtx->peerCert);
         ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&peerPubKey);
         if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16835, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "GET_PUB_KEY fail", 0, 0, 0, 0);
             return ret;
         }
 
@@ -487,36 +526,45 @@ static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecre
     return SAL_CRYPT_CalcEcdhSharedSecret(ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
         ctx->hsCtx->kxCtx->pubKeyLen, preMasterSecret, preMasterSecretLen);
 }
-
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
 static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
 {
     int32_t ret = HITLS_SUCCESS;
     KeyExchCtx *keyExchCtx = ctx->hsCtx->kxCtx;
-
+    (void)preMasterSecret;
+    (void)preMasterSecretLen;
     switch (keyExchCtx->keyExchAlgo) {
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE:
         case HITLS_KEY_EXCH_ECDHE_PSK:
             ret = GenPremasterSecretFromEcdhe(ctx, preMasterSecret, preMasterSecretLen);
             break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
             ret = SAL_CRYPT_CalcDhSharedSecret(keyExchCtx->key,
                 keyExchCtx->peerPubkey, keyExchCtx->pubKeyLen,
                 preMasterSecret, preMasterSecretLen);
             break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
         case HITLS_KEY_EXCH_RSA:
         case HITLS_KEY_EXCH_RSA_PSK:
             if (memcpy_s(preMasterSecret, *preMasterSecretLen,
                 keyExchCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN) != EOK) {
-                    ret = HITLS_MEMCPY_FAIL;
+                    BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+                    return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID16836, "memcpy fail");
                 }
             *preMasterSecretLen = MASTER_SECRET_LEN;
             break;
-#ifndef HITLS_NO_TLCP11
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
             if (memcpy_s(preMasterSecret, *preMasterSecretLen,
                 keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN) != EOK) {
-                    ret = HITLS_MEMCPY_FAIL;
+                    BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+                    return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID16837, "memcpy fail");
                 }
             *preMasterSecretLen = MASTER_SECRET_LEN;
             break;
@@ -524,8 +572,8 @@ static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32
         case HITLS_KEY_EXCH_PSK:
             break;
         default:
-            ret = HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG;
-            break;
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG, BINLOG_ID16838, "unknow keyExchAlgo");
     }
     BSL_ERR_PUSH_ERROR(ret);
     return ret;
@@ -543,7 +591,7 @@ int32_t HS_GenerateMasterSecret(TLS_Ctx *ctx)
             "calc ecdh shared secret failed.", 0, 0, 0, 0);
         return ret;
     }
-
+#ifdef HITLS_TLS_FEATURE_PSK
     /* re-arrange preMasterSecret for psk negotiation */
     if (IsPskNegotiation(ctx)) {
         ret = GeneratePskPreMasterSecret(ctx, preMasterSecret, MAX_PRE_MASTER_SECRET_SIZE, &preMasterSecretLen);
@@ -553,16 +601,14 @@ int32_t HS_GenerateMasterSecret(TLS_Ctx *ctx)
             return ret;
         }
     }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
     ret = DeriveMasterSecret(ctx, preMasterSecret, preMasterSecretLen);
     BSL_SAL_CleanseData(preMasterSecret, MAX_PRE_MASTER_SECRET_SIZE);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15528, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "derive master secret failed.", 0, 0, 0, 0);
-        return ret;
     }
-
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 int32_t HS_SetInitPendingStateParam(const TLS_Ctx *ctx, bool isClient, REC_SecParameters *keyPara)
@@ -584,14 +630,14 @@ int32_t HS_SetInitPendingStateParam(const TLS_Ctx *ctx, bool isClient, REC_SecPa
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         uint32_t clientRandomSize = HS_RANDOM_SIZE;
         if (memcpy_s(keyPara->clientRandom, clientRandomSize, hsCtx->clientRandom, HS_RANDOM_SIZE) != EOK) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15622, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16114, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Client random value copy failed.", 0, 0, 0, 0);
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             return HITLS_MEMCPY_FAIL;
         }
         uint32_t serverRandomSize = HS_RANDOM_SIZE;
         if (memcpy_s(keyPara->serverRandom, serverRandomSize, hsCtx->serverRandom, HS_RANDOM_SIZE) != EOK) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15623, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16115, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Server random value copy failed.", 0, 0, 0, 0);
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             return HITLS_MEMCPY_FAIL;
@@ -617,7 +663,7 @@ int32_t HS_KeyEstablish(TLS_Ctx *ctx, bool isClient)
     (void)memset_s(keyPara.masterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
     return ret;
 }
-
+#ifdef HITLS_TLS_FEATURE_SESSION
 int32_t HS_ResumeKeyEstablish(TLS_Ctx *ctx)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
@@ -638,19 +684,21 @@ int32_t HS_ResumeKeyEstablish(TLS_Ctx *ctx)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
     ret = HS_SetSctpAuthKey(ctx);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16839, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+            "SetSctpAuthKey fail", 0, 0, 0, 0);
     }
 #endif
-
-    return HITLS_SUCCESS;
+    return ret;
 }
-
+#endif /* HITLS_TLS_FEATURE_SESSION */
+#ifdef HITLS_TLS_FEATURE_PSK
 int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeMsg *serverKxMsg)
 {
     if (ctx == NULL || serverKxMsg == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16840, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         return HITLS_NULL_INPUT;
     }
     uint8_t psk[HS_PSK_MAX_LEN] = {0};
@@ -659,6 +707,8 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
     int32_t ret = HITLS_SUCCESS;
     do {
         if (ctx->config.tlsConfig.pskClientCb == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16841, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "pskClientCb null", 0, 0, 0, 0);
             ret = HITLS_UNREGISTERED_CALLBACK;
             break;
         }
@@ -666,12 +716,16 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
         uint32_t pskUsedLen = ctx->config.tlsConfig.pskClientCb(ctx, serverKxMsg->pskIdentityHint, identity,
             HS_PSK_IDENTITY_MAX_LEN, psk, HS_PSK_MAX_LEN);
         if (pskUsedLen == 0 || pskUsedLen > HS_PSK_MAX_LEN) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16842, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "psk len err", 0, 0, 0, 0);
             ret = HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN;
             break;
         }
 
         uint32_t identityUsedLen = (uint32_t)strnlen((char *)identity, HS_PSK_IDENTITY_MAX_LEN + 1);
         if (identityUsedLen > HS_PSK_IDENTITY_MAX_LEN) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16843, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "identity len err", 0, 0, 0, 0);
             ret = HITLS_MSG_HANDLE_ILLEGAL_IDENTITY_LEN;
             break;
         }
@@ -679,6 +733,8 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
         if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
             ctx->hsCtx->kxCtx->pskInfo = (PskInfo *)BSL_SAL_Calloc(1u, sizeof(PskInfo));
             if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16844, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "Calloc fail", 0, 0, 0, 0);
                 ret = HITLS_MEMALLOC_FAIL;
                 break;
             }
@@ -686,6 +742,7 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
 
         uint8_t *tmpIdentity = (uint8_t *)BSL_SAL_Calloc(1u, (identityUsedLen + 1) * sizeof(uint8_t));
         if (tmpIdentity == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16845, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc err", 0, 0, 0, 0);
             ret = HITLS_MEMALLOC_FAIL;
             break;
         }
@@ -693,6 +750,7 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
 
         uint8_t *tmpPsk = (uint8_t *)BSL_SAL_Dump(psk, pskUsedLen);
         if (tmpPsk == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16846, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
             BSL_SAL_FREE(tmpIdentity);
             ret = HITLS_MEMALLOC_FAIL;
             break;
@@ -711,3 +769,4 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
     BSL_ERR_PUSH_ERROR(ret);
     return ret;
 }
+#endif /* HITLS_TLS_FEATURE_PSK */

@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_INDICATOR
 #include <stddef.h>
 #include "tls.h"
 #include "hitls_error.h"
@@ -22,7 +24,6 @@
 int32_t HITLS_SetInfoCb(HITLS_Ctx *ctx, HITLS_InfoCb callback)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -43,7 +44,6 @@ int32_t HITLS_CFG_SetInfoCb(HITLS_Config *config, HITLS_InfoCb callback)
 {
     /* support NULL callback */
     if (config == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -59,11 +59,9 @@ HITLS_InfoCb HITLS_CFG_GetInfoCb(const HITLS_Config *config)
     return config->infoCb;
 }
 
-
 int32_t HITLS_SetMsgCb(HITLS_Ctx *ctx, HITLS_MsgCb callback)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -74,7 +72,6 @@ int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback)
 {
     /* support NULL callback */
     if (config == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -85,7 +82,6 @@ int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback)
 int32_t HITLS_CFG_SetMsgCbArg(HITLS_Config *config, void *arg)
 {
     if (config == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -93,3 +89,4 @@ int32_t HITLS_CFG_SetMsgCbArg(HITLS_Config *config, void *arg)
 
     return HITLS_SUCCESS;
 }
+#endif
