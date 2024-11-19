@@ -110,18 +110,19 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
     /* parse attribute entry */
     int32_t ret = HITLS_X509_ParseAttr(asn, node);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_AFTER);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     return ret;
 ERR:
     HITLS_X509_AttrEntryFree(node);
-    BSL_ERR_PUSH_ERROR(ret);
     return ret;
 }
 
@@ -133,9 +134,10 @@ int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrs, BSL_ASN1_List *list)
 
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {1, expTag};
-    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, attrs, &HITLS_X509_ParseAttrsListAsnItem, NULL, list);
+    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, attrs, HITLS_X509_ParseAttrsListAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
+        BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
 }
@@ -263,7 +265,7 @@ static BSL_ASN1_TemplateItem g_x509AttrEntryTempl[] = {
 
 int32_t HITLS_X509_EncodeAttrEntry(HITLS_X509_AttrEntry *node, BSL_ASN1_Buffer *attrBuff)
 {
-    BSL_ASN1_Buffer asnBuf[X509_CSR_ATTR_ELEM_NUMBER] = {};
+    BSL_ASN1_Buffer asnBuf[X509_CSR_ATTR_ELEM_NUMBER] = {0};
     asnBuf[0] = node->attrId;
     asnBuf[1] = node->attrValue;
     BSL_ASN1_Template templ = {g_x509AttrEntryTempl, sizeof(g_x509AttrEntryTempl) / sizeof(g_x509AttrEntryTempl[0])};
@@ -299,7 +301,7 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buf
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int iter = 0;
+    int32_t iter = 0;
     int32_t ret;
     HITLS_X509_AttrEntry *node = NULL;
     for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), iter++) {
@@ -315,8 +317,9 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buf
     FreeAsnAttrsBuff(asnBuf, count);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
 
     attr->tag = tag;
-    return ret;
+    return HITLS_X509_SUCCESS;
 }
