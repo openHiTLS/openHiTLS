@@ -122,10 +122,11 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
 
-    setenv("LD_LIBRARY_PATH", path, 1);
+    ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test2);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test CRYPT_EAL_ProviderUnload
