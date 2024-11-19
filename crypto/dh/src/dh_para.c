@@ -902,7 +902,7 @@ ERR:
 CRYPT_PKEY_ParaId CRYPT_DH_GetParaId(const CRYPT_DH_Ctx *ctx)
 {
     if (ctx == NULL || ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_PKEY_PARAID_MAX);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_PKEY_PARAID_MAX;
     }
     return ctx->para->id;
