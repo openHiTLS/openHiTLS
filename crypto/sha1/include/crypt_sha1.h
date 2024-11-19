@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,25 +33,35 @@ extern "C" {
 /* Message processing block size */
 #define CRYPT_SHA1_BLOCKSIZE   64
 
-/* SHA-1 context structure */
-typedef struct {
-    uint8_t m[CRYPT_SHA1_BLOCKSIZE];                      /* store the remaining data which less than one block */
-    uint32_t h[CRYPT_SHA1_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
-    uint32_t hNum, lNum;                                  /* input data counter, maximum value 2 ^ 64 bits */
-    int32_t errorCode;                                    /* Error code */
-    uint32_t count;       /* Number of remaining data bytes less than one block, corresponding to the length of the m */
-} CRYPT_SHA1_Ctx;
+typedef struct CryptSha1Ctx CRYPT_SHA1_Ctx;
+/**
+ * @ingroup SHA1
+ * @brief Generate md context.
+ *
+ * @retval Success: cipher ctx.
+ *         Fails: NULL.
+ */
+CRYPT_SHA1_Ctx *CRYPT_SHA1_NewCtx(void);
+
+/**
+ * @ingroup SHA1
+ * @brief free md context.
+ *
+ * @param ctx [IN] md handle
+ */
+void CRYPT_SHA1_FreeCtx(CRYPT_SHA1_Ctx *ctx);
 
 /**
  * @ingroup SHA1
  * @brief This API is invoked to initialize the SHA-1 context.
  *
  * @param *ctx [in,out] Pointer to the SHA-1 context.
+ * @param *param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS       initialization succeeded.
  * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
  */
-int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx);
+int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx, CRYPT_Param *param);
 
 /**
  * @ingroup SHA1
@@ -88,7 +99,7 @@ int32_t CRYPT_SHA1_Final(CRYPT_SHA1_Ctx *ctx, uint8_t *out, uint32_t *len);
  */
 void CRYPT_SHA1_Deinit(CRYPT_SHA1_Ctx *ctx);
 
-int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, CRYPT_SHA1_Ctx *src);
+int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src);
 
 #ifdef __cplusplus
 }

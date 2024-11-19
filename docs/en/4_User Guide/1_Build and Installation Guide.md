@@ -52,7 +52,7 @@ The openHiTLS code directory structure is as follows:
    ├── script
    ├── testcode
    ├── tls
-   └── x509
+   └── pki
 ```
 Where:
 
@@ -63,7 +63,7 @@ Where:
 - tls: stores the code related to secure transmission
 - platform: stores other dependent codes
 - testcode: stores the test project code
-- x509: provides the X509 certificate function
+- pki: stores the PKI related code
 
 **Call CMake to build the source code. The detailed method is as follows:**
 

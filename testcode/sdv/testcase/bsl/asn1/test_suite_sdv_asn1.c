@@ -550,6 +550,26 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_WRONG_INPUT_FUNC()
+{
+    uint8_t *encode = NULL;
+    uint32_t encodeLen = 0;
+    uint32_t valueLen = 0;
+    bool completeLen = 0;
+    uint8_t tag = 0x30;
+    BSL_ASN1_Buffer asnItem = {0};
+    ASSERT_EQ(BSL_ASN1_DecodeLen(&encode, &encodeLen, completeLen, &valueLen), BSL_NULL_INPUT);
+    ASSERT_EQ(BSL_ASN1_DecodeTagLen(tag, &encode, &encodeLen, &valueLen), BSL_NULL_INPUT);
+    ASSERT_EQ(BSL_ASN1_DecodeItem(&encode, &encodeLen, &asnItem), BSL_NULL_INPUT);
+    BSL_ASN1_TemplateItem listTempl = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0};
+    BSL_ASN1_Template templ = {&listTempl, 1};
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &encode, &encodeLen, &asnItem, 1), BSL_NULL_INPUT);
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_DECODECOMPLETELEN_FUNC(Hex *val, int ecpLen, int res)
 {
     uint8_t *encode = val->x;
@@ -1171,7 +1191,7 @@ exit:
  * For test bmpString.
 */
 /* BEGIN_CASE */
-void SDV_PKCS7_BMPSTRING_TC001(Hex *enc, char *dec)
+void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
 {
     int32_t ret;
     BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BMPSTRING, enc->len, enc->x};

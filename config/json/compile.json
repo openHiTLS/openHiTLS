@@ -39,7 +39,8 @@
             "-Wl,-z,noexecstack",
             "-Wl,-z,relro",
             "-Wl,-z,now",
-            "-Wl,--build-id=none"
+            "-Wl,--build-id=none",
+            "--enable-linker-build-id"
         ],
         "SHARED": [],
         "EXE": []

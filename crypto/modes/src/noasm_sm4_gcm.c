@@ -16,23 +16,17 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_GCM)
 
-#include "crypt_sm4.h"
-#include "crypt_modes.h"
 #include "crypt_modes_gcm.h"
 
-int32_t MODES_SM4_GCM_SetKey(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len)
+int32_t SM4_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
 {
-    return MODES_GCM_SetKey(ctx, key, len);
+    return MODES_GCM_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
 }
 
-int32_t MODES_SM4_GCM_EncryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t SM4_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return MODES_GCM_Encrypt(ctx, in, out, len);
-}
-
-int32_t MODES_SM4_GCM_DecryptBlock(MODES_GCM_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-{
-    return MODES_GCM_Decrypt(ctx, in, out, len);
+    return MODES_GCM_Update(modeCtx, in, inLen, out, outLen);
 }
 
 #endif
