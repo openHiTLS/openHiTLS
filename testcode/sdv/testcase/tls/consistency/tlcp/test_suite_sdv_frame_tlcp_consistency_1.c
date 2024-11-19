@@ -380,7 +380,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_RECORDTYPE_TC006(void)
 
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 
     ALERT_Info info = { 0 };
     ALERT_GetInfo(server->ssl, &info);
@@ -551,7 +551,8 @@ void UT_TLS_TLCP_CONSISTENCY_UNKNOW_RECORDTYPE_TC02(void)
     uint8_t dataBuf[] = "Hello World!";
     uint8_t readBuf[READ_BUF_SIZE];
     uint32_t readbytes;
-    ASSERT_EQ(HITLS_Write(server->ssl, dataBuf, sizeof(dataBuf)), HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(server->ssl, dataBuf, sizeof(dataBuf), &writeLen), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
     FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
     ioClientData->recMsg.msg[0] = 0x99u;
@@ -662,7 +663,8 @@ void UT_TLS_TLCP_CONSISTENCY_UNKNOW_RECORDTYPE_TC04(void)
     uint8_t dataBuf[] = "Hello World!";
     uint8_t readBuf[READ_BUF_SIZE];
     uint32_t readbytes;
-    ASSERT_EQ(HITLS_Write(client->ssl, dataBuf, sizeof(dataBuf)), HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(client->ssl, dataBuf, sizeof(dataBuf), &writeLen), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     ioServerData->recMsg.msg[0] = 0x99u;
@@ -944,7 +946,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC004(void)
 
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 
     ALERT_Info info = {0};
     ALERT_GetInfo(client->ssl, &info);
@@ -2085,7 +2087,8 @@ void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC002(int isClient)
     uint32_t transportDataLen = sizeof(transportData) / sizeof(uint8_t);
     ASSERT_EQ(RandBytes(transportData, transportDataLen), HITLS_SUCCESS);
     HITLS_Ctx *localSsl = isClient ? testInfo.client->ssl : testInfo.server->ssl;
-    ASSERT_EQ(APP_Write(localSsl, transportData, transportDataLen), HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_EQ(APP_Write(localSsl, transportData, transportDataLen, &writeLen), HITLS_SUCCESS);
 
     ASSERT_EQ(localSsl->recCtx->writeStates.currentState->seq , 2);
 

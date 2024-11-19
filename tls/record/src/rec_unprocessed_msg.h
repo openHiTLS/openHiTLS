@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 
 typedef struct {
     RecHdr hdr;                     /* record header */
@@ -56,9 +56,9 @@ void UnprocessedAppMsgListDeinit(UnprocessedAppMsg *appMsgList);
 
 int32_t UnprocessedAppMsgListAppend(UnprocessedAppMsg *appMsgList, const RecHdr *hdr, const uint8_t *recordBody);
 
-UnprocessedAppMsg *UnprocessedAppMsgGet(UnprocessedAppMsg *appMsgList);
+UnprocessedAppMsg *UnprocessedAppMsgGet(UnprocessedAppMsg *appMsgList, uint16_t curEpoch);
 
-#endif // HITLS_NO_DTLS12
+#endif // HITLS_TLS_PROTO_DTLS12
 
 #ifdef __cplusplus
 }

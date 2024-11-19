@@ -220,7 +220,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVE_RENEGOTIATION_REQUEST_FUNC_TC001()
     uint32_t readLen = 0;
     ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_HANDSHAKE, recMsg.msg, recMsg.len), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_ALERTED);
     ALERT_Info info = { 0 };
@@ -1347,6 +1347,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RENEGOTIATION_OLD_VERSION_FUNC_TC001()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
@@ -1421,6 +1422,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RENEGOTIATION_OLD_VERSION_FUNC_TC002()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
@@ -2245,7 +2247,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_COMPRESSION_METHOD_FUNC_TC002()
     ALERT_GetInfo(server->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(info.description, ALERT_ILLEGAL_PARAMETER);
+    ASSERT_EQ(info.description, ALERT_DECODE_ERROR);
 
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -3060,7 +3062,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_EXTENSION_FUNC_TC001()
     ALERT_GetInfo(client->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(info.description, ALERT_UNSUPPORTED_EXTENSION);
+    ASSERT_EQ(info.description, ALERT_ILLEGAL_PARAMETER);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -3080,15 +3082,12 @@ exit:
 *       establishment). Other extensions (see Section 4.2) are sent
 *       separately in the EncryptedExtensions message.
 * @title Initialize the client and server to tls1.3 and construct the serverhello message that does not carry the
-*        supportedversion extension,
-*       The expected client stays in the TRY_RECV_CERTIFICATIONATE state after receiving the serverhello message. After
-*        receiving the CCS message, the client sends an alarm indicating that the unexpected message is received.
+*        supportedversion extension, client send illegal parameter after receive serverhello
 * @precon nan
 * @brief 4.1.3. Server Hello row28
-*       Initialize the client server to tls1.3 and construct the serverhello message without the supportedversion
-*        extension, The expected client stays in the TRY_RECV_CERTIFICATIONATE state after receiving the serverhello
-*        message. After receiving the CCS message, the client sends an alarm indicating that the unexpected message is
-*        received.
+*        Initialize the client server to tls1.3 and construct the serverhello message without the supportedversion
+*        extension, client send illegal parameter because server send a tls13 ciphersuite without supportedversion
+*        extension
 * @expect 1. The client receives an alert response from the CCS.
 @ */
 /* BEGIN_CASE */
@@ -3130,13 +3129,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_EXTENSION_FUNC_TC002()
      *  supportedversion extension */
     FRAME_ServerHelloMsg *serverMsg = &frameMsg.body.hsMsg.body.serverHello;
     serverMsg->supportedVersion.exState = MISSING_FIELD;
-    serverMsg->secRenego.exState = INITIAL_FIELD;
-    serverMsg->secRenego.exType.state = INITIAL_FIELD;
-    serverMsg->secRenego.exType.data = 0xFF01u;
-    serverMsg->secRenego.exLen.state = INITIAL_FIELD;
-    serverMsg->secRenego.exLen.data = 1;
-    serverMsg->secRenego.exDataLen.state = INITIAL_FIELD;
-    serverMsg->secRenego.exDataLen.data = 0u;
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -3146,13 +3138,12 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_EXTENSION_FUNC_TC002()
     ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
 
-    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_CERTIFICATE);
-
-    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
-    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-
-    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_MSG_HANDLE_CIPHER_SUITE_ERR);
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(client->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_ILLEGAL_PARAMETER);
 
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -3487,7 +3478,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_RENEGOTIATION_VERSION_FUNC_TC001()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);

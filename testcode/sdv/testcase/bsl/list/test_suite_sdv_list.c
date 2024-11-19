@@ -1018,3 +1018,28 @@ exit:
     BSL_SAL_FREE(testList);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_BSL_LIST_FREE_WITHOUT_FUNC_TC001
+ * @title  test BSL_LIST_FreeWithoutData functions
+ * @precon nan
+ * @brief
+ *    1.Call BSL_LIST_New create a list, Expected result 1 is obtained.
+ *    2.Call BSL_LIST_FreeWithoutData free normal list, Expected result 2 is obtained.
+ *    3.Call BSL_LIST_FreeWithoutData free empty list, Expected result 2 is obtained.
+ * @expect
+ *    1. The list is created successfully.
+ *    2. The list is free successfully.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_FREE_WITHOUT_FUNC_TC001(void)
+{
+    BslList *testList = BSL_LIST_New(MAX_NAME_LEN);
+    ASSERT_TRUE(testList != NULL);
+    BSL_LIST_FreeWithoutData(testList);
+    testList = NULL;
+exit:
+    BSL_LIST_FreeWithoutData(testList);
+}
+/* END_CASE */
+

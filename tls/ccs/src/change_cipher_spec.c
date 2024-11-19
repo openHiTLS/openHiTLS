@@ -12,7 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
 #include "securec.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
@@ -20,12 +20,14 @@
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
-#include "bsl_errno.h"
 #include "bsl_uio.h"
 #include "uio_base.h"
 #include "rec.h"
+#ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
+#endif
 #include "hs.h"
+#include "alert.h"
 #include "change_cipher_spec.h"
 
 struct CcsCtx {
@@ -40,77 +42,28 @@ bool CCS_IsRecv(const TLS_Ctx *ctx)
     return ctx->ccsCtx->ccsRecvflag;
 }
 
-void CCS_Recv(TLS_Ctx *ctx, const uint8_t *buf, uint32_t len)
-{
-    if (ctx->ccsCtx->isReady == false) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15612, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
-            "Error: recv a unexpected change cipher spec message.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-        return;
-    }
-
-    /** The read length is abnormal. */
-    if (len != 1u) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15613, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
-            "the change cipher spec message length incorrect", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-        return;
-    }
-
-    /** Message exception. */
-    if (buf[0] != 1u) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15614, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
-            "the change cipher spec message incorrect", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-        return;
-    }
-
-    if (ctx->ccsCtx->ccsRecvflag == true && HS_GetVersion(ctx) != HITLS_VERSION_TLS13) {
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-        return;
-    }
-
-    if (ctx->ccsCtx->isAllowActiveCipher == true && ctx->ccsCtx->activeCipherFlag == false) {
-        /** Enable key specification */
-        if (REC_ActivePendingState(ctx, false) != HITLS_SUCCESS) {
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-            return;
-        }
-        ctx->ccsCtx->activeCipherFlag = true;
-    }
-    ctx->ccsCtx->ccsRecvflag = true;
-
-    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, buf, 1,
-                              ctx, ctx->config.tlsConfig.msgArg);
-
-    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15615, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "got a change cipher spec message.", 0, 0, 0, 0);
-    ctx->negotiatedInfo.isEncryptThenMacRead = ctx->negotiatedInfo.isEncryptThenMac;
-    return;
-}
-
 int32_t CCS_Send(TLS_Ctx *ctx)
 {
     int32_t ret;
     const uint8_t buf[1] = {1u};
     const uint32_t len = 1u;
     if (ctx == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15616, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "ctx is null.", 0, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15616, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
-#ifndef HITLS_NO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
     /*  rfc6083 4.7.  Handshake
         Before sending a ChangeCipherSpec message, all outstanding SCTP user
         messages MUST have been acknowledged by the SCTP peer and MUST NOT be
         revoked by the SCTP peer. */
-    if ((BSL_UIO_GetTransportType(ctx->uio) == BSL_UIO_SCTP) &&
-        (ctx->negotiatedInfo.isRenegotiation == true)) {
+    if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP) && ctx->negotiatedInfo.isRenegotiation) {
         bool isBuffEmpty = false;
         ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_SCTP_SND_BUFF_IS_EMPTY, (int32_t)sizeof(isBuffEmpty), &isBuffEmpty);
         if (ret != BSL_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16275, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+                "UIO_Ctrl fail, ret %d", ret, 0, 0, 0);
             BSL_ERR_PUSH_ERROR(HITLS_UIO_FAIL);
             return HITLS_UIO_FAIL;
         }
@@ -125,12 +78,12 @@ int32_t CCS_Send(TLS_Ctx *ctx)
     /** Write record */
     ret = REC_Write(ctx, REC_TYPE_CHANGE_CIPHER_SPEC, buf, len);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16276, "Write fail");
     }
-
+#ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, buf, 1,
     ctx, ctx->config.tlsConfig.msgArg);
-
+#endif
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15617, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "written a change cipher spec message.", 0, 0, 0, 0);
     return HITLS_SUCCESS;
@@ -139,8 +92,7 @@ int32_t CCS_Send(TLS_Ctx *ctx)
 int32_t CCS_Ctrl(TLS_Ctx *ctx, CCS_Cmd cmd)
 {
     if (ctx == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15618, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "ctx is null.", 0, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15618, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -178,8 +130,7 @@ int32_t CCS_Ctrl(TLS_Ctx *ctx, CCS_Cmd cmd)
 int32_t CCS_Init(TLS_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15620, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "ctx is null.", 0, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15620, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -205,4 +156,60 @@ void CCS_DeInit(TLS_Ctx *ctx)
     }
     BSL_SAL_FREE(ctx->ccsCtx);
     return;
+}
+
+int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+{
+    if (ctx->ccsCtx->isReady == false) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15612,
+            "recv unexpected ccs msg", ALERT_UNEXPECTED_MESSAGE);
+    }
+
+    /** The read length is abnormal. */
+    if (dataLen != 1u) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15613,
+            "ccs msg length err", ALERT_UNEXPECTED_MESSAGE);
+    }
+
+    /** Message exception. */
+    if (data[0] != 1u) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15614,
+            "ccs msg err", ALERT_UNEXPECTED_MESSAGE);
+    }
+    /** Multiple generate ccs messages are received: If UDP transmission is used, ignore the ccs. */
+    if (ctx->ccsCtx->ccsRecvflag == true && HS_GetVersion(ctx) != HITLS_VERSION_TLS13) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID16277,
+            "Multiple generate ccs msg are received", ALERT_UNEXPECTED_MESSAGE);
+    }
+
+    if (ctx->ccsCtx->isAllowActiveCipher == true && ctx->ccsCtx->activeCipherFlag == false) {
+        /** Enable key specification */
+        if (REC_ActivePendingState(ctx, false) != HITLS_SUCCESS) {
+            return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID16278,
+                "ActivePendingState err", ALERT_INTERNAL_ERROR);
+        }
+        ctx->ccsCtx->activeCipherFlag = true;
+    }
+    ctx->ccsCtx->ccsRecvflag = true;
+#ifdef HITLS_TLS_FEATURE_INDICATOR
+    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, data, 1,
+                              ctx, ctx->config.tlsConfig.msgArg);
+#endif
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15615, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+        "got a change cipher spec message.", 0, 0, 0, 0);
+#ifdef HITLS_TLS_SUITE_CIPHER_CBC
+    ctx->negotiatedInfo.isEncryptThenMacRead = ctx->negotiatedInfo.isEncryptThenMac;
+#endif
+    return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+}
+
+int32_t ProcessDecryptedCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+{
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (HS_GetVersion(ctx) == HITLS_VERSION_TLS13) {
+        return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15612,
+            "recv encrypted ccs msg", ALERT_UNEXPECTED_MESSAGE);
+    }
+#endif
+    return ProcessPlainCCS(ctx, data, dataLen);
 }

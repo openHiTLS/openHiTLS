@@ -78,7 +78,6 @@ CRYPT_MD_IMPL_METHOD_DECLARE(SM3);
 #endif
 
 static const EAL_CidToMdMeth ID_TO_MD_METH_TABLE[] = {
-    {CRYPT_MD_MD4,      NULL},
 #ifdef HITLS_CRYPTO_MD5
     {CRYPT_MD_MD5,      &g_mdMethod_MD5},
 #endif

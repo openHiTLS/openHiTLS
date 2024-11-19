@@ -53,16 +53,6 @@ typedef HITLS_CRYPT_Key *(*CRYPT_GenerateEcdhKeyPairCallback)(const HITLS_ECPara
 
 /**
  * @ingroup hitls_crypt_reg
- * @brief   Deep copy key
- *
- * @param   key [IN] Key handle
- *
- * @retval  Key handle
- */
-typedef HITLS_CRYPT_Key *(*CRYPT_DupEcdhKeyCallback)(HITLS_CRYPT_Key *key);
-
-/**
- * @ingroup hitls_crypt_reg
  * @brief   Release the key.
  *
  * @param   key [IN] Key handle
@@ -125,7 +115,7 @@ typedef HITLS_CRYPT_Key *(*CRYPT_GenerateDhKeyBySecbitsCallback)(int32_t secbits
  * @ingroup hitls_crypt_reg
  * @brief   DH: Generate a key pair based on the dh parameter.
  *
- * @param  p [IN] p Parameter
+ * @param   p [IN] p Parameter
  * @param   plen [IN] p Parameter length
  * @param   g [IN] g Parameter
  * @param   glen [IN] g Parameter length
@@ -218,6 +208,16 @@ typedef uint32_t (*CRYPT_HmacSizeCallback)(HITLS_HashAlgo hashAlgo);
  * @retval  HMAC context
  */
 typedef HITLS_HMAC_Ctx *(*CRYPT_HmacInitCallback)(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len);
+
+/**
+ * @ingroup hitls_crypt_reg
+ * @brief   reinit the HMAC context.
+ *
+ * @param   ctx [IN] HMAC context
+ *
+ * @retval  HMAC context
+ */
+typedef int32_t (*CRYPT_HmacReInitCallback)(HITLS_HMAC_Ctx *ctx);
 
 /**
  * @ingroup hitls_crypt_reg
@@ -387,6 +387,13 @@ typedef int32_t (*CRYPT_DecryptCallback)(const HITLS_CipherParameters *cipher, c
 
 /**
  * @ingroup hitls_crypt_reg
+ * @brief   Release the cipher ctx.
+ *
+ * @param   ctx [IN] cipher ctx handle
+ */
+typedef void (*CRYPT_CipherFreeCallback)(HITLS_Cipher_Ctx *ctx);
+/**
+ * @ingroup hitls_crypt_reg
  * @brief   HKDF-Extract
  *
  * @param   input [IN] Enter the key material.
@@ -402,12 +409,13 @@ typedef int32_t (*CRYPT_HkdfExtractCallback)(const HITLS_CRYPT_HkdfExtractInput 
  * @brief   HKDF-Expand
  *
  * @param   input [IN] Enter the key material.
- * @param   okm [OUT] Output key
- * @param   okmLen [IN] Output key length
+ * @param   outputKeyMaterial [OUT] Output key
+ * @param   outputKeyMaterialLen [IN] Output key length
  *
  * @retval  0 indicates success. Other values indicate failure.
  */
-typedef int32_t (*CRYPT_HkdfExpandCallback)(const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen);
+typedef int32_t (*CRYPT_HkdfExpandCallback)(
+    const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *outputKeyMaterial, uint32_t outputKeyMaterialLen);
 
 /**
  * @ingroup hitls_cert_reg
@@ -418,6 +426,7 @@ typedef struct {
     CRYPT_HmacSizeCallback hmacSize;                    /**< HMAC: obtain the HMAC length based
                                                              on the hash algorithm. */
     CRYPT_HmacInitCallback hmacInit;                    /**< HMAC: initialize the context. */
+    CRYPT_HmacReInitCallback hmacReinit;                /**< HMAC: reinitialize the context. */
     CRYPT_HmacFreeCallback hmacFree;                    /**< HMAC: release the context. */
     CRYPT_HmacUpdateCallback hmacUpdate;                /**< HMAC: add input data. */
     CRYPT_HmacFinalCallback hmacFinal;                  /**< HMAC: output result. */
@@ -433,6 +442,7 @@ typedef struct {
                                                             capability for records. */
     CRYPT_DecryptCallback decrypt;                      /**< TLS decryption: provides the decryption
                                                              capability for records. */
+    CRYPT_CipherFreeCallback cipherFree;                /**< CIPHER: release the context. */
 } HITLS_CRYPT_BaseMethod;
 
 /**
@@ -442,7 +452,6 @@ typedef struct {
 typedef struct {
     CRYPT_GenerateEcdhKeyPairCallback generateEcdhKeyPair;      /**< ECDH: generate a key pair based
                                                                            on the elliptic curve parameters. */
-    CRYPT_DupEcdhKeyCallback dupEcdhKey;                        /**< ECDH: deep copy key. */
     CRYPT_FreeEcdhKeyCallback freeEcdhKey;                      /**< ECDH: release the elliptic curve key. */
     CRYPT_GetEcdhEncodedPubKeyCallback getEcdhPubKey;           /**< ECDH: extract public key data. */
     CRYPT_CalcEcdhSharedSecretCallback calcEcdhSharedSecret;    /**< ECDH: calculate the shared key based on

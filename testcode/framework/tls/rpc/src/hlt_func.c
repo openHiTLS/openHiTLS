@@ -200,7 +200,6 @@ int HLT_GetTlsAcceptResult(HLT_Tls_Res* tlsRes)
     } else {
         // Indicates that the local process accepts the request.
         pthread_join(tlsRes->acceptId, NULL);
-        tlsRes->acceptId = 0;
         return SUCCESS;
     }
     tlsRes->acceptId = 0;
@@ -506,16 +505,15 @@ void HLT_CloseFd(int fd, int linkType)
 HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClient)
 {
     (void)setFile;
-    HLT_Ctx_Config *ctxConfig;
     Process *localProcess;
 
-    ctxConfig = (HLT_Ctx_Config*)malloc(sizeof(HLT_Ctx_Config));
+    HLT_Ctx_Config *ctxConfig = (HLT_Ctx_Config*)calloc(sizeof(HLT_Ctx_Config), 1u);
     if (ctxConfig == NULL) {
         return NULL;
     }
-
-    (void)memset_s(ctxConfig, sizeof(HLT_Ctx_Config), 0, sizeof(HLT_Ctx_Config));
     ctxConfig->isSupportRenegotiation = false;
+    ctxConfig->allowClientRenegotiate = false;
+    ctxConfig->allowLegacyRenegotiate = false;
     ctxConfig->isSupportClientVerify = false;
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportExtendMasterSecret = false;
@@ -565,9 +563,12 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
     (void)memset_s(ctxConfig, sizeof(HLT_Ctx_Config), 0, sizeof(HLT_Ctx_Config));
     ctxConfig->needCheckKeyUsage = false;
     ctxConfig->isSupportRenegotiation = false;
+    ctxConfig->allowClientRenegotiate = false;
+    ctxConfig->allowLegacyRenegotiate = false;
     ctxConfig->isSupportClientVerify = false;
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportVerifyNone = false;
+    ctxConfig->isSupportPostHandshakeAuth = false;
     ctxConfig->isSupportExtendMasterSecret = true;
     ctxConfig->isSupportSessionTicket = false;
     ctxConfig->isSupportDhAuto = true;
@@ -576,9 +577,10 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
     ctxConfig->setSessionCache = HITLS_SESS_CACHE_SERVER;
     ctxConfig->mtu = 0;
     ctxConfig->infoCb = NULL;
-	ctxConfig->securitylevel = HITLS_DEFAULT_SECURITY_LEVEL;
+	ctxConfig->securitylevel = HITLS_SECURITY_LEVEL_ZERO;
 	ctxConfig->SupportType = 0;
-
+    ctxConfig->readAhead = 1;
+    ctxConfig->emptyRecordsNum = 32;
     HLT_SetGroups(ctxConfig, "NULL");
     HLT_SetCipherSuites(ctxConfig, "NULL");
     HLT_SetTls13CipherSuites(ctxConfig, "NULL");
@@ -1003,13 +1005,27 @@ int HLT_SetRenegotiationSupport(HLT_Ctx_Config *ctxConfig, bool support)
     return SUCCESS;
 }
 
-int32_t HLT_SetNoSecRenegotiationCb(HLT_Ctx_Config *ctxConfig, char* NoSecRenegotiationCb)
+int HLT_SetLegacyRenegotiateSupport(HLT_Ctx_Config *ctxConfig, bool support)
 {
-    (void)memset_s(ctxConfig->noSecRenegotiationCb, MAX_NO_RENEGOTIATIONCB_LEN, 0, MAX_NO_RENEGOTIATIONCB_LEN);
-    if (strcpy_s(ctxConfig->noSecRenegotiationCb, MAX_NO_RENEGOTIATIONCB_LEN, NoSecRenegotiationCb) != EOK) {
-        LOG_ERROR("HLT_SetNoSecRenegotiationCb failed.");
-        return -1;
-    }
+    ctxConfig->allowLegacyRenegotiate = support;
+    return SUCCESS;
+}
+
+int HLT_SetClientRenegotiateSupport(HLT_Ctx_Config *ctxConfig, bool support)
+{
+    ctxConfig->allowClientRenegotiate = support;
+    return SUCCESS;
+}
+
+int HLT_SetEmptyRecordsNum(HLT_Ctx_Config *ctxConfig, uint32_t emptyNum)
+{
+    ctxConfig->emptyRecordsNum = emptyNum;
+    return SUCCESS;
+}
+
+int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support)
+{
+    ctxConfig->isEncryptThenMac = support;
     return SUCCESS;
 }
 

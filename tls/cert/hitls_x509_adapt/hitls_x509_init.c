@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_CALLBACK_CERT
 #include <stdint.h>
 #include <stddef.h>
 #include "hitls_error.h"
@@ -57,3 +58,5 @@ int32_t HITLS_CertMethodDeInit(void)
     HITLS_CERT_DeinitMgrMethod();
     return HITLS_SUCCESS;
 }
+
+#endif /* HITLS_TLS_CALLBACK_CERT */
