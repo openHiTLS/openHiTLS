@@ -12,18 +12,21 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_CLIENT
 #include <stdint.h>
 #include "securec.h"
-#include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
+#include "tls_binlog_id.h"
+#include "tls.h"
 #include "bsl_bytes.h"
 #include "hitls_error.h"
 #include "hitls_security.h"
-#include "tls.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
+#endif
 #include "cipher_suite.h"
 #include "hs_ctx.h"
 #include "pack_common.h"
@@ -37,23 +40,26 @@
 static int32_t PackClientVersion(const TLS_Ctx *ctx, uint16_t version, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     (void)bufLen;
-    const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
+    (void)ctx;
     uint32_t offset = 0u;
-
-    int32_t ret = SECURITY_CfgCheck((HITLS_Config *)tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
+    int32_t ret = SECURITY_CfgCheck((const HITLS_Config *)tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
     if (ret != SECURITY_SUCCESS) {
-        ctx->method.sendAlert((TLS_Ctx *)ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16924, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CfgCheck fail, ret %d", ret, 0, 0, 0);
+        ctx->method.sendAlert((TLS_Ctx *)(uintptr_t)ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSECURE_VERSION);
         return HITLS_PACK_UNSECURE_VERSION;
     }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     BSL_Uint16ToByte(version, &buf[offset]);
     offset += sizeof(uint16_t);
 
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
-
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 // Pack the cookie content of the client Hello message.
 static int32_t PackClientCookie(const uint8_t *cookie, uint8_t cookieLen,
     uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
@@ -74,20 +80,13 @@ static int32_t PackClientCookie(const uint8_t *cookie, uint8_t cookieLen,
         return HITLS_SUCCESS;
     }
 
-    int32_t ret = memcpy_s(&buf[offset], bufLen - offset, cookie, cookieLen);
-    if (ret != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15731, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "memcpy fail when pack cookie.", 0, 0, 0, 0);
-        return HITLS_MEMCPY_FAIL;
-    }
+    (void)memcpy_s(&buf[offset], bufLen - offset, cookie, cookieLen);
     offset += cookieLen;
 
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
-#endif
-
+#endif /* HITLS_TLS_PROTO_DTLS12 */
 static int32_t PackCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *offset, bool isTls13)
 {
     uint16_t *cipherSuites = NULL;
@@ -95,6 +94,7 @@ static int32_t PackCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLe
     uint32_t tmpOffset = *offset;
     uint16_t minVersion = ctx->config.tlsConfig.minVersion;
     uint16_t maxVersion = ctx->config.tlsConfig.maxVersion;
+#ifdef HITLS_TLS_PROTO_TLS13
     if (isTls13) {
         cipherSuites = ctx->config.tlsConfig.tls13CipherSuites;
         cipherSuitesSize = ctx->config.tlsConfig.tls13cipherSuitesSize;
@@ -102,6 +102,11 @@ static int32_t PackCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLe
         cipherSuites = ctx->config.tlsConfig.cipherSuites;
         cipherSuitesSize = ctx->config.tlsConfig.cipherSuitesSize;
     }
+#else
+    (void)isTls13;
+    cipherSuites = ctx->config.tlsConfig.cipherSuites;
+    cipherSuitesSize = ctx->config.tlsConfig.cipherSuitesSize;
+#endif /* HITLS_TLS_PROTO_TLS13 */
 
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
         if ((CFG_CheckCipherSuiteSupported(cipherSuites[i]) != true) ||
@@ -112,7 +117,7 @@ static int32_t PackCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLe
         }
         if (tmpOffset + sizeof(uint16_t) > bufLen) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_CLIENT_CIPHER_SUITE_ERR);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15776, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15733, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack cipher suite error, the buffer length is not enough.", 0, 0, 0, 0);
             return HITLS_PACK_CLIENT_CIPHER_SUITE_ERR;
         }
@@ -131,18 +136,20 @@ static int32_t PackClientCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t
     uint16_t cipherSuitesLen = 0u;
     /* Finally fill in the length of the cipher suites */
     uint32_t offset = CIPHER_SUITES_LEN_SIZE;
-    /* If the local is not in the renegotiation state,
-     * you need to pack the SCSV algorithm set */
-    bool isPackScsv = (!ctx->negotiatedInfo.isRenegotiation);
+#ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13) {
         ret = PackCipherSuites(ctx, buf, bufLen, &offset, 1);
         if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16925, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "PackCipherSuites fail", 0, 0, 0, 0);
             return ret;
         }
     }
-
+#endif /* HITLS_TLS_PROTO_TLS13 */
     ret = PackCipherSuites(ctx, buf, bufLen, &offset, 0);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16926, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PackCipherSuites fail", 0, 0, 0, 0);
         return ret;
     }
 
@@ -156,16 +163,18 @@ static int32_t PackClientCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t
     /* The cipher suite has been filled. Each cipher suite takes two bytes, so the length of the filled cipher suite can
      * be calculated according to offset */
     cipherSuitesLen = (uint16_t)(offset - CIPHER_SUITES_LEN_SIZE);
-    if (isPackScsv) {
+    /* If the local is not in the renegotiation state,
+     * the SCSV algorithm set needs to be packed.*/
+    if (!ctx->negotiatedInfo.isRenegotiation) {
+        if (offset + sizeof(uint16_t) > bufLen) {
+            BSL_ERR_PUSH_ERROR(HITLS_PACK_CLIENT_CIPHER_SUITE_ERR);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15733, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "pack cipher suite error, the buffer length is not enough.", 0, 0, 0, 0);
+            return HITLS_PACK_CLIENT_CIPHER_SUITE_ERR;
+        }
         cipherSuitesLen += sizeof(uint16_t);
         BSL_Uint16ToByte(TLS_EMPTY_RENEGOTIATION_INFO_SCSV, &buf[offset]);
         offset += sizeof(uint16_t);
-    }
-    if (offset > bufLen) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_CLIENT_CIPHER_SUITE_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15733, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack cipher suite error, the buffer length is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_CLIENT_CIPHER_SUITE_ERR;
     }
     BSL_Uint16ToByte(cipherSuitesLen, &buf[0]);
     *usedLen = offset;
@@ -199,16 +208,26 @@ static int32_t PackSessionAndCookie(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
     uint32_t len = 0;
+    (void)len;
+    (void)ret;
+    (void)ctx;
+    (void)bufLen;
+#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-
     len = 0u;
     ret = PackSessionId(hsCtx->sessionId, hsCtx->sessionIdSize, &buf[offset], bufLen - offset, &len);
     if (ret != HITLS_SUCCESS) {
+        (void)memset_s(hsCtx->sessionId, hsCtx->sessionIdSize, 0, hsCtx->sessionIdSize);
         return ret;
     }
     offset += len;
+#else // Session recovery is not supported.
+    /* SessionId (Session is not supported yet and the length field is initialized with a value of 0) */
+    buf[offset] = 0; 
+    offset += sizeof(uint8_t);
+#endif
 
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
     const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
     uint16_t version = (tlsConfig->maxVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 : tlsConfig->maxVersion;
     if (IS_DTLS_VERSION(version)) {
@@ -234,20 +253,23 @@ static int32_t PackClientHelloMandatoryField(const TLS_Ctx *ctx, uint8_t *buf, u
     /* The bufLen must be able to assemble at least the version number (2 bytes),
        random number (32 bytes), and session ID (1 byte) */
     if (bufLen < (sizeof(uint16_t) + HS_RANDOM_SIZE + sizeof(uint8_t))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15126, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack client hello mandatory field error, the bufLen(%u) is not enough.", bufLen, NULL, NULL, NULL);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID16078, BINGLOG_STR("client hello"));
     }
     int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
     uint32_t len = 0u;
     const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
     if (ctx->hsCtx->clientRandom == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16927, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "clientRandom null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
-    uint16_t version = (tlsConfig->maxVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 : tlsConfig->maxVersion;
+    uint16_t version =
+#ifdef HITLS_TLS_PROTO_TLS13
+    (tlsConfig->maxVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 :
+#endif
+     tlsConfig->maxVersion;
     ret = PackClientVersion(ctx, version, buf, bufLen, &len);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -309,3 +331,5 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
+
+#endif /* HITLS_TLS_HOST_CLIENT */

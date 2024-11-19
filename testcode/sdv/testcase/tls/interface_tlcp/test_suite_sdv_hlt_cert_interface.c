@@ -77,19 +77,19 @@ int32_t g_uiPort = 18886;
 #define READ_DATA_18432 18432
 #define PASSWDLEN (10)
 #define CERT_PATH_BUFFER (100)
- 
+
 #define RSA_ROOT_CERT_DER         "rsa_sha/ca-3072.der"
 #define RSA_CA_CERT_DER           "rsa_sha/inter-3072.der"
 #define RSA_EE_CERT_DER           "rsa_sha/end-sha1.der"
 #define RSA_PRIV_KEY_DER          "rsa_sha/end-sha1.key.der"
 #define RSA_EE_CERT_DER           "rsa_sha/end-sha1.der"
 #define RSA_PRIV_KEY_DER          "rsa_sha/end-sha1.key.der"
- 
+
 #define RSA_ROOT_CERT2_DER         "rsa_sha256/ca.der"
 #define RSA_CA_CERT2_DER           "rsa_sha256/inter.der"
 #define RSA_EE_CERT2_DER           "rsa_sha256/server.der"
 #define RSA_PRIV_KEY2_DER          "rsa_sha256/server.key.der"
- 
+
 #define ECDSA_ROOT_CERT_DER        "ecdsa/ca-nist521.der"
 #define ECDSA_CA_CERT_DER          "ecdsa/inter-nist521.der"
 #define ECDSA_EE_CERT_DER          "ecdsa/end256-sha256.der"
@@ -178,7 +178,7 @@ HITLS_Ctx *Dtls_New_Ctx(HLT_Process *localProcess, HITLS_Config* clientConfig)
     ASSERT_TRUE(clientCtx != NULL);
     HLT_Ssl_Config clientCtxConfig;
     clientCtxConfig.sockFd = localProcess->connFd;
-    clientCtxConfig.connType = IsEnableSctpAuth() ? SCTP : TCP;
+    clientCtxConfig.connType = SCTP;
     ASSERT_TRUE_AND_LOG("HLT_TlsSetSsl", HLT_TlsSetSsl(clientCtx, &clientCtxConfig) == 0);
     return clientCtx;
 
@@ -276,6 +276,9 @@ HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(const char *file);
 /* BEGIN_CASE */
 void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
 {
+    if (!IsEnableSctpAuth()) {
+        return;
+    }
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
     HLT_Process *remoteProcess = NULL;
@@ -295,7 +298,7 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, false);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -331,7 +334,7 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
     HITLS_CERT_X509 *eeCert1 = HiTLS_X509_LoadCertFile(eeFilePath2);
     ASSERT_TRUE(eeCert1 != NULL);
     ASSERT_EQ(HITLS_CFG_SetCertificate(serverConfig, eeCert1, SHALLOW_COPY), SUCCESS);
-    HITLS_CERT_Key *prvKey1 = HITLS_X509_Adapt_KeyParse(serverConfig, (const uint8_t *)eeKeyPath2, strlen(eeKeyPath1), 
+    HITLS_CERT_Key *prvKey1 = HITLS_CFG_ParseKey(serverConfig, (const uint8_t *)eeKeyPath2, strlen(eeKeyPath1),
         TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
     ASSERT_TRUE(prvKey1 != NULL);
     ASSERT_EQ(HITLS_CFG_SetPrivateKey(serverConfig, prvKey1, SHALLOW_COPY), SUCCESS);

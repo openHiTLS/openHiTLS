@@ -58,21 +58,21 @@ static HITLS_Config *GetHitlsConfigViaVersion(int ver)
     switch (ver) {
         case HITLS_VERSION_TLS12:
             config = HITLS_CFG_NewTLS12Config();
-            ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+            ret = HITLS_CFG_SetCheckKeyUsage(config, false);
             if (ret != HITLS_SUCCESS) {
                 return NULL;
             }
             return config;
         case HITLS_VERSION_TLS13:
             config = HITLS_CFG_NewTLS13Config();
-            ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+            ret = HITLS_CFG_SetCheckKeyUsage(config, false);
             if (ret != HITLS_SUCCESS) {
                 return NULL;
             }
             return config;
         case HITLS_VERSION_DTLS12:
             config = HITLS_CFG_NewDTLS12Config();
-            ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false);
+            ret = HITLS_CFG_SetCheckKeyUsage(config, false);
             if (ret != HITLS_SUCCESS) {
                 return NULL;
             }
@@ -821,7 +821,8 @@ void UT_TLS_CM_READHASPENDING_FUNC_TC001(int version)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     uint8_t data[] = "Hello World";
-    ASSERT_TRUE(HITLS_Write(client->ssl, data, sizeof(data)) == HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_TRUE(HITLS_Write(client->ssl, data, sizeof(data), &writeLen) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
 
     uint8_t readBuf[5] = {0};
@@ -871,18 +872,12 @@ void UT_TLS_CM_GET_READPENDING_FUNC_TC001(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
     uint8_t data[] = "Hello World";
-    ASSERT_TRUE(HITLS_Write(server->ssl, data, sizeof(data)) == HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_TRUE(HITLS_Write(server->ssl, data, sizeof(data), &writeLen) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_SUCCESS);
-
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_IO_BUSY);
+    client->ssl->state = CM_STATE_ALERTING;
     ASSERT_TRUE(HITLS_GetReadPendingBytes(client->ssl) == sizeof("Hello World"));
-
-    client->ssl->state = CM_STATE_TRANSPORTING;
-    uint8_t readBuf[READ_BUF_SIZE] = {0};
-    uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, 2, &readLen), HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_GetReadPendingBytes(client->ssl) == (sizeof("Hello World") - 2));
-
 exit:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1369,13 +1364,13 @@ void UT_TLS_CM_GET_RANDOM_FUNC_TC001(void)
     uint8_t serverRandom[RANDOM_SIZE];
     uint32_t randomSize = RANDOM_SIZE;
 
-    ASSERT_TRUE(HITLS_GetRandom(testInfo.client->ssl, g_clientRandom, &randomSize, true) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_GetRandom(testInfo.server->ssl, clientRandom, &randomSize, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetHsRandom(testInfo.client->ssl, g_clientRandom, &randomSize, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetHsRandom(testInfo.server->ssl, clientRandom, &randomSize, true) == HITLS_SUCCESS);
     ASSERT_TRUE(randomSize == RANDOM_SIZE);
     ASSERT_TRUE(memcmp(g_clientRandom, clientRandom, RANDOM_SIZE) == 0);
 
-    ASSERT_TRUE(HITLS_GetRandom(testInfo.server->ssl, g_serverRandom, &randomSize, false) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_GetRandom(testInfo.client->ssl, serverRandom, &randomSize, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetHsRandom(testInfo.server->ssl, g_serverRandom, &randomSize, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetHsRandom(testInfo.client->ssl, serverRandom, &randomSize, false) == HITLS_SUCCESS);
     ASSERT_TRUE(randomSize == RANDOM_SIZE);
     ASSERT_TRUE(memcmp(g_serverRandom, serverRandom, RANDOM_SIZE) == 0);
 exit:
@@ -1443,12 +1438,11 @@ exit:
 /* BEGIN_CASE */
 void UT_TLS_CM_GET_STATE_STRING_FUNC_TC001()
 {
-    const char goalStr[31][32] = {
+    const char goalStr[34][32] = {
         "idle",
         "connected",
         "send hello request",
         "send client hello",
-        "send hello verify request",
         "send hello retry request",
         "send server hello",
         "send encrypted extensions",
@@ -1462,8 +1456,8 @@ void UT_TLS_CM_GET_STATE_STRING_FUNC_TC001()
         "send change cipher spec",
         "send end of early data",
         "send finished",
+        "send keyupdate",
         "recv client hello",
-        "recv hello verify request",
         "recv server hello",
         "recv encrypted extensions",
         "recv certificate",
@@ -1475,6 +1469,8 @@ void UT_TLS_CM_GET_STATE_STRING_FUNC_TC001()
         "recv new session ticket",
         "recv end of early data",
         "recv finished",
+        "recv keyupdate",
+        "recv hello request",
     };
     int32_t ret;
     for (uint32_t i = 0; i <= 30; i++) {
@@ -2593,7 +2589,8 @@ void UT_TLS_CM_HITLS_GetRwstate_FUNC_TC001(int version)
     HITLS_Accept(server->ssl);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     uint8_t writeBuf[100] = {0};
-    ret = HITLS_Write(client->ssl, writeBuf, sizeof(writeBuf));
+    uint32_t writeLen;
+    ret = HITLS_Write(client->ssl, writeBuf, sizeof(writeBuf), &writeLen);
     ret = HITLS_GetRwstate(client->ssl, &rwstate);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_EQ(rwstate, HITLS_WRITING);
@@ -2831,12 +2828,6 @@ exit:
 }
 /* END_CASE */
 
-int32_t NoSecRenegotiationCb(HITLS_Ctx *ctx)
-{
-    (void)ctx;
-    return HITLS_SUCCESS;
-}
-
 /**
 * @test Verifying the HITLS_ClearRenegotiationNum Interface
 * @title  UT_HITLS_CM_HITLS_ClearRenegotiationNum_FUNC_TC001
@@ -2881,6 +2872,7 @@ void UT_HITLS_CM_HITLS_ClearRenegotiationNum_FUNC_TC001(int version)
 
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
     uint32_t renegotiationNum = 0;
 
     ASSERT_TRUE(HITLS_ClearRenegotiationNum(clientTlsCtx, &renegotiationNum) == HITLS_SUCCESS);
@@ -2947,11 +2939,9 @@ void UT_HITLS_CM_HITLS_ClearRenegotiationNum_FUNC_TC001(int version)
     ASSERT_TRUE(HITLS_Renegotiate(clientTlsCtx) == HITLS_SUCCESS);
 
     serverTlsCtx->negotiatedInfo.isSecureRenegotiation = false;
-    serverTlsCtx->config.tlsConfig.noSecRenegotiationCb = NoSecRenegotiationCb;
-    clientTlsCtx->config.tlsConfig.noSecRenegotiationCb = NoSecRenegotiationCb;
+    ASSERT_EQ(FRAME_CreateRenegotiation(client, server), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 
-    ASSERT_TRUE(FRAME_CreateRenegotiation(client, server) == HITLS_SUCCESS);
-    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTED);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
 
     ASSERT_TRUE(HITLS_GetFinishVerifyData(serverTlsCtx, verifyDataNew, sizeof(verifyDataNew), &verifyDataNewSize) ==
@@ -3880,13 +3870,13 @@ exit:
 
 /* @
 * @test UT_TLS_CM_SETCLOSECHECKKEYUSAGE_API_TC001
-* @title HITLS_SetCloseCheckKeyUsage interface test
+* @title HITLS_SetCheckKeyUsage interface test
 * @precon nan
 * @brief
 * 1. Apply for and initialize config and ctx.
-* 2. Invoke the HITLS_SetCloseCheckKeyUsage interface and set the input parameter of the HITLS_Ctx to NULL.
-* 3. Invoke the HITLS_SetCloseCheckKeyUsage interface and set the input parameter of the isClose to true.
-* 4. Invoke the HITLS_SetCloseCheckKeyUsage interface and set the input parameter of the isClose to false.
+* 2. Invoke the HITLS_SetCheckKeyUsage interface and set the input parameter of the HITLS_Ctx to NULL.
+* 3. Invoke the HITLS_SetCheckKeyUsage interface and set the input parameter of the isClose to true.
+* 4. Invoke the HITLS_SetCheckKeyUsage interface and set the input parameter of the isClose to false.
 * @expect
 * 1. Initialization succeeded.
 * 2. The interface returns HITLS_NULL_INPUT.
@@ -3902,9 +3892,9 @@ void UT_TLS_CM_SETCLOSECHECKKEYUSAGE_API_TC001()
     HITLS_Ctx *ctx = HITLS_New(config);
     ASSERT_TRUE(ctx != NULL);
 
-    ASSERT_EQ(HITLS_SetCloseCheckKeyUsage(NULL, true), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetCloseCheckKeyUsage(ctx, true), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_SetCloseCheckKeyUsage(ctx, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetCheckKeyUsage(NULL, true), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetCheckKeyUsage(ctx, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetCheckKeyUsage(ctx, false), HITLS_SUCCESS);
 exit:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -4025,7 +4015,7 @@ HITLS_CFG_GetSecurityLevel
 3、Invoke HITLS_CFG_GetSecurityLevel to obtain the default security level. The expected result 1 is obtained
 4、Check the obtained security level. The expected result 2 is obtained
 * @expect  1、return HITLS_SUCCESS
-2、The security level is DEFAULT_SECURITYLEVEL
+2、The security level is 1
 @ */
 /* BEGIN_CASE */
 void UT_TLS_CM_SECURITY_SECURITYLEVEL_API_TC001()
@@ -4040,9 +4030,9 @@ void UT_TLS_CM_SECURITY_SECURITYLEVEL_API_TC001()
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(HITLS_GetSecurityLevel(ctx, &level) == HITLS_SUCCESS);
-    ASSERT_TRUE(level == DEFAULT_SECURITYLEVEL);
+    ASSERT_TRUE(level == 1);
     ASSERT_TRUE(HITLS_CFG_GetSecurityLevel(Config, &level) == HITLS_SUCCESS);
-    ASSERT_TRUE(level == DEFAULT_SECURITYLEVEL);
+    ASSERT_TRUE(level == 1);
 exit:
     HITLS_CFG_FreeConfig(Config);
     HITLS_Free(ctx);

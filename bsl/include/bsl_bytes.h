@@ -200,6 +200,56 @@ static inline void BSL_Uint64ToByte(uint64_t num, uint8_t *data)
     return;
 }
 
+// if a's MSB is 0, output 0
+// else if a' MSB is 1 output x00ffffffff
+static inline uint32_t Uint32ConstTimeMsb(uint32_t a)
+{
+    // 31 == (4 * 8 - 1)
+    return 0u - (a >> 31);
+}
+
+// if a is 0, output x00ffffffff, else output 0
+static inline uint32_t Uint32ConstTimeIsZero(uint32_t a)
+{
+    return Uint32ConstTimeMsb(~a & (a - 1));
+}
+
+// if a == b, output x00ffffffff, else output 0
+static inline uint32_t Uint32ConstTimeEqual(uint32_t a, uint32_t b)
+{
+    return Uint32ConstTimeIsZero(a ^ b);
+}
+
+// if mask == 0xffffffff, return a,
+// else if mask == 0, return b
+static inline uint32_t Uint32ConstTimeSelect(uint32_t mask, uint32_t a, uint32_t b)
+{
+    return ((mask) & a) | ((~mask) & b);
+}
+
+static inline uint32_t Uint8ConstTimeSelect(uint32_t mask, uint8_t a, uint8_t b)
+{
+    return (((mask) & a) | ((~mask) & b)) & 0xff;
+}
+
+// if a < b, output x00ffffffff, else output 0
+static inline uint32_t Uint32ConstTimeLt(uint32_t a, uint32_t b)
+{
+    return Uint32ConstTimeMsb(a ^ ((a ^ b) | ((a - b) ^ a)));
+}
+
+// if a >= b, output x00ffffffff, else output 0
+static inline uint32_t Uint32ConstTimeGe(uint32_t a, uint32_t b)
+{
+    return ~Uint32ConstTimeLt(a, b);
+}
+
+// if a > b, output x00ffffffff, else output 0
+static inline uint32_t Uint32ConstTimeGt(uint32_t a, uint32_t b)
+{
+    return Uint32ConstTimeLt(b, a);
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

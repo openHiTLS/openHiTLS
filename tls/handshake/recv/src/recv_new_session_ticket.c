@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 #include <stdint.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -69,7 +70,7 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
 
     return HITLS_SUCCESS;
 }
-
+#ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t Tls12ClientRecvNewSeesionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -109,21 +110,31 @@ int32_t Tls12ClientRecvNewSeesionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
 
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC */
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13ClientRecvNewSessionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
+    if (!ctx->isClient) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
+        BSL_LOG_BINLOG_VARLEN(BINLOG_ID16018, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Unexpected msg: server recv new session ticket", HS_GetMsgTypeStr(hsMsg->type));
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+        return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+    }
+
     int32_t ret = HITLS_SUCCESS;
     NewSessionTicketMsg *msg = &hsMsg->body.newSessionTicket;
 
     /* If the value is 0, the ticket should be discarded immediately. After the TTO is backed up, the ctx->session field
      * is empty */
     if (msg->ticketLifetimeHint == 0 || ctx->session == NULL) {
-        return HITLS_SUCCESS;
+        return HS_ChangeState(ctx, TLS_CONNECTED);
     }
 
     uint8_t resumePsk[MAX_DIGEST_SIZE] = {0};
     uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
     if (hashLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17081, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "DigestSize err", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_DIGEST;
     }
     ret = HS_TLS13DeriveResumePsk(ctx, msg->ticketNonce, msg->ticketNonceSize, resumePsk, hashLen);
@@ -141,5 +152,7 @@ int32_t Tls13ClientRecvNewSessionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
         return ret;
     }
 
-    return HITLS_SUCCESS;
+    return HS_ChangeState(ctx, TLS_CONNECTED);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */

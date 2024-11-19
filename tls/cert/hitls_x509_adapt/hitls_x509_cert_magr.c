@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_CALLBACK_CERT
 #include <stdint.h>
 #include "securec.h"
 #include "crypt_eal_pkey.h"
@@ -229,3 +230,4 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
 
     return ret;
 }
+#endif /* HITLS_TLS_CALLBACK_CERT */

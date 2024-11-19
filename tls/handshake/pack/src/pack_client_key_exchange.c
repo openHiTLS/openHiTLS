@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_CLIENT
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #include <stdint.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -27,10 +29,9 @@
 #include "cert_method.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "pack_common.h"
 
-
-#define APPROXIMATE_PREMASTER_LEN 128
-
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
 static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -49,17 +50,13 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, uint8_t *buf, uint3
     }
 
     if (bufLen < (sizeof(uint8_t) + pubKeyLen)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15674, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the buffer length is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID15674, BINGLOG_STR("ClientKx"));
     }
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version ==
         HITLS_VERSION_TLCP11) { /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
         if (bufLen < (sizeof(uint8_t) + pubKeyLen + sizeof(uint8_t) + sizeof(uint16_t))) {
-            BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-            return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+            return PackBufLenError(BINLOG_ID16216, BINGLOG_STR("ClientKx"));
         }
         buf[offset] = HITLS_EC_CURVE_TYPE_NAMED_CURVE;
         offset += sizeof(uint8_t);
@@ -100,7 +97,8 @@ static int32_t PackClientKxMsgEcdhe(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         "unsupport key exchange curve type.", 0, 0, 0, 0);
     return HITLS_PACK_UNSUPPORT_KX_CURVE_TYPE;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
 static int32_t PackClientKxMsgDhe(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -116,10 +114,7 @@ static int32_t PackClientKxMsgDhe(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     }
 
     if (bufLen < (sizeof(uint16_t) + pubkeyLen)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15678, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the buffer length is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID15678, BINGLOG_STR("ClientKx"));
     }
 
     uint32_t offset = sizeof(uint16_t);
@@ -138,7 +133,8 @@ static int32_t PackClientKxMsgDhe(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
 
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
 int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -148,10 +144,7 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t
     uint8_t *preMasterSecret = kxCtx->keyExchParam.rsa.preMasterSecret;
 
     if (bufLen < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15680, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "bufLen = %u is not enough to encrypt PreMasterSecret.", bufLen, 0, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID15680, BINGLOG_STR("ClientKx"));
     }
 
     offset = sizeof(uint16_t);
@@ -160,19 +153,26 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t
     HITLS_Config *config = &ctx->config.tlsConfig;
     CERT_MgrCtx *mgrCtx = config->certMgrCtx;
     HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(hsCtx->peerCert);
-    if (ctx->config.tlsConfig.needCheckKeyUsage == true &&
-        SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE) != true) {
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    if ((cert == NULL) || (ctx->config.tlsConfig.needCheckKeyUsage == true &&
+        SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE) != true)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16928, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CheckCertKeyUsage fail", 0, 0, 0, 0);
         return HITLS_CERT_ERR_KEYUSAGE;
     }
-
+#endif
     HITLS_CERT_Key *pubkey = NULL;
     ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16929, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ParseChain fail", 0, 0, 0, 0);
         return ret;
     }
     ret = SAL_CERT_KeyEncrypt(ctx, pubkey, preMasterSecret, MASTER_SECRET_LEN, &buf[offset], &encLen);
     SAL_CERT_KeyFree(mgrCtx, pubkey);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16930, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GET_PUB_KEY fail", 0, 0, 0, 0);
         return ret;
     }
     offset += encLen;
@@ -181,8 +181,8 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
-
-#ifndef HITLS_NO_TLCP11
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_PROTO_TLCP11
 static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -191,8 +191,7 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     uint8_t *preMasterSecret = kxCtx->keyExchParam.ecc.preMasterSecret;
 
     if (bufLen < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID16217, BINGLOG_STR("ClientKx"));
     }
 
     uint32_t offset = sizeof(uint16_t);
@@ -202,18 +201,26 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     HITLS_Config *config = &ctx->config.tlsConfig;
     CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
     HITLS_CERT_X509 *certEnc = SAL_CERT_GetTlcpEncCert(hsCtx->peerCert);
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
     if (ctx->config.tlsConfig.needCheckKeyUsage == true &&
         SAL_CERT_CheckCertKeyUsage(ctx, certEnc, CERT_KEY_CTRL_IS_KEYENC_USAGE) != true) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16931, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CheckCertKeyUsage fail", 0, 0, 0, 0);
         return HITLS_CERT_ERR_KEYUSAGE;
     }
+#endif
     HITLS_CERT_Key *pubkey = NULL;
     ret = SAL_CERT_X509Ctrl(config, certEnc, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16218, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "get encrypt cert public key failed.", 0, 0, 0, 0);
         return ret;
     }
     ret = SAL_CERT_KeyEncrypt(ctx, pubkey, preMasterSecret, MASTER_SECRET_LEN, &buf[offset], &encLen);
     SAL_CERT_KeyFree(certMgrCtx, pubkey);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16932, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "KeyEncrypt fail", 0, 0, 0, 0);
         return ret;
     }
     offset += encLen;
@@ -225,7 +232,7 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     return HITLS_SUCCESS;
 }
 #endif
-
+#ifdef HITLS_TLS_FEATURE_PSK
 static int32_t PackClientKxMsgIdentity(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     uint8_t *pskIdentity = ctx->hsCtx->kxCtx->pskInfo->identity;
@@ -233,6 +240,7 @@ static int32_t PackClientKxMsgIdentity(const TLS_Ctx *ctx, uint8_t *buf, uint32_
     uint32_t dataLen = sizeof(uint16_t) + pskIdentitySize;
 
     if (bufLen < dataLen) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16933, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "buflen err", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
         return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
     }
@@ -243,19 +251,17 @@ static int32_t PackClientKxMsgIdentity(const TLS_Ctx *ctx, uint8_t *buf, uint32_
     offset += sizeof(uint16_t);
 
     if (bufLen - offset < pskIdentitySize) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16934, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "buflen err", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
         return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
     }
-    if (memcpy_s(&buf[offset], bufLen - offset, pskIdentity, pskIdentitySize) != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        return HITLS_MEMCPY_FAIL;
-    }
+    (void)memcpy_s(&buf[offset], bufLen - offset, pskIdentity, pskIdentitySize);
     offset += pskIdentitySize;
 
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
 // Pack the ClientKeyExchange message.
 
 int32_t PackClientKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
@@ -263,32 +269,37 @@ int32_t PackClientKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     int32_t ret = HITLS_SUCCESS;
     uint32_t len = 0u;
     uint32_t offset = 0u;
-
+#ifdef HITLS_TLS_FEATURE_PSK
     /* PSK negotiation pre act: append identity */
     if (IsPskNegotiation(ctx)) {
-        ret = PackClientKxMsgIdentity(ctx, buf, bufLen, &len);
-        if (ret != HITLS_SUCCESS) {
+        if ((ret = PackClientKxMsgIdentity(ctx, buf, bufLen, &len)) != HITLS_SUCCESS) {
             return ret;
         }
-        offset += len;
+        offset = offset + len;
     }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
     len = 0u;
     /* Pack the key exchange message */
     switch (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg) {
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE: /* TLCP is also included */
         case HITLS_KEY_EXCH_ECDHE_PSK:
             ret = PackClientKxMsgEcdhe(ctx, &buf[offset], bufLen - offset, &len);
             break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
             ret = PackClientKxMsgDhe(ctx, &buf[offset], bufLen - offset, &len);
             break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
         case HITLS_KEY_EXCH_RSA:
         case HITLS_KEY_EXCH_RSA_PSK:
             ret = PackClientKxMsgRsa(ctx, &buf[offset], bufLen - offset, &len);
             break;
-#ifndef HITLS_NO_TLCP11
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
             ret = PackClientKxMsgEcc(ctx, &buf[offset], bufLen - offset, &len);
             break;
@@ -302,12 +313,9 @@ int32_t PackClientKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
                 "unsupport key exchange algorithm when pack client key exchange.", 0, 0, 0, 0);
             return HITLS_PACK_UNSUPPORT_KX_ALG;
     }
-
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    offset += len;
-
+    offset = offset + len;
     *usedLen = offset;
-    return HITLS_SUCCESS;
+    return ret;
 }
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_HOST_CLIENT */

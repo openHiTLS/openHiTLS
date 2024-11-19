@@ -27,7 +27,6 @@
 #include "sal_net.h"
 #include "uio_base.h"
 #include "uio_abstraction.h"
-#include "uio_tcp.h"
 
 typedef struct {
     int32_t fd;
@@ -73,18 +72,6 @@ static int32_t TcpSocketDestroy(BSL_UIO *uio)
         BSL_UIO_SetCtx(uio, NULL);
     }
     return BSL_SUCCESS;
-}
-
-int32_t TcpWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
-{
-    *writeLen = 0;
-    return uio->method.write(uio, buf, len, writeLen);
-}
-
-int32_t TcpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
-{
-    *readLen = 0;
-    return uio->method.read(uio, buf, len, readLen);
 }
 
 static int32_t TcpSocketWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)

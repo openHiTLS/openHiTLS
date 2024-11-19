@@ -12,13 +12,14 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+ 
 #ifndef PARSE_EXTENSIONS_H
 #define PARSE_EXTENSIONS_H
 
 #include <stdint.h>
 #include "tls.h"
 #include "hs_msg.h"
+#include "parse_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -102,6 +103,35 @@ void CleanServerHelloExtension(ServerHelloMsg *msg);
  */
 int32_t ParseEmptyExtension(TLS_Ctx *ctx, uint16_t extMsgType, uint32_t extMsgLen, bool *haveExtension);
 
+int32_t ParseExCookie(const uint8_t *buf, uint32_t bufLen, uint8_t **cookie, uint16_t *cookieLen);
+
+int32_t ParseSecRenegoInfo(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, uint8_t **secRenegoInfo,
+    uint8_t *secRenegoInfoSize);
+
+int32_t ParseServerSelectedAlpnProtocol(
+    ParsePacket *pkt, bool *haveSelectedAlpn, uint8_t **alpnSelected, uint16_t *alpnSelectedSize);
+
+/**
+ * @brief   Error process in duplicated extension
+ *
+ * @param   ctx [IN] TLS context
+ * @param   logId [IN] binlogid
+ * @param   format [IN] Message for log function
+
+ * @retval  HITLS_PARSE_DUPLICATE_EXTENDED_MSG
+ */
+int32_t ParseDupExtProcess(TLS_Ctx *ctx, uint32_t logId, const void *format);
+
+/**
+ * @brief   Parse extension length error
+ *
+ * @param   ctx [IN] TLS context
+ * @param   logId [IN] binlogid
+ * @param   format [IN] Message for log function
+
+ * @retval  HITLS_PARSE_INVALID_MSG_LEN
+ */
+int32_t ParseErrorExtLengthProcess(TLS_Ctx *ctx, uint32_t logId, const void *format);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

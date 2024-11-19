@@ -12,7 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -25,13 +25,13 @@
 #include "hs_kx.h"
 #include "pack.h"
 #include "send_process.h"
-
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t SendCertificateProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
-    /** Determine whether the message needs to be packed */
+    /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
         /* Only the client can send a certificate message with an empty certificate */
         if ((ctx->isClient == false) && (SAL_CERT_GetCurrentCert(mgrCtx) == NULL)) {
@@ -74,31 +74,43 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO_DONE);
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
-    /** Determine whether the message needs to be packed */
+    /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
-        /** In the middlebox scenario, if the client does not send the hrr message, a CCS message needs to be sent
+        /* In the middlebox scenario, if the client does not send the hrr message, a CCS message needs to be sent
          * before the certificate */
-        if (!ctx->hsCtx->haveHrr && ctx->phaState != PHA_REQUESTED) {
+        if (!ctx->hsCtx->haveHrr
+#ifdef HITLS_TLS_FEATURE_PHA
+                && ctx->phaState != PHA_REQUESTED
+#endif /* HITLS_TLS_FEATURE_PHA */
+             ) {
             ret = ctx->method.sendCCS(ctx);
             if (ret != HITLS_SUCCESS) {
                 return ret;
             }
         }
-        if (ctx->phaState != PHA_REQUESTED) {
+#ifdef HITLS_TLS_FEATURE_PHA
+        if (ctx->phaState != PHA_REQUESTED)
+#endif /* HITLS_TLS_FEATURE_PHA */
+        {
             /* CCS messages cannot be encrypted. Therefore, you need to activate the
                 sending key of the client after sending CCS messages. */
             uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
             if (hashLen == 0) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17103, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "DigestSize fail", 0, 0, 0, 0);
                 return HITLS_CRYPT_ERR_DIGEST;
             }
             ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->clientHsTrafficSecret, hashLen, true);
             if (ret != HITLS_SUCCESS) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17104, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "SwitchTrafficKey fail", 0, 0, 0, 0);
                 return ret;
             }
         }
@@ -131,7 +143,7 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
-    /** Determine whether the message needs to be packed */
+    /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
         /* The server cannot send an empty certificate message */
         if (SAL_CERT_GetCurrentCert(ctx->config.tlsConfig.certMgrCtx) == NULL) {
@@ -159,3 +171,4 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
 
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_VERIFY);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */

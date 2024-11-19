@@ -101,9 +101,11 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
     // Test BSL_SAL_UnLoadLib with valid input
     ret = BSL_SAL_UnLoadLib(handle1);
     ASSERT_EQ(ret, BSL_SUCCESS);
+    handle1 = NULL;
 
     ret = BSL_SAL_UnLoadLib(handle2);
     ASSERT_EQ(ret, BSL_SUCCESS);
+    handle2 = NULL;
 
     // Test BSL_SAL_UnLoadLib with invalid input
     ret = BSL_SAL_UnLoadLib(NULL);

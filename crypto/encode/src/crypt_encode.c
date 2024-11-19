@@ -220,28 +220,29 @@ static uint32_t GetDecodeLen(const uint8_t *sign, uint32_t signLen, uint32_t *of
     if ((sign[offset] & 0x80) != 0) {
         cnt = sign[offset] & 0x7F;
         offset++;
+        // Check whether the length is meaningful and out of range.
+        if (cnt == 0 || (offset + cnt) > signLen || cnt > sizeof(int32_t)) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return 0;
+        }
+
+        uint32_t i;
+        // Obtain the length.
+        for (i = 0; i < cnt; i++) {
+            ret <<= 8; // Each byte has 8 bits.
+            ret += sign[offset + i];
+        }
+        offset += i;
+        if (ret + offset < ret) { // Prevent the ret is out of range.
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return 0;
+        }
     } else {
-        cnt = 1;
+        ret = sign[offset];
+        offset++;
     }
-    // Check whether the length is meaningful and out of range.
-    if (cnt == 0 || (offset + cnt) > signLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return 0;
-    }
-    uint32_t i;
-    // Obtain the length.
-    for (i = 0; i < cnt; i++) {
-        ret <<= 8;
-        ret += sign[offset + i];
-    }
-    // Check whether the length is meaningful.
-    if (ret == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return 0;
-    }
-    offset += i;
     // Determine whether out-of-bounds.
-    if (offset + ret > signLen) {
+    if (ret == 0 || offset + ret > signLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return 0;
     }

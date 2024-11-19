@@ -14,6 +14,7 @@
  */
 
 #include <stddef.h>
+#include "hitls_build.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
@@ -24,7 +25,6 @@
 int32_t HITLS_SetVerifyStore(HITLS_Ctx *ctx, HITLS_CERT_Store *store, bool isClone)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -43,7 +43,6 @@ HITLS_CERT_Store *HITLS_GetVerifyStore(const HITLS_Ctx *ctx)
 int32_t HITLS_SetChainStore(HITLS_Ctx *ctx, HITLS_CERT_Store *store, bool isClone)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -62,7 +61,6 @@ HITLS_CERT_Store *HITLS_GetChainStore(const HITLS_Ctx *ctx)
 int32_t HITLS_SetCertStore(HITLS_Ctx *ctx, HITLS_CERT_Store *store, bool isClone)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -81,7 +79,6 @@ HITLS_CERT_Store *HITLS_GetCertStore(const HITLS_Ctx *ctx)
 int32_t HITLS_SetVerifyDepth(HITLS_Ctx *ctx, uint32_t depth)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -91,7 +88,6 @@ int32_t HITLS_SetVerifyDepth(HITLS_Ctx *ctx, uint32_t depth)
 int32_t HITLS_GetVerifyDepth(const HITLS_Ctx *ctx, uint32_t *depth)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -101,16 +97,10 @@ int32_t HITLS_GetVerifyDepth(const HITLS_Ctx *ctx, uint32_t *depth)
 int32_t HITLS_SetDefaultPasswordCb(HITLS_Ctx *ctx, HITLS_PasswordCb cb)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
-    int32_t ret = HITLS_CFG_SetDefaultPasswordCb(&(ctx->config.tlsConfig), cb);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    return HITLS_SUCCESS;
+    return HITLS_CFG_SetDefaultPasswordCb(&(ctx->config.tlsConfig), cb);
 }
 
 HITLS_PasswordCb HITLS_GetDefaultPasswordCb(HITLS_Ctx *ctx)
@@ -125,16 +115,10 @@ HITLS_PasswordCb HITLS_GetDefaultPasswordCb(HITLS_Ctx *ctx)
 int32_t HITLS_SetDefaultPasswordCbUserdata(HITLS_Ctx *ctx, void *userdata)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
-    int32_t ret = HITLS_CFG_SetDefaultPasswordCbUserdata(&(ctx->config.tlsConfig), userdata);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    return HITLS_SUCCESS;
+    return HITLS_CFG_SetDefaultPasswordCbUserdata(&(ctx->config.tlsConfig), userdata);
 }
 
 void *HITLS_GetDefaultPasswordCbUserdata(HITLS_Ctx *ctx)
@@ -149,27 +133,26 @@ void *HITLS_GetDefaultPasswordCbUserdata(HITLS_Ctx *ctx)
 int32_t HITLS_SetCertificate(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, bool isClone)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetCertificate(&(ctx->config.tlsConfig), cert, isClone);
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
 int32_t HITLS_LoadCertFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_LoadCertFile(&(ctx->config.tlsConfig), file, format);
 }
+#endif
 
 int32_t HITLS_LoadCertBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -188,27 +171,25 @@ HITLS_CERT_X509 *HITLS_GetCertificate(const HITLS_Ctx *ctx)
 int32_t HITLS_SetPrivateKey(HITLS_Ctx *ctx, HITLS_CERT_Key *key, bool isClone)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetPrivateKey(&(ctx->config.tlsConfig), key, isClone);
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
 int32_t HITLS_LoadKeyFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_LoadKeyFile(&(ctx->config.tlsConfig), file, format);
 }
-
+#endif
 int32_t HITLS_LoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -224,10 +205,9 @@ HITLS_CERT_Key *HITLS_GetPrivateKey(HITLS_Ctx *ctx)
     return HITLS_CFG_GetPrivateKey(&(ctx->config.tlsConfig));
 }
 
-int32_t HITLS_CheckPrivateKey(const HITLS_Ctx *ctx)
+int32_t HITLS_CheckPrivateKey(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -237,7 +217,6 @@ int32_t HITLS_CheckPrivateKey(const HITLS_Ctx *ctx)
 int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -247,14 +226,13 @@ int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx)
 int32_t HITLS_SetVerifyCb(HITLS_Ctx *ctx, HITLS_VerifyCb callback)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetVerifyCb(&(ctx->config.tlsConfig), callback);
 }
 
-HITLS_VerifyCb HITLS_GetVerifyCb(const HITLS_Ctx *ctx)
+HITLS_VerifyCb HITLS_GetVerifyCb(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
         return NULL;

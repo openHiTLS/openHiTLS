@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_CALLBACK_CERT
 #include <stdint.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
@@ -118,3 +119,4 @@ EXIT:
     BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     return ret;
 }
+#endif /* HITLS_TLS_CALLBACK_CERT */

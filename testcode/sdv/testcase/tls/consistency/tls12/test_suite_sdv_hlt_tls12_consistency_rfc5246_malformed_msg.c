@@ -815,7 +815,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC015(void
     // 4. Check the status of the test.
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     /* 3. Check the status of the tested . */
-    testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
+    testPara.expectDescription = ALERT_DECODE_ERROR;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
 }

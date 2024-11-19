@@ -17,6 +17,7 @@
 #define REC_BUF_H
 
 #include <stdint.h>
+#include "bsl_list.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,10 +30,12 @@ typedef struct {
 
     uint32_t start;
     uint32_t end;
-
     uint32_t singleRecStart;
     uint32_t singleRecEnd;
+    bool isHoldBuffer;
 } RecBuf;
+
+typedef struct BslList RecBufList;
 /**
  * @brief   Allocate buffer
  *
@@ -55,6 +58,20 @@ void RecBufFree(RecBuf *buf);
  * @param   buf [IN] Buffer handle
  */
 void RecBufClean(RecBuf *buf);
+
+RecBufList *RecBufListNew(void);
+
+void RecBufListFree(RecBufList *bufList);
+
+int32_t RecBufListDereference(RecBufList *bufList);
+
+bool RecBufListEmpty(RecBufList *bufList);
+
+int32_t RecBufListGetBuffer(RecBufList *bufList, uint8_t *buf, uint32_t bufLen, uint32_t *getLen, bool isPeek);
+
+int32_t RecBufListAddBuffer(RecBufList *bufList, RecBuf *buf);
+
+int32_t RecBufResize(RecBuf *recBuf, uint32_t size);
 
 #ifdef __cplusplus
 }

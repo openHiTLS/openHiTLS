@@ -35,9 +35,21 @@ int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg);
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg);
+#endif
+
+/*
+ * @brief   Dtls client processes hello verify request message
+ *
+ * @param   ctx [IN] TLS context
+ * @param   msg [IN] hello verify request message
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  For other error codes, see hitls_error.h
+ */
+#ifdef HITLS_TLS_PROTO_DTLS12
+int32_t DtlsClientRecvHelloVerifyRequestProcess(TLS_Ctx *ctx, HS_Msg *msg);
 #endif
 
 /**
@@ -147,8 +159,7 @@ int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL Failed to verify the finished message
  */
-
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
 #endif
 
@@ -161,8 +172,7 @@ int32_t DtlsServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL Failed to verify the finished message
  */
-
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
 #endif
 
