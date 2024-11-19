@@ -12,15 +12,16 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
 #include <stdint.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "tls_binlog_id.h"
 #include "hitls_error.h"
 #include "hitls_security.h"
 #include "tls.h"
 #include "security.h"
-
 /* Number of security bits corresponding to the security level */
 static const int32_t g_minBits[] = {HITLS_SECURITY_LEVEL_ONE_SECBITS,
     HITLS_SECURITY_LEVEL_TWO_SECBITS,
@@ -75,7 +76,7 @@ static int32_t GetSigalgSecbits(HITLS_SignHashAlgo signScheme)
         case CERT_SIG_SCHEME_DSA_SHA256:
         case CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256:
         case CERT_SIG_SCHEME_ED25519:
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case CERT_SIG_SCHEME_SM2_SM3:
 #endif
             return HITLS_SECURITY_LEVEL_THREE_SECBITS;
@@ -84,6 +85,7 @@ static int32_t GetSigalgSecbits(HITLS_SignHashAlgo signScheme)
         case CERT_SIG_SCHEME_RSA_PKCS1_SHA384:
         case CERT_SIG_SCHEME_DSA_SHA384:
         case CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384:
+        case CERT_SIG_SCHEME_ED448:
             return HITLS_SECURITY_LEVEL_FOUR_SECBITS;
         case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512:
         case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512:
@@ -142,7 +144,7 @@ static int32_t CheckVersion(int32_t id, int32_t level)
         }
         return SECURITY_SUCCESS;
     }
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
     /* If the level is greater than or equal to 1, SSL2.0, SSL3.0, TLS1.0, and TLS1.1 cannot be used. */
     if ((level >= HITLS_SECURITY_LEVEL_ONE) && ((uint32_t)id < HITLS_VERSION_TLS12) &&
         ((uint32_t)id != HITLS_VERSION_TLCP11)) {
@@ -201,13 +203,18 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
         return SECURITY_ERR;
     } else if (config != NULL) {
         (void)HITLS_CFG_GetSecurityLevel(config, &level);
-    } else {
+    } else if (ctx != NULL) {
         (void)HITLS_GetSecurityLevel(ctx, &level);
     }
     /* No restrictions are imposed when Level is 0. */
     if (level <= HITLS_SECURITY_LEVEL_MIN) {
         return SECURITY_SUCCESS;
     }
+
+    if (level > HITLS_SECURITY_LEVEL_MAX) {
+        level = HITLS_SECURITY_LEVEL_MAX;
+    }
+
     /* Check the number of security bits. */
     minBits = SECURITY_GetSecbits(level);
     switch (option) {
@@ -257,9 +264,10 @@ void SECURITY_SetDefault(HITLS_Config *config)
     return;
 }
 
-int32_t SECURITY_CfgCheck(HITLS_Config *config, int32_t option, int32_t bits, int32_t id, void *other)
+int32_t SECURITY_CfgCheck(const HITLS_Config *config, int32_t option, int32_t bits, int32_t id, void *other)
 {
     if (config == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16698, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "config null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -269,12 +277,14 @@ int32_t SECURITY_CfgCheck(HITLS_Config *config, int32_t option, int32_t bits, in
     }
     return config->securityCb(NULL, config, option, bits, id, other, config->securityExData);
 }
-int32_t SECURITY_SslCheck(HITLS_Ctx *ctx, int32_t option, int32_t bits, int32_t id, void *other)
+int32_t SECURITY_SslCheck(const HITLS_Ctx *ctx, int32_t option, int32_t bits, int32_t id, void *other)
 {
     if (ctx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16699, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return SECURITY_CfgCheck(&(ctx->config.tlsConfig), option, bits, id, other);
 }
+#endif /* HITLS_TLS_FEATURE_SECURITY */

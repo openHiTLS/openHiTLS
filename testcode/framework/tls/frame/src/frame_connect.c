@@ -93,7 +93,10 @@ static bool StateCompare(FRAME_LinkObj *link, bool isClient, HITLS_HandshakeStat
         }
         // In tls1.3, the server may receive the CCS message in the TRY_RECV_CERTIFICATIONATE phase
         if (state == TRY_RECV_CERTIFICATE){
-            if (link->needStopBeforeRecvCCS || CCS_IsRecv(link->ssl) == true || link->ssl->hsCtx->haveHrr == true ||
+            if (link->needStopBeforeRecvCCS || CCS_IsRecv(link->ssl) == true ||
+#ifdef HITLS_TLS_PROTO_TLS13
+                link->ssl->hsCtx->haveHrr == true ||
+#endif /* HITLS_TLS_PROTO_TLS13 */
                 link->ssl->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 || isClient == true) {
                 return true;
             }
@@ -215,7 +218,8 @@ int32_t FRAME_CreateRenegotiation(FRAME_LinkObj *linkA, FRAME_LinkObj *linkB)
     }
 
     do {
-        clientRet = HITLS_Write(linkA->ssl, writeBuf, sizeof(writeBuf));
+        uint32_t len = 0;
+        clientRet = HITLS_Write(linkA->ssl, writeBuf, sizeof(writeBuf), &len);
         if (clientRet != HITLS_SUCCESS) {
             ret = clientRet;
             if ((clientRet != HITLS_REC_NORMAL_IO_BUSY) && (clientRet != HITLS_REC_NORMAL_RECV_BUF_EMPTY)) {

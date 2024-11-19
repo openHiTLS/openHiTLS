@@ -30,10 +30,10 @@ extern "C" {
 void SECURITY_SetDefault(HITLS_Config *config);
 
 /* check TLS configuration security */
-int32_t SECURITY_CfgCheck(HITLS_Config *config, int32_t option, int32_t bits, int32_t id, void *other);
+int32_t SECURITY_CfgCheck(const HITLS_Config *config, int32_t option, int32_t bits, int32_t id, void *other);
 
 /* check TLS link security */
-int32_t SECURITY_SslCheck(HITLS_Ctx *ctx, int32_t option, int32_t bits, int32_t id, void *other);
+int32_t SECURITY_SslCheck(const HITLS_Ctx *ctx, int32_t option, int32_t bits, int32_t id, void *other);
 
 /* get the security strength corresponding to the security level */
 int32_t SECURITY_GetSecbits(int32_t level);

@@ -48,6 +48,15 @@ int32_t PackSessionId(const uint8_t *id, uint32_t idSize, uint8_t *buf, uint32_t
  */
 void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint8_t *buf);
 
+/**
+ * @brief   Error processing function in pack module
+ *
+ * @param   logId [IN] binlogid
+ * @param   format [IN] Message for log function
+
+ * @retval  error code
+ */
+int32_t PackBufLenError(uint32_t logId, const void *format);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

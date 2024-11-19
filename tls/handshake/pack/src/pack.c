@@ -15,7 +15,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-
+#include "hitls_build.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -30,19 +30,14 @@
 #include "pack_msg.h"
 #include "pack_common.h"
 
-
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
     switch (type) {
-        case CLIENT_HELLO:
-            ret = PackClientHello(ctx, buf, bufLen, usedLen);
-            break;
+#ifdef HITLS_TLS_HOST_SERVER
         case SERVER_HELLO:
             ret = PackServerHello(ctx, buf, bufLen, usedLen);
-            break;
-        case CERTIFICATE:
-            ret = PackCertificate(ctx, buf, bufLen, usedLen);
             break;
         case SERVER_KEY_EXCHANGE:
             ret = PackServerKeyExchange(ctx, buf, bufLen, usedLen);
@@ -53,14 +48,25 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32
         case HELLO_REQUEST:
         case SERVER_HELLO_DONE:
             return HITLS_SUCCESS;
-        case CERTIFICATE_VERIFY:
-            ret = PackCertificateVerify(ctx, buf, bufLen, usedLen);
-            break;
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
         case NEW_SESSION_TICKET:
             ret = PackNewSessionTicket(ctx, buf, bufLen, usedLen);
             break;
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
+#endif /* HITLS_TLS_HOST_SERVER */
+#ifdef HITLS_TLS_HOST_CLIENT
+        case CLIENT_HELLO:
+            ret = PackClientHello(ctx, buf, bufLen, usedLen);
+            break;
         case CLIENT_KEY_EXCHANGE:
             ret = PackClientKeyExchange(ctx, buf, bufLen, usedLen);
+            break;
+        case CERTIFICATE_VERIFY:
+            ret = PackCertificateVerify(ctx, buf, bufLen, usedLen);
+            break;
+#endif /* HITLS_TLS_HOST_CLIENT */
+        case CERTIFICATE:
+            ret = PackCertificate(ctx, buf, bufLen, usedLen);
             break;
         case FINISHED:
             ret = PackFinished(ctx, buf, bufLen, usedLen);
@@ -73,18 +79,21 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15812, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack handshake[%u] msg error.", type, 0, 0, 0);
-        return ret;
     }
-    return HITLS_SUCCESS;
+    return ret;
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#ifdef HITLS_TLS_PROTO_TLS13
 static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
     switch (type) {
+#ifdef HITLS_TLS_HOST_CLIENT
         case CLIENT_HELLO:
             ret = PackClientHello(ctx, buf, bufLen, usedLen);
             break;
+#endif /* HITLS_TLS_HOST_CLIENT */
+#ifdef HITLS_TLS_HOST_SERVER
         case SERVER_HELLO:
             ret = PackServerHello(ctx, buf, bufLen, usedLen);
             break;
@@ -94,6 +103,10 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, u
         case CERTIFICATE_REQUEST:
             ret = Tls13PackCertificateRequest(ctx, buf, bufLen, usedLen);
             break;
+        case NEW_SESSION_TICKET:
+            ret = Tls13PackNewSessionTicket(ctx, buf, bufLen, usedLen);
+            break;
+#endif /* HITLS_TLS_HOST_SERVER */
         case CERTIFICATE:
             ret = Tls13PackCertificate(ctx, buf, bufLen, usedLen);
             break;
@@ -103,12 +116,11 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, u
         case FINISHED:
             ret = PackFinished(ctx, buf, bufLen, usedLen);
             break;
+#ifdef HITLS_TLS_FEATURE_KEY_UPDATE
         case KEY_UPDATE:
             ret = PackKeyUpdate(ctx, buf, bufLen, usedLen);
             break;
-        case NEW_SESSION_TICKET:
-            ret = Tls13PackNewSessionTicket(ctx, buf, bufLen, usedLen);
-            break;
+#endif
         default:
             ret = HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
             break;
@@ -121,8 +133,8 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, u
     }
     return HITLS_SUCCESS;
 }
-
-#ifndef HITLS_NO_DTLS12
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_PROTO_DTLS12
 int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     uint16_t sequence = 0;
@@ -141,13 +153,14 @@ int32_t Dtls12PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufL
     return HITLS_SUCCESS;
 }
 #endif
-
+#ifdef HITLS_TLS_PROTO_TLS_BASIC
 int32_t Tls12PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
     uint32_t len = 0;
 
     if (type > HS_MSG_TYPE_END) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16943, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "type err", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG);
         return HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
     }
@@ -163,13 +176,15 @@ int32_t Tls12PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLe
 
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC */
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
     uint32_t len = 0;
-
-    if (type > HS_MSG_TYPE_END) {
+    int32_t enumBorder = HS_MSG_TYPE_END;
+    if ((int32_t)type > enumBorder) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16944, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "type err", 0, 0, 0, 0);
         return HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
     }
     ret = PackTls13HsMsgBody(ctx, type, &buf[HS_MSG_HEADER_SIZE], bufLen - HS_MSG_HEADER_SIZE, &len);
@@ -184,7 +199,7 @@ int32_t Tls13PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLe
 
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_PROTO_TLS13 */
 int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     if ((ctx == NULL) || (buf == NULL) || (usedLen == NULL) || (bufLen == 0)) {
@@ -197,14 +212,18 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen,
     uint32_t version = HS_GetVersion(ctx);
 
     switch (version) {
+#ifdef HITLS_TLS_PROTO_TLS_BASIC
         case HITLS_VERSION_TLS12:
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_VERSION_TLCP11:
 #endif
             return Tls12PackMsg(ctx, type, buf, bufLen, usedLen);
+#endif /* HITLS_TLS_PROTO_TLS_BASIC */
+#ifdef HITLS_TLS_PROTO_TLS13
         case HITLS_VERSION_TLS13:
             return Tls13PackMsg(ctx, type, buf, bufLen, usedLen);
-#ifndef HITLS_NO_DTLS12
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_PROTO_DTLS12
         case HITLS_VERSION_DTLS12:
             return Dtls12PackMsg(ctx, type, buf, bufLen, usedLen);
 #endif

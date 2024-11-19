@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_PROTO_DTLS12
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -27,13 +28,10 @@
 #include "hs_msg.h"
 #include "hs_reass.h"
 
-
-#ifndef HITLS_NO_DTLS12
-
 #define MAX_NUM_EXCEED_EXPECT 10
 
-static const uint8_t START_MASK_MAP[] = { 0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80 };
-static const uint8_t END_MASK_MAP[] = { 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F, 0x7F, 0xFF };
+static const uint8_t g_startMaskMap[] = { 0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80 };
+static const uint8_t g_endMaskMap[] = { 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F, 0x7F, 0xFF };
 
 static void SetReassBitMap(uint8_t *reassBitMap, uint32_t fragmentOffset, uint32_t fragmentLength)
 {
@@ -51,16 +49,15 @@ static void SetReassBitMap(uint8_t *reassBitMap, uint32_t fragmentOffset, uint32
         uint32_t startOffset = start >> 3; /* bitmap to be set, >> 3 indicates the division by 8 */
         uint32_t endOffset = end >> 3;     /* last byte of the bitmap to be set, >> 3 is divided by 8 */
         /* Assign the first byte, &7 indicates the remainder 8 */
-        reassBitMap[startOffset] |= START_MASK_MAP[start & 7];
+        reassBitMap[startOffset] |= g_startMaskMap[start & 7];
         /* Assign a value to the middle byte */
         uint32_t copyLen = endOffset - startOffset - 1;
         (void)memset_s(&reassBitMap[startOffset + 1], copyLen, 0xFF, copyLen);
         /* Assign the last byte, &7 indicates the remainder 8 */
-        reassBitMap[endOffset] |= END_MASK_MAP[end & 7];
+        reassBitMap[endOffset] |= g_endMaskMap[end & 7];
     }
     return;
 }
-
 
 static bool IsReassComplete(const uint8_t *reassBitMap, uint32_t msgLen)
 {
@@ -68,7 +65,7 @@ static bool IsReassComplete(const uint8_t *reassBitMap, uint32_t msgLen)
     /* bit map from 0 to (msgLen-1) */
     uint32_t maxIndex = msgLen - 1;
     /* Check the last byte, >> 3 indicates the division by 8, and &7 indicates the remainder by 8 */
-    if (reassBitMap[maxIndex >> 3] != END_MASK_MAP[maxIndex & 7]) {
+    if (reassBitMap[maxIndex >> 3] != g_endMaskMap[maxIndex & 7]) {
         return false;
     }
     /* Check the 0th byte to the last 2nd byte, >> 3 is divided by 8 */
@@ -247,6 +244,8 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo)
         /* If no message has the corresponding sequence number, create a new queue node to buffer the message */
         node = ReassNodeNew(reassQueue, msgInfo);
         if (node == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17027, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "ReassNodeNew fail", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
             return HITLS_MEMALLOC_FAIL;
         }
@@ -258,7 +257,6 @@ int32_t HS_ReassAppend(TLS_Ctx *ctx, HS_MsgInfo *msgInfo)
 int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
 {
     /* Check whether there are messages in the reassembly queue */
-    int32_t ret;
     HS_ReassQueue *node = GetReassNode(ctx->hsCtx->reassMsg, ctx->hsCtx->expectRecvSeq);
     if (node == NULL) {
         *len = 0;
@@ -278,12 +276,10 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     msgInfo->sequence = node->sequence;
     msgInfo->fragmentOffset = 0u;
     msgInfo->fragmentLength = node->msgLen - DTLS_HS_MSG_HEADER_SIZE;
-
-    ret = HS_ReSizeMsgBuf(ctx, node->msgLen);
+    int32_t ret = HS_ReSizeMsgBuf(ctx, node->msgLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
     if (memcpy_s(ctx->hsCtx->msgBuf, ctx->hsCtx->bufferLen, node->msg, node->msgLen) != EOK) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15758, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -301,4 +297,4 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     return HITLS_SUCCESS;
 }
 
-#endif /* end #ifndef HITLS_NO_DTLS12 */
+#endif /* end #ifdef HITLS_TLS_PROTO_DTLS12 */

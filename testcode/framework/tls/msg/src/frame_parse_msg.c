@@ -88,6 +88,7 @@ static int32_t ParseFieldArray8(const uint8_t *buffer, uint32_t bufLen, FRAME_Ar
     if (bufLen < fieldLen) {
         return HITLS_PARSE_INVALID_MSG_LEN;
     }
+    BSL_SAL_FREE(field->data);
     field->data = BSL_SAL_Dump(buffer, fieldLen);
     if (field->data == NULL) {
         return HITLS_MEMALLOC_FAIL;
@@ -785,9 +786,8 @@ static int32_t ParseClientKxMsg(FRAME_Type *frameType, const uint8_t *buffer, ui
     uint32_t offset = 0;
     switch (frameType->keyExType) {
         case HITLS_KEY_EXCH_ECDHE:
-            /* Three bytes are added to the client key exchange. */
-
-#ifndef HITLS_NO_TLCP11
+            /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
+#ifdef HITLS_TLS_PROTO_TLCP11
             if (frameType->versionType == HITLS_VERSION_TLCP11) {
                 // Curve type + Curve ID + Public key length
                 uint8_t minLen = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint8_t);

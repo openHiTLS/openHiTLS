@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -194,12 +195,14 @@ static const HitlsConfig g_signatureList[] = {
     {"CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384", CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384},
     {"CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512", CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512},
     {"CERT_SIG_SCHEME_ED25519", CERT_SIG_SCHEME_ED25519},
+    {"CERT_SIG_SCHEME_ED448", CERT_SIG_SCHEME_ED448},
     {"CERT_SIG_SCHEME_DSA_SHA1", CERT_SIG_SCHEME_DSA_SHA1},
     {"CERT_SIG_SCHEME_DSA_SHA224", CERT_SIG_SCHEME_DSA_SHA224},
     {"CERT_SIG_SCHEME_DSA_SHA256", CERT_SIG_SCHEME_DSA_SHA256},
     {"CERT_SIG_SCHEME_DSA_SHA384", CERT_SIG_SCHEME_DSA_SHA384},
     {"CERT_SIG_SCHEME_DSA_SHA512", CERT_SIG_SCHEME_DSA_SHA512},
     {"CERT_SIG_SCHEME_SM2_SM3", CERT_SIG_SCHEME_SM2_SM3},
+    {"CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256", CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256},
     {"HITLS_INVALID_SIG_TC01", 0xFFFF},
     {"HITLS_INVALID_SIG_TC02", 0xFFFE},
 };
@@ -240,7 +243,7 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
             LOG_DEBUG("HiTLS New TLS_ALL Ctx");
             hitlsConfig = HITLS_CFG_NewTLSConfig();
             break;
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case TLCP1_1:
             LOG_DEBUG("HiTLS New TLCP1_1 Ctx");
             hitlsConfig = HITLS_CFG_NewTLCPConfig();
@@ -253,6 +256,10 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
     if (hitlsConfig == NULL) {
         LOG_ERROR("HITLS Not Support This TlsVersion's ID %d", tlsVersion);
     }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    // Setting the security level
+    HITLS_CFG_SetSecurityLevel(hitlsConfig, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     return hitlsConfig;
 }
 
@@ -325,8 +332,7 @@ static int8_t HitlsSetConfig(const HitlsConfig *hitlsConfigList, int configListS
 
 int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
 {
-    int ret;
-
+    int ret = 0;
     if (inCtxCfg->setSessionCache >= 0) {
         LOG_DEBUG("HiTLS Set SessionCache is %d", inCtxCfg->setSessionCache);
         HITLS_CFG_SetSessionCacheMode(outCfg, inCtxCfg->setSessionCache);
@@ -348,11 +354,19 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     LOG_DEBUG("HiTLS Set Support Renegotiation is %d", inCtxCfg->isSupportRenegotiation);
     ret = HITLS_CFG_SetRenegotiationSupport(outCfg, inCtxCfg->isSupportRenegotiation);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetRenegotiationSupport ERROR");
+    // Whether allow a renegotiation initiated by the client
+    LOG_DEBUG("HiTLS Set allow Client Renegotiate is %d", inCtxCfg->allowClientRenegotiate);
+    ret = HITLS_CFG_SetClientRenegotiateSupport(outCfg, inCtxCfg->allowClientRenegotiate);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetClientRenegotiateSupport ERROR");
 
     // Whether to enable dual-ended verification
     LOG_DEBUG("HiTLS Set Support Client Verify is %d", inCtxCfg->isSupportClientVerify);
     ret = HITLS_CFG_SetClientVerifySupport(outCfg, inCtxCfg->isSupportClientVerify);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetClientVerifySupport ERROR");
+
+    LOG_DEBUG("HiTLS Set readAhead is %d", inCtxCfg->readAhead);
+    ret = HITLS_CFG_SetReadAhead(outCfg, inCtxCfg->readAhead);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetReadAhead ERROR");
 
     // Indicates whether to allow empty certificate list on the client.
     LOG_DEBUG("HiTLS Set Support Not Client Cert is %d", inCtxCfg->isSupportNoClientCert);
@@ -371,8 +385,8 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
 
     // Support CloseCheckKeyUsage
     LOG_DEBUG("HiTLS Set CloseCheckKeyUsage is false");
-    ret = HITLS_CFG_SetCloseCheckKeyUsage(outCfg, inCtxCfg->needCheckKeyUsage);
-    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetCloseCheckKeyUsage ERROR");
+    ret = HITLS_CFG_SetCheckKeyUsage(outCfg, inCtxCfg->needCheckKeyUsage);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetCheckKeyUsage ERROR");
 
 	// Indicates whether to support sessionTicket.
     LOG_DEBUG("HiTLS Set Support SessionTicket is %d", inCtxCfg->isSupportSessionTicket);
@@ -508,13 +522,6 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ret = HITLS_CFG_SetDhAutoSupport(outCfg, inCtxCfg->isSupportDhAuto);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetDhAutoSupport ERROR");
 
-    // Register insecure renegotiation callback
-    if (strncmp("NULL", inCtxCfg->noSecRenegotiationCb, strlen(inCtxCfg->noSecRenegotiationCb)) != 0) {
-        LOG_DEBUG("HiTLS Set noSecRenegotiationCb callback is %s", inCtxCfg->noSecRenegotiationCb);
-        ret = HITLS_CFG_SetNoSecRenegotiationCb(outCfg, GetNoSecRenegotiationCb(inCtxCfg->noSecRenegotiationCb));
-        ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetNoSecRenegotiationCb Fail");
-    }
-
     // TLS1.3 key exchange mode
     if (outCfg->maxVersion == HITLS_VERSION_TLS13) {
         LOG_DEBUG("HiTLS Set keyExchMode is %u", inCtxCfg->keyExchMode);
@@ -526,6 +533,16 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     LOG_DEBUG("HiTLS Set Support pha is %d", inCtxCfg->isSupportVerifyNone);
     ret = HITLS_CFG_SetVerifyNoneSupport(outCfg, inCtxCfg->isSupportVerifyNone);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetVerifyNoneSupport ERROR");
+
+    LOG_DEBUG("HiTLS Set Empty Record Number is %u", inCtxCfg->emptyRecordsNum);
+    ret = HITLS_CFG_SetEmptyRecordsNum(outCfg, inCtxCfg->emptyRecordsNum);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetEmptyRecordsNum");
+
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+    LOG_DEBUG("HiTLS Set allow Legacy Renegotiate is %d", inCtxCfg->allowLegacyRenegotiate);
+    ret = HITLS_CFG_SetLegacyRenegotiateSupport(outCfg, inCtxCfg->allowLegacyRenegotiate);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetLegacyRenegotiateSupport ERROR");
+#endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 
     return SUCCESS;
 }
@@ -633,8 +650,9 @@ int HitlsWrite(void *ssl, uint8_t *data, uint32_t dataLen)
     int ret, tryNum;
     LOG_DEBUG("HiTLS Write Ing...");
     tryNum = 0;
+    uint32_t len = 0;
     do {
-        ret = HITLS_Write(ssl, data, dataLen);
+        ret = HITLS_Write(ssl, data, dataLen, &len);
         tryNum++;
         usleep(1000); // stay 1000us
     } while ((ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY ||

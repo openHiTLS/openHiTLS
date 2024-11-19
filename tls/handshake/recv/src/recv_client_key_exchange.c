@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_SERVER
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -27,7 +29,7 @@
 #include "hs_common.h"
 #include "securec.h"
 #include "bsl_sal.h"
-
+#ifdef HITLS_TLS_FEATURE_PSK
 static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
 {
     uint8_t psk[HS_PSK_MAX_LEN] = {0};
@@ -38,13 +40,13 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
 
     if (ctx->config.tlsConfig.pskServerCb == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID17068, "unregistered pskServerCb");
     }
 
     uint32_t pskUsedLen = ctx->config.tlsConfig.pskServerCb(ctx, clientKxMsg->pskIdentity, psk, HS_PSK_MAX_LEN);
     if (pskUsedLen == 0 || pskUsedLen > HS_PSK_MAX_LEN) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN);
-        return HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN, BINLOG_ID17069, "pskUsedLen incorrect");
     }
 
     if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
@@ -52,7 +54,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
         if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
             (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            return HITLS_MEMALLOC_FAIL;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17070, "Calloc fail");
         }
     }
 
@@ -62,7 +64,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
         if (tmpIdentity == NULL) {
             (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            return HITLS_MEMALLOC_FAIL;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17071, "Calloc fail");
         }
         (void)memcpy_s(tmpIdentity, clientKxMsg->pskIdentitySize + 1, clientKxMsg->pskIdentity,
             clientKxMsg->pskIdentitySize);
@@ -75,7 +77,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
     if (tmpPsk == NULL) {
         (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17072, "Dump fail");
     }
 
     BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo->psk);
@@ -87,39 +89,49 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
 
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
 static int32_t ProcessClientKxMsg(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-
-    int32_t ret = RetriveServerPsk(ctx, clientKxMsg);
+    int32_t ret = HITLS_SUCCESS;
+#ifdef HITLS_TLS_FEATURE_PSK
+    ret = RetriveServerPsk(ctx, clientKxMsg);
     if (ret != HITLS_SUCCESS) {
+        // log here
         return ret;
     }
-
-    /** Process the key exchange message from the client */
+#endif /* HITLS_TLS_FEATURE_PSK */
+    /** Process the key exchange packet from the client */
     switch (hsCtx->kxCtx->keyExchAlgo) {
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE: /* ECDHE of TLCP is also in this branch */
         case HITLS_KEY_EXCH_ECDHE_PSK:
             ret = HS_ProcessClientKxMsgEcdhe(ctx, clientKxMsg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
             ret = HS_ProcessClientKxMsgDhe(ctx, clientKxMsg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
         case HITLS_KEY_EXCH_RSA:
         case HITLS_KEY_EXCH_RSA_PSK:
             ret = HS_ProcessClientKxMsgRsa(ctx, clientKxMsg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_RSA */
         case HITLS_KEY_EXCH_PSK:
             ret = HITLS_SUCCESS;
             break;
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
             ret = HS_ProcessClientKxMsgSm2(ctx, clientKxMsg);
             break;
 #endif
         default:
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17073, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "unknow keyExchAlgo", 0, 0, 0, 0);
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);
             ret = HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG;
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
@@ -158,14 +170,14 @@ static int32_t GenerateKeyMaterial(TLS_Ctx *ctx, const HS_Msg *msg)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
     ret = HS_SetSctpAuthKey(ctx);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17074, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+            "SetSctpAuthKey fail", 0, 0, 0, 0);
     }
-#endif
-
-    return HITLS_SUCCESS;
+#endif /* HITLS_TLS_PROTO_DTLS12 */
+    return ret;
 }
 
 int32_t ServerRecvClientKxProcess(TLS_Ctx *ctx, const HS_Msg *msg)
@@ -191,7 +203,6 @@ int32_t ServerRecvClientKxProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     if (hsCtx->isNeedClientCert && hsCtx->peerCert != NULL) {
         return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_VERIFY);
     }
-
     ret = VERIFY_CalcVerifyData(ctx, true, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15823, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -205,3 +216,5 @@ int32_t ServerRecvClientKxProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_ACTIVE_CIPHER_SPEC);
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_HOST_SERVER */
