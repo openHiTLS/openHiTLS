@@ -16,7 +16,9 @@
 #ifndef HITLS_BUILD_H
 #define HITLS_BUILD_H
 
-#include "hitls_config_layer.h"
+#include "hitls_config_layer_tls.h"
+#include "hitls_config_layer_crypto.h"
+#include "hitls_config_layer_bsl.h"
 #include "hitls_config_check.h"
 
 #endif /* HITLS_BUILD_H */

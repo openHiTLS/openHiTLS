@@ -35,40 +35,8 @@ extern "C" {
  */
 int32_t HS_RecvMsgProcess(TLS_Ctx *ctx);
 
-/**
- * @brief   key update message receiving processing
- *
- * @param   ctx [IN] TLS object
- * @param   hsMsgInfo [IN] Parsed message header
- * @param   hsMsg [OUT] Parsed message
- *
- * @retval  HITLS_SUCCESS
- * @retval  For details, see hitls_error.h
- */
-int32_t HS_HandleRecvKeyUpdate(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg);
 
-/**
- * @brief   Process renegotiation request
- *
- * @param   ctx [IN] TLS object
- * @param   hsMsgInfo [IN] Parsed message header
- *
- * @retval  HITLS_SUCCESS
- * @retval  For details, see hitls_error.h
- */
-int32_t HS_HandleRecvRenegoReq(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo);
-
-/**
- * @brief   Process TLS1.3 new session ticket
- *
- * @param   ctx [IN] TLS object
- * @param   hsMsgInfo [IN] Parsed message header
- *
- * @retval  HITLS_SUCCESS
- * @retval  For details, see hitls_error.h
- */
-int32_t HS_HandleTLS13NewSessionTicket(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo);
-
+int32_t ReadHsMessage(TLS_Ctx *ctx, uint32_t length);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

@@ -17,16 +17,19 @@
 #define APP_CTX_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 /**
  * @ingroup hitls_cert_type
  * @brief   Describe the APP cache linked list.
  */
 typedef struct BslList AppList;
+#endif
 
 typedef struct {
     uint8_t *buf;       /* buffer */
@@ -34,14 +37,6 @@ typedef struct {
     uint32_t start;     /* start position */
     uint32_t end;       /* end position */
 } AppBuf;
-
-/**
- * AppDataCtx struct, used to transfer app data information
- */
-struct AppDataCtx {
-    AppBuf appReadBuf;      /* buffer received by the app */
-    AppList *appList;       /* cache unexpected app messages */
-};
 
 #ifdef __cplusplus
 }

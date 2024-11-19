@@ -321,50 +321,50 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
- * Obtain the entropy source. If the default entropy source provided by HiTLS is not used,
- * the API must be registered. the output data must meet requirements such as the length.
- * The HiTLS does not check the entropy source. The data must be provided by the entropy source.
- *
- * @param ctx      [IN] Context used by the caller.
- * @param entropy  [OUT] Indicates the obtained entropy source data. The length of the entropy source data
- *                 must meet the following requirements: lenRange->min <= len <= lenRange->max.
- * @param strength  [IN] Entropy source strength.
- * @param lenRange  [IN] Entropy source length range.
- * @retval 0 indicates success, and other values indicate failure.
- */
+     * Obtain the entropy source. If the default entropy source provided by HiTLS is not used,
+     * the API must be registered. the output data must meet requirements such as the length.
+     * The HiTLS does not check the entropy source. The data must be provided by the entropy source.
+     *
+     * @param ctx      [IN] Context used by the caller.
+     * @param entropy  [OUT] Indicates the obtained entropy source data. The length of the entropy source data
+     *                 must meet the following requirements: lenRange->min <= len <= lenRange->max.
+     * @param strength  [IN] Entropy source strength.
+     * @param lenRange  [IN] Entropy source length range.
+     * @retval 0 indicates success, and other values indicate failure.
+     */
 typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
 
-/**
- * @ingroup crypt_types
- * @brief The entropy source memory is cleared, this API is optional.
- * @param ctx     [IN] Context used by the caller
- * @param entropy [OUT] Entropy source data
- * @retval  void
- */
+    /**
+     * @ingroup crypt_types
+     * @brief The entropy source memory is cleared, this API is optional.
+     * @param ctx     [IN] Context used by the caller
+     * @param entropy [OUT] Entropy source data
+     * @retval  void
+     */
 typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
 
-/**
- * @ingroup crypt_types
- * @brief Obtain the random number. This API is not need to registered.
- *        For registration, the output data must meet requirements such as the length.
- *        The HiTLS does not check the entropy source, but will implement if provide the function.
- *
- * @param ctx      [IN] Context used by the caller
- * @param nonce    [OUT] Obtained random number.
- * The length of the random number must be lenRange->min <= len <= lenRange->max.
- * @param strength [IN]: Random number strength
- * @param lenRange [IN] Random number length range.
- * @retval 0 indicates success, and other values indicate failure.
- */
+    /**
+     * @ingroup crypt_types
+     * @brief Obtain the random number. This API is not need to registered.
+     *        For registration, the output data must meet requirements such as the length.
+     *        The HiTLS does not check the entropy source, but will implement if provide the function.
+     *
+     * @param ctx      [IN] Context used by the caller
+     * @param nonce    [OUT] Obtained random number.
+     * The length of the random number must be lenRange->min <= len <= lenRange->max.
+     * @param strength [IN]: Random number strength
+     * @param lenRange [IN] Random number length range.
+     * @retval 0 indicates success, and other values indicate failure.
+     */
 typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
 
-/**
-* @ingroup crypt_types
-* @brief Random number memory clearance. this API is optional.
-* @param ctx [IN] Context used by the caller
-* @param nonce [OUT] random number
-* @retval void
-*/
+    /**
+    * @ingroup crypt_types
+    * @brief Random number memory clearance. this API is optional.
+    * @param ctx [IN] Context used by the caller
+    * @param nonce [OUT] random number
+    * @retval void
+    */
 typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
 
 /**
@@ -436,6 +436,7 @@ typedef enum {
     CRYPT_CTRL_SET_RSA_FLAG,            /**< RSA set the flag. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15,   /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15. */
+    CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS, /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15_TLS. */
     CRYPT_CTRL_SET_SM2_USER_ID,
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */
     CRYPT_CTRL_GENE_SM2_R,              /* SM2 obtain the R value. */
@@ -480,6 +481,8 @@ typedef enum {
     CRYPT_PKEY_RSAES_OAEP,       /**< OAEP according to RFC8017. */
     CRYPT_PKEY_RSAES_PKCSV15,    /**< RSAES_PKCSV15 according to RFC8017. */
     CRYPT_PKEY_RSA_NO_PAD,
+    CRYPT_RSAES_PKCSV15_TLS, /* Specific RSA pkcs1.5 padding verification process to
+                                prevent possible Bleichenbacher attacks */
     CRYPT_PKEY_RSA_PADDINGMAX,
 } CRYPT_RsaPadType;
 

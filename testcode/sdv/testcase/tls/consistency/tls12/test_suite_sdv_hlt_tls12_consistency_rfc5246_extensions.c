@@ -1609,7 +1609,7 @@ void MalformedClientHellocallback001(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
 
     /* Modify the structure. */
-    uint16_t suite[] = {0x00fe, HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 0x00ff}; // renegotiation cipher suite:0x00ff
+    uint16_t suite[] = {0x00fe, HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
     ASSERT_TRUE(FRAME_ModifyMsgArray16(suite, sizeof(suite)/sizeof(uint16_t),
     &(clientHello->cipherSuites), &(clientHello->cipherSuitesSize)) == HITLS_SUCCESS);
 
@@ -1666,7 +1666,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC002(int version, 
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+    HLT_SetLegacyRenegotiateSupport(clientCtxConfig, true);
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
 

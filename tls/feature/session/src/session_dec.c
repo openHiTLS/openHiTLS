@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 #include <stdbool.h>
 #include "securec.h"
 #include "tlv.h"
@@ -31,8 +32,9 @@
 #include "parse_common.h"
 
 #define MAX_PSK_IDENTITY_LEN 0xffff
+#ifdef HITLS_TLS_FEATURE_SNI
 #define MAX_HOST_NAME_LEN 0xff
-
+#endif
 typedef int32_t (*PfuncDecSessionObjFunc)(HITLS_Session *sess, SessionObjType type, const uint8_t *data,
     uint32_t length, uint32_t *readLen);
 
@@ -54,7 +56,7 @@ static int32_t DecSessObjVersion(HITLS_Session *sess, SessionObjType type, const
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_VERSION_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15993, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj version fail.", 0, 0, 0, 0);
+            "decode session version fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_VERSION_FAIL;
     }
 
@@ -75,7 +77,7 @@ static int32_t DecSessObjCipherSuite(HITLS_Session *sess, SessionObjType type, c
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_CIPHER_SUITE_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15994, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj cipher suite fail.", 0, 0, 0, 0);
+            "decode session cipher suite fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_CIPHER_SUITE_FAIL;
     }
 
@@ -95,47 +97,11 @@ static int32_t DecSessObjMasterSecret(HITLS_Session *sess, SessionObjType type, 
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_MASTER_SECRET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15995, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj master secret fail.", 0, 0, 0, 0);
+            "decode session master secret fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_MASTER_SECRET_FAIL;
     }
 
     sess->masterKeySize = tlv.length;
-    return HITLS_SUCCESS;
-}
-
-static int32_t DecSessObjPskIdentity(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
-    uint32_t *readLen)
-{
-    int32_t ret;
-    uint32_t offset = sizeof(uint32_t);
-    // The length has been verified at the upper layer and must be greater than 8 bytes.
-    uint32_t tlvLen = BSL_ByteToUint32(&data[offset]);
-    if (tlvLen > MAX_PSK_IDENTITY_LEN || tlvLen == 0) {
-        return HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL;
-    }
-    uint8_t *pskIdentity = BSL_SAL_Calloc(1u, tlvLen);
-    if (pskIdentity == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15996, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "malloc pskIdentity fail when decode session obj psk identity.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    BSL_Tlv tlv = {0};
-    tlv.length = tlvLen;
-    tlv.value = pskIdentity;
-
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
-    if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(pskIdentity);
-        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15997, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj psk identity fail.", 0, 0, 0, 0);
-        return HITLS_SESS_ERR_DEC_PSK_IDENTITY_FAIL;
-    }
-
-    sess->pskIdentity = tlv.value;
-    sess->pskIdentitySize = tlv.length;
     return HITLS_SUCCESS;
 }
 
@@ -152,7 +118,7 @@ static int32_t DecSessObjStartTime(HITLS_Session *sess, SessionObjType type, con
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_START_TIME_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15998, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj start time fail.", 0, 0, 0, 0);
+            "decode session start time fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_START_TIME_FAIL;
     }
 
@@ -173,7 +139,7 @@ static int32_t DecSessObjTimeout(HITLS_Session *sess, SessionObjType type, const
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_TIME_OUT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15999, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj timeout fail.", 0, 0, 0, 0);
+            "decode session timeout fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_TIME_OUT_FAIL;
     }
 
@@ -181,6 +147,7 @@ static int32_t DecSessObjTimeout(HITLS_Session *sess, SessionObjType type, const
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_SNI
 static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
@@ -189,6 +156,7 @@ static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, cons
     // The length has been verified at the upper layer and must be greater than 8 bytes.
     uint32_t tlvLen = BSL_ByteToUint32(&data[offset]);
     if (tlvLen > MAX_HOST_NAME_LEN || tlvLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16701, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "tlvLen error", 0, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_HOST_NAME_FAIL;
     }
     uint8_t *hostName = BSL_SAL_Calloc(1u, tlvLen);
@@ -208,7 +176,7 @@ static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, cons
         BSL_SAL_FREE(hostName);
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_HOST_NAME_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16001, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj host name fail.", 0, 0, 0, 0);
+            "decode session host name fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_HOST_NAME_FAIL;
     }
 
@@ -216,6 +184,7 @@ static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, cons
     sess->hostNameSize = tlv.length;
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_SNI */
 
 static int32_t DecSessObjSessionIdCtx(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
@@ -229,7 +198,7 @@ static int32_t DecSessObjSessionIdCtx(HITLS_Session *sess, SessionObjType type, 
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_SESSION_ID_CTX_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16002, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj session id ctx fail.", 0, 0, 0, 0);
+            "decode session session id ctx fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_SESSION_ID_CTX_FAIL;
     }
 
@@ -249,7 +218,7 @@ static int32_t DecSessObjSessionId(HITLS_Session *sess, SessionObjType type, con
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_SESSION_ID_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16003, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj session id fail.", 0, 0, 0, 0);
+            "decode session session id fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_SESSION_ID_FAIL;
     }
 
@@ -270,7 +239,7 @@ static int32_t DecSessObjExtendMasterSecret(HITLS_Session *sess, SessionObjType 
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_EXT_MASTER_SECRET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16004, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj extend master secret fail.", 0, 0, 0, 0);
+            "decode session extend master secret fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_EXT_MASTER_SECRET_FAIL;
     }
 
@@ -291,7 +260,7 @@ static int32_t DecSessObjVerifyResult(HITLS_Session *sess, SessionObjType type, 
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_VERIFY_RESULT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16005, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj verify result fail.", 0, 0, 0, 0);
+            "decode session verify result fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_VERIFY_RESULT_FAIL;
     }
 
@@ -301,39 +270,36 @@ static int32_t DecSessObjVerifyResult(HITLS_Session *sess, SessionObjType type, 
 
 static int32_t ParseBufToCert(HITLS_Session *sess, const uint8_t *buf, uint32_t bufLen)
 {
-    if (bufLen < CERT_LEN_TAG_SIZE) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16057, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode certLen fail.", bufLen, 0, 0, 0);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
     uint32_t offset = 0;
-    uint32_t certLen = BSL_ByteToUint24(buf); /* Obtain the certificate length */
-    offset += CERT_LEN_TAG_SIZE;
-
-    if (certLen != (bufLen - offset)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16058, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+    ParsePacket pkt = {.ctx = NULL, .buf = buf, .bufLen = bufLen, .bufOffset = &offset};
+    /* Obtain the certificate length */
+    uint32_t certLen = 0;
+    CERT_MgrCtx *certMgrCtx = sess->certMgrCtx;
+    int32_t ret = ParseBytesToUint24(&pkt, &certLen);
+    if (ret != HITLS_SUCCESS || (certLen != (pkt.bufLen - CERT_LEN_TAG_SIZE))) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16260, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "decode certLen fail.", 0, 0, 0, 0);
         return HITLS_PARSE_INVALID_MSG_LEN;
     }
-    CERT_MgrCtx *certMgrCtx = sess->certMgrCtx;
+
     if (certMgrCtx == NULL || certMgrCtx->method.certParse == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16059, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16261, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "certMgrCtx or certMgrCtx->method.certParse is null.", 0, 0, 0, 0);
         return HITLS_NULL_INPUT;
     }
 
     /* Parse the first device certificate. */
-    HITLS_CERT_X509 *cert = certMgrCtx->method.certParse(NULL, &buf[offset], certLen,
+    HITLS_CERT_X509 *cert = certMgrCtx->method.certParse(NULL, &pkt.buf[*pkt.bufOffset], certLen,
         TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
     if (cert == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16060, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16262, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "parse peer eecert error", 0, 0, 0, 0);
         return HITLS_CERT_ERR_PARSE_MSG;
     }
 
     CERT_Pair *newCertPair = BSL_SAL_Calloc(1u, sizeof(CERT_Pair));
     if (newCertPair == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16061, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16263, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "peer cert malloc fail.", 0, 0, 0, 0);
         SAL_CERT_X509Free(cert);
         return HITLS_MEMALLOC_FAIL;
@@ -353,7 +319,7 @@ static int32_t DecSessObjPeerCert(HITLS_Session *sess, SessionObjType type, cons
     offset += sizeof(uint32_t);
     if ((tlvLen == 0) || (tlvLen > length - offset)) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_PEER_CERT_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16062, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16264, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "decode peercert fail.", 0, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_PEER_CERT_FAIL;
     }
@@ -374,8 +340,8 @@ static int32_t DecSessObjTicketAgeAdd(HITLS_Session *sess, SessionObjType type, 
     ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_START_TIME_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15975, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decode session obj TicketAgeAdd fail.", 0, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15998, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode session TicketAgeAdd fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_START_TIME_FAIL;
     }
 
@@ -383,7 +349,7 @@ static int32_t DecSessObjTicketAgeAdd(HITLS_Session *sess, SessionObjType type, 
     return HITLS_SUCCESS;
 }
 
-/**
+/*
  * Decoding function list.
  * Ensure that the sequence of decode and encode types is the same.
  */
@@ -392,10 +358,11 @@ static const SessObjDecFunc OBJ_LIST[] = {
     {SESS_OBJ_CIPHER_SUITE, DecSessObjCipherSuite},
     {SESS_OBJ_MASTER_SECRET, DecSessObjMasterSecret},
     {SESS_OBJ_PEER_CERT, DecSessObjPeerCert},
-    {SESS_OBJ_PSK_IDENTITY, DecSessObjPskIdentity},
     {SESS_OBJ_START_TIME, DecSessObjStartTime},
     {SESS_OBJ_TIMEOUT, DecSessObjTimeout},
+#ifdef HITLS_TLS_FEATURE_SNI
     {SESS_OBJ_HOST_NAME, DecSessObjHostName},
+#endif
     {SESS_OBJ_SESSION_ID_CTX, DecSessObjSessionIdCtx},
     {SESS_OBJ_SESSION_ID, DecSessObjSessionId},
     {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, DecSessObjExtendMasterSecret},
@@ -447,3 +414,4 @@ int32_t SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length)
 
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */

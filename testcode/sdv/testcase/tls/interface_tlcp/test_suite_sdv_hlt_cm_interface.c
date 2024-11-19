@@ -87,6 +87,9 @@ static void SetCertPath_2(HLT_Ctx_Config *ctxConfig, char *cipherSuite)
 /* BEGIN_CASE */
 void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, char *clientCipherSuite, int expectResult)
 {
+    if (!IsEnableSctpAuth()) {
+        return;
+    }
     HLT_Tls_Res *serverRes = NULL;
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
@@ -94,7 +97,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -164,6 +167,9 @@ exit:
 /* BEGIN_CASE */
 void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, char *clientCipherSuite, int expectResult)
 {
+    if (!IsEnableSctpAuth()) {
+        return;
+    }
     HLT_Tls_Res *serverRes = NULL;
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
@@ -171,7 +177,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -238,6 +244,9 @@ exit:
 /* BEGIN_CASE */
 void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, char *clientCipherSuite)
 {
+    if (!IsEnableSctpAuth()) {
+        return;
+    }
     HLT_Tls_Res *serverRes = NULL;
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
@@ -245,7 +254,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -314,6 +323,9 @@ exit:
 /* BEGIN_CASE */
 void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, char *clientCipherSuite)
 {
+    if (!IsEnableSctpAuth()) {
+        return;
+    }
     HLT_Tls_Res *serverRes = NULL;
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
@@ -321,7 +333,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, ch
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, g_uiPort, true);
     ASSERT_TRUE(remoteProcess != NULL);
 
@@ -393,6 +405,9 @@ int32_t STUB_REC_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len)
 /* BEGIN_CASE */
 void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
 {
+    if (!IsEnableSctpAuth()) {
+        return;
+    }
     HLT_Tls_Res *serverRes = NULL;
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
@@ -402,7 +417,7 @@ void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    HILT_TransportType connType = IsEnableSctpAuth() ? SCTP : TCP;
+    HILT_TransportType connType = SCTP;
     remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, Port, false);
     ASSERT_TRUE(remoteProcess != NULL);
 

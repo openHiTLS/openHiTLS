@@ -37,7 +37,7 @@ extern "C" {
  */
 typedef enum {
     HITLS_SNI_HOSTNAME_TYPE,
-    HITLS_SNI_BUTT = 255                        /**< Maximum enumerated value. */
+    HITLS_SNI_BUTT = 255                    /* Maximum enumerated value */
 } SNI_Type;
 
 #define HITLS_ACCEPT_SNI_ERR_OK  0              /* Accepts the request and continues handshake. */
@@ -118,7 +118,7 @@ int32_t HITLS_CFG_SetServerNameCb(HITLS_Config *config, HITLS_SniDealCb callback
  * @ingroup hitls_sni
  * @brief   Set the server_name parameters required during SNI negotiation on the server.
  *
- * @param   ctx  [OUT] ctx context
+ * @param   config  [OUT] Config context
  * @param   arg  [IN] Set parameters related to server_name.
  * @retval  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
@@ -140,7 +140,7 @@ int32_t HITLS_CFG_GetServerNameCb(HITLS_Config *config, HITLS_SniDealCb *callbac
  * @ingroup hitls_sni
  * @brief   Obtain the server_name required during SNI negotiation on the server, related Parameter arg.
  *
- * @param   ctx  [IN] ctx context
+ * @param   config  [IN] Config context
  * @param   arg  [IN] [OUT] Set parameters related to server_name.arg
  * @retval  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.

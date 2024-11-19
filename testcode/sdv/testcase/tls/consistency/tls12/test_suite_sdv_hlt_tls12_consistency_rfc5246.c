@@ -265,7 +265,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_KEYUPDATE_TC001(void)
     uint8_t readBuf[READ_BUF_LEN_18K] = {0};
     uint32_t readLen= 0;
 
-    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 
     ALERT_Info info = { 0 };
@@ -348,5 +348,160 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_NST_TC001(void)
 exit:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_StateTrans_FUNC_TC001(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+    clientCtxConfig->isSupportExtendMasterSecret=true;
+    serverCtxConfig->isSupportExtendMasterSecret=true;
+    serverCtxConfig->isSupportSessionTicket=true;
+    clientCtxConfig->isSupportSessionTicket=true;
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(remoteProcess, clientRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    uint8_t readBuf2[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen2= 0;
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf2, READ_BUF_LEN_18K, &readLen2) , 0);
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf2, READ_BUF_LEN_18K, &readLen2) , 0);
+
+    HITLS_Ctx *serverCtx = (HITLS_Ctx *)serverRes->ssl;
+    ASSERT_TRUE(serverCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_EQ(SendKeyupdate_Err(serverRes->ssl) , HITLS_SUCCESS);
+    uint8_t readBuf[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen= 0;
+
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, READ_BUF_LEN_18K, &readLen) , HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(serverRes->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
+exit:
+    HLT_FreeAllProcess();
+    HLT_CleanFrameHandle();
+}
+/* END_CASE */
+static void MalformedCipherSuiteLenCallback_01(void *msg, void *userData)
+{
+    HLT_FrameHandle *handle = (HLT_FrameHandle *)userData;
+    FRAME_Msg *frameMsg = (FRAME_Msg *)msg;
+    ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
+    FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
+    clientHello->cipherSuitesSize.data = 1000;
+    clientHello->cipherSuitesSize.state = ASSIGNED_FIELD;
+exit:
+    return;
+}
+void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *testPara)
+{
+    HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    HLT_Process *remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, 16384, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+    // The remote server listens on the TLS connection.
+
+    HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+    ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
+    serverConfig->isSupportExtendMasterSecret = false;
+    HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_2, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+    // Configure the TLS connection on the local client.
+
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+    serverConfig->isSupportExtendMasterSecret = false;
+    HLT_Tls_Res *clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    // Configure the interface for constructing abnormal messages.
+
+    handle->ctx = clientRes->ssl;
+    ASSERT_TRUE(HLT_SetFrameHandle(handle) == 0);
+    // Set up a connection and wait until the local is complete.
+
+    ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) != 0);
+    // Wait the remote.
+    int ret = HLT_GetTlsAcceptResult(serverRes);
+    ASSERT_TRUE(ret != 0);
+    if (testPara->isExpectRet) {
+        ASSERT_EQ(ret, testPara->expectRet);
+    }
+    ALERT_Info alertInfo = { 0 };
+    ALERT_GetInfo(clientRes->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, testPara->expectDescription);
+
+exit:
+    HLT_CleanFrameHandle();
+    HLT_FreeAllProcess();
+    return;
+}
+/** @
+* @test SDV_TLS1_2_RFC5246_MALFORMED_CIPHER_SUITE_LEN_FUN_TC001
+* @spec -
+* @title    The length of the cipher suite in the sent ClientHello message is greater than the specific content
+            length_cipher suites length
+* @precon nan
+* @brief    1. The tested end functions as the client, and the tested end functions as the server. Expected result 1 is
+            obtained.
+            2. Obtain the message, modify the field content, and send the message. (Expected result 2)
+            3. Check the status of the tested end. Expected result 3 is obtained.
+            4. Check the status of the test end. Expected result 4 is obtained.
+* @expect   1. A success message is returned.
+            2. A success message is returned.
+            3. The tested end returns an alert message, and the status is alerted.
+            4. The status of the test end is alerted, and the handshake status is ready to receive the serverHello
+            message.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_RFC5246_MALFORMED_CIPHER_SUITE_LEN_FUN_TC001()
+{
+    HLT_FrameHandle handle = {0};
+    handle.pointType = POINT_SEND;
+    handle.userData = (void *)&handle;
+    handle.expectReType = REC_TYPE_HANDSHAKE;
+    /* 1. The tested end functions as the client, and the tested end functions as the server. */
+    handle.expectHsType = CLIENT_HELLO;
+    /* 2. Obtain the message, modify the field content, and send the message. */
+    handle.frameCallBack = MalformedCipherSuiteLenCallback_01;
+    TestPara testPara = {0};
+    testPara.port = g_uiPort;
+    /* 4. Check the status of the test. */
+    testPara.expectHsState = TRY_RECV_SERVER_HELLO;
+    /* 3. Check the status of the tested */
+    testPara.expectDescription = ALERT_DECODE_ERROR;
+    ClientSendMalformedCipherSuiteLenMsg(&handle, &testPara);
+    return;
 }
 /* END_CASE */

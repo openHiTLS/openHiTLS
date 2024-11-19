@@ -77,10 +77,6 @@ void *GetTicketKeyCb(char *str);
 void *GetExtensionCb(const char *str);
 void *GetExampleData(const char *str);
 
-int32_t NoSecRenegotiationCb_Success(HITLS_Ctx *ctx);
-int32_t NoSecRenegotiationCb_Fail(HITLS_Ctx *ctx);
-void *GetNoSecRenegotiationCb(const char *str);
-
 #ifdef __cplusplus
 }
 #endif

@@ -12,9 +12,10 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_CLIENT
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #include <stdint.h>
-
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -32,27 +33,33 @@ int32_t ClientRecvServerKxProcess(TLS_Ctx *ctx, HS_Msg *msg)
     /** get the client infomation */
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     ServerKeyExchangeMsg *serverKxMsg = &msg->body.serverKeyExchange;
-
+    (void)serverKxMsg;
+#ifdef HITLS_TLS_FEATURE_PSK
     if (IsPskNegotiation(ctx)) {
         ret = HS_ProcessServerKxMsgIdentityHint(ctx, serverKxMsg);
         if (ret != HITLS_SUCCESS) {
+            // log here
             return ret;
         }
     }
-
+#endif /* HITLS_TLS_FEATURE_PSK */
     /* process key exchange message from the server */
     switch (hsCtx->kxCtx->keyExchAlgo) {
-        case HITLS_KEY_EXCH_ECDHE: // ECDHE of TLCP is also in this branch
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
+        case HITLS_KEY_EXCH_ECDHE: // include TLCP
         case HITLS_KEY_EXCH_ECDHE_PSK:
             ret = HS_ProcessServerKxMsgEcdhe(ctx, serverKxMsg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
             ret = HS_ProcessServerKxMsgDhe(ctx, serverKxMsg);
             break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
         case HITLS_KEY_EXCH_PSK:
         case HITLS_KEY_EXCH_RSA_PSK:
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC: // signature is verified at parse time
 #endif
             ret = HITLS_SUCCESS;
@@ -71,3 +78,5 @@ int32_t ClientRecvServerKxProcess(TLS_Ctx *ctx, HS_Msg *msg)
     /* update the state machine */
     return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_REQUEST);
 }
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_HOST_CLIENT */

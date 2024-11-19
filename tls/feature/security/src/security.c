@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
 #include <stdint.h>
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
@@ -138,3 +139,4 @@ void *HITLS_GetSecurityExData(const HITLS_Ctx *ctx)
 
     return HITLS_CFG_GetSecurityExData(&(ctx->config.tlsConfig));
 }
+#endif /* HITLS_TLS_FEATURE_SECURITY */

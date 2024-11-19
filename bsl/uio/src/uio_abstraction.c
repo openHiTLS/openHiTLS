@@ -26,7 +26,6 @@
 #include "bsl_uio.h"
 #include "uio_base.h"
 #include "uio_sctp.h"
-#include "uio_tcp.h"
 #include "uio_abstraction.h"
 
 BSL_UIO_Method *BSL_UIO_NewMethod(void)
@@ -268,6 +267,23 @@ int32_t BSL_UIO_GetTransportType(const BSL_UIO *uio)
         return BSL_NULL_INPUT;
     }
     return uio->method.type;
+}
+
+bool BSL_UIO_GetUioChainTransportType(BSL_UIO *uio, const BSL_UIO_TransportType uioType)
+{
+    if (uio == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05069, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "get uio type is NULL.", NULL, NULL, NULL, NULL);
+        return false;
+    }
+
+    while (uio != NULL) {
+        if (BSL_UIO_GetTransportType(uio) == (int32_t)uioType) {
+            return true;
+        }
+        uio = BSL_UIO_Next(uio);
+    }
+    return false;
 }
 
 int32_t BSL_UIO_SetUserData(BSL_UIO *uio, void *data)

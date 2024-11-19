@@ -17,6 +17,7 @@
 #define HS_CTX_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 #include "sal_time.h"
 #include "hitls_cert_type.h"
 #include "hitls_crypt_type.h"
@@ -66,14 +67,15 @@ typedef struct {
  *
  * @brief   PskInfo is used for PSK negotiation and stores identity and psk during negotiation
  */
+#ifdef HITLS_TLS_FEATURE_PSK
 typedef struct {
     uint8_t *identity;
     uint32_t identityLen;
     uint8_t *psk;
     uint32_t pskLen;
-    bool isResumePsk; /* Indicates whether the PSK is generated during session resumption */
 } PskInfo;
-
+#endif /* HITLS_TLS_FEATURE_PSK */
+#ifdef HITLS_TLS_PROTO_TLS13
 typedef struct {
     uint8_t *identity;
     uint32_t identityLen;
@@ -88,6 +90,7 @@ typedef struct {
     uint8_t *psk;                 /* selected psk */
     uint32_t pskLen;
 } PskInfo13;
+#endif /* HITLS_TLS_PROTO_TLS13 */
 
 /* Used to transfer the key exchange context */
 typedef struct {
@@ -99,11 +102,15 @@ typedef struct {
         EccParam ecc; /* Sm2 parameter */
         KeyShareParam share;
     } keyExchParam;
-    PskInfo *pskInfo;     /* PSK data tls 1.2 */
     HITLS_CRYPT_Key *key; /* Local key pair */
     uint8_t *peerPubkey;
     uint32_t pubKeyLen;
+#ifdef HITLS_TLS_FEATURE_PSK
+    PskInfo *pskInfo;     /* PSK data tls 1.2 */
+#endif /* HITLS_TLS_FEATURE_PSK */
+#ifdef HITLS_TLS_PROTO_TLS13
     PskInfo13 pskInfo13; /* tls 1.3 psk */
+#endif /* HITLS_TLS_PROTO_TLS13 */
 } KeyExchCtx;
 
 /* Buffer for transmitting handshake data. */
@@ -125,57 +132,61 @@ typedef struct {
 /* Used to pass the handshake context */
 struct HsCtx {
     HITLS_HandshakeState state;
-    HITLS_HandshakeState ccsNextState;
     ExtensionFlag extFlag;
-    bool isNeedClientCert;
+#ifdef HITLS_TLS_PROTO_TLS13
+    HITLS_HandshakeState ccsNextState;
     bool haveHrr; /* Whether the hello retry request has been processed */
-
+#endif
+    bool isNeedClientCert;
+#if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13)
     uint32_t sessionIdSize;
     uint8_t *sessionId;
-
+#endif
     uint8_t *clientRandom;
     uint8_t *serverRandom;
+#ifdef HITLS_TLS_PROTO_TLS13
     uint8_t earlySecret[MAX_DIGEST_SIZE];
     uint8_t handshakeSecret[MAX_DIGEST_SIZE];
+#endif
     uint8_t masterKey[MAX_DIGEST_SIZE];
     CERT_Pair *peerCert;
+#ifdef HITLS_TLS_FEATURE_ALPN
     uint8_t *clientAlpnList;
-
     uint32_t clientAlpnListSize;
+#endif
+#ifdef HITLS_TLS_FEATURE_SNI
     uint8_t *serverName;
     uint32_t serverNameSize;
+#endif
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     uint32_t ticketSize;
     uint8_t *ticket;
     uint32_t ticketLifetimeHint; /* ticket timeout interval, in seconds */
-
+#ifdef HITLS_TLS_PROTO_TLS13
     uint32_t ticketAgeAdd; /* Used to obfuscate ticket age */
 
     uint64_t nextTicketNonce; /* TLS1.3 connection, starting from 0 and increasing in ascending order */
     uint32_t sentTickets;     /* TLS1.3 Number of tickets sent */
-
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
     KeyExchCtx *kxCtx;    /* Key Exchange Context */
     VerifyCtx *verifyCtx; /* Verify the context of handshake data. */
     uint8_t *msgBuf;      /* Buffer for receiving and sending messages */
+    uint32_t msgOffset;   /* messages offset */
     uint32_t bufferLen;   /* messages buffer size */
     uint32_t msgLen;      /* Total length of buffered messages */
-
+#ifdef HITLS_TLS_PROTO_TLS13
     uint8_t clientHsTrafficSecret[MAX_DIGEST_SIZE]; /* Handshake secret used to encrypt the message sent by the TLS1.3
                                                        client */
     uint8_t serverHsTrafficSecret[MAX_DIGEST_SIZE]; /* Handshake secret used to encrypt the message sent by the TLS1.3
                                                        server */
     ClientHelloMsg *firstClientHello;               /* TLS1.3 server records the first received ClientHello message */
-
-#ifndef HITLS_NO_DTLS12
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_PROTO_DTLS12
     uint16_t nextSendSeq;    /* message sending sequence number */
     uint16_t expectRecvSeq;  /* message receiving sequence number */
     HS_ReassQueue *reassMsg; /* reassembly message queue, used for reassembly of fragmented messages */
-
-    /* To reduce the calculation amount for determining timeout, use the end time instead of the start time. If the end
-     * time is exceeded, the receiving times out. */
-    BSL_TIME deadline;     /* End time */
-    uint32_t timeoutValue; /* Timeout interval, in us. */
-    uint32_t timeoutNum;   /* Timeout count */
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS12 */
 };
 
 #ifdef __cplusplus

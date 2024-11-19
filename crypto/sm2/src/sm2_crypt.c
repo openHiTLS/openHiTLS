@@ -252,7 +252,7 @@ int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    uint32_t decodeLen = datalen;
+    uint32_t decodeLen = datalen - 1; // '04' requires one byte
     uint8_t *decode = BSL_SAL_Calloc(1u, datalen); // The decoded length will be smaller than the original length.
     if (decode == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

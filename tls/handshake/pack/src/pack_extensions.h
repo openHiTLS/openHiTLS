@@ -95,6 +95,7 @@ int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, uint8_t *buf, uint
  */
 int32_t PackExtensionHeader(uint16_t exMsgType, uint16_t exMsgLen, uint8_t *buf, uint32_t bufLen);
 
+int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */
