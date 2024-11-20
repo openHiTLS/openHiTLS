@@ -189,10 +189,10 @@ ERR:
     return ret;
 }
 
-static int32_t X509CsrBuffAsn1Parse(uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Csr *csr)
+static int32_t X509CsrBuffAsn1Parse(uint8_t *encode, uint32_t encodeLen, HITLS_X509_Csr *csr)
 {
-    uint8_t *temp = *encode;
-    uint32_t tempLen = *encodeLen;
+    uint8_t *temp = encode;
+    uint32_t tempLen = encodeLen;
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CSR_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_csrTempl, sizeof(g_csrTempl) / sizeof(g_csrTempl[0])};
@@ -203,7 +203,7 @@ static int32_t X509CsrBuffAsn1Parse(uint8_t **encode, uint32_t *encodeLen, HITLS
         return ret;
     }
     // parse reqInfo raw data
-    ret = HITLS_X509_ParseTbsRawData(*encode, *encodeLen, &csr->reqInfo.reqInfoRawData,
+    ret = HITLS_X509_ParseTbsRawData(encode, encodeLen, &csr->reqInfo.reqInfoRawData,
         &csr->reqInfo.reqInfoRawDataLen);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -227,10 +227,8 @@ static int32_t X509CsrBuffAsn1Parse(uint8_t **encode, uint32_t *encodeLen, HITLS
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    csr->rawData = *encode;
-    csr->rawDataLen = *encodeLen - tempLen;
-    *encode = temp;
-    *encodeLen = tempLen;
+    csr->rawData = encode;
+    csr->rawDataLen = encodeLen - tempLen;
     return HITLS_X509_SUCCESS;
 ERR:
     BSL_LIST_FREE(csr->reqInfo.attributes, NULL);
@@ -242,27 +240,30 @@ ERR:
     return ret;
 }
 
-static int32_t X509CsrAsn1Parse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
+static int32_t X509CsrAsn1Parse(bool iscopy, BSL_Buffer *encode, HITLS_X509_Csr *csr)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
-    BSL_Buffer asn1Buff = {data, dataLen};
     if (csr->flag & HITLS_X509_CSR_GEN_FLAG) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    asn1Buff.data = (uint8_t *)BSL_SAL_Dump(data, dataLen);
-    if (asn1Buff.data == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
-        return BSL_DUMP_FAIL;
+    uint8_t *tmp = NULL;
+    if (iscopy) {
+        tmp = (uint8_t *)BSL_SAL_Dump(data, dataLen);
+        if (tmp == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+            return BSL_DUMP_FAIL;
+        }
+        data = tmp;
     }
-    int32_t ret = X509CsrBuffAsn1Parse(&asn1Buff.data, &asn1Buff.dataLen, csr);
+    int32_t ret = X509CsrBuffAsn1Parse(data, dataLen, csr);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_FREE(asn1Buff.data);
+        BSL_SAL_FREE(tmp);
         return ret;
     }
     csr->flag |= HITLS_X509_CSR_PARSE_FLAG;
-    return ret;
+    return HITLS_X509_SUCCESS;
 }
 
 static int32_t X509CsrPemParse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
@@ -277,9 +278,9 @@ static int32_t X509CsrPemParse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = X509CsrAsn1Parse(&asn1Buf, csr);
-    BSL_SAL_FREE(asn1Buf.data);
+    ret = X509CsrAsn1Parse(false, &asn1Buf, csr);
     if (ret != HITLS_X509_SUCCESS) {
+        BSL_SAL_FREE(asn1Buf.data);
         BSL_ERR_PUSH_ERROR(ret);
     }
 
@@ -300,12 +301,13 @@ int32_t HITLS_X509_CsrParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_C
     }
     switch (format) {
         case BSL_FORMAT_ASN1:
-            ret = X509CsrAsn1Parse(encode, tempCsr);
+            ret = X509CsrAsn1Parse(true, encode, tempCsr);
             break;
         case BSL_FORMAT_PEM:
             ret = X509CsrPemParse(encode, tempCsr);
             break;
         default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
             ret = HITLS_X509_ERR_NOT_SUPPORT_FORMAT;
             break;
     }
