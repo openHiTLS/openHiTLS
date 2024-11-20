@@ -22,16 +22,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+HITLS_Config *CreateConfig(void);
+#ifdef HITLS_TLS_PROTO_ALL
 /* provide default configuration */
 int32_t DefaultTlsAllConfig(HITLS_Config *config);
-
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS
 int32_t DefaultDtlsAllConfig(HITLS_Config *config);
-
+#endif
 int32_t DefaultConfig(uint16_t version, HITLS_Config *config);
-
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t DefaultTLS13Config(HITLS_Config *config);
-
+#endif
 #ifdef __cplusplus
 }
 #endif

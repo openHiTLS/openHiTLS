@@ -189,12 +189,12 @@ typedef struct {
     char alpnList[MAX_ALPN_LEN];               // alpn
     char alpnUserData[ALPN_CB_NAME_LEN];
     char alpnSelectCb[ALPN_DATA_NAME_LEN];     // Application Layer Protocol Select Callback
-    /* Callback function when the peer end does not support security renegotiation */
-    char noSecRenegotiationCb[MAX_NO_RENEGOTIATIONCB_LEN];
 
     // Indicates whether renegotiation is supported. The default value is False, indicating that renegotiation is not
     // supported
     bool isSupportRenegotiation;
+    bool allowClientRenegotiate;        /* allow a renegotiation initiated by the client */
+    bool allowLegacyRenegotiate;        /* whether to abort handshake when server doesn't support SecRenegotiation */
     int  SupportType;                   // 1:The server algorithm is preferred
     bool needCheckKeyUsage;             // Client verification is supported. The default value is False
     // Indicates whether to allow the empty certificate list on the client. The default value is False
@@ -217,7 +217,8 @@ typedef struct {
     // Indicates whether to enable the function of sending handshake information by flight
     bool isFlightTransmitEnable;
     bool isNoSetCert;                   // Indicates whether the certificate does not need to be set
-    int32_t securitylevel;                  // Security level
+	int32_t securitylevel;                  // Security level
+    int32_t readAhead;
 
     char psk[PSK_MAX_LEN];              // psk password
     char ticketKeyCb[TICKET_KEY_CB_NAME_LEN]; // ticket key Callback Function Name
@@ -231,6 +232,7 @@ typedef struct {
     char chainCert[MAX_CERT_LEN];
 
     bool isClient;
+    uint32_t emptyRecordsNum;
 } HLT_Ctx_Config;
 
 typedef struct {

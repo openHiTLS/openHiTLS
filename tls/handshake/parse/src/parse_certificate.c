@@ -12,7 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -24,6 +24,7 @@
 #include "hs_msg.h"
 #include "hs_common.h"
 #include "parse_msg.h"
+#include "parse_common.h"
 
 /**
  * @brief   Parse the certificate signature
@@ -35,35 +36,27 @@
  *
  * @return Return the memory of the applied certificate. If NULL is returned, the parsing fails.
  */
-CERT_Item *ParseSingleCert(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, uint32_t *readLen)
+int32_t ParseSingleCert(ParsePacket *pkt, CERT_Item **certItem)
 {
-    if (bufLen <= CERT_LEN_TAG_SIZE) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15586, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Parse cert data error: data len= %u, less than 3.", bufLen, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
+    uint32_t certLen = 0;
+    /* Obtain the certificate length */
+    int32_t ret = ParseBytesToUint24(pkt, &certLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15586,
+            BINGLOG_STR("Parse cert data len error."), ALERT_DECODE_ERROR);
     }
 
-    uint32_t bufOffset = 0;
-    uint32_t certLen = BSL_ByteToUint24(buf); /* Obtain the certificate length */
-    bufOffset += CERT_LEN_TAG_SIZE;
-
-    if ((certLen == 0) || (certLen > (bufLen - bufOffset))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
+    if ((certLen == 0) || (certLen > (pkt->bufLen - *pkt->bufOffset))) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15587, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Parse cert data error: data len= %u, cert len= %u.", bufLen, certLen, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return NULL;
+            "Parse cert data error: data len= %u, cert len= %u.", pkt->bufLen, certLen, 0, 0);
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, 0, NULL, ALERT_DECODE_ERROR);
     }
 
     /* Allocate memory for certificate messages */
     CERT_Item *item = (CERT_Item*)BSL_SAL_Calloc(1u, sizeof(CERT_Item));
     if (item == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15588, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "CERT_Item malloc fail when parse certificate msg.", 0, 0, 0, 0);
-        return NULL;
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15588,
+            BINGLOG_STR("CERT_Item malloc fail."), ALERT_UNKNOWN);
     }
     item->next = NULL;
     item->dataSize = certLen; /* Update the length of the certificate message */
@@ -71,89 +64,73 @@ CERT_Item *ParseSingleCert(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, ui
     /* Extract the contents of the certificate message */
     item->data = BSL_SAL_Malloc(item->dataSize);
     if (item->data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15589, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "item->data malloc fail when parse certificate msg.", 0, 0, 0, 0);
         BSL_SAL_FREE(item);
-        return NULL;
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15589,
+            BINGLOG_STR("item->data malloc fail."), ALERT_UNKNOWN);
     }
-    (void)memcpy_s(item->data, item->dataSize, &buf[bufOffset], item->dataSize);
-    bufOffset += certLen;
+    (void)memcpy_s(item->data, item->dataSize, &pkt->buf[*pkt->bufOffset], item->dataSize);
+    *pkt->bufOffset += certLen;
+    *certItem = item;
 
-    /* Update certificate message parameters */
-    *readLen = bufOffset;
-
-    return item;
+    return HITLS_SUCCESS;
 }
 
-static int32_t ParseCertExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, uint32_t *readLen)
+static int32_t ParseCertExtension(ParsePacket *pkt)
 {
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
-        *readLen = 0;
+    if (pkt->ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         return HITLS_SUCCESS;
     }
 
-    if (bufLen < sizeof(uint16_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15590, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of certificate extension is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    uint16_t certExLen = 0;
+    const char *logStr = BINGLOG_STR("length of certificate extension is incorrect.");
+    int32_t ret = ParseBytesToUint16(pkt, &certExLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15590, logStr, ALERT_DECODE_ERROR);
     }
-
-    uint32_t offset = 0;
-    uint16_t certExLen = BSL_ByteToUint16(&buf[offset]);
-    offset += sizeof(uint16_t) + certExLen;  // Skip extensions
-
-    *readLen = offset;
+    if (*pkt->bufOffset + certExLen > pkt->bufLen) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16237, logStr, ALERT_DECODE_ERROR);
+    }
+    *pkt->bufOffset += certExLen;
     return HITLS_SUCCESS;
 }
 
 // Parse the certificate content
-int32_t ParseCerts(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg, uint32_t *offset)
+int32_t ParseCerts(ParsePacket *pkt, HS_Msg *hsMsg)
 {
     int32_t ret;
     CertificateMsg *msg = &hsMsg->body.certificate;
     CERT_Item *cur = msg->cert;
-    uint32_t tmpOffset = *offset;
 
     /* Parse the certificate message and save the certificate chain to the structure */
-    while (tmpOffset < bufLen) {
-        uint32_t readLen = 0u;
-
+    while (*pkt->bufOffset < pkt->bufLen) {
         CERT_Item *item = NULL;
-        item = ParseSingleCert(ctx, &buf[tmpOffset], bufLen - tmpOffset, &readLen);
-        if (item == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_PARSE_CERT_ERR);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15591, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "parse certificate item fail.", 0, 0, 0, 0);
-            return HITLS_PARSE_CERT_ERR;
+        ret = ParseSingleCert(pkt, &item);
+        if (ret != HITLS_SUCCESS) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_CERT_ERR, BINLOG_ID15591,
+                BINGLOG_STR("parse certificate item fail."), ALERT_UNKNOWN);
         }
 
         /* Add the parsed certificate to the last node in the linked list */
         if (msg->cert == NULL) {
             msg->cert = item;
-        } else {
+        } else if (cur != NULL) {
             cur->next = item;
         }
         cur = item;
-        tmpOffset += readLen;
 
-        ret = ParseCertExtension(ctx, &buf[tmpOffset], bufLen - tmpOffset, &readLen);
+        ret = ParseCertExtension(pkt);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15592, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "parse certificate extension fail.", 0, 0, 0, 0);
             return ret;
         }
-        tmpOffset += readLen;
 
         msg->certCount++;
     }
-    *offset = tmpOffset;
 
     return HITLS_SUCCESS;
 }
-
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 /**
 * @brief Parse the certificate message.
 *
@@ -168,29 +145,21 @@ int32_t ParseCerts(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hs
  */
 int32_t ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
 {
-    /* The total length of the certificate can be parsed at least 3 bytes */
-    if (bufLen < CERT_LEN_TAG_SIZE) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15593, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the length of handshake message (certificate) is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-
-    int32_t ret;
     uint32_t offset = 0;
-
+    uint32_t allCertsLen = 0;
+    ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &offset};
+    const char *logStr = BINGLOG_STR("length of all certificates is incorrect.");
     /* Obtain the lengths of all certificates */
-    uint32_t allCertsLen = BSL_ByteToUint24(buf);
-    if (allCertsLen != (bufLen - CERT_LEN_TAG_SIZE)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15594, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of all certificates is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    int32_t ret = ParseBytesToUint24(&pkt, &allCertsLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15593, logStr, ALERT_DECODE_ERROR);
     }
 
-    /**
+    if (allCertsLen != (pkt.bufLen - CERT_LEN_TAG_SIZE)) {
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15594, logStr, ALERT_DECODE_ERROR);
+    }
+
+    /*
      * The client can send a certificate message without a certificate, so if the total length of the certificate is 0,
      * it directly returns success; If the client receives a certificate message of length 0, it is determined by the
      * processing layer, which is only responsible for parsing
@@ -199,52 +168,42 @@ int32_t ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_M
         return HITLS_SUCCESS;
     }
 
-    offset += CERT_LEN_TAG_SIZE; /* Initialize the buffer length offset. */
-
-    ret = ParseCerts(ctx, buf, bufLen, hsMsg, &offset);
-    if ((ret != HITLS_SUCCESS) || (offset != (allCertsLen + CERT_LEN_TAG_SIZE))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_CERT_ERR);
-        BSL_LOG_BINLOG_FIXLEN(
-            BINLOG_ID15595, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Certificate msg parse failed.", 0, 0, 0, 0);
-        CleanCertificate(&hsMsg->body.certificate);
-        return HITLS_PARSE_CERT_ERR;
+    ret = ParseCerts(&pkt, hsMsg);
+    if ((ret != HITLS_SUCCESS) || (*pkt.bufOffset != (allCertsLen + CERT_LEN_TAG_SIZE))) {
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_CERT_ERR, BINLOG_ID15595,
+            BINGLOG_STR("Certificate msg parse failed."), ALERT_UNKNOWN);
     }
 
     return HITLS_SUCCESS;
 }
-
-int32_t Tls13ParseCertificateReqCtx(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg, uint32_t *offset)
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#ifdef HITLS_TLS_PROTO_TLS13
+int32_t Tls13ParseCertificateReqCtx(ParsePacket *pkt, HS_Msg *hsMsg)
 {
-    if (bufLen < sizeof(uint8_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
     CertificateMsg *certMsg = &hsMsg->body.certificate;
-
     /* Obtain the certificates_request_context_length */
-    uint16_t certReqCtxLen = buf[*offset];
+    uint8_t len = 0;
+    int32_t ret = ParseBytesToUint8(pkt, &len);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16971,
+            BINGLOG_STR("ParseBytesToUint8 fail"), ALERT_DECODE_ERROR);
+    }
+    uint16_t certReqCtxLen = (uint16_t)len;
     certMsg->certificateReqCtxSize = (uint32_t)certReqCtxLen;
-    (*offset)++;
     /* At least the length and content of the total certificate length of 3 bytes + certificateReqCtx can be parsed */
-    if (bufLen < CERT_LEN_TAG_SIZE + certReqCtxLen + sizeof(uint8_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15905, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the length of handshake message (tls 1.3 certificate) is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+    if (pkt->bufLen < CERT_LEN_TAG_SIZE + certReqCtxLen + sizeof(uint8_t)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16129,
+            BINGLOG_STR("the length of tls13 certificate message is incorrect"), ALERT_DECODE_ERROR);
     }
     /* Obtain the certificate_request_context value */
     if (certReqCtxLen > 0) {
         certMsg->certificateReqCtx = BSL_SAL_Calloc(certReqCtxLen, sizeof(uint8_t));
         if (certMsg->certificateReqCtx == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15596, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "certificateReqCtx malloc fail when parse tls1.3 certificate msg.", 0, 0, 0, 0);
-            return HITLS_MEMALLOC_FAIL;
+            return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15596,
+                BINGLOG_STR("certificateReqCtx malloc fail."), ALERT_UNKNOWN);
         }
-        (void)memcpy_s(certMsg->certificateReqCtx, certReqCtxLen, &buf[*offset], certReqCtxLen);
-        *offset += certReqCtxLen;
+        (void)memcpy_s(certMsg->certificateReqCtx, certReqCtxLen, &pkt->buf[*pkt->bufOffset], certReqCtxLen);
+        *pkt->bufOffset += certReqCtxLen;
     }
     return HITLS_SUCCESS;
 }
@@ -265,23 +224,22 @@ int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
 {
     CertificateMsg *certMsg = &hsMsg->body.certificate;
     uint32_t offset = 0;
-    int32_t ret = Tls13ParseCertificateReqCtx(ctx, buf, bufLen, hsMsg, &offset);
+    ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &offset};
+    int32_t ret = Tls13ParseCertificateReqCtx(&pkt, hsMsg);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
     /* Obtain the lengths of all certificates */
-    uint32_t allCertsLen = BSL_ByteToUint24(&buf[offset]);
-    if (allCertsLen != (bufLen - CERT_LEN_TAG_SIZE - offset)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15597, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "length of all tls1.3 certificates is incorrect.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+    uint32_t allCertsLen = 0;
+    ret = ParseBytesToUint24(&pkt, &allCertsLen);
+    if (ret != HITLS_SUCCESS || (allCertsLen != (pkt.bufLen - *pkt.bufOffset))) {
         CleanCertificate(&hsMsg->body.certificate);
-        return HITLS_PARSE_INVALID_MSG_LEN;
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15597,
+            BINGLOG_STR("length of all tls1.3 certificates is incorrect."), ALERT_DECODE_ERROR);
     }
 
-    /**
+    /*
      * The client can send a certificate message without a certificate, so if the total length of the certificate is 0,
      * it directly returns success; If the client receives a certificate message of length 0, it is determined by the
      * processing layer, which is only responsible for parsing
@@ -290,28 +248,26 @@ int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         return HITLS_SUCCESS;
     }
 
-    offset += CERT_LEN_TAG_SIZE;
-
-    ret = ParseCerts(ctx, buf, bufLen, hsMsg, &offset);
+    ret = ParseCerts(&pkt, hsMsg);
     if ((ret != HITLS_SUCCESS) ||
-        (offset != (sizeof(uint8_t) + certMsg->certificateReqCtxSize + CERT_LEN_TAG_SIZE + allCertsLen))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PARSE_CERT_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15598, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Certificate msg parse failed.", 0, 0, 0, 0);
+        (*pkt.bufOffset != (sizeof(uint8_t) + certMsg->certificateReqCtxSize + CERT_LEN_TAG_SIZE + allCertsLen))) {
         CleanCertificate(&hsMsg->body.certificate);
-        return HITLS_PARSE_CERT_ERR;
+        return ParseErrorProcess(pkt.ctx, HITLS_PARSE_CERT_ERR, BINLOG_ID15598,
+            BINGLOG_STR("Certificate msg parse failed."), ALERT_UNKNOWN);
     }
 
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_PROTO_TLS13 */
 //  Clear the memory applied for in the certificate message structure.
 void CleanCertificate(CertificateMsg *msg)
 {
     if (msg == NULL) {
         return;
     }
+#ifdef HITLS_TLS_PROTO_TLS13
     BSL_SAL_FREE(msg->certificateReqCtx);
+#endif
     /* Obtain the certificate message */
     CERT_Item *next = msg->cert;
     /* Release the message until it is empty */

@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_HOST_SERVER)
 #include <stdint.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -32,20 +33,24 @@
 int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
-    /** Obtain the client information */
+    /* Obtain the client information */
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
-    /** Determine whether the message needs to be packed */
+    /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
 
         /* The CCS message cannot be encrypted. Therefore, the sending key of the server must be activated after the CCS
          * message is sent */
         uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
         if (hashLen == 0) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17130, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "DigestSize fail", 0, 0, 0, 0);
             return HITLS_CRYPT_ERR_DIGEST;
         }
         ret = HS_SwitchTrafficKey(ctx, ctx->hsCtx->serverHsTrafficSecret, hashLen, true);
         if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17131, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "SwitchTrafficKey fail", 0, 0, 0, 0);
             return ret;
         }
 
@@ -68,16 +73,14 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
     if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL) {
         return HS_ChangeState(ctx, TRY_SEND_FINISH);
     }
-
     /* The server sends a CertificateRequest message only when the VerifyPeer mode is enabled */
-    if (ctx->config.tlsConfig.isSupportClientVerify && ctx->phaState != PHA_EXTENSION) {
-        /* VerifyOnce is used to control the CR sent only in the initial handshake phase. */
-        /* certReqSendTime indicates the number of sent CRs. If the value of certReqSendTime is not zero in the
-         * post-authentication phase, it indicates that the CRs have been sent */
-        if (ctx->negotiatedInfo.certReqSendTime < 1 || !(ctx->config.tlsConfig.isSupportClientOnceVerify)) {
-            return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
-        }
+    if (ctx->config.tlsConfig.isSupportClientVerify
+#ifdef HITLS_TLS_FEATURE_PHA
+        && ctx->phaState != PHA_EXTENSION
+#endif /* HITLS_TLS_FEATURE_PHA */
+        ) {
+        return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
     }
-
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 && HITLS_TLS_HOST_SERVER */

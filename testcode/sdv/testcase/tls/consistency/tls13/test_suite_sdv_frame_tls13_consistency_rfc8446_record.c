@@ -124,7 +124,7 @@ static int32_t SendErrorAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Descripti
 *           1. After the client sends a client hello message, the CCS message received by the client is not encrypted
 *            (value: 0x01).
 *           Discard the message and do not process the message. If the CCS message that is not encrypted is received
-*            again (value: 0x01), the system sends the unexpected_message alarm to terminate the handshake.
+*            again (value: 0x01), the system discards the message.
 *           3. Before the client receives the finished message, the client receives the CCS message that is not
 *            encrypted (value: 0x01) and discards the message.
 @ */
@@ -167,8 +167,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC001(void)
 
     ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
-    /* The server generates the unexpected_message alarm after receiving the CCS message for the second time. */
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -420,8 +419,8 @@ exit:
 * @brief    5 Record Protocol line 181
 *           9. After receiving the helloretry request, the client sends the client hello message for the second time.
 *                 The received CCS message is not encrypted (value: 0x01).
-*           Discard the message and do not process the message. If the CCS message is received again and the unencrypted
-*             record (value: 0x01) is received, the unexpected_message alarm is sent to terminate the handshake.
+*           Discard the message and do not process the message. If the CCS message is received again,
+*           discard the messages.
 @ */
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC005(void)
@@ -467,8 +466,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC005(void)
 
     ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
-    /* When the client receives the CCS message for the second time, the unexpected_message alarm is generated. */
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_DATA_BETWEEN_CCS_AND_FINISHED);
+    /* client will discard the ccs */
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -901,7 +900,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC006(void)
      *    the handshake because it receives a CCS whose value is not 0x01. */
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
     ALERT_Info info = {0};
     ALERT_GetInfo(client->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -960,7 +959,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC007(void)
      *    the handshake because the client receives the encrypted CCS */
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
     ALERT_Info info = {0};
     ALERT_GetInfo(client->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -1435,7 +1434,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC013(void)
      *  unexpected_message alarm to terminate the handshake. */
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
     ALERT_Info info = {0};
     ALERT_GetInfo(client->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -1508,7 +1507,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC014(void)
      *     Therefore, the client sends the unexpected_message alarm to terminate the handshake. */
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
     ALERT_Info info = {0};
     ALERT_GetInfo(client->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -1581,7 +1580,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC015(void)
      *     because the server receives a CCS whose value is not 0x01. */
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
     ALERT_Info info = {0};
     ALERT_GetInfo(server->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -1652,7 +1651,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC016(void)
      *     handshake because the server receives the encrypted CCS. */
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
     ALERT_Info info = {0};
     ALERT_GetInfo(server->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
@@ -2436,13 +2435,15 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC001(void)
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_Write(client->ssl, (uint8_t *)"Hello World", sizeof("Hello World")) == HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_TRUE(HITLS_Write(client->ssl, (uint8_t *)"Hello World", sizeof("Hello World"), &writeLen) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
 
     REC_Ctx *recCtx = (REC_Ctx *)client->ssl->recCtx;
     ASSERT_TRUE(recCtx->writeStates.currentState->seq != 0);
 
     ASSERT_TRUE(HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_REQUESTED) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(recCtx->writeStates.currentState->seq == 0);
 
 exit:
@@ -2487,14 +2488,16 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC002(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-    ASSERT_TRUE(HITLS_Write(client->ssl, (uint8_t *)"Hello World", sizeof("Hello World")) == HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_TRUE(HITLS_Write(client->ssl, (uint8_t *)"Hello World", sizeof("Hello World"), &writeLen) == HITLS_SUCCESS);
     REC_Ctx *recCtx = (REC_Ctx *)client->ssl->recCtx;
     ASSERT_TRUE(recCtx->writeStates.currentState->seq != 0);
 
     FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
     ioClientData->sndMsg.len = 1;
 
-    ASSERT_TRUE(HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_REQUESTED) == HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_REQUESTED) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_TRUE(recCtx->writeStates.currentState->seq != 0);
 
 exit:
@@ -2541,10 +2544,12 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC003(void)
     ASSERT_TRUE(recCtx->writeStates.currentState->seq != 0);
 
     ASSERT_TRUE(HITLS_KeyUpdate(server->ssl, HITLS_UPDATE_REQUESTED) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(recCtx->writeStates.currentState->seq == 0);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
 
-    ASSERT_TRUE(HITLS_Write(server->ssl, (uint8_t *)"Hello World", sizeof("Hello World")) == HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_TRUE(HITLS_Write(server->ssl, (uint8_t *)"Hello World", sizeof("Hello World"), &writeLen) == HITLS_SUCCESS);
     ASSERT_TRUE(recCtx->writeStates.currentState->seq == 1);
 exit:
     HITLS_CFG_FreeConfig(tlsConfig);

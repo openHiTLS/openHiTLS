@@ -44,6 +44,8 @@ bool IsSm4AlgDisabled(int id);
 
 bool IsCipherAlgDisabled(int id);
 
+int32_t TestSimpleRand(uint8_t *buff, uint32_t len);
+
 #ifdef __cplusplus
 }
 #endif

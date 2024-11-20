@@ -12,7 +12,6 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
 #include <stddef.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -25,6 +24,10 @@
 #include "hitls_crypt_reg.h"
 #include "crypt.h"
 
+HITLS_CRYPT_BaseMethod g_cryptBaseMethod = {0};
+HITLS_CRYPT_EcdhMethod g_cryptEcdhMethod = {0};
+HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
+#ifdef HITLS_TLS_PROTO_TLS13
 #define TLS13_MAX_LABEL_LEN 255
 #define TLS13_MAX_CTX_LEN 255
 
@@ -33,9 +36,6 @@
 
 #define TLS13_MAX_HKDF_LABEL_LEN TLS13_HKDF_LABEL_LEN(TLS13_MAX_LABEL_LEN, TLS13_MAX_CTX_LEN)
 
-HITLS_CRYPT_BaseMethod g_cryptBaseMethod = {0};
-HITLS_CRYPT_EcdhMethod g_cryptEcdhMethod = {0};
-HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
 HITLS_CRYPT_KdfMethod g_cryptKdfMethod = {0};
 
 typedef struct {
@@ -45,6 +45,43 @@ typedef struct {
     const uint8_t *label;   /* Label */
     const uint8_t *ctx;     /* Context information */
 } HkdfLabel;
+#endif
+
+const char *g_cryptCallBackStr[] = {
+    [HITLS_CRYPT_CALLBACK_RAND_BYTES] = "random bytes",
+    [HITLS_CRYPT_CALLBACK_HMAC_SIZE] = "hmac size",
+    [HITLS_CRYPT_CALLBACK_HMAC_INIT] = "hmac init",
+    [HITLS_CRYPT_CALLBACK_HMAC_FREE] = "hmac free",
+    [HITLS_CRYPT_CALLBACK_HMAC_UPDATE] = "hmac update",
+    [HITLS_CRYPT_CALLBACK_HMAC_FINAL] = "hmac final",
+    [HITLS_CRYPT_CALLBACK_HMAC] = "hmac calc",
+    [HITLS_CRYPT_CALLBACK_DIGEST_SIZE] = "digest size",
+    [HITLS_CRYPT_CALLBACK_DIGEST_INIT] = "digest init",
+    [HITLS_CRYPT_CALLBACK_DIGEST_COPY] = "digest copy",
+    [HITLS_CRYPT_CALLBACK_DIGEST_FREE] = "digest free",
+    [HITLS_CRYPT_CALLBACK_DIGEST_UPDATE] = "digest update",
+    [HITLS_CRYPT_CALLBACK_DIGEST_FINAL] = "digest final",
+    [HITLS_CRYPT_CALLBACK_DIGEST] = "digest calc",
+    [HITLS_CRYPT_CALLBACK_ENCRYPT] = "encrypt",
+    [HITLS_CRYPT_CALLBACK_DECRYPT] = "decrpt",
+
+    [HITLS_CRYPT_CALLBACK_GENERATE_ECDH_KEY_PAIR] = "generate ecdh key",
+    [HITLS_CRYPT_CALLBACK_FREE_ECDH_KEY] = "free ecdh key",
+    [HITLS_CRYPT_CALLBACK_GET_ECDH_ENCODED_PUBKEY] = "get ecdh public key",
+    [HITLS_CRYPT_CALLBACK_CALC_ECDH_SHARED_SECRET] = "calculate ecdh shared secret",
+    [HITLS_CRYPT_CALLBACK_SM2_CALC_ECDH_SHARED_SECRET] = "calculate sm2 ecdh shared secret",
+
+    [HITLS_CRYPT_CALLBACK_GENERATE_DH_KEY_BY_SECBITS] = "generate Dh key by secbits",
+    [HITLS_CRYPT_CALLBACK_GENERATE_DH_KEY_BY_PARAMS] = "generate Dh key by params",
+    [HITLS_CRYPT_CALLBACK_DUP_DH_KEY] = "dup Dh key",
+    [HITLS_CRYPT_CALLBACK_FREE_DH_KEY] = "free Dh key",
+    [HITLS_CRYPT_CALLBACK_DH_GET_PARAMETERS] = "get dh params",
+    [HITLS_CRYPT_CALLBACK_GET_DH_ENCODED_PUBKEY] = "get dh public key",
+    [HITLS_CRYPT_CALLBACK_CALC_DH_SHARED_SECRET] = "calculate dh shared secret",
+
+    [HITLS_CRYPT_CALLBACK_HKDF_EXTRACT] = "HKDF-Extract",
+    [HITLS_CRYPT_CALLBACK_HKDF_EXPAND] = "HKDF-Expand",
+};
 
 int32_t HITLS_CRYPT_RegisterBaseMethod(HITLS_CRYPT_BaseMethod *userCryptCallBack)
 {
@@ -57,6 +94,7 @@ int32_t HITLS_CRYPT_RegisterBaseMethod(HITLS_CRYPT_BaseMethod *userCryptCallBack
     g_cryptBaseMethod.randBytes = userCryptCallBack->randBytes;
     g_cryptBaseMethod.hmacSize = userCryptCallBack->hmacSize;
     g_cryptBaseMethod.hmacInit = userCryptCallBack->hmacInit;
+    g_cryptBaseMethod.hmacReinit = userCryptCallBack->hmacReinit;
     g_cryptBaseMethod.hmacFree = userCryptCallBack->hmacFree;
     g_cryptBaseMethod.hmacUpdate = userCryptCallBack->hmacUpdate;
     g_cryptBaseMethod.hmacFinal = userCryptCallBack->hmacFinal;
@@ -70,6 +108,7 @@ int32_t HITLS_CRYPT_RegisterBaseMethod(HITLS_CRYPT_BaseMethod *userCryptCallBack
     g_cryptBaseMethod.digest = userCryptCallBack->digest;
     g_cryptBaseMethod.encrypt = userCryptCallBack->encrypt;
     g_cryptBaseMethod.decrypt = userCryptCallBack->decrypt;
+    g_cryptBaseMethod.cipherFree = userCryptCallBack->cipherFree;
     return HITLS_SUCCESS;
 }
 
@@ -82,11 +121,12 @@ int32_t HITLS_CRYPT_RegisterEcdhMethod(HITLS_CRYPT_EcdhMethod *userCryptCallBack
         return HITLS_NULL_INPUT;
     }
     g_cryptEcdhMethod.generateEcdhKeyPair = userCryptCallBack->generateEcdhKeyPair;
-    g_cryptEcdhMethod.dupEcdhKey = userCryptCallBack->dupEcdhKey;
     g_cryptEcdhMethod.freeEcdhKey = userCryptCallBack->freeEcdhKey;
     g_cryptEcdhMethod.getEcdhPubKey = userCryptCallBack->getEcdhPubKey;
     g_cryptEcdhMethod.calcEcdhSharedSecret = userCryptCallBack->calcEcdhSharedSecret;
+#ifdef HITLS_TLS_PROTO_TLCP11
     g_cryptEcdhMethod.sm2CalEcdhSharedSecret = userCryptCallBack->sm2CalEcdhSharedSecret;
+#endif /* HITLS_TLS_PROTO_TLCP11 */
     return HITLS_SUCCESS;
 }
 
@@ -105,10 +145,13 @@ int32_t HITLS_CRYPT_RegisterDhMethod(const HITLS_CRYPT_DhMethod *userCryptCallBa
     g_cryptDhMethod.freeDhKey = userCryptCallBack->freeDhKey;
     g_cryptDhMethod.getDhPubKey = userCryptCallBack->getDhPubKey;
     g_cryptDhMethod.calcDhSharedSecret = userCryptCallBack->calcDhSharedSecret;
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
     g_cryptDhMethod.dupDhKey = userCryptCallBack->dupDhKey;
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t HITLS_CRYPT_RegisterHkdfMethod(HITLS_CRYPT_KdfMethod *userCryptCallBack)
 {
     if (userCryptCallBack == NULL) {
@@ -121,119 +164,68 @@ int32_t HITLS_CRYPT_RegisterHkdfMethod(HITLS_CRYPT_KdfMethod *userCryptCallBack)
     g_cryptKdfMethod.hkdfExpand = userCryptCallBack->hkdfExpand;
     return HITLS_SUCCESS;
 }
+#endif
 
-int32_t SAL_CRYPT_Rand(uint8_t *buf, uint32_t len)
+int32_t CheckCallBackRetVal(int32_t cmd, int32_t callBackRet, uint32_t bingLogId, uint32_t hitlsRet)
 {
-    if (g_cryptBaseMethod.randBytes == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "generate %u bytes random error: callback unregistered.", len, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
-
-    int32_t ret = g_cryptBaseMethod.randBytes(buf, len);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15068, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "generate %u bytes random error: callback ret = 0x%x.", len, ret, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_GENERATE_RANDOM);
-        return HITLS_CRYPT_ERR_GENERATE_RANDOM;
+    if (callBackRet != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(bingLogId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "%s error: callback ret = 0x%x.", g_cryptCallBackStr[cmd], callBackRet, 0, 0);
+        BSL_ERR_PUSH_ERROR((int32_t)hitlsRet);
+        return (int32_t)hitlsRet;
     }
     return HITLS_SUCCESS;
 }
 
+int32_t SAL_CRYPT_Rand(uint8_t *buf, uint32_t len)
+{
+    int32_t ret = g_cryptBaseMethod.randBytes(buf, len);
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_RAND_BYTES, ret, BINLOG_ID15068,
+        HITLS_CRYPT_ERR_GENERATE_RANDOM);
+}
+
 uint32_t SAL_CRYPT_HmacSize(HITLS_HashAlgo hashAlgo)
 {
-    if (g_cryptBaseMethod.hmacSize == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15069, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac size error: callback unregistered.", 0, 0, 0, 0);
-        return 0;
-    }
     return g_cryptBaseMethod.hmacSize(hashAlgo);
 }
 
+#ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
 HITLS_HMAC_Ctx *SAL_CRYPT_HmacInit(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
 {
-    if (g_cryptBaseMethod.hmacInit == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15070, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac init error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
-
     return g_cryptBaseMethod.hmacInit(hashAlgo, key, len);
 }
 
 void SAL_CRYPT_HmacFree(HITLS_HMAC_Ctx *hmac)
 {
-    if (g_cryptBaseMethod.hmacFree == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15071, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac free error: callback unregistered.", 0, 0, 0, 0);
-        return;
-    }
     if (hmac != NULL) {
         g_cryptBaseMethod.hmacFree(hmac);
     }
     return;
 }
 
+int32_t SAL_CRYPT_HmacReInit(HITLS_HMAC_Ctx *ctx)
+{
+    return g_cryptBaseMethod.hmacReinit(ctx);
+}
+
 int32_t SAL_CRYPT_HmacUpdate(HITLS_HMAC_Ctx *hmac, const uint8_t *data, uint32_t len)
 {
-    if (g_cryptBaseMethod.hmacUpdate == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15072, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac update error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.hmacUpdate(hmac, data, len);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15073, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac update error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_HMAC);
-        return HITLS_CRYPT_ERR_HMAC;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HMAC_UPDATE, ret, BINLOG_ID15073, HITLS_CRYPT_ERR_HMAC);
 }
 
 int32_t SAL_CRYPT_HmacFinal(HITLS_HMAC_Ctx *hmac, uint8_t *out, uint32_t *len)
 {
-    if (g_cryptBaseMethod.hmacFinal == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15074, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac final error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.hmacFinal(hmac, out, len);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15075, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac final error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_HMAC);
-        return HITLS_CRYPT_ERR_HMAC;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HMAC_FINAL, ret, BINLOG_ID15075, HITLS_CRYPT_ERR_HMAC);
 }
+#endif /* HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES */
 
 int32_t SAL_CRYPT_Hmac(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (g_cryptBaseMethod.hmac == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15076, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.hmac(hashAlgo, key, keyLen, in, inLen, out, outLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15077, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "hmac error: callback ret = 0x%x, hashAlgo = %u, keyLen = %u, inLen = %u, .",
-            ret, hashAlgo, keyLen, inLen);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15207, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "outLen = %u", *outLen, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_HMAC);
-        return HITLS_CRYPT_ERR_HMAC;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HMAC, ret, BINLOG_ID15077, HITLS_CRYPT_ERR_HMAC);
 }
 
 static int32_t IteratorInit(CRYPT_KeyDeriveParameters *input, uint32_t hmacSize,
@@ -242,7 +234,7 @@ static int32_t IteratorInit(CRYPT_KeyDeriveParameters *input, uint32_t hmacSize,
     uint8_t *seed = BSL_SAL_Calloc(1u, hmacSize + input->labelLen + input->seedLen);
     if (seed == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "P_Hash error: malloc seed failed.", 0, 0, 0, 0);
+            "P_Hash error: out of memory.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
@@ -266,6 +258,7 @@ static int32_t IteratorInit(CRYPT_KeyDeriveParameters *input, uint32_t hmacSize,
 static int32_t PHashPre(uint32_t *hmacSize, uint32_t *alignLen, uint32_t outLen, HITLS_HashAlgo hashAlgo)
 {
     if (hmacSize == NULL || alignLen == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16611, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -295,19 +288,18 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
     uint32_t hmacSize;
     int32_t ret = PHashPre(&hmacSize, &alignLen, outLen, input->hashAlgo);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16612, "PHashPre fail");
     }
     data = BSL_SAL_Calloc(1u, alignLen);
     if (data == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15081, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "P_Hash error: malloc data failed.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID15081, "Calloc fail");
     }
 
     uint32_t tmpLen = hmacSize;
     ret = IteratorInit(input, hmacSize, &iterator, &iteratorSize);
     if (ret != HITLS_SUCCESS) {
+        (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16613, "IteratorInit fail");
         goto PHASH_END;
     }
 
@@ -332,6 +324,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
     }
 
     if (memcpy_s(out, outLen, data, srcLen) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16614, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         ret = HITLS_MEMCPY_FAIL;
     }
 PHASH_END:
@@ -340,6 +333,7 @@ PHASH_END:
     return ret;
 }
 
+#if defined(HITLS_CRYPTO_MD5) && defined(HITLS_CRYPTO_SHA1)
 int32_t PRF_MD5_SHA1(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
 {
     uint32_t secretLen = input->secretLen;
@@ -354,13 +348,14 @@ int32_t PRF_MD5_SHA1(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t ou
     input->hashAlgo = HITLS_HASH_MD5;
     ret = P_Hash(input, out, outLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16615, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "P_Hash fail", 0, 0, 0, 0);
         return ret;
     }
 
     uint8_t *sha1data = BSL_SAL_Calloc(1u, outLen);
     if (sha1data == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15084, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "PRF_MD5_SHA1 error: malloc sha1data failed.", 0, 0, 0, 0);
+            "PRF_MD5_SHA1 error: out of memory.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
@@ -369,6 +364,7 @@ int32_t PRF_MD5_SHA1(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t ou
     input->hashAlgo = HITLS_HASH_SHA1;
     ret = P_Hash(input, sha1data, outLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16616, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "P_Hash fail", 0, 0, 0, 0);
         BSL_SAL_FREE(sha1data);
         return ret;
     }
@@ -383,13 +379,16 @@ int32_t PRF_MD5_SHA1(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t ou
     BSL_SAL_FREE(sha1data);
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_CRYPTO_MD5 && HITLS_CRYPTO_SHA1 */
 
 int32_t SAL_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
 {
-    // TLS1.0, TLS1.1
+#if defined(HITLS_CRYPTO_MD5) && defined(HITLS_CRYPTO_SHA1)
+    // TLS1.0、TLS1.1
     if (input->hashAlgo == HITLS_HASH_MD5_SHA1) {
         return PRF_MD5_SHA1(input, out, outLen);
     }
+#endif
 
     // Other versions
     if (input->hashAlgo < HITLS_HASH_SHA_256) {
@@ -400,46 +399,19 @@ int32_t SAL_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t o
     return P_Hash(input, out, outLen);
 }
 
-uint32_t SAL_CRYPT_DigestSize(HITLS_HashAlgo hashAlgo)
-{
-    if (g_cryptBaseMethod.digestSize == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15085, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest size error: callback unregistered.", 0, 0, 0, 0);
-        return 0;
-    }
-    return g_cryptBaseMethod.digestSize(hashAlgo);
-}
 
 HITLS_HASH_Ctx *SAL_CRYPT_DigestInit(HITLS_HashAlgo hashAlgo)
 {
-    if (g_cryptBaseMethod.digestInit == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15086, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest init error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
     return g_cryptBaseMethod.digestInit(hashAlgo);
 }
 
 HITLS_HASH_Ctx *SAL_CRYPT_DigestCopy(HITLS_HASH_Ctx *ctx)
 {
-    if (g_cryptBaseMethod.digestCopy == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15087, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest copy error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
     return g_cryptBaseMethod.digestCopy(ctx);
 }
 
 void SAL_CRYPT_DigestFree(HITLS_HASH_Ctx *ctx)
 {
-    if (g_cryptBaseMethod.digestFree == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15088, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest free error: callback unregistered.", 0, 0, 0, 0);
-        return;
-    }
     if (ctx != NULL) {
         g_cryptBaseMethod.digestFree(ctx);
     }
@@ -448,132 +420,59 @@ void SAL_CRYPT_DigestFree(HITLS_HASH_Ctx *ctx)
 
 int32_t SAL_CRYPT_DigestUpdate(HITLS_HASH_Ctx *ctx, const uint8_t *data, uint32_t len)
 {
-    if (g_cryptBaseMethod.digestUpdate == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15089, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest update error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.digestUpdate(ctx, data, len);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15090, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest update error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_DIGEST);
-        return HITLS_CRYPT_ERR_DIGEST;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_DIGEST_UPDATE, ret, BINLOG_ID15090,
+        HITLS_CRYPT_ERR_DIGEST);
 }
 
 int32_t SAL_CRYPT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len)
 {
-    if (g_cryptBaseMethod.digestFinal == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15091, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest final error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.digestFinal(ctx, out, len);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15092, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest final error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_DIGEST);
-        return HITLS_CRYPT_ERR_DIGEST;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_DIGEST_FINAL, ret, BINLOG_ID15092,
+        HITLS_CRYPT_ERR_DIGEST);
+}
+
+#ifdef HITLS_TLS_PROTO_TLS13
+uint32_t SAL_CRYPT_DigestSize(HITLS_HashAlgo hashAlgo)
+{
+    return g_cryptBaseMethod.digestSize(hashAlgo);
 }
 
 int32_t SAL_CRYPT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (g_cryptBaseMethod.digest == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15093, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.digest(hashAlgo, in, inLen, out, outLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15094, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "digest error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_DIGEST);
-        return HITLS_CRYPT_ERR_DIGEST;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_DIGEST, ret, BINLOG_ID15094, HITLS_CRYPT_ERR_DIGEST);
 }
+#endif
 
 int32_t SAL_CRYPT_Encrypt(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen)
 {
-    if (g_cryptBaseMethod.encrypt == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15095, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "encrypt error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.encrypt(cipher, in, inLen, out, outLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15096, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "encrypt error: cipher type = %u, algo = %u, keyLen = %u, ivLen = %u",
-            cipher->type, cipher->algo, cipher->keyLen, cipher->ivLen);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15208, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "aadLen = %u, inTextLen = %u, outTextLen = %u.", cipher->aadLen, inLen, *outLen, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCRYPT);
-        return HITLS_CRYPT_ERR_ENCRYPT;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_ENCRYPT, ret, BINLOG_ID15096, HITLS_CRYPT_ERR_ENCRYPT);
 }
 
 int32_t SAL_CRYPT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen)
 {
-    if (g_cryptBaseMethod.decrypt == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15097, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decrypt error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptBaseMethod.decrypt(cipher, in, inLen, out, outLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15098, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "decrypt error: cipher type = %u, algo = %u, keyLen = %u, ivLen = %u",
-            cipher->type, cipher->algo, cipher->keyLen, cipher->ivLen);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15209, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "aadLen = %u, inTextLen = %u, outTextLen = %u.", cipher->aadLen, inLen, *outLen, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_DECRYPT);
-        return HITLS_CRYPT_ERR_DECRYPT;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_DECRYPT, ret, BINLOG_ID15098, HITLS_CRYPT_ERR_DECRYPT);
+}
+
+void SAL_CRYPT_CipherFree(HITLS_Cipher_Ctx *ctx)
+{
+    if (g_cryptBaseMethod.cipherFree != NULL) {
+        g_cryptBaseMethod.cipherFree(ctx);
     }
-    return HITLS_SUCCESS;
 }
 
 HITLS_CRYPT_Key *SAL_CRYPT_GenEcdhKeyPair(const HITLS_ECParameters *curveParams)
 {
-    if (g_cryptEcdhMethod.generateEcdhKeyPair == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15099, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "generate ecdh key error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
     return g_cryptEcdhMethod.generateEcdhKeyPair(curveParams);
-}
-
-HITLS_CRYPT_Key *SAL_CRYPT_DupEcdhKey(HITLS_CRYPT_Key *key)
-{
-    if (g_cryptEcdhMethod.dupEcdhKey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16011, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "dup ecdh key error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
-    return g_cryptEcdhMethod.dupEcdhKey(key);
 }
 
 void SAL_CRYPT_FreeEcdhKey(HITLS_CRYPT_Key *key)
 {
-    if (g_cryptEcdhMethod.freeEcdhKey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15100, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "free ecdh key error: callback unregistered.", 0, 0, 0, 0);
-        return;
-    }
     if (key != NULL) {
         g_cryptEcdhMethod.freeEcdhKey(key);
     }
@@ -582,100 +481,49 @@ void SAL_CRYPT_FreeEcdhKey(HITLS_CRYPT_Key *key)
 
 int32_t SAL_CRYPT_EncodeEcdhPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *usedLen)
 {
-    if (g_cryptEcdhMethod.getEcdhPubKey == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15101, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get ecdh public key error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptEcdhMethod.getEcdhPubKey(key, pubKeyBuf, bufLen, usedLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15102, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get ecdh public key error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
-        return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(
+        HITLS_CRYPT_CALLBACK_GET_ECDH_ENCODED_PUBKEY, ret, BINLOG_ID15102, HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
 }
 
 int32_t SAL_CRYPT_CalcEcdhSharedSecret(HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
     uint8_t *sharedSecret, uint32_t *sharedSecretLen)
 {
-    if (g_cryptEcdhMethod.calcEcdhSharedSecret == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15103, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "calculate ecdh shared secret error: callback unregistered.", 0, 0, 0, 0);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptEcdhMethod.calcEcdhSharedSecret(key, peerPubkey, pubKeyLen, sharedSecret, sharedSecretLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15104, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "calculate ecdh shared secret error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_CALC_SHARED_KEY);
-        return HITLS_CRYPT_ERR_CALC_SHARED_KEY;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(
+        HITLS_CRYPT_CALLBACK_CALC_ECDH_SHARED_SECRET, ret, BINLOG_ID15104, HITLS_CRYPT_ERR_CALC_SHARED_KEY);
 }
 
+#ifdef HITLS_TLS_PROTO_TLCP11
 int32_t SAL_CRYPT_CalcSm2dhSharedSecret(HITLS_Sm2GenShareKeyParameters *sm2ShareKeyParam, uint8_t *sharedSecret,
                                         uint32_t *sharedSecretLen)
 {
-    if (g_cryptEcdhMethod.sm2CalEcdhSharedSecret == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15241, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get sm2 ecdh public key error: callback unregistered", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptEcdhMethod.sm2CalEcdhSharedSecret(sm2ShareKeyParam, sharedSecret, sharedSecretLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15242, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get sm2 ecdh public key error: callback ret = 0x%x", (uint32_t)ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
-        return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(
+        HITLS_CRYPT_CALLBACK_SM2_CALC_ECDH_SHARED_SECRET, ret, BINLOG_ID16212,
+        HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
 }
+#endif /* HITLS_TLS_PROTO_TLCP11 */
 
 HITLS_CRYPT_Key *SAL_CRYPT_GenerateDhKeyByParams(uint8_t *p, uint16_t plen, uint8_t *g, uint16_t glen)
 {
-    if (g_cryptDhMethod.generateDhKeyByParams == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15105, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "generate Dh key error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
     return g_cryptDhMethod.generateDhKeyByParams(p, plen, g, glen);
 }
 
 HITLS_CRYPT_Key *SAL_CRYPT_GenerateDhKeyBySecbits(int32_t secbits)
 {
-    if (g_cryptDhMethod.generateDhKeyBySecbits == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15106, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "generate Dh key error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
     return g_cryptDhMethod.generateDhKeyBySecbits(secbits);
 }
 
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
 HITLS_CRYPT_Key *SAL_CRYPT_DupDhKey(HITLS_CRYPT_Key *key)
 {
-    if (g_cryptDhMethod.dupDhKey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16010, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "dup Dh key error: callback unregistered.", 0, 0, 0, 0);
-        return NULL;
-    }
     return g_cryptDhMethod.dupDhKey(key);
 }
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
 
 void SAL_CRYPT_FreeDhKey(HITLS_CRYPT_Key *key)
 {
-    if (g_cryptDhMethod.freeDhKey == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "free Dh key error: callback unregistered.", 0, 0, 0, 0);
-        return;
-    }
     if (key != NULL) {
         g_cryptDhMethod.freeDhKey(key);
     }
@@ -684,89 +532,40 @@ void SAL_CRYPT_FreeDhKey(HITLS_CRYPT_Key *key)
 
 int32_t SAL_CRYPT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *plen, uint8_t *g, uint16_t *glen)
 {
-    if (g_cryptDhMethod.getDhParameters == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15108, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get dh params error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     return g_cryptDhMethod.getDhParameters(key, p, plen, g, glen);
 }
 
 int32_t SAL_CRYPT_EncodeDhPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *usedLen)
 {
-    if (g_cryptDhMethod.getDhPubKey == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15109, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get dh public key error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptDhMethod.getDhPubKey(key, pubKeyBuf, bufLen, usedLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15110, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get dh public key error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_DH_KEY);
-        return HITLS_CRYPT_ERR_ENCODE_DH_KEY;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(
+        HITLS_CRYPT_CALLBACK_GET_DH_ENCODED_PUBKEY, ret, BINLOG_ID15110, HITLS_CRYPT_ERR_ENCODE_DH_KEY);
 }
 
-int32_t SAL_CRYPT_CalcDhSharedSecret(HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
-    uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+int32_t SAL_CRYPT_CalcDhSharedSecret(
+    HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen, uint8_t *sharedSecret, uint32_t *sharedSecretLen)
 {
-    if (g_cryptDhMethod.calcDhSharedSecret == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15111, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "calculate dh shared secret error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptDhMethod.calcDhSharedSecret(key, peerPubkey, pubKeyLen, sharedSecret, sharedSecretLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15112, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "calculate dh shared secret error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_CALC_SHARED_KEY);
-        return HITLS_CRYPT_ERR_CALC_SHARED_KEY;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(
+        HITLS_CRYPT_CALLBACK_CALC_DH_SHARED_SECRET, ret, BINLOG_ID15112, HITLS_CRYPT_ERR_CALC_SHARED_KEY);
 }
 
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t SAL_CRYPT_HkdfExtract(HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
 {
-    if (g_cryptKdfMethod.hkdfExtract == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15113, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "HKDF-Extract error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptKdfMethod.hkdfExtract(input, prk, prkLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15114, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "HKDF-Extract error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_HKDF_EXTRACT);
-        return HITLS_CRYPT_ERR_HKDF_EXTRACT;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HKDF_EXTRACT, ret, BINLOG_ID15114,
+        HITLS_CRYPT_ERR_HKDF_EXTRACT);
 }
 
 int32_t SAL_CRYPT_HkdfExpand(HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen)
 {
-    if (g_cryptKdfMethod.hkdfExpand == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15115, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "HKDF-Expand error: callback unregistered.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
     int32_t ret = g_cryptKdfMethod.hkdfExpand(input, okm, okmLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15116, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "HKDF-Expand error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_HKDF_EXPAND);
-        return HITLS_CRYPT_ERR_HKDF_EXPAND;
-    }
-    return HITLS_SUCCESS;
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HKDF_EXPAND, ret, BINLOG_ID15116,
+        HITLS_CRYPT_ERR_HKDF_EXPAND);
 }
 
-/**
+/*
  * 2 bytes for length of derived secret + 1 byte for length of combined
  * prefix and label + bytes for the label itself + 1 byte length of hash
  * + bytes for the hash itself
@@ -779,13 +578,12 @@ static int32_t SAL_CRYPT_EncodeHkdfLabel(HkdfLabel *hkdfLabel, uint8_t *buf, uin
 
     BSL_Uint16ToByte(hkdfLabel->length, buf);
     offset += sizeof(uint16_t);
-
     /* The truncation won't happen, as the label length will not be greater than 64, all possible labels are as follows:
      * "ext binder", "res binder", "finished", "c e traffic", "e exp master", "derived", "c hs traffic", "s hs traffic"
      * "finished", "derived", "c ap traffic", "s ap traffic", "exp master", "finished", "res master",
      * "TLS 1.3,serverCertificateVerify", "TLS 1.3,clientCertificateVerify".
      */
-    buf[offset] = hkdfLabel->labelLen + (uint8_t)labelPrefixLen;
+    buf[offset] = (uint8_t)(hkdfLabel->labelLen + labelPrefixLen);
     offset += sizeof(uint8_t);
 
     if (memcpy_s(&buf[offset], bufLen - offset, labelPrefix, labelPrefixLen) != EOK) {
@@ -832,6 +630,8 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t
     info.ctx = deriveInfo->seed;
     int32_t ret = SAL_CRYPT_EncodeHkdfLabel(&info, hkdfLabel, TLS13_MAX_HKDF_LABEL_LEN, &hkdfLabelLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16617, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "EncodeHkdfLabel fail", 0, 0, 0, 0);
         return ret;
     }
 
@@ -841,10 +641,6 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t
     expandInput.prkLen = deriveInfo->secretLen;
     expandInput.info = hkdfLabel;
     expandInput.infoLen = hkdfLabelLen;
-    ret = SAL_CRYPT_HkdfExpand(&expandInput, outSecret, outLen);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    return HITLS_SUCCESS;
+    return SAL_CRYPT_HkdfExpand(&expandInput, outSecret, outLen);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */

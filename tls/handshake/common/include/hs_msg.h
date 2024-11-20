@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "bsl_module_list.h"
 #include "cert.h"
 #include "hitls_crypt_type.h"
@@ -101,6 +102,7 @@ typedef struct OfferedPsks {
 typedef struct {
     uint16_t *supportedGroups;
     uint16_t *signatureAlgorithms;
+    uint16_t *signatureAlgorithmsCert;
     uint8_t *pointFormats;
     uint8_t *alpnList;      /* application-layer protocol negotiation list */
     uint8_t *serverName;    /* serverName after parsing */
@@ -110,6 +112,7 @@ typedef struct {
     uint32_t ticketSize;
     uint16_t supportedGroupsSize;
     uint16_t signatureAlgorithmsSize;
+    uint16_t signatureAlgorithmsCertSize;
     uint16_t alpnListSize; /* application-layer protocol negotiation list len */
     uint16_t serverNameSize;
     uint8_t pointFormatsSize;
@@ -125,6 +128,7 @@ typedef struct {
     uint8_t supportedVersionsCount; /* Number of supported version */
     uint16_t cookieLen;
 
+    HITLS_TrustedCAList *caList;
     PreSharedKey *preSharedKey;
     KeyShare *keyShare; /* In the ClientHello message, this extension provides a set of KeyShares */
 } ExtensionContent;
@@ -132,13 +136,16 @@ typedef struct {
 typedef struct {
     bool haveSupportedGroups;
     bool haveSignatureAlgorithms;
+    bool haveSignatureAlgorithmsCert;
     bool havePointFormats;
     bool haveExtendedMasterSecret;
     bool haveSupportedVers;
     bool haveCookie;        /* Whether there is a cookie (involved in TLS1.3 ClientHello) */
+    bool haveCA;            /* Whether the CA exists (involved in TLS1.3 ClientHello) */
     bool havePostHsAuth;    /* Indicates whether the Client (TLS1.3) is willing to receive the Certificate Request
                                message. */
     bool haveKeyShare;
+    bool haveEarlyData;
     bool havePskExMode;      /* Indicates whether the TLS1.3 key exchange mode exists. */
     bool havePreShareKey;    /* Indicates whether the pre-shared key exists. */
     bool haveAlpn;           /* Whether there is Alpn */
@@ -170,6 +177,7 @@ typedef struct {
     uint8_t refCnt;      /* Do not involve multiple threads. Process the hrr check clientHello. */
     uint32_t truncateHelloLen; /* is used for binder calculation. */
     ClientHelloExt extension;
+    uint64_t extensionTypeMask;
 } ClientHelloMsg;
 
 /* It is used to transmit server hello message */
@@ -190,6 +198,7 @@ typedef struct {
     uint8_t sessionIdSize;
     uint8_t pointFormatsSize;
     uint8_t secRenegoInfoSize; /* Length of the security renegotiation information */
+    uint64_t extensionTypeMask;
     bool havePointFormats;
     bool haveExtendedMasterSecret;
     bool haveSupportedVersion;
@@ -203,6 +212,14 @@ typedef struct {
     bool haveEncryptThenMac;
     bool reserved[2]; /* Four-byte alignment */
 } ServerHelloMsg;
+
+/* It is used to transmit hello verify request message */
+typedef struct {
+    uint16_t version;
+    uint8_t cookieLen;
+    uint8_t reserved[1]; /* fill with 1 byte for 4-byte alignment */
+    uint8_t *cookie;
+} HelloVerifyRequestMsg;
 
 /* Transmits certificate message */
 typedef struct {
@@ -226,7 +243,7 @@ typedef struct {
     uint16_t plen;
     uint16_t glen;
     uint8_t *pubkey;
-    uint32_t pubKeyLen;
+    uint16_t pubKeyLen;
     uint16_t signAlgorithm;
     uint16_t signSize;
     uint8_t *signData;
@@ -258,10 +275,18 @@ typedef struct {
     uint8_t reserved;               /* Four-byte alignment */
     uint8_t certTypesSize;
     uint16_t signatureAlgorithmsSize;
+    HITLS_TrustedCAList *caList;
+#ifdef HITLS_TLS_PROTO_TLS13
+    uint16_t *signatureAlgorithmsCert;
+    uint16_t signatureAlgorithmsCertSize;
     uint8_t *certificateReqCtx;     /* Used by the TLS 1.3 */
     uint32_t certificateReqCtxSize; /* This field is used by the TLS 1.3. The value is not 0 only for the
                                        authentication after the handshake */
+    uint64_t extensionTypeMask;
+    bool haveSignatureAndHashAlgoCert;
+#endif /* HITLS_TLS_PROTO_TLS13 */
     bool haveSignatureAndHashAlgo;
+    bool haveDistinguishedName;
 } CertificateRequestMsg;
 
 /* Transmits certificate verification message */
@@ -306,10 +331,14 @@ typedef struct {
 typedef struct {
     uint16_t *supportedGroups;
     uint16_t supportedGroupsSize;
+    uint16_t alpnSelectedSize; /* selected alpn protocol length */
+    uint8_t *alpnSelected; /* selected alpn protocol */
+    uint64_t extensionTypeMask;
 
     bool haveSupportedGroups;
     bool haveEarlyData;
     bool haveServerName;
+    bool haveSelectedAlpn;
 } EncryptedExtensions;
 
 /* Used to parse the handshake message header. */
@@ -318,8 +347,6 @@ typedef struct {
     uint32_t length;    /* handshake msg body length */
     uint16_t sequence; /* DTLS Indicates the number of the handshake message. Each time a new handshake message is
                           sent, one is added. Retransmission does not add up */
-    bool isHsMsgComplete;
-    bool hasParsedHeader;    /* Indicates whether the handshake message header is processed. */
     uint32_t fragmentOffset; /* Fragment offset of DTLS handshake message */
     uint32_t fragmentLength; /* Fragment length of the DTLS handshake message */
     const uint8_t *rawMsg;   /* Complete handshake information */
@@ -338,6 +365,7 @@ typedef struct {
     union {
         ClientHelloMsg clientHello;
         ServerHelloMsg serverHello;
+        HelloVerifyRequestMsg helloVerifyReq;
         EncryptedExtensions encryptedExtensions;
         CertificateMsg certificate;
         ClientKeyExchangeMsg clientKeyExchange;
@@ -350,6 +378,7 @@ typedef struct {
     } body;
 } HS_Msg;
 
+#ifdef HITLS_TLS_PROTO_DTLS12
 /* Reassembles fragmented messages */
 typedef struct {
     ListHead head;
@@ -363,6 +392,7 @@ typedef struct {
     uint8_t *msg;         /* Used to store the handshake messages during the reassembly. */
     uint32_t msgLen;      /* Total length of a message, including the message header. */
 } HS_ReassQueue;
+#endif
 
 #ifdef __cplusplus
 }

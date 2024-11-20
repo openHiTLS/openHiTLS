@@ -66,7 +66,7 @@ exit:
  *       (6) sign != null, signLen = 0, expected result 6.
  *       (7) sign != null, signLen == NULL, expected result 7.
  *    2. Call the CRYPT_EAL_PkeySetPrv method with incorrect hash id, expected result 8:
- *       CRYPT_MD_MD4, CRYPT_MD_MD5, CRYPT_MD_SHA1, CRYPT_MD_SM3, CRYPT_MD_MAX
+ *       CRYPT_MD_MD5, CRYPT_MD_SHA1, CRYPT_MD_SM3, CRYPT_MD_MAX
  * @expect
  *    1. CRYPT_NULL_INPUT
  *    2. CRYPT_SUCCESS
@@ -88,7 +88,7 @@ void SDV_CRYPTO_RSA_SIGN_API_TC001(Hex *n, Hex *d, int isProvider)
     uint32_t signLen = d->len + 1;
     uint32_t dataLen = signLen;
     CRYPT_RSA_PkcsV15Para pkcsv15 = {CRYPT_MD_SHA224};
-    CRYPT_MD_AlgId errIdList[] = {CRYPT_MD_MD4, CRYPT_MD_MD5, CRYPT_MD_SHA1, CRYPT_MD_SM3, CRYPT_MD_MAX};
+    CRYPT_MD_AlgId errIdList[] = {CRYPT_MD_MD5, CRYPT_MD_SHA1, CRYPT_MD_SM3, CRYPT_MD_MAX};
 
     /* Malloc signature buffer */
     sign = (uint8_t *)malloc(signLen);

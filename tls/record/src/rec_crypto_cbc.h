@@ -12,26 +12,10 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+#ifndef REC_CRYPT_CBC_H
+#define REC_CRYPT_CBC_H
+#include "rec_crypto.h"
 
-#ifndef UIO_TCP_H
-#define UIO_TCP_H
+const RecCryptoFunc *RecGetCbcCryptoFuncs(DecryptPostProcess decryptPostProcess, EncryptPreProcess encryptPreProcess);
 
-#include "hitls_build.h"
-#ifdef HITLS_BSL_UIO_TCP
-
-#include "bsl_uio.h"
-
-#ifdef __cplusplus
-extern "C" {
 #endif
-
-int32_t TcpWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen);
-int32_t TcpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* HITLS_BSL_UIO_TCP */
-
-#endif // UIO_TCP_H

@@ -53,6 +53,8 @@
 #include "rec_header.h"
 #include "bsl_log.h"
 #include "cert_callback.h"
+#include "bsl_uio.h"
+#include "uio_abstraction.h"
 /* END_HEADER */
 
 #define BUF_SIZE_DTO_TEST 18432
@@ -97,6 +99,7 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     HLT_SetRenegotiationSupport(clientCtxConfig, true);
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     HLT_SetRenegotiationSupport(serverCtxConfig, true);
+    HLT_SetClientRenegotiateSupport(serverCtxConfig, true);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
     DataChannelParam channelParam;
@@ -126,20 +129,16 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     clientSslConfig->connType = connType;
     HLT_TlsSetSsl(clientSsl, clientSslConfig);
     ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
-      ASSERT_TRUE(HITLS_Renegotiate(clientSsl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Renegotiate(clientSsl) == HITLS_SUCCESS);
     const char *writeBuf = "Hello world";
     pthread_t thrd;
     ASSERT_TRUE(pthread_create(&thrd, NULL, (void *)Hello, clientSsl) == 0);
     sleep(2);
-    HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf));
     uint8_t readBuf[BUF_SIZE_DTO_TEST] = {0};
     uint32_t readLen;
     ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
     ASSERT_TRUE(HLT_RpcTlsRead(remoteProcess, serverSslId, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     pthread_join(thrd, NULL);
-    ASSERT_TRUE(readLen == strlen(writeBuf));
-    ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
-    ASSERT_TRUE(HLT_TlsRead(clientSsl,  readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
     ASSERT_TRUE(HLT_RpcTlsClose(remoteProcess, serverSslId) == 0);
@@ -151,6 +150,86 @@ exit:
     ClearWrapper();
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+static int32_t DtlsSctpUioWriteException(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
+{
+    int32_t ret;
+    static int32_t count = 0;
+    count++;
+    if (count == 1) {
+        ret = SctpDefaultWrite(uio, (uint8_t *)buf, len / 2, writeLen);
+    } else {
+        ret = SctpDefaultWrite(uio, (uint8_t *)buf, len, writeLen);
+    }
+    return ret;
+}
+/**
+* @test SDV_TLS_DTLS_WRITE_APP_FAILED_TC001
+* @spec -
+* @title The client and server receive the client Hello message after the connection establishment is complete.
+* @precon nan
+* @brief
+* 1. Use the default configuration items to configure the client and server. Expected result 1.
+* 2. A DTLS over SCTP connection is established between the client and server. Expected result 2.
+* 3. Construct a app message and send it to the client. Check the server ret. Expected result 3.
+* 4. Construct a app message and send it to the client. Check the server ret. Expected result 4.
+* @expect
+* 1. The initialization is successful.
+* 2. The connection is set up successfully.
+* 3. The server ret is HITLS_REC_ERR_IO_EXCEPTION.
+* 4. The server ret is HITLS_SUCCESS.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS_WRITE_APP_FAILED_TC001(int version, int connType)
+{
+    if (connType == SCTP && !IsEnableSctpAuth()){
+        return;
+    }
+    bool certverifyflag = true;
+
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, 16790, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+
+    serverCtxConfig->isSupportClientVerify = certverifyflag;
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, version, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+
+    clientCtxConfig->isSupportClientVerify = certverifyflag;
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, version, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    HITLS_Ctx *ctx = serverRes->ssl;
+    BSL_UIO *uio = ctx->uio;
+    uio->method.write = DtlsSctpUioWriteException;
+    ASSERT_EQ(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World", strlen("Hello World")), HITLS_REC_ERR_IO_EXCEPTION);
+    ASSERT_EQ(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World2", strlen("Hello World2")), HITLS_SUCCESS);
+    uint8_t readBuf[1024] = {0};
+    uint32_t readLen;
+    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, sizeof(readBuf), &readLen) == 0);
+    ASSERT_TRUE(readLen == strlen("Hello World2"));
+    ASSERT_TRUE(memcmp("Hello World2", readBuf, readLen) == 0);
+exit:
     HLT_FreeAllProcess();
 }
 /* END_CASE */

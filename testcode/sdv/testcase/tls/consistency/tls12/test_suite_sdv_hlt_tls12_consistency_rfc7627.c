@@ -37,7 +37,7 @@
 #include "cert_mgr_ctx.h"
 #include "hitls_cert_type.h"
 #include "hs_extensions.h"
-
+#include "rec_wrapper.h"
 /* END_HEADER */
 
 static uint32_t g_uiPort = 2569;
@@ -432,6 +432,143 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
         cunt++;
     } while (cunt <= 2);
 exit:
+    HITLS_SESS_Free(session);
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+static void Test_ClientHelloWithnoEMS(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLS12;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS12;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    clientMsg->extendedMasterSecret.exState = MISSING_FIELD;
+
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+exit:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test     SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009
+* @title    Resume sessions that both support no EMS on the client and server
+* @precon nan
+* @brief    1. The client and server that does not support the extension connection establishment. 
+*              Disconnect the connection and save the session.
+*            2. Apply for another server that does not support the extension and establish a connection. Expected result
+*                2 is obtained.
+* @expect   1. The connection is successfully established.
+*           2. Session restoration success.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int version, int connType)
+{
+    Process *localProcess = NULL;
+    Process *remoteProcess = NULL;
+    HLT_FD sockFd = {0};
+ 
+    HITLS_Session *session = NULL;
+    const char *writeBuf = "Hello world";
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen;
+    int32_t cnt = 1;
+ 
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_CreateRemoteProcess(HITLS);
+    ASSERT_TRUE(remoteProcess != NULL);
+ 
+    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+    void *clientConfig = HLT_TlsNewCtx(version);
+    ASSERT_TRUE(clientConfig != NULL);
+ 
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
+ 
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    HLT_SetExtenedMasterSecretSupport(serverCtxConfig, false);
+ 
+    ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
+    ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
+    do {
+        if (session != NULL) {
+            ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
+            ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
+        } else {
+            RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_ClientHelloWithnoEMS};
+            RegisterWrapper(wrapper);
+        }
+        DataChannelParam channelParam;
+        channelParam.port = g_uiPort;
+        channelParam.type = connType;
+        channelParam.isBlock = true;
+        sockFd = HLT_CreateDataChannel(localProcess, remoteProcess, channelParam);
+        ASSERT_TRUE((sockFd.srcFd > 0) && (sockFd.peerFd > 0));
+        remoteProcess->connFd = sockFd.peerFd;
+        localProcess->connFd = sockFd.srcFd;
+        remoteProcess->connType = connType;
+        localProcess->connType = connType;
+        int32_t serverSslId = HLT_RpcTlsNewSsl(remoteProcess, serverConfigId);
+ 
+        HLT_Ssl_Config *serverSslConfig;
+        serverSslConfig = HLT_NewSslConfig(NULL);
+        ASSERT_TRUE(serverSslConfig != NULL);
+        serverSslConfig->sockFd = remoteProcess->connFd;
+        serverSslConfig->connType = connType;
+        ASSERT_TRUE(HLT_RpcTlsSetSsl(remoteProcess, serverSslId, serverSslConfig) == 0);
+        HLT_RpcTlsAccept(remoteProcess, serverSslId);
+        void *clientSsl = HLT_TlsNewSsl(clientConfig);
+        ASSERT_TRUE(clientSsl != NULL);
+ 
+        HLT_Ssl_Config *clientSslConfig;
+        clientSslConfig = HLT_NewSslConfig(NULL);
+        ASSERT_TRUE(clientSslConfig != NULL);
+        clientSslConfig->sockFd = localProcess->connFd;
+        clientSslConfig->connType = connType;
+ 
+        HLT_TlsSetSsl(clientSsl, clientSslConfig);
+        if (session != NULL) {
+            ASSERT_TRUE(HITLS_SetSession(clientSsl, session) == HITLS_SUCCESS);
+            ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
+            uint8_t isReused = 0;
+            ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
+            ASSERT_TRUE(isReused != 0);
+        } else {
+            ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
+            ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
+            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
+            ASSERT_TRUE(readLen == strlen(writeBuf));
+            ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
+            ASSERT_TRUE(HLT_RpcTlsClose(remoteProcess, serverSslId) == 0);
+            ASSERT_TRUE(HLT_TlsClose(clientSsl) == 0);
+            HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen);
+            HLT_RpcTlsRead(remoteProcess, serverSslId, readBuf, READ_BUF_SIZE, &readLen);
+            HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
+            HLT_CloseFd(sockFd.srcFd, localProcess->connType);
+ 
+            session = HITLS_GetDupSession(clientSsl);
+            ASSERT_TRUE(session != NULL);
+            ASSERT_TRUE(HITLS_SESS_IsResumable(session) == true);
+        }
+ 
+        cnt++;
+    } while (cnt < 3);
+exit:
+    ClearWrapper();
+    HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }

@@ -29,9 +29,6 @@ extern "C" {
 /* tls.handshake.certificate_length Length of a label */
 #define CERT_LEN_TAG_SIZE 3u
 
-/* sed to transfer certificate verification parameters */
-typedef struct CertVerifyParamInner HITLS_CertVerifyParam;
-
 /* Used to transfer certificate data in ASN.1 DER format. */
 typedef struct CertItem {
     uint32_t dataSize;      /* Data length */
@@ -49,6 +46,7 @@ typedef struct {
     uint32_t ellipticCurveNum;      /* number of EC curve IDs */
     uint8_t *ecPointFormatList;     /* EC point format list */
     uint32_t ecPointFormatNum;      /* number of EC point formats */
+    HITLS_TrustedCAList *caList;    /* trusted CA list */
 } CERT_ExpectInfo;
 
 /**

@@ -559,14 +559,4 @@ int32_t BSL_BASE64_SetFlags(BSL_Base64Ctx *ctx, uint32_t flags)
     ctx->flags |= flags;
     return BSL_SUCCESS;
 }
-
-int32_t BSL_Base64GetNum(BSL_Base64Ctx *ctx, uint32_t *num)
-{
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    *num = ctx->num;
-    return BSL_SUCCESS;
-}
 #endif /* HITLS_BSL_BASE64 */
