@@ -30,7 +30,7 @@
 
 int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, int32_t valLen)
 {
-    if (val == NULL || valLen != sizeof(int32_t)) {
+    if (val == NULL || valLen != sizeof(int)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
