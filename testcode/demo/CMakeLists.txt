@@ -26,10 +26,10 @@ add_library(DEMO_INTF INTERFACE)
 target_compile_options(DEMO_INTF INTERFACE -g)
 target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build 
                                             ${HITLS_ROOT}/platform/Secure_C/lib/)
-target_link_libraries(DEMO_INTF INTERFACE  hitls_tls hitls_x509 hitls_crypto hitls_bsl boundscheck)
+target_link_libraries(DEMO_INTF INTERFACE  hitls_tls hitls_pki hitls_crypto hitls_bsl boundscheck)
 target_include_directories(DEMO_INTF INTERFACE ${HITLS_INCLUDE})
 
-set(TESTS client.c server.c drbg.c ecdh.c pbkdf2.c sm2enc.c sm2sign.c sm4cbc.c)
+set(TESTS client.c server.c drbg.c ecdh.c pbkdf2.c sm2enc.c sm2sign.c sm4cbc.c hash.c)
 foreach(testcase ${TESTS})
     get_filename_component(testname ${testcase} NAME_WLE)
     add_executable(${testname} ${testcase})
