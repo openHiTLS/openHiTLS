@@ -38,7 +38,6 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
 
     /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
-
         /* The CCS message cannot be encrypted. Therefore, the sending key of the server must be activated after the CCS
          * message is sent */
         uint32_t hashLen = SAL_CRYPT_DigestSize(ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);

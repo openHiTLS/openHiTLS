@@ -352,7 +352,6 @@ int32_t DefaultConfig(uint16_t version, HITLS_Config *config)
         goto ERR;
     }
 
-
     if (SAL_CERT_MgrIsEnable()) {
         config->certMgrCtx = SAL_CERT_MgrCtxNew();
         if (config->certMgrCtx == NULL) {
