@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#if defined(HITLS_TLS_HOST_SERVER) || defined(HITLS_TLS_PROTO_TLS13)
 #include <stdint.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -26,18 +27,16 @@
 #include "hs_verify.h"
 #include "hs_common.h"
 #include "hs_msg.h"
-
-
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t ServerRecvClientCertVerifyProcess(TLS_Ctx *ctx)
 {
-    /* The signature verification part has been completed in the parser part.
-       Only the client finish data needs to be calculated in advance. */
-    int32_t ret = VERIFY_CalcVerifyData(ctx, true, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
+    int32_t ret;
+    ret = VERIFY_CalcVerifyData(ctx, true, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15871, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server Calculate client finished data error.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 
@@ -45,7 +44,8 @@ int32_t ServerRecvClientCertVerifyProcess(TLS_Ctx *ctx)
     ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_ACTIVE_CIPHER_SPEC);
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13RecvCertVerifyProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
@@ -62,3 +62,5 @@ int32_t Tls13RecvCertVerifyProcess(TLS_Ctx *ctx)
 
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_HOST_SERVER || HITLS_TLS_PROTO_TLS13 */

@@ -12,7 +12,10 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_HOST_CLIENT
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+#include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -24,8 +27,7 @@
 #include "hs_common.h"
 #include "pack.h"
 #include "send_process.h"
-#include "securec.h"
-
+#ifdef HITLS_TLS_SUITE_KX_RSA
 int32_t GenerateRsaPremasterSecret(TLS_Ctx *ctx)
 {
     uint32_t offset = 0;
@@ -39,8 +41,8 @@ int32_t GenerateRsaPremasterSecret(TLS_Ctx *ctx)
     /* 46-byte secure random value */
     return SAL_CRYPT_Rand(&preMasterSecret[offset], MASTER_SECRET_LEN - offset);
 }
-
-#ifndef HITLS_NO_TLCP11
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_PROTO_TLCP11
 int32_t GenerateEccPremasterSecret(TLS_Ctx *ctx)
 {
     uint32_t offset = 0;
@@ -61,35 +63,42 @@ static int32_t PackMsgPrepare(TLS_Ctx *ctx)
 {
     int32_t ret = 0;
     HS_Ctx *hsCtx = ctx->hsCtx;
-
+#ifdef HITLS_TLS_SUITE_KX_RSA
     if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA || hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA_PSK) {
         ret = GenerateRsaPremasterSecret(ctx);
         if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17120, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "GenerateRsaPremasterSecret fail", 0, 0, 0, 0);
             (void)memset_s(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
             return ret;
         }
     }
-
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_FEATURE_PSK
     /* If the PSK and RSA_PSK cipher suites are used, the server may not send the ServerKeyExchange message. Before
      * packing the ClientKeyExchange message, check whether the PSK has been obtained */
     if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_PSK || hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA_PSK) {
         ret = CheckClientPsk(ctx);
         if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17121, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CheckClientPsk fail", 0, 0, 0, 0);
             (void)memset_s(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
             return ret;
         }
     }
-
-#ifndef HITLS_NO_TLCP11
+#endif /* HITLS_TLS_FEATURE_PSK */
+#ifdef HITLS_TLS_PROTO_TLCP11
     if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_ECC) {
         ret = GenerateEccPremasterSecret(ctx);
         if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17122, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "GenerateEccPremasterSecret fail", 0, 0, 0, 0);
             (void)memset_s(hsCtx->kxCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
             return ret;
         }
     }
 #endif
-
+    (void)hsCtx;
     return ret;
 }
 
@@ -139,9 +148,11 @@ int32_t ClientSendClientKeyExchangeProcess(TLS_Ctx *ctx)
         return ret;
     }
 
-#ifndef HITLS_NO_DTLS12
+#ifdef HITLS_TLS_PROTO_DTLS12
     ret = HS_SetSctpAuthKey(ctx);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17124, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+            "SetSctpAuthKey fail", 0, 0, 0, 0);
         return ret;
     }
 #endif
@@ -159,3 +170,5 @@ int32_t ClientSendClientKeyExchangeProcess(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
 }
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#endif /* HITLS_TLS_HOST_CLIENT */

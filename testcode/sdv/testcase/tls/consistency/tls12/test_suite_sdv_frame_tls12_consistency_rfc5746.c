@@ -116,7 +116,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
     if (testInfo->config == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
-    HITLS_CFG_SetCloseCheckKeyUsage(testInfo->config, false);
+    HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
     testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
@@ -1070,6 +1070,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0014(void)
     ASSERT_TRUE(server != NULL);
     HITLS_SetRenegotiationSupport(client->ssl, true);
     HITLS_SetRenegotiationSupport(server->ssl, true);
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);
@@ -1237,6 +1238,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0012(void)
     ASSERT_TRUE(server != NULL);
     HITLS_SetRenegotiationSupport(client->ssl, true);
     HITLS_SetRenegotiationSupport(server->ssl, true);
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetRenegotiationState(client->ssl, &isRenegotiation) == HITLS_SUCCESS);

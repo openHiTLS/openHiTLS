@@ -18,13 +18,15 @@
 #include "bsl_sal.h"
 #include "hitls_error.h"
 #include "tls.h"
+#include "conn_init.h"
 #include "hs_ctx.h"
 #include "parse.h"
+#include "conn_init.h"
 #include "frame_tls.h"
 #include "frame_msg.h"
 #include "parser_frame_msg.h"
 
-void SendAlertStake(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
+void SendAlertStake(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
 {
     (void)ctx;
     (void)level;
@@ -66,13 +68,13 @@ int32_t ParserHandShakeMsg(const FRAME_LinkObj *linkObj, FRAME_Msg *frameMsg,
 
     SendAlertCallback tmpAlertCallback = sslCtx->method.sendAlert;
     sslCtx->method.sendAlert = SendAlertStake;
-
+    CONN_Init(sslCtx);
     ret = HS_ParseMsgHeader(sslCtx, buffer, len, &hsMsgInfo);
     if (ret != HITLS_SUCCESS) {
         sslCtx->method.sendAlert = tmpAlertCallback;
         return ret;
     }
-
+    hsMsgInfo.rawMsg = buffer;
     ret = HS_ParseMsg(sslCtx, &hsMsgInfo, &frameMsg->body.handshakeMsg);
     if (ret != HITLS_SUCCESS) {
         sslCtx->method.sendAlert = tmpAlertCallback;
@@ -111,6 +113,7 @@ int32_t ParserAppMsg(FRAME_Msg *frameMsg, const uint8_t *buffer, uint32_t len, u
     uint32_t userDataLen = BSL_ByteToUint32(&buffer[bufOffset]);
     frameMsg->body.appMsg.len = userDataLen;
     bufOffset += sizeof(uint32_t);
+    BSL_SAL_FREE(frameMsg->body.appMsg.buffer);
     frameMsg->body.appMsg.buffer = BSL_SAL_Dump(&buffer[bufOffset], userDataLen);
     if (frameMsg->body.appMsg.buffer == NULL) {
         return HITLS_MEMALLOC_FAIL;

@@ -12,30 +12,27 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
 #include <stdbool.h>
 #include <time.h>
+#include <stdarg.h>
 #include "securec.h"
 #include "bsl_sal.h"
 #include "hitls_error.h"
 #include "bsl_list.h"
 #include "bsl_err_internal.h"
 #include "bsl_errno.h"
+#include "tls_binlog_id.h"
 #include "cert_method.h"
 #include "cert.h"
 #include "cert_mgr.h"
 #include "session_type.h"
 #include "session.h"
-
+#ifdef HITLS_TLS_FEATURE_SESSION
 #define MAX_PRINTF_BUF 1024
 #define CTIME_BUF 26
-/* RFC8446 8.3 Freshness Checks: For clients on the Internet, this
-   implies windows on the order of ten seconds to account for errors in
-   clocks and variations in measurements; other deployment scenarios may
-   have different needs. */
-#define TICKET_AGE_WINDOWS (10 * 1000)
-#define MS_CONVERT 1000
-#define ONE_SECOND 1000
+#endif
 /**
  * Apply for a session
  */
@@ -43,16 +40,20 @@ HITLS_Session *HITLS_SESS_New(void)
 {
     HITLS_Session *sess = (HITLS_Session *)BSL_SAL_Calloc(1u, sizeof(HITLS_Session));
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16714, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return NULL;
     }
 
     sess->certMgrCtx = SAL_CERT_MgrCtxNew();
     if (sess->certMgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16715, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MgrCtxNew fail", 0, 0, 0, 0);
         BSL_SAL_FREE(sess);
         return NULL;
     }
 
     if (BSL_SAL_ThreadLockNew(&sess->lock) != BSL_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16716, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ThreadLockNew fail", 0, 0, 0, 0);
         SAL_CERT_MgrCtxFree(sess->certMgrCtx);
         BSL_SAL_FREE(sess);
         return NULL;
@@ -102,7 +103,6 @@ void HITLS_SESS_Free(HITLS_Session *sess)
     if (sess != NULL) {
         BSL_SAL_ThreadWriteLock(sess->lock);
         sess->references--;
-
         if (sess->references > 0) {
             BSL_SAL_ThreadUnlock(sess->lock);
             return;
@@ -113,8 +113,9 @@ void HITLS_SESS_Free(HITLS_Session *sess)
         }
         sess->peerCert = NULL;
         BSL_SAL_FREE(sess->ticket);
+#ifdef HITLS_TLS_FEATURE_SNI
         BSL_SAL_FREE(sess->hostName);
-        BSL_SAL_FREE(sess->pskIdentity);
+#endif
         memset_s(sess->masterKey, MAX_MASTER_KEY_SIZE, 0, MAX_MASTER_KEY_SIZE);
         SAL_CERT_MgrCtxFree(sess->certMgrCtx);
         BSL_SAL_ThreadLockFree(sess->lock);
@@ -122,14 +123,56 @@ void HITLS_SESS_Free(HITLS_Session *sess)
     }
 }
 
+static HITLS_Session *DeepCopySess(HITLS_Session *src, HITLS_Session *dest)
+{
+    dest->certMgrCtx = SAL_CERT_MgrCtxNew();
+    if (dest->certMgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16717, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MgrCtxNew fail", 0, 0, 0, 0);
+        goto err;
+    }
+
+    if (src->peerCert != NULL) {
+        dest->peerCert = SAL_CERT_PairDup(dest->certMgrCtx, src->peerCert);
+        if (dest->peerCert == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16718, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "PairDup fail", 0, 0, 0, 0);
+            goto err;
+        }
+    }
+
+#ifdef HITLS_TLS_FEATURE_SNI
+    if (src->hostNameSize > 0) {
+        if (SESS_SetHostName(dest, src->hostNameSize, src->hostName) != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16719, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "SetHostName fail", 0, 0, 0, 0);
+            goto err;
+        }
+    }
+#endif
+
+    if (src->ticketSize > 0) {
+        if (SESS_SetTicket(dest, src->ticket, src->ticketSize) != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16722, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "SetTicket fail", 0, 0, 0, 0);
+            goto err;
+        }
+    }
+    return dest;
+err:
+    return NULL;
+}
+
 HITLS_Session *SESS_Copy(HITLS_Session *src)
 {
     HITLS_Session *dest = (HITLS_Session *)BSL_SAL_Dump(src, sizeof(HITLS_Session));
     if (dest == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16723, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "dump fail", 0, 0, 0, 0);
         return NULL;
     }
 
     if (BSL_SAL_ThreadLockNew(&dest->lock) != BSL_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16724, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ThreadLockNew fail", 0, 0, 0, 0);
         BSL_SAL_FREE(dest);
         return NULL;
     }
@@ -138,52 +181,24 @@ HITLS_Session *SESS_Copy(HITLS_Session *src)
     dest->enable = true;
 
     dest->peerCert = NULL;
+#ifdef HITLS_TLS_FEATURE_SNI
     dest->hostName = NULL;
-    dest->pskIdentity = NULL;
+#endif
     dest->ticket = NULL;
 
-    dest->certMgrCtx = SAL_CERT_MgrCtxNew();
-    if (dest->certMgrCtx == NULL) {
-        goto ERR;
-    }
-
-    if (src->peerCert != NULL) {
-        dest->peerCert = SAL_CERT_PairDup(dest->certMgrCtx, src->peerCert);
-        if (dest->peerCert == NULL) {
-            goto ERR;
-        }
-    }
-
-    if (src->hostNameSize > 0) {
-        if (SESS_SetHostName(dest, src->hostNameSize, src->hostName) != HITLS_SUCCESS) {
-            goto ERR;
-        }
-    }
-
-    if (src->pskIdentitySize > 0) {
-        dest->pskIdentity = (uint8_t *)BSL_SAL_Calloc(1u, (src->pskIdentitySize + 1) * sizeof(uint8_t));
-        if (dest->pskIdentity == NULL) {
-            goto ERR;
-        }
-        if (memcpy_s(dest->pskIdentity, src->pskIdentitySize + 1, src->pskIdentity, src->pskIdentitySize) != EOK) {
-            goto ERR;
-        }
-        dest->pskIdentitySize = src->pskIdentitySize;
-    }
-
-    if (src->ticketSize > 0) {
-        if (SESS_SetTicket(dest, src->ticket, src->ticketSize) != HITLS_SUCCESS) {
-            goto ERR;
-        }
+    if (DeepCopySess(src, dest) == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16725, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "DeepCopySess fail", 0, 0, 0, 0);
+        goto err;
     }
 
     return dest;
-ERR:
+err:
     HITLS_SESS_Free(dest);
     return NULL;
 }
 
-/* Simple judgment only */
+/* Just make a simple judgment */
 bool HITLS_SESS_IsResumable(const HITLS_Session *sess)
 {
     bool isResumable = 0;
@@ -200,16 +215,39 @@ bool HITLS_SESS_IsResumable(const HITLS_Session *sess)
 void SESS_Disable(HITLS_Session *sess)
 {
     if (sess != NULL) {
-        BSL_SAL_ThreadReadLock(sess->lock);
+        BSL_SAL_ThreadWriteLock(sess->lock);
         sess->enable = false;
         BSL_SAL_ThreadUnlock(sess->lock);
     }
     return;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION_ID
+int32_t HITLS_SESS_GetSessionId(const HITLS_Session *sess, uint8_t *sessionId, uint32_t *sessionIdSize)
+{
+    if (sess == NULL || sessionId == NULL || sessionIdSize == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16726, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return HITLS_NULL_INPUT;
+    }
+
+    BSL_SAL_ThreadReadLock(sess->lock);
+    if (memcpy_s(sessionId, *sessionIdSize, sess->sessionId, sess->sessionIdSize) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16727, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
+        BSL_SAL_ThreadUnlock(sess->lock);
+        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+        return HITLS_MEMCPY_FAIL;
+    }
+
+    *sessionIdSize = sess->sessionIdSize;
+    BSL_SAL_ThreadUnlock(sess->lock);
+    return HITLS_SUCCESS;
+}
+
 int32_t HITLS_SESS_SetSessionIdCtx(HITLS_Session *sess, uint8_t *sessionIdCtx, uint32_t sessionIdCtxSize)
 {
     if (sess == NULL || sessionIdCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16728, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -217,12 +255,13 @@ int32_t HITLS_SESS_SetSessionIdCtx(HITLS_Session *sess, uint8_t *sessionIdCtx, u
     BSL_SAL_ThreadWriteLock(sess->lock);
     if (sessionIdCtxSize != 0 &&
         memcpy_s(sess->sessionIdCtx, sizeof(sess->sessionIdCtx), sessionIdCtx, sessionIdCtxSize) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16729, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
     }
 
-    /* The sessionIdCtxSize allowed value is 0 */
+    /* The allowed value for sessionIdCtxSize is 0 */
     sess->sessionIdCtxSize = sessionIdCtxSize;
 
     BSL_SAL_ThreadUnlock(sess->lock);
@@ -232,12 +271,14 @@ int32_t HITLS_SESS_SetSessionIdCtx(HITLS_Session *sess, uint8_t *sessionIdCtx, u
 int32_t HITLS_SESS_GetSessionIdCtx(const HITLS_Session *sess, uint8_t *sessionIdCtx, uint32_t *sessionIdCtxSize)
 {
     if (sess == NULL || sessionIdCtx == NULL || sessionIdCtxSize == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16730, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     BSL_SAL_ThreadReadLock(sess->lock);
     if (memcpy_s(sessionIdCtx, *sessionIdCtxSize, sess->sessionIdCtx, sess->sessionIdCtxSize) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16731, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
@@ -247,16 +288,19 @@ int32_t HITLS_SESS_GetSessionIdCtx(const HITLS_Session *sess, uint8_t *sessionId
     BSL_SAL_ThreadUnlock(sess->lock);
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_SESSION_ID */
 
 int32_t HITLS_SESS_SetSessionId(HITLS_Session *sess, uint8_t *sessionId, uint32_t sessionIdSize)
 {
     if (sess == NULL || sessionId == NULL || sessionIdSize == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16732, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     BSL_SAL_ThreadWriteLock(sess->lock);
     if (memcpy_s(sess->sessionId, sizeof(sess->sessionId), sessionId, sessionIdSize) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16733, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
@@ -268,28 +312,10 @@ int32_t HITLS_SESS_SetSessionId(HITLS_Session *sess, uint8_t *sessionId, uint32_
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_SESS_GetSessionId(const HITLS_Session *sess, uint8_t *sessionId, uint32_t *sessionIdSize)
-{
-    if (sess == NULL || sessionId == NULL || sessionIdSize == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
-    }
-
-    BSL_SAL_ThreadReadLock(sess->lock);
-    if (memcpy_s(sessionId, *sessionIdSize, sess->sessionId, sess->sessionIdSize) != EOK) {
-        BSL_SAL_ThreadUnlock(sess->lock);
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        return HITLS_MEMCPY_FAIL;
-    }
-
-    *sessionIdSize = sess->sessionIdSize;
-    BSL_SAL_ThreadUnlock(sess->lock);
-    return HITLS_SUCCESS;
-}
-
 int32_t HITLS_SESS_SetHaveExtMasterSecret(HITLS_Session *sess, uint8_t haveExtMasterSecret)
 {
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16734, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -303,6 +329,7 @@ int32_t HITLS_SESS_SetHaveExtMasterSecret(HITLS_Session *sess, uint8_t haveExtMa
 int32_t HITLS_SESS_GetHaveExtMasterSecret(HITLS_Session *sess, uint8_t *haveExtMasterSecret)
 {
     if (sess == NULL || haveExtMasterSecret == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16735, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -313,17 +340,21 @@ int32_t HITLS_SESS_GetHaveExtMasterSecret(HITLS_Session *sess, uint8_t *haveExtM
     return HITLS_SUCCESS;
 }
 
+#if defined(HITLS_TLS_FEATURE_SNI) && defined(HITLS_TLS_FEATURE_SESSION)
 /* Set the server_name extension required for TLS1.2 session resumption */
 int32_t SESS_SetHostName(HITLS_Session *sess, uint32_t hostNameSize, uint8_t *hostName)
 {
     if (sess == NULL || hostName == NULL || hostNameSize == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16736, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     BSL_SAL_ThreadWriteLock(sess->lock);
+    BSL_SAL_FREE(sess->hostName);
     sess->hostName = (uint8_t *)BSL_SAL_Dump(hostName, hostNameSize * sizeof(uint8_t));
     if (sess->hostName == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16737, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
@@ -338,6 +369,7 @@ int32_t SESS_SetHostName(HITLS_Session *sess, uint32_t hostNameSize, uint8_t *ho
 int32_t SESS_GetHostName(HITLS_Session *sess, uint32_t  *hostNameSize, uint8_t **hostName)
 {
     if (sess == NULL || hostNameSize == NULL || hostName == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16738, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -349,10 +381,12 @@ int32_t SESS_GetHostName(HITLS_Session *sess, uint32_t  *hostNameSize, uint8_t *
 
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_SNI */
 
 int32_t HITLS_SESS_SetProtocolVersion(HITLS_Session *sess, uint16_t version)
 {
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16739, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -366,6 +400,7 @@ int32_t HITLS_SESS_SetProtocolVersion(HITLS_Session *sess, uint16_t version)
 int32_t HITLS_SESS_GetProtocolVersion(const HITLS_Session *sess, uint16_t *version)
 {
     if (sess == NULL || version == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16740, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -376,11 +411,13 @@ int32_t HITLS_SESS_GetProtocolVersion(const HITLS_Session *sess, uint16_t *versi
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert, bool isClient)
 {
     int32_t ret = 0;
     if (sess == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16741, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "sess null", 0, 0, 0, 0);
         return HITLS_NULL_INPUT;
     }
 
@@ -398,12 +435,12 @@ int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert, bool isClient
         /* Obtain the chain */
         HITLS_CERT_Chain *tmpChain = SAL_CERT_PairGetChain(peerCert);
         if (tmpChain == NULL) {
-            /* If the chain in CERT_Pair is empty, unlocking is returned */
+            /* If the chain in CERT_Pair is empty, the unlocking is returned */
             ret = HITLS_SUCCESS;
             goto EXIT;
         }
 
-        /* Make a copy of cert */
+        /* Make a copy of the cert */
         HITLS_CERT_X509 *newSubjectCert = SAL_CERT_X509Dup(sess->certMgrCtx, tmpCert);
         if (newSubjectCert == NULL) {
             ret = HITLS_CERT_ERR_X509_DUP;
@@ -426,6 +463,7 @@ EXIT:
 int32_t SESS_GetPeerCert(HITLS_Session *sess, CERT_Pair **peerCert)
 {
     if (sess == NULL || peerCert == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16742, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -435,6 +473,7 @@ int32_t SESS_GetPeerCert(HITLS_Session *sess, CERT_Pair **peerCert)
     BSL_SAL_ThreadUnlock(sess->lock);
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_CONNECTION_INFO_NEGOTIATION */
 
 uint64_t SESS_GetStartTime(HITLS_Session *sess)
 {
@@ -454,6 +493,7 @@ uint64_t SESS_GetStartTime(HITLS_Session *sess)
 int32_t SESS_SetStartTime(HITLS_Session *sess, uint64_t startTime)
 {
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16743, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -468,6 +508,7 @@ int32_t SESS_SetStartTime(HITLS_Session *sess, uint64_t startTime)
 int32_t HITLS_SESS_SetTimeout(HITLS_Session *sess, uint64_t timeout)
 {
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16744, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -481,18 +522,20 @@ int32_t HITLS_SESS_SetTimeout(HITLS_Session *sess, uint64_t timeout)
 int32_t HITLS_SESS_SetCipherSuite(HITLS_Session *sess, uint16_t cipherSuite)
 {
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16745, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
-    BSL_SAL_ThreadReadLock(sess->lock);
+    BSL_SAL_ThreadWriteLock(sess->lock);
     sess->cipherSuite = cipherSuite;
     BSL_SAL_ThreadUnlock(sess->lock);
     return HITLS_SUCCESS;
 }
-int32_t HITLS_SESS_GetCipherSuite(HITLS_Session *sess, uint16_t *cipherSuite)
+int32_t HITLS_SESS_GetCipherSuite(const HITLS_Session *sess, uint16_t *cipherSuite)
 {
     if (sess == NULL || cipherSuite == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16746, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -506,12 +549,14 @@ int32_t HITLS_SESS_GetCipherSuite(HITLS_Session *sess, uint16_t *cipherSuite)
 int32_t HITLS_SESS_SetMasterKey(HITLS_Session *sess, const uint8_t *masterKey, uint32_t masterKeySize)
 {
     if (sess == NULL || masterKey == NULL || masterKeySize == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16747, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     BSL_SAL_ThreadWriteLock(sess->lock);
     if (memcpy_s(sess->masterKey, sizeof(sess->masterKey), masterKey, masterKeySize) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16748, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
@@ -523,6 +568,7 @@ int32_t HITLS_SESS_SetMasterKey(HITLS_Session *sess, const uint8_t *masterKey, u
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION
 uint32_t HITLS_SESS_GetMasterKeyLen(const HITLS_Session *sess)
 {
     uint32_t masterKeySize = 0;
@@ -535,16 +581,19 @@ uint32_t HITLS_SESS_GetMasterKeyLen(const HITLS_Session *sess)
     BSL_SAL_ThreadUnlock(sess->lock);
     return masterKeySize;
 }
+#endif
 
 int32_t HITLS_SESS_GetMasterKey(const HITLS_Session *sess, uint8_t *masterKey, uint32_t *masterKeySize)
 {
     if (sess == NULL || masterKey == NULL || masterKeySize == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16749, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     BSL_SAL_ThreadReadLock(sess->lock);
     if (memcpy_s(masterKey, *masterKeySize, sess->masterKey, sess->masterKeySize) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16750, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
@@ -558,6 +607,7 @@ int32_t HITLS_SESS_GetMasterKey(const HITLS_Session *sess, uint8_t *masterKey, u
 int32_t SESS_SetTicket(HITLS_Session *sess, uint8_t *ticket, uint32_t ticketSize)
 {
     if (sess == NULL || ticket == NULL || ticketSize == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16751, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -567,6 +617,7 @@ int32_t SESS_SetTicket(HITLS_Session *sess, uint8_t *ticket, uint32_t ticketSize
     BSL_SAL_FREE(sess->ticket);
     sess->ticket = (uint8_t *)BSL_SAL_Dump(ticket, ticketSize);
     if (sess->ticket == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16752, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
         BSL_SAL_ThreadUnlock(sess->lock);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
@@ -591,6 +642,7 @@ int32_t SESS_GetTicket(const HITLS_Session *sess, uint8_t **ticket, uint32_t *ti
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 bool HITLS_SESS_HasTicket(const HITLS_Session *sess)
 {
     if (sess == NULL) {
@@ -604,6 +656,7 @@ bool HITLS_SESS_HasTicket(const HITLS_Session *sess)
 
     return flag;
 }
+#endif
 
 bool SESS_CheckValidity(HITLS_Session *sess, uint64_t curTime)
 {
@@ -622,31 +675,10 @@ bool SESS_CheckValidity(HITLS_Session *sess, uint64_t curTime)
     return flag;
 }
 
-bool SESS_CheckObfuscatedTicketAge(HITLS_Session *sess, uint64_t curTime, uint64_t obfuscatedTicketAge)
-{
-    if (sess == NULL) {
-        return false;
-    }
-
-    bool flag = false;
-    BSL_SAL_ThreadReadLock(sess->lock);
-    uint64_t ticketTmLocal = curTime - sess->startTime;
-    uint64_t ticketTmLocalMs = ticketTmLocal * MS_CONVERT;
-    uint64_t ticketAgeClient = obfuscatedTicketAge - sess->ticketAgeAdd;
-    if ((sess->enable) && (curTime < sess->startTime + sess->timeout) &&
-        ((ticketTmLocalMs / (uint64_t)MS_CONVERT) == ticketTmLocal) &&
-        ticketAgeClient <= ticketTmLocalMs + ONE_SECOND &&
-        ticketAgeClient + TICKET_AGE_WINDOWS >= ticketTmLocalMs + ONE_SECOND) {
-        flag = true;
-    }
-    BSL_SAL_ThreadUnlock(sess->lock);
-
-    return flag;
-}
-
 int32_t SESS_SetTicketAgeAdd(HITLS_Session *sess, uint32_t ticketAgeAdd)
 {
     if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16754, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
@@ -669,3 +701,5 @@ uint32_t SESS_GetTicketAgeAdd(const HITLS_Session *sess)
     BSL_SAL_ThreadUnlock(sess->lock);
     return ticketAgeAdd;
 }
+
+#endif /* HITLS_TLS_FEATURE_SESSION */

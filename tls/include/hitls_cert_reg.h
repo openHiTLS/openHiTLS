@@ -319,47 +319,6 @@ typedef int32_t (*CERT_DecryptCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, con
  */
 typedef int32_t (*CERT_CheckPrivateKeyCallBack)(const HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key);
 
-/**
- * @ingroup hitls_cert_reg
- * @brief   Callback for converting the underlying key of the hitls to the upper layer user (adaptation layer)
- *
- * @param   srcKey [IN] Key type used by the HiTLS TLS layer.
- * @param   desKey [OUT] Key type used by upper layer users.
- */
-typedef int32_t (*CERT_KeyToUserKeyCallBack)(HITLS_CERT_Key *srcKey, HITLS_CERT_USER_Key **desKey);
-
-/**
- * @ingroup hitls_cert_reg
- * @brief   Callback for converting the key of the upper layer user (adaptation layer) to the key of the
- * bottom layer hitls.
- *
- * @param   srcKey [IN] Key type used by upper-layer users.
- * @param   desKey [OUT] Key type used by the HiTLS TLS layer.
- *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
- */
-typedef int32_t (*CERT_KeyFormUserKeyCallBack)(HITLS_CERT_USER_Key *srcKey, HITLS_CERT_Key **desKey);
-
-/**
- * @ingroup hitls_cert_reg
- * @brief   Duplicate the certificate key.
- *
- * @param   key [IN] Certificate key
- *
- * @retval  New certificate key.
- */
-typedef HITLS_CERT_USER_Key *(*CERT_UserKeyDupCallBack)(HITLS_CERT_USER_Key *key);
-
-/**
- * @ingroup hitls_cert_reg
- * @brief   Callback for releasing the key of the upper layer user (adaptation layer).
- *
- * @param   userKey [in] Key type used by upper layer users.
- *
- * @retval  void
- */
-typedef void (*CERT_UserKeyFreeCallBack)(HITLS_CERT_USER_Key *userKey);
-
 typedef struct {
     CERT_StoreNewCallBack certStoreNew;             /**< REQUIRED, Creating a certificate store. */
     CERT_StoreDupCallBack certStoreDup;             /**< REQUIRED, duplicate certificate store. */
@@ -387,15 +346,6 @@ typedef struct {
     CERT_CheckPrivateKeyCallBack checkPrivateKey;   /**< REQUIRED, Check whether the certificate matches the key. */
 } HITLS_CERT_MgrMethod;
 
-typedef struct {
-    CERT_KeyToUserKeyCallBack keyToUserKey;         /**< converts the underlying key of the HiTLS to the
-                                                         upper layer user (adaptation layer) for use */
-    CERT_KeyFormUserKeyCallBack keyFormUserKey;     /**< upper layer user (adaptation layer) key
-                                                         to obtain the bottom-layer key of the HiTLS */
-    CERT_UserKeyFreeCallBack userKeyFree;           /**< upper-layer user (adaptation layer) key release*/
-    CERT_UserKeyDupCallBack userKeyDup;             /**< upper-layer user (adaptation layer) key copy */
-} HITLS_CERT_UserKeyMgrMethod;
-
 /**
  * @ingroup hitls_cert_reg
  * @brief   Callback function related to certificate registration
@@ -419,28 +369,6 @@ void HITLS_CERT_DeinitMgrMethod(void);
 
 /**
  * @ingroup hitls_cert_reg
- * @brief   Callback function related to register the certificate UserKey.
- * Before calling this API, ensure that the HITLS_CERT_RegisterMgrMethod is successfully registered.
- *
- * @param   method [IN] Callback function
- *
- * @retval HITLS_SUCCESS, succeeded.
- * @retval HITLS_NULL_INPUT, the callback function is NULL.
- */
-int32_t HITLS_CERT_RegisterUserKeyMgrMethod(HITLS_CERT_UserKeyMgrMethod *method);
-
-/**
- * @ingroup hitls_cert_reg
- * @brief   Callback functions related to the deregistration certificate UserKey
- *
- * @param   method [IN] Callback function
- *
- * @retval
- */
-void HITLS_CERT_DeinitUserKeyMgrMethod(void);
-
-/**
- * @ingroup hitls_cert_reg
  * @brief   Register the private key with the config file and certificate matching Check Interface.
  *
  * @param   config [IN/OUT] Config context
@@ -460,6 +388,14 @@ int32_t HITLS_CFG_SetCheckPriKeyCb(HITLS_Config *config, CERT_CheckPrivateKeyCal
  *          If the registered private key does not match the certificate, NULL is returned.
  */
 CERT_CheckPrivateKeyCallBack HITLS_CFG_GetCheckPriKeyCb(HITLS_Config *config);
+
+/**
+ * @ingroup hitls_cert_reg
+ * @brief   Get certificate callback function
+ *
+ * @retval Cert callback function
+ */
+HITLS_CERT_MgrMethod *HITLS_CERT_GetMgrMethod(void);
 
 #ifdef __cplusplus
 }

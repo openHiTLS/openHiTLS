@@ -12,29 +12,33 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
 #include "hitls_error.h"
 #include "bsl_err_internal.h"
+#include "tls_binlog_id.h"
 #include "hitls_type.h"
 #include "hitls_config.h"
 #include "tls.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
 #include "session.h"
+#endif
 #include "cert_method.h"
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version)
 {
     if (ctx == NULL || version == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
     *version = ctx->negotiatedInfo.version;
     return HITLS_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_TLS_PROTO_ALL
 int32_t HITLS_GetMaxProtoVersion(const HITLS_Ctx *ctx, uint16_t *maxVersion)
 {
     if (ctx == NULL || maxVersion == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -45,7 +49,6 @@ int32_t HITLS_GetMaxProtoVersion(const HITLS_Ctx *ctx, uint16_t *maxVersion)
 int32_t HITLS_GetMinProtoVersion(const HITLS_Ctx *ctx, uint16_t *minVersion)
 {
     if (ctx == NULL || minVersion == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -56,7 +59,6 @@ int32_t HITLS_GetMinProtoVersion(const HITLS_Ctx *ctx, uint16_t *minVersion)
 int32_t HITLS_SetMinProtoVersion(HITLS_Ctx *ctx, uint16_t version)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -67,59 +69,62 @@ int32_t HITLS_SetMinProtoVersion(HITLS_Ctx *ctx, uint16_t version)
 int32_t HITLS_SetMaxProtoVersion(HITLS_Ctx *ctx, uint16_t version)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     uint16_t minVersion = ctx->config.tlsConfig.minVersion;
     return HITLS_CFG_SetVersion(&(ctx->config.tlsConfig), minVersion, version);
 }
+#endif
 
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_IsAead(const HITLS_Ctx *ctx, uint8_t *isAead)
 {
-    if (ctx == NULL || isAead == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
     /* Check whether the input parameter is empty. The system does not need to check whether the input parameter is
      * empty */
     return HITLS_CIPHER_IsAead(&(ctx->negotiatedInfo.cipherSuiteInfo), isAead);
 }
-
+#endif
+#ifdef HITLS_TLS_PROTO_DTLS
 int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, uint8_t *isDtls)
 {
-    if (ctx == NULL || isDtls == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
     return HITLS_CFG_IsDtls(&(ctx->config.tlsConfig), isDtls);
 }
+#endif
 
+#ifdef HITLS_TLS_FEATURE_SESSION
 int32_t HITLS_IsSessionReused(HITLS_Ctx *ctx, uint8_t *isReused)
 {
     if (ctx == NULL || isReused == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     *isReused = (uint8_t)ctx->negotiatedInfo.isResume;
     return HITLS_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_TLS_FEATURE_SESSION_ID
 int32_t HITLS_SetSessionIdCtx(HITLS_Ctx *ctx, const uint8_t *sessionIdCtx, uint32_t len)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetSessionIdCtx(&ctx->config.tlsConfig, sessionIdCtx, len);
 }
+#endif
 
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 int32_t HITLS_GetSessionTicketKey(const HITLS_Ctx *ctx, uint8_t *key, uint32_t keySize, uint32_t *outSize)
 {
-    if (ctx == NULL || key == NULL || outSize == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -128,19 +133,17 @@ int32_t HITLS_GetSessionTicketKey(const HITLS_Ctx *ctx, uint8_t *key, uint32_t k
 
 int32_t HITLS_SetSessionTicketKey(HITLS_Ctx *ctx, const uint8_t *key, uint32_t keySize)
 {
-    if (ctx == NULL || key == NULL ||
-        (keySize != HITLS_TICKET_KEY_NAME_SIZE + HITLS_TICKET_KEY_SIZE + HITLS_TICKET_KEY_SIZE)) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetSessionTicketKey(&ctx->config.tlsConfig, key, keySize);
 }
+#endif
 
 int32_t HITLS_SetVerifyResult(HITLS_Ctx *ctx, HITLS_ERROR verifyResult)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -151,7 +154,6 @@ int32_t HITLS_SetVerifyResult(HITLS_Ctx *ctx, HITLS_ERROR verifyResult)
 int32_t HITLS_GetVerifyResult(const HITLS_Ctx *ctx, HITLS_ERROR *verifyResult)
 {
     if (ctx == NULL || verifyResult == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -159,6 +161,7 @@ int32_t HITLS_GetVerifyResult(const HITLS_Ctx *ctx, HITLS_ERROR *verifyResult)
     return HITLS_SUCCESS;
 }
 
+#if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
 HITLS_CERT_X509 *HITLS_GetPeerCertificate(const HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -169,33 +172,30 @@ HITLS_CERT_X509 *HITLS_GetPeerCertificate(const HITLS_Ctx *ctx)
 
     int32_t ret = SESS_GetPeerCert(ctx->session, &peerCert);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17157, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetPeerCert fail", 0, 0, 0, 0);
         return NULL;
     }
 
     HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(peerCert);
     /* Certificate reference increments by one */
-    return SAL_CERT_X509Ref(ctx->config.tlsConfig.certMgrCtx, cert);
+    return cert == NULL ? NULL : SAL_CERT_X509Ref(ctx->config.tlsConfig.certMgrCtx, cert);
 }
+#endif
 
 int32_t HITLS_SetQuietShutdown(HITLS_Ctx *ctx, int32_t mode)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     // The mode value 0 indicates that the quiet disconnection mode is disabled. The mode value 1 indicates that the
     // quiet disconnection mode is enabled
     if (mode != 0 && mode != 1) {
-        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
         return HITLS_CONFIG_INVALID_SET;
     }
 
-    if (mode == 0) {
-        ctx->config.tlsConfig.isQuietShutdown = false;
-    } else {
-        ctx->config.tlsConfig.isQuietShutdown = true;
-    }
+    ctx->config.tlsConfig.isQuietShutdown = (mode != 0);
 
     return HITLS_SUCCESS;
 }
@@ -203,7 +203,6 @@ int32_t HITLS_SetQuietShutdown(HITLS_Ctx *ctx, int32_t mode)
 int32_t HITLS_GetQuietShutdown(const HITLS_Ctx *ctx, int32_t *mode)
 {
     if (ctx == NULL || mode == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -211,11 +210,10 @@ int32_t HITLS_GetQuietShutdown(const HITLS_Ctx *ctx, int32_t *mode)
 
     return HITLS_SUCCESS;
 }
-
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, uint8_t *isRenegotiationState)
 {
     if (ctx == NULL || isRenegotiationState == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -223,22 +221,21 @@ int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, uint8_t *isRenegotiati
 
     return HITLS_SUCCESS;
 }
-
+#endif
+#ifdef HITLS_TLS_CONFIG_STATE
 int32_t HITLS_GetRwstate(const HITLS_Ctx *ctx, uint8_t *rwstate)
 {
     if (ctx == NULL || rwstate == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     *rwstate = ctx->rwstate;
     return HITLS_SUCCESS;
 }
-
+#endif
 int32_t HITLS_SetShutdownState(HITLS_Ctx *ctx, uint32_t mode)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -249,7 +246,6 @@ int32_t HITLS_SetShutdownState(HITLS_Ctx *ctx, uint32_t mode)
 int32_t HITLS_GetShutdownState(const HITLS_Ctx *ctx, uint32_t *mode)
 {
     if (ctx == NULL || mode == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -257,10 +253,10 @@ int32_t HITLS_GetShutdownState(const HITLS_Ctx *ctx, uint32_t *mode)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -269,48 +265,50 @@ int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 
 int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetNoClientCertSupport(&(ctx->config.tlsConfig), isSupport);
 }
+#endif
 
+#ifdef HITLS_TLS_FEATURE_PHA
 int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetPostHandshakeAuthSupport(&(ctx->config.tlsConfig), isSupport);
 }
-
+#endif
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetVerifyNoneSupport(&(ctx->config.tlsConfig), isSupport);
 }
+#endif
 
+#if defined(HITLS_TLS_FEATURE_CERT_MODE) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
 int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetClientOnceVerifySupport(&(ctx->config.tlsConfig), isSupport);
 }
+#endif
 
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 int32_t HITLS_ClearRenegotiationNum(HITLS_Ctx *ctx, uint32_t *renegotiationNum)
 {
     if (ctx == NULL || renegotiationNum == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -318,11 +316,12 @@ int32_t HITLS_ClearRenegotiationNum(HITLS_Ctx *ctx, uint32_t *renegotiationNum)
     ctx->negotiatedInfo.renegotiationNum = 0;
     return HITLS_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_TLS_SUITE_CIPHER_CBC
 int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, uint32_t encryptThenMacType)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -332,7 +331,6 @@ int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, uint32_t encryptThenMacType)
 int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, uint32_t *encryptThenMacType)
 {
     if (ctx == NULL || encryptThenMacType == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -344,21 +342,21 @@ int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, uint32_t *encryptThenMacTy
         return HITLS_CFG_GetEncryptThenMac(&(ctx->config.tlsConfig), encryptThenMacType);
     }
 }
+#endif
 
+#ifdef HITLS_TLS_FEATURE_SNI
 int32_t HITLS_SetServerName(HITLS_Ctx *ctx, uint8_t *serverName, uint32_t serverNameStrlen)
 {
-    if (ctx == NULL || serverName == NULL || serverNameStrlen == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetServerName(&(ctx->config.tlsConfig), serverName, serverNameStrlen);
 }
-
+#endif
 int32_t HITLS_SetCipherServerPreference(HITLS_Ctx *ctx, bool isSupport)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -367,8 +365,7 @@ int32_t HITLS_SetCipherServerPreference(HITLS_Ctx *ctx, bool isSupport)
 
 int32_t HITLS_GetCipherServerPreference(const HITLS_Ctx *ctx, bool *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -378,17 +375,35 @@ int32_t HITLS_GetCipherServerPreference(const HITLS_Ctx *ctx, bool *isSupport)
 int32_t HITLS_SetRenegotiationSupport(HITLS_Ctx *ctx, bool isSupport)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_SetRenegotiationSupport(&(ctx->config.tlsConfig), isSupport);
 }
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+int32_t HITLS_SetClientRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
 
+    return HITLS_CFG_SetClientRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
+}
+#endif
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetLegacyRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
+}
+#endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -397,18 +412,35 @@ int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport)
 
 int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, uint8_t *isSupport)
 {
-    if (ctx == NULL || isSupport == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetSessionTicketSupport(&(ctx->config.tlsConfig), isSupport);
 }
+#endif
+int32_t HITLS_SetEmptyRecordsNum(HITLS_Ctx *ctx, uint32_t emptyNum)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
 
+    return HITLS_CFG_SetEmptyRecordsNum(&(ctx->config.tlsConfig), emptyNum);
+}
+
+int32_t HITLS_GetEmptyRecordsNum(const HITLS_Ctx *ctx, uint32_t *emptyNum)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetEmptyRecordsNum(&(ctx->config.tlsConfig), emptyNum);
+}
+
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 int32_t HITLS_SetTicketNums(HITLS_Ctx *ctx, uint32_t ticketNums)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -418,17 +450,16 @@ int32_t HITLS_SetTicketNums(HITLS_Ctx *ctx, uint32_t ticketNums)
 uint32_t HITLS_GetTicketNums(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetTicketNums(&ctx->config.tlsConfig);
 }
-
+#endif
+#ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, uint8_t isEnable)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -437,14 +468,15 @@ int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, uint8_t isEnable)
 
 int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, uint8_t *isEnable)
 {
-    if (ctx == NULL || isEnable == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetFlightTransmitSwitch(&(ctx->config.tlsConfig), isEnable);
 }
+#endif
 
+#ifdef HITLS_TLS_CONFIG_CERT
 /**
  * @ingroup hitls
  * @brief Set the maximum size of the certificate chain that can be sent by the peer end.
@@ -457,7 +489,6 @@ int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, uint8_t *isEnable)
 int32_t HITLS_SetMaxCertList(HITLS_Ctx *ctx, uint32_t maxSize)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
 
@@ -475,14 +506,26 @@ int32_t HITLS_SetMaxCertList(HITLS_Ctx *ctx, uint32_t maxSize)
  */
 int32_t HITLS_GetMaxCertList(const HITLS_Ctx *ctx, uint32_t *maxSize)
 {
-    if (ctx == NULL || maxSize == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+    if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_GetMaxCertList(&(ctx->config.tlsConfig), maxSize);
 }
+#endif
 
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+int32_t HITLS_SetTmpDhCb(HITLS_Ctx *ctx, HITLS_DhTmpCb cb)
+{
+    if (ctx == NULL || cb == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetTmpDhCb(&(ctx->config.tlsConfig), cb);
+}
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
+
+#ifdef HITLS_TLS_CONFIG_RECORD_PADDING
 int32_t HITLS_SetRecordPaddingCb(HITLS_Ctx *ctx, HITLS_RecordPaddingCb cb)
 {
     if (ctx == NULL) {
@@ -510,14 +553,6 @@ int32_t HITLS_SetRecordPaddingCbArg(HITLS_Ctx *ctx, void *arg)
     return HITLS_CFG_SetRecordPaddingCbArg(&(ctx->config.tlsConfig), arg);
 }
 
-int32_t HITLS_SetCloseCheckKeyUsage(HITLS_Ctx *ctx, bool isClose)
-{
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-    return HITLS_CFG_SetCloseCheckKeyUsage(&(ctx->config.tlsConfig), isClose);
-}
-
 void *HITLS_GetRecordPaddingCbArg(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -526,3 +561,14 @@ void *HITLS_GetRecordPaddingCbArg(HITLS_Ctx *ctx)
 
     return HITLS_CFG_GetRecordPaddingCbArg(&(ctx->config.tlsConfig));
 }
+#endif
+
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_SetCheckKeyUsage(&(ctx->config.tlsConfig), isCheck);
+}
+#endif

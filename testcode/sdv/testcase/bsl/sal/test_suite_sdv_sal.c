@@ -785,3 +785,30 @@ exit:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_BSL_SAL_CALLBACK_CTRL_FUNC_TC001
+ * @title  test BSL_SAL_CallBack_Ctrl functions
+ * @precon nan
+ * @brief
+ *    1.Call BSL_SAL_CallBack_Ctrl registering file Callback Function, Expected result 1 is obtained.
+ *    2.Call BSL_SAL_CallBack_Ctrl registering time Callback Function, Expected result 1 is obtained.
+ *    3.Call BSL_SAL_CallBack_Ctrl registering net Callback Function, Expected result 1 is obtained.
+ *    4.Call BSL_SAL_CallBack_Ctrl registering invalid Callback Function, Expected result 2 is obtained.
+ *    5.Call BSL_SAL_SockGetLastSocketError obtaining the last socket error, Expected result 3 is obtained.
+ * @expect
+ *    1. BSL_SUCCESS
+ *    2. BSL_SAL_ERR_NET_IOCTL
+ *    3. Succeeded in obtaining the last socket error.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_SAL_CALLBACK_CTRL_FUNC_TC001(void)
+{
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_FILE_OPEN_CB_FUNC, NULL), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_SYS_TIME_CB_FUNC, NULL), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_NET_WRITE_CB_FUNC, NULL), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_Ioctlsocket(0, 0, NULL), BSL_SAL_ERR_NET_IOCTL);
+exit:
+    BSL_SAL_SockGetLastSocketError();
+}
+/* END_CASE */

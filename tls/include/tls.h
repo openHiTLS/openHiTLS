@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hitls_build.h"
 #include "cipher_suite.h"
 #include "tls_config.h"
 #include "hitls_error.h"
@@ -50,7 +51,6 @@ typedef struct HsCtx HS_Ctx;
 typedef struct CcsCtx CCS_Ctx;
 typedef struct AlertCtx ALERT_Ctx;
 typedef struct RecCtx REC_Ctx;
-typedef struct AppDataCtx APP_Ctx;
 
 typedef enum {
     CCS_CMD_RECV_READY,                 /* CCS allowed to be received */
@@ -129,18 +129,58 @@ typedef enum {
     PHA_REQUESTED       /* certificate request has been sent or received */
 } PHA_State;
 
+/* Describes the handshake status */
+typedef enum {
+    TLS_IDLE,                       /* initial state */
+    TLS_CONNECTED,                  /* Handshake succeeded */
+    TRY_SEND_HELLO_REQUEST,         /* sends hello request message */
+    TRY_SEND_CLIENT_HELLO,          /* sends client hello message */
+    TRY_SEND_HELLO_RETRY_REQUEST,   /* sends hello retry request message */
+    TRY_SEND_SERVER_HELLO,          /* sends server hello message */
+    TRY_SEND_ENCRYPTED_EXTENSIONS,  /* sends encrypted extensions message */
+    TRY_SEND_CERTIFICATE,           /* sends certificate message */
+    TRY_SEND_SERVER_KEY_EXCHANGE,   /* sends server key exchange message */
+    TRY_SEND_CERTIFICATE_REQUEST,   /* sends certificate request message */
+    TRY_SEND_SERVER_HELLO_DONE,     /* sends server hello done message */
+    TRY_SEND_CLIENT_KEY_EXCHANGE,   /* sends client key exchange message */
+    TRY_SEND_CERTIFICATE_VERIFY,    /* sends certificate verify message */
+    TRY_SEND_NEW_SESSION_TICKET,    /* sends new session ticket message */
+    TRY_SEND_CHANGE_CIPHER_SPEC,    /* sends change cipher spec message */
+    TRY_SEND_END_OF_EARLY_DATA,     /* sends end of early data message */
+    TRY_SEND_FINISH,                /* sends finished message */
+    TRY_SEND_KEY_UPDATE,            /* sends keyupdate message */
+    TRY_RECV_CLIENT_HELLO,          /* attempts to receive client hello message */
+    TRY_RECV_SERVER_HELLO,          /* attempts to receive server hello message */
+    TRY_RECV_ENCRYPTED_EXTENSIONS,  /* attempts to receive encrypted extensions message */
+    TRY_RECV_CERTIFICATE,           /* attempts to receive certificate message */
+    TRY_RECV_SERVER_KEY_EXCHANGE,   /* attempts to receive server key exchange message */
+    TRY_RECV_CERTIFICATE_REQUEST,   /* attempts to receive certificate request message */
+    TRY_RECV_SERVER_HELLO_DONE,     /* attempts to receive server hello done message */
+    TRY_RECV_CLIENT_KEY_EXCHANGE,   /* attempts to receive client key exchange message */
+    TRY_RECV_CERTIFICATE_VERIFY,    /* attempts to receive certificate verify message */
+    TRY_RECV_NEW_SESSION_TICKET,    /* attempts to receive new session ticket message */
+    TRY_RECV_END_OF_EARLY_DATA,     /* attempts to receive end of early data message */
+    TRY_RECV_FINISH,                /* attempts to receive finished message */
+    TRY_RECV_KEY_UPDATE,            /* attempts to receive keyupdate message */
+    TRY_RECV_HELLO_REQUEST,         /* attempts to receive hello request message */
+    HS_STATE_BUTT = 255             /* enumerated Maximum Value */
+} HITLS_HandshakeState;
 
-typedef void (*SendAlertCallback)(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description);
+typedef void (*SendAlertCallback)(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description);
 
 typedef bool (*GetAlertFlagCallback)(const TLS_Ctx *ctx);
 
-typedef int32_t (*UnexpectMsgHandleCallback)(TLS_Ctx *ctx, uint32_t msgType, const uint8_t *data, uint32_t dataLen);
+typedef int32_t (*UnexpectMsgHandleCallback)(TLS_Ctx *ctx, uint32_t msgType, const uint8_t *data, uint32_t dataLen,
+    bool isPlain);
 
 /** Connection management configure */
 typedef struct TLSCtxConfig {
     void *userData;                         /* user data */
     uint16_t pmtu;                          /* Maximum transport unit of a path (bytes) */
+
+    bool isSupportPto;                      /* is support process based TLS offload */
     uint8_t reserved[1];                    /* four-byte alignment */
+
     TLS_Config tlsConfig;                   /* tls configure context */
 } TLS_CtxConfig;
 
@@ -187,6 +227,8 @@ typedef struct {
 typedef struct {
     uint16_t *groups;                   /* all groups sent by the peer end */
     uint32_t groupsSize;                /* size of a group */
+    uint16_t *cipherSuites;             /* all cipher suites sent by the peer end */
+    uint16_t cipherSuitesSize;          /* size of a cipher suites */
     HITLS_SignHashAlgo peerSignHashAlg; /* peer signature algorithm */
     HITLS_ERROR verifyResult;           /* record the certificate verification result of the peer end */
     HITLS_TrustedCAList *caList;        /* peer trusted ca list */
@@ -209,7 +251,6 @@ struct TlsCtx {
     CCS_Ctx *ccsCtx;                        /* ChangeCipherSpec context */
     ALERT_Ctx *alertCtx;                    /* alert context */
     REC_Ctx *recCtx;                        /* record context */
-    APP_Ctx *appCtx;                        /* app context */
     struct {
         IsRecvCcsCallback isRecvCCS;
         SendCcsCallback sendCCS;            /* send a CCS message */
@@ -233,6 +274,7 @@ struct TlsCtx {
     uint32_t keyUpdateType;                 /* TLS1.3 key update type */
     bool isKeyUpdateRequest;                /* TLS1.3 Check whether there are unsent key update messages */
     bool haveClientPointFormats;            /* whether the EC point format extension in the client hello is processed */
+    uint8_t peekFlag;                       /* peekFlag equals 0, read mode; otherwise, peek mode */
     bool hasParsedHsMsgHeader;              /* has parsed current hs msg header */
     int32_t errorCode;                      /* Record the tls error code */
 
@@ -241,6 +283,8 @@ struct TlsCtx {
     PHA_State phaState;                     /* tls1.3 pha state */
     uint8_t *certificateReqCtx;             /* tls1.3 pha certificate_request_context */
     uint32_t certificateReqCtxSize;         /* tls1.3 pha certificate_request_context */
+    bool plainAlertForbid;                  /* tls1.3 forbid to receive plain alert message */
+    bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
 };
 
 #ifdef __cplusplus

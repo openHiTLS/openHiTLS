@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#if defined(HITLS_TLS_HOST_CLIENT) || defined(HITLS_TLS_PROTO_TLS13)
 #include <stdint.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -20,13 +21,13 @@
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
 #include "bsl_bytes.h"
+#include "pack_common.h"
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_ctx.h"
 
 int32_t PackCertificateVerify(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
-    int32_t ret = 0;
     uint32_t offset = 0u;
     const HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
@@ -38,30 +39,23 @@ int32_t PackCertificateVerify(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen,
     }
 
     if (bufLen < sizeof(uint16_t) + sizeof(uint16_t) + hsCtx->verifyCtx->verifyDataSize) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15825, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the buffer length of certificate verify message is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID15825, BINGLOG_STR("cert verify"));
     }
+#if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13)
 
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11) {
         BSL_Uint16ToByte((uint16_t)ctx->negotiatedInfo.signScheme, &buf[offset]);
         offset += sizeof(uint16_t);
     }
-
+#endif
     /* Verify the data is the signature data. The maximum length of the signature data is 1024 bytes */
     BSL_Uint16ToByte((uint16_t)hsCtx->verifyCtx->verifyDataSize, &buf[offset]);
     offset += sizeof(uint16_t);
 
-    ret = memcpy_s(&buf[offset], bufLen - offset, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
-    if (ret != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15826, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "memcpy verify data fail when pack certificate verify msg.", 0, 0, 0, 0);
-        return HITLS_MEMCPY_FAIL;
-    }
+    (void)memcpy_s(&buf[offset], bufLen - offset, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
     offset += hsCtx->verifyCtx->verifyDataSize;
 
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */
