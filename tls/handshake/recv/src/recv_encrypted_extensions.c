@@ -118,7 +118,7 @@ int32_t Tls13ClientRecvEncryptedExtensionsProcess(TLS_Ctx *ctx, const HS_Msg *ms
         return ret;
     }
 
-    /* In psk_only mode, the 'server verify data' needs to be calculated 
+    /* In psk_only mode, the 'server verify data' needs to be calculated
      * for verifying the 'finished' message from the server. */
     PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
     if ((pskInfo->psk != NULL)) {
