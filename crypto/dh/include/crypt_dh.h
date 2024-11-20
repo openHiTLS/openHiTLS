@@ -98,7 +98,7 @@ void CRYPT_DH_FreePara(CRYPT_DH_Para *dhPara);
  * @retval BN error code:           An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DhPara *para);
 
 /**
  * @ingroup dh
@@ -112,7 +112,7 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *param);
  * @retval BN error code:       An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_DhPara *para);
 
 /**
  * @ingroup dh
@@ -195,7 +195,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv);
 
 /**
  * @ingroup dh
@@ -211,7 +211,7 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPub *pub);
 
 /**
  * @ingroup dh
@@ -226,7 +226,7 @@ int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                obtained successfully.
  */
-int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv);
 
 /**
  * @ingroup dh
@@ -241,7 +241,7 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPub *pub);
 
 
 /**

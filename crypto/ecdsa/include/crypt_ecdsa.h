@@ -115,7 +115,7 @@ void CRYPT_ECDSA_FreePara(CRYPT_EcdsaPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPara *para);
 
 /**
  * @ingroup ecdsa
@@ -128,7 +128,7 @@ int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *param);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Get parameters successfully.
  */
-int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPara *para);
 
 /**
  * @ingroup ecdsa
@@ -267,7 +267,7 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPrv *para);
 
 /**
  * @ingroup ecdsa
@@ -281,7 +281,7 @@ int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPub *para);
 
 /**
  * @ingroup ecdsa
@@ -295,7 +295,7 @@ int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPrv *para);
 
 /**
  * @ingroup ecdsa
@@ -309,7 +309,7 @@ int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *para);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPub *para);
 
 /**
  * @ingroup ecdsa

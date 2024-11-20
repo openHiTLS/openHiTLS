@@ -95,7 +95,7 @@ void CRYPT_PAILLIER_FreePara(CRYPT_PAILLIER_Para *para);
  * @retval CRYPT_MEM_ALLOC_FAIL         internal memory allocation error
  * @retval CRYPT_SUCCESS                set successfully.
  */
-int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPara *param);
 
 /**
  * @ingroup paillier
@@ -182,7 +182,7 @@ int32_t CRYPT_PAILLIER_PrvDec(const CRYPT_PAILLIER_Ctx *ctx, const BN_BigNum *ci
  * @retval BN error                         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    The private key is successfully set.
  */
-int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPrv *prv);
 
 /**
  * @ingroup paillier
@@ -198,7 +198,7 @@ int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *par
  * @retval BN error                         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    The public key is successfully set.
  */
-int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPub *pub);
 
 /**
  * @ingroup paillier
@@ -211,7 +211,7 @@ int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *par
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The private key is obtained successfully.
  */
-int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPrv *prvPara);
 
 /**
  * @ingroup paillier
@@ -224,7 +224,7 @@ int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Para
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The public key is obtained successfully.
  */
-int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPub *pubPara);
 
 /**
  * @ingroup paillier

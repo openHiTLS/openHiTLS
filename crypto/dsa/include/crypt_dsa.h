@@ -96,7 +96,7 @@ void CRYPT_DSA_FreePara(CRYPT_DSA_Para *para);
  * @retval BN error code.            An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS             Set successfully.
  */
-int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPara *para);
 
 /**
  * @ingroup dsa
@@ -110,7 +110,7 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *param);
  * @retval BN error code.            An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS             Get successfully.
  */
-int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPara *para);
 
 /**
  * @ingroup dsa
@@ -252,7 +252,7 @@ int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t 
  * @retval BN error.                 An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS             Set successfully.
  */
-int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPrv *prv);
 
 /**
  * @ingroup dsa
@@ -268,7 +268,7 @@ int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPub *pub);
 
 /**
  * @ingroup dsa
@@ -283,7 +283,7 @@ int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                        An error occurs in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
-int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv);
 
 /**
  * @ingroup dsa
@@ -298,7 +298,7 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
  * @retval BN error.                        An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
-int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPub *pub);
 
 /**
  * @ingroup dsa

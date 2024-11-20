@@ -122,6 +122,7 @@ target_include_directories(${sdv_exe}
         ${openHiTLS_SRC}/bsl/obj/include
         ${openHiTLS_SRC}/bsl/include
         ${openHiTLS_SRC}/bsl/sal/src
+        ${openHiTLS_SRC}/bsl/params/src
         ${openHiTLS_SRC}/include/crypto/
         ${openHiTLS_SRC}/crypto/bn/include/
         ${openHiTLS_SRC}/crypto/bn/src/

@@ -101,7 +101,7 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx);
  * @retval CRYPT_MEM_ALLOC_FAIL     internal memory allocation error
  * @retval CRYPT_SUCCESS            set successfully.
  */
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPara *para);
 
 /**
  * @ingroup rsa
@@ -198,7 +198,7 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
  * @retval BN error                     An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                The private key is successfully set.
  */
-int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv);
 
 /**
  * @ingroup rsa
@@ -214,7 +214,7 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error                  An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS             The public key is successfully set.
  */
-int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub);
 
 /**
  * @ingroup rsa
@@ -227,7 +227,7 @@ int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The private key is obtained successfully.
  */
-int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPrv *prv);
 
 /**
  * @ingroup rsa
@@ -240,7 +240,7 @@ int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para);
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The public key is obtained successfully.
  */
-int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPub *pub);
 
 /**
  * @ingroup rsa
