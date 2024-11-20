@@ -58,7 +58,7 @@ static int32_t PackCertificateTypes(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #endif
     };
 
-     uint8_t certTypeListsSize = (uint8_t)(sizeof(certTypeLists) / sizeof(certTypeLists[0]));
+    uint8_t certTypeListsSize = (uint8_t)(sizeof(certTypeLists) / sizeof(certTypeLists[0]));
     uint8_t supportedCertTypesSize = 0;
     uint32_t baseSignAlgorithmsSize = config->signAlgorithmsSize;
     const uint16_t *baseSignAlgorithms = config->signAlgorithms;

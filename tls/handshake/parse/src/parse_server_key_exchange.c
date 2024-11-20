@@ -380,7 +380,6 @@ static int32_t ParseServerDhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17017, "ParseSignAlgorithm fail");
     }
 
-
     ret = ParseSignature(pkt, &dh->signSize, &dh->signData);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17018, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

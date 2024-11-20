@@ -103,7 +103,6 @@ typedef struct TlsConfig {
     HITLS_PskFindSessionCb pskFindSessionCb;    /* TLS1.3 PSK server callback */
     HITLS_PskUseSessionCb pskUseSessionCb;      /* TLS1.3 PSK client callback */
 
-
     HITLS_CRYPT_Key *dhTmp;             /* Temporary DH key set by the user */
     HITLS_DhTmpCb dhTmpCb;              /* Temporary ECDH key set by the user */
 
