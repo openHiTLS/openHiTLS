@@ -25,6 +25,7 @@
 #include "crypt_dh.h"
 #include "dh_local.h"
 #include "sal_atomic.h"
+#include "crypt_local_types.h"
 
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
 {
@@ -285,7 +286,7 @@ ERR :
     return NULL;
 }
 
-int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para)
+int32_t CRYPT_DH_SetParaEx(CRYPT_DH_Ctx *ctx, CRYPT_DH_Para *para)
 {
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -301,24 +302,45 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_DH_Para *para)
     CRYPT_DH_FreePara(ctx->para);
     ctx->x = NULL;
     ctx->y = NULL;
-    ctx->para = ParaDup(para);
-    if (ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
+    ctx->para = para;
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_DhPara *para)
+int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
 {
-    int32_t ret;
-
-    if (ctx == NULL || para == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    CRYPT_DH_Para *dhPara = CRYPT_DH_NewPara((CRYPT_DhPara *)para->param);
+    if (dhPara == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = ParaDataCheck(dhPara);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_DH_FreePara(dhPara);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BN_Destroy(ctx->x);
+    BN_Destroy(ctx->y);
+    CRYPT_DH_FreePara(ctx->para);
+    ctx->x = NULL;
+    ctx->y = NULL;
+    ctx->para = dhPara;
+    return CRYPT_SUCCESS;
+}
 
-    if (ctx->para == NULL) {
+int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_Param *param)
+{
+    int32_t ret;
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_DhPara *para = (CRYPT_DhPara *)param->param;
+    if (ctx->para == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
         return CRYPT_DH_PARA_ERROR;
     }
@@ -586,8 +608,9 @@ static int32_t PrvLenCheck(const CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv)
+int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_DhPrv *prv = (CRYPT_DhPrv *)para->param;
     if (ctx == NULL || prv == NULL || prv->data == NULL || prv->len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -643,8 +666,9 @@ ERR:
 // No parameter information is required for setting the public key.
 // Therefore, the validity of the public key is not checked during the setting.
 // The validity of the public key is checked during the calculation of the shared key.
-int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_DhPub *pub)
+int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
 {
+    CRYPT_DhPub *pub = (CRYPT_DhPub *)para->param;
     if (ctx == NULL || pub == NULL || pub->data == NULL || pub->len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -672,8 +696,9 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv)
+int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para)
 {
+    CRYPT_DhPrv *prv = (CRYPT_DhPrv *)para->param;
     if (ctx == NULL || prv == NULL || prv->data == NULL || prv->len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -700,8 +725,9 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv)
     return ret;
 }
 
-int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPub *pub)
+int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para)
 {
+    CRYPT_DhPub *pub = (CRYPT_DhPub *)para->param;
     if (ctx == NULL || pub == NULL || pub->data == NULL || pub->len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -734,41 +760,6 @@ uint32_t CRYPT_DH_GetBits(const CRYPT_DH_Ctx *ctx)
     return BN_Bits(ctx->para->p);
 }
 
-int32_t CRYPT_DH_Check(const CRYPT_DH_Ctx *ctx)
-{
-    int32_t ret;
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ctx->x == NULL || ctx->y == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
-        return CRYPT_DH_KEYINFO_ERROR;
-    }
-    BN_Mont *mont = BN_MontCreate(ctx->para->p);
-    BN_Optimizer *opt = BN_OptimizerCreate();
-    BN_BigNum *y = BN_Create(BN_Bits(ctx->para->p));
-    if (y == NULL || mont == NULL || opt == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    // SP800-56A R3 Section 5.6.2.1.4 Owner Assurance of Pair-wise Consistency
-    ret = BN_MontExpConsttime(y, ctx->para->g, ctx->x, mont, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    if (BN_Cmp(y, ctx->y) != 0) {
-        ret = CRYPT_DH_PAIRWISE_CHECK_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-ERR:
-    BN_Destroy(y);
-    BN_MontDestroy(mont);
-    BN_OptimizerDestroy(opt);
-    return ret;
-}
 
 int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
 {
@@ -788,14 +779,44 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
 {
-    if (ctx == NULL || val == NULL) {
+    CRYPT_DH_Para *para = CRYPT_DH_NewParaById(id);
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = CRYPT_DH_SetParaEx(ctx, para);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_DH_FreePara(para);
+        return ret;
+    }
+    return ret;
+}
+
+int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
+{
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len == (uint32_t)sizeof(int) && opt == CRYPT_CTRL_UP_REFERENCES) {
-        return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+    switch (opt) {
+        case CRYPT_CTRL_GET_PARAID:
+            return CRYPT_DH_GetParaId(ctx);
+        case CRYPT_CTRL_GET_BITS:
+            return CRYPT_DH_GetBits(ctx);
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_DH_GetSecBits(ctx);
+        case CRYPT_CTRL_SET_PARA_BY_ID:
+            return CRYPT_DH_SetParamById(ctx, *(CRYPT_PKEY_ParaId *)val);
+        case CRYPT_CTRL_UP_REFERENCES:
+            if (val == NULL || len != (uint32_t)sizeof(int)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+                return CRYPT_INVALID_ARG;
+            }
+            return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+        default:
+            break;
     }
     BSL_ERR_PUSH_ERROR(CRYPT_DH_UNSUPPORTED_CTRL_OPTION);
     return CRYPT_DH_UNSUPPORTED_CTRL_OPTION;

@@ -321,16 +321,6 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
- *     Metohd structure of the RAND registration interface, including the entropy source obtaining and clearing
- * interface and random number obtaining and clearing interface.
- *     For details about how to use the default entropy source of the HiTLS, see CRYPT_EAL_RandInit().
- *     If the default mode is not used, the entropy source obtaining interface cannot be null, interface for
- * obtaining random numbers can be null.
- */
-typedef struct {
-    /**
-     * @ingroup crypt_types
-     *
      * Obtain the entropy source. If the default entropy source provided by HiTLS is not used,
      * the API must be registered. the output data must meet requirements such as the length.
      * The HiTLS does not check the entropy source. The data must be provided by the entropy source.
@@ -342,7 +332,7 @@ typedef struct {
      * @param lenRange  [IN] Entropy source length range.
      * @retval 0 indicates success, and other values indicate failure.
      */
-int32_t (*getEntropy)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
+typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
 
     /**
      * @ingroup crypt_types
@@ -351,7 +341,7 @@ int32_t (*getEntropy)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_R
      * @param entropy [OUT] Entropy source data
      * @retval  void
      */
-    void (*cleanEntropy)(void *ctx, CRYPT_Data *entropy);
+typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
 
     /**
      * @ingroup crypt_types
@@ -366,7 +356,7 @@ int32_t (*getEntropy)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_R
      * @param lenRange [IN] Random number length range.
      * @retval 0 indicates success, and other values indicate failure.
      */
-    int32_t (*getNonce)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
+typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
 
     /**
     * @ingroup crypt_types
@@ -375,7 +365,22 @@ int32_t (*getEntropy)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_R
     * @param nonce [OUT] random number
     * @retval void
     */
-    void (*cleanNonce)(void *ctx, CRYPT_Data *nonce);
+typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
+
+/**
+ * @ingroup crypt_types
+ *
+ *     Metohd structure of the RAND registration interface, including the entropy source obtaining and clearing
+ * interface and random number obtaining and clearing interface.
+ *     For details about how to use the default entropy source of the HiTLS, see CRYPT_EAL_RandInit().
+ *     If the default mode is not used, the entropy source obtaining interface cannot be null, interface for
+ * obtaining random numbers can be null.
+ */
+typedef struct {
+    CRYPT_RAL_GetEntropyCb getEntropy;
+    CRYPT_RAL_CleanEntropyCb cleanEntropy;
+    CRYPT_RAL_GetNonceCb getNonce;
+    CRYPT_RAL_CleanNonceCb cleanNonce;
 } CRYPT_RandSeedMethod;
 
 /**
@@ -384,11 +389,8 @@ int32_t (*getEntropy)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_R
  * Set and obtain internal mode parameters.
  */
 typedef enum {
-    CRYPT_CTRL_SET_IV = 0,        /**< Set IV data, the data type is uint8_t type.. */
     CRYPT_CTRL_GET_IV,            /**< Obtains the IV data, the data type is uint8_t type. */
     CRYPT_CTRL_GET_BLOCKSIZE,     /**< Obtain the block size, the data type is uint8_t type. */
-    CRYPT_CTRL_SET_COUNT,         /**< Set the counter information, the input is a four-byte little-endian byte stream,
-                                       the algorithm required is chacha20. */
     CRYPT_CTRL_SET_AAD,           /**< Set the ADD information in AEAD encryption and decryption mode. */
     CRYPT_CTRL_GET_TAG,           /**< Obtain the tag at the end in AEAD encryption or decryption. */
     CRYPT_CTRL_SET_TAGLEN,        /**< Set the tag length before the encryption/decryption starts in AEAD
@@ -399,7 +401,6 @@ typedef enum {
     CRYPT_CTRL_SET_FEEDBACKSIZE,  /**< Setting the ciphertext feedback length in CFB mode. */
     CRYPT_CTRL_GET_FEEDBACKSIZE,  /**< Obtaining the ciphertext feedback length in CFB mode. */
     CRYPT_CTRL_DES_NOKEYCHECK,    /**< DES does not verify the key. */
-    CRYPT_CTRL_RC2_SETEFFLEN,     /**< RC2 Change the valid length of the key. */
     CRYPT_CTRL_SET_SM4_CONSTTIME, /**< SM4 selects the side channel security implementation, which reduces
                                        the performance. Valid only when ARM assembly implementation is enabled. */
     CRYPT_CTRL_MAX
@@ -411,7 +412,6 @@ typedef enum {
  * Set and obtain internal parameters of pkey.
  */
 typedef enum {
-    CRYPT_CTRL_SET_ED25519_HASH_METHOD, /**< ED25519 Set the hash method. */
     CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,    /**< RSA set the signature padding mode to EMSA_PKCSV15. */
     CRYPT_CTRL_SET_RSA_EMSA_PSS,        /**< RSA set the signature padding mode to EMSA_PSS. */
     CRYPT_CTRL_SET_RSA_SALT,            /**< When the RSA algorithm is used for PSS signature, the salt data is
@@ -436,9 +436,8 @@ typedef enum {
     CRYPT_CTRL_SET_RSA_FLAG,            /**< RSA set the flag. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15,   /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15. */
-    CRYPT_CTRL_SET_SM9_HASH_METHOD,     /**< SM9 Set the hash method. */
+    CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS, /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15_TLS. */
     CRYPT_CTRL_SET_SM2_USER_ID,
-    CRYPT_CTRL_SET_SM2_HASH_METHOD,     /* SM2 calculate the hash value by set SM3. */
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */
     CRYPT_CTRL_GENE_SM2_R,              /* SM2 obtain the R value. */
     CRYPT_CTRL_SET_SM2_R,               /* SM2 set the R value. */
@@ -451,6 +450,15 @@ typedef enum {
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
 } CRYPT_PkeyCtrl;
+
+/**
+ * @ingroup crypt_ctrl_param
+ *
+ * Set and obtain internal parameters of mac.
+ */
+typedef enum {
+    CRYPT_CTRL_GET_MACLEN             /* Mac get maxlen . */
+} CRYPT_MacCtrl;
 
 /**
  * @ingroup crypt_padding_type
@@ -473,6 +481,8 @@ typedef enum {
     CRYPT_PKEY_RSAES_OAEP,       /**< OAEP according to RFC8017. */
     CRYPT_PKEY_RSAES_PKCSV15,    /**< RSAES_PKCSV15 according to RFC8017. */
     CRYPT_PKEY_RSA_NO_PAD,
+    CRYPT_RSAES_PKCSV15_TLS, /* Specific RSA pkcs1.5 padding verification process to
+                                prevent possible Bleichenbacher attacks */
     CRYPT_PKEY_RSA_PADDINGMAX,
 } CRYPT_RsaPadType;
 
@@ -489,6 +499,7 @@ typedef enum {
     CRYPT_EVENT_VERIFY,       /**< Verify the signature. */
     CRYPT_EVENT_MD,           /**< Hash. */
     CRYPT_EVENT_MAC,          /**< MAC. */
+    CRYPT_EVENT_KDF,          /**< KDF. */
     CRYPT_EVENT_KEYAGGREMENT, /**< Key negotiation. */
     CRYPT_EVENT_KEYDERIVE,    /**< Derived key. */
     CRYPT_EVENT_RANDGEN,      /**< Generating a random number. */
@@ -554,6 +565,50 @@ typedef enum {
     CRYPT_INFO_BLOCK_LEN,            /**< Algorithm block length. */
     CRYPT_INFO_MAX
 } CRYPT_INFO_TYPE;
+
+typedef enum {
+    CRYPT_KDF_PARAM_PASSWORD = 0,
+    CRYPT_KDF_PARAM_SALT,
+    CRYPT_KDF_PARAM_ITER,
+    CRYPT_KDF_PARAM_MAC_ALG_ID,
+    CRYPT_KDF_PARAM_MAC_METHOD,
+    CRYPT_KDF_PARAM_KEY,
+    CRYPT_KDF_PARAM_LABEL,
+    CRYPT_KDF_PARAM_SEED,
+    CRYPT_KDF_PARAM_PBKDF2,
+    CRYPT_KDF_PARAM_N,
+    CRYPT_KDF_PARAM_R,
+    CRYPT_KDF_PARAM_P,
+    CRYPT_KDF_PARAM_MODE,
+    CRYPT_KDF_PARAM_PRK,
+    CRYPT_KDF_PARAM_INFO,
+    CRYPT_KDF_PARAM_OUTLEN,
+    CRYPT_KDF_PARAM_MAX,
+} CRYPT_KDF_PARAM_TYPE;
+
+typedef enum {
+    CRYPT_KDF_HKDF_MODE_FULL = 0,
+    CRYPT_KDF_HKDF_MODE_EXTRACT,
+    CRYPT_KDF_HKDF_MODE_EXPAND,
+} CRYPT_HKDF_MODE;
+
+#define DEFAULT_PROVIDER_PARAM_TYPE 0
+
+typedef struct {
+    int32_t type;
+    void *param;
+    uint32_t paramLen;
+} CRYPT_Param;
+
+typedef struct {
+    CRYPT_RandSeedMethod *seedMeth;
+    void *seedCtx;
+    const uint8_t *pers;
+    uint32_t persLen;
+    const uint8_t *adin;
+    uint32_t adinLen;
+    bool predictionResistant;
+} CRYPT_RndParam;
 
 #ifdef __cplusplus
 }

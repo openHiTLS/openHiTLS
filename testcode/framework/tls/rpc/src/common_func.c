@@ -383,34 +383,6 @@ void *GetTicketKeyCb(char *str)
     return NULL;
 }
 
-int32_t NoSecRenegotiationCb_Success(HITLS_Ctx *ctx)
-{
-    (void)ctx;
-    return 0;
-}
-
-int32_t NoSecRenegotiationCb_Fail(HITLS_Ctx *ctx)
-{
-    (void)ctx;
-    return RENEGOTIATE_FAIL;
-}
-
-void *GetNoSecRenegotiationCb(const char *str)
-{
-    const ExampleCb cbList[] = {
-        {"NoSecRenegotiationCb_Success", NoSecRenegotiationCb_Success},
-        {"NoSecRenegotiationCb_Fail", NoSecRenegotiationCb_Fail},
-    };
-
-    int len = sizeof(cbList) / sizeof(cbList[0]);
-    for (int i = 0; i < len; i++) {
-        if (strcmp(str, cbList[i].name) == 0) {
-            return cbList[i].cb;
-        }
-    }
-    return NULL;
-}
-
 void *GetExtensionCb(const char *str)
 {
     const ExampleCb cbList[] = {

@@ -35,7 +35,8 @@ extern "C" {
 * Pkey session structure
 */
 struct EAL_PkeyCtx {
-    const EAL_PkeyMethod *method;
+    bool isProvider;
+    const EAL_PkeyUnitaryMethod *method;
     void *key;
     void *extData;
     CRYPT_PKEY_AlgId id;
@@ -52,7 +53,6 @@ struct EAL_PkeyCtx {
  * For other error codes, see crypt_errno.h.
  */
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id);
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus

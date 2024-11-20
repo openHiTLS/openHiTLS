@@ -85,7 +85,7 @@ int32_t NewConfig(HsTestInfo *testInfo)
 }
 static int32_t DoHandshake(HsTestInfo *testInfo)
 {
-    HITLS_CFG_SetCloseCheckKeyUsage(testInfo->config, false);
+    HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
 
     testInfo->client = FRAME_CreateLink(testInfo->config, testInfo->uioType);
     if (testInfo->client == NULL) {
@@ -1028,7 +1028,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC003()
         TRY_SEND_CERTIFICATE_REQUEST, REC_TYPE_HANDSHAKE, false, NULL, Test_CertReqPackAndParseNoSign};
     RegisterWrapper(wrapper);
 
-    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_MISSING_EXTENSION);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
 exit:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1087,7 +1087,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC004()
         TRY_SEND_CERTIFICATE_REQUEST, REC_TYPE_HANDSHAKE, false, NULL, Test_CertReqPackAndParseUnknownEx};
     RegisterWrapper(wrapper);
 
-    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_MISSING_EXTENSION);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
 
 exit:
     ClearWrapper();
@@ -1330,11 +1330,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SIGN_ERR_FUNC_TC001(void)
     ASSERT_TRUE(server != NULL);
     client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &serverCertInfo);
     ASSERT_TRUE(client != NULL);
-    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
     ALERT_Info alert = {0};
-    ALERT_GetInfo(server->ssl, &alert);
+    ALERT_GetInfo(client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alert.description, ALERT_HANDSHAKE_FAILURE);
+    ASSERT_EQ(alert.description, ALERT_INTERNAL_ERROR);
 exit:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1666,7 +1666,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CERTVERIFY_SIGN_FUNC_TC001(int isClient)
     client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &clientCertInfo);
     ASSERT_TRUE(client != NULL);
 
-    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_PARSE_VERIFY_SIGN_FAIL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_PARSE_UNSUPPORT_SIGN_ALG);
 exit:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
@@ -2091,6 +2091,56 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ECDSA_SIGN_RSA_CERT_FUNC_TC001(void)
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+exit:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_MD5_CERT_TC001
+* @spec Apply for the ee certificate signed by the MD5 signature algorithm, set the MD5 certificate at both ends,
+* set up a link, and observe the server behavior.
+* Expected result: The server cannot select a proper certificate, sends bad_certificate, and disconnects the link.
+* @title
+* @precon nan
+* @brief 4.4.2.4. Receiving a Certificate Message row143
+         Any endpoint receiving any certificate which it would need to validate using any signature algorithm using an
+        MD5 hash MUST abort the handshake with a "bad_certificate" alert.
+* @expect 1. The link is set up successfully.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_MD5_CERT_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(config, true);
+    FRAME_CertInfo certInfo = {
+        "md5_cert/rsa_root.der",
+        "md5_cert/rsa_intCa.der",
+        "md5_cert/md5_dev.der",
+        0,
+        "md5_cert/md5_dev.key",
+        0,
+    };
+
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO);
+
+    ALERT_Info alertInfo = { 0 };
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_BAD_CERTIFICATE);
 exit:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

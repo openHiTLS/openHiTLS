@@ -66,6 +66,25 @@ typedef bool (*BSL_HASH_MatchFunc)(uintptr_t key1, uintptr_t key2);
 
 /**
  * @ingroup bsl_hash
+ * @brief Function for updating a node in the hash table.
+ * @par Description: This function is used to update the value of an existing node in the hash table.
+ * @attention
+ * 1. This function is called when a key already exists in the hash table and needs to be updated.
+ * 2. The user can provide a custom implementation of this function to handle specific update logic.
+ * @param hash [IN] Handle of the hash table.
+ * @param node [IN] Pointer to the node to be updated.
+ * @param value [IN] New value or address for storing the new value.
+ * @param valueSize [IN] Size of the new value. If the user has not registered a dupFunc, this parameter is not used.
+ * @retval #BSL_SUCCESS The node was successfully updated.
+ * @retval #BSL_INTERNAL_EXCEPTION Failed to update the node.
+ * @par Dependency: None
+ * @li bsl_hash.h: Header file where this function type is declared.
+ */
+typedef int32_t (*BSL_HASH_UpdateNodeFunc)(BSL_HASH_Hash *hash, BSL_HASH_Iterator node,
+    uintptr_t value, uint32_t valueSize);
+
+/**
+ * @ingroup bsl_hash
  * @brief Hash function.
  * @par Description: Calculate the hash value based on the key value.
  * The hash value does not modulate the size of the hash table and cannot be directly used for hash indexing.
@@ -212,12 +231,15 @@ int32_t BSL_HASH_Insert(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, ui
  * @param keySize       [IN] Copy length of key. If the user has not registered the dupFunc, this parameter is not used.
  * @param value         [IN] value or the address for storing the value.
  * @param valueSize     [IN] Copy length of value. If user has not registered the dupFunc, this parameter is not used.
+ * @param updateNodeFunc [IN] Callback function for updating a node. If NULL, the default update function will be used.
+ *                            This function allows custom logic for updating existing nodes.
  * @retval #BSL_SUCCESS Succeeded in inserting or updating the node.
  * @retval #BSL_INTERNAL_EXCEPTION Failed to insert or update the node.
  * @par Dependency: None
  * @li bsl_hash.h: header file where this function's declaration is located.
  */
-int32_t BSL_HASH_Put(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, uintptr_t value, uint32_t valueSize);
+int32_t BSL_HASH_Put(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, uintptr_t value, uint32_t valueSize,
+    BSL_HASH_UpdateNodeFunc updateNodeFunc);
 
 /**
  * @ingroup bsl_hash

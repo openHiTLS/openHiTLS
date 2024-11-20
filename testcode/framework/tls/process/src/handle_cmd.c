@@ -313,7 +313,7 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     ASSERT_RETURN(ret == EOK, "strcpy_s Error");
     LOG_DEBUG("Remote Process Set Ctx ticketKeyCb is %s", ctxConfig->ticketKeyCb);
 
-    // Indicates whether isFlightTransmitEnable is supported. The 25th parameter indicates whether to send handshake 
+    // Indicates whether isFlightTransmitEnable is supported. The 25th parameter indicates whether to send handshake
     // messages by flight. The value is converted into a decimal number.
     ctxConfig->isFlightTransmitEnable = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
     LOG_DEBUG("Remote Process Set Ctx isFlightTransmitEnable is %d", ctxConfig->isFlightTransmitEnable);
@@ -360,13 +360,7 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     ctxConfig->isSupportDhAuto = (int)strtol(string[index++], NULL, 10);
     LOG_DEBUG("Remote Process Set Ctx issupportDhauto is %d", ctxConfig->isSupportDhAuto);
 
-    // Setting insecure renegotiation callback
-    // 34th parameter
-    ret = strcpy_s(ctxConfig->noSecRenegotiationCb, sizeof(ctxConfig->noSecRenegotiationCb), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
-    LOG_DEBUG("Remote Process Set Ctx noSecRenegotiationCb is %s", ctxConfig->noSecRenegotiationCb);
-
-    // Sets the TLS1.3 key exchange mode. The parameter indicates the TLS1.3 key exchange mode, 
+    // Sets the TLS1.3 key exchange mode. The parameter indicates the TLS1.3 key exchange mode,
     // which is converted into a decimal number.
     ctxConfig->keyExchMode = (int)strtol(string[index++], NULL, 10);
     LOG_DEBUG("Remote Process Set Ctx keyExchMode is %u", ctxConfig->keyExchMode);
@@ -377,6 +371,8 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
 
     ctxConfig->isSupportPostHandshakeAuth = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
 
+    ctxConfig->readAhead = (int)strtol(string[index++], NULL, 10);
+    LOG_DEBUG("Remote Process Set Ctx readAhead is %u", ctxConfig->readAhead);
     // Sets whether to verify the keyusage in the certificate. The keyusage is converted into a decimal number.
     ctxConfig->needCheckKeyUsage = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
     LOG_DEBUG("Remote Process Set Ctx needCheckKeyUsage is %d", ctxConfig->needCheckKeyUsage);
@@ -384,6 +380,18 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     // Set whether to continue the handshake when the verification of peer certificate fails
     ctxConfig->isSupportVerifyNone = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
     LOG_DEBUG("Remote Process Set Ctx isSupportVerifyNone is %d", ctxConfig->isSupportVerifyNone);
+
+    // Whether allow a renegotiation initiated by the client
+    ctxConfig->allowClientRenegotiate = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
+    LOG_DEBUG("Remote Process Set Ctx allowClientRenegotiate is %d", ctxConfig->allowClientRenegotiate);
+
+    // Set the empty record number.
+    ctxConfig->emptyRecordsNum = (int)strtol(string[index++], NULL, 10);
+    LOG_DEBUG("Remote Process Set Ctx emptyRecordsNum is %u", ctxConfig->emptyRecordsNum);
+
+    // Whether allow legacy renegotiation
+    ctxConfig->allowLegacyRenegotiate = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
+    LOG_DEBUG("Remote Process Set Ctx allowLegacyRenegotiate is %d", ctxConfig->allowLegacyRenegotiate);
 
     // Setting the info cb
     ctxConfig->infoCb = NULL; // The pointer cannot be transferred. Set this parameter to null.

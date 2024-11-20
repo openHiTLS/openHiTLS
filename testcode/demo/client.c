@@ -18,7 +18,7 @@
 #include "hitls_cert_init.h"
 #include "hitls_cert.h"
 #include "hitls_crypt_init.h"
-#include "hitls_x509.h"
+#include "hitls_pki.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
@@ -72,7 +72,7 @@ int main(int32_t argc, char *argv[])
         printf("HITLS_CFG_NewTLS12Config failed.\n");
         goto exit;
     }
-    ret = HITLS_CFG_SetCloseCheckKeyUsage(config, false); // disable cert keyusage check
+    ret = HITLS_CFG_SetCheckKeyUsage(config, false); // disable cert keyusage check
     if (ret != HITLS_SUCCESS) {
         printf("Disable check KeyUsage failed.\n");
         goto exit;

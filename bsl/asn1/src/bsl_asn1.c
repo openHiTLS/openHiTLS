@@ -28,7 +28,7 @@
 
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
-    if (encode == NULL || encLen == NULL || len == NULL) {
+    if (encode == NULL || *encode == NULL || encLen == NULL || len == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
@@ -96,7 +96,7 @@ int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen)
 
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen)
 {
-    if (encode == NULL || encLen == NULL || valLen == NULL) {
+    if (encode == NULL || *encode == NULL || encLen == NULL || valLen == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
@@ -126,7 +126,7 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
 
 int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem)
 {
-    if (encode == NULL || encLen == NULL || asnItem == NULL) {
+    if (encode == NULL || *encode == NULL || encLen == NULL || asnItem == NULL) {
         return BSL_NULL_INPUT;
     }
     uint8_t tag;
@@ -418,7 +418,7 @@ static int32_t BSL_ASN1_AnyOrChoiceTagProcess(bool isAny, BSL_ASN1_AnyOrChoicePa
     int32_t type = isAny == true ? BSL_ASN1_TYPE_GET_ANY_TAG : BSL_ASN1_TYPE_CHECK_CHOICE_TAG;
     int32_t ret = tagCbinfo->tagCb(type, tagCbinfo->idx, tagCbinfo->previousAsnOrTag, tag);
     if (ret != BSL_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05066, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "asn1: callback is err %x", ret, 0, 0, 0);
     }
     return ret;
@@ -443,7 +443,7 @@ static int32_t BSL_ASN1_ProcessWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
             }
         }
         if (tag != realTag) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "asn1: expected tag %x is not match %x", tag, realTag, 0, 0);
             return BSL_ASN1_ERR_TAG_EXPECTED;
         }
@@ -599,7 +599,7 @@ int32_t BSL_ASN1_ProcessConstructResult(BSL_ASN1_Template *templ, uint32_t *temp
     if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) && asn->tag == 0) {
         ret = BSL_ASN1_SkipChildNodeAndFill(templIdx, templ, asnArr, arrNum, arrIdx);
         if (ret != BSL_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05068, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "asn1: skip and file node err %x, idx %d", ret, *templIdx, 0, 0);
             return ret;
         }
@@ -608,7 +608,7 @@ int32_t BSL_ASN1_ProcessConstructResult(BSL_ASN1_Template *templ, uint32_t *temp
 
     if (templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_HEADERONLY) {
         if (*arrIdx >= arrNum) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05069, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "asn1: array idx %d, overflow %d, templ %d", *arrIdx, arrNum, *templIdx, 0);
             return BSL_ASN1_ERR_OVERFLOW;
         } else {
@@ -657,7 +657,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
         if (BSL_ASN1_IsConstructItem(&templ->templItems[i])) {
             ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05070, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse construct item err %x, idx %d", ret, i, 0, 0);
                 return ret;
             }
@@ -668,13 +668,13 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
         } else {
             ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05071, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse primitive item err %x, idx %d", ret, i, 0, 0);
                 return ret;
             }
             // Process no construct result
             if (arrIdx >= arrNum) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05072, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: array idx %d, overflow %d, templ %d", arrIdx, arrNum, i, 0);
                 return BSL_ASN1_ERR_OVERFLOW;
             } else {

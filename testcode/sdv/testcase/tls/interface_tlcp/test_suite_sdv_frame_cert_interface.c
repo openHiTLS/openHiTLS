@@ -551,7 +551,8 @@ void UT_TLS_CERT_CFG_SetTlcpCertificate_FUNC_001(void)
     uint8_t dataBuf[] = "Hello World!";
     uint8_t readBuf[READ_BUF_SIZE];
     uint32_t readbytes;
-    ASSERT_EQ(HITLS_Write(client->ssl, dataBuf, sizeof(dataBuf)), HITLS_SUCCESS);
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(client->ssl, dataBuf, sizeof(dataBuf), &writeLen), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     ioServerData->recMsg.msg[0] = 0x99u;
@@ -728,6 +729,7 @@ void UT_TLS_CERT_GET_CALIST_FUNC_TC001(int version)
     ASSERT_TRUE(tlsConfig != NULL);
     ctx = HITLS_New(tlsConfig);
     ASSERT_TRUE(ctx != NULL);
+    ctx->isClient = true;
 
     HITLS_Session *session = HITLS_SESS_New();
     ASSERT_TRUE(session != NULL);

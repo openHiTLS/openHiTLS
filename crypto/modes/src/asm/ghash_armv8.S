@@ -12,6 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
+#include "hitls_build.h"
 #ifdef HITLS_CRYPTO_GCM
 .arch    armv8-a+crypto
 .text

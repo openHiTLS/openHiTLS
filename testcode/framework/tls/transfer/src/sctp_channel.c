@@ -34,7 +34,8 @@
 #include "uio_base.h"
 #include "hlt_type.h"
 #include "socket_common.h"
-
+#include "bsl_uio.h"
+#include "uio_abstraction.h"
 #define SUCCESS 0
 #define ERROR (-1)
 
@@ -98,6 +99,7 @@ static int32_t SctpGetSendStreamNum(int32_t fd, uint16_t *sendStreamNum)
  */
 int32_t SctpConnect(char *targetIP, int targetPort, bool isBlock)
 {
+    (void)targetIP;
     int32_t fd = 0;
     int32_t ret;
     struct sockaddr_in sockAddr;
@@ -139,11 +141,11 @@ int32_t SctpConnect(char *targetIP, int targetPort, bool isBlock)
     }
 
     // Set the protocol and port number
-    memset_s(&sockAddr, sizeof(struct sockaddr_in), 0, sizeof(struct sockaddr_in));
+    bzero(&sockAddr, sizeof(struct sockaddr_in));
     sockAddr.sin_family = AF_INET;
     sockAddr.sin_port = htons(targetPort);
     // Set the IP address
-    sockAddr.sin_addr.s_addr = inet_addr(targetIP);
+    sockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     // Connection
     int16_t tryNum = 0;
@@ -203,7 +205,7 @@ int32_t SctpBind(int port)
     }
 
     // Set the protocol and port number
-    memset_s(&serverAddr, sizeof(struct sockaddr_in), 0, sizeof(struct sockaddr_in));
+    bzero(&serverAddr, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -400,4 +402,45 @@ BSL_UIO_Method *SctpGetDefaultMethod(void)
     g_SctpUioMethodDefault.read = SelectSctpRead;
     g_SctpUioMethodDefault.ctrl = SelectSctpCtrl;
     return &g_SctpUioMethodDefault;
+}
+
+/**
+ * @brief   Implement the write interface, specifying whether the flow is out of order and the flow ID
+ *
+ * @param   uio [IN] the point to the UIO.
+ * @param   buf [IN] Transmitted data
+ * @param   len [IN] Send length
+ * @param   writeLen [IN] Length of the successfully sent message
+ * @return  BSL_SUCCESS succeeded
+            BSL_UIO_FAIL    failure
+            BSL_UIO_IO_EXCEPTION   IOexception
+ */
+int32_t SctpDefaultWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
+{
+    /* set flags */
+    // is set to SCTP_UNORD:00-20:00, the messages are sent in disorder. 
+    // Whether the messages are sent in disorder is defined by the user
+    const uint32_t flags = SCTP_SACK_IMMEDIATELY;
+    uint16_t sendStreamId = 0;
+    int32_t ret = uio->method.ctrl(uio, BSL_UIO_SCTP_GET_SEND_STREAM_ID, sizeof(sendStreamId), &sendStreamId);
+    if (ret != BSL_SUCCESS) {
+        LOG_ERROR("error: get sctp send stream id fail %d", ret);
+        return ret;
+    }
+    int32_t fd = BSL_UIO_GetFd(uio);
+    if (fd < 0) {
+        LOG_ERROR("error: get fd fail");
+        return BSL_UIO_IO_EXCEPTION;
+    }
+    ret = sctp_sendmsg(fd, buf, len, NULL, 0, 0, flags, sendStreamId, 0, 0);
+    if (ret < 0) {
+        /* Fatal error */
+        LOG_ERROR("SCTP ERROR IS %d", errno);
+        return BSL_UIO_IO_EXCEPTION;
+    } else if (ret == 0) {
+        return BSL_UIO_IO_EXCEPTION;
+    }
+    *writeLen = ret;
+
+    return BSL_SUCCESS;
 }

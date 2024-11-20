@@ -148,14 +148,17 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
 
 /**
  * @ingroup bsl_asn1
- * @brief Obtain the length of V in an ASN1 TLV structure based on the tag.
+ * @brief Decode the tag and length fields of an ASN.1 TLV structure and validate against expected tag.
  *
- * @param tag [IN] ASN1 tag.
- * @param encode [IN/OUT] Data to be decoded. Update the offset after decoding.
- * @param encLen [IN/OUT] The length of the data to be decoded.
- * @param valLen [OUT] The length of V.
- * @retval  BSL_SUCCESS, success.
- *          Other error codes see the bsl_errno.h.
+ * @param tag [IN] Expected ASN.1 tag value to validate against.
+ * @param encode [IN/OUT] Pointer to buffer containing encoded data. Updated to point after tag and length fields.
+ * @param encLen [IN/OUT] Length of remaining encoded data. Updated to reflect bytes consumed.
+ * @param valLen [OUT] Length of the value field in bytes.
+ * @retval BSL_SUCCESS Successfully decoded tag and length fields.
+ *         BSL_NULL_INPUT Invalid NULL parameters.
+ *         BSL_INVALID_ARG Buffer too small.
+ *         BSL_ASN1_ERR_MISMATCH_TAG Tag does not match expected value.
+ *         Other error codes see bsl_errno.h.
  */
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen);
 

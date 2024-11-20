@@ -38,7 +38,7 @@ CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
     CERT_MgrCtx *newCtx = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15017, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16085, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "new cert manager context error: out of memory.", 0, 0, 0, 0);
         return NULL;
     }
@@ -66,29 +66,23 @@ static int32_t CertResourceDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx)
         if (srcCertPair->cert != NULL) {
             destCertPair->cert = SAL_CERT_X509Dup(srcMgrCtx, srcCertPair->cert);
             if (destCertPair->cert == NULL) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15018, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "dup cert manager context error: x509 dup error.", 0, 0, 0, 0);
                 /* releasing resources at the call point */
-                return HITLS_CERT_ERR_X509_DUP;
+                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_X509_DUP, BINLOG_ID16088, "X509Dup fail");
             }
         }
         if (srcCertPair->privateKey != NULL) {
             destCertPair->privateKey = SAL_CERT_KeyDup(srcMgrCtx, srcCertPair->privateKey);
             if (destCertPair->privateKey == NULL) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15020, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "dup cert manager context error: key dup error.", 0, 0, 0, 0);
                 /* releasing resources at the call point */
-                return HITLS_CERT_ERR_KEY_DUP;
+                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_KEY_DUP, BINLOG_ID16089, "KeyDup fail");
             }
         }
         if (srcCertPair->chain != NULL) {
             destCertPair->chain = SAL_CERT_ChainDup(srcMgrCtx, srcCertPair->chain);
             if (destCertPair->chain == NULL) {
                 BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_CHAIN_DUP);
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15019, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "dup cert manager context error: cert chain dup error.", 0, 0, 0, 0);
                 /* releasing resources at the call point */
-                return HITLS_CERT_ERR_CHAIN_DUP;
+                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_CHAIN_DUP, BINLOG_ID15019, "ChainDup fail");
             }
         }
     }
@@ -100,30 +94,24 @@ int32_t StoreDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx)
     if (srcMgrCtx->certStore != NULL) {
         destMgrCtx->certStore = SAL_CERT_StoreDup(srcMgrCtx, srcMgrCtx->certStore);
         if (destMgrCtx->certStore == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15021, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "dup cert manager context error in copy cert store.", 0, 0, 0, 0);
             /* releasing resources at the call point */
-            return HITLS_CERT_ERR_STORE_DUP;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_STORE_DUP, BINLOG_ID16092, "StoreDup fail");
         }
     }
 
     if (srcMgrCtx->chainStore != NULL) {
         destMgrCtx->chainStore = SAL_CERT_StoreDup(srcMgrCtx, srcMgrCtx->chainStore);
         if (destMgrCtx->chainStore == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15022, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "dup cert manager context error in copy chain store.", 0, 0, 0, 0);
             /* releasing resources at the call point */
-            return HITLS_CERT_ERR_STORE_DUP;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_STORE_DUP, BINLOG_ID16093, "StoreDup fail");
         }
     }
 
     if (srcMgrCtx->verifyStore != NULL) {
         destMgrCtx->verifyStore = SAL_CERT_StoreDup(srcMgrCtx, srcMgrCtx->verifyStore);
         if (destMgrCtx->verifyStore == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15023, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "dup cert manager context error in copy verify store.", 0, 0, 0, 0);
             /* releasing resources at the call point */
-            return HITLS_CERT_ERR_STORE_DUP;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_STORE_DUP, BINLOG_ID16095, "StoreDup fail");
         }
     }
 
@@ -134,13 +122,14 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
 {
     int32_t ret;
     if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16282, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
 
     CERT_MgrCtx *newCtx = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15024, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16097, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "dup cert manager context error: out of memory.", 0, 0, 0, 0);
         return NULL;
     }
@@ -149,6 +138,8 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
 
     ret = CertResourceDup(newCtx, mgrCtx);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16283, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CertResourceDup fail, ret %d", ret, 0, 0, 0);
         SAL_CERT_MgrCtxFree(newCtx);
         return NULL;
     }
@@ -156,6 +147,8 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
     if (mgrCtx->extraChain != NULL) {
         newCtx->extraChain = SAL_CERT_ChainDup(mgrCtx, mgrCtx->extraChain);
         if (newCtx->extraChain == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16284, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "ChainDup fail", 0, 0, 0, 0);
             SAL_CERT_MgrCtxFree(newCtx);
             return NULL;
         }
@@ -163,6 +156,8 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
 
     ret = StoreDup(newCtx, mgrCtx);
     if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16285, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "StoreDup fail, ret %d", ret, 0, 0, 0);
         SAL_CERT_MgrCtxFree(newCtx);
         return NULL;
     }

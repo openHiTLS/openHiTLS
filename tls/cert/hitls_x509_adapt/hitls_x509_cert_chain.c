@@ -12,12 +12,14 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#ifdef HITLS_TLS_CALLBACK_CERT
 #include <stdint.h>
+#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
-#include "hitls_x509.h"
+#include "hitls_pki.h"
 #include "bsl_list.h"
 #include "hitls_error.h"
 
@@ -95,12 +97,26 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    int64_t sysTime = BSL_SAL_CurrentSysTimeGet();
+    if (sysTime == 0) {
+        ret = HITLS_X509_ADAPT_INVALID_TIME;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_INVALID_TIME);
+        goto EXIT;
+    }
+    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_TIME, &sysTime,
+        sizeof(sysTime));
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
     ret = HITLS_X509_CertVerify((HITLS_X509_StoreCtx *)store, certList);
     if (ret != HITLS_SUCCESS) {
-        BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        return ret;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
     }
 
+EXIT:
     BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    return HITLS_SUCCESS;
+    return ret;
 }
+#endif /* HITLS_TLS_CALLBACK_CERT */

@@ -35,7 +35,8 @@ typedef enum {
 } CRYPT_MD_WORKSTATE;
 
 struct EAL_MdCtx {
-    const EAL_MdMethod *method;  /* algorithm operation entity */
+    bool isProvider;
+    const EAL_MdUnitaryMethod *method;  /* algorithm operation entity */
     void *data;        /* Algorithm ctx, mainly context */
     uint32_t state;
     CRYPT_MD_AlgId id;
@@ -51,6 +52,8 @@ struct EAL_MdCtx {
  * For other error codes, see crypt_errno.h.
  */
 const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id);
+
+int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus
 }

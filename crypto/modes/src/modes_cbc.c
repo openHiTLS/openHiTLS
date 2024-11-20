@@ -17,12 +17,11 @@
 #ifdef HITLS_CRYPTO_CBC
 
 #include "securec.h"
-#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
-#include "crypt_modes.h"
 #include "crypt_modes_cbc.h"
+#include "modes_local.h"
 
 #define CBC_UPDATE_VALUES(l, i, o, len) \
     do { \
@@ -31,7 +30,8 @@
         (o) += (len); \
     } while (false)
 
-int32_t MODE_CBC_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+
+int32_t MODES_CBC_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     uint32_t blockSize = ctx->blockSize;
     int32_t ret;
@@ -50,7 +50,7 @@ int32_t MODE_CBC_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
         /* Plaintext XOR IV. BlockSize must be an integer multiple of 4 bytes. */
         DATA32_XOR(input, iv, tmp, blockSize);
 
-        ret = ctx->ciphMeth->encrypt(ctx->ciphCtx, tmp, output, blockSize);
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, tmp, output, blockSize);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -70,7 +70,7 @@ int32_t MODE_CBC_Encrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
     return CRYPT_SUCCESS;
 }
 
-int32_t MODE_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+int32_t MODES_CBC_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     const uint8_t *iv = ctx->iv;
     uint8_t *tmp = ctx->buf;
@@ -90,7 +90,7 @@ int32_t MODE_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
     // the judgment should be placed outside the while loop. Otherwise, the performance will be affected.
     if (in != out) {
         while (left >= blockSize) {
-            int32_t ret = ctx->ciphMeth->decrypt(ctx->ciphCtx, input, tmp, blockSize);
+            int32_t ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, input, tmp, blockSize);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 return ret;
@@ -106,7 +106,7 @@ int32_t MODE_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
         }
     } else {
         while (left >= blockSize) {
-            int32_t ret = ctx->ciphMeth->decrypt(ctx->ciphCtx, input, tmp, blockSize);
+            int32_t ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, input, tmp, blockSize);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 return ret;
@@ -125,8 +125,119 @@ int32_t MODE_CBC_Decrypt(MODE_CipherCtx *ctx, const uint8_t *in, uint8_t *out, u
     return CRYPT_SUCCESS;
 }
 
-void MODE_CBC_Clean(MODE_CipherCtx *ctx)
+MODES_CipherCtx *MODES_CBC_NewCtx(int32_t algId)
 {
-    MODE_Clean(ctx);
+    return MODES_CipherNewCtx(algId);
 }
+
+int32_t MODES_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, bool enc)
+{
+    void *setKeyFuncs = enc ? modeCtx->commonCtx.ciphMeth->setEncryptKey : modeCtx->commonCtx.ciphMeth->setDecryptKey;
+    return MODES_CipherInitCtx(modeCtx, setKeyFuncs, modeCtx->commonCtx.ciphCtx, key, keyLen, iv, ivLen, enc);
+}
+
+int32_t MODES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherUpdate(modeCtx, modeCtx->enc ? MODES_CBC_Encrypt : MODES_CBC_Decrypt,
+        in, inLen, out, outLen);
+}
+
+int32_t MODES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_CipherFinal(modeCtx, modeCtx->enc ? MODES_CBC_Encrypt : MODES_CBC_Decrypt, out, outLen);
+}
+
+int32_t MODES_CBC_DeInitCtx(MODES_CipherCtx *modeCtx)
+{
+    return MODES_CipherDeInitCtx(modeCtx);
+}
+
+int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
+{
+    int32_t ret;
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    
+    switch (cmd) {
+        case CRYPT_CTRL_SET_PADDING:
+            ret = MODES_SetPaddingCheck(*(int32_t *)val);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            modeCtx->pad = *(int32_t *)val;
+            return CRYPT_SUCCESS;
+        case CRYPT_CTRL_GET_PADDING:
+            *(int32_t *)val = modeCtx->pad;
+            return CRYPT_SUCCESS;
+        case CRYPT_CTRL_GET_BLOCKSIZE:
+            if (val == NULL || valLen != sizeof(uint32_t)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+                return CRYPT_MODE_ERR_INPUT_LEN;
+            }
+            *(int32_t *)val = modeCtx->commonCtx.ciphMeth->blockSize;
+            return CRYPT_SUCCESS;
+        default:
+            return MODES_CipherCtrl(modeCtx, cmd, val, valLen);
+    }
+}
+
+void MODES_CBC_FreeCtx(MODES_CipherCtx *modeCtx)
+{
+    MODES_CipherFreeCtx(modeCtx);
+}
+
+int32_t MODES_CBC_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_AES128_CBC:
+        case CRYPT_CIPHER_AES192_CBC:
+        case CRYPT_CIPHER_AES256_CBC:
+            return AES_CBC_Update(modeCtx, in, inLen, out, outLen);
+        case CRYPT_CIPHER_SM4_CBC:
+            return SM4_CBC_Update(modeCtx, in, inLen, out, outLen);
+        default:
+            return MODES_CBC_Update(modeCtx, in, inLen, out, outLen);
+    }
+}
+int32_t MODES_CBC_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
+    uint32_t ivLen, CRYPT_Param *param, bool enc)
+{
+    (void)param;
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_SM4_CBC:
+            return SM4_CBC_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+        default:
+            return MODES_CBC_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+    }
+}
+
+int32_t MODES_CBC_FinalEx(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_AES128_CBC:
+        case CRYPT_CIPHER_AES192_CBC:
+        case CRYPT_CIPHER_AES256_CBC:
+            return AES_CBC_Final(modeCtx, out, outLen);
+        case CRYPT_CIPHER_SM4_CBC:
+            return SM4_CBC_Final(modeCtx, out, outLen);
+        default:
+            return MODES_CBC_Final(modeCtx, out, outLen);
+    }
+}
+
 #endif // HITLS_CRYPTO_CBC

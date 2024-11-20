@@ -278,6 +278,7 @@ class CMakeGenerator:
             path = 'include/' + module
             if os.path.exists(path):
                 inc_dirs.add(path)
+
         if os.path.exists('config/macro_config'):
             inc_dirs.add('config/macro_config')
         if os.path.exists('../../../../Secure_C/include'):
@@ -369,6 +370,8 @@ class CMakeGenerator:
             for item in macros:
                 if item == '-DHITLS_BSL_UIO' or item == '-DHITLS_BSL_UIO_SCTP':
                     cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared sctp")
+                if item == '-DHITLS_BSL_SAL_DL':
+                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared dl")     
         if lib_name == 'hitls_crypto':
             cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_crypto-shared hitls_bsl-shared")
         if lib_name == 'hitls_tls':

@@ -12,9 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-
+#include "hitls_build.h"
+#if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_SESSION_TICKET)
 #include <stdint.h>
-
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -22,9 +22,11 @@
 #include "bsl_err_internal.h"
 #include "bsl_bytes.h"
 #include "hitls_error.h"
+#include "pack_common.h"
 #include "tls.h"
 #include "hs_ctx.h"
 
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     uint32_t offset = 0u;
@@ -32,10 +34,7 @@ int32_t PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     HS_Ctx *hsCtx = ctx->hsCtx;
 
     if (bufLen < (sizeof(uint32_t) + sizeof(uint16_t) + hsCtx->ticketSize)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16054, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the buffer length of NewSessionTicket message is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID16054, BINGLOG_STR("NewSessionTicket"));
     }
 
     /* hsCtx->ticket is the encrypted ticket content, which corresponds to the ticket field in the protocol */
@@ -47,19 +46,16 @@ int32_t PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     /* rfc5077 3.3. NewSessionTicket Handshake Message
        If the server determines that it does not want to include a ticket after including the SessionTicket extension
        in the ServerHello, it sends a zero-length ticket in the NewSessionTicket handshake message. */
-    if (hsCtx->ticketSize != 0 && memcpy_s(&buf[offset], bufLen - offset, hsCtx->ticket, hsCtx->ticketSize) != EOK) {
-        (void)memset_s(hsCtx->ticket, hsCtx->ticketSize, 0, hsCtx->ticketSize);
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15001, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "memcpy ticket fail when pack new session ticket msg.", 0, 0, 0, 0);
-        return HITLS_MEMCPY_FAIL;
+    if (hsCtx->ticketSize != 0) {
+        (void)memcpy_s(&buf[offset], bufLen - offset, hsCtx->ticket, hsCtx->ticketSize);
     }
 
     *usedLen = offset + hsCtx->ticketSize;
 
     return HITLS_SUCCESS;
 }
-
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
+#ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     uint32_t ticketAgeAdd = 0u;
@@ -67,14 +63,11 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
 
     HS_Ctx *hsCtx = ctx->hsCtx;
 
-    /* ticket_lifetime + ticket_age_add + ticket_nonce length part + ticket_nonce + ticket length part + ticketSize */
+    /* size of ticketLifetime + size of ticketAgeAdd + size of ticketNonce + size of nextTicketNonce + size of ticket + ticketSize */
     if (bufLen < (sizeof(uint32_t) + sizeof(uint32_t) +
         sizeof(uint8_t) + sizeof(hsCtx->nextTicketNonce) +
         sizeof(uint16_t) + hsCtx->ticketSize)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16055, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Pack NewSessionTicket message failed: bufLen %u ticketSize %u.", bufLen, hsCtx->ticketSize, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID16055, BINGLOG_STR("NewSessionTicket"));
     }
 
     BSL_Uint32ToByte(hsCtx->ticketLifetimeHint, &buf[offset]);
@@ -103,13 +96,12 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     /* extension is not supported currently, set the total extension length to 0 */
     /* total extension length */
     if (bufLen < (offset + sizeof(uint16_t))) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16049, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the buffer length of NewSessionTicket message is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        return PackBufLenError(BINLOG_ID16049, BINGLOG_STR("NewSessionTicket"));
     }
     BSL_Uint16ToByte(0, &buf[offset]);
 
     *usedLen = offset + sizeof(uint16_t);
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
+#endif /* HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_SESSION_TICKET */

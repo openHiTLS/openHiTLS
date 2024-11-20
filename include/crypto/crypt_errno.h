@@ -44,7 +44,8 @@ enum CRYPT_ERROR {
     CRYPT_NO_REGIST_RAND,               /**< The global random number is not registered.*/
     CRYPT_ERR_ALGID,                    /**< Incorrect algorithm ID. */
     CRYPT_INVALID_ARG,                  /**< Invalid input parameter. */
-    CRYPT_NOT_SUPPORT,
+    CRYPT_NOT_SUPPORT,                  /**< unsupported operation. */
+    CRYPT_INCONSISTENT_OPERATION,       /**< Inconsistent  operation. */
 
     CRYPT_BN_BUFF_LEN_NOT_ENOUGH = 0x01020001, /**< Insufficient buffer length. */
     CRYPT_BN_SPACE_NOT_ENOUGH,          /**< Insufficient big number space. */
@@ -130,10 +131,8 @@ enum CRYPT_ERROR {
                                              if this requirement is not met,an error will be reported.
                                              For ISO7816, the first bit of padding data is 0x80, and the other bits
                                              are 0, if this requirement is not met, an error will be reported. */
-    CRYPT_EAL_PADDING_NOT_SUPPORT,      /**< Unsupported padding. */
     CRYPT_EAL_CIPHER_CTRL_ERROR,        /**< CRYPT_EAL_CipherCtrl interface unsupported CTRL type. */
-    CRYPT_EAL_CIPHER_FIANL_WITH_AEAD_ERROR,  /**< An error occurs when the final operation is performed on the
-                                                  AEAD algorithm. */
+    CRYPT_EAL_CIPHER_ERR_NEWCTX,
     CRYPT_EAL_PKEY_CTRL_ERROR,          /**< When the CRYPT_EAL_PkeyCtrl interface performs CTRL,
                                              the function is not supported or the input length is incorrect. */
     CRYPT_EAL_PKEY_DUP_ERROR,           /**< Pkey context duplicate failure. */
@@ -152,6 +151,7 @@ enum CRYPT_ERROR {
     CRYPT_DRBG_FAIL_GET_NONCE,          /**< Failed to obtain the nonce. */
     CRYPT_DRBG_ALG_NOT_SUPPORT,         /**< Does not support the given algorithm. */
     CRYPT_DRBG_INVALID_LEN,             /**< Incorrect data length. */
+    CRYPT_DRBG_PARAM_ERROR,             /**< Incorrect input parameter. */
 
     CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,         /**< No public key. */
     CRYPT_CURVE25519_NO_PRVKEY,                      /**< No private key. */
@@ -191,6 +191,7 @@ enum CRYPT_ERROR {
 
     CRYPT_HMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x010B0001, /**< The length of the buffer that storing
                                                           the output result is insufficient. */
+    CRYPT_ECC_HMAC_ERR_UNSUPPORTED_CTRL_OPTION,  /**< Unsupport the control type. */
 
     CRYPT_DH_BUFF_LEN_NOT_ENOUGH = 0x010C0001,   /**< The buffer length is insufficient. */
     CRYPT_DH_PARA_ERROR,                         /**< The value of the key parameter does not meet
@@ -262,7 +263,8 @@ enum CRYPT_ERROR {
                                                           on which the pattern depends on. */
     CRYPT_MODES_METHODS_NOT_SUPPORT,                 /**< Mode depends does not support the behavior. */
 	CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
-
+    CRYPT_MODES_ERR_STREAM_FINAL,                    /**< streaming encryption not support final */
+    CRYPT_MODES_PADDING_NOT_SUPPORT,                 /**< Unsupported padding. */
     CRYPT_HKDF_DKLEN_OVERFLOW = 0x01100001,          /**< The length of the derived key exceeds the maximum. */
     CRYPT_HKDF_NOT_SUPPORTED,                        /**< Unsupport HKDF algorithm. */
     CRYPT_HKDF_PARAM_ERROR,                          /**< Incorrect input parameter. */
@@ -325,6 +327,7 @@ enum CRYPT_ERROR {
                                                            maximum processing range of the MD5. */
     CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
                                                            output result is insufficient. */
+    CRYPT_MD_ERR_NEWCTX,                              /**< create md ctx failed. */
 
     CRYPT_SM2_BUFF_LEN_NOT_ENOUGH = 0x011B0001,       /**< Insufficient buffer length. */
     CRYPT_SM2_NO_PUBKEY,                              /**< SM2 the public key is not set. */
@@ -348,6 +351,7 @@ enum CRYPT_ERROR {
                                                             the decoding requirements. */
     CRYPT_SM2_ID_TOO_LARGE,                           /**< User id to large. */
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x011C0001,        /**< Unsupport the KDFTLS12 algorithm. */
+    CRYPT_KDFTLS12_PARAM_ERROR,
 
     CRYPT_DECODE_ASN1_BUFF_NUM_NOT_ENOUGH = 0x011D0001,  /**< The input number of BSL_ANS1_Buffer is not enough. */
     CRYPT_DECODE_UNSUPPORTED_PUBKEY_TYPE,                /**< Unsupported pubkey type */
@@ -378,8 +382,15 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
     CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
-};
+    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When RSA is used for Ctrl. */
 
+    CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01200001,     /**< Unexpected impl */
+    CRYPT_PROVIDER_ERR_IMPL_NULL,
+    CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */
+    CRYPT_PROVIDER_ERR_NEWCTX,
+    CRYPT_PROVIDER_NOT_SUPPORT,
+    CRYPT_PROVIDER_ERR_ATTRIBUTE,
+};
 #ifdef __cplusplus
 }
 #endif

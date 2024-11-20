@@ -58,12 +58,14 @@ static int32_t PauseState(LinkPara *linkPara, uint16_t version)
         /* Link establishment in other versions is not supported. */
         return HITLS_INTERNAL_EXCEPTION;
     }
-
+#ifdef HITLS_TLS_PROTO_TLCP11
     /* Constructing a Link */
     if ( version == HITLS_VERSION_TLCP11 ) {
         linkPara->client = FRAME_CreateTLCPLink(linkPara->config, transportType, true);
         linkPara->server = FRAME_CreateTLCPLink(linkPara->config, transportType, false);
-    }else {
+    } else
+#endif /* HITLS_TLS_PROTO_TLCP11 */
+    {
         linkPara->client = FRAME_CreateLink(linkPara->config, transportType);
         linkPara->server = FRAME_CreateLink(linkPara->config, transportType);
     }
@@ -136,30 +138,31 @@ static int32_t SetLinkConfig(uint16_t version, HITLS_KeyExchAlgo keyExAlgo, Link
     linkPara->config = NULL;
     if (IS_DTLS_VERSION(version)) {
         linkPara->config = HITLS_CFG_NewDTLS12Config();
-        HITLS_CFG_SetCloseCheckKeyUsage(linkPara->config, false);
     } else if (version == HITLS_VERSION_TLS12) {
         linkPara->config = HITLS_CFG_NewTLS12Config();
-        HITLS_CFG_SetCloseCheckKeyUsage(linkPara->config, false);
     } else if (version == HITLS_VERSION_TLS13) {
         linkPara->config = HITLS_CFG_NewTLS13Config();
-        HITLS_CFG_SetCloseCheckKeyUsage(linkPara->config, false);
     } else if (version == HITLS_VERSION_TLCP11) {
         linkPara->config = HITLS_CFG_NewTLCPConfig();
-        HITLS_CFG_SetCloseCheckKeyUsage(linkPara->config, false);
         return HITLS_SUCCESS;
     }
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(linkPara->config, false);
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
 
     int32_t ret;
+#ifdef HITLS_TLS_PROTO_ALL
     ret = HITLS_CFG_SetVersion(linkPara->config, version, version);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
+#endif
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
     ret = HITLS_CFG_SetClientVerifySupport(linkPara->config, true);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
+#endif /* HITLS_TLS_FEATURE_CERT_MODE */
     if (keyExAlgo == HITLS_KEY_EXCH_DHE) {
         uint16_t cipherSuites[] = {HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256};
         HITLS_CFG_SetCipherSuites(linkPara->config, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t));
@@ -242,7 +245,7 @@ static void SetDefaultRecordHeader(FRAME_Type *frameType, FRAME_Msg *msg, REC_Ty
     /* In the default message, the value is set to 0 by default. You need to assign a value to the value. */
     msg->sequence.data = 0;
     msg->length.state = INITIAL_FIELD;
-    /* The value of length is automatically calculated during assembly. 
+    /* The value of length is automatically calculated during assembly.
      * Therefore, the value of length is initialized to 0. */
     msg->length.data = 0;
 }

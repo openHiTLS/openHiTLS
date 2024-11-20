@@ -988,10 +988,11 @@ exit:
 }
 /* END_CASE */
 
-static int32_t STUB_APP_Write_Fatal(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
+static int32_t STUB_APP_Write_Fatal(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     (void)data;
     (void)dataLen;
+    (void)writeLen;
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
     return HITLS_INTERNAL_EXCEPTION;
 }
@@ -1039,7 +1040,8 @@ void UT_TLS_TLCP_CONSISTENCY_FATAL_ALERT_TC003(char *cipherSuite, int isResume)
     uint32_t readLen = 0;
     uint8_t data[] = "Hello World";
     STUB_Replace(&tmpRpInfo, APP_Write, STUB_APP_Write_Fatal);
-    ASSERT_EQ(HITLS_Write(server->ssl, data, sizeof(data)), HITLS_INTERNAL_EXCEPTION);
+    uint32_t writeLen;
+    ASSERT_EQ(HITLS_Write(server->ssl, data, sizeof(data), &writeLen), HITLS_INTERNAL_EXCEPTION);
     STUB_Reset(&tmpRpInfo);
     ASSERT_TRUE(server->ssl->state == CM_STATE_ALERTED);
 
@@ -1063,7 +1065,7 @@ void UT_TLS_TLCP_CONSISTENCY_FATAL_ALERT_TC003(char *cipherSuite, int isResume)
 
         ASSERT_TRUE(memcmp(serverSession->sessionId, Newsession->sessionId, HITLS_SESSION_ID_MAX_SIZE) != 0);
     } else {
-        ASSERT_TRUE(HITLS_Write(server->ssl, data, sizeof(data)) == HITLS_CM_LINK_FATAL_ALERTED);
+        ASSERT_TRUE(HITLS_Write(server->ssl, data, sizeof(data), &writeLen) == HITLS_CM_LINK_FATAL_ALERTED);
         ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_FATAL_ALERTED);
     }
 
@@ -1435,7 +1437,8 @@ void UT_TLS_TLCP_CONSISTENCY_AMEND_APPDATA_TC001(char *cipherSuite, int isClient
     uint8_t data[] = "Hello World";
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
-    ASSERT_EQ(HITLS_Write(sender->ssl, data, sizeof(data)), HITLS_SUCCESS);
+    uint32_t writeLen = 0;
+    ASSERT_EQ(HITLS_Write(sender->ssl, data, sizeof(data), &writeLen), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(sender, recver) == HITLS_SUCCESS);
 
     FRAME_Msg frameMsg = { 0 };

@@ -104,7 +104,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBSOLETE_RESERVED_FUNC_TC001(int signAlg)
     ASSERT_EQ(NewConfig(&testInfo), HITLS_SUCCESS);
     HITLS_CFG_SetSignature(testInfo.config, (uint16_t *)&signAlg, 1);
 
-    ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
 
 exit:
     ClearWrapper();
@@ -130,7 +130,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBSOLETE_RESERVED_FUNC_TC002(int group)
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
     testInfo.uioType = BSL_UIO_TCP;
- 
+
     ASSERT_EQ(NewConfig(&testInfo), HITLS_SUCCESS);
     HITLS_CFG_SetGroups(testInfo.config, (uint16_t *)&group, 1);
     ASSERT_EQ(DoHandshake(&testInfo), HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);

@@ -448,7 +448,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RENEGOTIATION_UNSUPPORTED_TC001()
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
-
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
     ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
@@ -464,82 +464,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RENEGOTIATION_UNSUPPORTED_TC001()
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    // Send a warning alert and ALERT_NO_RENEGOTIATION message. After receiving the message, the peer end changes the status to CM_STATE_TRANSPORTING.
+    // Send a warning alert and ALERT_NO_RENEGOTIATION message. After receiving the message, the peer send fatal alert.
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_SUCCESS);
-    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
-
-exit:
-    HITLS_CFG_FreeConfig(config);
-    FRAME_FreeLink(client);
-    FRAME_FreeLink(server);
-}
-/* END_CASE */
-
-int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *textLen, uint8_t *recType);
-
-int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *textLen, uint8_t *recType)
-{
-    (void)ctx;
-    (void)text;
-    (void)textLen;
-    *recType = (uint8_t)REC_TYPE_APP;
-
-    return HITLS_SUCCESS;
-}
-/* @
-* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_RENEGOTIATION_UNSUPPORTED_TC002
-* @title Invoke the hitls_connect/hitls_accept/hitls_write interface to initiate renegotiation, and the peer end returns an app message.
-* @precon  nan
-* @brief    1. Invoke the hitls_renegotiate interface to initiate renegotiation. Expected result 1 is displayed.
-            2. Invoke the hitls_connect/hitls_accept/hitls_write interface to initiate renegotiation. The peer end replies with an app message. Expected result 2 is obtained.
-            3. The peer end continuously sends 51 app messages. Expected result 3 is obtained.
-            4. Read the stored app message. Expected result 4 is obtained.
-* @expect   1. The link enters the renegotiation state.
-            2. Received successfully.
-            3. Received successfully.
-            4. The 50th message can be read normally, and the 51st message is lost.
-@ */
-/* BEGIN_CASE */
-void UT_TLS_TLS12_RFC5246_CONSISTENCY_RENEGOTIATION_UNSUPPORTED_TC002()
-{
-    FRAME_Init();
-    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
-    FRAME_LinkObj *client = NULL;
-    FRAME_LinkObj *server = NULL;
-    config->isSupportRenegotiation = true;
-
-    client = FRAME_CreateLink(config, BSL_UIO_TCP);
-    ASSERT_TRUE(client != NULL);
-    server = FRAME_CreateLink(config, BSL_UIO_TCP);
-    ASSERT_TRUE(server != NULL);
-
-    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
-    // 1. Invoke the hitls_renegotiate interface to initiate renegotiation.
-    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
-    // 2. Invoke the hitls_connect/hitls_accept/hitls_write interface to initiate renegotiation. The peer end replies with an app message.
-    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
-
-    uint8_t data[] = "Hello World";
-    int32_t count = 0;
-    while (count < 60) {
-        // 3. The peer end continuously sends 51 app messages.
-        int32_t ret = HITLS_Write(server->ssl, data, sizeof(data));
-        ASSERT_TRUE(ret == HITLS_SUCCESS);
-        ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-        ret = HITLS_Connect(client->ssl);
-        count++;
-        if (ret == HITLS_SUCCESS) {
-            // 4. Read the stored app message.
-            APP_Ctx *appCtx = client->ssl->appCtx;
-            if (count <= UNPROCESSED_APP_MSG_COUNT_MAX) {
-                ASSERT_TRUE(BSL_LIST_COUNT(appCtx->appList) == count);
-            } else {
-                ASSERT_TRUE(BSL_LIST_COUNT(appCtx->appList) == UNPROCESSED_APP_MSG_COUNT_MAX);
-            }
-        }
-    }
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_EQ(client->ssl->state, CM_STATE_ALERTED);
 
 exit:
     HITLS_CFG_FreeConfig(config);

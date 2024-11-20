@@ -133,7 +133,7 @@ int32_t SM4_XTS_En(uint8_t* cipher, const uint8_t* plain, const uint32_t* dataRk
     }
     left = dataLen % CRYPT_SM4_BLOCKSIZE_16;
 
-    // MODE_XTS_Ctrl has TW = Enc_K2(iv) done
+    // MODES_XTS_Ctrl has TW = Enc_K2(iv) done
     memcpy_s(t, CRYPT_SM4_BLOCKSIZE_16, tweak, CRYPT_SM4_BLOCKSIZE);
 
     if (dataLen >= CRYPT_SM4_BLOCKSIZE_16) {
@@ -227,7 +227,7 @@ int32_t SM4_XTS_De(uint8_t* plain, const uint8_t* cipher, const uint32_t* dataRk
     }
     left = dataLen % CRYPT_SM4_BLOCKSIZE_16;
 
-    // MODE_XTS_Ctrl has TW = Enc_K2(iv) done
+    // MODES_XTS_Ctrl has TW = Enc_K2(iv) done
     (void)memcpy_s(t, CRYPT_SM4_BLOCKSIZE_16, tweak, CRYPT_SM4_BLOCKSIZE);
 
     if (dataLen >= CRYPT_SM4_BLOCKSIZE_16) {

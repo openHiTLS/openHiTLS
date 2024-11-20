@@ -76,7 +76,7 @@ typedef struct {
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type,
+int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
     BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
@@ -93,7 +93,7 @@ int32_t CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type,
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_DecodeFileKey(BSL_ParseFormat format, int32_t type, const char *path,
+int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
     uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
@@ -110,7 +110,7 @@ int32_t CRYPT_EAL_DecodeFileKey(BSL_ParseFormat format, int32_t type, const char
  *         Other error codes see the crypt_errno.h
  */
 int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    BSL_ParseFormat format, int32_t type, BSL_Buffer *encode);
+    int32_t format, int32_t type, BSL_Buffer *encode);
 
 /**
  * @ingroup crypt_eal_encode
@@ -126,7 +126,7 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  *         Other error codes see the crypt_errno.h
  */
 int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
-    BSL_ParseFormat format, int32_t type, const char *path);
+    int32_t format, int32_t type, const char *path);
 
 #ifdef __cplusplus
 }

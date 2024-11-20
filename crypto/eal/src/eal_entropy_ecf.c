@@ -19,6 +19,7 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
+#include "eal_common.h"
 #include "eal_entropy.h"
 #include "entropy.h"
 #include "crypt_eal_mac.h"
@@ -32,7 +33,7 @@ static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out,
 {
     CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_CONDITION_FAILURE);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_ENTROPY_CONDITION_FAILURE;
     }
     uint32_t keyLen = ECF_ALG_KEY_LEN_128;

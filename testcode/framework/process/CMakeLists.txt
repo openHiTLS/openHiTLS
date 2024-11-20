@@ -52,12 +52,13 @@ target_link_directories(${PROCESS}
         ${HITLS_SRC}/testcode/framework/tls/lib
         ${HITLS_SRC}/platform/Secure_C/lib
 )
+
 target_link_libraries(${PROCESS}
     tls_hlt    
     tls_frame
     hitls_tls
+    hitls_pki
     hitls_crypto
-    hitls_x509
     hitls_bsl
     boundscheck
     pthread

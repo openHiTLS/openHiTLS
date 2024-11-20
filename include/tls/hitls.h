@@ -185,6 +185,22 @@ int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
 
 /**
  * @ingroup hitls
+ * @brief   read application data from a TLS/SSL connection
+ * @attention HITLS_Peek() is identical to HITLS_Read() except no bytes are actually
+              removed from the underlying BIO during the read
+ * @param   ctx [IN] TLS context
+ * @param   data [OUT] data buffer
+ * @param   bufSize [IN] data buffer size
+ * @param   readLen [OUT] store the number of bytes actually read in *readLen
+ * @retval  HITLS_SUCCESS
+ * @retval  HITLS_REC_NORMAL_RECV_BUF_EMPTY, read buffer is empty, more bytes can be read.
+ * @retval  HITLS_REC_NORMAL_IO_BUSY, IO budy, waiting for next calling to read more.
+ * @retval  Refer to hitls_error.h for more
+ */
+int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen);
+
+/**
+ * @ingroup hitls
  * @brief   Write data.
  *
  * Encrypts and packs data with the specified length dataLen into a single record and sends the record.
@@ -194,13 +210,14 @@ int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
  * @param   ctx [IN] TLS context
  * @param   data [IN] Data to be written
  * @param   dataLen [IN] Length to be written
+ * @param   writeLen [OUT] Length of Successful Writes
  * @retval  HITLS_SUCCESS is sent successfully.
  * @retval  HITLS_REC_NORMAL_RECV_BUF_EMPTY, record If the receiving buffer is NULL, the message can be sent again.
  * @retval  HITLS_REC_NORMAL_IO_BUSY, The network I/O is busy and needs to wait for the next sending.
  *                                   You can continue sending the I/O.
  * @retval  For other error codes, see hitls_error.h.
  */
-int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
+int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen);
 
 /**
  * @ingroup hitls
@@ -375,7 +392,7 @@ int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, uint8_t *isDtls);
  * @brief   Record the error value of the HiTLS link.
  *
  * @param   ctx [OUT] TLS connection handle
- * @param   ret [IN] Error value
+ * @param   errorCode [IN] Error value
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For other error codes, see hitls_error.h.
  */
@@ -572,6 +589,15 @@ const HITLS_Config *HITLS_GetConfig(const HITLS_Ctx *ctx);
 
 /**
  * @ingroup hitls
+ * @brief   Obtain the point of GlobalConfig
+ * @param   ctx [IN] TLS connection handle
+ * @retval  NULL The input parameter pointer is null
+ * @retval  GlobalConfig in ctx
+ */
+HITLS_Config *HITLS_GetGlobalConfig(const HITLS_Ctx *ctx);
+
+/**
+ * @ingroup hitls
  * @brief   Clears the configured TLS1.3 cipher suite.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -582,13 +608,13 @@ int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx);
 
 /**
  * @ingroup hitls
- * @brief    Set the supported key suites.
+ * @brief    Set the supported cipher suites.
  *
- * The sequence of the key suites affects the priority of the selected key suites.
- * The key suites with the highest priority are selected first.
+ * The sequence of the cipher suites affects the priority of the selected cipher suites.
+ * The cipher suites with the highest priority are selected first.
  *
  * @attention Do not check the cipher suite to meet the changes in the supported version.
- * @param   ctx [OUT] config handle.
+ * @param   ctx [OUT] TLS connection handle.
  * @param   cipherSuites [IN] Key suite array, corresponding to the HITLS_CipherSuite enumerated value.
  * @param   cipherSuitesSize [IN] Key suite array length.
  * @retval  HITLS_SUCCESS, if successful.
@@ -619,7 +645,7 @@ const HITLS_Cipher *HITLS_GetCurrentCipher(const HITLS_Ctx *ctx);
  * @retval  HITLS_SUCCESS, obtaining the status succeeded.
  *          For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_GetRandom(const HITLS_Ctx *ctx, uint8_t *out, uint32_t *outlen, bool isClient);
+int32_t HITLS_GetHsRandom(const HITLS_Ctx *ctx, uint8_t *out, uint32_t *outlen, bool isClient);
 
 /**
  * @ingroup hitls
@@ -808,7 +834,7 @@ int32_t HITLS_SetVersion(HITLS_Ctx *ctx, uint32_t minVersion, uint32_t maxVersio
  * @brief   Set the version number to be disabled.
  *
  * @param   ctx  [OUT] TLS connection handle
- * @param   noversion [IN] Disabled version number.
+ * @param   noVersion [IN] Disabled version number.
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
@@ -879,6 +905,16 @@ int32_t HITLS_SetTmpDh(HITLS_Ctx *ctx, HITLS_CRYPT_Key *dhPkey);
 
 /**
  * @ingroup hitls
+ * @brief   Set the TmpDh callback function.
+ * @param   ctx [IN/OUT] TLS connection handle.
+ * @param   callback [IN] Set the TmpDh callback.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_SetTmpDhCb(HITLS_Ctx *ctx, HITLS_DhTmpCb callback);
+
+/**
+ * @ingroup hitls
  * @brief   Sets the RecordPadding callback.
  *
  * @param   ctx [IN/OUT] TLS Connection Handle
@@ -937,11 +973,11 @@ int32_t HITLS_GetPeerFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t 
  * @brief   Disables the verification of keyusage in the certificate. This function is enabled by default.
  *
  * @param   ctx [OUT] config context
- * @param   close [IN] Sets whether to disable verification.
+ * @param   isCheck [IN] Sets whether to check key usage.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_SetCloseCheckKeyUsage(HITLS_Ctx *ctx, bool isClose);
+int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck);
 
 /**
  * @ingroup hitls
@@ -988,7 +1024,25 @@ int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSec
  *               HiTLS caches the message, the message is returned when a user calls HITLS_Read.
  *               Maximum of 50 app messages can be cached, if the cache is full, subsequent app messages will be
  *               ignored.
+ *            5. In the DTLS over UDP scenario, if the user functions as the server,
+ *               packet loss occurs in the renegotiation request(hello request).
+ *               (1) If the user calls the HITLS_Write for renegotiation, the app message to be sent is
+ *                   sent to the peer end after packet loss occurs in the renegotiation request.
+ *               (2) The HiTLS does not retransmit the renegotiation request. The user needs to call the
+ *                   HITLS_Renegotiate and HITLS_Accept interfaces again to continue the renegotiation.
+ *                   You can call the HITLS_GetRenegotiationState interface to determine
+ *                   whether the current renegotiation is in the renegotiation state,
+ *                   If the renegotiation is not in the renegotiation state,
+ *                   call the HITLS_Renegotiate and HITLS_Accept interfaces again to continue the renegotiation.
+ *            6. In the DTLS over UDP scenario, if the user as the client,
+ *               packet loss occurs in the renegotiation request (client hello).
+ *               (1) If the user calls the HITLS_Write to perform renegotiation, the app message is not
+ *                   sent to the peer end after packet loss occurs in the renegotiation request.
+ *                   Instead, the user waits for the response from the peer end.
+ *               (2) The client hello message is retransmitted inside the HiTLS,
+ *                   and the user does not need to initiate renegotiation again.
  * @param   ctx  [IN] TLS Connection Handle
+ *
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For details about other error codes, see hitls_error.h.
  */
@@ -1004,6 +1058,7 @@ int32_t HITLS_Renegotiate(HITLS_Ctx *ctx);
  * @param   ctx  [IN] TLS Connection Handle.
  * @param   isRenegotiationState  [OUT] Indicates whether the renegotiation is in the renegotiation state.
  * true: in the renegotiation state; false: not in the renegotiation state.
+ *
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For details about other error codes, see hitls_error.h.
  */
@@ -1105,7 +1160,7 @@ int32_t HITLS_GetNegotiateGroup(const HITLS_Ctx *ctx, uint16_t *group);
  * @brief   Setting the Encrypt-Then-Mac mode.
  *
  * @param   ctx [IN] TLS connection handle.
- * @param   isEncryptThenMac [IN] Indicates whether to enable the Encrypt-Then-Mac mode.
+ * @param   encryptThenMacType [IN] Current Encrypt-Then-Mac mode.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
@@ -1170,10 +1225,30 @@ int32_t HITLS_SetRenegotiationSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
  * @ingroup hitls
+ * @brief   Set whether to allow a renegotiate request from the client
+ * @param   ctx   [IN/OUT] TLS connection handle.
+ * @param   isSupport  [IN] Support or Not, true: yes; false: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_SetClientRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
+
+/**
+ * @ingroup hitls
+ * @brief   Set whether to abort handshake when server doesn't support SecRenegotiation
+ * @param   ctx   [IN/OUT] TLS connection handle.
+ * @param   isSupport  [IN] Support or Not, true: yes; false: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
+
+/**
+ * @ingroup hitls
  * @brief   Sets whether to support session tickets.
  *
  * @param   ctx  [IN/OUT] TLS connection handle.
- * @param   support [IN] whether to support session tickets, true: yes; false: no
+ * @param   isSupport [IN] whether to support session tickets, true: yes; false: no
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  */
@@ -1184,7 +1259,7 @@ int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport);
  * @brief   Check whether the session ticket is supported.
  *
  * @param   ctx  [IN] TLS connection handle.
- * @param   support [OUT] whether to support session tickets, true: yes; false: no
+ * @param   isSupport [OUT] whether to support session tickets, true: yes; false: no
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  */
@@ -1215,24 +1290,25 @@ int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, uint8_t *isEnable);
 
 /**
  * @ingroup hitls
- * @brief   Obtains all asynchronous fd.
+ * @brief   set the max empty records number can be received
  *
- * @param   ctx [IN] TLS connection handle.
- * @param   fd  [OUT] fd array.
- * @param   fdNums [OUT] fd number.
+ * @param   ctx [IN/OUT] TLS connection handle.
+ * @param   emptyNum [IN] Indicates the max number of empty records can be received
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
- * @retval  For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_GetAllAsyncFds(HITLS_Ctx *ctx, int *fd, int *fdNums);
+int32_t HITLS_SetEmptyRecordsNum(HITLS_Ctx *ctx, uint32_t emptyNum);
 
 /**
  * @ingroup hitls
- * @brief   Obtains the certificate-based user data index number.
+ * @brief   Obtain the max empty records number can be received
  *
- * @retval  Index No.
- * @retval  For details about other error codes, see hitls_error.h.
+ * @param   ctx [IN] TLS connection handle.
+ * @param   emptyNum [OUT] Indicates the max number of empty records can be received
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_get_ex_data_X509_STORE_CTX_idx(void);
+int32_t HITLS_GetEmptyRecordsNum(const HITLS_Ctx *ctx, uint32_t *emptyNum);
 
 /**
  * @ingroup hitls
