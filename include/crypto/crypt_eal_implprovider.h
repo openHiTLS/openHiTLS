@@ -23,6 +23,7 @@
 #define CRYPT_EAL_IMPLPROVIDER_H
 
 #include <stdint.h>
+#include "bsl_params.h"
 #include "crypt_types.h"
 #include "crypt_eal_provider.h"
 
@@ -136,19 +137,17 @@ typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
 
 
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetParam)(void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetParam)(void *ctx, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGenKey)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPrv)(void *ctx, const CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, const CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPrv)(const void *ctx, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPub)(const void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPrv)(void *ctx, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPrv)(const void *ctx, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPub)(const void *ctx, BSL_Param *param);
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtDupCtx)(const void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCheck)(const void *prv, const void *pub);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCompare)(const void *ctx1, const void *ctx2);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCopyParam)(const void *src, void *dest);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx, const CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtEncode)(const void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 

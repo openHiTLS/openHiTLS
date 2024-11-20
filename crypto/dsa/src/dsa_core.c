@@ -244,13 +244,13 @@ static CRYPT_DSA_Para *ParaDup(const CRYPT_DSA_Para *para)
     return ret;
 }
 
-int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPara *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_DSA_Para *dsaPara = CRYPT_DSA_NewPara((CRYPT_DsaPara *)para->param);
+    CRYPT_DSA_Para *dsaPara = CRYPT_DSA_NewPara(para);
     if (dsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
@@ -270,10 +270,9 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *param)
+int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPara *para)
 {
     int32_t ret;
-    CRYPT_DsaPara *para = (CRYPT_DsaPara *)param->param;
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -350,9 +349,8 @@ uint32_t CRYPT_DSA_GetSignLen(const CRYPT_DSA_Ctx *ctx)
 }
 
 /* x != 0 && x < q */
-int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPrv *prv)
 {
-    CRYPT_DsaPrv *prv = (CRYPT_DsaPrv *)para->param;
     if (ctx == NULL || prv == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -400,9 +398,8 @@ ERR:
 }
 
 /* y != 0 && y != 1 && y < p */
-int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_DsaPub *pub)
 {
-    CRYPT_DsaPub *pub = (CRYPT_DsaPub *)para->param;
     if (ctx == NULL || pub == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -449,9 +446,8 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv)
 {
-    CRYPT_DsaPrv *prv = (CRYPT_DsaPrv *)para->param;
     if (ctx == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -475,9 +471,8 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para)
     return ret;
 }
 
-int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPub *pub)
 {
-    CRYPT_DsaPub *pub = (CRYPT_DsaPub *)para->param;
     if (ctx == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

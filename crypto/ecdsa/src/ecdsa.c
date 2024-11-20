@@ -88,9 +88,8 @@ void CRYPT_ECDSA_FreePara(CRYPT_EcdsaPara *para)
     ECC_FreePara(para);
 }
 
-int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *param)
+int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPara *para)
 {
-    CRYPT_EccPara *para = (CRYPT_EccPara *)param->param;
     return ECC_GetPara(ctx, para);
 }
 
@@ -113,13 +112,13 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPara *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPara *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_EcdsaPara *ecdsaPara = CRYPT_ECDSA_NewPara((CRYPT_EccPara *)para->param);
+    CRYPT_EcdsaPara *ecdsaPara = CRYPT_ECDSA_NewPara(para);
     if (ecdsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
@@ -142,22 +141,22 @@ uint32_t CRYPT_ECDSA_GetBits(const CRYPT_ECDSA_Ctx *ctx)
     return ECC_PkeyGetBits(ctx);
 }
 
-int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPrv *para)
 {
     return ECC_PkeySetPrvKey(ctx, para);
 }
 
-int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPub *para)
 {
     return ECC_PkeySetPubKey(ctx, para);
 }
 
-int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPrv *para)
 {
     return ECC_PkeyGetPrvKey(ctx, para);
 }
 
-int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPub *para)
 {
     return ECC_PkeyGetPubKey(ctx, para);
 }

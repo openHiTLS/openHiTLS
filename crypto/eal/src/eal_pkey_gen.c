@@ -33,6 +33,8 @@
 #include "crypt_eal_pkey.h"
 #include "bsl_err_internal.h"
 #include "crypt_provider.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMethod *dest)
 {
@@ -200,6 +202,113 @@ static int32_t ParaIsVaild(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPa
     return CRYPT_SUCCESS;
 }
 
+static int32_t CvtBslParamAndSetParams(CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para, int32_t isSet)
+{
+    int32_t ret;
+    switch (pkey->id)
+    {
+        case CRYPT_PKEY_DSA: {
+            BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_DSA_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.dsaPara.p, para->para.dsaPara.pLen);
+            BSL_Param_InitValue(&param[1], CRYPT_DSA_KEY_Q, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.dsaPara.q, para->para.dsaPara.qLen);
+            BSL_Param_InitValue(&param[2], CRYPT_DSA_KEY_G, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.dsaPara.g, para->para.dsaPara.gLen);
+            if (isSet) {
+                return pkey->method->setPara(pkey->key, &param);
+            }
+            ret = pkey->method->getPara(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            para->para.dsaPara.pLen = param[0].useLen;
+            para->para.dsaPara.qLen = param[1].useLen;
+            para->para.dsaPara.gLen = param[2].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_RSA: {
+            BSL_Param param[3] = {{0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_RSA_KEY_E, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.rsaPara.e, para->para.rsaPara.eLen);
+            BSL_Param_InitValue(&param[1], CRYPT_RSA_KEY_BITS, BSL_PARAM_TYPE_UINT32_PTR,
+                &para->para.rsaPara.bits, sizeof(para->para.rsaPara.bits));
+            if (isSet) {
+                return pkey->method->setPara(pkey->key, &param);
+            }
+            return CRYPT_EAL_ERR_ALGID;
+        }
+        case CRYPT_PKEY_DH: {
+            BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_DH_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.dhPara.p, para->para.dhPara.pLen);
+            BSL_Param_InitValue(&param[1], CRYPT_DH_KEY_Q, BSL_PARAM_TYPE_UINT32_PTR,
+                para->para.dhPara.q, para->para.dhPara.qLen);
+            BSL_Param_InitValue(&param[2], CRYPT_DH_KEY_G, BSL_PARAM_TYPE_UINT32_PTR,
+                para->para.dhPara.g, para->para.dhPara.gLen);
+            if (isSet) {
+                return pkey->method->setPara(pkey->key, &param);
+            }
+            ret = pkey->method->getPara(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            para->para.dhPara.pLen = param[0].useLen;
+            para->para.dhPara.qLen = param[1].useLen;
+            para->para.dhPara.gLen = param[2].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ECDH: {
+            BSL_Param param[8] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_ECC_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.p, para->para.eccPara.pLen);
+            BSL_Param_InitValue(&param[1], CRYPT_ECC_KEY_A, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.a, para->para.eccPara.aLen);
+            BSL_Param_InitValue(&param[2], CRYPT_ECC_KEY_B, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.b, para->para.eccPara.bLen);
+            BSL_Param_InitValue(&param[3], CRYPT_ECC_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.n, para->para.eccPara.nLen);
+            BSL_Param_InitValue(&param[4], CRYPT_ECC_KEY_H, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.h, para->para.eccPara.hLen);
+            BSL_Param_InitValue(&param[5], CRYPT_ECC_KEY_X, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.x, para->para.eccPara.xLen);
+            BSL_Param_InitValue(&param[6], CRYPT_ECC_KEY_Y, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.eccPara.y, para->para.eccPara.yLen);
+            if (isSet) {
+                return pkey->method->setPara(pkey->key, &param);
+            }
+            ret = pkey->method->getPara(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            para->para.eccPara.pLen = param[0].useLen;
+            para->para.eccPara.aLen = param[1].useLen;
+            para->para.eccPara.bLen = param[2].useLen;
+            para->para.eccPara.nLen = param[3].useLen;
+            para->para.eccPara.hLen = param[4].useLen;
+            para->para.eccPara.xLen = param[5].useLen;
+            para->para.eccPara.yLen = param[6].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_PAILLIER: {
+            BSL_Param param[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_PAILLER_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.paillierPara.p, para->para.paillierPara.pLen);
+            BSL_Param_InitValue(&param[1], CRYPT_PAILLER_KEY_Q, BSL_PARAM_TYPE_OCTETS_PTR,
+                para->para.paillierPara.q, para->para.paillierPara.qLen);
+            BSL_Param_InitValue(&param[2], CRYPT_PAILLER_KEY_BITS, BSL_PARAM_TYPE_UINT32_PTR,
+                &para->para.paillierPara.bits, sizeof(para->para.paillierPara.bits));
+            if (isSet) {
+                return pkey->method->setPara(pkey->key, &param);
+            }
+            return CRYPT_EAL_ERR_ALGID;
+        }
+        default:
+            return CRYPT_EAL_ERR_ALGID;
+    }
+}
+
 int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
 {
     int32_t ret;
@@ -212,15 +321,90 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam = {0};
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(para->para);
-    ret = pkey->method->setPara(pkey->key, &cryptParam);
+    if (pkey->isProvider == true) {
+        ret = CvtBslParamAndSetParams(pkey, (CRYPT_EAL_PkeyPara *)para, 1);
+    } else {
+        ret = pkey->method->setPara(pkey->key, &(para->para));
+    }
+    
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
     return ret;
 }
+
+// static int32_t CvtBslParamAndGetParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
+// {
+//     int32_t ret;
+//     switch (pkey->id)
+//     {
+//         case CRYPT_PKEY_DSA: {
+//             BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
+//             BSL_Param_InitValue(&param[0], CRYPT_DSA_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.dsaPara.p, para->para.dsaPara.pLen);
+//             BSL_Param_InitValue(&param[1], CRYPT_DSA_KEY_Q, BSL_PARAM_TYPE_UINT32_PTR,
+//                 para->para.dsaPara.q, para->para.dsaPara.qLen);
+//             BSL_Param_InitValue(&param[2], CRYPT_DSA_KEY_G, BSL_PARAM_TYPE_UINT32_PTR,
+//                 para->para.dsaPara.g, para->para.dsaPara.gLen);
+//             ret = pkey->method->getPara(pkey->key, &param);
+//             break;
+//         }
+//         case CRYPT_PKEY_RSA: {
+//             BSL_Param param[3] = {{0}, {0}, BSL_PARAM_END};
+//             BSL_Param_InitValue(&param[0], CRYPT_RSA_KEY_E, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.rsaPara.e, para->para.rsaPara.eLen);
+//             BSL_Param_InitValue(&param[1], CRYPT_RSA_KEY_BITS, BSL_PARAM_TYPE_UINT32_PTR,
+//                 para->para.rsaPara.bits, sizeof(para->para.rsaPara.bits));
+//             ret = pkey->method->getPara(pkey->key, &param);
+//             break;
+//         }
+//         case CRYPT_PKEY_DH: {
+//             BSL_Param param[3] = {{0}, {0}, {0}, BSL_PARAM_END};
+//             BSL_Param_InitValue(&param[0], CRYPT_DH_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.dhPara.p, para->para.dhPara.pLen);
+//             BSL_Param_InitValue(&param[1], CRYPT_DH_KEY_Q, BSL_PARAM_TYPE_UINT32_PTR,
+//                 para->para.dhPara.q, para->para.dhPara.qLen);
+//             BSL_Param_InitValue(&param[2], CRYPT_DH_KEY_G, BSL_PARAM_TYPE_UINT32_PTR,
+//                 para->para.dhPara.g, para->para.dhPara.gLen);
+//             ret = pkey->method->getPara(pkey->key, &param);
+//             break;
+//         }
+//         case CRYPT_PKEY_ECDSA:
+//         case CRYPT_PKEY_ECDH: {
+//             BSL_Param param[8] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+//             BSL_Param_InitValue(&param[0], CRYPT_ECC_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.p, para->para.eccPara.pLen);
+//             BSL_Param_InitValue(&param[1], CRYPT_ECC_KEY_A, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.a, para->para.eccPara.aLen);
+//             BSL_Param_InitValue(&param[2], CRYPT_ECC_KEY_B, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.b, para->para.eccPara.bLen);
+//             BSL_Param_InitValue(&param[3], CRYPT_ECC_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.n, para->para.eccPara.nLen);
+//             BSL_Param_InitValue(&param[4], CRYPT_ECC_KEY_H, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.h, para->para.eccPara.hLen);
+//             BSL_Param_InitValue(&param[5], CRYPT_ECC_KEY_X, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.x, para->para.eccPara.xLen);
+//             BSL_Param_InitValue(&param[6], CRYPT_ECC_KEY_Y, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.eccPara.y, para->para.eccPara.yLen);
+//             ret = pkey->method->getPara(pkey->key, &param);
+//             break;
+//         }
+//         case CRYPT_PKEY_PAILLIER: {
+//             BSL_Param param[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+//             BSL_Param_InitValue(&param[0], CRYPT_PAILLER_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.paillierPara.p, para->para.paillierPara.pLen);
+//             BSL_Param_InitValue(&param[1], CRYPT_PAILLER_KEY_Q, BSL_PARAM_TYPE_OCTETS_PTR,
+//                 para->para.paillierPara.q, para->para.paillierPara.qLen);
+//             BSL_Param_InitValue(&param[2], CRYPT_PAILLER_KEY_BITS, BSL_PARAM_TYPE_UINT32_PTR,
+//                 para->para.paillierPara.bits, sizeof(para->para.paillierPara.bits));
+//              ret = pkey->method->getPara(pkey->key, &param);
+//             break;
+//         }
+//         default:
+//             return CRYPT_EAL_ERR_ALGID;
+//     }
+//     return CRYPT_SUCCESS;
+// }
 
 int32_t CRYPT_EAL_PkeyGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para)
 {
@@ -234,10 +418,11 @@ int32_t CRYPT_EAL_PkeyGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam;
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(para->para);
-    ret = pkey->method->getPara(pkey->key, &cryptParam);
+    if (pkey->isProvider == true) {
+        ret = CvtBslParamAndSetParams((CRYPT_EAL_PkeyCtx *)pkey, para, 0);
+    } else {
+        ret = pkey->method->getPara(pkey->key, &(para->para));
+    }
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
@@ -308,6 +493,73 @@ static int32_t PriAndPubParamIsValid(const CRYPT_EAL_PkeyCtx *pkey, const void *
     return CRYPT_SUCCESS;
 }
 
+static int32_t CvtBslParamAndSetPub(CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k, int isSet)
+{
+    int32_t ret;
+    switch (pkey->id)
+    {
+        case CRYPT_PKEY_ED25519:
+        case CRYPT_PKEY_X25519:
+        case CRYPT_PKEY_DH:
+        case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ECDH:
+        case CRYPT_PKEY_SM2:
+        case CRYPT_PKEY_DSA: {
+            BSL_Param param[2] = {{0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_PUBLIC_KEY, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.dsaPub.data, k->key.dsaPub.len);
+            if (isSet) {
+                return pkey->method->setPub(pkey->key, &param);
+            }
+            ret = pkey->method->getPub(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            k->key.dsaPub.len = param[0].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_RSA: {
+            BSL_Param param[3] = {{0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_RSA_KEY_E, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPub.e, k->key.rsaPub.eLen);
+            BSL_Param_InitValue(&param[1], CRYPT_RSA_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPub.n, k->key.rsaPub.nLen);
+            if (isSet) {
+                return pkey->method->setPub(pkey->key, &param);
+            }
+            ret = pkey->method->getPub(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            k->key.rsaPub.eLen = param[0].useLen;
+            k->key.rsaPub.nLen = param[1].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_PAILLIER: {
+            BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_PAILLER_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPub.n, k->key.paillierPub.nLen);
+            BSL_Param_InitValue(&param[1], CRYPT_PAILLER_KEY_G, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPub.g, k->key.paillierPub.gLen);
+            BSL_Param_InitValue(&param[2], CRYPT_PAILLER_KEY_N2, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPub.n2, k->key.paillierPub.n2Len);
+            if (isSet) {
+                return pkey->method->setPub(pkey->key, &param);
+            }
+            ret = pkey->method->getPub(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            k->key.paillierPub.nLen = param[0].useLen;
+            k->key.paillierPub.gLen = param[1].useLen;
+            k->key.paillierPub.n2Len = param[2].useLen;
+            return CRYPT_SUCCESS;
+        }
+        default:
+            return CRYPT_EAL_ERR_ALGID;
+    }
+}
+
 int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key)
 {
     int32_t ret = PriAndPubParamIsValid(pkey, key, false);
@@ -319,12 +571,101 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam = {0};
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(key->key.rsaPub);
-    ret = pkey->method->setPub(pkey->key, &cryptParam);
+    if (pkey->isProvider == true) {
+        ret = CvtBslParamAndSetPub(pkey, (CRYPT_EAL_PkeyPub *)key, 1);
+    } else {
+        ret = pkey->method->setPub(pkey->key, &(key->key));
+    }
     EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_SETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
+}
+
+static int32_t CvtBslParamAndSetPrv(CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k, int isSet)
+{
+    int32_t ret;
+    switch (pkey->id)
+    {
+        case CRYPT_PKEY_ED25519:
+        case CRYPT_PKEY_X25519:
+        case CRYPT_PKEY_DH:
+        case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ECDH:
+        case CRYPT_PKEY_SM2:
+        case CRYPT_PKEY_DSA: {
+            BSL_Param param[2] = {{0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_PRIVATE_KEY, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.dsaPrv.data, k->key.dsaPrv.len);
+            if (isSet) {
+                return pkey->method->setPrv(pkey->key, &param);
+            }
+            ret = pkey->method->getPrv(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            k->key.dsaPrv.len = param[0].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_RSA: {
+            BSL_Param param[9] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_RSA_KEY_D, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.d, k->key.rsaPrv.dLen);
+            BSL_Param_InitValue(&param[1], CRYPT_RSA_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.n, k->key.rsaPrv.nLen);
+            BSL_Param_InitValue(&param[2], CRYPT_RSA_KEY_P, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.p, k->key.rsaPrv.pLen);
+            BSL_Param_InitValue(&param[3], CRYPT_RSA_KEY_Q, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.q, k->key.rsaPrv.qLen);
+            BSL_Param_InitValue(&param[4], CRYPT_RSA_KEY_DP, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.dP, k->key.rsaPrv.dPLen);
+            BSL_Param_InitValue(&param[5], CRYPT_RSA_KEY_DQ, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.dQ, k->key.rsaPrv.dQLen);
+            BSL_Param_InitValue(&param[6], CRYPT_RSA_KEY_QINV, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.qInv, k->key.rsaPrv.qInvLen);
+            BSL_Param_InitValue(&param[7], CRYPT_RSA_KEY_E, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.rsaPrv.e, k->key.rsaPrv.eLen);
+            if (isSet) {
+                return pkey->method->setPrv(pkey->key, &param);
+            }
+            ret = pkey->method->getPrv(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            k->key.rsaPrv.dLen = param[0].useLen;
+            k->key.rsaPrv.nLen = param[1].useLen;
+            k->key.rsaPrv.pLen = param[2].useLen;
+            k->key.rsaPrv.qLen = param[3].useLen;
+            k->key.rsaPrv.dPLen = param[4].useLen;
+            k->key.rsaPrv.dQLen = param[5].useLen;
+            k->key.rsaPrv.qInvLen = param[6].useLen;
+            k->key.rsaPrv.eLen = param[7].useLen;
+            return CRYPT_SUCCESS;
+        }
+        case CRYPT_PKEY_PAILLIER: {
+            BSL_Param param[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+            BSL_Param_InitValue(&param[0], CRYPT_PAILLER_KEY_N, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPrv.n, k->key.paillierPrv.nLen);
+            BSL_Param_InitValue(&param[1], CRYPT_PAILLER_KEY_LAMBDA, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPrv.lambda, k->key.paillierPrv.lambdaLen);
+            BSL_Param_InitValue(&param[2], CRYPT_PAILLER_KEY_MU, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPrv.mu, k->key.paillierPrv.muLen);
+            BSL_Param_InitValue(&param[3], CRYPT_PAILLER_KEY_N2, BSL_PARAM_TYPE_OCTETS_PTR,
+                k->key.paillierPrv.n2, k->key.paillierPrv.n2Len);
+            if (isSet) {
+                return pkey->method->setPrv(pkey->key, &param);
+            }
+            ret = pkey->method->getPrv(pkey->key, &param);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+            k->key.paillierPrv.nLen = param[0].useLen;
+            k->key.paillierPrv.lambdaLen = param[1].useLen;
+            k->key.paillierPrv.muLen = param[2].useLen;
+            k->key.paillierPrv.n2Len = param[3].useLen;
+            return CRYPT_SUCCESS;
+        }
+        default:
+            return CRYPT_EAL_ERR_ALGID;
+    }
 }
 
 int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key)
@@ -338,10 +679,11 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam = {0};
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(key->key.rsaPrv);
-    ret = pkey->method->setPrv(pkey->key, &cryptParam);
+    if (pkey->isProvider == true) {
+        ret = CvtBslParamAndSetPrv(pkey, (CRYPT_EAL_PkeyPrv *)key, 1);
+    } else {
+        ret = pkey->method->setPrv(pkey->key, &(key->key));
+    }
     EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_SETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
@@ -357,10 +699,11 @@ int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam = {0};
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(key->key.rsaPub);
-    ret = pkey->method->getPub(pkey->key, &cryptParam);
+    if (pkey->isProvider == true) {
+        ret = CvtBslParamAndSetPub((CRYPT_EAL_PkeyCtx *)pkey, key, 0);
+    } else {
+        ret = pkey->method->getPub(pkey->key, &(key->key));
+    }
     EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_GETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
@@ -376,10 +719,11 @@ int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam = {0};
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(key->key.rsaPrv);
-    ret = pkey->method->getPrv(pkey->key, &cryptParam);
+    if (pkey->isProvider == true) {
+        ret = CvtBslParamAndSetPrv((CRYPT_EAL_PkeyCtx *)pkey, key, 0);
+    } else {
+        ret = pkey->method->getPrv(pkey->key, &(key->key));
+    }
     EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_GETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }

@@ -11,6 +11,7 @@
                     "list": null,
                     "log": null,
                     "obj":null,
+                    "params": null,
                     "sal": null,
                     "sal_mem": null,
                     "sal_thread": null,
@@ -970,6 +971,11 @@
             "init": {
                 ".features": ["init"],
                 ".srcs": "bsl/init/*.c"
+            },
+            "params": {
+                ".features": ["params"],
+                ".srcs": "bsl/params/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
             }
         },
         "platform": {
