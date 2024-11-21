@@ -29,7 +29,7 @@
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
 
-
+static char g_sm2DefaultUserid[] = "1234567812345678";
 /* END_HEADER */
 
 /* BEGIN_CASE */
@@ -1030,15 +1030,14 @@ exit:
 }
 
 /* BEGIN_CASE */
-void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2,
-    char *tmp)
+void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, int mdId, int isV2,
+    char *tmp, int isUseSm2UserId)
 {
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_Crl *parseCrl = NULL;
     HITLS_X509_Cert *issuerCert = NULL;
     CRYPT_EAL_PkeyCtx *prvKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
-    (void)pkeyId;
     TestRandInit();
     // Parse issuer certificate and private key
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_X509_SUCCESS);
@@ -1056,9 +1055,13 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
         pssParam.mgfId = mdId;
         pssParam.saltLen = 32;
         algParam.rsaPss = pssParam;
+    } else if (isUseSm2UserId != 0) {
+        algParam.algId = BSL_CID_SM2DSAWITHSM3;
+        algParam.sm2UserId.data = (uint8_t *)g_sm2DefaultUserid;
+        algParam.sm2UserId.dataLen = (uint32_t)strlen(g_sm2DefaultUserid);
     }
 
-    if (pad == CRYPT_PKEY_EMSA_PSS) {
+    if (pad == CRYPT_PKEY_EMSA_PSS || isUseSm2UserId != 0) {
         ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, &algParam, crl), HITLS_X509_SUCCESS);
     } else {
         ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_SUCCESS);
@@ -1068,8 +1071,14 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
     ASSERT_NE(crl->signature.buff, NULL);
     ASSERT_NE(crl->signature.len, 0);
     ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, crl), HITLS_X509_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_X509_SUCCESS);
     ASSERT_NE(parseCrl, NULL);
+    if (isUseSm2UserId != 0) {
+        ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
+        strlen(g_sm2DefaultUserid)), HITLS_X509_SUCCESS);
+    }
+
     ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_CrlFree(crl);
