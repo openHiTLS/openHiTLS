@@ -76,6 +76,7 @@ typedef struct _HITLS_X509_NameNode {
     BSL_ASN1_Buffer nameType;
     BSL_ASN1_Buffer nameValue;
     uint8_t layer;
+    BSL_ASN1_Buffer encode;
 } HITLS_X509_NameNode;
 
 typedef struct _HITLS_X509_ExtEntry {
