@@ -295,11 +295,10 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert);
  * @brief Duplicate a certificate.
  *
  * @param src  [IN] Source certificate.
- * @param dest [OUT] Destination certificate.
- * @retval #HITLS_X509_SUCCESS, success.
- *         Error codes can be found in hitls_pki_errno.h
+ * @retval HITLS_X509_Cert *, success.
+ *         NULL, fail.
  */
-int32_t HITLS_X509_CertDup(HITLS_X509_Cert *src, HITLS_X509_Cert **dest);
+HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src);
 
 /**
  * @ingroup pki
