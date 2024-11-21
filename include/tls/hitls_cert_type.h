@@ -42,12 +42,6 @@ typedef void HITLS_CERT_Key;
 
 /**
  * @ingroup hitls_cert_type
- * @brief   Describes the user key type
- */
-typedef void HITLS_CERT_USER_Key;
-
-/**
- * @ingroup hitls_cert_type
  * @brief   Describes the certificate
  */
 typedef void HITLS_CERT_Store;

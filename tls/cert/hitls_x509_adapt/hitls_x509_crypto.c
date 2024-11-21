@@ -109,6 +109,7 @@ int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
     return CRYPT_EAL_PkeyVerify(key, mdAlgId, data, dataLen, sign, signLen);
 }
 
+#if defined(HITLS_TLS_SUITE_KX_RSA) || defined(HITLS_TLS_PROTO_TLCP11)
 static int32_t CertSetRsaEncryptionScheme(CRYPT_EAL_PkeyCtx *ctx)
 {
     CRYPT_RSA_PkcsV15Para pad = {
@@ -144,6 +145,7 @@ int32_t HITLS_X509_Adapt_Decrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
 
     return CRYPT_EAL_PkeyDecrypt(key, in, inLen, out, outLen);
 }
+#endif
 
 int32_t HITLS_X509_Adapt_CheckPrivateKey(const HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key)
 {
@@ -160,9 +162,7 @@ int32_t HITLS_X509_Adapt_CheckPrivateKey(const HITLS_Config *config, HITLS_CERT_
     CRYPT_EAL_PkeyFreeCtx(ealPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return HITLS_SUCCESS;
+    return ret;
 }
 #endif /* HITLS_TLS_CALLBACK_CERT */
