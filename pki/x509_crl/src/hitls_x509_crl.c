@@ -123,6 +123,9 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     } else {
         BSL_LIST_FREE(crl->tbs.issuerName, NULL);
     }
+    if (crl->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
+        BSL_SAL_FREE(crl->signAlgId.sm2UserId.data);
+    }
     BSL_LIST_FREE(crl->tbs.revokedCerts, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlRevokedFree);
     X509_ExtFree(&crl->tbs.crlExt, false);
     BSL_SAL_ReferencesFree(&(crl->references));
@@ -1155,6 +1158,12 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t 
     }
     if (cmd == HITLS_X509_REF_UP) {
         return X509_CrlRefUp(crl, val, valLen);
+    } else if (cmd == HITLS_X509_SET_VEY_SM2_USER_ID) {
+        if (crl->signAlgId.algId != (BslCid)BSL_CID_SM2DSAWITHSM3) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+            return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
+        }
+        return HITLS_X509_SetSm2UserId(&crl->signAlgId.sm2UserId, val, valLen);
     } else if (cmd >= HITLS_X509_GET_ENCODELEN && cmd < HITLS_X509_SET_VERSION) {
         return X509_CrlGetCtrl(crl, cmd, val, valLen);
     } else if (cmd < HITLS_X509_EXT_KU_KEYENC) {
@@ -1517,5 +1526,9 @@ int32_t HITLS_X509_CrlSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const
     crl->tbs.tbsRawDataLen = 0;
     BSL_SAL_FREE(crl->rawData);
     crl->rawDataLen = 0;
+    if (crl->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
+        BSL_SAL_FREE(crl->signAlgId.sm2UserId.data);
+        crl->signAlgId.sm2UserId.dataLen = 0;
+    }
     return HITLS_X509_Sign(mdId, prvKey, algParam, crl, (HITLS_X509_SignCb)CrlSignCb);
 }

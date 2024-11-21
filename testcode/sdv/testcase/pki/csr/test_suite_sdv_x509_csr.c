@@ -31,6 +31,8 @@
 /* END_HEADER */
 #define MAX_DATA_LEN 128
 
+static char g_sm2DefaultUserid[] = "1234567812345678";
+
 void *TestMallocErr(uint32_t len)
 {
     (void)len;
@@ -133,13 +135,16 @@ exit:
 
 /* BEGIN_CASE */
 void SDV_X509_CSR_PARSE_FUNC_TC001(int format, char *path, int expRawDataLen, int expSignAlg, Hex *expectedSign,
-    int expectUnusedbits)
+    int expectUnusedbits, int isUseSm2UserId)
 {
     TestMemInit();
     HITLS_X509_Csr *csr = NULL;
     uint32_t rawDataLen = 0;
     ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_X509_SUCCESS);
-
+    if (isUseSm2UserId != 0) {
+        ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
+            strlen(g_sm2DefaultUserid)), HITLS_X509_SUCCESS);
+    }
     ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_X509_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen)), 0);
@@ -414,9 +419,10 @@ exit:
 */
 /* BEGIN_CASE */
 void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, char *privPath, int keyType, int pad,
-    int mdId, int mgfId, int saltLen)
+    int mdId, int mgfId, int saltLen, int isUseSm2UserId)
 {
     TestMemInit();
+    TestRandInit();
     HITLS_X509_Csr *raw = NULL;
     HITLS_X509_Csr *new = NULL;
     CRYPT_EAL_PkeyCtx *privKey = NULL;
@@ -427,14 +433,19 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
     uint32_t rawCsrEncodeLen = 0;
     HITLS_X509_SignAlgParam algParam = {0};
     HITLS_X509_SignAlgParam *algParamPtr = NULL;
-    if (pad == 0) {
-        algParamPtr = NULL;
-    } else if (pad == CRYPT_PKEY_EMSA_PSS) {
+    if (pad == CRYPT_PKEY_EMSA_PSS) {
         algParam.algId = BSL_CID_RSASSAPSS;
         algParam.rsaPss.mdId = mdId;
         algParam.rsaPss.mgfId = mgfId;
         algParam.rsaPss.saltLen = saltLen;
         algParamPtr = &algParam;
+    } else if (isUseSm2UserId != 0) {
+        algParam.algId = BSL_CID_SM2DSAWITHSM3;
+        algParam.sm2UserId.data = (uint8_t *)g_sm2DefaultUserid;
+        algParam.sm2UserId.dataLen = (uint32_t)strlen(g_sm2DefaultUserid);
+        algParamPtr = &algParam;
+    } else {
+        algParamPtr = NULL;
     }
 
     TestMemInit();
@@ -445,6 +456,7 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
     ASSERT_EQ(SetCsr(raw, new), 0);
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, algParamPtr, new), HITLS_X509_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(csrFormat, new, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrVerify(new), HITLS_X509_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODELEN, &newCsrEncodeLen, sizeof(newCsrEncodeLen)),
         HITLS_X509_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODE, &newCsrEncode, 0), HITLS_X509_SUCCESS);
@@ -452,7 +464,7 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
         HITLS_X509_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(raw, HITLS_X509_GET_ENCODE, &rawCsrEncode, 0), HITLS_X509_SUCCESS);
 
-    if (pad == CRYPT_PKEY_EMSA_PSS) {
+    if (pad == CRYPT_PKEY_EMSA_PSS || new->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
         ASSERT_EQ(raw->reqInfo.reqInfoRawDataLen, new->reqInfo.reqInfoRawDataLen);
         ASSERT_EQ(memcmp(raw->reqInfo.reqInfoRawData, new->reqInfo.reqInfoRawData, raw->reqInfo.reqInfoRawDataLen), 0);
     } else {
