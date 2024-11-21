@@ -132,11 +132,6 @@ ERR:
 
 static RSA_BlindParam *RSABssADupCtx(RSA_BlindParam *blind)
 {
-    if (blind->type != RSABSSA) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_BLIND_TYPE);
-        return NULL;
-    }
-    
     RSA_BlindParam *newBlind = BSL_SAL_Calloc(1u, sizeof(RSA_BlindParam));
     if (newBlind == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

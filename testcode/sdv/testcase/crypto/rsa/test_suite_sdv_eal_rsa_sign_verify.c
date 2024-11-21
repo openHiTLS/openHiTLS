@@ -1226,7 +1226,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int keyLen, int hashId, Hex *msg
     ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, hashId, msg->x, msg->len, blindMsg, &blindMsgLen) == CRYPT_SUCCESS);
 
     /* private key signature */
-    ASSERT_TRUE(CRYPT_EAL_PkeySign(pkey, hashId, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySignData(pkey, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyUnBlind(pkey, sign, signLen, unBlindSig, &unBlindSigLen) == CRYPT_SUCCESS);
     /* public key verify */
@@ -1234,7 +1234,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int keyLen, int hashId, Hex *msg
 
     newCtx = CRYPT_EAL_PkeyDupCtx(pkey); // dup ctx
     ASSERT_TRUE(newCtx != NULL);
-    ASSERT_TRUE(CRYPT_EAL_PkeySign(newCtx, hashId, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySignData(newCtx, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(newCtx, hashId, msg->x, msg->len, unBlindSig, unBlindSigLen) == CRYPT_SUCCESS);
 exit:
     CRYPT_EAL_RandDeinit();
@@ -1313,14 +1313,14 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    // 设置PSS参数
+    // set pss param.
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, PSS_SIZE) == CRYPT_SUCCESS);
     if (salt->len != 0) {
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_SALT, salt->x, salt->len) == CRYPT_SUCCESS);
     }
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_PARAM, rBuf, rBufLen) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_PARAM, &invN, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &invN, 0) == CRYPT_SUCCESS);
 
     BN_Bn2Bin(invN, invBufTest, &invBufTestLen);
     ret = memcmp(invBuf->x, invBufTest, invBuf->len);
@@ -1329,12 +1329,13 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     uint32_t flag = CRYPT_RSA_BSSA;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_FLAG, (void *)&flag, sizeof(uint32_t)) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, CRYPT_MD_SHA384, prepared_msg->x, prepared_msg->len, blindMsg, &blindMsgLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, CRYPT_MD_SHA384, prepared_msg->x, prepared_msg->len, blindMsg,
+        &blindMsgLen) == CRYPT_SUCCESS);
     ret = memcmp(blindMsgBuf->x, blindMsg, blindMsgBuf->len);
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(blindMsgBuf->len, blindMsgLen);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA384, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySignData(pkey, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
     ret = memcmp(blindSigBuf->x, sign, blindSigBuf->len);
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(blindSigBuf->len, signLen);
@@ -1344,7 +1345,8 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     ASSERT_EQ(ret, 0);
     ASSERT_EQ(sigBuf->len, unBlindSigLen);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA384, prepared_msg->x, prepared_msg->len, unBlindSig, unBlindSigLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA384, prepared_msg->x, prepared_msg->len, unBlindSig,
+        unBlindSigLen) == CRYPT_SUCCESS);
 exit:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);

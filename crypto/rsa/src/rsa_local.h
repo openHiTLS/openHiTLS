@@ -104,7 +104,7 @@ typedef enum {
 typedef struct {
     RSA_BlindType type; /**< padding id */
     union {
-        RSA_Blind *bssa; /**< pkcsv15 padding mode */
+        RSA_Blind *bssa;
     } para;
 } RSA_BlindParam;
 
@@ -112,7 +112,7 @@ struct RSA_Ctx {
     CRYPT_RSA_PrvKey *prvKey;
     CRYPT_RSA_PubKey *pubKey;
     CRYPT_RSA_Para *para;
-    RSA_Blind *scBlind;
+    RSA_Blind *scBlind; // Preventing side channel attacks
     RSAPad pad;
     uint32_t flags;
     CRYPT_Data label; // Used for oaep padding

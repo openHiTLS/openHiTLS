@@ -458,13 +458,13 @@ int32_t CRYPT_EAL_PkeyCtrl(CRYPT_EAL_PkeyCtx *pkey, int32_t opt, void *val, uint
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Perform blind operation on input data using the specified algorithm.
- *
+ *          For RSA BSSA, users need to ensure sufficient entropy in the message if the input has low entropy.
  * @param   pkey [IN] Key session
  * @param   id [IN] md Id for input.
  * @param   input [IN] Data to be blinded
  * @param   inputLen [IN] Length of input data
  * @param   out [OUT] Blinded output data
- * @param   outLen [IN/OUT] Size of output buffer / Length of blinded data
+ * @param   outLen [OUT] Length of blinded data
  *
  * @retval  #CRYPT_SUCCESS, if successful.
  *          For other error codes, see crypt_errno.h.
@@ -480,7 +480,7 @@ int32_t CRYPT_EAL_PkeyBlind(CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id, const ui
  * @param   input [IN] Blinded data to be unblinded
  * @param   inputLen [IN] Length of blinded data
  * @param   out [OUT] Unblinded output data
- * @param   outLen [IN/OUT] Size of output buffer / Length of unblinded data
+ * @param   outLen [OUT] Length of unblinded data
  *
  * @retval  #CRYPT_SUCCESS, if successful.
  *          For other error codes, see crypt_errno.h.
