@@ -148,7 +148,7 @@ int32_t ClientSendClientKeyExchangeProcess(TLS_Ctx *ctx)
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
     ret = HS_SetSctpAuthKey(ctx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17124, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
