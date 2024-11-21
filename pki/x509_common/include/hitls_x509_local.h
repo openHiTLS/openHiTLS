@@ -136,6 +136,7 @@ typedef struct _HITLS_X509_Asn1AlgId {
     BslCid algId;
     union {
         CRYPT_RSA_PssPara rsaPssParam;
+        BSL_Buffer sm2UserId;
     };
 } HITLS_X509_Asn1AlgId;
 
@@ -227,6 +228,8 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
 
 int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
     HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature);
+
+int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, int32_t valLen);
 
 int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, int32_t valLen);
 

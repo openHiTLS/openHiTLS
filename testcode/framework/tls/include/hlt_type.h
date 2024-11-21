@@ -85,16 +85,16 @@ extern "C" {
 #define ECDSA_SHA256_EE_PATH2   "ecdsa_sha256/client.der"
 #define ECDSA_SHA256_PRIV_PATH2 "ecdsa_sha256/client.key.der"
 
-#define SM2_VERIFY_PATH "sm2/ca.der:sm2/inter.der"
-#define SM2_CHAIN_PATH "sm2/inter.der"
-#define SM2_SERVER_ENC_CERT_PATH "sm2/enc.der"
-#define SM2_SERVER_ENC_KEY_PATH "sm2/enc.key.der"
-#define SM2_SERVER_SIGN_CERT_PATH "sm2/sign.der"
-#define SM2_SERVER_SIGN_KEY_PATH "sm2/sign.key.der"
-#define SM2_CLIENT_ENC_CERT_PATH "sm2/enc22.der"
-#define SM2_CLIENT_ENC_KEY_PATH "sm2/enc22.key.der"
-#define SM2_CLIENT_SIGN_CERT_PATH "sm2/sign22.der"
-#define SM2_CLIENT_SIGN_KEY_PATH "sm2/sign22.key.der"
+#define SM2_VERIFY_PATH "sm2_with_userid/ca.der:sm2_with_userid/inter.der"
+#define SM2_CHAIN_PATH "sm2_with_userid/inter.der"
+#define SM2_SERVER_ENC_CERT_PATH "sm2_with_userid/enc.der"
+#define SM2_SERVER_ENC_KEY_PATH "sm2_with_userid/enc.key.der"
+#define SM2_SERVER_SIGN_CERT_PATH "sm2_with_userid/sign.der"
+#define SM2_SERVER_SIGN_KEY_PATH "sm2_with_userid/sign.key.der"
+#define SM2_CLIENT_ENC_CERT_PATH "sm2_with_userid/enc22.der"
+#define SM2_CLIENT_ENC_KEY_PATH "sm2_with_userid/enc22.key.der"
+#define SM2_CLIENT_SIGN_CERT_PATH "sm2_with_userid/sign22.der"
+#define SM2_CLIENT_SIGN_KEY_PATH "sm2_with_userid/sign22.key.der"
 
 typedef struct ProcessSt HLT_Process;
 
