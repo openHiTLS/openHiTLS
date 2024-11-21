@@ -31,6 +31,7 @@
 #include "crypt_eal_encode.h"
 #include "crypt_eal_rand.h"
 #include "hitls_x509_local.h"
+#include "hitls_print_local.h"
 
 #define MAX_BUFF_SIZE 4096
 /* END_HEADER */
@@ -1180,7 +1181,7 @@ void SDV_HITLS_X509_PrintDn_TC002(char *certPath, int format, int printFlag, cha
     HITLS_X509_Cert *cert = NULL;
     BslList *rawIssuer = NULL;
     Hex expectName = {};
-    if (printFlag == HITLS_X509_PRINT_DN_MULLINE) {
+    if (printFlag == HITLS_X509_PRINT_DN_MULTILINE) {
         expectName.x = multiExpect->x;
         expectName.len = multiExpect->len;
     } else {

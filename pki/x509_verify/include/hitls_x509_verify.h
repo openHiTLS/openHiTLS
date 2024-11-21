@@ -35,6 +35,7 @@ typedef struct _HITLS_X509_VerifyParam {
     int64_t time;
     uint32_t securityBits;
     uint64_t flags;
+    BSL_Buffer sm2UserId;
 } HITLS_X509_VerifyParam;
 
 struct _HITLS_X509_StoreCtx {
