@@ -178,7 +178,7 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId)
     return ctx;
 }
 
-int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, CRYPT_Param *param)
+int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, BSL_Param *param)
 {
     int32_t ret;
 

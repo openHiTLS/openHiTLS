@@ -100,23 +100,6 @@ do {                                         \
         } \
     } while (0)
 
-/**
- * Check whether conditions are met. If conditions are met, go to the label EXIT.
- */
-#define GOTO_EXIT_IF(condition, ret) \
-    do {                        \
-        if (condition) {        \
-            BSL_ERR_PUSH_ERROR((ret));   \
-            goto EXIT;          \
-        }                       \
-    } while (0)
-
-#define GOTO_EXIT_IF_EX(condition, ret) \
-    do {                        \
-        if (condition) {        \
-            goto EXIT;          \
-        }                       \
-    } while (0)
 
 #define BREAK_IF(condition) \
     do {                    \

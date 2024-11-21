@@ -33,6 +33,8 @@
 #include "bsl_bytes.h"
 #include "crypt_eal_rand.h"
 #include "crypt_encode.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #define PATH_MAX_LEN 4096
 #define PWD_MAX_LEN 4096
@@ -910,30 +912,15 @@ static int32_t ParseEncDataAsn1(BslCid symAlg, EncryptPara *encPara, const uint8
         return CRYPT_PBKDF2_NOT_SUPPORTED;
     }
 
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &prfId, sizeof(prfId)};
-    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam);
+    BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &prfId, sizeof(prfId));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, (uint8_t *)pwd, pwdlen);
+    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt.data, salt.dataLen);
+    BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, sizeof(iter));
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
-
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, (uint8_t *)pwd, pwdlen};
-    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &passwordParam);
-    if (ret != CRYPT_SUCCESS) {
-        goto ERR;
-    }
-
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt.data, salt.dataLen};
-    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam);
-    if (ret != CRYPT_SUCCESS) {
-        goto ERR;
-    }
-
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &iter, sizeof(iter)};
-    CRYPT_EAL_KdfSetParam(kdfCtx, &iterParam);
-    if (ret != CRYPT_SUCCESS) {
-        goto ERR;
-    }
-
     ret = CRYPT_EAL_KdfDerive(kdfCtx, key, symKeyLen);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
@@ -1612,23 +1599,15 @@ static int32_t EncodeEncryptedData(CRYPT_Pbkdf2Param *pkcsParam,
             ret = BSL_MALLOC_FAIL;
             break;
         }
-        CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &pkcsParam->hmacId, sizeof(pkcsParam->hmacId)};
-        ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam);
-        if (ret != CRYPT_SUCCESS) {
-            goto ERR;
-        }
-        CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, pkcsParam->pwd, pkcsParam->pwdLen};
-        ret = CRYPT_EAL_KdfSetParam(kdfCtx, &passwordParam);
-        if (ret != CRYPT_SUCCESS) {
-            goto ERR;
-        }
-        CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->data, salt->dataLen};
-        ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam);
-        if (ret != CRYPT_SUCCESS) {
-            goto ERR;
-        }
-        CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &pkcsParam->itCnt, sizeof(pkcsParam->itCnt)};
-        CRYPT_EAL_KdfSetParam(kdfCtx, &iterParam);
+        BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+        BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+            &pkcsParam->hmacId, sizeof(pkcsParam->hmacId));
+        BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+            pkcsParam->pwd, pkcsParam->pwdLen);
+        BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt->data, salt->dataLen);
+        BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32,
+            &pkcsParam->itCnt, sizeof(pkcsParam->itCnt));
+        ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
         if (ret != CRYPT_SUCCESS) {
             goto ERR;
         }

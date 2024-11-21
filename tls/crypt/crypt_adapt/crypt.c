@@ -742,8 +742,8 @@ int32_t SAL_CRYPT_HkdfExtract(HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk,
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15114, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "HKDF-Extract error: callback ret = 0x%x.", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_HKDF_EXTRACT);
-        return HITLS_CRYPT_ERR_HKDF_EXTRACT;
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
     return HITLS_SUCCESS;
 }

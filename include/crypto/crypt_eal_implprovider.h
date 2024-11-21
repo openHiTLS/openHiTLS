@@ -23,6 +23,7 @@
 #define CRYPT_EAL_IMPLPROVIDER_H
 
 #include <stdint.h>
+#include "bsl_params.h"
 #include "crypt_types.h"
 #include "crypt_eal_provider.h"
 
@@ -246,7 +247,7 @@ typedef void (*CRYPT_EAL_ImplMacFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLKDF_FREECTX     6
 
 typedef void *(*CRYPT_EAL_ImplKdfNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplKdfSetParam)(void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplKdfSetParam)(void *ctx, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplKdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
 typedef int32_t (*CRYPT_EAL_ImplKdfDeInitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplKdfCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
