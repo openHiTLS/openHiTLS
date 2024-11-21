@@ -510,7 +510,7 @@ static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer
     }
     uint32_t offset = 0;
     int32_t ret;
-    char tmpBuffStr[MAX_DN_STR_LEN] = {};
+    char tmpBuffStr[MAX_DN_STR_LEN] = {0};
     char *tmpBuff = tmpBuffStr;
     uint32_t tmpBuffLen = MAX_DN_STR_LEN;
     (void)BSL_LIST_GET_FIRST(nameList);
@@ -840,21 +840,20 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
     }
 }
 
-int32_t HITLS_X509_CertDup(HITLS_X509_Cert *src, HITLS_X509_Cert **dest)
+HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src)
 {
-    if (src == NULL || dest == NULL) {
+    if (src == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
+        return NULL;
     }
-
     HITLS_X509_Cert *tempCert = NULL;
     BSL_Buffer encode = {src->rawData, src->rawDataLen};
     int32_t ret = HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encode, &tempCert);
     if (ret != HITLS_X509_SUCCESS) {
-        return ret;
+        BSL_ERR_PUSH_ERROR(ret);
+        return NULL;
     }
-    *dest = tempCert;
-    return ret;
+    return tempCert;
 }
 
 /**
@@ -930,6 +929,7 @@ bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert)
 static int32_t EncodeTbsItems(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *signAlg, BSL_ASN1_Buffer *issuer,
     BSL_ASN1_Buffer *subject, BSL_ASN1_Buffer *pubkey, BSL_ASN1_Buffer *ext)
 {
+    BSL_Buffer pub = {0};
     int32_t ret = HITLS_X509_EncodeSignAlgInfo(&tbs->signAlgId, signAlg);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -946,7 +946,6 @@ static int32_t EncodeTbsItems(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *signAlg,
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    BSL_Buffer pub = {0};
     ret = CRYPT_EAL_EncodePubKeyBuffInternal(tbs->ealPubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, false, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
