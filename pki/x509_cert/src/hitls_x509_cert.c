@@ -35,6 +35,7 @@
 #include "bsl_err_internal.h"
 #include "hitls_csr_local.h"
 #include "hitls_cert_local.h"
+#include "hitls_print_local.h"
 #include "crypt_encode.h"
 
 #define HITLS_CERT_CTX_SPECIFIC_TAG_VER       0
@@ -175,6 +176,9 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
     } else {
         BSL_LIST_FREE(cert->tbs.issuerName, NULL);
         BSL_LIST_FREE(cert->tbs.subjectName, NULL);
+    }
+    if (cert->signAlgId.algId == (BslCid)CRYPT_PKEY_SM2) {
+        BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
     }
     X509_ExtFree(&cert->tbs.ext, false);
     BSL_SAL_FREE(cert->rawData);
@@ -1202,5 +1206,9 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
     cert->tbs.tbsRawDataLen = 0;
     BSL_SAL_FREE(cert->rawData);
     cert->rawDataLen = 0;
+    if (cert->signAlgId.algId == (BslCid)CRYPT_PKEY_SM2) {
+        BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
+        cert->signAlgId.sm2UserId.dataLen = 0;
+    }
     return HITLS_X509_Sign(mdId, prvKey, algParam, cert, (HITLS_X509_SignCb)CertSignCb);
 }

@@ -119,6 +119,8 @@ typedef enum {
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
+
+    HITLS_X509_SET_VEY_SM2_USER_ID = 0x800,             /** Set sm2 user Id when verify cert/csr/crl. */
 } HITLS_X509_Cmd;
 
 typedef enum {
@@ -227,6 +229,7 @@ typedef struct {
     uint32_t algId;    /**< Algorithm identifier */
     union {
         CRYPT_RSA_PssPara rsaPss;       /**< RSA PSS padding parameters */
+        BSL_Buffer sm2UserId;
     };
 } HITLS_X509_SignAlgParam;
 
@@ -702,6 +705,7 @@ typedef enum {
     HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA,
     HITLS_X509_STORECTX_SET_CRL,
     HITLS_X509_STORECTX_REF_UP,
+    HITLS_X509_STORECTX_SET_VEY_SM2_USERID,
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
 
