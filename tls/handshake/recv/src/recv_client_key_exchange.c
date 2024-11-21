@@ -170,7 +170,7 @@ static int32_t GenerateKeyMaterial(TLS_Ctx *ctx, const HS_Msg *msg)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
     ret = HS_SetSctpAuthKey(ctx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17074, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
