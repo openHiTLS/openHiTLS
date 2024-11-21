@@ -23,6 +23,7 @@
 #include "bsl_err_internal.h"
 #include "hitls_x509_local.h"
 #include "hitls_pki_errno.h"
+#include "hitls_print_local.h"
 
 static uint32_t g_nameFlag = HITLS_X509_PRINT_DN_RFC2253;
 
@@ -85,24 +86,24 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         return HITLS_X509_ERR_PRINT_DN_VALUE;
     }
     char c;
-    char *fmt = NULL;
+    char *fmt;
     int32_t ret;
     while (cur != end) {
         c = *cur;
         /*
          * RFC2253： section 2.4
          * Characters that need escaping:
-         * - A space or "#" character occurring at the beginning of the string
-         * - A space character occurring at the end of the string
-         * - One of the characters: ",", "+", "\"", "\\", "<", ">", ";"
+         * (1) A space or "#" character occurring at the beginning of the string
+         * (2) A space character occurring at the end of the string
+         * (3) One of the characters: ",", "+", """, "\", "<", ">", ";"
          */
         fmt = NULL;
         if (c < ' ' || c > '~') { // control character
             fmt = "\\%02X";
         } else if (g_nameFlag == HITLS_X509_PRINT_DN_RFC2253) {
-            if ((cur == value->buff && (c == ' ' || c == '#')) ||
-                (cur + 1 == end && c == ' ') ||
-                CharInList(c, g_rfc2253Ecsape, RFC2253_ESCAPE_CHAR_CNT)) {
+            if ((cur == value->buff && (c == ' ' || c == '#')) ||             // (1)
+                (cur + 1 == end && c == ' ') ||                               // (2)
+                CharInList(c, g_rfc2253Ecsape, RFC2253_ESCAPE_CHAR_CNT)) {    // (3) 
                 fmt = "\\%c";
             }
         } else if (needQuote && c == '"') {
@@ -145,7 +146,7 @@ int32_t HITLS_X509_PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine
         if (oidName == NULL) {
             oidName = "Unknown";
         }
-        if (g_nameFlag == HITLS_X509_PRINT_DN_MULLINE) {
+        if (g_nameFlag == HITLS_X509_PRINT_DN_MULTILINE) {
             if (namePosFlag == 0) {
                 ret = BSL_ASN1_PrintfBuff(layer, uio, NULL, 0);
             } else if (!preLayerIs2) {
@@ -168,7 +169,7 @@ int32_t HITLS_X509_PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine
                 return ret;
             }
         }
-        preLayerIs2 = name->layer == 2;
+        preLayerIs2 = name->layer != 1;
         name = g_nameFlag == HITLS_X509_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(nameList) :
             BSL_LIST_GET_NEXT(nameList);
     }
@@ -194,7 +195,7 @@ static int32_t X509_PrintDn(void *val, uint32_t valLen, BSL_UIO *uio)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    return HITLS_X509_PrintDn(g_nameFlag == HITLS_X509_PRINT_DN_MULLINE ? 1 : 0,
+    return HITLS_X509_PrintDn(g_nameFlag == HITLS_X509_PRINT_DN_MULTILINE ? 1 : 0,
         val, false, uio);
 }
 
