@@ -36,14 +36,7 @@
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 #include "transcript_hash.h"
 #include "recv_process.h"
-#ifdef HITLS_TLS_PROTO_DTLS12
-static void Dtls12UninstallDto(TLS_Ctx *ctx) __attribute__((unused)); /* unused function */
-static void Dtls12UninstallDto(TLS_Ctx *ctx)
-{
-    (void)ctx;
-    return;
-}
-#endif
+
 static int32_t HandshakeDone(TLS_Ctx *ctx)
 {
     (void)ctx;
