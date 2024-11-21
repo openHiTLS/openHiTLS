@@ -450,8 +450,9 @@ typedef enum {
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
-    CRYPT_CTRL_SET_RSA_BSSA_PARAM,      /**< Set the random bytes for RSA-BSSA (Blind RSA Signature Scheme). */
-    CRYPT_CTRL_GET_RSA_BSSA_PARAM,      /**< Get the inv-random of current blinding parameter from RSA-BSSA context. */
+    CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,      /**< Set the random bytes for RSA-BSSA. */
+    CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R,      /**< Get the inv-random of current blinding parameter
+                                                    from RSA-BSSA context. */
 } CRYPT_PkeyCtrl;
 
 /**
