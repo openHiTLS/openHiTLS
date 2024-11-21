@@ -120,6 +120,10 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
     } else {
         BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
     }
+    if (csr->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
+        BSL_SAL_FREE(csr->signAlgId.sm2UserId.data);
+        csr->signAlgId.sm2UserId.dataLen = 0;
+    }
     HITLS_X509_AttrsFree(csr->reqInfo.attributes, NULL);
     csr->reqInfo.attributes = NULL;
     BSL_SAL_FREE(csr->rawData);
@@ -618,6 +622,12 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
             csr->flag |= HITLS_X509_CSR_GEN_FLAG;
             csr->state = HITLS_X509_CSR_STATE_SET;
             return HITLS_X509_AddDnName(csr->reqInfo.subjectName, (HITLS_X509_DN *)val, valLen);
+        case HITLS_X509_SET_VEY_SM2_USER_ID:
+            if (csr->signAlgId.algId != (BslCid)BSL_CID_SM2DSAWITHSM3) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+                return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
+            }
+            return HITLS_X509_SetSm2UserId(&csr->signAlgId.sm2UserId, val, valLen);
         case HITLS_X509_GET_ENCODELEN:
             return HITLS_X509_GetEncodeLen(csr->rawDataLen, val, valLen);
         case HITLS_X509_GET_ENCODE:
@@ -710,5 +720,9 @@ int32_t HITLS_X509_CsrSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const
     csr->reqInfo.reqInfoRawDataLen = 0;
     BSL_SAL_FREE(csr->rawData);
     csr->rawDataLen = 0;
+    if (csr->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
+        BSL_SAL_FREE(csr->signAlgId.sm2UserId.data);
+        csr->signAlgId.sm2UserId.dataLen = 0;
+    }
     return HITLS_X509_Sign(mdId, prvKey, algParam, csr, (HITLS_X509_SignCb)CsrSignCb);
 }

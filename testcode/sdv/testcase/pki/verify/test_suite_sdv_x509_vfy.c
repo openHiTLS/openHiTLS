@@ -136,7 +136,6 @@ exit:
 }
 /* END_CASE */
 
-
 /* BEGIN_CASE */
 void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, char *path2, char *path3,
     char *crl1, char *crl2)
@@ -237,7 +236,7 @@ exit:
 
 static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Cert **cert)
 {
-    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, cert);
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, path, cert);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
     }
@@ -252,7 +251,6 @@ static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, H
     }
     return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, *crl, sizeof(HITLS_X509_Crl));
 }
-
 
 /* BEGIN_CASE */
 void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *cert, char *crlPath)
@@ -336,6 +334,7 @@ exit:
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
+
 
 static int32_t X509_AddCertToChainTest(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
 {
@@ -621,5 +620,38 @@ exit:
     HITLS_X509_CertFree(entity);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_X509_SM2_CERT_USERID_FUNC_TC001(char *caCertPath, char *interCertPath, char *entityCertPath,
+    int isUseDefaultUserId)
+{
+    TestMemInit();
+    TestRandInit();
+    HITLS_X509_Cert *entityCert = NULL;
+    HITLS_X509_Cert *interCert = NULL;
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_X509_List *chain = NULL;
+    char sm2DefaultUserid[] = "1234567812345678";
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+    ASSERT_EQ(HITLS_AddCertToStoreTest(caCertPath, storeCtx, &caCert), 0);
+    ASSERT_EQ(HITLS_AddCertToStoreTest(interCertPath, storeCtx, &interCert), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entityCert), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store), 2);
+    if (isUseDefaultUserId != 0) {
+        ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VEY_SM2_USERID, sm2DefaultUserid,
+            strlen(sm2DefaultUserid)), 0);
+    }
+    ASSERT_EQ(HITLS_X509_CertChainBuild(storeCtx, false, entityCert, &chain), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_X509_SUCCESS);
+exit:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    HITLS_X509_CertFree(entityCert);
+    HITLS_X509_CertFree(interCert);
+    HITLS_X509_CertFree(caCert);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
 /* END_CASE */
