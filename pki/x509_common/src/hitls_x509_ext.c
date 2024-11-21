@@ -604,7 +604,6 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry, HITLS_X509
     int32_t ret = BSL_ASN1_DecodeTagLen(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, &buff, &buffLen, &len);
     if (ret == BSL_SUCCESS && buffLen != len) {
         ret = HITLS_X509_ERR_PARSE_NO_ENOUGH;
-        BSL_ERR_PUSH_ERROR(ret);
     }
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1405,7 +1404,7 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
     }
     BSL_LIST_FREE(dest->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
     dest->extList = list;
-    dest->flag = HITLS_X509_EXT_FLAG_GEN;
+    dest->flag |= HITLS_X509_EXT_FLAG_GEN;
     return HITLS_X509_SUCCESS;
 }
 
