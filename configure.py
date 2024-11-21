@@ -369,13 +369,16 @@ class CMakeGenerator:
         if lib_name == 'hitls_bsl':
             for item in macros:
                 if item == '-DHITLS_BSL_UIO' or item == '-DHITLS_BSL_UIO_SCTP':
-                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared sctp")
+                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared sctp boundscheck")
                 if item == '-DHITLS_BSL_SAL_DL':
-                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared dl")     
+                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared dl boundscheck")     
         if lib_name == 'hitls_crypto':
-            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_crypto-shared hitls_bsl-shared")
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_crypto-shared hitls_bsl-shared boundscheck")
         if lib_name == 'hitls_tls':
-            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_tls-shared hitls_bsl-shared")
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_tls-shared hitls_bsl-shared boundscheck")
+        if lib_name == 'hitls_pki':
+            cmake += self._gen_cmd_cmake(
+                "target_link_libraries", "hitls_pki-shared hitls_crypto-shared hitls_bsl-shared boundscheck")
         tgt_list.append(tgt_name)
         return cmake
 

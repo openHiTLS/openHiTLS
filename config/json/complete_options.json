@@ -187,8 +187,7 @@
             "-Wl,-z,relro,-z,now",
             "-Wl,-z,noexecstack",
             "-s",
-            "-rdynamic",
-            "--enable-linker-build-id"
+            "-rdynamic"
         ],
         "SHARED": [
             "-shared"
