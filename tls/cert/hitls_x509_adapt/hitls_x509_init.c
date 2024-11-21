@@ -44,8 +44,10 @@ int32_t HITLS_CertMethodInit(void)
                    
         .createSign = HITLS_X509_Adapt_CreateSign,
         .verifySign = HITLS_X509_Adapt_VerifySign,
+#if defined(HITLS_TLS_SUITE_KX_RSA) || defined(HITLS_TLS_PROTO_TLCP11)
         .encrypt = HITLS_X509_Adapt_Encrypt,
         .decrypt = HITLS_X509_Adapt_Decrypt,
+#endif
 
         .checkPrivateKey = HITLS_X509_Adapt_CheckPrivateKey,
     };
