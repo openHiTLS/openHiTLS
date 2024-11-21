@@ -48,7 +48,7 @@ static int32_t GetPassByCb(HITLS_PasswordCb passWordCb, void *passWordCbUserData
     } else {
         if (passWordCbUserData != NULL) {
             uint32_t userDataLen = BSL_SAL_Strnlen((const char *)passWordCbUserData, *passLen);
-            if (userDataLen == 0) {
+            if (userDataLen == 0 || userDataLen == (uint32_t)*passLen) {
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
                 return HITLS_X509_ADAPT_ERR;
             }
@@ -56,7 +56,7 @@ static int32_t GetPassByCb(HITLS_PasswordCb passWordCb, void *passWordCbUserData
             len = userDataLen;
         }
     }
-    
+
     *passLen = len;
     return HITLS_SUCCESS;
 }
@@ -70,9 +70,8 @@ static int32_t GetPrivKeyPassword(HITLS_Config *config, uint8_t *pwd, int32_t *p
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         (void)memset_s(pwd, len, 0, len);
-        return ret;
     }
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 static HITLS_CERT_Key *HitlsPrivKeyBuffAsn1Parse(HITLS_Config *config, BSL_Buffer *encode)
@@ -121,7 +120,7 @@ static HITLS_CERT_Key *HitlsPrivKeyBuffPemParse(HITLS_Config *config, BSL_Buffer
     return NULL;
 }
 
-static HITLS_CERT_Key *HitlsPrivKeyFileAsn1Parse(HITLS_Config *config, const uint8_t *buf)
+static HITLS_CERT_Key *HitlsPrivKeyFileAsn1Parse(HITLS_Config *config, const char *path)
 {
     HITLS_CERT_Key *ealPriKey = NULL;
     uint8_t pwd[MAX_PASS_LEN] = { 0 };
@@ -132,7 +131,7 @@ static HITLS_CERT_Key *HitlsPrivKeyFileAsn1Parse(HITLS_Config *config, const uin
                 continue;
             }
         }
-        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, g_tryTypes[i], (const char *)buf, pwd, pwdLen,
+        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, g_tryTypes[i], path, pwd, pwdLen,
             (CRYPT_EAL_PkeyCtx **)&ealPriKey);
         if (ret == HITLS_SUCCESS) {
             (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
@@ -143,7 +142,7 @@ static HITLS_CERT_Key *HitlsPrivKeyFileAsn1Parse(HITLS_Config *config, const uin
     return NULL;
 }
 
-static HITLS_CERT_Key *HitlsPrivKeyFilePemParse(HITLS_Config *config, const uint8_t *buf)
+static HITLS_CERT_Key *HitlsPrivKeyFilePemParse(HITLS_Config *config, const char *path)
 {
     HITLS_CERT_Key *ealPriKey = NULL;
     uint8_t pwd[MAX_PASS_LEN] = { 0 };
@@ -154,7 +153,7 @@ static HITLS_CERT_Key *HitlsPrivKeyFilePemParse(HITLS_Config *config, const uint
                 continue;
             }
         }
-        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, g_tryTypes[i], (const char *)buf, pwd, pwdLen,
+        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, g_tryTypes[i], path, pwd, pwdLen,
             (CRYPT_EAL_PkeyCtx **)&ealPriKey);
         if (ret == HITLS_SUCCESS) {
             (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
@@ -173,18 +172,20 @@ static HITLS_CERT_Key *HitlsPrivKeyBuffParse(HITLS_Config *config, int32_t forma
         case TLS_PARSE_FORMAT_ASN1:
             return HitlsPrivKeyBuffAsn1Parse(config, encode);
         default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
             return NULL;
     }
 }
 
-static HITLS_CERT_Key *HitlsPrivKeyFileParse(HITLS_Config *config, int32_t format, const uint8_t *buf)
+static HITLS_CERT_Key *HitlsPrivKeyFileParse(HITLS_Config *config, int32_t format, const char *path)
 {
     switch (format) {
         case TLS_PARSE_FORMAT_PEM:
-            return HitlsPrivKeyFilePemParse(config, buf);
+            return HitlsPrivKeyFilePemParse(config, path);
         case TLS_PARSE_FORMAT_ASN1:
-            return HitlsPrivKeyFileAsn1Parse(config, buf);
+            return HitlsPrivKeyFileAsn1Parse(config, path);
         default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
             return NULL;
     }
 }
@@ -192,26 +193,22 @@ static HITLS_CERT_Key *HitlsPrivKeyFileParse(HITLS_Config *config, int32_t forma
 HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
-    BSL_Buffer encode = {};
+    BSL_Buffer encode = {0};
     HITLS_CERT_Key *certKey = NULL;
-    encode.data = (uint8_t *)BSL_SAL_Calloc(len, sizeof(uint8_t));
-    if (encode.data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return NULL;
-    }
-    (void)memcpy_s(encode.data, len, buf, len);
-    encode.dataLen = len;
+
     switch (type) {
         case TLS_PARSE_TYPE_FILE:
-            certKey = HitlsPrivKeyFileParse(config, format, buf);
+            certKey = HitlsPrivKeyFileParse(config, format, (const char *)buf);
             break;
         case TLS_PARSE_TYPE_BUFF:
+            encode.data = (uint8_t *)(uintptr_t)buf;
+            encode.dataLen = len;
             certKey = HitlsPrivKeyBuffParse(config, format, &encode);
             break;
         default:
-            break;;
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
+            break;
     }
-    BSL_SAL_FREE(encode.data);
     return certKey;
 }
 
@@ -282,9 +279,9 @@ static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
         {CRYPT_PKEY_DSA, TLS_CERT_KEY_TYPE_DSA},
         {CRYPT_PKEY_ECDSA, TLS_CERT_KEY_TYPE_ECDSA},
         {CRYPT_PKEY_ED25519, TLS_CERT_KEY_TYPE_ED25519},
-    #ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         {CRYPT_PKEY_SM2, TLS_CERT_KEY_TYPE_SM2},
-    #endif
+#endif
     };
     for (size_t i = 0; i < sizeof(signMap) / sizeof(signMap[0]); i++) {
         if (signMap[i].cid == cid) {
