@@ -64,13 +64,11 @@ static int32_t PackMsgPrepare(TLS_Ctx *ctx)
     int32_t ret = 0;
     HS_Ctx *hsCtx = ctx->hsCtx;
 #ifdef HITLS_TLS_SUITE_KX_RSA
-    if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA || hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA_PSK)
-    {
+    if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA || hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA_PSK) {
         ret = GenerateRsaPremasterSecret(ctx);
-        if (ret != HITLS_SUCCESS)
-        {
+        if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17120, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                                  "GenerateRsaPremasterSecret fail", 0, 0, 0, 0);
+                "GenerateRsaPremasterSecret fail", 0, 0, 0, 0);
             (void)memset_s(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
             return ret;
         }
@@ -79,26 +77,22 @@ static int32_t PackMsgPrepare(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_PSK
     /* If the PSK and RSA_PSK cipher suites are used, the server may not send the ServerKeyExchange message. Before
      * packing the ClientKeyExchange message, check whether the PSK has been obtained */
-    if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_PSK || hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA_PSK)
-    {
+    if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_PSK || hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_RSA_PSK) {
         ret = CheckClientPsk(ctx);
-        if (ret != HITLS_SUCCESS)
-        {
+        if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17121, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                                  "CheckClientPsk fail", 0, 0, 0, 0);
+                "CheckClientPsk fail", 0, 0, 0, 0);
             (void)memset_s(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
             return ret;
         }
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_ECC)
-    {
+    if (hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_ECC) {
         ret = GenerateEccPremasterSecret(ctx);
-        if (ret != HITLS_SUCCESS)
-        {
+        if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17122, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                                  "GenerateEccPremasterSecret fail", 0, 0, 0, 0);
+                "GenerateEccPremasterSecret fail", 0, 0, 0, 0);
             (void)memset_s(hsCtx->kxCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
             return ret;
         }
@@ -115,57 +109,50 @@ int32_t ClientSendClientKeyExchangeProcess(TLS_Ctx *ctx)
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
 
     /* Check whether the message needs to be packed */
-    if (hsCtx->msgLen == 0)
-    {
+    if (hsCtx->msgLen == 0) {
         ret = PackMsgPrepare(ctx);
-        if (ret != HITLS_SUCCESS)
-        {
+        if (ret != HITLS_SUCCESS) {
             return ret;
         }
 
         ret = HS_PackMsg(ctx, CLIENT_KEY_EXCHANGE, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
-        if (ret != HITLS_SUCCESS)
-        {
+        if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15816, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                                  "client pack client key exchange msg error.", 0, 0, 0, 0);
+                "client pack client key exchange msg error.", 0, 0, 0, 0);
             return ret;
         }
     }
 
     ret = HS_SendMsg(ctx);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15817, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-                          "client send client key exchange msg success.", 0, 0, 0, 0);
+        "client send client key exchange msg success.", 0, 0, 0, 0);
 
     ret = HS_GenerateMasterSecret(ctx);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15818, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "client generate master secret fail.", 0, 0, 0, 0);
+            "client generate master secret fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 
     /* Client derives key */
     ret = HS_KeyEstablish(ctx, ctx->isClient);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15819, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "client key establish fail.", 0, 0, 0, 0);
+            "client key establish fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
     ret = HS_SetSctpAuthKey(ctx);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17124, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
-                              "SetSctpAuthKey fail", 0, 0, 0, 0);
+            "SetSctpAuthKey fail", 0, 0, 0, 0);
         return ret;
     }
 #endif
@@ -178,8 +165,7 @@ int32_t ClientSendClientKeyExchangeProcess(TLS_Ctx *ctx)
      * For TLCP, SAL_CERT_GetCurrentCert MAY return NULL when dealing with cerificate request message,
      * Whether the client needing to be verified depends on the server configuration.
      */
-    if (hsCtx->isNeedClientCert && (SAL_CERT_GetCurrentCert(mgrCtx) != NULL))
-    {
+    if (hsCtx->isNeedClientCert && (SAL_CERT_GetCurrentCert(mgrCtx) != NULL)) {
         return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_VERIFY);
     }
     return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);

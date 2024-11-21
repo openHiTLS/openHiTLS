@@ -34,29 +34,24 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
 {
     uint8_t psk[HS_PSK_MAX_LEN] = {0};
 
-    if ((!IsPskNegotiation(ctx)) == true)
-    {
+    if ((!IsPskNegotiation(ctx)) == true) {
         return HITLS_SUCCESS;
     }
 
-    if (ctx->config.tlsConfig.pskServerCb == NULL)
-    {
+    if (ctx->config.tlsConfig.pskServerCb == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_UNREGISTERED_CALLBACK);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID17068, "unregistered pskServerCb");
     }
 
     uint32_t pskUsedLen = ctx->config.tlsConfig.pskServerCb(ctx, clientKxMsg->pskIdentity, psk, HS_PSK_MAX_LEN);
-    if (pskUsedLen == 0 || pskUsedLen > HS_PSK_MAX_LEN)
-    {
+    if (pskUsedLen == 0 || pskUsedLen > HS_PSK_MAX_LEN) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN, BINLOG_ID17069, "pskUsedLen incorrect");
     }
 
-    if (ctx->hsCtx->kxCtx->pskInfo == NULL)
-    {
+    if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
         ctx->hsCtx->kxCtx->pskInfo = (PskInfo *)BSL_SAL_Calloc(1u, sizeof(PskInfo));
-        if (ctx->hsCtx->kxCtx->pskInfo == NULL)
-        {
+        if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
             (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17070, "Calloc fail");
@@ -64,25 +59,22 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
     }
 
     uint8_t *tmpIdentity = NULL;
-    if (clientKxMsg->pskIdentity != NULL)
-    {
+    if (clientKxMsg->pskIdentity != NULL) {
         tmpIdentity = (uint8_t *)BSL_SAL_Calloc(1u, (clientKxMsg->pskIdentitySize + 1) * sizeof(uint8_t));
-        if (tmpIdentity == NULL)
-        {
+        if (tmpIdentity == NULL) {
             (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17071, "Calloc fail");
         }
         (void)memcpy_s(tmpIdentity, clientKxMsg->pskIdentitySize + 1, clientKxMsg->pskIdentity,
-                       clientKxMsg->pskIdentitySize);
+            clientKxMsg->pskIdentitySize);
         BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo->identity);
         ctx->hsCtx->kxCtx->pskInfo->identity = tmpIdentity;
         ctx->hsCtx->kxCtx->pskInfo->identityLen = clientKxMsg->pskIdentitySize;
     }
 
     uint8_t *tmpPsk = (uint8_t *)BSL_SAL_Dump(psk, pskUsedLen);
-    if (tmpPsk == NULL)
-    {
+    if (tmpPsk == NULL) {
         (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17072, "Dump fail");
@@ -104,48 +96,46 @@ static int32_t ProcessClientKxMsg(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clie
     int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_FEATURE_PSK
     ret = RetriveServerPsk(ctx, clientKxMsg);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         // log here
         return ret;
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
     /** Process the key exchange packet from the client */
-    switch (hsCtx->kxCtx->keyExchAlgo)
-    {
+    switch (hsCtx->kxCtx->keyExchAlgo) {
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
-    case HITLS_KEY_EXCH_ECDHE: /* ECDHE of TLCP is also in this branch */
-    case HITLS_KEY_EXCH_ECDHE_PSK:
-        ret = HS_ProcessClientKxMsgEcdhe(ctx, clientKxMsg);
-        break;
+        case HITLS_KEY_EXCH_ECDHE: /* ECDHE of TLCP is also in this branch */
+        case HITLS_KEY_EXCH_ECDHE_PSK:
+            ret = HS_ProcessClientKxMsgEcdhe(ctx, clientKxMsg);
+            break;
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
 #ifdef HITLS_TLS_SUITE_KX_DHE
-    case HITLS_KEY_EXCH_DHE:
-    case HITLS_KEY_EXCH_DHE_PSK:
-        ret = HS_ProcessClientKxMsgDhe(ctx, clientKxMsg);
-        break;
+        case HITLS_KEY_EXCH_DHE:
+        case HITLS_KEY_EXCH_DHE_PSK:
+            ret = HS_ProcessClientKxMsgDhe(ctx, clientKxMsg);
+            break;
 #endif /* HITLS_TLS_SUITE_KX_DHE */
 #ifdef HITLS_TLS_SUITE_KX_RSA
-    case HITLS_KEY_EXCH_RSA:
-    case HITLS_KEY_EXCH_RSA_PSK:
-        ret = HS_ProcessClientKxMsgRsa(ctx, clientKxMsg);
-        break;
+        case HITLS_KEY_EXCH_RSA:
+        case HITLS_KEY_EXCH_RSA_PSK:
+            ret = HS_ProcessClientKxMsgRsa(ctx, clientKxMsg);
+            break;
 #endif /* HITLS_TLS_SUITE_KX_RSA */
-    case HITLS_KEY_EXCH_PSK:
-        ret = HITLS_SUCCESS;
-        break;
+        case HITLS_KEY_EXCH_PSK:
+            ret = HITLS_SUCCESS;
+            break;
 #ifdef HITLS_TLS_PROTO_TLCP11
-    case HITLS_KEY_EXCH_ECC:
-        ret = HS_ProcessClientKxMsgSm2(ctx, clientKxMsg);
-        break;
+        case HITLS_KEY_EXCH_ECC:
+            ret = HS_ProcessClientKxMsgSm2(ctx, clientKxMsg);
+            break;
 #endif
-    default:
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17073, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "unknow keyExchAlgo", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);
-        ret = HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG;
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        break;
+        default:
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17073, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "unknow keyExchAlgo", 0, 0, 0, 0);
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);
+            ret = HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG;
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+            break;
     }
 
     return ret;
@@ -158,37 +148,33 @@ static int32_t GenerateKeyMaterial(TLS_Ctx *ctx, const HS_Msg *msg)
     const ClientKeyExchangeMsg *clientKxMsg = &msg->body.clientKeyExchange;
 
     ret = ProcessClientKxMsg(ctx, clientKxMsg);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15820, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "server process client key exchange msg fail.", 0, 0, 0, 0);
+            "server process client key exchange msg fail.", 0, 0, 0, 0);
         return ret;
     }
 
     ret = HS_GenerateMasterSecret(ctx);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15821, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "server generate master secret fail.", 0, 0, 0, 0);
+            "server generate master secret fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 
     /** Server secret derivation */
     ret = HS_KeyEstablish(ctx, ctx->isClient);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15822, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "server key establish fail.", 0, 0, 0, 0);
+            "server key establish fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
     ret = HS_SetSctpAuthKey(ctx);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17074, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
-                              "SetSctpAuthKey fail", 0, 0, 0, 0);
+            "SetSctpAuthKey fail", 0, 0, 0, 0);
     }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
     return ret;
@@ -201,8 +187,7 @@ int32_t ServerRecvClientKxProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
     ret = GenerateKeyMaterial(ctx, msg);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
@@ -215,15 +200,13 @@ int32_t ServerRecvClientKxProcess(TLS_Ctx *ctx, const HS_Msg *msg)
      * a cert request message, In this case, the client does not send the cert verify message. Therefore, the client
      * needs to switch to the state of receiving the Finish message.
      */
-    if (hsCtx->isNeedClientCert && hsCtx->peerCert != NULL)
-    {
+    if (hsCtx->isNeedClientCert && hsCtx->peerCert != NULL) {
         return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE_VERIFY);
     }
     ret = VERIFY_CalcVerifyData(ctx, true, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
-    if (ret != HITLS_SUCCESS)
-    {
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15823, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "server Calculate client finished data error.", 0, 0, 0, 0);
+            "server Calculate client finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
         return ret;
