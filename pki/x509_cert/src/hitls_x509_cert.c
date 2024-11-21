@@ -176,6 +176,9 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
         BSL_LIST_FREE(cert->tbs.issuerName, NULL);
         BSL_LIST_FREE(cert->tbs.subjectName, NULL);
     }
+    if (cert->signAlgId.algId == (BslCid)CRYPT_PKEY_SM2) {
+        BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
+    }
     X509_ExtFree(&cert->tbs.ext, false);
     BSL_SAL_FREE(cert->rawData);
     CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
@@ -1202,5 +1205,9 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
     cert->tbs.tbsRawDataLen = 0;
     BSL_SAL_FREE(cert->rawData);
     cert->rawDataLen = 0;
+    if (cert->signAlgId.algId == (BslCid)CRYPT_PKEY_SM2) {
+        BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
+        cert->signAlgId.sm2UserId.dataLen = 0;
+    }
     return HITLS_X509_Sign(mdId, prvKey, algParam, cert, (HITLS_X509_SignCb)CertSignCb);
 }

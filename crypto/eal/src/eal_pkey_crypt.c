@@ -66,6 +66,16 @@ static int32_t CryptRsaEmsaPairSet(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx 
     return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para));
 }
 
+static int32_t CryptSm2PairSet(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *prvKey)
+{
+    char *userId = "1234567812345678";
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_SET_SM2_USER_ID, (void *)userId, strlen(userId));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_SM2_USER_ID, (void *)userId, strlen(userId));
+}
+
 int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *prvKey)
 {
     if ((pubKey == NULL) || (prvKey == NULL)) {
@@ -97,6 +107,7 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
             break;
         case CRYPT_PKEY_SM2:
             hashId = CRYPT_MD_SM3;
+            ret = CryptSm2PairSet(tempPubKey, tempPrivKey);
             break;
         default:
             ret = CRYPT_NOT_SUPPORT;
