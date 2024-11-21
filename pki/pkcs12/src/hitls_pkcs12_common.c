@@ -1620,7 +1620,6 @@ static void *AttrCopy(const void *val)
 
 static HITLS_PKCS12_Bag *BagDump(HITLS_PKCS12_Bag *input)
 {
-    int32_t ret;
     HITLS_PKCS12_Bag *target = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     HITLS_X509_Cert *cert = NULL;
@@ -1634,9 +1633,9 @@ static HITLS_PKCS12_Bag *BagDump(HITLS_PKCS12_Bag *input)
             target = HITLS_PKCS12_BagNew(input->type, pkey);
             break;
         case BSL_CID_CERTBAG:
-            ret = HITLS_X509_CertDup(input->value.cert, &cert);
-            if (ret != HITLS_X509_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(ret);
+            cert = HITLS_X509_CertDup(input->value.cert);
+            if (cert == NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_DUP_FAIL);
                 return NULL;
             }
             target = HITLS_PKCS12_BagNew(input->type, cert);
@@ -1733,11 +1732,10 @@ static int32_t PKCS12_GetEntityCert(HITLS_PKCS12 *p12, void **val)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_ENTITYCERT);
         return HITLS_PKCS12_ERR_NO_ENTITYCERT;
     }
-    HITLS_X509_Cert *dest = NULL;
-    int32_t ret = HITLS_X509_CertDup(p12->entityCert->value.cert, &dest);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    HITLS_X509_Cert *dest = HITLS_X509_CertDup(p12->entityCert->value.cert);
+    if (dest == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_DUP_FAIL);
+        return HITLS_X509_ERR_CERT_DUP_FAIL;
     }
     *val = dest;
     return HITLS_X509_SUCCESS;
