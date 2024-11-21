@@ -473,7 +473,7 @@ int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx);
  * @param input [IN] Message to be blinded
  * @param inputLen [IN] Length of input message
  * @param out [OUT] Blinded message
- * @param outLen [IN/OUT] Length of output buffer / Length of blinded message
+ * @param outLen [OUT] Length of blinded message
  *
  * @retval CRYPT_SUCCESS on success
  *          For other error codes, see crypt_errno.h.
@@ -490,7 +490,7 @@ int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input,
  * @param input [IN] Blind signature to be unblinded
  * @param inputLen [IN] Length of blind signature
  * @param out [OUT] Final unblinded signature
- * @param outLen [IN/OUT] Length of output buffer / Length of final signature
+ * @param outLen [OUT] Length of unblinded signature
  *
  * @retval CRYPT_SUCCESS on success
  *          For other error codes, see crypt_errno.h.
