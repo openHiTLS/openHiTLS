@@ -84,12 +84,7 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
             ret = HITLS_X509_CertParseFile(bslFormat, (const char *)buf, &cert);
             break;
         case TLS_PARSE_TYPE_BUFF:
-            encodedCert.data = (uint8_t *)BSL_SAL_Calloc(len, (uint32_t)sizeof(uint8_t));
-            if (encodedCert.data == NULL) {
-                ret = HITLS_MEMALLOC_FAIL;
-                break;
-            }
-            (void)memcpy_s(encodedCert.data, len, buf, len);
+            encodedCert.data = (uint8_t *)buf;
             encodedCert.dataLen = len;
             ret = HITLS_X509_CertParseBuff(bslFormat, &encodedCert, &cert);
             break;
@@ -98,11 +93,9 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
     }
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(encodedCert.data);
         return NULL;
     }
 
-    BSL_SAL_FREE(encodedCert.data);
     return cert;
 }
 
@@ -152,7 +145,7 @@ static HITLS_SignHashAlgo BslCid2SignHashAlgo(BslCid cid)
         { BSL_CID_ECDSAWITHSHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256 },
         { BSL_CID_ECDSAWITHSHA384, CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384 },
         { BSL_CID_ECDSAWITHSHA512, CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512 },
-#ifndef HITLS_NO_TLCP11
+#ifdef HITLS_TLS_PROTO_TLCP11
         { BSL_CID_SM2DSAWITHSM3, CERT_SIG_SCHEME_SM2_SM3 },
 #endif
         { BSL_CID_ED25519, CERT_SIG_SCHEME_ED25519 },
@@ -203,6 +196,7 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
             break;
         case CERT_CTRL_GET_SIGN_ALGO:
             return CertCtrlGetSignAlgo(cert, (HITLS_SignHashAlgo *)output);
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
         case CERT_KEY_CTRL_IS_KEYENC_USAGE:
             valLen = (int32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_EXT_KU_KEYENC;
@@ -219,6 +213,7 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
             valLen = (int32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_EXT_KU_KEYAGREEMENT;
             break;
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
             return HITLS_X509_ADAPT_ERR;
