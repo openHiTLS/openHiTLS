@@ -66,6 +66,7 @@ static int32_t HandshakeDone(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_DTLS12
     Dtls12UninstallDto(ctx);
 
+#ifdef HITLS_BSL_UIO_SCTP
     if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         return HITLS_SUCCESS;
     }
@@ -88,7 +89,8 @@ static int32_t HandshakeDone(TLS_Ctx *ctx)
     }
 
     ret = HS_DeletePreviousSctpAuthKey(ctx);
-#endif
+#endif /* HITLS_BSL_UIO_SCTP */
+#endif /* HITLS_TLS_PROTO_DTLS12 */
 
     return ret;
 }
