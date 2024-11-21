@@ -528,7 +528,8 @@ void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
     HITLS_X509_Cert *dest = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_CertDup(cert, &dest), HITLS_X509_SUCCESS);
+    dest = HITLS_X509_CertDup(cert);
+    ASSERT_NE(dest, NULL);
 
     int32_t alg = 0;
     ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_X509_SUCCESS);
