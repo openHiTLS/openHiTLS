@@ -25,11 +25,6 @@
 
 #define DATA_LEN (64)
 
-void HKDF_SET_PARAM(CRYPT_Param *p, void *param, uint32_t paramLen)
-{
-    p->param = param;
-    p->paramLen = paramLen;
-}
 
 static uint32_t GetMaxKeyLen(int algId)
 {

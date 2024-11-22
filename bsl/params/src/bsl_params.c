@@ -32,6 +32,7 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
         case BSL_PARAM_TYPE_UINT32_PTR:
         case BSL_PARAM_TYPE_FUNC_PTR:
         case BSL_PARAM_TYPE_CTX_PTR:
+        case BSL_PARAM_TYPE_INT32:
             param->value = val;
             param->valueLen = valueLen;
             param->valueType = type;
@@ -149,6 +150,7 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
         case BSL_PARAM_TYPE_BOOL:
+        case BSL_PARAM_TYPE_INT32:
             if (*valueLen < param->valueLen) {
                 BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
                 return BSL_INVALID_ARG;
@@ -162,7 +164,28 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
     }
 }
 
-const BSL_Param *BSL_PARAM_FindParam(const BSL_Param *param, int32_t key)
+const BSL_Param *BSL_PARAM_FindConstParam(const BSL_Param *param, int32_t key)
+{
+    if (key == 0) {
+        BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_KEY);
+        return NULL;
+    }
+    if (param == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return NULL;
+    }
+    int32_t index = 0;
+    while (param[index].key != 0 && index < BSL_PARAM_MAX_NUMBER) {
+        if (param[index].key == key) {
+            return &param[index];
+        }
+        index++;
+    }
+    BSL_ERR_PUSH_ERROR(BSL_PARAMS_MISMATCH);
+    return NULL;
+}
+
+BSL_Param *BSL_PARAM_FindParam(BSL_Param *param, int32_t key)
 {
     if (key == 0) {
         BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_KEY);

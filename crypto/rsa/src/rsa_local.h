@@ -77,10 +77,19 @@ typedef enum {
                           to prevent possible Bleichenbacher attacks */
 } RSA_PadType;
 
+/**
+ * @ingroup crypt_types
+ *
+ * Pkcsv15 padding mode, when RSA is used for signature.
+ */
+typedef struct {
+    CRYPT_MD_AlgId mdId; /**< ID of the hash algorithm during pkcsv15 padding */
+} RSA_PkcsV15Para;
+
 typedef struct {
     RSA_PadType type; /**< padding id */
     union {
-        CRYPT_RSA_PkcsV15Para pkcsv15; /**< pkcsv15 padding mode */
+        RSA_PkcsV15Para pkcsv15; /**< pkcsv15 padding mode */
         RSA_PadingPara pss;         /**< pss padding mode */
         RSA_PadingPara oaep; /**< oaep padding mode */
     } para;                            /**< padding mode combination, including pss and pkcsv15 */

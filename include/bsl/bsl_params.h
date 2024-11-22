@@ -38,6 +38,7 @@ typedef enum {
     BSL_PARAM_TYPE_CTX_PTR,
     BSL_PARAM_TYPE_UINT32,
     BSL_PARAM_TYPE_BOOL,
+    BSL_PARAM_TYPE_INT32,
     BSL_PARAM_TYPE_OCTETS,
 } BSL_PARAM_VALUE_TYPE;
 
@@ -124,7 +125,20 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
  *         - Non-NULL indicates the parameter was found
  *         - NULL indicates the parameter was not found
  */
-const BSL_Param *BSL_PARAM_FindParam(const BSL_Param *param, int32_t key);
+const BSL_Param *BSL_PARAM_FindConstParam(const BSL_Param *param, int32_t key);
+
+/**
+ * @brief Find BSL parameter by key
+ * @details Searches for a parameter with the specified key in the parameter array
+ *
+ * @param param [IN] Pointer to the BSL_Param structure array
+ * @param key [IN] Parameter key value to search for
+ *
+ * @return const BSL_Param* Returns pointer to the found parameter
+ *         - Non-NULL indicates the parameter was found
+ *         - NULL indicates the parameter was not found
+ */
+BSL_Param *BSL_PARAM_FindParam(BSL_Param *param, int32_t key);
 
 #ifdef __cplusplus
 }

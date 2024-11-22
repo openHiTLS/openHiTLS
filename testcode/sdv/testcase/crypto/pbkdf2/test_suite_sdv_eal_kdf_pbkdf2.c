@@ -30,12 +30,6 @@
 #define TEST_FAIL (-1)
 #define TEST_SUCCESS (0)
 
-void PBKDF2_SET_PARAM(CRYPT_Param *p, void *param, uint32_t paramLen)
-{
-    p->param = param;
-    p->paramLen = paramLen;
-}
-
 /**
  * @test   SDV_CRYPT_EAL_KDF_PBKDF2_API_TC001
  * @title  pbkdf2 api test.

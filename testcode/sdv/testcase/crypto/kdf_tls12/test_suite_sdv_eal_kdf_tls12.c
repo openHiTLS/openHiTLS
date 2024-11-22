@@ -25,12 +25,6 @@
 
 #define DATA_LEN (64)
 
-void KDFTLS12_SET_PARAM(CRYPT_Param *p, void *param, uint32_t paramLen)
-{
-    p->param = param;
-    p->paramLen = paramLen;
-}
-
 /**
  * @test   SDV_CRYPT_EAL_KDF_TLS12_API_TC001
  * @title  kdftls12 interface test.

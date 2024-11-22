@@ -100,14 +100,14 @@ static int32_t GetAndCheckPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para, CRYP
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    prv->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
-    prv->d = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_D);
-    prv->e = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
-    prv->p = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_P);
-    prv->q = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_Q);
-    prv->dP = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DP);
-    prv->dQ = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DQ);
-    prv->qInv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_QINV);
+    prv->n = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    prv->d = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_D);
+    prv->e = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    prv->p = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_P);
+    prv->q = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_Q);
+    prv->dP = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DP);
+    prv->dQ = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DQ);
+    prv->qInv = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_QINV);
     if (PARAMISNULL(prv->n) || prv->n->valueLen == 0 || PARAMISNULL(prv->d)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -226,8 +226,8 @@ static int32_t SetPubBasicCheckAndGet(const CRYPT_RSA_Ctx *ctx, const BSL_Param 
 
 int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
 {
-    const BSL_Param *nParam = BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
-    const BSL_Param *eParam = BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    const BSL_Param *nParam = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_N);
+    const BSL_Param *eParam = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_E);
     int32_t ret = SetPubBasicCheckAndGet(ctx, para, nParam, eParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -287,14 +287,14 @@ static int32_t GetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, BSL_Param *para, CRYPT
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    prv->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
-    prv->d = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_D);
-    prv->e = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
-    prv->p = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_P);
-    prv->q = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_Q);
-    prv->dP = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DP);
-    prv->dQ = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DQ);
-    prv->qInv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_QINV);
+    prv->n = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    prv->d = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_D);
+    prv->e = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    prv->p = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_P);
+    prv->q = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_Q);
+    prv->dP = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DP);
+    prv->dQ = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DQ);
+    prv->qInv = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_QINV);
     // ctx\ctx->prvKey\prv is not empty.
     // prv->p\q and prv->dP\dQ\qInv are both null or non-null.
     // If prv->p is empty, prv->dP is empty.
@@ -374,7 +374,7 @@ int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *e = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    BSL_Param *e = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
     if (e == NULL || e->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -385,7 +385,7 @@ int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BSL_Param *n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    BSL_Param *n = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
     if (n == NULL || n->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

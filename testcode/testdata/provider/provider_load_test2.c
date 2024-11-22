@@ -100,7 +100,7 @@ static CRYPT_EAL_Func defProvOutFuncs[] = {
 };
 
 int32_t CRYPT_EAL_ProviderInitcb(CRYPT_EAL_ProvMgrCtx *mgrCtx,
-    CRYPT_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
+    BSL_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     *outFuncs = defProvOutFuncs;
     return 0;
