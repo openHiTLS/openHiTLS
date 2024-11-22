@@ -224,6 +224,21 @@ int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src)
     return CRYPT_SUCCESS;
 }
 
+CRYPT_MD5_Ctx *CRYPT_MD5_DupCtx(const CRYPT_MD5_Ctx *src)
+{
+    if (src == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_MD5_Ctx *newCtx = CRYPT_MD5_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CRYPT_MD5_Ctx), src, sizeof(CRYPT_MD5_Ctx));
+    return newCtx;
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */
