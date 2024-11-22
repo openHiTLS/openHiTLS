@@ -84,7 +84,7 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
             ret = HITLS_X509_CertParseFile(bslFormat, (const char *)buf, &cert);
             break;
         case TLS_PARSE_TYPE_BUFF:
-            encodedCert.data = (uint8_t *)buf;
+            encodedCert.data = (uint8_t *)(uintptr_t)buf;
             encodedCert.dataLen = len;
             ret = HITLS_X509_CertParseBuff(bslFormat, &encodedCert, &cert);
             break;

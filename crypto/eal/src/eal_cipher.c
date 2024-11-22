@@ -81,7 +81,7 @@ static CRYPT_EAL_CipherCtx *CipherNewDefaultCtx(CRYPT_CIPHER_AlgId id)
     return ctx;
 }
 
-static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, CRYPT_EAL_Func *funcs)
+static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
     EAL_CipherUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_CipherUnitaryMethod));
@@ -126,10 +126,10 @@ static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, CRYPT_EAL_Fun
 
 CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
-    CRYPT_EAL_Func *funcs = NULL;
+    const CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
     int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_SYMMCIPHER, algId, attrName,
-        (const CRYPT_EAL_Func **)&funcs, &provCtx);
+        &funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, ret);
         return NULL;
@@ -246,7 +246,7 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
 }
 
 // no need for IV, the value can be set to NULL
-int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t ivLen)
+int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *iv, uint32_t ivLen)
 {
     int32_t ret;
     if (ctx == NULL) {
@@ -265,7 +265,7 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_REINIT_STATUS, (uint8_t *)iv, ivLen);
+    ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_REINIT_STATUS, (uint8_t *)(uintptr_t)iv, ivLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;

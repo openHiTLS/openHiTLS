@@ -35,7 +35,7 @@
 #define DEFAULT_PROVIDER_PATH_LEN_MAX 4095
 
 
-CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNew()
+CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNew(void)
 {
     return CRYPT_EAL_LibCtxNewInternal();
 }
@@ -108,7 +108,7 @@ static int32_t ListCompareProvider(const void *a, const void *b)
 
 // Function to mount parameters of EAL_ProviderMgrCtx structure
 static int32_t MountEalProviderMgrCtxParams(CRYPT_EAL_LibCtx *libCtx, void *handle, const char *providerName,
-    const char *providerPath, CRYPT_Param *param, CRYPT_EAL_ProvMgrCtx *ctx)
+    const char *providerPath, BSL_Param *param, CRYPT_EAL_ProvMgrCtx *ctx)
 {
     int32_t ret;
 
@@ -206,7 +206,7 @@ static int32_t AddProviderToList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx 
 }
 
 // Create a new mgr context and initialize various parameters
-static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, char *providerName, CRYPT_Param *param,
+static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, char *providerName, BSL_Param *param,
     CRYPT_EAL_ProvMgrCtx **ctx)
 {
     int32_t ret;
@@ -261,7 +261,7 @@ static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, char *providerName
 
 // Load provider dynamic library
 int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
-    const char *providerName, CRYPT_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx)
+    const char *providerName, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx)
 {
     if (libCtx == NULL || providerName == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

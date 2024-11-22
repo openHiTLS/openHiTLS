@@ -34,7 +34,7 @@
 
 #include "crypt_default.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #ifndef HITLS_CRYPTO_EAL
 #error "Missing definition of HITLS_CRYPTO_EAL"
@@ -456,7 +456,7 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
 static int32_t GetCipherInitCtx(const HITLS_CipherParameters *cipher, CRYPT_EAL_CipherCtx **ctx, bool enc)
 {
     if (*ctx != NULL) {
-        return CRYPT_EAL_CipherReinit(*ctx, (uint8_t *)cipher->iv, cipher->ivLen);
+        return CRYPT_EAL_CipherReinit(*ctx, cipher->iv, cipher->ivLen);
     }
     CRYPT_CIPHER_AlgId id = GetCipherAlgId(cipher->algo);
     if (id == CRYPT_CIPHER_MAX) {
@@ -1266,9 +1266,9 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
     (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id));
     (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_MODE, BSL_PARAM_TYPE_UINT32, &mode, sizeof(mode));
     (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
-        (void *)input->inputKeyMaterial, input->inputKeyMaterialLen);
+        (void *)(uintptr_t)input->inputKeyMaterial, input->inputKeyMaterialLen);
     (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
-        (void *)input->salt, input->saltLen);
+        (void *)(uintptr_t)input->salt, input->saltLen);
     (void)BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_EXLEN, BSL_PARAM_TYPE_UINT32_PTR, &tmpLen, sizeof(tmpLen));
     ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
     if (ret != CRYPT_SUCCESS) {
@@ -1311,9 +1311,9 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
     (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id));
     (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_MODE, BSL_PARAM_TYPE_UINT32, &mode, sizeof(mode));
     (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_PRK, BSL_PARAM_TYPE_OCTETS,
-        (void *)input->prk, input->prkLen);
+        (void *)(uintptr_t)input->prk, input->prkLen);
     (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_INFO, BSL_PARAM_TYPE_OCTETS,
-        (void *)input->info, input->infoLen);
+        (void *)(uintptr_t)input->info, input->infoLen);
     ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
     if (ret != CRYPT_SUCCESS) {
         goto Exit;

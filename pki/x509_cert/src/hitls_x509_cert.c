@@ -630,8 +630,8 @@ typedef bool (*SetParamCheck)(const void *val, int32_t valLen);
 
 static bool VersionCheck(const void *val, int32_t valLen)
 {
-    return valLen == sizeof(int32_t) && *(int32_t *)val >= HITLS_CERT_VERSION_1 &&
-        *(int32_t *)val <= HITLS_CERT_VERSION_3;
+    return valLen == sizeof(int32_t) && *(const int32_t *)val >= HITLS_CERT_VERSION_1 &&
+        *(const int32_t *)val <= HITLS_CERT_VERSION_3;
 }
 
 static int32_t CertSetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)

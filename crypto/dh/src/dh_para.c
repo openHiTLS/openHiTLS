@@ -20,7 +20,7 @@
 #include "crypt_bn.h"
 #include "crypt_errno.h"
 #include "crypt_types.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 #include "dh_local.h"
 #include "crypt_dh.h"
 

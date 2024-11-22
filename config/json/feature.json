@@ -811,7 +811,9 @@
                     "crypto/hmac/include",
                     "crypto/paillier/include",
                     "crypto/drbg/include",
-                    "crypto/modes/include"
+                    "crypto/modes/include",
+                    "crypto/entropy/include",
+                    "crypto/include"
                 ]
             },
             "bn": {

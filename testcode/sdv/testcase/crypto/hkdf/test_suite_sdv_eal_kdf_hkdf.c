@@ -20,16 +20,11 @@
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 /* END_HEADER */
 
 #define DATA_LEN (64)
 
-void HKDF_SET_PARAM(CRYPT_Param *p, void *param, uint32_t paramLen)
-{
-    p->param = param;
-    p->paramLen = paramLen;
-}
 
 static uint32_t GetMaxKeyLen(int algId)
 {
