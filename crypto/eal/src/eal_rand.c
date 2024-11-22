@@ -30,7 +30,7 @@
 #include "crypt_local_types.h"
 #include "crypt_util_rand.h"
 #include "eal_common.h"
-#include "eal_entropy.h"
+#include "crypt_entropy.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
 #include "crypt_modes.h"

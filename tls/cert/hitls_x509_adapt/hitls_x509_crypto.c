@@ -26,6 +26,8 @@
 #include "hitls_crypt_type.h"
 #include "crypt_algid.h"
 #include "crypt_eal_pkey.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 CRYPT_MD_AlgId GetCryptHashAlgFromCertHashAlg(HITLS_HashAlgo hashAlgo)
 {
@@ -53,11 +55,16 @@ CRYPT_MD_AlgId GetCryptHashAlgFromCertHashAlg(HITLS_HashAlgo hashAlgo)
 static int32_t SetRsaEmsa(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT_MD_AlgId mdAlgId)
 {
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
-        CRYPT_RSA_PkcsV15Para pad = { .mdId = mdAlgId };
-        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(CRYPT_RSA_PkcsV15Para));
+        int32_t pad = mdAlgId;
+        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(pad));
     } else if  (signAlgo == HITLS_SIGN_RSA_PSS_PSS || signAlgo == HITLS_SIGN_RSA_PSS_RSAE) {
-        CRYPT_RSA_PssPara pad = { -1, mdAlgId, mdAlgId };
-        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pad, sizeof(CRYPT_RSA_PssPara));
+        int32_t saltLen = CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
+        BSL_Param pssParam[4] = {
+            {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
+            {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
+            {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+            BSL_PARAM_END};
+        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);
     }
 
     return HITLS_SUCCESS;
@@ -99,10 +106,8 @@ int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 #if defined(HITLS_TLS_SUITE_KX_RSA) || defined(HITLS_TLS_PROTO_TLCP11)
 static int32_t CertSetRsaEncryptionScheme(CRYPT_EAL_PkeyCtx *ctx)
 {
-    CRYPT_RSA_PkcsV15Para pad = {
-        .mdId = CRYPT_MD_SHA256,
-    };
-    return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pad, sizeof(CRYPT_RSA_PkcsV15Para));
+    int32_t pad = CRYPT_MD_SHA256;
+    return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pad, sizeof(pad));
 }
 
 /* only support rsa pkcs1.5 */
