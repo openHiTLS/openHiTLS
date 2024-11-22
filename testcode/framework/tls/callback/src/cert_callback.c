@@ -75,8 +75,8 @@ void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType, void 
 
 void RegDefaultMemCallback(void)
 {
-    BSL_SAL_MemCallback memMthod = {(void *(*)(uint32_t size))(uintptr_t)malloc, free};
-    BSL_SAL_RegMemCallback(&memMthod);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, malloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
     BSL_ERR_Init();
     BSL_LOG_SetBinLogLevel(BSL_LOG_LEVEL_DEBUG);
 #ifdef TLS_DEBUG
