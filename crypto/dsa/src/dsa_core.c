@@ -69,7 +69,7 @@ static CRYPT_DSA_Para *ParaMemGet(uint32_t bits)
 static int32_t GetDsaParamValue(const BSL_Param *params, int32_t paramId, uint32_t maxLen,
     const uint8_t **value, uint32_t *valueLen)
 {
-    const BSL_Param *param = BSL_PARAM_FindParam(params, paramId);
+    const BSL_Param *param = BSL_PARAM_FindConstParam(params, paramId);
     if (param == NULL || param->value == NULL || param->valueLen > maxLen || param->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
         return CRYPT_DSA_ERR_KEY_PARA;
@@ -298,7 +298,7 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const BSL_Param *para)
 
 static int32_t GetDsaParam(const BN_BigNum *x, BSL_Param *param, int32_t key)
 {
-    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, key);
+    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindConstParam(param, key);
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
         return CRYPT_DSA_PARA_ERROR;
@@ -399,7 +399,7 @@ int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_DSA_PRVKEY);
+    const BSL_Param *prv = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_DSA_PRVKEY);
     if (prv == NULL || prv->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -453,7 +453,7 @@ int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_DSA_PUBKEY);
+    const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_DSA_PUBKEY);
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -507,7 +507,7 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *prv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_DSA_PRVKEY);
+    BSL_Param *prv = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_DSA_PRVKEY);
     if (prv == NULL || prv->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -541,7 +541,7 @@ int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *pub = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_DSA_PUBKEY);
+    BSL_Param *pub = (BSL_Param *)BSL_PARAM_FindParam(para, CRYPT_PARAM_DSA_PUBKEY);
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

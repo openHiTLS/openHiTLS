@@ -55,7 +55,7 @@ void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_MD5_Ctx));
 }
 
-int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, CRYPT_Param *param)
+int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
