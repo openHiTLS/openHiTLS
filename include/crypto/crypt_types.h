@@ -62,10 +62,25 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
+ * RSA salt length type, when rsa pss mode is used for signature and verify
+ */
+typedef enum {
+// When the padding type is PSS, the salt data is obtained by the DRBG and the length is hashlen.
+    CRYPT_RSA_SALTLEN_TYPE_HASHLEN = -1,
+// When the padding type is PSS, the salt data is obtained by the DRBG.
+// and the length is padLen - mdMethod->GetDigestSize - 2
+    CRYPT_RSA_SALTLEN_TYPE_MAXLEN = -2,
+// get salt length from signature
+    CRYPT_RSA_SALTLEN_TYPE_AUTOLEN = -3,
+} CRYPT_RSA_SaltLenType;
+
+/**
+ * @ingroup crypt_types
+ *
  * PSS padding mode, when RSA is used for signature.
  */
 typedef struct {
-    int32_t saltLen;      /**< pss salt length. the value -1 indicates hashLen, and the value -2 indicates MaxLen. */
+    int32_t saltLen;      /**< pss salt length. enum values defined by CRYPT_RSA_SaltLenType or actual value. */
     CRYPT_MD_AlgId mdId;  /**< mdid when pss padding. */
     CRYPT_MD_AlgId mgfId; /**< mgfid when pss padding. */
 } CRYPT_RSA_PssPara;
@@ -389,8 +404,11 @@ typedef struct {
  * Set and obtain internal mode parameters.
  */
 typedef enum {
+    CRYPT_CTRL_SET_IV = 0,        /**< Set IV data, the data type is uint8_t type.. */
     CRYPT_CTRL_GET_IV,            /**< Obtains the IV data, the data type is uint8_t type. */
     CRYPT_CTRL_GET_BLOCKSIZE,     /**< Obtain the block size, the data type is uint8_t type. */
+    CRYPT_CTRL_SET_COUNT,         /**< Set the counter information, the input is a four-byte little-endian byte stream,
+                                       the algorithm required is chacha20. */
     CRYPT_CTRL_SET_AAD,           /**< Set the ADD information in AEAD encryption and decryption mode. */
     CRYPT_CTRL_GET_TAG,           /**< Obtain the tag at the end in AEAD encryption or decryption. */
     CRYPT_CTRL_SET_TAGLEN,        /**< Set the tag length before the encryption/decryption starts in AEAD
@@ -403,6 +421,9 @@ typedef enum {
     CRYPT_CTRL_DES_NOKEYCHECK,    /**< DES does not verify the key. */
     CRYPT_CTRL_SET_SM4_CONSTTIME, /**< SM4 selects the side channel security implementation, which reduces
                                        the performance. Valid only when ARM assembly implementation is enabled. */
+    CRYPT_CTRL_SET_PADDING,       /**< Set the padding mode of the algorithm. */
+    CRYPT_CTRL_GET_PADDING,       /**< Obtain the padding mode of thealgorithm. */
+    CRYPT_CTRL_REINIT_STATUS,     /**< Reinitialize the status of the algorithm. */
     CRYPT_CTRL_MAX
 } CRYPT_CipherCtrl;
 
@@ -449,6 +470,12 @@ typedef enum {
     CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
                                              It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
+    CRYPT_CTRL_SET_PARA_BY_ID,          /* Asymmetric cipher set para by id. */
+    CRYPT_CTRL_GET_PARA,                /* Asymmetric cipher get para. */
+    CRYPT_CTRL_GET_PARAID,              /* Asymmetric cipher get id of para. */
+    CRYPT_CTRL_GET_BITS,            /* Asymmetric cipher get bits . */
+    CRYPT_CTRL_GET_SIGNLEN,             /* Asymmetric cipher get signlen . */
+    CRYPT_CTRL_GET_SECBITS,              /* Asymmetric cipher get secure bits . */
 } CRYPT_PkeyCtrl;
 
 /**

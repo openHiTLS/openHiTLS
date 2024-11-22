@@ -843,7 +843,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isProvider)
 {
-    uint8_t crypt[TMP_BUFF_LEN];
+    uint8_t crypt[TMP_BUFF_LEN+1];
     uint32_t cryptLen = TMP_BUFF_LEN;
     CRYPT_EAL_PkeyPrv prvkey = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -878,8 +878,8 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
 
     cryptLen = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
-    cryptLen = 2049;  // 2049 is an invalid data length.
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+    cryptLen = 2049;  // 2049 The buffer that holds the decrypted data is allowed to be larger than it actually is。
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1433,16 +1433,13 @@ void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
 
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
 
-    BSL_SAL_ThreadCallback cb = {
-        .pfThreadLockNew = pthreadRWLockNew,
-        .pfThreadLockFree = pthreadRWLockFree,
-        .pfThreadReadLock = pthreadRWLockReadLock,
-        .pfThreadWriteLock = pthreadRWLockWriteLock,
-        .pfThreadUnlock = pthreadRWLockUnlock,
-        .pfThreadGetId = pthreadGetId,
-    };
     TestMemInit();
-    ASSERT_TRUE(BSL_SAL_RegThreadCallback(&cb) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, pthreadRWLockNew) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, pthreadRWLockFree) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_READ_LOCK_CB_FUNC, pthreadRWLockReadLock) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_WRITE_LOCK_CB_FUNC, pthreadRWLockWriteLock) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_UNLOCK_CB_FUNC, pthreadRWLockUnlock) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, pthreadGetId) == BSL_SUCCESS);
 
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");

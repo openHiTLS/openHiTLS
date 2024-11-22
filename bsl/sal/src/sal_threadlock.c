@@ -32,7 +32,7 @@ int32_t BSL_SAL_ThreadLockNew(BSL_SAL_ThreadLockHandle *lock)
     if ((g_threadCallback.pfThreadLockNew != NULL) && (g_threadCallback.pfThreadLockNew != BSL_SAL_ThreadLockNew)) {
         return g_threadCallback.pfThreadLockNew(lock);
     }
-#ifdef HITLS_BSL_SAL_LOCK
+#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
     return SAL_RwLockNew(lock);
 #else
     return BSL_SUCCESS;
@@ -44,7 +44,7 @@ int32_t BSL_SAL_ThreadReadLock(BSL_SAL_ThreadLockHandle lock)
     if ((g_threadCallback.pfThreadReadLock != NULL) && (g_threadCallback.pfThreadReadLock != BSL_SAL_ThreadReadLock)) {
         return g_threadCallback.pfThreadReadLock(lock);
     }
-#ifdef HITLS_BSL_SAL_LOCK
+#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
     return SAL_RwReadLock(lock);
 #else
     return BSL_SUCCESS;
@@ -57,7 +57,7 @@ int32_t BSL_SAL_ThreadWriteLock(BSL_SAL_ThreadLockHandle lock)
         (g_threadCallback.pfThreadWriteLock != BSL_SAL_ThreadWriteLock)) {
         return g_threadCallback.pfThreadWriteLock(lock);
     }
-#ifdef HITLS_BSL_SAL_LOCK
+#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
     return SAL_RwWriteLock(lock);
 #else
     return BSL_SUCCESS;
@@ -69,7 +69,7 @@ int32_t BSL_SAL_ThreadUnlock(BSL_SAL_ThreadLockHandle lock)
     if ((g_threadCallback.pfThreadUnlock != NULL) && (g_threadCallback.pfThreadUnlock != BSL_SAL_ThreadUnlock)) {
         return g_threadCallback.pfThreadUnlock(lock);
     }
-#ifdef HITLS_BSL_SAL_LOCK
+#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
     return SAL_RwUnlock(lock);
 #else
     return BSL_SUCCESS;
@@ -82,7 +82,7 @@ void BSL_SAL_ThreadLockFree(BSL_SAL_ThreadLockHandle lock)
         g_threadCallback.pfThreadLockFree(lock);
         return;
     }
-#ifdef HITLS_BSL_SAL_LOCK
+#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
     SAL_RwLockFree(lock);
 #endif
 }
@@ -92,7 +92,7 @@ uint64_t BSL_SAL_ThreadGetId(void)
     if ((g_threadCallback.pfThreadGetId != NULL) && (g_threadCallback.pfThreadGetId != BSL_SAL_ThreadGetId)) {
         return g_threadCallback.pfThreadGetId();
     }
-#ifdef HITLS_BSL_SAL_THREAD
+#if defined (HITLS_BSL_SAL_THREAD) && defined(HITLS_BSL_SAL_LINUX)
     return SAL_GetPid();
 #else
     return BSL_SUCCESS;
@@ -104,7 +104,7 @@ int32_t BSL_SAL_ThreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine i
     if (onceControl == NULL || initFunc == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-#ifdef HITLS_BSL_SAL_THREAD
+#if defined (HITLS_BSL_SAL_THREAD) && defined(HITLS_BSL_SAL_LINUX)
     return SAL_PthreadRunOnce(onceControl, initFunc);
 #else
     if (*onceControl == 1) {
@@ -116,20 +116,12 @@ int32_t BSL_SAL_ThreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine i
 #endif
 }
 
-int32_t BSL_SAL_RegThreadCallback(BSL_SAL_ThreadCallback *cb)
+int32_t BSL_SAL_RegThreadCallback(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if ((cb == NULL) || (cb->pfThreadLockNew == NULL) || (cb->pfThreadLockFree == NULL) ||
-        (cb->pfThreadReadLock == NULL) || (cb->pfThreadWriteLock == NULL) ||
-        (cb->pfThreadUnlock == NULL) || (cb->pfThreadGetId == NULL)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05012, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "invalid params", 0, 0, 0, 0);
+    if (type > BSL_SAL_THREAD_GET_ID_CB_FUNC || type < BSL_SAL_THREAD_LOCK_NEW_CB_FUNC) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    g_threadCallback.pfThreadLockNew = cb->pfThreadLockNew;
-    g_threadCallback.pfThreadLockFree = cb->pfThreadLockFree;
-    g_threadCallback.pfThreadReadLock = cb->pfThreadReadLock;
-    g_threadCallback.pfThreadWriteLock = cb->pfThreadWriteLock;
-    g_threadCallback.pfThreadUnlock = cb->pfThreadUnlock;
-    g_threadCallback.pfThreadGetId = cb->pfThreadGetId;
+    uint32_t offset = (uint32_t)(type - BSL_SAL_THREAD_LOCK_NEW_CB_FUNC);
+    ((void **)&g_threadCallback)[offset] = funcCb;
     return BSL_SUCCESS;
 }

@@ -691,9 +691,9 @@ int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t d
                 data, dataLen);
             break;
         case EMSA_PSS:
-            if (ctx->pad.para.pss.saltLen == SALTLEN_PSS_HASHLEN_TYPE) { // saltLen is -1
+            if (ctx->pad.para.pss.saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
                 saltLen = (uint32_t)ctx->pad.para.pss.mdMeth->mdSize;
-            } else if (ctx->pad.para.pss.saltLen == SALTLEN_PSS_MAXLEN_TYPE) { // saltLen is -2
+            } else if (ctx->pad.para.pss.saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN) { // saltLen is -2
                 saltLen = (uint32_t)(padLen - ctx->pad.para.pss.mdMeth->mdSize - 2); // salt, obtains DRBG
             }
             ret = CRYPT_RSA_VerifyPss(ctx->pad.para.pss.mdMeth, ctx->pad.para.pss.mgfMeth,
@@ -930,19 +930,19 @@ static int32_t SetEmsaPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
-    if (pad->saltLen < SALTLEN_PSS_AUTOLEN_TYPE) {
+    if (pad->saltLen < CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_SALT_LEN);
         return  CRYPT_RSA_ERR_SALT_LEN;
     }
     uint32_t saltLen = (uint32_t)pad->saltLen;
-    if (pad->saltLen == SALTLEN_PSS_HASHLEN_TYPE) {
+    if (pad->saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) {
         saltLen = pad->mdMeth->mdSize;
     }
     uint32_t bytes = BN_BITS_TO_BYTES(bits);
     // The minimum specification supported by RSA is 1K,
     // and the maximum hash length supported by the hash algorithm is 64 bytes.
     // Therefore, specifying the salt length as the maximum available length is satisfied.
-    if (pad->saltLen != SALTLEN_PSS_MAXLEN_TYPE && pad->saltLen != SALTLEN_PSS_AUTOLEN_TYPE &&
+    if (pad->saltLen != CRYPT_RSA_SALTLEN_TYPE_MAXLEN && pad->saltLen != CRYPT_RSA_SALTLEN_TYPE_AUTOLEN &&
         saltLen > bytes - pad->mdMeth->mdSize - 2) { // maximum length of the salt is padLen-mdMethod->GetDigestSize-2
         // The configured salt length does not meet the specification.
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_PSS_SALT_LEN);
@@ -1263,6 +1263,17 @@ static int32_t EalSetPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
     return SetEmsaPss(ctx, &padPara, sizeof(RSA_PadingPara));
 }
 
+static int32_t CRYPT_RSA_GetLen(const CRYPT_RSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -1297,11 +1308,11 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_UP_REFERENCES:
             return RsaUpReferences(ctx, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_RSA_GetBits(ctx);
+            return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetBits, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_RSA_GetSignLen(ctx);
+            return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_RSA_GetSecBits(ctx);
+            return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetSecBits, val, len);
         case CRYPT_CTRL_SET_RSA_EMSA_PSS:
             return EalSetPss(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_RSAES_OAEP:

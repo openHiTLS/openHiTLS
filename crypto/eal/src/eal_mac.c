@@ -137,7 +137,7 @@ CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
     EAL_MacMethLookup method;
     ret = EAL_MacFindMethod(id, &method);
     if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_EAL_ERR_ALGID);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, ret);
         return NULL;
     }
 
@@ -195,6 +195,8 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
     }
     if (ctx->macMeth == NULL || ctx->macMeth->freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_SAL_FREE(ctx->macMeth);
+        BSL_SAL_FREE(ctx);
         return;
     }
     EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
@@ -348,17 +350,23 @@ int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (cmd == CRYPT_CTRL_GET_MACLEN) {
+        return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
+    }
+
+    if (ctx->state != CRYPT_MAC_STATE_INIT) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ERR_STATE);
+        return CRYPT_EAL_ERR_STATE;
+    }
 
     return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
 }
 
 int32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
 {
-    if (ctx == NULL || ctx->macMeth == NULL || ctx->macMeth->ctrl== NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
-        return 0;
-    }
-    return CRYPT_EAL_MacCtrl((CRYPT_EAL_MacCtx *)ctx, CRYPT_CTRL_GET_MACLEN, NULL, 0);
+    int32_t result = 0;
+    int32_t ret = CRYPT_EAL_MacCtrl((CRYPT_EAL_MacCtx *)ctx, CRYPT_CTRL_GET_MACLEN, &result, sizeof(result));
+    return (ret == CRYPT_SUCCESS) ? result : 0;
 }
 
 bool CRYPT_EAL_MacIsValidAlgId(CRYPT_MAC_AlgId id)
