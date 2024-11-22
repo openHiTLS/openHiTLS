@@ -83,71 +83,26 @@ find_test_suite()
     RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}"
 }
 
-build_generate()
+build_test_suite()
 {
+    build_provider_so
+
     cd ${HITLS_ROOT_DIR}/testcode && rm -rf ./build && mkdir build && cd build
     cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
           -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
-          -DGEN_TEST_FILES=${TEST_SUITE} -DENABLE_TLS=${ENABLE_TLS} \
+          -DGEN_TEST_FILES="${RUN_TEST_SUITES}" -DENABLE_TLS=${ENABLE_TLS} \
           -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_PKI=${ENABLE_PKI} -DTLS_DEBUG=${TLS_DEBUG} \
           -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
-    make GEN_TESTCASE ${ENABLE_VERBOSE} -j
+    make -j
 }
 
 # Function: Compile provider .so file
 build_provider_so()
 {
-    # Enter provider directory
     cd ${HITLS_ROOT_DIR}/testcode/testdata/provider
-    # Create build directory
     mkdir -p build && cd build
-    # Execute cmake
     cmake ..
-    # Compile
     make -j
-    # Return to original directory
-    cd ${HITLS_ROOT_DIR}/testcode/build
-}
-
-build_test_suite()
-{
-    build_provider_so
-    procNum=$(grep -c ^processor /proc/cpuinfo)
-    echo "procNum = $procNum"
-    tmpPipe="$$.fifo"
-    mkfifo $tmpPipe
-    exec 7<>$tmpPipe
-    rm -f $tmpPipe
-    for((i=0; i<$procNum; i++)); do
-        echo
-    done >&7
-    retPipe=$tmpPipe.ret
-    mkfifo $retPipe
-    exec 8<>$retPipe
-    rm -f $retPipe
-    echo "0" >&8
-    [[ -n ${CASES} ]] && RUN_TEST_SUITES=${CASES}
-    cd ${HITLS_ROOT_DIR}/testcode && rm -rf build && mkdir build && cd build
-    for TEST_SUITE in ${RUN_TEST_SUITES}
-    do
-       {
-            read -u7
-            local tmp_dir=${TEST_SUITE##*/}
-            rm -rf ./${tmp_dir} && mkdir ${tmp_dir} && cd ${tmp_dir}
-            cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
-                -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
-                -DGEN_TEST_FILES=${TEST_SUITE} -DTESTFILE=${tmp_dir} \
-                -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_PKI=${ENABLE_PKI} -DENABLE_TLS=${ENABLE_TLS} \
-                -DTLS_DEBUG=${TLS_DEBUG} -DOS_BIG_ENDIAN=${BIG_ENDIAN} \
-                -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ../..
-            make TESTCASE ${ENABLE_VERBOSE} -j || (read -u8 && echo "1" >&8)
-            echo >&7
-       } &
-    done
-    wait
-    exec 7<&-
-    read -u8 ret
-    exec 8<&-
 }
 
 process_custom_cases()
@@ -260,6 +215,5 @@ clean
 down_depend_code
 find_test_suite
 process_custom_cases
-build_generate
 build_test_suite
 build_demos
