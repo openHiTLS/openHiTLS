@@ -104,7 +104,7 @@ build_provider_so()
     # Execute cmake
     cmake ..
     # Compile
-    make
+    make -j
     # Return to original directory
     cd ${HITLS_ROOT_DIR}/testcode/build
 }
@@ -161,6 +161,17 @@ process_custom_cases()
             [[ -n "${suite}" ]] && CASES="${suite} ${CASES}"
         done
     fi
+}
+
+build_demos()
+{
+    pushd ${HITLS_ROOT_DIR}/testcode/demo/
+    rm -rf build && mkdir build 
+    pushd build
+    cmake ../
+    make -j
+    popd
+    popd
 }
 
 clean()
@@ -251,3 +262,4 @@ find_test_suite
 process_custom_cases
 build_generate
 build_test_suite
+build_demos
