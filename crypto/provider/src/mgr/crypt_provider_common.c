@@ -21,6 +21,7 @@
 #include "crypt_errno.h"
 #include "string.h"
 #include "bsl_err_internal.h"
+#include "crypt_entropy.h"
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
@@ -50,19 +51,43 @@ int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId
     return CRYPT_EAL_CompareAlgAndAttr(localCtx, operaId, algId, attribute, funcs, provCtx);
 }
 
+int32_t CRYPT_EAL_ProvMgrCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
+{
+    (void) valLen;
+    if (ctx == NULL || val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    switch (cmd) {
+        case CRYPT_EAL_MGR_GETSEEDCTX:
+            *(void **) val = ctx->seedCtx;
+            return CRYPT_SUCCESS;
+        case CRYPT_EAL_MGR_GETLIBCTX:
+            *(void **) val = ctx->libCtx;
+            return CRYPT_SUCCESS;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_FOUND);
+            return CRYPT_PROVIDER_NOT_FOUND;
+    }
+}
+
 // Function to get provider methods
-int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, CRYPT_Param *param,
+int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param,
     CRYPT_EAL_ImplProviderInit providerInit)
 {
     int32_t ret;
-
+    CRYPT_RandSeedMethod meth = {0};
+    void *seedCtx = NULL;
+    // The implementer of provider may not use the default entropy source
+    (void)EAL_SetDefaultEntropyMeth(&meth, &seedCtx);
+    ctx->seedCtx = seedCtx;
     // Construct input method structure array
     CRYPT_EAL_Func capFuncs[] = {
-        {CRYPT_EAL_CAP_GETENTROPY, NULL},
-        {CRYPT_EAL_CAP_CLEANENTROPY, NULL},
-        {CRYPT_EAL_CAP_GETNONCE, NULL},
-        {CRYPT_EAL_CAP_CLEANNONCE, NULL},
-        {CRYPT_EAL_CAP_MGRCTXCTRL, NULL},
+        {CRYPT_EAL_CAP_GETENTROPY, meth.getEntropy},
+        {CRYPT_EAL_CAP_CLEANENTROPY, meth.cleanEntropy},
+        {CRYPT_EAL_CAP_GETNONCE, meth.getNonce},
+        {CRYPT_EAL_CAP_CLEANNONCE, meth.cleanNonce},
+        {CRYPT_EAL_CAP_MGRCTXCTRL, CRYPT_EAL_ProvMgrCtrl},
         CRYPT_EAL_FUNC_END  // End marker
     };
 

@@ -132,7 +132,7 @@ ERR :
 
 static int32_t GetPaillierParam(const BSL_Param *params, int32_t type, const uint8_t **value, uint32_t *valueLen)
 {
-    const BSL_Param *temp = BSL_PARAM_FindParam(params, type);
+    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, type);
     if (temp == NULL || temp->valueLen == 0 || temp->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -146,7 +146,7 @@ static int32_t GetPaillierParam(const BSL_Param *params, int32_t type, const uin
 static int32_t GetPaillierBits(const BSL_Param *params, uint32_t *bits)
 {
     uint32_t bitsLen = sizeof(*bits);
-    const BSL_Param *temp = BSL_PARAM_FindParam(params, CRYPT_PARAM_PAILLIER_BITS);
+    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_PAILLIER_BITS);
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;

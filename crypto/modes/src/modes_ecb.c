@@ -147,7 +147,7 @@ void MODES_ECB_FreeCtx(MODES_CipherCtx *modeCtx)
 }
 
 int32_t MODES_ECB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, CRYPT_Param *param, bool enc)
+    uint32_t ivLen, BSL_Param *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {

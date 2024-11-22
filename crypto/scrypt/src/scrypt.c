@@ -415,25 +415,25 @@ int32_t CRYPT_SCRYPT_SetParam(CRYPT_SCRYPT_Ctx *ctx, const BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_PASSWORD)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_PASSWORD)) != NULL) {
         GOTO_ERR_IF(CRYPT_SCRYPT_SetPassWord(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
         GOTO_ERR_IF(CRYPT_SCRYPT_SetSalt(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_N)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_N)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_N,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
         GOTO_ERR_IF(CRYPT_SCRYPT_SetN(ctx, val), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_R)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_R)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_R,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
         GOTO_ERR_IF(CRYPT_SCRYPT_SetR(ctx, val), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_P)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_P)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_P,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);

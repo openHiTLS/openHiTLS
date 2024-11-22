@@ -383,7 +383,7 @@ int32_t CRYPT_SM4_CBC_Encrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len < CRYPT_SM4_BLOCKSIZE) {
+    if (len % CRYPT_SM4_BLOCKSIZE != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
         return CRYPT_SM4_DATALEN_ERROR;
     }

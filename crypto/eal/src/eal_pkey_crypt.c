@@ -58,12 +58,12 @@ int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
 
 static int32_t CryptRsaEmsaPairSet(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *prvKey, CRYPT_MD_AlgId hashId)
 {
-    CRYPT_RSA_PkcsV15Para pkcsv15 = {hashId};
-    int32_t ret = CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para));
+    int32_t mdId = hashId;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &mdId, sizeof(mdId));
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para));
+    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &mdId, sizeof(mdId));
 }
 
 static int32_t CryptSm2PairSet(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *prvKey)
@@ -85,6 +85,7 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
 
     int32_t ret = CRYPT_SUCCESS;
     uint8_t *signedData = NULL;
+    
     CRYPT_EAL_PkeyCtx *tempPubKey = CRYPT_EAL_PkeyDupCtx(pubKey);
     CRYPT_EAL_PkeyCtx *tempPrivKey = CRYPT_EAL_PkeyDupCtx(prvKey);
     if (tempPubKey == NULL || tempPrivKey == NULL) {
