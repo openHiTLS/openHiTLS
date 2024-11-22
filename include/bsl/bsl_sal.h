@@ -32,35 +32,6 @@ extern "C" {
 /**
  * @ingroup bsl_sal
  *
- * Registrable function structure for memory allocation/release.
- */
-typedef struct MemCallback {
-    /**
-     * @ingroup bsl_sal
-     * @brief Allocate a memory block.
-     *
-     * Allocate a memory block.
-     *
-     * @param size [IN] Size of the allocated memory.
-     * @retval: Not NULL, The start address of the allocated memory when memory is allocated successfully.
-     * @retval  NULL, Memory allocation failure.
-     */
-    void *(*pfMalloc)(uint32_t size);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Reclaim a memory block allocated by pfMalloc.
-     *
-     * Reclaim a block of memory allocated by pfMalloc.
-     *
-     * @param addr [IN] Start address of the memory allocated by pfMalloc.
-     */
-    void (*pfFree)(void *addr);
-} BSL_SAL_MemCallback;
-
-/**
- * @ingroup bsl_sal
- *
  * Thread lock handle, the corresponding structure is provided by the user during registration.
  */
 typedef void *BSL_SAL_ThreadLockHandle;
@@ -85,116 +56,6 @@ typedef void *BSL_SAL_Mutex;
  * Condition handle, the corresponding structure is provided by the user during registration.
  */
 typedef void *BSL_SAL_CondVar;
-
-/**
- * @ingroup bsl_sal
- *
- * The user registers the function structure for thread-related operations.
- */
-typedef struct ThreadCallback {
-    /**
-     * @ingroup bsl_sal
-     * @brief Create a thread lock.
-     *
-     * Create a thread lock.
-     *
-     * @param lock [IN/OUT] Lock handle
-     * @retval #BSL_SUCCESS, created successfully.
-     * @retval #BSL_MALLOC_FAIL, memory space is insufficient and thread lock space cannot be applied for.
-     * @retval #BSL_SAL_ERR_UNKNOWN, thread lock initialization failed.
-     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
-     */
-    int32_t (*pfThreadLockNew)(BSL_SAL_ThreadLockHandle *lock);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Release the thread lock.
-     *
-     * Release the thread lock. Ensure that the lock can be released when other threads obtain the lock.
-     *
-     * @param lock [IN] Lock handle
-     */
-    void (*pfThreadLockFree)(BSL_SAL_ThreadLockHandle lock);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Lock the read operation.
-     *
-     * Lock the read operation.
-     *
-     * @param lock [IN] Lock handle
-     * @retval #BSL_SUCCESS, succeeded.
-     * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
-     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
-     */
-    int32_t (*pfThreadReadLock)(BSL_SAL_ThreadLockHandle lock);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Lock the write operation.
-     *
-     * Lock the write operation.
-     *
-     * @param lock [IN] Lock handle
-     * @retval #BSL_SUCCESS, succeeded.
-     * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
-     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
-     */
-    int32_t (*pfThreadWriteLock)(BSL_SAL_ThreadLockHandle lock);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Unlock
-     *
-     * Unlock
-     *
-     * @param lock [IN] Lock handle
-     * @retval #BSL_SUCCESS, succeeded.
-     * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
-     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
-     */
-    int32_t (*pfThreadUnlock)(BSL_SAL_ThreadLockHandle lock);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Obtain the thread ID.
-     *
-     * Obtain the thread ID.
-     *
-     * @retval Thread ID
-     */
-    uint64_t (*pfThreadGetId)(void);
-} BSL_SAL_ThreadCallback;
-
-/**
- * @ingroup bsl_sal
- * @brief   Interface for registering memory-related callback functions
- *
- * Register the memory application and release functions.
- *
- * @attention None
- * @param cb [IN] Pointer to the memory-related callback function
- * @retval #BSL_SUCCESS, memory application and release functions are successfully registered.
- * @retval #BSL_SAL_ERR_BAD_PARAM 0x02010003. If the cb is null or the cb members have null, caution fill
- * the input parameter cb.
- */
-int32_t BSL_SAL_RegMemCallback(BSL_SAL_MemCallback *cb);
-
-/**
- * @ingroup bsl_sal
- * @brief   Interface for registering thread-related callback functions.
- *
- * Register the functions related to thread lock creation, release, lock, unlock, and thread ID obtaining.
- * Can't be called in single thread scenario.
- * Must be called in multiple threads scenario.
- *
- * @attention None
- * @param cb [IN] Thread related callback function pointer
- * @retval #BSL_SUCCESS, The functions related to the thread are successfully registered.
- * @retval #BSL_SAL_ERR_BAD_PARAM 0x02010003. If the cb is null or the cb members have null, fill in the
- * cb pointer with caution.
- */
-int32_t BSL_SAL_RegThreadCallback(BSL_SAL_ThreadCallback *cb);
 
 /**
  * @ingroup bsl_sal
@@ -955,6 +816,16 @@ int32_t BSL_SAL_Atoi(const char *str);
 uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count);
 
 typedef enum {
+    BSL_SAL_MEM_MALLOC_CB_FUNC = 0X0100,
+    BSL_SAL_MEM_FREE_CB_FUNC,
+
+    BSL_SAL_THREAD_LOCK_NEW_CB_FUNC = 0X0200,
+    BSL_SAL_THREAD_LOCK_FREE_CB_FUNC,
+    BSL_SAL_THREAD_READ_LOCK_CB_FUNC,
+    BSL_SAL_THREAD_WRITE_LOCK_CB_FUNC,
+    BSL_SAL_THREAD_UNLOCK_CB_FUNC,
+    BSL_SAL_THREAD_GET_ID_CB_FUNC,
+
     BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,
     BSL_SAL_NET_READ_CB_FUNC,
     BSL_SAL_NET_SOCKET_CB_FUNC,
@@ -990,6 +861,101 @@ typedef enum {
 
     BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;
+
+/**
+ * @ingroup bsl_sal
+ * @brief Allocate a memory block.
+ *
+ * Allocate a memory block.
+ *
+ * @param size [IN] Size of the allocated memory.
+ * @retval: Not NULL, The start address of the allocated memory when memory is allocated successfully.
+ * @retval  NULL, Memory allocation failure.
+ */
+typedef void *(*BslSalMalloc)(uint32_t size);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Reclaim a memory block allocated by pfMalloc.
+ *
+ * Reclaim a block of memory allocated by pfMalloc.
+ *
+ * @param addr [IN] Start address of the memory allocated by pfMalloc.
+ */
+typedef void (*BslSalFree)(void *addr);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Create a thread lock.
+ *
+ * Create a thread lock.
+ *
+ * @param lock [IN/OUT] Lock handle
+ * @retval #BSL_SUCCESS, created successfully.
+ * @retval #BSL_MALLOC_FAIL, memory space is insufficient and thread lock space cannot be applied for.
+ * @retval #BSL_SAL_ERR_UNKNOWN, thread lock initialization failed.
+ * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+ */
+typedef int32_t (*BslSalThreadLockNew)(BSL_SAL_ThreadLockHandle *lock);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Release the thread lock.
+ *
+ * Release the thread lock. Ensure that the lock can be released when other threads obtain the lock.
+ *
+ * @param lock [IN] Lock handle
+ */
+typedef void (*BslSalThreadLockFree)(BSL_SAL_ThreadLockHandle lock);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Lock the read operation.
+ *
+ * Lock the read operation.
+ *
+ * @param lock [IN] Lock handle
+ * @retval #BSL_SUCCESS, succeeded.
+ * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+ * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+ */
+typedef int32_t (*BslSalThreadReadLock)(BSL_SAL_ThreadLockHandle lock);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Lock the write operation.
+ *
+ * Lock the write operation.
+ *
+ * @param lock [IN] Lock handle
+ * @retval #BSL_SUCCESS, succeeded.
+ * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+ * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+ */
+typedef int32_t (*BslSalThreadWriteLock)(BSL_SAL_ThreadLockHandle lock);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Unlock
+ *
+ * Unlock
+ *
+ * @param lock [IN] Lock handle
+ * @retval #BSL_SUCCESS, succeeded.
+ * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+ * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+ */
+typedef int32_t (*BslSalThreadUnlock)(BSL_SAL_ThreadLockHandle lock);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtain the thread ID.
+ *
+ * Obtain the thread ID.
+ *
+ * @retval Thread ID
+ */
+typedef uint64_t (*BslSalThreadGetId)(void);
 
 /**
  * @ingroup bsl_sal
