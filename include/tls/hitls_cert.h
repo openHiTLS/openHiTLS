@@ -27,7 +27,6 @@
 #include <stddef.h>
 #include "hitls_type.h"
 #include "hitls_cert_type.h"
-#include "hitls_cert_reg.h"
 #include "hitls_error.h"
 
 #ifdef __cplusplus
