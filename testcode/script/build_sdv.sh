@@ -168,7 +168,7 @@ build_demos()
     pushd ${HITLS_ROOT_DIR}/testcode/demo/
     rm -rf build && mkdir build 
     pushd build
-    cmake ../
+    cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} ../
     make -j
     popd
     popd
