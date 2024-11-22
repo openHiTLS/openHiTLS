@@ -796,6 +796,17 @@ static int32_t SM2UpReferences(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
     return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
 }
 
+static int32_t CRYPT_SM2_GetLen(const CRYPT_SM2_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -805,14 +816,11 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     int32_t ret = CRYPT_SM2_ERR_UNSUPPORTED_CTRL_OPTION;
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_SM2_GetBits(ctx);
-            break;
+            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetBits, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_SM2_GetSignLen(ctx);
-            break;
+            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_SM2_GetSecBits(ctx);
-            break;
+            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSecBits, val, len);
         case CRYPT_CTRL_SET_SM2_SERVER:
             ret = CtrlServerSet(ctx, val, len);
             break;
@@ -844,7 +852,9 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             ret = ECC_PkeyCtrl(ctx->pkey, opt, val, len);
             break;
     }
-    BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_UNSUPPORTED_CTRL_OPTION);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 

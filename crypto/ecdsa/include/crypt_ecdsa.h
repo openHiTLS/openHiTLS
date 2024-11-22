@@ -344,7 +344,7 @@ int32_t CRYPT_ECDSA_Cmp(const CRYPT_ECDSA_Ctx *a, const CRYPT_ECDSA_Ctx *b);
  * @ingroup ecdsa
  * @brief ecdsa get security bits
  *
- * @param para [IN] ecdsa Context structure
+ * @param ctx [IN] ecdsa Context structure
  *
  * @retval security bits
  */

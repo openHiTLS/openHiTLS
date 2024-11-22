@@ -134,7 +134,7 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
-    if (saltLen == (uint32_t)SALTLEN_PSS_AUTOLEN_TYPE) {
+    if (saltLen == (uint32_t)CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
         return CRYPT_SUCCESS;
     }
     if (saltLen > RSA_MAX_MODULUS_LEN) {
@@ -156,9 +156,10 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
 int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
 {
     uint32_t hashLen = mdMethod->mdSize;
-    if (saltLen == SALTLEN_PSS_HASHLEN_TYPE) { // saltLen is -1
+    if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
         salt->len = hashLen;
-    } else if (saltLen == SALTLEN_PSS_MAXLEN_TYPE || saltLen == SALTLEN_PSS_AUTOLEN_TYPE) { // saltLen is -2 or -3
+    } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN ||
+        saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) { // saltLen is -2 or -3
         salt->len = padBuffLen - hashLen - 2; // salt, obtains from the DRBG
     } else {
         salt->len = (uint32_t)saltLen;
@@ -311,7 +312,7 @@ static int32_t GetAndVerifyDB(const EAL_MdMethod *mgfMethod, const CRYPT_Data *e
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (tmpSaltLen == (uint32_t)SALTLEN_PSS_AUTOLEN_TYPE) {
+    if (tmpSaltLen == (uint32_t)CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
         ret = GetVerifySaltLen(emData->data, dbBuff->data, maskedDBLen, msBit, &tmpSaltLen);
         if (ret != CRYPT_SUCCESS) {
             return ret;

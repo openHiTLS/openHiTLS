@@ -184,6 +184,7 @@ void CRYPT_EAL_CipherFreeCtx(CRYPT_EAL_CipherCtx *ctx)
     }
     if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_SAL_FREE(ctx->method);
         BSL_SAL_FREE(ctx);
         return;
     }

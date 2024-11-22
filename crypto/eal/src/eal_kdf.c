@@ -250,7 +250,9 @@ void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
         return;
     }
     if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_SAL_FREE(ctx->method);
+        BSL_SAL_FREE(ctx);
         return;
     }
     EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
