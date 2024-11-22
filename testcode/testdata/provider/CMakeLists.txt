@@ -32,7 +32,7 @@ function(include_directories_recursive dir)
 endfunction()
 
 # Call the function to recursively include the specified directory
-include_directories_recursive(${CMAKE_SOURCE_DIR}/../../..)
+include_directories_recursive(${CMAKE_SOURCE_DIR}/../../../include)
 
 # Define four file areas
 set(SOURCE_FILES_PATH1_SO
