@@ -22,6 +22,14 @@ set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
                   ${HITLS_ROOT}/include/pki
                   ${HITLS_ROOT}/platform/Secure_C/include)
 
+if(ENABLE_GCOV)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+endif()
+
+if(ENABLE_ASAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-stack-protector -fno-omit-frame-pointer")
+endif()
+
 add_library(DEMO_INTF INTERFACE)
 target_compile_options(DEMO_INTF INTERFACE -g)
 target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build 
