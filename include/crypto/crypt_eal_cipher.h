@@ -197,23 +197,16 @@ int32_t CRYPT_EAL_CipherFinal(CRYPT_EAL_CipherCtx *ctx, uint8_t *out, uint32_t *
  *         parameter           data type         Length(len):number of data bytes
  * CRYPT_CTRL_GET_IV         uint8_t array   The length of the IV depends on the corresponding algorithm,
                                              see the mapping in CRYPT_EAL_CipherInit
- * CRYPT_CTRL_SET_IV         uint8_t array   The length of the IV depends on the corresponding algorithm,
-                                             see the mapping in CRYPT_EAL_CipherInit.
  * CRYPT_CTRL_SET_AAD        uint8_t array   It is used only for AEAD calculation.
                                              The length is related to the corresponding AEAD algorithm.
  * CRYPT_CTRL_GET_TAG        uint8_t array   It is used only for AEAD calculation.
                                              The length is the tagLen value set by the user.
- * CRYPT_CTRL_SET_COUNT      uint8_t[4]      length(len) 4
  * CRYPT_CTRL_SET_TAGLEN     uint32_t        length(len) 4
  * CRYPT_CTRL_SET_MSGLEN     uint64_t        length(len) 8
  * CRYPT_CTRL_SET_FEEDBACKSIZE     uint32_t            length(len) 4
  * CRYPT_CTRL_GET_FEEDBACKSIZE     uint32_t pointer    sizeof(*uint32_t)
  * CRYPT_CTRL_GET_BLOCKSIZE        uint32_t            length(len) 4
  * CRYPT_CTRL_SET_SM4_CONSTTIME    NULL                0
- * CRYPT_CTRL_DES_NOKEYCHECK       NULL                0
- * CRYPT_CTRL_SET_PADDING          int32_t *           sizeof(*int32_t)
- * CRYPT_CTRL_GET_PADDING          int32_t *           sizeof(*int32_t)
- * CRYPT_CTRL_REINIT_STATUS        uint8_t *           sizeof(*uint8_t)
  *
  * @attention If the function is called by an external user and the error stack is concerned,
  * it is recommended that BSL_ERR_ClearError() be called before this function is called.
