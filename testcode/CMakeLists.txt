@@ -15,10 +15,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 PROJECT(openHiTLS_TEST)
 
 set(openHiTLS_SRC "${PROJECT_SOURCE_DIR}/..")
-set(PROCESS PROCESS)
-set(GEN_TESTCASE GEN_TESTCASE)
-set(TESTCASE TESTCASE)
-set(LIB_TEST_TLS LIB_TEST_TLS)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     option(__x86_64__ "x86" ON)
@@ -65,40 +61,7 @@ endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
 
 include(ExternalProject)
-ExternalProject_Add(${LIB_TEST_TLS}
-    SOURCE_DIR            ${openHiTLS_SRC}
-    PREFIX                ""
-    BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/tls/build
-    INSTALL_DIR           ""
-    UPDATE_COMMAND        ""
-    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DENABLE_TLS_DEBUG=${TLS_DEBUG} ..
-    BUILD_COMMAND         make
-    INSTALL_COMMAND       ""
-    BUILD_ALWAYS          FALSE
-    LOG_BUILD             TRUE
-    LOG_DOWNLOAD          TRUE
-    EXCLUDE_FROM_ALL      TRUE
-    LOG_OUTPUT_ON_FAILURE TRUE
-)
-
-ExternalProject_Add(${PROCESS}
-    SOURCE_DIR            ${openHiTLS_SRC}
-    PREFIX                ""
-    BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/process/build
-    INSTALL_DIR           ""
-    UPDATE_COMMAND        ""
-    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
-    BUILD_COMMAND         make
-    INSTALL_COMMAND       ""
-    DEPENDS               ${LIB_TEST_TLS}
-    BUILD_ALWAYS          FALSE
-    LOG_BUILD             TRUE
-    LOG_DOWNLOAD          TRUE
-    EXCLUDE_FROM_ALL      TRUE
-    LOG_OUTPUT_ON_FAILURE TRUE
-)
-
-ExternalProject_Add(${GEN_TESTCASE}
+ExternalProject_Add(gen_testcase
     SOURCE_DIR            ${openHiTLS_SRC}
     PREFIX                ""
     BINARY_DIR            ${openHiTLS_SRC}/testcode/framework/gen_test/build/
@@ -114,25 +77,10 @@ ExternalProject_Add(${GEN_TESTCASE}
     LOG_OUTPUT_ON_FAILURE TRUE
 )
 
-ExternalProject_Add(${TESTCASE}
-    SOURCE_DIR            ${openHiTLS_SRC}
-    PREFIX                ""
-    BINARY_DIR            ${openHiTLS_SRC}/testcode/sdv/build/${TESTFILE}
-    INSTALL_DIR           ""
-    UPDATE_COMMAND        ""
-    CONFIGURE_COMMAND     cmake -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DENABLE_CRYPTO=${ENABLE_CRYPTO}
-                                -DENABLE_TLS=${ENABLE_TLS}
-                                -DENABLE_PKI=${ENABLE_PKI} -DGEN_TEST_FILES=${GEN_TEST_FILES}
-                                -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} ../..
-    BUILD_COMMAND         make
-    INSTALL_COMMAND       ""
-    BUILD_ALWAYS          FALSE
-    LOG_BUILD             TRUE
-    LOG_DOWNLOAD          TRUE
-    EXCLUDE_FROM_ALL      TRUE
-    LOG_OUTPUT_ON_FAILURE TRUE
-)
+add_subdirectory(${openHiTLS_SRC}/testcode/sdv)
 
 if(ENABLE_TLS)
-    add_dependencies(${GEN_TESTCASE} ${PROCESS})
+    add_subdirectory(${openHiTLS_SRC}/testcode/framework/tls)
+    add_subdirectory(${openHiTLS_SRC}/testcode/framework/process)
+    add_dependencies(gen_testcase process)
 endif()
