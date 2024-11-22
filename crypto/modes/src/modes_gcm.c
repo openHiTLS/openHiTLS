@@ -523,7 +523,7 @@ void MODES_GCM_FreeCtx(MODES_GCM_Ctx *modeCtx)
 
 
 int32_t MODES_GCM_InitCtxEx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, CRYPT_Param *param, bool enc)
+    uint32_t ivLen, BSL_Param *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {

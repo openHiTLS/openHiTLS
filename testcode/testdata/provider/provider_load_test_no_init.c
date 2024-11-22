@@ -33,11 +33,6 @@ typedef struct {
     void *func;
 } CRYPT_EAL_Func;
 
-typedef struct {
-    int32_t type;
-    void *param;
-    uint32_t paramLen;
-} CRYPT_Param;
 
 typedef struct {
     int32_t algId; // implemented algorithm id, such as aes128cbc, rsa sign
