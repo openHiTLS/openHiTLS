@@ -36,7 +36,8 @@ void PrintLastError(void) {
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = {StdMalloc, free};
+BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
 int main(void)
 {
@@ -56,11 +57,12 @@ int main(void)
 
     /**
      * Before calling the algorithm APIs,
-     * call the BSL_SAL_RegMemCallback function to register the malloc and free functions.
+     * call the BSL_SAL_CallBack_Ctrl function to register the malloc and free functions.
      * Execute this step only once. If the memory allocation ability of Linux is available,
      * the two functions can be registered using Linux by default.
     */
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
     if (ctx == NULL) {

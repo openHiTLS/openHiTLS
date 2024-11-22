@@ -196,6 +196,17 @@ void CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)
     method->deinit(ctx->oCtx);
 }
 
+static int32_t CRYPT_HMAC_GetLen(const CRYPT_HMAC_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    *(int32_t *)val = func(ctx);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -206,7 +217,7 @@ int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint3
     (void) len;
     switch (opt) {
         case CRYPT_CTRL_GET_MACLEN:
-            return CRYPT_HMAC_GetMacLen(ctx);
+            return CRYPT_HMAC_GetLen(ctx, (GetLenFunc)CRYPT_HMAC_GetMacLen, val, len);
         default:
             break;
     }
