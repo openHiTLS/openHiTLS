@@ -785,7 +785,7 @@ static int32_t OaepDecodeSeedMask(const EAL_MdMethod *mgfMethod, const uint8_t *
 static int32_t OaepDecodeMaskedDB(const EAL_MdMethod *mgfMethod, const CRYPT_Data *in, const uint8_t *seedMask,
     uint32_t hashLen, const CRYPT_Data *dbMaskData)
 {
-    int32_t ret = 0;
+    int32_t ret;
     uint32_t i;
     const uint8_t *maskedDB = in->data + 1 + hashLen;
     uint32_t maskedDBLen = in->len - hashLen - 1;
@@ -805,7 +805,7 @@ static int32_t OaepDecodeMaskedDB(const EAL_MdMethod *mgfMethod, const CRYPT_Dat
 static int32_t OaepVerifyHashMaskDB(const EAL_MdMethod *hashMethod, CRYPT_Data *paramData, CRYPT_Data *dbMaskData,
     uint32_t hashLen, uint32_t *offset)
 {
-    int32_t ret = 0;
+    int32_t ret;
     uint8_t hashVal[HASH_MAX_MDSIZE];
     ret = CalcHash(hashMethod, paramData, 1, hashVal, hashLen);
     if (ret != CRYPT_SUCCESS) {
@@ -849,7 +849,7 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMe
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
     uint32_t maskedDBLen = inLen - hashLen - 1;
-    int32_t ret = 0;
+    int32_t ret;
     uint32_t offset;
     uint8_t seedMask[HASH_MAX_MDSIZE];
     CRYPT_Data seedData = { (uint8_t *)(uintptr_t)seedMask, HASH_MAX_MDSIZE };
