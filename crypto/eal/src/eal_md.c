@@ -39,12 +39,16 @@ static CRYPT_EAL_MdCTX *MdAllocCtx(CRYPT_MD_AlgId id, const EAL_MdUnitaryMethod 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    if (method->newCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
+    void *data = NULL;
+    if (method->provNewCtx) {
+        data = method->provNewCtx(NULL, id);
+    } else if (method->newCtx) {
+        data = method->newCtx();
+    } else {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NULL_INPUT);
         BSL_SAL_FREE(ctx);
         return NULL;
     }
-    void *data = method->newCtx();
     if (data == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
         BSL_SAL_FREE(ctx);
@@ -266,7 +270,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
     EAL_MdUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_MdUnitaryMethod));
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        newCtx->method->freeCtx(newCtx->data);
+        ctx->method->freeCtx(newCtx->data);
         BSL_SAL_FREE(newCtx);
         return NULL;
     }
@@ -275,7 +279,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
     
     int32_t ret = ctx->method->copyCtx(newCtx->data, ctx->data);
     if (ret != CRYPT_SUCCESS) {
-        newCtx->method->freeCtx(newCtx->data);
+        ctx->method->freeCtx(newCtx->data);
         BSL_SAL_FREE(newCtx->method);
         BSL_SAL_FREE(newCtx);
         return NULL;
@@ -292,6 +296,8 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx)
     }
     if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_SAL_FREE(ctx->method);
+        BSL_SAL_FREE(ctx);
         return;
     }
     EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);

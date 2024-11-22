@@ -246,7 +246,7 @@ static CRYPT_DSA_Para *ParaDup(const CRYPT_DSA_Para *para)
 
 int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

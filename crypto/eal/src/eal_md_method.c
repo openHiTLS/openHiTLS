@@ -151,8 +151,7 @@ int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *ou
     ret = method->init(data, NULL);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
-        method->freeCtx(data);
-        return ret;
+        goto ERR;
     }
     if (inLen != 0) {
         ret = method->update(data, in, inLen);
