@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "crypt_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +60,7 @@ void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx);
  * @retval #CRYPT_SUCCESS    initialization succeeded.
  * @retval #CRYPT_NULL_INPUT Pointer ctx is NULL
  */
-int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, BSL_Param *param);
 
 /**
  * @ingroup SM3

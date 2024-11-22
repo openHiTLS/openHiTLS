@@ -63,7 +63,7 @@ int32_t MODES_CBC_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
     }
 
     if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, iv, blockSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         return CRYPT_SECUREC_FAIL;
     }
 
@@ -207,7 +207,7 @@ int32_t MODES_CBC_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t
     }
 }
 int32_t MODES_CBC_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, CRYPT_Param *param, bool enc)
+    uint32_t ivLen, BSL_Param *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {

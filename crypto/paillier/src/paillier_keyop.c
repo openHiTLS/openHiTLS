@@ -24,7 +24,7 @@
 #include "crypt_errno.h"
 #include "securec.h"
 #include "bsl_sal.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 typedef struct {
     BSL_Param *n;      /**< Paillier private key parameter marked as n */
@@ -111,16 +111,16 @@ static int32_t SetPrvPara(const CRYPT_PAILLIER_PrvKey *prvKey, const CRYPT_Paill
     return ret;
 }
 
-static int32_t SetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para, CRYPT_PaillierPrvParam *prv)
+static int32_t SetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para, CRYPT_PaillierPrvParam *prv)
 {
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    prv->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
-    prv->lambda = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_LAMBDA);
-    prv->mu = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_MU);
-    prv->n2 = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
+    prv->n = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
+    prv->lambda = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_LAMBDA);
+    prv->mu = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_MU);
+    prv->n2 = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
     if (PARAMISNULL(prv->n) || PARAMISNULL(prv->lambda) || PARAMISNULL(prv->mu) || PARAMISNULL(prv->n2) ||
         prv->lambda->valueLen == 0 || prv->mu->valueLen == 0 || prv->n->valueLen == 0 || prv->n2->valueLen == 0) {    
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
@@ -132,7 +132,7 @@ static int32_t SetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *
 int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
 {
     CRYPT_PaillierPrvParam prv = {0};
-    int32_t ret = SetPrvBasicCheck(ctx, para, &prv);
+    int32_t ret = SetPrvBasicCheck(ctx, (BSL_Param *)(uintptr_t)para, &prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -164,15 +164,15 @@ ERR:
     return ret;
 }
 
-static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para, CRYPT_PaillierPubParam *pub)
+static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para, CRYPT_PaillierPubParam *pub)
 {
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    pub->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
-    pub->g = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_G);
-    pub->n2 = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
+    pub->n = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
+    pub->g = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_G);
+    pub->n2 = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
     if (PARAMISNULL(pub->n) || PARAMISNULL(pub->g) || PARAMISNULL(pub->n2)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -183,7 +183,7 @@ static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *
 int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
 {
     CRYPT_PaillierPubParam pub = {NULL};
-    int32_t ret = SetPubBasicCheck(ctx, para, &pub);
+    int32_t ret = SetPubBasicCheck(ctx, (BSL_Param *)(uintptr_t)para, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -215,16 +215,16 @@ ERR:
     return ret;
 }
 
-static int32_t GetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para, CRYPT_PaillierPrvParam *prv)
+static int32_t GetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para, CRYPT_PaillierPrvParam *prv)
 {
     if (ctx == NULL || ctx->prvKey == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    prv->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
-    prv->lambda = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_LAMBDA);
-    prv->mu = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_MU);
-    prv->n2 = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
+    prv->n = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
+    prv->lambda = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_LAMBDA);
+    prv->mu = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_MU);
+    prv->n2 = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
     if (PARAMISNULL(prv->lambda) || PARAMISNULL(prv->mu)) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
         return CRYPT_PAILLIER_ERR_INPUT_VALUE;
@@ -232,7 +232,7 @@ static int32_t GetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
+int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para)
 {
     CRYPT_PaillierPrvParam prv = {0};
     int32_t ret = GetPrvBasicCheck(ctx, para, &prv);
@@ -273,15 +273,15 @@ ERR:
     return ret;
 }
 
-static int32_t GetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para, CRYPT_PaillierPubParam *pub)
+static int32_t GetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para, CRYPT_PaillierPubParam *pub)
 {
     if (ctx == NULL || ctx->pubKey == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    pub->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
-    pub->g = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_G);
-    pub->n2 = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
+    pub->n = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N);
+    pub->g = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_G);
+    pub->n2 = BSL_PARAM_FindParam(para, CRYPT_PARAM_PAILLIER_N2);
     if (PARAMISNULL(pub->n) || PARAMISNULL(pub->g) || PARAMISNULL(pub->n2)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -289,7 +289,7 @@ static int32_t GetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
+int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para)
 {
     CRYPT_PaillierPubParam pub = {NULL};
     int32_t ret = GetPubBasicCheck(ctx, para, &pub);

@@ -1539,7 +1539,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
 
 static void *AttrCopy(const void *val)
 {
-    HITLS_PKCS12_SafeBagAttr *input = (HITLS_PKCS12_SafeBagAttr *)val;
+    const HITLS_PKCS12_SafeBagAttr *input = val;
     HITLS_PKCS12_SafeBagAttr *output = BSL_SAL_Malloc(sizeof(HITLS_PKCS12_SafeBagAttr));
     if (output == NULL) {
         return NULL;

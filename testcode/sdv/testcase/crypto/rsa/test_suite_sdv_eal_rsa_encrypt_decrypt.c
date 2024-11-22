@@ -15,6 +15,9 @@
 /* INCLUDE_BASE test_suite_sdv_eal_rsa */
 
 /* BEGIN_HEADER */
+#include <stdint.h>
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 /* END_HEADER */
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 /**
@@ -53,8 +56,11 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
     CRYPT_EAL_PkeyPrv prvkey = {0};
     CRYPT_EAL_PkeyPub pubkey = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
-    CRYPT_RSA_OaepPara oaepPara = {.mdId = hashId, .mgfId = hashId};
-    CRYPT_RSA_PkcsV15Para pkcsv15 = {hashId};
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+    int32_t pkcsv15 = hashId;
     uint8_t pt[MAX_CIPHERTEXT_LEN] = {0};
     uint32_t ptLen = MAX_CIPHERTEXT_LEN;
     uint8_t ct[MAX_CIPHERTEXT_LEN] = {0};
@@ -64,10 +70,10 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
     if (padMode == CRYPT_CTRL_SET_RSA_RSAES_OAEP) {
-        paraSize = OAEP_SIZE;
-        paraPtr = &oaepPara;
+        paraSize = 0;
+        paraPtr = oaepParam;
     } else if (padMode == CRYPT_CTRL_SET_RSA_RSAES_PKCSV15) {
-        paraSize = PKCSV15_SIZE;
+        paraSize = sizeof(pkcsv15);
         paraPtr = &pkcsv15;
     } else if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
         paraSize = sizeof(noPad);
@@ -143,8 +149,12 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyPrv prvkey = {0};
     CRYPT_EAL_PkeyPub pubkey = {0};
-    CRYPT_RSA_OaepPara oaepPara = {.mdId = CRYPT_MD_SHA1, .mgfId = CRYPT_MD_SHA1};
-    CRYPT_RSA_PkcsV15Para pkcsv15 = {CRYPT_MD_SHA1};
+    int32_t hashId = CRYPT_MD_SHA1;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+    int32_t pkcsv15 = CRYPT_MD_SHA1;
 
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
@@ -161,16 +171,16 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int
 
     /* HiTLS public key encrypt: OAEP */
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pubkey) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, &oaepPara, OAEP_SIZE) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, plaintext->x, plaintext->len, ct, &msgLen) == CRYPT_SUCCESS);
 
     /* HiTLS private key encrypt: PKCSV15 */
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey, &prvkey) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pkcsv15, PKCSV15_SIZE) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pkcsv15, sizeof(pkcsv15)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, ct, msgLen, pt, &msgLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
 
     /* HiTLS private key encrypt: OAEP */
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, &oaepPara, OAEP_SIZE) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, ct, msgLen, pt, &msgLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(msgLen == plaintext->len);
     ASSERT_TRUE(memcmp(pt, plaintext->x, msgLen) == 0);
@@ -215,8 +225,11 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
     CRYPT_EAL_PkeyPrv prvkey = {0};
     CRYPT_EAL_PkeyPub pubkey = {0};
-    CRYPT_RSA_OaepPara oaepPara = {.mdId = CRYPT_MD_SHA256, .mgfId = CRYPT_MD_SHA256};
-
+    int32_t hashId = CRYPT_MD_SHA256;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
 
@@ -235,7 +248,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     /* HiTLS pubenc, prvdec */
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pubkey) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey, &prvkey) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, &oaepPara, OAEP_SIZE) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_OAEP_LABEL, label->x, label->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, plaintext->x, plaintext->len, ct, &msgLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, ct, msgLen, pt, &msgLen) == CRYPT_SUCCESS);

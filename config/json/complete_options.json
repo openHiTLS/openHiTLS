@@ -26,6 +26,7 @@
             "-Wstrict-prototypes",
             "-Wdate-time",
             "-Wfloat-equal",
+            "-Wcast-qual",
             "-Wswitch-default",
             "-Wshadow",
             "-Wstack-usage=8192",

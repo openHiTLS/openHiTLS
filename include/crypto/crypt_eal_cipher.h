@@ -124,7 +124,7 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx);
  * @param iv [IN] Vector
  * @param ivlen [IN] Vector length
  */
-int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t ivLen);
+int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *iv, uint32_t ivLen);
 
 /**
  * @ingroup crypt_eal_cipher

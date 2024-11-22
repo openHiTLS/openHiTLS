@@ -30,7 +30,7 @@
 #include "crypt_eal_cipher.h"
 #include "asmcap_local.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 /* END_HEADER */
 
 #define DATA_LEN (64)

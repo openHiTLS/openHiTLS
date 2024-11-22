@@ -36,7 +36,7 @@ typedef enum {
 
 struct EAL_MdCtx {
     bool isProvider;
-    const EAL_MdUnitaryMethod *method;  /* algorithm operation entity */
+    EAL_MdUnitaryMethod *method;  /* algorithm operation entity */
     void *data;        /* Algorithm ctx, mainly context */
     uint32_t state;
     CRYPT_MD_AlgId id;

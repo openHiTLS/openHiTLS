@@ -28,7 +28,7 @@
 #include "crypt_ecdh.h"
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
 {
@@ -259,13 +259,13 @@ int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t le
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
-        case CRYPT_CTRL_GET_PARAID:
+        case CRYPT_CTRL_GET_PARAM_ID:
             return CRYPT_ECDH_GetLen(ctx, (GetLenFunc)CRYPT_ECDH_GetParaId, val, len);
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_ECDH_GetLen(ctx, (GetLenFunc)CRYPT_ECDH_GetBits, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_ECDH_GetLen(ctx, (GetLenFunc)CRYPT_ECDH_GetSecBits, val, len);
-        case CRYPT_CTRL_SET_PARA_BY_ID:
+        case CRYPT_CTRL_SET_PARAM_BY_ID:
             return CRYPT_ECDH_SetParaEx(ctx, CRYPT_ECDH_NewParaById(*(CRYPT_PKEY_ParaId *)val));
         default:
             break;
