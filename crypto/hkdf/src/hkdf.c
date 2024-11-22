@@ -310,31 +310,31 @@ int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
         GOTO_ERR_IF(CRYPT_HKDF_SetMacMethod(ctx, val), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MODE)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_MODE)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MODE,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
         ctx->mode = val;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
         GOTO_ERR_IF(CRYPT_HKDF_SetKey(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
         GOTO_ERR_IF(CRYPT_HKDF_SetSalt(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_PRK)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_PRK)) != NULL) {
         GOTO_ERR_IF(CRYPT_HKDF_SetPRK(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_INFO)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_INFO)) != NULL) {
         GOTO_ERR_IF(CRYPT_HKDF_SetInfo(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_EXLEN)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_EXLEN)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_KDF_EXLEN, BSL_PARAM_TYPE_UINT32_PTR, &ptrVal, &len), ret);
         GOTO_ERR_IF(CRYPT_HKDF_SetOutLen(ctx, ptrVal), ret);

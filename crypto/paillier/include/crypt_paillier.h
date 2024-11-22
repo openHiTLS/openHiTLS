@@ -212,7 +212,7 @@ int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The private key is obtained successfully.
  */
-int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup paillier
@@ -225,7 +225,7 @@ int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param 
  * @retval BN error         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The public key is obtained successfully.
  */
-int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup paillier
