@@ -25,6 +25,8 @@
 #include "crypt_utils.h"
 #include "crypt_hkdf.h"
 #include "eal_mac_local.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #define HKDF_MAX_HMACSIZE 64
 
@@ -195,13 +197,8 @@ CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void)
     return ctx;
 }
 
-int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id, const uint32_t idLen)
+int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id)
 {
-    if (idLen != sizeof(CRYPT_MAC_AlgId)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
-        return CRYPT_HKDF_PARAM_ERROR;
-    }
-
     EAL_MacMethLookup method;
     if (!CRYPT_HKDF_IsValidAlgId(id)) {
         BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
@@ -215,17 +212,6 @@ int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id, c
     ctx->macMeth = method.macMethod;
     ctx->macId = id;
     ctx->mdMeth = method.md;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_HKDF_SetMode(CRYPT_HKDF_Ctx *ctx, const CRYPT_HKDF_MODE mode, const uint32_t modeLen)
-{
-    if (modeLen != sizeof(CRYPT_HKDF_MODE)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
-        return CRYPT_HKDF_PARAM_ERROR;
-    }
-
-    ctx->mode = mode;
     return CRYPT_SUCCESS;
 }
 
@@ -312,31 +298,49 @@ int32_t CRYPT_HKDF_SetOutLen(CRYPT_HKDF_Ctx *ctx, uint32_t *outLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const CRYPT_Param *param)
+
+int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const BSL_Param *param)
 {
+    uint32_t val = 0;
+    void *ptrVal = NULL;
+    uint32_t len = 0;
+    const BSL_Param *temp = NULL;
+    int32_t ret = CRYPT_HKDF_PARAM_ERROR;
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
-    switch (param->type) {
-        case CRYPT_KDF_PARAM_MAC_ALG_ID:
-            return CRYPT_HKDF_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param), param->paramLen);
-        case CRYPT_KDF_PARAM_MODE:
-            return CRYPT_HKDF_SetMode(ctx, *(CRYPT_HKDF_MODE *)(param->param), param->paramLen);
-        case CRYPT_KDF_PARAM_KEY:
-            return CRYPT_HKDF_SetKey(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_SALT:
-            return CRYPT_HKDF_SetSalt(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_PRK:
-            return CRYPT_HKDF_SetPRK(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_INFO:
-            return CRYPT_HKDF_SetInfo(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_OUTLEN:
-            return CRYPT_HKDF_SetOutLen(ctx, param->param);
-        default:
-            return CRYPT_HKDF_PARAM_ERROR;
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID,
+            BSL_PARAM_TYPE_UINT32, &val, &len), ret);
+        GOTO_ERR_IF(CRYPT_HKDF_SetMacMethod(ctx, val), ret);
     }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MODE)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MODE,
+            BSL_PARAM_TYPE_UINT32, &val, &len), ret);
+        ctx->mode = val;
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
+        GOTO_ERR_IF(CRYPT_HKDF_SetKey(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
+        GOTO_ERR_IF(CRYPT_HKDF_SetSalt(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_PRK)) != NULL) {
+        GOTO_ERR_IF(CRYPT_HKDF_SetPRK(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_INFO)) != NULL) {
+        GOTO_ERR_IF(CRYPT_HKDF_SetInfo(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_EXLEN)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_KDF_EXLEN, BSL_PARAM_TYPE_UINT32_PTR, &ptrVal, &len), ret);
+        GOTO_ERR_IF(CRYPT_HKDF_SetOutLen(ctx, ptrVal), ret);
+    }
+ERR:
+    return ret;
 }
 
 int32_t CRYPT_HKDF_Derive(CRYPT_HKDF_Ctx *ctx, uint8_t *out, uint32_t len)
