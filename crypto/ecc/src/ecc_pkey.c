@@ -27,7 +27,7 @@
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "crypt_ecc_pkey.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 typedef struct {
     const char *name;           /* elliptic curve NIST name */
@@ -102,7 +102,7 @@ int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_PRVKEY);
+    const BSL_Param *prv = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_EC_PRVKEY);
     if (prv == NULL || prv->value == NULL || prv->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -148,7 +148,7 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -205,7 +205,7 @@ int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *prv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_PRVKEY);
+    BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_PRVKEY);
     if (prv == NULL || prv->value == NULL || prv->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -230,7 +230,7 @@ int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *pub = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

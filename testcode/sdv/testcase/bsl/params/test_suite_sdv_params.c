@@ -102,11 +102,11 @@ void SDV_BSL_BSL_PARAM_FindParam_API_TC001()
     ASSERT_EQ(BSL_PARAM_InitValue(&param[3], 4, BSL_PARAM_TYPE_CTX_PTR, valPtr, 0), BSL_SUCCESS);
 
     BSL_Param *temp = NULL;
-    temp = (BSL_Param *)BSL_PARAM_FindParam(param, 1);
+    temp = BSL_PARAM_FindParam(param, 1);
     ASSERT_EQ(temp, &param[0]);
-    temp = (BSL_Param *)BSL_PARAM_FindParam(param, 2);
+    temp = BSL_PARAM_FindParam(param, 2);
     ASSERT_EQ(temp, &param[1]);
-    temp = (BSL_Param *)BSL_PARAM_FindParam(param, 5);
+    temp = BSL_PARAM_FindParam(param, 5);
     ASSERT_EQ(temp, NULL);
 
 exit:

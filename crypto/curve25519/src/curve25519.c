@@ -25,7 +25,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
 #include "eal_md_local.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
 {
@@ -141,7 +141,7 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
+    const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -166,7 +166,7 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PRVKEY);
+    const BSL_Param *prv = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_CURVE25519_PRVKEY);
     if (prv == NULL || prv->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -191,7 +191,7 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *pub = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
+    BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -221,7 +221,7 @@ int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *prv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PRVKEY);
+    BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PRVKEY);
     if (prv == NULL || prv->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

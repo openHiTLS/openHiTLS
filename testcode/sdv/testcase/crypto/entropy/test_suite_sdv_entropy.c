@@ -21,7 +21,7 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "entropy.h"
-#include "eal_entropy.h"
+#include "crypt_entropy.h"
 #include "crypt_algid.h"
 
 /* END_HEADER */

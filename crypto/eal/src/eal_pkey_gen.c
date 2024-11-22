@@ -25,7 +25,6 @@
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
 #include "crypt_types.h"
-#include "crypt_params_type.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
@@ -36,7 +35,7 @@
 #include "bsl_err_internal.h"
 #include "crypt_provider.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMethod *dest)
 {
@@ -60,7 +59,6 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->decrypt = method->decrypt;
     dest->check = method->check;
     dest->cmp = method->cmp;
-    dest->copyPara = method->copyPara;
 }
 
 CRYPT_EAL_PkeyCtx *PkeyNewDefaultCtx(CRYPT_PKEY_AlgId id)
@@ -444,7 +442,7 @@ int32_t CRYPT_EAL_PkeyCtrl(CRYPT_EAL_PkeyCtx *pkey, int32_t opt, void *val, uint
 
 int32_t CRYPT_EAL_PkeySetParaById(CRYPT_EAL_PkeyCtx *pkey, CRYPT_PKEY_ParaId id)
 {
-    return CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, &id, sizeof(id));
+    return CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARAM_BY_ID, &id, sizeof(id));
 }
 
 int32_t CRYPT_EAL_PkeyGen(CRYPT_EAL_PkeyCtx *pkey)
@@ -857,7 +855,7 @@ CRYPT_PKEY_AlgId CRYPT_EAL_PkeyGetId(const CRYPT_EAL_PkeyCtx *pkey)
 CRYPT_PKEY_ParaId CRYPT_EAL_PkeyGetParaId(const CRYPT_EAL_PkeyCtx *pkey)
 {
     int32_t result = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)pkey, CRYPT_CTRL_GET_PARAID, &result, sizeof(result));
+    int32_t ret = CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)pkey, CRYPT_CTRL_GET_PARAM_ID, &result, sizeof(result));
     return ret  == CRYPT_SUCCESS ? result : CRYPT_PKEY_PARAID_MAX;
 }
 
@@ -959,9 +957,6 @@ static int32_t CRYPT_EAL_SetKeyMethod(CRYPT_EAL_Func *funcsKeyMgmt, EAL_PkeyUnit
                     break;
                 case CRYPT_EAL_IMPLPKEYMGMT_COMPARE:
                     method->cmp = funcsKeyMgmt[index].func;
-                    break;
-                case CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM:
-                    method->copyPara = funcsKeyMgmt[index].func;
                     break;
                 case CRYPT_EAL_IMPLPKEYMGMT_CTRL:
                     method->ctrl = funcsKeyMgmt[index].func;

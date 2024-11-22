@@ -29,7 +29,7 @@
 #include "crypt_ealinit.h"
 #include "pbkdf2_local.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #define PBKDF2_MAX_BLOCKSIZE 64
 #define PBKDF2_MAX_KEYLEN 0xFFFFFFFF
@@ -309,19 +309,19 @@ int32_t CRYPT_PBKDF2_SetParam(CRYPT_PBKDF2_Ctx *ctx, const BSL_Param *param)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
         GOTO_ERR_IF(CRYPT_PBKDF2_SetMacMethod(ctx, val), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_PASSWORD)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_PASSWORD)) != NULL) {
         GOTO_ERR_IF(CRYPT_PBKDF2_SetPassWord(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
         GOTO_ERR_IF(CRYPT_PBKDF2_SetSalt(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_ITER)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_ITER)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_ITER,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
