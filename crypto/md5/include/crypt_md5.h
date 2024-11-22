@@ -102,6 +102,13 @@ int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen);
  */
 int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src);
 
+/**
+ * @ingroup MD5
+ * @brief MD5 dup CTX function
+ * @param src [in]   Pointer to the original MD5 context.
+ */
+CRYPT_MD5_Ctx *CRYPT_MD5_DupCtx(const CRYPT_MD5_Ctx *src);
+
 #ifdef __cplusplus
 }
 #endif

@@ -104,6 +104,13 @@ void CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx);
  */
 int32_t CRYPT_SM3_CopyCtx(CRYPT_SM3_Ctx *dst, const CRYPT_SM3_Ctx *src);
 
+/**
+ * @ingroup SM3
+ * @brief Dup SM3 CTX function
+ * @param src [in]   Pointer to the original SM3 context.
+ */
+CRYPT_SM3_Ctx *CRYPT_SM3_DupCtx(const CRYPT_SM3_Ctx *src);
+
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */

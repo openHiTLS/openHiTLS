@@ -48,8 +48,9 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
     BN_BigNum *rn = BN_Create(bits);
 
     BN_BigNum *result = BN_Create(bits);
+    BN_BigNum *gcd_result = BN_Create(bits);
 
-    bool createFailed = (m == NULL || r == NULL || gm == NULL || rn == NULL || result == NULL);
+    bool createFailed = (m == NULL || r == NULL || gm == NULL || rn == NULL || result == NULL || gcd_result == NULL);
     if (createFailed) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
@@ -75,30 +76,19 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
         goto OUT;
     }
 
-    BN_BigNum *gcd_result = BN_Create(bits);
-    if (gcd_result == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BN_Destroy(gcd_result);
-        goto OUT;
-    }
-
     while (true) {
         // Check whether r is relatively prime to n, if not, regenerate r
         ret = BN_Gcd(gcd_result, r, pubKey->n, optimizer);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            BN_Destroy(gcd_result);
             goto OUT;
         }
         if (BN_IsOne(gcd_result)) {
-            BN_Destroy(gcd_result);
             break;
         }
         ret = BN_RandRange(r, pubKey->n);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            BN_Destroy(gcd_result);
             goto OUT;
         }
     }
@@ -132,6 +122,7 @@ OUT :
     BN_Destroy(gm);
     BN_Destroy(rn);
     BN_Destroy(result);
+    BN_Destroy(gcd_result);
     BN_OptimizerDestroy(optimizer);
     return ret;
 }

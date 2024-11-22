@@ -99,7 +99,20 @@ int32_t CRYPT_SHA1_Final(CRYPT_SHA1_Ctx *ctx, uint8_t *out, uint32_t *len);
  */
 void CRYPT_SHA1_Deinit(CRYPT_SHA1_Ctx *ctx);
 
+/**
+ * @ingroup SHA1
+ * @brief SHA1 copy CTX function
+ * @param dest [out]  Pointer to the dest SHA1 context.
+ * @param src [in]   Pointer to the original SHA1 context.
+ */
 int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src);
+
+/**
+ * @ingroup SHA1
+ * @brief SHA1 dup CTX function
+ * @param src [in]   Pointer to the original SHA1 context.
+ */
+CRYPT_SHA1_Ctx *CRYPT_SHA1_DupCtx(const CRYPT_SHA1_Ctx *src);
 
 #ifdef __cplusplus
 }

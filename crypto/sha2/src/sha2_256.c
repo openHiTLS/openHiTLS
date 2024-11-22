@@ -99,6 +99,21 @@ int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx
     return CRYPT_SUCCESS;
 }
 
+CRYPT_SHA2_256_Ctx *CRYPT_SHA2_256_DupCtx(const CRYPT_SHA2_256_Ctx *src)
+{
+    if (src == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_SHA2_256_Ctx *newCtx = CRYPT_SHA2_256_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA2_256_Ctx), src, sizeof(CRYPT_SHA2_256_Ctx));
+    return newCtx;
+}
+
 static int32_t CheckIsCorrupted(CRYPT_SHA2_256_Ctx *ctx, uint32_t nbytes);
 static int32_t UpdateParamIsValid(CRYPT_SHA2_256_Ctx *ctx, const uint8_t *data, uint32_t nbytes)
 {
@@ -320,6 +335,21 @@ int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, const CRYPT_SHA2_224_Ctx
 
     (void)memcpy_s(dst, sizeof(CRYPT_SHA2_224_Ctx), src, sizeof(CRYPT_SHA2_224_Ctx));
     return CRYPT_SUCCESS;
+}
+
+CRYPT_SHA2_224_Ctx *CRYPT_SHA2_224_DupCtx(const CRYPT_SHA2_224_Ctx *src)
+{
+    if (src == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_SHA2_224_Ctx *newCtx = CRYPT_SHA2_224_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA2_224_Ctx), src, sizeof(CRYPT_SHA2_224_Ctx));
+    return newCtx;
 }
 
 int32_t CRYPT_SHA2_224_Update(CRYPT_SHA2_224_Ctx *ctx, const uint8_t *data, uint32_t nbytes)

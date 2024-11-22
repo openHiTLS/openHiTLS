@@ -208,7 +208,7 @@ typedef int32_t CRYPT_EAL_ImplPkeyKemCtrl(void *ctx, int32_t cmd, void *val, uin
 #define CRYPT_EAL_IMPLMD_UPDATE      3
 #define CRYPT_EAL_IMPLMD_FINAL       4
 #define CRYPT_EAL_IMPLMD_DEINITCTX   5
-#define CRYPT_EAL_IMPLMD_COPYCTX     6
+#define CRYPT_EAL_IMPLMD_DUPCTX      6
 #define CRYPT_EAL_IMPLMD_CTRL        7
 #define CRYPT_EAL_IMPLMD_FREECTX     8
 
@@ -217,7 +217,7 @@ typedef int32_t (*CRYPT_EAL_ImplMdInitCtx)(void *ctx, CRYPT_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplMdUpdate)(const void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMdFinal)(const void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplMdDeInitCtx)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplMdCopyCtx)(const void *src, void *dest);
+typedef void *(*CRYPT_EAL_ImplMdDupCtx)(const void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplMdCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplMdFreeCtx)(void *ctx);
 

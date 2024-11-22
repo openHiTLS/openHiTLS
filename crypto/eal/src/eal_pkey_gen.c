@@ -170,6 +170,8 @@ void CRYPT_EAL_PkeyFreeCtx(CRYPT_EAL_PkeyCtx *pkey)
     }
     if (pkey->method == NULL || pkey->method->freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_SAL_FREE(pkey->method);
+        BSL_SAL_FREE(pkey);
         return;
     }
     EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, pkey->id, CRYPT_SUCCESS);
