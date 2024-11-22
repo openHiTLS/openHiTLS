@@ -27,6 +27,8 @@
 #include "crypt_scrypt.h"
 #include "eal_mac_local.h"
 #include "pbkdf2_local.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #define SCRYPT_PR_MAX   ((1 << 30) - 1)
 
@@ -373,9 +375,9 @@ int32_t CRYPT_SCRYPT_SetSalt(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *salt, uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n, const uint32_t nLen)
+int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n)
 {
-    if (nLen != sizeof(uint32_t) || n <= 1 || (n & (n - 1)) != 0) {
+    if (n <= 1 || (n & (n - 1)) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SCRYPT_PARAM_ERROR);
         return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -383,9 +385,9 @@ int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n, const uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetR(CRYPT_SCRYPT_Ctx *ctx, const uint32_t r, const uint32_t rLen)
+int32_t CRYPT_SCRYPT_SetR(CRYPT_SCRYPT_Ctx *ctx, const uint32_t r)
 {
-    if (rLen != sizeof(uint32_t) || r == 0) {
+    if (r == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SCRYPT_PARAM_ERROR);
         return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -393,9 +395,9 @@ int32_t CRYPT_SCRYPT_SetR(CRYPT_SCRYPT_Ctx *ctx, const uint32_t r, const uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetP(CRYPT_SCRYPT_Ctx *ctx, const uint32_t p, const uint32_t pLen)
+int32_t CRYPT_SCRYPT_SetP(CRYPT_SCRYPT_Ctx *ctx, const uint32_t p)
 {
-    if (pLen != sizeof(uint32_t) || p == 0) {
+    if (p == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SCRYPT_PARAM_ERROR);
         return CRYPT_SCRYPT_PARAM_ERROR;
     }
@@ -403,27 +405,42 @@ int32_t CRYPT_SCRYPT_SetP(CRYPT_SCRYPT_Ctx *ctx, const uint32_t p, const uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_SCRYPT_SetParam(CRYPT_SCRYPT_Ctx *ctx, const CRYPT_Param *param)
+int32_t CRYPT_SCRYPT_SetParam(CRYPT_SCRYPT_Ctx *ctx, const BSL_Param *param)
 {
+    uint32_t val = 0;
+    uint32_t len = 0;
+    const BSL_Param *temp = NULL;
+    int32_t ret = CRYPT_SCRYPT_PARAM_ERROR;
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
-    switch (param->type) {
-        case CRYPT_KDF_PARAM_PASSWORD:
-            return CRYPT_SCRYPT_SetPassWord(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_SALT:
-            return CRYPT_SCRYPT_SetSalt(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_N:
-            return CRYPT_SCRYPT_SetN(ctx, *(uint32_t *)(param->param), param->paramLen);
-        case CRYPT_KDF_PARAM_R:
-            return CRYPT_SCRYPT_SetR(ctx, *(uint32_t *)(param->param), param->paramLen);
-        case CRYPT_KDF_PARAM_P:
-            return CRYPT_SCRYPT_SetP(ctx, *(uint32_t *)(param->param), param->paramLen);
-        default:
-            return CRYPT_SCRYPT_PARAM_ERROR;
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_PASSWORD)) != NULL) {
+        GOTO_ERR_IF(CRYPT_SCRYPT_SetPassWord(ctx, temp->value, temp->valueLen), ret);
     }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
+        GOTO_ERR_IF(CRYPT_SCRYPT_SetSalt(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_N)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_N,
+            BSL_PARAM_TYPE_UINT32, &val, &len), ret);
+        GOTO_ERR_IF(CRYPT_SCRYPT_SetN(ctx, val), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_R)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_R,
+            BSL_PARAM_TYPE_UINT32, &val, &len), ret);
+        GOTO_ERR_IF(CRYPT_SCRYPT_SetR(ctx, val), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_P)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_P,
+            BSL_PARAM_TYPE_UINT32, &val, &len), ret);
+        GOTO_ERR_IF(CRYPT_SCRYPT_SetP(ctx, val), ret);
+    }
+ERR:
+    return ret;
 }
 
 int32_t CRYPT_SCRYPT_Derive(CRYPT_SCRYPT_Ctx *ctx, uint8_t *out, uint32_t len)
