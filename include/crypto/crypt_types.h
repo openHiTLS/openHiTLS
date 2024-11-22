@@ -62,10 +62,25 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
+ * RSA salt length type, when rsa pss mode is used for signature and verify
+ */
+typedef enum {
+// When the padding type is PSS, the salt data is obtained by the DRBG and the length is hashlen.
+    CRYPT_RSA_SALTLEN_TYPE_HASHLEN = -1,
+// When the padding type is PSS, the salt data is obtained by the DRBG.
+// and the length is padLen - mdMethod->GetDigestSize - 2
+    CRYPT_RSA_SALTLEN_TYPE_MAXLEN = -2,
+// get salt length from signature
+    CRYPT_RSA_SALTLEN_TYPE_AUTOLEN = -3,
+} CRYPT_RSA_SaltLenType;
+
+/**
+ * @ingroup crypt_types
+ *
  * PSS padding mode, when RSA is used for signature.
  */
 typedef struct {
-    int32_t saltLen;      /**< pss salt length. the value -1 indicates hashLen, and the value -2 indicates MaxLen. */
+    int32_t saltLen;      /**< pss salt length. enum values defined by CRYPT_RSA_SaltLenType or actual value. */
     CRYPT_MD_AlgId mdId;  /**< mdid when pss padding. */
     CRYPT_MD_AlgId mgfId; /**< mgfid when pss padding. */
 } CRYPT_RSA_PssPara;
