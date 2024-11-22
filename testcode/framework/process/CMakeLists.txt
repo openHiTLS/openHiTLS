@@ -62,6 +62,7 @@ target_link_libraries(${PROCESS}
     hitls_bsl
     boundscheck
     pthread
+    dl
     sctp
     rec_wrapper
 )
