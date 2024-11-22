@@ -50,23 +50,14 @@ CRYPT_MD_AlgId GetCryptHashAlgFromCertHashAlg(HITLS_HashAlgo hashAlgo)
     return CRYPT_MD_MAX;
 }
 
-static int32_t CertSetRsaEmsa(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT_MD_AlgId mdAlgId)
+static int32_t SetRsaEmsa(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT_MD_AlgId mdAlgId)
 {
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
         CRYPT_RSA_PkcsV15Para pad = { .mdId = mdAlgId };
-        if (CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(CRYPT_RSA_PkcsV15Para))
-            != CRYPT_SUCCESS) {
-            return HITLS_X509_ADAPT_ERR;
-        }
+        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(CRYPT_RSA_PkcsV15Para));
     } else if  (signAlgo == HITLS_SIGN_RSA_PSS_PSS || signAlgo == HITLS_SIGN_RSA_PSS_RSAE) {
-        CRYPT_RSA_PssPara pad = {
-            .mdId = mdAlgId,
-            .mgfId = mdAlgId,
-            .saltLen = -1,
-        };
-        if (CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pad, sizeof(CRYPT_RSA_PssPara)) != CRYPT_SUCCESS) {
-            return HITLS_X509_ADAPT_ERR;
-        }
+        CRYPT_RSA_PssPara pad = { -1, mdAlgId, mdAlgId };
+        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pad, sizeof(CRYPT_RSA_PssPara));
     }
 
     return HITLS_SUCCESS;
@@ -80,11 +71,7 @@ static int32_t SignOrVerifySignPre(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAl
         BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
         return HITLS_X509_ADAPT_ERR;
     }
-    if (CertSetRsaEmsa(ctx, signAlgo, *mdAlgId) != HITLS_SUCCESS) {
-        return HITLS_X509_ADAPT_ERR;
-    }
-
-    return HITLS_SUCCESS;
+    return SetRsaEmsa(ctx, signAlgo, *mdAlgId);
 }
 
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
@@ -115,11 +102,7 @@ static int32_t CertSetRsaEncryptionScheme(CRYPT_EAL_PkeyCtx *ctx)
     CRYPT_RSA_PkcsV15Para pad = {
         .mdId = CRYPT_MD_SHA256,
     };
-    if (CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pad, sizeof(CRYPT_RSA_PkcsV15Para))
-        != HITLS_SUCCESS) {
-        return HITLS_X509_ADAPT_ERR;
-    }
-    return HITLS_SUCCESS;
+    return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pad, sizeof(CRYPT_RSA_PkcsV15Para));
 }
 
 /* only support rsa pkcs1.5 */

@@ -256,10 +256,7 @@ void ALERT_ClearWarnCount(TLS_Ctx *ctx)
 bool ALERT_HaveExceeded(TLS_Ctx *ctx, uint8_t threshold)
 {
     ctx->alertCtx->warnCount += 1;
-    if (ctx->alertCtx->warnCount >= threshold) {
-        return true;
-    }
-    return false;
+    return ctx->alertCtx->warnCount >= threshold;
 }
 
 #ifdef HITLS_BSL_LOG

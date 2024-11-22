@@ -233,11 +233,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
         /* Send the client hello message for the first time and fill in the group in the key share extension */
         keyShare->group = selectGroup;
     }
-    int32_t ret = Tls13ClientGenKeyPair(ctx->hsCtx->kxCtx, selectGroup);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    return HITLS_SUCCESS;
+    return Tls13ClientGenKeyPair(ctx->hsCtx->kxCtx, selectGroup);
 }
 
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)

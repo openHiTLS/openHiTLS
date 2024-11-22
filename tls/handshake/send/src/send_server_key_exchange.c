@@ -50,9 +50,7 @@ static HITLS_CRYPT_Key *GenerateDhEphemeralKey(HITLS_CRYPT_Key *priKey)
     }
     return SAL_CRYPT_GenerateDhKeyByParams(p, pLen, g, gLen);
 }
-#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
 
-#ifdef HITLS_TLS_CONFIG_MANUAL_DH
 static HITLS_CRYPT_Key *GetDhKeyByDhTmp(TLS_Ctx *ctx)
 {
     HITLS_CRYPT_Key *key = NULL;
