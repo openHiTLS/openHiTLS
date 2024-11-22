@@ -21,7 +21,7 @@
 #include "crypt_errno.h"
 #include "eal_common.h"
 #include "entropy.h"
-#include "eal_entropy.h"
+#include "crypt_entropy.h"
 
 #define DEV_RAND_MIN_ENTROPY 7.0
 

@@ -13,8 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef EAL_ENTROPY_H
-#define EAL_ENTROPY_H
+#ifndef CRYPT_ENTROPY_H
+#define CRYPT_ENTROPY_H
 
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_ENTROPY)
@@ -48,4 +48,4 @@ ExternalConditioningFunction EAL_EntropyGetECF(uint32_t algId);
 
 #endif // HITLS_CRYPTO_ENTROPY
 
-#endif // EAL_ENTROPY_H
+#endif // CRYPT_ENTROPY_H

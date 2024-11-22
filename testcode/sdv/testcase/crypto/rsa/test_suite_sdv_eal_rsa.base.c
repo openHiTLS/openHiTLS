@@ -36,9 +36,6 @@
 #define SUCCESS 0
 #define FAIL (-1)
 
-#define PKCSV15_SIZE ((uint32_t)sizeof(CRYPT_RSA_PkcsV15Para))
-#define OAEP_SIZE ((uint32_t)sizeof(CRYPT_RSA_OaepPara))
-#define PSS_SIZE ((uint32_t)sizeof(CRYPT_RSA_PssPara))
 
 #define RSA_MAX_KEYLEN 2048
 #define RSA_MIN_KEYLEN 128
