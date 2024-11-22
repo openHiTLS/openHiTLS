@@ -219,6 +219,25 @@ parse_option()
     done
 }
 
+run_demos()
+{
+    pushd ${HITLS_ROOT_DIR}/testcode/demo/build
+    executales=$(find ./ -maxdepth 1 -type f -perm -a=x )
+    for e in $executales
+    do
+        if [[ ! "$e" == *"client"* ]] && [[ ! "$e" == *"server"* ]]; then
+            echo "${e} start"
+            eval "${e}"
+        fi
+    done
+
+    # run server and client in order.
+    ./server >/dev/null &
+    sleep 1
+    ./client >/dev/null &
+    popd
+}
+
 clean()
 {
     rm -rf ${HITLS_ROOT_DIR}/testcode/output/log/*
@@ -236,4 +255,5 @@ elif [ ${paramNum} -eq 1 ] && [ $is_concurrent = 0 ]; then
 else
     run_test
 fi
+run_demos
 gen_test_report
