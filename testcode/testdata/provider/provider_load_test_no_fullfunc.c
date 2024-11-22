@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "bsl_params.h"
 
 #define CRYPT_EAL_FUNCEND_ID  0
 #define CRYPT_EAL_FUNC_END     {CRYPT_EAL_FUNCEND_ID, NULL}
@@ -33,11 +34,6 @@ typedef struct {
     void *func;
 } CRYPT_EAL_Func;
 
-typedef struct {
-    int32_t type;
-    void *param;
-    uint32_t paramLen;
-} CRYPT_Param;
 
 typedef struct {
     int32_t algId; // implemented algorithm id, such as aes128cbc, rsa sign
@@ -63,7 +59,7 @@ int32_t CRYPT_EAL_ProvCtrlCb(void *provCtx, int32_t cmd, void *val, uint32_t val
 }
 
 int32_t CRYPT_EAL_ProviderInitcb(CRYPT_EAL_ProvMgrCtx *mgrCtx,
-    CRYPT_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
+    BSL_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     return 0;
 }

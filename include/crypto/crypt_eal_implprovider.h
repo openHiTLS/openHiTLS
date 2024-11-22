@@ -95,7 +95,7 @@ typedef int32_t (*CRYPT_EAL_ProvCtrlCb)(void *provCtx, int32_t cmd, void *val, u
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-typedef int32_t (*CRYPT_EAL_ImplProviderInit)(CRYPT_EAL_ProvMgrCtx *mgrCtx, CRYPT_Param *param,
+typedef int32_t (*CRYPT_EAL_ImplProviderInit)(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx);
 
 // CRYPT_EAL_OPERAID_SYMMCIPHER
@@ -109,7 +109,7 @@ typedef int32_t (*CRYPT_EAL_ImplProviderInit)(CRYPT_EAL_ProvMgrCtx *mgrCtx, CRYP
 
 typedef void *(*CRYPT_EAL_ImplCipherNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplCipherInitCtx)(void *ctx, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *iv, uint32_t ivLen, CRYPT_Param *param, bool enc);
+    const uint8_t *iv, uint32_t ivLen, BSL_Param *param, bool enc);
 typedef int32_t (*CRYPT_EAL_ImplCipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplCipherFinal)(void *ctx, const uint8_t *in, uint32_t inLen,
@@ -131,25 +131,23 @@ typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLPKEYMGMT_DUPCTX     9
 #define CRYPT_EAL_IMPLPKEYMGMT_CHECK     10
 #define CRYPT_EAL_IMPLPKEYMGMT_COMPARE   11
-#define CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM 12
-#define CRYPT_EAL_IMPLPKEYMGMT_CTRL      15
-#define CRYPT_EAL_IMPLPKEYMGMT_FREECTX   16
+#define CRYPT_EAL_IMPLPKEYMGMT_CTRL      12
+#define CRYPT_EAL_IMPLPKEYMGMT_FREECTX   13
 
 
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetParam)(void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetParam)(void *ctx, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGenKey)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPrv)(void *ctx, const CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, const CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPrv)(const void *ctx, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPub)(const void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPrv)(void *ctx, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetPub)(void *ctx, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPrv)(const void *ctx, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtGetPub)(const void *ctx, BSL_Param *param);
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtDupCtx)(const void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCheck)(const void *prv, const void *pub);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCompare)(const void *ctx1, const void *ctx2);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCopyParam)(const void *src, void *dest);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx, const CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtEncode)(const void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtParse)(void *ctx, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtEncode)(const void *ctx, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 
@@ -213,7 +211,7 @@ typedef int32_t CRYPT_EAL_ImplPkeyKemCtrl(void *ctx, int32_t cmd, void *val, uin
 #define CRYPT_EAL_IMPLMD_FREECTX     8
 
 typedef void *(*CRYPT_EAL_ImplMdNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplMdInitCtx)(void *ctx, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplMdInitCtx)(void *ctx, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplMdUpdate)(const void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMdFinal)(const void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplMdDeInitCtx)(void *ctx);
@@ -231,7 +229,7 @@ typedef void (*CRYPT_EAL_ImplMdFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLMAC_FREECTX     7
 
 typedef void *(*CRYPT_EAL_ImplMacNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplMacUpdate)(const void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMacFinal)(const void *ctx, uint8_t *out, uint32_t *outLen);
 typedef void (*CRYPT_EAL_ImplMacReInitCtx)(void *ctx);
@@ -262,12 +260,12 @@ typedef void (*CRYPT_EAL_ImplKdfFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLRAND_DRBGCTRL     6
 #define CRYPT_EAL_IMPLRAND_DRBGFREECTX  7
 
-typedef void *(*CRYPT_EAL_ImplRandDrbgNewCtx)(void *provCtx, int32_t algId, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplRandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, CRYPT_Param *param);
+typedef void *(*CRYPT_EAL_ImplRandDrbgNewCtx)(void *provCtx, int32_t algId, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplRandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgUnInst)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *bytes, uint32_t len,
-    const uint8_t *addin, uint32_t addinLen, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, CRYPT_Param *param);
+    const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplRandDrbgFreeCtx)(void *ctx);
 #ifdef __cplusplus

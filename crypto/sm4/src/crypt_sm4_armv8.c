@@ -162,7 +162,7 @@ int32_t CRYPT_SM4_ECB_Decrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
 #ifdef HITLS_CRYPTO_CBC
 int32_t CRYPT_SM4_CBC_Encrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, uint8_t *iv)
 {
-    if (len < CRYPT_SM4_BLOCKSIZE) {
+    if (len % CRYPT_SM4_BLOCKSIZE != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
         return CRYPT_SM4_DATALEN_ERROR;
     }

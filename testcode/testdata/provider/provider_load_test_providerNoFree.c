@@ -26,7 +26,7 @@
 #define CRYPT_EAL_DEFAULT_ATTR "provider=test1,compare1=one,cpmpare3=three"
 #define RESULT 1415926
 
-void *Provider_NewCtx(void *provCtx, int32_t algid, CRYPT_Param *param)
+void *Provider_NewCtx(void *provCtx, int32_t algid, BSL_Param *param)
 {
     (void)provCtx;
     (void)param;
@@ -91,7 +91,6 @@ const CRYPT_EAL_Func defKeyMgmtDsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_CHECK, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, NULL},
-    {CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, NULL},
     CRYPT_EAL_FUNC_END,
@@ -202,7 +201,7 @@ static CRYPT_EAL_Func defProvOutFuncs[] = {
 };
 
 int32_t CRYPT_EAL_ProviderInitcb(CRYPT_EAL_ProvMgrCtx *mgrCtx,
-    CRYPT_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
+    BSL_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     *outFuncs = defProvOutFuncs;
     return 0;

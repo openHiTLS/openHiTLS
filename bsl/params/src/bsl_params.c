@@ -23,6 +23,7 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
         case BSL_PARAM_TYPE_UINT32_PTR:
+        case BSL_PARAM_TYPE_INT32:
             param->value = val;
             param->valueLen = valueLen;
             param->valueType = type;
@@ -119,6 +120,7 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
     switch (type) {
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
+        case BSL_PARAM_TYPE_INT32:
             if (*valueLen < param->valueLen) {
                 BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
                 return BSL_INVALID_ARG;
