@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "hitls_type.h"
 #include "hitls_cert_type.h"
+#include "hitls_cert_reg.h"
 #include "hitls_cert.h"
 #include "tls_config.h"
 
