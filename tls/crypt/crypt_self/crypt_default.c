@@ -34,7 +34,7 @@
 
 #include "crypt_default.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #ifndef HITLS_CRYPTO_EAL
 #error "Missing definition of HITLS_CRYPTO_EAL"

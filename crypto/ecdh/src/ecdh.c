@@ -28,7 +28,7 @@
 #include "crypt_ecdh.h"
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
 {

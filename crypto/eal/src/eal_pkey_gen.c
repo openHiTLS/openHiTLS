@@ -25,7 +25,7 @@
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
 #include "crypt_types.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
@@ -36,7 +36,7 @@
 #include "bsl_err_internal.h"
 #include "crypt_provider.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMethod *dest)
 {
@@ -60,7 +60,6 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->decrypt = method->decrypt;
     dest->check = method->check;
     dest->cmp = method->cmp;
-    dest->copyPara = method->copyPara;
 }
 
 CRYPT_EAL_PkeyCtx *PkeyNewDefaultCtx(CRYPT_PKEY_AlgId id)
@@ -959,9 +958,6 @@ static int32_t CRYPT_EAL_SetKeyMethod(CRYPT_EAL_Func *funcsKeyMgmt, EAL_PkeyUnit
                     break;
                 case CRYPT_EAL_IMPLPKEYMGMT_COMPARE:
                     method->cmp = funcsKeyMgmt[index].func;
-                    break;
-                case CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM:
-                    method->copyPara = funcsKeyMgmt[index].func;
                     break;
                 case CRYPT_EAL_IMPLPKEYMGMT_CTRL:
                     method->ctrl = funcsKeyMgmt[index].func;

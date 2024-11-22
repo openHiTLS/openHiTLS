@@ -211,7 +211,7 @@ static CRYPT_EAL_Func g_defProvOutFuncs[] = {
     CRYPT_EAL_FUNC_END
 };
 
-int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, CRYPT_Param *param,
+int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     (void) param;
