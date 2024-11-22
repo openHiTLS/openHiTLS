@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "crypt_types.h"
+#include "bsl_params.h"
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -49,7 +50,7 @@ int32_t SM4_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen
 
 
 int32_t MODES_CFB_InitCtxEx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, CRYPT_Param *param, bool enc);
+    uint32_t ivLen, BSL_Param *param, bool enc);
 int32_t MODES_CFB_UpdateEx(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus
