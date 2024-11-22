@@ -29,6 +29,8 @@
 #include "crypt_eal_kdf.h"
 #include "crypt_eal_cipher.h"
 #include "asmcap_local.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 /* END_HEADER */
 
 #define DATA_LEN (64)
@@ -226,33 +228,34 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC004()
     ASSERT_TRUE(ctx != NULL);
 
     CRYPT_MAC_AlgId macAlgId = CRYPT_MAC_HMAC_SHA256;
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &macAlgId, sizeof(macAlgId)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam), CRYPT_SUCCESS);
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &it, sizeof(it)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &iterParam), CRYPT_SUCCESS);
-
+    BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &macAlgId, sizeof(macAlgId)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        key, keyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt, saltLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &it,
+        sizeof(it)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 #if defined(HITLS_CRYPTO_ASM_CHECK)
 #if defined(__x86_64__)
 #if defined(HITLS_CRYPTO_SHA2_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportAVX, STUB_IsSupportAVX);
-    ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam) != CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, params) != CRYPT_SUCCESS);
     STUB_Reset(&tmpStubInfo);
 #endif
 #if defined(HITLS_CRYPTO_MD5_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportBMI1, STUB_IsSupportBMI1);
     macAlgId = CRYPT_MAC_HMAC_MD5;
-    ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam) != CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, params) != CRYPT_SUCCESS);
     STUB_Reset(&tmpStubInfo);
 #endif
 #if defined(HITLS_CRYPTO_SM3_ASM)
     STUB_Replace(&tmpStubInfo, IsSupportMOVBE, STUB_IsSupportMOVBE);
     macAlgId = CRYPT_MAC_HMAC_SM3;
-    ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, &macAlgIdParam) != CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, params) != CRYPT_SUCCESS);
     STUB_Reset(&tmpStubInfo);
 #endif
 #endif

@@ -25,6 +25,8 @@
 #include "crypt_utils.h"
 #include "crypt_kdf_tls12.h"
 #include "eal_mac_local.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #define KDFTLS12_MAX_BLOCKSIZE 64
 
@@ -159,13 +161,8 @@ CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void)
     return ctx;
 }
 
-int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_AlgId id, const uint32_t idLen)
+int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_AlgId id)
 {
-    if (idLen != sizeof(CRYPT_MAC_AlgId)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_PARAM_ERROR);
-        return CRYPT_KDFTLS12_PARAM_ERROR;
-    }
-
     EAL_MacMethLookup method;
     if (!CRYPT_KDFTLS12_IsValidAlgId(id)) {
         BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_PARAM_ERROR);
@@ -235,25 +232,34 @@ int32_t CRYPT_KDFTLS12_SetSeed(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *seed, uin
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_Param *param)
+int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const BSL_Param *param)
 {
+    uint32_t val = 0;
+    uint32_t len = 0;
+    const BSL_Param *temp = NULL;
+    int32_t ret = CRYPT_PBKDF2_PARAM_ERROR;
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
-    switch (param->type) {
-        case CRYPT_KDF_PARAM_MAC_ALG_ID:
-            return CRYPT_KDFTLS12_SetMacMethod(ctx, *(CRYPT_MAC_AlgId *)(param->param), param->paramLen);
-        case CRYPT_KDF_PARAM_KEY:
-            return CRYPT_KDFTLS12_SetKey(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_LABEL:
-            return CRYPT_KDFTLS12_SetLabel(ctx, param->param, param->paramLen);
-        case CRYPT_KDF_PARAM_SEED:
-            return CRYPT_KDFTLS12_SetSeed(ctx, param->param, param->paramLen);
-        default:
-            return CRYPT_KDFTLS12_PARAM_ERROR;
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
+        len = sizeof(val);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID,
+            BSL_PARAM_TYPE_UINT32, &val, &len), ret);
+        GOTO_ERR_IF(CRYPT_KDFTLS12_SetMacMethod(ctx, val), ret);
     }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
+        GOTO_ERR_IF(CRYPT_KDFTLS12_SetKey(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_LABEL)) != NULL) {
+        GOTO_ERR_IF(CRYPT_KDFTLS12_SetLabel(ctx, temp->value, temp->valueLen), ret);
+    }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SEED)) != NULL) {
+        GOTO_ERR_IF(CRYPT_KDFTLS12_SetSeed(ctx, temp->value, temp->valueLen), ret);
+    }
+ERR:
+    return ret;
 }
 
 int32_t CRYPT_KDFTLS12_Derive(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)

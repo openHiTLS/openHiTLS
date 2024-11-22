@@ -29,6 +29,7 @@
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]}
                     },
                     "usrdata": null,
+                    "params": null,
                     "asn1":null
                 }
             }
@@ -966,6 +967,11 @@
                 ".features": ["asn1"],
                 ".srcs": "bsl/asn1/src/*.c",
                 ".deps": ["bsl::sal"]
+            },
+            "params": {
+                ".features": ["params"],
+                ".srcs": "bsl/params/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
             },
             "init": {
                 ".features": ["init"],

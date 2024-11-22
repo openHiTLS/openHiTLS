@@ -18,6 +18,7 @@
 
 #include "crypt_algid.h"
 #include "crypt_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -319,7 +320,7 @@ typedef struct {
 /* Prototype of the KDF algorithm operation functions */
 typedef void* (*KdfNewCtx)(void);
 typedef void* (*KdfProvNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*KdfSetParam)(void *ctx, CRYPT_Param *param);
+typedef int32_t (*KdfSetParam)(void *ctx, BSL_Param *param);
 typedef int32_t (*KdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
 typedef int32_t (*KdfDeinit)(void *ctx);
 typedef int32_t (*KdfCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);

@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include "crypt_local_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,7 +48,7 @@ CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void);
  * @retval Success: CRYPT_SUCCESS
  *         For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const BSL_Param *param);
 
 /**
  * @ingroup KDFTLS12
