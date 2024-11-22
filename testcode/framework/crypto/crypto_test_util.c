@@ -48,8 +48,8 @@ void TestMemInit(void)
 #ifdef HITLS_BSL_SAL_MEM
     return;
 #else
-    static BSL_SAL_MemCallback cb = {TestMalloc, free};
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, TestMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 #endif
 }
 
