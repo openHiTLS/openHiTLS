@@ -60,6 +60,7 @@ target_link_libraries(${PROCESS}
     hitls_pki
     hitls_crypto
     hitls_bsl
+    dl
     boundscheck
     pthread
     sctp

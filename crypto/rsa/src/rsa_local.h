@@ -29,14 +29,6 @@
 extern "C" {
 #endif /* __cpluscplus */
 
-// When the padding type is PSS, the salt data is obtained by the DRBG and the length is hashlen.
-#define SALTLEN_PSS_HASHLEN_TYPE      (-1)
-// When the padding type is PSS, the salt data is obtained by the DRBG.
-// and the length is padLen - mdMethod->GetDigestSize - 2
-#define SALTLEN_PSS_MAXLEN_TYPE       (-2)
-// get salt length from signature
-#define SALTLEN_PSS_AUTOLEN_TYPE      (-3)
-
 #define HASH_MAX_MDSIZE  (64)
 
 typedef struct RSA_BlindSt {
