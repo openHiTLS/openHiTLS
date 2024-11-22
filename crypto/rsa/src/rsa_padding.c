@@ -158,7 +158,8 @@ int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltL
     uint32_t hashLen = mdMethod->mdSize;
     if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
         salt->len = hashLen;
-    } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN || saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) { // saltLen is -2 or -3
+    } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN ||
+        saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) { // saltLen is -2 or -3
         salt->len = padBuffLen - hashLen - 2; // salt, obtains from the DRBG
     } else {
         salt->len = (uint32_t)saltLen;
