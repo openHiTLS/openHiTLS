@@ -147,6 +147,21 @@ static int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src
     return CRYPT_SUCCESS;
 }
 
+static CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src)
+{
+    if (src == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_SHA3_Ctx *newCtx = CRYPT_SHA3_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA3_Ctx), src, sizeof(CRYPT_SHA3_Ctx));
+    return newCtx;
+}
+
 // new context
 CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_NewCtx(void)
 {
@@ -359,6 +374,36 @@ int32_t CRYPT_SHAKE128_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx
 int32_t CRYPT_SHAKE256_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src)
 {
     return CRYPT_SHA3_CopyCtx(dst, src);
+}
+
+CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_DupCtx(const CRYPT_SHA3_224_Ctx *src)
+{
+    return CRYPT_SHA3_DupCtx(src);
+}
+
+CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_DupCtx(const CRYPT_SHA3_256_Ctx *src)
+{
+    return CRYPT_SHA3_DupCtx(src);
+}
+
+CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_DupCtx(const CRYPT_SHA3_384_Ctx *src)
+{
+    return CRYPT_SHA3_DupCtx(src);
+}
+
+CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_DupCtx(const CRYPT_SHA3_512_Ctx *src)
+{
+    return CRYPT_SHA3_DupCtx(src);
+}
+
+CRYPT_SHA3_384_Ctx *CRYPT_SHAKE128_DupCtx(const CRYPT_SHA3_384_Ctx *src)
+{
+    return CRYPT_SHA3_DupCtx(src);
+}
+
+CRYPT_SHA3_512_Ctx *CRYPT_SHAKE256_DupCtx(const CRYPT_SHA3_512_Ctx *src)
+{
+    return CRYPT_SHA3_DupCtx(src);
 }
 
 #endif // HITLS_CRYPTO_SHA3

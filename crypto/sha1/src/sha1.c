@@ -97,6 +97,21 @@ int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src)
     return CRYPT_SUCCESS;
 }
 
+CRYPT_SHA1_Ctx *CRYPT_SHA1_DupCtx(const CRYPT_SHA1_Ctx *src)
+{
+    if (src == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_SHA1_Ctx *newCtx = CRYPT_SHA1_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA1_Ctx), src, sizeof(CRYPT_SHA1_Ctx));
+    return newCtx;
+}
+
 static int32_t SHA1_CheckIsCorrupted(CRYPT_SHA1_Ctx *ctx, uint32_t textLen)
 {
     uint32_t low = (ctx->lNum + (textLen << 3)) & 0xffffffffUL;

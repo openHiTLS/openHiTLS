@@ -461,7 +461,20 @@ int32_t CRYPT_SHA2_512_Final(CRYPT_SHA2_512_Ctx *ctx, uint8_t *digest, uint32_t 
  */
 void CRYPT_SHA2_224_Deinit(CRYPT_SHA2_224_Ctx *ctx);
 
+/**
+ * @ingroup SHA224
+ * @brief SHA224 copy CTX function
+ * @param dst [out]  Pointer to the new SHA224 context.
+ * @param src [in]   Pointer to the original SHA224 context.
+ */
 int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, const CRYPT_SHA2_224_Ctx *src);
+
+/**
+ * @ingroup SHA224
+ * @brief SHA224 dup CTX function
+ * @param src [in]   Pointer to the original SHA224 context.
+ */
+CRYPT_SHA2_224_Ctx *CRYPT_SHA2_224_DupCtx(const CRYPT_SHA2_224_Ctx *src);
 #endif // HITLS_CRYPTO_SHA224
 
 #ifdef HITLS_CRYPTO_SHA256
@@ -474,7 +487,20 @@ int32_t CRYPT_SHA2_224_CopyCtx(CRYPT_SHA2_224_Ctx *dst, const CRYPT_SHA2_224_Ctx
  */
 void CRYPT_SHA2_256_Deinit(CRYPT_SHA2_256_Ctx *ctx);
 
+/**
+ * @ingroup SHA256
+ * @brief SHA256 copy CTX function
+ * @param dst [out]  Pointer to the new SHA256 context.
+ * @param src [in]   Pointer to the original SHA256 context.
+ */
 int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx *src);
+
+/**
+ * @ingroup SHA256
+ * @brief SHA256 dup CTX function
+ * @param src [in]   Pointer to the original SHA256 context.
+ */
+CRYPT_SHA2_256_Ctx *CRYPT_SHA2_256_DupCtx(const CRYPT_SHA2_256_Ctx *src);
 #endif // HITLS_CRYPTO_SHA256
 
 #ifdef HITLS_CRYPTO_SHA384
@@ -487,7 +513,20 @@ int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx
  */
 void CRYPT_SHA2_384_Deinit(CRYPT_SHA2_384_Ctx *ctx);
 
+/**
+ * @ingroup SHA384
+ * @brief SHA384 copy CTX function
+ * @param dst [out]  Pointer to the new SHA384 context.
+ * @param src [in]   Pointer to the original SHA384 context.
+ */
 int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, const CRYPT_SHA2_384_Ctx *src);
+
+/**
+ * @ingroup SHA384
+ * @brief SHA384 dup CTX function
+ * @param src [in]   Pointer to the original SHA384 context.
+ */
+CRYPT_SHA2_384_Ctx *CRYPT_SHA2_384_DupCtx(const CRYPT_SHA2_384_Ctx *src);
 #endif // HITLS_CRYPTO_SHA384
 
 #ifdef HITLS_CRYPTO_SHA512
@@ -500,7 +539,20 @@ int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, const CRYPT_SHA2_384_Ctx
  */
 void CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx);
 
+/**
+ * @ingroup SHA512
+ * @brief SHA512 copy CTX function
+ * @param dst [out]  Pointer to the new SHA512 context.
+ * @param src [in]   Pointer to the original SHA512 context.
+ */
 int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, const CRYPT_SHA2_512_Ctx *src);
+
+/**
+ * @ingroup SHA512
+ * @brief SHA512 dup CTX function
+ * @param src [in]   Pointer to the original SHA512 context.
+ */
+CRYPT_SHA2_512_Ctx *CRYPT_SHA2_512_DupCtx(const CRYPT_SHA2_512_Ctx *src);
 #endif // HITLS_CRYPTO_SHA512
 
 #ifdef __cplusplus
