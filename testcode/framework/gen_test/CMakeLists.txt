@@ -35,13 +35,13 @@ include_directories(${SECURTE_INCLUDE}
 add_executable(${GEN_TESTCASE} ${GEN_SOURCE_SRC})
 
 if(PRINT_TO_TERMINAL)
-    target_compile_options(${GEN_TESTCASE} PUBLIC -DPRINT_TO_TERMINAL)
+    target_compile_options(${GEN_TESTCASE} PRIVATE -DPRINT_TO_TERMINAL)
 endif()
 
 target_link_directories(${GEN_TESTCASE}
-    PUBLIC
+    PRIVATE
         ${HITLS_SRC}/platform/Secure_C/lib
 )
 target_link_libraries(${GEN_TESTCASE}
-    -lboundscheck
+    boundscheck
 )
