@@ -137,7 +137,7 @@ void *HiTLS_X509_LoadCertListToStore(const char *fileList)
             HITLS_X509_Adapt_StoreFree(store);
             return NULL;
         }
-        ret = HITLS_X509_Adapt_StoreCtrl(NULL, store, CERT_STORE_CTRL_SHALLOW_COPY_ADD_CERT_LIST, cert, NULL);
+        ret = HITLS_X509_Adapt_StoreCtrl(NULL, store, CERT_STORE_CTRL_ADD_CERT_LIST, cert, NULL);
         if (ret != SUCCESS) {
             LOG_ERROR("X509_STORE_add_cert Error: path = %s.", certPath);
             HITLS_X509_Adapt_StoreFree(store);

@@ -70,8 +70,7 @@ typedef struct BslList HITLS_CERT_Chain;
  */
 typedef enum {
     CERT_STORE_CTRL_SET_VERIFY_DEPTH,   /**< Set the certificate verification depth. */
-    CERT_STORE_CTRL_DEEP_COPY_ADD_CERT_LIST,      /**< Add ca and chain certificate to store */
-    CERT_STORE_CTRL_SHALLOW_COPY_ADD_CERT_LIST,
+    CERT_STORE_CTRL_ADD_CERT_LIST,      /**< Add ca and chain certificate to store */
 
     CERT_CTRL_GET_ENCODE_LEN,           /**< Obtain the length of the certificate code. */
     CERT_CTRL_GET_PUB_KEY,              /**< Obtaining the Certificate Public Key (Release Required). */
