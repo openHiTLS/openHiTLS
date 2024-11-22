@@ -260,6 +260,7 @@ int32_t StreamWrite(TLS_Ctx *ctx, RecBuf *buf)
         }
 
         buf->start += sendLen;
+        total -= sendLen;
     } while (buf->start < buf->end);
 
     buf->start = 0;
