@@ -20,7 +20,7 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "eal_common.h"
-#include "eal_entropy.h"
+#include "crypt_entropy.h"
 #include "entropy.h"
 #include "crypt_eal_mac.h"
 #include "crypt_eal_md.h"

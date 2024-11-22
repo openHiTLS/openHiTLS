@@ -227,7 +227,7 @@ static int32_t CmpAttrEntryByCid(const void *attrEntry, const void *cid)
     const HITLS_X509_AttrEntry *node = attrEntry;
     const BslCid *oid = cid;
 
-    return node->cid == *(BslCid *)oid ? 0 : 1;
+    return node->cid == *(const BslCid *)oid ? 0 : 1;
 }
 
 typedef int32_t (*EncodeAttrCb)(HITLS_X509_Attrs *attributes, void *val, int32_t valLen, BSL_ASN1_Buffer *attrValue);

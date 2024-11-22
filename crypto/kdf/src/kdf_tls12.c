@@ -26,7 +26,7 @@
 #include "crypt_kdf_tls12.h"
 #include "eal_mac_local.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #define KDFTLS12_MAX_BLOCKSIZE 64
 
@@ -40,11 +40,11 @@ struct CryptKdfTls12Ctx {
     CRYPT_MAC_AlgId macId;
     const EAL_MacMethod *macMeth;
     void *macCtx;
-    const uint8_t *key;
+    uint8_t *key;
     uint32_t keyLen;
-    const uint8_t *label;
+    uint8_t *label;
     uint32_t labelLen;
-    const uint8_t *seed;
+    uint8_t *seed;
     uint32_t seedLen;
 };
 
@@ -112,43 +112,6 @@ ERR:
     macMeth->freeCtx(ctx->macCtx);
     ctx->macCtx = NULL;
     return ret;
-}
-
-int32_t CRYPT_KDF_TLS12(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *label, uint32_t labelLen, const uint8_t *seed, uint32_t seedLen, uint8_t *out, uint32_t len)
-{
-    if (macMeth == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (key == NULL && keyLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (label == NULL && labelLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (seed == NULL && seedLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if ((out == NULL) || (len == 0)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    CRYPT_KDFTLS12_Ctx ctx;
-    ctx.macMeth = macMeth;
-    ctx.macId = macId;
-    ctx.key = key;
-    ctx.keyLen = keyLen;
-    ctx.label = label;
-    ctx.labelLen = labelLen;
-    ctx.seed = seed;
-    ctx.seedLen = seedLen;
-
-    return KDF_PHASH(&ctx, out, len);
 }
 
 CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void)
@@ -243,19 +206,19 @@ int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const BSL_Param *param)
         return CRYPT_NULL_INPUT;
     }
 
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_MAC_ID)) != NULL) {
         len = sizeof(val);
         GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID,
             BSL_PARAM_TYPE_UINT32, &val, &len), ret);
         GOTO_ERR_IF(CRYPT_KDFTLS12_SetMacMethod(ctx, val), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
         GOTO_ERR_IF(CRYPT_KDFTLS12_SetKey(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_LABEL)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_LABEL)) != NULL) {
         GOTO_ERR_IF(CRYPT_KDFTLS12_SetLabel(ctx, temp->value, temp->valueLen), ret);
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_KDF_SEED)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SEED)) != NULL) {
         GOTO_ERR_IF(CRYPT_KDFTLS12_SetSeed(ctx, temp->value, temp->valueLen), ret);
     }
 ERR:

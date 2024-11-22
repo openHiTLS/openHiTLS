@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include "crypt_types.h"
 #include "bsl_sal.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,7 +77,7 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
  *         Other error codes see the crypt_errno.h
 */
 int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
-    const char *providerName, CRYPT_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
+    const char *providerName, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
 /**
  * @ingroup crypt_eal_provider

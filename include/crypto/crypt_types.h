@@ -46,18 +46,9 @@ typedef struct {
  * Data range
  */
 typedef struct {
-uint32_t min;  /**< Minimum value */
-uint32_t max;  /**< Maximum value */
+    uint32_t min;  /**< Minimum value */
+    uint32_t max;  /**< Maximum value */
 } CRYPT_Range;
-
-/**
- * @ingroup crypt_types
- *
- * Pkcsv15 padding mode, when RSA is used for signature.
- */
-typedef struct {
-    CRYPT_MD_AlgId mdId; /**< ID of the hash algorithm during pkcsv15 padding */
-} CRYPT_RSA_PkcsV15Para;
 
 /**
  * @ingroup crypt_types
@@ -65,12 +56,12 @@ typedef struct {
  * RSA salt length type, when rsa pss mode is used for signature and verify
  */
 typedef enum {
-// When the padding type is PSS, the salt data is obtained by the DRBG and the length is hashlen.
+    // When the padding type is PSS, the salt data is obtained by the DRBG and the length is hashlen.
     CRYPT_RSA_SALTLEN_TYPE_HASHLEN = -1,
-// When the padding type is PSS, the salt data is obtained by the DRBG.
-// and the length is padLen - mdMethod->GetDigestSize - 2
+    // When the padding type is PSS, the salt data is obtained by the DRBG.
+    // and the length is padLen - mdMethod->GetDigestSize - 2
     CRYPT_RSA_SALTLEN_TYPE_MAXLEN = -2,
-// get salt length from signature
+    // get salt length from signature
     CRYPT_RSA_SALTLEN_TYPE_AUTOLEN = -3,
 } CRYPT_RSA_SaltLenType;
 
@@ -84,11 +75,6 @@ typedef struct {
     CRYPT_MD_AlgId mdId;  /**< mdid when pss padding. */
     CRYPT_MD_AlgId mgfId; /**< mgfid when pss padding. */
 } CRYPT_RSA_PssPara;
-
-typedef struct {
-    CRYPT_MD_AlgId mdId;  /**< mdid when oaep padding */
-    CRYPT_MD_AlgId mgfId; /**< mgfid when oaep padding */
-} CRYPT_RSA_OaepPara;
 
 typedef enum {
     CRYPT_RSA_BLINDING = 0x00000001,            /**< Enable the RSA blinding function for signature. */
@@ -433,49 +419,56 @@ typedef enum {
  * Set and obtain internal parameters of pkey.
  */
 typedef enum {
-    CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,    /**< RSA set the signature padding mode to EMSA_PKCSV15. */
-    CRYPT_CTRL_SET_RSA_EMSA_PSS,        /**< RSA set the signature padding mode to EMSA_PSS. */
-    CRYPT_CTRL_SET_RSA_SALT,            /**< When the RSA algorithm is used for PSS signature, the salt data is
+    // common
+    CRYPT_CTRL_UP_REFERENCES = 0,           /**< The reference count value increases automatically.
+                                             It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
+    CRYPT_CTRL_SET_PARAM_BY_ID,          /* Asymmetric cipher set para by id. */
+
+    CRYPT_CTRL_GET_PARA,                /* Asymmetric cipher get para. */
+    CRYPT_CTRL_GET_PARAM_ID,              /* Asymmetric cipher get id of para. */
+    CRYPT_CTRL_GET_BITS,                 /* Asymmetric cipher get bits . */
+    CRYPT_CTRL_GET_SIGNLEN,             /* Asymmetric cipher get signlen . */
+    CRYPT_CTRL_GET_SECBITS,              /* Asymmetric cipher get secure bits . */
+
+    // rsa
+    CRYPT_CTRL_SET_RSA_EMSA_PKCSV15 = 200, /**< RSA set the signature padding mode to EMSA_PKCSV15. */
+    CRYPT_CTRL_SET_RSA_EMSA_PSS,         /**< RSA set the signature padding mode to EMSA_PSS. */
+    CRYPT_CTRL_SET_RSA_SALT,             /**< When the RSA algorithm is used for PSS signature, the salt data is
                                              specified. During signature, the user data address is directly saved
                                              to the key. And the user data is used for the next signature, the caller
                                              must ensure that the next signature is called within the life cycle
                                              of the salt data. This option is not recommended and is used only for
                                              KAT and self-verification. */
-    CRYPT_CTRL_SET_ECC_POINT_FORMAT,    /**< ECC PKEY set the point format. For the point format,
-                                             see CRYPT_PKEY_PointFormat. */
-    CRYPT_CTRL_GET_RSA_SALT,            /**< Obtain the salt length of the RSA algorithm. */
-    CRYPT_CTRL_GET_RSA_PADDING,         /**< Obtain the padding mode of the RSA algorithm. */
     CRYPT_CTRL_SET_RSA_PADDING,         /**< Set the padding mode of the RSA algorithm. */
-    CRYPT_CTRL_GET_RSA_MD,              /**< Obtain the MD algorithm of the RSA algorithm. */
-    CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode
-                                             is PSS. */
-    CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, /**< Indicates whether to use the cofactor mode to prevent
-                                               man-in-the-middle from tampering with the public key.
-                                               Set this parameter to 1 when used or 0 when not used. */
     CRYPT_CTRL_SET_RSA_RSAES_OAEP,      /**< RSA set the padding mode to RSAES_OAEP. */
     CRYPT_CTRL_SET_RSA_OAEP_LABEL,      /**< RSA oaep padding and setting labels, used to generate hash values. */
     CRYPT_CTRL_SET_RSA_FLAG,            /**< RSA set the flag. */
-    CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15,   /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS, /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15_TLS. */
-    CRYPT_CTRL_SET_SM2_USER_ID,
+
+    CRYPT_CTRL_GET_RSA_SALT,            /**< Obtain the salt length of the RSA algorithm. */
+    CRYPT_CTRL_GET_RSA_PADDING,         /**< Obtain the padding mode of the RSA algorithm. */
+    CRYPT_CTRL_GET_RSA_MD,              /**< Obtain the MD algorithm of the RSA algorithm. */
+    CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode is PSS. */
+    CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
+    
+    // ecc
+    CRYPT_CTRL_SET_SM2_USER_ID = 300,
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */
-    CRYPT_CTRL_GENE_SM2_R,              /* SM2 obtain the R value. */
     CRYPT_CTRL_SET_SM2_R,               /* SM2 set the R value. */
     CRYPT_CTRL_SET_SM2_RANDOM,          /* SM2 set the r value. */
     CRYPT_CTRL_SET_SM2_PKG,             /* SM2 uses the PKG process. */
-    CRYPT_CTRL_SM2_GET_SEND_CHECK,      /* SM2 obtain the check value sent from the local end to the peer end. */
-    CRYPT_CTRL_SM2_DO_CHECK,            /* SM2 check the shared key. */
+    CRYPT_CTRL_SET_ECC_POINT_FORMAT,    /**< ECC PKEY set the point format. For the point format,
+                                             see CRYPT_PKEY_PointFormat. */
+    CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, /**< Indicates whether to use the cofactor mode to prevent
+                                               man-in-the-middle from tampering with the public key.
+                                               Set this parameter to 1 when used or 0 when not used. */
 
-    CRYPT_CTRL_UP_REFERENCES,           /**< The reference count value increases automatically.
-                                             It is applicable to asymmetric algorithms such as 25519, RSA, and ECC. */
-    CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey genarate pubkey. */
-    CRYPT_CTRL_SET_PARA_BY_ID,          /* Asymmetric cipher set para by id. */
-    CRYPT_CTRL_GET_PARA,                /* Asymmetric cipher get para. */
-    CRYPT_CTRL_GET_PARAID,              /* Asymmetric cipher get id of para. */
-    CRYPT_CTRL_GET_BITS,            /* Asymmetric cipher get bits . */
-    CRYPT_CTRL_GET_SIGNLEN,             /* Asymmetric cipher get signlen . */
-    CRYPT_CTRL_GET_SECBITS,              /* Asymmetric cipher get secure bits . */
+    CRYPT_CTRL_GET_SM2_SEND_CHECK,      /* SM2 obtain the check value sent from the local end to the peer end. */
+
+    CRYPT_CTRL_SM2_DO_CHECK,            /* SM2 check the shared key. */
+    CRYPT_CTRL_SM2_GENE_R,              /* SM2 obtain the R value. */
+    CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey generate pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**
@@ -601,12 +594,6 @@ typedef enum {
 } CRYPT_HKDF_MODE;
 
 #define DEFAULT_PROVIDER_PARAM_TYPE 0
-
-typedef struct {
-    int32_t type;
-    void *param;
-    uint32_t paramLen;
-} CRYPT_Param;
 
 #ifdef __cplusplus
 }

@@ -158,7 +158,7 @@ int32_t CRYPT_EAL_MacFinal(CRYPT_EAL_MacCtx *ctx, uint8_t *out, uint32_t *len);
  *
  * @param   ctx [IN] MAC context
  */
-void CRYPT_EAL_MacDeinit(CRYPT_EAL_MacCtx *ctx);
+int32_t CRYPT_EAL_MacDeinit(CRYPT_EAL_MacCtx *ctx);
 
 /**
  * @ingroup crypt_eal_mac
