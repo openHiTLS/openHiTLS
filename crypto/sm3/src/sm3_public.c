@@ -222,4 +222,20 @@ int32_t CRYPT_SM3_CopyCtx(CRYPT_SM3_Ctx *dst, const CRYPT_SM3_Ctx *src)
     (void)memcpy_s(dst, sizeof(CRYPT_SM3_Ctx), src, sizeof(CRYPT_SM3_Ctx));
     return CRYPT_SUCCESS;
 }
+
+CRYPT_SM3_Ctx *CRYPT_SM3_DupCtx(const CRYPT_SM3_Ctx *src)
+{
+    if (src == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_SM3_Ctx *newCtx = CRYPT_SM3_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CRYPT_SM3_Ctx), src, sizeof(CRYPT_SM3_Ctx));
+    return newCtx;
+}
+
 #endif /* HITLS_CRYPTO_SM3 */

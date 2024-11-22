@@ -136,6 +136,14 @@ int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx
 int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src);
 int32_t CRYPT_SHAKE128_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src);
 int32_t CRYPT_SHAKE256_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src);
+
+// Dup the context
+CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_DupCtx(const CRYPT_SHA3_224_Ctx *src);
+CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_DupCtx(const CRYPT_SHA3_256_Ctx *src);
+CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_DupCtx(const CRYPT_SHA3_384_Ctx *src);
+CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_DupCtx(const CRYPT_SHA3_512_Ctx *src);
+CRYPT_SHA3_384_Ctx *CRYPT_SHAKE128_DupCtx(const CRYPT_SHA3_384_Ctx *src);
+CRYPT_SHA3_512_Ctx *CRYPT_SHAKE256_DupCtx(const CRYPT_SHA3_512_Ctx *src);
 #ifdef __cplusplus
 }
 #endif

@@ -35,6 +35,7 @@ typedef int32_t (*MdUpdate)(void *data, const uint8_t *input, uint32_t len);
 typedef int32_t (*MdFinal)(void *data, uint8_t *out, uint32_t *len);
 typedef void (*MdDeinit)(void *data);
 typedef int32_t (*MdCopyCtx)(void *dst, void *src);
+typedef void* (*MdDupCtx)(const void *src);
 typedef void (*MdFreeCtx)(void *data);
 typedef int32_t (*MdCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
 
@@ -46,7 +47,8 @@ typedef struct {
     MdUpdate update;    // Add block data for MD calculation.
     MdFinal final;      // Complete the MD calculation and obtain the MD result.
     MdDeinit deinit;    // Clear the key information of the MD context.
-    MdCopyCtx copyCtx;  // Copy the MD context.
+    MdCopyCtx copyCtx; // Copy the MD context.
+    MdDupCtx dupCtx;  // Dup the MD context.
     MdFreeCtx freeCtx;   // free md context
     MdCtrl ctrl;        // get/set md param
 } EAL_MdMethod;
@@ -60,7 +62,7 @@ typedef struct {
     MdUpdate update;
     MdFinal final;
     MdDeinit deinit;
-    MdCopyCtx copyCtx;
+    MdDupCtx dupCtx;
     MdFreeCtx freeCtx;
     MdCtrl ctrl;
 } EAL_MdUnitaryMethod;
