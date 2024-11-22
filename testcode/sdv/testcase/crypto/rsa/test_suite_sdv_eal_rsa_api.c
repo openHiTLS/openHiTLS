@@ -843,7 +843,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isProvider)
 {
-    uint8_t crypt[TMP_BUFF_LEN];
+    uint8_t crypt[TMP_BUFF_LEN+1];
     uint32_t cryptLen = TMP_BUFF_LEN;
     CRYPT_EAL_PkeyPrv prvkey = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -878,8 +878,8 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
 
     cryptLen = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
-    cryptLen = 2049;  // 2049 is an invalid data length.
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+    cryptLen = 2049;  // 2049 The buffer that holds the decrypted data is allowed to be larger than it actually is。
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_SUCCESS);
 
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkey);

@@ -901,12 +901,12 @@ exit:
 
 /**
  * @test   SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC002
- * @title  RSA verify PSS: saltLen is SALTLEN_PSS_AUTOLEN_TYPE
+ * @title  RSA verify PSS: saltLen is CRYPT_RSA_SALTLEN_TYPE_AUTOLEN
  * @precon
  * @brief
  *    1. Create the context(pkeyCtx) of the rsa algorithm, expected result 1
  *    2. Set public key for pkeyCtx, expected result 2
- *    3. Set padding type to PSS(saltLen is SALTLEN_PSS_AUTOLEN_TYPE) for pkeyCtx, expected result 3
+ *    3. Set padding type to PSS(saltLen is CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) for pkeyCtx, expected result 3
  *    4. Call the CRYPT_EAL_PkeyVerify method and use pkeyCtx to verify the signed data, expected result 4
  *    5. Calculate the hash value of msg, expected result 5
  *    6. Call the CRYPT_EAL_PkeyVerifyData method and use pkeyCtx to verify the signed data, expected result 6
@@ -922,7 +922,7 @@ void SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC002(int mdAlgId, Hex *n, Hex *e, Hex *msg,
     }
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     CRYPT_EAL_PkeyPub publicKey = {0};
-    CRYPT_RSA_PssPara pkeyPad = {.saltLen = SALTLEN_PSS_AUTOLEN_TYPE, .mdId = mdAlgId, .mgfId = mdAlgId};
+    CRYPT_RSA_PssPara pkeyPad = {.saltLen = CRYPT_RSA_SALTLEN_TYPE_AUTOLEN, .mdId = mdAlgId, .mgfId = mdAlgId};
 
     TestMemInit();
 
