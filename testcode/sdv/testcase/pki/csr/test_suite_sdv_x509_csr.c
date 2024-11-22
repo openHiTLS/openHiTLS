@@ -44,14 +44,14 @@ static void *TestMalloc(uint32_t len)
 
 static void TestMemInitErr()
 {
-    BSL_SAL_MemCallback cb = {TestMallocErr, free};
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, TestMallocErr);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 }
 
 static void TestMemInitCorrect()
 {
-    static BSL_SAL_MemCallback cb = {TestMalloc, free};
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, TestMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 }
 
 /* BEGIN_CASE */

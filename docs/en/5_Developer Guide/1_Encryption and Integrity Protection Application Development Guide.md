@@ -42,8 +42,6 @@ void PrintLastError(void) {
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = { StdMalloc, free };  // Registered interfaces for memory allocation.
-
 int main(void)
 {
     uint8_t data[10] = {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x1c, 0x14};
@@ -66,9 +64,10 @@ int main(void)
     // Initialize the error code module.
     BSL_ERR_Init();
 
-    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     // Create a context.
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_CBC);
@@ -207,14 +206,13 @@ void PrintLastError(void) {
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = {StdMalloc, free};
-
 int main(void) {
     int32_t ret;
     BSL_ERR_Init();  // Initialize the error code module.
-    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (pkey == NULL) {
@@ -305,7 +303,6 @@ void PrintLastError(void) {
     BSL_ERR_GetLastErrorFileLine(&file, &line);// Obtain the name and number of lines of the error file.
     printf("failed at file %s at line %d\n", file, line);
 }
-BSL_SAL_MemCallback cb = {StdMalloc, free};
 
 int main(void)
 {
@@ -320,9 +317,10 @@ int main(void)
     CRYPT_EAL_PkeyCtx *ctx = NULL;
 
     BSL_ERR_Init(); // Initialize the error code module.
-    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (ctx == NULL) {
@@ -412,8 +410,6 @@ void PrintLastError(void) {
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = {StdMalloc, free};
-
 int main(void)
 {
     int ret;
@@ -439,9 +435,10 @@ int main(void)
     CRYPT_PKEY_ParaId id = CRYPT_ECC_NISTP256;
 
     BSL_ERR_Init(); // Initialize the error code module.
-    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
@@ -566,8 +563,6 @@ void PrintLastError(void) {
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = {StdMalloc, free};
-
 int main(void)
 {
     int32_t ret;
@@ -596,7 +591,8 @@ int main(void)
      * Execute this step only once. If the memory allocation ability of Linux is available,
      * the two functions can be registered using Linux by default.
     */
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     if (ctx == NULL) {
@@ -690,17 +686,16 @@ void PrintLastError(void) {
     printf("failed at file %s at line %d\n", file, line);
 }
 
-BSL_SAL_MemCallback cb = {StdMalloc, free};
-
 int main(void)
 {
     int ret;
     uint8_t output[100] = {0};
     uint32_t len = 100;
 
-    // Before calling the algorithm APIs, call the **BSL_SAL_RegMemCallback** function to register the **malloc** and **free** functions. Execute this step only once.
+    // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_RegMemCallback(&cb);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     BSL_ERR_Init();// Initialize the error module.
 
