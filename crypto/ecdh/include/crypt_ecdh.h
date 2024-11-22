@@ -122,7 +122,7 @@ int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *param);
  * @brief Get the data of the key structure to the key parameter structure.
  *
  * @param ctx [IN] Key structure for setting related parameters
- * @param para [OUT] Key parameters
+ * @param param [OUT] Key parameters
  *
  * @retval CRYPT_NULL_INPUT     Invalid null pointer input.
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
@@ -264,7 +264,7 @@ int32_t CRYPT_ECDH_Cmp(const CRYPT_ECDH_Ctx *a, const CRYPT_ECDH_Ctx *b);
  * @ingroup ecdh
  * @brief ecdh get security bits
  *
- * @param para [IN] ecdh Context structure
+ * @param ctx [IN] ecdh Context structure
  *
  * @retval security bits
  */

@@ -378,28 +378,24 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
 
     CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, NULL);
     ASSERT_TRUE(kdfCtx != NULL);
+    void *tempData = kdfCtx->data;
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
-    BSL_SAL_FREE(kdfCtx->method);
-    BSL_SAL_FREE(kdfCtx->data);
-    BSL_SAL_FREE(kdfCtx);
+    BSL_SAL_FREE(tempData);
     CRYPT_EAL_MacCtx *macCtx = CRYPT_EAL_ProviderMacNewCtx(libCtx, CRYPT_MAC_HMAC_MD5, NULL);
     ASSERT_TRUE(macCtx != NULL);
+    tempData = macCtx->ctx;
     CRYPT_EAL_MacFreeCtx(macCtx);
-    BSL_SAL_FREE(macCtx->macMeth);
-    BSL_SAL_FREE(macCtx->ctx);
-    BSL_SAL_FREE(macCtx);
+    BSL_SAL_FREE(tempData);
     CRYPT_EAL_MdCTX *mdCtx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_MD5, NULL);
     ASSERT_TRUE(mdCtx != NULL);
+    tempData = mdCtx->data;
     CRYPT_EAL_MdFreeCtx(mdCtx);
-    BSL_SAL_FREE(mdCtx->method);
-    BSL_SAL_FREE(mdCtx->data);
-    BSL_SAL_FREE(mdCtx);
+    BSL_SAL_FREE(tempData);
     CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, NULL);
     ASSERT_TRUE(pkeyCtx != NULL);
+    tempData = pkeyCtx->key;
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
-    BSL_SAL_FREE(pkeyCtx->method);
-    BSL_SAL_FREE(pkeyCtx->key);
-    BSL_SAL_FREE(pkeyCtx);
+    BSL_SAL_FREE(tempData);
 
 exit:
     if (libCtx != NULL) {
