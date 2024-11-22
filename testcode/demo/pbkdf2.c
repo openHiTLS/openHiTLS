@@ -22,6 +22,8 @@
 #include "bsl_err.h"
 #include "crypt_algid.h"
 #include "crypt_eal_kdf.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #define PBKDF2_PARAM_LEN (4)
 
@@ -74,20 +76,16 @@ int main(void)
         goto exit;
     }
     CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
-    CRYPT_Param PBKDF2_PARAM[PBKDF2_PARAM_LEN] = {
-        {CRYPT_KDF_PARAM_MAC_ALG_ID, &id, sizeof(id)},
-        {CRYPT_KDF_PARAM_PASSWORD, key, sizeof(key)},
-        {CRYPT_KDF_PARAM_SALT, salt, sizeof(salt)},
-        {CRYPT_KDF_PARAM_ITER, &iterations, sizeof(iterations)},
-    };
-
-    for (int i = 0; i < PBKDF2_PARAM_LEN; i++) {
-        ret = CRYPT_EAL_KdfSetParam(ctx, PBKDF2_PARAM + i);
-        if (ret != CRYPT_SUCCESS) {
-            printf("error code is %x\n", ret);
-            PrintLastError();
-            goto exit;
-        }
+    BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id));
+    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, key, sizeof(key));
+    (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, sizeof(salt));
+    (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iterations, sizeof(iterations));
+    ret = CRYPT_EAL_KdfSetParam(ctx, params);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        PrintLastError();
+        goto exit;
     }
 
     ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);

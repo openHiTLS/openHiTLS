@@ -20,6 +20,8 @@
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "crypt_pbkdf2.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 /* END_HEADER */
 
 #define DATA_LEN (16)
@@ -58,82 +60,81 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001(void)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
-
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
-
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
-
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        key, keyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt, saltLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
-    SCRYPT_SET_PARAM(&passwordParam, NULL, keyLen);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_NULL_INPUT);
-
-    SCRYPT_SET_PARAM(&passwordParam, NULL, 0);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
-    SCRYPT_SET_PARAM(&passwordParam, key, 0);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
-
-    SCRYPT_SET_PARAM(&passwordParam, key, keyLen);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
-
-    SCRYPT_SET_PARAM(&saltParam, NULL, saltLen);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_NULL_INPUT);
-
-    SCRYPT_SET_PARAM(&saltParam, NULL, 0);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
-
-    SCRYPT_SET_PARAM(&saltParam, salt, 0);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
-
-    SCRYPT_SET_PARAM(&saltParam, salt, saltLen);
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
 
     N = 0;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SCRYPT_PARAM_ERROR);
 
     N = 3;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SCRYPT_PARAM_ERROR);
 
     N = 6;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SCRYPT_PARAM_ERROR);
 
     N = 65538;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SCRYPT_PARAM_ERROR);
 
     N = 4;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
     N = DATA_LEN;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
 
     r = 0;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SCRYPT_PARAM_ERROR);
 
     r = DATA_LEN;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
     p = 0;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SCRYPT_PARAM_ERROR);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SCRYPT_PARAM_ERROR);
 
     p = DATA_LEN;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, NULL, outLen), CRYPT_SCRYPT_PARAM_ERROR);
@@ -179,87 +180,112 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC002(void)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key, keyLen};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
-
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt, saltLen};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
-
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
-
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        key, keyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt, saltLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
     // N is 2^16 = 65536, r is 1,Not satisfied N < 2^(128 * r / 8)
     N = 65536;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
     r = 1;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // N is 2^15 = 32768, r is 1,satisfied N < 2^(128 * r / 8)
     N = 32768;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
     r = 1;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
 
     // r = 2^16 = 65536, N = 2^9 = 512, Not satisfied N < ((UINT32_MAX / 128) / r)
     N = 512;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
     r = 65536;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     N = DATA_LEN;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
 
     // r  is 2^16 = 65536, p is 2^16 = 65536, Not satisfied p <= ((2^32-1) * 32) / (128 * r)
     r = 65536;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
     p = 65536;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^16 = 65536, p = 2^14 = 16384, Not satisfied r * p <= 2^30 - 1
     r = 65536;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
     p = 16384;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^16 = 65536, p = 2^9 = 512, Not satisfied p * 128 * r < UINT32_MAX
     r = 65536;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
     p = 512;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^8 = 256, p = 2^22 = 4194304, Not satisfied r * p <= 2^30 - 1
     r = 256;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
     p = 4194304;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^4 = 16, p = 2^26 = 67108864, Not satisfied r * p <= 2^30 - 1
     r = 16;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
     p = 67108864;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 
     // r = 2^4 = 16, p = 2^21 = 2097152, Not satisfied p * 128 * r < UINT32_MAX
     r = 16;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
     p = 2097152;
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
 exit:
     CRYPT_EAL_KdfFreeCtx(ctx);
@@ -287,22 +313,18 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC001(Hex *key, Hex *salt, int N, int r, int p
 
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     ASSERT_TRUE(ctx != NULL);
-
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
-
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
-
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
-
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt->x, salt->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
 exit:
@@ -331,20 +353,18 @@ void SDV_CRYPTO_SCRYPT_DEFAULT_PROVIDER_FUNC_TC001(Hex *key, Hex *salt, int N, i
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_SCRYPT, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, key->x, key->len};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &passwordParam), CRYPT_SUCCESS);
-
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->x, salt->len};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &saltParam), CRYPT_SUCCESS);
-
-    CRYPT_Param nParam = {CRYPT_KDF_PARAM_N, &N, sizeof(N)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &nParam), CRYPT_SUCCESS);
-
-    CRYPT_Param rParam = {CRYPT_KDF_PARAM_R, &r, sizeof(r)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &rParam), CRYPT_SUCCESS);
-
-    CRYPT_Param pParam = {CRYPT_KDF_PARAM_P, &p, sizeof(p)};
-    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, &pParam), CRYPT_SUCCESS);
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt->x, salt->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);

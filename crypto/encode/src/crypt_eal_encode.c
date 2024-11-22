@@ -34,6 +34,8 @@
 #include "crypt_types.h"
 #include "crypt_eal_rand.h"
 #include "crypt_encode.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #define PATH_MAX_LEN 4096
 #define PWD_MAX_LEN 4096
@@ -906,40 +908,23 @@ typedef struct {
 
 static int32_t PbkdfDeriveKey(int32_t iter, int32_t prfId, BSL_Buffer *salt, const uint8_t *pwd, uint32_t pwdlen, BSL_Buffer *key)
 {
+    int32_t ret;
     CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     if (kdfCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_NOT_SUPPORTED);
         return CRYPT_PBKDF2_NOT_SUPPORTED;
     }
-    int32_t madId = prfId;
-    CRYPT_Param macAlgIdParam = {CRYPT_KDF_PARAM_MAC_ALG_ID, &madId, sizeof(int32_t)};
-    int32_t ret = CRYPT_EAL_KdfSetParam(kdfCtx, &macAlgIdParam);
+
+    BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &prfId, sizeof(prfId));
+    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, (uint8_t *)pwd, pwdlen);
+    (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt->data, salt->dataLen);
+    (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, sizeof(iter));
+    ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-
-    CRYPT_Param passwordParam = {CRYPT_KDF_PARAM_PASSWORD, (uint8_t *)pwd, pwdlen};
-    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &passwordParam);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    CRYPT_Param saltParam = {CRYPT_KDF_PARAM_SALT, salt->data, salt->dataLen};
-    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &saltParam);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    CRYPT_Param iterParam = {CRYPT_KDF_PARAM_ITER, &iter, sizeof(iter)};
-    ret = CRYPT_EAL_KdfSetParam(kdfCtx, &iterParam);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
     ret = CRYPT_EAL_KdfDerive(kdfCtx, key->data, key->dataLen);
 EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
