@@ -101,14 +101,7 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
 
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertDup(HITLS_CERT_X509 *cert)
 {
-    HITLS_X509_Cert *dest = NULL;
-    int32_t ret = HITLS_X509_CertDup(cert, &dest);
-    if (ret != HITLS_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return NULL;
-    }
-
-    return dest;
+    return HITLS_X509_CertDup(cert);
 }
 
 void HITLS_X509_Adapt_CertFree(HITLS_CERT_X509 *cert)

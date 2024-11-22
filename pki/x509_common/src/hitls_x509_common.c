@@ -246,7 +246,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
     BSL_ASN1_Template templ = {algTempl, sizeof(algTempl) / sizeof(algTempl[0])};
     // 2: alg + param
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, 2, &(asn->buff), &(asn->len));
-    BSL_SAL_Free(asnArr[1].buff);
+    BSL_SAL_FREE(asnArr[1].buff);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -348,7 +348,7 @@ static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, X509_ParseFuncCbk *parse
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
@@ -374,7 +374,7 @@ int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HI
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
 {
     char *nextEncode = (char *)(encode->data);
     uint32_t nextEncodeLen = encode->dataLen;
@@ -400,7 +400,7 @@ int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+static int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
     HITLS_X509_List *list)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
@@ -613,6 +613,7 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(sign->buff);
+        sign->len = 0;
         BSL_SAL_FREE(rawSignBuff->data);
         rawSignBuff->dataLen = 0;
     }

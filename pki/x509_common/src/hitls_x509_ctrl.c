@@ -182,6 +182,11 @@ static int32_t X509EncodeNameNodeEntry(const HITLS_X509_NameNode *nameNode, BSL_
     return ret;
 }
 
+typedef struct {
+    HITLS_X509_NameNode *node;
+    BSL_ASN1_Buffer *encode;
+} NameNodePack;
+
 /**
  *  X.690: 11.6 Set-of components
  *  https://www.itu.int/rec/T-REC-X.690-202102-I/en
@@ -189,45 +194,23 @@ static int32_t X509EncodeNameNodeEntry(const HITLS_X509_NameNode *nameNode, BSL_
  * being compared as octet strings with the shorter components being padded at their trailing end with 0-octets.
  * NOTE – The padding octets are for comparison purposes only and do not appear in the encodings.
 */
-static int32_t g_cmpRes = HITLS_X509_SUCCESS;
 static int32_t CmpDnNameByEncode(const void *pDnName1, const void *pDnName2)
 {
-    if (pDnName1 == NULL || pDnName2 == NULL) {
-        g_cmpRes = HITLS_X509_ERR_CERT_INVALID_DN;
-        return 0;
-    }
-    const HITLS_X509_NameNode *node1 = *(const HITLS_X509_NameNode **)pDnName1;
-    const HITLS_X509_NameNode *node2 = *(const HITLS_X509_NameNode **)pDnName2;
+    const NameNodePack *node1 = *(const NameNodePack **)pDnName1;
+    const NameNodePack *node2 = *(const NameNodePack **)pDnName2;
     int res;
-    BSL_ASN1_Buffer asn1Buff = {0};
-    BSL_ASN1_Buffer asn2Buff = {0};
-    int32_t ret = X509EncodeNameNodeEntry(node1, &asn1Buff);
-    if (ret != HITLS_X509_SUCCESS) {
-        g_cmpRes = HITLS_X509_ERR_SORT_NAME_NODE;
-        BSL_ERR_PUSH_ERROR(ret);
-        return 0;
-    }
+    BSL_ASN1_Buffer *asn1Buff = node1->encode;
+    BSL_ASN1_Buffer *asn2Buff = node2->encode;
 
-    ret = X509EncodeNameNodeEntry(node2, &asn2Buff);
-    if (ret != HITLS_X509_SUCCESS) {
-        g_cmpRes = HITLS_X509_ERR_SORT_NAME_NODE;
-        BSL_SAL_FREE(asn1Buff.buff);
-        BSL_ERR_PUSH_ERROR(ret);
-        return 0;
-    }
-
-    if (asn1Buff.len == asn2Buff.len) {
-        res = memcmp(asn1Buff.buff, asn2Buff.buff, asn2Buff.len);
+    if (asn1Buff->len == asn2Buff->len) {
+        res = memcmp(asn1Buff->buff, asn2Buff->buff, asn2Buff->len);
     } else {
-        uint32_t minSize = asn1Buff.len < asn2Buff.len ? asn1Buff.len : asn2Buff.len;
-        res = memcmp(asn1Buff.buff, asn2Buff.buff, minSize);
+        uint32_t minSize = asn1Buff->len < asn2Buff->len ? asn1Buff->len : asn2Buff->len;
+        res = memcmp(asn1Buff->buff, asn2Buff->buff, minSize);
         if (res == 0) {
-            res = asn1Buff.len == minSize ? -1 : 1;
+            res = asn1Buff->len == minSize ? -1 : 1;
         }
     }
-    g_cmpRes = HITLS_X509_SUCCESS;
-    BSL_SAL_FREE(asn1Buff.buff);
-    BSL_SAL_FREE(asn2Buff.buff);
     return res;
 }
 
@@ -271,6 +254,19 @@ void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node)
     node->nameValue.len = 0;
     node->nameValue.tag = 0;
     BSL_SAL_Free(node);
+}
+
+static void FreeNodePack(NameNodePack *node)
+{
+    if (node == NULL) {
+        return;
+    }
+    if (node->encode != NULL) { // the node->node has been pushed in other list.
+        BSL_SAL_FREE(node->encode->buff);
+        BSL_SAL_Free(node->encode);
+    }
+    BSL_SAL_Free(node);
+    return;
 }
 
 int32_t HITLS_X509_SetNameList(BslList **dest, void *val, int32_t valLen)
@@ -327,28 +323,43 @@ static int32_t X509AddDnNameItemToList(BslList *dnNameList, BslCid cid, uint8_t 
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
         return HITLS_X509_ERR_SET_DNNAME_UNKKOWN;
     }
-
+    NameNodePack pack;
+    BSL_ASN1_Buffer *encode = BSL_SAL_Calloc(1u, sizeof(HITLS_X509_NameNode));
+    if (encode == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
     HITLS_X509_NameNode *layer2 = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
     if (layer2 == NULL) {
+        BSL_SAL_FREE(encode);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     layer2->nameValue.tag = GetAsn1TypeByCid(cid);
     int32_t ret = FillNameNodes(layer2, data, dataLen, oid);
     if (ret != HITLS_X509_SUCCESS) {
+        BSL_SAL_FREE(encode);
         HITLS_X509_FreeNameNode(layer2);
         return ret;
     }
-
-    ret = BSL_LIST_AddElement(dnNameList, layer2, BSL_LIST_POS_END);
+    ret = X509EncodeNameNodeEntry(layer2, encode);
+    if (ret != HITLS_X509_SUCCESS) {
+        BSL_SAL_FREE(encode);
+        HITLS_X509_FreeNameNode(layer2);
+        return ret;
+    }
+    pack.node = layer2;
+    pack.encode = encode;
+    ret = HITLS_X509_AddListItemDefault(&pack, sizeof(NameNodePack), dnNameList);
     if (ret != BSL_SUCCESS) {
         HITLS_X509_FreeNameNode(layer2);
+        BSL_SAL_FREE(encode->buff);
+        BSL_SAL_Free(encode);
     }
-
     return ret;
 }
 
-static int32_t X509AddDnNamesToList(BslList *list, const BslList *dnNameList)
+static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
 {
     HITLS_X509_NameNode *layer1 = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
     if (layer1 == NULL) {
@@ -363,12 +374,14 @@ static int32_t X509AddDnNamesToList(BslList *list, const BslList *dnNameList)
         HITLS_X509_FreeNameNode(layer1);
         return ret;
     }
-
-    list = BSL_LIST_Concat(list, dnNameList);
-    if (list == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_LIST_ERR_CONCAT);
-        HITLS_X509_FreeNameNode(layer1);
-        return BSL_LIST_ERR_CONCAT;
+    NameNodePack *node = BSL_LIST_GET_FIRST(dnNameList);
+    while (node != NULL) {
+        ret = BSL_LIST_AddElement(list, node->node, BSL_LIST_POS_END);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        node = BSL_LIST_GET_NEXT(dnNameList);
     }
 
     return ret;
@@ -385,7 +398,7 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size
         return HITLS_X509_ERR_SET_DNNAME_TOOMUCH;
     }
 
-    BslList *dnNameList = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    BslList *dnNameList = BSL_LIST_New(sizeof(NameNodePack));
     if (dnNameList == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
@@ -399,8 +412,7 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size
     }
     // sort
     dnNameList = BSL_LIST_Sort(dnNameList, CmpDnNameByEncode);
-    if (g_cmpRes != HITLS_X509_SUCCESS) {
-        ret = g_cmpRes;
+    if (dnNameList == NULL) {
         goto ERR;
     }
     // add dnNameList to list
@@ -408,11 +420,8 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size
     if (ret != HITLS_X509_SUCCESS) {
         goto ERR;
     }
-    BSL_SAL_FREE(dnNameList);
-    return ret;
 ERR:
-    BSL_ERR_PUSH_ERROR(ret);
-    BSL_LIST_FREE(dnNameList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+    BSL_LIST_FREE(dnNameList, (BSL_LIST_PFUNC_FREE)FreeNodePack);
     return ret;
 }
 
