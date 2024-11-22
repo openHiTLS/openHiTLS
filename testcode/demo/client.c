@@ -128,7 +128,8 @@ int main(int32_t argc, char *argv[])
 
     /* 向对端发送报文、用户需按实际场景考虑返回值 */
     const uint8_t sndBuf[] = "Hi, this is client\n";
-    ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf));
+    uint32_t writeLen = 0;
+    ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_Write error:error code:%d\n", ret);
         goto exit;
