@@ -356,7 +356,7 @@ int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uin
     }
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_PAILLIER_GetLen(ctx, (GetLenFunc)CRYPT_PAILLIER_GetBits, val ,len);
+            return CRYPT_PAILLIER_GetLen(ctx, (GetLenFunc)CRYPT_PAILLIER_GetBits, val , len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_PAILLIER_GetLen(ctx, (GetLenFunc)CRYPT_PAILLIER_GetSecBits, val, len);
         default:
