@@ -386,7 +386,7 @@ void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits, int isProvi
 
     /* lambda = NULL */
     prvKey.key.paillierPrv.lambda = NULL;
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_PAILLIER_ERR_INPUT_VALUE);
     prvKey.key.paillierPrv.lambda = prvLambda;
 
     /* lambda != NULL and lambdaLen = 0 */
@@ -396,7 +396,7 @@ void SDV_CRYPTO_PAILLIER_GET_PRV_API_TC001(Hex *p, Hex *q, int bits, int isProvi
 
     /* mu = NULL */
     prvKey.key.paillierPrv.mu = NULL;
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_PAILLIER_ERR_INPUT_VALUE);
     prvKey.key.paillierPrv.mu = prvMu;
     
     /* mu != NULL, muLen = 0 */

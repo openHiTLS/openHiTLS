@@ -24,11 +24,24 @@
 #include "crypt_errno.h"
 #include "securec.h"
 #include "bsl_sal.h"
+#include "crypt_params_type.h"
 
+typedef struct {
+    BSL_Param *d;  /**< RSA private key parameter marked as d. */
+    BSL_Param *n;  /**< RSA private key parameter marked as n. */
+    BSL_Param *p;  /**< RSA private key parameter marked as p. */
+    BSL_Param *q;  /**< RSA private key parameter marked as q. */
+    BSL_Param *dP; /**< RSA private key parameter marked as dP. */
+    BSL_Param *dQ; /**< RSA private key parameter marked as dQ. */
+    BSL_Param *qInv; /**< RSA private key parameter marked as qInv. */
+    BSL_Param *e;    /**< RSA public key parameter marked as e. */
+} CRYPT_RsaPrvParam;
 
-static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *prv)
+#define PARAMISNULL(a) (a == NULL || a->value == NULL)
+
+static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrvParam *prv)
 {
-    int32_t ret = BN_Bin2Bn(prvKey->n, prv->n, prv->nLen);
+    int32_t ret = BN_Bin2Bn(prvKey->n, prv->n->value, prv->n->valueLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -38,7 +51,7 @@ static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *pr
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
-    ret = BN_Bin2Bn(prvKey->d, prv->d, prv->dLen);
+    ret = BN_Bin2Bn(prvKey->d, prv->d->value, prv->d->valueLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -53,8 +66,8 @@ static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *pr
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
-    if (prv->e != NULL) {
-        ret = BN_Bin2Bn(prvKey->e, prv->e, prv->eLen);
+    if (!PARAMISNULL(prv->e)) {
+        ret = BN_Bin2Bn(prvKey->e, prv->e->value, prv->e->valueLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -64,63 +77,78 @@ static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *pr
             return CRYPT_RSA_ERR_INPUT_VALUE;
         }
     }
-    if (prv->p != NULL) {
-        GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->p, prv->p, prv->pLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->q, prv->q, prv->qLen), ret);
+    if (!PARAMISNULL(prv->p)) {
+        GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->p, prv->p->value, prv->p->valueLen), ret);
+        GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->q, prv->q->value, prv->q->valueLen), ret);
         if (BN_IsZero(prvKey->p) == true || BN_IsZero(prvKey->q) == true) {
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
             return CRYPT_RSA_ERR_INPUT_VALUE;
         }
-        if (prv->dP != NULL) {
-            GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->dP, prv->dP, prv->dPLen), ret);
-            GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->dQ, prv->dQ, prv->dQLen), ret);
-            GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->qInv, prv->qInv, prv->qInvLen), ret);
+        if (!PARAMISNULL(prv->dP)) {
+            GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->dP, prv->dP->value, prv->dP->valueLen), ret);
+            GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->dQ, prv->dQ->value, prv->dQ->valueLen), ret);
+            GOTO_ERR_IF_EX(BN_Bin2Bn(prvKey->qInv, prv->qInv->value, prv->qInv->valueLen), ret);
         }
     }
 ERR:
     return ret;
 }
 
-// If n and d are not NULL, p and q are optional. If p and q exist, qInv, dP, and dQ need to be calculated.
-static int32_t SetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
+static int32_t GetAndCheckPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para, CRYPT_RsaPrvParam *prv)
 {
-    if (ctx == NULL || prv == NULL || prv->n == NULL || prv->d == NULL || prv->nLen == 0) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (prv->nLen > RSA_MAX_MODULUS_LEN) {
+    prv->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    prv->d = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_D);
+    prv->e = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    prv->p = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_P);
+    prv->q = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_Q);
+    prv->dP = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DP);
+    prv->dQ = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DQ);
+    prv->qInv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_QINV);
+    if (PARAMISNULL(prv->n) || prv->n->valueLen == 0 || PARAMISNULL(prv->d)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (prv->n->valueLen > RSA_MAX_MODULUS_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
     // prv->p\q and prv->dP\dQ\qInv must be both empty or not.
     // If prv->p is empty, prv->dP must be empty.
-    if ((prv->p == NULL) != (prv->q == NULL) || (prv->p == NULL && prv->dP != NULL) ||
-        ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv))) {
+    if ((PARAMISNULL(prv->p) != PARAMISNULL(prv->q)) || (PARAMISNULL(prv->p) && !PARAMISNULL(prv->dP))) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
+        return CRYPT_RSA_NO_KEY_INFO;
+    }
+    if ((PARAMISNULL(prv->dP) || PARAMISNULL(prv->dQ) || PARAMISNULL(prv->qInv)) &&
+        (!PARAMISNULL(prv->dP) || !PARAMISNULL(prv->dQ) || !PARAMISNULL(prv->qInv))) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
     return CRYPT_SUCCESS;
 }
 
-static int32_t SetPrvBnLenCheck(const CRYPT_RsaPrv *prv)
+static int32_t SetPrvBnLenCheck(const CRYPT_RsaPrvParam *prv)
 {
     /* The length of n is used as the length of a BigNum. The lengths of d, p, and q are not greater than n. */
-    uint32_t bnBytes = prv->nLen;
-    if (prv->dLen > bnBytes || prv->pLen > bnBytes || prv->qLen > bnBytes) {
+    uint32_t bnBytes = prv->n->valueLen;
+    if (prv->d->valueLen > bnBytes || prv->p->valueLen > bnBytes || prv->q->valueLen > bnBytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
 {
-    CRYPT_RsaPrv *prv = (CRYPT_RsaPrv *)para->param;
-    int32_t ret = SetPrvBasicCheck(ctx, prv);
+    CRYPT_RsaPrvParam prv = {0};
+    int32_t ret = GetAndCheckPrvKey(ctx, para, &prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = SetPrvBnLenCheck(prv);
+    ret = SetPrvBnLenCheck(&prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -128,19 +156,19 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
     if (newCtx == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    newCtx->prvKey = RSA_NewPrvKey(prv->nLen * 8); // Bit length is obtained by multiplying byte length by 8.
+    newCtx->prvKey = RSA_NewPrvKey(prv.n->valueLen * 8); // Bit length is obtained by multiplying byte length by 8.
     if (newCtx->prvKey == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
-    ret = SetPrvPara(newCtx->prvKey, prv);
+    ret = SetPrvPara(newCtx->prvKey, &prv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    if (prv->p != NULL && prv->dP == NULL) {
+    if (!PARAMISNULL(prv.p) && PARAMISNULL(prv.dP)) {
         BN_Optimizer *optimizer = BN_OptimizerCreate();
         if (optimizer == NULL) {
             ret = CRYPT_MEM_ALLOC_FAIL;
@@ -169,28 +197,38 @@ ERR:
     return ret;
 }
 
-static int32_t SetPubBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub)
+static int32_t SetPubBasicCheckAndGet(const CRYPT_RSA_Ctx *ctx, const BSL_Param *para, const BSL_Param *n,
+    const BSL_Param *e)
 {
-    if (ctx == NULL || pub == NULL || pub->n == NULL || pub->e == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pub->nLen > RSA_MAX_MODULUS_LEN) {
+    if (PARAMISNULL(n)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (PARAMISNULL(e)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (n->valueLen > RSA_MAX_MODULUS_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
     /* The length of n is used as the length of a BigNum, and the length of e is not greater than n. */
-    if (pub->eLen > pub->nLen) {
+    if (e->valueLen > n->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
 {
-    CRYPT_RsaPub *pub = (CRYPT_RsaPub *)para->param;
-    int32_t ret = SetPubBasicCheck(ctx, pub);
+    const BSL_Param *nParam = BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    const BSL_Param *eParam = BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    int32_t ret = SetPubBasicCheckAndGet(ctx, para, nParam, eParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -199,19 +237,19 @@ int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
     CRYPT_RSA_PubKey *newPub = NULL;
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
     /* Bit length is obtained by multiplying byte length by 8. */
-    newPub = RSA_NewPubKey(pub->nLen * 8);
+    newPub = RSA_NewPubKey(nParam->valueLen * 8);
     if (newPub == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    GOTO_ERR_IF(BN_Bin2Bn(newPub->n, pub->n, pub->nLen), ret);
+    GOTO_ERR_IF(BN_Bin2Bn(newPub->n, nParam->value, nParam->valueLen), ret);
     bnBits = BN_Bits(newPub->n);
     if (bnBits > RSA_MAX_MODULUS_BITS || bnBits < RSA_MIN_MODULUS_BITS) {
         ret = CRYPT_RSA_ERR_KEY_BITS;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(BN_Bin2Bn(newPub->e, pub->e, pub->eLen), ret);
-    if (pub->nLen > RSA_SMALL_MODULUS_BYTES && BN_Bytes(newPub->e) > RSA_MAX_PUBEXP_BYTES) {
+    GOTO_ERR_IF(BN_Bin2Bn(newPub->e, eParam->value, eParam->valueLen), ret);
+    if (nParam->valueLen > RSA_SMALL_MODULUS_BYTES && BN_Bytes(newPub->e) > RSA_MAX_PUBEXP_BYTES) {
         ret = CRYPT_RSA_ERR_KEY_BITS;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -243,82 +281,124 @@ ERR:
     return ret;
 }
 
-static int32_t GetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
+static int32_t GetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, BSL_Param *para, CRYPT_RsaPrvParam *prv)
 {
+    if (ctx == NULL || ctx->prvKey == NULL || para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    prv->n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    prv->d = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_D);
+    prv->e = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    prv->p = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_P);
+    prv->q = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_Q);
+    prv->dP = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DP);
+    prv->dQ = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_DQ);
+    prv->qInv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_QINV);
     // ctx\ctx->prvKey\prv is not empty.
     // prv->p\q and prv->dP\dQ\qInv are both null or non-null.
     // If prv->p is empty, prv->dP is empty.
-    if (ctx == NULL || ctx->prvKey == NULL || prv == NULL || ((prv->p == NULL) != (prv->q == NULL)) ||
-        ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv)) ||
-        (prv->p == NULL && prv->dP != NULL)) {
+    if ((PARAMISNULL(prv->p) != PARAMISNULL(prv->q)) ||
+        ((PARAMISNULL(prv->dP) || PARAMISNULL(prv->dQ) || PARAMISNULL(prv->qInv)) &&
+         (!PARAMISNULL(prv->dP) || !PARAMISNULL(prv->dQ) || !PARAMISNULL(prv->qInv))) ||
+        (PARAMISNULL(prv->p) && !PARAMISNULL(prv->dP))) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
 {
-    CRYPT_RsaPrv *prv = (CRYPT_RsaPrv *)para->param;
-    int32_t ret = GetPrvBasicCheck(ctx, prv);
+    CRYPT_RsaPrvParam prv = {0};
+    int32_t ret = GetPrvBasicCheck(ctx, para, &prv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->n, prv->n, &prv->nLen), ret);
-    GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->d, prv->d, &prv->dLen), ret);
-    if (prv->e != NULL) {
-        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->e, prv->e, &prv->eLen), ret);
+
+    prv.n->useLen = prv.n->valueLen;
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->n, prv.n->value, &(prv.n->useLen)), ret);
+    prv.d->useLen = prv.d->valueLen;
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->d, prv.d->value, &(prv.d->useLen)), ret);
+    if (!PARAMISNULL(prv.e)) {
+        prv.e->useLen = prv.e->valueLen;
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->e, prv.e->value, &(prv.e->useLen)), ret);
     }
-    if (prv->p != NULL) {
-        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->p, prv->p, &prv->pLen), ret);
-        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->q, prv->q, &prv->qLen), ret);
+    if (!PARAMISNULL(prv.p)) {
+        prv.p->useLen = prv.p->valueLen;
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->p, prv.p->value, &(prv.p->useLen)), ret);
+        prv.q->useLen = prv.q->valueLen;
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->q, prv.q->value, &(prv.q->useLen)), ret);
     }
-    if (prv->dQ != NULL) {
-        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->dQ, prv->dQ, &prv->dQLen), ret);
-        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->dP, prv->dP, &prv->dPLen), ret);
-        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->qInv, prv->qInv, &prv->qInvLen), ret);
+    if (!PARAMISNULL(prv.dQ)) {
+        prv.dQ->useLen = prv.dQ->valueLen;
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->dQ, prv.dQ->value, &(prv.dQ->useLen)), ret);
+        prv.dP->useLen = prv.dP->valueLen;
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->dP, prv.dP->value, &(prv.dP->useLen)), ret);
+        prv.qInv->useLen = prv.qInv->valueLen;
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->qInv, prv.qInv->value, &(prv.qInv->useLen)), ret);
     }
     return CRYPT_SUCCESS;
 
 ERR:
-    if (prv->d != NULL && prv->dLen != 0) {
-        BSL_SAL_CleanseData(prv->d, prv->dLen);
+    if (!PARAMISNULL(prv.d) && prv.d->useLen != 0) {
+        BSL_SAL_CleanseData(prv.d->value, prv.d->useLen);
+        prv.d->useLen = 0;
     }
-    if (prv->p != NULL && prv->pLen != 0) {
-        BSL_SAL_CleanseData(prv->p, prv->pLen);
+    if (!PARAMISNULL(prv.p) && prv.p->useLen != 0) {
+        BSL_SAL_CleanseData(prv.p->value, prv.p->useLen);
+        prv.p->useLen = 0;
     }
-    if (prv->q != NULL && prv->qLen != 0) {
-        BSL_SAL_CleanseData(prv->q, prv->qLen);
+    if (!PARAMISNULL(prv.q) && prv.q->useLen != 0) {
+        BSL_SAL_CleanseData(prv.q->value, prv.q->useLen);
+        prv.q->useLen = 0;
     }
-    if (prv->dQ != NULL && prv->dQLen != 0) {
-        BSL_SAL_CleanseData(prv->dQ, prv->dQLen);
+    if (!PARAMISNULL(prv.dQ) && prv.dQ->useLen != 0) {
+        BSL_SAL_CleanseData(prv.dQ->value, prv.dQ->useLen);
+        prv.dQ->useLen = 0;
     }
-    if (prv->dP != NULL && prv->dPLen != 0) {
-        BSL_SAL_CleanseData(prv->dP, prv->dPLen);
+    if (!PARAMISNULL(prv.dP) && prv.dP->useLen != 0) {
+        BSL_SAL_CleanseData(prv.dP->value, prv.dP->useLen);
+        prv.dP->useLen = 0;
     }
-    if (prv->qInv != NULL && prv->qInvLen != 0) {
-        BSL_SAL_CleanseData(prv->qInv, prv->qInvLen);
+    if (!PARAMISNULL(prv.qInv) && prv.qInv->useLen != 0) {
+        BSL_SAL_CleanseData(prv.qInv->value, prv.qInv->useLen);
+        prv.qInv->useLen = 0;
     }
     return ret;
 }
 
-int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
 {
-    CRYPT_RsaPub *pub = (CRYPT_RsaPub *)para->param;
-    if (ctx == NULL || ctx->pubKey == NULL || pub == NULL) {
+    if (ctx == NULL || ctx->pubKey == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = BN_Bn2Bin(ctx->pubKey->e, pub->e, &pub->eLen);
+    BSL_Param *e = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_E);
+    if (e == NULL || e->value == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    uint32_t eLen = e->valueLen;
+    int32_t ret = BN_Bn2Bin(ctx->pubKey->e, e->value, &eLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(ctx->pubKey->n, pub->n, &pub->nLen);
+    BSL_Param *n = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_RSA_N);
+    if (n == NULL || n->value == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    uint32_t nLen = n->valueLen;
+    ret = BN_Bn2Bin(ctx->pubKey->n, n->value, &nLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
+    e->useLen = eLen;
+    n->useLen = nLen;
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)

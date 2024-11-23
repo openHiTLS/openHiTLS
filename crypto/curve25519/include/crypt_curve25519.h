@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include "crypt_local_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,7 +96,7 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
  * @retval CRYPT_NULL_INPUT                     If any input parameter is empty
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        pubKeyLen is not equal to curve25519 public key length
  */
-int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para);
+int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para);
 
 /**
  * @ingroup curve25519
@@ -109,7 +110,7 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param
  * @retval CRYPT_CURVE25519_NO_PUBKEY           The key pair has no public key.
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        pubKeyLen is less than curve25519 public key length.
  */
-int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para);
+int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *para);
 
 /**
  * @ingroup curve25519
@@ -122,7 +123,7 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param
  * @retval CRYPT_NULL_INPUT                     If any input parameter is empty
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        prvKeyLen is not equal to curve25519 private key length
  */
-int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param *para);
+int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para);
 
 /**
  * @ingroup curve25519
@@ -136,7 +137,7 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Param
  * @retval CRYPT_CURVE25519_NO_PRVKEY           The key pair has no private key.
  * @retval CRYPT_CURVE25519_KEYLEN_ERROR        prvKeyLen is less than the private key length of curve25519.
  */
-int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Param *para);
+int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *para);
 
 /**
  * @ingroup curve25519
