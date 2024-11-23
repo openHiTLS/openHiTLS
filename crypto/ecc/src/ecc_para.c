@@ -23,6 +23,7 @@
 #include "crypt_errno.h"
 #include "ecc_local.h"
 #include "crypt_types.h"
+#include "crypt_params_type.h"
 #include "crypt_ecc_pkey.h"
 
 typedef struct {
@@ -517,7 +518,25 @@ ERR:
     return CRYPT_PKEY_PARAID_MAX;
 }
 
-int32_t ECC_GetPara(const ECC_Pkey *pkey, CRYPT_EccPara *eccPara)
+static int32_t GetEccParam(const BN_BigNum *x, BSL_Param *param, int32_t key)
+{
+    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, key);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
+        return CRYPT_DSA_PARA_ERROR;
+    }
+
+    temp->useLen = temp->valueLen;
+    int32_t ret = BN_Bn2Bin(x, temp->value, &temp->useLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t ECC_GetPara(const ECC_Pkey *pkey, BSL_Param *eccPara)
 {
     if (pkey == NULL || eccPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -527,37 +546,37 @@ int32_t ECC_GetPara(const ECC_Pkey *pkey, CRYPT_EccPara *eccPara)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
         return CRYPT_ECC_PKEY_ERR_EMPTY_KEY;
     }
-    int32_t ret = BN_Bn2Bin(pkey->para->a, eccPara->a, &eccPara->aLen);
+    int32_t ret = GetEccParam(pkey->para->p, eccPara, CRYPT_PARAM_ECC_P);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(pkey->para->b, eccPara->b, &eccPara->bLen);
+    ret = GetEccParam(pkey->para->a, eccPara, CRYPT_PARAM_ECC_A);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(pkey->para->h, eccPara->h, &eccPara->hLen);
+    ret = GetEccParam(pkey->para->b, eccPara, CRYPT_PARAM_ECC_B);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(pkey->para->n, eccPara->n, &eccPara->nLen);
+    ret = GetEccParam(pkey->para->n, eccPara, CRYPT_PARAM_ECC_N);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(pkey->para->p, eccPara->p, &eccPara->pLen);
+    ret = GetEccParam(pkey->para->h, eccPara, CRYPT_PARAM_ECC_H);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(pkey->para->x, eccPara->x, &eccPara->xLen);
+    ret = GetEccParam(pkey->para->x, eccPara, CRYPT_PARAM_ECC_X);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(pkey->para->y, eccPara->y, &eccPara->yLen);
+    ret = GetEccParam(pkey->para->y, eccPara, CRYPT_PARAM_ECC_Y);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

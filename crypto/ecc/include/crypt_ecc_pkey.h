@@ -22,6 +22,7 @@
 #include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "crypt_algid.h"
+#include "bsl_params.h"
 #include "sal_atomic.h"
 
 #ifdef __cplusplus
@@ -82,7 +83,7 @@ uint32_t ECC_PkeyGetBits(const ECC_Pkey *ctx);
  * @retval CRYPT_SUCCESS
  * @retval Other            failure
  */
-int32_t ECC_GetPara(const ECC_Pkey *pkey, CRYPT_EccPara *eccPara);
+int32_t ECC_GetPara(const ECC_Pkey *pkey, BSL_Param *eccPara);
 
 /**
  * @ingroup ecc

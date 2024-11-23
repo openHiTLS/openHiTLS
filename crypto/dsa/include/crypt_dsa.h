@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include "crypt_bn.h"
 #include "crypt_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +97,7 @@ void CRYPT_DSA_FreePara(CRYPT_DSA_Para *para);
  * @retval BN error code.            An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS             Set successfully.
  */
-int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const BSL_Param *param);
 
 /**
  * @ingroup dsa
@@ -110,7 +111,7 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *param);
  * @retval BN error code.            An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS             Get successfully.
  */
-int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup dsa

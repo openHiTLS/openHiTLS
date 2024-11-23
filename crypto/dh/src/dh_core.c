@@ -26,6 +26,7 @@
 #include "dh_local.h"
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
+#include "crypt_params_type.h"
 
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
 {
@@ -306,13 +307,13 @@ int32_t CRYPT_DH_SetParaEx(CRYPT_DH_Ctx *ctx, CRYPT_DH_Para *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_DH_Para *dhPara = CRYPT_DH_NewPara((CRYPT_DhPara *)para->param);
+    CRYPT_DH_Para *dhPara = CRYPT_DH_NewPara(para);
     if (dhPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
@@ -332,42 +333,92 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_Param *param)
+static int32_t GetDhParamP(const CRYPT_DH_Para *para, BSL_Param *param)
 {
-    int32_t ret;
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    CRYPT_DhPara *para = (CRYPT_DhPara *)param->param;
-    if (ctx->para == NULL || para == NULL) {
+    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, CRYPT_PARAM_DH_P);
+    if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
         return CRYPT_DH_PARA_ERROR;
     }
-    ret = BN_Bn2Bin(ctx->para->p, para->p, &(para->pLen));
+
+    temp->useLen = temp->valueLen;
+    int32_t ret = BN_Bn2Bin(para->p, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    if (ctx->para->q == NULL) {
-        para->q = NULL;
-        para->qLen = 0;
-    } else {
-        ret = BN_Bn2Bin(ctx->para->q, para->q, &(para->qLen));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetDhParamQ(const CRYPT_DH_Para *para, BSL_Param *param)
+{
+    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, CRYPT_PARAM_DH_Q);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
+        return CRYPT_DH_PARA_ERROR;
     }
 
-    ret = BN_Bn2Bin(ctx->para->g, para->g, &(para->gLen));
+    if (para->q == NULL) {
+        temp->useLen = 0;
+        return CRYPT_SUCCESS;
+    }
+
+    temp->useLen = temp->valueLen;
+    int32_t ret = BN_Bn2Bin(para->q, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    return ret;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetDhParamG(const CRYPT_DH_Para *para, BSL_Param *param)
+{
+    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, CRYPT_PARAM_DH_G);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
+        return CRYPT_DH_PARA_ERROR;
+    }
+
+    temp->useLen = temp->valueLen;
+    int32_t ret = BN_Bn2Bin(para->g, temp->value, &temp->useLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, BSL_Param *param)
+{
+    if (ctx == NULL || param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
+        return CRYPT_DH_PARA_ERROR;
+    }
+
+    int32_t ret = GetDhParamP(ctx->para, param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    ret = GetDhParamQ(ctx->para, param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    ret = GetDhParamG(ctx->para, param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
 }
 
 /**
