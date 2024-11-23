@@ -251,53 +251,28 @@ DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
 
     const BSL_Param *temp = NULL;
     bool seedMethFlag = false;
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_SEED_GETENTROPY)) != NULL) {
-        ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.getEntropy), NULL);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return NULL;
-        }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY)) != NULL) {
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.getEntropy), NULL), ret);
         seedMethFlag = true;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_SEED_CLEANENTROPY)) != NULL) {
-        ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.cleanEntropy), NULL);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return NULL;
-        }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY)) != NULL) {
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.cleanEntropy), NULL), ret);
         seedMethFlag = true;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_SEED_GETNONCE)) != NULL) {
-        ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.getNonce), NULL);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return NULL;
-        }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE)) != NULL) {
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.getNonce), NULL), ret);
         seedMethFlag = true;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_SEED_CLEANNONCE)) != NULL) {
-        ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.cleanNonce), NULL);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return NULL;
-        }
+    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE)) != NULL) {
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.cleanNonce), NULL), ret);
         seedMethFlag = true;
     }
     if (!seedMethFlag) {
         seedMeth = NULL;
     }
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
-        ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return NULL;
-        }
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
     }
-    
     CRYPT_RandSeedMethod seedMethTmp = {0};
     ret = RandInitCheck(algId, &seedMeth, &seedCtx, &seedMethTmp);
     if (ret != CRYPT_SUCCESS) {
@@ -336,6 +311,10 @@ DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
             return NULL;
     }
     return drbg;
+
+ERR:
+    BSL_ERR_PUSH_ERROR(ret);
+    return NULL;
 }
 
 void DRBG_Free(DRBG_Ctx *ctx)

@@ -317,10 +317,10 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
     BSL_Param param[6] = {0};
     param[0] = (BSL_Param){CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0, 0};
     if (seedMeth != NULL) {
-        param[1] = (BSL_Param){CRYPT_PARAM_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getEntropy, 0, 0};
-        param[2] = (BSL_Param){CRYPT_PARAM_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanEntropy, 0, 0};
-        param[3] = (BSL_Param){CRYPT_PARAM_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getNonce, 0, 0};
-        param[4] = (BSL_Param){CRYPT_PARAM_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanNonce, 0, 0};
+        param[1] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getEntropy, 0, 0};
+        param[2] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanEntropy, 0, 0};
+        param[3] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getNonce, 0, 0};
+        param[4] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanNonce, 0, 0};
     }
 
     ctx = EAL_RandInitDrbg(id, param);
@@ -343,10 +343,10 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *s
     BSL_Param param[6] = {0};
     param[0] = (BSL_Param){CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0, 0};
     if (seedMeth != NULL) {
-        param[1] = (BSL_Param){CRYPT_PARAM_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getEntropy, 0, 0};
-        param[2] = (BSL_Param){CRYPT_PARAM_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanEntropy, 0, 0};
-        param[3] = (BSL_Param){CRYPT_PARAM_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getNonce, 0, 0};
-        param[4] = (BSL_Param){CRYPT_PARAM_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanNonce, 0, 0};
+        param[1] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getEntropy, 0, 0};
+        param[2] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanEntropy, 0, 0};
+        param[3] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getNonce, 0, 0};
+        param[4] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanNonce, 0, 0};
     }
 
     return EAL_RandInitDrbg(id, param);
