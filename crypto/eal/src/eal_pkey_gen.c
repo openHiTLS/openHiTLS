@@ -206,12 +206,6 @@ static int32_t ParaIsVaild(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPa
     return CRYPT_SUCCESS;
 }
 
-#define CRYPT_PARAM_DSA_NUM         (CRYPT_PARAM_DSA_G - CRYPT_PARAM_DSA_BASE + 1)
-#define CRYPT_PARAM_RSA_NUM         (CRYPT_PARAM_RSA_BITS - CRYPT_PARAM_RSA_BASE + 1)
-#define CRYPT_PARAM_DH_NUM          (CRYPT_PARAM_DH_G - CRYPT_PARAM_DH_BASE + 1)
-#define CRYPT_PARAM_ECC_NUM         (CRYPT_PARAM_ECC_Y - CRYPT_PARAM_ECC_BASE + 1)
-#define CRYPT_PARAM_PAILLIER_NUM    (CRYPT_PARAM_PAILLIER_BITS - CRYPT_PARAM_PAILLIER_BASE + 1)
-
 static int32_t SetDsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DsaPara *dsaPara)
 {
     BSL_Param param[CRYPT_PARAM_DSA_NUM] = {
