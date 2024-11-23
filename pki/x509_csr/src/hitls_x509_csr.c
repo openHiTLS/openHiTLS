@@ -351,7 +351,7 @@ static int32_t CheckCsrValid(HITLS_X509_Csr *csr)
     if (csr->reqInfo.ealPubKey == NULL) {
         return HITLS_X509_ERR_CSR_INVALID_PUBKEY;
     }
-    if (csr->reqInfo.subjectName == NULL || BSL_LIST_COUNT(csr->reqInfo.subjectName) == 0) {
+    if (csr->reqInfo.subjectName == NULL || BSL_LIST_COUNT(csr->reqInfo.subjectName) <= 0) {
         return HITLS_X509_ERR_CSR_INVALID_SUBJECT_DN;
     }
 

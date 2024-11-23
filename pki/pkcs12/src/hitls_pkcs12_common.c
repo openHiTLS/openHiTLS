@@ -153,7 +153,6 @@ static int32_t X509_ParseP12AttrItem(BslList *attrList, HITLS_X509_AttrEntry *at
     attr.attrId = attrEntry->cid;
     int32_t ret = ConvertAttributes(attrEntry->cid, &attrEntry->attrValue, &attr.attrValue);
     if (ret != HITLS_X509_SUCCESS) {
-        BSL_SAL_Free(attr.attrValue.data);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -167,11 +166,7 @@ static int32_t X509_ParseP12AttrItem(BslList *attrList, HITLS_X509_AttrEntry *at
 
 int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attributes)
 {
-    int32_t ret = HITLS_X509_ParseAttrList(attrBuff, attributes, X509_ParseP12AttrItem, HITLS_PKCS12_AttributesFree);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
+    return HITLS_X509_ParseAttrList(attrBuff, attributes, X509_ParseP12AttrItem, HITLS_PKCS12_AttributesFree);
 }
 /*
  SafeBag ::= SEQUENCE {
@@ -891,13 +886,8 @@ static int32_t X509_EncodeP12AttrItem(void *attrNode, HITLS_X509_AttrEntry *attr
 
 int32_t HITLS_PKCS12_EncodeAttrList(HITLS_X509_Attrs *attrs, BSL_ASN1_Buffer *attrBuff)
 {
-    int32_t ret = HITLS_X509_EncodeAttrList(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, attrs,
+    return HITLS_X509_EncodeAttrList(BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, attrs,
         X509_EncodeP12AttrItem, attrBuff);
-    if (ret != HITLS_X509_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-
-    return ret;
 }
 
 static int32_t EncodeCertBag(HITLS_X509_Cert *cert, uint32_t certType, uint8_t **encode, uint32_t *encodeLen)
@@ -1474,7 +1464,7 @@ int32_t HITLS_PKCS12_GenFile(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS
 
 static void DeleteAttribute(HITLS_PKCS12_Bag *bag, uint32_t type)
 {
-    if (bag->attributes == NULL || bag->attributes->list == NULL) {
+    if (bag->attributes == NULL) {
         return;
     }
     BSL_ASN1_List *list = bag->attributes->list;

@@ -65,6 +65,10 @@ HITLS_X509_Attrs *HITLS_X509_AttrsNew(void)
     return attrs;
 }
 
+/*
+* For pkcs12, parsing and encoding operation uses deep copy, and it use callback function to free
+* For csr, parsing operation uses shallow copy, and encoding operation uses deep copy
+*/
 void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb freeItem)
 {
     if (attrs == NULL) {
@@ -101,7 +105,7 @@ int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 HITLS_X509_Attrs *HITLS_X509_AttrsDup(const HITLS_X509_Attrs *src, HITLS_X509_DupAttrItemCb dupCb,
     HITLS_X509_FreeAttrItemCb freeCb)
 {
-    if (src == NULL || src->list == NULL || BSL_LIST_COUNT(src->list) <= 0 ||
+    if (src == NULL || BSL_LIST_COUNT(src->list) <= 0 ||
         dupCb == NULL || freeCb == NULL) {
         return NULL;
     }
