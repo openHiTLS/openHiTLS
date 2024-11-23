@@ -37,13 +37,6 @@ static void BagListsDestroyCb(void *bag)
     HITLS_PKCS12_SafeBagFree((HITLS_PKCS12_SafeBag *)bag);
 }
 
-// static void AttributesFree(void *attribute)
-// {
-//     HITLS_PKCS12_SafeBagAttr *input = (HITLS_PKCS12_SafeBagAttr *)attribute;
-//     BSL_SAL_FREE(input->attrValue.data);
-//     BSL_SAL_FREE(input);
-// }
-
 static void BagFree(void *value)
 {
     HITLS_PKCS12_Bag *bag = (HITLS_PKCS12_Bag *)value;

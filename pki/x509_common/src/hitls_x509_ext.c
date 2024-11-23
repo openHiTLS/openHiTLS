@@ -995,7 +995,7 @@ static int32_t SetExtSan(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const 
 {
     (void)ext;
     const HITLS_X509_ExtSan *san = (const HITLS_X509_ExtSan *)val;
-    if (san->names == NULL || BSL_LIST_COUNT(san->names) == 0) {
+    if (san->names == NULL || BSL_LIST_COUNT(san->names) <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SAN);
         return HITLS_X509_ERR_EXT_SAN;
     }
@@ -1034,7 +1034,7 @@ static int32_t SetExtExKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry,
 {
     (void)ext;
     const HITLS_X509_ExtExKeyUsage *exku = (const HITLS_X509_ExtExKeyUsage *)val;
-    if (exku->oidList == NULL || BSL_LIST_COUNT(exku->oidList) == 0) {
+    if (exku->oidList == NULL || BSL_LIST_COUNT(exku->oidList) <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_EXTENDED_KU);
         return HITLS_X509_ERR_EXT_EXTENDED_KU;
     }
@@ -1313,7 +1313,7 @@ int32_t HITLS_X509_EncodeExtEntry(BSL_ASN1_List *list, BSL_ASN1_Buffer *ext)
 
 int32_t HITLS_X509_EncodeExt(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *ext)
 {
-    if (BSL_LIST_COUNT(list) == 0) {
+    if (BSL_LIST_COUNT(list) <= 0) {
         ext->tag = tag;
         ext->len = 0;
         ext->buff = NULL;
@@ -1392,7 +1392,7 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
     certExt->keyUsage = srcExt->keyUsage;
     certExt->extFlags = srcExt->extFlags;
 
-    if (BSL_LIST_COUNT(src->extList) == 0) {
+    if (BSL_LIST_COUNT(src->extList) <= 0) {
         BSL_LIST_DeleteAll(dest->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
         return HITLS_X509_SUCCESS;
     }
