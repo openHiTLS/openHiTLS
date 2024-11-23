@@ -262,12 +262,12 @@ typedef void (*CRYPT_EAL_ImplKdfFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLRAND_DRBGCTRL     6
 #define CRYPT_EAL_IMPLRAND_DRBGFREECTX  7
 
-typedef void *(*CRYPT_EAL_ImplRandDrbgNewCtx)(void *provCtx, int32_t algId, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplRandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, CRYPT_Param *param);
+typedef void *(*CRYPT_EAL_ImplRandDrbgNewCtx)(void *provCtx, int32_t algId, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplRandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgUnInst)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *bytes, uint32_t len,
-    const uint8_t *addin, uint32_t addinLen, CRYPT_Param *param);
-typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, CRYPT_Param *param);
+    const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplRandDrbgFreeCtx)(void *ctx);
 #ifdef __cplusplus

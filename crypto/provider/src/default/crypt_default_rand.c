@@ -23,7 +23,7 @@
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 
-void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, CRYPT_Param *param)
+void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
 {
     (void) provCtx;
     void *randCtx = NULL;

@@ -13,16 +13,25 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
         BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_KEY);
         return BSL_PARAMS_INVALID_KEY;
     }
-    /* Parameter validation: param cannot be NULL, if val is NULL, valueLen must be 0 */
-    if ((val == NULL && valueLen != 0) || param == NULL) {
+    if (param == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
+    }
+    if (type != BSL_PARAM_TYPE_FUNC_PTR && type != BSL_PARAM_TYPE_CTX_PTR) {
+        /* Parameter validation: param cannot be NULL, if val is NULL, valueLen must be 0 */
+        if (val == NULL && valueLen != 0) {
+            BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+            return BSL_INVALID_ARG;
+        }
     }
 
     switch (type) {
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
+        case BSL_PARAM_TYPE_BOOL:
         case BSL_PARAM_TYPE_UINT32_PTR:
+        case BSL_PARAM_TYPE_FUNC_PTR:
+        case BSL_PARAM_TYPE_CTX_PTR:
             param->value = val;
             param->valueLen = valueLen;
             param->valueType = type;
@@ -51,6 +60,8 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
     }
     switch (type) {
         case BSL_PARAM_TYPE_OCTETS_PTR:
+        case BSL_PARAM_TYPE_FUNC_PTR:
+        case BSL_PARAM_TYPE_CTX_PTR:
             param->value = val;
             param->useLen = len;
             return BSL_SUCCESS;
@@ -70,6 +81,14 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
             (void)memcpy_s(param->value, len, val, len);
             param->useLen = len;
             return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_BOOL:
+            if (param->valueLen != len || val == NULL || param->value == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+                return BSL_INVALID_ARG;
+            }
+            *(bool *)param->value = *(bool *)val;
+            param->useLen = len;
+            return BSL_SUCCESS;
         default:
             BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_TYPE);
             return BSL_PARAMS_INVALID_TYPE;
@@ -82,9 +101,15 @@ int32_t BSL_PARAM_GetPtrValue(const BSL_Param *param, int32_t key, uint32_t type
         BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_KEY);
         return BSL_PARAMS_INVALID_KEY;
     }
-    if (param == NULL || val == NULL || valueLen == NULL) {
+    if (param == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
+    }
+    if (type != BSL_PARAM_TYPE_FUNC_PTR && type != BSL_PARAM_TYPE_CTX_PTR) {
+        if (valueLen == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+            return BSL_INVALID_ARG;
+        }
     }
     if (param->key != key || param->valueType != type) {
         BSL_ERR_PUSH_ERROR(BSL_PARAMS_MISMATCH);
@@ -95,6 +120,10 @@ int32_t BSL_PARAM_GetPtrValue(const BSL_Param *param, int32_t key, uint32_t type
         case BSL_PARAM_TYPE_OCTETS_PTR:
             *val = param->value;
             *valueLen = param->valueLen;
+            return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_FUNC_PTR:
+        case BSL_PARAM_TYPE_CTX_PTR:
+            *val = param->value;
             return BSL_SUCCESS;
         default:
             BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_TYPE);
@@ -119,6 +148,7 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
     switch (type) {
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
+        case BSL_PARAM_TYPE_BOOL:
             if (*valueLen < param->valueLen) {
                 BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
                 return BSL_INVALID_ARG;

@@ -31,12 +31,19 @@ void SDV_BSL_BSL_PARAM_InitValue_API_TC001()
 {
     BSL_Param param = {0};
     int32_t val = 1;
+    bool valBool = true;
+    int32_t *valPtr = &val;
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 0, BSL_PARAM_TYPE_UINT32,
         &val, sizeof(val)), BSL_PARAMS_INVALID_KEY);
     ASSERT_EQ(BSL_PARAM_InitValue(NULL, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, NULL, sizeof(val)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, 100, &val, sizeof(val)), BSL_PARAMS_INVALID_TYPE);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_CTX_PTR, valPtr, 0), BSL_SUCCESS);
+    valPtr = NULL;
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
 exit:
     return;
 }
@@ -47,6 +54,8 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC001()
 {
     BSL_Param param = {0};
     int32_t val = 1;
+    bool valBool = true;
+    int32_t *valPtr = &val;
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_SetValue(&param, 0, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_PARAMS_INVALID_KEY);
     ASSERT_EQ(BSL_PARAM_SetValue(NULL, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_INVALID_ARG);
@@ -60,6 +69,46 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC001()
     uint32_t retValLen = sizeof(retVal);
     ASSERT_EQ(BSL_PARAM_GetValue(&param, 1, BSL_PARAM_TYPE_UINT32, &retVal, &retValLen), BSL_SUCCESS);
     ASSERT_EQ(retVal, val);
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
+    valBool = false;
+    ASSERT_EQ(BSL_PARAM_SetValue(&param, 1, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
+    uint32_t boolSize = sizeof(valBool);
+    ASSERT_EQ(BSL_PARAM_GetValue(&param, 1, BSL_PARAM_TYPE_BOOL, &valBool, &boolSize), BSL_SUCCESS);
+    ASSERT_EQ(valBool, false);
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
+    *valPtr = 0;
+    ASSERT_EQ(BSL_PARAM_SetValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_GetPtrValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, (void **)&valPtr, NULL), BSL_SUCCESS);
+    ASSERT_EQ(*valPtr, 0);
+
+exit:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_BSL_PARAM_FindParam_API_TC001()
+{
+    BSL_Param param[6] = {0};
+    int32_t val = 1;
+    bool valBool = true;
+    int32_t *valPtr = &val;
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0], 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1], 2, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2], 3, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[3], 4, BSL_PARAM_TYPE_CTX_PTR, valPtr, 0), BSL_SUCCESS);
+
+    BSL_Param *temp = NULL;
+    temp = (BSL_Param *)BSL_PARAM_FindParam(param, 1);
+    ASSERT_EQ(temp, &param[0]);
+    temp = (BSL_Param *)BSL_PARAM_FindParam(param, 2);
+    ASSERT_EQ(temp, &param[1]);
+    temp = (BSL_Param *)BSL_PARAM_FindParam(param, 5);
+    ASSERT_EQ(temp, NULL);
+
 exit:
     return;
 }
