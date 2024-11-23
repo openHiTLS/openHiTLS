@@ -74,7 +74,7 @@ void CRYPT_DSA_FreeCtx(CRYPT_DSA_Ctx *ctx);
  * @retval (CRYPT_DSA_Para *) Pointer to the memory space of the allocated context
  * @retval NULL               Invalid null pointer
  */
-CRYPT_DSA_Para *CRYPT_DSA_NewPara(const CRYPT_DsaPara *para);
+CRYPT_DSA_Para *CRYPT_DSA_NewPara(const BSL_Param *para);
 
 /**
  * @ingroup dsa

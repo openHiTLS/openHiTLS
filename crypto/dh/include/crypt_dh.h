@@ -75,7 +75,7 @@ void CRYPT_DH_FreeCtx(CRYPT_DH_Ctx *ctx);
  * @retval (CRYPT_DH_Para *) Pointer to the memory space of the allocated context
  * @retval NULL              Invalid null pointer
  */
-CRYPT_DH_Para *CRYPT_DH_NewPara(const CRYPT_DhPara *para);
+CRYPT_DH_Para *CRYPT_DH_NewPara(const BSL_Param *para);
 
 /**
  * @ingroup dh

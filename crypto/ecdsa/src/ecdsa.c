@@ -61,7 +61,7 @@ CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(CRYPT_PKEY_ParaId id)
     return ECC_NewPara(id);
 }
 
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const CRYPT_EccPara *eccPara)
+CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const BSL_Param *eccPara)
 {
     if (eccPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

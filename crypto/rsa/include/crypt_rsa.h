@@ -71,7 +71,7 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx);
  * @retval (CRYPT_RSA_Para *) Pointer to the allocated memory space of the structure
  * @retval NULL               Invalid null pointer.
  */
-CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para);
+CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para);
 
 /**
  * @ingroup rsa

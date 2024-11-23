@@ -208,15 +208,9 @@ static int32_t ParaIsVaild(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPa
     return CRYPT_SUCCESS;
 }
 
-#define CRYPT_PARAM_DSA_NUM         (CRYPT_PARAM_DSA_G - CRYPT_PARAM_DSA_BASE + 1)
-#define CRYPT_PARAM_RSA_NUM         (CRYPT_PARAM_RSA_BITS - CRYPT_PARAM_RSA_BASE + 1)
-#define CRYPT_PARAM_DH_NUM          (CRYPT_PARAM_DH_G - CRYPT_PARAM_DH_BASE + 1)
-#define CRYPT_PARAM_ECC_NUM         (CRYPT_PARAM_ECC_Y - CRYPT_PARAM_ECC_BASE + 1)
-#define CRYPT_PARAM_PAILLIER_NUM    (CRYPT_PARAM_PAILLIER_BITS - CRYPT_PARAM_PAILLIER_BASE + 1)
-
 static int32_t SetDsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DsaPara *dsaPara)
 {
-    BSL_Param param[CRYPT_PARAM_DSA_NUM] = {
+    BSL_Param param[4] = {
         {CRYPT_PARAM_DSA_P, BSL_PARAM_TYPE_OCTETS_PTR, dsaPara->p, dsaPara->pLen, 0},
         {CRYPT_PARAM_DSA_Q, BSL_PARAM_TYPE_OCTETS_PTR, dsaPara->q, dsaPara->qLen, 0},
         {CRYPT_PARAM_DSA_G, BSL_PARAM_TYPE_OCTETS_PTR, dsaPara->g, dsaPara->gLen, 0},
@@ -228,7 +222,7 @@ static int32_t SetDsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DsaPara *dsaPar
 static int32_t SetRsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_RsaPara *rsaPara)
 {
     uint32_t bits = rsaPara->bits;
-    BSL_Param param[CRYPT_PARAM_RSA_NUM] = {
+    BSL_Param param[3] = {
         {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS_PTR, rsaPara->e, rsaPara->eLen, 0},
         {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
         BSL_PARAM_END
@@ -238,7 +232,7 @@ static int32_t SetRsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_RsaPara *rsaPar
 
 static int32_t SetDhParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DhPara *dhPara)
 {
-    BSL_Param param[CRYPT_PARAM_DH_NUM] = {
+    BSL_Param param[4] = {
         {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS_PTR, dhPara->p, dhPara->pLen, 0},
         {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS_PTR, dhPara->q, dhPara->qLen, 0},
         {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS_PTR, dhPara->g, dhPara->gLen, 0},
@@ -249,14 +243,14 @@ static int32_t SetDhParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DhPara *dhPara)
 
 static int32_t SetEccParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EccPara *eccPara)
 {
-    BSL_Param param[CRYPT_PARAM_ECC_NUM] = {
-        {CRYPT_PARAM_ECC_P, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->p, eccPara->pLen, 0},
-        {CRYPT_PARAM_ECC_A, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->a, eccPara->aLen, 0},
-        {CRYPT_PARAM_ECC_B, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->b, eccPara->bLen, 0},
-        {CRYPT_PARAM_ECC_N, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->n, eccPara->nLen, 0},
-        {CRYPT_PARAM_ECC_H, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->h, eccPara->hLen, 0},
-        {CRYPT_PARAM_ECC_X, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->x, eccPara->xLen, 0},
-        {CRYPT_PARAM_ECC_Y, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->y, eccPara->yLen, 0},
+    BSL_Param param[8] = {
+        {CRYPT_PARAM_EC_P, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->p, eccPara->pLen, 0},
+        {CRYPT_PARAM_EC_A, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->a, eccPara->aLen, 0},
+        {CRYPT_PARAM_EC_B, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->b, eccPara->bLen, 0},
+        {CRYPT_PARAM_EC_N, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->n, eccPara->nLen, 0},
+        {CRYPT_PARAM_EC_H, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->h, eccPara->hLen, 0},
+        {CRYPT_PARAM_EC_X, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->x, eccPara->xLen, 0},
+        {CRYPT_PARAM_EC_Y, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->y, eccPara->yLen, 0},
         BSL_PARAM_END
     };
     return pkey->method->setPara(pkey->key, param);
@@ -265,7 +259,7 @@ static int32_t SetEccParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EccPara *eccPar
 static int32_t SetPaillierParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_PaillierPara *paillierPara)
 {
     uint32_t bits = paillierPara->bits;
-    BSL_Param param[CRYPT_PARAM_PAILLIER_NUM] = {
+    BSL_Param param[4] = {
         {CRYPT_PARAM_PAILLIER_P, BSL_PARAM_TYPE_OCTETS_PTR, paillierPara->p, paillierPara->pLen, 0},
         {CRYPT_PARAM_PAILLIER_Q, BSL_PARAM_TYPE_OCTETS_PTR, paillierPara->q, paillierPara->qLen, 0},
         {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
@@ -276,7 +270,7 @@ static int32_t SetPaillierParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_PaillierPa
 
 static int32_t GetDsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DsaPara *dsaPara)
 {
-    BSL_Param param[CRYPT_PARAM_DSA_NUM] = {
+    BSL_Param param[4] = {
         {CRYPT_PARAM_DSA_P, BSL_PARAM_TYPE_OCTETS_PTR, dsaPara->p, dsaPara->pLen, 0},
         {CRYPT_PARAM_DSA_Q, BSL_PARAM_TYPE_OCTETS_PTR, dsaPara->q, dsaPara->qLen, 0},
         {CRYPT_PARAM_DSA_G, BSL_PARAM_TYPE_OCTETS_PTR, dsaPara->g, dsaPara->gLen, 0},
@@ -293,7 +287,7 @@ static int32_t GetDsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DsaPara *dsaPar
 
 static int32_t GetRsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_RsaPara *rsaPara)
 {
-    BSL_Param param[CRYPT_PARAM_RSA_NUM] = {
+    BSL_Param param[3] = {
         {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS_PTR, rsaPara->e, rsaPara->eLen, 0},
         {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &rsaPara->bits, sizeof(rsaPara->bits), 0},
         BSL_PARAM_END
@@ -307,7 +301,7 @@ static int32_t GetRsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_RsaPara *rsaPar
 
 static int32_t GetDhParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DhPara *dhPara)
 {
-    BSL_Param param[CRYPT_PARAM_DH_NUM] = {
+    BSL_Param param[4] = {
         {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS_PTR, dhPara->p, dhPara->pLen, 0},
         {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS_PTR, dhPara->q, dhPara->qLen, 0},
         {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS_PTR, dhPara->g, dhPara->gLen, 0},
@@ -324,14 +318,14 @@ static int32_t GetDhParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DhPara *dhPara)
 
 static int32_t GetEccParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EccPara *eccPara)
 {
-    BSL_Param param[CRYPT_PARAM_ECC_NUM] = {
-        {CRYPT_PARAM_ECC_P, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->p, eccPara->pLen, 0},
-        {CRYPT_PARAM_ECC_A, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->a, eccPara->aLen, 0},
-        {CRYPT_PARAM_ECC_B, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->b, eccPara->bLen, 0},
-        {CRYPT_PARAM_ECC_N, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->n, eccPara->nLen, 0},
-        {CRYPT_PARAM_ECC_H, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->h, eccPara->hLen, 0},
-        {CRYPT_PARAM_ECC_X, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->x, eccPara->xLen, 0},
-        {CRYPT_PARAM_ECC_Y, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->y, eccPara->yLen, 0},
+    BSL_Param param[8] = {
+        {CRYPT_PARAM_EC_P, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->p, eccPara->pLen, 0},
+        {CRYPT_PARAM_EC_A, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->a, eccPara->aLen, 0},
+        {CRYPT_PARAM_EC_B, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->b, eccPara->bLen, 0},
+        {CRYPT_PARAM_EC_N, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->n, eccPara->nLen, 0},
+        {CRYPT_PARAM_EC_H, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->h, eccPara->hLen, 0},
+        {CRYPT_PARAM_EC_X, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->x, eccPara->xLen, 0},
+        {CRYPT_PARAM_EC_Y, BSL_PARAM_TYPE_OCTETS_PTR, eccPara->y, eccPara->yLen, 0},
         BSL_PARAM_END
     };
     int32_t ret = pkey->method->getPara(pkey->key, param);
@@ -349,7 +343,7 @@ static int32_t GetEccParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EccPara *eccPar
 
 static int32_t GetPaillierParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPara *paillierPara)
 {
-    BSL_Param param[CRYPT_PARAM_PAILLIER_NUM] = {
+    BSL_Param param[4] = {
         {CRYPT_PARAM_PAILLIER_P, BSL_PARAM_TYPE_OCTETS_PTR, paillierPara->p, paillierPara->pLen, 0},
         {CRYPT_PARAM_PAILLIER_Q, BSL_PARAM_TYPE_OCTETS_PTR, paillierPara->q, paillierPara->qLen, 0},
         {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_UINT32, &paillierPara->bits, sizeof(paillierPara->bits), 0},

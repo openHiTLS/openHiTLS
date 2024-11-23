@@ -84,7 +84,7 @@ CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(CRYPT_PKEY_ParaId id);
  * @retval (CRYPT_EcdsaPara *) Pointer to the memory space of the allocated context
  * @retval NULL Invalid null pointer
  */
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const CRYPT_EccPara *eccPara);
+CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const BSL_Param *eccPara);
 
 /**
  * @ingroup ecdsa

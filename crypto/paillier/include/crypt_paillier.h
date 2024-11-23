@@ -65,7 +65,7 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_DupCtx(CRYPT_PAILLIER_Ctx *keyCtx);
  * @retval (CRYPT_PAILLIER_Para *)  Pointer to the allocated memory space of the structure
  * @retval NULL                     Invalid null pointer.
  */
-CRYPT_PAILLIER_Para *CRYPT_PAILLIER_NewPara(const CRYPT_PaillierPara *para);
+CRYPT_PAILLIER_Para *CRYPT_PAILLIER_NewPara(const BSL_Param *para);
 
 /**
  * @ingroup paillier
