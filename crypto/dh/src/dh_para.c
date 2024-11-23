@@ -853,9 +853,9 @@ CRYPT_DH_Para *CRYPT_DH_NewParaById(CRYPT_PKEY_ParaId id)
         return NULL;
     }
     BSL_Param para[4] = {
-        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS_PTR, vector->p->data, vector->p->len, 0},
-        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS_PTR, vector->q->data, vector->q->len, 0},
-        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS_PTR, vector->g->data, vector->g->len, 0},
+        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, vector->p->data, vector->p->len, 0},
+        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, vector->q->data, vector->q->len, 0},
+        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, vector->g->data, vector->g->len, 0},
         BSL_PARAM_END
     };
     retPara = CRYPT_DH_NewPara(para);
