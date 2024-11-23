@@ -96,7 +96,7 @@ void CRYPT_PAILLIER_FreePara(CRYPT_PAILLIER_Para *para);
  * @retval CRYPT_MEM_ALLOC_FAIL         internal memory allocation error
  * @retval CRYPT_SUCCESS                set successfully.
  */
-int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *param);
 
 /**
  * @ingroup paillier
