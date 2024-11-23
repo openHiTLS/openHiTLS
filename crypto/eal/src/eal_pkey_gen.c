@@ -326,22 +326,6 @@ static int32_t GetEccParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EccPara *eccPar
     return ret;
 }
 
-static int32_t GetPaillierParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPara *paillierPara)
-{
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_PAILLIER_P, BSL_PARAM_TYPE_OCTETS, paillierPara->p, paillierPara->pLen, 0},
-        {CRYPT_PARAM_PAILLIER_Q, BSL_PARAM_TYPE_OCTETS, paillierPara->q, paillierPara->qLen, 0},
-        {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_OCTETS_PTR, &paillierPara->bits, sizeof(paillierPara->bits), 0},
-        BSL_PARAM_END
-    };
-    int32_t ret = pkey->method->getPara(pkey->key, param);
-    if (ret == CRYPT_SUCCESS) {
-        paillierPara->pLen = param[0].useLen;
-        paillierPara->qLen = param[1].useLen;
-    }
-    return ret;
-}
-
 static int32_t CvtBslParamAndSetParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
 {
     int32_t ret = CRYPT_NOT_SUPPORT;
@@ -389,8 +373,6 @@ static int32_t CvtBslParamAndGetParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_
             ret =  GetEccParams(pkey, &para->para.eccPara);
             break;
         case CRYPT_PKEY_PAILLIER:
-            ret =  GetPaillierParams(pkey, &para->para.paillierPara);
-            break;
         case CRYPT_PKEY_RSA:
         case CRYPT_PKEY_ED25519:
         case CRYPT_PKEY_X25519:
