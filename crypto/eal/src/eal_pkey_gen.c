@@ -24,6 +24,8 @@
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
+#include "crypt_types.h"
+#include "crypt_params_type.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
@@ -205,6 +207,185 @@ static int32_t ParaIsVaild(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPa
     return CRYPT_SUCCESS;
 }
 
+static int32_t SetDsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DsaPara *dsaPara)
+{
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_DSA_P, BSL_PARAM_TYPE_OCTETS, dsaPara->p, dsaPara->pLen, 0},
+        {CRYPT_PARAM_DSA_Q, BSL_PARAM_TYPE_OCTETS, dsaPara->q, dsaPara->qLen, 0},
+        {CRYPT_PARAM_DSA_G, BSL_PARAM_TYPE_OCTETS, dsaPara->g, dsaPara->gLen, 0},
+        BSL_PARAM_END
+    };
+    return pkey->method->setPara(pkey->key, param);
+}
+
+static int32_t SetRsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_RsaPara *rsaPara)
+{
+    uint32_t bits = rsaPara->bits;
+    BSL_Param param[3] = {
+        {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, rsaPara->e, rsaPara->eLen, 0},
+        {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        BSL_PARAM_END
+    };
+    return pkey->method->setPara(pkey->key, param);
+}
+
+static int32_t SetDhParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DhPara *dhPara)
+{
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, dhPara->p, dhPara->pLen, 0},
+        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, dhPara->q, dhPara->qLen, 0},
+        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, dhPara->g, dhPara->gLen, 0},
+        BSL_PARAM_END
+    };
+    return pkey->method->setPara(pkey->key, param);
+}
+
+static int32_t SetEccParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EccPara *eccPara)
+{
+    BSL_Param param[8] = {
+        {CRYPT_PARAM_EC_P, BSL_PARAM_TYPE_OCTETS, eccPara->p, eccPara->pLen, 0},
+        {CRYPT_PARAM_EC_A, BSL_PARAM_TYPE_OCTETS, eccPara->a, eccPara->aLen, 0},
+        {CRYPT_PARAM_EC_B, BSL_PARAM_TYPE_OCTETS, eccPara->b, eccPara->bLen, 0},
+        {CRYPT_PARAM_EC_N, BSL_PARAM_TYPE_OCTETS, eccPara->n, eccPara->nLen, 0},
+        {CRYPT_PARAM_EC_H, BSL_PARAM_TYPE_OCTETS, eccPara->h, eccPara->hLen, 0},
+        {CRYPT_PARAM_EC_X, BSL_PARAM_TYPE_OCTETS, eccPara->x, eccPara->xLen, 0},
+        {CRYPT_PARAM_EC_Y, BSL_PARAM_TYPE_OCTETS, eccPara->y, eccPara->yLen, 0},
+        BSL_PARAM_END
+    };
+    return pkey->method->setPara(pkey->key, param);
+}
+
+static int32_t SetPaillierParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_PaillierPara *paillierPara)
+{
+    uint32_t bits = paillierPara->bits;
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_PAILLIER_P, BSL_PARAM_TYPE_OCTETS, paillierPara->p, paillierPara->pLen, 0},
+        {CRYPT_PARAM_PAILLIER_Q, BSL_PARAM_TYPE_OCTETS, paillierPara->q, paillierPara->qLen, 0},
+        {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        BSL_PARAM_END
+    };
+    return pkey->method->setPara(pkey->key, param);
+}
+
+static int32_t GetDsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DsaPara *dsaPara)
+{
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_DSA_P, BSL_PARAM_TYPE_OCTETS, dsaPara->p, dsaPara->pLen, 0},
+        {CRYPT_PARAM_DSA_Q, BSL_PARAM_TYPE_OCTETS, dsaPara->q, dsaPara->qLen, 0},
+        {CRYPT_PARAM_DSA_G, BSL_PARAM_TYPE_OCTETS, dsaPara->g, dsaPara->gLen, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = pkey->method->getPara(pkey->key, param);
+    if (ret == CRYPT_SUCCESS) {
+        dsaPara->pLen = param[0].useLen;
+        dsaPara->qLen = param[1].useLen;
+        dsaPara->gLen = param[2].useLen;
+    }
+    return ret;
+}
+
+static int32_t GetDhParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DhPara *dhPara)
+{
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, dhPara->p, dhPara->pLen, 0},
+        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, dhPara->q, dhPara->qLen, 0},
+        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, dhPara->g, dhPara->gLen, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = pkey->method->getPara(pkey->key, param);
+    if (ret == CRYPT_SUCCESS) {
+        dhPara->pLen = param[0].useLen;
+        dhPara->qLen = param[1].useLen;
+        dhPara->gLen = param[2].useLen;
+    }
+    return ret;
+}
+
+static int32_t GetEccParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EccPara *eccPara)
+{
+    BSL_Param param[8] = {
+        {CRYPT_PARAM_EC_P, BSL_PARAM_TYPE_OCTETS, eccPara->p, eccPara->pLen, 0},
+        {CRYPT_PARAM_EC_A, BSL_PARAM_TYPE_OCTETS, eccPara->a, eccPara->aLen, 0},
+        {CRYPT_PARAM_EC_B, BSL_PARAM_TYPE_OCTETS, eccPara->b, eccPara->bLen, 0},
+        {CRYPT_PARAM_EC_N, BSL_PARAM_TYPE_OCTETS, eccPara->n, eccPara->nLen, 0},
+        {CRYPT_PARAM_EC_H, BSL_PARAM_TYPE_OCTETS, eccPara->h, eccPara->hLen, 0},
+        {CRYPT_PARAM_EC_X, BSL_PARAM_TYPE_OCTETS, eccPara->x, eccPara->xLen, 0},
+        {CRYPT_PARAM_EC_Y, BSL_PARAM_TYPE_OCTETS, eccPara->y, eccPara->yLen, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = pkey->method->getPara(pkey->key, param);
+    if (ret == CRYPT_SUCCESS) {
+        eccPara->pLen = param[0].useLen;
+        eccPara->aLen = param[1].useLen;
+        eccPara->bLen = param[2].useLen;
+        eccPara->nLen = param[3].useLen;
+        eccPara->hLen = param[4].useLen;
+        eccPara->xLen = param[5].useLen;
+        eccPara->yLen = param[6].useLen;
+    }
+    return ret;
+}
+
+static int32_t CvtBslParamAndSetParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
+{
+    int32_t ret = CRYPT_NOT_SUPPORT;
+    switch (pkey->id) {
+        case CRYPT_PKEY_DSA:
+            ret = SetDsaParams(pkey, &para->para.dsaPara);
+            break;
+        case CRYPT_PKEY_RSA:
+            ret = SetRsaParams(pkey, &para->para.rsaPara);
+            break;
+        case CRYPT_PKEY_DH:
+            ret = SetDhParams(pkey, &para->para.dhPara);
+            break;
+        case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ECDH:
+            ret =  SetEccParams(pkey, &para->para.eccPara);
+            break;
+        case CRYPT_PKEY_PAILLIER:
+            ret = SetPaillierParams(pkey, &para->para.paillierPara);
+            break;
+        case CRYPT_PKEY_ED25519:
+        case CRYPT_PKEY_X25519:
+        case CRYPT_PKEY_SM2:
+        default:
+            return CRYPT_NOT_SUPPORT;
+    }
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    }
+    return ret;
+}
+
+static int32_t CvtBslParamAndGetParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para)
+{
+    int32_t ret = CRYPT_NOT_SUPPORT;
+    switch (pkey->id) {
+        case CRYPT_PKEY_DSA:
+            ret =  GetDsaParams(pkey, &para->para.dsaPara);
+            break;
+        case CRYPT_PKEY_DH:
+            ret =  GetDhParams(pkey, &para->para.dhPara);
+            break;
+        case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ECDH:
+            ret =  GetEccParams(pkey, &para->para.eccPara);
+            break;
+        case CRYPT_PKEY_PAILLIER:
+        case CRYPT_PKEY_RSA:
+        case CRYPT_PKEY_ED25519:
+        case CRYPT_PKEY_X25519:
+        case CRYPT_PKEY_SM2:
+        default:
+            return CRYPT_NOT_SUPPORT;
+    }
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    }
+    return ret;
+}
+
 int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
 {
     int32_t ret;
@@ -217,10 +398,7 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam = {0};
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(para->para);
-    ret = pkey->method->setPara(pkey->key, &cryptParam);
+    ret = CvtBslParamAndSetParams(pkey, para);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
@@ -239,10 +417,7 @@ int32_t CRYPT_EAL_PkeyGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    CRYPT_Param cryptParam;
-    cryptParam.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    cryptParam.param = (void *)&(para->para);
-    ret = pkey->method->getPara(pkey->key, &cryptParam);
+    ret = CvtBslParamAndGetParams(pkey, para);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }

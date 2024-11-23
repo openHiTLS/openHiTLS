@@ -28,6 +28,7 @@
 #include "crypt_ecdh.h"
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
+#include "crypt_params_type.h"
 
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
 {
@@ -61,7 +62,7 @@ CRYPT_EcdhPara *CRYPT_ECDH_NewParaById(CRYPT_PKEY_ParaId id)
     return ECC_NewPara(id);
 }
 
-CRYPT_EcdhPara *CRYPT_ECDH_NewPara(const CRYPT_EccPara *eccPara)
+CRYPT_EcdhPara *CRYPT_ECDH_NewPara(const BSL_Param *eccPara)
 {
     if (eccPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -88,10 +89,9 @@ void CRYPT_ECDH_FreePara(CRYPT_EcdhPara *para)
     ECC_FreePara(para);
 }
 
-int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, CRYPT_Param *param)
+int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, BSL_Param *param)
 {
-    CRYPT_EccPara *para = (CRYPT_EccPara *)param->param;
-    return ECC_GetPara(ctx, para);
+    return ECC_GetPara(ctx, param);
 }
 
 int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPara *para)
@@ -113,13 +113,13 @@ int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPara *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_EcdhPara *ecdhPara = CRYPT_ECDH_NewPara((CRYPT_EccPara *)para->param);
+    CRYPT_EcdhPara *ecdhPara = CRYPT_ECDH_NewPara(para);
     if (ecdhPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;

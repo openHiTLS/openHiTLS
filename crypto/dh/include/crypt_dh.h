@@ -24,7 +24,6 @@
 #include "crypt_algid.h"
 #include "bsl_params.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
@@ -76,7 +75,7 @@ void CRYPT_DH_FreeCtx(CRYPT_DH_Ctx *ctx);
  * @retval (CRYPT_DH_Para *) Pointer to the memory space of the allocated context
  * @retval NULL              Invalid null pointer
  */
-CRYPT_DH_Para *CRYPT_DH_NewPara(const CRYPT_DhPara *para);
+CRYPT_DH_Para *CRYPT_DH_NewPara(const BSL_Param *para);
 
 /**
  * @ingroup dh
@@ -99,7 +98,7 @@ void CRYPT_DH_FreePara(CRYPT_DH_Para *dhPara);
  * @retval BN error code:           An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const BSL_Param *param);
 
 /**
  * @ingroup dh
@@ -113,7 +112,7 @@ int32_t CRYPT_DH_SetPara(CRYPT_DH_Ctx *ctx, const CRYPT_Param *param);
  * @retval BN error code:       An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_Param *param);
+int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, BSL_Param *param);
 
 /**
  * @ingroup dh
