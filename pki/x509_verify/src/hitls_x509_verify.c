@@ -282,7 +282,6 @@ static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t val
     return ret;
 }
 
-
 static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
 {
     if (valLen != sizeof(int)) {
@@ -743,7 +742,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (BSL_LIST_COUNT(chain) == 0) {
+    if (BSL_LIST_COUNT(chain) <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0);
         return HITLS_X509_ERR_CERT_CHAIN_COUNT_IS0;
     }

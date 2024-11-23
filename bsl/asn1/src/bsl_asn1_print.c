@@ -23,7 +23,7 @@
 #define X509_PRINT_EACH_LAYER_INDENT 4
 #define X509_PRINT_MAX_INDENT (X509_PRINT_EACH_LAYER_INDENT) * (X509_PRINT_MAX_LAYER)
 
-int32_t BSL_ASN1_PrintfBuff(uint32_t layer, BSL_UIO *uio, const char *buff, uint32_t buffLen)
+int32_t BSL_ASN1_PrintfBuff(uint32_t layer, BSL_UIO *uio, const void *buff, uint32_t buffLen)
 {
     int32_t ret;
     uint32_t writeLen = 0;

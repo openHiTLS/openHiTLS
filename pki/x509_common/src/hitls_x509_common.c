@@ -853,6 +853,10 @@ int32_t X509_SetRsaSignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITL
 static int32_t X509_SetSm2SignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Asn1AlgId *signAlgId)
 {
+    if (algParam->algId != BSL_CID_SM2DSAWITHSM3) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
+        return HITLS_X509_ERR_MD_NOT_MATCH;
+    }
     int32_t ret;
     signAlgId->algId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)CRYPT_PKEY_SM2, (BslCid)mdId);
     if (signAlgId->algId == BSL_CID_UNKNOWN) {

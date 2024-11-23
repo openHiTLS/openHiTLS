@@ -122,7 +122,7 @@ typedef void *(*HITLS_X509_DupAttrItemCb)(const void *item);
 
 typedef void (*HITLS_X509_FreeAttrItemCb)(void *item);
 typedef struct _HITLS_X509_Attrs {
-    int flag;
+    uint8_t flag;
     BslList *list; // The list of HITLS_X509_AttrEntry
 } HITLS_X509_Attrs;
 
@@ -219,7 +219,6 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     BSL_ASN1_Buffer *asn1Buff, BSL_Buffer *rawSignBuff, BSL_ASN1_BitString *sign);
 
 HITLS_X509_Attrs *HITLS_X509_AttrsNew(void);
-
 
 void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb freeItem);
 

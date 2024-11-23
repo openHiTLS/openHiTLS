@@ -85,7 +85,7 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
         return HITLS_X509_ERR_PRINT_DN_VALUE;
     }
-    char c;
+    uint64_t c;
     char *fmt;
     int32_t ret;
     while (cur != end) {
@@ -109,7 +109,8 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         } else if (needQuote && c == '"') {
             fmt = "\\%c";
         }
-        ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &c, 1) : BSL_ASN1_Printf(0, uio, fmt, c);
+        char ch = (char)c;
+        ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &ch, 1) : BSL_ASN1_Printf(0, uio, fmt, c);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
             return HITLS_X509_ERR_PRINT_DN_VALUE;

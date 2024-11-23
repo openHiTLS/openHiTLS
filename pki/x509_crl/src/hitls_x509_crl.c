@@ -410,7 +410,7 @@ static int32_t X509_EncodeCrlEntry(HITLS_X509_CrlEntry *crlEntry, BSL_ASN1_Buffe
         BSL_ASN1_TAG_GENERALIZEDTIME : BSL_ASN1_TAG_UTCTIME;
     asnBuf[1].buff = (uint8_t *)&(crlEntry->time);
     asnBuf[1].len = sizeof(BSL_TIME);
-    if (crlEntry->extList != NULL && BSL_LIST_COUNT(crlEntry->extList) != 0) {
+    if (crlEntry->extList != NULL && BSL_LIST_COUNT(crlEntry->extList) > 0) {
         return HITLS_X509_EncodeExtEntry(crlEntry->extList, &asnBuf[2]); // 2 ：extensions
     } else {
         asnBuf[2].tag = 0;  // 2 ：extensions
@@ -424,7 +424,7 @@ static int32_t X509_EncodeCrlEntry(HITLS_X509_CrlEntry *crlEntry, BSL_ASN1_Buffe
 int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *revokeBuf)
 {
     int32_t count = BSL_LIST_COUNT(crlList);
-    if (count == 0) {
+    if (count <= 0) {
         revokeBuf->buff = NULL;
         revokeBuf->len = 0;
         revokeBuf->tag = BSL_ASN1_TAG_SEQUENCE;
@@ -683,7 +683,7 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
         return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
     }
-    if (crl->tbs.crlExt.extList != NULL && BSL_LIST_COUNT(crl->tbs.crlExt.extList) != 0) {
+    if (crl->tbs.crlExt.extList != NULL && BSL_LIST_COUNT(crl->tbs.crlExt.extList) <= 0) {
         if (crl->tbs.version != 1) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_INACCURACY_VERSION);
             return HITLS_X509_ERR_CRL_INACCURACY_VERSION;
@@ -691,7 +691,7 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
     }
 
     // Check issuer name
-    if (crl->tbs.issuerName == NULL || BSL_LIST_COUNT(crl->tbs.issuerName) == 0) {
+    if (crl->tbs.issuerName == NULL || BSL_LIST_COUNT(crl->tbs.issuerName) <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_ISSUER_EMPTY);
         return HITLS_X509_ERR_CRL_ISSUER_EMPTY;
     }
