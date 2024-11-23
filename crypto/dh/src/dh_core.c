@@ -26,6 +26,7 @@
 #include "dh_local.h"
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
+#include "crypt_params_type.h"
 
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
 {
@@ -592,15 +593,15 @@ ERR:
     return ret;
 }
 
-static int32_t PrvLenCheck(const CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv)
+static int32_t PrvLenCheck(const CRYPT_DH_Ctx *ctx, const BSL_Param *prv)
 {
     if (ctx->para->q != NULL) {
-        if (BN_Bytes(ctx->para->q) < prv->len) {
+        if (BN_Bytes(ctx->para->q) < prv->valueLen) {
             BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
             return CRYPT_DH_KEYINFO_ERROR;
         }
     } else {
-        if (BN_Bytes(ctx->para->p) < prv->len) {
+        if (BN_Bytes(ctx->para->p) < prv->valueLen) {
             BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
             return CRYPT_DH_KEYINFO_ERROR;
         }
@@ -608,10 +609,14 @@ static int32_t PrvLenCheck(const CRYPT_DH_Ctx *ctx, const CRYPT_DhPrv *prv)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
 {
-    CRYPT_DhPrv *prv = (CRYPT_DhPrv *)para->param;
-    if (ctx == NULL || prv == NULL || prv->data == NULL || prv->len == 0) {
+    if (ctx == NULL || para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    const BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_DH_PRVKEY);
+    if (prv == NULL || prv->value == NULL || prv->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -623,7 +628,7 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    BN_BigNum *bnX = BN_Create(BN_BYTES_TO_BITS(prv->len));
+    BN_BigNum *bnX = BN_Create(BN_BYTES_TO_BITS(prv->valueLen));
     BN_BigNum *xLimb = BN_Create(BN_Bits(ctx->para->p) + 1);
     if (bnX == NULL || xLimb == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
@@ -635,7 +640,7 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = BN_Bin2Bn(bnX, prv->data, prv->len);
+    ret = BN_Bin2Bn(bnX, prv->value, prv->valueLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -666,23 +671,27 @@ ERR:
 // No parameter information is required for setting the public key.
 // Therefore, the validity of the public key is not checked during the setting.
 // The validity of the public key is checked during the calculation of the shared key.
-int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
 {
-    CRYPT_DhPub *pub = (CRYPT_DhPub *)para->param;
-    if (ctx == NULL || pub == NULL || pub->data == NULL || pub->len == 0) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pub->len > BN_BITS_TO_BYTES(DH_MAX_PBITS)) {
+    const BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_DH_PUBKEY);
+    if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pub->valueLen > BN_BITS_TO_BYTES(DH_MAX_PBITS)) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
         return CRYPT_DH_KEYINFO_ERROR;
     }
-    BN_BigNum *bnY = BN_Create(BN_BYTES_TO_BITS(pub->len));
+    BN_BigNum *bnY = BN_Create(BN_BYTES_TO_BITS(pub->valueLen));
     if (bnY == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = BN_Bin2Bn(bnY, pub->data, pub->len);
+    int32_t ret = BN_Bin2Bn(bnY, pub->value, pub->valueLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -696,10 +705,14 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 {
-    CRYPT_DhPrv *prv = (CRYPT_DhPrv *)para->param;
-    if (ctx == NULL || prv == NULL || prv->data == NULL || prv->len == 0) {
+    if (ctx == NULL || para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    BSL_Param *prv = (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_DH_PRVKEY);
+    if (prv == NULL || prv->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -708,27 +721,34 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para)
         return CRYPT_DH_KEYINFO_ERROR;
     }
     if (ctx->para->q != NULL) {
-        if (BN_Bytes(ctx->para->q) > prv->len) {
+        if (BN_Bytes(ctx->para->q) > prv->valueLen) {
             BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
             return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
         }
     } else {
-        if (BN_Bytes(ctx->para->p) > prv->len) {
+        if (BN_Bytes(ctx->para->p) > prv->valueLen) {
             BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
             return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
         }
     }
-    int32_t ret = BN_Bn2Bin(ctx->x, prv->data, &(prv->len));
+    uint32_t useLen = prv->valueLen;
+    int32_t ret = BN_Bn2Bin(ctx->x, prv->value, &(useLen));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
+    prv->useLen = useLen;
+    return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 {
-    CRYPT_DhPub *pub = (CRYPT_DhPub *)para->param;
-    if (ctx == NULL || pub == NULL || pub->data == NULL || pub->len == 0) {
+    if (ctx == NULL || para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    BSL_Param *pub =  (BSL_Param *)(uintptr_t)BSL_PARAM_FindParam(para, CRYPT_PARAM_DH_PUBKEY);
+    if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -736,15 +756,18 @@ int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
         return CRYPT_DH_KEYINFO_ERROR;
     }
-    if (BN_Bytes(ctx->y) > pub->len) {
+    if (BN_Bytes(ctx->y) > pub->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
     }
-    int32_t ret = BN_Bn2Bin(ctx->y, pub->data, &(pub->len));
+    uint32_t useLen = pub->valueLen;
+    int32_t ret = BN_Bn2Bin(ctx->y, pub->value, &(useLen));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
+    pub->useLen = useLen;
+    return CRYPT_SUCCESS;
 }
 
 uint32_t CRYPT_DH_GetBits(const CRYPT_DH_Ctx *ctx)
