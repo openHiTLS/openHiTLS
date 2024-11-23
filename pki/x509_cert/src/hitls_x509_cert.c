@@ -1023,13 +1023,13 @@ static int32_t CheckCertTbs(HITLS_X509_Cert *cert)
     if (cert == NULL) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (BSL_LIST_COUNT(cert->tbs.ext.extList) != 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
+    if (BSL_LIST_COUNT(cert->tbs.ext.extList) > 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
         return HITLS_X509_ERR_CERT_INACCURACY_VERSION;
     }
     if (cert->tbs.serialNum.buff == NULL || cert->tbs.serialNum.len == 0) {
         return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
     }
-    if (BSL_LIST_COUNT(cert->tbs.issuerName) == 0 || BSL_LIST_COUNT(cert->tbs.subjectName) == 0) {
+    if (BSL_LIST_COUNT(cert->tbs.issuerName) <= 0 || BSL_LIST_COUNT(cert->tbs.subjectName) <= 0) {
         return HITLS_X509_ERR_CERT_INVALID_DN;
     }
     if ((cert->tbs.validTime.flag & BSL_TIME_BEFORE_SET) == 0 || (cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) == 0) {

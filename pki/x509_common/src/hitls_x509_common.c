@@ -860,6 +860,10 @@ static int32_t X509_SetSm2SignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, con
         return HITLS_X509_ERR_ENCODE_SIGNID;
     }
     if (algParam != NULL && algParam->sm2UserId.data != NULL && algParam->sm2UserId.dataLen != 0) {
+        if (algParam->algId != BSL_CID_SM2DSAWITHSM3) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
+            return HITLS_X509_ERR_MD_NOT_MATCH;
+        }
         ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_SM2_USER_ID, algParam->sm2UserId.data,
             algParam->sm2UserId.dataLen);
         if (ret != CRYPT_SUCCESS) {

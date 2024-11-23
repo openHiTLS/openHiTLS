@@ -306,7 +306,7 @@ int32_t BSL_ASN1_Printf(uint32_t layer, BSL_UIO *uio, const char *fmt, ...);
  * @retval  BSL_SUCCESS, success.
  *          Other error codes see the bsl_errno.h.
  */
-int32_t BSL_ASN1_PrintfBuff(uint32_t layer, BSL_UIO *uio, const char *buff, uint32_t buffLen);
+int32_t BSL_ASN1_PrintfBuff(uint32_t layer, BSL_UIO *uio, const void *buff, uint32_t buffLen);
 
 #ifdef __cplusplus
 }

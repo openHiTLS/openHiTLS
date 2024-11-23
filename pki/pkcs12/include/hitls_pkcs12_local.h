@@ -80,8 +80,6 @@ typedef struct {
     HITLS_X509_Attrs *attributes; // Currently, only support localKeyId, friendlyName. Item is HITLS_PKCS12_SafeBagAttr.
 } HITLS_PKCS12_SafeBag;
 
-HITLS_PKCS12_SafeBag *HITLS_PKCS12_SafeBagNew();
-
 void HITLS_PKCS12_SafeBagFree(HITLS_PKCS12_SafeBag *safeBag);
 
 HITLS_PKCS12_MacData *HITLS_PKCS12_MacDataNew(void);

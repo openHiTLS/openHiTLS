@@ -139,7 +139,7 @@ static int32_t MemRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
     if (buf != NULL && real > 0) {
         (void)memcpy_s(buf, len, ubm->buf->data + ubm->readIndex, real);
         ubm->readIndex += real;
-        *readLen = (int32_t)real;
+        *readLen = (uint32_t)real;
     }
     if (*readLen > 0) {
         return BSL_SUCCESS;
