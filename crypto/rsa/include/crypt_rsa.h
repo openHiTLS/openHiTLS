@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "crypt_local_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,7 +102,7 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx);
  * @retval CRYPT_MEM_ALLOC_FAIL     internal memory allocation error
  * @retval CRYPT_SUCCESS            set successfully.
  */
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup rsa

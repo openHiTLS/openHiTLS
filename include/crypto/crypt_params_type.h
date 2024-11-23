@@ -24,14 +24,14 @@ extern "C" {
 #endif
 
 #define CRYPT_PARAM_RSA_N    1
-#define CRYPT_PARAM_RSA_E    2
+// #define CRYPT_PARAM_RSA_E    2
 #define CRYPT_PARAM_RSA_D    3
 #define CRYPT_PARAM_RSA_P    4
 #define CRYPT_PARAM_RSA_Q    5
 #define CRYPT_PARAM_RSA_DQ   6
 #define CRYPT_PARAM_RSA_DP   7
 #define CRYPT_PARAM_RSA_QINV 8
-#define CRYPT_PARAM_RSA_BITS 9
+// #define CRYPT_PARAM_RSA_BITS 9
 
 
 #define CRYPT_PARAM_KDF_BASE 100
@@ -49,6 +49,34 @@ extern "C" {
 #define CRYPT_PARAM_KDF_N            (CRYPT_PARAM_KDF_BASE + 13)
 #define CRYPT_PARAM_KDF_P            (CRYPT_PARAM_KDF_BASE + 14)
 #define CRYPT_PARAM_KDF_R            (CRYPT_PARAM_KDF_BASE + 15)
+
+#define CRYPT_PARAM_DSA_BASE 200
+#define CRYPT_PARAM_DSA_P             (CRYPT_PARAM_DSA_BASE + 1)
+#define CRYPT_PARAM_DSA_Q             (CRYPT_PARAM_DSA_BASE + 2)
+#define CRYPT_PARAM_DSA_G             (CRYPT_PARAM_DSA_BASE + 3)
+
+#define CRYPT_PARAM_RSA_BASE 300
+#define CRYPT_PARAM_RSA_E             (CRYPT_PARAM_RSA_BASE + 1)
+#define CRYPT_PARAM_RSA_BITS          (CRYPT_PARAM_RSA_BASE + 2)
+
+#define CRYPT_PARAM_DH_BASE 400
+#define CRYPT_PARAM_DH_P             (CRYPT_PARAM_DH_BASE + 1)
+#define CRYPT_PARAM_DH_Q             (CRYPT_PARAM_DH_BASE + 2)
+#define CRYPT_PARAM_DH_G             (CRYPT_PARAM_DH_BASE + 3)
+
+#define CRYPT_PARAM_ECC_BASE 500
+#define CRYPT_PARAM_ECC_P             (CRYPT_PARAM_ECC_BASE + 1)
+#define CRYPT_PARAM_ECC_A             (CRYPT_PARAM_ECC_BASE + 2)
+#define CRYPT_PARAM_ECC_B             (CRYPT_PARAM_ECC_BASE + 3)
+#define CRYPT_PARAM_ECC_N             (CRYPT_PARAM_ECC_BASE + 4)
+#define CRYPT_PARAM_ECC_H             (CRYPT_PARAM_ECC_BASE + 5)
+#define CRYPT_PARAM_ECC_X             (CRYPT_PARAM_ECC_BASE + 6)
+#define CRYPT_PARAM_ECC_Y             (CRYPT_PARAM_ECC_BASE + 7)
+
+#define CRYPT_PARAM_PAILLIER_BASE 600
+#define CRYPT_PARAM_PAILLIER_P          (CRYPT_PARAM_PAILLIER_BASE + 1)
+#define CRYPT_PARAM_PAILLIER_Q          (CRYPT_PARAM_PAILLIER_BASE + 2)
+#define CRYPT_PARAM_PAILLIER_BITS       (CRYPT_PARAM_PAILLIER_BASE + 3)
 
 #ifdef __cplusplus
 }

@@ -22,6 +22,7 @@
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_encode.h"
+#include "crypt_params_type.h"
 #include "dsa_local.h"
 #include "crypt_dsa.h"
 #include "eal_md_local.h"
@@ -244,13 +245,13 @@ static CRYPT_DSA_Para *ParaDup(const CRYPT_DSA_Para *para)
     return ret;
 }
 
-int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_DSA_Para *dsaPara = CRYPT_DSA_NewPara((CRYPT_DsaPara *)para->param);
+    CRYPT_DSA_Para *dsaPara = CRYPT_DSA_NewPara(para);
     if (dsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
@@ -270,11 +271,28 @@ int32_t CRYPT_DSA_SetPara(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *param)
+static int32_t GetDsaParam(const BN_BigNum *x, BSL_Param *param, int32_t key)
+{
+    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, key);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
+        return CRYPT_DSA_PARA_ERROR;
+    }
+
+    temp->useLen = temp->valueLen;
+    int32_t ret = BN_Bn2Bin(x, temp->value, &temp->useLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, BSL_Param *param)
 {
     int32_t ret;
-    CRYPT_DsaPara *para = (CRYPT_DsaPara *)param->param;
-    if (ctx == NULL || para == NULL) {
+    if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -283,17 +301,17 @@ int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *param)
         return CRYPT_DSA_PARA_ERROR;
     }
 
-    ret = BN_Bn2Bin(ctx->para->p, para->p, &(para->pLen));
+    ret = GetDsaParam(ctx->para->p, param, CRYPT_PARAM_DSA_P);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(ctx->para->q, para->q, &(para->qLen));
+    ret = GetDsaParam(ctx->para->q, param, CRYPT_PARAM_DSA_Q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Bn2Bin(ctx->para->g, para->g, &(para->gLen));
+    ret = GetDsaParam(ctx->para->g, param, CRYPT_PARAM_DSA_G);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
