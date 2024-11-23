@@ -19,6 +19,7 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "bsl_params.h"
+#include "crypt_params_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -339,13 +340,13 @@ typedef struct {
 } EAL_CidToKdfMeth;
 
 /* Prototype of the RAND algorithm operation functions */
-typedef void *(*RandNewCtx)(int32_t algId, CRYPT_Param *param);
-typedef void *(*RandDrbgNewCtx)(void *provCtx, int32_t algId, CRYPT_Param *param);
-typedef int32_t (*RandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, CRYPT_Param *param);
+typedef void *(*RandNewCtx)(int32_t algId, BSL_Param *param);
+typedef void *(*RandDrbgNewCtx)(void *provCtx, int32_t algId, BSL_Param *param);
+typedef int32_t (*RandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, BSL_Param *param);
 typedef int32_t (*RandDrbgUnInst)(void *ctx);
 typedef int32_t (*RandDrbgGen)(void *ctx, uint8_t *bytes, uint32_t len,
-    const uint8_t *addin, uint32_t addinLen, CRYPT_Param *param);
-typedef int32_t (*RandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, CRYPT_Param *param);
+    const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
+typedef int32_t (*RandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
 typedef int32_t (*RandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*RandDrbgFreeCtx)(void *ctx);
 

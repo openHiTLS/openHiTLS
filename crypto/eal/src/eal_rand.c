@@ -136,7 +136,7 @@ static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, CRYPT_EAL_Func *fu
 }
 
 /* Initialize the global DRBG. */
-int32_t EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx)
+int32_t EAL_RandInit(CRYPT_RAND_AlgId id, BSL_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, CRYPT_RAND_ALGID_MAX, CRYPT_NULL_INPUT);
@@ -237,15 +237,13 @@ int32_t EAL_RandDrbgGenerate(CRYPT_EAL_RndCtx *drbgCtx, uint8_t *bytes, uint32_t
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, CRYPT_RAND_ALGID_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_RndParam randParam = {
-        .predictionResistant = false,
-    };
-    CRYPT_Param param = {
-        .type = DEFAULT_PROVIDER_PARAM_TYPE,
-        .param = &randParam,
-        .paramLen = sizeof(CRYPT_RndParam)
-    };
-    int32_t ret = drbgCtx->meth->gen(drbgCtx->ctx, bytes, len, adin, adinLen, &param);
+
+    bool pr = false;
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_RAND_PR, BSL_PARAM_TYPE_BOOL, &pr, sizeof(bool), 0},
+        BSL_PARAM_END};
+
+    int32_t ret = drbgCtx->meth->gen(drbgCtx->ctx, bytes, len, adin, adinLen, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, drbgCtx->id, ret);
         return ret;
@@ -267,7 +265,7 @@ int32_t EAL_RandDrbgReseed(CRYPT_EAL_RndCtx *drbgCtx, const uint8_t *adin, uint3
     return CRYPT_SUCCESS;
 }
 
-static CRYPT_EAL_RndCtx *EAL_RandInitDrbg(CRYPT_RAND_AlgId id, CRYPT_Param *param)
+static CRYPT_EAL_RndCtx *EAL_RandInitDrbg(CRYPT_RAND_AlgId id, BSL_Param *param)
 {
     EAL_RandUnitaryMethod *meth = EAL_RandGetMethod();
 
@@ -316,18 +314,16 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
         return CRYPT_EAL_ERR_DRBG_REPEAT_INIT;
     }
 
-    CRYPT_RndParam randParam = {
-        .seedMeth = seedMeth,
-        .seedCtx = seedCtx,
-    };
+    BSL_Param param[6] = {0};
+    param[0] = (BSL_Param){CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0, 0};
+    if (seedMeth != NULL) {
+        param[1] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getEntropy, 0, 0};
+        param[2] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanEntropy, 0, 0};
+        param[3] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getNonce, 0, 0};
+        param[4] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanNonce, 0, 0};
+    }
 
-    CRYPT_Param param = {
-        .type = DEFAULT_PROVIDER_PARAM_TYPE,
-        .param = &randParam,
-        .paramLen = sizeof(CRYPT_RndParam)
-    };
-
-    ctx = EAL_RandInitDrbg(id, &param);
+    ctx = EAL_RandInitDrbg(id, param);
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, id, CRYPT_EAL_ERR_DRBG_INIT_FAIL);
         return CRYPT_EAL_ERR_DRBG_INIT_FAIL;
@@ -344,21 +340,20 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
 
 CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
 {
-    CRYPT_RndParam randParam = {
-        .seedMeth = seedMeth,
-        .seedCtx = seedCtx,
-    };
+    BSL_Param param[6] = {0};
+    param[0] = (BSL_Param){CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0, 0};
+    if (seedMeth != NULL) {
+        param[1] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getEntropy, 0, 0};
+        param[2] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanEntropy, 0, 0};
+        param[3] = (BSL_Param){CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->getNonce, 0, 0};
+        param[4] = (BSL_Param){CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth->cleanNonce, 0, 0};
+    }
 
-    CRYPT_Param param = {
-        .type = DEFAULT_PROVIDER_PARAM_TYPE,
-        .param = &randParam,
-        .paramLen = sizeof(CRYPT_RndParam)
-    };
-    return EAL_RandInitDrbg(id, &param);
+    return EAL_RandInitDrbg(id, param);
 }
 
 static CRYPT_EAL_RndCtx *EAL_ProvRandInitDrbg(CRYPT_EAL_LibCtx *libCtx, CRYPT_RAND_AlgId id,
-    const char *attrName, CRYPT_Param *param)
+    const char *attrName, BSL_Param *param)
 {
     CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
@@ -404,7 +399,7 @@ static CRYPT_EAL_RndCtx *EAL_ProvRandInitDrbg(CRYPT_EAL_LibCtx *libCtx, CRYPT_RA
 }
 
 int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
-    const uint8_t *pers, uint32_t persLen, CRYPT_Param *param)
+    const uint8_t *pers, uint32_t persLen, BSL_Param *param)
 {
     CRYPT_EAL_RndCtx *ctx = NULL;
     if (g_globalRndCtx != NULL) { // Prevent DRBG repeated Init
@@ -433,7 +428,7 @@ int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, c
 }
 
 CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
-    CRYPT_Param *param)
+    BSL_Param *param)
 {
     return EAL_ProvRandInitDrbg(libCtx, algId, attrName, param);
 }

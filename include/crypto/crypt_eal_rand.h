@@ -27,6 +27,7 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "crypt_eal_provider.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +80,7 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
  *         For other error codes, see the crypt_errno.h file.
  */
 int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
-    const uint8_t *pers, uint32_t persLen, CRYPT_Param *param);
+    const uint8_t *pers, uint32_t persLen, BSL_Param *param);
 
 /**
  * @ingroup crypt_eal_rand
@@ -183,7 +184,7 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *s
  *         Fails: NULL.
  */
 CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
-    CRYPT_Param *param);
+    BSL_Param *param);
 
 /**
  * @ingroup CRYPT_EAL_DrbgDeinit
