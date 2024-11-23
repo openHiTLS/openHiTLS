@@ -53,13 +53,13 @@ extern "C" {
 #define CRYPT_PARAM_EC_BASE 200
 #define CRYPT_PARAM_EC_POINT_UNCOMPRESSED     (CRYPT_PARAM_EC_BASE + 1)
 #define CRYPT_PARAM_EC_PRVKEY                 (CRYPT_PARAM_EC_BASE + 2)
-#define CRYPT_PARAM_EC_P                      (CRYPT_PARAM_EC_BASE + 1)
-#define CRYPT_PARAM_EC_A                      (CRYPT_PARAM_EC_BASE + 2)
-#define CRYPT_PARAM_EC_B                      (CRYPT_PARAM_EC_BASE + 3)
-#define CRYPT_PARAM_EC_N                      (CRYPT_PARAM_EC_BASE + 4)
-#define CRYPT_PARAM_EC_H                      (CRYPT_PARAM_EC_BASE + 5)
-#define CRYPT_PARAM_EC_X                      (CRYPT_PARAM_EC_BASE + 6)
-#define CRYPT_PARAM_EC_Y                      (CRYPT_PARAM_EC_BASE + 7)
+#define CRYPT_PARAM_EC_P                      (CRYPT_PARAM_EC_BASE + 3)
+#define CRYPT_PARAM_EC_A                      (CRYPT_PARAM_EC_BASE + 4)
+#define CRYPT_PARAM_EC_B                      (CRYPT_PARAM_EC_BASE + 5)
+#define CRYPT_PARAM_EC_N                      (CRYPT_PARAM_EC_BASE + 6)
+#define CRYPT_PARAM_EC_H                      (CRYPT_PARAM_EC_BASE + 7)
+#define CRYPT_PARAM_EC_X                      (CRYPT_PARAM_EC_BASE + 8)
+#define CRYPT_PARAM_EC_Y                      (CRYPT_PARAM_EC_BASE + 9)
 
 #define CRYPT_PARAM_DH_BASE 300
 #define CRYPT_PARAM_DH_PUBKEY     (CRYPT_PARAM_DH_BASE + 1)
@@ -71,6 +71,9 @@ extern "C" {
 #define CRYPT_PARAM_DSA_BASE 400
 #define CRYPT_PARAM_DSA_PUBKEY     (CRYPT_PARAM_DSA_BASE + 1)
 #define CRYPT_PARAM_DSA_PRVKEY     (CRYPT_PARAM_DSA_BASE + 2)
+#define CRYPT_PARAM_DSA_P          (CRYPT_PARAM_DSA_BASE + 3)
+#define CRYPT_PARAM_DSA_Q          (CRYPT_PARAM_DSA_BASE + 4)
+#define CRYPT_PARAM_DSA_G          (CRYPT_PARAM_DSA_BASE + 5)
 
 #define CRYPT_PARAM_PAILLIER_BASE 500
 #define CRYPT_PARAM_PAILLIER_N         (CRYPT_PARAM_PAILLIER_BASE + 1)
