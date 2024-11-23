@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
 #define BSL_ASN1_VAL_MAX_BIT_STRING_LEN 7
-#define BSL_ASN1_MAX_LIST_NEST_EPTH 2
+#define BSL_ASN1_MAX_LIST_NEST_DEPTH 2
 #define BSL_ASN1_FLAG_OPTIONAL_DEFAUL (BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_DEFAULT)
 
 /* Gets the mask of the class */

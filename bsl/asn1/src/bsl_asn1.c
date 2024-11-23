@@ -29,12 +29,14 @@
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
     if (encode == NULL || *encode == NULL || encLen == NULL || len == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
     uint32_t parseLen = 0;
     if (tempLen < 1) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_LEN);
         return BSL_ASN1_ERR_DECODE_LEN;
     }
 
@@ -46,11 +48,13 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
     } else {
         uint32_t index = *temp - BSL_ASN1_INDEFINITE_LENGTH;
         if (index > sizeof(int32_t)) {
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_MAX_LEN_NUM);
             return BSL_ASN1_ERR_MAX_LEN_NUM;
         }
         temp++;
         tempLen--;
         if (tempLen < index) {
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_BUFF_NOT_ENOUGH);
             return BSL_ASN1_ERR_BUFF_NOT_ENOUGH;
         }
         for (uint32_t iter = 0; iter < index; iter++) {
@@ -60,6 +64,7 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
         }
         // anti-flip
         if (parseLen >= ((((uint64_t)1 << 32) - 1) - index - 2)) { // 1<<32:U32_MAX; 2: Tag + length(0x8x)
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_MAX_LEN_NUM);
             return BSL_ASN1_ERR_MAX_LEN_NUM;
         }
         parseLen += ((completeLen) ? (index + 1) : 0);
@@ -67,6 +72,7 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
     uint32_t length = (completeLen) ? *encLen : tempLen;
     /* The length supports a maximum of 4 bytes */
     if (parseLen > length) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_LEN);
         return BSL_ASN1_ERR_DECODE_LEN;
     }
     *len = parseLen;
@@ -81,6 +87,7 @@ int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen)
     uint32_t tmpLen = *dataLen;
     uint32_t len = 0;
     if (tmpLen < 1) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_BUFF_NOT_ENOUGH);
         return BSL_ASN1_ERR_BUFF_NOT_ENOUGH;
     }
 
@@ -88,6 +95,7 @@ int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen)
     tmpLen--;
     int32_t ret = BSL_ASN1_DecodeLen(&tmp, &tmpLen, true, &len);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     *dataLen = len + 1;
@@ -97,15 +105,18 @@ int32_t BSL_ASN1_GetCompleteLen(uint8_t *data, uint32_t *dataLen)
 int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, uint32_t *valLen)
 {
     if (encode == NULL || *encode == NULL || encLen == NULL || valLen == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
     if (tempLen < 1) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
     
     if (tag != *temp) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_MISMATCH_TAG);
         return BSL_ASN1_ERR_MISMATCH_TAG;
     }
     temp++;
@@ -113,9 +124,11 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
     uint32_t len;
     int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, false, &len);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (len > tempLen) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_BUFF_NOT_ENOUGH);
         return BSL_ASN1_ERR_BUFF_NOT_ENOUGH;
     }
     *valLen = len;
@@ -127,13 +140,19 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
 int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asnItem)
 {
     if (encode == NULL || *encode == NULL || encLen == NULL || asnItem == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
+    }
+    if (asnItem->buff != NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
     }
     uint8_t tag;
     uint32_t len;
     uint8_t *temp = *encode;
     uint32_t tempLen = *encLen;
     if (tempLen < 1) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
     tag = *temp;
@@ -141,6 +160,7 @@ int32_t BSL_ASN1_DecodeItem(uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer 
     tempLen--;
     int32_t ret = BSL_ASN1_DecodeLen(&temp, &tempLen, false, &len);
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     asnItem->tag = tag;
@@ -219,16 +239,19 @@ static int32_t ParseTime(uint8_t tag, uint8_t *val, uint32_t len, BSL_TIME *deco
     int32_t ret;
     uint8_t *temp = val;
     if (tag == BSL_ASN1_TAG_UTCTIME && (len != 12 && len != 13)) { // 12 YYMMDDHHMMSS, 13 YYMMDDHHMMSSZ
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_UTC_TIME);
         return BSL_ASN1_ERR_DECODE_UTC_TIME;
     }
     
     if (tag == BSL_ASN1_TAG_GENERALIZEDTIME && (len != 14 && len != 15)) { // 14 YYYYMMDDHHMMSS, 15 YYYYMMDDHHMMSSZ
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_GENERAL_TIME);
         return BSL_ASN1_ERR_DECODE_GENERAL_TIME;
     }
 
     // Check if the encoding is within the expected range and prepare for conversion
     ret = tag == BSL_ASN1_TAG_UTCTIME ? CheckTime(val, 12) : CheckTime(val, 14); // 12|14: ignoring Z
     if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (tag == BSL_ASN1_TAG_UTCTIME) {
@@ -256,6 +279,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
     BSL_ASN1_Buffer item;
     while (len > 0) {
         if (*buff != param->expTag[layer - 1]) {
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_MISMATCH_TAG);
             return BSL_ASN1_ERR_MISMATCH_TAG;
         }
         tag = *buff;
@@ -263,6 +287,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
         len--;
         ret = BSL_ASN1_DecodeLen(&buff, &len, false, &encLen);
         if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         item.tag = tag;
@@ -270,6 +295,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
         item.buff = buff;
         ret = parseListItemCb(layer, &item, cbParam, list);
         if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         buff += encLen;
@@ -295,6 +321,7 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
     BSL_ASN1_Buffer item;
     while (len > 0) {
         if (*buff != param->expTag[0]) {
+            BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_MISMATCH_TAG);
             return BSL_ASN1_ERR_MISMATCH_TAG;
         }
         tag = *buff;
@@ -302,6 +329,7 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
         len--;
         ret = BSL_ASN1_DecodeLen(&buff, &len, false, &encLen);
         if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         item.tag = tag;
@@ -309,10 +337,12 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
         item.buff = buff;
         ret = parseListItemCb(1, &item, cbParam, list);
         if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         ret = DecodeTwoLayerListInternal(2, param, &item, parseListItemCb, cbParam, list);
         if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         buff += encLen;
@@ -324,12 +354,15 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
 int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
     BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
 {
-    if (param == NULL || asn == NULL || parseListItemCb == NULL || list == NULL) {
+    if (param == NULL || asn == NULL || asn->buff == NULL || asn->len == 0 || parseListItemCb == NULL ||
+        list == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
 
      // Currently, it supports a maximum of 2 layers
-    if (param->layer > BSL_ASN1_MAX_LIST_NEST_EPTH) {
+    if (param->layer > BSL_ASN1_MAX_LIST_NEST_DEPTH) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_EXCEED_LIST_DEPTH);
         return BSL_ASN1_ERR_EXCEED_LIST_DEPTH;
     }
     return param->layer == 1 ? DecodeOneLayerList(param, asn, parseListItemCb, cbParam, list)
