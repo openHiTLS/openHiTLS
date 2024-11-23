@@ -24,6 +24,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
+#include "crypt_params_type.h"
 
 CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
 {
@@ -159,25 +160,62 @@ ERR :
     return NULL;
 }
 
-static int32_t RsaNewParaBasicCheck(const CRYPT_RsaPara *para)
+static int32_t GetRsaParam(const BSL_Param *params, int32_t type, const uint8_t **value, uint32_t *valueLen)
 {
-    if (para == NULL || para->e == NULL || para->eLen == 0 ||
-        para->bits > RSA_MAX_MODULUS_BITS || para->bits < RSA_MIN_MODULUS_BITS) {
+    const BSL_Param *temp = BSL_PARAM_FindParam(params, type);
+    if (temp == NULL || temp->valueLen == 0 || temp->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
+
+    *value = temp->value;
+    *valueLen = temp->valueLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetRsaBits(const BSL_Param *params, uint32_t *bits)
+{
+    uint32_t bitsLen = sizeof(*bits);
+    const BSL_Param *temp = BSL_PARAM_FindParam(params, CRYPT_PARAM_RSA_BITS);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    int32_t ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, bits, &bitsLen);
+    if (ret != BSL_SUCCESS || *bits < RSA_MIN_MODULUS_BITS || *bits > RSA_MAX_MODULUS_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ValidateRsaParams(uint32_t eLen, uint32_t bits)
+{
     /* the length of e cannot be greater than bits */
-    if (para->eLen > BN_BITS_TO_BYTES(para->bits)) {
+    if (eLen > BN_BITS_TO_BYTES(bits)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
     return CRYPT_SUCCESS;
 }
 
-CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
+CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para)
 {
-    if (RsaNewParaBasicCheck(para) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+    const uint8_t *e = NULL;
+    uint32_t eLen = 0;
+    int32_t ret = GetRsaParam(para, CRYPT_PARAM_RSA_E, &e, &eLen);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    uint32_t bits = 0;
+    ret = GetRsaBits(para, &bits);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    ret = ValidateRsaParams(eLen, bits);
+    if (ret != CRYPT_SUCCESS) {
         return NULL;
     }
     CRYPT_RSA_Para *retPara = BSL_SAL_Malloc(sizeof(CRYPT_RSA_Para));
@@ -185,21 +223,20 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    retPara->bits = para->bits;
-    retPara->e = BN_Create(para->bits);
-    retPara->p = BN_Create(para->bits);
-    retPara->q = BN_Create(para->bits);
+    retPara->bits = bits;
+    retPara->e = BN_Create(bits);
+    retPara->p = BN_Create(bits);
+    retPara->q = BN_Create(bits);
     if (retPara->e == NULL || retPara->p == NULL || retPara->q == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
-    int32_t ret;
-    ret = BN_Bin2Bn(retPara->e, para->e, para->eLen);
+    ret = BN_Bin2Bn(retPara->e, e, eLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    if (BN_BITS_TO_BYTES(para->bits) > RSA_SMALL_MODULUS_BYTES && BN_Bytes(retPara->e) > RSA_MAX_PUBEXP_BYTES) {
+    if (BN_BITS_TO_BYTES(bits) > RSA_SMALL_MODULUS_BYTES && BN_Bytes(retPara->e) > RSA_MAX_PUBEXP_BYTES) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         goto ERR;
     }
@@ -307,13 +344,13 @@ CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para)
     return paraCopy;
 }
 
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_RSA_Para *rsaPara = CRYPT_RSA_NewPara((CRYPT_RsaPara *)para->param);
+    CRYPT_RSA_Para *rsaPara = CRYPT_RSA_NewPara(para);
     if (rsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;

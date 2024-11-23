@@ -61,7 +61,7 @@ CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(CRYPT_PKEY_ParaId id)
     return ECC_NewPara(id);
 }
 
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const CRYPT_EccPara *eccPara)
+CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const BSL_Param *eccPara)
 {
     if (eccPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -88,10 +88,9 @@ void CRYPT_ECDSA_FreePara(CRYPT_EcdsaPara *para)
     ECC_FreePara(para);
 }
 
-int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_Param *param)
+int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *param)
 {
-    CRYPT_EccPara *para = (CRYPT_EccPara *)param->param;
-    return ECC_GetPara(ctx, para);
+    return ECC_GetPara(ctx, param);
 }
 
 int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPara *para)
@@ -113,13 +112,13 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPara *para)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_EcdsaPara *ecdsaPara = CRYPT_ECDSA_NewPara((CRYPT_EccPara *)para->param);
+    CRYPT_EcdsaPara *ecdsaPara = CRYPT_ECDSA_NewPara(para);
     if (ecdsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;

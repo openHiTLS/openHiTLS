@@ -65,7 +65,7 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_DupCtx(CRYPT_PAILLIER_Ctx *keyCtx);
  * @retval (CRYPT_PAILLIER_Para *)  Pointer to the allocated memory space of the structure
  * @retval NULL                     Invalid null pointer.
  */
-CRYPT_PAILLIER_Para *CRYPT_PAILLIER_NewPara(const CRYPT_PaillierPara *para);
+CRYPT_PAILLIER_Para *CRYPT_PAILLIER_NewPara(const BSL_Param *para);
 
 /**
  * @ingroup paillier
@@ -96,7 +96,7 @@ void CRYPT_PAILLIER_FreePara(CRYPT_PAILLIER_Para *para);
  * @retval CRYPT_MEM_ALLOC_FAIL         internal memory allocation error
  * @retval CRYPT_SUCCESS                set successfully.
  */
-int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *param);
+int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *param);
 
 /**
  * @ingroup paillier

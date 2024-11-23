@@ -24,7 +24,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
-
+#include "crypt_params_type.h"
 
 CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtx(void)
 {
@@ -130,43 +130,91 @@ ERR :
     return NULL;
 }
 
-static int32_t PaillierNewParaBasicCheck(const CRYPT_PaillierPara *para)
+static int32_t GetPaillierParam(const BSL_Param *params, int32_t type, const uint8_t **value, uint32_t *valueLen)
 {
-    if (para == NULL || para->p == NULL || para->pLen == 0 || para->q == NULL || para->qLen == 0 || para->bits <= 0 || para->bits > PAILLIER_MAX_MODULUS_BITS) {
+    const BSL_Param *temp = BSL_PARAM_FindParam(params, type);
+    if (temp == NULL || temp->valueLen == 0 || temp->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    /* the length of p and q should be equal to bits */
-    if (para->pLen != BN_BITS_TO_BYTES(para->bits) || para->qLen != BN_BITS_TO_BYTES(para->bits)) {
+
+    *value = temp->value;
+    *valueLen = temp->valueLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetPaillierBits(const BSL_Param *params, uint32_t *bits)
+{
+    uint32_t bitsLen = sizeof(*bits);
+    const BSL_Param *temp = BSL_PARAM_FindParam(params, CRYPT_PARAM_PAILLIER_BITS);
+    if (temp == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    int32_t ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_UINT32, bits, &bitsLen);
+    if (ret != BSL_SUCCESS || *bits == 0 || *bits > PAILLIER_MAX_MODULUS_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ValidatePaillierParams(uint32_t pLen, uint32_t qLen, uint32_t bits)
+{
+    if (pLen != BN_BITS_TO_BYTES(bits) || qLen != BN_BITS_TO_BYTES(bits)) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_KEY_BITS);
         return CRYPT_PAILLIER_ERR_KEY_BITS;
     }
     return CRYPT_SUCCESS;
 }
 
-CRYPT_PAILLIER_Para *CRYPT_PAILLIER_NewPara(const CRYPT_PaillierPara *para)
+CRYPT_PAILLIER_Para *CRYPT_PAILLIER_NewPara(const BSL_Param *params)
 {
-    int32_t ret = PaillierNewParaBasicCheck(para);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    if (params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
     }
+
+    const uint8_t *p = NULL, *q = NULL;
+    uint32_t pLen = 0, qLen = 0;
+    int32_t ret = GetPaillierParam(params, CRYPT_PARAM_PAILLIER_P, &p, &pLen);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+
+    ret = GetPaillierParam(params, CRYPT_PARAM_PAILLIER_Q, &q, &qLen);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+
+    uint32_t bits = 0;
+    ret = GetPaillierBits(params, &bits);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+
+    ret = ValidatePaillierParams(pLen, qLen, bits);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+
     CRYPT_PAILLIER_Para *retPara = BSL_SAL_Malloc(sizeof(CRYPT_PAILLIER_Para));
     if (retPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    retPara->bits = para->bits;
-    retPara->p = BN_Create(para->bits);
-    retPara->q = BN_Create(para->bits);
+
+    retPara->bits = bits;
+    retPara->p = BN_Create(bits);
+    retPara->q = BN_Create(bits);
     if (retPara->p == NULL || retPara->q == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto ERR;
+        CRYPT_PAILLIER_FreePara(retPara);
+        return NULL;
     }
     return retPara;
-ERR:
-    CRYPT_PAILLIER_FreePara(retPara);
-    return NULL;
 }
 
 void CRYPT_PAILLIER_FreeCtx(CRYPT_PAILLIER_Ctx *ctx)
@@ -252,13 +300,13 @@ CRYPT_PAILLIER_Para *CRYPT_Paillier_DupPara(const CRYPT_PAILLIER_Para *para)
     return paraCopy;
 }
 
-int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Param *param)
+int32_t CRYPT_PAILLIER_SetPara(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_PAILLIER_Para *para = CRYPT_PAILLIER_NewPara((const CRYPT_PaillierPara *)param->param);
+    CRYPT_PAILLIER_Para *para = CRYPT_PAILLIER_NewPara(param);
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
