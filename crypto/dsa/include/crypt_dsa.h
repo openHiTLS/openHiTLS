@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include "crypt_bn.h"
 #include "crypt_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -252,7 +253,7 @@ int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t 
  * @retval BN error.                 An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS             Set successfully.
  */
-int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup dsa
@@ -268,7 +269,7 @@ int32_t CRYPT_DSA_SetPrvKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup dsa
@@ -283,7 +284,7 @@ int32_t CRYPT_DSA_SetPubKey(CRYPT_DSA_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                        An error occurs in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
-int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup dsa
@@ -298,7 +299,7 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
  * @retval BN error.                        An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
-int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup dsa

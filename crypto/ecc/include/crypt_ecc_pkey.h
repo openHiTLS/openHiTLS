@@ -23,6 +23,7 @@
 #include "crypt_ecc.h"
 #include "crypt_algid.h"
 #include "sal_atomic.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,7 +125,7 @@ int32_t ECC_PkeyGen(ECC_Pkey *ctx);
  * @retval BN error.            An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const CRYPT_Param *para);
+int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const BSL_Param *para);
 
 /**
  * @ingroup ecc
@@ -138,7 +139,7 @@ int32_t ECC_PkeySetPrvKey(ECC_Pkey *ctx, const CRYPT_Param *para);
  * @retval BN error.            An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const CRYPT_Param *para);
+int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para);
 /**
  * @ingroup ecc
  * @brief ECC Obtain the private key data.
@@ -151,7 +152,7 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const CRYPT_Param *para);
  * @retval BN error.                An error occurred in the internal BigNum calculation.
  * @retval CRYPT_SUCCESS            Obtained successfully.
  */
-int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_Param *para);
+int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, BSL_Param *para);
 
 /**
  * @ingroup ecc
@@ -166,7 +167,7 @@ int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_Param *para);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_Param *para);
+int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, BSL_Param *para);
 
 /**
  * @ingroup ecc
