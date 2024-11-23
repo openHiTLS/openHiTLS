@@ -412,8 +412,7 @@ static int32_t GetDhParamQ(const CRYPT_DH_Para *para, BSL_Param *param)
 {
     BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, CRYPT_PARAM_DH_Q);
     if (temp == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
-        return CRYPT_DH_PARA_ERROR;
+        return CRYPT_SUCCESS;
     }
 
     if (para->q == NULL) {
