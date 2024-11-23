@@ -37,20 +37,12 @@ static void BagListsDestroyCb(void *bag)
     HITLS_PKCS12_SafeBagFree((HITLS_PKCS12_SafeBag *)bag);
 }
 
-static void AttributesFree(void *attribute)
-{
-    HITLS_PKCS12_SafeBagAttr *input = (HITLS_PKCS12_SafeBagAttr *)attribute;
-    BSL_SAL_FREE(input->attrValue->data);
-    BSL_SAL_FREE(input->attrValue);
-    BSL_SAL_FREE(input);
-}
-
 static void BagFree(void *value)
 {
     HITLS_PKCS12_Bag *bag = (HITLS_PKCS12_Bag *)value;
     HITLS_X509_CertFree(bag->value.cert);
-    BSL_LIST_DeleteAll(bag->attributes, HITLS_PKCS12_AttributesFree);
-    BSL_SAL_FREE(bag->attributes);
+    HITLS_X509_AttrsFree(bag->attributes, HITLS_PKCS12_AttributesFree);
+    bag->attributes = NULL;
     BSL_SAL_FREE(bag);
 }
 
@@ -139,7 +131,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, Hex *localKeyId)
 {
-    BSL_ASN1_List *attrbutes = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBagAttr));
+    HITLS_X509_Attrs *attrbutes = HITLS_X509_AttrsNew();
     ASSERT_NE(attrbutes, NULL);
 
     BSL_ASN1_Buffer asn = {
@@ -149,19 +141,19 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, 
     };
     int32_t ret = HITLS_PKCS12_ParseSafeBagAttr(&asn, attrbutes);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
-    HITLS_PKCS12_SafeBagAttr *firstAttr = BSL_LIST_GET_FIRST(attrbutes);
-    HITLS_PKCS12_SafeBagAttr *second = BSL_LIST_GET_NEXT(attrbutes);
+    HITLS_PKCS12_SafeBagAttr *firstAttr = BSL_LIST_GET_FIRST(attrbutes->list);
+    HITLS_PKCS12_SafeBagAttr *second = BSL_LIST_GET_NEXT(attrbutes->list);
     if (firstAttr->attrId == BSL_CID_FRIENDLYNAME) {
         BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BMPSTRING, (uint32_t)friendlyName->len, friendlyName->x};
         BSL_ASN1_Buffer encode = {0};
         ret = BSL_ASN1_DecodePrimitiveItem(&asn, &encode);
         ASSERT_EQ(ret, BSL_SUCCESS);
-        ASSERT_COMPARE("friendly name", firstAttr->attrValue->data, firstAttr->attrValue->dataLen,
+        ASSERT_COMPARE("friendly name", firstAttr->attrValue.data, firstAttr->attrValue.dataLen,
             encode.buff, encode.len);
         BSL_SAL_FREE(encode.buff);
     }
     if (firstAttr->attrId == BSL_CID_LOCALKEYID) {
-        ASSERT_EQ(memcmp(firstAttr->attrValue->data, localKeyId->x, localKeyId->len), 0);
+        ASSERT_EQ(memcmp(firstAttr->attrValue.data, localKeyId->x, localKeyId->len), 0);
     }
     if (second == NULL) {
         ASSERT_EQ(friendlyName->len, 0);
@@ -171,17 +163,16 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC001(Hex *buff, Hex *friendlyName, 
             BSL_ASN1_Buffer encode = {0};
             ret = BSL_ASN1_DecodePrimitiveItem(&asn, &encode);
             ASSERT_EQ(ret, BSL_SUCCESS);
-            ASSERT_COMPARE("friendly name", firstAttr->attrValue->data, firstAttr->attrValue->dataLen,
+            ASSERT_COMPARE("friendly name", firstAttr->attrValue.data, firstAttr->attrValue.dataLen,
                 encode.buff, encode.len);
             BSL_SAL_FREE(encode.buff);
         }
         if (second->attrId == BSL_CID_LOCALKEYID) {
-            ASSERT_EQ(memcmp(second->attrValue->data, localKeyId->x, localKeyId->len), 0);
+            ASSERT_EQ(memcmp(second->attrValue.data, localKeyId->x, localKeyId->len), 0);
         }
     }
 exit:
-    BSL_LIST_DeleteAll(attrbutes, AttributesFree);
-    BSL_SAL_FREE(attrbutes);
+    HITLS_X509_AttrsFree(attrbutes, HITLS_PKCS12_AttributesFree);
 }
 /* END_CASE */
 
@@ -191,7 +182,7 @@ exit:
 /* BEGIN_CASE */
 void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC002(Hex *buff)
 {
-    BSL_ASN1_List *attrbutes = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBagAttr));
+    HITLS_X509_Attrs *attrbutes = HITLS_X509_AttrsNew();
     ASSERT_NE(attrbutes, NULL);
 
     BSL_ASN1_Buffer asn = {
@@ -209,8 +200,7 @@ void SDV_PKCS12_PARSE_SAFEBAGS_OF_ATTRIBUTE_TC002(Hex *buff)
     ret = HITLS_PKCS12_ParseSafeBagAttr(&asn, attrbutes);
     ASSERT_NE(ret, HITLS_X509_SUCCESS);
 exit:
-    BSL_LIST_DeleteAll(attrbutes, AttributesFree);
-    BSL_SAL_FREE(attrbutes);
+    HITLS_X509_AttrsFree(attrbutes, HITLS_PKCS12_AttributesFree);
 }
 /* END_CASE */
 
@@ -1125,12 +1115,16 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output3);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
+    // test p12-encode of entityCert attribute = NULL.
     p12_1.entityCert->value.cert = entityCert;
-    BSL_LIST_DeleteAll(p12_1.entityCert->attributes, AttributesFree); // test p12-encode of entityCert attribute = NULL.
+    HITLS_X509_AttrsFree(p12_1.entityCert->attributes, HITLS_PKCS12_AttributesFree);
+    p12_1.entityCert->attributes = NULL;
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output4);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
-    BSL_LIST_DeleteAll(p12_1.key->attributes, AttributesFree); // test p12-encode of key attribute = NULL.
+    // test p12-encode of key attribute = NULL.
+    HITLS_X509_AttrsFree(p12_1.key->attributes, HITLS_PKCS12_AttributesFree);
+    p12_1.key->attributes = NULL;
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, &p12_1, &encodeParam, true, &output5);
     ASSERT_EQ(ret, HITLS_X509_SUCCESS);
 
@@ -1405,8 +1399,8 @@ void SDV_PKCS12_CTRL_TEST_TC001(char *pkeyPath, char *enCertPath, char *caCertPa
 
     ASSERT_NE(p12->key->value.key, NULL);
     ASSERT_NE(p12->entityCert->value.cert, NULL);
-    ASSERT_EQ(BSL_LIST_COUNT(p12->key->attributes), 1);
-    ASSERT_EQ(BSL_LIST_COUNT(p12->entityCert->attributes), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(p12->key->attributes->list), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(p12->entityCert->attributes->list), 1);
     ASSERT_EQ(BSL_LIST_COUNT(p12->certList), 1);
 
 exit:
