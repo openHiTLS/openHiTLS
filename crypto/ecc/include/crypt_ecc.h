@@ -22,6 +22,7 @@
 #include "crypt_bn.h"
 #include "crypt_algid.h"
 #include "crypt_types.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,7 +88,7 @@ CRYPT_PKEY_ParaId ECC_GetParaId(const ECC_Para *para);
  *
  * @retval Curve ID
  */
-CRYPT_PKEY_ParaId ECC_GetCurveId(const CRYPT_EccPara *eccPara);
+CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara);
 
 /**
  * @ingroup ecc

@@ -58,70 +58,122 @@ static CRYPT_DH_Para *ParaMemGet(uint32_t bits)
     return para;
 }
 
-static int32_t NewParaCheck(const CRYPT_DhPara *para)
+static int32_t ValidateParamLength(const BSL_Param *param, uint32_t maxLen)
 {
-    if (para == NULL || para->p == NULL || para->g == NULL ||
-        para->pLen == 0 || para->gLen == 0 || (para->q == NULL &&
-        para->qLen != 0)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->pLen > BN_BITS_TO_BYTES(DH_MAX_PBITS)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
-        return CRYPT_DH_PARA_ERROR;
-    }
-    if (para->gLen > para->pLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
-        return CRYPT_DH_PARA_ERROR;
-    }
-    if (para->q == NULL) {
-        return CRYPT_SUCCESS;
-    }
-    if (para->qLen > para->pLen) {
+    if (param == NULL || param->valueLen > maxLen || param->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
         return CRYPT_DH_PARA_ERROR;
     }
     return CRYPT_SUCCESS;
 }
 
-CRYPT_DH_Para *CRYPT_DH_NewPara(const CRYPT_DhPara *para)
+static int32_t GetDhParam(const BSL_Param *params, int32_t paramId, uint32_t maxLen,
+    const uint8_t **value, uint32_t *valueLen)
 {
-    if (NewParaCheck(para) != CRYPT_SUCCESS) {
-        return NULL;
+    const BSL_Param *param = BSL_PARAM_FindParam(params, paramId);
+    int32_t ret = ValidateParamLength(param, maxLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
-    uint32_t modBits = BN_BYTES_TO_BITS(para->pLen);
-    CRYPT_DH_Para *retPara = ParaMemGet(modBits);
-    if (retPara == NULL) {
+
+    *value = param->value;
+    *valueLen = param->valueLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t InitDhPara(CRYPT_DH_Para *para, const uint8_t *p, uint32_t pLen,
+    const uint8_t *g, uint32_t gLen)
+{
+    int32_t ret = BN_Bin2Bn(para->p, p, pLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BN_Bin2Bn(para->g, g, gLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t InitDhParaQ(CRYPT_DH_Para *para, const uint8_t *q, uint32_t qLen, uint32_t modBits)
+{
+    if (q == NULL) {
+        return CRYPT_SUCCESS;
+    }
+
+    para->q = BN_Create(modBits);
+    if (para->q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_CREATE_PARA_FAIL);
+        return CRYPT_DH_CREATE_PARA_FAIL;
+    }
+
+    int32_t ret = BN_Bin2Bn(para->q, q, qLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_DH_Para *CRYPT_DH_NewPara(const BSL_Param *params)
+{
+    if (params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
 
-    int32_t ret = BN_Bin2Bn(retPara->p, para->p, para->pLen);
+    const uint8_t *p = NULL;
+    uint32_t pLen = 0;
+    int32_t ret = GetDhParam(params, CRYPT_PARAM_DH_P, BN_BITS_TO_BYTES(DH_MAX_PBITS), &p, &pLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return NULL;
     }
-    ret = BN_Bin2Bn(retPara->g, para->g, para->gLen);
+
+    const uint8_t *g = NULL;
+    uint32_t gLen = 0;
+    ret = GetDhParam(params, CRYPT_PARAM_DH_G, pLen, &g, &gLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return NULL;
     }
-    if (para->q == NULL) {
-        return retPara; // The parameter q does not exist, this function is ended early.
+
+    const uint8_t *q = NULL;
+    uint32_t qLen = 0;
+    const BSL_Param *qParam = BSL_PARAM_FindParam(params, CRYPT_PARAM_DH_Q);
+    if (qParam != NULL) {
+        ret = ValidateParamLength(qParam, pLen);
+        if (ret != CRYPT_SUCCESS) {
+            return NULL;
+        }
+        q = qParam->value;
+        qLen = qParam->valueLen;
     }
-    retPara->q = BN_Create(modBits);
-    if (retPara->q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_CREATE_PARA_FAIL);
-        goto ERR;
+
+    uint32_t modBits = BN_BYTES_TO_BITS(pLen);
+    CRYPT_DH_Para *para = ParaMemGet(modBits);
+    if (para == NULL) {
+        return NULL;
     }
-    ret = BN_Bin2Bn(retPara->q, para->q, para->qLen);
+
+    ret = InitDhPara(para, p, pLen, g, gLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    retPara->id = CRYPT_PKEY_PARAID_MAX; // No ID is passed in this function. Assign a invalid ID temporarily.
-    return retPara;
+
+    ret = InitDhParaQ(para, q, qLen, modBits);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+
+    para->id = CRYPT_PKEY_PARAID_MAX;
+    return para;
+
 ERR:
-    CRYPT_DH_FreePara(retPara);
+    CRYPT_DH_FreePara(para);
     return NULL;
 }
 
