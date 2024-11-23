@@ -194,22 +194,17 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
     BSL_Buffer encode = {0};
-    HITLS_CERT_Key *certKey = NULL;
-
     switch (type) {
         case TLS_PARSE_TYPE_FILE:
-            certKey = HitlsPrivKeyFileParse(config, format, (const char *)buf);
-            break;
+            return HitlsPrivKeyFileParse(config, format, (const char *)buf);
         case TLS_PARSE_TYPE_BUFF:
             encode.data = (uint8_t *)(uintptr_t)buf;
             encode.dataLen = len;
-            certKey = HitlsPrivKeyBuffParse(config, format, &encode);
-            break;
+            return HitlsPrivKeyBuffParse(config, format, &encode);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
-            break;
+            return NULL;
     }
-    return certKey;
 }
 
 HITLS_CERT_Key *HITLS_X509_Adapt_KeyDup(HITLS_CERT_Key *key)

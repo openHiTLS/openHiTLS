@@ -513,10 +513,15 @@ int32_t HITLS_CFG_AddCertToStore(HITLS_Config *config, HITLS_CERT_X509 *cert, HI
         default:
             return HITLS_CERT_ERR_INVALID_STORE_TYPE;
     }
+    HITLS_CERT_X509 *newCert = cert;
+    if (isClone) {
+        newCert = SAL_CERT_X509Dup(config->certMgrCtx, cert);
+        if (newCert == NULL) {
+            return HITLS_CERT_ERR_X509_DUP;
+        }
+    }
 
-    HITLS_CERT_CtrlCmd cmd = isClone ? CERT_STORE_CTRL_DEEP_COPY_ADD_CERT_LIST :
-        CERT_STORE_CTRL_SHALLOW_COPY_ADD_CERT_LIST;
-    int32_t ret = SAL_CERT_StoreCtrl(config, store, cmd, cert, NULL);
+    int32_t ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, newCert, NULL);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
