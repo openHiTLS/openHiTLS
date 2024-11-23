@@ -468,43 +468,72 @@ static const uint32_t CURVE_ID_LIST[] = {
     CRYPT_ECC_SM2,
 };
 
-CRYPT_PKEY_ParaId ECC_GetCurveId(const CRYPT_EccPara *eccPara)
+CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
 {
     int32_t ret;
     BN_BigNum *a = BN_Create(ECC_MAX_BIT_LEN);
     BN_BigNum *b = BN_Create(ECC_MAX_BIT_LEN);
+    const BSL_Param *temp = NULL;
 
     for (uint32_t i = 0; i < sizeof(CURVE_ID_LIST) / sizeof(CURVE_ID_LIST[0]); i++) {
         const CURVE_Para *curve = GetCurvePara(CURVE_ID_LIST[i]);
         if (curve == NULL) {
             continue;
         }
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->p, eccPara->pLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_P);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->p.data, curve->p.dataLen), ret);
         if (BN_Cmp(a, b) != 0) {
             continue;
         }
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->a, eccPara->aLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_A);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->a.data, curve->a.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->b, eccPara->bLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_B);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->b.data, curve->b.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->h, eccPara->hLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_H);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->h.data, curve->h.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->n, eccPara->nLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_N);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->n.data, curve->n.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->x, eccPara->xLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_X);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->x.data, curve->x.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->y, eccPara->yLen), ret);
+        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_ECC_Y);
+        if (temp == NULL) {
+            goto ERR;
+        }
+        GOTO_ERR_IF_EX(BN_Bin2Bn(a, temp->value, temp->valueLen), ret);
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->y.data, curve->y.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
