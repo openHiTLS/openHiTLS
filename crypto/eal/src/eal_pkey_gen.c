@@ -331,7 +331,7 @@ static int32_t GetPaillierParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPa
     BSL_Param param[4] = {
         {CRYPT_PARAM_PAILLIER_P, BSL_PARAM_TYPE_OCTETS, paillierPara->p, paillierPara->pLen, 0},
         {CRYPT_PARAM_PAILLIER_Q, BSL_PARAM_TYPE_OCTETS, paillierPara->q, paillierPara->qLen, 0},
-        {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_OCTETS_PTR, &paillierPara->bits, sizeof(paillierPara->bits), 0},
+        {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_UINT32_PTR, &paillierPara->bits, sizeof(paillierPara->bits), 0},
         BSL_PARAM_END
     };
     int32_t ret = pkey->method->getPara(pkey->key, param);
