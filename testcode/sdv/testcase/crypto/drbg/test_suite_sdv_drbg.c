@@ -33,6 +33,8 @@
 #include "eal_drbg_local.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
+#include "bsl_params.h"
+#include "crypt_params_type.h"
 /* END_HEADER */
 
 #define CTR_AES128_SEEDLEN (32)
@@ -1878,19 +1880,20 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
     ASSERT_TRUE(seedCtx != NULL);
     seedCtxCfg(seedCtx, entropy, nonce, pers, addin1, entropyPR1, addin2, entropyPR2, retBits);
 
-    CRYPT_RndParam randParam = {
-        .seedMeth = &seedMeth,
-        .seedCtx = (void *)seedCtx,
-        .pers = seedCtx->pers->data,
-        .persLen = seedCtx->pers->len
-    };
-    CRYPT_Param param = {
-        .type = DEFAULT_PROVIDER_PARAM_TYPE,
-        .param = &randParam,
-        .paramLen = sizeof(CRYPT_RndParam)
-    };
+    BSL_Param param[6] = {0};
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0],
+        CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1],
+        CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2],
+        CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[3],
+        CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getNonce, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[4],
+        CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
+
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default",
-        seedCtx->pers->data, seedCtx->pers->len, &param), CRYPT_SUCCESS);
+        seedCtx->pers->data, seedCtx->pers->len, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandbytesWithAdin(output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
         CRYPT_SUCCESS);
 
@@ -1936,18 +1939,20 @@ void SDV_CRYPT_EAL_DRBG_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
     seedCtx = seedCtxMem();
     ASSERT_TRUE(seedCtx != NULL);
     seedCtxCfg(seedCtx, entropy, nonce, pers, addin1, entropyPR1, addin2, entropyPR2, retBits);
-    CRYPT_RndParam randParam = {
-        .seedMeth = &seedMeth,
-        .seedCtx = (void *)seedCtx,
-        .pers = NULL,
-        .persLen = 0
-    };
-    CRYPT_Param param = {
-        .type = DEFAULT_PROVIDER_PARAM_TYPE,
-        .param = &randParam,
-        .paramLen = sizeof(CRYPT_RndParam)
-    };
-    drbgCtx = CRYPT_EAL_ProviderDrbgInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", &param);
+
+    BSL_Param param[6] = {0};
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0],
+        CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1],
+        CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2],
+        CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[3],
+        CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getNonce, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[4],
+        CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
+
+    drbgCtx = CRYPT_EAL_ProviderDrbgInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", param);
     ASSERT_TRUE(drbgCtx != NULL);
     ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
 
@@ -2008,26 +2013,24 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
         seedMeth.getNonce = NULL;
         seedMeth.cleanNonce = NULL;
     }
-    CRYPT_RndParam randParam = {
-        .seedMeth = &seedMeth,
-        .seedCtx = NULL,
-        .pers = NULL,
-        .persLen = 0
-    };
-    CRYPT_Param param = {
-        .type = DEFAULT_PROVIDER_PARAM_TYPE,
-        .param = &randParam,
-        .paramLen = sizeof(CRYPT_RndParam)
-    };
-    param.type += 1;
-    ASSERT_NE(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, &param), CRYPT_SUCCESS);
-    param.type = DEFAULT_PROVIDER_PARAM_TYPE;
-    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, &param), CRYPT_SUCCESS);
+    BSL_Param param[6] = {0};
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0],
+        CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, NULL, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1],
+        CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2],
+        CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[3],
+        CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getNonce, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[4],
+        CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
-    randParam.seedMeth = NULL;
-    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, &param), CRYPT_SUCCESS);
+    param[1] = (BSL_Param){0, 0, NULL, 0, 0};
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 

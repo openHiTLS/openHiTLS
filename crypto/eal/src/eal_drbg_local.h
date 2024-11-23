@@ -71,7 +71,7 @@ int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx);
  * @return Success: CRYPT_SUCCESS
  * For other error codes, see crypt_errno.h.
  */
-int32_t EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx);
+int32_t EAL_RandInit(CRYPT_RAND_AlgId id, BSL_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx);
 
 /**
  * @brief Global random deinitialization
