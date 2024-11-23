@@ -53,7 +53,7 @@ typedef struct DrbgCtx DRBG_Ctx;
  * @retval DRBG_Ctx* Success
  * @retval NULL      Failure
  */
-DRBG_Ctx *DRBG_New(int32_t algId, CRYPT_Param *param);
+DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param);
 
 /**
  * @ingroup drbg
@@ -83,7 +83,7 @@ void DRBG_Free(DRBG_Ctx *ctx);
  * @retval CRYPT_DRBG_FAIL_GET_NONCE    Failed to obtain the nonce.
  * @retval Hash function error code:    Failed to invoke the hash function.
  */
-int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen, CRYPT_Param *param);
+int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen, BSL_Param *param);
 
 /**
  * @ingroup drbg
@@ -101,7 +101,7 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
  * @retval CRYPT_DRBG_FAIL_GET_ENTROPY  Failed to obtain the entropy.
  * @retval Hash function error code:    Failed to invoke the hash function.
  */
-int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, CRYPT_Param *param);
+int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Param *param);
 
 /**
  * @ingroup drbg
@@ -124,7 +124,7 @@ int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, CRYPT_
  * @retval Hash function error code: Failed to invoke the hash function.
  */
 int32_t DRBG_Generate(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
-    const uint8_t *adin, uint32_t adinLen, CRYPT_Param *param);
+    const uint8_t *adin, uint32_t adinLen, BSL_Param *param);
 
 /**
  * @ingroup drbg

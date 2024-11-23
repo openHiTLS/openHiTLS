@@ -608,16 +608,6 @@ typedef struct {
     uint32_t paramLen;
 } CRYPT_Param;
 
-typedef struct {
-    CRYPT_RandSeedMethod *seedMeth;
-    void *seedCtx;
-    const uint8_t *pers;
-    uint32_t persLen;
-    const uint8_t *adin;
-    uint32_t adinLen;
-    bool predictionResistant;
-} CRYPT_RndParam;
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
