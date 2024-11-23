@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include "crypt_types.h"
 #include "crypt_algid.h"
+#include "bsl_params.h"
 
 
 #ifdef __cplusplus
@@ -195,7 +196,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup dh
@@ -211,7 +212,7 @@ int32_t CRYPT_DH_SetPrvKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS            Set successfully.
  */
-int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
+int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup dh
@@ -226,7 +227,7 @@ int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const CRYPT_Param *para);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                obtained successfully.
  */
-int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup dh
@@ -241,7 +242,7 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, CRYPT_Param *para);
+int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para);
 
 
 /**

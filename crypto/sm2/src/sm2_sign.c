@@ -31,6 +31,7 @@
 #include "crypt_sm2.h"
 #include "sm2_local.h"
 #include "eal_md_local.h"
+#include "crypt_params_type.h"
 
 static int32_t Sm2SetUserId(CRYPT_SM2_Ctx *ctx, const uint8_t *val, uint32_t len)
 {
@@ -149,8 +150,10 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    CRYPT_Param tmpPara = {0, &pub, 0};
-    CRYPT_SM2_GetPubKey(ctx, &tmpPara);
+    BSL_Param tmpPara[2] = {{CRYPT_PARAM_EC_POINT_UNCOMPRESSED, BSL_PARAM_TYPE_OCTETS, maxPubData,
+        SM2_MAX_PUBKEY_DATA_LENGTH, 0}, BSL_PARAM_END};
+    GOTO_ERR_IF(CRYPT_SM2_GetPubKey(ctx, tmpPara), ret);
+    pub.len = tmpPara[0].useLen;
     GOTO_ERR_IF(ctx->hashMethod->init(mdCtx, NULL), ret);
     // User A has a distinguishable identifier IDA with a length of entlenA bits,
     // and ENTLA is two bytes converted from an integer entlenA
@@ -215,7 +218,7 @@ uint32_t CRYPT_SM2_GetBits(const CRYPT_SM2_Ctx *ctx)
     return ECC_PkeyGetBits(ctx->pkey);
 }
 
-int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -224,7 +227,7 @@ int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Param *para)
     return ECC_PkeySetPrvKey(ctx->pkey, para);
 }
 
-int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Param *para)
+int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -233,7 +236,7 @@ int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Param *para)
     return ECC_PkeySetPubKey(ctx->pkey, para);
 }
 
-int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -243,7 +246,7 @@ int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Param *para)
     return ECC_PkeyGetPrvKey(ctx->pkey, para);
 }
 
-int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Param *para)
+int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, BSL_Param *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
