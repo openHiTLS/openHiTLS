@@ -29,7 +29,7 @@
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
 
-
+static char g_sm2DefaultUserid[] = "1234567812345678";
 /* END_HEADER */
 
 /* BEGIN_CASE */
@@ -417,7 +417,7 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test incorrect length for issuer parameter
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuer, sizeof(BSL_ASN1_List) - 1),
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuer, sizeof(BSL_ASN1_List) - 1),
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test empty buffer for get command
@@ -583,7 +583,7 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     ASSERT_TRUE(afterTime.month > beforeTime.month);
 
     // Test getting the issuer DN name
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
     ASSERT_NE(BSL_LIST_COUNT(issuerDN), 0);
 
@@ -650,10 +650,10 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     uint32_t version = 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
     BslList *issuerDN = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)),
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)),
         HITLS_X509_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
 
@@ -723,8 +723,8 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
 
     /* Cannot set after parsing */
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &ver, sizeof(uint32_t)), HITLS_X509_ERR_SET_AFTER_PARSE);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DNNAME, &tmp, sizeof(BslList *)), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, tmp, 0), HITLS_X509_ERR_SET_AFTER_PARSE);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &tmp, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, tmp, 0), HITLS_X509_ERR_SET_AFTER_PARSE);
 
     /* Generate crl after parsing is allowed. */
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
@@ -780,8 +780,8 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
 
     /* issuer name is empty */
     ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_ERR_CRL_ISSUER_EMPTY);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), 0);
 
     /* thisUpdate is not set */
     ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_ERR_CRL_THISUPDATE_UNEXIST);
@@ -855,8 +855,8 @@ void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
     crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DNNAME, &issuerDN, sizeof(BslList *)), 0);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), 0);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &thisUpdate, sizeof(BSL_TIME)), 0);
 
     /* Test invalid mdId */
@@ -989,9 +989,9 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
 
     // Set issuer DN from certificate
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DNNAME, &issuerDN, sizeof(BslList *)),
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN, &issuerDN, sizeof(BslList *)),
         HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DNNAME, issuerDN, sizeof(BslList)),
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)),
         HITLS_X509_SUCCESS);
 
     // Set validity period
@@ -1030,15 +1030,14 @@ exit:
 }
 
 /* BEGIN_CASE */
-void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId, int pad, int mdId, int isV2,
-    char *tmp)
+void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, int mdId, int isV2,
+    char *tmp, int isUseSm2UserId)
 {
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_Crl *parseCrl = NULL;
     HITLS_X509_Cert *issuerCert = NULL;
     CRYPT_EAL_PkeyCtx *prvKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
-    (void)pkeyId;
     TestRandInit();
     // Parse issuer certificate and private key
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_X509_SUCCESS);
@@ -1056,9 +1055,13 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
         pssParam.mgfId = mdId;
         pssParam.saltLen = 32;
         algParam.rsaPss = pssParam;
+    } else if (isUseSm2UserId != 0) {
+        algParam.algId = BSL_CID_SM2DSAWITHSM3;
+        algParam.sm2UserId.data = (uint8_t *)g_sm2DefaultUserid;
+        algParam.sm2UserId.dataLen = (uint32_t)strlen(g_sm2DefaultUserid);
     }
 
-    if (pad == CRYPT_PKEY_EMSA_PSS) {
+    if (pad == CRYPT_PKEY_EMSA_PSS || isUseSm2UserId != 0) {
         ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, &algParam, crl), HITLS_X509_SUCCESS);
     } else {
         ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_SUCCESS);
@@ -1068,8 +1071,14 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pkeyId
     ASSERT_NE(crl->signature.buff, NULL);
     ASSERT_NE(crl->signature.len, 0);
     ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, crl), HITLS_X509_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_X509_SUCCESS);
     ASSERT_NE(parseCrl, NULL);
+    if (isUseSm2UserId != 0) {
+        ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
+            strlen(g_sm2DefaultUserid)), HITLS_X509_SUCCESS);
+    }
+
     ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_X509_SUCCESS);
 exit:
     HITLS_X509_CrlFree(crl);

@@ -1106,3 +1106,108 @@ exit:
     BSL_UIO_Free(tcp);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_UIO_MEM_BASIC_TC001(void)
+{
+    TestMemInit();
+    
+    // Create memory UIO
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(uio != NULL);
+    
+    // Test write operation
+    const char testData[] = "Hello World";
+    uint32_t writeLen = 0;
+    int32_t ret = BSL_UIO_Write(uio, testData, strlen(testData), &writeLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(writeLen == strlen(testData));
+    
+    // Test read operation
+    char readBuf[20] = {0};
+    uint32_t readLen = 0;
+    ret = BSL_UIO_Read(uio, readBuf, sizeof(readBuf), &readLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(readLen == strlen(testData));
+    ASSERT_TRUE(memcmp(readBuf, testData, readLen) == 0);
+    
+    // Test pending data length
+    int64_t pendingLen = 0;
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_PENDING, sizeof(size_t), &pendingLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(pendingLen == 0); // All data has been read
+
+exit:
+    BSL_UIO_Free(uio);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_UIO_MEM_NEW_BUF_TC001(void)
+{
+    TestMemInit();
+    
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(uio != NULL);
+    
+    // Test MemNewBuf with invalid parameters
+    int32_t ret = BSL_UIO_Ctrl(uio, BSL_UIO_MEM_NEW_BUF, -1, NULL);
+    ASSERT_TRUE(ret == BSL_NULL_INPUT);
+    
+    // Test MemNewBuf with valid parameters
+    char testBuf[] = "Test Buffer";
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_MEM_NEW_BUF, strlen(testBuf), testBuf);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    
+    // Verify buffer is in read-only mode
+    uint32_t writeLen = 0;
+    ret = BSL_UIO_Write(uio, "data", 4, &writeLen);
+    ASSERT_TRUE(ret == BSL_UIO_WRITE_NOT_ALLOWED);
+    
+    // Test reading from new buffer
+    char readBuf[20] = {0};
+    uint32_t readLen = 0;
+    ret = BSL_UIO_Read(uio, readBuf, sizeof(readBuf), &readLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(readLen == strlen(testBuf));
+    ASSERT_TRUE(memcmp(readBuf, testBuf, readLen) == 0);
+exit:
+    BSL_UIO_Free(uio);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_UIO_MEM_EOF_TC001(void)
+{
+    TestMemInit();
+    
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(uio != NULL);
+    
+    // Test setting EOF behavior
+    int32_t eofValue = 1;
+    int32_t ret = BSL_UIO_Ctrl(uio, BSL_UIO_MEM_SET_EOF, sizeof(int32_t), &eofValue);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    
+    // Verify EOF value
+    int32_t readEof = 0;
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_MEM_GET_EOF, sizeof(int32_t), &readEof);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(readEof == eofValue);
+    
+    // Test read behavior with EOF set
+    char readBuf[10];
+    uint32_t readLen = 0;
+    ret = BSL_UIO_Read(uio, readBuf, sizeof(readBuf), &readLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(readLen == 0);
+    
+    // Verify retry flag is set due to EOF
+    uint32_t flags = 0;
+    BSL_UIO_TestFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY, &flags);
+    ASSERT_TRUE((flags & BSL_UIO_FLAGS_SHOULD_RETRY) != 0);
+
+exit:
+    BSL_UIO_Free(uio);
+}
+/* END_CASE */
