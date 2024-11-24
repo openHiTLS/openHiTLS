@@ -28,19 +28,19 @@
 
 
 
-int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, uint32_t k, BN_Optimizer *opt)  //Initialize mu and k for subsequent calculations
-{
+int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, BN_Optimizer *opt) {
     if (n == NULL || mu == NULL) 
     {
         return CRYPT_NULL_INPUT;
     }
     int32_t ret; 
-    ret = OptimizerStart(opt); 
+    ret = OptimizerStart(opt); // use the optimizer
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     BN_BigNum *temp = OptimizerGetBn(opt, 2 * n->size);
+    uint32_t k;
     k = BN_Bits(n);
     bool invalidInput = (temp == NULL);
     if (invalidInput) {
@@ -48,7 +48,8 @@ int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, uint32_t k, BN_Opt
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         goto ERR;
     }
-    //  mu = 2^(2k) / n
+    
+    // 计算 mu = 2^(2k) / n
     ret = BN_SetBit(temp, 2 * k);  
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -58,16 +59,14 @@ int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, uint32_t k, BN_Opt
      if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
-    }
-    
+    }  
 ERR:
     OptimizerEnd(opt);
     return ret;
 }
 
-
-// Barrett reduction function, calculates r = a mod n,(0 < a < 2n, n != 2^x)
-int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, uint32_t k, BN_Optimizer *opt) {
+// Barrett reduction function(ecc), calculates r = a mod n,(0 < a < 2n, n != 2^x)
+int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, BN_Optimizer *opt) {
     if (r == NULL || a == NULL || n == NULL || mu == NULL) {
         return CRYPT_NULL_INPUT;
     }
@@ -77,6 +76,8 @@ int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNu
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    uint32_t k;
+    k = BN_Bits(n);
     BN_BigNum *q1 = OptimizerGetBn(opt, a->size);
     BN_BigNum *q2 = OptimizerGetBn(opt, a->size + n->size);
     BN_BigNum *q3 = OptimizerGetBn(opt, a->size + n->size);
@@ -140,12 +141,11 @@ int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNu
         }   
     }
 ERR:
-    OptimizerEnd(opt); 
-    return ret;
-
+    OptimizerEnd(opt); // Release occupation from the optimizer.
+    return ret; 
 }
 // Barrett reduction function, calculates r = a mod n,(0 <= a < n ^ 2, n != 2^x)
-int32_t BN_BarrettReduction(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, uint32_t k, BN_Optimizer *opt) {
+int32_t BN_BarrettReduction(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, BN_Optimizer *opt) {
     if (r == NULL || a == NULL || n == NULL) {
         return CRYPT_NULL_INPUT;
     }
@@ -155,6 +155,8 @@ int32_t BN_BarrettReduction(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    uint32_t k;
+    k = BN_Bits(n);
     BN_BigNum *q1 = OptimizerGetBn(opt, a->size);
     BN_BigNum *q2 = OptimizerGetBn(opt, a->size + k + 1);
     BN_BigNum *q3 = OptimizerGetBn(opt, a->size + k + 1);

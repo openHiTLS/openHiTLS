@@ -1929,7 +1929,6 @@ void SDV_CRYPTO_BN_BARRETT_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, H
    
     BN_BigNum *resBn = NULL;
     BN_BigNum *mu = NULL;
-    uint32_t k = 0;
     BN_Optimizer *opt = NULL;
     
     BN_BigNum *bn1 = TEST_VectorToBN(sign1, a->x, a->len);
@@ -1944,9 +1943,9 @@ void SDV_CRYPTO_BN_BARRETT_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, H
     ASSERT_TRUE(resBn != NULL);
     ASSERT_TRUE(mu != NULL);
 
-    ASSERT_EQ(BarrettContextInit(mu, bn2, k, opt), expectRet);
+    ASSERT_EQ(BarrettContextInit(mu, bn2, opt), expectRet);
   
-    ASSERT_EQ(BN_BarrettReduction_ecc(resBn, bn1, bn2, mu, k, opt), expectRet);
+    ASSERT_EQ(BN_BarrettReduction_ecc(resBn, bn1, bn2, mu, opt), expectRet);
     if (expectRet == CRYPT_SUCCESS) {
         if (r->len == 0) {
             ASSERT_EQ(BN_IsZero(resBn), 1);

@@ -376,13 +376,14 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
 * @param a [IN] BigNum
 * @param n [IN] BigNum
 * @param mu [IN] BigNum
-* @param k [IN] uint32_t
 * @param opt [IN] Optimizer
 *
 * @retval CRYPT_SUCCESS
-* @retval OTHER
+* @retval CRYPT_NULL_INPUT             Invalid null pointer
+* @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+* @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
 */
-int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, uint32_t k, BN_Optimizer *opt);
+int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu,  BN_Optimizer *opt);
 
 /**
 * @ingroup bn
@@ -392,28 +393,29 @@ int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNu
 * @param a [IN] BigNum
 * @param n [IN] BigNum
 * @param mu [IN] BigNum
-* @param k [IN] uint32_t
 * @param opt [IN] Optimizer
 *
 * @retval CRYPT_SUCCESS
-* @retval OTHER
+* @retval CRYPT_NULL_INPUT             Invalid null pointer
+* @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+* @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
 */
-int32_t BN_BarrettReduction(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, uint32_t k, BN_Optimizer *opt);
+int32_t BN_BarrettReduction(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, BN_Optimizer *opt);
 
 /**
 * @ingroup bn
 * @brief BarrettContextInit
 *
 * @param mu [OUT] out num
-* @param k [OUT] out num
-* 
 * @param n [IN] BigNum
 * @param opt [IN] Optimizer
 *
 * @retval CRYPT_SUCCESS
-* @retval OTHER
+* @retval CRYPT_NULL_INPUT             Invalid null pointer
+* @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+* @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
 */
-int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, uint32_t k, BN_Optimizer *opt);
+int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, BN_Optimizer *opt);
 
 
 /**
