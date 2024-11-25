@@ -87,6 +87,7 @@ build_test_suite()
 {
     build_provider_so
 
+    [[ -n ${CASES} ]] && RUN_TEST_SUITES=${CASES}
     cd ${HITLS_ROOT_DIR}/testcode && rm -rf ./build && mkdir build && cd build
     cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
           -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
