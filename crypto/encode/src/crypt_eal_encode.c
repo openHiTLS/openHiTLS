@@ -1035,7 +1035,7 @@ static int32_t ParsePk8EncPriKeyBuff(BSL_Buffer *buff, const uint8_t *pwd, uint3
         return ret;
     }
     ret = ParsePk8PriKeyBuff(&decode, ealPriKey);
-    BSL_SAL_Free(decode.data);
+    BSL_SAL_ClearFree(decode.data, decode.dataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -1751,15 +1751,12 @@ static int32_t CheckEncodeParam(const CRYPT_EncodeParam *encodeParam)
 static int32_t EncodePkcsEncryptedBuff(CRYPT_Pbkdf2Param *pkcsParam,
     BSL_Buffer *unEncrypted, BSL_ASN1_Buffer *asn1)
 {
+    int32_t ret;
     BslOidString *oidPbes = BSL_OBJ_GetOidFromCID((BslCid)pkcsParam->pbesId);
     if (oidPbes == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
     }
-    int32_t ret;
-    asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].buff = (uint8_t *)oidPbes->octs;
-    asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].len = oidPbes->octetLen;
-    asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
     /* derivation param */
     BSL_Buffer derParam = {0};
     uint8_t *saltData = (uint8_t *)BSL_SAL_Malloc(pkcsParam->saltLen);
@@ -1780,6 +1777,7 @@ static int32_t EncodePkcsEncryptedBuff(CRYPT_Pbkdf2Param *pkcsParam,
         /* iv */
         ret = GenRandIv(pkcsParam, asn1);
         if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             break;
         }
         /* encryptedData */
@@ -1788,13 +1786,15 @@ static int32_t EncodePkcsEncryptedBuff(CRYPT_Pbkdf2Param *pkcsParam,
             BSL_ERR_PUSH_ERROR(ret);
             break;
         }
-        BSL_SAL_FREE(saltData);
+        BSL_SAL_ClearFree(saltData, pkcsParam->saltLen);
+        asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].buff = (uint8_t *)oidPbes->octs;
+        asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].len = oidPbes->octetLen;
+        asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
         return CRYPT_SUCCESS;
     } while (0);
-    BSL_SAL_FREE(saltData);
-    BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff);
-    BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff);
-    BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_ENCDATA_IDX].buff);
+    BSL_SAL_ClearFree(saltData, pkcsParam->saltLen);
+    BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].len);
+    BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].len);
     return ret;
 }
 
@@ -1814,22 +1814,19 @@ static int32_t EncodePk8EncPriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey,
         return ret;
     }
     BSL_ASN1_Buffer asn1[CRYPT_PKCS_ENCPRIKEY_MAX] = {0};
-    do {
-        /* code */
-        ret = EncodePkcsEncryptedBuff(pkcs8Param, &unEncrypted, asn1);
-        if (ret != CRYPT_SUCCESS) {
-            break;
-        }
-        /* encode */
-        BSL_ASN1_Template templ = {pk8EncPriKeyTempl, sizeof(pk8EncPriKeyTempl) / sizeof(pk8EncPriKeyTempl[0])};
-        ret = BSL_ASN1_EncodeTemplate(&templ, asn1, CRYPT_PKCS_ENCPRIKEY_MAX, &encode->data, &encode->dataLen);
-    } while (0);
-    BSL_SAL_ClearFree(unEncrypted.data, unEncrypted.dataLen);
-    if (ret == CRYPT_SUCCESS) {
-        BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff);
-        BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff);
-        BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_ENCDATA_IDX].buff);
+    /* code */
+    ret = EncodePkcsEncryptedBuff(pkcs8Param, &unEncrypted, asn1);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_ClearFree(unEncrypted.data, unEncrypted.dataLen);
+        return ret;
     }
+    /* encode */
+    BSL_ASN1_Template templ = {pk8EncPriKeyTempl, sizeof(pk8EncPriKeyTempl) / sizeof(pk8EncPriKeyTempl[0])};
+    ret = BSL_ASN1_EncodeTemplate(&templ, asn1, CRYPT_PKCS_ENCPRIKEY_MAX, &encode->data, &encode->dataLen);
+    BSL_SAL_ClearFree(unEncrypted.data, unEncrypted.dataLen);
+    BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].len);
+    BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].len);
+    BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_ENCDATA_IDX].buff);
     return ret;
 }
 
@@ -2443,12 +2440,13 @@ static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, const CRYPT_Enc
     }
     CRYPT_Pbkdf2Param *pkcs7Param = (CRYPT_Pbkdf2Param *)encodeParam->param;
     BSL_ASN1_Buffer asn1[CRYPT_PKCS_ENCPRIKEY_MAX] = {0};
+    /* code */
+    ret = EncodePkcsEncryptedBuff(pkcs7Param, data, asn1);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     do {
-        /* code */
-        ret = EncodePkcsEncryptedBuff(pkcs7Param, data, asn1);
-        if (ret != CRYPT_SUCCESS) {
-            break;
-        }
         /* encode */
         BslOidString *oidStr = BSL_OBJ_GetOidFromCID(BSL_CID_DATA);
         if (oidStr == NULL) {
@@ -2472,8 +2470,8 @@ static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, const CRYPT_Enc
         BSL_ASN1_Template templ = {enContentInfoTempl, sizeof(enContentInfoTempl) / sizeof(enContentInfoTempl[0])};
         ret = BSL_ASN1_EncodeTemplate(&templ, p7asn, HITLS_P7_ENC_CONTINFO_MAX_IDX, &encode->data, &encode->dataLen);
     } while (0);
-    BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff);
-    BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff);
+    BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].len);
+    BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].len);
     BSL_SAL_FREE(asn1[CRYPT_PKCS_ENCPRIKEY_ENCDATA_IDX].buff);
     return ret;
 }
