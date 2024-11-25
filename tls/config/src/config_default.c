@@ -276,6 +276,7 @@ static void InitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     config->isFlightTransmitEnable = false;
 #endif
+    config->isHelloVerifyReqEnable = false;
 #ifdef HITLS_TLS_FEATURE_CERT_MODE
     /** Set the certificate verification mode */
     config->isSupportClientVerify = false;
