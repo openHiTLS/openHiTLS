@@ -80,7 +80,7 @@ extern "C" {
 #endif
 
 #ifndef OPENHITLS_VERSION_I
-#define OPENHITLS_VERSION_I 0x00001000U
+#define OPENHITLS_VERSION_I 0x00100000ULL
 #endif
 
 #define HITLS_VERSION_LEN 150
@@ -103,7 +103,7 @@ int32_t BSL_LOG_GetVersion(char *version, uint32_t *versionLen);
  *
  * @retval  openHiTLS version number.
  */
-uint32_t BSL_LOG_GetVersionNum(void);
+uint64_t BSL_LOG_GetVersionNum(void);
 
 /**
  * @ingroup bsl_log
