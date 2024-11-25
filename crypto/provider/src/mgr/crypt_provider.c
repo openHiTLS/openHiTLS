@@ -287,6 +287,8 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cm
         BSL_SAL_Free(providerFullName);
         if (mgrCtx != NULL) {
             *mgrCtx = providerMgr;
+        } else {
+            EalProviderMgrCtxFree(providerMgr);
         }
         return CRYPT_SUCCESS;
     }
@@ -310,6 +312,8 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cm
     BSL_SAL_Free(providerFullName);
     if (mgrCtx != NULL) {
         *mgrCtx = providerMgr;
+    } else {
+        EalProviderMgrCtxFree(providerMgr);
     }
     return CRYPT_SUCCESS;
 }
