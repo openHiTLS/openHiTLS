@@ -38,11 +38,13 @@ generate_asan_log() {
                     echo "The ASAN log contains only ucontext warning content. Ignore it."
                 else
                     echo "ASAN ERROR. Exit with ucontext check failure."
+                    cat ${i}
                     exit 1
                 fi
                 continue
             else
                 echo "ASAN ERROR. Exit with failure."
+                cat ${i}
                 exit 1
             fi
         done

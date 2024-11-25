@@ -38,8 +38,7 @@
             "-shared",
             "-Wl,-z,noexecstack",
             "-Wl,-z,relro",
-            "-Wl,-z,now",
-            "--enable-linker-build-id"
+            "-Wl,-z,now"
         ],
         "SHARED": [],
         "EXE": []
