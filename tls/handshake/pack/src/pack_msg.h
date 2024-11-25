@@ -37,6 +37,19 @@ extern "C" {
 int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
 
 /**
+ * @brief   Pack HelloVerifyRequest message
+ *
+ * @param   ctx  [IN] TLS context
+ * @param   buf [OUT] Returned handshake message
+ * @param   bufLen [IN] Buffer size
+ * @param   usedLen  [OUT] Returned message length
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  For other error codes, see hitls_error.h
+ */
+int32_t PackHelloVerifyRequest(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+
+/**
  * @brief   Pack ServertHello message
  *
  * @param   ctx  [IN] TLS context

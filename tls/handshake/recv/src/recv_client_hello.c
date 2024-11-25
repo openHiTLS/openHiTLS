@@ -1184,6 +1184,37 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     CheckRenegotiate(ctx);
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
+
+    // If authentication enabled and cookie not negotiated (empty or invalid), check CH cookie.
+    if (ctx->config.tlsConfig.isHelloVerifyReqEnable && !ctx->isCookieNegotiated) {
+        if (clientHello->cookieLen == 0) {
+            // generate stateless cookie
+            if (ctx->globalConfig->cookieGenerateCb != NULL) {
+                if (ctx->negotiatedInfo.cookie == NULL) {
+                    ctx->negotiatedInfo.cookie = (uint8_t *)BSL_SAL_Calloc(1, sizeof(uint8_t) * DTLS_COOKIE_LEN);
+                    if (ctx->negotiatedInfo.cookie == NULL) {
+                        return BSL_MALLOC_FAIL;
+                    }
+                }
+                ctx->globalConfig->cookieGenerateCb((HITLS_Ctx *)ctx, (void *)clientHello,
+                                                    (uint8_t *)ctx->negotiatedInfo.cookie,
+                                                    (unsigned int *)&((HITLS_Ctx *)ctx)->negotiatedInfo.cookieSize);
+                /* not deal with error yet */
+                return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
+            } else {
+                return HITLS_UNREGISTERED_CALLBACK;
+            }
+        } else {
+            ctx->globalConfig->clientHelloCbArg = (void *)clientHello;
+            // Check cookie field in CH
+            ret = ClientHelloCbCheck(ctx);
+            if (ret != HITLS_SUCCESS) {
+                return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);                
+            }
+            ctx->isCookieNegotiated = true;
+        }        
+    }
+
     /* Process the client Hello message */
     ret = ServerCheckAndProcessClientHello(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {
