@@ -1727,18 +1727,21 @@ static int32_t PKCS12_AddCertBag(HITLS_PKCS12 *p12, void *val)
     return ret;
 }
 
-static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, void *val)
+static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, CRYPT_MD_AlgId *algId, int32_t algIdLen)
 {
-    if (val == NULL || p12->entityCert == NULL || p12->key == NULL) {
+    if (algId == NULL || p12->entityCert == NULL || p12->key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
+    }
+    if (algIdLen != sizeof(CRYPT_MD_AlgId)) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
+        return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
     if (p12->entityCert->value.cert == NULL || p12->key->value.key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_PAIRED_CERT_AND_KEY);
         return HITLS_PKCS12_ERR_NO_PAIRED_CERT_AND_KEY;
     }
-    CRYPT_MD_AlgId algId = *(CRYPT_MD_AlgId *)val;
-    uint32_t mdSize = CRYPT_EAL_MdGetDigestSize(algId);
+    uint32_t mdSize = CRYPT_EAL_MdGetDigestSize(*algId);
     if (mdSize == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
@@ -1748,7 +1751,7 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, void *val)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = HITLS_X509_CertDigest(p12->entityCert->value.cert, algId, md, &mdSize);
+    int32_t ret = HITLS_X509_CertDigest(p12->entityCert->value.cert, *algId, md, &mdSize);
     if (ret != HITLS_X509_SUCCESS) {
         BSL_SAL_Free(md);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1773,14 +1776,13 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, void *val)
 
 int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t valLen)
 {
-    (void)valLen;
     if (p12 == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
     switch (cmd) {
         case HITLS_PKCS12_GEN_LOCALKEYID:
-            return PKCS12_SetLocalKeyId(p12, val);
+            return PKCS12_SetLocalKeyId(p12, val, valLen);
         case HITLS_PKCS12_SET_ENTITY_KEYBAG:
             return PKCS12_SetEntityKey(p12, val);
         case HITLS_PKCS12_SET_ENTITY_CERTBAG:
@@ -1792,7 +1794,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
         case HITLS_PKCS12_ADD_CERTBAG:
             return PKCS12_AddCertBag(p12, val);
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            return HITLS_X509_ERR_INVALID_PARAM;
+            BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
+            return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
 }
