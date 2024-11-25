@@ -125,7 +125,7 @@ def get_cfg_args():
                             help='delete some link flags such as --del_link_flags="-shared -Wl,-z,relro"')
 
         parser.add_argument('--hitls_version', default='openHiTLS 0.1.0 25 12 2023', help='%(prog)s version str')
-        parser.add_argument('--hitls_version_num', default=0x00001000, help='%(prog)s version num')
+        parser.add_argument('--hitls_version_num', default=0x00100000, help='%(prog)s version num')
 
         args = vars(parser.parse_args())
 
