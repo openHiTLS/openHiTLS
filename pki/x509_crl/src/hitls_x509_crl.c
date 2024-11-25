@@ -991,7 +991,7 @@ static int32_t CrlSetTime(void *dest, uint8_t *val, uint8_t valLen)
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t CrlSetThisUpdaeTime(HITLS_X509_ValidTime *time, uint8_t *val, uint8_t valLen)
+static int32_t CrlSetThisUpdateTime(HITLS_X509_ValidTime *time, uint8_t *val, uint8_t valLen)
 {
     int32_t ret = CrlSetTime(&(time->start), val, valLen);
     if (ret != HITLS_X509_SUCCESS) {
@@ -1139,7 +1139,7 @@ int32_t X509_CrlSetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t val
         case HITLS_X509_SET_ISSUER_DN:
             return HITLS_X509_SetNameList(&crl->tbs.issuerName, val, valLen);
         case HITLS_X509_SET_BEFORE_TIME:
-            return CrlSetThisUpdaeTime(&crl->tbs.validTime, val, valLen);
+            return CrlSetThisUpdateTime(&crl->tbs.validTime, val, valLen);
         case HITLS_X509_SET_AFTER_TIME:
             return CrlSetNextUpdateTime(&crl->tbs.validTime, val, valLen);
         case HITLS_X509_CRL_ADD_REVOKED_CERT:

@@ -245,7 +245,7 @@ ERR:
     return ret;
 }
 
-static int32_t X509CsrAsn1Parse(bool iscopy, BSL_Buffer *encode, HITLS_X509_Csr *csr)
+static int32_t X509CsrAsn1Parse(bool isCopy, BSL_Buffer *encode, HITLS_X509_Csr *csr)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
@@ -254,7 +254,7 @@ static int32_t X509CsrAsn1Parse(bool iscopy, BSL_Buffer *encode, HITLS_X509_Csr 
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     uint8_t *tmp = NULL;
-    if (iscopy) {
+    if (isCopy) {
         tmp = (uint8_t *)BSL_SAL_Dump(data, dataLen);
         if (tmp == NULL) {
             BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);

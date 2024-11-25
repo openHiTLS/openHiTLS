@@ -223,9 +223,9 @@ static void BslBase64DecodeRemoveBlank(const uint8_t *buf, const uint32_t bufLen
     *destLen = slow;
 }
 
-static uint32_t BslBase64DecodeCheckAndRmvEqualSign(uint8_t *buf, uint32_t *bufLen)
+static int32_t BslBase64DecodeCheckAndRmvEqualSign(uint8_t *buf, uint32_t *bufLen)
 {
-    uint32_t ret = BSL_SUCCESS;
+    int32_t ret = BSL_SUCCESS;
     uint32_t i = 0;
     bool hasEqualSign = false;
     uint32_t len = *bufLen;
