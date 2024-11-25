@@ -27,6 +27,7 @@
 #include "hs_msg.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "hs_verify.h"
 #include "transcript_hash.h"
 #include "hs_reass.h"
 #include "parse.h"
@@ -101,6 +102,8 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
             return ServerRecvClientCertVerifyProcess(ctx);
 #endif /* HITLS_TLS_HOST_SERVER */
 #ifdef HITLS_TLS_HOST_CLIENT
+        case TRY_RECV_HELLO_VERIFY_REQUEST:
+            return DtlsClientRecvHelloVerifyRequestProcess(ctx, hsMsg);
         case TRY_RECV_SERVER_HELLO:
             return ClientRecvServerHelloProcess(ctx, hsMsg);
         case TRY_RECV_SERVER_KEY_EXCHANGE:
@@ -452,6 +455,15 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     ret = DtlsCheckAndParseMsg(ctx, &hsMsgInfo, &hsMsg);
     if (ret != HITLS_SUCCESS) {
         return ret;
+    }
+
+    if (hsMsgInfo.type == CLIENT_HELLO) {
+        ret = VERIFY_Init(ctx->hsCtx);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17332, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "VERIFY_Init fail", 0, 0, 0, 0);
+            return ret;
+        }
     }
 
     /* The HelloRequest message is not included. */

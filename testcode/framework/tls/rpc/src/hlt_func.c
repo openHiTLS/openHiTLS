@@ -30,6 +30,7 @@
 #include "hitls_func.h"
 #include "sctp_channel.h"
 #include "tcp_channel.h"
+#include "udp_channel.h"
 #include "socket_common.h"
 #include "cert_callback.h"
 #include "sctp_channel.h"
@@ -374,6 +375,7 @@ int RunDataChannelBind(void *param)
     switch (channelParam->type) {
         case SCTP: sockFd = SctpBind(channelParam->port); break;
         case TCP: sockFd = TcpBind(channelParam->port); break;
+        case UDP: sockFd = UdpBind(channelParam->port); break;
         default:
             return ERROR;
     }
@@ -397,6 +399,9 @@ int RunDataChannelAccept(void *param)
             break;
         case TCP:
             sockFd = TcpAccept(channelParam->ip, channelParam->bindFd, channelParam->isBlock, true);
+            break;
+        case UDP:
+            sockFd = UdpAccept(channelParam->ip, channelParam->bindFd, channelParam->isBlock, false);
             break;
         default:
             return ERROR;
@@ -426,6 +431,7 @@ int HLT_DataChannelConnect(DataChannelParam *dstChannelParam)
     switch (dstChannelParam->type) {
         case SCTP: return SctpConnect(dstChannelParam->ip, dstChannelParam->port, dstChannelParam->isBlock);
         case TCP: return TcpConnect(dstChannelParam->ip, dstChannelParam->port);
+        case UDP: return UdpConnect(dstChannelParam->ip, dstChannelParam->port);
         default:
             return ERROR;
     }
@@ -497,6 +503,7 @@ void HLT_CloseFd(int fd, int linkType)
     switch (linkType) {
         case TCP: TcpClose(fd); break;
         case SCTP: SctpClose(fd); break;
+        case UDP: UdpClose(fd); break;
         default:
             /* Unknown fd type */
             break;

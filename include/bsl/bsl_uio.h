@@ -58,6 +58,7 @@ typedef void (*BSL_UIO_USERDATA_FREE_FUNC)(void *);
  */
 typedef enum {
     BSL_UIO_TCP,
+    BSL_UIO_UDP,
     BSL_UIO_SCTP,
     BSL_UIO_BUFFER,
     BSL_UIO_MEM,
@@ -98,6 +99,9 @@ typedef enum {
     BSL_UIO_RESET,
     BSL_UIO_PENDING,
     BSL_UIO_WPENDING,
+
+    /* UDP uses 0x2XX */
+    BSL_UIO_DGRAM_SET_CONNECTED,
 
     /* SCTP uses 0x3XX */
     BSL_UIO_SCTP_CHECK_PEER_AUTH = 0x300,
@@ -206,6 +210,14 @@ void BSL_UIO_FreeMethod(BSL_UIO_Method *meth);
  * @retval  pointer to the TCP UIO method
  */
 const BSL_UIO_Method *BSL_UIO_TcpMethod(void);
+
+/**
+ * @ingroup bsl_uio
+ * @brief   obtain the default UDP UIO method
+ *
+ * @retval  pointer to the UDP UIO method
+ */
+const BSL_UIO_Method *BSL_UIO_UdpMethod(void);
 
 /**
  * @ingroup bsl_uio

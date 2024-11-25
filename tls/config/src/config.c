@@ -194,6 +194,9 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     destConfig->isFlightTransmitEnable = srcConfig->isFlightTransmitEnable;
 #endif
+#ifdef HITLS_TLS_PROTO_DTLS12
+    destConfig->isHelloVerifyReqEnable = srcConfig->isHelloVerifyReqEnable;
+#endif
 }
 
 static int32_t DeepCopy(void** destConfig, const void* srcConfig, uint32_t logId, uint32_t len)
@@ -936,6 +939,28 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     config->groupsSize = groupsSize;
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_PROTO_DTLS12
+int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerateCb callback)
+{
+    if (config == NULL || callback == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->cookieGenerateCb = callback;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_CookieVerifyCb callback)
+{
+    if (config == NULL || callback == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->cookieVerifyCb = callback;
+    return HITLS_SUCCESS;
+}
+#endif
 
 #ifdef HITLS_TLS_FEATURE_SNI
 int32_t HITLS_CFG_SetClientHelloCb(HITLS_Config *config, HITLS_ClientHelloCb callback, void *arg)
@@ -1799,6 +1824,31 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
 }
 #endif
 
+#ifdef HITLS_TLS_PROTO_DTLS12
+int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, bool isEnable)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (isEnable == 0) {
+        config->isHelloVerifyReqEnable = false;
+    } else {
+        config->isHelloVerifyReqEnable = true;
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, bool *isEnable)
+{
+    if (config == NULL || isEnable == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *isEnable = config->isHelloVerifyReqEnable;
+    return HITLS_SUCCESS;
+}
+#endif
 #ifdef HITLS_TLS_MAINTAIN_KEYLOG
 int32_t HITLS_CFG_SetKeyLogCb(HITLS_Config *config, HITLS_KeyLogCb callback)
 {
