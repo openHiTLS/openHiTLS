@@ -24,7 +24,7 @@
 
 /* string of HiTLS version */
 static char g_openHiTLSVersion[HITLS_VERSION_LEN] = OPENHITLS_VERSION_S;
-static uint32_t g_openHiTLSNumVersion = OPENHITLS_VERSION_I;
+static uint64_t g_openHiTLSNumVersion = OPENHITLS_VERSION_I;
 
 int32_t BSL_LOG_GetVersion(char *version, uint32_t *versionLen)
 {
@@ -45,7 +45,7 @@ int32_t BSL_LOG_GetVersion(char *version, uint32_t *versionLen)
     return BSL_SUCCESS;
 }
 
-uint32_t BSL_LOG_GetVersionNum(void)
+uint64_t BSL_LOG_GetVersionNum(void)
 {
     return g_openHiTLSNumVersion;
 }
