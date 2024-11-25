@@ -32,8 +32,10 @@
 #include "crypt_eal_rand.h"
 #include "hitls_x509_local.h"
 #include "hitls_print_local.h"
-
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 #define MAX_BUFF_SIZE 4096
+
 /* END_HEADER */
 
 static void FreeListData(void *data)
@@ -1085,7 +1087,12 @@ void SDV_X509_SIGN_Func_TC002(void)
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
 
     CRYPT_RSA_PssPara pssPara = {1, CRYPT_MD_SHA256, CRYPT_MD_SHA256};
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssPara, sizeof(CRYPT_RSA_PssPara)), 0);
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssPara.mdId, sizeof(pssPara.mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &pssPara.mgfId, sizeof(pssPara.mgfId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &pssPara.saltLen, sizeof(pssPara.saltLen), 0},
+        BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), 0);
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), HITLS_X509_ERR_MD_NOT_MATCH);
 
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA256, prvKey, NULL, &obj, TestSignCb), 0);

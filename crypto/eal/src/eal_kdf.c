@@ -75,7 +75,7 @@ static void EalKdfCopyMethod(const EAL_KdfMethod *method, EAL_KdfUnitaryMethod *
     dest->ctrl = method->ctrl;
 }
 
-static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, CRYPT_EAL_Func *funcs)
+static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
     EAL_KdfUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_KdfUnitaryMethod));
@@ -117,10 +117,10 @@ static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, CRYPT_EAL_Func *fun
 
 CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
-    CRYPT_EAL_Func *funcs = NULL;
+    const CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
     int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_KDF, algId, attrName,
-        (const CRYPT_EAL_Func **)&funcs, &provCtx);
+        &funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, algId, ret);
         return NULL;

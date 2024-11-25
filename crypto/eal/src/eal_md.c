@@ -94,7 +94,7 @@ static CRYPT_EAL_MdCTX *MdNewDefaultCtx(CRYPT_MD_AlgId id)
     return ctx;
 }
 
-static int32_t CRYPT_EAL_SetMdMethod(CRYPT_EAL_MdCTX *ctx, CRYPT_EAL_Func *funcs)
+static int32_t CRYPT_EAL_SetMdMethod(CRYPT_EAL_MdCTX *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
     EAL_MdUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_MdUnitaryMethod));
@@ -142,10 +142,10 @@ static int32_t CRYPT_EAL_SetMdMethod(CRYPT_EAL_MdCTX *ctx, CRYPT_EAL_Func *funcs
 
 CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
-    CRYPT_EAL_Func *funcs = NULL;
+    const CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
     int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, algId, attrName,
-        (const CRYPT_EAL_Func **)&funcs, &provCtx);
+        &funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -232,7 +232,7 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    *(EAL_MdUnitaryMethod *)(uintptr_t)to->method = *from->method;
+    *(EAL_MdUnitaryMethod *)to->method = *from->method;
     to->data = data;
     to->state = from->state;
     to->id = from->id;

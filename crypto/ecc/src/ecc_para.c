@@ -23,7 +23,7 @@
 #include "crypt_errno.h"
 #include "ecc_local.h"
 #include "crypt_types.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 #include "crypt_ecc_pkey.h"
 
 typedef struct {
@@ -480,7 +480,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         if (curve == NULL) {
             continue;
         }
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_P);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_P);
         if (temp == NULL) {
             goto ERR;
         }
@@ -489,7 +489,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         if (BN_Cmp(a, b) != 0) {
             continue;
         }
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_A);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_A);
         if (temp == NULL) {
             goto ERR;
         }
@@ -497,7 +497,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->a.data, curve->a.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_B);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_B);
         if (temp == NULL) {
             goto ERR;
         }
@@ -505,7 +505,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->b.data, curve->b.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_H);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_H);
         if (temp == NULL) {
             goto ERR;
         }
@@ -513,7 +513,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->h.data, curve->h.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_N);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_N);
         if (temp == NULL) {
             goto ERR;
         }
@@ -521,7 +521,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->n.data, curve->n.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_X);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_X);
         if (temp == NULL) {
             goto ERR;
         }
@@ -529,7 +529,7 @@ CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara)
         GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->x.data, curve->x.dataLen), ret);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        temp = BSL_PARAM_FindParam(eccPara, CRYPT_PARAM_EC_Y);
+        temp = BSL_PARAM_FindConstParam(eccPara, CRYPT_PARAM_EC_Y);
         if (temp == NULL) {
             goto ERR;
         }
@@ -549,7 +549,7 @@ ERR:
 
 static int32_t GetEccParam(const BN_BigNum *x, BSL_Param *param, int32_t key)
 {
-    BSL_Param *temp = (BSL_Param *)BSL_PARAM_FindParam(param, key);
+    BSL_Param *temp = BSL_PARAM_FindParam(param, key);
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_PARA_ERROR);
         return CRYPT_DSA_PARA_ERROR;

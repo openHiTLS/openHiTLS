@@ -30,7 +30,7 @@
 #include "crypt_local_types.h"
 #include "crypt_util_rand.h"
 #include "eal_common.h"
-#include "eal_entropy.h"
+#include "crypt_entropy.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
 #include "crypt_modes.h"
@@ -93,7 +93,7 @@ int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx)
 }
 
 
-static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, CRYPT_EAL_Func *funcs)
+static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
     EAL_RandUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_RandUnitaryMethod));
@@ -355,10 +355,10 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *s
 static CRYPT_EAL_RndCtx *EAL_ProvRandInitDrbg(CRYPT_EAL_LibCtx *libCtx, CRYPT_RAND_AlgId id,
     const char *attrName, BSL_Param *param)
 {
-    CRYPT_EAL_Func *funcs = NULL;
+    const CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
     int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_RAND, id, attrName,
-        (const CRYPT_EAL_Func **)&funcs, &provCtx);
+        &funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, id, ret);
         return NULL;

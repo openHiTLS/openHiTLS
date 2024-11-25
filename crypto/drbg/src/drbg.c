@@ -23,12 +23,12 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "crypt_ealinit.h"
-#include "eal_entropy.h"
+#include "crypt_entropy.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
 #include "eal_drbg_local.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 
 #define DRBG_NONCE_FROM_ENTROPY (2)
@@ -251,26 +251,26 @@ DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
 
     const BSL_Param *temp = NULL;
     bool seedMethFlag = false;
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.getEntropy), NULL), ret);
         seedMethFlag = true;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.cleanEntropy), NULL), ret);
         seedMethFlag = true;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.getNonce), NULL), ret);
         seedMethFlag = true;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.cleanNonce), NULL), ret);
         seedMethFlag = true;
     }
     if (!seedMethFlag) {
         seedMeth = NULL;
     }
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
     }
     CRYPT_RandSeedMethod seedMethTmp = {0};
@@ -463,7 +463,7 @@ int32_t DRBG_Generate(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
     bool pr = false;
 
     const BSL_Param *temp = NULL;
-    if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_PR)) != NULL) {
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_PR)) != NULL) {
         uint32_t boolSize = sizeof(bool);
         ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_RAND_PR, BSL_PARAM_TYPE_BOOL, (void *)&pr, &boolSize);
         if (ret != CRYPT_SUCCESS) {

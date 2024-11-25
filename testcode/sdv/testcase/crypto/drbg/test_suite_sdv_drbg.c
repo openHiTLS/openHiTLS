@@ -34,7 +34,7 @@
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 /* END_HEADER */
 
 #define CTR_AES128_SEEDLEN (32)
