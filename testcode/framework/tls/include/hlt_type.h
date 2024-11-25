@@ -123,6 +123,7 @@ typedef enum {
 typedef enum {
     TCP = 0,    /**< TCP protocol */
     SCTP = 1,   /**< SCTP protocol */
+    UDP = 2,    /**< UDP protocol */
     NONE_TYPE = 10,
 } HILT_TransportType;
 

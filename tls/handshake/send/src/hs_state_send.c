@@ -103,6 +103,8 @@ static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
         case TRY_SEND_HELLO_REQUEST:
             return ServerSendHelloRequestProcess(ctx);
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
+        case TRY_SEND_HELLO_VERIFY_REQUEST:
+            return ServerSendHelloVerifyRequestProcess(ctx);
         case TRY_SEND_SERVER_HELLO:
             return ServerSendServerHelloProcess(ctx);
         case TRY_SEND_SERVER_KEY_EXCHANGE:

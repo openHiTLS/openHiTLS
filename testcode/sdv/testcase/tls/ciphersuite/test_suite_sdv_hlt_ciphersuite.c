@@ -206,6 +206,7 @@ void SDV_TLS_RSA_CIPHER_SUITE(void)
         if (IsEnableSctpAuth()) {
             CONNECT(DTLS1_2, SCTP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
         }
+        CONNECT(DTLS1_2, UDP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_RSA_Ciphersuite) / sizeof(HITLS_RSA_Ciphersuite[0]));
@@ -221,6 +222,7 @@ void SDV_TLS_ECDSA_CIPHER_SUITE(void)
         if (IsEnableSctpAuth()) {
             CONNECT(DTLS1_2, SCTP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
         }
+        CONNECT(DTLS1_2, UDP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_ECDSA_Ciphersuite) / sizeof(HITLS_ECDSA_Ciphersuite[0]));
@@ -237,6 +239,7 @@ void SDV_TLS_PSK_CIPHER_SUITE(void)
         if (IsEnableSctpAuth()) {
             CONNECT(DTLS1_2, SCTP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
         }
+        CONNECT(DTLS1_2, UDP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_PSK_Ciphersuite) / sizeof(HITLS_PSK_Ciphersuite[0]));
@@ -252,6 +255,7 @@ void SDV_TLS_ANON_CIPHER_SUITE(void)
         if (IsEnableSctpAuth()) {
             CONNECT(DTLS1_2, SCTP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
         }
+        CONNECT(DTLS1_2, UDP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_ANON_Ciphersuite) / sizeof(HITLS_ANON_Ciphersuite[0]));

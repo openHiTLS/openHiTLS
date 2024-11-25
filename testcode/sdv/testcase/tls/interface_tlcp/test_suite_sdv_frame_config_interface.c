@@ -125,6 +125,22 @@ static int32_t UT_ClientHelloCb(HITLS_Ctx *ctx, int32_t *alert, void *arg)
     return *(int32_t *)arg;
 }
 
+static int32_t UT_CookieGenerateCb(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len)
+{
+    (void)ctx;
+    (void)cookie;
+    (void)cookie_len;
+    return 0;
+}
+
+static int32_t UT_CookieVerifyCb(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len)
+{
+    (void)ctx;
+    (void)cookie;
+    (void)cookie_len;
+    return 1;
+}
+
 /** @
 * @test  UT_TLS_CFG_UPREF_FUNC_TC001
 * @spec  -
@@ -406,6 +422,68 @@ void UT_TLS_CFG_SET_CLIENTHELLOCB_API_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_CFG_SetClientHelloCb(config, UT_ClientHelloCb, &cbRetVal) == HITLS_SUCCESS);
 
 EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_CFG_SET_COOKIEGENERATECB_API_TC001
+* @title Test the HITLS_CFG_SetCookieGenerateCb interface.
+* @precon nan
+* @brief HITLS_CFG_SetCookieGenerateCb
+* 1. Import empty configuration information. Expected result 1 is obtained.
+* 2. Transfer non-empty configuration information and leave callback empty. Expected result 1 is obtained.
+* 3. Transfer non-empty configuration information and set callback to a non-empty value. Expected result 2 is obtained.
+* @expect
+* 1. Returns HITLS_NULL_INPUT
+* 2. Returns HITLS_SUCCES
+@ */
+
+/* BEGIN_CASE */
+void UT_TLS_CFG_SET_COOKIEGENERATECB_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, UT_CookieGenerateCb) == HITLS_NULL_INPUT);
+
+    config = HITLS_CFG_NewDTLS12Config();
+
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, NULL) == HITLS_NULL_INPUT);
+
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, UT_CookieGenerateCb) == HITLS_SUCCESS);
+
+exit:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_CFG_SET_COOKIEVERIFYCB_API_TC001
+* @title Test the HITLS_CFG_SetCookieVerifyCb interface.
+* @precon nan
+* @brief HITLS_CFG_SetCookieVerifyCb
+* 1. Import empty configuration information. Expected result 1 is obtained.
+* 2. Transfer non-empty configuration information and leave callback empty. Expected result 1 is obtained.
+* 3. Transfer non-empty configuration information and set callback to a non-empty value. Expected result 2 is obtained.
+* @expect
+* 1. Returns HITLS_NULL_INPUT
+* 2. Returns HITLS_SUCCES
+@ */
+
+/* BEGIN_CASE */
+void UT_TLS_CFG_SET_COOKIEVERIFYCB_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, UT_CookieVerifyCb) == HITLS_NULL_INPUT);
+
+    config = HITLS_CFG_NewDTLS12Config();
+
+    ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, NULL) == HITLS_NULL_INPUT);
+
+    ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, UT_CookieVerifyCb) == HITLS_SUCCESS);
+
+exit:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -863,6 +941,52 @@ void UT_TLS_CFG_SET_GET_CIPHERSERVERPREFERENCE_API_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_CFG_GetCipherServerPreference(config, &getIsSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(getIsSupport == false);
 EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_CFG_SET_GET_HELLO_VERIFY_REQ_API_TC001
+* @title Test the HITLS_CFG_SetHelloVerifyReqEnable and HITLS_CFG_GetHelloVerifyReqEnable interfaces.
+* @precon nan
+* @brief HITLS_CFG_SetHelloVerifyReqEnable
+* 1. Import empty configuration information. Expected result 1 is obtained.
+* 2. Transfer non-empty configuration information and set isSupport to an invalid value. Expected result 2 is obtained.
+* 3. Transfer a non-empty configuration information and set isSupport to a valid value. Expected result 3 is obtained.
+* HITLS_CFG_GetHelloVerifyReqEnable
+* 1. Import empty configuration information. Expected result 1 is obtained.
+* 2. Transfer an empty isSupport pointer. Expected result 1 is obtained.
+* 3. Transfer the non-null configuration information and the isSupport pointer is not null. Expected result 3 is
+*    obtained.
+* @expect
+* 1. Returns HITLS_NULL_INPUT
+* 2. HITLS_SUCCES is returned and config->isHelloVerifyReqEnable is set to true.
+* 3. Returns HITLS_SUCCES, and config->isHelloVerifyReqEnable is true or false.
+@ */
+
+/* BEGIN_CASE */
+void UT_TLS_CFG_SET_GET_HELLO_VERIFY_REQ_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    bool isSupport = false;
+    bool getIsSupport = false;
+    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, &getIsSupport) == HITLS_NULL_INPUT);
+
+    config = HITLS_CFG_NewDTLS12Config();
+
+    ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, NULL) == HITLS_NULL_INPUT);
+    isSupport = true;
+    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(config->isHelloVerifyReqEnable = true);
+    isSupport = false;
+    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, &getIsSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(getIsSupport == false);
+exit:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */

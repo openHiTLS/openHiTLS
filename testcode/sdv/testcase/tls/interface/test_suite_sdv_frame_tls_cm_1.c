@@ -970,7 +970,7 @@ EXIT:
 * @auto  TRUE
 @ */
 /* BEGIN_CASE */
-void UT_TLS_HITLS_CLOSE_TC001(void)
+void UT_TLS_HITLS_CLOSE_TC001(int uioType)
 {
     FRAME_Init();
 
@@ -985,9 +985,9 @@ void UT_TLS_HITLS_CLOSE_TC001(void)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    client = FRAME_CreateLink(config, BSL_UIO_SCTP);
+    client = FRAME_CreateLink(config, uioType);
     ASSERT_TRUE(client != NULL);
-    server = FRAME_CreateLink(config, BSL_UIO_SCTP);
+    server = FRAME_CreateLink(config, uioType);
     ASSERT_TRUE(server != NULL);
 
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
@@ -1039,7 +1039,7 @@ EXIT:
 * @auto  TRUE
 @ */
 /* BEGIN_CASE */
-void UT_TLS_HITLS_CLOSE_TC002(void)
+void UT_TLS_HITLS_CLOSE_TC002(int uioType)
 {
     FRAME_Init();
 
@@ -1052,9 +1052,9 @@ void UT_TLS_HITLS_CLOSE_TC002(void)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    client = FRAME_CreateLink(config, BSL_UIO_SCTP);
+    client = FRAME_CreateLink(config, uioType);
     ASSERT_TRUE(client != NULL);
-    server = FRAME_CreateLink(config, BSL_UIO_SCTP);
+    server = FRAME_CreateLink(config, uioType);
     ASSERT_TRUE(server != NULL);
 
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
