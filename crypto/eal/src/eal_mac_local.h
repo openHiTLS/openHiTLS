@@ -41,7 +41,7 @@ typedef enum {
 
 struct EAL_MacCtx {
     bool isProvider;
-    const EAL_MacUnitaryMethod *macMeth; // combined algorithm
+    EAL_MacUnitaryMethod *macMeth; // combined algorithm
     void *ctx;  // MAC context
     CRYPT_MAC_AlgId id;
     CRYPT_MAC_WORKSTATE state;

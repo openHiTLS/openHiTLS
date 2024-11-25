@@ -14,7 +14,7 @@ extern "C" {
 
 struct EalKdfCtx {
     bool isProvider;
-    const EAL_KdfUnitaryMethod *method;  /* algorithm operation entity */
+    EAL_KdfUnitaryMethod *method;  /* algorithm operation entity */
     void *data;
     CRYPT_KDF_AlgId id;
 };

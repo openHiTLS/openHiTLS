@@ -293,7 +293,7 @@ int32_t MODES_XTS_SetIv(MODES_CipherXTSCtx *ctx, const uint8_t *val, uint32_t le
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
         return CRYPT_MODES_IVLEN_ERROR;
     }
-    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, (uint8_t*)val, len) != EOK) {
+    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, val, len) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         return CRYPT_SECUREC_FAIL;
     }
@@ -438,7 +438,7 @@ void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx)
 
 
 int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, CRYPT_Param *param, bool enc)
+    uint32_t ivLen, BSL_Param *param, bool enc)
 {
     (void) param;
     if (modeCtx == NULL) {

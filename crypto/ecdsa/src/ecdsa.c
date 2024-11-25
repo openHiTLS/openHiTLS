@@ -555,7 +555,7 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
         case CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE:
             BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION;
-        case CRYPT_CTRL_GET_PARAID:
+        case CRYPT_CTRL_GET_PARAM_ID:
             return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetParaId, val, len);
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetBits, val, len);
@@ -563,7 +563,7 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
             return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetSecBits, val, len);
-        case CRYPT_CTRL_SET_PARA_BY_ID:
+        case CRYPT_CTRL_SET_PARAM_BY_ID:
             return CRYPT_ECDSA_SetParaEx(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)val));
         default:
             break;

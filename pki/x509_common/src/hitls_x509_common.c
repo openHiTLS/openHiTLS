@@ -27,6 +27,8 @@
 #include "bsl_err_internal.h"
 #include "bsl_pem_internal.h"
 #include "crypt_encode.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRawData, uint32_t *tbsRawDataLen)
 {
@@ -643,14 +645,17 @@ static int32_t X509_CtrlAlgInfo(const CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId
         case BSL_CID_SHA384WITHRSAENCRYPTION:
         case BSL_CID_SHA512WITHRSAENCRYPTION:
         case BSL_CID_SM3WITHRSAENCRYPTION:
-            {
-                CRYPT_RSA_PkcsV15Para pkcs15Para = {hashId};
-                return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
-                    &pkcs15Para, sizeof(CRYPT_RSA_PkcsV15Para));
-            }
-        case BSL_CID_RSASSAPSS:
-            return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PSS,
-                                      &alg->rsaPssParam, sizeof(CRYPT_RSA_PssPara));
+            return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
+                &hashId, sizeof(hashId));
+        case BSL_CID_RSASSAPSS: {
+            BSL_Param param[4] = {
+            {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &alg->rsaPssParam.mdId, sizeof(alg->rsaPssParam.mdId), 0},
+            {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &alg->rsaPssParam.mgfId, sizeof(alg->rsaPssParam.mgfId), 0},
+            {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32,
+                &alg->rsaPssParam.saltLen, sizeof(alg->rsaPssParam.saltLen), 0},
+            BSL_PARAM_END};
+            return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
+        }
         case BSL_CID_SM2DSAWITHSM3:
             if (alg->sm2UserId.data != NULL) {
                 return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_SM2_USER_ID,
@@ -744,8 +749,13 @@ static int32_t X509_SetRsaPssDefaultParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdI
         signAlgId->rsaPssParam.mdId = mdId;
         signAlgId->rsaPssParam.mgfId = mdId;
         signAlgId->rsaPssParam.saltLen = 20; // 20: default saltLen
-        return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, (void *)&signAlgId->rsaPssParam,
-            sizeof(CRYPT_RSA_PssPara));
+        BSL_Param param[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &signAlgId->rsaPssParam.saltLen,
+            sizeof(signAlgId->rsaPssParam.saltLen), 0},
+        BSL_PARAM_END};
+        return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
     }
 
     if (currentHash != mdId) {
@@ -788,8 +798,15 @@ static int32_t X509_SetRsaPssParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, cons
 
     signAlgId->algId = BSL_CID_RSASSAPSS;
     signAlgId->rsaPssParam = algParam->rsaPss;
-    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, (void *)&algParam->rsaPss,
-        sizeof(CRYPT_RSA_PssPara));
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, (void *)&signAlgId->rsaPssParam.mdId,
+            sizeof(algParam->rsaPss.mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, (void *)&signAlgId->rsaPssParam.mgfId,
+            sizeof(algParam->rsaPss.mgfId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, (void *)&signAlgId->rsaPssParam.saltLen,
+            sizeof(algParam->rsaPss.saltLen), 0},
+        BSL_PARAM_END};
+    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
 }
 
 static int32_t X509_SetRsaPkcsParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, bool setPadding)
@@ -802,8 +819,8 @@ static int32_t X509_SetRsaPkcsParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, boo
             return ret;
         }
     }
-    CRYPT_RSA_PkcsV15Para pkcs15Param = {mdId};
-    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcs15Param, sizeof(CRYPT_RSA_PkcsV15Para));
+    int32_t pkcs15Param = mdId;
+    return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcs15Param, sizeof(int32_t));
 }
 
 int32_t X509_SetRsaSignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITLS_X509_SignAlgParam *algParam,

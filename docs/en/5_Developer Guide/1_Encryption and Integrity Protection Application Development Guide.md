@@ -548,7 +548,7 @@ The PBKDF2, HKDF, SCRYPT, and KDFTLS12 algorithms can be used for key derivation
 #include "crypt_algid.h"
 #include "crypt_eal_kdf.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #define PBKDF2_PARAM_LEN (4)
 

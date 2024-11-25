@@ -35,7 +35,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_encode.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #define PATH_MAX_LEN 4096
 #define PWD_MAX_LEN 4096
@@ -323,8 +323,12 @@ static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_EAL_PkeyCtx *
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-
-    return CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &para, sizeof(CRYPT_RSA_PssPara));
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &para.mdId, sizeof(para.mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &para.mgfId, sizeof(para.mgfId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &para.saltLen, sizeof(para.saltLen), 0},
+        BSL_PARAM_END};
+    return CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
 }
 
 static int32_t ParseRsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *param,
@@ -917,7 +921,8 @@ static int32_t PbkdfDeriveKey(int32_t iter, int32_t prfId, BSL_Buffer *salt, con
 
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
     (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &prfId, sizeof(prfId));
-    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, (uint8_t *)pwd, pwdlen);
+    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        (uint8_t *)(uintptr_t)pwd, pwdlen);
     (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt->data, salt->dataLen);
     (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, sizeof(iter));
     ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);

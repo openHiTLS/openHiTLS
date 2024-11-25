@@ -69,7 +69,7 @@ struct CryptEalCipherCtx {
     CRYPT_CIPHER_AlgId id;
     EAL_CipherStates states;                        /**< record status */
     void *ctx;                                      /**< handle of the mode */
-    const EAL_CipherUnitaryMethod *method;          /**< method corresponding to the encryption/decryption mode */
+    EAL_CipherUnitaryMethod *method;          /**< method corresponding to the encryption/decryption mode */
 };
 
 /**

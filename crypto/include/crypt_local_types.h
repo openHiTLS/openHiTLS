@@ -19,7 +19,7 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "bsl_params.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +31,7 @@ typedef int32_t (*GetLenFunc)(const void *ctx);
 /* Prototype of the MD algorithm operation functions */
 typedef void* (*MdNewCtx)(void);
 typedef void* (*MdProvNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*MdInit)(void *data, CRYPT_Param *param);
+typedef int32_t (*MdInit)(void *data, BSL_Param *param);
 typedef int32_t (*MdUpdate)(void *data, const uint8_t *input, uint32_t len);
 typedef int32_t (*MdFinal)(void *data, uint8_t *out, uint32_t *len);
 typedef void (*MdDeinit)(void *data);
@@ -109,7 +109,6 @@ typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t data
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
-typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
 typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
 /**
 * @ingroup  EAL
@@ -139,7 +138,6 @@ typedef struct EAL_PkeyMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
-    PkeyCopyParam copyPara;                 // copy parameter from source to destination
 } EAL_PkeyMethod;
 
 typedef struct EAL_PkeyUnitaryMethod {
@@ -164,7 +162,6 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
-    PkeyCopyParam copyPara;                 // Copy parameter from source to destination
     PkeyRecover recover;
 } EAL_PkeyUnitaryMethod;
 /**
@@ -183,7 +180,7 @@ typedef enum {
 typedef void *(*CipherNewCtx)(int32_t alg);
 typedef void *(*CipherProvNewCtx)(void *provCtx, int32_t alg);
 typedef int32_t (*CipherInitCtx)(void *ctx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, CRYPT_Param *param, bool enc);
+    uint32_t ivLen, BSL_Param *param, bool enc);
 typedef int32_t (*CipherDeInitCtx)(void *ctx);
 typedef int32_t (*CipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CipherFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
@@ -236,7 +233,7 @@ typedef struct {
 typedef void* (*MacNewCtx)(CRYPT_MAC_AlgId id);
 typedef void* (*MacProvNewCtx)(void *provCtx, int32_t algId);
 // Complete key initialization.
-typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len, CRYPT_Param *param);
+typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len, BSL_Param *param);
 typedef int32_t (*MacUpdate)(void *ctx, const uint8_t *in, uint32_t len);
 typedef int32_t (*MacFinal)(void *ctx, const uint8_t *out, uint32_t *len);
 typedef void    (*MacDeinit)(void *ctx);

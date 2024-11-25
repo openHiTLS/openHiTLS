@@ -104,7 +104,7 @@ int32_t SAL_SockConnect(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
 
 int32_t SAL_SockSend(int32_t sockId, const void *msg, size_t len, int32_t flags)
 {
-    return (int32_t)send(sockId, (char *)msg, len, flags);
+    return (int32_t)send(sockId, msg, len, flags);
 }
 
 int32_t SAL_SockRecv(int32_t sockfd, void *buff, size_t len, int32_t flags)

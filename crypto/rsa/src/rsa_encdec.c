@@ -25,6 +25,8 @@
 #include "bsl_err_internal.h"
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 // rsa-decrypt Calculation used by Chinese Remainder Theorem(CRT). intermediate variables:
 typedef struct {
@@ -887,7 +889,7 @@ static int32_t SetEmsaPkcsV15(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len != sizeof(CRYPT_RSA_PkcsV15Para)) {
+    if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_SET_EMS_PKCSV15_LEN_ERROR);
         return CRYPT_RSA_SET_EMS_PKCSV15_LEN_ERROR;
     }
@@ -895,35 +897,20 @@ static int32_t SetEmsaPkcsV15(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
         CRYPT_MD_SHA384, CRYPT_MD_SHA512, CRYPT_MD_SM3, CRYPT_MD_SHA1, CRYPT_MD_MD5
     };
 
-    CRYPT_RSA_PkcsV15Para *pad = val;
-    if (ParamIdIsValid(pad->mdId, SIGN_MD_ID_LIST, sizeof(SIGN_MD_ID_LIST) / sizeof(SIGN_MD_ID_LIST[0])) == false) {
+    int32_t mdId = *(int32_t *)val;
+    if (ParamIdIsValid(mdId, SIGN_MD_ID_LIST, sizeof(SIGN_MD_ID_LIST) / sizeof(SIGN_MD_ID_LIST[0])) == false) {
         // This hash algorithm is not supported.
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_MD_ALGID);
         return CRYPT_RSA_ERR_MD_ALGID;
     }
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
-    (void)memcpy_s(&(ctx->pad.para.pkcsv15), sizeof(CRYPT_RSA_PkcsV15Para), val, sizeof(CRYPT_RSA_PkcsV15Para));
     ctx->pad.type = EMSA_PKCSV15;
-    ctx->pad.para.pkcsv15.mdId = pad->mdId;
+    ctx->pad.para.pkcsv15.mdId = mdId;
     return CRYPT_SUCCESS;
 }
 
-static int32_t SetEmsaPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
+static int32_t SetEmsaPss(CRYPT_RSA_Ctx *ctx, RSA_PadingPara *pad)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (len != sizeof(RSA_PadingPara)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_SET_EMS_PSS_LEN_ERROR);
-        return CRYPT_RSA_SET_EMS_PSS_LEN_ERROR;
-    }
-
-    RSA_PadingPara *pad = val;
-    if (pad->mdMeth == NULL || pad->mgfMeth == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
     if (bits == 0) {
         // The valid key information does not exist.
@@ -949,28 +936,19 @@ static int32_t SetEmsaPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
         return CRYPT_RSA_ERR_PSS_SALT_LEN;
     }
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
-    (void)memcpy_s(&(ctx->pad.para.pss), sizeof(RSA_PadingPara), val, sizeof(RSA_PadingPara));
+    (void)memcpy_s(&(ctx->pad.para.pss), sizeof(RSA_PadingPara), pad, sizeof(RSA_PadingPara));
     ctx->pad.type = EMSA_PSS;
     ctx->pad.para.pss.mdId = pad->mdId;
     ctx->pad.para.pss.mgfId = pad->mgfId;
     return CRYPT_SUCCESS;
 }
 
-static int32_t SetOaep(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
+void SetOaep(CRYPT_RSA_Ctx *ctx, const RSA_PadingPara *val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (len != sizeof(RSA_PadingPara)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_SET_RSAES_OAEP_LEN_ERROR);
-        return CRYPT_RSA_SET_RSAES_OAEP_LEN_ERROR;
-    }
-
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
     (void)memcpy_s(&(ctx->pad.para.oaep), sizeof(RSA_PadingPara), val, sizeof(RSA_PadingPara));
     ctx->pad.type = RSAES_OAEP;
-    return CRYPT_SUCCESS;
+    return;
 }
 
 static int32_t SetOaepLabel(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
@@ -1004,13 +982,13 @@ static int32_t SetRsaesPkcsV15(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len != sizeof(CRYPT_RSA_PkcsV15Para)) {
+    if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_SET_EMS_PKCSV15_LEN_ERROR);
         return CRYPT_RSA_SET_EMS_PKCSV15_LEN_ERROR;
     }
 
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
-    (void)memcpy_s(&(ctx->pad.para.pkcsv15), sizeof(CRYPT_RSA_PkcsV15Para), val, sizeof(CRYPT_RSA_PkcsV15Para));
+    ctx->pad.para.pkcsv15.mdId = *(const int32_t *)val;
     ctx->pad.type = RSAES_PKCSV15;
     return CRYPT_SUCCESS;
 }
@@ -1177,7 +1155,7 @@ static int32_t SetRsaPad(CRYPT_RSA_Ctx *ctx, const void *val, const uint32_t len
         return CRYPT_RSA_SET_FLAG_LEN_ERROR;
     }
 
-    int32_t pad = *(int32_t *)val;
+    int32_t pad = *(const int32_t *)val;
     if (pad < EMSA_PKCSV15 || pad > RSA_NO_PAD) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -1196,71 +1174,94 @@ static int32_t MdIdCheckSha1Sha2(CRYPT_MD_AlgId id)
     return CRYPT_SUCCESS;
 }
 
-static int32_t EalSetOaep(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
+static int32_t EalSetOaep(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
 {
-    RSA_PadingPara padPara;
-    if (val == NULL) {
+    int32_t ret;
+    uint32_t len = 0;
+    RSA_PadingPara padPara = {0};
+    const BSL_Param *temp = NULL;
+    if (param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const CRYPT_RSA_OaepPara *opad = val;
-    if (len != sizeof(CRYPT_RSA_OaepPara)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_PKEY_CTRL_ERROR);
-        return CRYPT_EAL_PKEY_CTRL_ERROR;
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MD_ID)) != NULL) {
+        len = sizeof(padPara.mdId);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_MD_ID,
+            BSL_PARAM_TYPE_INT32, &padPara.mdId, &len), ret);
     }
-    int32_t ret = MdIdCheckSha1Sha2(opad->mdId);
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MGF1_ID)) != NULL) {
+        len = sizeof(padPara.mgfId);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_MGF1_ID,
+            BSL_PARAM_TYPE_INT32, &padPara.mgfId, &len), ret);
+    }
+    ret = MdIdCheckSha1Sha2(padPara.mdId);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = MdIdCheckSha1Sha2(opad->mgfId);
+    ret = MdIdCheckSha1Sha2(padPara.mgfId);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    padPara.mdId = opad->mdId;
-    padPara.mgfId = opad->mgfId;
-    padPara.mdMeth = EAL_MdFindMethod(opad->mdId);
-    padPara.mgfMeth = EAL_MdFindMethod(opad->mgfId);
+    padPara.mdMeth = EAL_MdFindMethod(padPara.mdId);
+    padPara.mgfMeth = EAL_MdFindMethod(padPara.mgfId);
     if (padPara.mdMeth == NULL || padPara.mgfMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    return SetOaep(ctx, &padPara, sizeof(RSA_PadingPara));
+    SetOaep(ctx, &padPara);
+ERR:
+    return ret;
 }
 
-static int32_t EalSetPss(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
+static int32_t EalSetPss(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
 {
-    RSA_PadingPara padPara;
-    if (val == NULL) {
+    int32_t ret;
+    uint32_t len = 0;
+    RSA_PadingPara padPara = {0};
+    const BSL_Param *temp = NULL;
+    if (param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_RSA_PssPara *pad = val;
-    if (len != sizeof(CRYPT_RSA_PssPara)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_PKEY_CTRL_ERROR);
-        return CRYPT_EAL_PKEY_CTRL_ERROR;
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MD_ID)) != NULL) {
+        len = sizeof(padPara.mdId);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_MD_ID,
+            BSL_PARAM_TYPE_INT32, &padPara.mdId, &len), ret);
     }
-    int32_t ret = MdIdCheckSha1Sha2(pad->mdId);
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MGF1_ID)) != NULL) {
+        len = sizeof(padPara.mgfId);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_MGF1_ID,
+            BSL_PARAM_TYPE_INT32, &padPara.mgfId, &len), ret);
+    }
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_SALTLEN)) != NULL) {
+        len = sizeof(padPara.saltLen);
+        GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_SALTLEN,
+            BSL_PARAM_TYPE_INT32, &padPara.saltLen, &len), ret);
+    }
+    ret = MdIdCheckSha1Sha2(padPara.mdId);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = MdIdCheckSha1Sha2(pad->mgfId);
+    ret = MdIdCheckSha1Sha2(padPara.mgfId);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    padPara.saltLen = pad->saltLen;
-    padPara.mdId = pad->mdId;
-    padPara.mgfId = pad->mgfId;
-    padPara.mdMeth = EAL_MdFindMethod(pad->mdId);
-    padPara.mgfMeth = EAL_MdFindMethod(pad->mgfId);
+    padPara.mdMeth = EAL_MdFindMethod(padPara.mdId);
+    padPara.mgfMeth = EAL_MdFindMethod(padPara.mgfId);
     if (padPara.mdMeth == NULL || padPara.mgfMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    return SetEmsaPss(ctx, &padPara, sizeof(RSA_PadingPara));
+    ret = SetEmsaPss(ctx, &padPara);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+ERR:
+    return ret;
 }
 
 static int32_t CRYPT_RSA_GetLen(const CRYPT_RSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
@@ -1314,9 +1315,9 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetSecBits, val, len);
         case CRYPT_CTRL_SET_RSA_EMSA_PSS:
-            return EalSetPss(ctx, val, len);
+            return EalSetPss(ctx, val);
         case CRYPT_CTRL_SET_RSA_RSAES_OAEP:
-            return EalSetOaep(ctx, val, len);
+            return EalSetOaep(ctx, val);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR);
             return CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR;
