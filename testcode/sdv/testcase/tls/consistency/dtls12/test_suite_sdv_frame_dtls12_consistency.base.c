@@ -76,15 +76,15 @@ typedef struct {
     bool isSupportNoClientCert;
 } HandshakeTestInfo;
 
-int32_t StatusPark(HandshakeTestInfo *testInfo)
+int32_t StatusPark(HandshakeTestInfo *testInfo, int uioType)
 {
 
-    testInfo->client = FRAME_CreateLink(testInfo->config, BSL_UIO_SCTP);
+    testInfo->client = FRAME_CreateLink(testInfo->config, uioType);
     if (testInfo->client == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    testInfo->server = FRAME_CreateLink(testInfo->config, BSL_UIO_SCTP);
+    testInfo->server = FRAME_CreateLink(testInfo->config, uioType);
     if (testInfo->server == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
@@ -98,7 +98,7 @@ int32_t StatusPark(HandshakeTestInfo *testInfo)
     return HITLS_SUCCESS;
 }
 
-int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
+int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo, int uioType)
 {
     FRAME_Init();
     FRAME_RegCryptMethod(); // stub all crypto functions
@@ -112,10 +112,10 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
 
-    return StatusPark(testInfo);
+    return StatusPark(testInfo, uioType);
 }
 
-int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
+int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo, int uioType)
 {
     FRAME_Init();
 
@@ -132,7 +132,7 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
 
-    return StatusPark(testInfo);
+    return StatusPark(testInfo, uioType);
 }
 
 int32_t SendHelloReqWithIndex(HITLS_Ctx *ctx, uint8_t index)
@@ -341,7 +341,7 @@ static int32_t GetDisorderServerFinish_AppData(FRAME_LinkObj *server, uint8_t *d
     return HITLS_SUCCESS;
 }
 
-int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo)
+int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo, int uioType)
 {
     FRAME_Init();
     testInfo->config = HITLS_CFG_NewDTLS12Config();
@@ -356,7 +356,7 @@ int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo)
     HITLS_CFG_SetClientVerifySupport(testInfo->config, testInfo->isSupportClientVerify);
     HITLS_CFG_SetNoClientCertSupport(testInfo->config, false);
     HITLS_CFG_SetExtenedMasterSecretSupport(testInfo->config, true);
-    return StatusPark(testInfo);
+    return StatusPark(testInfo, uioType);
 }
 
 static int32_t GetRepeatsApp(FRAME_LinkObj *obj, uint8_t *data, uint32_t *usedLen)

@@ -37,6 +37,7 @@
 #include "bsl_uio.h"
 #include "uio_base.h"
 #include "uio_sctp.h"
+#include "uio_udp.h"
 #include "sal_atomic.h"
 #include "uio_abstraction.h"
 
@@ -121,6 +122,8 @@ const BSL_UIO_Method * GetUioMethodByType(int uioType)
         case BSL_UIO_SCTP:
             return BSL_UIO_SctpMethod();
 #endif
+        case BSL_UIO_UDP:
+            return BSL_UIO_UdpMethod();
         case BSL_UIO_BUFFER:
             return BSL_UIO_BufferMethod();
         default:
@@ -242,7 +245,7 @@ static int32_t BslUioGets(BSL_UIO *uio, char *buf, uint32_t *readLen)
  * @title  Input parameter test
  * @precon  nan
  * @brief
- *    1. Construct the tcp/sctp method structure, and invoke BSL_UIO_New.
+ *    1. Construct the tcp/sctp/udp method structure, and invoke BSL_UIO_New.
  *    2. Invoke the BSL_UIO_GetTransportType interface.
  * @expect
  *    1. Expected the uio is not NULL, and transport type is the target type
@@ -278,6 +281,18 @@ void SDV_BSL_UIO_NEW_API_TC001(void)
         method.ctrl = STUB_Ctrl;
         uio = BSL_UIO_New(&method);
         ASSERT_TRUE(uio != NULL && BSL_UIO_GetTransportType(uio) == BSL_UIO_TCP);
+        BSL_UIO_Free(uio);
+    }
+    /* Set transportType to udp and construct the method structure. */
+    {
+        const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
+        BSL_UIO_Method method = {0};
+        memcpy(&method, ori, sizeof(method));
+        method.write = STUB_Write;
+        method.read = STUB_Read;
+        method.ctrl = STUB_Ctrl;
+        uio = BSL_UIO_New(&method);
+        ASSERT_TRUE(uio != NULL && BSL_UIO_GetTransportType(uio) == BSL_UIO_UDP);
         BSL_UIO_Free(uio);
     }
 EXIT:
@@ -416,6 +431,7 @@ void SDV_BSL_UIO_INIT_FUNC_TC001(int uioType)
     const BSL_UIO_Method *ori = NULL;
     switch (uioType) {
         case BSL_UIO_TCP:
+        case BSL_UIO_UDP:
             ori = GetUioMethodByType(uioType);
             break;
         case BSL_UIO_SCTP:
@@ -1008,6 +1024,54 @@ void SDV_BSL_UIO_NEXT_TC001(void)
 EXIT:
     BSL_UIO_Free(tcp1);
     BSL_UIO_Free(tcp2);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_UIO_UDP_API_TC001
+ * @title  UDP ctrl test
+ * @precon  nan
+ * @brief
+ *    1. Call BSL_UIO_UdpMethod to create a UDP method. Expected result 1 is obtained.
+ *    2. The input cmd is BSL_UIO_SET_PEER_IP_ADDR when BSL_UIO_Ctrl is invoked. Expected result 2 is obtained.
+ *    3. The input cmd is BSL_UIO_GET_PEER_IP_ADDR when BSL_UIO_Ctrl is invoked. Expected result 3 is obtained.
+ *    4. The input cmd is BSL_UIO_DGRAM_SET_CONNECTED when BSL_UIO_Ctrl is invoked. Expected result 3 is obtained.
+ * @expect
+ *    1. The UDP method is successfully created.
+ *    2. Return BSL_SUCCESS
+ *    3. Return BSL_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_UDP_API_TC001(void)
+{
+    BSL_UIO *uio = NULL;
+    int ret;
+    uint8_t ipAddr[256] = {0};
+    BSL_UIO_CtrlGetPeerIpAddrParam param = {ipAddr, sizeof(ipAddr)};
+    uint8_t data[SOCK_ADDR_V4_LEN] = {0};
+
+    const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
+    BSL_UIO_Method method = {0};
+    memcpy_s(&method, sizeof(method), ori, sizeof(method));
+    method.write = STUB_Write;
+    method.read = STUB_Read;
+
+    uio = BSL_UIO_New(&method);
+    ASSERT_TRUE(uio != NULL);
+
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_PEER_IP_ADDR, sizeof(data), data);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_GET_PEER_IP_ADDR, sizeof(param), &param);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, sizeof(param), &param);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, 0, NULL);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+exit:
+    BSL_UIO_Free(uio);
 }
 /* END_CASE */
 

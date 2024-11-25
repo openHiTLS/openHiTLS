@@ -39,6 +39,9 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32
         case SERVER_HELLO:
             ret = PackServerHello(ctx, buf, bufLen, usedLen);
             break;
+        case HELLO_VERIFY_REQUEST:
+            ret = PackHelloVerifyRequest(ctx, buf, bufLen, usedLen);
+            break;
         case SERVER_KEY_EXCHANGE:
             ret = PackServerKeyExchange(ctx, buf, bufLen, usedLen);
             break;

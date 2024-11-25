@@ -93,6 +93,7 @@ static bool IsHsSendState(HITLS_HandshakeState state)
         case TRY_SEND_CLIENT_HELLO:
         case TRY_SEND_HELLO_RETRY_REQUEST:
         case TRY_SEND_SERVER_HELLO:
+        case TRY_SEND_HELLO_VERIFY_REQUEST:
         case TRY_SEND_ENCRYPTED_EXTENSIONS:
         case TRY_SEND_CERTIFICATE:
         case TRY_SEND_SERVER_KEY_EXCHANGE:
@@ -118,6 +119,7 @@ static bool IsHsRecvState(HITLS_HandshakeState state)
     switch (state) {
         case TRY_RECV_CLIENT_HELLO:
         case TRY_RECV_SERVER_HELLO:
+        case TRY_RECV_HELLO_VERIFY_REQUEST:
         case TRY_RECV_ENCRYPTED_EXTENSIONS:
         case TRY_RECV_CERTIFICATE:
         case TRY_RECV_SERVER_KEY_EXCHANGE:

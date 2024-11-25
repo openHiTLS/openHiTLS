@@ -31,6 +31,10 @@ extern "C" {
 #define IP_ADDR_V6_LEN 16
 #define IP_ADDR_MAX_LEN IP_ADDR_V6_LEN
 
+#define SOCK_ADDR_V4_LEN     (sizeof(struct sockaddr_in))
+#define SOCK_ADDR_V6_LEN     (sizeof(struct sockaddr_in6))
+#define SOCK_ADDR_UNIX_LEN   (sizeof(struct sockaddr_un))
+#define DGRAM_SOCKADDR_MAX_LEN SOCK_ADDR_UNIX_LEN
 
 struct UIO_ControlBlock {
     struct BSL_UIO_MethodStruct method;

@@ -28,6 +28,7 @@
                         "uio_buffer": {"deps": ["uio_plt"]},
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
+                        "uio_udp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]}
                     },
                     "usrdata": null,
@@ -177,7 +178,7 @@
                         "deps": ["tlv", "sal", "eal", "list"],
                         "opts": [
                             ["host", "host_client", "host_server"],
-                            ["uio_sctp", "uio_tcp", "uio_plt"]
+                            ["uio_sctp", "uio_tcp", "uio_udp", "uio_plt"]
                         ]
                     },
                     "config": {
@@ -982,7 +983,7 @@
             },
             "uio": {
                 ".features": [
-                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp", "uio_mem"
+                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp","uio_udp" ,"uio_mem"
                 ],
                 ".srcs": "bsl/uio/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"],
