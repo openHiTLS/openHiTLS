@@ -154,6 +154,9 @@ typedef struct TlsConfig {
     bool isSupportSessionTicket;        /* is support session ticket */
     bool isSupportServerPreference;     /* server cipher suites can be preferentially selected */
 
+    /* DTLS */
+    bool isHelloVerifyReqEnable;    /* is server or client HelloVerifyRequest message enabled */
+
     /**
      * Configurations in the HITLS_Ctx are classified into private configuration and global configuration.
      * The following parameters directly reference the global configuration in tls.
@@ -167,6 +170,7 @@ typedef struct TlsConfig {
     HITLS_SniDealCb sniDealCb;          /* server name callback function */
     HITLS_ClientHelloCb clientHelloCb;          /* ClientHello callback */
     void *clientHelloCbArg;                     /* the args for ClientHello callback */
+    HITLS_CookieGenerateCb cookieGenerateCb;
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */

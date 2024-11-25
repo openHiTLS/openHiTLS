@@ -61,7 +61,7 @@ static int32_t PackClientVersion(const TLS_Ctx *ctx, uint16_t version, uint8_t *
 }
 #ifdef HITLS_TLS_PROTO_DTLS12
 // Pack the cookie content of the client Hello message.
-static int32_t PackClientCookie(const uint8_t *cookie, uint8_t cookieLen,
+int32_t PackClientCookie(const uint8_t *cookie, uint8_t cookieLen,
     uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     uint32_t offset = 0u;

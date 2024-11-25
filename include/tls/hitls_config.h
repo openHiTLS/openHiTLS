@@ -781,6 +781,29 @@ uint32_t HITLS_CFG_GetKeyExchMode(HITLS_Config *config);
 
 /**
  * @ingroup hitls_config
+ * @brief   CookieGenerate callback prototype for the server to process the callback.
+ *
+ * @param   ctx  [IN] Ctx context
+ * @param   msg   [IN] ClientHello Message
+ * @param   cookie  [OUT] Generated cookie
+ * @param   cookie_len  [OUT] Length of Generated cookie
+ * @retval  HITLS_SUCCESS: successful. Other values are considered as failure.
+ */
+typedef int32_t (*HITLS_CookieGenerateCb)(HITLS_Ctx *ctx, const void* msg, unsigned char *cookie,  uint32_t *cookie_len);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the cookie generation callback on the server.
+ *
+ * @param   config [OUT] Config context
+ * @param   callback  [IN] CookieGenerate callback
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerateCb callback);
+
+/**
+ * @ingroup hitls_config
  * @brief   ClientHello callback prototype for the server to process the callback.
  *
  * @param   ctx  [IN] Ctx context
@@ -1156,6 +1179,28 @@ int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, uint8_t isEnable
  * @retval  HITLS_SUCCESS, if successful.
  */
 int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *isEnable);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether to send hello verify request message.
+ *
+ * @param   config [IN] TLS link configuration.
+ * @param   isEnable [OUT] Indicates whether to send hello verify request message.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, uint8_t isEnable);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Obtains the status of whether to send hello verify request message.
+ *
+ * @param   config [IN] TLS link configuration.
+ * @param   isEnable [OUT] Indicates whether to send hello verify request message.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, uint8_t *isEnable);
 
 /**
  * @ingroup hitls_config

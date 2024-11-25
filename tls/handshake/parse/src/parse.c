@@ -79,6 +79,7 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CLIENT_HELLO] = {.msgType = CLIENT_HELLO,
                                .checkCb = NULL},
     [TRY_RECV_SERVER_HELLO] = {.msgType = SERVER_HELLO, .checkCb = NULL},
+    [TRY_RECV_HELLO_VERIFY_REQUEST] = {.msgType = HELLO_VERIFY_REQUEST, .checkCb = NULL},
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = {.msgType = ENCRYPTED_EXTENSIONS, .checkCb = NULL},
     [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = NULL},
     [TRY_RECV_SERVER_KEY_EXCHANGE] = {.msgType = SERVER_KEY_EXCHANGE, .checkCb = CheckServerKeyExchangeType},
@@ -98,7 +99,7 @@ int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
         return HITLS_SUCCESS;
     }
 
-    if ((msgType == HELLO_REQUEST) && (ctx->isClient)) {
+    if ((msgType == HELLO_REQUEST || msgType == HELLO_VERIFY_REQUEST) && (ctx->isClient)) {
         /* The HelloRequest message may appear at any time during the handshake.
            The client should ignore this message */
         return HITLS_SUCCESS;
@@ -225,6 +226,8 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
             return ParseClientHello(ctx, data, len, hsMsg);
         case SERVER_HELLO:
             return ParseServerHello(ctx, data, len, hsMsg);
+        case HELLO_VERIFY_REQUEST:
+            return ParseHelloVerifyRequest(ctx, data, len, hsMsg);
         case CERTIFICATE:
             return ParseCertificate(ctx, data, len, hsMsg);
         case SERVER_KEY_EXCHANGE:
