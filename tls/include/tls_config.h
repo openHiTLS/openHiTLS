@@ -170,7 +170,10 @@ typedef struct TlsConfig {
     HITLS_SniDealCb sniDealCb;          /* server name callback function */
     HITLS_ClientHelloCb clientHelloCb;          /* ClientHello callback */
     void *clientHelloCbArg;                     /* the args for ClientHello callback */
+#ifdef HITLS_TLS_PROTO_DTLS12
     HITLS_CookieGenerateCb cookieGenerateCb;
+    HITLS_CookieVerifyCb cookieVerifyCb;
+#endif    
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */

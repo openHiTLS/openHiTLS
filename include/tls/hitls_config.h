@@ -784,12 +784,11 @@ uint32_t HITLS_CFG_GetKeyExchMode(HITLS_Config *config);
  * @brief   CookieGenerate callback prototype for the server to process the callback.
  *
  * @param   ctx  [IN] Ctx context
- * @param   msg   [IN] ClientHello Message
  * @param   cookie  [OUT] Generated cookie
  * @param   cookie_len  [OUT] Length of Generated cookie
  * @retval  HITLS_SUCCESS: successful. Other values are considered as failure.
  */
-typedef int32_t (*HITLS_CookieGenerateCb)(HITLS_Ctx *ctx, const void* msg, unsigned char *cookie,  uint32_t *cookie_len);
+typedef int32_t (*HITLS_CookieGenerateCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len);
 
 /**
  * @ingroup hitls_config
@@ -801,6 +800,28 @@ typedef int32_t (*HITLS_CookieGenerateCb)(HITLS_Ctx *ctx, const void* msg, unsig
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerateCb callback);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Cookie Verification callback prototype for the server to process the callback.
+ *
+ * @param   ctx  [IN] Ctx context
+ * @param   cookie  [IN] Cookie to be verified
+ * @param   cookie_len  [IN] Length of Cookie to be verified
+ * @retval  HITLS_SUCCESS: successful. Other values are considered as failure.
+ */
+typedef int32_t (*HITLS_CookieVerifyCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the cookie verification callback on the server.
+ *
+ * @param   config [OUT] Config context
+ * @param   callback  [IN] CookieVerify callback
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_CookieVerifyCb callback);
 
 /**
  * @ingroup hitls_config

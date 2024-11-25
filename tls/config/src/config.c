@@ -938,7 +938,7 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_FEATURE_SNI
+#ifdef HITLS_TLS_PROTO_DTLS12
 int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerateCb callback)
 {
     if (config == NULL || callback == NULL) {
@@ -949,6 +949,18 @@ int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerate
     return HITLS_SUCCESS;
 }
 
+int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_CookieVerifyCb callback)
+{
+    if (config == NULL || callback == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->cookieVerifyCb = callback;
+    return HITLS_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_TLS_FEATURE_SNI
 int32_t HITLS_CFG_SetClientHelloCb(HITLS_Config *config, HITLS_ClientHelloCb callback, void *arg)
 {
     if (config == NULL || callback == NULL) {
