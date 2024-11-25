@@ -8,6 +8,7 @@
         "CC_WARN_FLAGS": [
             "-Werror",
             "-Wextra",
+            "-Wcast-qual",
             "-Wall",
             "-Wdate-time",
             "-Wfloat-equal",

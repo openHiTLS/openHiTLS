@@ -1296,7 +1296,7 @@ static int32_t SetExtInvaildTime(void *param, HITLS_X509_ExtEntry *entry, const 
         asns.tag = BSL_ASN1_TAG_UTCTIME;
     }
     asns.len = sizeof(BSL_TIME);
-    asns.buff = (uint8_t *)&invaildTime->time;
+    asns.buff = (uint8_t *)(uintptr_t)&invaildTime->time;
     BSL_ASN1_TemplateItem templItem = {BSL_ASN1_TAG_CHOICE, 0, 0};
     BSL_ASN1_Template templ = {&templItem, 1};
     int32_t ret = BSL_ASN1_EncodeTemplate(&templ, &asns, 1, &entry->extnValue.buff, &entry->extnValue.len);

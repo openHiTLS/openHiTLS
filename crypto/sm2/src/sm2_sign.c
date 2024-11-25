@@ -31,7 +31,7 @@
 #include "crypt_sm2.h"
 #include "sm2_local.h"
 #include "eal_md_local.h"
-#include "crypt_params_type.h"
+#include "crypt_params_key.h"
 
 static int32_t Sm2SetUserId(CRYPT_SM2_Ctx *ctx, const uint8_t *val, uint32_t len)
 {
@@ -782,11 +782,11 @@ static int32_t Sm2SetPKG(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_CTRL_LEN);
         return CRYPT_SM2_ERR_CTRL_LEN;
     }
-    if (*(uint32_t *)val != 0 && *(uint32_t *)val != 1) {
+    if (*(const uint32_t *)val != 0 && *(const uint32_t *)val != 1) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    ctx->pkgImpl = *(uint32_t *)val;
+    ctx->pkgImpl = *(const uint32_t *)val;
     return CRYPT_SUCCESS;
 }
 
@@ -830,7 +830,7 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_SET_SM2_USER_ID:
             ret = CtrlUserId(ctx, val, len);
             break;
-        case CRYPT_CTRL_GENE_SM2_R:
+        case CRYPT_CTRL_SM2_GENE_R:
             ret = Sm2GenerateR(ctx, val, len);
             break;
         case CRYPT_CTRL_SET_SM2_R:
@@ -839,7 +839,7 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_SET_SM2_RANDOM:
             ret = Sm2SetRandom(ctx, val, len);
             break;
-        case CRYPT_CTRL_SM2_GET_SEND_CHECK:
+        case CRYPT_CTRL_GET_SM2_SEND_CHECK:
             ret = Sm2GetSumSend(ctx, val, len);
             break;
         case CRYPT_CTRL_SM2_DO_CHECK:

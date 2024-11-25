@@ -672,7 +672,7 @@ ERR:
 
 void ECP_Sm2ScalarMulG(P256_Point *r, const BN_UINT *k)
 {
-    const BN_UINT *precompute = (BN_UINT *)g_sm2Precompute;
+    const BN_UINT *precompute = (const BN_UINT *)g_sm2Precompute;
     uint32_t index, mask = 0xff;
     for (int i = 31; i >= 0; --i) {
         /* 'i / 8' is for split i to 4 parts(k is a 4 elements array)

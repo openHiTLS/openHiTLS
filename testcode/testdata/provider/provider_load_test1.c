@@ -26,7 +26,7 @@
 #define CRYPT_EAL_DEFAULT_ATTR "provider=test1,compare1=one,cpmpare3=three"
 #define RESULT 1415926
 
-void *Provider_NewCtx(void *provCtx, int32_t algid, CRYPT_Param *param)
+void *Provider_NewCtx(void *provCtx, int32_t algid, BSL_Param *param)
 {
     (void)provCtx;
     (void)param;
@@ -91,7 +91,6 @@ const CRYPT_EAL_Func defKeyMgmtDsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_CHECK, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, NULL},
-    {CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, Provider_FreeCtx},
     CRYPT_EAL_FUNC_END,
@@ -202,8 +201,60 @@ static CRYPT_EAL_Func defProvOutFuncs[] = {
 };
 
 int32_t CRYPT_EAL_ProviderInitcb(CRYPT_EAL_ProvMgrCtx *mgrCtx,
-    CRYPT_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
+    BSL_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
+    CRYPT_RandSeedMethod entroy = {0};
+    CRYPT_EAL_ProvMgrCtrlCb mgrCtrl = NULL;
+    int32_t index = 0;
+    while (capFuncs[index].id != 0) {
+        switch (capFuncs[index].id) {
+            case CRYPT_EAL_CAP_GETENTROPY:
+                entroy.getEntropy = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_CLEANENTROPY:
+                entroy.cleanEntropy = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_GETNONCE:
+                entroy.getNonce = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_CLEANNONCE:
+                entroy.cleanNonce = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_MGRCTXCTRL:
+                mgrCtrl = capFuncs[index].func;
+                break;
+            default:
+                return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
+        }
+        index++;
+    }
+    void *seedCtx = NULL;
+    void *libCtx = NULL;
+    if (entroy.getEntropy == NULL || entroy.cleanEntropy == NULL || entroy.getNonce == NULL ||
+        entroy.cleanNonce == NULL || mgrCtrl == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETSEEDCTX, &seedCtx, 0);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    CRYPT_Data entropy = {NULL, 0};
+    CRYPT_Range entropyRange = {32, 2147483632};
+    ret = entroy.getEntropy(seedCtx, &entropy, 256, &entropyRange);
+    if (ret != CRYPT_SUCCESS) {
+        return CRYPT_DRBG_FAIL_GET_ENTROPY;
+    }
+    entroy.cleanEntropy(seedCtx, &entropy);
+    // check libCtx
+    if (param != NULL) {
+        if (param[0].value != libCtx) {
+            return CRYPT_INVALID_ARG;
+        }
+    }
     *outFuncs = defProvOutFuncs;
     return 0;
 }
