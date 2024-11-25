@@ -45,7 +45,7 @@ int32_t BSL_LOG_GetVersion(char *version, uint32_t *versionLen)
     return BSL_SUCCESS;
 }
 
-uint32_t BSL_LOG_GetVersionNum(void)
+uint64_t BSL_LOG_GetVersionNum(void)
 {
     return g_openHiTLSNumVersion;
 }
