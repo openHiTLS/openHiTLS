@@ -173,7 +173,7 @@ typedef struct TlsConfig {
 #ifdef HITLS_TLS_PROTO_DTLS12
     HITLS_CookieGenerateCb cookieGenerateCb;
     HITLS_CookieVerifyCb cookieVerifyCb;
-#endif    
+#endif
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */

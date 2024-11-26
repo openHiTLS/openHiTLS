@@ -479,7 +479,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     ret = ProcessReceivedHandshakeMsg(ctx, &hsMsg);
     
-    if (hsMsgInfo.type == CLIENT_HELLO) {
+    if (ret == HITLS_SUCCESS && hsMsgInfo.type == CLIENT_HELLO) {
         // server: add ClientHello with valid cookie to verify
         if (ctx->config.tlsConfig.isHelloVerifyReqEnable && !ctx->isCookieNegotiated)
             ;

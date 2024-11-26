@@ -31,13 +31,36 @@
 #include "pack_common.h"
 #include "pack_extensions.h"
 
-extern int32_t PackClientCookie(const uint8_t *cookie, uint8_t cookieLen,
-    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+static int32_t PackCookie(const uint8_t *cookie, uint8_t cookieLen,
+    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+{
+    uint32_t offset = 0u;
+
+    if (bufLen < (sizeof(uint8_t) + cookieLen)) {
+        BSL_ERR_PUSH_ERROR(HITLS_PACK_COOKIE_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15730, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "the buffer length of cookie is not enough.", 0, 0, 0, 0);
+        return HITLS_PACK_COOKIE_ERR;
+    }
+
+    buf[offset] = cookieLen;
+    offset += sizeof(uint8_t);
+    if (cookieLen == 0u) {
+        *usedLen = offset;
+        return HITLS_SUCCESS;
+    }
+
+    (void)memcpy_s(&buf[offset], bufLen - offset, cookie, cookieLen);
+    offset += cookieLen;
+
+    *usedLen = offset;
+    return HITLS_SUCCESS;
+}
 
 // Pack the mandatory content of the HelloVerifyRequest message
 static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
-    /* The bufLen must be able to pack at least the version number (2 bytes) + cookie (xx bytes)*/
+    /* The bufLen must be able to pack at least the version number (2 bytes) + cookie (xx bytes) */
     if (bufLen < (sizeof(uint16_t) + ctx->negotiatedInfo.cookieSize)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15461, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -60,10 +83,10 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
         BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSECURE_VERSION);
         return HITLS_PACK_UNSECURE_VERSION;
     }
-#endif /* HITLS_TLS_FEATURE_SECURITY */    
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     BSL_Uint16ToByte(version, &buf[offset]);    // version number
     offset += sizeof(uint16_t);
-    ret = PackClientCookie(ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize,
+    ret = PackCookie(ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize,
             &buf[offset], bufLen - offset, &len);
     if (ret != HITLS_SUCCESS) {
         (void)memset_s(ctx->negotiatedInfo.cookie, ctx->negotiatedInfo.cookieSize,
@@ -85,7 +108,7 @@ int32_t PackHelloVerifyRequest(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint
     ret = PackHelloVerifyReqMandatoryField(ctx, buf, bufLen, &msgLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15863, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack server hello mandatory content fail.", 0, 0, 0, 0);
+            "pack hello verify request mandatory content fail.", 0, 0, 0, 0);
         return ret;
     }
     offset += msgLen;
