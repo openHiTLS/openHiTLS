@@ -175,10 +175,10 @@ void SDV_BSL_LOG_VERSION_API_TC001(void)
 
     versionLen = 200;
     ASSERT_TRUE(BSL_LOG_GetVersion((char *)version, &versionLen) == BSL_SUCCESS);
-    ASSERT_TRUE(versionLen == strlen("openHiTLS 0.1.0 25 12 2023"));
-    ASSERT_TRUE(memcmp(version, "openHiTLS 0.1.0 25 12 2023", versionLen) == 0);
+    ASSERT_TRUE(versionLen == strlen("openHiTLS 0.1.0f 26 Nov 2024"));
+    ASSERT_TRUE(memcmp(version, "openHiTLS 0.1.0f 26 Nov 2024", versionLen) == 0);
     uint64_t versionNum = BSL_LOG_GetVersionNum();
-    ASSERT_TRUE(versionNum == 0x00100000ULL);
+    ASSERT_EQ(versionNum, 0x0010000fULL);
 exit:
     return;
 }

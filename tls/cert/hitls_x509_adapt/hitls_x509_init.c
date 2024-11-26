@@ -55,10 +55,9 @@ int32_t HITLS_CertMethodInit(void)
     return HITLS_CERT_RegisterMgrMethod(&mgr);
 }
 
-int32_t HITLS_CertMethodDeInit(void)
+void HITLS_CertMethodDeinit(void)
 {
     HITLS_CERT_DeinitMgrMethod();
-    return HITLS_SUCCESS;
 }
 
 #endif /* HITLS_TLS_CALLBACK_CERT */
