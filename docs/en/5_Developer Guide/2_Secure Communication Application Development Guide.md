@@ -683,7 +683,8 @@ The security renegotiation procedure is as follows:
 ```c
 /* Exchange data at the application layer. */
 const uint8_t sndBuf[] = "Hi, this is client\n";
-ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf));
+uint32_t writeLen = 0;
+ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
 	printf("HITLS_Write error:error code:%d\n", ret);
 	goto exit;
@@ -722,7 +723,8 @@ if (ret != HITLS_SUCCESS) {
 	goto exit;
 }
 const uint8_t sndBuf[] = "Hi, this is server\n";
-ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf));
+uint32_t writeLen = 0;
+ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
 	printf("HITLS_Write error:error code:%d\n", ret);
 	goto exit;
@@ -772,7 +774,8 @@ if (ret != HITLS_SUCCESS) {
 	goto exit;
 }
 const uint8_t sndBuf[] = "Hi, this is server\n";
-ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf));
+uint32_t writeLen = 0;
+ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
 	printf("HITLS_Write error:error code:%d\n", ret);
 	goto exit;
@@ -798,7 +801,8 @@ if (ret != HITLS_SUCCESS) {
 	goto exit;
 }
 const uint8_t sndBuf[] = "Hi, this is server\n";
-ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf));
+uint32_t writeLen = 0;
+ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
 	printf("HITLS_Write error:error code:%d\n", ret);
 	goto exit;
