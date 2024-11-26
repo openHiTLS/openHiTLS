@@ -171,5 +171,6 @@ exit:
     HITLS_X509_CertFree(subCA);
     HITLS_X509_CertFree(serverCert);
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    BSL_UIO_Free(uio);
     return exitValue;
 }
