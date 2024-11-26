@@ -234,9 +234,9 @@ run_demos()
     done
 
     # run server and client in order.
-    ./server >/dev/null &
+    ./server &
     sleep 1
-    ./client >/dev/null &
+    ./client
     popd
 }
 
