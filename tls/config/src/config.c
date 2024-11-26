@@ -194,7 +194,9 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     destConfig->isFlightTransmitEnable = srcConfig->isFlightTransmitEnable;
 #endif
+#ifdef HITLS_TLS_PROTO_DTLS12
     destConfig->isHelloVerifyReqEnable = srcConfig->isHelloVerifyReqEnable;
+#endif
 }
 
 static int32_t DeepCopy(void** destConfig, const void* srcConfig, uint32_t logId, uint32_t len)

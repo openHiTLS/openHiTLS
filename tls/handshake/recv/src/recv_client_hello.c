@@ -1239,24 +1239,26 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             // generate stateless cookie
             ret = CookieGenerate(ctx);
             ctx->negotiatedInfo.version = 0;
-            if (ret == COOKIE_GEN_SUCCESS) {
-                return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
-            } else if (ret == HITLS_UNREGISTERED_CALLBACK) {
-                return HITLS_UNREGISTERED_CALLBACK;
-            } else {
-                return HITLS_INTERNAL_EXCEPTION;
+            switch (ret) {
+                case COOKIE_GEN_SUCCESS:
+                    return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
+                case HITLS_UNREGISTERED_CALLBACK:
+                    return HITLS_UNREGISTERED_CALLBACK;
+                default:
+                    return HITLS_INTERNAL_EXCEPTION;
             }
         } else {
             // Verify cookie field in ClientHello
             ret = CookieVerify(ctx, clientHello);
             if (ret != COOKIE_VERIFY_SUCCESS) {
                 ctx->negotiatedInfo.version = 0;
-                if (ret == HITLS_UNREGISTERED_CALLBACK) {
-                    return HITLS_UNREGISTERED_CALLBACK;
-                } else if (ret == COOKIE_VERIFY_ERROR) {
-                    return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
-                } else {
-                    return HITLS_INTERNAL_EXCEPTION;
+                switch (ret) {
+                    case HITLS_UNREGISTERED_CALLBACK:
+                        return HITLS_UNREGISTERED_CALLBACK;
+                    case COOKIE_VERIFY_ERROR:
+                        return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
+                    default:
+                        return HITLS_INTERNAL_EXCEPTION;
                 }
             }
             ctx->isCookieNegotiated = true;
