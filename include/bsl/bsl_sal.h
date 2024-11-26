@@ -1246,6 +1246,7 @@ int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func);
 
 // Define command enumeration
 typedef enum {
+    BSL_SAL_CONVERTER_OFF = 0, /* Do not enable named conversion */
     BSL_SAL_CONVERTER_SO = 1,
     BSL_SAL_CONVERTER_LIBSO = 2,
     BSL_SAL_CONVERTER_LIBDLL = 3,

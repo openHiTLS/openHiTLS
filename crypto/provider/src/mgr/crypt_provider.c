@@ -26,11 +26,11 @@
 #include "crypt_eal_provider.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider_local.h"
+#include "crypt_provider.h"
 
 // Name of the dl initialization function
 #define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInitcb"
-// Maximum length of provider name
-#define DEFAULT_PROVIDER_NAME_LEN_MAX 255
+
 // Maximum length of search path
 #define DEFAULT_PROVIDER_PATH_LEN_MAX 4095
 
@@ -67,9 +67,6 @@ static int32_t ListCompareProvider(const void *a, const void *b)
 {
     const CRYPT_EAL_ProvMgrCtx *ctx = (const CRYPT_EAL_ProvMgrCtx *)a;
     const char *providerName = (const char *)b;
-    if (ctx->providerName == NULL) {
-        return 1;
-    }
     return (strcmp(ctx->providerName, providerName) == 0) ? 0 : 1;
 }
 
@@ -172,6 +169,17 @@ static int32_t AddProviderToList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx 
     return CRYPT_SUCCESS;
 }
 
+static bool IsEalPreDefinedProvider(const char *providerName)
+{
+    const char *preProvider[] = {CRYPT_EAL_DEFAULT_PROVIDER};
+    for (size_t i = 0; i < sizeof(preProvider)/sizeof(preProvider[0]); i++) {
+        if (strcmp(preProvider[i], providerName) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Create a new mgr context and initialize various parameters
 static int32_t EalProviderMgrCtxNew(CRYPT_EAL_LibCtx *libCtx, char *providerName, BSL_Param *param,
     CRYPT_EAL_ProvMgrCtx **ctx)
@@ -265,7 +273,14 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cm
         }
         return CRYPT_SUCCESS;
     }
-
+    if (IsEalPreDefinedProvider(providerFullName)) {
+        ret = CRYPT_EAL_LoadPreDefinedProvider(libCtx, providerFullName);
+        BSL_SAL_Free(providerFullName);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
+        return ret;
+    }
     // Create and initialize EAL_ProviderMgrCtx
     ret = EalProviderMgrCtxNew(localCtx, providerFullName, param, &providerMgr);
     if (ret != CRYPT_SUCCESS) {
