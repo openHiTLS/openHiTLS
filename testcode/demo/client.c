@@ -154,5 +154,6 @@ exit:
     close(fd);
     HITLS_X509_CertFree(rootCA);
     HITLS_X509_CertFree(subCA);
+    BSL_UIO_Free(uio);
     return exitValue;
 }
