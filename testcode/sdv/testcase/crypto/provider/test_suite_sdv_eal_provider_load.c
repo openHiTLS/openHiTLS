@@ -18,6 +18,7 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
+#include "crypt_eal_init.h"
 #include "crypt_eal_provider.h"
 #include "crypt_provider_local.h"
 #include "crypt_eal_implprovider.h"
@@ -195,6 +196,40 @@ exit:
         CRYPT_EAL_LibCtxFree(libCtx);
     }
     return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LOAD_TC003
+ * @title Test load provider into global libctx
+ * @precon None
+ * @brief
+ *    1. 
+ * @expect
+ *    1. CRYPT_INVALID_ARG
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LOAD_TC003(char *path, int cmd, char *test1)
+{
+    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(NULL, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(NULL, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(NULL, cmd, test1), CRYPT_SUCCESS);
+    CRYPT_EAL_Cleanup(1);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(NULL, cmd, test1, NULL, NULL), CRYPT_PROVIDER_INVALID_LIB_CTX);
+    ASSERT_EQ(CRYPT_EAL_Init(1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(NULL, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(NULL, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    mdCtx = CRYPT_EAL_ProviderMdNewCtx(NULL, CRYPT_MD_MD5, NULL);
+    ASSERT_TRUE(mdCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdInit(mdCtx), CRYPT_SUCCESS);
+
+exit:
+    CRYPT_EAL_Cleanup(1);
+    ASSERT_EQ(CRYPT_EAL_Init(1), CRYPT_SUCCESS);
+    CRYPT_EAL_MdFreeCtx(mdCtx);
 }
 /* END_CASE */
 
