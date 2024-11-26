@@ -65,6 +65,9 @@ int32_t BSL_SAL_LibNameFormat(BSL_SAL_ConverterCmd cmd, const char *fileName, ch
         case BSL_SAL_CONVERTER_DLL:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.dll", fileName);
             break;
+        case BSL_SAL_CONVERTER_OFF:
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s", fileName);
+            break;
         default:
             // Default to the first(BSL_SAL_CONVERTER_SO) conversion
             BSL_SAL_Free(tempName);

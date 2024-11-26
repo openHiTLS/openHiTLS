@@ -167,20 +167,33 @@ void EalFreeProviderMgrCtx(void *data)
     if (mgrCtx->provFreeCb != NULL) {
         mgrCtx->provFreeCb(mgrCtx->provCtx);
     }
-
+    BSL_SAL_Free(mgrCtx->providerName);
+    BSL_SAL_Free(mgrCtx->providerPath);
     BSL_SAL_ReferencesFree(&mgrCtx->ref);
+    if (mgrCtx->handle != NULL) {
+        BSL_SAL_UnLoadLib(mgrCtx->handle);
+        mgrCtx->handle = NULL;
+    }
+
     BSL_SAL_Free(mgrCtx);
 }
 
-int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
+int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* providerName)
 {
+    char *name = BSL_SAL_Dump(providerName, BSL_SAL_Strnlen(providerName, DEFAULT_PROVIDER_NAME_LEN_MAX) + 1);
+    if (name == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
     CRYPT_EAL_ProvMgrCtx *mgrCtx = (CRYPT_EAL_ProvMgrCtx *)BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_ProvMgrCtx));
     if (mgrCtx == NULL) {
+        BSL_SAL_Free(name);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     int32_t ret = BSL_SAL_ReferencesInit(&mgrCtx->ref);
     if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(name);
         BSL_SAL_Free(mgrCtx);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -188,6 +201,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
 
     ret = BSL_LIST_AddElement(libCtx->providers, mgrCtx, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(name);
         BSL_SAL_ReferencesFree(&mgrCtx->ref);
         BSL_SAL_Free(mgrCtx);
         return ret;
@@ -197,8 +211,9 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_LIST_DeleteAll(libCtx->providers, EalFreeProviderMgrCtx);
+        return ret;
     }
-
+    mgrCtx->providerName = name;
     return ret;
 }
 
@@ -210,7 +225,7 @@ int32_t CRYPT_EAL_InitPreDefinedProviders()
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    ret = CRYPT_EAL_LoadPreDefinedProvider(libCtx);
+    ret = CRYPT_EAL_LoadPreDefinedProvider(libCtx, CRYPT_EAL_DEFAULT_PROVIDER);
     if (ret != CRYPT_SUCCESS) {
         BSL_LIST_FREE(libCtx->providers, NULL);
         BSL_SAL_ThreadLockFree(libCtx->lock);
