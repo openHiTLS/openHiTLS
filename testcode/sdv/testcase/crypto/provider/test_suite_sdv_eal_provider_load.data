@@ -2,6 +2,8 @@ SDV_CRYPTO_PROVIDER_LOAD_TC001
 SDV_CRYPTO_PROVIDER_LOAD_TC001:"../testdata/provider/path1":"../testdata/provider/path2":"provider_load_test1":"provider_load_test2":"provider_load_test_no_init":"provider_load_test_no_fullfunc":2:1
 SDV_CRYPTO_PROVIDER_LOAD_TC002
 SDV_CRYPTO_PROVIDER_LOAD_TC002:
+SDV_CRYPTO_PROVIDER_LOAD_TC003
+SDV_CRYPTO_PROVIDER_LOAD_TC003:"../testdata/provider/path1":BSL_SAL_CONVERTER_LIBSO:"provider_load_test1":"provider=test1,compare1=one,cpmpare3=three"
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #1
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #2
