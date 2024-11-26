@@ -36,6 +36,7 @@
 #include "bsl_sal.h"
 #include "bsl_list.h"
 #include "bsl_errno.h"
+#include "crypt_eal_md.h"
 /* END_HEADER */
 
 #define PROVIDER_LOAD_SAIZE_2 2
@@ -45,32 +46,6 @@
  * @test SDV_CRYPTO_PROVIDER_LOAD_FUNC_TC001
  * @title Provider load and unload functionality test
  * @precon None
- * @brief
- *    1. Call CRYPT_EAL_LibCtxNew to create a library context. Expected result 1 is obtained.
- *    2. Call CRYPT_EAL_ProviderSetLoadPath to set the provider path. Expected result 2 is obtained.
- *    3. Call CRYPT_EAL_ProviderLoad to load providers. Expected result 3 is obtained.
- *    4. Call CRYPT_EAL_ProviderLoad with non-existent provider. Expected result 4 is obtained.
- *    5. Call CRYPT_EAL_ProviderLoad with provider lacking init function. Expected result 5 is obtained.
- *    6. Call CRYPT_EAL_ProviderLoad with provider lacking full functions. Expected result 6 is obtained.
- *    7. Call CRYPT_EAL_ProviderLoad to load the same provider again. Expected result 7 is obtained.
- *    8. Call CRYPT_EAL_ProviderLoad with different cmd for the same name. Expected result 8 is obtained.
- *    9. Call CRYPT_EAL_ProviderLoad with same cmd and name but different path. Expected result 9 is obtained.
- *    10. Call CRYPT_EAL_ProviderUnload to unload providers. Expected result 10 is obtained.
- *    11. Call CRYPT_EAL_ProviderUnload with non-existent provider. Expected result 11 is obtained.
- * @expect
- *    1. Library context is created successfully.
- *    2. CRYPT_SUCCESS
- *    3. CRYPT_SUCCESS for valid providers
- *    4. BSL_SAL_ERR_DL_NOT_FOUND
- *    5. CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL
- *    6. CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL
- *    7. CRYPT_SUCCESS, and only one EAL_ProviderMgrCtx structure for the provider in list with ref == 2
- *    8. CRYPT_SUCCESS
- *    9. CRYPT_SUCCESS
- *    10. CRYPT_SUCCESS
- *    11. CRYPT_SUCCESS
- * @prior Level 1
- * @auto TRUE
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *test2, char *testNoInit,
@@ -91,13 +66,24 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
+    // Test CRYPT_EAL_ProviderLoad
+    ret = CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_CONVERTER_OFF, "default", NULL, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    // Test CRYPT_EAL_ProviderLoad
+    ret = CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_CONVERTER_OFF, "default", NULL, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
     // Test loading the same provider consecutively
     ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Verify only one EAL_ProviderMgrCtx structure for this provider in the providers list,and ref == 2
-    ASSERT_EQ(BSL_LIST_COUNT(libCtx->providers), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(libCtx->providers), 2);
     CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_FIRST_ELMT(libCtx->providers);
+    ASSERT_TRUE(providerMgr != NULL);
+    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
+
+    providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_LAST_ELMT(libCtx->providers);
     ASSERT_TRUE(providerMgr != NULL);
     ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2);
 
@@ -112,7 +98,9 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2+1);
+    providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_FIRST_ELMT(libCtx->providers);
+    ASSERT_TRUE(providerMgr != NULL);
+    ASSERT_EQ(providerMgr->ref.count, PROVIDER_LOAD_SAIZE_2 + 1);
 
     ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, path);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -436,6 +424,58 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
 exit:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    return;
+}
+/* END_CASE */
+
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001
+ * Load two providers, one of which is the default provider,
+ * query the algorithm from the default provider, and calculate the result
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001(char *path, char *test1, int cmd, Hex *msg, Hex *hash)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_MdCTX *ctx = NULL;
+    int32_t ret;
+
+    // Test CRYPT_EAL_LibCtxNew
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+
+    // Test CRYPT_EAL_ProviderSetLoadPath
+    ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, path);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Test CRYPT_EAL_ProviderLoad
+    ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Test CRYPT_EAL_ProviderLoad
+    ret = CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_CONVERTER_OFF, "default", NULL, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    // Test CRYPT_EAL_ProviderLoad
+    ret = CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_CONVERTER_OFF, "default", NULL, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_SHA224, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+    uint8_t output[32];
+    uint32_t outLen = sizeof(output);
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+exit:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    if (ctx != NULL) {
+        CRYPT_EAL_MdFreeCtx(ctx);
     }
     return;
 }
