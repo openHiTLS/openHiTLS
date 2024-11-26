@@ -24,6 +24,7 @@
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "crypt_default_provider.h"
+#include "crypt_provider.h"
 
 #define CRYPT_EAL_DEFAULT_ATTR "provider=default"
 
