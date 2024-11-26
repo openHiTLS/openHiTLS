@@ -25,6 +25,11 @@
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
+CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void)
+{
+    return g_libCtx;
+}
+
 int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx)
 {
@@ -158,18 +163,26 @@ ERR:
     return NULL;
 }
 
-void EalFreeProviderMgrCtx(void *data)
+void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx  *ctx)
 {
-    if (data == NULL) {
+    if (ctx == NULL) {
         return;
     }
-    CRYPT_EAL_ProvMgrCtx *mgrCtx = (CRYPT_EAL_ProvMgrCtx *)data;
-    if (mgrCtx->provFreeCb != NULL) {
-        mgrCtx->provFreeCb(mgrCtx->provCtx);
+    if (ctx->provFreeCb != NULL) {
+        ctx->provFreeCb(ctx->provCtx);
     }
 
-    BSL_SAL_ReferencesFree(&mgrCtx->ref);
-    BSL_SAL_Free(mgrCtx);
+    BSL_SAL_FREE(ctx->providerName);
+    BSL_SAL_FREE(ctx->providerPath);
+
+    BSL_SAL_ReferencesFree(&(ctx->ref));
+    
+    if (ctx->handle != NULL) {
+        BSL_SAL_UnLoadLib(ctx->handle);
+        ctx->handle = NULL;
+    }
+
+    BSL_SAL_Free(ctx);
 }
 
 int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
@@ -196,7 +209,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx)
     ret = CRYPT_EAL_InitProviderMethod(mgrCtx, NULL, CRYPT_EAL_DefaultProvInit);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_LIST_DeleteAll(libCtx->providers, EalFreeProviderMgrCtx);
+        BSL_LIST_DeleteAll(libCtx->providers, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
     }
 
     return ret;
@@ -229,8 +242,10 @@ void CRYPT_EAL_FreePreDefinedProviders()
     }
     // Free the providers list and each EAL_ProviderMgrCtx in it
     if (libCtx->providers != NULL) {
-        BSL_LIST_FREE(libCtx->providers, EalFreeProviderMgrCtx);
+        BSL_LIST_FREE(libCtx->providers, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
     }
+
+    BSL_SAL_FREE(libCtx->searchProviderPath);
 
     // Free thread lock
     if (libCtx->lock != NULL) {

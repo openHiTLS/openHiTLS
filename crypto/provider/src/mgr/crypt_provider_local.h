@@ -60,6 +60,9 @@ CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal();
 int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
     int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
 
+CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void);
+void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx  *ctx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
