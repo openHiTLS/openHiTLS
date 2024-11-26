@@ -257,24 +257,18 @@ int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = ctx->hsCtx;
     KeyExchCtx *keyExchCtx = hsCtx->kxCtx;
-    if (clientKxMsg->dataSize < MASTER_SECRET_LEN) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17327, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "invalid kx msg len", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-    uint8_t *premasterSecret = BSL_SAL_Calloc(1u, clientKxMsg->dataSize);
+    uint32_t secretLen = clientKxMsg->dataSize < MASTER_SECRET_LEN ? MASTER_SECRET_LEN : clientKxMsg->dataSize;
+    uint8_t *premasterSecret = BSL_SAL_Calloc(1u, secretLen);
     if (premasterSecret == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15524, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Decrypt RSA-Encrypted Premaster Secret error: out of memory.", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    uint32_t secretLen = clientKxMsg->dataSize;
-
     uint8_t premaster[MASTER_SECRET_LEN];
     ret = SAL_CRYPT_Rand(premaster, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(premasterSecret);
         return ret;
     }
 
