@@ -44,7 +44,7 @@ static int32_t UdpNew(BSL_UIO *uio)
     UdpParameters *parameters = (UdpParameters *)BSL_SAL_Calloc(1u, sizeof(UdpParameters));
     if (parameters == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05031, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "Uio: sctp param malloc fail.", 0, 0, 0, 0);
+                              "Uio: udp param malloc fail.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         return BSL_UIO_FAIL;
     }

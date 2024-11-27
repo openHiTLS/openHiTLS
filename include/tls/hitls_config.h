@@ -781,12 +781,12 @@ uint32_t HITLS_CFG_GetKeyExchMode(HITLS_Config *config);
 
 /**
  * @ingroup hitls_config
- * @brief   CookieGenerate callback prototype for the server to process the callback.
+ * @brief   Cookie Generation callback prototype for the server to process the callback.
  *
  * @param   ctx  [IN] Ctx context
  * @param   cookie  [OUT] Generated cookie
  * @param   cookie_len  [OUT] Length of Generated cookie
- * @retval  HITLS_SUCCESS: successful. Other values are considered as failure.
+ * @retval  COOKIE_GEN_SUCCESS: successful. Other values are considered as failure.
  */
 typedef int32_t (*HITLS_CookieGenerateCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len);
 
@@ -808,7 +808,7 @@ int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerate
  * @param   ctx  [IN] Ctx context
  * @param   cookie  [IN] Cookie to be verified
  * @param   cookie_len  [IN] Length of Cookie to be verified
- * @retval  HITLS_SUCCESS: successful. Other values are considered as failure.
+ * @retval  COOKIE_VERIFY_SUCCESS: successful. Other values are considered as failure.
  */
 typedef int32_t (*HITLS_CookieVerifyCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len);
 

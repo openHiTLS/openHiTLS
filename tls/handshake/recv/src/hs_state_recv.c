@@ -27,6 +27,7 @@
 #include "hs_msg.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "hs_verify.h"
 #include "transcript_hash.h"
 #include "hs_reass.h"
 #include "parse.h"
@@ -456,12 +457,17 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
         return ret;
     }
 
+    if (hsMsgInfo.type == CLIENT_HELLO) {
+        ret = VERIFY_Init(ctx->hsCtx);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "VERIFY_Init fail", 0, 0, 0, 0);
+            return ret;
+        }
+    }
+
     /* The HelloRequest message is not included. */
-    if (hsMsgInfo.type != HELLO_REQUEST &&
-        // server: whether add ClientHello to verify depends on whether cookie verify successfully
-        hsMsgInfo.type != CLIENT_HELLO &&
-        // client: HelloVerifyRequest not included
-        hsMsgInfo.type != HELLO_VERIFY_REQUEST) {
+    if (hsMsgInfo.type != HELLO_REQUEST && hsMsgInfo.type != HELLO_VERIFY_REQUEST) {
         /* Session hash is needed to compute ems, the VERIFY_Append must be dealt with beforehand */
         ret = VERIFY_Append(ctx->hsCtx->verifyCtx, buf, dataLen);
         if (ret != HITLS_SUCCESS) {
@@ -478,18 +484,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
                               hsMsgInfo.length, ctx, ctx->config.tlsConfig.msgArg);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     ret = ProcessReceivedHandshakeMsg(ctx, &hsMsg);
-    if (ret == HITLS_SUCCESS && hsMsgInfo.type == CLIENT_HELLO) {
-        // server: add ClientHello with valid cookie to verify
-        if (ctx->config.tlsConfig.isHelloVerifyReqEnable && !ctx->isCookieNegotiated)
-            ;
-        else {
-            ret = VERIFY_Append(ctx->hsCtx->verifyCtx, buf, dataLen);
-            if (ret != HITLS_SUCCESS) {
-                HS_CleanMsg(&hsMsg);
-                return ret;
-            }
-        }
-    }
+
     HS_CleanMsg(&hsMsg);
     return ret;
 }

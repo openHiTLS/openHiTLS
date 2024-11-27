@@ -1261,7 +1261,6 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
                         return HITLS_INTERNAL_EXCEPTION;
                 }
             }
-            ctx->isCookieNegotiated = true;
         }
     }
 

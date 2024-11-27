@@ -242,7 +242,6 @@ struct TlsCtx {
     bool isClient;                          /* is Client */
     bool userShutDown;                      /* record whether the local end invokes the HITLS_Close */
     bool userRenego;                        /* record whether the local end initiates renegotiation */
-    bool isCookieNegotiated;                /* record whether the cookie is valid */
     uint8_t rwstate;                        /* record the current internal read and write state */
     CM_State preState;
     CM_State state;
