@@ -52,7 +52,7 @@
     #ifndef HITLS_BSL_UIO_UDP
         #define HITLS_BSL_UIO_UDP
     #endif
-    #ifndef HITLS_BSL_SAL_MEM
+    #ifndef HITLS_BSL_UIO_MEM
         #define HITLS_BSL_UIO_MEM
     #endif
 #endif
