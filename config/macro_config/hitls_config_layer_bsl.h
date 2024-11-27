@@ -49,7 +49,7 @@
     #ifndef HITLS_BSL_UIO_TCP
         #define HITLS_BSL_UIO_TCP
     #endif
-    #ifndef HITLS_BSL_SAL_MEM
+    #ifndef HITLS_BSL_UIO_MEM
         #define HITLS_BSL_UIO_MEM
     #endif
 #endif
