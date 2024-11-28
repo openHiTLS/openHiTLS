@@ -29,7 +29,7 @@
 #include "crypt_provider.h"
 
 // Name of the dl initialization function
-#define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInitcb"
+#define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInit"
 
 // Maximum length of search path
 #define DEFAULT_PROVIDER_PATH_LEN_MAX 4095
