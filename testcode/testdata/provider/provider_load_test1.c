@@ -200,7 +200,7 @@ static CRYPT_EAL_Func defProvOutFuncs[] = {
     CRYPT_EAL_FUNC_END
 };
 
-int32_t CRYPT_EAL_ProviderInitcb(CRYPT_EAL_ProvMgrCtx *mgrCtx,
+int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx,
     BSL_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     CRYPT_RandSeedMethod entroy = {0};
