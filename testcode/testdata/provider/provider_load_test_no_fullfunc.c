@@ -58,7 +58,7 @@ int32_t CRYPT_EAL_ProvCtrlCb(void *provCtx, int32_t cmd, void *val, uint32_t val
     return 0;
 }
 
-int32_t CRYPT_EAL_ProviderInitcb(CRYPT_EAL_ProvMgrCtx *mgrCtx,
+int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx,
     BSL_Param *param, CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     return 0;
