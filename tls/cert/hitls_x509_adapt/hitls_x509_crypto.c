@@ -52,7 +52,7 @@ CRYPT_MD_AlgId GetCryptHashAlgFromCertHashAlg(HITLS_HashAlgo hashAlgo)
     return CRYPT_MD_MAX;
 }
 
-static int32_t SetRsaEmsa(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT_MD_AlgId mdAlgId)
+static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT_MD_AlgId mdAlgId)
 {
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
         int32_t pad = mdAlgId;
@@ -65,6 +65,10 @@ static int32_t SetRsaEmsa(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT
             {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
             BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);
+    } else if (signAlgo == HITLS_SIGN_SM2) {
+        /* The default user id as specified in GM/T 0009-2012 */
+        char sm2DefaultUserid[] = "1234567812345678";
+        return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
     }
 
     return HITLS_SUCCESS;
@@ -78,7 +82,7 @@ static int32_t SignOrVerifySignPre(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAl
         BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
         return HITLS_X509_ADAPT_ERR;
     }
-    return SetRsaEmsa(ctx, signAlgo, *mdAlgId);
+    return SetPkeySignParam(ctx, signAlgo, *mdAlgId);
 }
 
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
