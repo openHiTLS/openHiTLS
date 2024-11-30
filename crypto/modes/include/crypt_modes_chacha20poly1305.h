@@ -32,7 +32,7 @@ typedef struct ModesChaChaCtx MODES_CHACHAPOLY_Ctx;
 
 MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtx(int32_t algId);
 int32_t MODES_CHACHA20POLY1305_InitCtx(MODES_CHACHAPOLY_Ctx *modeCtx, const uint8_t *key,
-    uint32_t keyLen, const uint8_t *iv, uint32_t ivLen, BSL_Param *param, bool enc);
+    uint32_t keyLen, const uint8_t *iv, uint32_t ivLen, const BSL_Param *param, bool enc);
 
 int32_t MODES_CHACHA20POLY1305_Update(MODES_CHACHAPOLY_Ctx *modeCtx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);

@@ -48,7 +48,7 @@ void CRYPT_SHA2_256_FreeCtx(CRYPT_SHA2_256_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_256_Ctx));
 }
 
-int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, const BSL_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -286,7 +286,7 @@ void CRYPT_SHA2_224_FreeCtx(CRYPT_SHA2_224_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_224_Ctx));
 }
 
-int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, const BSL_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

@@ -33,7 +33,7 @@ extern "C" {
 typedef struct HMAC_Ctx CRYPT_HMAC_Ctx;
 
 CRYPT_HMAC_Ctx *CRYPT_HMAC_NewCtx(CRYPT_MAC_AlgId id);
-int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, BSL_Param *param);
+int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, const BSL_Param *param);
 int32_t CRYPT_HMAC_Update(CRYPT_HMAC_Ctx *ctx, const uint8_t *in, uint32_t len);
 int32_t CRYPT_HMAC_Final(CRYPT_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len);
 void    CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx);
