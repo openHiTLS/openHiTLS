@@ -58,7 +58,7 @@ void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx);
  * @retval #CRYPT_SUCCESS       Initialization succeeded.
  * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
  */
-int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, const BSL_Param *param);
 
 /**
  * @ingroup MD5

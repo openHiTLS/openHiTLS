@@ -57,7 +57,7 @@ void CRYPT_SHA1_FreeCtx(CRYPT_SHA1_Ctx *ctx)
 /* e767 is because H is defined in SHA1 and MD5.
 But the both the macros are different. So masked
 this error */
-int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx, const BSL_Param *param)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
