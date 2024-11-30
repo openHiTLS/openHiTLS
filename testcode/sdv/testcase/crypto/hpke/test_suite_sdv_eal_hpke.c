@@ -89,7 +89,7 @@ exit:
     return CRYPT_ERR_ALGID;
 }
 
-static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HpkeCipherSuite cipherSuite, Hex *info, Hex *ikmE, Hex *ikmR,
+static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSuite, Hex *info, Hex *ikmE, Hex *ikmR,
     CRYPT_EAL_HpkeCtx **ctxS, CRYPT_EAL_HpkeCtx **ctxR, CRYPT_EAL_PkeyCtx **pkeyS, CRYPT_EAL_PkeyCtx **pkeyR,
     uint8_t *encapsulatedKey, uint32_t *encapsulatedKeyLen)
 {
@@ -113,13 +113,13 @@ static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HpkeCipherSuite cipherSui
     ret = CRYPT_EAL_PkeyGetPub(pkeyR1, &pubR1);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ctxS1 = CRYPT_EAL_HpkeNewCtx(mode, cipherSuite);
+    ctxS1 = CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_SENDER, mode, cipherSuite);
     ASSERT_TRUE(ctxS1 != NULL);
 
     ret = CRYPT_EAL_HpkeSetupSender(ctxS1, pkeyS1, info->x, info->len, pubR1.key.eccPub.data, pubR1.key.eccPub.len, encapsulatedKey, encapsulatedKeyLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ctxR1 = CRYPT_EAL_HpkeNewCtx(mode, cipherSuite);
+    ctxR1 = CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_RECIPIENT, mode, cipherSuite);
     ASSERT_TRUE(ctxR1 != NULL);
 
     ret = CRYPT_EAL_HpkeSetupRecipient(ctxR1, pkeyR1, info->x, info->len, encapsulatedKey, *encapsulatedKeyLen);
@@ -162,7 +162,7 @@ void SDV_CRYPT_EAL_HPKE_API_TC001(int mode, int kemId, int kdfId, int aeadId, He
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
 
     int32_t ret;
-    CRYPT_HpkeCipherSuite cipherSuite = {kemId, kdfId, aeadId};
+    CRYPT_HPKE_CipherSuite cipherSuite = {kemId, kdfId, aeadId};
     CRYPT_EAL_HpkeCtx *ctxS = NULL;
     CRYPT_EAL_HpkeCtx *ctxR = NULL;
     CRYPT_EAL_PkeyCtx *pkeyS = NULL;
@@ -238,7 +238,7 @@ void SDV_CRYPT_EAL_HPKE_API_TC002(int mode, int kemId, int kdfId, int aeadId, He
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
 
     int32_t ret;
-    CRYPT_HpkeCipherSuite cipherSuite = {kemId, kdfId, aeadId};
+    CRYPT_HPKE_CipherSuite cipherSuite = {kemId, kdfId, aeadId};
     CRYPT_EAL_HpkeCtx *ctxS = NULL;
     CRYPT_EAL_HpkeCtx *ctxR = NULL;
     CRYPT_EAL_PkeyCtx *pkeyS = NULL;
@@ -289,7 +289,7 @@ void SDV_CRYPT_EAL_HPKE_API_TC003(int mode, int kemId, int kdfId, int aeadId, He
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
 
     int32_t ret;
-    CRYPT_HpkeCipherSuite cipherSuite = {kemId, kdfId, aeadId};
+    CRYPT_HPKE_CipherSuite cipherSuite = {kemId, kdfId, aeadId};
     CRYPT_EAL_HpkeCtx *ctxS = NULL;
     CRYPT_EAL_HpkeCtx *ctxR = NULL;
     CRYPT_EAL_PkeyCtx *pkeyS = NULL;
@@ -332,7 +332,7 @@ void SDV_CRYPT_EAL_HPKE_API_TC004(int mode, int kemId, int kdfId, int aeadId)
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
 
     int32_t ret;
-    CRYPT_HpkeCipherSuite cipherSuite = {kemId, kdfId, aeadId};
+    CRYPT_HPKE_CipherSuite cipherSuite = {kemId, kdfId, aeadId};
     CRYPT_EAL_HpkeCtx *ctxS = NULL;
     CRYPT_EAL_HpkeCtx *ctxR = NULL;
     CRYPT_EAL_PkeyCtx *pkeyS = NULL;
@@ -360,7 +360,7 @@ void SDV_CRYPT_EAL_HPKE_API_TC004(int mode, int kemId, int kdfId, int aeadId)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Sender init
-    ctxS = CRYPT_EAL_HpkeNewCtx(mode, cipherSuite);
+    ctxS = CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_SENDER, mode, cipherSuite);
     ASSERT_TRUE(ctxS != NULL);
 
     uint8_t encapsulatedKey[CRYPT_HPKE_KEN_MAX_NENC];
@@ -370,7 +370,7 @@ void SDV_CRYPT_EAL_HPKE_API_TC004(int mode, int kemId, int kdfId, int aeadId)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Recipient init
-    ctxR = CRYPT_EAL_HpkeNewCtx(mode, cipherSuite);
+    ctxR = CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_RECIPIENT, mode, cipherSuite);
     ASSERT_TRUE(ctxR != NULL);
 
     ret = CRYPT_EAL_HpkeSetupRecipient(ctxR, pkeyR, info.x, info.len, encapsulatedKey, encapsulatedKeyLen);
@@ -417,4 +417,64 @@ exit:
 }
 /* END_CASE */
 
-// bash build_hitls.sh && bash build_sdv.sh run-tests=test_suite_sdv_eal_hpke verbose &&  bash execute_sdv.sh test_suite_sdv_eal_hpke
+
+/**
+ * @test   SDV_CRYPT_EAL_HPKE_API_TC005
+ * @title  hpke rand test.
+ * @precon nan
+ * @brief
+ *    1.NA.
+ * @expect
+ *    1.NA.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_HPKE_API_TC005(void)
+{
+    CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+
+    int32_t ret;
+    CRYPT_EAL_HpkeCtx *ctxS = NULL;
+    CRYPT_EAL_HpkeCtx *ctxR = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyS = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyR = NULL;
+    CRYPT_HPKE_CipherSuite cipherSuite = {0, 0, 0};
+    uint8_t massage[100];
+    uint32_t massageLen = 100;
+    uint8_t buff[100];
+    uint32_t buffLen = 100;
+    uint8_t cipherText[116];
+    uint32_t cipherTextLen = 116;
+
+    ctxS = CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_SENDER, CRYPT_HPKE_MODE_BASE, cipherSuite);
+    ASSERT_TRUE(ctxS == NULL);
+
+    cipherSuite.kemId = CRYPT_KEM_DHKEM_P256_HKDF_SHA256;
+    cipherSuite.kdfId = CRYPT_KDF_HKDF_SHA256;
+    cipherSuite.aeadId = CRYPT_AEAD_AES_GCM_128;
+
+    ctxS = CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_SENDER, CRYPT_HPKE_MODE_BASE, cipherSuite);
+    ASSERT_TRUE(ctxS != NULL);
+
+    ret = CRYPT_EAL_HpkeSeal(ctxS, NULL, 0, massage, massageLen, cipherText, &cipherTextLen);
+    ASSERT_NE(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_HpkeOpen(ctxS, NULL, 0, massage, massageLen, cipherText, &cipherTextLen);
+    ASSERT_NE(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_HpkeExportSecret(ctxS, NULL, 0, buff, buffLen);
+    ASSERT_NE(ret, CRYPT_SUCCESS);
+
+exit:
+    CRYPT_EAL_HpkeFreeCtx(ctxS);
+    CRYPT_EAL_HpkeFreeCtx(ctxR);
+    CRYPT_EAL_PkeyFreeCtx(pkeyS);
+    CRYPT_EAL_PkeyFreeCtx(pkeyR);
+}
+/* END_CASE */
+
+// bash build_hitls.sh debug && bash build_sdv.sh run-tests=test_suite_sdv_eal_hpke verbose &&  bash execute_sdv.sh test_suite_sdv_eal_hpke
+
+// bash build_hitls.sh debug
+// bash build_sdv.sh run-tests=test_suite_sdv_eal_hpke verbose debug
+// bash execute_sdv.sh test_suite_sdv_eal_hpke
+// bash execute_sdv.sh test_suite_sdv_eal_hpke SDV_CRYPT_EAL_HPKE_API_TC005

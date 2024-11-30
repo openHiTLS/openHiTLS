@@ -11,7 +11,7 @@ typedef enum {
     // CRYPT_HPKE_MODE_PSK = 0x01,       /* PSK模式 */
     // CRYPT_HPKE_MODE_AUTH = 0x02,      /* 认证模式 */
     // CRYPT_HPKE_MODE_AUTH_PSK = 0x03   /* 认证PSK模式 */
-} CRYPT_HPKE_MODE;
+} CRYPT_HPKE_mode;
 
 typedef enum {
     CRYPT_KEM_DHKEM_P256_HKDF_SHA256 = 0x0010,    /* DHKEM(P-256, HKDF-SHA256) */
@@ -39,9 +39,14 @@ typedef struct {
     CRYPT_HPKE_KEM_AlgId kemId;            /* KEM算法标识符 */
     CRYPT_HPKE_KDF_AlgId kdfId;            /* KDF算法标识符 */
     CRYPT_HPKE_AEAD_AlgId aeadId;        /* AEAD算法标识符 */
-} CRYPT_HpkeCipherSuite;
+} CRYPT_HPKE_CipherSuite;
 
-typedef struct CRYPT_EAL_HpkeCtx CRYPT_EAL_HpkeCtx;
+typedef enum {
+    CRYPT_HPKE_SENDER = 0,
+    CRYPT_HPKE_RECIPIENT = 1,
+} CRYPT_HPKE_Role;
+
+typedef struct EAL_HpkeCtx CRYPT_EAL_HpkeCtx;
 
 /**
  * @ingroup crypt_eal_hpke
@@ -58,7 +63,7 @@ typedef struct CRYPT_EAL_HpkeCtx CRYPT_EAL_HpkeCtx;
  * @retval #CRYPT_SUCCESS if the key pair is generated successfully.
  * @retval Other error codes defined in crypt_errno.h if an error occurs.
  */
-int32_t CRYPT_EAL_HpkeGenerateKeyPair(CRYPT_HpkeCipherSuite cipher, const uint8_t *ikm, uint32_t ikmLen, CRYPT_EAL_PkeyCtx **pctx);
+int32_t CRYPT_EAL_HpkeGenerateKeyPair(CRYPT_HPKE_CipherSuite cipher, const uint8_t *ikm, uint32_t ikmLen, CRYPT_EAL_PkeyCtx **pctx);
 
 /**
  * @ingroup crypt_eal_hpke
@@ -68,7 +73,7 @@ int32_t CRYPT_EAL_HpkeGenerateKeyPair(CRYPT_HpkeCipherSuite cipher, const uint8_
  * @param cipher [IN] HPKE cipher suite containing KEM, KDF and AEAD algorithms
  * @retval CRYPT_EAL_HpkeCtx* HPKE context pointer if successful, NULL if failed
  */
-CRYPT_EAL_HpkeCtx *CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_MODE mode, CRYPT_HpkeCipherSuite cipher);
+CRYPT_EAL_HpkeCtx *CRYPT_EAL_HpkeNewCtx(CRYPT_HPKE_Role role, CRYPT_HPKE_mode mode, CRYPT_HPKE_CipherSuite cipher);
 
 /**
  * @ingroup crypt_eal_hpke
@@ -150,6 +155,20 @@ int32_t CRYPT_EAL_HpkeOpen(CRYPT_EAL_HpkeCtx *ctx, const uint8_t *cipherText, ui
 
 /**
  * @ingroup crypt_eal_hpke
+ * @brief Export a secret from the HPKE context
+ *
+ * @param ctx [IN] HPKE context
+ * @param info [IN] Additional information for the export
+ * @param infoLen [IN] Length of the additional information
+ * @param key [OUT] Buffer to store the exported secret
+ * @param keyLen [IN] Length of the buffer for the exported secret
+ * @retval #CRYPT_SUCCESS if successful
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_HpkeExportSecret(CRYPT_EAL_HpkeCtx *ctx, const uint8_t *info, uint32_t infoLen, uint8_t *key, uint32_t keyLen);
+
+/**
+ * @ingroup crypt_eal_hpke
  * @brief Set the sequence number for the HPKE context
  *
  * @param ctx [IN] HPKE context
@@ -174,7 +193,8 @@ typedef enum {
     CRYPT_HPKE_PARAM_SYM_KEY = 0,    /* Symmetric key */
     CRYPT_HPKE_PARAM_BASE_NONCE = 1,    /* Base nonce */
     CRYPT_HPKE_PARAM_EXPORTER_SECRET = 2,    /* Exporter secret */
-    CRYPT_HPKE_PARAM_ENCAPSULATED_KEY = 3 /* Encapsulated key */
+    // CRYPT_HPKE_PARAM_ENCAPSULATED_KEY = 3 /* Encapsulated key */
+    // CRYPT_HPKE_PARAM_ROLE,
 } CRYPT_HPKE_PARAM_TYPE;
 
 /**
@@ -201,21 +221,7 @@ int32_t CRYPT_EAL_HpkeGetParam(CRYPT_EAL_HpkeCtx *ctx, CRYPT_HPKE_PARAM_TYPE typ
  * @retval #CRYPT_SUCCESS if successful
  *         Other error codes see crypt_errno.h
  */
-int32_t CRYPT_EAL_HpkeSetParam(CRYPT_EAL_HpkeCtx *ctx, CRYPT_HPKE_PARAM_TYPE type, unsigned char *buff, uint32_t buffLen);
-
-/**
- * @ingroup crypt_eal_hpke
- * @brief Export a secret from the HPKE context
- *
- * @param ctx [IN] HPKE context
- * @param info [IN] Additional information for the export
- * @param infoLen [IN] Length of the additional information
- * @param key [OUT] Buffer to store the exported secret
- * @param keyLen [IN] Length of the buffer for the exported secret
- * @retval #CRYPT_SUCCESS if successful
- *         Other error codes see crypt_errno.h
- */
-int32_t CRYPT_EAL_HpkeExportSecret(CRYPT_EAL_HpkeCtx *ctx, const uint8_t *info, uint32_t infoLen, uint8_t *key, uint32_t keyLen);
+int32_t CRYPT_EAL_HpkeSetParam(CRYPT_EAL_HpkeCtx *ctx, CRYPT_HPKE_PARAM_TYPE type, const unsigned char *buff, uint32_t buffLen);
 
 /**
  * @ingroup crypt_eal_hpke
