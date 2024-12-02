@@ -32,7 +32,7 @@ typedef struct ModesCcmCtx MODES_CCM_Ctx;
 // CCM mode universal implementation
 MODES_CCM_Ctx *MODES_CCM_NewCtx(int32_t algId);
 int32_t MODES_CCM_InitCtx(MODES_CCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, BSL_Param *param, bool enc);
+    uint32_t ivLen, const BSL_Param *param, bool enc);
 
 int32_t MODES_CCM_Update(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t MODES_CCM_Final(MODES_CCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
