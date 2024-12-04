@@ -66,17 +66,17 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
  * @param cmd [IN] Command specifying the conversion format for the provider library name.
  *                 This parameter is used to determine how the provider library name should be
  *                 converted or formatted. Possible values are:
- *                 - BSL_SAL_CONVERTER_SO: Convert to .so format
- *                 - BSL_SAL_CONVERTER_LIBSO: Convert to lib*.so format
- *                 - BSL_SAL_CONVERTER_LIBDLL: Convert to lib*.dll format
- *                 - BSL_SAL_CONVERTER_DLL: Convert to .dll format
+ *                 - BSL_SAL_LIB_FMT_SO: Convert to .so format
+ *                 - BSL_SAL_LIB_FMT_LIBSO: Convert to lib*.so format
+ *                 - BSL_SAL_LIB_FMT_LIBDLL: Convert to lib*.dll format
+ *                 - BSL_SAL_LIB_FMT_DLL: Convert to .dll format
  *                 The specific conversion is handled by the BSL_SAL_LibNameFormat function.
  * @param mgrCtx [OUT] Provider context
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_ConverterCmd cmd,
+int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
     const char *providerName, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
 /**
@@ -101,17 +101,17 @@ int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val
  * @param cmd [IN] Command specifying the conversion format for the provider library name.
  *                 This parameter is used to determine how the provider library name should be
  *                 converted or formatted. Possible values are:
- *                 - BSL_SAL_CONVERTER_SO: Convert to .so format
- *                 - BSL_SAL_CONVERTER_LIBSO: Convert to lib*.so format
- *                 - BSL_SAL_CONVERTER_LIBDLL: Convert to lib*.dll format
- *                 - BSL_SAL_CONVERTER_DLL: Convert to .dll format
+ *                 - BSL_SAL_LIB_FMT_SO: Convert to .so format
+ *                 - BSL_SAL_LIB_FMT_LIBSO: Convert to lib*.so format
+ *                 - BSL_SAL_LIB_FMT_LIBDLL: Convert to lib*.dll format
+ *                 - BSL_SAL_LIB_FMT_DLL: Convert to .dll format
  *                 The specific conversion is handled by the BSL_SAL_LibNameFormat function.
  * @param providerName [IN] provider name
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libctx, BSL_SAL_ConverterCmd cmd, const char *providerName);
+int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libctx, BSL_SAL_LibFmtCmd cmd, const char *providerName);
 
 
 /**
@@ -141,7 +141,7 @@ int32_t CRYPT_EAL_ProviderSetLoadPath(CRYPT_EAL_LibCtx *libCtx, const char *sear
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
 
 #ifdef __cplusplus

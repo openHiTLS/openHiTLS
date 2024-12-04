@@ -31,7 +31,7 @@ typedef struct {
 
 BSL_EX_CALLBACK g_exCallBack[BSL_MAX_EX_TYPE][BSL_MAX_EX_DATA];
 
-int BSL_USER_GetExDataNewIndex(int32_t index, int64_t argl, const void *argp, void *newFunc, void *dupFunc,
+int BSL_USER_GetExDataNewIndex(int32_t index, int64_t argl, const void *argp, const void *newFunc, const void *dupFunc,
     void *freeFunc)
 {
     if (index < 0 || index >= BSL_MAX_EX_TYPE) {
