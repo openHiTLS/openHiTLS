@@ -34,7 +34,7 @@ bool IsDrbgHashAlgDisabled(int id);
 
 bool IsDrbgHmacAlgDisabled(int id);
 
-int GetAvailableRandAlgId();
+int GetAvailableRandAlgId(void);
 
 bool IsRandAlgDisabled(int id);
 

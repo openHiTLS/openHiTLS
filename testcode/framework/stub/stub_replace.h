@@ -46,7 +46,7 @@ typedef struct {
  * Initialize the dynamic stub change function. Invoke the function once.
  * return - 0:Success, non-zero:Error code
  */
-int STUB_Init();
+int STUB_Init(void);
 
 /*
  * Replaces the specified function with the specified stub function.
