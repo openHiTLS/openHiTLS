@@ -160,7 +160,7 @@ void RegisterWrapper(RecWrapper wrapper)
     g_recWrapper = wrapper;
 }
 
-void ClearWrapper()
+void ClearWrapper(void)
 {
     STUB_Reset(&g_stubRecFuncs);
     g_enableWrapper = false;

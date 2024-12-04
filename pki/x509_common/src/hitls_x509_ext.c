@@ -783,8 +783,7 @@ static int32_t SetExtBCons(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, cons
      *   pathLenConstraint       INTEGER (0..MAX) OPTIONAL }
      */
     BSL_ASN1_Buffer asns[] = {
-        {BSL_ASN1_TAG_BOOLEAN, bCons->isCa ? sizeof(bool) : 0,
-            bCons->isCa ? (uint8_t *)(uintptr_t)&bCons->isCa : NULL},
+        {BSL_ASN1_TAG_BOOLEAN, bCons->isCa ? sizeof(bool) : 0, bCons->isCa ? (uint8_t *)(uintptr_t)&bCons->isCa : NULL},
         {BSL_ASN1_TAG_INTEGER, 0, NULL},
     };
     int32_t ret;

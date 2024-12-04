@@ -1246,12 +1246,12 @@ int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func);
 
 // Define command enumeration
 typedef enum {
-    BSL_SAL_CONVERTER_OFF = 0, /* Do not enable named conversion */
-    BSL_SAL_CONVERTER_SO = 1,
-    BSL_SAL_CONVERTER_LIBSO = 2,
-    BSL_SAL_CONVERTER_LIBDLL = 3,
-    BSL_SAL_CONVERTER_DLL = 4
-} BSL_SAL_ConverterCmd;
+    BSL_SAL_LIB_FMT_OFF = 0, /* Do not enable named conversion */
+    BSL_SAL_LIB_FMT_SO = 1,
+    BSL_SAL_LIB_FMT_LIBSO = 2,
+    BSL_SAL_LIB_FMT_LIBDLL = 3,
+    BSL_SAL_LIB_FMT_DLL = 4
+} BSL_SAL_LibFmtCmd;
 
 /**
  * @ingroup bsl_sal
@@ -1266,7 +1266,7 @@ typedef enum {
  * @retval If the operation is successful, BSL_OK is returned;
  * Otherwise, an error code is returned.
  */
-int32_t BSL_SAL_LibNameFormat(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name);
+int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char **name);
 
 /**
  * @ingroup bsl_sal

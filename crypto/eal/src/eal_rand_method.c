@@ -89,7 +89,7 @@ const DrbgIdMap *GetDrbgIdMap(CRYPT_RAND_AlgId id)
     return NULL;
 }
 
-EAL_RandUnitaryMethod* EAL_RandGetMethod()
+EAL_RandUnitaryMethod* EAL_RandGetMethod(void)
 {
     return &g_randMethod;
 }

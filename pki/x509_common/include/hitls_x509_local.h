@@ -201,7 +201,7 @@ int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *l
 
 int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HITLS_X509_ValidTime *time);
 
-int32_t HITLS_X509_ParseX509(int32_t format, BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+int32_t HITLS_X509_ParseX509(int32_t format, const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
     HITLS_X509_List *list);
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);
 
@@ -248,7 +248,7 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src);
 
 int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen);
 
-int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen);
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, int32_t valLen);
 
 typedef int32_t (*EncodeExtCb)(void *, HITLS_X509_ExtEntry *, const void *);
 

@@ -91,8 +91,8 @@ static void *ValueDupFunc(void *ptr, size_t size)
         goto ERR;
     }
 
-    newValue->judgeStr = BSL_SAL_Dump(srcValue->judgeStr, BSL_SAL_Strnlen(srcValue->judgeStr, UINT32_MAX)+1);
-    newValue->valueStr = BSL_SAL_Dump(srcValue->valueStr, BSL_SAL_Strnlen(srcValue->valueStr, UINT32_MAX)+1);
+    newValue->judgeStr = BSL_SAL_Dump(srcValue->judgeStr, BSL_SAL_Strnlen(srcValue->judgeStr, UINT32_MAX) + 1);
+    newValue->valueStr = BSL_SAL_Dump(srcValue->valueStr, BSL_SAL_Strnlen(srcValue->valueStr, UINT32_MAX) + 1);
 
     if (newValue->judgeStr == NULL || newValue->valueStr == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -217,14 +217,13 @@ static int32_t GetAttributePositions(const char *attribute, int32_t start, int32
 
 static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, char **key, AttributeValue **value)
 {
-    int32_t ret;
     int32_t start = *startPos;
     char *tempKey = NULL;
     AttributeValue *tempValue = NULL;
 
     // Call the sub-function to get key-value pair positions
     int32_t keyStart, keyEnd, judgeStart, judgeEnd, valueStart, valueEnd;
-    ret = GetAttributePositions(attribute, start, &keyStart, &keyEnd, &judgeStart, &judgeEnd, &valueStart, &valueEnd);
+    int32_t ret = GetAttributePositions(attribute, start, &keyStart, &keyEnd, &judgeStart, &judgeEnd, &valueStart, &valueEnd);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

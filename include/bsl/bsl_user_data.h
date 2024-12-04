@@ -55,7 +55,7 @@ int BSL_USER_SetExData(BSL_USER_ExData *ad, int32_t idx, void *val);
 
 void *BSL_USER_GetExData(const BSL_USER_ExData *ad, int32_t idx);
 
-int BSL_USER_GetExDataNewIndex(int32_t index, int64_t argl, const void *argp, void *newFunc, void *dupFunc,
+int BSL_USER_GetExDataNewIndex(int32_t index, int64_t argl, const void *argp, const void *newFunc, const void *dupFunc,
     void *freeFunc);
 
 void BSL_USER_FreeExDataIndex(int32_t index, void *obj, BSL_USER_ExData *ad);

@@ -245,7 +245,7 @@ ERR:
     return ret;
 }
 
-static int32_t X509CsrAsn1Parse(bool isCopy, BSL_Buffer *encode, HITLS_X509_Csr *csr)
+static int32_t X509CsrAsn1Parse(bool isCopy, const BSL_Buffer *encode, HITLS_X509_Csr *csr)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
@@ -271,7 +271,7 @@ static int32_t X509CsrAsn1Parse(bool isCopy, BSL_Buffer *encode, HITLS_X509_Csr 
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509CsrPemParse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
+static int32_t X509CsrPemParse(const BSL_Buffer *encode, HITLS_X509_Csr *csr)
 {
     uint8_t *tmpBuf = encode->data;
     uint32_t tmpBufLen = encode->dataLen;
@@ -292,7 +292,7 @@ static int32_t X509CsrPemParse(BSL_Buffer *encode, HITLS_X509_Csr *csr)
     return ret;
 }
 
-int32_t HITLS_X509_CsrParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Csr **csr)
+int32_t HITLS_X509_CsrParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_Csr **csr)
 {
     if (encode == NULL || csr == NULL || *csr != NULL || encode->data == NULL || encode->dataLen == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);

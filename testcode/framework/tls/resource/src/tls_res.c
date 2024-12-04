@@ -145,12 +145,12 @@ int InsertSslToList(void *ctx, void *ssl)
     return InsertResToList(sslList, sslRes);
 }
 
-ResList *GetCtxList()
+ResList *GetCtxList(void)
 {
     return &g_ctxList;
 }
 
-ResList *GetSslList()
+ResList *GetSslList(void)
 {
     return &g_sslList;
 }

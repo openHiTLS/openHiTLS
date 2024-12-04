@@ -104,7 +104,7 @@ int InitControlChannelRes(char *srcDomainPath, int srcDomainPathLen, char *peerD
     return ret;
 }
 
-ControlChannelRes *GetControlChannelRes()
+ControlChannelRes *GetControlChannelRes(void)
 {
     return &g_channelRes;
 }

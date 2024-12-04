@@ -154,8 +154,7 @@ typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA   2
 #define CRYPT_EAL_IMPLPKEYSIGN_VERIFY     3
 #define CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA 4
-#define CRYPT_EAL_IMPLPKEYSIGN_RECOVER    5
-#define CRYPT_EAL_IMPLPKEYSIGN_CTRL       6
+#define CRYPT_EAL_IMPLPKEYSIGN_CTRL       5
 
 typedef int32_t (*CRYPT_EAL_ImplPkeySign)(const void *ctx, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
@@ -165,8 +164,6 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyVerify)(const void *ctx, int32_t mdAlgId, co
     uint8_t *sign, uint32_t signLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyVerifyData)(const void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t signLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyRecover)(const void *ctx, const uint8_t *sign, uint32_t signLen,
-    uint8_t *data, uint32_t *dataLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 // CRYPT_EAL_OPERAID_ASYMCIPHER
