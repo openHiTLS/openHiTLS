@@ -110,7 +110,7 @@ typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
 typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
-typedef int32_t (*PkeyBlind)(void *pkey, int32_t mdAlgId, const uint8_t *input, uint32_t inputLen,
+typedef int32_t (*PkeyBlind)(const void *pkey, int32_t mdAlgId, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyUnBlind)(const void *pkey, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
