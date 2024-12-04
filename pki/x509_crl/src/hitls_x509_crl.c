@@ -134,7 +134,7 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     return;
 }
 
-HITLS_X509_Crl *HITLS_X509_CrlNew()
+HITLS_X509_Crl *HITLS_X509_CrlNew(void)
 {
     HITLS_X509_Crl *crl = NULL;
     BSL_ASN1_List *issuerName = NULL;
@@ -811,7 +811,7 @@ ERR:
     return ret;
 }
 
-int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **crllist)
+int32_t HITLS_X509_CrlMulParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist)
 {
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crllist == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -838,7 +838,7 @@ int32_t HITLS_X509_CrlMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X50
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_CrlParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Crl **crl)
+int32_t HITLS_X509_CrlParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_Crl **crl)
 {
     HITLS_X509_List *list = NULL;
     if (crl == NULL || *crl != NULL) {

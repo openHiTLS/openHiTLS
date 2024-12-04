@@ -35,7 +35,7 @@ static BSL_SAL_DlCallback g_dlCallback = {0};
 #define BSL_SAL_PATH_MAX 4095
 #define BSL_SAL_NAME_MAX 255
 
-int32_t BSL_SAL_LibNameFormat(BSL_SAL_ConverterCmd cmd, const char *fileName, char **name)
+int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char **name)
 {
     if (fileName == NULL || name == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
@@ -53,23 +53,23 @@ int32_t BSL_SAL_LibNameFormat(BSL_SAL_ConverterCmd cmd, const char *fileName, ch
         return BSL_MALLOC_FAIL;
     }
     switch (cmd) {
-        case BSL_SAL_CONVERTER_SO:
+        case BSL_SAL_LIB_FMT_SO:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.so", fileName);
             break;
-        case BSL_SAL_CONVERTER_LIBSO:
+        case BSL_SAL_LIB_FMT_LIBSO:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.so", fileName);
             break;
-        case BSL_SAL_CONVERTER_LIBDLL:
+        case BSL_SAL_LIB_FMT_LIBDLL:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.dll", fileName);
             break;
-        case BSL_SAL_CONVERTER_DLL:
+        case BSL_SAL_LIB_FMT_DLL:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.dll", fileName);
             break;
-        case BSL_SAL_CONVERTER_OFF:
+        case BSL_SAL_LIB_FMT_OFF:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s", fileName);
             break;
         default:
-            // Default to the first(BSL_SAL_CONVERTER_SO) conversion
+            // Default to the first(BSL_SAL_LIB_FMT_SO) conversion
             BSL_SAL_Free(tempName);
             BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
             return BSL_SAL_ERR_BAD_PARAM;
