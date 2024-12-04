@@ -129,7 +129,7 @@ typedef struct {
         return;             \
     } while (0)
 
-extern int *GetJmpAddress();
+extern int *GetJmpAddress(void);
 #define SUB_PROC 1
 #define SUB_PROC_BEGIN(parentAction)   if (fork() > 0) parentAction
 #define SUB_PROC_END() *GetJmpAddress() = SUB_PROC; return

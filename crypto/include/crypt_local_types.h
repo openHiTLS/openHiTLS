@@ -109,7 +109,6 @@ typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t data
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
-typedef int32_t (*PkeyRecover)(const void *ctx, uint8_t *sign, uint32_t signLen, uint8_t *data, uint32_t *dataLen);
 /**
 * @ingroup  EAL
 *
@@ -162,7 +161,6 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
-    PkeyRecover recover;
 } EAL_PkeyUnitaryMethod;
 /**
  * @ingroup  sym_algid

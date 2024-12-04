@@ -144,7 +144,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t al
 {
     const CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
-    int32_t ret = CRYPT_EAL_ProviderGetFuncsFrom(libCtx, CRYPT_EAL_OPERAID_HASH, algId, attrName,
+    int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_HASH, algId, attrName,
         &funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

@@ -350,7 +350,7 @@ static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, X509_ParseFuncCbk *parse
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t HITLS_X509_ParseAsn1(const BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
@@ -376,7 +376,8 @@ static int32_t HITLS_X509_ParseAsn1(BSL_Buffer *encode, X509_ParseFuncCbk *parse
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t HITLS_X509_ParsePem(const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+    HITLS_X509_List *list)
 {
     char *nextEncode = (char *)(encode->data);
     uint32_t nextEncodeLen = encode->dataLen;
@@ -402,7 +403,7 @@ static int32_t HITLS_X509_ParsePem(BSL_Buffer *encode, bool isCert, X509_ParseFu
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+static int32_t HITLS_X509_ParseUnknown(const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
     HITLS_X509_List *list)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
@@ -413,7 +414,7 @@ static int32_t HITLS_X509_ParseUnknown(BSL_Buffer *encode, bool isCert, X509_Par
     }
 }
 
-int32_t HITLS_X509_ParseX509(int32_t format, BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
+int32_t HITLS_X509_ParseX509(int32_t format, const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
     HITLS_X509_List *list)
 {
     switch (format) {
