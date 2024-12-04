@@ -214,42 +214,42 @@ void CRYPT_SHAKE256_FreeCtx(CRYPT_SHAKE256_Ctx* ctx)
     CRYPT_SHA3_FreeCtx(ctx);
 }
 
-int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, const BSL_Param *param)
 {
     (void) param;
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_224_DIGESTSIZE, CRYPT_SHA3_224_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, const BSL_Param *param)
 {
     (void) param;
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_256_DIGESTSIZE, CRYPT_SHA3_256_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, const BSL_Param *param)
 {
     (void) param;
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_384_DIGESTSIZE, CRYPT_SHA3_384_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, const BSL_Param *param)
 {
     (void) param;
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_512_DIGESTSIZE, CRYPT_SHA3_512_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, const BSL_Param *param)
 {
     (void) param;
     // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, 0, CRYPT_SHAKE128_BLOCKSIZE, 0x1F);
 }
 
-int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, const BSL_Param *param)
 {
     (void) param;
     // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html

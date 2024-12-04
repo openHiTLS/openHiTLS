@@ -30,7 +30,7 @@ CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void)
     return g_libCtx;
 }
 
-int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx)
 {
     if (funcs == NULL) {
@@ -46,11 +46,9 @@ int32_t CRYPT_EAL_ProviderGetFuncsFrom(CRYPT_EAL_LibCtx *libCtx, int32_t operaId
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (attribute != NULL) {
-        if (strlen(attribute) > (INT32_MAX/2)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-            return CRYPT_NULL_INPUT;
-        }
+    if (attribute != NULL && strlen(attribute) > (INT32_MAX >> 1)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
 
     return CRYPT_EAL_CompareAlgAndAttr(localCtx, operaId, algId, attribute, funcs, provCtx);
@@ -135,7 +133,7 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal()
+CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal(void)
 {
     CRYPT_EAL_LibCtx *libCtx = (CRYPT_EAL_LibCtx *)BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_LibCtx));
     if (libCtx == NULL) {
@@ -170,6 +168,7 @@ void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx  *ctx)
     }
     if (ctx->provFreeCb != NULL) {
         ctx->provFreeCb(ctx->provCtx);
+        ctx->provCtx = NULL;
     }
     BSL_SAL_FREE(ctx->providerName);
     BSL_SAL_FREE(ctx->providerPath);
@@ -222,7 +221,7 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* p
     return ret;
 }
 
-int32_t CRYPT_EAL_InitPreDefinedProviders()
+int32_t CRYPT_EAL_InitPreDefinedProviders(void)
 {
     int32_t ret;
     CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNewInternal();
@@ -241,7 +240,7 @@ int32_t CRYPT_EAL_InitPreDefinedProviders()
     return ret;
 }
 
-void CRYPT_EAL_FreePreDefinedProviders()
+void CRYPT_EAL_FreePreDefinedProviders(void)
 {
     CRYPT_EAL_LibCtx *libCtx = g_libCtx;
     if (libCtx == NULL) {

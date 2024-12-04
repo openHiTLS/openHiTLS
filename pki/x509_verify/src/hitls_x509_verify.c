@@ -219,12 +219,8 @@ static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ce
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen, bool isCopy)
+static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, bool isCopy)
 {
-    if (valLen != sizeof(HITLS_X509_Cert)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
     int32_t ret = X509_CheckCert(storeCtx, val);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
@@ -259,12 +255,8 @@ static int32_t X509_CheckCRL(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl)
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val)
 {
-    if (valLen != sizeof(HITLS_X509_Crl)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
     int32_t ret = X509_CheckCRL(storeCtx, val);
     if (ret != HITLS_X509_SUCCESS) {
         return ret;
@@ -310,11 +302,11 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
         case HITLS_X509_STORECTX_CLR_PARAM_FLAGS:
             return X509_ClearParamFlag(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_DEEP_COPY_SET_CA:
-            return X509_SetCA(storeCtx, val, valLen, true);
+            return X509_SetCA(storeCtx, val, true);
         case HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA:
-            return X509_SetCA(storeCtx, val, valLen, false);
+            return X509_SetCA(storeCtx, val, false);
         case HITLS_X509_STORECTX_SET_CRL:
-            return X509_SetCRL(storeCtx, val, valLen);
+            return X509_SetCRL(storeCtx, val);
         case HITLS_X509_STORECTX_REF_UP:
             return X509_RefUp(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_SET_VEY_SM2_USERID:
