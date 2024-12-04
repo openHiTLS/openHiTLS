@@ -996,6 +996,9 @@ exit:
 void SDV_CRYPTO_RSA_BLINDING_FUNC_TC001(int keyLen, int hashId, int padMode, Hex *msg, int saltLen, int isProvider)
 {
     TestMemInit();
+    if (IsMdAlgDisabled(hashId)) {
+        SKIP_TEST();
+    }
     uint8_t sign[MAX_CIPHERTEXT_LEN] = {0};
     uint32_t dataLen = MAX_CIPHERTEXT_LEN;
     uint8_t e[] = {1, 0, 1};
@@ -1186,7 +1189,7 @@ exit:
  *    All operations return CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int keyLen, int mdId, Hex *msg, int saltLen)
+void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int keyLen, int mdId, Hex *msg, int saltLen, int isProvider)
 {
     TestMemInit();
     uint8_t sign[MAX_CIPHERTEXT_LEN] = {0};
@@ -1206,7 +1209,12 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int keyLen, int mdId, Hex *msg, 
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    }
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
@@ -1252,8 +1260,8 @@ exit:
  *    2. All computed values match the test vectors
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex *prepared_msg, Hex *salt, Hex *invBuf, Hex *blindMsgBuf,
-    Hex *blindSigBuf, Hex *sigBuf)
+void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex *prepared_msg, Hex *salt, Hex *invBuf,
+    Hex *blindMsgBuf, Hex *blindSigBuf, Hex *sigBuf)
 {
     TestMemInit();
     uint32_t ret;
