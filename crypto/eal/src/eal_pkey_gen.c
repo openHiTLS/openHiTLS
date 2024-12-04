@@ -1049,6 +1049,12 @@ static int32_t CRYPT_EAL_SetSignMethod(const CRYPT_EAL_Func *funcSign, EAL_PkeyU
                 case CRYPT_EAL_IMPLPKEYSIGN_CTRL:
                     method->ctrl = funcSign[index].func;
                     break;
+                case CRYPT_EAL_IMPLPKEYSIGN_BLIND:
+                    method->blind = funcSign[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYSIGN_UNBLIND:
+                    method->unBlind = funcSign[index].func;
+                    break;
                 default:
                     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                     return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;

@@ -755,22 +755,11 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
         goto ERR;
     }
    // encoded_msg = EMSA-PSS-ENCODE(msg, bit_len(n))
-    ret = PssPad(ctx, input, inputLen, pad, padLen);
-    if (ret != CRYPT_SUCCESS) {
-        goto ERR;
-    }
-    ret = BN_Bin2Bn(enMsg, pad, padLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(PssPad(ctx, input, inputLen, pad, padLen), ret);
+    GOTO_ERR_IF(BN_Bin2Bn(enMsg, pad, padLen), ret);
 
     // Check if bigNumOut and n are coprime using GCD
-    ret = BN_Gcd(gcd, enMsg, n, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(BN_Gcd(gcd, enMsg, n, opt), ret);
 
     // Check if gcd is 1
     if (!BN_IsOne(gcd)) {
@@ -785,22 +774,11 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
         if (param == NULL) {
             goto ERR;
         }
-        ret = RSA_BlindCreateParam(param->para.bssa, e, n, opt);
-        if (ret != CRYPT_SUCCESS) {
-            goto ERR;
-        }
+        GOTO_ERR_IF(RSA_BlindCreateParam(param->para.bssa, e, n, opt), ret);
     }
     blind = param->para.bssa;
-    ret = BN_ModMul(enMsg, enMsg, blind->a, n, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    ret = BN_Bn2Bin(enMsg, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->a, n, opt), ret);
+    GOTO_ERR_IF(BN_Bn2Bin(enMsg, out, outLen), ret);
     ctx->blindParam = param;
 ERR:
     if (ret != CRYPT_SUCCESS && ctx->blindParam == NULL && param != NULL) {
@@ -959,22 +937,9 @@ static int32_t BssaUnBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t in
         goto ERR;
     }
     blind = ctx->blindParam->para.bssa;
-    ret = BN_Bin2Bn(z, input, inputLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    ret = BN_ModMul(s, z, blind->ai, n, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-
-    ret = BN_Bn2Bin(s, sig, &sigLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(BN_Bin2Bn(z, input, inputLen), ret);
+    GOTO_ERR_IF(BN_ModMul(s, z, blind->ai, n, opt), ret);
+    GOTO_ERR_IF(BN_Bn2Bin(s, sig, &sigLen), ret);
 
     if (memcpy_s(out, *outLen, sig, sigLen) != EOK) {
         ret = BSL_MEMCPY_FAIL;
@@ -1494,21 +1459,9 @@ static int32_t RsaSetBssa(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
-    ret = BN_Bin2Bn(blind->a, r, len);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    ret = BN_ModInv(blind->ai, blind->a, ctx->pubKey->n, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    ret = BN_ModExp(blind->a, blind->a, ctx->pubKey->e, ctx->pubKey->n, opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(BN_Bin2Bn(blind->a, r, len), ret);
+    GOTO_ERR_IF(BN_ModInv(blind->ai, blind->a, ctx->pubKey->n, opt), ret);
+    GOTO_ERR_IF(BN_ModExp(blind->a, blind->a, ctx->pubKey->e, ctx->pubKey->n, opt), ret);
     ctx->blindParam = param;
 ERR:
     if (ret != CRYPT_SUCCESS && ctx->blindParam == NULL && param != NULL) {
