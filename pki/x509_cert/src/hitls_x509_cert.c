@@ -354,7 +354,7 @@ ERR:
 }
 
 
-int32_t HITLS_X509_CertMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_List **certlist)
+int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **certlist)
 {
     int32_t ret;
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || certlist == NULL) {
@@ -382,7 +382,7 @@ int32_t HITLS_X509_CertMulParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X5
     return ret;
 }
 
-int32_t HITLS_X509_CertParseBuff(int32_t format, BSL_Buffer *encode, HITLS_X509_Cert **cert)
+int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_Cert **cert)
 {
     HITLS_X509_List *list = NULL;
     if (cert == NULL || *cert != NULL) {

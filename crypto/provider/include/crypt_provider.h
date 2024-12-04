@@ -30,8 +30,8 @@ extern "C" {
 // Maximum length of provider name
 #define DEFAULT_PROVIDER_NAME_LEN_MAX 255
 
-int32_t CRYPT_EAL_InitPreDefinedProviders();
-void CRYPT_EAL_FreePreDefinedProviders();
+int32_t CRYPT_EAL_InitPreDefinedProviders(void);
+void CRYPT_EAL_FreePreDefinedProviders(void);
 
 int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx);

@@ -390,7 +390,7 @@ static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
     return ret;
 }
 
-BslList *HITLS_X509_DnListNew()
+BslList *HITLS_X509_DnListNew(void)
 {
     return BSL_LIST_New(sizeof(HITLS_X509_NameNode));
 }
@@ -455,7 +455,7 @@ int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t v
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, int32_t valLen)
 {
     if (valLen != sizeof(BSL_Buffer)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -465,7 +465,7 @@ int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t v
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    BSL_Buffer *buff = (BSL_Buffer *)(uintptr_t)val;
+    BSL_Buffer *buff = (BSL_Buffer *)val;
     buff->data = serial->buff;
     buff->dataLen = serial->len;
     return HITLS_X509_SUCCESS;

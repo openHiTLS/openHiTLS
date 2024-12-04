@@ -51,7 +51,7 @@ typedef struct {
 
 const DrbgIdMap *GetDrbgIdMap(CRYPT_RAND_AlgId id);
 
-EAL_RandUnitaryMethod* EAL_RandGetMethod();
+EAL_RandUnitaryMethod* EAL_RandGetMethod(void);
 
 int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu);
 

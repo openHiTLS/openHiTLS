@@ -714,7 +714,7 @@ static int32_t ParseMacDataAndVerify(BSL_Buffer *initData, BSL_Buffer *macData, 
     return HITLS_X509_SUCCESS;
 }
 
-static int32_t ParseAsn1PKCS12(BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
+static int32_t ParseAsn1PKCS12(const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
     HITLS_PKCS12 *p12, bool needMacVerify)
 {
     uint32_t version = 0;
@@ -763,7 +763,7 @@ static int32_t ParseAsn1PKCS12(BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *
     return HITLS_X509_SUCCESS;
 }
 
-int32_t HITLS_PKCS12_ParseBuff(int32_t format, BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
+int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
     HITLS_PKCS12 **p12, bool needMacVerify)
 {
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 ||
