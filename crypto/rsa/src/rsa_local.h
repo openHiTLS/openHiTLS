@@ -32,8 +32,8 @@ extern "C" {
 #define HASH_MAX_MDSIZE  (64)
 
 typedef struct RSA_BlindSt {
-    BN_BigNum *a;
-    BN_BigNum *ai;
+    BN_BigNum *r;
+    BN_BigNum *rInv;
 } RSA_Blind;
 
 typedef struct {

@@ -497,7 +497,7 @@ int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input,
  * @retval CRYPT_SUCCESS on success
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_RSA_UnBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
+int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus

@@ -624,11 +624,7 @@ static int32_t BlindSign(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataL
     }
 
     /* Copy the blind signature to output buffer */
-    if (memcpy_s(sign, *signLen, s, sLen) != EOK) {
-        ret = BSL_MEMCPY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    (void)memcpy_s(sign, *signLen, s, sLen);
     *signLen = sLen;
 ERR:
     BSL_SAL_FREE(m);
@@ -702,8 +698,8 @@ static int32_t BlindInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, u
     }
     if (ctx->pubKey == NULL) {
         // Check whether the private key information exists.
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
-        return CRYPT_RSA_NO_KEY_INFO;
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PUBKEY_INFO);
+        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
     }
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
     if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
@@ -711,9 +707,8 @@ static int32_t BlindInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, u
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
     if (ctx->pad.type != EMSA_PSS) {
-        // padding type is wrong.
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_PAD_NO_SET_ERROR);
-        return CRYPT_RSA_PAD_NO_SET_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_PADDING_NOT_SUPPORTED);
+        return CRYPT_RSA_PADDING_NOT_SUPPORTED;
     }
     return CRYPT_SUCCESS;
 }
@@ -777,7 +772,7 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
         GOTO_ERR_IF(RSA_BlindCreateParam(param->para.bssa, e, n, opt), ret);
     }
     blind = param->para.bssa;
-    GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->a, n, opt), ret);
+    GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->r, n, opt), ret);
     GOTO_ERR_IF(BN_Bn2Bin(enMsg, out, outLen), ret);
     ctx->blindParam = param;
 ERR:
@@ -905,7 +900,7 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data,
     return CRYPT_RSA_VerifyData(ctx, hash, hashLen, sign, signLen);
 }
 
-static int32_t BssaUnBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
+static int32_t BssaUnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
@@ -938,14 +933,10 @@ static int32_t BssaUnBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t in
     }
     blind = ctx->blindParam->para.bssa;
     GOTO_ERR_IF(BN_Bin2Bn(z, input, inputLen), ret);
-    GOTO_ERR_IF(BN_ModMul(s, z, blind->ai, n, opt), ret);
+    GOTO_ERR_IF(BN_ModMul(s, z, blind->rInv, n, opt), ret);
     GOTO_ERR_IF(BN_Bn2Bin(s, sig, &sigLen), ret);
 
-    if (memcpy_s(out, *outLen, sig, sigLen) != EOK) {
-        ret = BSL_MEMCPY_FAIL;
-        BSL_ERR_PUSH_ERROR(BSL_MEMCPY_FAIL);
-        goto ERR;
-    }
+    (void)memcpy_s(out, *outLen, sig, sigLen);
     *outLen = sigLen;
 ERR:
     BN_Destroy(z);
@@ -955,7 +946,7 @@ ERR:
     return ret;
 }
 
-int32_t CRYPT_RSA_UnBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
+int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {
     int32_t ret;
@@ -1459,9 +1450,9 @@ static int32_t RsaSetBssa(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
-    GOTO_ERR_IF(BN_Bin2Bn(blind->a, r, len), ret);
-    GOTO_ERR_IF(BN_ModInv(blind->ai, blind->a, ctx->pubKey->n, opt), ret);
-    GOTO_ERR_IF(BN_ModExp(blind->a, blind->a, ctx->pubKey->e, ctx->pubKey->n, opt), ret);
+    GOTO_ERR_IF(BN_Bin2Bn(blind->r, r, len), ret);
+    GOTO_ERR_IF(BN_ModInv(blind->rInv, blind->r, ctx->pubKey->n, opt), ret);
+    GOTO_ERR_IF(BN_ModExp(blind->r, blind->r, ctx->pubKey->e, ctx->pubKey->n, opt), ret);
     ctx->blindParam = param;
 ERR:
     if (ret != CRYPT_SUCCESS && ctx->blindParam == NULL && param != NULL) {
@@ -1472,14 +1463,14 @@ ERR:
     return ret;
 }
 
-static int32_t RsaGetBssa(CRYPT_RSA_Ctx *ctx, void *val)
+static int32_t RsaGetBssa(CRYPT_RSA_Ctx *ctx, BSL_Param *bslParam)
 {
-    if (val == NULL) {
+    if (bslParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BN_BigNum **inv = val;
-    if (*inv != NULL) {
+    BSL_Param *output = BSL_PARAM_FindParam(bslParam, CRYPT_PARAM_RSA_BLIND_R_INV);
+    if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -1488,11 +1479,13 @@ static int32_t RsaGetBssa(CRYPT_RSA_Ctx *ctx, void *val)
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_BLIND_INFO);
         return CRYPT_RSA_ERR_NO_BLIND_INFO;
     }
-    *inv = BN_Dup(param->para.bssa->ai);
-    if (*inv == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+    uint32_t tmpLen = output->valueLen;
+    int32_t ret = BN_Bn2Bin(param->para.bssa->rInv, output->value, &tmpLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
+    output->useLen = tmpLen;
     return CRYPT_SUCCESS;
 }
 
@@ -1637,7 +1630,7 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_RSA_GetLen(ctx, (GetLenFunc)CRYPT_RSA_GetSecBits, val, len);
         case CRYPT_CTRL_SET_RSA_EMSA_PSS:
-            return RsaSetPss(ctx, val);;
+            return RsaSetPss(ctx, val);
         case CRYPT_CTRL_SET_RSA_RSAES_OAEP:
             return RsaSetOaep(ctx, val);
         case CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R:
