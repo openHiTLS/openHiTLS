@@ -121,8 +121,8 @@ static RSA_Blind *RSABlindDupCtx(RSA_Blind *blind)
 
     (void)memset_s(newBlind, sizeof(RSA_Blind), 0, sizeof(RSA_Blind));
 
-    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->a, blind->a, BN_Dup(blind->a), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->ai, blind->ai, BN_Dup(blind->ai), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->r, blind->r, BN_Dup(blind->r), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->rInv, blind->rInv, BN_Dup(blind->rInv), CRYPT_MEM_ALLOC_FAIL);
     return newBlind;
 
 ERR:
