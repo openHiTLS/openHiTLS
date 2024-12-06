@@ -1210,7 +1210,7 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, uint8_t isEnable);
+int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, bool isEnable);
 
 /**
  * @ingroup hitls_config
@@ -1221,7 +1221,7 @@ int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, uint8_t isEnable
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, uint8_t *isEnable);
+int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, bool *isEnable);
 
 /**
  * @ingroup hitls_config

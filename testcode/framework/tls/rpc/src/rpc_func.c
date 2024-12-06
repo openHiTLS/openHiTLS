@@ -266,11 +266,11 @@ int RpcTlsConnect(CmdData *cmdData)
         ret = ERROR;
         goto ERR;
     }
-    
+
     BSL_UIO *uio = HITLS_GetUio(ssl);
     if (BSL_UIO_GetTransportType(uio) == BSL_UIO_UDP) {
         struct sockaddr_in serverAddr;
-        memset((void *)&serverAddr, 0, sizeof(struct sockaddr_in));
+        memset_s((void *)&serverAddr, sizeof(serverAddr), 0, sizeof(serverAddr));
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(g_serverPort);
         serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");

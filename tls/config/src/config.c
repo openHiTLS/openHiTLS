@@ -1825,7 +1825,7 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
 #endif
 
 #ifdef HITLS_TLS_PROTO_DTLS12
-int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, uint8_t isEnable)
+int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, bool isEnable)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
@@ -1839,7 +1839,7 @@ int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, uint8_t isEnable
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, uint8_t *isEnable)
+int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, bool *isEnable)
 {
     if (config == NULL || isEnable == NULL) {
         return HITLS_NULL_INPUT;

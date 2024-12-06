@@ -155,7 +155,7 @@ typedef struct TlsConfig {
     bool isSupportServerPreference;     /* server cipher suites can be preferentially selected */
 
     /* DTLS */
-    bool isHelloVerifyReqEnable;    /* is server or client HelloVerifyRequest message enabled */
+    bool isHelloVerifyReqEnable;    /* is HelloVerifyRequest message enabled on server*/
 
     /**
      * Configurations in the HITLS_Ctx are classified into private configuration and global configuration.

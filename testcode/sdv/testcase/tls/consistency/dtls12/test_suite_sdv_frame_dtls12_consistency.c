@@ -2470,6 +2470,182 @@ exit:
 }
 /* END_CASE */
 
+static bool cookie_generate_success = true;
+static int32_t UT_CookieGenerateCb(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len)
+{
+    (void)ctx;
+    (void)cookie;
+    if (cookie_generate_success) {
+        *cookie_len = DTLS_COOKIE_LEN;
+    }
+    return cookie_generate_success;
+}
+
+static bool cookie_valid = true;
+static int32_t UT_CookieVerifyCb(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len)
+{
+    (void)ctx;
+    (void)cookie;
+    (void)cookie_len;
+    return cookie_valid;
+}
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC001
+* @spec -
+* @title The server doesn't set cookieGenerateCb or cookieVerifyCb.
+* @precon nan
+* @brief 1. Configure option isHelloVerifyReqEnable is on. Leave cookieGenerateCb or cookieVerifyCb blank.
+            Check whether server and client can handshake successfully. Expected result 1.
+* @expect 1. The link fails to be set up.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC001(int setGenerateCb, int setVerifyCb)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
+    if (setGenerateCb) {
+        serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
+    }
+    if (setVerifyCb) {
+        serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    }
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_UNREGISTERED_CALLBACK);
+
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC002
+* @spec -
+* @title The server fails to generate cookie.
+* @precon nan
+* @brief 1. Configure option isHelloVerifyReqEnable is on. Configure cookieGenerateCb and cookieVerifyCb.
+            cookieGenerateCb always return false.
+            Check whether server and client can handshake successfully. Expected result 1.
+* @expect 1. The link fails to be set up.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
+    serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
+    serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    cookie_generate_success = false;
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_INTERNAL_EXCEPTION);
+
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003
+* @spec -
+* @title The server receives a Client Hello packet with invalid cookie when isHelloVerifyReqEnable is on.
+* @precon nan
+* @brief 1. Configure option isHelloVerifyReqEnable is on. Configure cookieGenerateCb and cookieVerifyCb.
+            cookieGenerateCb always return true and cookieVerifyCb always return false.
+            Check whether server and client can handshake successfully. Expected result 1.
+* @expect 1: The link fails to be set up.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
+    serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
+    serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    cookie_generate_success = true;
+    cookie_valid = false;
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_INTERNAL_EXCEPTION);
+
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003
+* @spec -
+* @title The server receives a Client Hello packet with valid cookie when isHelloVerifyReqEnable is on.
+* @precon nan
+* @brief 1. Configure option isHelloVerifyReqEnable is on. Configure cookieGenerateCb and cookieVerifyCb.
+            cookieGenerateCb always return true and cookieVerifyCb always return true.
+            Check whether server and client can handshake successfully. Expected result 1.
+* @expect 1: The link is set up successfully.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
+    serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
+    serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    cookie_generate_success = true;
+    cookie_valid = true;
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+exit:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
 /* @
 * @test UT_TLS_DTLS_CONSISTENCY_RFC8422_ECPOINT_TC001
 * @spec -
