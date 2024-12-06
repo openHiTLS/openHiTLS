@@ -1185,6 +1185,7 @@ exit:
  *    4. Sign the blinded message with private key
  *    5. Unblind the signature
  *    6. Verify the unblinded signature with public key
+ *    7. Dup the context, and sign-verify with new context
  * @expect
  *    All operations return CRYPT_SUCCESS
  */
@@ -1298,6 +1299,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_MD_AlgId mdId = CRYPT_MD_SHA384;
     uint32_t saltLen = salt->len;
+    BSL_Param blindParam = {CRYPT_PARAM_RSA_BLIND_R_INV, BSL_PARAM_TYPE_OCTETS, invBufTest, invBufTestLen, 0};
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -1318,16 +1320,15 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
     // set pss param.
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, (uint32_t)sizeof(CRYPT_RSA_PssPara))
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0)
         == CRYPT_SUCCESS);
     if (salt->len != 0) {
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_SALT, salt->x, salt->len) == CRYPT_SUCCESS);
     }
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &invN, 0) == CRYPT_SUCCESS);
-
-    BN_Bn2Bin(invN, invBufTest, &invBufTestLen);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
+        (uint32_t)sizeof(BSL_Param)) == CRYPT_SUCCESS);
     ret = memcmp(invBuf->x, invBufTest, invBuf->len);
     ASSERT_EQ(ret, 0);
 
@@ -1368,17 +1369,31 @@ exit:
  * @title  RSA: Blind signature invalid parameter test
  * @precon Registering memory-related functions
  * @brief
- *    1. Test null pointer parameters
- *    2. Test operations without key information
- *    3. Test insufficient buffer size
- *    4. Test invalid padding configuration
- *    5. Test mismatched hash algorithm
+ *    1. Test null pointer handling:
+ *       - Test PkeyBlind/PkeyUnBlind with NULL context
+ *       - Test PkeyBlind/PkeyUnBlind with NULL input/output buffers
+ *       - Test PkeyBlind/PkeyUnBlind with NULL length pointers
+ *    2. Test unsupported algorithm:
+ *       - Test blind operations with ECDH key context
+ *    3. Test RSA context without key information:
+ *       - Test blind operations before setting key parameters
+ *    4. Test buffer size validation:
+ *       - Test with insufficient output buffer size
+ *    5. Test padding configuration:
+ *       - Test blind operations without setting padding
+ *       - Test with mismatched hash algorithm (SHA256 vs SHA384)
+ *    6. Test blind parameter controls:
+ *       - Test NULL and invalid parameters for BSSA controls
+ *       - Test getting blind factor inverse without setting output buffer.
  * @expect
- *    1. CRYPT_NULL_INPUT for null pointer parameters
- *    2. CRYPT_RSA_NO_KEY_INFO when key info missing
- *    3. CRYPT_RSA_BUFF_LEN_NOT_ENOUGH for small buffers
- *    4. CRYPT_RSA_PAD_NO_SET_ERROR for invalid padding
- *    5. CRYPT_RSA_ERR_MD_ALGID for mismatched hash
+ *    - CRYPT_NULL_INPUT for null pointer parameters
+ *    - CRYPT_EAL_ALG_NOT_SUPPORT for unsupported algorithms
+ *    - CRYPT_RSA_NO_KEY_INFO when key info missing
+ *    - CRYPT_RSA_BUFF_LEN_NOT_ENOUGH for small buffers
+ *    - CRYPT_RSA_PADDING_NOT_SUPPORTED for invalid padding
+ *    - CRYPT_RSA_ERR_MD_ALGID for mismatched hash
+ *    - CRYPT_INVALID_ARG for invalid blind parameters
+ *    - CRYPT_RSA_ERR_NO_BLIND_INFO when blind factor not set
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
@@ -1437,8 +1452,9 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
 
     // pad type is wrong.
     ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, CRYPT_MD_SHA384, msg, msgLen, blindMsg, &blindMsgLen)
-        == CRYPT_RSA_PAD_NO_SET_ERROR);
-    ASSERT_TRUE(CRYPT_EAL_PkeyUnBlind(pkey, msg, msgLen, unBlindSig, &unBlindSigLen) == CRYPT_RSA_PAD_NO_SET_ERROR);
+        == CRYPT_RSA_PADDING_NOT_SUPPORTED);
+    ASSERT_TRUE(CRYPT_EAL_PkeyUnBlind(pkey, msg, msgLen, unBlindSig, &unBlindSigLen)
+        == CRYPT_RSA_PADDING_NOT_SUPPORTED);
 
     CRYPT_MD_AlgId mdId = CRYPT_MD_SHA384;
     uint32_t saltLen = 0;
@@ -1452,6 +1468,20 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, CRYPT_MD_SHA256, msg, msgLen, blindMsg, &unBlindSigLen)
         == CRYPT_RSA_ERR_MD_ALGID);
+
+    BSL_Param blindParam = {0};
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, NULL, 0) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_INVALID_ARG);
+    blindParam.valueType = BSL_PARAM_TYPE_OCTETS;
+    blindParam.key = CRYPT_PARAM_RSA_BLIND_R_INV;
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
+        (uint32_t)sizeof(BSL_Param)) == CRYPT_RSA_ERR_NO_BLIND_INFO);
+    uint8_t rBufTest[128] = {1}; // due to key bits = 1024
+    uint32_t rBufTestLen = 128;
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
+    // This should fail with CRYPT_NULL_INPUT because blindParam.value is NULL.
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
+        (uint32_t)sizeof(BSL_Param)) == CRYPT_NULL_INPUT);
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
