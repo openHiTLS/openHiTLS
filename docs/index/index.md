@@ -11,7 +11,6 @@
 | 7    | [加密完保应用开发指南](../zh/5_开发指南/1_加密完保应用开发指南.md) | [Encryption and Integrity Protection Application Development Guide](../en/5_Developer%20Guide/1_Encryption%20and%20Integrity%20Protection%20Application%20Development%20Guide.md) |
 | 8    | [安全通信应用开发指南](../zh/5_开发指南/2_安全通信应用开发指南.md) | [Secure Communication Application Development Guide](../en/5_Developer%20Guide/2_Secure%20Communication%20Application%20Development%20Guide.md) |
 | 9    | [API参考](../zh/5_开发指南/3_API参考.md)   | [API Reference](../en/5_Developer%20Guide/3_API%20Reference.md) |
-| 10   | [provider开发指南](../zh/5_开发指南/4_provider开发指南.md)     | [provider Development Guide](../en/5_Developer%20Guide/4_provider%20Development%20Guide.md)       |
-| 11   | [术语列表](../zh/6_附录/1_术语列表.md)     | [Terms](../en/6_Appendix/1_Terms.md)       |
-| 12   | [修订记录](../zh/6_附录/2_修订记录.md)     | [Change History](../en/6_Appendix/2_Change%20History.md) |
+| 10   | [术语列表](../zh/6_附录/1_术语列表.md)     | [Terms](../en/6_Appendix/1_Terms.md)       |
+| 11   | [修订记录](../zh/6_附录/2_修订记录.md)     | [Change History](../en/6_Appendix/2_Change%20History.md) |
 
