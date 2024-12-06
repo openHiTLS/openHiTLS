@@ -232,6 +232,7 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    to->isProvider = from->isProvider;
     *(EAL_MdUnitaryMethod *)to->method = *from->method;
     to->data = data;
     to->state = from->state;
@@ -269,6 +270,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
         BSL_SAL_FREE(newCtx);
         return NULL;
     }
+    newCtx->isProvider = ctx->isProvider;
     newCtx->method = method;
     newCtx->state = ctx->state;
     newCtx->id = ctx->id;
