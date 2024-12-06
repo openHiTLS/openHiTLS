@@ -112,6 +112,8 @@ enum CRYPT_ERROR {
     CRYPT_RSA_ERR_BLIND_TYPE,           /**< Invalid RSA blinding type. Only RSA-BSSA is currently supported. */
     CRYPT_RSA_ERR_NO_BLIND_INFO,        /**< RSA blinding information is missing.
                                             The blind/unblind operation requires previous blinding parameters. */
+    CRYPT_RSA_ERR_NO_PUBKEY_INFO,       /**< The rsa pub key is missing. */
+    CRYPT_RSA_PADDING_NOT_SUPPORTED,    /**< The specified RSA padding mode is not supported in blinding. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
     CRYPT_EAL_ERR_ALGID,                /**< Incorrect algorithm ID. */

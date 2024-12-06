@@ -124,8 +124,8 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
  * @brief   Create an asymmetric key pair structure in the providers.
  *
  * @param libCtx [IN] Library context
- * @param algId [IN] Symmetric encryption/decryption algorithm ID.
- * @param type [IN] Specify operation type.
+ * @param algId [IN] Asymmetric algorithm ID.
+ * @param pkeyOperType [IN] Specify operation type.
  * @param attrName [IN] Specify expected attribute values
  *
  * @retval  CRYPT_EAL_PkeyCtx pointer.
