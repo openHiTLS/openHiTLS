@@ -1262,7 +1262,7 @@ exit:
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex *prepared_msg, Hex *salt, Hex *invBuf,
-    Hex *blindMsgBuf, Hex *blindSigBuf, Hex *sigBuf)
+    Hex *blindMsgBuf, Hex *blindSigBuf, Hex *sigBuf, int isStub)
 {
     TestMemInit();
     uint32_t ret;
@@ -1299,7 +1299,9 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_MD_AlgId mdId = CRYPT_MD_SHA384;
     uint32_t saltLen = salt->len;
-    BSL_Param blindParam = {CRYPT_PARAM_RSA_BLIND_R_INV, BSL_PARAM_TYPE_OCTETS, invBufTest, invBufTestLen, 0};
+    BSL_Param blindParam[2] = {
+        {CRYPT_PARAM_RSA_BLIND_R_INV, BSL_PARAM_TYPE_OCTETS, invBufTest, invBufTestLen, 0},
+        BSL_PARAM_END};
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -1316,21 +1318,25 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &priKey), CRYPT_SUCCESS);
-
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-
+    if (isStub) {
+        CRYPT_RandRegist(STUB_ReplaceRandom);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
     // set pss param.
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0)
         == CRYPT_SUCCESS);
     if (salt->len != 0) {
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_SALT, salt->x, salt->len) == CRYPT_SUCCESS);
     }
-
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
-        (uint32_t)sizeof(BSL_Param)) == CRYPT_SUCCESS);
-    ret = memcmp(invBuf->x, invBufTest, invBuf->len);
-    ASSERT_EQ(ret, 0);
+    if (isStub) {
+        memcpy_s(g_RandBuf, TMP_BUFF_LEN, rBuf, rBufLen);
+    } else {
+        ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
+        ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_SUCCESS);
+        ret = memcmp(invBuf->x, invBufTest, invBuf->len);
+        ASSERT_EQ(ret, 0);
+    }
 
     uint32_t flag = CRYPT_RSA_BSSA;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_FLAG, (void *)&flag, sizeof(uint32_t)) == CRYPT_SUCCESS);
@@ -1469,19 +1475,18 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, CRYPT_MD_SHA256, msg, msgLen, blindMsg, &unBlindSigLen)
         == CRYPT_RSA_ERR_MD_ALGID);
 
-    BSL_Param blindParam = {0};
+    BSL_Param blindParam[2] = {{0}, BSL_PARAM_END};
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_INVALID_ARG);
-    blindParam.valueType = BSL_PARAM_TYPE_OCTETS;
-    blindParam.key = CRYPT_PARAM_RSA_BLIND_R_INV;
+    blindParam[0].valueType = BSL_PARAM_TYPE_OCTETS;
+    blindParam[0].key = CRYPT_PARAM_RSA_BLIND_R_INV;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
         (uint32_t)sizeof(BSL_Param)) == CRYPT_RSA_ERR_NO_BLIND_INFO);
     uint8_t rBufTest[128] = {1}; // due to key bits = 1024
     uint32_t rBufTestLen = 128;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
     // This should fail with CRYPT_NULL_INPUT because blindParam.value is NULL.
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
-        (uint32_t)sizeof(BSL_Param)) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_NULL_INPUT);
 exit:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
