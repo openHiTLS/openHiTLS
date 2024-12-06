@@ -124,8 +124,8 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id);
  * @brief   Create an asymmetric key pair structure in the providers.
  *
  * @param libCtx [IN] Library context
- * @param algId [IN] Symmetric encryption/decryption algorithm ID.
- * @param type [IN] Specify operation type.
+ * @param algId [IN] Asymmetric algorithm ID.
+ * @param pkeyOperType [IN] Specify operation type.
  * @param attrName [IN] Specify expected attribute values
  *
  * @retval  CRYPT_EAL_PkeyCtx pointer.
@@ -454,6 +454,39 @@ uint32_t CRYPT_EAL_PkeyGetSignLen(const CRYPT_EAL_PkeyCtx *pkey);
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeyCtrl(CRYPT_EAL_PkeyCtx *pkey, int32_t opt, void *val, uint32_t len);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Perform blind operation on input data using the specified algorithm.
+ *          For RSA BSSA, users need to ensure sufficient entropy in the message if the input has low entropy.
+ * @param   pkey [IN] Key session
+ * @param   id [IN] md Id for input.
+ * @param   input [IN] Data to be blinded
+ * @param   inputLen [IN] Length of input data
+ * @param   out [OUT] Blinded output data
+ * @param   outLen [OUT] Length of blinded data
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyBlind(CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Perform unblind operation on blinded data.
+ *
+ * @param   pkey [IN] Key session
+ * @param   input [IN] Blinded data to be unblinded
+ * @param   inputLen [IN] Length of blinded data
+ * @param   out [OUT] Unblinded output data
+ * @param   outLen [OUT] Length of unblinded data
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyUnBlind(CRYPT_EAL_PkeyCtx *pkey, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
 
 /**
  * @ingroup crypt_eal_pkey
