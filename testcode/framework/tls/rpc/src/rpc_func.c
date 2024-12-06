@@ -77,6 +77,8 @@ RpcFunList *GetRpcFuncList(void)
     return g_rpcFuncList;
 }
 
+static int g_serverPort = 0;
+
 int GetRpcFuncNum(void)
 {
     return sizeof(g_rpcFuncList) / sizeof(g_rpcFuncList[0]);
@@ -263,6 +265,23 @@ int RpcTlsConnect(CmdData *cmdData)
         LOG_ERROR("Not Find Ssl");
         ret = ERROR;
         goto ERR;
+    }
+
+    BSL_UIO *uio = HITLS_GetUio(ssl);
+    if (BSL_UIO_GetTransportType(uio) == BSL_UIO_UDP) {
+        struct sockaddr_in serverAddr;
+        memset_s((void *)&serverAddr, sizeof(serverAddr), 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(g_serverPort);
+        serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+        ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, (int32_t)sizeof(serverAddr), &serverAddr);
+        if (ret != HITLS_SUCCESS) {
+            BSL_UIO_Free(uio);
+            LOG_ERROR("BSL_UIO_SET_PEER_IP_ADDR failed\n");
+            ret = ERROR;
+            goto ERR;
+        }
     }
 
     ret = HLT_TlsConnect(ssl);
@@ -473,6 +492,7 @@ int RpcDataChannelConnect(CmdData *cmdData)
     channelParam.isBlock = atoi(cmdData->paras[2]); // The second parameter of indicates whether the is blocked
 
     sockFd = HLT_DataChannelConnect(&channelParam);
+    g_serverPort = channelParam.port;
 
     // Return the result.
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, sockFd);

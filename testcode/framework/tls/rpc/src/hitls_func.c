@@ -37,6 +37,7 @@
 #include "cert_callback.h"
 #include "sctp_channel.h"
 #include "tcp_channel.h"
+#include "udp_channel.h"
 #include "common_func.h"
 #include "crypt_eal_rand.h"
 #include "crypt_algid.h"
@@ -564,6 +565,8 @@ const BSL_UIO_Method *GetDefaultMethod(HILT_TransportType type)
             return SctpGetDefaultMethod();
         case TCP:
             return TcpGetDefaultMethod();
+        case UDP:
+            return UdpGetDefaultMethod();
         default:
             break;
     }

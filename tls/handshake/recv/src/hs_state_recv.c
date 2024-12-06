@@ -27,6 +27,7 @@
 #include "hs_msg.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "hs_verify.h"
 #include "transcript_hash.h"
 #include "hs_reass.h"
 #include "parse.h"
@@ -101,6 +102,8 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
             return ServerRecvClientCertVerifyProcess(ctx);
 #endif /* HITLS_TLS_HOST_SERVER */
 #ifdef HITLS_TLS_HOST_CLIENT
+        case TRY_RECV_HELLO_VERIFY_REQUEST:
+            return DtlsClientRecvHelloVerifyRequestProcess(ctx, hsMsg);
         case TRY_RECV_SERVER_HELLO:
             return ClientRecvServerHelloProcess(ctx, hsMsg);
         case TRY_RECV_SERVER_KEY_EXCHANGE:
@@ -454,8 +457,17 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
         return ret;
     }
 
+    if (hsMsgInfo.type == CLIENT_HELLO) {
+        ret = VERIFY_Init(ctx->hsCtx);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "VERIFY_Init fail", 0, 0, 0, 0);
+            return ret;
+        }
+    }
+
     /* The HelloRequest message is not included. */
-    if (hsMsgInfo.type != HELLO_REQUEST) {
+    if (hsMsgInfo.type != HELLO_REQUEST && hsMsgInfo.type != HELLO_VERIFY_REQUEST) {
         /* Session hash is needed to compute ems, the VERIFY_Append must be dealt with beforehand */
         ret = VERIFY_Append(ctx->hsCtx->verifyCtx, buf, dataLen);
         if (ret != HITLS_SUCCESS) {
@@ -463,11 +475,16 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17036, "VERIFY_Append fail");
         }
     }
+
+    if (hsMsgInfo.type == HELLO_VERIFY_REQUEST) {
+        ctx->hsCtx->state = TRY_RECV_HELLO_VERIFY_REQUEST;
+    }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
                               hsMsgInfo.length, ctx, ctx->config.tlsConfig.msgArg);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     ret = ProcessReceivedHandshakeMsg(ctx, &hsMsg);
+
     HS_CleanMsg(&hsMsg);
     return ret;
 }

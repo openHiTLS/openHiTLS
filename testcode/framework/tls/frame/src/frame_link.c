@@ -85,6 +85,9 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
         case BSL_UIO_TCP:
             ori = BSL_UIO_TcpMethod();
             break;
+        case BSL_UIO_UDP:
+            ori = BSL_UIO_UdpMethod();
+            break;
         default:
             ori = BSL_UIO_SctpMethod();
             break;
