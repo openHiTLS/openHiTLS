@@ -698,8 +698,8 @@ static int32_t BlindInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, u
     }
     if (ctx->pubKey == NULL) {
         // Check whether the private key information exists.
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
-        return CRYPT_RSA_NO_KEY_INFO;
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PUBKEY_INFO);
+        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
     }
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
     if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
@@ -1463,14 +1463,14 @@ ERR:
     return ret;
 }
 
-static int32_t RsaGetBssa(CRYPT_RSA_Ctx *ctx, BSL_Param *bslParam, uint32_t len)
+static int32_t RsaGetBssa(CRYPT_RSA_Ctx *ctx, BSL_Param *bslParam)
 {
     if (bslParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len != sizeof(BSL_Param) || bslParam->valueType != BSL_PARAM_TYPE_OCTETS ||
-            bslParam->key != CRYPT_PARAM_RSA_BLIND_R_INV) {
+    BSL_Param *output = BSL_PARAM_FindParam(bslParam, CRYPT_PARAM_RSA_BLIND_R_INV);
+    if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -1479,13 +1479,13 @@ static int32_t RsaGetBssa(CRYPT_RSA_Ctx *ctx, BSL_Param *bslParam, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_BLIND_INFO);
         return CRYPT_RSA_ERR_NO_BLIND_INFO;
     }
-    uint32_t tmpLen = bslParam->valueLen;
-    int32_t ret = BN_Bn2Bin(param->para.bssa->rInv, bslParam->value, &tmpLen);
+    uint32_t tmpLen = output->valueLen;
+    int32_t ret = BN_Bn2Bin(param->para.bssa->rInv, output->value, &tmpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    bslParam->useLen = tmpLen;
+    output->useLen = tmpLen;
     return CRYPT_SUCCESS;
 }
 
@@ -1636,7 +1636,7 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R:
             return RsaSetBssa(ctx, val, len);
         case CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R:
-            return RsaGetBssa(ctx, val, len);
+            return RsaGetBssa(ctx, val);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR);
             return CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR;
