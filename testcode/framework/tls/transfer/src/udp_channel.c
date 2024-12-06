@@ -226,7 +226,7 @@ static BSL_UIO_Method g_UdpUioMethodDefault;
 void *UdpGetDefaultMethod(void)
 {
     const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
-    memcpy(&g_UdpUioMethodDefault, ori, sizeof(g_UdpUioMethodDefault));
+    memcpy_s(&g_UdpUioMethodDefault, sizeof(g_UdpUioMethodDefault), ori, sizeof(g_UdpUioMethodDefault));
     g_UdpUioMethodDefault.write = SelectUdpWrite;
     g_UdpUioMethodDefault.read = SelectUdpRead;
     return &g_UdpUioMethodDefault;

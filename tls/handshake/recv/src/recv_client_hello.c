@@ -1213,7 +1213,7 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
                 return HITLS_UNREGISTERED_CALLBACK;
             }
             if (ctx->negotiatedInfo.cookie == NULL && (ctx->negotiatedInfo.cookie = (uint8_t *)BSL_SAL_Calloc(
-                                                           1, sizeof(uint8_t) * DTLS_COOKIE_LEN)) == NULL) {
+                1, sizeof(uint8_t) * DTLS_COOKIE_LEN)) == NULL) {
                 return BSL_MALLOC_FAIL;
             }
             ret = ctx->globalConfig->cookieGenerateCb(ctx, ctx->negotiatedInfo.cookie, &ctx->negotiatedInfo.cookieSize);

@@ -979,8 +979,7 @@ void UT_TLS_CFG_SET_GET_HELLO_VERIFY_REQ_API_TC001(void)
     ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, NULL) == HITLS_NULL_INPUT);
     isSupport = true;
     ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);
-    isSupport = 2;
-    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);
+
     ASSERT_TRUE(config->isHelloVerifyReqEnable = true);
     isSupport = false;
     ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);

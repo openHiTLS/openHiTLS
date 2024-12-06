@@ -400,6 +400,8 @@ void HS_CleanMsg(HS_Msg *hsMsg)
 #ifdef HITLS_TLS_HOST_CLIENT
         case SERVER_HELLO:
             return CleanServerHello(&hsMsg->body.serverHello);
+        case HELLO_VERIFY_REQUEST:
+            return CleanHelloVerifyRequest(&hsMsg->body.helloVerifyReq);
         case CERTIFICATE_REQUEST:
             return CleanCertificateRequest(&hsMsg->body.certificateReq);
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)

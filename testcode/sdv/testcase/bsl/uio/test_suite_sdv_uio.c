@@ -1052,7 +1052,7 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
 
     const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
     BSL_UIO_Method method = {0};
-    memcpy(&method, ori, sizeof(method));
+    memcpy_s(&method, sizeof(method), ori, sizeof(method));
     method.write = STUB_Write;
     method.read = STUB_Read;
 
