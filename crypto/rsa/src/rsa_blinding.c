@@ -41,19 +41,19 @@ void RSA_BlindFreeCtx(RSA_Blind *b)
     if (b == NULL) {
         return;
     }
-    BN_Destroy(b->a);
-    BN_Destroy(b->ai);
+    BN_Destroy(b->r);
+    BN_Destroy(b->rInv);
     BSL_SAL_FREE(b);
 }
 
 static int32_t BlindUpdate(RSA_Blind *b, BN_BigNum *n, BN_Optimizer *opt)
 {
-    int32_t ret = BN_ModMul(b->a, b->a, b->a, n, opt);
+    int32_t ret = BN_ModMul(b->r, b->r, b->r, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_ModMul(b->ai, b->ai, b->ai, n, opt);
+    ret = BN_ModMul(b->rInv, b->rInv, b->rInv, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -70,7 +70,7 @@ int32_t RSA_BlindCovert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
         return ret;
     }
     // 8. z = m * x mod n
-    ret = BN_ModMul(data, data, b->a, n, opt);
+    ret = BN_ModMul(data, data, b->r, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -82,7 +82,7 @@ int32_t RSA_BlindCovert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
 int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimizer *opt)
 {
     int32_t ret;
-    ret = BN_ModMul(data, data, b->ai, n, opt);
+    ret = BN_ModMul(data, data, b->rInv, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -92,22 +92,31 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
 
 int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
 {
-    b->a = BN_Create(bits);
-    if (b->a == NULL) {
+    b->r = BN_Create(bits);
+    if (b->r == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    b->ai = BN_Create(bits);
-    if (b->ai == NULL) {
-        BN_Destroy(b->a);
-        b->a = NULL;
+    b->rInv = BN_Create(bits);
+    if (b->rInv == NULL) {
+        BN_Destroy(b->r);
+        b->r = NULL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     return CRYPT_SUCCESS;
 }
 
+/*
+ * Initializes blind signature parameters for an RSA key.
+ * Ref. https://www.rfc-editor.org/rfc/rfc9474.html#name-blind
+ *
+ * As RFC-9474 Section 2.1, we need to do this.
+ * 1. Generates a random blinding factor r
+ * 2. Computes r^(-1) mod n (modular inverse)
+ * 3. Computes r^e mod n (where e is the public exponent)
+ */
 int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt)
 {
     int32_t ret;
@@ -116,10 +125,10 @@ int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimi
         return CRYPT_NULL_INPUT;
     }
 
-    BN_Destroy(b->a);
-    BN_Destroy(b->ai);
-    b->a = NULL;
-    b->ai = NULL;
+    BN_Destroy(b->r);
+    BN_Destroy(b->rInv);
+    b->r = NULL;
+    b->rInv = NULL;
 
     ret = RSA_CreateBlind(b, BN_Bits(n));
     if (ret != CRYPT_SUCCESS) {
@@ -127,29 +136,32 @@ int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimi
         goto END;
     }
 
-    ret = BN_RandRange(b->a, n);
+    // b->r = random_integer_uniform(1, n)
+    ret = BN_RandRange(b->r, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
     }
 
-    ret = BN_ModInv(b->ai, b->a, n, opt);
+    // b->rInv = inverse_mod(r, n)
+    ret = BN_ModInv(b->rInv, b->r, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
     }
 
-    ret = BN_ModExp(b->a, b->a, e, n, opt);
+    // b->r = RSAVP1(pk, r)
+    ret = BN_ModExp(b->r, b->r, e, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto END;
     }
     return ret;
 END:
-    BN_Destroy(b->a);
-    BN_Destroy(b->ai);
-    b->a = NULL;
-    b->ai = NULL;
+    BN_Destroy(b->r);
+    BN_Destroy(b->rInv);
+    b->r = NULL;
+    b->rInv = NULL;
     return ret;
 }
 #endif // HITLS_CRYPTO_RSA
