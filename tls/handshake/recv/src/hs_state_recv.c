@@ -467,7 +467,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     }
 
     /* The HelloRequest message is not included. */
-    if (hsMsgInfo.type != HELLO_REQUEST && hsMsgInfo.type != HELLO_VERIFY_REQUEST) {
+    if (hsMsgInfo.type != HELLO_REQUEST) {
         /* Session hash is needed to compute ems, the VERIFY_Append must be dealt with beforehand */
         ret = VERIFY_Append(ctx->hsCtx->verifyCtx, buf, dataLen);
         if (ret != HITLS_SUCCESS) {
@@ -476,9 +476,6 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
         }
     }
 
-    if (hsMsgInfo.type == HELLO_VERIFY_REQUEST) {
-        ctx->hsCtx->state = TRY_RECV_HELLO_VERIFY_REQUEST;
-    }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
                               hsMsgInfo.length, ctx, ctx->config.tlsConfig.msgArg);

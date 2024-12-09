@@ -1186,6 +1186,7 @@ int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     int32_t ret;
+    bool ifNeedGenerate = false;
     const ClientHelloMsg *clientHello = &msg->body.clientHello;
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     CheckRenegotiate(ctx);
@@ -1208,20 +1209,7 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     // If authentication enabled, check ClientHello cookie.
     if (ctx->config.tlsConfig.isHelloVerifyReqEnable) {
         if (clientHello->cookieLen == 0) {
-            // Generate stateless cookie
-            if (ctx->globalConfig->cookieGenerateCb == NULL) {
-                return HITLS_UNREGISTERED_CALLBACK;
-            }
-            if (ctx->negotiatedInfo.cookie == NULL && (ctx->negotiatedInfo.cookie = (uint8_t *)BSL_SAL_Calloc(
-                1, sizeof(uint8_t) * DTLS_COOKIE_LEN)) == NULL) {
-                return BSL_MALLOC_FAIL;
-            }
-            ret = ctx->globalConfig->cookieGenerateCb(ctx, ctx->negotiatedInfo.cookie, &ctx->negotiatedInfo.cookieSize);
-            if (ret != COOKIE_GEN_SUCCESS) {
-                return HITLS_INTERNAL_EXCEPTION;
-            }
-            ctx->negotiatedInfo.version = 0;
-            return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
+            ifNeedGenerate = true;
         } else {
             // Verify cookie field in ClientHello
             if (ctx->globalConfig->cookieVerifyCb == NULL) {
@@ -1229,9 +1217,34 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             }
             ret = ctx->globalConfig->cookieVerifyCb(ctx, clientHello->cookie, clientHello->cookieLen);
             if (ret != COOKIE_VERIFY_SUCCESS) {
-                ctx->negotiatedInfo.version = 0;
-                return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
+                ifNeedGenerate = true;
             }
+        }
+        if (ifNeedGenerate) {
+            // Generate stateless cookie
+            uint32_t cookieSize = 0;
+            if (ctx->globalConfig->cookieGenerateCb == NULL) {
+                return HITLS_UNREGISTERED_CALLBACK;
+            }
+
+            uint8_t *cookieTmp = (uint8_t *)BSL_SAL_Calloc(1, DTLS_COOKIE_LEN);
+            if (cookieTmp == NULL) {
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+                BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+                return HITLS_MEMALLOC_FAIL;
+            }
+
+            ret = ctx->globalConfig->cookieGenerateCb(ctx, cookieTmp, &cookieSize);
+            if (ret != COOKIE_GEN_SUCCESS || cookieSize > DTLS_COOKIE_LEN) {
+                BSL_SAL_FREE(cookieTmp);
+                return HITLS_INTERNAL_EXCEPTION;
+            }
+            ctx->negotiatedInfo.version = 0;
+
+            BSL_SAL_FREE(ctx->negotiatedInfo.cookie);
+            ctx->negotiatedInfo.cookie = cookieTmp;
+            ctx->negotiatedInfo.cookieSize = cookieSize;
+            return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
         }
     }
 

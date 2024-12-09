@@ -1048,7 +1048,7 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
     int ret;
     uint8_t ipAddr[256] = {0};
     BSL_UIO_CtrlGetPeerIpAddrParam param = {ipAddr, sizeof(ipAddr)};
-    uint8_t data[IP_ADDR_V4_LEN] = {0};
+    uint8_t data[DGRAM_IPADDR_MAX_LEN] = {0};
 
     const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
     BSL_UIO_Method method = {0};

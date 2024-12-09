@@ -31,9 +31,6 @@
 #include "uio_base.h"
 #include "uio_abstraction.h"
 
-#define IP_ADDR_SOCK_LEN     (sizeof(struct sockaddr_un))
-#define DGRAM_IPADDR_MAX_LEN IP_ADDR_SOCK_LEN
-
 typedef union BSL_ADDR {
     struct sockaddr sa;
     struct sockaddr_in6 s_in6;
@@ -102,10 +99,11 @@ static int32_t UdpDestroy(BSL_UIO *uio)
 
 static int32_t BslUdpGetPeerIpAddr(UdpParameters *parameters, void *parg, uint32_t larg)
 {
-    if (parameters == NULL || parameters->ip == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05049, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Uio: NULL error.", 0, 0, 0,
-                              0);
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+    BSL_UIO_CtrlGetPeerIpAddrParam *para = (BSL_UIO_CtrlGetPeerIpAddrParam *)parg;
+    if (parg == NULL || larg != (int32_t)sizeof(BSL_UIO_CtrlGetPeerIpAddrParam) ||
+        para->addr == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05051, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Uio: Get peer ip address input error.", 0, 0, 0, 0);
         return BSL_NULL_INPUT;
     }
 
@@ -117,15 +115,15 @@ static int32_t BslUdpGetPeerIpAddr(UdpParameters *parameters, void *parg, uint32
         return BSL_UIO_FAIL;
     }
 
-    if (larg < parameters->ipLen) {
+    if (para->size < parameters->ipLen) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05050, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                              "Uio: Set peer ip address input error.", 0, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05053, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Uio: Ip address length err.", 0, 0, 0, 0);
         return BSL_UIO_FAIL;
     }
 
-    (void)memcpy_s(&parameters->ip, sizeof(parameters->ip), parg, larg);
-    parameters->ipLen = larg;
+    (void)memcpy_s(para->addr, para->size, parameters->ip, parameters->ipLen);
+    para->size = parameters->ipLen;
     return BSL_SUCCESS;
 }
 

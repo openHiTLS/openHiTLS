@@ -37,6 +37,22 @@ typedef struct {
     CheckHsMsgTypeFunc checkCb;
 } HsMsgTypeCheck;
 
+static int32_t CheckServerHelloType(TLS_Ctx *ctx, const HS_MsgType msgType)
+{
+    /* In DTLS, When client try to receive ServerHello message, it doesn't know if server enables 
+     * isHelloVerifyReqEnable. If client receives HelloVerifyRequest message, also valid */
+    uint32_t version = HS_GetVersion(ctx);
+    if (version == HITLS_VERSION_DTLS12) {
+        if (msgType == HELLO_VERIFY_REQUEST) {
+            (void)HS_ChangeState(ctx, TRY_RECV_HELLO_VERIFY_REQUEST);
+            return HITLS_SUCCESS;
+        }
+    }
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17026, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "CheckServerHelloType fail", 0, 0, 0, 0);
+    return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+}
+
 static int32_t CheckServerKeyExchangeType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
     /* When the PSK and RSA_PSK are used, whether the ServerKeyExchange message is received depends on whether the
@@ -78,7 +94,7 @@ static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgTyp
 static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CLIENT_HELLO] = {.msgType = CLIENT_HELLO,
                                .checkCb = NULL},
-    [TRY_RECV_SERVER_HELLO] = {.msgType = SERVER_HELLO, .checkCb = NULL},
+    [TRY_RECV_SERVER_HELLO] = {.msgType = SERVER_HELLO, .checkCb = CheckServerHelloType},
     [TRY_RECV_HELLO_VERIFY_REQUEST] = {.msgType = HELLO_VERIFY_REQUEST, .checkCb = NULL},
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = {.msgType = ENCRYPTED_EXTENSIONS, .checkCb = NULL},
     [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = NULL},
@@ -99,7 +115,7 @@ int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
         return HITLS_SUCCESS;
     }
 
-    if ((msgType == HELLO_REQUEST || msgType == HELLO_VERIFY_REQUEST) && (ctx->isClient)) {
+    if ((msgType == HELLO_REQUEST) && (ctx->isClient)) {
         /* The HelloRequest message may appear at any time during the handshake.
            The client should ignore this message */
         return HITLS_SUCCESS;
