@@ -84,6 +84,7 @@ A test framework developed by the community provides public configurations and m
 | no-bsl    | bash build_sdv.sh no-bsl         | Deletes the test cases of the bsl module.       |
 | no-tls    | bash build_sdv.sh no-tls         | Deletes the test cases of the tls module.       |
 | no-pki    | bash build_sdv.sh no-pki         | Deletes the test cases of the pki module.       |
+| no-auth    | bash build_sdv.sh no-auth         | Deletes the test cases of the auth module.       |
 | verbose    |bash build_sdv.sh verbose          |Displays the detailed information about the build process.        |
 | gcov     |  bash build_sdv.sh gcov  | Enables the capability of obtaining the coverage rate.      |
 | asan    | bash build_sdv.sh asan         | Enables the memory monitoring capability.      |
