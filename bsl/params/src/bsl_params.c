@@ -66,6 +66,14 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
             param->value = val;
             param->useLen = len;
             return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_UINT16:
+            if (param->valueLen != len || val == NULL || param->value == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+                return BSL_INVALID_ARG;
+            }
+            *(uint16_t *)param->value = *(uint16_t *)val;
+            param->useLen = len;
+            return BSL_SUCCESS;
         case BSL_PARAM_TYPE_UINT32:
             if (param->valueLen != len || val == NULL || param->value == NULL) {
                 BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
@@ -147,6 +155,7 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
         return BSL_PARAMS_MISMATCH;
     }
     switch (type) {
+        case BSL_PARAM_TYPE_UINT16:
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
         case BSL_PARAM_TYPE_BOOL:
