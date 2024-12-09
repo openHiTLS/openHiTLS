@@ -94,9 +94,9 @@ typedef int32_t (*PkeySetPub)(void *key, const void *para);
 typedef int32_t (*PkeyGetPrv)(const void *key, void *para);
 typedef int32_t (*PkeyGetPub)(const void *key, void *para);
 typedef void *(*PkeyNewPara)(const void *para);
-typedef int32_t (*PkeySign)(const void *key, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
+typedef int32_t (*PkeySign)(void *key, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
-typedef int32_t (*PkeySignData)(const void *key, const uint8_t *data, uint32_t dataLen,
+typedef int32_t (*PkeySignData)(void *key, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
 typedef int32_t (*PkeyVerify)(const void *key, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
@@ -109,6 +109,11 @@ typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t data
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
+typedef int32_t (*PkeyBlind)(void *pkey, int32_t mdAlgId, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
+typedef int32_t (*PkeyUnBlind)(const void *pkey, const uint8_t *input, uint32_t inputLen,
+    uint8_t *out, uint32_t *outLen);
+
 /**
 * @ingroup  EAL
 *
@@ -137,6 +142,8 @@ typedef struct EAL_PkeyMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
+    PkeyBlind blind;                        // msg blind
+    PkeyUnBlind unBlind;                    // sig unBlind.
 } EAL_PkeyMethod;
 
 typedef struct EAL_PkeyUnitaryMethod {
@@ -161,6 +168,8 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
+    PkeyBlind blind;                        // msg blind
+    PkeyUnBlind unBlind;                    // sig unBlind.
 } EAL_PkeyUnitaryMethod;
 /**
  * @ingroup  sym_algid

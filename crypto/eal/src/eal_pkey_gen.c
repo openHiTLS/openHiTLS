@@ -59,6 +59,8 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->decrypt = method->decrypt;
     dest->check = method->check;
     dest->cmp = method->cmp;
+    dest->blind = method->blind;
+    dest->unBlind = method->unBlind;
 }
 
 CRYPT_EAL_PkeyCtx *PkeyNewDefaultCtx(CRYPT_PKEY_AlgId id)
@@ -1046,6 +1048,12 @@ static int32_t CRYPT_EAL_SetSignMethod(const CRYPT_EAL_Func *funcSign, EAL_PkeyU
                     break;
                 case CRYPT_EAL_IMPLPKEYSIGN_CTRL:
                     method->ctrl = funcSign[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYSIGN_BLIND:
+                    method->blind = funcSign[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYSIGN_UNBLIND:
+                    method->unBlind = funcSign[index].func;
                     break;
                 default:
                     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
