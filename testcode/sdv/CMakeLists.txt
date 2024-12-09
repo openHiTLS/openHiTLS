@@ -40,6 +40,10 @@ if(ENABLE_PKI)
     target_link_libraries(TEST_INTF INTERFACE hitls_pki)
 endif()
 
+if(ENABLE_AUTH)
+    target_link_libraries(TEST_INTF INTERFACE hitls_auth)
+endif()
+
 if(ENABLE_TLS)
     target_link_libraries(TEST_INTF INTERFACE
         tls_hlt
@@ -88,6 +92,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/bsl/tlv/include
         ${openHiTLS_SRC}/include/bsl
         ${openHiTLS_SRC}/include/tls
+        ${openHiTLS_SRC}/include/auth
         ${openHiTLS_SRC}/bsl/log/include
         ${openHiTLS_SRC}/bsl/hash/include
         ${openHiTLS_SRC}/bsl/base64/include
@@ -172,6 +177,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/pki/cms/include
         ${openHiTLS_SRC}/pki/x509_verify/include
         ${openHiTLS_SRC}/pki/print/include
+        ${openHiTLS_SRC}/auth/privpass_token/inlcude
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/include
         ${openHiTLS_SRC}/tls/handshake/common/include
