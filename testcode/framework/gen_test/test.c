@@ -78,7 +78,7 @@ int ConvertHex(const char *str, Hex *output)
     }
     // Length of the hex string/2 = Length of the byte stream
     len = len / 2;
-    output->x = (uint8_t *)malloc(len * sizeof(uint8_t));
+    output->x = (uint8_t *)malloc(len * sizeof(uint8_t) + 1);
     if (output->x == NULL) {
         return 1;
     }
@@ -92,7 +92,7 @@ int ConvertHex(const char *str, Hex *output)
         // hex to int formulas: (Hex % 32 + 9) % 25 = int, hex
         output->x[i / 2] = (str[i] % 32 + 9) % 25 * 16 + (str[i + 1] % 32 + 9) % 25;
     }
-
+    output->x[len] = '\0';
     return 0;
 
 hex_error:
