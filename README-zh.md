@@ -9,7 +9,7 @@ openHiTLS架构高度模块化，可通过模块和特性配置。RAM/ROM尺寸�
 
 ## 特性简介
 
-1. 功能特性：TLS1.2、TLS1.3、DTLS1.2、TLCP；AES，SM4，Chacha20，RSA，DSA，ECDSA，ECDH，DH，SM2，DRBG，HKDF，SCRYPT，PBKDF2，SHA2，SHA3，MD5，SM3，HMAC；PKI
+1. 功能特性：TLS1.2、TLS1.3、DTLS1.2、TLCP；AES，SM4，Chacha20，RSA，DSA，ECDSA，ECDH，DH，SM2，DRBG，HKDF，SCRYPT，PBKDF2，SHA2，SHA3，MD5，SM3，HMAC；PKI，Auth
 2. DFX特性：高度模块化特性按需配置的敏捷架构，ARM、x86上的算法性能优化，日志和错误堆栈功能的可维可测性
 
 ## 组件简介
@@ -19,6 +19,7 @@ openHiTLS架构高度模块化，可通过模块和特性配置。RAM/ROM尺寸�
 - 密码算法组件（Crypto）提供了完整的密码功能，且性能较优。该组件既可以被TLS使用，也可与BSL一起使用
 - TLS是Transport Layer Security的缩写，涵盖了TLS1.3及之前的TLS版本，会与Crypto、BSL以及其他三方密码组件或PKI库一起使用
 - PKI组件当前提供了能够支撑TLS协议建链的基础功能，后续逐步完善功能
+- Auth认证组件提供了认证功能，当前提供了基于公钥的认证功能
 
 
 ## 开发
@@ -77,12 +78,12 @@ python3 ../configure.py ["option"]
 ```
 * C全量构建
 ```
-python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki --lib_type static --bits=64 --system=linux
+python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --bits=64 --system=linux
 ```
 
 * x8664优化全量构建：
 ```
-python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki --lib_type static --bits=64 --system=linux --asm_type x8664
+python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --bits=64 --system=linux --asm_type x8664
 ```
 选项介绍可参考[构建安装指导](docs/zh/4_使用指南/1_构建及安装指导.md)
 

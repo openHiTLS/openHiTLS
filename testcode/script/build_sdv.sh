@@ -25,6 +25,7 @@ usage()
     printf "%-50s %-30s\n" "* no-bsl       : Custom bsl testcase."             "bash ${BASH_SOURCE[0]} no-bsl"
     printf "%-50s %-30s\n" "* no-tls       : Custom tls testcase."             "bash ${BASH_SOURCE[0]} no-tls"
     printf "%-50s %-30s\n" "* no-pki       : Custom pki testcase."             "bash ${BASH_SOURCE[0]} no-pki"
+    printf "%-50s %-30s\n" "* no-auth      : Custom auth testcase."            "bash ${BASH_SOURCE[0]} no-auth"
     printf "%-50s %-30s\n" "* verbose      : Show detailse."                   "bash ${BASH_SOURCE[0]} verbose"
     printf "%-50s %-30s\n" "* gcov         : Enable the coverage capability."  "bash ${BASH_SOURCE[0]} gcov"
     printf "%-50s %-30s\n" "* asan         : Enabling the ASAN capability."    "bash ${BASH_SOURCE[0]} asan"
@@ -46,6 +47,7 @@ export_env()
     ENABLE_CRYPTO=${ENABLE_CRYPTO:=ON}
     ENABLE_BSL=${ENABLE_BSL:=ON}
     ENABLE_PKI=${ENABLE_PKI:=ON}
+    ENABLE_AUTH=${ENABLE_AUTH:=ON}
     ENABLE_UIO_SCTP=${ENABLE_UIO_SCTP:=ON}
     ENABLE_VERBOSE=${ENABLE_VERBOSE:=''}
     RUN_TESTS=${RUN_TESTS:=''}
@@ -80,7 +82,10 @@ find_test_suite()
     if [[ ${ENABLE_TLS} == "ON" ]]; then
         proto_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/tls  -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
     fi
-    RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}"
+    if [[ ${ENABLE_AUTH} == "ON" ]]; then
+        auth_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/auth -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
+    fi
+    RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}${auth_testsuite}"
 }
 
 build_test_suite()
@@ -92,8 +97,9 @@ build_test_suite()
     cmake -DENABLE_GCOV=${ENABLE_GCOV} -DENABLE_ASAN=${ENABLE_ASAN} \
           -DCUSTOM_CFLAGS="${CUSTOM_CFLAGS}" -DDEBUG=${DEBUG} -DENABLE_UIO_SCTP=${ENABLE_UIO_SCTP} \
           -DGEN_TEST_FILES="${RUN_TEST_SUITES}" -DENABLE_TLS=${ENABLE_TLS} \
-          -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_PKI=${ENABLE_PKI} -DTLS_DEBUG=${TLS_DEBUG} \
-          -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
+          -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_PKI=${ENABLE_PKI} -DENABLE_AUTH=${ENABLE_AUTH} \
+          -DTLS_DEBUG=${TLS_DEBUG} -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} \
+          -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
     make -j
 }
 
@@ -174,6 +180,9 @@ options()
                 ;;
             no-pki)
                 ENABLE_PKI=OFF
+                ;;
+            no-auth)
+                ENABLE_AUTH=OFF
                 ;;
             no-bsl)
                 ENABLE_BSL=OFF
