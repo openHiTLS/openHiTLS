@@ -1,0 +1,413 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
+#ifndef AUTH_PRIVPASS_TOKEN_H
+#define AUTH_PRIVPASS_TOKEN_H
+
+#include <stdint.h>
+#include "bsl_params.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @ingroup auth_privpass
+ *
+ * priv pass context structure.
+ */
+typedef struct PrivPass_Ctx HiTLS_Auth_PrivPassCtx;
+
+/**
+ * @ingroup auth_privpass
+ *
+ * priv pass token structure.
+ */
+typedef struct PrivPass_Token HiTLS_Auth_PrivPassToken;
+
+/* Token types for different stages of the Private Pass protocol */
+typedef enum {
+    HITLS_AUTH_PRIVPASS_INVALID_TOKEN_TYPE = 0,
+    HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE_REQUEST = 1, // Initial request for challenge
+    HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE = 2,         // Challenge from server
+    HITLS_AUTH_PRIVPASS_TOKEN_REQUEST = 3,           // Token request with blinded message
+    HITLS_AUTH_PRIVPASS_TOKEN_RESPONSE = 4,          // Server's response with blind signature
+    HITLS_AUTH_PRIVPASS_TOKEN_INSTANCE = 5,          // Final token instance
+} HITLS_Auth_PrivPassTokenType;
+
+/* Commands for token operations and parameter retrieval */
+typedef enum {
+    HITLS_AUTH_PRIVPASS_INVALID_CMD = 0,    /** Invalid command value */
+    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_REQUEST = 1,    /** Get the token challenge request data */
+    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_TYPE = 2,    /** Get the type of token challenge */
+    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ISSUERNAME = 3,    /** Get the issuer name from token challenge */
+    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_REDEMPTION = 4,    /** Get the redemption information from token challenge */
+    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ORIGININFO = 5,    /** Get the origin information from token challenge */
+    HITLS_AUTH_PRIVPASS_GET_TOKEN_NONCE = 6,    /** Get the nonce value from token */
+} HITLS_Auth_PrivPassCmd;
+
+/**
+ * @ingroup auth_privpass
+ * @brief Creates a new public/private key context for the specified algorithm.
+ *
+ * @param   algId [IN] Algorithm identifier
+ *
+ * @retval  Pointer to the created key context.
+ *          NULL, if the operation fails.
+ */
+typedef void *(*HiTLS_Auth_PrivPassNewPkeyCtx)(int32_t algId);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Frees a previously allocated key context.
+ *
+ * @param   pkeyCtx [IN] Key context to be freed
+ */
+typedef void (*HiTLS_Auth_PrivPassFreePkeyCtx)(void *pkeyCtx);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Computes a cryptographic digest of the input data.
+ *
+ * @param   algId [IN] hash algorithm identifier
+ * @param   input [IN] Input data to be hashed
+ * @param   inputLen [IN] Length of input data
+ * @param   digest [OUT] Buffer to store the computed digest
+ * @param   digestLen [IN/OUT] Size of digest buffer/Length of computed digest
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassDigest)(int32_t algId, const uint8_t *input, uint32_t inputLen,
+    uint8_t *digest, uint32_t *digestLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Blinds data using the key context and hash algorithm for blind signature protocol.
+ *
+ * @param   pkeyCtx [IN] Key context
+ * @param   algId [IN] hash algorithm identifier
+ * @param   data [IN] Data to be blinded
+ * @param   dataLen [IN] Length of input data
+ * @param   blindedData [OUT] Buffer to store blinded data
+ * @param   blindedDataLen [IN/OUT] Size of buffer/Length of blinded data
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassBlind)(void *pkeyCtx, int32_t algId, const uint8_t *data,
+    uint32_t dataLen, uint8_t *blindedData, uint32_t *blindedDataLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Unblinds previously blinded data to reveal the actual signature.
+ *
+ * @param   pkeyCtx [IN] Key context
+ * @param   blindedData [IN] Blinded data to be unblinded
+ * @param   blindedDataLen [IN] Length of blinded data
+ * @param   data [OUT] Buffer to store unblinded data
+ * @param   dataLen [IN/OUT] Size of buffer/Length of unblinded data
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassUnblind)(void *pkeyCtx, const uint8_t *blindedData,
+    uint32_t blindedDataLen, uint8_t *data, uint32_t *dataLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Signs data using the private key context.
+ *
+ * @param   pkeyCtx [IN] Private key context
+ * @param   data [IN] Data to be signed
+ * @param   dataLen [IN] Length of input data
+ * @param   sign [OUT] Buffer to store signature
+ * @param   signLen [IN/OUT] Size of buffer/Length of signature
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassSignData)(void *pkeyCtx, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Verifies a signature using the public key context.
+ *
+ * @param   pkeyCtx [IN] Public key context
+ * @param   algId [IN] hash algorithm identifier
+ * @param   data [IN] Original data
+ * @param   dataLen [IN] Length of data
+ * @param   sign [IN] Signature to verify
+ * @param   signLen [IN] Length of signature
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassVerify)(void *pkeyCtx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Decodes a public key from binary format and creates a key context.
+ *
+ * @param   pkeyCtx [OUT] Pointer to store created key context
+ * @param   pubKey [IN] Binary public key data
+ * @param   pubKeyLen [IN] Length of public key data
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassDecodePubKey)(void **pkeyCtx, uint8_t *pubKey, uint32_t pubKeyLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Decodes a private key from binary format and creates a key context.
+ *
+ * @param   pkeyCtx [OUT] Pointer to store created key context
+ * @param   prvKey [IN] Binary private key data
+ * @param   prvKeyLen [IN] Length of private key data
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassDecodePrvKey)(void **pkeyCtx, uint8_t *prvKey, uint32_t prvKeyLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief Verifies that a public/private key pair matches.
+ *
+ * @param   pubKeyCtx [IN] Public key context
+ * @param   prvKeyCtx [IN] Private key context
+ *
+ * @retval  #0, if successful.
+ *          other error codes, failed.
+ */
+typedef int32_t (*HiTLS_Auth_PrivPassCheckKeyPair)(void *pubKeyCtx, void *prvKeyCtx);
+
+typedef struct {
+    HiTLS_Auth_PrivPassNewPkeyCtx newPkeyCtx;
+    HiTLS_Auth_PrivPassFreePkeyCtx freePkeyCtx;
+    HiTLS_Auth_PrivPassDigest digest;
+    HiTLS_Auth_PrivPassBlind blind;
+    HiTLS_Auth_PrivPassUnblind unblind;
+    HiTLS_Auth_PrivPassSignData signData;
+    HiTLS_Auth_PrivPassVerify verify;
+    HiTLS_Auth_PrivPassDecodePubKey decodePubKey;
+    HiTLS_Auth_PrivPassDecodePrvKey decodePrvKey;
+    HiTLS_Auth_PrivPassCheckKeyPair checkKeyPair;
+} HiTLS_Auth_PrivPassCryptCb;
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Create a new PrivPass context object, all library callbacks by default are setted when created.
+ *
+ * @retval  HiTLS_Auth_PrivPassCtx pointer.
+ *          NULL, if the operation fails.
+ */
+HiTLS_Auth_PrivPassCtx *HiTLS_Auth_PrivPassCtxNew(void);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Free a PrivPass context object.
+ *
+ * @param   ctx [IN] Context to be freed
+ */
+void HiTLS_Auth_PrivPassCtxFree(HiTLS_Auth_PrivPassCtx *ctx);
+/**
+ * @ingroup auth_privpass
+ * @brief   Create a new PrivPass token object.
+ *
+ * @param   tokenType [IN] Type of token to create, defined in HITLS_Auth_PrivPassTokenType.
+ *
+ * @retval  HiTLS_Auth_PrivPassToken pointer.
+ *          NULL, if the operation fails.
+ */
+HiTLS_Auth_PrivPassToken *HiTLS_Auth_PrivPassTokenNew(int32_t tokenType);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Free a PrivPass token object.
+ *
+ * @param   object [IN] Token to be freed
+ */
+void HiTLS_Auth_PrivPassTokenFree(HiTLS_Auth_PrivPassToken *object);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Set cryptographic callback functions for the context. When setting callbacks,
+ *          the input callbacks will be checked. Non-NULL callbacks will override the default callbacks.
+ *
+ * @param   ctx [IN/OUT] PrivPass context
+ * @param   cryptCb [IN] Callback functions to be set
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassSetCryptCb(HiTLS_Auth_PrivPassCtx *ctx, HiTLS_Auth_PrivPassCryptCb *cryptCb);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Serialize a PrivPass token object to binary format, If the object == NULL, outbufferlen returns
+ *          the length required for serialization
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   object [IN] Token to serialize
+ * @param   buffer [OUT] Buffer to store serialized data
+ * @param   outBuffLen [IN/OUT] Length of the serialized data
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassSerialization(HiTLS_Auth_PrivPassCtx *ctx, HiTLS_Auth_PrivPassToken *object, uint8_t *buffer,
+    uint32_t *outBuffLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Deserialize binary data into a PrivPass token object. The object needs to be freed by the caller
+ *          using HiTLS_Auth_PrivPassTokenFree
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   tokenType [IN] Expected token type
+ * @param   buffer [IN] Serialized data buffer
+ * @param   outBuffLen [IN] Length of serialized data
+ * @param   object [OUT] Pointer to store deserialized token
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassDeserialization(HiTLS_Auth_PrivPassCtx *ctx, int32_t tokenType, const uint8_t *buffer,
+    uint32_t outBuffLen, HiTLS_Auth_PrivPassToken **object);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Generate a token challenge. The challenge token is generated based on
+ *          the input param. The construct of param refer to auth_params.h.
+ * @param   ctx [IN] PrivPass context
+ * @param   param [IN] Parameters for challenge generation
+ * @param   challenge [OUT] Generated challenge token
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassGenTokenChallenge(HiTLS_Auth_PrivPassCtx *ctx, BSL_Param *param,
+    HiTLS_Auth_PrivPassToken **challenge);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Generate a token request.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   tokenChallenge [IN] Challenge token
+ * @param   tokenRequest [OUT] Generated request token
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassGenTokenReq(HiTLS_Auth_PrivPassCtx *ctx, const HiTLS_Auth_PrivPassToken *tokenChallenge,
+    HiTLS_Auth_PrivPassToken **tokenRequest);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Generate a token response.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   tokenRequest [IN] Request token
+ * @param   tokenResponse [OUT] Generated response token
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassGenTokenResponse(HiTLS_Auth_PrivPassCtx *ctx, HiTLS_Auth_PrivPassToken *tokenRequest,
+    HiTLS_Auth_PrivPassToken **tokenResponse);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Generate final token.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   tokenChallenge [IN] Challenge token
+ * @param   tokenResponse [IN] Response token
+ * @param   token [OUT] Generated final token
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassGenToken(HiTLS_Auth_PrivPassCtx *ctx, HiTLS_Auth_PrivPassToken *tokenChallenge,
+    HiTLS_Auth_PrivPassToken *tokenResponse, HiTLS_Auth_PrivPassToken **token);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Verify the validity of a token.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   tokenChallenge [IN] Challenge token
+ * @param   token [IN] Token to verify
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassVerifyToken(HiTLS_Auth_PrivPassCtx *ctx, HiTLS_Auth_PrivPassToken *tokenChallenge,
+    HiTLS_Auth_PrivPassToken *token);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Set the public key for the ctx. We support the repeated setting of the public key. If the ctx
+ *          contains the private key when the public key is set, we will check whether the public key
+ *          matches the private key. If its not match, an exception is returned.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   pki [IN] Public key data
+ * @param   pkiLen [IN] Length of public key data
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassSetPubkey(HiTLS_Auth_PrivPassCtx *ctx, uint8_t *pki, uint32_t pkiLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Set the private key for the ctx. We support the repeated setting of the private key. If the ctx
+ *          contains the public key when the private key is set, we will check whether the private key
+ *          matches the public key. If its not match, an exception is returned.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   ski [IN] Private key data
+ * @param   skiLen [IN] Length of private key data
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassSetPrvkey(HiTLS_Auth_PrivPassCtx *ctx, uint8_t *ski, uint32_t skiLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Control interface for getting/setting various parameters.
+ *
+ * @param   object [IN] Target object
+ * @param   cmd [IN] Command to execute, defined in HITLS_Auth_PrivPassCmd
+ * @param   param [IN/OUT] Command parameters
+ * @param   paramLen [IN] Length of parameters
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t HiTLS_Auth_PrivPassCtrl(void *object, int32_t cmd, void *param, uint32_t paramLen);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // AUTH_PRIVPASS_TOKEN_H
