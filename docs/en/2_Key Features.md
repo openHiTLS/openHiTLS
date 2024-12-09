@@ -9,7 +9,7 @@ openHiTLS aims to provide efficient and agile cryptography suites for all scenar
 1.1. Key functional features are as follows:
 
 * TLS protocols: TLS1.2, TLS1.3, DTLS1.2, and TLCP
-* Encryption and decryption cryptographic algorithms: AES, SM4, Chacha20, RSA, (EC)DSA, (EC)DH, SM2, DRBG, HKDF, SCRYPT, PBKDF2, SHA2, SHA3, MD5, SM3, HMAC, and PKI
+* Encryption and decryption cryptographic algorithms: AES, SM4, Chacha20, RSA, (EC)DSA, (EC)DH, SM2, DRBG, HKDF, SCRYPT, PBKDF2, SHA2, SHA3, MD5, SM3, HMAC, PKI, and auth.
 
 1.2. Non-functional features are as follows:
 

@@ -493,6 +493,16 @@
                     "all_pki" : null
                 }
             }
+        },
+        "hitls_auth":{
+            "lang" : "C",
+            "features" : {
+                "c": {
+                    "privpass_token": {
+                        "privpass_pubtoken": null
+                    }
+                }
+            }
         }
     },
     "modules":{
@@ -1160,6 +1170,16 @@
                 ".features" : ["all_pki"],
                 ".srcs" : "pki/cms/src/*",
                 ".deps" : ["platform::Secure_C", "crypto::encode"]
+            }
+        },
+        "auth" : {
+            "privpass_pubtoken": {
+                ".features" : ["privpass_token"],
+                ".srcs" : "auth/privpass_token/src/*",
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "auth/privpass_token/inlcude"
+                ]
             }
         }
     }
