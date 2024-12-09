@@ -379,6 +379,9 @@ class CMakeGenerator:
         if lib_name == 'hitls_pki':
             cmake += self._gen_cmd_cmake(
                 "target_link_libraries", "hitls_pki-shared hitls_crypto-shared hitls_bsl-shared boundscheck")
+        if lib_name == 'hitls_auth':
+            cmake += self._gen_cmd_cmake(
+                "target_link_libraries", "hitls_auth-shared hitls_crypto-shared hitls_bsl-shared boundscheck")
         tgt_list.append(tgt_name)
         return cmake
 
