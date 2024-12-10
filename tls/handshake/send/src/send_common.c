@@ -153,13 +153,11 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
     }
 
     /* Add hash data */
-    if (hsCtx->state != TRY_SEND_HELLO_VERIFY_REQUEST) {
-        ret = VERIFY_Append(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15798, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "verify append fail when send handshake msg.", 0, 0, 0, 0);
-            return ret;
-        }
+    ret = VERIFY_Append(hsCtx->verifyCtx, hsCtx->msgBuf, hsCtx->msgLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15798, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "verify append fail when send handshake msg.", 0, 0, 0, 0);
+        return ret;
     }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen,
