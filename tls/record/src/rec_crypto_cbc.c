@@ -27,6 +27,7 @@
 #include "rec_crypto_cbc.h"
 
 #define CBC_PADDING_LEN_TAG_SIZE 1u
+#define HMAC_MAX_BLEN 144
 
 uint8_t RecConnGetCbcPaddingLen(uint8_t blockLen, uint32_t plaintextLen)
 {
@@ -102,51 +103,198 @@ static int32_t RecConnCbcCheckCryptMsg(TLS_Ctx *ctx, const RecConnState *state, 
     return HITLS_SUCCESS;
 }
 
-static int32_t RecConnCbcCheckDecryptPadding(TLS_Ctx *ctx, const REC_TextInput *cryptMsg, uint8_t *data,
-    uint32_t plaintextLen, uint32_t offset)
+static int32_t RecConnCbcDecCheckPaddingEtM(TLS_Ctx *ctx, const REC_TextInput *cryptMsg, uint8_t *plain,
+    uint32_t plainLen, uint32_t offset)
 {
     const RecConnState *state = ctx->recCtx->readStates.currentState;
-    uint8_t mac[MAX_DIGEST_SIZE] = {0};
-    uint32_t macLen = MAX_DIGEST_SIZE;
-    uint8_t paddingLen = data[plaintextLen - 1];
+    uint8_t padLen = plain[plainLen - 1];
 
-#ifdef HITLS_TLS_FEATURE_ETM
-    if (cryptMsg->isEncryptThenMac && (plaintextLen < paddingLen + CBC_PADDING_LEN_TAG_SIZE)) {
+    if (cryptMsg->isEncryptThenMac && (plainLen < padLen + CBC_PADDING_LEN_TAG_SIZE)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15399, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "record cbc mode decrypt error: ciphertext len = %u, plaintext len = %u, mac len = %u, padding len = %u.",
-            cryptMsg->textLen - offset - state->suiteInfo->macLen, plaintextLen, state->suiteInfo->macLen, paddingLen);
-        return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
-    }
-#endif
-    if ((plaintextLen < state->suiteInfo->macLen + paddingLen + CBC_PADDING_LEN_TAG_SIZE)
-#ifdef HITLS_TLS_FEATURE_ETM
-        && !cryptMsg->isEncryptThenMac
-#endif
-        ) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15928, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "record cbc mode decrypt error: ciphertext len = %u, plaintext len = %u, mac len = %u, padding len = %u.",
-            cryptMsg->textLen - offset, plaintextLen, state->suiteInfo->macLen, paddingLen);
-        /* Anti-side channel attack: Calculate the MAC address even if the padding is incorrect */
-        (void)RecConnGenerateMac(state->suiteInfo, cryptMsg, mac, &macLen);
+            cryptMsg->textLen - offset - state->suiteInfo->macLen, plainLen, state->suiteInfo->macLen, padLen);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
     }
 
-    for (uint32_t i = 1; i <= paddingLen; i++) {
-        if (data[plaintextLen - 1 - i] != paddingLen) {
+    for (uint32_t i = 1; i <= padLen; i++) {
+        if (plain[plainLen - 1 - i] != padLen) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15400, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "record cbc mode decrypt error: padding len = %u, %u-to-last padding data = %u.",
-                paddingLen, i, data[plaintextLen - 1 - i], 0);
-            /* Anti-side channel attack: Calculate the MAC address even if the padding is incorrect */
-#ifdef HITLS_TLS_FEATURE_ETM
-            if (!cryptMsg->isEncryptThenMac)
-#endif
-            {
-                (void)RecConnGenerateMac(state->suiteInfo, cryptMsg, mac, &macLen);
-            }
+                padLen, i, plain[plainLen - 1 - i], 0);
             return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
         }
     }
     return HITLS_SUCCESS;
+}
+
+static uint32_t GetHashOfMac(HITLS_MacAlgo macAlgo)
+{
+    switch (macAlgo) {
+        case HITLS_MAC_1:
+            return HITLS_HASH_SHA1;
+        case HITLS_MAC_256:
+            return HITLS_HASH_SHA_256;
+        case HITLS_MAC_224:
+            return HITLS_HASH_SHA_224;
+        case HITLS_MAC_384:
+            return HITLS_HASH_SHA_384;
+        case HITLS_MAC_512:
+            return HITLS_HASH_SHA_512;
+#ifdef HITLS_TLS_PROTO_TLCP11
+        case HITLS_MAC_SM3:
+            return HITLS_HASH_SM3;
+#endif
+        default:
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15388, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "CBC encrypt error: unsupport MAC algorithm = %u.", macAlgo, 0, 0, 0);
+            break;
+    }
+    return HITLS_HASH_BUTT;
+}
+
+static uint32_t GetHmacBLen(HITLS_MacAlgo macAlgo)
+{
+    switch (macAlgo) {
+        case HITLS_MAC_1:
+        case HITLS_MAC_224:
+        case HITLS_MAC_256:
+        case HITLS_MAC_SM3:
+            return 64; // Blen of upper hmac is 64.
+        case HITLS_MAC_384:
+        case HITLS_MAC_512:
+            return 128; // Blen of upper hmac is 128.
+        default:
+            // should never be here.
+            return 0;
+    }
+}
+
+/**
+ * a constant-time implemenation of HMAC to prevent side-channel attacks
+ * reference: https://datatracker.ietf.org/doc/html/rfc2104#autoid-2
+ */
+
+static int32_t ConstTimeHmac(RecConnSuitInfo *suiteInfo, HITLS_HASH_Ctx **hashCtx, uint32_t good,
+    const REC_TextInput *cryptMsg, uint8_t *data, uint32_t dataLen, uint8_t *mac, uint32_t *macLen)
+{
+    HITLS_HASH_Ctx *obCtx = hashCtx[2];
+    uint32_t padLen = data[dataLen - 1];
+    padLen = Uint32ConstTimeSelect(good, padLen, 0);
+    uint32_t plainLen = dataLen - (suiteInfo->macLen + padLen + 1);
+    plainLen = Uint32ConstTimeSelect(good, plainLen, 0);
+
+    uint32_t blen = GetHmacBLen(suiteInfo->macAlg);
+    uint8_t ipad[HMAC_MAX_BLEN] = {0};
+    uint8_t opad[HMAC_MAX_BLEN * 2] = {0};
+    uint8_t key[HMAC_MAX_BLEN] = {0};
+    uint8_t ihash[MAX_DIGEST_SIZE] = {0};
+    uint32_t ihashLen = sizeof(ihash);
+    (void)memcpy_s(key, sizeof(key), suiteInfo->macKey, suiteInfo->macKeyLen);
+    for (uint32_t i = 0; i < blen; i++) {
+        ipad[i] = key[i] ^ 0x36;
+        opad[i] = key[i] ^ 0x5c;
+    }
+
+    // update K xor ipad
+    (void)SAL_CRYPT_DigestUpdate(hashCtx[0], ipad, blen);
+    // update the obscureHashCtx simultaneously
+    (void)SAL_CRYPT_DigestUpdate(obCtx, ipad, blen);
+
+    /**
+     * constant-time update plaintext to resist lucky13
+     * ref: https://www.isg.rhul.ac.uk/tls/TLStiming.pdf
+     */
+    uint8_t header[13] = {0}; // seq + record type
+    uint32_t pos = 0;
+    (void)memcpy_s(header, sizeof(header), cryptMsg->seq, REC_CONN_SEQ_SIZE);
+    pos += REC_CONN_SEQ_SIZE;
+    header[pos++] = cryptMsg->type;
+    BSL_Uint16ToByte(cryptMsg->version, header + pos);
+    pos += sizeof(uint16_t);
+    BSL_Uint16ToByte((uint16_t)plainLen, header + pos);
+    (void)SAL_CRYPT_DigestUpdate(hashCtx[0], header, sizeof(header));
+    (void)SAL_CRYPT_DigestUpdate(obCtx, header, sizeof(header));
+
+    uint32_t maxLen = dataLen - (suiteInfo->macLen + 1);
+    maxLen = Uint32ConstTimeSelect(good, maxLen, dataLen);
+    uint32_t flag = Uint32ConstTimeGt(maxLen, 256); // the value of 1 byte is up to 256
+    uint32_t minLen = Uint32ConstTimeSelect(flag, maxLen - 256, 0);
+    pos = 0;
+    (void)SAL_CRYPT_DigestUpdate(hashCtx[0], data, minLen);
+    (void)SAL_CRYPT_DigestUpdate(obCtx, data, minLen);
+    pos += minLen;
+    for (uint32_t i = minLen; i < maxLen; i++) {
+        if (i < plainLen) {
+            SAL_CRYPT_DigestUpdate(hashCtx[0], data + i, 1);
+        } else {
+            SAL_CRYPT_DigestUpdate(obCtx, data + i, 1);
+        }
+    }
+    (void)SAL_CRYPT_DigestFinal(hashCtx[0], ihash, &ihashLen);
+    (void)memcpy_s(opad + blen, MAX_DIGEST_SIZE, ihash, ihashLen);
+
+    // update (K xor opad) + ihash
+    (void)SAL_CRYPT_DigestUpdate(hashCtx[1], opad, blen + ihashLen);
+    (void)SAL_CRYPT_DigestFinal(hashCtx[1], mac, macLen);
+
+    BSL_SAL_CleanseData(ipad, sizeof(ipad));
+    BSL_SAL_CleanseData(opad, sizeof(opad));
+    BSL_SAL_CleanseData(key, sizeof(key));
+
+    return HITLS_SUCCESS;
+}
+
+static inline uint32_t ConstTimeSelectMemcmp(uint32_t good, uint8_t *a, uint8_t *b, uint32_t l)
+{
+    uint8_t *t = (good == 0) ? b : a;
+    return ConstTimeMemcmp(t, b, l);
+}
+
+static int32_t RecConnCbcDecMtECheckMacTls(TLS_Ctx *ctx, const REC_TextInput *cryptMsg,
+    uint8_t *plain, uint32_t plainLen)
+{
+    const RecConnState *state = ctx->recCtx->readStates.currentState;
+    uint32_t hashAlg = GetHashOfMac(state->suiteInfo->macAlg);
+    if (hashAlg == HITLS_HASH_BUTT) {
+        return HITLS_CRYPT_ERR_HMAC;
+    }
+    
+    HITLS_HASH_Ctx *ihashCtx = NULL;
+    HITLS_HASH_Ctx *ohashCtx = NULL;
+    HITLS_HASH_Ctx *obscureHashCtx = NULL;
+    ihashCtx = SAL_CRYPT_DigestInit(hashAlg);
+    ohashCtx = SAL_CRYPT_DigestCopy(ihashCtx);
+    obscureHashCtx = SAL_CRYPT_DigestCopy(ihashCtx);
+    if (ihashCtx == NULL || ohashCtx == NULL || obscureHashCtx == NULL) {
+        SAL_CRYPT_DigestFree(ihashCtx);
+        SAL_CRYPT_DigestFree(ohashCtx);
+        SAL_CRYPT_DigestFree(obscureHashCtx);
+        return HITLS_REC_ERR_GENERATE_MAC;
+    }
+
+    uint8_t mac[MAX_DIGEST_SIZE] = {0};
+    uint32_t macLen = sizeof(mac);
+    uint8_t padLen = plain[plainLen - 1];
+
+    uint32_t good = Uint32ConstTimeGe(plainLen, state->suiteInfo->macLen + padLen + 1);
+
+    // constant-time check padding bytes
+    for (uint32_t i = 1; i <= 255; i++) {
+        uint32_t mask = good & Uint32ConstTimeLe(i, padLen);
+        good &= Uint32ConstTimeEqual(plain[plainLen - 1 - (i & mask)], padLen);
+    }
+
+    HITLS_HASH_Ctx *hashCtxs[3] = {ihashCtx, ohashCtx, obscureHashCtx};
+    ConstTimeHmac(state->suiteInfo, hashCtxs, good, cryptMsg, plain, plainLen, mac, &macLen);
+
+    // check mac
+    padLen = Uint32ConstTimeSelect(good, padLen, 0);
+    plainLen -= state->suiteInfo->macLen + padLen + 1;
+    good &= ConstTimeSelectMemcmp(good, &plain[plainLen], mac, macLen);
+    SAL_CRYPT_DigestFree(ihashCtx);
+    SAL_CRYPT_DigestFree(ohashCtx);
+    SAL_CRYPT_DigestFree(obscureHashCtx);
+    return ~good;
 }
 
 static int32_t RecConnCbcDecryptByMacThenEncrypt(TLS_Ctx *ctx, const RecConnState *state, const REC_TextInput *cryptMsg,
@@ -180,18 +328,13 @@ static int32_t RecConnCbcDecryptByMacThenEncrypt(TLS_Ctx *ctx, const RecConnStat
     }
 
     /* Check padding and padding length */
-    ret = RecConnCbcCheckDecryptPadding(ctx, cryptMsg, data, plaintextLen, offset);
+    ret = RecConnCbcDecMtECheckMacTls(ctx, cryptMsg, data, plaintextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17244, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "RecConnCbcCheckDecryptPadding fail", 0, 0, 0, 0);
-        return ret;
+            "RecConnCbcDecMtECheckMacTls fail", 0, 0, 0, 0);
+        return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
     }
-    plaintextLen -= data[plaintextLen - 1] + CBC_PADDING_LEN_TAG_SIZE;
-
-    /* Check MAC */
-    ret = RecConnCheckMac(ctx, state->suiteInfo, cryptMsg, data, plaintextLen);
-    plaintextLen -= state->suiteInfo->macLen;
-    *dataLen = plaintextLen;
+    *dataLen = plaintextLen - (state->suiteInfo->macLen + data[plaintextLen - 1] + CBC_PADDING_LEN_TAG_SIZE);
     return ret;
 }
 
@@ -237,10 +380,10 @@ static int32_t RecConnCbcDecryptByEncryptThenMac(TLS_Ctx *ctx, const RecConnStat
 
     /* Check padding and padding length */
     uint8_t paddingLen = data[plaintextLen - 1];
-    ret = RecConnCbcCheckDecryptPadding(ctx, cryptMsg, data, plaintextLen, offset);
+    ret = RecConnCbcDecCheckPaddingEtM(ctx, cryptMsg, data, plaintextLen, offset);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17247, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "RecConnCbcCheckDecryptPadding fail", 0, 0, 0, 0);
+            "RecConnCbcDecCheckPaddingEtM fail", 0, 0, 0, 0);
         return ret;
     }
     *dataLen = plaintextLen - paddingLen - CBC_PADDING_LEN_TAG_SIZE;
