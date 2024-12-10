@@ -616,9 +616,9 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return X509_GetSerialNumStr(cert, val);
         case HITLS_X509_GET_SERIALNUM:
             return HITLS_X509_GetSerial(&cert->tbs.serialNum, val, valLen);
-        case HITLS_X509_GET_BEFORE_TIME:
+        case HITLS_X509_GET_BEFORE_TIME_STR:
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_BEFORE_TIME);
-        case HITLS_X509_GET_AFTER_TIME:
+        case HITLS_X509_GET_AFTER_TIME_STR:
             return X509_GetAsn1BslTimeStr(cert, val, HITLS_X509_AFTER_TIME);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
