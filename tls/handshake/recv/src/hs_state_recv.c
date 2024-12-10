@@ -475,13 +475,11 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17036, "VERIFY_Append fail");
         }
     }
-
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
                               hsMsgInfo.length, ctx, ctx->config.tlsConfig.msgArg);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     ret = ProcessReceivedHandshakeMsg(ctx, &hsMsg);
-
     HS_CleanMsg(&hsMsg);
     return ret;
 }
