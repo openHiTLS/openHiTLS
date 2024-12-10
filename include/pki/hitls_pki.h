@@ -77,8 +77,8 @@ typedef enum {
     HITLS_X509_GET_SUBJECT_DN_STR,     /** Get the subject distinguished name as a formatted string */
     HITLS_X509_GET_ISSUER_DN_STR,      /** Get the issuer distinguished name as a formatted string */
     HITLS_X509_GET_SERIALNUM_STR,      /** Get the serial number as a string */
-    HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time as a string */
-    HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time as a string */
+    HITLS_X509_GET_BEFORE_TIME_STR,    /** Get the validity start time as a string */
+    HITLS_X509_GET_AFTER_TIME_STR,     /** Get the validity end time as a string */
     HITLS_X509_GET_SUBJECT_DN,         /** Get the list of subject distinguished name components.
                                            Note: The list is read-only and should not be modified. */
     HITLS_X509_GET_ISSUER_DN,          /** Get the list of issuer distinguished name components.
@@ -86,6 +86,8 @@ typedef enum {
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
     HITLS_X509_GET_REVOKELIST,         /** Get the certficate revoke list from the crl. */
     HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
+    HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time */
+    HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
@@ -93,7 +95,7 @@ typedef enum {
     HITLS_X509_SET_AFTER_TIME,         /** Set the after time for the cert. */
     HITLS_X509_SET_PUBKEY,             /** Set the public key for the cert/csr. */
     HITLS_X509_SET_SUBJECT_DN,         /** Set the subject name list. */
-    HITLS_X509_SET_ISSUER_DN,        /** Set the issuer name list. */
+    HITLS_X509_SET_ISSUER_DN,          /** Set the issuer name list. */
     HITLS_X509_SET_CSR_EXT,            /** Replace the cert's ext with csr's */
     HITLS_X509_ADD_SUBJECT_NAME,       /** Add the subject name for the cert/csr. */
     HITLS_X509_CRL_ADD_REVOKED_CERT,   /** Add the revoke cert to crl. */
@@ -103,13 +105,13 @@ typedef enum {
     HITLS_X509_EXT_KU_CERTSIGN,                 /** Check if certificate signing usage is set in key usage extension */
     HITLS_X509_EXT_KU_KEYAGREEMENT,             /** Check if key agreement usage is set in key usage extension */
 
-    HITLS_X509_EXT_SET_SKI = 0x0400,             /** Set the subject key identifier extension. */
-    HITLS_X509_EXT_SET_AKI,                      /** Set the authority key identifier extension. */
-    HITLS_X509_EXT_SET_KUSAGE,                   /** Set the key usage extension. */
-    HITLS_X509_EXT_SET_SAN,                      /** Set the subject alternative name extension. */
-    HITLS_X509_EXT_SET_BCONS,                    /** Set the basic constraints extension. */
-    HITLS_X509_EXT_SET_EXKUSAGE,                 /** Set the extended key usage extension. */
-    HITLS_X509_EXT_SET_CRLNUMBER,                /** Set the crlnumber extension. */
+    HITLS_X509_EXT_SET_SKI = 0x0400,            /** Set the subject key identifier extension. */
+    HITLS_X509_EXT_SET_AKI,                     /** Set the authority key identifier extension. */
+    HITLS_X509_EXT_SET_KUSAGE,                  /** Set the key usage extension. */
+    HITLS_X509_EXT_SET_SAN,                     /** Set the subject alternative name extension. */
+    HITLS_X509_EXT_SET_BCONS,                   /** Set the basic constraints extension. */
+    HITLS_X509_EXT_SET_EXKUSAGE,                /** Set the extended key usage extension. */
+    HITLS_X509_EXT_SET_CRLNUMBER,               /** Set the crlnumber extension. */
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
