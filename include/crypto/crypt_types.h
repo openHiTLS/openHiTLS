@@ -27,18 +27,20 @@
 #include "crypt_algid.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif // __cplusplus
 
-/**
- * @ingroup crypt_types
- *
- * Data structure
- */
-typedef struct {
-    uint8_t *data;   /**< Data content */
-    uint32_t len;    /**< Data length */
-} CRYPT_Data;
+    /**
+     * @ingroup crypt_types
+     *
+     * Data structure
+     */
+    typedef struct
+    {
+        uint8_t *data; /**< Data content */
+        uint32_t len;  /**< Data length */
+    } CRYPT_Data;
 
 /**
  * @ingroup crypt_types
@@ -82,230 +84,274 @@ typedef enum {
     CRYPT_RSA_MAXFLAG
 } CRYPT_RSA_Flag;
 
-/**
- * @ingroup crypt_types
- *
- * RSA private key parameter structure
- */
-typedef struct {
-    uint8_t *d;  /**< RSA private key parameter marked as d. */
-    uint8_t *n;  /**< RSA private key parameter marked as n. */
-    uint8_t *p;  /**< RSA private key parameter marked as p. */
-    uint8_t *q;  /**< RSA private key parameter marked as q. */
-    uint8_t *dP; /**< RSA private key parameter marked as dP. */
-    uint8_t *dQ; /**< RSA private key parameter marked as dQ. */
-    uint8_t *qInv; /**< RSA private key parameter marked as qInv. */
-    uint8_t *e;    /**< RSA public key parameter marked as e. */
-    uint32_t dLen; /**< Length of the RSA private key parameter marked as d. */
-    uint32_t nLen; /**< Length of the RSA private key parameter marked as n. */
-    uint32_t pLen; /**< Length of the RSA private key parameter marked as p. */
-    uint32_t qLen; /**< Length of the RSA private key parameter marked as q. */
-    uint32_t dPLen; /**< Length of the RSA private key parameter marked as dPLen. */
-    uint32_t dQLen; /**< Length of the RSA private key parameter marked as dQLen. */
-    uint32_t qInvLen; /**< Length of the RSA private key parameter marked as qInvLen. */
-    uint32_t eLen; /**< Length of the RSA public key parameter marked as eLen. */
-} CRYPT_RsaPrv;
+    /**
+     * @ingroup crypt_types
+     *
+     * RSA private key parameter structure
+     */
+    typedef struct
+    {
+        uint8_t *d;       /**< RSA private key parameter marked as d. */
+        uint8_t *n;       /**< RSA private key parameter marked as n. */
+        uint8_t *p;       /**< RSA private key parameter marked as p. */
+        uint8_t *q;       /**< RSA private key parameter marked as q. */
+        uint8_t *dP;      /**< RSA private key parameter marked as dP. */
+        uint8_t *dQ;      /**< RSA private key parameter marked as dQ. */
+        uint8_t *qInv;    /**< RSA private key parameter marked as qInv. */
+        uint8_t *e;       /**< RSA public key parameter marked as e. */
+        uint32_t dLen;    /**< Length of the RSA private key parameter marked as d. */
+        uint32_t nLen;    /**< Length of the RSA private key parameter marked as n. */
+        uint32_t pLen;    /**< Length of the RSA private key parameter marked as p. */
+        uint32_t qLen;    /**< Length of the RSA private key parameter marked as q. */
+        uint32_t dPLen;   /**< Length of the RSA private key parameter marked as dPLen. */
+        uint32_t dQLen;   /**< Length of the RSA private key parameter marked as dQLen. */
+        uint32_t qInvLen; /**< Length of the RSA private key parameter marked as qInvLen. */
+        uint32_t eLen;    /**< Length of the RSA public key parameter marked as eLen. */
+    } CRYPT_RsaPrv;
 
-/**
- * @ingroup crypt_types
- *
- * Elliptic curve parameter information
- */
-typedef struct {
-    uint8_t *p;
-    uint8_t *a;
-    uint8_t *b;
-    uint8_t *n;
-    uint8_t *h;
-    uint8_t *x;
-    uint8_t *y;
-    uint32_t pLen;
-    uint32_t aLen;
-    uint32_t bLen;
-    uint32_t nLen;
-    uint32_t hLen;
-    uint32_t xLen;
-    uint32_t yLen;
-} CRYPT_EccPara;
+    /**
+     * @ingroup crypt_types
+     *
+     * Elliptic curve parameter information
+     */
+    typedef struct
+    {
+        uint8_t *p;
+        uint8_t *a;
+        uint8_t *b;
+        uint8_t *n;
+        uint8_t *h;
+        uint8_t *x;
+        uint8_t *y;
+        uint32_t pLen;
+        uint32_t aLen;
+        uint32_t bLen;
+        uint32_t nLen;
+        uint32_t hLen;
+        uint32_t xLen;
+        uint32_t yLen;
+    } CRYPT_EccPara;
 
-/**
- * @ingroup crypt_types
- *
- * Paillier private key parameter structure
- */
-typedef struct {
-    uint8_t *n;      /**< Paillier private key parameter marked as n */
-    uint8_t *lambda; /**< Paillier private key parameter marked as lambda */
-    uint8_t *mu;     /**< Paillier private key parameter marked as mu */
-    uint8_t *n2;     /**< Paillier private key parameter marked as n2 */
-    uint32_t nLen;   /**< Length of the Paillier private key parameter marked as n */
-    uint32_t lambdaLen; /**< Length of the Paillier private key parameter marked as lambda */
-    uint32_t muLen; /**< Length of the Paillier private key parameter marked as mu */
-    uint32_t n2Len; /**< Length of the Paillier private key parameter marked as n2 */
-} CRYPT_PaillierPrv;
+    /**
+     * @ingroup crypt_types
+     *
+     * Paillier private key parameter structure
+     */
+    typedef struct
+    {
+        uint8_t *n;         /**< Paillier private key parameter marked as n */
+        uint8_t *lambda;    /**< Paillier private key parameter marked as lambda */
+        uint8_t *mu;        /**< Paillier private key parameter marked as mu */
+        uint8_t *n2;        /**< Paillier private key parameter marked as n2 */
+        uint32_t nLen;      /**< Length of the Paillier private key parameter marked as n */
+        uint32_t lambdaLen; /**< Length of the Paillier private key parameter marked as lambda */
+        uint32_t muLen;     /**< Length of the Paillier private key parameter marked as mu */
+        uint32_t n2Len;     /**< Length of the Paillier private key parameter marked as n2 */
+    } CRYPT_PaillierPrv;
 
-/**
- * @ingroup crypt_types
- *
- * DSA private key parameter structure
- */
-typedef CRYPT_Data CRYPT_DsaPrv;
+    /**
+     * @ingroup crypt_types
+     *
+     * ElGamal private key parameter structure
+     */
+    typedef struct
+    {
+        uint8_t *p; /**< ElGamal private key parameter marked as p */
+        uint8_t *g; /**< ElGamal private key parameter marked as g */
+        uint8_t *x; /**< ElGamal private key parameter marked as x */
+        uint8_t *q; /**< ElGamal private key parameter marked as q */
 
-/**
- * @ingroup crypt_types
- *
- * ECC private key parameter structure.
- */
-typedef CRYPT_Data CRYPT_EccPrv;
+        uint32_t pLen; /**< Length of the ElGamal private key parameter marked as p */
+        uint32_t gLen; /**< Length of the ElGamal private key parameter marked as g */
+        uint32_t xLen; /**< Length of the ElGamal private key parameter marked as x */
+        uint32_t qLen; /**< Length of the ElGamal private key parameter marked as q */
 
-/**
- * @ingroup crypt_types
- *
- * ECDSA private key parameter structure.
- */
-typedef CRYPT_Data CRYPT_EcdsaPrv;
+    } CRYPT_ElGamalPrv;
 
-/**
- * @ingroup crypt_types
- *
- * SM2 private key parameter structure
- */
-typedef CRYPT_Data CRYPT_Sm2Prv;
+    /**
+     * @ingroup crypt_types
+     *
+     * DSA private key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_DsaPrv;
 
-/**
- * @ingroup crypt_types
- *
- * DH private key parameter structure
- */
-typedef CRYPT_Data CRYPT_DhPrv;
+    /**
+     * @ingroup crypt_types
+     *
+     * ECC private key parameter structure.
+     */
+    typedef CRYPT_Data CRYPT_EccPrv;
 
-/**
- * @ingroup crypt_types
- *
- * ECDH private key parameter structure
- */
-typedef CRYPT_Data CRYPT_EcdhPrv;
+    /**
+     * @ingroup crypt_types
+     *
+     * ECDSA private key parameter structure.
+     */
+    typedef CRYPT_Data CRYPT_EcdsaPrv;
 
-/**
- * @ingroup crypt_types
- *
- * ed25519/x25519 private key parameter structure
- */
-typedef CRYPT_Data CRYPT_Curve25519Prv;
+    /**
+     * @ingroup crypt_types
+     *
+     * SM2 private key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_Sm2Prv;
 
-/**
- * @ingroup crypt_types
- *
- * RSA public key parameter structure
- */
-typedef struct {
-    uint8_t *e;  /**< RSA public key parameter marked as e */
-    uint8_t *n;  /**< RSA public key parameter marked as n */
-    uint32_t eLen; /**< Length of the RSA public key parameter marked as e*/
-    uint32_t nLen; /**< Length of the RSA public key parameter marked as e*/
-} CRYPT_RsaPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * DH private key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_DhPrv;
 
-/**
- * @ingroup crypt_types
- *
- * Paillier public key parameter structure
- */
-typedef struct {
-    uint8_t *n;  /**< Paillier public key parameter marked as n */
-    uint8_t *g;  /**< Paillier public key parameter marked as g */
-    uint8_t *n2; /**< Paillier public key parameter marked as n2 */
-    uint32_t nLen; /**< Length of the Paillier public key parameter marked as n */
-    uint32_t gLen; /**< Length of the Paillier public key parameter marked as g */
-    uint32_t n2Len; /**< Length of the Paillier public key parameter marked as n2 */
-} CRYPT_PaillierPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * ECDH private key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_EcdhPrv;
 
-/**
- * @ingroup crypt_types
- *
- * DSA public key parameter structure
- */
-typedef CRYPT_Data CRYPT_DsaPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * ed25519/x25519 private key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_Curve25519Prv;
 
-/**
- * @ingroup crypt_types
- *
- * ECC public key parameter structure
- */
-typedef CRYPT_Data CRYPT_EccPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * RSA public key parameter structure
+     */
+    typedef struct
+    {
+        uint8_t *e;    /**< RSA public key parameter marked as e */
+        uint8_t *n;    /**< RSA public key parameter marked as n */
+        uint32_t eLen; /**< Length of the RSA public key parameter marked as e*/
+        uint32_t nLen; /**< Length of the RSA public key parameter marked as e*/
+    } CRYPT_RsaPub;
 
-/**
- * @ingroup crypt_types
- *
- * ECDSA public key parameter structure.
- */
-typedef CRYPT_Data CRYPT_EcdsaPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * Paillier public key parameter structure
+     */
+    typedef struct
+    {
+        uint8_t *n;     /**< Paillier public key parameter marked as n */
+        uint8_t *g;     /**< Paillier public key parameter marked as g */
+        uint8_t *n2;    /**< Paillier public key parameter marked as n2 */
+        uint32_t nLen;  /**< Length of the Paillier public key parameter marked as n */
+        uint32_t gLen;  /**< Length of the Paillier public key parameter marked as g */
+        uint32_t n2Len; /**< Length of the Paillier public key parameter marked as n2 */
+    } CRYPT_PaillierPub;
 
-/**
- * @ingroup crypt_types
- *
- * SM2 public key parameter structure
- */
-typedef CRYPT_Data CRYPT_Sm2Pub;
+    /**
+     * @ingroup crypt_types
+     *
+     * ElGamal public key parameter structure
+     */
+    typedef struct
+    {
+        uint8_t *p;    /**< ElGamal public key parameter marked as p */
+        uint8_t *g;    /**< ElGamal public key parameter marked as g */
+        uint8_t *y;    /**< ElGamal public key parameter marked as y */
+        uint8_t *q;    /**< ElGamal public key parameter marked as q */
+        uint32_t pLen; /**< Length of the ElGamal public key parameter marked as p */
+        uint32_t gLen; /**< Length of the ElGamal public key parameter marked as g */
+        uint32_t yLen; /**< Length of the ElGamal public key parameter marked as y */
+        uint32_t qLen; /**< Length of the ElGamal public key parameter marked as q */
+    } CRYPT_ElGamalPub;
 
-/**
- * @ingroup crypt_types
- *
- * DH public key parameter structure
- */
-typedef CRYPT_Data CRYPT_DhPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * DSA public key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_DsaPub;
 
-/**
- * @ingroup crypt_types
- *
- * ECDH public key parameter structure
- */
-typedef CRYPT_Data CRYPT_EcdhPub;
+    /**
+     * @ingroup crypt_types
+     *
+     * ECC public key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_EccPub;
 
-/**
- * @ingroup crypt_types
- *
- * ed25519/x25519 public key parameter structure
- */
-typedef CRYPT_Data CRYPT_Curve25519Pub;
+    /**
+     * @ingroup crypt_types
+     *
+     * ECDSA public key parameter structure.
+     */
+    typedef CRYPT_Data CRYPT_EcdsaPub;
 
-/**
- * @ingroup crypt_types
- *
- * Para structure of the RSA algorithm
- */
-typedef struct {   /**< This parameter cannot be NULL and is determined by the underlying structure. */
-    uint8_t *e;    /**< Para Parameter e */
-    uint32_t eLen; /**< Length of para e*/
-    uint32_t bits; /**< Bits of para */
-} CRYPT_RsaPara;
+    /**
+     * @ingroup crypt_types
+     *
+     * SM2 public key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_Sm2Pub;
 
-/**
- * @ingroup crypt_types
- *
- * Para structure of the DSA algorithm. This parameter cannot be null, and it is determined by the underlying structure.
- */
-typedef struct {
-    uint8_t *p;  /**< Parameter p */
-    uint8_t *q;  /**< Parameter q */
-    uint8_t *g;  /**< Parameter g */
-    uint32_t pLen; /**< Length of parameter p*/
-    uint32_t qLen; /**< Length of parameter q*/
-    uint32_t gLen; /**< Length of parameter g*/
-} CRYPT_DsaPara;
+    /**
+     * @ingroup crypt_types
+     *
+     * DH public key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_DhPub;
 
-/**
- * @ingroup crypt_types
- *
- * Para structure of the DH algorithm
- */
-typedef struct {
-    uint8_t *p;  /**< Parameter p. */
-    uint8_t *q;  /**< Parameter q, the parameter can be NULL. */
-    uint8_t *g;  /**< Parameter g. */
-    uint32_t pLen; /**< Length of parameter p. */
-    uint32_t qLen; /**< Length of parameter q. */
-    uint32_t gLen; /**< Length of parameter g. */
-} CRYPT_DhPara;
+    /**
+     * @ingroup crypt_types
+     *
+     * ECDH public key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_EcdhPub;
+
+    /**
+     * @ingroup crypt_types
+     *
+     * ed25519/x25519 public key parameter structure
+     */
+    typedef CRYPT_Data CRYPT_Curve25519Pub;
+
+    /**
+     * @ingroup crypt_types
+     *
+     * Para structure of the RSA algorithm
+     */
+    typedef struct
+    {                  /**< This parameter cannot be NULL and is determined by the underlying structure. */
+        uint8_t *e;    /**< Para Parameter e */
+        uint32_t eLen; /**< Length of para e*/
+        uint32_t bits; /**< Bits of para */
+    } CRYPT_RsaPara;
+
+    /**
+     * @ingroup crypt_types
+     *
+     * Para structure of the DSA algorithm. This parameter cannot be null, and it is determined by the underlying structure.
+     */
+    typedef struct
+    {
+        uint8_t *p;    /**< Parameter p */
+        uint8_t *q;    /**< Parameter q */
+        uint8_t *g;    /**< Parameter g */
+        uint32_t pLen; /**< Length of parameter p*/
+        uint32_t qLen; /**< Length of parameter q*/
+        uint32_t gLen; /**< Length of parameter g*/
+    } CRYPT_DsaPara;
+
+    /**
+     * @ingroup crypt_types
+     *
+     * Para structure of the DH algorithm
+     */
+    typedef struct
+    {
+        uint8_t *p;    /**< Parameter p. */
+        uint8_t *q;    /**< Parameter q, the parameter can be NULL. */
+        uint8_t *g;    /**< Parameter g. */
+        uint32_t pLen; /**< Length of parameter p. */
+        uint32_t qLen; /**< Length of parameter q. */
+        uint32_t gLen; /**< Length of parameter g. */
+    } CRYPT_DhPara;
 
 /**
  * @ingroup crypt_types
@@ -319,6 +365,19 @@ typedef struct {
     uint32_t qLen; /**< Length of parameter q. */
     uint32_t bits; /**< Bits of para. */
 } CRYPT_PaillierPara;
+
+ /**
+     * @ingroup crypt_types
+     *
+     * Para structure of the ElGamal algorithm
+     */
+    typedef struct
+    {
+        uint8_t *q;    /**< Parameter q. */
+        uint32_t qLen; /**< Length of parameter q. */
+        uint32_t bits; /**< Bits of para. */
+        uint32_t k_bits; /**< Bits of q. */
+    } CRYPT_ElGamalPara;
 
 /**
  * @ingroup crypt_types
@@ -484,20 +543,21 @@ typedef enum {
     CRYPT_CTRL_GET_MACLEN             /* Mac get maxlen . */
 } CRYPT_MacCtrl;
 
-/**
- * @ingroup crypt_padding_type
- *
- * Padding mode enumerated type
- */
-typedef enum {
-    CRYPT_PADDING_NONE = 0,         /**< Never pad (full blocks only).   */
-    CRYPT_PADDING_ZEROS,            /**< Zero padding (not reversible).  */
-    CRYPT_PADDING_ISO7816,          /**< ISO/IEC 7816-4 padding.         */
-    CRYPT_PADDING_X923,             /**< ANSI X.923 padding.            */
-    CRYPT_PADDING_PKCS5,            /**< PKCS5 padding.                  */
-    CRYPT_PADDING_PKCS7,            /**< PKCS7 padding.                  */
-    CRYPT_PADDING_MAX_COUNT
-} CRYPT_PaddingType;
+    /**
+     * @ingroup crypt_padding_type
+     *
+     * Padding mode enumerated type
+     */
+    typedef enum
+    {
+        CRYPT_PADDING_NONE = 0, /**< Never pad (full blocks only).   */
+        CRYPT_PADDING_ZEROS,    /**< Zero padding (not reversible).  */
+        CRYPT_PADDING_ISO7816,  /**< ISO/IEC 7816-4 padding.         */
+        CRYPT_PADDING_X923,     /**< ANSI X.923 padding.            */
+        CRYPT_PADDING_PKCS5,    /**< PKCS5 padding.                  */
+        CRYPT_PADDING_PKCS7,    /**< PKCS7 padding.                  */
+        CRYPT_PADDING_MAX_COUNT
+    } CRYPT_PaddingType;
 
 typedef enum {
     CRYPT_PKEY_EMSA_PKCSV15 = 1, /**< PKCS1-v1_5 according to RFC8017. */
@@ -536,47 +596,48 @@ typedef enum {
     CRYPT_EVENT_MAX
 } CRYPT_EVENT_TYPE;
 
-/**
- * @ingroup  crypt_types
- *
- * Algorithm type
- */
-typedef enum {
-    CRYPT_ALGO_CIPHER = 0,
-    CRYPT_ALGO_PKEY,
-    CRYPT_ALGO_MD,
-    CRYPT_ALGO_MAC,
-    CRYPT_ALGO_KDF,
-    CRYPT_ALGO_RAND
-} CRYPT_ALGO_TYPE;
+    /**
+     * @ingroup  crypt_types
+     *
+     * Algorithm type
+     */
+    typedef enum
+    {
+        CRYPT_ALGO_CIPHER = 0,
+        CRYPT_ALGO_PKEY,
+        CRYPT_ALGO_MD,
+        CRYPT_ALGO_MAC,
+        CRYPT_ALGO_KDF,
+        CRYPT_ALGO_RAND
+    } CRYPT_ALGO_TYPE;
 
-/**
- * @ingroup crypt_types
- * @brief   event report.
- *
- * @param   oper [IN] Operation type.
- * @param   type [IN] Algorithm type.
- * @param   id [IN] Algorithm ID.
- * @param   err [IN] CRYPT_SUCCESS, if successful.
- *                   For other error codes, see crypt_errno.h.
- *
- * @retval None
- */
-typedef void (*EventReport)(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
+    /**
+     * @ingroup crypt_types
+     * @brief   event report.
+     *
+     * @param   oper [IN] Operation type.
+     * @param   type [IN] Algorithm type.
+     * @param   id [IN] Algorithm ID.
+     * @param   err [IN] CRYPT_SUCCESS, if successful.
+     *                   For other error codes, see crypt_errno.h.
+     *
+     * @retval None
+     */
+    typedef void (*EventReport)(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
 
-/**
- * @ingroup crypt_types
- *
- *     Event reporting callback registration interface, the EAL reports an event when the service is executed
- * and an error is reported.
- *     If the CMVP feature is enabled, the default implementation is provided and registration is not allowed.
- *     Note that Multi-threading is not supported.
- *
- * @param   func     [IN] Event reporting and processing callback
- *
- * @retval  NONE
- */
-void CRYPT_EAL_RegEventReport(EventReport func);
+    /**
+     * @ingroup crypt_types
+     *
+     *     Event reporting callback registration interface, the EAL reports an event when the service is executed
+     * and an error is reported.
+     *     If the CMVP feature is enabled, the default implementation is provided and registration is not allowed.
+     *     Note that Multi-threading is not supported.
+     *
+     * @param   func     [IN] Event reporting and processing callback
+     *
+     * @retval  NONE
+     */
+    void CRYPT_EAL_RegEventReport(EventReport func);
 
 /**
  * @ingroup crypt_getInfo_type

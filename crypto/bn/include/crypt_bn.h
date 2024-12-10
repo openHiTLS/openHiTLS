@@ -56,6 +56,7 @@ typedef struct BigNum BN_BigNum;
 
 typedef struct BnOptimizer BN_Optimizer;
 
+// 回调上下文
 typedef struct BnCbCtx BN_CbCtx;
 
 typedef int32_t (*BN_CallBack)(BN_CbCtx *, int32_t, int32_t);
@@ -261,6 +262,7 @@ bool BN_IsFlag(const BN_BigNum *a, uint32_t flag);
  */
 int32_t BN_Zeroize(BN_BigNum *a);
 
+// a是否等于w
 /**
  * @ingroup bn
  * @brief Compare whether the value of BigNum a is the target limb w.
@@ -350,6 +352,7 @@ uint32_t BN_Bits(const BN_BigNum *a);
  */
 uint32_t BN_Bytes(const BN_BigNum *a);
 
+//计算两个大数的 最大公约数
 /**
  * @ingroup bn
  * @brief BigNum Calculate the greatest common divisor
@@ -368,6 +371,8 @@ uint32_t BN_Bytes(const BN_BigNum *a);
  */
 int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
 
+
+//用于计算大数的 模反元素
 /**
  * @ingroup bn
  * @brief BigNum modulo inverse
@@ -1099,6 +1104,24 @@ int32_t BN_SecBit(int32_t publen, int32_t prvlen);
  */
 int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
 #endif
+
+#ifdef HITLS_CRYPTO_ELGAMAL
+/**
+ * @ingroup bn
+ * @brief BigNum Calculate the original root
+ *
+ * @param g    [OUT] Safety prime
+ * @param p    [IN] Big prime
+ * @param q    [IN] Big prime
+ * @param opt   [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ */
+int32_t BN_OriginalRoot(BN_BigNum *g,const BN_BigNum *p, const BN_BigNum *q, BN_Optimizer *opt);
+#endif
+
 
 #ifdef __cplusplus
 }

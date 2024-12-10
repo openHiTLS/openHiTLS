@@ -25,6 +25,7 @@
 #include "crypt_ecdh.h"
 #include "crypt_sm2.h"
 #include "crypt_paillier.h"
+#include "crypt_elgamal.h"
 #include "crypt_errno.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
@@ -60,6 +61,9 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(void *provCtx, int32_t algId)
             break;
         case CRYPT_PKEY_PAILLIER:
             pkeyCtx = CRYPT_PAILLIER_NewCtx();
+            break;
+         case CRYPT_PKEY_ELGAMAL:
+            pkeyCtx = CRYPT_ELGAMAL_NewCtx();
             break;
     }
     if (pkeyCtx == NULL) {
@@ -198,6 +202,8 @@ const CRYPT_EAL_Func g_defKeyMgmtSm2[] = {
     CRYPT_EAL_FUNC_END,
 };
 
+
+
 const CRYPT_EAL_Func g_defKeyMgmtPaillier[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, CRYPT_EAL_DefPkeyMgmtNewCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, CRYPT_PAILLIER_SetPara},
@@ -211,6 +217,23 @@ const CRYPT_EAL_Func g_defKeyMgmtPaillier[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, NULL},
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, CRYPT_PAILLIER_Ctrl},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, CRYPT_PAILLIER_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+
+const CRYPT_EAL_Func g_defKeyMgmtElGamal[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, CRYPT_EAL_DefPkeyMgmtNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, CRYPT_ELGAMAL_SetPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, CRYPT_ELGAMAL_Gen},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, CRYPT_ELGAMAL_SetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, CRYPT_ELGAMAL_SetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, CRYPT_ELGAMAL_GetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, CRYPT_ELGAMAL_GetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, CRYPT_ELGAMAL_DupCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, NULL},
+    {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, NULL},
+    // {CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM, NULL},
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, CRYPT_ELGAMAL_Ctrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, CRYPT_ELGAMAL_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 
