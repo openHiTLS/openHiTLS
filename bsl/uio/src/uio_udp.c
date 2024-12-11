@@ -51,13 +51,10 @@ static uint32_t Family2Len(const struct sockaddr addr)
     switch (addr.sa_family) {
         case AF_INET:
             return sizeof(struct sockaddr_in);
-            break;
         case AF_INET6:
             return sizeof(struct sockaddr_in6);
-            break;
         case AF_UNIX:
             return sizeof(struct sockaddr_un);
-            break;
         default:
             return BSL_UIO_IO_EXCEPTION;
     }
@@ -226,7 +223,6 @@ int32_t UdpCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 static int32_t UdpWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
 {
     UdpParameters *parameters = (UdpParameters *)BSL_UIO_GetCtx(uio);
-    (void)parameters;
     int32_t ret = 0, err = 0;
     int32_t fd = BSL_UIO_GetFd(uio);
     if (fd < 0) {
@@ -234,7 +230,7 @@ static int32_t UdpWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *w
         return BSL_UIO_IO_EXCEPTION;
     }
     if (parameters->connected) {
-        ret = write(fd, buf, len);
+        ret = BSL_SAL_Write(fd, buf, len, &err);
     } else {
         ret = sendto(fd, buf, len, 0, (const struct sockaddr *)&parameters->ip, parameters->ipLen);
     }
