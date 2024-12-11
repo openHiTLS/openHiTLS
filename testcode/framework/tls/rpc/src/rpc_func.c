@@ -277,7 +277,6 @@ int RpcTlsConnect(CmdData *cmdData)
 
         ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, (int32_t)sizeof(serverAddr), &serverAddr);
         if (ret != HITLS_SUCCESS) {
-            BSL_UIO_Free(uio);
             LOG_ERROR("BSL_UIO_SET_PEER_IP_ADDR failed\n");
             ret = ERROR;
             goto ERR;
