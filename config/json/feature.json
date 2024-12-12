@@ -94,6 +94,7 @@
                         "dsa": {"deps": ["bn"]},
                         "dh": {"deps": ["bn"]},
                         "paillier": {"deps":["bn"]},
+                        "elgamal": {"deps":["bn"]},
                         "ecdh": {"deps": ["ecc"]},
                         "ecdsa": {"deps": ["ecc"]},
                         "curve25519": {
@@ -530,6 +531,7 @@
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
                     "crypto/paillier/include",
+                    "crypto/elgamal/include",
                     "crypto/provider/include"
                 ]
             },
@@ -810,6 +812,7 @@
                     "crypto/ecc/include",
                     "crypto/hmac/include",
                     "crypto/paillier/include",
+                    "crypto/elgamal/include",
                     "crypto/drbg/include",
                     "crypto/modes/include",
                     "crypto/entropy/include",
@@ -903,6 +906,12 @@
             "paillier": {
                 ".features": ["paillier"],
                 ".srcs": "crypto/paillier/src/*.c",
+                ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
+            },
+            "elgamal": {
+                ".features": ["elgamal"],
+                ".srcs": "crypto/elgamal/src/*.c",
                 ".deps": ["crypto::bn"],
                 ".include": ["crypto/eal/src"]
             }
