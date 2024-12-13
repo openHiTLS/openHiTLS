@@ -397,7 +397,7 @@ enum CRYPT_ERROR {
     CRYPT_PROVIDER_ERR_ATTRIBUTE,
     CRYPT_PROVIDER_INVALID_LIB_CTX,
 
-    CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01210001, /**< The buffer length is insufficient. */
+    CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer length is insufficient. */
     CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */
     CRYPT_ELGAMAL_ERR_KEY_BITS,             /**< Incorrect key length. */
     CRYPT_ELGAMAL_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
