@@ -20,6 +20,7 @@
 #include "crypt_rsa.h"
 #include "crypt_sm2.h"
 #include "crypt_paillier.h"
+#include "crypt_elgamal.h"
 
 const CRYPT_EAL_Func g_defAsymCipherRsa[] = {
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, CRYPT_RSA_Encrypt},
@@ -39,6 +40,13 @@ const CRYPT_EAL_Func g_defAsymCipherPaillier[] = {
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, CRYPT_PAILLIER_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, CRYPT_PAILLIER_Decrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_CTRL, CRYPT_PAILLIER_Ctrl},
+    CRYPT_EAL_FUNC_END
+};
+
+const CRYPT_EAL_Func g_defAsymCipherElGamal[] = {
+    {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, CRYPT_ELGAMAL_Encrypt},
+    {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, CRYPT_ELGAMAL_Decrypt},
+    {CRYPT_EAL_IMPLPKEYCIPHER_CTRL, CRYPT_ELGAMAL_Ctrl},
     CRYPT_EAL_FUNC_END
 };
 

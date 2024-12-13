@@ -387,7 +387,7 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
     CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
-    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When RSA is used for Ctrl. */
+    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When paillier is used for Ctrl. */
 
     CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01200001,     /**< Unexpected impl */
     CRYPT_PROVIDER_ERR_IMPL_NULL,
@@ -401,6 +401,17 @@ enum CRYPT_ERROR {
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
     CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
     CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
+    
+    CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer length is insufficient. */
+    CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */
+    CRYPT_ELGAMAL_ERR_KEY_BITS,             /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_ELGAMAL_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_ELGAMAL_ERR_KEY_KBITS,             /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_ENC_KBITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_ELGAMAL_ERR_DEC_KBITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_ELGAMAL_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
+    CRYPT_ELGAMAL_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When elgamal is used for Ctrl. */
 };
 #ifdef __cplusplus
 }
