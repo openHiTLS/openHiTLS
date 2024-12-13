@@ -600,4 +600,20 @@ chacha20poly1305, chacha20, rsa"
     #error "[HiTLS] tls13 ciphersuite must work with suite_auth_rsa or suite_auth_ecdsa or suite_auth_psk"
     #endif
 #endif
+
+#if defined(HITLS_CRYPTO_HPKE)
+#if !defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_CHACHA20POLY1305)
+#error "[HiTLS] The hpke must work with aes or chacha20poly1305."
+#endif
+
+#if !defined(HITLS_CRYPTO_CHACHA20POLY1305) && defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_GCM)
+#error "[HiTLS] The hpke must work with aes-gcm."
+#endif
+
+#if !defined(HITLS_CRYPTO_CURVE_NISTP256) && !defined(HITLS_CRYPTO_CURVE_NISTP384) && \
+    !defined(HITLS_CRYPTO_CURVE_NISTP521) && !defined(HITLS_CRYPTO_X25519)
+#error "[HiTLS] The hpke must work with p256 or p384 or p521 or x25519."
+#endif
+#endif /* HITLS_CRYPTO_HPKE */
+
 #endif /* HITLS_CONFIG_CHECK_H */
