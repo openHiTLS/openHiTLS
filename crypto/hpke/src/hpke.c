@@ -946,6 +946,11 @@ static int32_t HpkeCheckSealParams(CRYPT_EAL_HpkeCtx *ctx, const uint8_t *plainT
         return CRYPT_NULL_INPUT;
     }
 
+    if (plainTextLen > (UINT32_MAX - HPKE_AEAD_TAG_LEN)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
     return CRYPT_SUCCESS;
 }
 
