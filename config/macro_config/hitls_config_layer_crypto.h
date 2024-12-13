@@ -41,6 +41,12 @@
     #endif
 #endif
 
+#ifdef HITLS_CRYPTO_HPKE
+    #ifndef HITLS_CRYPTO_HKDF
+        #define HITLS_CRYPTO_HKDF
+    #endif
+#endif
+
 #ifdef HITLS_CRYPTO_SCRYPT
     #ifndef HITLS_CRYPTO_SHA256
         #define HITLS_CRYPTO_SHA256
