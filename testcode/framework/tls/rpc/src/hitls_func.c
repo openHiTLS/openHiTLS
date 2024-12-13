@@ -594,6 +594,20 @@ int HitlsSetSsl(void *ssl, HLT_Ssl_Config *sslConfig)
         BSL_UIO_Free(uio);
         return ERROR;
     }
+
+    if (BSL_UIO_GetTransportType(uio) == BSL_UIO_UDP) {
+        struct sockaddr_in serverAddr;
+        uint32_t addrlen = sizeof(serverAddr);
+        if (getpeername(sslConfig->sockFd, (struct sockaddr *)&serverAddr, &addrlen) == 0) {
+            ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, (int32_t)sizeof(serverAddr), &serverAddr);
+            if (ret != HITLS_SUCCESS) {
+                LOG_ERROR("BSL_UIO_SET_PEER_IP_ADDR failed\n");
+                BSL_UIO_Free(uio);
+                return ERROR;
+            }
+        }
+    }
+
     BSL_UIO_SetInit(uio, 1);
 
     ret = HITLS_SetUio(ssl, uio);

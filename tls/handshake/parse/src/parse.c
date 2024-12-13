@@ -41,8 +41,7 @@ static int32_t CheckServerHelloType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
     /* In DTLS, When client try to receive ServerHello message, it doesn't know if server enables 
      * isHelloVerifyReqEnable. If client receives HelloVerifyRequest message, also valid */
-    uint32_t version = HS_GetVersion(ctx);
-    if (version == HITLS_VERSION_DTLS12) {
+    if (BSL_UIO_GetTransportType(ctx->rUio) == BSL_UIO_UDP) {
         if (msgType == HELLO_VERIFY_REQUEST) {
             (void)HS_ChangeState(ctx, TRY_RECV_HELLO_VERIFY_REQUEST);
             return HITLS_SUCCESS;

@@ -1198,15 +1198,7 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         return ret;
     }
 #endif /* HITLS_TLS_FEATURE_SNI */
-    /* Process the client Hello message */
-    ret = ServerCheckAndProcessClientHello(ctx, clientHello);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15244, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "server process clientHello fail.", 0, 0, 0, 0);
-        return ret;
-    }
-
-    // If authentication enabled, check ClientHello cookie.
+    // If isHelloVerifyReqEnable enabled, check ClientHello cookie.
     if (ctx->config.tlsConfig.isHelloVerifyReqEnable) {
         if (clientHello->cookieLen == 0) {
             ifNeedGenerate = true;
@@ -1239,7 +1231,6 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
                 BSL_SAL_FREE(cookieTmp);
                 return HITLS_INTERNAL_EXCEPTION;
             }
-            ctx->negotiatedInfo.version = 0;
 
             BSL_SAL_FREE(ctx->negotiatedInfo.cookie);
             ctx->negotiatedInfo.cookie = cookieTmp;
@@ -1248,6 +1239,13 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         }
     }
 
+    /* Process the client Hello message */
+    ret = ServerCheckAndProcessClientHello(ctx, clientHello);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15244, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "server process clientHello fail.", 0, 0, 0, 0);
+        return ret;
+    }
     if (ctx->state == CM_STATE_RENEGOTIATION && !ctx->userRenego) {
         ctx->negotiatedInfo.isRenegotiation = true; /* Start renegotiation */
         ctx->negotiatedInfo.renegotiationNum++;

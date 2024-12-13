@@ -64,7 +64,7 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
     if (bufLen < (sizeof(uint16_t) + ctx->negotiatedInfo.cookieSize)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15461, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack server hello mandatory field error, the bufLen(%u) is not enough.", bufLen, NULL, NULL, NULL);
+            "pack hello verify request mandatory field error, the bufLen(%u) is not enough.", bufLen, NULL, NULL, NULL);
         return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
     }
 
@@ -72,18 +72,8 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
     uint32_t len = 0u;
     int32_t ret = 0;
 
-    uint16_t version = HITLS_DTLS_ANY_VERSION;
-#ifdef HITLS_TLS_FEATURE_SECURITY
-    const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    ret = SECURITY_CfgCheck((const HITLS_Config *)tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
-    if (ret != SECURITY_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16924, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "CfgCheck fail, ret %d", ret, 0, 0, 0);
-        ctx->method.sendAlert((TLS_Ctx *)(uintptr_t)ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSECURE_VERSION);
-        return HITLS_PACK_UNSECURE_VERSION;
-    }
-#endif /* HITLS_TLS_FEATURE_SECURITY */
+    uint16_t version = HITLS_VERSION_DTLS1;
+
     BSL_Uint16ToByte(version, &buf[offset]);    // version number
     offset += sizeof(uint16_t);
     ret = PackCookie(ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize,
