@@ -182,7 +182,7 @@ static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para, 
 
 int32_t CRYPT_PAILLIER_SetPubKey(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
 {
-    CRYPT_PaillierPubParam pub = {NULL};
+    CRYPT_PaillierPubParam pub = {0};
     int32_t ret = SetPubBasicCheck(ctx, (BSL_Param *)(uintptr_t)para, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -291,7 +291,7 @@ static int32_t GetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para, 
 
 int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *para)
 {
-    CRYPT_PaillierPubParam pub = {NULL};
+    CRYPT_PaillierPubParam pub = {0};
     int32_t ret = GetPubBasicCheck(ctx, para, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
