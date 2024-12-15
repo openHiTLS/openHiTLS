@@ -369,6 +369,59 @@ uint32_t BN_Bytes(const BN_BigNum *a);
 int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
 
 /**
+* @ingroup bn
+* @brief BarrettReduction_ecc(a<2n)
+*
+* @param r [OUT] out num
+* @param a [IN] BigNum
+* @param n [IN] BigNum
+* @param mu [IN] BigNum
+* @param k [IN] uint32_t
+* @param opt [IN] Optimizer
+*
+* @retval CRYPT_SUCCESS
+* @retval CRYPT_NULL_INPUT             Invalid null pointer
+* @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+* @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
+*/
+int32_t BN_BarrettReduction_ecc(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, uint32_t k, BN_Optimizer *opt);
+
+/**
+* @ingroup bn
+* @brief BarrettReduction
+*
+* @param r [OUT] out num
+* @param a [IN] BigNum
+* @param n [IN] BigNum
+* @param mu [IN] BigNum
+* @param k [IN] uint32_t
+* @param opt [IN] Optimizer
+*
+* @retval CRYPT_SUCCESS
+* @retval CRYPT_NULL_INPUT             Invalid null pointer
+* @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+* @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
+*/
+int32_t BN_BarrettReduction(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *n, const BN_BigNum *mu, uint32_t k, BN_Optimizer *opt);
+
+/**
+* @ingroup bn
+* @brief BarrettContextInit
+*
+* @param mu [OUT] out num
+* @param n [IN] BigNum
+* @param k [IN] uint32_t *
+* @param opt [IN] Optimizer
+*
+* @retval CRYPT_SUCCESS
+* @retval CRYPT_NULL_INPUT             Invalid null pointer
+* @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+* @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
+*/
+int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, uint32_t *k, BN_Optimizer *opt);
+
+
+/**
  * @ingroup bn
  * @brief BigNum modulo inverse
  *
@@ -863,6 +916,7 @@ void BN_MontDestroy(BN_Mont *mont);
  * @retval CRYPT_SECUREC_FAIL       The security function returns an error.
  */
 int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
+
 
 int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1, const BN_BigNum *a2, const BN_BigNum *e2,
     BN_Mont *mont, BN_Optimizer *opt);
