@@ -41,6 +41,7 @@ int32_t BarrettContextInit(BN_BigNum *mu, const BN_BigNum *n, uint32_t *k, BN_Op
         return ret;
     }
     BN_BigNum *temp = OptimizerGetBn(opt, 2 * n->size);
+    *k = BN_Bits(n);
     bool invalidInput = (temp == NULL);
     if (invalidInput) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
