@@ -483,12 +483,12 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     ASSERT_EQ(serialNum.dataLen, strlen(expectedSerialNum));
     ASSERT_EQ(strcmp((char *)serialNum.data, expectedSerialNum), 0);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_BEFORE_TIME, &beforeTime, sizeof(BSL_Buffer)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_BEFORE_TIME_STR, &beforeTime, sizeof(BSL_Buffer)), 0);
     ASSERT_NE(beforeTime.data, NULL);
     ASSERT_EQ(beforeTime.dataLen, strlen(expectedBeforeTime));
     ASSERT_EQ(strcmp((char *)beforeTime.data, expectedBeforeTime), 0);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_AFTER_TIME, &afterTime, sizeof(BSL_Buffer)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_AFTER_TIME_STR, &afterTime, sizeof(BSL_Buffer)), 0);
     ASSERT_NE(afterTime.data, NULL);
     ASSERT_EQ (afterTime.dataLen, strlen(expectedAfterTime));
     ASSERT_EQ(strcmp((char *)afterTime.data, expectedAfterTime), 0);
