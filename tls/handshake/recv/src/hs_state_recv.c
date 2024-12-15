@@ -460,7 +460,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     if (hsMsgInfo.type == CLIENT_HELLO) {
         ret = VERIFY_Init(ctx->hsCtx);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17332, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "VERIFY_Init fail", 0, 0, 0, 0);
             return ret;
         }

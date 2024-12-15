@@ -38,7 +38,7 @@ static int32_t PackCookie(const uint8_t *cookie, uint8_t cookieLen,
 
     if (bufLen < (sizeof(uint8_t) + cookieLen)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_COOKIE_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15730, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17328, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "the buffer length of cookie is not enough.", 0, 0, 0, 0);
         return HITLS_PACK_COOKIE_ERR;
     }
@@ -63,7 +63,7 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
     /* The bufLen must be able to pack at least the version number (2 bytes) + cookie (xx bytes) */
     if (bufLen < (sizeof(uint16_t) + ctx->negotiatedInfo.cookieSize)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15461, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17329, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack hello verify request mandatory field error, the bufLen(%u) is not enough.", bufLen, NULL, NULL, NULL);
         return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
     }
@@ -97,7 +97,7 @@ int32_t PackHelloVerifyRequest(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint
     
     ret = PackHelloVerifyReqMandatoryField(ctx, buf, bufLen, &msgLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15863, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17330, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack hello verify request mandatory content fail.", 0, 0, 0, 0);
         return ret;
     }

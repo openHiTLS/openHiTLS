@@ -64,7 +64,7 @@ static int32_t UdpNew(BSL_UIO *uio)
 {
     UdpParameters *parameters = (UdpParameters *)BSL_SAL_Calloc(1u, sizeof(UdpParameters));
     if (parameters == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05031, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05073, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "Uio: udp param malloc fail.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         return BSL_UIO_FAIL;
@@ -99,7 +99,7 @@ static int32_t BslUdpGetPeerIpAddr(UdpParameters *parameters, void *parg, uint32
     BSL_UIO_CtrlGetPeerIpAddrParam *para = (BSL_UIO_CtrlGetPeerIpAddrParam *)parg;
     if (parg == NULL || larg != (int32_t)sizeof(BSL_UIO_CtrlGetPeerIpAddrParam) ||
         para->addr == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05051, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05074, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: Get peer ip address input error.", 0, 0, 0, 0);
         return BSL_NULL_INPUT;
     }
@@ -107,14 +107,14 @@ static int32_t BslUdpGetPeerIpAddr(UdpParameters *parameters, void *parg, uint32
     /* Check whether the IP address is set. */
     if (parameters->ipLen == 0) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05052, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05075, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: Ip address is already existed.", 0, 0, 0, 0);
         return BSL_UIO_FAIL;
     }
 
     if (para->size < parameters->ipLen) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05053, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05076, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: Ip address length err.", 0, 0, 0, 0);
         return BSL_UIO_FAIL;
     }
@@ -127,7 +127,7 @@ static int32_t BslUdpGetPeerIpAddr(UdpParameters *parameters, void *parg, uint32
 static int32_t BslUdpSetPeerIpAddr(UdpParameters *parameters, const uint8_t *addr, uint32_t size)
 {
     if (addr == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05049, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Uio: NULL error.", 0, 0, 0,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05077, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Uio: NULL error.", 0, 0, 0,
                               0);
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
@@ -135,7 +135,7 @@ static int32_t BslUdpSetPeerIpAddr(UdpParameters *parameters, const uint8_t *add
 
     if (size != IP_ADDR_V4_LEN && size != IP_ADDR_V6_LEN && size != IP_ADDR_SOCK_LEN) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05050, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "Uio: Set peer ip address input error.", 0, 0, 0, 0);
         return BSL_UIO_FAIL;
     }
@@ -181,7 +181,7 @@ static int32_t BslUdpGetFd(UdpParameters *parameters, void *parg, int32_t larg)
 {
     if (larg != (int32_t)sizeof(int32_t) || parg == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05054, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05079, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "get fd handle invalid parameter.", 0, 0, 0, 0);
         return BSL_INVALID_ARG;
     }

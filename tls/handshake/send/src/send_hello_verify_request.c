@@ -37,7 +37,7 @@ int32_t ServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
         /* assemble message */
         ret = HS_PackMsg(ctx, HELLO_VERIFY_REQUEST, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15906, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17333, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack hello verify request msg fail.", 0, 0, 0, 0);
             return ret;
         }
@@ -53,7 +53,7 @@ int32_t ServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
        The server enters the renegotiation state only when receiving a ClientHello message. */
     ctx->negotiatedInfo.isRenegotiation = false;
 
-    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15907, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17334, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "server send hello verify request msg success.", 0, 0, 0, 0);
 
     return HS_ChangeState(ctx, TRY_RECV_CLIENT_HELLO);
