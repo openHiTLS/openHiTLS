@@ -1230,7 +1230,12 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ecdsaPkey, mdId, msg->x, msg->len, hitlsSign, hitlsSginLen) == CRYPT_SUCCESS);
 
     /* Copy the contexts: sign and verify */
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
+    if (isProvider == 1) {
+        cpyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        cpyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, ecdsaPkey), CRYPT_SUCCESS);
     hitlsSginLen = CRYPT_EAL_PkeyGetSignLen(cpyCtx);
