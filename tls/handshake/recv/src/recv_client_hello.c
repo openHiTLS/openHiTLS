@@ -1188,16 +1188,7 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     int32_t ret;
     bool ifNeedGenerate = false;
     const ClientHelloMsg *clientHello = &msg->body.clientHello;
-#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-    CheckRenegotiate(ctx);
-#endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
-#ifdef HITLS_TLS_FEATURE_SNI
-    /* Perform the ClientHello callback. The pause handshake status is not considered */
-    ret = ClientHelloCbCheck(ctx);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif /* HITLS_TLS_FEATURE_SNI */
+
     // If isHelloVerifyReqEnable enabled, check ClientHello cookie.
     if (ctx->config.tlsConfig.isHelloVerifyReqEnable) {
         if (clientHello->cookieLen == 0) {
@@ -1239,6 +1230,16 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         }
     }
 
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+    CheckRenegotiate(ctx);
+#endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
+#ifdef HITLS_TLS_FEATURE_SNI
+    /* Perform the ClientHello callback. The pause handshake status is not considered */
+    ret = ClientHelloCbCheck(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif /* HITLS_TLS_FEATURE_SNI */
     /* Process the client Hello message */
     ret = ServerCheckAndProcessClientHello(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {

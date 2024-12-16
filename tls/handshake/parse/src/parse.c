@@ -47,7 +47,7 @@ static int32_t CheckServerHelloType(TLS_Ctx *ctx, const HS_MsgType msgType)
             return HITLS_SUCCESS;
         }
     }
-    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17026, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17331, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "CheckServerHelloType fail", 0, 0, 0, 0);
     return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
 }
