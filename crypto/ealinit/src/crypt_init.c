@@ -114,13 +114,14 @@ static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 static void RandModuleFree(uint64_t initOpt)
 {
     (void) initOpt;
-    return CRYPT_SUCCESS;
+    return;
 }
 
 static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 {
+    (void) alg;
     (void) initOpt;
-    return;
+    return CRYPT_SUCCESS;
 }
 #endif
 
