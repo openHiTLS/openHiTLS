@@ -213,7 +213,7 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
     if (keyExchInfoNum == 0 && ctx->keyDeriveFunc != NULL) {
         return E2EE_SUCCESS;
     }
-    if (keyExchInfoNum == 0 ||keyExchInfoNum > E2EE_MAX_SERVER_KEY_EXCH_INFO_NUM) {
+    if (keyExchInfoNum == 0 || keyExchInfoNum > E2EE_MAX_SERVER_KEY_EXCH_INFO_NUM) {
         return E2EE_ERR_NVALID_ARG;
     }
 
@@ -286,7 +286,7 @@ int32_t E2EE_ServerInit(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo keyExchInfo[
     return E2EE_SUCCESS;
 }
 
-static int32_t FindPubKeyId(E2EE_ServerCtx *ctx, uint8_t *pubKeyId, uint32_t pubKeyIdLen, uint32_t *index)
+static int32_t FindPubKeyIdIndex(E2EE_ServerCtx *ctx, uint8_t *pubKeyId, uint32_t pubKeyIdLen, uint32_t *index)
 {
     if (pubKeyIdLen != E2EE_MSG_PUBKEY_ID_SIZE) {
         return E2EE_ERR_MSG_LEN;
@@ -331,7 +331,7 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
         }
     } else {
         uint32_t index;
-        ret = FindPubKeyId(ctx, pubKeyId, pubKeyIdLen, &index);
+        ret = FindPubKeyIdIndex(ctx, pubKeyId, pubKeyIdLen, &index);
         if (ret != E2EE_SUCCESS) {
             CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
             return ret;
@@ -380,14 +380,14 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
     }
 
     E2EE_Tlv tlvs[E2EE_MSG_C2S_KEY_EXCH_TLV_NUM] = {0};
-    uint32_t tlvsLen = E2EE_MSG_C2S_KEY_EXCH_TLV_NUM;
+    uint32_t tlvNum = E2EE_MSG_C2S_KEY_EXCH_TLV_NUM;
 
-    ret = E2EE_DeserializeMsg(cipherText, cipherTextLen, tlvs, &tlvsLen);
+    ret = E2EE_DeserializeMsg(cipherText, cipherTextLen, tlvs, &tlvNum);
     if (ret != E2EE_SUCCESS) {
         return ret;
     }
 
-    if (tlvsLen != E2EE_MSG_C2S_KEY_EXCH_TLV_NUM) {
+    if (tlvNum != E2EE_MSG_C2S_KEY_EXCH_TLV_NUM) {
         return E2EE_ERR_MSG_LEN;
     }
 

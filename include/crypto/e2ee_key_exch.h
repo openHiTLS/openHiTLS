@@ -61,6 +61,8 @@ typedef struct {
     uint32_t sharedSecretLen;
     uint8_t *encapsulatedKey;
     uint32_t encapsulatedKeyLen;
+    uint8_t *pubKeyId;  // sha256(serverPubKey)
+    uint32_t pubKeyIdLen;
 } E2EE_KemEncapsulateResult;
 
 typedef struct {

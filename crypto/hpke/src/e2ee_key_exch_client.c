@@ -72,8 +72,8 @@ E2EE_ClientCtx *E2EE_ClientCreate(E2EE_AlgId algId)
     return ctx;
 }
 
-static int32_t InitClientSender(E2EE_ClientCtx *ctx, uint8_t *serverPubKey, uint32_t serverPubKeyLen, uint8_t *info,
-    uint32_t infoLen)
+static int32_t InitClientSenderWithCallback(E2EE_ClientCtx *ctx, uint8_t *serverPubKey, uint32_t serverPubKeyLen,
+    uint8_t *info, uint32_t infoLen)
 {
     uint32_t encapKeyLen = 0;
     CRYPT_HPKE_CipherSuite cipher = {(CRYPT_HPKE_KEM_AlgId)ctx->algId.kemAlgId,
@@ -82,47 +82,82 @@ static int32_t InitClientSender(E2EE_ClientCtx *ctx, uint8_t *serverPubKey, uint
     if (ret != CRYPT_SUCCESS) {
         return E2EE_ERR_CRYPTO;
     }
+
     uint8_t *encapKey = malloc(encapKeyLen);
-    if (encapKey == NULL) {
-        return E2EE_ERR_MALLOC;
+    uint8_t *sharedSecret = malloc(E2EE_MAX_SHARED_SECRET_LEN);
+    uint8_t *serverPubKeyId = malloc(E2EE_MSG_PUBKEY_ID_SIZE);
+    if (encapKey == NULL || sharedSecret == NULL || serverPubKeyId == NULL) {
+        ret = E2EE_ERR_MALLOC;
+        goto end;
     }
 
-    if (ctx->keyDeriveFunc != NULL) {
-        uint8_t *sharedSecret = malloc(E2EE_MAX_SHARED_SECRET_LEN);
-        if (sharedSecret == NULL) {
-            ret = E2EE_ERR_MALLOC;
-            goto end;
-        }
-
-        E2EE_KemEncapsulateResult result = {sharedSecret, E2EE_MAX_SHARED_SECRET_LEN, encapKey, encapKeyLen};
-        ret = ctx->keyDeriveFunc(ctx->callbackArg, ctx->algId.kemAlgId, serverPubKey, serverPubKeyLen, &result);
-        if (ret != E2EE_SUCCESS) {
-            free(sharedSecret);
-            ret = E2EE_ERR_KEY_EXCH;
-            goto end;
-        }
-
-        ret = CRYPT_EAL_HpkeSetSharedSecret(ctx->sender, info, infoLen, result.sharedSecret, result.sharedSecretLen);
-        memset_s(sharedSecret, E2EE_MAX_SHARED_SECRET_LEN, 0, E2EE_MAX_SHARED_SECRET_LEN);
-        free(sharedSecret);
-        if (ret != CRYPT_SUCCESS) {
-            ret = E2EE_ERR_CRYPTO;
-            goto end;
-        }
-    } else {
-        ret = CRYPT_EAL_HpkeSetupSender(ctx->sender, NULL, info, infoLen, serverPubKey, serverPubKeyLen, encapKey,
-            &encapKeyLen);
-        if (ret != CRYPT_SUCCESS) {
-            ret = E2EE_ERR_CRYPTO;
-            goto end;
-        }
+    E2EE_KemEncapsulateResult result = {sharedSecret, E2EE_MAX_SHARED_SECRET_LEN, encapKey, encapKeyLen,
+        serverPubKeyId, E2EE_MSG_PUBKEY_ID_SIZE};
+    ret = ctx->keyDeriveFunc(ctx->callbackArg, ctx->algId.kemAlgId, serverPubKey, serverPubKeyLen, &result);
+    if (ret != E2EE_SUCCESS) {
+        ret = E2EE_ERR_KEY_EXCH;
+        goto end;
     }
-    ret = E2EE_SUCCESS;
+
+    ret = CRYPT_EAL_HpkeSetSharedSecret(ctx->sender, info, infoLen, result.sharedSecret, result.sharedSecretLen);
+    if (ret != CRYPT_SUCCESS) {
+        ret = E2EE_ERR_CRYPTO;
+        goto end;
+    }
     ctx->encapsulatedKey = encapKey;
     ctx->encapsulatedKeyLen = encapKeyLen;
+    ctx->serverPubKeyId = serverPubKeyId;
+    ctx->serverPubKeyIdLen = E2EE_MSG_PUBKEY_ID_SIZE;
+end:
+    memset_s(sharedSecret, E2EE_MAX_SHARED_SECRET_LEN, 0, E2EE_MAX_SHARED_SECRET_LEN);
+    free(sharedSecret);
+    if (ret != E2EE_SUCCESS) {
+        memset_s(encapKey, encapKeyLen, 0, encapKeyLen);
+        free(encapKey);
+        free(serverPubKeyId);
+    }
+    return ret;
+}
+
+static int32_t InitClientSenderWithDefault(E2EE_ClientCtx *ctx, uint8_t *serverPubKey, uint32_t serverPubKeyLen,
+    uint8_t *info, uint32_t infoLen)
+{
+    if (serverPubKey == NULL || serverPubKeyLen == 0) {
+        return E2EE_ERR_NULL_INPUT;
+    }
+
+    uint32_t encapKeyLen = 0;
+    CRYPT_HPKE_CipherSuite cipher = {(CRYPT_HPKE_KEM_AlgId)ctx->algId.kemAlgId,
+        (CRYPT_HPKE_KDF_AlgId)ctx->algId.kdfAlgId, (CRYPT_HPKE_AEAD_AlgId)ctx->algId.aeadAlgId};
+    int32_t ret = CRYPT_EAL_HpkeGetEncapKeyLen(cipher, &encapKeyLen);
+    if (ret != CRYPT_SUCCESS) {
+        return E2EE_ERR_CRYPTO;
+    }
+    uint8_t *encapKey = malloc(encapKeyLen);
+    uint8_t *serverPubKeyId = malloc(E2EE_MSG_PUBKEY_ID_SIZE);
+    if (encapKey == NULL || serverPubKeyId == NULL) {
+        ret = E2EE_ERR_MALLOC;
+        goto end;
+    }
+    ret = E2eeSha256(serverPubKey, serverPubKeyLen, serverPubKeyId, E2EE_MSG_PUBKEY_ID_SIZE);
+    if (ret != E2EE_SUCCESS) {
+        goto end;
+    }
+
+    ret = CRYPT_EAL_HpkeSetupSender(ctx->sender, NULL, info, infoLen, serverPubKey, serverPubKeyLen, encapKey,
+        &encapKeyLen);
+    if (ret != CRYPT_SUCCESS) {
+        free(encapKey);
+        return E2EE_ERR_CRYPTO;
+    }
+    ctx->encapsulatedKey = encapKey;
+    ctx->encapsulatedKeyLen = encapKeyLen;
+    ctx->serverPubKeyId = serverPubKeyId;
+    ctx->serverPubKeyIdLen = E2EE_MSG_PUBKEY_ID_SIZE;
 end:
     if (ret != E2EE_SUCCESS) {
         free(encapKey);
+        free(serverPubKeyId);
     }
     return ret;
 }
@@ -130,7 +165,7 @@ end:
 int32_t E2EE_ClientInit(E2EE_ClientCtx *ctx, uint8_t *serverPubKey, uint32_t serverPubKeyLen, uint8_t *info,
     uint32_t infoLen)
 {
-    if (ctx == NULL || serverPubKey == NULL || serverPubKeyLen == 0) {
+    if (ctx == NULL) {
         return E2EE_ERR_NULL_INPUT;
     }
 
@@ -138,31 +173,23 @@ int32_t E2EE_ClientInit(E2EE_ClientCtx *ctx, uint8_t *serverPubKey, uint32_t ser
         return E2EE_FAILED;
     }
 
-    if (serverPubKeyLen > E2EE_MAX_PUBKEY_LEN) {
-        return E2EE_ERR_NVALID_ARG;
+    int32_t ret;
+    if (ctx->keyDeriveFunc != NULL) {
+        ret = InitClientSenderWithCallback(ctx, serverPubKey, serverPubKeyLen, info, infoLen);
+        if (ret != E2EE_SUCCESS) {
+            return ret;
+        }
+    } else {
+        ret = InitClientSenderWithDefault(ctx, serverPubKey, serverPubKeyLen, info, infoLen);
+        if (ret != E2EE_SUCCESS) {
+            return ret;
+        }
     }
 
-    uint8_t *serverPubKeyId = malloc(E2EE_MSG_PUBKEY_ID_SIZE);
-    if (serverPubKeyId == NULL) {
-        return E2EE_ERR_MALLOC;
+    if (ret == E2EE_SUCCESS) {
+        ctx->senderState = E2EE_CLIENT_KEY_EXCH;
     }
-
-    int32_t ret = E2eeSha256(serverPubKey, serverPubKeyLen, serverPubKeyId, E2EE_MSG_PUBKEY_ID_SIZE);
-    if (ret != E2EE_SUCCESS) {
-        free(serverPubKeyId);
-        return ret;
-    }
-
-    ret = InitClientSender(ctx, serverPubKey, serverPubKeyLen, info, infoLen);
-    if (ret != E2EE_SUCCESS) {
-        free(serverPubKeyId);
-        return ret;
-    }
-
-    ctx->serverPubKeyId = serverPubKeyId;
-    ctx->serverPubKeyIdLen = E2EE_MSG_PUBKEY_ID_SIZE;
-    ctx->senderState = E2EE_CLIENT_KEY_EXCH;
-    return E2EE_SUCCESS;
+    return ret;
 }
 
 static uint16_t Uint16ToBigEndian(uint16_t value)

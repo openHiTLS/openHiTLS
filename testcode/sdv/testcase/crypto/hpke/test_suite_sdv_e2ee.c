@@ -17,61 +17,43 @@
 #include "securec.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_hpke.h"
+#include "crypt_eal_md.h"
 #include "e2ee_key_exch.h"
 /* END_HEADER */
 
 #define HPKE_KEM_MAX_PUBLIC_KEY_LEN  133
 #define HPKE_KEM_MAX_PRIVATE_KEY_LEN  66
 
-
-static inline uint32_t Uint32ToBigEndian(uint32_t value) // 大部分是小端机器，可以考虑使用小端序？
-{
-    uint16_t a = 0x1213;
-    uint8_t *p = (uint8_t *)&a;
-    uint8_t *data = (uint8_t *)&value;
-    if (p[0] == 0x13) { // little-endian
-        return ((uint32_t)data[0] << 24) | ((uint32_t)data[1] << 16) | ((uint32_t)data[2] << 8) | ((uint32_t)data[3]);
-    } else {
-        return value;
-    }
-}
-
-static inline uint64_t Uint64ToBigEndian(uint64_t value) // 大部分是小端机器，可以考虑使用小端序？
-{
-    uint16_t a = 0x1213;
-    uint8_t *p = (uint8_t *)&a;
-    uint32_t *data = (uint32_t *)&value;
-    if (p[0] == 0x13) { // little-endian
-        return (uint64_t)Uint32ToBigEndian(data[0]) << 32 | (uint64_t)Uint32ToBigEndian(data[1]);
-    } else {
-        return value;
-    }
-}
-
 static int32_t GetPubAndPrivKey(CRYPT_EAL_PkeyCtx *pkey, uint8_t *pubKey, uint32_t *pubKeyLen, uint8_t *priKey,
     uint32_t *priKeyLen)
 {
     int32_t ret;
     CRYPT_EAL_PkeyPub pub = { 0 };
-    pub.id = CRYPT_EAL_PkeyGetId(pkey);
-    pub.key.eccPub.data = pubKey;
-    pub.key.eccPub.len = *pubKeyLen;
-    ret = CRYPT_EAL_PkeyGetPub(pkey, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+
+    if (pubKey != NULL) {
+        pub.id = CRYPT_EAL_PkeyGetId(pkey);
+        pub.key.eccPub.data = pubKey;
+        pub.key.eccPub.len = *pubKeyLen;
+        ret = CRYPT_EAL_PkeyGetPub(pkey, &pub);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        *pubKeyLen = pub.key.eccPub.len;
     }
 
     CRYPT_EAL_PkeyPrv priv = { 0 };
-    priv.id = CRYPT_EAL_PkeyGetId(pkey);
-    priv.key.eccPrv.data = priKey;
-    priv.key.eccPrv.len = *priKeyLen;
-    ret = CRYPT_EAL_PkeyGetPrv(pkey, &priv);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+
+    if (priKey != NULL) {
+        priv.id = CRYPT_EAL_PkeyGetId(pkey);
+        priv.key.eccPrv.data = priKey;
+        priv.key.eccPrv.len = *priKeyLen;
+        ret = CRYPT_EAL_PkeyGetPrv(pkey, &priv);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        *priKeyLen = priv.key.eccPrv.len;
     }
 
-    *pubKeyLen = pub.key.eccPub.len;
-    *priKeyLen = priv.key.eccPrv.len;
     return ret;
 }
 
@@ -196,44 +178,70 @@ exit:
     return ret;
 }
 
+static int32_t Sha256(const uint8_t *data, uint32_t dataLen, uint8_t *hash, uint32_t hashLen)
+{
+    uint32_t len = hashLen;
+    int32_t ret = -1;
+    CRYPT_EAL_MdCTX *hashCtx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    ASSERT_TRUE(hashCtx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(hashCtx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(hashCtx, data, dataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(hashCtx, hash, &len), CRYPT_SUCCESS);
+    ret = CRYPT_SUCCESS;
+exit:
+    CRYPT_EAL_MdFreeCtx(hashCtx);
+    return ret;
+}
+
+CRYPT_EAL_PkeyCtx *g_pkeyR = NULL;
 static int32_t KemEncapsulate(void *callbackArg, E2EE_KEM_AlgId kemId, uint8_t *serverPubKey,
     uint32_t serverPubKeyLen, E2EE_KemEncapsulateResult *out)
 {
     (void)callbackArg;
+    (void)serverPubKey;
+    (void)serverPubKeyLen;
     int32_t ret = -1;
     CRYPT_HPKE_CipherSuite cipherSuite = {(CRYPT_HPKE_KEM_AlgId)kemId, CRYPT_KDF_HKDF_SHA256, CRYPT_AEAD_AES_128_GCM};
     CRYPT_EAL_HpkeCtx *hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, NULL, CRYPT_HPKE_SENDER, CRYPT_HPKE_MODE_BASE, cipherSuite);
     ASSERT_TRUE(hpkeCtx != NULL);
 
-    ASSERT_EQ(CRYPT_EAL_HpkeSetupSender(hpkeCtx, NULL, 0, 0, serverPubKey, serverPubKeyLen, out->encapsulatedKey, &out->encapsulatedKeyLen), CRYPT_SUCCESS);
+    uint8_t pkeyRPubKeyBuf[HPKE_KEM_MAX_PUBLIC_KEY_LEN] = {0};
+    uint32_t pkeyRPubKeyBufLen = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+    ASSERT_EQ(GetPubAndPrivKey(g_pkeyR, pkeyRPubKeyBuf, &pkeyRPubKeyBufLen, NULL, NULL), CRYPT_SUCCESS);
+    Sha256(pkeyRPubKeyBuf, pkeyRPubKeyBufLen, out->pubKeyId, out->pubKeyIdLen);
+
+    ASSERT_EQ(CRYPT_EAL_HpkeSetupSender(hpkeCtx, NULL, 0, 0, pkeyRPubKeyBuf, pkeyRPubKeyBufLen, out->encapsulatedKey, &out->encapsulatedKeyLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(hpkeCtx, out->sharedSecret, &out->sharedSecretLen), CRYPT_SUCCESS);
+
     ret = CRYPT_SUCCESS;
 exit:
     CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
     return ret;
 }
 
-CRYPT_EAL_PkeyCtx *g_pkeyR = NULL;
-static int32_t KemDecapsulate(void *callbackArg, E2EE_KEM_AlgId kemId, uint8_t *encapsulatedKey,
-    uint32_t encapsulatedKeyLen, uint8_t *pubKeyId, uint32_t pubKeyIdLen, E2EE_KemDecapsulateResult *out)
-{
-    (void)callbackArg;
-    (void)pubKeyId;
-    (void)pubKeyIdLen;
-    int32_t ret = -1;
-    CRYPT_HPKE_CipherSuite cipherSuite = {(CRYPT_HPKE_KEM_AlgId)kemId, CRYPT_KDF_HKDF_SHA256, CRYPT_AEAD_AES_128_GCM};
-    CRYPT_EAL_HpkeCtx *hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, NULL, CRYPT_HPKE_RECIPIENT, CRYPT_HPKE_MODE_BASE, cipherSuite);
-    ASSERT_TRUE(hpkeCtx != NULL);
 
-    ASSERT_EQ(CRYPT_EAL_HpkeSetupRecipient(hpkeCtx, g_pkeyR, NULL, 0, encapsulatedKey, encapsulatedKeyLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(hpkeCtx, out->sharedSecret, &out->sharedSecretLen), CRYPT_SUCCESS);
-    memset_s(out->info, 16, 0, 16);
-    out->infoLen = 16;
-    ret = CRYPT_SUCCESS;
-exit:
-    CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
-    return ret;
-}
+// static int32_t KemDecapsulate(void *callbackArg, E2EE_KEM_AlgId kemId, uint8_t *encapsulatedKey,
+//     uint32_t encapsulatedKeyLen, uint8_t *pubKeyId, uint32_t pubKeyIdLen, E2EE_KemDecapsulateResult *out)
+// {
+//     (void)callbackArg;
+//     (void)pubKeyId;
+//     (void)pubKeyIdLen;
+//     int32_t ret = -1;
+//     CRYPT_HPKE_CipherSuite cipherSuite = {(CRYPT_HPKE_KEM_AlgId)kemId, CRYPT_KDF_HKDF_SHA256, CRYPT_AEAD_AES_128_GCM};
+//     CRYPT_EAL_HpkeCtx *hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, NULL, CRYPT_HPKE_RECIPIENT, CRYPT_HPKE_MODE_BASE, cipherSuite);
+//     ASSERT_TRUE(hpkeCtx != NULL);
+
+//     ASSERT_EQ(CRYPT_EAL_HpkeSetupRecipient(hpkeCtx, g_pkeyR, NULL, 0, encapsulatedKey, encapsulatedKeyLen), CRYPT_SUCCESS);
+//     ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(hpkeCtx, out->sharedSecret, &out->sharedSecretLen), CRYPT_SUCCESS);
+//     memset_s(out->info, 16, 0, 16);
+//     out->infoLen = 16;
+//     ret = CRYPT_SUCCESS;
+// exit:
+//     CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
+//     return ret;
+// }
 
 static int32_t E2EE_test2(E2EE_KEM_AlgId kemId, E2EE_KDF_AlgId kdfId, E2EE_AEAD_AlgId aeadId)
 {
@@ -252,7 +260,7 @@ static int32_t E2EE_test2(E2EE_KEM_AlgId kemId, E2EE_KDF_AlgId kdfId, E2EE_AEAD_
     uint8_t infoData[16] = { 0 };
     info.x = infoData;
     // CRYPT_EAL_Randbytes(info.x, info.len);
-    memset_s(infoData, 16, 0, 16);
+    memset_s(infoData, 16, 0xFE, 16);
 
     // prepare Recipient key
     ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, NULL, 0, &pkeyS), CRYPT_SUCCESS);
@@ -263,27 +271,20 @@ static int32_t E2EE_test2(E2EE_KEM_AlgId kemId, E2EE_KDF_AlgId kdfId, E2EE_AEAD_
         pkeyRPrivKeyBufLen[i] = HPKE_KEM_MAX_PRIVATE_KEY_LEN;
         ASSERT_EQ(GetPubAndPrivKey(pkeyR[i], pkeyRPubKeyBuf[i], &pkeyRPubKeyBufLen[i], pkeyRPrivKeyBuf[i], &pkeyRPrivKeyBufLen[i]), CRYPT_SUCCESS);
     }
+    g_pkeyR = CRYPT_EAL_PkeyDupCtx(pkeyR[0]);
+    ASSERT_TRUE(g_pkeyR != NULL);
 
     E2EE_ClientCtx *client = E2EE_ClientCreate(e2eeCipherSuite);
     ASSERT_TRUE(client != NULL);
 
-    E2EE_KemEncapsulateCallbackFunc keyDeriveFunc = KemEncapsulate;
-    E2EE_SetClientKemCallback(client, keyDeriveFunc, NULL);
+    E2EE_SetClientKemCallback(client, KemEncapsulate, NULL);
 
     ASSERT_EQ(E2EE_ClientInit(client, pkeyRPubKeyBuf[0], pkeyRPubKeyBufLen[0], info.x, info.len), CRYPT_SUCCESS);
-
-    // g_pkeyR = CRYPT_EAL_PkeyNewCtx(CRYPT_EAL_PkeyGetId(pkeyR[0]));
-    // ASSERT_TRUE(g_pkeyR != NULL);
-    // ret = CRYPT_EAL_PkeyCopyCtx(g_pkeyR, pkeyR[0]);
-    // ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    g_pkeyR = CRYPT_EAL_PkeyDupCtx(pkeyR[0]);
-    ASSERT_TRUE(g_pkeyR != NULL);
 
     E2EE_ServerCtx *server = E2EE_ServerCreate();
     ASSERT_TRUE(server != NULL);
 
-    E2EE_SetServerKemCallback(server, KemDecapsulate, NULL);
+    // E2EE_SetServerKemCallback(server, KemDecapsulate, NULL);
 
     E2EE_KeyType type = E2EE_ECC_P256;
     if (kemId == E2EE_X25519_HKDF_SHA256) {
@@ -302,7 +303,7 @@ static int32_t E2EE_test2(E2EE_KEM_AlgId kemId, E2EE_KDF_AlgId kdfId, E2EE_AEAD_
         {type, pkeyRPrivKeyBuf[2], pkeyRPrivKeyBufLen[2], info.x, info.len},
         {type, pkeyRPrivKeyBuf[3], pkeyRPrivKeyBufLen[3], info.x, info.len},
         {type, pkeyRPrivKeyBuf[4], pkeyRPrivKeyBufLen[4], info.x, info.len} };
-    ASSERT_EQ(E2EE_ServerInit(server, keyExchInfo, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(E2EE_ServerInit(server, keyExchInfo, 5), CRYPT_SUCCESS);
 
     uint8_t *plain = NULL;
     uint32_t plainLen;
