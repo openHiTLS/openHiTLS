@@ -43,13 +43,14 @@ int32_t ParseHelloVerifyRequest(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLe
         CleanHelloVerifyRequest(msg);
         return ret;
     }
-    
-    /* If the buf length is equal to the offset length, return HITLS_SUCCESS. */
-    if (bufLen == bufOffset) {
-        return HITLS_SUCCESS;
+
+    // The cookie content is the last field of the helloVerifyRequest message. No other data should follow.
+    if (bufLen != bufOffset) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17335,
+            BINGLOG_STR("hello verify request packet length error."), ALERT_DECODE_ERROR);
     }
 
-    return ret;
+    return HITLS_SUCCESS;
 }
 
 void CleanHelloVerifyRequest(HelloVerifyRequestMsg *msg)

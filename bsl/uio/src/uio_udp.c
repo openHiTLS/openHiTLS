@@ -42,7 +42,7 @@ typedef struct {
     uint8_t reverse[3];
 
     int32_t fd; // Network socket
-    uint8_t ip[DGRAM_IPADDR_MAX_LEN];
+    uint8_t ip[DGRAM_SOCKADDR_MAX_LEN];
     uint32_t ipLen;
 } UdpParameters;
 
@@ -133,7 +133,7 @@ static int32_t BslUdpSetPeerIpAddr(UdpParameters *parameters, const uint8_t *add
         return BSL_NULL_INPUT;
     }
 
-    if (size != IP_ADDR_V4_LEN && size != IP_ADDR_V6_LEN && size != IP_ADDR_SOCK_LEN) {
+    if (size != SOCK_ADDR_V4_LEN && size != SOCK_ADDR_V6_LEN) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "Uio: Set peer ip address input error.", 0, 0, 0, 0);
@@ -147,7 +147,7 @@ static int32_t BslUdpSetPeerIpAddr(UdpParameters *parameters, const uint8_t *add
 
 static int32_t ClearPeerIpAddr(UdpParameters *parameters)
 {
-    memset_s(parameters->ip, DGRAM_IPADDR_MAX_LEN, 0, DGRAM_IPADDR_MAX_LEN);
+    memset_s(parameters->ip, DGRAM_SOCKADDR_MAX_LEN, 0, DGRAM_SOCKADDR_MAX_LEN);
     parameters->ipLen = 0;
     return BSL_SUCCESS;
 }
@@ -259,6 +259,7 @@ static int32_t UdpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
     errno = 0;
     (void)BSL_UIO_ClearFlags(uio, BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY);
 
+    uint8_t ip[DGRAM_SOCKADDR_MAX_LEN];
     UdpParameters *parameters = BSL_UIO_GetCtx(uio);
     if (parameters == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
@@ -273,15 +274,14 @@ static int32_t UdpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
         return BSL_UIO_IO_EXCEPTION;
     }
 
-    ClearPeerIpAddr(parameters);
-    ret = recvfrom(fd, buf, len, 0, (struct sockaddr *)&parameters->ip, &iplen);
+    ret = recvfrom(fd, buf, len, 0, (struct sockaddr *)&ip, &iplen);
 
     err = errno;
     if (ret > 0) {
         *readLen = ret;
         if (!parameters->connected) {
-            BSL_ADDR *bsl_addr = (BSL_ADDR *)parameters->ip;
-            ret = UdpCtrl(uio, BSL_UIO_SET_PEER_IP_ADDR, Family2Len(bsl_addr->sa), parameters->ip);
+            BSL_ADDR *bsl_addr = (BSL_ADDR *)ip;
+            ret = UdpCtrl(uio, BSL_UIO_SET_PEER_IP_ADDR, Family2Len(bsl_addr->sa), ip);
             if (ret != BSL_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
                 return BSL_UIO_IO_EXCEPTION;

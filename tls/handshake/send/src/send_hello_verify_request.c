@@ -49,7 +49,7 @@ int32_t ServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
         return ret;
     }
 
-    /* The server does not enter the renegotiation state when sending a HelloRequest message.
+    /* The server does not enter the renegotiation state when sending a HelloVerifyRequest message.
        The server enters the renegotiation state only when receiving a ClientHello message. */
     ctx->negotiatedInfo.isRenegotiation = false;
 
