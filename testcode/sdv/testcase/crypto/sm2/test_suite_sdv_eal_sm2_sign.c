@@ -932,7 +932,12 @@ void SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
+    if (isProvider == 1) {
+        cpyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        cpyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
     signLen = sizeof(signBuf);
