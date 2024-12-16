@@ -7,9 +7,9 @@
 
 
 // TLS big-endian
-#define E2EE_MSG_VERSION_SIZE 1    //uint8_t
-#define E2EE_MSG_TYPE_SIZE 1       //uint8_t
-#define E2EE_MSG_TOTAL_LEN_SIZE 8  //uint64_t
+#define E2EE_MSG_VERSION_SIZE 1    // uint8_t
+#define E2EE_MSG_TYPE_SIZE 1       // uint8_t
+#define E2EE_MSG_TOTAL_LEN_SIZE 8  // uint64_t
 
 #define E2EE_MSG_HEADER_SIZE 10    // E2EE_MSG_VERSION_SIZE + E2EE_MSG_TYPE_SIZE + E2EE_MSG_TOTAL_LEN_SIZE
 

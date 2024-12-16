@@ -423,7 +423,7 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
         return ret;
     }
 
-    ret = InitServerRecipient(ctx, tlvs[encapsulatedKeyIndex].value, tlvs[encapsulatedKeyIndex].len, 
+    ret = InitServerRecipient(ctx, tlvs[encapsulatedKeyIndex].value, tlvs[encapsulatedKeyIndex].len,
         tlvs[pubKeyIdIndex].value, tlvs[pubKeyIdIndex].len);
     if (ret != E2EE_SUCCESS) {
         return ret;

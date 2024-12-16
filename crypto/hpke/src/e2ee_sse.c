@@ -378,10 +378,6 @@ end:
 
 int32_t E2eeSha256(const uint8_t *data, uint32_t dataLen, uint8_t *hash, uint32_t hashLen)
 {
-    if (hashLen != 32) {
-        return E2EE_ERR_CRYPTO;
-    }
-
     uint32_t len = hashLen;
     CRYPT_EAL_MdCTX *hashCtx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
     if (hashCtx == NULL) {
