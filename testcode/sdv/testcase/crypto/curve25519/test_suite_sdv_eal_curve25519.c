@@ -743,7 +743,12 @@ void SDV_CRYPTO_ED25519_SIGN_VERIFY_FUNC_TC001(Hex *prvKey, Hex *pubKey, Hex *ms
     ASSERT_EQ(memcmp(out, sign->x, sign->len), 0);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA512, msg->x, msg->len, sign->x, sign->len), CRYPT_SUCCESS);
 
-    cpyCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
+    if (isProvider == 1) {
+        cpyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        cpyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, pkey), CRYPT_SUCCESS);
     outLen = sizeof(out);
@@ -876,8 +881,15 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC002(Hex *pubkey, Hex *prvkey, Hex *share, int
     ASSERT_EQ(shareLen, share->len);
     ASSERT_EQ(memcmp(shareKey, share->x, shareLen), 0);
 
-    cpyCtx1 = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
-    cpyCtx2 = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
+    if (isProvider == 1) {
+        cpyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+        cpyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        cpyCtx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+        cpyCtx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(cpyCtx1 != NULL && cpyCtx2 != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx1, pkey1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx2, pkey2), CRYPT_SUCCESS);
