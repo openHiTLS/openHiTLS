@@ -17,7 +17,7 @@
 #ifdef HITLS_BSL_SAL_TIME
 
 #include "bsl_sal.h"
-#include "sal_time_impl.h"
+#include "sal_timeimpl.h"
 #include "bsl_errno.h"
 #include "sal_time.h"
 

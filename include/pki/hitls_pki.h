@@ -324,7 +324,7 @@ HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src);
  * @param prvKey   [IN] The private key context used for signing.
  * @param algParam [IN] The signature algorithm parameters.
  * @param cert     [IN] The certificate to be signed.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
@@ -340,7 +340,7 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
  * @param mdId [IN] Digest algorithm.
  * @param data [IN/OUT] The digest result.
  * @param dataLen [IN/OUT] The length of the digest.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_t *data, uint32_t *dataLen);
@@ -353,7 +353,7 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
  * @param cmd    [IN] HITLS_X509_Cmd
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32_t valLen);
@@ -374,7 +374,7 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, int32
  *        HITLS_X509_EXT_CHECK_SKI              bool
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen);
@@ -416,7 +416,7 @@ void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode [IN] CERT data.
  * @param cert   [OUT] CERT after parse.
- * @return #HITLS_X509_SUCCESS, success.
+ * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_Cert **cert);
@@ -431,7 +431,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param path   [IN] CERT file path.
  * @param cert   [OUT] CERT after parse.
- * @return #HITLS_X509_SUCCESS, success.
+ * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Cert **cert);
@@ -446,7 +446,7 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  * @param format  [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param path    [IN] CRL file path.
  * @param crllist [OUT] CRL list after parse.
- * @return #HITLS_X509_SUCCESS, success.
+ * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertMulParseFile(int32_t format, const char *path, HITLS_X509_List **certlist);
@@ -460,7 +460,7 @@ int32_t HITLS_X509_CertMulParseFile(int32_t format, const char *path, HITLS_X509
  * @param format [IN] Encoding format: BSL_FORMAT_ASN1 or BSL_FORMAT_PEM
  * @param cert   [IN] cert
  * @param buff   [OUT] encode result
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertGenBuff(int32_t format, HITLS_X509_Cert *cert, BSL_Buffer *buff);
@@ -474,7 +474,7 @@ int32_t HITLS_X509_CertGenBuff(int32_t format, HITLS_X509_Cert *cert, BSL_Buffer
  * @param format [IN] Encoding format: BSL_FORMAT_ASN1 or BSL_FORMAT_PEM
  * @param cert   [IN] cert
  * @param path   [IN] file path
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertGenFile(int32_t format, HITLS_X509_Cert *cert, const char *path);
@@ -505,7 +505,7 @@ void HITLS_X509_DnListFree(BslList *dnList);
  * @param list [IN] The name list
  * @param dnNames   [IN] dnName array
  * @param size   [IN] The count of dnName array
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size);
@@ -636,7 +636,7 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
  * @param crl            [IN] CRL info.
  * @return Error code
  */
-int32_t HITLS_X509_CrlVerify(void *pubkey, HITLS_X509_Crl *crl);
+int32_t HITLS_X509_CrlVerify(void *pubkey, const HITLS_X509_Crl *crl);
 
 /**
  * @ingroup pki
@@ -744,7 +744,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  *        HITLS_X509_STORECTX_SET_VEY_SM2_USERID        buffer              > 0
  * @param val [IN/OUT] input and output value.
  * @param valLen [IN] value length.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t valLen);
@@ -755,7 +755,7 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
  *
  * @param storeCtx [IN] StoreCtx.
  * @param chain [IN] certificate chain.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
@@ -768,7 +768,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
  * @param isWithRoot [IN] whether the root cert is included.
  * @param cert [IN] certificate.
  * @param chain [OUT] certificate chain.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot, HITLS_X509_Cert *cert,
@@ -802,7 +802,7 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr);
  * @param prvKey   [IN] The private key context used for signing.
  * @param algParam [IN] The signature algorithm parameters.
  * @param csr      [IN] The CSR to be signed.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
@@ -817,7 +817,7 @@ int32_t HITLS_X509_CsrSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const
  * @param format [IN] The format of the generated csr.
  * @param csr    [IN] The csr context
  * @param buff   [OUT] The buffer of the generated csr.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrGenBuff(int32_t format, HITLS_X509_Csr *csr, BSL_Buffer *buff);
@@ -831,7 +831,7 @@ int32_t HITLS_X509_CsrGenBuff(int32_t format, HITLS_X509_Csr *csr, BSL_Buffer *b
  * @param format [IN] The format of the generated csr.
  * @param csr    [IN] The csr context
  * @param path   [IN] The path of the generated csr.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *path);
@@ -844,7 +844,7 @@ int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *p
  * @param cmd [IN] HITLS_X509_Cmd
  * @param val [IN/OUT] input and output value.
  * @param valLen [IN] value length.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t valLen);
@@ -857,7 +857,7 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t 
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param encode [IN] The csr data
  * @param csr [OUT] The csr context after parsing
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_Csr **csr);
@@ -869,7 +869,7 @@ int32_t HITLS_X509_CsrParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param path [IN] The csr file path
  * @param csr [OUT] The csr context after parsing
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr **csr);
@@ -879,7 +879,7 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
  * @brief Csr verify function
  *
  * @param csr [OUT] The csr context
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
@@ -893,7 +893,7 @@ int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
  * @param val                                               data type
  *        HITLS_X509_ATTR_XX_REQUESTED_EXTENSIONS         HITLS_X509_Ext
  * @param valLen  The length of value.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, int32_t valLen);
@@ -985,7 +985,7 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag);
  * @param bag          [IN] bag
  * @param type         [IN] BSL_CID_LOCALKEYID/BSL_CID_FRIENDLYNAME
  * @param attrValue    [IN] the attr buffer
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_Buffer *attrValue);
@@ -1005,7 +1005,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
  *        HITLS_PKCS12_GET_ENTITY_KEY           CRYPT_EAL_PkeyCtx**
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t valLen);
@@ -1022,7 +1022,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t val
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
@@ -1038,7 +1038,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const H
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKCS12_PwdParam *pwdParam,
@@ -1055,7 +1055,7 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKC
  * @param encodeParam     [IN] encode data
  * @param isNeedMac       [IN] Identifies whether macData is required.
  * @param encode          [OUT] result.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,
@@ -1071,7 +1071,7 @@ int32_t HITLS_PKCS12_GenBuff(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS
  * @param encodeParam     [IN] encode data
  * @param isNeedMac       [IN] Identifies whether macData is required.
  * @param path            [IN] The path of the generated p12-file.
- * @retval #HITLS_X509_SUCCESS, success.
+ * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_PKCS12_GenFile(int32_t format, HITLS_PKCS12 *p12, const HITLS_PKCS12_EncodeParam *encodeParam,

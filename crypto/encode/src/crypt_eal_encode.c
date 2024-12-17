@@ -1814,13 +1814,13 @@ static int32_t EncodePk8EncPriKeyBuff(CRYPT_EAL_PkeyCtx *ealPriKey,
         return ret;
     }
     BSL_ASN1_Buffer asn1[CRYPT_PKCS_ENCPRIKEY_MAX] = {0};
-    /* code */
+
     ret = EncodePkcsEncryptedBuff(pkcs8Param, &unEncrypted, asn1);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(unEncrypted.data, unEncrypted.dataLen);
         return ret;
     }
-    /* encode */
+
     BSL_ASN1_Template templ = {pk8EncPriKeyTempl, sizeof(pk8EncPriKeyTempl) / sizeof(pk8EncPriKeyTempl[0])};
     ret = BSL_ASN1_EncodeTemplate(&templ, asn1, CRYPT_PKCS_ENCPRIKEY_MAX, &encode->data, &encode->dataLen);
     BSL_SAL_ClearFree(unEncrypted.data, unEncrypted.dataLen);
@@ -2279,7 +2279,7 @@ int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  * https://datatracker.ietf.org/doc/html/rfc5652#section-6.1
  */
 
-static BSL_ASN1_TemplateItem enContentInfoTempl[] = {
+static BSL_ASN1_TemplateItem g_enContentInfoTempl[] = {
          /* ContentType */
         {BSL_ASN1_TAG_OBJECT_ID, 0, 0},
          /* ContentEncryptionAlgorithmIdentifier */
@@ -2310,7 +2310,7 @@ static int32_t ParsePKCS7EncryptedContentInfo(BSL_Buffer *encode, const uint8_t 
     uint8_t *temp = encode->data;
     uint32_t  tempLen = encode->dataLen;
     BSL_ASN1_Buffer asn1[HITLS_P7_ENC_CONTINFO_MAX_IDX] = {0};
-    BSL_ASN1_Template templ = {enContentInfoTempl, sizeof(enContentInfoTempl) / sizeof(enContentInfoTempl[0])};
+    BSL_ASN1_Template templ = {g_enContentInfoTempl, sizeof(g_enContentInfoTempl) / sizeof(g_enContentInfoTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, asn1, HITLS_P7_ENC_CONTINFO_MAX_IDX);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2319,7 +2319,7 @@ static int32_t ParsePKCS7EncryptedContentInfo(BSL_Buffer *encode, const uint8_t 
     BslOidString typeOidStr = {asn1[HITLS_P7_ENC_CONTINFO_TYPE_IDX].len,
         (char *)asn1[HITLS_P7_ENC_CONTINFO_TYPE_IDX].buff, 0};
     BslCid cid = BSL_OBJ_GetCIDFromOid(&typeOidStr);
-    if (cid != BSL_CID_DATA) {
+    if (cid != BSL_CID_PKCS7_SIMPLEDATA) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNSUPPORTED_PKCS7_TYPE);
         return CRYPT_DECODE_UNSUPPORTED_PKCS7_TYPE;
     }
@@ -2366,7 +2366,7 @@ static int32_t ParsePKCS7EncryptedContentInfo(BSL_Buffer *encode, const uint8_t 
  *
  * https://datatracker.ietf.org/doc/html/rfc5652#page-29
 */
-static BSL_ASN1_TemplateItem encryptedDataTempl[] = {
+static BSL_ASN1_TemplateItem g_encryptedDataTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
         /* version */
         {BSL_ASN1_TAG_INTEGER, 0, 1},
@@ -2398,7 +2398,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(BSL_Buffer *encode, const uint8_t 
     uint8_t *temp = encode->data;
     uint32_t  tempLen = encode->dataLen;
     BSL_ASN1_Buffer asn1[HITLS_P7_ENCRYPTDATA_MAX_IDX] = {0};
-    BSL_ASN1_Template templ = {encryptedDataTempl, sizeof(encryptedDataTempl) / sizeof(encryptedDataTempl[0])};
+    BSL_ASN1_Template templ = {g_encryptedDataTempl, sizeof(g_encryptedDataTempl) / sizeof(g_encryptedDataTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, asn1, HITLS_P7_ENCRYPTDATA_MAX_IDX);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2440,15 +2440,14 @@ static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, const CRYPT_Enc
     }
     CRYPT_Pbkdf2Param *pkcs7Param = (CRYPT_Pbkdf2Param *)encodeParam->param;
     BSL_ASN1_Buffer asn1[CRYPT_PKCS_ENCPRIKEY_MAX] = {0};
-    /* code */
+
     ret = EncodePkcsEncryptedBuff(pkcs7Param, data, asn1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     do {
-        /* encode */
-        BslOidString *oidStr = BSL_OBJ_GetOidFromCID(BSL_CID_DATA);
+        BslOidString *oidStr = BSL_OBJ_GetOidFromCID(BSL_CID_PKCS7_SIMPLEDATA);
         if (oidStr == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
             ret = CRYPT_ERR_ALGID;
@@ -2467,7 +2466,8 @@ static int32_t EncodePKCS7EncryptedContentInfo(BSL_Buffer *data, const CRYPT_Enc
             {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_P7_SPECIFIC_ENCONTENTINFO_EXTENSION,
                 asn1[CRYPT_PKCS_ENCPRIKEY_ENCDATA_IDX].len, asn1[CRYPT_PKCS_ENCPRIKEY_ENCDATA_IDX].buff},
         };
-        BSL_ASN1_Template templ = {enContentInfoTempl, sizeof(enContentInfoTempl) / sizeof(enContentInfoTempl[0])};
+        BSL_ASN1_Template templ = {g_enContentInfoTempl,
+            sizeof(g_enContentInfoTempl) / sizeof(g_enContentInfoTempl[0])};
         ret = BSL_ASN1_EncodeTemplate(&templ, p7asn, HITLS_P7_ENC_CONTINFO_MAX_IDX, &encode->data, &encode->dataLen);
     } while (0);
     BSL_SAL_ClearFree(asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_DERPARAM_IDX].len);
@@ -2494,7 +2494,7 @@ int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, const void *encod
         {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, contentInfo.dataLen, contentInfo.data},
         {0, 0, 0},
     };
-    BSL_ASN1_Template templ = {encryptedDataTempl, sizeof(encryptedDataTempl) / sizeof(encryptedDataTempl[0])};
+    BSL_ASN1_Template templ = {g_encryptedDataTempl, sizeof(g_encryptedDataTempl) / sizeof(g_encryptedDataTempl[0])};
     BSL_Buffer tmp = {0};
     ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_P7_ENCRYPTDATA_MAX_IDX, &tmp.data, &tmp.dataLen);
     BSL_SAL_FREE(contentInfo.data);

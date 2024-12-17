@@ -111,18 +111,21 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
+    EAL_PkeyUnitaryMethod *temp = to->method;
     (void)memcpy_s(to, sizeof(CRYPT_EAL_PkeyCtx), from, sizeof(CRYPT_EAL_PkeyCtx));
     to->key = from->method->dupCtx(from->key);
     if (to->key == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_PKEY_DUP_ERROR);
         return CRYPT_EAL_PKEY_DUP_ERROR;
     }
-    EAL_PkeyUnitaryMethod *temp = BSL_SAL_Calloc(1, sizeof(EAL_PkeyUnitaryMethod));
     if (temp == NULL) {
-        from->method->freeCtx(to->key);
-        to->key = NULL;
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+        temp = BSL_SAL_Calloc(1, sizeof(EAL_PkeyUnitaryMethod));
+        if (temp == NULL) {
+            from->method->freeCtx(to->key);
+            to->key = NULL;
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
     }
     to->method = temp;
     *(EAL_PkeyUnitaryMethod *)(uintptr_t)to->method = *from->method;
@@ -143,8 +146,6 @@ int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *fr
         }
         to->method->freeCtx(to->key);
         to->key = NULL;
-        BSL_SAL_Free(to->method);
-        to->method = NULL;
     }
     return PkeyCopyCtx(to, from);
 }
