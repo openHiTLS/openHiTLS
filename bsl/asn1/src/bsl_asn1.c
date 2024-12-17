@@ -509,7 +509,7 @@ int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     }
     asn->tag = tag;
     asn->len = len;
-    asn->buff = (tag == BSL_ASN1_TAG_NULL) ? NULL: temp;
+    asn->buff = (tag == BSL_ASN1_TAG_NULL) ? NULL : temp;
     if (item->tag & BSL_ASN1_TAG_CONSTRUCTED) {
         /* struct type, headerOnly flag is set, only the whole is parsed,
          otherwise the parsed content is traversed */

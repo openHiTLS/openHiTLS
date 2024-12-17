@@ -228,16 +228,13 @@
     #ifndef HITLS_CRYPTO_CURVE_SM2
         #define HITLS_CRYPTO_CURVE_SM2
     #endif
-    #ifndef HITLS_CRYPTO_CURVE_SM9
-        #define HITLS_CRYPTO_CURVE_SM9
-    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP256) || \
     defined(HITLS_CRYPTO_CURVE_NISTP384) || defined(HITLS_CRYPTO_CURVE_NISTP521) || \
     defined(HITLS_CRYPTO_CURVE_BP256R1) || defined(HITLS_CRYPTO_CURVE_BP384R1) || \
     defined(HITLS_CRYPTO_CURVE_BP512R1) || defined(HITLS_CRYPTO_CURVE_192WAPI) || \
-    defined(HITLS_CRYPTO_CURVE_SM2) || defined(HITLS_CRYPTO_CURVE_SM9)
+    defined(HITLS_CRYPTO_CURVE_SM2)
     #ifndef HITLS_CRYPTO_ECC
         #define HITLS_CRYPTO_ECC
     #endif

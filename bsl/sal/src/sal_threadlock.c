@@ -116,7 +116,7 @@ int32_t BSL_SAL_ThreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine i
 #endif
 }
 
-int32_t BSL_SAL_RegThreadCallback(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+int32_t SAL_ThreadCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
     if (type > BSL_SAL_THREAD_GET_ID_CB_FUNC || type < BSL_SAL_THREAD_LOCK_NEW_CB_FUNC) {
         return BSL_SAL_ERR_BAD_PARAM;

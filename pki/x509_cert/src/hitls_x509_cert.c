@@ -241,14 +241,14 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
     // sign alg
     ret = HITLS_X509_ParseSignAlgInfo(&asnArr[HITLS_X509_CERT_TBS_SIGNALG_OID_IDX],
         &asnArr[HITLS_X509_CERT_TBS_SIGNALG_ANY_IDX], &cert->tbs.signAlgId);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     // issuer name
     ret = HITLS_X509_ParseNameList(&asnArr[HITLS_X509_CERT_ISSUER_IDX], cert->tbs.issuerName);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -263,7 +263,7 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
 
     // subject name
     ret = HITLS_X509_ParseNameList(&asnArr[HITLS_X509_CERT_SUBJECT_IDX], cert->tbs.subjectName);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
@@ -314,20 +314,20 @@ int32_t HITLS_X509_ParseAsn1Cert(uint8_t **encode, uint32_t *encodeLen, HITLS_X5
     }
     // parse tbs raw data
     ret = HITLS_X509_ParseTbsRawData(*encode, *encodeLen, &cert->tbs.tbsRawData, &cert->tbs.tbsRawDataLen);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // parse tbs
     ret = HITLS_X509_ParseCertTbs(asnArr, cert);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // parse sign alg
     ret = HITLS_X509_ParseSignAlgInfo(&asnArr[HITLS_X509_CERT_SIGNALG_IDX],
         &asnArr[HITLS_X509_CERT_SIGNALG_ANY_IDX], &cert->signAlgId);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
@@ -343,7 +343,7 @@ int32_t HITLS_X509_ParseAsn1Cert(uint8_t **encode, uint32_t *encodeLen, HITLS_X5
     *encode = temp;
     *encodeLen = tempLen;
     cert->flag |= HITLS_X509_CERT_PARSE_FLAG;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 ERR:
     CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
     cert->tbs.ealPubKey = NULL;
@@ -373,7 +373,7 @@ int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HI
     }
 
     ret = HITLS_X509_ParseX509(format, encode, true, &certCbk, list);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -390,7 +390,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     int32_t ret = HITLS_X509_CertMulParseBuff(format, encode, &list);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -398,11 +398,11 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
     int ref;
     ret = HITLS_X509_CertCtrl(tmp, HITLS_X509_REF_UP, &ref, sizeof(int));
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
     *cert = tmp;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Cert **cert)
@@ -444,7 +444,7 @@ static int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, int32_t valL
     }
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
     *val = (certExt->keyUsage & exp);
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 /* RFC2253 https://www.rfc-editor.org/rfc/rfc2253 */
@@ -455,11 +455,11 @@ static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer
     uint32_t dnBufLen = 0;
     BSL_UIO *bufUio = BSL_UIO_New(BSL_UIO_MemMethod());
     if (bufUio == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_UIO);
-        return HITLS_X509_ERR_PRINT_UIO;
+        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_UIO);
+        return HITLS_PRINT_ERR_UIO;
     }
-    int32_t ret = HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, nameList, sizeof(BslList), bufUio);
-    if (ret != HITLS_X509_SUCCESS) {
+    int32_t ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, nameList, sizeof(BslList), bufUio);
+    if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
     ret = BSL_UIO_Ctrl(bufUio, BSL_UIO_GET_WRITE_NUM, (int32_t)sizeof(writeNum), (void *)&writeNum);
@@ -474,12 +474,12 @@ static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer
     ret = BSL_UIO_Read(bufUio, dnBuf, writeNum + 1, &dnBufLen);
     BSL_UIO_Free(bufUio);
     if (ret != BSL_SUCCESS || dnBufLen != writeNum) {
-        ret = HITLS_X509_ERR_PRINT_UIO;
+        ret = HITLS_PRINT_ERR_UIO;
         goto ERR;
     }
     buff->data = dnBuf;
     buff->dataLen = dnBufLen;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 ERR:
     BSL_SAL_Free(dnBuf);
     BSL_UIO_Free(bufUio);
@@ -524,7 +524,7 @@ static int32_t GetAsn1SerialNumStr(const BSL_ASN1_Buffer *number, BSL_Buffer *va
         return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
     }
     val->dataLen = 3 * number->len - 1;  // 3: "xx:"
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
@@ -541,7 +541,7 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
     }
     val->dataLen = serialNum.len * 3;
     int32_t ret = GetAsn1SerialNumStr(&serialNum, val);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_SAL_FREE(val->data);
         val->dataLen = 0;
     }
@@ -572,7 +572,7 @@ static int32_t GetAsn1BslTimeStr(const BSL_TIME *time, BSL_Buffer *val)
         return HITLS_X509_ERR_CERT_INVALID_TIME;
     }
     val->dataLen = strlen((char *)val->data);
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t X509_GetAsn1BslTimeStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)
@@ -648,7 +648,7 @@ static int32_t CertSetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t v
     }
     serial->len = valLen;
     serial->tag = BSL_ASN1_TAG_INTEGER;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 static bool TimeCheck(const void *val, int32_t valLen)
@@ -664,7 +664,7 @@ static int32_t CertSet(void *dest, int32_t size, void *val, int32_t valLen, SetP
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     (void)memcpy_s(dest, size, val, size);
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
@@ -675,7 +675,7 @@ static int32_t HITLS_X509_SetCsrExt(HITLS_X509_Ext *ext, HITLS_X509_Csr *csr)
     if (ret == HITLS_X509_ERR_ATTR_NOT_FOUND) {
         return ret;
     }
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -704,7 +704,7 @@ static int32_t X509_CertSetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return CertSetSerial(&cert->tbs.serialNum, val, valLen);
         case HITLS_X509_SET_BEFORE_TIME:
             ret = CertSet(&cert->tbs.validTime.start, sizeof(BSL_TIME), val, valLen, TimeCheck);
-            if (ret == HITLS_X509_SUCCESS) {
+            if (ret == HITLS_PKI_SUCCESS) {
                 cert->tbs.validTime.flag |= BSL_TIME_BEFORE_SET;
                 cert->tbs.validTime.flag |=
                     cert->tbs.validTime.start.year <= BSL_TIME_UTC_MAX_YEAR ? BSL_TIME_BEFORE_IS_UTC : 0;
@@ -712,7 +712,7 @@ static int32_t X509_CertSetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, i
             return ret;
         case HITLS_X509_SET_AFTER_TIME:
             ret = CertSet(&cert->tbs.validTime.end, sizeof(BSL_TIME), val, valLen, TimeCheck);
-            if (ret == HITLS_X509_SUCCESS) {
+            if (ret == HITLS_PKI_SUCCESS) {
                 cert->tbs.validTime.flag |= BSL_TIME_AFTER_SET;
                 cert->tbs.validTime.flag |=
                     cert->tbs.validTime.end.year <= BSL_TIME_UTC_MAX_YEAR ? BSL_TIME_AFTER_IS_UTC : 0;
@@ -788,7 +788,7 @@ HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src)
     HITLS_X509_Cert *tempCert = NULL;
     BSL_Buffer encode = {src->rawData, src->rawDataLen};
     int32_t ret = HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encode, &tempCert);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
@@ -805,18 +805,18 @@ HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src)
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res)
 {
     int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         *res = false;
-        return HITLS_X509_SUCCESS;
+        return HITLS_PKI_SUCCESS;
     }
     if (issue->tbs.version == HITLS_CERT_VERSION_3 && subject->tbs.version == HITLS_CERT_VERSION_3) {
         ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
-        if (ret != HITLS_X509_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
+        if (ret != HITLS_PKI_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
             return ret;
         }
         if (ret == HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
             *res = false;
-            return HITLS_X509_SUCCESS;
+            return HITLS_PKI_SUCCESS;
         }
     }
 
@@ -833,7 +833,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
     }
 
     ret = HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -849,7 +849,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
         }
     }
     *res = true;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert)
@@ -870,18 +870,18 @@ static int32_t EncodeTbsItems(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *signAlg,
 {
     BSL_Buffer pub = {0};
     int32_t ret = HITLS_X509_EncodeSignAlgInfo(&tbs->signAlgId, signAlg);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     ret = HITLS_X509_EncodeNameList(tbs->issuerName, issuer);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
     ret = HITLS_X509_EncodeNameList(tbs->subjectName, subject);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
@@ -894,7 +894,7 @@ static int32_t EncodeTbsItems(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *signAlg,
     if (tbs->version == HITLS_CERT_VERSION_3) {
         ret = HITLS_X509_EncodeExt(BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
             HITLS_CERT_CTX_SPECIFIC_TAG_EXTENSION, tbs->ext.extList, ext);
-        if (ret != HITLS_X509_SUCCESS) {
+        if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
         }
@@ -946,7 +946,7 @@ static int32_t EncodeTbsCertificate(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *tb
         HITLS_CERT_CTX_SPECIFIC_TAG_EXTENSION, 0, NULL};
 
     int32_t ret = EncodeTbsItems(tbs, &signAlg, &issuer, &subject, &pubkey, &ext);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -1001,13 +1001,13 @@ static int32_t EncodeAsn1Cert(HITLS_X509_Cert *cert)
     };
     uint32_t valLen = 0;
     int32_t ret = BSL_ASN1_DecodeTagLen(asns[0].tag, &asns[0].buff, &asns[0].len, &valLen); // 0 is tbs
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     ret = HITLS_X509_EncodeSignAlgInfo(&cert->signAlgId, &asns[1]); // 1 is signAlg
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -1043,7 +1043,7 @@ static int32_t CheckCertTbs(HITLS_X509_Cert *cert)
         return HITLS_X509_ERR_CERT_INVALID_PUBKEY;
     }
 
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 /**
@@ -1065,7 +1065,7 @@ static int32_t HITLS_X509_EncodeAsn1Cert(HITLS_X509_Cert *cert, BSL_Buffer *buff
         }
         if (cert->state == HITLS_X509_CERT_STATE_SIGN) {
             ret = EncodeAsn1Cert(cert);
-            if (ret != HITLS_X509_SUCCESS) {
+            if (ret != HITLS_PKI_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 return ret;
             }
@@ -1077,7 +1077,7 @@ static int32_t HITLS_X509_EncodeAsn1Cert(HITLS_X509_Cert *cert, BSL_Buffer *buff
         return HITLS_X509_ERR_CERT_NOT_SIGNED;
     }
     if (buff == NULL) {
-        return HITLS_X509_SUCCESS;
+        return HITLS_PKI_SUCCESS;
     }
     buff->data = BSL_SAL_Dump(cert->rawData, cert->rawDataLen);
     if (buff->data == NULL) {
@@ -1085,13 +1085,13 @@ static int32_t HITLS_X509_EncodeAsn1Cert(HITLS_X509_Cert *cert, BSL_Buffer *buff
         return BSL_DUMP_FAIL;
     }
     buff->dataLen = cert->rawDataLen;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 int32_t HITLS_X509_EncodePemCert(HITLS_X509_Cert *cert, BSL_Buffer *buff)
 {
     int32_t ret = HITLS_X509_EncodeAsn1Cert(cert, NULL);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -1126,7 +1126,7 @@ int32_t HITLS_X509_CertGenFile(int32_t format, HITLS_X509_Cert *cert, const char
 
     BSL_Buffer encode = {0};
     int32_t ret = HITLS_X509_CertGenBuff(format, cert, &encode);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -1146,7 +1146,7 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
     }
 
     int32_t ret = HITLS_X509_EncodeAsn1Cert(cert, NULL);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -1162,13 +1162,13 @@ static int32_t CertSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *pivKey, HITLS_X509_A
     cert->signAlgId = *signAlgId;
     cert->tbs.signAlgId = *signAlgId;
     int32_t ret = EncodeTbsCertificate(&cert->tbs, &tbsAsn1);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = HITLS_X509_SignAsn1Data(pivKey, mdId, &tbsAsn1, &signBuff, &cert->signature);
     BSL_SAL_Free(tbsAsn1.buff);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -1191,11 +1191,11 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
         return HITLS_X509_ERR_SIGN_AFTER_PARSE;
     }
     if (cert->state == HITLS_X509_CERT_STATE_SIGN || cert->state == HITLS_X509_CERT_STATE_GEN) {
-        return HITLS_X509_SUCCESS;
+        return HITLS_PKI_SUCCESS;
     }
 
     int32_t ret = CheckCertTbs(cert);
-    if (ret != HITLS_X509_SUCCESS) {
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
