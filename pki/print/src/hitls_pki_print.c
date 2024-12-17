@@ -25,7 +25,7 @@
 #include "hitls_pki_errno.h"
 #include "hitls_print_local.h"
 
-static uint32_t g_nameFlag = HITLS_X509_PRINT_DN_RFC2253;
+static uint32_t g_nameFlag = HITLS_PKI_PRINT_DN_RFC2253;
 
 static char g_rfc2253Ecsape[] = {',', '+', '"', '\\', '<', '>', ';'};
 
@@ -34,16 +34,16 @@ static char g_rfc2253Ecsape[] = {',', '+', '"', '\\', '<', '>', ';'};
 static char *GetPrefixFmt(bool preLayerIs2, bool isFirst)
 {
     if (preLayerIs2) {
-        if (g_nameFlag == HITLS_X509_PRINT_DN_RFC2253) {
+        if (g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253) {
             return "+%s=";
         }
         return " + %s = ";
     }
-    if (g_nameFlag == HITLS_X509_PRINT_DN_RFC2253) {
+    if (g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253) {
         return isFirst ? "%s=" : ",%s=";
     }
 
-    if (g_nameFlag == HITLS_X509_PRINT_DN_ONELINE) {
+    if (g_nameFlag == HITLS_PKI_PRINT_DN_ONELINE) {
         return isFirst ? "%s = " : ", %s = ";
     }
     return "%s = ";  // multiline
@@ -51,7 +51,7 @@ static char *GetPrefixFmt(bool preLayerIs2, bool isFirst)
 
 static bool NeedQuote(BSL_ASN1_Buffer *value)
 {
-    if (g_nameFlag != HITLS_X509_PRINT_DN_ONELINE) {
+    if (g_nameFlag != HITLS_PKI_PRINT_DN_ONELINE) {
         return false;
     }
     for (uint32_t i = 0; i < value->len; i++) {
@@ -82,8 +82,8 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
     char quote = '"';
     bool needQuote = NeedQuote(value);
     if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
-        return HITLS_X509_ERR_PRINT_DN_VALUE;
+        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
+        return HITLS_PRINT_ERR_DN_VALUE;
     }
     char c;
     char *fmt;
@@ -100,7 +100,7 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         fmt = NULL;
         if (c < ' ' || c > '~') { // control character
             fmt = "\\%02X";
-        } else if (g_nameFlag == HITLS_X509_PRINT_DN_RFC2253) {
+        } else if (g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253) {
             if ((cur == value->buff && (c == ' ' || c == '#')) ||             // (1)
                 (cur + 1 == end && c == ' ') ||                               // (2)
                 CharInList(c, g_rfc2253Ecsape, RFC2253_ESCAPE_CHAR_CNT)) {    // (3)
@@ -111,31 +111,31 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         }
         ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &c, 1) : BSL_ASN1_Printf(0, uio, fmt, c);
         if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
-            return HITLS_X509_ERR_PRINT_DN_VALUE;
+            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
+            return HITLS_PRINT_ERR_DN_VALUE;
         }
         cur++;
     }
     if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
-        return HITLS_X509_ERR_PRINT_DN_VALUE;
+        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
+        return HITLS_PRINT_ERR_DN_VALUE;
     }
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine, BSL_UIO *uio)
+static int32_t PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine, BSL_UIO *uio)
 {
     BslOidString oid = {0};
     const char *oidName = NULL;
     bool preLayerIs2 = false;
     int8_t namePosFlag = -1; // -1: not start; 0: first; 1: other
     int32_t ret;
-    HITLS_X509_NameNode *name = g_nameFlag == HITLS_X509_PRINT_DN_RFC2253 ?
+    HITLS_X509_NameNode *name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ?
         BSL_LIST_GET_LAST(nameList) : BSL_LIST_GET_FIRST(nameList);
     while (name != NULL) {
         if (name->layer == 1) {
             preLayerIs2 = false;
-            name = g_nameFlag == HITLS_X509_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(nameList) :
+            name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(nameList) :
             BSL_LIST_GET_NEXT(nameList);
             continue;
         }
@@ -146,71 +146,65 @@ int32_t HITLS_X509_PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine
         if (oidName == NULL) {
             oidName = "Unknown";
         }
-        if (g_nameFlag == HITLS_X509_PRINT_DN_MULTILINE) {
+        if (g_nameFlag == HITLS_PKI_PRINT_DN_MULTILINE) {
             if (namePosFlag == 0) {
                 ret = BSL_ASN1_PrintfBuff(layer, uio, NULL, 0);
             } else if (!preLayerIs2) {
                 ret = BSL_ASN1_PrintfBuff(0, uio, "\n", strlen("\n")) || BSL_ASN1_PrintfBuff(layer, uio, NULL, 0);
             }
             if (ret != BSL_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
-                return HITLS_X509_ERR_PRINT_DN;
+                BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
+                return HITLS_PRINT_ERR_DN;
             }
         }
         /* print type */
         if (BSL_ASN1_Printf(0, uio, GetPrefixFmt(preLayerIs2, namePosFlag == 0), oidName) != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PRINT_DN);
-            return HITLS_X509_ERR_PRINT_DN;
+            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
+            return HITLS_PRINT_ERR_DN;
         }
         /* print value */
         if (name->nameValue.buff != NULL && name->nameValue.len != 0) {
             ret = PrintDnNameValue(&name->nameValue, uio);
-            if (ret != HITLS_X509_SUCCESS) {
+            if (ret != HITLS_PKI_SUCCESS) {
                 return ret;
             }
         }
         preLayerIs2 = name->layer != 1;
-        name = g_nameFlag == HITLS_X509_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(nameList) :
+        name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(nameList) :
             BSL_LIST_GET_NEXT(nameList);
     }
     if (newLine) {
-        return BSL_ASN1_PrintfBuff(0, uio, "\n", strlen("\n")) != 0 ? HITLS_X509_ERR_PRINT_DN : HITLS_X509_SUCCESS;
+        return BSL_ASN1_PrintfBuff(0, uio, "\n", strlen("\n")) != 0 ? HITLS_PRINT_ERR_DN : HITLS_PKI_SUCCESS;
     }
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_SetPrintFlag(void *val, uint32_t valLen)
+static int32_t SetPrintFlag(void *val, uint32_t valLen)
 {
     if (val == NULL || valLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     g_nameFlag = *(uint32_t *)val;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_PrintDn(void *val, uint32_t valLen, BSL_UIO *uio)
+int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *uio)
 {
-    if (valLen != sizeof(BslList)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    return HITLS_X509_PrintDn(g_nameFlag == HITLS_X509_PRINT_DN_MULTILINE ? 1 : 0,
-        val, false, uio);
-}
-
-int32_t HITLS_X509_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *uio)
-{
-    if (cmd == HITLS_X509_SET_PRINT_FLAG) {
-        return X509_SetPrintFlag(val, valLen);
+    if (cmd == HITLS_PKI_SET_PRINT_FLAG) {
+        return SetPrintFlag(val, valLen);
     }
     if (val == NULL || uio == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     switch (cmd) {
-        case HITLS_X509_PRINT_DN:
-            return X509_PrintDn(val, valLen, uio);
+        case HITLS_PKI_PRINT_DN:
+            if (valLen != sizeof(BslList)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            return PrintDn(g_nameFlag == HITLS_PKI_PRINT_DN_MULTILINE ? 1 : 0, val, false, uio);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;

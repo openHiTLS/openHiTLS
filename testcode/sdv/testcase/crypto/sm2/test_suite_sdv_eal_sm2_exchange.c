@@ -1023,8 +1023,15 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     ASSERT_TRUE(outLen == shareKey->len);
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
 
-    cpyCtx1 = calloc(1, sizeof(CRYPT_EAL_PkeyCtx));
-    cpyCtx2 = calloc(1, sizeof(CRYPT_EAL_PkeyCtx));
+    if (isProvider == 1) {
+        cpyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+        cpyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        cpyCtx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+        cpyCtx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
+    }
     ASSERT_TRUE(cpyCtx1 != NULL && cpyCtx2 != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx1, ctx1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(cpyCtx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)), CRYPT_SUCCESS);
