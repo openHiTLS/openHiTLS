@@ -238,12 +238,14 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
             break;
         }
 
-        ctx->keyExchInfo[i].info = E2EE_Dump(keyExchInfo[i].info, keyExchInfo[i].infoLen);
-        if (ctx->keyExchInfo[i].info == NULL) {
-            ret = E2EE_ERR_MALLOC;
-            break;
+        if (keyExchInfo[i].info != NULL) {
+            ctx->keyExchInfo[i].info = E2EE_Dump(keyExchInfo[i].info, keyExchInfo[i].infoLen);
+            if (ctx->keyExchInfo[i].info == NULL) {
+                ret = E2EE_ERR_MALLOC;
+                break;
+            }
+            ctx->keyExchInfo[i].infoLen = keyExchInfo[i].infoLen;
         }
-        ctx->keyExchInfo[i].infoLen = keyExchInfo[i].infoLen;
     }
 
     if (ret != E2EE_SUCCESS) {
