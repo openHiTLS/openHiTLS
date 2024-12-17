@@ -72,7 +72,7 @@ typedef struct {
     uint32_t infoLen;
 } E2EE_KemDecapsulateResult;
 
-typedef void (*E2EE_logCallbackFunc)(void *callbackArg, const char *str, uint32_t len);
+typedef void (*E2EE_logCallbackFunc)(const char *str, uint32_t len);
 
 /* Use kem alg to generate a shared secret.*/
 typedef int32_t (*E2EE_KemEncapsulateCallbackFunc)(void *callbackArg, E2EE_KEM_AlgId kemId, uint8_t *serverPubKey,

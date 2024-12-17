@@ -1,4 +1,3 @@
-
 #ifndef E2EE_SSE_H
 #define E2EE_SSE_H
 

@@ -1,26 +1,10 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
- */
-
-#include "hitls_build.h"
-
 #include <string.h>
 #include "securec.h"
 #include "crypt_eal_hpke.h"
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 #include "e2ee_mem.h"
+#include "e2ee_log.h"
 #include "e2ee_key_exch.h"
 #include "e2ee_key_exch_err.h"
 #include "e2ee_sse.h"
@@ -93,6 +77,7 @@ static uint16_t BigEndianToUint16(uint16_t value)
 static int32_t DeserializeCipherCuite(uint8_t *in, uint32_t inLen, E2EE_AlgId *algId)
 {
     if (inLen != E2EE_CIPHER_CUITE_LEN) {
+        E2EE_LOG_ERROR("Invalid cipher suite length: %u, expected: %u", inLen, E2EE_CIPHER_CUITE_LEN);
         return E2EE_ERR_MSG_LEN;
     }
     uint16_t *p = (uint16_t *)in;
@@ -108,6 +93,7 @@ E2EE_ServerCtx *E2EE_ServerCreate(void)
 {
     E2EE_ServerCtx *ctx = (E2EE_ServerCtx *)E2EE_Calloc(1, sizeof(E2EE_ServerCtx));
     if (ctx == NULL) {
+        E2EE_LOG_ERROR("Failed to allocate server context");
         return NULL;
     }
 
@@ -121,6 +107,7 @@ static int32_t CreatePriKey(E2EE_PkeyInfo *pkeyInfo, uint8_t *priKey, uint32_t p
 {
     CRYPT_EAL_PkeyCtx *tmpPkey = CRYPT_EAL_PkeyNewCtx(pkeyInfo->pkeyId);
     if (pkey == NULL) {
+        E2EE_LOG_ERROR("Failed to create pkey context");
         return E2EE_ERR_CRYPTO;
     }
 
@@ -129,6 +116,7 @@ static int32_t CreatePriKey(E2EE_PkeyInfo *pkeyInfo, uint8_t *priKey, uint32_t p
         ret = CRYPT_EAL_PkeySetParaById(tmpPkey, pkeyInfo->curveId);
         if (ret != CRYPT_SUCCESS) {
             CRYPT_EAL_PkeyFreeCtx(tmpPkey);
+            E2EE_LOG_ERROR("Failed to set pkey parameters, ret: %d", ret);
             return E2EE_ERR_CRYPTO;
         }
     }
@@ -141,6 +129,7 @@ static int32_t CreatePriKey(E2EE_PkeyInfo *pkeyInfo, uint8_t *priKey, uint32_t p
     ret = CRYPT_EAL_PkeySetPrv(tmpPkey, &prv);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(tmpPkey);
+        E2EE_LOG_ERROR("Failed to set private key, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
@@ -152,6 +141,7 @@ static int32_t CreatePriKey(E2EE_PkeyInfo *pkeyInfo, uint8_t *priKey, uint32_t p
 
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(tmpPkey);
+        E2EE_LOG_ERROR("Failed to generate public key, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
@@ -184,12 +174,14 @@ static int32_t ComputePubKeyID(E2EE_KeyExchInfo *keyExchInfo)
     pub.key.eccPub.len = E2EE_MSG_MAX_PUBKEY_LEN;
     int32_t ret = CRYPT_EAL_PkeyGetPub(pkey, &pub);
     if (ret != CRYPT_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to get public key, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
     ret = E2eeSha256(pub.key.eccPub.data, pub.key.eccPub.len, keyExchInfo->pubKeyId, E2EE_MSG_PUBKEY_ID_SIZE);
     if (ret != E2EE_SUCCESS) {
-        return E2EE_ERR_CRYPTO;
+        E2EE_LOG_ERROR("Failed to compute public key ID, ret: %d", ret);
+        return ret;
     }
     return E2EE_SUCCESS;
 }
@@ -202,27 +194,32 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
         return E2EE_SUCCESS;
     }
     if (keyExchInfoNum == 0 || keyExchInfoNum > E2EE_MAX_SERVER_KEY_EXCH_INFO_NUM) {
+        E2EE_LOG_ERROR("Invalid key exchange info number: %u", keyExchInfoNum);
         return E2EE_ERR_INVALID_ARG;
     }
 
     ctx->keyExchInfo = (E2EE_KeyExchInfo *)E2EE_Calloc(keyExchInfoNum, sizeof(E2EE_KeyExchInfo));
     if (ctx->keyExchInfo == NULL) {
+        E2EE_LOG_ERROR("Failed to allocate memory for key exchange info");
         return E2EE_ERR_MALLOC;
     }
     ctx->keyExchInfoNum = keyExchInfoNum;
 
     for (i = 0; i < keyExchInfoNum; i++) {
         if (keyExchInfo[i].type > E2EE_X25519) {
+            E2EE_LOG_ERROR("Invalid key type: %u", keyExchInfo[i].type);
             ret = E2EE_ERR_INVALID_ARG;
             break;
         }
 
         if (keyExchInfo[i].infoLen > E2EE_MAX_INFO_LEN) {
+            E2EE_LOG_ERROR("Info length too large: %u", keyExchInfo[i].infoLen);
             ret = E2EE_ERR_INVALID_ARG;
             break;
         }
 
         if (keyExchInfo[i].privKeyLen > E2EE_MAX_PRIVATE_KEY_LEN) {
+            E2EE_LOG_ERROR("Private key length too large: %u", keyExchInfo[i].privKeyLen);
             ret = E2EE_ERR_INVALID_ARG;
             break;
         }
@@ -230,17 +227,20 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
         ret = CreatePriKey(&g_hpkeKemAlgInfo[keyExchInfo[i].type], keyExchInfo[i].privKey, keyExchInfo[i].privKeyLen,
             &ctx->keyExchInfo[i].pkey);
         if (ret != E2EE_SUCCESS) {
+            E2EE_LOG_ERROR("Failed to create private key, ret: %d", ret);
             break;
         }
 
         ret = ComputePubKeyID(&ctx->keyExchInfo[i]);
         if (ret != E2EE_SUCCESS) {
+            E2EE_LOG_ERROR("Failed to compute public key ID, ret: %d", ret);
             break;
         }
 
         if (keyExchInfo[i].info != NULL) {
             ctx->keyExchInfo[i].info = E2EE_Dump(keyExchInfo[i].info, keyExchInfo[i].infoLen);
             if (ctx->keyExchInfo[i].info == NULL) {
+                E2EE_LOG_ERROR("Failed to allocate memory for info");
                 ret = E2EE_ERR_MALLOC;
                 break;
             }
@@ -260,15 +260,18 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
 int32_t E2EE_ServerInit(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo keyExchInfo[], uint32_t keyExchInfoNum)
 {
     if (ctx == NULL) {
+        E2EE_LOG_ERROR("Null context");
         return E2EE_ERR_NULL_INPUT;
     }
 
     if (ctx->senderState != E2EE_SERVER_INIT) {
-        return E2EE_FAILED;
+        E2EE_LOG_ERROR("Invalid sender state: %d", ctx->senderState);
+        return E2EE_ERR_CALL;
     }
 
     int32_t ret = ProcessKeyExchInfo(ctx, keyExchInfo, keyExchInfoNum);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to process key exchange info, ret: %d", ret);
         return ret;
     }
 
@@ -279,6 +282,7 @@ int32_t E2EE_ServerInit(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo keyExchInfo[
 static int32_t FindPubKeyIdIndex(E2EE_ServerCtx *ctx, uint8_t *pubKeyId, uint32_t pubKeyIdLen, uint32_t *index)
 {
     if (pubKeyIdLen != E2EE_MSG_PUBKEY_ID_SIZE) {
+        E2EE_LOG_ERROR("Invalid public key ID length: %u", pubKeyIdLen);
         return E2EE_ERR_MSG_LEN;
     }
     for (uint32_t i = 0; i < ctx->keyExchInfoNum; i++) {
@@ -287,6 +291,7 @@ static int32_t FindPubKeyIdIndex(E2EE_ServerCtx *ctx, uint8_t *pubKeyId, uint32_
             return E2EE_SUCCESS;
         }
     }
+    E2EE_LOG_ERROR("No suitable key found for public key ID");
     return E2EE_ERR_NO_SUITABLE_KEY;
 }
 
@@ -297,6 +302,7 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
         (CRYPT_HPKE_KDF_AlgId)ctx->algId.kdfAlgId, (CRYPT_HPKE_AEAD_AlgId)ctx->algId.aeadAlgId};
     CRYPT_EAL_HpkeCtx *hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, NULL, CRYPT_HPKE_RECIPIENT, CRYPT_HPKE_MODE_BASE, cipher);
     if (hpkeCtx == NULL) {
+        E2EE_LOG_ERROR("Failed to create HPKE context");
         return E2EE_ERR_CRYPTO;
     }
 
@@ -310,6 +316,7 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
         ret = ctx->keyDeriveFunc(ctx->callbackArg, ctx->algId.kemAlgId, encapsulatedKey, encapsulatedKeyLen, pubKeyId,
             pubKeyIdLen, &out);
         if (ret != 0) {
+            E2EE_LOG_ERROR("KEM callback failed with error: %d", ret);
             CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
             return E2EE_ERR_KEM_CALLBACK;
         }
@@ -317,6 +324,7 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
         memset_s(sharedSecret, sharedSecretLen, 0, sharedSecretLen);
         if (ret != CRYPT_SUCCESS) {
             CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
+            E2EE_LOG_ERROR("Failed to set shared secret, ret: %d", ret);
             return E2EE_ERR_CRYPTO;
         }
     } else {
@@ -324,13 +332,15 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
         ret = FindPubKeyIdIndex(ctx, pubKeyId, pubKeyIdLen, &index);
         if (ret != E2EE_SUCCESS) {
             CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
-            return ret;
+            E2EE_LOG_ERROR("Failed to setup recipient, ret: %d", ret);
+            return E2EE_ERR_CRYPTO;
         }
 
         ret = CRYPT_EAL_HpkeSetupRecipient(hpkeCtx, ctx->keyExchInfo[index].pkey, ctx->keyExchInfo[index].info,
             ctx->keyExchInfo[index].infoLen, encapsulatedKey, encapsulatedKeyLen);
         if (ret != CRYPT_SUCCESS) {
             CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
+            E2EE_LOG_ERROR("Failed to setup recipient, ret: %d", ret);
             return E2EE_ERR_CRYPTO;
         }
     }
@@ -338,6 +348,7 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
     ctx->encapsulatedKey = E2EE_Dump(encapsulatedKey, encapsulatedKeyLen);
     if (ctx->encapsulatedKey == NULL) {
         CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
+        E2EE_LOG_ERROR("Failed to allocate memory for encapsulated key");
         return E2EE_ERR_MALLOC;
     }
     ctx->encapsulatedKeyLen = encapsulatedKeyLen;
@@ -365,6 +376,7 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
 {
     uint32_t ret = E2EE_CheckMsgBaseInfo(cipherText, cipherTextLen, E2EE_MSG_VERSION, E2EE_MSG_C2S_KEY_EXCH_TYPE);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Invalid message base info, ret: %d", ret);
         return ret;
     }
 
@@ -373,10 +385,12 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
 
     ret = E2EE_DeserializeMsg(cipherText, cipherTextLen, tlvs, &tlvNum);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to deserialize message, ret: %d", ret);
         return ret;
     }
 
     if (tlvNum != E2EE_MSG_C2S_KEY_EXCH_TLV_NUM) {
+        E2EE_LOG_ERROR("Invalid TLV number: %u, expected: %u", tlvNum, E2EE_MSG_C2S_KEY_EXCH_TLV_NUM);
         return E2EE_ERR_MSG_LEN;
     }
 
@@ -404,17 +418,20 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
     }
 
     if (cipherCuiteIndex == -1 || encapsulatedKeyIndex == -1 || cipherTextIndex == -1 || pubKeyIdIndex == -1) {
+        E2EE_LOG_ERROR("Missing required TLV tags");
         return E2EE_ERR_INVALID_MSG;
     }
 
     ret = DeserializeCipherCuite(tlvs[cipherCuiteIndex].value, tlvs[cipherCuiteIndex].len, &ctx->algId);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to deserialize cipher suite, ret: %d", ret);
         return ret;
     }
 
     ret = InitServerRecipient(ctx, tlvs[encapsulatedKeyIndex].value, tlvs[encapsulatedKeyIndex].len,
         tlvs[pubKeyIdIndex].value, tlvs[pubKeyIdIndex].len);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to init server recipient, ret: %d", ret);
         return ret;
     }
 
@@ -422,6 +439,7 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
         plainText, plainTextLen);
     if (ret != CRYPT_SUCCESS) {
         DeInitServerRecipient(ctx);
+        E2EE_LOG_ERROR("Failed to open HPKE message, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
@@ -437,12 +455,14 @@ static int32_t InitServerSender(E2EE_ServerCtx *ctx, uint8_t *responseNonce, uin
     uint32_t secretLen = E2EE_MAX_SHARED_SECRET_LEN;
     int32_t ret = CRYPT_EAL_HpkeGetSharedSecret(ctx->recipient, secret, &secretLen);
     if (ret != CRYPT_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to get shared secret, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
     uint8_t *salt = E2EE_Malloc(ctx->encapsulatedKeyLen + responseNonceLen);
     if (salt == NULL) {
         memset_s(secret, secretLen, 0, secretLen);
+        E2EE_LOG_ERROR("Failed to allocate memory for salt");
         return E2EE_ERR_MALLOC;
     }
     (void)memcpy_s(salt, ctx->encapsulatedKeyLen, ctx->encapsulatedKey, ctx->encapsulatedKeyLen);
@@ -454,6 +474,7 @@ static int32_t InitServerSender(E2EE_ServerCtx *ctx, uint8_t *responseNonce, uin
     E2EE_Free(salt);
     memset_s(secret, secretLen, 0, secretLen);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to create self encryption context, ret: %d", ret);
         return ret;
     }
 
@@ -484,7 +505,8 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
 
     ret = E2EE_SerializeMsg(E2EE_MSG_VERSION, E2EE_MSG_S2C_KEY_EXCH_TYPE, tlvs, 2, NULL, &e2eeCipherTextLen);
     if (ret != E2EE_SUCCESS) {
-        return E2EE_FAILED;
+        E2EE_LOG_ERROR("Failed to serialize message, ret: %d", ret);
+        return ret;
     }
 
     if (cipherText == NULL) {
@@ -493,6 +515,7 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     }
 
     if (*cipherTextLen < e2eeCipherTextLen) {
+        E2EE_LOG_ERROR("Buffer too small: need %u, got %u", e2eeCipherTextLen, *cipherTextLen);
         return E2EE_ERR_INVALID_ARG;
     }
 
@@ -500,11 +523,13 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     uint32_t responseNonceLen = E2EE_RESPONSE_NONCE_LEN;
     ret = CRYPT_EAL_Randbytes(responseNonce, responseNonceLen);
     if (ret != CRYPT_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to generate random nonce, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
     ret = InitServerSender(ctx, responseNonce, responseNonceLen);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to init server sender, ret: %d", ret);
         return ret;
     }
 
@@ -513,7 +538,8 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     ret = E2eeAeadEncrypt(ctx->sender, aad, aadLen, plainText, plainTextLen, cipherText + cipherTextOffet, &len);
     if (ret != E2EE_SUCCESS) {
         DeInitServerSender(ctx);
-        return E2EE_FAILED;
+        E2EE_LOG_ERROR("Failed to encrypt message, ret: %d", ret);
+        return ret;
     }
 
     tlvs[0].value = responseNonce;
@@ -522,6 +548,7 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     ret = E2EE_SerializeMsg(E2EE_MSG_VERSION, E2EE_MSG_S2C_KEY_EXCH_TYPE, tlvs, 2, cipherText, &e2eeCipherTextLen);
     if (ret != E2EE_SUCCESS) {
         DeInitServerSender(ctx);
+        E2EE_LOG_ERROR("Failed to serialize final message, ret: %d", ret);
         return ret;
     }
 
@@ -547,6 +574,7 @@ static int32_t ServerGenAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     ret = E2EE_SerializeMsg(E2EE_MSG_VERSION, E2EE_MSG_APP_DATA_TYPE, tlvs, E2EE_MSG_APP_DATA_TLV_NUM, NULL,
         &e2eeCipherTextLen);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to serialize message, ret: %d", ret);
         return ret;
     }
 
@@ -556,6 +584,7 @@ static int32_t ServerGenAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     }
 
     if (*cipherTextLen < e2eeCipherTextLen) {
+        E2EE_LOG_ERROR("Buffer too small: need %u, got %u", e2eeCipherTextLen, *cipherTextLen);
         return E2EE_ERR_INVALID_ARG;
     }
 
@@ -564,6 +593,7 @@ static int32_t ServerGenAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     uint32_t len = *cipherTextLen - cipherTextOffet;
     ret = E2eeAeadEncrypt(ctx->sender, aad, aadLen, plainText, plainTextLen, cipherText + cipherTextOffet, &len);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to encrypt message, ret: %d", ret);
         return ret;
     }
 
@@ -571,9 +601,12 @@ static int32_t ServerGenAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
 
     ret = E2EE_SerializeMsg(E2EE_MSG_VERSION, E2EE_MSG_APP_DATA_TYPE, tlvs, E2EE_MSG_APP_DATA_TLV_NUM, cipherText,
         &e2eeCipherTextLen);
-    if (ret == E2EE_SUCCESS) {
-        *cipherTextLen = e2eeCipherTextLen;
+    if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to serialize final message, ret: %d", ret);
+        return ret;
     }
+
+    *cipherTextLen = e2eeCipherTextLen;
     return ret;
 }
 
@@ -584,11 +617,13 @@ static int32_t ProcessAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText, uint3
     uint32_t realCipherTextLen = 0;
     uint32_t ret = ParseAppDataMsg(cipherText, cipherTextLen, &realCipherText, &realCipherTextLen);
     if (ret != E2EE_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to parse app data message, ret: %d", ret);
         return ret;
     }
 
     ret = CRYPT_EAL_HpkeOpen(ctx->recipient, aad, aadLen, realCipherText, realCipherTextLen, plainText, plainTextLen);
     if (ret != CRYPT_SUCCESS) {
+        E2EE_LOG_ERROR("Failed to decrypt message, ret: %d", ret);
         return E2EE_ERR_CRYPTO;
     }
 
@@ -599,6 +634,7 @@ int32_t E2EE_ServerDecrypt(E2EE_ServerCtx *ctx, uint8_t *cipherText, uint32_t ci
     uint8_t *aad, uint32_t aadLen, uint8_t *plainText, uint32_t *plainTextLen)
 {
     if (ctx == NULL || cipherText == NULL || cipherTextLen == 0 || plainText == NULL || plainTextLen == NULL) {
+        E2EE_LOG_ERROR("Null input parameter");
         return E2EE_ERR_NULL_INPUT;
     }
 
@@ -608,6 +644,7 @@ int32_t E2EE_ServerDecrypt(E2EE_ServerCtx *ctx, uint8_t *cipherText, uint32_t ci
         case E2EE_SERVER_ENCRYPT:
             return ProcessAppDataMsg(ctx, cipherText, cipherTextLen, aad, aadLen, plainText, plainTextLen);
         default:
+            E2EE_LOG_ERROR("Invalid server state: %d", ctx->recipientState);
             return E2EE_ERR_CALL;
     }
 }
@@ -616,10 +653,12 @@ int32_t E2EE_ServerEncrypt(E2EE_ServerCtx *ctx, uint8_t *plainText, uint32_t pla
     uint8_t *aad, uint32_t aadLen, uint8_t *cipherText, uint32_t *cipherTextLen)
 {
     if (ctx == NULL || plainText == NULL || plainTextLen == 0 || cipherTextLen == NULL) {
+        E2EE_LOG_ERROR("Null input parameter");
         return E2EE_ERR_NULL_INPUT;
     }
 
     if (plainTextLen > E2EE_MAX_PLIANTEXT_LEN) {
+        E2EE_LOG_ERROR("Plain text length too large: %u", plainTextLen);
         return E2EE_ERR_INVALID_ARG;
     }
 
@@ -629,6 +668,7 @@ int32_t E2EE_ServerEncrypt(E2EE_ServerCtx *ctx, uint8_t *plainText, uint32_t pla
         case E2EE_SERVER_ENCRYPT:
             return ServerGenAppDataMsg(ctx, plainText, plainTextLen, aad, aadLen, cipherText, cipherTextLen);
         default:
+            E2EE_LOG_ERROR("Invalid server state: %d", ctx->senderState);
             return E2EE_ERR_CALL;
     }
 }

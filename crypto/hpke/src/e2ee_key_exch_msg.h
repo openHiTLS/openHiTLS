@@ -1,4 +1,3 @@
-
 #ifndef E2EE_KEY_EXCH_MSG_H
 #define E2EE_KEY_EXCH_MSG_H
 
