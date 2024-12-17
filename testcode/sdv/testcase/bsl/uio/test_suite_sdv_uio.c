@@ -1067,6 +1067,9 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, sizeof(param), &param);
     ASSERT_TRUE(ret == BSL_SUCCESS);
+
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, 0, NULL);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
 exit:
     BSL_UIO_Free(uio);
 }

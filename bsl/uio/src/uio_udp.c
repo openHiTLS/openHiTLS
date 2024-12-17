@@ -31,12 +31,6 @@
 #include "uio_base.h"
 #include "uio_abstraction.h"
 
-typedef union BSL_ADDR {
-    struct sockaddr sa;
-    struct sockaddr_in6 s_in6;
-    struct sockaddr_in s_in;
-    struct sockaddr_un s_un;
-} BSL_ADDR;
 typedef struct {
     bool connected;
     uint8_t reverse[3];
@@ -46,9 +40,9 @@ typedef struct {
     uint32_t ipLen;
 } UdpParameters;
 
-static uint32_t Family2Len(const struct sockaddr addr)
+static uint32_t Family2Len(const struct sockaddr *addr)
 {
-    switch (addr.sa_family) {
+    switch (addr->sa_family) {
         case AF_INET:
             return sizeof(struct sockaddr_in);
         case AF_INET6:
@@ -133,7 +127,7 @@ static int32_t BslUdpSetPeerIpAddr(UdpParameters *parameters, const uint8_t *add
         return BSL_NULL_INPUT;
     }
 
-    if (size != SOCK_ADDR_V4_LEN && size != SOCK_ADDR_V6_LEN) {
+    if (size != SOCK_ADDR_V4_LEN && size != SOCK_ADDR_V6_LEN && size != SOCK_ADDR_UNIX_LEN) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                               "Uio: Set peer ip address input error.", 0, 0, 0, 0);
@@ -267,7 +261,7 @@ static int32_t UdpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
     }
 
     int32_t fd = BSL_UIO_GetFd(uio);
-    uint32_t iplen = sizeof(BSL_ADDR);
+    uint32_t iplen = sizeof(ip);
 
     if (fd < 0) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
@@ -280,8 +274,7 @@ static int32_t UdpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
     if (ret > 0) {
         *readLen = ret;
         if (!parameters->connected) {
-            BSL_ADDR *bsl_addr = (BSL_ADDR *)ip;
-            ret = UdpCtrl(uio, BSL_UIO_SET_PEER_IP_ADDR, Family2Len(bsl_addr->sa), ip);
+            ret = UdpCtrl(uio, BSL_UIO_SET_PEER_IP_ADDR, Family2Len((const struct sockaddr *)&ip), ip);
             if (ret != BSL_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
                 return BSL_UIO_IO_EXCEPTION;
