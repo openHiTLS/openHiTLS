@@ -39,7 +39,7 @@ void SDV_X509_CRL_PARSE_FUNC_TC001(int format, char *path)
     BSL_GLOBAL_Init();
     HITLS_X509_Crl *crl = NULL;
 
-    ASSERT_EQ(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_PKI_SUCCESS);
 exit:
     HITLS_X509_CrlFree(crl);
     BSL_GLOBAL_DeInit();
@@ -50,10 +50,10 @@ exit:
 void SDV_X509_CRL_CTRL_FUNC_TC001(char *path)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     int32_t ref = 0;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(ref, 2);
     HITLS_X509_CrlFree(crl);
 
@@ -66,7 +66,7 @@ exit:
 void SDV_X509_CRL_PARSE_VERSION_FUNC_TC001(char *path, int version)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
     ASSERT_EQ(crl->tbs.version, version);
 exit:
     HITLS_X509_CrlFree(crl);
@@ -78,7 +78,7 @@ void SDV_X509_CRL_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(crl->tbs.signAlgId.algId, signAlg);
     ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.mdId, rsaPssHash);
@@ -99,7 +99,7 @@ void SDV_X509_CRL_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
     Hex *type5, int tag5, Hex *value5)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
@@ -153,7 +153,7 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC003(char *path, int count, int num,
     int tag1, Hex *value1, int year1, int month1, int day1, int hour1, int minute1, int second1)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.revokedCerts), count);
     HITLS_X509_CrlEntry *nameNode = NULL;
     nameNode = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
@@ -190,7 +190,7 @@ void SDV_X509_CRL_PARSE_START_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(crl->tbs.validTime.start.year, year);
     ASSERT_EQ(crl->tbs.validTime.start.month, month);
@@ -208,7 +208,7 @@ void SDV_X509_CRL_PARSE_END_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(crl->tbs.validTime.end.year, year);
     ASSERT_EQ(crl->tbs.validTime.end.month, month);
@@ -226,7 +226,7 @@ void SDV_X509_CRL_PARSE_EXTENSIONS_FUNC_TC001(char *path,
     int tag1, Hex *value1, int tag2, Hex *value2)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.crlExt.extList), 1);
     HITLS_X509_ExtEntry **nameNode = NULL;
@@ -248,7 +248,7 @@ void SDV_X509_CRL_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(crl->signAlgId.algId, signAlg);
     ASSERT_EQ(crl->signAlgId.rsaPssParam.mdId, rsaPssHash);
@@ -264,7 +264,7 @@ exit:
 void SDV_X509_CRL_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBits)
 {
     HITLS_X509_Crl *crl = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
     ASSERT_EQ(crl->signature.len, buff->len);
     ASSERT_COMPARE("signature", crl->signature.buff, crl->signature.len, buff->x, buff->len);
     ASSERT_EQ(crl->signature.unusedBits, unusedBits);
@@ -279,7 +279,7 @@ void SDV_X509_MUL_CRL_PARSE_FUNC_TC001(int format, char *path, int crlNum)
     BSL_GLOBAL_Init();
     HITLS_X509_List *list = NULL;
     int32_t ret = HITLS_X509_CrlMulParseFile(format, path, &list);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), crlNum);
 exit:
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
@@ -299,9 +299,9 @@ void SDV_X509_CRL_Encode_TC001(int format, char *path)
 
     BSL_Buffer ori = {data, dataLen};
     ret = HITLS_X509_CrlParseBuff(format, &ori, &crl);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CrlGenBuff(format, crl, &encode);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     if (format == BSL_FORMAT_ASN1) {
         ASSERT_EQ(dataLen, encode.dataLen);
     } else {
@@ -327,7 +327,7 @@ void SDV_X509_CRL_EncodeParam_TC001(void)
     ASSERT_EQ(BSL_SAL_ReadFile("../testdata/cert/pem/crl/crl_v2.pem", &data, &dataLen), BSL_SUCCESS);
 
     BSL_Buffer ori = {data, dataLen};
-    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_PEM, &ori, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_PEM, &ori, &crl), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, NULL, &encode), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_UNKNOWN, crl, &encode), HITLS_X509_ERR_INVALID_PARAM);
@@ -353,9 +353,9 @@ void SDV_X509_CRL_EncodeFile_TC001(int format, char *path)
 
     BSL_Buffer ori = {data, dataLen};
     ret = HITLS_X509_CrlParseBuff(format, &ori, &crl);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CrlGenFile(format, crl, "res.crl");
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_SAL_ReadFile("res.crl", &res, &resLen), BSL_SUCCESS);
     ASSERT_COMPARE("crl_file com", data, dataLen, res, resLen);
 exit:
@@ -372,9 +372,9 @@ void SDV_X509_CRL_Check_TC001(char *capath, char *crlpath, int res)
     HITLS_X509_Crl *crl = NULL;
     HITLS_X509_Cert *cert = NULL;
     void *pubKey = NULL;
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, crlpath, &crl), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(void *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, crlpath, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(void *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), res);
 exit:
     CRYPT_EAL_PkeyFreeCtx(pubKey);
@@ -428,20 +428,20 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
 
     // Test normal parameters - set version number
     version = 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
 
     // Test normal parameters - get version number
     uint32_t getVersion = 0;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &getVersion, sizeof(getVersion)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &getVersion, sizeof(getVersion)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(getVersion, version);
 
     // Test normal parameters - set last update time
     ASSERT_EQ(BSL_SAL_SysTimeGet(&time), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(time)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(time)), HITLS_PKI_SUCCESS);
 
     // Test normal parameters - get last update time
     BSL_TIME getTime = {0};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &getTime, sizeof(getTime)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &getTime, sizeof(getTime)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(memcmp(&getTime, &time, sizeof(BSL_TIME)), 0);
 exit:
     // Clean up resources
@@ -477,31 +477,31 @@ void SDV_X509_CRL_CTRL_RevokedParamCheck_TC001(void)
     // Test setting/getting revoke time
     ASSERT_EQ(BSL_SAL_SysTimeGet(&time), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
 
     BSL_TIME getTime = {0};
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &getTime, sizeof(getTime)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(memcmp(&time, &getTime, sizeof(BSL_TIME)), 0);
 
     // Test setting/getting reason
     HITLS_X509_RevokeExtReason reasonExt = {false, 1};
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reasonExt,
-        sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
+        sizeof(HITLS_X509_RevokeExtReason)), HITLS_PKI_SUCCESS);
 
     int32_t getReason = 0;
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, &getReason, sizeof(getReason)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(reasonExt.reason, getReason);
 
     // Test setting/getting serial number
     uint8_t serial[] = {0x01, 0x02, 0x03, 0x04};
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serial, 4),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
 
     BSL_Buffer getSerial = {0};
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &getSerial, sizeof(getSerial)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(4, getSerial.dataLen);
     ASSERT_EQ(memcmp(serial, getSerial.data, getSerial.dataLen), 0);
 
@@ -525,24 +525,24 @@ void SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001(char *parh, int revokedNum)
     int32_t reason = 0;
     BSL_Buffer serialNum = {0};
 
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, parh, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, parh, &crl), HITLS_PKI_SUCCESS);
     ASSERT_NE(crl, NULL);
 
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_NE(revokeList, NULL);
     ASSERT_EQ(BSL_LIST_COUNT(revokeList), revokedNum);
     for (entry = (HITLS_X509_CrlEntry *)BSL_LIST_GET_FIRST(revokeList); entry != NULL; entry =
         (HITLS_X509_CrlEntry *)BSL_LIST_GET_NEXT(revokeList)) {
         ASSERT_TRUE(entry->serialNumber.buff != NULL);
         ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &serialNum,
-            sizeof(BSL_Buffer)), HITLS_X509_SUCCESS);
+            sizeof(BSL_Buffer)), HITLS_PKI_SUCCESS);
         ASSERT_TRUE(serialNum.dataLen > 0 && serialNum.dataLen <= 20);
         ASSERT_NE(serialNum.data, NULL);
         ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(BSL_TIME)),
-            HITLS_X509_SUCCESS);
+            HITLS_PKI_SUCCESS);
         ASSERT_NE(time.year, 0);
         ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON,
-            &reason, sizeof(int32_t)), HITLS_X509_SUCCESS);
+            &reason, sizeof(int32_t)), HITLS_PKI_SUCCESS);
         ASSERT_TRUE(reason >= 0 && reason <= 11);
         reason = 0;
         memset(&time, 0, sizeof(BSL_TIME));
@@ -565,25 +565,25 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
 
     // Parse the test CRL file
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, "../testdata/cert/pem/crl/crl_v2.mul3.crl", &crl),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_NE(crl, NULL);
 
     // Test getting the version number
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(uint32_t)), HITLS_PKI_SUCCESS);
     // The CRL version should be 0 (v1) or 1 (v2)
     ASSERT_TRUE(version == 1);
 
     // Test getting the last update time
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_NE(beforeTime.year, 0);
 
     // Test getting the next update time
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     // The next update time should be later than the last update time
     ASSERT_TRUE(afterTime.month > beforeTime.month);
 
     // Test getting the issuer DN name
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
     ASSERT_NE(BSL_LIST_COUNT(issuerDN), 0);
 
@@ -593,7 +593,7 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     ASSERT_EQ(BSL_LIST_COUNT(crl->tbs.crlExt.extList), 1);
 
     // Test getting the revoke list
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_REVOKELIST, &revokeList, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_NE(revokeList, NULL);
     ASSERT_EQ(BSL_LIST_COUNT(revokeList), 3);
 
@@ -615,18 +615,18 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
     // set CRL Number
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumExt = {0};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(crlNumExt.critical, crlNumberExt.critical);
     ASSERT_EQ(crlNumExt.crlNumber.dataLen, crlNumberExt.crlNumber.dataLen);
     ASSERT_EQ(memcmp(crlNumExt.crlNumber.data, crlNumberExt.crlNumber.data, crlNumberExt.crlNumber.dataLen), 0);
 
     HITLS_X509_ExtAki aki = {false, {keyId, sizeof(keyId)}, NULL, {NULL, 0}};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_PKI_SUCCESS);
     HITLS_X509_ExtAki getaki = {0};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_AKI, &getaki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_AKI, &getaki, sizeof(HITLS_X509_ExtAki)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(getaki.critical, aki.critical);
     ASSERT_EQ(getaki.kid.dataLen, aki.kid.dataLen);
     ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
@@ -645,31 +645,31 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     BSL_TIME afterTime = {0};
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_PKI_SUCCESS);
     ASSERT_NE(crl, NULL);
     uint32_t version = 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(uint32_t)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(uint32_t)), HITLS_PKI_SUCCESS);
     BslList *issuerDN = NULL;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_NE(issuerDN, NULL);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
 
     afterTime = beforeTime;
     afterTime.year += 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
 
     HITLS_X509_ExtSki ski = {0};
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(ski.kid.data != NULL);
     HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, cert->tbs.issuerName,
         {cert->tbs.serialNum.buff, cert->tbs.serialNum.len}};
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_PKI_SUCCESS);
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
-              HITLS_X509_SUCCESS);
+              HITLS_PKI_SUCCESS);
 exit:
     HITLS_X509_CertFree(cert);
     HITLS_X509_CrlFree(crl);
@@ -713,7 +713,7 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
     BslList *tmp = NULL;
 
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &prvKey), 0);
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_PKI_SUCCESS);
 
     /* Cannot repeat parse */
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_X509_ERR_INVALID_PARAM);
@@ -723,7 +723,7 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
 
     /* Cannot set after parsing */
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &ver, sizeof(uint32_t)), HITLS_X509_ERR_SET_AFTER_PARSE);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &tmp, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &tmp, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, tmp, 0), HITLS_X509_ERR_SET_AFTER_PARSE);
 
     /* Generate crl after parsing is allowed. */
@@ -889,22 +889,22 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
     HITLS_X509_CrlEntry *entry = HITLS_X509_CrlRevokedNew();
     ASSERT_NE(entry, NULL);
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM,
-        serialNum, sizeof(serialNum)), HITLS_X509_SUCCESS);
+        serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
 
     BSL_TIME revokeTime = {0};
     ASSERT_EQ(BSL_SAL_SysTimeGet(&revokeTime), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     HITLS_X509_RevokeExtReason reason = {0, 1};  // keyCompromise
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason,
-        sizeof(HITLS_X509_RevokeExtReason)), HITLS_X509_SUCCESS);
+        sizeof(HITLS_X509_RevokeExtReason)), HITLS_PKI_SUCCESS);
 
     // Set invalid time (optional)
     BSL_TIME invalidTime = revokeTime;
     invalidTime.day -= 1;  // Set invalid time to 1 day before revocation
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
-        &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_X509_SUCCESS);
+        &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
 
     // Set certificate issuer (optional, only needed for indirect CRLs)
     HITLS_X509_RevokeExtCertIssuer certIssuer = {
@@ -912,12 +912,12 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
         issuerDN  // Use the same DN as CRL issuer for this test
     };
     ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
-        &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), HITLS_X509_SUCCESS);
+        &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, sizeof(HITLS_X509_CrlEntry)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     HITLS_X509_CrlRevokedFree(entry);
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 exit:
     return -1;
 }
@@ -936,7 +936,7 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
         "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der", &cert),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
 
     // Create a basic CRL object and set necessary fields
     crl = HITLS_X509_CrlNew();
@@ -946,13 +946,13 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     crl->tbs.version = 1;
     crl->tbs.issuerName = cert->tbs.subjectName;
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
 
     afterTime = beforeTime;
     afterTime.year += 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(SetCrlRevoked(crl, cert->tbs.subjectName, 1), HITLS_X509_SUCCESS);
+    ASSERT_EQ(SetCrlRevoked(crl, cert->tbs.subjectName, 1), HITLS_PKI_SUCCESS);
     entry = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
     ASSERT_TRUE(entry != NULL);
 
@@ -986,34 +986,34 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     uint8_t crlNumber[1] = {0x01};
     // Set CRL version (v2)
     uint32_t version = 1;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
 
     // Set issuer DN from certificate
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN, &issuerDN, sizeof(BslList *)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
 
     // Set validity period
     ASSERT_EQ(BSL_SAL_SysTimeGet(&beforeTime), BSL_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
 
     afterTime = beforeTime;
     afterTime.year += 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     for (int i = 0; i < 3; i++) {
-        ASSERT_EQ(SetCrlRevoked(crl, issuerDN, i), HITLS_X509_SUCCESS);
+        ASSERT_EQ(SetCrlRevoked(crl, issuerDN, i), HITLS_PKI_SUCCESS);
     }
     if (isV2) {
         HITLS_X509_ExtSki ski = {0};
         int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki));
-        if (ret == HITLS_X509_SUCCESS) {
+        if (ret == HITLS_PKI_SUCCESS) {
             HITLS_X509_ExtAki aki = {false, {ski.kid.data, ski.kid.dataLen}, NULL, {NULL, 0}};
             // Set SKI extension
             ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)),
-                HITLS_X509_SUCCESS);
+                HITLS_PKI_SUCCESS);
         }
 
         // Set CRL Number extension
@@ -1022,9 +1022,9 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
             {crlNumber, sizeof(crlNumber)}
         };
         ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt,
-            sizeof(HITLS_X509_ExtCrlNumber)), HITLS_X509_SUCCESS);
+            sizeof(HITLS_X509_ExtCrlNumber)), HITLS_PKI_SUCCESS);
     }
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 exit:
     return -1;
 }
@@ -1040,7 +1040,7 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, i
     HITLS_X509_SignAlgParam algParam = {0};
     TestRandInit();
     // Parse issuer certificate and private key
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
 
     // Create and initialize CRL
@@ -1062,24 +1062,24 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, i
     }
 
     if (pad == CRYPT_PKEY_EMSA_PSS || isUseSm2UserId != 0) {
-        ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, &algParam, crl), HITLS_X509_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, &algParam, crl), HITLS_PKI_SUCCESS);
     } else {
-        ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_X509_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
     }
 
     // Verify the signature is present
     ASSERT_NE(crl->signature.buff, NULL);
     ASSERT_NE(crl->signature.len, 0);
-    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, crl), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_PKI_SUCCESS);
     ASSERT_NE(parseCrl, NULL);
     if (isUseSm2UserId != 0) {
         ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
-            strlen(g_sm2DefaultUserid)), HITLS_X509_SUCCESS);
+            strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
     }
 
-    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_PKI_SUCCESS);
 exit:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CrlFree(parseCrl);

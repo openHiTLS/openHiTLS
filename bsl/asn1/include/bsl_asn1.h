@@ -86,8 +86,8 @@ typedef struct _BSL_ASN1_TemplateItem {
     /* exptect tag */
     uint8_t tag;
     /* corresponding to the tag flag */
-    uint8_t flags:5;
-    uint8_t depth:3;
+    uint8_t flags : 5;
+    uint8_t depth : 3;
 } BSL_ASN1_TemplateItem;
 
 typedef struct _BSL_ASN1_Template {
