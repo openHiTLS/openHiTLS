@@ -227,16 +227,16 @@ SDV_X509_CRL_EncodeFile_TC001 sm2 crl(pem)
 SDV_X509_CRL_EncodeFile_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"
 
 SDV_X509_CRL_Check_TC001 success rsa
-SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_SUCCESS
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_PKI_SUCCESS
 
 SDV_X509_CRL_Check_TC001 success ecdsa
-SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/crl_v2.old.der":HITLS_X509_SUCCESS
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/crl_v2.old.der":HITLS_PKI_SUCCESS
 
 SDV_X509_CRL_Check_TC001 success rsa-pss
-SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-pss-v3/rootca.crt":"../testdata/cert/chain/rsa-pss-v3/crl.der":HITLS_X509_SUCCESS
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-pss-v3/rootca.crt":"../testdata/cert/chain/rsa-pss-v3/crl.der":HITLS_PKI_SUCCESS
 
 SDV_X509_CRL_Check_TC001 success sm2
-SDV_X509_CRL_Check_TC001:"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/crl_v2.mul.der":HITLS_X509_SUCCESS
+SDV_X509_CRL_Check_TC001:"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/crl_v2.mul.der":HITLS_PKI_SUCCESS
 
 SDV_X509_CRL_CTRL_ParamCheck_TC001
 SDV_X509_CRL_CTRL_ParamCheck_TC001:

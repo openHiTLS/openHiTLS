@@ -40,7 +40,7 @@ void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
     BSL_GLOBAL_Init();
     HITLS_X509_Cert *cert = NULL;
     int32_t ret = HITLS_X509_CertParseFile(format, path, &cert);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 exit:
     HITLS_X509_CertFree(cert);
     BSL_GLOBAL_DeInit();
@@ -51,7 +51,7 @@ exit:
 void SDV_X509_CERT_PARSE_VERSION_FUNC_TC001(char *path, int version)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
 exit:
     HITLS_X509_CertFree(cert);
@@ -62,7 +62,7 @@ exit:
 void SDV_X509_CERT_PARSE_SERIALNUM_FUNC_TC001(char *path, Hex *serialNum)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.serialNum.tag, 2);
     ASSERT_COMPARE("serialNum", cert->tbs.serialNum.buff, cert->tbs.serialNum.len,
         serialNum->x, serialNum->len);
@@ -76,7 +76,7 @@ void SDV_X509_CERT_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(cert->tbs.signAlgId.algId, signAlg);
     ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.mdId, rsaPssHash);
@@ -98,7 +98,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
     Hex *type6, int tag6, Hex *value6)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
@@ -143,7 +143,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC002(char *path, int count,
     Hex *type1, int tag1, Hex *value1)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x}
@@ -187,7 +187,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC003(char *path, int count,
     Hex *type5, int tag5, Hex *value5)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
@@ -243,7 +243,7 @@ void SDV_X509_CERT_PARSE_START_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(cert->tbs.validTime.start.year, year);
     ASSERT_EQ(cert->tbs.validTime.start.month, month);
@@ -261,7 +261,7 @@ void SDV_X509_CERT_PARSE_END_TIME_FUNC_TC001(char *path,
     int year, int month, int day, int hour, int minute, int second)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(cert->tbs.validTime.end.year, year);
     ASSERT_EQ(cert->tbs.validTime.end.month, month);
@@ -284,7 +284,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC001(char *path, int count,
     Hex *type6, int tag6, Hex *value6)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
@@ -329,7 +329,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC002(char *path, int count,
     Hex *type1, int tag1, Hex *value1)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x}
@@ -373,7 +373,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003(char *path, int count,
     Hex *type5, int tag5, Hex *value5)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     BSL_ASN1_Buffer expAsan1Arr[] = {
         {6, type1->len, type1->x}, {(uint8_t)tag1, value1->len, value1->x},
@@ -417,37 +417,37 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     int expKuDigitailSign, int expKuCertSign, int expKuKeyAgreement)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     int32_t rawDataLen;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(rawDataLen, expRawDataLen);
 
     uint8_t *rawData = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE, &rawData, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE, &rawData, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(rawData, NULL);
 
     void *ealKey = NULL;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &ealKey, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &ealKey, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(ealKey, NULL);
     CRYPT_EAL_PkeyFreeCtx(ealKey);
 
     int32_t alg = 0;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, expSignAlg);
 
     int32_t ref = 0;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(ref, 2);
     HITLS_X509_CertFree(cert);
 
     bool isTrue = false;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuDigitailSign);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_CERTSIGN, &isTrue, sizeof(isTrue)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_CERTSIGN, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuCertSign);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuKeyAgreement);
 
 exit:
@@ -466,7 +466,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     BSL_Buffer beforeTime = { NULL, 0 };
     BSL_Buffer afterTime = { NULL, 0 };
 
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer)), 0);
     ASSERT_NE(subjectName.data, NULL);
@@ -509,11 +509,11 @@ void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC001(char *path, char *path2)
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *cert2 = NULL;
 
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path2, &cert2), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path2, &cert2), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CheckSignature(cert2->tbs.ealPubKey, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen,
-        &cert->signAlgId, &cert->signature), HITLS_X509_SUCCESS);
+        &cert->signAlgId, &cert->signature), HITLS_PKI_SUCCESS);
 exit:
     HITLS_X509_CertFree(cert);
     HITLS_X509_CertFree(cert2);
@@ -526,23 +526,23 @@ void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *dest = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     dest = HITLS_X509_CertDup(cert);
     ASSERT_NE(dest, NULL);
 
     int32_t alg = 0;
-    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, expSignAlg);
 
     bool isTrue = false;
-    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_DIGITALSIGN, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuDigitailSign);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_CERTSIGN, &isTrue, sizeof(isTrue)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_CERTSIGN, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuCertSign);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuKeyAgreement);
 
 exit:
@@ -570,7 +570,7 @@ void SDV_X509_CERT_PARSE_EXTENSIONS_FUNC_TC001(char *path, int extNum, int isCA,
 {
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_ExtEntry **node = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
     ASSERT_EQ(certExt->isCa, isCA);
     ASSERT_EQ(certExt->maxPathLen, maxPathLen);
@@ -604,7 +604,7 @@ void SDV_X509_CERT_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
     int rsaPssHash, int rsaPssMgf1, int rsaPssSaltLen)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(cert->signAlgId.algId, signAlg);
     ASSERT_EQ(cert->signAlgId.rsaPssParam.mdId, rsaPssHash);
@@ -621,7 +621,7 @@ exit:
 void SDV_X509_CERT_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBits)
 {
     HITLS_X509_Cert *cert = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->signature.len, buff->len);
     ASSERT_COMPARE("signature", cert->signature.buff, cert->signature.len, buff->x, buff->len);
     ASSERT_EQ(cert->signature.unusedBits, unusedBits);
@@ -636,7 +636,7 @@ void SDV_X509_MUL_CERT_PARSE_FUNC_TC001(int format, char *path, int certNum)
     TestMemInit();
     HITLS_X509_List *list = NULL;
     int32_t ret = HITLS_X509_CertMulParseFile(format, path, &list);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), certNum);
 exit:
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -652,11 +652,11 @@ void SDV_X509_CERT_SET_VERIOSN_FUNC_TC001(void)
     ASSERT_EQ(cert->tbs.version, HITLS_CERT_VERSION_1);
 
     int32_t version = HITLS_CERT_VERSION_2;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
 
     version = HITLS_CERT_VERSION_3;
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
 
     // valLen
@@ -685,7 +685,7 @@ void SDV_X509_CERT_SET_SERIAL_FUNC_TC001(Hex *serial)
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, val, 0), HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, val, valLen), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, val, valLen), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.serialNum.len, valLen);
     ASSERT_COMPARE("serial", cert->tbs.serialNum.buff, valLen, val, valLen);
 
@@ -706,11 +706,11 @@ void SDV_X509_CERT_SET_TIME_FUNC_TC001(void)
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &time, 0), HITLS_X509_ERR_INVALID_PARAM);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &time, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_BEFORE_SET) != 0);
     ASSERT_EQ(BSL_SAL_DateTimeCompare(&cert->tbs.validTime.start, &time, NULL), BSL_TIME_CMP_EQUAL);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &time, sizeof(BSL_TIME)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &time, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) != 0);
     ASSERT_EQ(BSL_SAL_DateTimeCompare(&cert->tbs.validTime.end, &time, NULL), BSL_TIME_CMP_EQUAL);
 
@@ -727,9 +727,9 @@ void SDV_X509_ENCODE_CERT_EXT_TC001(char *path, Hex *expectExt)
     HITLS_X509_Cert *cert = NULL;
     BSL_ASN1_Buffer ext = {0};
 
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     uint8_t tag = 0xA3;
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &ext), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &ext), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(ext.len, expectExt->len);
     if (expectExt->len != 0) {
@@ -920,7 +920,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC001(char *derCertPath, char *privPath, int keyT
 
     TestMemInit();
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, derCertPath, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, derCertPath, &cert), HITLS_PKI_SUCCESS);
 
     /* Cannot repeat parse */
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, derCertPath, &cert), HITLS_X509_ERR_INVALID_PARAM);
@@ -965,7 +965,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
 
     TestMemInit();
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
-    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csrPath, &csr), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csrPath, &csr), HITLS_PKI_SUCCESS);
 
     cert = HITLS_X509_CertNew();
     ASSERT_TRUE(cert != NULL);
