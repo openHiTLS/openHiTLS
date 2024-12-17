@@ -4,7 +4,7 @@
 
 #define E2EE_SUCCESS                  0
 #define E2EE_FAILED                   1
-#define E2EE_ERR_NVALID_ARG           2
+#define E2EE_ERR_INVALID_ARG          2
 #define E2EE_ERR_NULL_INPUT           3
 #define E2EE_ERR_MALLOC               4
 #define E2EE_ERR_MSG_VERSION          5

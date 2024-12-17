@@ -93,9 +93,10 @@ void E2EE_RegisterLogCallback(E2EE_logCallbackFunc logCallbackFunc);
 Function Name: E2EE_RegisterMemCallback
 Description:   Register memory callback, if do not register, the default memory function will be used.
 Input:         memCallback - memory callback
-Return:        void
+Return:        Success - E2EE_SUCCESS
+               Failure - other Errcode
 **********************************************************************/
-void E2EE_RegisterMemCallback(E2EE_MemCallback *memCallback);
+int32_t E2EE_RegisterMemCallback(E2EE_MemCallback *memCallback);
 
 /**********************************************************************
 Function Name: E2EE_ClientCreate

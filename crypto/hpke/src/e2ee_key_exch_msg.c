@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "securec.h"
+#include "e2ee_mem.h"
 #include "e2ee_key_exch_err.h"
 #include "e2ee_key_exch_msg.h"
 
@@ -64,7 +65,7 @@ int32_t E2EE_SerializeMsg(uint8_t version, uint8_t type, E2EE_Tlv tlvs[], uint32
     }
 
     if (*outLen < totalLen) {
-        return E2EE_ERR_NVALID_ARG;
+        return E2EE_ERR_INVALID_ARG;
     }
 
     uint8_t *p = out;

@@ -8,7 +8,7 @@
 #include "crypt_params_key.h"
 #include "e2ee_key_exch_err.h"
 #include "e2ee_key_exch.h"
-
+#include "e2ee_mem.h"
 #include "e2ee_sse.h"
 
 #define E2EE_AEAD_NONCE_LEN  12
@@ -171,7 +171,8 @@ static int32_t SseDeriveKey(E2EE_SelfEncryptionCtx *ctx, E2EE_KDF_AlgId kdfAlgId
         goto end;
     }
 
-    ret = HkdfExpand(macId, prk, prkLen, (uint8_t *)"base_nonce", strlen("base_nonce"), ctx->baseNonce, ctx->baseNonceLen);
+    ret = HkdfExpand(macId, prk, prkLen, (uint8_t *)"base_nonce", strlen("base_nonce"), ctx->baseNonce,
+        ctx->baseNonceLen);
     if (ret != E2EE_SUCCESS) {
         goto end;
     }
@@ -213,21 +214,20 @@ int32_t CreateSelfEncryptionCtx(E2EE_AlgId *algId, uint8_t *salt, uint32_t saltL
     uint32_t secretLen, E2EE_SelfEncryptionCtx **ctx)
 {
     int32_t ret;
-    E2EE_SelfEncryptionCtx *tmpCtx = malloc(sizeof(E2EE_SelfEncryptionCtx));
+    E2EE_SelfEncryptionCtx *tmpCtx = (E2EE_SelfEncryptionCtx *)E2EE_Calloc(1, sizeof(E2EE_SelfEncryptionCtx));
     if (tmpCtx == NULL) {
         return E2EE_ERR_MALLOC;
     }
-    memset_s(tmpCtx, sizeof(E2EE_SelfEncryptionCtx), 0, sizeof(E2EE_SelfEncryptionCtx));
 
     tmpCtx->symKeyLen = GetAeadKeyLen(algId->aeadAlgId);
-    tmpCtx->symKey = malloc(tmpCtx->symKeyLen);
+    tmpCtx->symKey = E2EE_Malloc(tmpCtx->symKeyLen);
     if (tmpCtx->symKey == NULL) {
-        free(tmpCtx);
+        E2EE_Free(tmpCtx);
         return E2EE_ERR_MALLOC;
     }
 
     tmpCtx->baseNonceLen = E2EE_AEAD_NONCE_LEN;
-    tmpCtx->baseNonce = malloc(tmpCtx->baseNonceLen);
+    tmpCtx->baseNonce = E2EE_Malloc(tmpCtx->baseNonceLen);
     if (tmpCtx->baseNonce == NULL) {
         ret = E2EE_ERR_MALLOC;
         goto end;
@@ -257,21 +257,14 @@ void DestroySelfEncryptionCtx(E2EE_SelfEncryptionCtx *ctx)
         return;
     }
 
-    if (ctx->symKey != NULL) {
-        memset_s(ctx->symKey, ctx->symKeyLen, 0, ctx->symKeyLen);
-        free(ctx->symKey);
-    }
-
-    if (ctx->baseNonce != NULL) {
-        memset_s(ctx->baseNonce, ctx->baseNonceLen, 0, ctx->baseNonceLen);
-        free(ctx->baseNonce);
-    }
+    E2EE_ClearFree(ctx->symKey, ctx->symKeyLen);
+    E2EE_ClearFree(ctx->baseNonce, ctx->baseNonceLen);
 
     if (ctx->cipherCtx != NULL) {
         CRYPT_EAL_CipherFreeCtx(ctx->cipherCtx);
     }
 
-    free(ctx);
+    E2EE_Free(ctx);
 }
 
 static void ComputeNonce(E2EE_SelfEncryptionCtx *ctx, uint8_t *nonce, uint32_t nonceLen)

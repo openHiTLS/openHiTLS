@@ -20,7 +20,7 @@
 #include "crypt_eal_hpke.h"
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
-
+#include "e2ee_mem.h"
 #include "e2ee_key_exch.h"
 #include "e2ee_key_exch_err.h"
 #include "e2ee_sse.h"
@@ -106,26 +106,14 @@ static int32_t DeserializeCipherCuite(uint8_t *in, uint32_t inLen, E2EE_AlgId *a
 
 E2EE_ServerCtx *E2EE_ServerCreate(void)
 {
-    E2EE_ServerCtx *ctx = (E2EE_ServerCtx *)malloc(sizeof(E2EE_ServerCtx));
+    E2EE_ServerCtx *ctx = (E2EE_ServerCtx *)E2EE_Calloc(1, sizeof(E2EE_ServerCtx));
     if (ctx == NULL) {
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(E2EE_ServerCtx), 0, sizeof(E2EE_ServerCtx));
 
     ctx->recipientState = E2EE_SERVER_INIT;
     ctx->senderState = E2EE_SERVER_INIT;
     return ctx;
-}
-
-static int32_t MallocAndCopy(uint8_t **out, uint32_t *outLen, uint8_t *in, uint32_t inLen)
-{
-    *out = (uint8_t *)malloc(inLen);
-    if (*out == NULL) {
-        return E2EE_ERR_MALLOC;
-    }
-    (void)memcpy_s(*out, inLen, in, inLen);
-    *outLen = inLen;
-    return E2EE_SUCCESS;
 }
 
 static int32_t CreatePriKey(E2EE_PkeyInfo *pkeyInfo, uint8_t *priKey, uint32_t priKeyLen,
@@ -177,11 +165,11 @@ static void FreeKeyExchInfo(E2EE_ServerCtx *ctx)
     E2EE_KeyExchInfo *keyExchInfo = ctx->keyExchInfo;
     for (uint32_t i = 0; i < keyExchInfoNum; i++) {
         CRYPT_EAL_PkeyFreeCtx(keyExchInfo[i].pkey);
-        free(keyExchInfo[i].info);
+        E2EE_Free(keyExchInfo[i].info);
         keyExchInfo[i].info = NULL;
         keyExchInfo[i].infoLen = 0;
     }
-    free(keyExchInfo);
+    E2EE_Free(keyExchInfo);
     ctx->keyExchInfo = NULL;
     ctx->keyExchInfoNum = 0;
 }
@@ -214,29 +202,28 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
         return E2EE_SUCCESS;
     }
     if (keyExchInfoNum == 0 || keyExchInfoNum > E2EE_MAX_SERVER_KEY_EXCH_INFO_NUM) {
-        return E2EE_ERR_NVALID_ARG;
+        return E2EE_ERR_INVALID_ARG;
     }
 
-    ctx->keyExchInfo = (E2EE_KeyExchInfo *)malloc(sizeof(E2EE_KeyExchInfo) * keyExchInfoNum);
+    ctx->keyExchInfo = (E2EE_KeyExchInfo *)E2EE_Calloc(keyExchInfoNum, sizeof(E2EE_KeyExchInfo));
     if (ctx->keyExchInfo == NULL) {
         return E2EE_ERR_MALLOC;
     }
     ctx->keyExchInfoNum = keyExchInfoNum;
-    memset_s(ctx->keyExchInfo, sizeof(E2EE_KeyExchInfo) * keyExchInfoNum, 0, sizeof(E2EE_KeyExchInfo) * keyExchInfoNum);
 
     for (i = 0; i < keyExchInfoNum; i++) {
         if (keyExchInfo[i].type > E2EE_X25519) {
-            ret = E2EE_ERR_NVALID_ARG;
+            ret = E2EE_ERR_INVALID_ARG;
             break;
         }
 
         if (keyExchInfo[i].infoLen > E2EE_MAX_INFO_LEN) {
-            ret = E2EE_ERR_NVALID_ARG;
+            ret = E2EE_ERR_INVALID_ARG;
             break;
         }
 
         if (keyExchInfo[i].privKeyLen > E2EE_MAX_PRIVATE_KEY_LEN) {
-            ret = E2EE_ERR_NVALID_ARG;
+            ret = E2EE_ERR_INVALID_ARG;
             break;
         }
 
@@ -251,11 +238,12 @@ static int32_t ProcessKeyExchInfo(E2EE_ServerCtx *ctx, E2EE_ServerKeyExchInfo ke
             break;
         }
 
-        ret = MallocAndCopy(&ctx->keyExchInfo[i].info, &ctx->keyExchInfo[i].infoLen, keyExchInfo[i].info,
-            keyExchInfo[i].infoLen);
-        if (ret != E2EE_SUCCESS) {
+        ctx->keyExchInfo[i].info = E2EE_Dump(keyExchInfo[i].info, keyExchInfo[i].infoLen);
+        if (ctx->keyExchInfo[i].info == NULL) {
+            ret = E2EE_ERR_MALLOC;
             break;
         }
+        ctx->keyExchInfo[i].infoLen = keyExchInfo[i].infoLen;
     }
 
     if (ret != E2EE_SUCCESS) {
@@ -345,13 +333,12 @@ static int32_t InitServerRecipient(E2EE_ServerCtx *ctx, uint8_t *encapsulatedKey
         }
     }
 
-    ctx->encapsulatedKey = malloc(encapsulatedKeyLen);
+    ctx->encapsulatedKey = E2EE_Dump(encapsulatedKey, encapsulatedKeyLen);
     if (ctx->encapsulatedKey == NULL) {
         CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
         return E2EE_ERR_MALLOC;
     }
     ctx->encapsulatedKeyLen = encapsulatedKeyLen;
-    memcpy_s(ctx->encapsulatedKey, ctx->encapsulatedKeyLen, encapsulatedKey, encapsulatedKeyLen);
 
     ctx->recipient = hpkeCtx;
     return E2EE_SUCCESS;
@@ -365,7 +352,7 @@ static void DeInitServerRecipient(E2EE_ServerCtx *ctx)
     }
 
     if (ctx->encapsulatedKey != NULL) {
-        free(ctx->encapsulatedKey);
+        E2EE_Free(ctx->encapsulatedKey);
         ctx->encapsulatedKey = NULL;
         ctx->encapsulatedKeyLen = 0;
     }
@@ -437,7 +424,7 @@ static int32_t ProcessClientKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *cipherText,
     }
 
     ctx->recipientState = E2EE_SERVER_ENCRYPT;
-    FreeKeyExchInfo(ctx); // No need for keyExchInfo
+    FreeKeyExchInfo(ctx); // No more key exchange info needed
     ctx->senderState = E2EE_SERVER_KEY_EXCH;
     return E2EE_SUCCESS;
 }
@@ -451,18 +438,18 @@ static int32_t InitServerSender(E2EE_ServerCtx *ctx, uint8_t *responseNonce, uin
         return E2EE_ERR_CRYPTO;
     }
 
-    uint8_t *salt = malloc(ctx->encapsulatedKeyLen + responseNonceLen);
+    uint8_t *salt = E2EE_Malloc(ctx->encapsulatedKeyLen + responseNonceLen);
     if (salt == NULL) {
         memset_s(secret, secretLen, 0, secretLen);
         return E2EE_ERR_MALLOC;
     }
-    memcpy_s(salt, ctx->encapsulatedKeyLen, ctx->encapsulatedKey, ctx->encapsulatedKeyLen);
-    memcpy_s(salt + ctx->encapsulatedKeyLen, responseNonceLen, responseNonce, responseNonceLen);
+    (void)memcpy_s(salt, ctx->encapsulatedKeyLen, ctx->encapsulatedKey, ctx->encapsulatedKeyLen);
+    (void)memcpy_s(salt + ctx->encapsulatedKeyLen, responseNonceLen, responseNonce, responseNonceLen);
 
     E2EE_SelfEncryptionCtx *sender = NULL;
     ret = CreateSelfEncryptionCtx(&ctx->algId, salt, ctx->encapsulatedKeyLen + responseNonceLen, secret, secretLen,
         &sender);
-    free(salt);
+    E2EE_Free(salt);
     memset_s(secret, secretLen, 0, secretLen);
     if (ret != E2EE_SUCCESS) {
         return ret;
@@ -484,7 +471,7 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     uint8_t *aad, uint32_t aadLen, uint8_t *cipherText, uint32_t *cipherTextLen)
 {
     int32_t ret;
-    uint32_t realCipherTextLen = plainTextLen + 16; // TAG LEN
+    uint32_t realCipherTextLen = plainTextLen + 16; // Tag length is 16
 
     uint32_t e2eeCipherTextLen = 0;
     E2EE_Tlv tlvs[2] = {0};
@@ -504,7 +491,7 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     }
 
     if (*cipherTextLen < e2eeCipherTextLen) {
-        return E2EE_ERR_NVALID_ARG;
+        return E2EE_ERR_INVALID_ARG;
     }
 
     uint8_t responseNonce[E2EE_RESPONSE_NONCE_LEN];
@@ -538,7 +525,7 @@ static int32_t ServerGenKeyExchMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
 
     *cipherTextLen = e2eeCipherTextLen;
     ctx->senderState = E2EE_SERVER_ENCRYPT;
-    free(ctx->encapsulatedKey); // No need for peer public key
+    E2EE_Free(ctx->encapsulatedKey); // No more peer public key needed
     ctx->encapsulatedKey = NULL;
     ctx->encapsulatedKeyLen = 0;
     return ret;
@@ -548,7 +535,7 @@ static int32_t ServerGenAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     uint8_t *aad, uint32_t aadLen, uint8_t *cipherText, uint32_t *cipherTextLen)
 {
     int32_t ret;
-    uint32_t realCipherTextLen = plainTextLen + 16; // TAG LEN
+    uint32_t realCipherTextLen = plainTextLen + 16; // Tag length is 16
 
     uint32_t e2eeCipherTextLen = 0;
     E2EE_Tlv tlvs[E2EE_MSG_APP_DATA_TLV_NUM] = {0};
@@ -567,7 +554,7 @@ static int32_t ServerGenAppDataMsg(E2EE_ServerCtx *ctx, uint8_t *plainText, uint
     }
 
     if (*cipherTextLen < e2eeCipherTextLen) {
-        return E2EE_ERR_NVALID_ARG;
+        return E2EE_ERR_INVALID_ARG;
     }
 
     uint64_t cipherTextOffet = E2EE_GetTagValueOffset(E2EE_MSG_VERSION, tlvs, E2EE_MSG_APP_DATA_TLV_NUM,
@@ -631,7 +618,7 @@ int32_t E2EE_ServerEncrypt(E2EE_ServerCtx *ctx, uint8_t *plainText, uint32_t pla
     }
 
     if (plainTextLen > E2EE_MAX_PLIANTEXT_LEN) {
-        return E2EE_ERR_NVALID_ARG;
+        return E2EE_ERR_INVALID_ARG;
     }
 
     switch (ctx->senderState) {
@@ -658,7 +645,7 @@ void E2EE_ServerDestroy(E2EE_ServerCtx *ctx)
 
     FreeKeyExchInfo(ctx);
 
-    free(ctx);
+    E2EE_Free(ctx);
 }
 
 void E2EE_SetServerKemCallback(E2EE_ServerCtx *ctx, E2EE_KemDecapsulateCallbackFunc keyDeriveFunc, void *callbackArg)
