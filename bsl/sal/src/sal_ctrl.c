@@ -24,7 +24,7 @@
 #include "sal_netimpl.h"
 #endif
 #ifdef HITLS_BSL_SAL_TIME
-#include "sal_time_impl.h"
+#include "sal_timeimpl.h"
 #endif
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_fileimpl.h"
@@ -36,10 +36,7 @@
 #include "sal_lockimpl.h"
 
 /* The prefix of BSL_SAL_CB_FUNC_TYPE */
-#ifdef HITLS_BSL_SAL_MEM
 #define BSL_SAL_MEM_CB      0x0100
-#endif
-
 #define BSL_SAL_THREAD_CB   0x0200
 
 #ifdef HITLS_BSL_SAL_NET
@@ -62,12 +59,10 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
 {
     uint32_t type = (uint32_t)funcType & 0xff00;
     switch (type) {
-#ifdef HITLS_BSL_SAL_MEM
         case BSL_SAL_MEM_CB:
-            return BSL_SAL_RegMemCallback(funcType, funcCb);
-#endif
+            return SAL_MemCallBack_Ctrl(funcType, funcCb);
         case BSL_SAL_THREAD_CB:
-            return BSL_SAL_RegThreadCallback(funcType, funcCb);
+            return SAL_ThreadCallback_Ctrl(funcType, funcCb);
 #ifdef HITLS_BSL_SAL_NET
         case BSL_SAL_NET_CB:
             return SAL_NetCallback_Ctrl(funcType, funcCb);

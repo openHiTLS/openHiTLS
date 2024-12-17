@@ -169,8 +169,6 @@ int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *
 
 void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data);
 
-void HITLS_X509_FreeGeneralNames(BslList *names);
-
 void HITLS_X509_ClearGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
@@ -205,7 +203,7 @@ int32_t HITLS_X509_ParseX509(int32_t format, const BSL_Buffer *encode, bool isCe
     HITLS_X509_List *list);
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);
 
-int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, HITLS_X509_Asn1AlgId *subAlg);
+int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg);
 
 int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attrs, HITLS_X509_ParseAttrItemCb parseCb,
     HITLS_X509_FreeAttrItemCb freeItem);
@@ -226,7 +224,7 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     BSL_ASN1_Buffer *attrAsn1);
 
 int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
-    HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature);
+    const HITLS_X509_Asn1AlgId *alg, const BSL_ASN1_BitString *signature);
 
 int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, int32_t valLen);
 

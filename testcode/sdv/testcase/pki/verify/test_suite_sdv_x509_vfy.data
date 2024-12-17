@@ -1,5 +1,5 @@
 SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 1
-SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":128:HITLS_X509_SUCCESS
+SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":128:HITLS_PKI_SUCCESS
 
 SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 2
 SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":256:HITLS_X509_ERR_VFY_CHECK_SECBITS
@@ -11,7 +11,7 @@ SDV_X509_STORE_VFY_CRL_FUNC_TC001 revoked device cert, all crl
 SDV_X509_STORE_VFY_CRL_FUNC_TC001:0:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/sm2/enc3.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
 
 SDV_X509_STORE_VFY_CRL_FUNC_TC001 device cert no revoked, dev crl
-SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_X509_SUCCESS:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
+SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_PKI_SUCCESS:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
 
 SDV_X509_STORE_VFY_CRL_FUNC_TC001 revoked device cert, dev crl
 SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata/cert/sm2/enc3.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/crl_v2.mul3.der":"../testdata/cert/sm2/crl_inter_v2.mul.der"
@@ -54,7 +54,7 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007 cert chain error depth
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007:
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy dev
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_SUCCESS
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl  vfy all
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_CRL_NOT_FOUND

@@ -16,10 +16,8 @@
 #ifndef SAL_MEMIMPL_H
 #define SAL_MEMIMPL_H
 
-#include "hitls_build.h"
-#ifdef HITLS_BSL_SAL_MEM
-
 #include <stdint.h>
+#include "hitls_build.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,9 +52,9 @@ typedef struct MemCallback {
     void (*pfFree)(void *addr);
 } BSL_SAL_MemCallback;
 
-int32_t BSL_SAL_RegMemCallback(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_MEM) && defined(HITLS_BSL_SAL_LINUX)
 void *SAL_MallocImpl(uint32_t size);
 
 void SAL_FreeImpl(void *value);
@@ -65,7 +63,5 @@ void SAL_FreeImpl(void *value);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* HITLS_BSL_SAL_MEM */
 
 #endif // SAL_MEMIMPL_H

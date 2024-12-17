@@ -171,7 +171,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/pki/pkcs12/include
         ${openHiTLS_SRC}/pki/cms/include
         ${openHiTLS_SRC}/pki/x509_verify/include
-        ${openHiTLS_SRC}/pki/x509_print/include
+        ${openHiTLS_SRC}/pki/print/include
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/include
         ${openHiTLS_SRC}/tls/handshake/common/include

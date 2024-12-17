@@ -1131,7 +1131,7 @@
             "x509_cert": {
                 ".features" : ["all_pki"],
                 ".srcs" : "pki/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "pki::x509_print", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "pki::print", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
                 ".include": ["pki/x509_csr/include"]
             },
             "x509_crl" : {
@@ -1144,9 +1144,9 @@
                 ".srcs" : "pki/x509_common/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem", "crypto::encode"]
             },
-            "x509_print" : {
+            "print" : {
                 ".features" : ["all_pki"],
-                ".srcs" : "pki/x509_print/src/*",
+                ".srcs" : "pki/print/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::uio"],
                 ".include": ["pki/x509_common/include"]
             },

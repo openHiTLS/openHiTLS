@@ -96,13 +96,13 @@ void SDV_X509_CSR_PARSE_API_TC001(void)
     TestMemInit();
     HITLS_X509_Csr *csr = NULL;
     const char *path = "../testdata/cert/pem/csr/csr.pem";
-    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, path, NULL), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, path, NULL), HITLS_PKI_SUCCESS);
 
-    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_UNKNOWN, path, &csr), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_UNKNOWN, path, &csr), HITLS_PKI_SUCCESS);
 
-    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, "/errPath/csr.pem", &csr), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, "/errPath/csr.pem", &csr), HITLS_PKI_SUCCESS);
 
-    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, NULL, &csr), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, NULL, &csr), HITLS_PKI_SUCCESS);
 
     /* the csr file don't have read permission */
 
@@ -140,31 +140,31 @@ void SDV_X509_CSR_PARSE_FUNC_TC001(int format, char *path, int expRawDataLen, in
     TestMemInit();
     HITLS_X509_Csr *csr = NULL;
     uint32_t rawDataLen = 0;
-    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_PKI_SUCCESS);
     if (isUseSm2UserId != 0) {
         ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
-            strlen(g_sm2DefaultUserid)), HITLS_X509_SUCCESS);
+            strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
     }
-    ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen)), 0);
     ASSERT_EQ(rawDataLen, expRawDataLen);
 
     uint8_t *rawData = NULL;
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, &rawData, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, &rawData, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(rawData, NULL);
 
     CRYPT_EAL_PkeyCtx *publicKey = NULL;
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_PUBKEY, &publicKey, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_PUBKEY, &publicKey, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(publicKey, NULL);
     CRYPT_EAL_PkeyFreeCtx(publicKey);
 
     int32_t alg = 0;
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, expSignAlg);
 
     int32_t ref = 0;
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(ref, 2);
     HITLS_X509_CsrFree(csr);
 
@@ -188,7 +188,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC002(int format, char *path, int expectedNum, char
 {
     TestMemInit();
     HITLS_X509_Csr *csr = NULL;
-    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_PKI_SUCCESS);
 
     BslList *rawSubject = NULL;
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &rawSubject, sizeof(BslList *)), 0);
@@ -229,10 +229,10 @@ void SDV_X509_CSR_PARSE_FUNC_TC003(int format, char *path, int attrNum, int attr
     HITLS_X509_Csr *csr = NULL;
     HITLS_X509_Attrs *rawAttrs = NULL;
 
-    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &rawAttrs, sizeof(HITLS_X509_Attrs *)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_NE(rawAttrs, NULL);
     ASSERT_EQ(attrNum, BSL_LIST_COUNT(rawAttrs->list));
     if (attrNum == 0) {
@@ -263,12 +263,12 @@ void SDV_X509_CSR_GEN_API_TC001(void)
     const char *path = "../testdata/cert/pem/csr/csr.pem";
     const char *writePath = "../testdata/cert/pem/csr/genCsr.pem";
     int32_t ret = HITLS_X509_CsrParseFile(BSL_FORMAT_PEM, path, &csr);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, NULL, writePath), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_UNKNOWN, csr, writePath), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_NE(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, "/errPath/csr.pem"), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, "/errPath/csr.pem"), HITLS_PKI_SUCCESS);
 exit:
     HITLS_X509_CsrFree(csr);
     return;
@@ -337,12 +337,12 @@ void SDV_X509_CSR_GEN_FUNC_TC001(int inFormat, char *csrPath, int outFormat)
     ASSERT_EQ(BSL_SAL_ReadFile(csrPath, &data, &dataLen), BSL_SUCCESS);
 
     BSL_Buffer ori = {data, dataLen};
-    ASSERT_EQ(HITLS_X509_CsrParseBuff(inFormat, &ori, &csr), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrGenBuff(outFormat, csr, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseBuff(inFormat, &ori, &csr), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(outFormat, csr, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &asnEncode.dataLen, sizeof(asnEncode.dataLen)),
-        HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, &asnEncode.data, 0), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, &asnEncode.data, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
 
     if (inFormat == outFormat) {
         ASSERT_EQ(dataLen, encode.dataLen);
@@ -449,20 +449,20 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
     }
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, privPath, NULL, 0, &privKey), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrParseFile(csrFormat, csrPath, &raw), HITLS_X509_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, privPath, NULL, 0, &privKey), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(csrFormat, csrPath, &raw), HITLS_PKI_SUCCESS);
     new = HITLS_X509_CsrNew();
     ASSERT_NE(new, NULL);
     ASSERT_EQ(SetCsr(raw, new), 0);
-    ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, algParamPtr, new), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrGenBuff(csrFormat, new, &encode), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrVerify(new), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, algParamPtr, new), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(csrFormat, new, &encode), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrVerify(new), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODELEN, &newCsrEncodeLen, sizeof(newCsrEncodeLen)),
-        HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODE, &newCsrEncode, 0), HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODE, &newCsrEncode, 0), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(raw, HITLS_X509_GET_ENCODELEN, &rawCsrEncodeLen, sizeof(rawCsrEncodeLen)),
-        HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(raw, HITLS_X509_GET_ENCODE, &rawCsrEncode, 0), HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(raw, HITLS_X509_GET_ENCODE, &rawCsrEncode, 0), HITLS_PKI_SUCCESS);
 
     if (pad == CRYPT_PKEY_EMSA_PSS || new->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
         ASSERT_EQ(raw->reqInfo.reqInfoRawDataLen, new->reqInfo.reqInfoRawDataLen);
@@ -491,7 +491,7 @@ void SDV_X509_CSR_GEN_PROCESS_TC001(char *csrPath, int csrFormat, char *privPath
 
     TestMemInit();
     ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(keyFormat, keyType, privPath, NULL, 0, &privKey), 0);
-    ASSERT_EQ(HITLS_X509_CsrParseFile(csrFormat, csrPath, &csr), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(csrFormat, csrPath, &csr), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
@@ -596,38 +596,38 @@ void SDV_X509_CSR_CTRL_SET_API_TC001(char *csrPath)
     uint32_t csrEncodeLen = 0;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
-    ASSERT_EQ(BSL_SAL_ReadFile(csrPath, &encodeRaw.data, &encodeRaw.dataLen), HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(csrPath, &encodeRaw.data, &encodeRaw.dataLen), HITLS_PKI_SUCCESS);
     ASSERT_NE(encodeRaw.data, NULL);
-    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &csr), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_ENCODE, &csrEncode, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, 0xFFFF, &csrEncode, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, NULL, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &csr), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_ENCODE, &csrEncode, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, 0xFFFF, &csrEncode, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, NULL, 0), HITLS_PKI_SUCCESS);
 
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, NULL, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, NULL, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_ENCODELEN, &csrEncodeLen, sizeof(csrEncodeLen)),
-        HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &csrEncodeLen, 0), HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &csrEncodeLen, 0), HITLS_PKI_SUCCESS);
 
     int ref = 0;
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, NULL, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, &ref, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, NULL, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, &ref, 0), HITLS_PKI_SUCCESS);
 
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_PUBKEY, NULL, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_PUBKEY, &pkey, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_PUBKEY, NULL, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_PUBKEY, &pkey, 0), HITLS_PKI_SUCCESS);
     int32_t signAlg = 0;
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, NULL, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_SIGNALG, &signAlg, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, &signAlg, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, NULL, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_SIGNALG, &signAlg, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SIGNALG, &signAlg, 0), HITLS_PKI_SUCCESS);
 
     BslList *subjectName = 0;
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, NULL, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_SUBJECT_DN, &subjectName, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subjectName, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, NULL, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_GET_SUBJECT_DN, &subjectName, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subjectName, 0), HITLS_PKI_SUCCESS);
 
     HITLS_X509_Attrs attrs = {};
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, NULL, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, NULL, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, 0), HITLS_PKI_SUCCESS);
 
 exit:
     BSL_SAL_FREE(encodeRaw.data);
@@ -649,7 +649,7 @@ void SDV_X509_CSR_CTRL_SET_API_TC002(char *csrPath)
     uint8_t e[] = {1, 0, 1};
 
     int32_t ret = HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csrPath, &csr);
-    ASSERT_EQ(ret, HITLS_X509_SUCCESS);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
     rsaPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     ASSERT_NE(rsaPkey, NULL);
@@ -657,8 +657,8 @@ void SDV_X509_CSR_CTRL_SET_API_TC002(char *csrPath)
     SetRsaPara(&rsaPara, e, sizeof(e), 2048); // 2048 is rsa key bits
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(rsaPkey, &rsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(rsaPkey), CRYPT_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, NULL, 0), HITLS_X509_SUCCESS);
-    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_SET_PUBKEY, rsaPkey, 0), HITLS_X509_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, NULL, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_SET_PUBKEY, rsaPkey, 0), HITLS_PKI_SUCCESS);
 
 exit:
     HITLS_X509_CsrFree(csr);
@@ -684,17 +684,17 @@ void SDV_X509_CSR_CTRL_FUNC_TC001(char *csrPath)
     uint8_t e[] = {1, 0, 1};
     HITLS_X509_Csr *newCsr = NULL;
 
-    ASSERT_EQ(BSL_SAL_ReadFile(csrPath, &encodeRaw.data, &encodeRaw.dataLen), HITLS_X509_SUCCESS);
+    ASSERT_EQ(BSL_SAL_ReadFile(csrPath, &encodeRaw.data, &encodeRaw.dataLen), HITLS_PKI_SUCCESS);
     ASSERT_NE(encodeRaw.data, NULL);
-    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &csr), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, &csrEncode, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &csr), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODE, &csrEncode, 0), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &csrEncodeLen, sizeof(csrEncodeLen)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(csrEncodeLen, encodeRaw.dataLen);
     ASSERT_EQ(memcmp(encodeRaw.data, csrEncode, encodeRaw.dataLen), 0);
 
     int32_t ref = 0;
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(ref, 2);
     HITLS_X509_CsrFree(csr);
 
@@ -706,10 +706,10 @@ void SDV_X509_CSR_CTRL_FUNC_TC001(char *csrPath)
     SetRsaPara(&para, e, sizeof(e), 2048); // 2048 is rsa key bits
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(newCsr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(newCsr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrCtrl(newCsr, HITLS_X509_GET_ENCODELEN, &csrEncodeLen, sizeof(csrEncodeLen)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
 
 exit:
     BSL_SAL_FREE(encodeRaw.data);
@@ -746,14 +746,14 @@ void SDV_X509_CSR_AttrCtrl_API_TC001(void)
     ext->extList->count = 1;
 
     // success
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, ext, 0), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, ext, 0), HITLS_PKI_SUCCESS);
 
     // repeat
     ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, cmd, ext, 0), HITLS_X509_ERR_SET_ATTR_REPEAT);
 
     // get attr
     ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
-        &getExt, sizeof(HITLS_X509_Ext *)), HITLS_X509_SUCCESS);
+        &getExt, sizeof(HITLS_X509_Ext *)), HITLS_PKI_SUCCESS);
     ASSERT_NE(getExt, NULL);
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)getExt->extData;
     ASSERT_EQ(certExt->keyUsage, HITLS_X509_EXT_KU_NON_REPUDIATION);
@@ -885,14 +885,14 @@ static int32_t SetNewCsrInfo(HITLS_X509_Csr *new, CRYPT_EAL_PkeyCtx *key, int dn
     char *dnNameStr[3] = {dnName1, dnName2, dnName3};
     for (int i = 0; i < 3; i++) {
         SetX509Dn(&dnName[i], dnTypes[i], dnNameStr[i]);
-        ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_ADD_SUBJECT_NAME, &dnName[i], 1), HITLS_X509_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_ADD_SUBJECT_NAME, &dnName[i], 1), HITLS_PKI_SUCCESS);
     }
     BslList *subjectName = 0;
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_SUBJECT_DN, &subjectName, sizeof(BslList *)),
-        HITLS_X509_SUCCESS);
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(subjectName), 6);
     
-    ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_ADD_SUBJECT_NAME, dnName, 3), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_ADD_SUBJECT_NAME, dnName, 3), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(subjectName), 10);
 
     ret = 0;
@@ -910,13 +910,13 @@ void SDV_X509_CSR_AddSubjectName_FUNC_TC001(int keyFormat, int keyType, char *pr
     CRYPT_EAL_PkeyCtx *privKey = NULL;
     BSL_Buffer encode = {NULL, 0};
 
-    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, privPath, NULL, 0, &privKey), HITLS_X509_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, privPath, NULL, 0, &privKey), HITLS_PKI_SUCCESS);
     new = HITLS_X509_CsrNew();
     ASSERT_NE(new, NULL);
 
     ASSERT_EQ(SetNewCsrInfo(new, privKey, dnType1, dnName1, dnType2, dnName2, dnType3, dnName3), 0);
-    ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, NULL, new), HITLS_X509_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, new, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, NULL, new), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, new, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(new->reqInfo.reqInfoRawDataLen, expectedReqInfo->len);
     ASSERT_EQ(memcmp(new->reqInfo.reqInfoRawData, expectedReqInfo->x, expectedReqInfo->len), 0);
 

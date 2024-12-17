@@ -626,7 +626,7 @@ void SDV_X509_EXT_EncodeBCons_TC001(int critical, int isCa, int maxPathLen, Hex 
     ASSERT_NE(cert, NULL);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: bCons", encode.buff, encode.len, expect->x, expect->len);
 exit:
@@ -654,7 +654,7 @@ void SDV_X509_EXT_EncodeExtendKeyUsage_TC001(int critical, Hex *oid1, Hex *oid2,
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_EXKUSAGE, &exku, sizeof(HITLS_X509_ExtExKeyUsage)),
               0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: extendKeyUsage", encode.buff, encode.len, expect->x, expect->len);
 
@@ -686,7 +686,7 @@ void SDV_X509_AddDnName_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
     ASSERT_EQ(HITLS_X509_AddDnName(list, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_AddDnName(list, dnNullName, 1), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_AddDnName(list, dnZeroLenName, 1), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), 2); // layer 1 and layer 2
 
     HITLS_X509_NameNode **node = BSL_LIST_First(list);
@@ -705,7 +705,7 @@ void SDV_X509_AddDnName_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
     ASSERT_COMPARE("nameValue", (*node)->nameValue.buff, (*node)->nameValue.len, value->x, value->len);
 
     /* subject name can add repeat name */
-    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_PKI_SUCCESS);
 
     list->count = 100; // 100: the max number of name type.
     ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 1), HITLS_X509_ERR_SET_DNNAME_TOOMUCH);
@@ -751,7 +751,7 @@ void SDV_X509_EXT_EncodeSan_TC001(int critical, int type1, int type2, int type3,
 
     // set san and encode ext
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: san", encode.buff, encode.len, expect->x, expect->len);
 
@@ -777,7 +777,7 @@ void SDV_X509_EXT_EncodeKeyUsage_TC001(int critical, int usage, Hex *expect)
     ASSERT_NE(cert, NULL);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext: keyUsage", encode.buff, encode.len, expect->x, expect->len);
 exit:
@@ -802,7 +802,7 @@ void SDV_X509_EXT_EncodeAKiSki_TC001(int critical1, int critical2, Hex *kid1, He
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 0);
-    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_EncodeExt(tag, cert->tbs.ext.extList, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(encode.len, expect->len);
     ASSERT_COMPARE("Ext:aki ski", encode.buff, encode.len, expect->x, expect->len);
 exit:
@@ -834,7 +834,7 @@ void SDV_X509_EXT_ParseGeneralNames_TC001(Hex *encode, Hex *ip, Hex *uri, Hex *r
     BslList *list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
     ASSERT_NE(list, NULL);
 
-    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, list), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, list), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), sizeof(map) / sizeof(map[0]));
 
     HITLS_X509_GeneralName *name = NULL;
@@ -874,7 +874,7 @@ void SDV_X509_EXT_ParseSki_TC001(Hex *encode, int ret, Hex *kid)
     BSL_GLOBAL_Init();
     TestMemInit();
     HITLS_X509_ExtSki ski = {0};
-    HITLS_X509_ExtEntry entry = {BSL_CID_CE_SUBJECTKEYID, {0}, true, {0, encode->len, encode->x}};
+    HITLS_X509_ExtEntry entry = {BSL_CID_CE_SUBJECTKEYIDENTIFIER, {0}, true, {0, encode->len, encode->x}};
 
     ASSERT_EQ(HITLS_X509_ParseSubjectKeyId(&entry, &ski), ret);
     if (ret == 0) {
@@ -896,7 +896,7 @@ void SDV_X509_EXT_ParseExtendedKu_TC001(Hex *encode, Hex *ku1, Hex *ku2, Hex *ku
     Hex *values[] = {ku1, ku2, ku3};
     uint32_t cnt = sizeof(values) / sizeof(values[0]);
     HITLS_X509_ExtExKeyUsage exku = {0};
-    HITLS_X509_ExtEntry entry = {BSL_CID_CE_EXTENDEDKEYUSAGE, {0}, true, {0, encode->len, encode->x}};
+    HITLS_X509_ExtEntry entry = {BSL_CID_CE_EXTKEYUSAGE, {0}, true, {0, encode->len, encode->x}};
 
     ASSERT_EQ(HITLS_X509_ParseExtendedKeyUsage(&entry, &exku), 0);
     ASSERT_EQ(exku.critical, entry.critical);
@@ -917,7 +917,7 @@ exit:
 void SDV_X509_EXT_ParseAki_TC001(Hex *encode, Hex *kid, Hex *serial, int nameCnt)
 {
     HITLS_X509_ExtAki aki = {0};
-    HITLS_X509_ExtEntry entry = {BSL_CID_CE_AUTHORITYKEYID, {0}, true, {0, encode->len, encode->x}};
+    HITLS_X509_ExtEntry entry = {BSL_CID_CE_AUTHORITYKEYIDENTIFIER, {0}, true, {0, encode->len, encode->x}};
 
     TestMemInit();
     ASSERT_EQ(HITLS_X509_ParseAuthorityKeyId(&entry, &aki), 0);
@@ -980,7 +980,7 @@ void SDV_X509_EXT_GetSki_TC001(Hex *encode, int ret, int critical, Hex *kid)
     ASSERT_EQ(HITLS_X509_ParseExt(&asnExt, ext), 0);
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_CHECK_SKI, &getIsExist, sizeof(bool)), 0);
-    ASSERT_EQ(getIsExist, ret == HITLS_X509_SUCCESS);
+    ASSERT_EQ(getIsExist, ret == HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), ret);
     ASSERT_EQ(ski.critical, critical);
@@ -1113,14 +1113,14 @@ void SDV_HITLS_X509_PrintCtrl_TC001(void)
     uint32_t flag = 0;
     BslList list = {0};
 
-    ASSERT_EQ(HITLS_X509_PrintCtrl(0xff, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(0xff, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_SET_PRINT_FLAG, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_SET_PRINT_FLAG, &flag, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &flag, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
     
-    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, NULL, sizeof(BslList), uio), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, &list, sizeof(BslList), NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_PRINT_DN, &list, 0, uio), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, NULL, sizeof(BslList), uio), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, &list, sizeof(BslList), NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, &list, 0, uio), HITLS_X509_ERR_INVALID_PARAM);
 
 exit:
     BSL_UIO_Free(uio);
@@ -1166,8 +1166,8 @@ static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, 
     uint32_t expectBufLen = sizeof(expectBuf);
     BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
     ASSERT_NE(uio, NULL);
-    ASSERT_EQ(HITLS_X509_PrintCtrl(cmd, data->data, data->dataLen, uio),
-        HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(cmd, data->data, data->dataLen, uio),
+        HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, MAX_BUFF_SIZE, &dnBufLen), 0);
     if (isExpectFile) {
         ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
@@ -1188,19 +1188,19 @@ void SDV_HITLS_X509_PrintDn_TC002(char *certPath, int format, int printFlag, cha
     HITLS_X509_Cert *cert = NULL;
     BslList *rawIssuer = NULL;
     Hex expectName = {};
-    if (printFlag == HITLS_X509_PRINT_DN_MULTILINE) {
+    if (printFlag == HITLS_PKI_PRINT_DN_MULTILINE) {
         expectName.x = multiExpect->x;
         expectName.len = multiExpect->len;
     } else {
         expectName.x = (uint8_t *)expect;
         expectName.len = strlen(expect);
     }
-    ASSERT_EQ(HITLS_X509_CertParseFile(format, certPath, &cert), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, certPath, &cert), HITLS_PKI_SUCCESS);
     ASSERT_NE(cert, NULL);
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *)), HITLS_X509_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     BSL_Buffer data = {(uint8_t *)rawIssuer, sizeof(BslList)};
-    ASSERT_EQ(HITLS_X509_PrintCtrl(HITLS_X509_SET_PRINT_FLAG, &printFlag, sizeof(int), NULL), HITLS_X509_SUCCESS);
-    ASSERT_EQ(PrintBuffTest(HITLS_X509_PRINT_DN, &data, "Print Distinguish name", &expectName, false), 0);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &printFlag, sizeof(int), NULL), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_DN, &data, "Print Distinguish name", &expectName, false), 0);
 
 exit:
     HITLS_X509_CertFree(cert);
