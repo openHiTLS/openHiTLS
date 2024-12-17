@@ -55,7 +55,7 @@ int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
     }
     dataValue->data = data;
     dataValue->dataLen = decodeLen;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 /**
@@ -121,7 +121,7 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
     digest->data = output;
     digest->dataLen = asn1[HITLS_P7_DIGESTINFO_OCTSTRING_IDX].len;
     *cid = parseCid;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }
 
 int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
@@ -150,5 +150,5 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
     }
     encode->data = tmp.data;
     encode->dataLen = tmp.dataLen;
-    return HITLS_X509_SUCCESS;
+    return HITLS_PKI_SUCCESS;
 }

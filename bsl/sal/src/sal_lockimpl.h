@@ -99,7 +99,7 @@ typedef struct ThreadCallback {
     uint64_t (*pfThreadGetId)(void);
 } BSL_SAL_ThreadCallback;
 
-int32_t BSL_SAL_RegThreadCallback(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+int32_t SAL_ThreadCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
 #ifdef HITLS_BSL_SAL_LINUX
 #ifdef HITLS_BSL_SAL_LOCK

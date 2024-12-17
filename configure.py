@@ -475,7 +475,6 @@ class CMakeGenerator:
 
     def out_cmake(self, cmake_path, macro_file):
         self._cfg_custom_feature._check_bn_config()
-        self._cfg_custom_feature._check_system_config()
 
         set_param_cmake, macros = self._gen_set_param_cmake(macro_file)
 
