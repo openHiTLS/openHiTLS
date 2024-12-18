@@ -1055,7 +1055,7 @@ int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
         goto ERR;
     }
     // Obtain the initial point data.
-    GetFirstData(para, r, &offData, windowsP);
+    GOTO_ERR_IF(GetFirstData(para, r, &offData, windowsP), ret);
 
     while (offData.baseBits != 0) {
         // Slide window
