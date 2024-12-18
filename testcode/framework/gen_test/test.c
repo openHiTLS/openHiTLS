@@ -92,7 +92,6 @@ int ConvertHex(const char *str, Hex *output)
         // hex to int formulas: (Hex % 32 + 9) % 25 = int, hex
         output->x[i / 2] = (str[i] % 32 + 9) % 25 * 16 + (str[i + 1] % 32 + 9) % 25;
     }
-
     return 0;
 
 hex_error:
