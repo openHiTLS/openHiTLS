@@ -54,7 +54,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_SERIALIZATION_TC001(int type, Hex *buffer)
     ASSERT_EQ(HITLS_AUTH_PrivPassSerialization(ctx, challenge, output, &outputLen), HITLS_AUTH_SUCCESS);
     // Test serialization
     ASSERT_COMPARE("compare token", output, outputLen, buffer->x, buffer->len);
-exit:
+EXIT:
     HITLS_AUTH_PrivPassFreeToken(challenge);
     HITLS_AUTH_PrivPassFreeCtx(ctx);
 }
@@ -124,7 +124,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_SERIALIZATION_TC002(Hex *tokenType, Hex *issuerName
     ASSERT_EQ(HITLS_AUTH_PrivPassSerialization(ctx, tokenChallenge4, output4, &outputLen4), HITLS_AUTH_SUCCESS);
     ASSERT_EQ(HITLS_AUTH_PrivPassDeserialization(ctx, HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE, output4, outputLen4,
         &tokenChallenge4_1), HITLS_AUTH_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge1);
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge2);
@@ -166,7 +166,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_SERIALIZATION_INVALID_TC001()
     ASSERT_EQ(HITLS_AUTH_PrivPassSerialization(ctx, NULL, output, &outputLen), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
     ASSERT_EQ(HITLS_AUTH_PrivPassSerialization(ctx, token, NULL, &outputLen), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
     ASSERT_EQ(HITLS_AUTH_PrivPassSerialization(ctx, token, output, NULL), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
-exit:
+EXIT:
     HITLS_AUTH_PrivPassFreeToken(token);
     HITLS_AUTH_PrivPassFreeCtx(ctx);
 }
@@ -184,7 +184,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_SERIALIZATION_INVALID_TC002(int type, Hex *buffer)
     HITLS_AUTH_PrivPassCtx *ctx = HITLS_AUTH_PrivPassNewCtx(HITLS_AUTH_PRIV_PASS_PUB_VERIFY_TOKENS);
     ASSERT_NE(ctx, NULL);
     ASSERT_NE(HITLS_AUTH_PrivPassDeserialization(ctx, type, buffer->x, buffer->len, &token), HITLS_AUTH_SUCCESS);
-exit:
+EXIT:
     HITLS_AUTH_PrivPassFreeToken(token);
     HITLS_AUTH_PrivPassFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();
@@ -228,7 +228,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_SERIALIZATION_INVALID_TC003(int type, Hex *buffer)
         ASSERT_EQ(HITLS_AUTH_PrivPassSerialization(ctx, token, output, &outputLen),
             HITLS_AUTH_PRIVPASS_INVALID_TOKEN_INSTANCE);
     }
-exit:
+EXIT:
     HITLS_AUTH_PrivPassFreeToken(token);
     HITLS_AUTH_PrivPassFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();
@@ -290,7 +290,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_GEN_PROCESS_TC001(Hex *pki, Hex *ski, Hex *tokenTyp
     ASSERT_EQ(HITLS_AUTH_PrivPassGenToken(client, tokenChallenge, tokenResponse, &finalToken), HITLS_AUTH_SUCCESS);
     // Verify token
     ASSERT_EQ(HITLS_AUTH_PrivPassVerifyToken(server, tokenChallenge, finalToken), HITLS_AUTH_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge);
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge2);
@@ -357,7 +357,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_GEN_TOKEN_CHALLENGE_TC001(Hex *tokenType, Hex *issu
         HITLS_AUTH_PRIVPASS_INVALID_ORIGIN_INFO);
     ASSERT_EQ(HITLS_AUTH_PrivPassGenTokenChallenge(ctx, param5, &tokenChallenge),
         HITLS_AUTH_PRIVPASS_INVALID_REDEMPTION);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge);
     HITLS_AUTH_PrivPassFreeCtx(ctx);
@@ -461,7 +461,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_VECTOR_TEST_TC001(Hex *ski, Hex *pki, Hex *challeng
         HITLS_AUTH_SUCCESS);
     ASSERT_COMPARE("compare nonce", param->value, param->useLen, nonce->x, nonce->len);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge);
     HITLS_AUTH_PrivPassFreeToken(tokenRequest);
@@ -520,7 +520,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_CHALLENGE_OBTAIN_TC001(Hex *challenge)
 
     ASSERT_COMPARE("compare token challenge", tokenChallengeBuffer, tokenChallengeBufferLen, challenge->x,
         challenge->len);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge1);
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge2);
@@ -579,7 +579,7 @@ void SDV_AUTH_PRIVPASS_TEST_SET_CRYPTO_CB_TC001(Hex *ski, Hex *pki)
         HITLS_AUTH_SUCCESS);
     pkeyCtx = ctx->method.newPkeyCtx(NULL, NULL, HITLS_AUTH_PRIVPASS_CRYPTO_RSA);
     ASSERT_EQ(pkeyCtx, NULL);
-exit:
+EXIT:
     HITLS_AUTH_PrivPassFreeCtx(ctx);
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge);
     HITLS_AUTH_PrivPassFreeToken(tokenRequest);
@@ -614,7 +614,7 @@ void SDV_AUTH_PRIVPASS_SET_KEY_TC001(Hex *ski, Hex *pki)
     ctx->method.checkKeyPair = NULL;
     ASSERT_EQ(HITLS_AUTH_PrivPassSetPrvkey(ctx, NULL, ski->x, ski->len), HITLS_AUTH_PRIVPASS_NO_KEYPAIR_CHECK_CALLBACK);
 
-exit:
+EXIT:
     HITLS_AUTH_PrivPassFreeCtx(ctx);
 }
 /* END_CASE */
@@ -666,7 +666,7 @@ void SDV_AUTH_PRIVPASS_SET_KEY_TC002()
         HITLS_AUTH_SUCCESS);
     ASSERT_EQ(HITLS_AUTH_PrivPassSetPubkey(ctx, pubBuffer.data, pubBuffer.dataLen),
         HITLS_AUTH_PRIVPASS_CHECK_KEYPAIR_FAILED);
-exit:
+EXIT:
     BSL_SAL_Free(pubBuffer.data);
     BSL_SAL_Free(prvBuffer.data);
     HITLS_AUTH_PrivPassFreeCtx(ctx);
@@ -712,7 +712,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_INVALID_INTERACTION_TC001()
     ASSERT_EQ(HITLS_AUTH_PrivPassGenTokenResponse(ctx, NULL, &tokenResponse), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
     ASSERT_EQ(HITLS_AUTH_PrivPassGenToken(ctx, NULL, tokenResponse, &finalToken), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
     ASSERT_EQ(HITLS_AUTH_PrivPassVerifyToken(ctx, NULL, finalToken), HITLS_AUTH_PRIVPASS_INVALID_INPUT);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge);
     HITLS_AUTH_PrivPassFreeToken(tokenRequest);
@@ -770,7 +770,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_INVALID_INTERACTION_TC002(Hex *challenge, Hex *requ
     ASSERT_EQ(HITLS_AUTH_PrivPassGenToken(ctx, tokenChallenge, tokenResponse, &finalToken1),
         HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO);
     ASSERT_EQ(HITLS_AUTH_PrivPassVerifyToken(ctx, tokenChallenge, finalToken), HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     HITLS_AUTH_PrivPassFreeToken(tokenChallenge);
     HITLS_AUTH_PrivPassFreeToken(tokenRequest);

@@ -108,7 +108,7 @@ static void *TEST_Read(void *arg)
     g_threadDefaultRead001 = g_threadDefaultWrite001;
     BSL_SAL_ThreadUnlock(lock);
     ASSERT_TRUE(ret == BSL_SUCCESS);
-exit:
+EXIT:
     return NULL;
 }
 
@@ -126,7 +126,7 @@ static void *TEST_Write(void *arg)
     }
 
     ASSERT_TRUE(ret == BSL_SUCCESS);
-exit:
+EXIT:
     return NULL;
 }
 #endif
@@ -182,7 +182,7 @@ void SDV_BSL_SAL_REGMEM_API_TC001(void)
 
     BSL_SAL_FREE(ptr);
     ASSERT_TRUE(ptr == NULL);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -228,7 +228,7 @@ void SDV_BSL_SAL_REG_THREAD_API_TC001(void)
     ASSERT_TRUE(BSL_SAL_ThreadWriteLock(NULL) == BSL_SAL_ERR_BAD_PARAM);
     ASSERT_TRUE(BSL_SAL_ThreadUnlock(NULL) == BSL_SAL_ERR_BAD_PARAM);
     BSL_SAL_ThreadLockFree(NULL);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -257,7 +257,7 @@ void SDV_BSL_SAL_MEM_API_TC001(void)
     memset_s(obj, 100, 0x1, 100);
 
     BSL_SAL_ClearFree(obj, 100);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -290,7 +290,7 @@ void SDV_BSL_SAL_MEM_API_TC002(void)
     ASSERT_TRUE(obj3 != NULL);
     ASSERT_TRUE(memcmp(objZero3, obj3, 1000) == 0);
     BSL_SAL_FREE(obj3);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -331,7 +331,7 @@ void SDV_BSL_SAL_DUMP_API_TC001(void)
     ASSERT_TRUE(testPtr != NULL);
 
     ASSERT_TRUE(memcmp(testPtr, srcPtr, memLen) == 0);
-exit:
+EXIT:
     BSL_SAL_FREE(srcPtr);
     BSL_SAL_FREE(testPtr);
 #endif
@@ -372,7 +372,7 @@ void SDV_BSL_SAL_REALLOC_API_TC001(void)
 
     // The realloc releases the obj. Therefore, the obj does not need to be released.
     // The value of realloc size to 0 is an implementation definition. Therefore, the test is not performed.
-exit:
+EXIT:
     BSL_SAL_FREE(obj3);
 #endif
 }
@@ -415,7 +415,7 @@ void SDV_BSL_SAL_THREAD_CREATE_FUNC_TC001(void)
     BSL_SAL_ThreadClose(thread);
     BSL_SAL_ThreadClose(NULL);
     BSL_SAL_ThreadLockFree(lock);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -443,7 +443,7 @@ void SDV_BSL_SAL_THREAD_API_TC001(void)
     ASSERT_EQ(BSL_SAL_ThreadRunOnce(NULL, TestRunOnce), BSL_SAL_ERR_BAD_PARAM);
     ASSERT_EQ(BSL_SAL_ThreadRunOnce(&isErrInit, NULL), BSL_SAL_ERR_BAD_PARAM);
     ASSERT_EQ(BSL_SAL_ThreadRunOnce(&isErrInit, TestRunOnce), BSL_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -488,7 +488,7 @@ void SDV_BSL_SAL_CONDVAR_CREATE_FUNC_TC001(void)
     ASSERT_TRUE(ret == BSL_SAL_ERR_BAD_PARAM);
     ret = BSL_SAL_DeleteCondVar(condVar);
     ASSERT_TRUE(ret == BSL_SUCCESS);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -532,7 +532,7 @@ void SDV_BSL_SAL_CONDVAR_WAIT_API_TC001(void)
     ret = BSL_SAL_DeleteCondVar(condVar);
     ASSERT_TRUE(ret == BSL_SUCCESS);
     BSL_SAL_ThreadLockFree(lock);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -547,7 +547,7 @@ static void *ThreadTest(void *arg)
     (void)arg;
     int32_t ret1 = BSL_SAL_CondTimedwaitMs(&g_lock, g_condVar, 10000000);
     ASSERT_TRUE(ret1 == BSL_SUCCESS);
-exit:
+EXIT:
     return NULL;
 }
 #endif
@@ -593,7 +593,7 @@ void SDV_BSL_SAL_CONDVAR_WAIT_FUNC_TC001(void)
     ret = BSL_SAL_DeleteCondVar(g_condVar);
     ASSERT_TRUE(ret == BSL_SUCCESS);
     pthread_mutex_destroy(&g_lock);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -627,7 +627,7 @@ void SDV_BSL_SAL_STR_API_TC001(void)
     ASSERT_TRUE(BSL_SAL_Memchr(NULL, 's', 10) == NULL);
     ASSERT_TRUE(BSL_SAL_Atoi(NULL) == 0);
     ASSERT_TRUE(BSL_SAL_Strnlen(NULL, 0) == 0);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -680,7 +680,7 @@ void SDV_BSL_SAL_STR_FUNC_TC001(void)
     ASSERT_TRUE(BSL_SAL_Strnlen(str1, strlen(str1)) == 7);
     ASSERT_TRUE(BSL_SAL_Strnlen(str1, 100) == 7);
     ASSERT_TRUE(BSL_SAL_Strnlen(str1, 3) == 3);
-exit:
+EXIT:
     return;
 #endif
 }
@@ -750,11 +750,11 @@ void SDV_BSL_SAL_THREAD_DEFAULT_FUNC_TC001(void)
         childId = BSL_SAL_ThreadGetId();
     } else {
         // The parent process
-        goto exit;
+        goto EXIT;
     }
     // The default implementation uses pthread_self. Therefore, the IDs of the parent and child processes are the same.
     ASSERT_EQ(childId, mainId);
-exit:
+EXIT:
     // 5
     BSL_SAL_ThreadLockFree(lock);
     g_threadDefaultWrite001 = 0;
@@ -786,7 +786,7 @@ void SDV_BSL_SAL_CALLBACK_CTRL_FUNC_TC001(void)
     ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_SYS_TIME_CB_FUNC, NULL), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_NET_WRITE_CB_FUNC, NULL), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_Ioctlsocket(0, 0, NULL), BSL_SAL_ERR_NET_IOCTL);
-exit:
+EXIT:
     BSL_SAL_SockGetLastSocketError();
 }
 /* END_CASE */

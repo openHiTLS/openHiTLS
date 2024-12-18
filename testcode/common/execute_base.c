@@ -81,29 +81,29 @@ static int LoadDataFile(const char *fileName)
         g_executeCases[i] = (TestArgs *)malloc(sizeof(TestArgs));
         if (g_executeCases[i] == NULL) {
             rt = -1;
-            goto END;
+            goto EXIT;
         }
         g_executeCases[i]->argLen = MAX_ARGUMENT_COUNT;
         if (ReadLine(fpDatax, g_executeCases[i]->testVectorName, MAX_FILE_NAME, 1, 1) != 0) {
             free(g_executeCases[i]);
-            goto END;
+            goto EXIT;
         }
         if (ReadLine(fpDatax, g_executeCases[i]->buf, MAX_DATA_LINE_LEN, 1, 1) != 0) {
             free(g_executeCases[i]);
             Print("Read vector failed, test vector should have 2 lines, here there's only one\n");
             rt = -1;
-            goto END;
+            goto EXIT;
         }
         if (SplitArguments(g_executeCases[i]->buf, strlen(g_executeCases[i]->buf),
             g_executeCases[i]->arg, &(g_executeCases[i]->argLen)) != 0) {
             free(g_executeCases[i]);
             rt = -1;
-            goto END;
+            goto EXIT;
         }
         if (ConvertStringCase(g_executeCases[i]) == 1) {
             free(g_executeCases[i]);
             rt = -1;
-            goto END;
+            goto EXIT;
         }
         g_executeCount += 1;
     }
@@ -113,7 +113,7 @@ static int LoadDataFile(const char *fileName)
         rt = -1;
     }
 
-END:
+EXIT:
     if (rt != 0) {
         for (int i = 0; i < g_executeCount; i++) {
             free(g_executeCases[i]);

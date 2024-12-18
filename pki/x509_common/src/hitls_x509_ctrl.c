@@ -421,20 +421,17 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size
     for (int32_t i = 0; i < size; i++) {
         ret = X509AddDnNameItemToList(dnNameList, dnNames[i].cid, dnNames[i].data, dnNames[i].dataLen);
         if (ret != HITLS_PKI_SUCCESS) {
-            goto ERR;
+            goto EXIT;
         }
     }
     // sort
     dnNameList = BSL_LIST_Sort(dnNameList, CmpDnNameByEncode);
     if (dnNameList == NULL) {
-        goto ERR;
+        goto EXIT;
     }
     // add dnNameList to list
     ret = X509AddDnNamesToList(list, dnNameList);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto ERR;
-    }
-ERR:
+EXIT:
     BSL_LIST_FREE(dnNameList, (BSL_LIST_PFUNC_FREE)FreeNodePack);
     return ret;
 }

@@ -173,7 +173,7 @@ void SDV_BSL_ERR_FUNC_TC001(void)
     BSL_ERR_RemoveErrorStack(false);
 
     ASSERT_TRUE(BSL_ERR_GetLastError() == BSL_SUCCESS);
-exit:
+EXIT:
     BSL_ERR_DeInit();
     return;
 }
@@ -258,7 +258,7 @@ void SDV_BSL_ERR_STACK_FUNC_TC001(int isRemoveAll)
     ASSERT_TRUE(BSL_ERR_PeekErrorFileLine((const char **)&file, &lineNo) == 1);
     ASSERT_TRUE(strcmp(file, "NA") == 0);
     ASSERT_TRUE(lineNo == 0);
-exit:
+EXIT:
     BSL_ERR_ClearError();
     BSL_ERR_DeInit();
 }
@@ -299,7 +299,7 @@ void SDV_BSL_ERR_COMPATIBILITY_FUNC_TC001(void)
     int32_t err = BSL_ERR_GetLastErrorFileLine((const char **)&file, &line);
     ASSERT_TRUE(strcmp(file, "uio_abstraction.c") == 0);
     ASSERT_TRUE(err == BSL_NULL_INPUT);
-exit:
+EXIT:
     BSL_ERR_ClearError();
     BSL_ERR_DeInit();
 #endif
@@ -334,7 +334,7 @@ void SDV_BSL_ERR_STACK_API_TC001(int isRemoveAll)
     BSL_ERR_RemoveErrorStack((isRemoveAll == 1) ? true : false);
     BSL_ERR_ClearError();
     BSL_ERR_ClearError();
-exit:
+EXIT:
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -402,7 +402,7 @@ void SDV_BSL_ERR_MARK_FUNC_TC001(void)
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ret = BSL_ERR_GetLastError();
     ASSERT_TRUE(ret == BSL_UIO_IO_BUSY);
-exit:
+EXIT:
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -442,7 +442,7 @@ void SDV_BSL_ERR_STRING_FUNC_TC001(void)
     ASSERT_TRUE(BSL_ERR_AddErrStringBatch(descList, 2) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_ERR_GetString(BSL_UIO_FAIL) == uioFail);
     ASSERT_TRUE(BSL_ERR_GetString(BSL_TLV_ERR_NO_WANT_TYPE) == tlvFail);
-exit:
+EXIT:
     BSL_ERR_RemoveErrStringBatch();
     BSL_ERR_DeInit();
 }
@@ -506,7 +506,7 @@ void SDV_BSL_ERR_AVLLR_FUNC_TC001(void)
 
     BSL_AVL_DeleteTree(root, NULL);
 
-exit:
+EXIT:
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -579,7 +579,7 @@ void SDV_BSL_ERR_AVLLL_FUNC_TC001(void)
 
     BSL_AVL_DeleteTree(root, NULL);
 
-exit:
+EXIT:
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -624,7 +624,7 @@ void SDV_BSL_ERR_AVLRL_FUNC_TC001(void)
 
     BSL_AVL_DeleteTree(root, NULL);
 
-exit:
+EXIT:
     BSL_ERR_DeInit();
 }
 /* END_CASE */

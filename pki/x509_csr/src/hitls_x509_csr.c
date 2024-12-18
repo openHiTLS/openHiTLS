@@ -373,7 +373,7 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         false, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
 
     /* encode attribute */
@@ -382,13 +382,13 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         reqInfo->attributes, NULL, attributes);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
 
     publicKey->buff = pub.data;
     publicKey->len = pub.dataLen;
     return ret;
-EXIT:
+ERR:
     BSL_SAL_FREE(subject->buff);
     BSL_SAL_FREE(pub.data);
     BSL_SAL_FREE(attributes->buff);

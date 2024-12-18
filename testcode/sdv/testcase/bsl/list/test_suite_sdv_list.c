@@ -194,7 +194,7 @@ void SDV_BSL_LIST_FUNC_TC001(void)
     BSL_LIST_FREE(destHeader, NULL);
 
     BSL_LIST_FREE(listHeader, NULL);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -221,7 +221,7 @@ void SDV_BSL_LIST_FUNC_TC002(void)
     ASSERT_EQ(BSL_LIST_COUNT(list), 65535);
     ASSERT_EQ(BSL_LIST_AddElement(list, arr, BSL_LIST_POS_AFTER), BSL_LIST_FULL);
 
-exit:
+EXIT:
     BSL_LIST_FREE(list, EmptyFree);
 }
 /* END_CASE */
@@ -266,7 +266,7 @@ void SDV_BSL_LIST_MAX_ELEMENTS_FUNC_TC001(void)
     ASSERT_EQ(BSL_LIST_COUNT(list), 65535);
     ASSERT_EQ(BSL_LIST_AddElement(list, arr, BSL_LIST_POS_AFTER), BSL_LIST_FULL);
 
-exit:
+EXIT:
     BSL_LIST_FREE(list, EmptyFree);
 }
 /* END_CASE */
@@ -316,7 +316,7 @@ void SDV_BSL_LIST_DETACH_FUNC_TC001(void)
     BslListNode *detachNode = testList->first->next->next->next;
     BSL_LIST_DetachNode(testList, &detachNode);
     ASSERT_TRUE(UserDataCompare(detachNode->data, &data[4]) == 0); // Dave's position became Emma.
-exit:
+EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
 /* END_CASE */
@@ -360,7 +360,7 @@ void SDV_BSL_LIST_SEARCH_FUNC_TC001(void)
 
     UserData *tmp2 = BSL_LIST_Search(testList, "Dave", UserDataCompareByName, &errNum);
     ASSERT_TRUE(UserDataCompare(tmp2, &data[3]) == 0);
-exit:
+EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
 /* END_CASE */
@@ -436,7 +436,7 @@ void SDV_BSL_LIST_GET_NODE_FUNC_TC001(void)
     // BSL_LIST_GetIndexNode changes the curr point to 3.
     curTmp = *(UserData **)BSL_LIST_Curr(testList);
     ASSERT_TRUE(UserDataCompare(curTmp, &data[3]) == 0);
-exit:
+EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
 /* END_CASE */
@@ -473,7 +473,7 @@ void SDV_BSL_LIST_COPY_FUNC_TC001(void)
     destTmp = BSL_LIST_GET_LAST(destList);
     ASSERT_TRUE(UserDataCompare((const void *)srcTmp, (const void *)destTmp) == 0);
     ASSERT_TRUE(UserDataCompare(destList->first->next->data, srcList->first->next->data) == 0);
-exit:
+EXIT:
     BSL_LIST_FREE(destList, NULL);
     BSL_LIST_FREE(srcList, UserDataFree);
 }
@@ -505,7 +505,7 @@ void SDV_BSL_LIST_SORT_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_FIRST(testList), &data[2]) == 0);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(testList), &data[3]) == 0);
     ASSERT_TRUE(UserDataCompare(testList->first->next->next->next->data, &data[4]) == 0);
-exit:
+EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
 /* END_CASE */
@@ -569,7 +569,7 @@ void SDV_BSL_LIST_SORT_FUNC_TC002(void)
     p = BSL_LIST_GET_NEXT(list1);
     ASSERT_TRUE(p != NULL && *p == 8);
 
-exit:
+EXIT:
     BSL_LIST_FREE(list1, EmptyFree);
 }
 /* END_CASE */
@@ -643,7 +643,7 @@ void SDV_BSL_LIST_ADD_GET_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(curTmp, &data[0]) == 0);
 
     ASSERT_TRUE(BSL_LIST_GetElmtIndex(&data[1], testList) == 1);
-exit:
+EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
 /* END_CASE */
@@ -683,7 +683,7 @@ void SDV_BSL_LIST_CONCAT_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_FIRST(destList), &data[0]) == 0);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(destList), &data[5]) == 0);
     ASSERT_TRUE(UserDataCompare(destList->first->next->next->next->data, &data[3]) == 0);
-exit:
+EXIT:
     BSL_LIST_FREE(destList, UserDataFree);
     BSL_SAL_FREE(srcList1);
     BSL_SAL_FREE(srcList2); // The nodes are free, so just use the free linked list itself.
@@ -715,7 +715,7 @@ void SDV_BSL_LIST_REVERSE_FUNC_TC001(void)
     BSL_LIST_RevList(testList);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_FIRST(testList), &data[2]) == 0);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(testList), &data[0]) == 0);
-exit:
+EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
 /* END_CASE */
@@ -755,7 +755,7 @@ void SDV_BSL_LIST_DELETE_NODE_FUNC_TC001(void)
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 2);
     BSL_LIST_DeleteAll(testList, UserDataFree);
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
-exit:
+EXIT:
     free(data1);
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -789,7 +789,7 @@ void SDV_BSL_LIST_DELETE_NODE_FUNC_TC002(void)
 
     BSL_LIST_DeleteAllAfterSort(testList);
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
-exit:
+EXIT:
     free(data1);
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -838,7 +838,7 @@ void SDV_CRYPTO_LIST_Pre_API_TC001()
     prv = BSL_LIST_Prev(list);
     ASSERT_TRUE(prv != NULL && **prv == 1);
 
-exit:
+EXIT:
     BSL_LIST_FREE(list, EmptyFree);
 }
 /* END_CASE */
@@ -886,7 +886,7 @@ void SDV_CRYPTO_LIST_Next_API_TC002()
     next = BSL_LIST_Next(list);
     ASSERT_TRUE(next != NULL && **next == 1);
 
-exit:
+EXIT:
     BSL_LIST_FREE(list, EmptyFree);
 }
 /* END_CASE */
@@ -912,7 +912,7 @@ void SDV_BSL_LIST_SET_MAX_FUNC_TC001(void)
     ASSERT_TRUE(BSL_LIST_GetMaxQsortCount() == 100001);
     ASSERT_TRUE(BSL_LIST_SetMaxElements((1 << 16)) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_LIST_GetMaxElements() == (1 << 16));
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -972,7 +972,7 @@ void SDV_BSL_LIST_INVALID_INPUT_FUNC_TC001(void)
 
     ASSERT_TRUE(BSL_LIST_SetMaxQsortCount(10) == BSL_INVALID_ARG);
     ASSERT_TRUE(BSL_LIST_SetMaxElements(10) == BSL_INVALID_ARG);
-exit:
+EXIT:
     BSL_SAL_FREE(testList);
 }
 /* END_CASE */
@@ -1014,7 +1014,7 @@ void SDV_BSL_LIST_DELETE_FUNC_TC001(void)
     ASSERT_TRUE(BSL_LIST_AddElement(testList, "cccc", BSL_LIST_POS_BEFORE) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 1);
     BSL_LIST_DeleteCurrent(testList, UserDataFree);
-exit:
+EXIT:
     BSL_SAL_FREE(testList);
 }
 /* END_CASE */
@@ -1038,7 +1038,7 @@ void SDV_BSL_LIST_FREE_WITHOUT_FUNC_TC001(void)
     ASSERT_TRUE(testList != NULL);
     BSL_LIST_FreeWithoutData(testList);
     testList = NULL;
-exit:
+EXIT:
     BSL_LIST_FreeWithoutData(testList);
 }
 /* END_CASE */

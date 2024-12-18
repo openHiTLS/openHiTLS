@@ -410,23 +410,21 @@ static int32_t VrifyCheckSign(const CRYPT_ECDSA_Ctx *ctx, const DSA_Sign *sign)
     int32_t ret = CRYPT_SUCCESS;
     BN_BigNum *paraN = ECC_GetParaN(ctx->para);
     if (paraN == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
     }
 
     if ((BN_Cmp(sign->r, paraN) >= 0) || (BN_Cmp(sign->s, paraN) >= 0)) {
-        ret = CRYPT_ECDSA_VERIFY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        BN_Destroy(paraN);
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_VERIFY_FAIL);
+        return CRYPT_ECDSA_VERIFY_FAIL;
     }
+    BN_Destroy(paraN);
     if (BN_IsZero(sign->r) || BN_IsZero(sign->s)) {
         ret = CRYPT_ECDSA_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
     }
 
-ERR:
-    BN_Destroy(paraN);
     return ret;
 }
 

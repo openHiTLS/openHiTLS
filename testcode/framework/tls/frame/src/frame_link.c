@@ -100,41 +100,41 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
     HITLS_CFG_SetReadAhead(config, 1);
     HITLS_Ctx *sslObj = HITLS_New(config);
     if (sslObj == NULL) {
-        goto exception;
+        goto ERR;
     }
 
     INIT_IO_METHOD(method, type, FRAME_Write, FRAME_Read, FRAME_Ctrl);
     io = BSL_UIO_New(&method);
     if (io == NULL) {
-        goto exception;
+        goto ERR;
     }
 
     ioUserdata = FRAME_IO_CreateUserData();
     if (ioUserdata == NULL) {
-        goto exception;
+        goto ERR;
     }
 
     uint32_t ret = BSL_UIO_SetUserData(io, ioUserdata);
     if (ret != HITLS_SUCCESS) {
-        goto exception;
+        goto ERR;
     }
 
     int32_t fd = 666;
     // Set any fd as the value of the underlying transfer I/O
     ret = BSL_UIO_Ctrl(io, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd);
     if (ret != HITLS_SUCCESS) {
-        goto exception;
+        goto ERR;
     }
     BSL_UIO_SetInit(io, true);
     // must return success
     ret = HITLS_SetUio(sslObj, io);
     if (ret != HITLS_SUCCESS) {
-        goto exception;
+        goto ERR;
     }
     linkObj->io = io;
     linkObj->ssl = sslObj;
     return linkObj;
-exception:
+ERR:
     FRAME_IO_FreeUserData(ioUserdata);
     BSL_UIO_Free(io);
     HITLS_Free(sslObj);

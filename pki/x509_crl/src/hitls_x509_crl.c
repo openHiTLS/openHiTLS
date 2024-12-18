@@ -442,7 +442,7 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
         ret = X509_EncodeCrlEntry(crlEntry, &asnBuf[iter]);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         iter += X509_CRLENTRY_ELEM_NUMBER;
     }
@@ -454,7 +454,7 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
     };
     BSL_ASN1_Template templ = {crlEntryTempl, sizeof(crlEntryTempl) / sizeof(crlEntryTempl[0])};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, iter, revokeBuf);
-ERR:
+EXIT:
     for (int32_t i = 0; i < count; i++) {
         /**
          * The memory for the extension in CRLentry needs to be freed up.

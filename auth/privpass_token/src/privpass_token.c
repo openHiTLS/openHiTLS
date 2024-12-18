@@ -552,9 +552,7 @@ int32_t HITLS_AUTH_PrivPassSetPubkey(HITLS_AUTH_PrivPassCtx *ctx, uint8_t *pki, 
     return HITLS_AUTH_SUCCESS;
 
 ERR:
-    if (ctx->method.freePkeyCtx != NULL) {
-        ctx->method.freePkeyCtx(pubKeyCtx);
-    }
+    ctx->method.freePkeyCtx(pubKeyCtx);
     return ret;
 }
 

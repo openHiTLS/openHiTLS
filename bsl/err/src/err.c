@@ -385,10 +385,10 @@ int32_t BSL_ERR_AddErrStringBatch(const BSL_ERR_Desc *descList, uint32_t num)
     for (i = 0; i < num; i++) {
         ret = AddErrDesc(&descList[i]);
         if (ret != BSL_SUCCESS) {
-            goto exit;
+            goto EXIT;
         }
     }
-exit:
+EXIT:
     BSL_SAL_ThreadUnlock(g_errLock);
     return ret;
 }

@@ -69,7 +69,7 @@ static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSu
     *pkeyS = pkeyS1;
     *pkeyR = pkeyR1;
     return CRYPT_SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS1);
     CRYPT_EAL_HpkeFreeCtx(ctxR1);
     CRYPT_EAL_PkeyFreeCtx(pkeyS1);
@@ -151,7 +151,7 @@ void SDV_CRYPT_EAL_HPKE_KEM_TC001(int mode, int kemId, int kdfId, int aeadId, He
     ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(ctxR, sharedSecretBuf, &buffLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke sharedSecret cmp", sharedSecretBuf, buffLen, sharedSecret->x, sharedSecret->len);
 
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
@@ -198,7 +198,7 @@ void SDV_CRYPT_EAL_HPKE_AEAD_TC001(int mode, int kemId, int kdfId, int aeadId, H
     ASSERT_EQ(CRYPT_EAL_HpkeGetSeq(ctxR, &nextSeq), CRYPT_SUCCESS);
     ASSERT_EQ(nextSeq, seq + 1);
 
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
@@ -235,7 +235,7 @@ void SDV_CRYPT_EAL_HPKE_EXPORT_SECRET_TC001(int mode, int kemId, int kdfId, int 
     memset(exportedValueBuf, 0, HPKE_HKDF_MAX_EXTRACT_KEY_LEN);
     ASSERT_EQ(CRYPT_EAL_HpkeExportSecret(ctxR, exporterContext->x, exporterContext->len, exportedValueBuf, L), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke R exportedValue cmp", exportedValueBuf, exportedValue->len, exportedValue->x, exportedValue->len);
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
@@ -283,7 +283,7 @@ static int32_t HpkeTestSealAndOpen(CRYPT_EAL_HpkeCtx *ctxS, CRYPT_EAL_HpkeCtx *c
     ASSERT_EQ(seqS, seqR);
     ASSERT_EQ(seqS, 10000000 + 100);
     return CRYPT_SUCCESS;
-exit:
+EXIT:
     return HPKE_ERR;
 }
 
@@ -338,7 +338,7 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
 
     ASSERT_EQ(HpkeTestSealAndOpen(ctxS, ctxR), CRYPT_SUCCESS);
     ret = CRYPT_SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
@@ -372,7 +372,7 @@ void SDV_CRYPT_EAL_HPKE_TEST_RANDOMLY_TC001(void)
             }
         }
     }
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     return;
 }
@@ -449,7 +449,7 @@ void SDV_CRYPT_EAL_HPKE_ABNORMAL_TC001(int role)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     uint8_t ikm[10];
     ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, ikm, 10, &pkey), CRYPT_INVALID_ARG);
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
     CRYPT_EAL_RandDeinit();
 }
@@ -464,7 +464,7 @@ static CRYPT_EAL_HpkeCtx *GenHpkeCtxWithSharedSecret(CRYPT_HPKE_Role role, CRYPT
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_HpkeSetSharedSecret(ctx, info, infoLen, sharedSecret, sharedSecretLen), CRYPT_SUCCESS);
     return ctx;
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctx);
     return NULL;
 }
@@ -490,7 +490,7 @@ static int32_t HpkeTestImportSharedSecret(CRYPT_HPKE_Mode mode, CRYPT_HPKE_Ciphe
     ASSERT_TRUE(ctxR != NULL);
 
     ASSERT_EQ(HpkeTestSealAndOpen(ctxS, ctxR), CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     return CRYPT_SUCCESS;
@@ -523,7 +523,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_RANDOMLY_TC001(void)
             }
         }
     }
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */
@@ -567,7 +567,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_TC001(int mode, int kemId, int kdfId, int 
     ASSERT_EQ(CRYPT_EAL_HpkeGetSeq(ctxR, &nextSeq), CRYPT_SUCCESS);
     ASSERT_EQ(nextSeq, seq + 1);
 
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     CRYPT_EAL_RandDeinit();
@@ -603,7 +603,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_TC002(int mode, int kemId, int kdfId, int 
     memset(exportedValueBuf, 0, HPKE_HKDF_MAX_EXTRACT_KEY_LEN);
     ASSERT_EQ(CRYPT_EAL_HpkeExportSecret(ctxR, exporterContext->x, exporterContext->len, exportedValueBuf, L), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke R exportedValue cmp", exportedValueBuf, exportedValue->len, exportedValue->x, exportedValue->len);
-exit:
+EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
     CRYPT_EAL_RandDeinit();
@@ -646,7 +646,7 @@ void SDV_CRYPT_EAL_HPKE_GENERATE_KEY_PAIR_TC001(void)
             }
         }
     }
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */

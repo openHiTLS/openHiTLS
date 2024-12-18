@@ -445,14 +445,14 @@ int main(int32_t argc, char *argv[])
         printf("HITLS_CFG_NewTLS12Config failed.\n");
         return -1;
     }
-	uint16_t cipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
-	// config cipher suite
+    uint16_t cipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
+    // config cipher suite
     if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetCipherSuites err\n");
         return -1;
     }
-	// config PSK callbacks
-	if (HITLS_CFG_SetPskClientCallback(config, (HITLS_PskClientCb)ExampleClientCb) != HITLS_SUCCESS) {
+    // config PSK callbacks
+    if (HITLS_CFG_SetPskClientCallback(config, (HITLS_PskClientCb)ExampleClientCb) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetPskClientCallback err\n");
         return -1;
     }
@@ -460,7 +460,7 @@ int main(int32_t argc, char *argv[])
     ctx = HITLS_New(config);
     if (ctx == NULL) {
         printf("HITLS_New failed.\n");
-        goto exit;
+        goto EXIT;
     }
 
     ...
@@ -474,14 +474,14 @@ The steps except for the following are the same as those described in "Certifica
 ```c
 config = HITLS_CFG_NewTLCPConfig();
 if (config == NULL) {
-	printf("HITLS_CFG_NewTLCPConfig failed.\n");
-	return -1;
+    printf("HITLS_CFG_NewTLCPConfig failed.\n");
+    return -1;
 }
 uint16_t cipherSuite = HITLS_ECC_SM4_CBC_SM3;
 // Configure the algorithm suite.
 if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
-	printf("HITLS_CFG_SetCipherSuites err\n");
-	return -1;
+    printf("HITLS_CFG_SetCipherSuites err\n");
+    return -1;
 }
 
 /* Load certificates. This capability needs to be implemented by users. */
@@ -601,14 +601,14 @@ int main(int32_t argc, char *argv[])
         printf("HITLS_CFG_NewTLS12Config failed.\n");
         return -1;
     }
-	uint16_t cipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
-	// config cipher suite
+    uint16_t cipherSuite = HITLS_PSK_WITH_AES_128_GCM_SHA256;
+    // config cipher suite
     if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetCipherSuites err\n");
         return -1;
     }
-	// config PSK callback
-	if (HITLS_CFG_SetPskServerCallback(tlsConfig, (HITLS_PskServerCb)ExampleServerCb) != HITLS_SUCCESS) {
+    // config PSK callback
+    if (HITLS_CFG_SetPskServerCallback(tlsConfig, (HITLS_PskServerCb)ExampleServerCb) != HITLS_SUCCESS) {
         printf("HITLS_CFG_SetPskClientCallback err\n");
         return -1;
     }
@@ -616,7 +616,7 @@ int main(int32_t argc, char *argv[])
     ctx = HITLS_New(config);
     if (ctx == NULL) {
         printf("HITLS_New failed.\n");
-        goto exit;
+        goto EXIT;
     }
 
     ...
@@ -631,20 +631,20 @@ The steps except for the following are the same as those described in "Certifica
 ...
 config = HITLS_CFG_NewTLCPConfig();
 if (cfg == NULL) {
-	printf("HITLS_CFG_NewTLCPConfig failed.\n");
-	return -1;
+    printf("HITLS_CFG_NewTLCPConfig failed.\n");
+    return -1;
 }
 
 uint16_t cipherSuite = HITLS_ECC_SM4_CBC_SM3;
 // Configure the algorithm suite.
 if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
-	printf("HITLS_CFG_SetCipherSuites err\n");
-	return -1;
+    printf("HITLS_CFG_SetCipherSuites err\n");
+    return -1;
 }
 
 if (HITLS_CFG_SetClientVerifySupport(config, ture) != HITLS_SUCCESS) {
-	printf("HITLS_CFG_SetClientVerifySupport err\n");
-	return -1;
+    printf("HITLS_CFG_SetClientVerifySupport err\n");
+    return -1;
 }
 
 /* Load certificates. This capability needs to be implemented by users. */
@@ -686,27 +686,27 @@ const uint8_t sndBuf[] = "Hi, this is client\n";
 uint32_t writeLen = 0;
 ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Write error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_Write error:error code:%d\n", ret);
+    goto EXIT;
 }
 uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0};
 uint32_t readLen = 0;
 ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Read failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Read failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 /* The client enters the renegotiation state. */
 ret = HITLS_Renegotiate(ctx);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Renegotiate error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_Renegotiate error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The client initiates a handshake, and the server processes the handshake through the `HITLS_Read` interface. */
 ret = HITLS_Connect(ctx);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Connect failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Connect failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 /* The renegotiation is complete, and the data exchange at the application layer proceeds. */
 ```
@@ -719,27 +719,27 @@ uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0};
 uint32_t readLen = 0;
 ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Read failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Read failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 const uint8_t sndBuf[] = "Hi, this is server\n";
 uint32_t writeLen = 0;
 ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Write error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_Write error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The server enters the renegotiation state. */
 ret = HITLS_Renegotiate(ctx);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Renegotiate error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_Renegotiate error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The server initiates a handshake, and the client processes the handshake through the `HITLS_Read` interface. */
 ret = HITLS_Accept(ctx);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Accept failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Accept failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 /* The renegotiation is complete, and the data exchange at the application layer proceeds. */
 ```
@@ -770,21 +770,21 @@ uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0};
 uint32_t readLen = 0;
 ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Read failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Read failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 const uint8_t sndBuf[] = "Hi, this is server\n";
 uint32_t writeLen = 0;
 ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Write error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_Write error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The client initiates a `KeyUpdate` message that does not require replies from the peer. The peer processes the message through the `HITLS_Read` interface. */
 ret = HITLS_KeyUpdate(ctx, HITLS_UPDATE_NOT_REQUESTED);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_KeyUpdate error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_KeyUpdate error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The key update process is complete. */
 ```
@@ -797,27 +797,27 @@ uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0};
 uint32_t readLen = 0;
 ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Read failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Read failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 const uint8_t sndBuf[] = "Hi, this is server\n";
 uint32_t writeLen = 0;
 ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Write error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_Write error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The server initiates a `KeyUpdate` message that requires replies from the peer. The peer processes the message through the `HITLS_Read` interface and returns replies to the `KeyUpdate` message. */
 ret = HITLS_KeyUpdate(ctx, HITLS_UPDATE_REQUESTED);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_KeyUpdate error:error code:%d\n", ret);
-	goto exit;
+    printf("HITLS_KeyUpdate error:error code:%d\n", ret);
+    goto EXIT;
 }
 /* The `HITLS_Read` interface receives the peer's replies to the `KeyUpdate` message. */
 ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen);
 if (ret != HITLS_SUCCESS) {
-	printf("HITLS_Read failed, ret = 0x%x.\n", ret);
-	goto exit;
+    printf("HITLS_Read failed, ret = 0x%x.\n", ret);
+    goto EXIT;
 }
 /* The key update process is complete. */
 ```

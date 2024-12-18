@@ -68,7 +68,7 @@ void SDV_BSL_SAL_SOCKET_FUNC_TC001(void)
     ASSERT_TRUE(udp != -1);
     ASSERT_TRUE(BSL_SAL_SetSockopt(udp, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, sizeof(timeOut)) == 0);
     ASSERT_TRUE(BSL_SAL_SockClose(udp) == 0);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -99,11 +99,11 @@ static void *TestTcpClient(void *args)
         if (ret == 0) {
             char *msg = "Hello,TCP!!";
             ASSERT_TRUE(BSL_SAL_SockSend(socketRemote, msg, strlen(msg), 0) >= 0);
-            goto exit;
+            goto EXIT;
         }
         ASSERT_TRUE(BSL_SAL_SockGetLastSocketError() != 0);
     }
-exit:
+EXIT:
     BSL_SAL_SockClose(socketRemote);
     return NULL;
 }
@@ -127,11 +127,11 @@ static void *TestTcpServer(void *args)
     ASSERT_TRUE(serConn != -1);
     while(true) {
         if (BSL_SAL_SockRecv(serConn, buff, 32, 0) > 0) {
-            goto exit;
+            goto EXIT;
         }
         ASSERT_TRUE(BSL_SAL_SockGetLastSocketError() != 0);
     }
-exit:
+EXIT:
     BSL_SAL_SockClose(socketLocal);
     BSL_SAL_SockClose(serConn);
     return NULL;
@@ -159,7 +159,7 @@ void SDV_BSL_SAL_SOCKET_FUNC_TC002(void)
     ASSERT_EQ(BSL_SAL_ThreadCreate(&serverThread, TestTcpServer, NULL), BSL_SUCCESS);
     BSL_SAL_ThreadId clientThread = NULL;
     ASSERT_EQ(BSL_SAL_ThreadCreate(&clientThread, TestTcpClient, NULL), BSL_SUCCESS);
-exit:
+EXIT:
     BSL_SAL_ThreadClose(serverThread);
     BSL_SAL_ThreadClose(clientThread);
 #endif
@@ -191,7 +191,7 @@ void SDV_BSL_SAL_SELECT_FUNC_TC001(void)
     tv.tv_sec = 2;
     tv.tv_usec = 0;
     ASSERT_TRUE(BSL_SAL_Select(fd + 1, &fds, NULL, NULL, &tv) > 0);
-exit:
+EXIT:
     close(fd);
 }
 /* END_CASE */

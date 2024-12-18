@@ -173,7 +173,7 @@ static int32_t ECP256_GetAffine(ECC_Point *r, const P256_Point *pt)
     if (IsZero(&(pt->z)) != 0) {
         ret = CRYPT_ECC_POINT_AT_INFINITY;
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        return ret;
     }
     ECP256_ModInverse(&zInv3, &(pt->z));        // zInv
     ECP256_Sqr(&zInv2, &zInv3);                 // zInv^2
@@ -185,21 +185,17 @@ static int32_t ECP256_GetAffine(ECC_Point *r, const P256_Point *pt)
     ret = BN_Array2BN(r->x, res_x.value, P256_SIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        return ret;
     }
     ret = BN_Array2BN(r->y, res_y.value, P256_SIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        return ret;
     }
     ret = BN_SetLimb(r->z, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
     }
-    return CRYPT_SUCCESS;
-
-END:
     return ret;
 }
 

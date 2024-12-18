@@ -210,7 +210,7 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
     if ((tmpPrvkey == NULL) || (sharePoint == NULL)) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     /** When the cofactor mode is enabled, pubkey = prvkey * h * G. When h is 1, no calculation is required.
@@ -219,23 +219,23 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
     ret = ECC_PointMul(ctx->para, sharePoint, ctx->prvkey, pubKey->pubkey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     ret = ECC_PointCheck(sharePoint);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     ret = ECC_GetPoint(ctx->para, sharePoint, &shareKeyX, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     *shareKeyLen = shareKeyX.len;
 
-ERR:
+EXIT:
     ECC_FreePoint(sharePoint);
     BN_Destroy(tmpPrvkey);
     return ret;
