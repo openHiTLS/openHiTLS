@@ -188,6 +188,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/tls/handshake/send/src
         ${openHiTLS_SRC}/tls/handshake/recv/src
         ${openHiTLS_SRC}/tls/handshake/recv/include
+        ${openHiTLS_SRC}/tls/handshake/common/src
         ${openHiTLS_SRC}/tls/feature/session/src
         ${openHiTLS_SRC}/tls/cert/include
         ${openHiTLS_SRC}/tls/cert/cert_adapt

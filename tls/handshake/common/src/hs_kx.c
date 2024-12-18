@@ -577,7 +577,9 @@ int32_t HS_GenerateMasterSecret(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     uint8_t preMasterSecret[MAX_PRE_MASTER_SECRET_SIZE] = {0};
-    uint32_t preMasterSecretLen = MAX_PRE_MASTER_SECRET_SIZE;
+    /* key exchange algorithm contains psk, preMasterSecret: |uint16_t|MAX_OTHER_SECRET_SIZE|uint16_t|HS_PSK_MAX_LEN|
+       key exchange algorithm not contains psk, preMasterSecret: |MAX_OTHER_SECRET_SIZE| */
+    uint32_t preMasterSecretLen = MAX_OTHER_SECRET_SIZE;
 
     ret = GenPreMasterSecret(ctx, preMasterSecret, &preMasterSecretLen);
     if (ret != HITLS_SUCCESS) {
