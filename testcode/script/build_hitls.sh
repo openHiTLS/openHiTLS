@@ -58,14 +58,10 @@ build_depend_code()
 
 build_hitls_code()
 {
-    bsl_features="err hash init list buffer log sal sal_mem sal_thread sal_lock sal_time sal_file sal_net sal_str \
-                sal_dl tlv uio_plt uio_buffer uio_sctp uio_tcp uio_mem usrdata asn1 obj base64 pem params"
-
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
 
     add_options="${add_options} -DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK" # Get CPU capability
-    python3 ../configure.py --enable ${bsl_features} hitls_crypto hitls_tls hitls_pki --bits=$BITS --system=linux --add_link_flags="-ldl" ${enable_sctp}
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
