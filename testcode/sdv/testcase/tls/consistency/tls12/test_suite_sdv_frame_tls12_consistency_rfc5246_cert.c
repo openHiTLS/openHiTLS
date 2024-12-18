@@ -29,10 +29,13 @@
 #include "alert.h"
 #include "bsl_list.h"
 #include "app_ctx.h"
+#include "hs_kx.c"
+#include "common_func.h"
 /* END_HEADER */
 
 #define g_uiPort 45678
 
+#define PREMASTERSECRETLEN 1534
 
 /* @
 * @test  UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_SEND_CERTFICATE_TC001 rfc 5246 table row 51
@@ -470,6 +473,54 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RENEGOTIATION_UNSUPPORTED_TC001()
     ASSERT_EQ(client->ssl->state, CM_STATE_ALERTED);
 
 exit:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static int32_t Stub_GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
+{
+    int32_t ret = SAL_CRYPT_CalcEcdhSharedSecret(ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
+        ctx->hsCtx->kxCtx->pubKeyLen, preMasterSecret, preMasterSecretLen);
+    *preMasterSecretLen = PREMASTERSECRETLEN;
+    return ret;
+}
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_ECDHE_PSK_TC001
+* @title After the premasterkey to be received by the server is modified, the connection fails to be established.
+* @precon nan
+* @brief    1. Configure the PSK cipher suite. When generating the premasterkey, change the preMasterSecretLen parameter
+            of GenPremasterSecretFromEcdhe to 1534 to reach the maximum value of the secret and check whether it is out
+            of bounds.
+* @expect   1. The link success.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_ECDHE_PSK_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    uint16_t cipherSuits[] = {HITLS_ECDHE_PSK_WITH_AES_128_CBC_SHA};
+    ASSERT_TRUE(
+        HITLS_CFG_SetCipherSuites(config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t)) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPskClientCallback(config, ExampleClientCb) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPskServerCallback(config, ExampleServerCb) == HITLS_SUCCESS);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    STUB_Init();
+    FuncStubInfo tmpStubInfo;
+    STUB_Replace(&tmpStubInfo, GenPremasterSecretFromEcdhe, Stub_GenPremasterSecretFromEcdhe);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+exit:
+    STUB_Reset(&tmpStubInfo);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
