@@ -20,6 +20,7 @@ set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
                   ${HITLS_ROOT}/include/crypto
                   ${HITLS_ROOT}/include/tls
                   ${HITLS_ROOT}/include/pki
+                  ${HITLS_ROOT}/include/auth
                   ${HITLS_ROOT}/platform/Secure_C/include)
 
 if(ENABLE_GCOV)
@@ -35,10 +36,10 @@ target_compile_options(DEMO_INTF INTERFACE -g)
 target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build 
                                             ${HITLS_ROOT}/platform/Secure_C/lib/)
 
-target_link_libraries(DEMO_INTF INTERFACE hitls_tls hitls_pki hitls_crypto hitls_bsl boundscheck pthread dl)
+target_link_libraries(DEMO_INTF INTERFACE hitls_tls hitls_pki hitls_auth hitls_crypto hitls_bsl boundscheck pthread dl)
 target_include_directories(DEMO_INTF INTERFACE ${HITLS_INCLUDE})
 
-set(TESTS client.c server.c drbg.c ecdh.c pbkdf2.c sm2enc.c sm2sign.c sm4cbc.c hash.c)
+set(TESTS client.c server.c drbg.c ecdh.c pbkdf2.c sm2enc.c sm2sign.c sm4cbc.c hash.c privpass_token.c)
 foreach(testcase ${TESTS})
     get_filename_component(testname ${testcase} NAME_WLE)
     add_executable(${testname} ${testcase})
