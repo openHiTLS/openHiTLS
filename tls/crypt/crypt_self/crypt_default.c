@@ -1060,10 +1060,10 @@ int32_t CRYPT_DEFAULT_CalcSM2SharedSecret(HITLS_Sm2GenShareKeyParameters *sm2Par
     }
     ret = CalcSM2SecretPre(peerCtx, sm2Params, &peerPub);
     if (ret != CRYPT_SUCCESS) {
-        goto Exit;
+        goto EXIT;
     }
     ret = CRYPT_EAL_PkeyComputeShareKey(selfCtx, peerCtx, sharedSecret, sharedSecretLen);
-Exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(peerCtx);
     return ret;
 #else
@@ -1099,29 +1099,27 @@ int32_t CRYPT_DEFAULT_CalcSharedSecret(HITLS_CRYPT_Key *key, uint8_t *peerPubkey
         if (paraId == CRYPT_PKEY_PARAID_MAX) {
             ret = CRYPT_EAL_ERR_ALGID;
             (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16679, "paraId error");
-            goto Exit;
+            goto EXIT;
         }
         ret = CRYPT_EAL_PkeySetParaById(peerPk, paraId);
         if (ret != CRYPT_SUCCESS) {
             (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16680, "SetParaById fail");
-            goto Exit;
+            goto EXIT;
         }
     }
 
     ret = CRYPT_EAL_PkeySetPub(peerPk, &pub);
     if (ret != CRYPT_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16681, "SetPub fail");
-        goto Exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_PkeyComputeShareKey(key, peerPk, sharedSecret, sharedSecretLen);
     if (ret != CRYPT_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16682, "ComputeShareKey fail");
-        goto Exit;
     }
 
-    ret = HITLS_SUCCESS;
-Exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(peerPk);
     return ret;
 #else
@@ -1272,17 +1270,17 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
     (void)BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_EXLEN, BSL_PARAM_TYPE_UINT32_PTR, &tmpLen, sizeof(tmpLen));
     ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
     if (ret != CRYPT_SUCCESS) {
-        goto Exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_KdfDerive(kdfCtx, prk, tmpLen);
     if (ret != CRYPT_SUCCESS) {
-        goto Exit;
+        goto EXIT;
     }
 
     *prkLen = tmpLen;
     ret = HITLS_SUCCESS;
-Exit:
+EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
     return ret;
 #else
@@ -1316,15 +1314,10 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
         (void *)(uintptr_t)input->info, input->infoLen);
     ret = CRYPT_EAL_KdfSetParam(kdfCtx, params);
     if (ret != CRYPT_SUCCESS) {
-        goto Exit;
+        goto EXIT;
     }
     ret = CRYPT_EAL_KdfDerive(kdfCtx, okm, okmLen);
-    if (ret != CRYPT_SUCCESS) {
-        goto Exit;
-    }
-
-    ret = HITLS_SUCCESS;
-Exit:
+EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
     return ret;
 #else

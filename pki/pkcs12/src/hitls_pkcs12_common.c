@@ -226,25 +226,25 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
     if (bag->data == NULL) {
         ret = BSL_DUMP_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     bag->dataLen = asnArr[HITLS_PKCS12_SAFEBAG_BAGVALUES_IDX].len;
     attributes = HITLS_X509_AttrsNew();
     if (attributes == NULL) {
         ret = BSL_MALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     ret = HITLS_PKCS12_ParseSafeBagAttr(asnArr + HITLS_PKCS12_SAFEBAG_BAGATTRIBUTES_IDX, attributes);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
     safeBag->attributes = attributes;
     safeBag->bagId = cid;
     safeBag->bag = bag;
     return ret;
-err:
+ERR:
     BSL_SAL_FREE(bag->data);
     BSL_SAL_FREE(bag);
     HITLS_X509_AttrsFree(attributes, HITLS_PKCS12_AttributesFree);
@@ -481,30 +481,30 @@ int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *passwo
     int32_t ret = HITLS_PKCS12_ParseAsn1AddList(encode, contentList, BSL_CID_PKCS7_CONTENTINFO);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
 
     bagLists = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBag));
     if (bagLists == NULL) {
         ret = BSL_MALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto err;
+        goto ERR;
     }
 
     node = BSL_LIST_GET_FIRST(contentList);
     while (node != NULL) {
         ret = ParseSafeBagList(node, password, passLen, bagLists);
         if (ret != HITLS_PKI_SUCCESS) {
-            goto err;
+            goto ERR;
         }
         node = BSL_LIST_GET_NEXT(contentList);
     }
     ret = HITLS_PKCS12_ParseSafeBagList(bagLists, password, passLen, p12);
     if (ret != HITLS_PKI_SUCCESS) {
-        goto err;
+        goto ERR;
     }
     ret = SetEntityCert(p12);
-err:
+ERR:
     BSL_LIST_DeleteAll(bagLists, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_SafeBagFree);
     BSL_SAL_FREE(bagLists);
     BSL_LIST_DeleteAll(contentList, NULL);

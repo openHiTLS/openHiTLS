@@ -515,9 +515,8 @@ int32_t CRYPT_SCRYPT_Deinit(CRYPT_SCRYPT_Ctx *ctx)
     int32_t ret = CRYPT_SCRYPT_InitCtx(ctx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 void CRYPT_SCRYPT_FreeCtx(CRYPT_SCRYPT_Ctx *ctx)

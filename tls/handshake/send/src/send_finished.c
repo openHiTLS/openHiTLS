@@ -269,15 +269,13 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
 static int32_t CalcVerifyData(TLS_Ctx *ctx)
 {
-    int32_t ret = HITLS_SUCCESS;
-    ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
+    int32_t ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15362, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return ret;
     }
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 int32_t Tls12ServerSendFinishedProcess(TLS_Ctx *ctx)

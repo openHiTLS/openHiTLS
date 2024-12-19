@@ -90,11 +90,9 @@ static int32_t IsDataZero(const uint8_t *data, uint32_t datalen)
 static int32_t MemAllocCheck(const BN_BigNum *k, const BN_BigNum *order,
     const ECC_Point *c1, const ECC_Point *tmp, const uint8_t *c2)
 {
-    int32_t ret;
     if (k == NULL || order == NULL || c1 == NULL || tmp == NULL || c2 == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     return CRYPT_SUCCESS;
 }
@@ -111,28 +109,23 @@ static void XorCalculate(uint8_t *c2, const uint8_t *data, uint32_t datalen)
 static int32_t EncryptInputCheck(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t datalen,
     const uint8_t *out, const uint32_t *outlen)
 {
-    int32_t ret;
     // 0-length plaintext encryption is not supported.
     if (ctx == NULL || data == NULL || datalen == 0 || out == NULL || outlen == NULL || *outlen == 0) {
-        ret = CRYPT_NULL_INPUT;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
     uint64_t tmpdatalen = ASN1_Sm2GetEnCodeLen(datalen);
     if ((uint64_t)*outlen < tmpdatalen || tmpdatalen > UINT32_MAX) {
-        ret = CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
     }
     if (ctx->pkey == NULL) {
-        ret = CRYPT_SM2_ERR_EMPTY_KEY;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_EMPTY_KEY);
+        return CRYPT_SM2_ERR_EMPTY_KEY;
     }
     if (ctx->pkey->pubkey == NULL) {
-        ret = CRYPT_SM2_NO_PUBKEY;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_NO_PUBKEY);
+        return CRYPT_SM2_NO_PUBKEY;
     }
     return CRYPT_SUCCESS;
 }
@@ -203,15 +196,13 @@ ERR:
 
 static int32_t IsUEqualToC3(const uint8_t *data, const uint8_t *sm3Buf, uint32_t sm3BufLen)
 {
-    int32_t ret;
     uint8_t check = 0;
     for (uint32_t i = 0; i < sm3BufLen; i++) {
         check |= sm3Buf[i] ^ data[i + SM2_POINT_COORDINATE_LEN];
     }
     if (check != 0) {
-        ret = CRYPT_SM2_DECRYPT_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECRYPT_FAIL);
+        return CRYPT_SM2_DECRYPT_FAIL;
     }
     return CRYPT_SUCCESS;
 }
@@ -219,27 +210,22 @@ static int32_t IsUEqualToC3(const uint8_t *data, const uint8_t *sm3Buf, uint32_t
 static int32_t DecryptInputCheck(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, const uint32_t datalen,
     const uint8_t *out, const uint32_t *outlen)
 {
-    int32_t ret;
     // 0-length plaintext decryption is not supported.
     if (ctx == NULL || data == NULL || datalen == 0 || out == NULL || outlen == NULL || *outlen == 0) {
-        ret = CRYPT_NULL_INPUT;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
     if (ASN1_Sm2GetEnCodeLen(*outlen) < datalen) {
-        ret = CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
     }
     if (ctx->pkey == NULL) {
-        ret = CRYPT_SM2_ERR_EMPTY_KEY;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_EMPTY_KEY);
+        return CRYPT_SM2_ERR_EMPTY_KEY;
     }
     if (ctx->pkey->prvkey == NULL) {
-        ret = CRYPT_SM2_NO_PRVKEY;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_NO_PRVKEY);
+        return CRYPT_SM2_NO_PRVKEY;
     }
     return CRYPT_SUCCESS;
 }

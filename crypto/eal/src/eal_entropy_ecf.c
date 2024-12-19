@@ -63,10 +63,7 @@ static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out,
     ret = CRYPT_EAL_MacFinal(ctx, out, outLen);
     CRYPT_EAL_MacFreeCtx(ctx);
     BSL_SAL_FREE(ecfKey);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 #endif
 

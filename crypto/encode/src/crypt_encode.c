@@ -397,12 +397,12 @@ int32_t CRYPT_EAL_EncodeRsaPssAlgParam(CRYPT_RSA_PssPara *rsaPssParam, uint8_t *
     }
     ret = EncodeMgfAlg(rsaPssParam->mgfId, &asnArr[1]);
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+        goto EXIT;
     }
 
     ret = EncodeSaltLen(rsaPssParam->saltLen, &asnArr[2]); // 2: saltLength
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+        goto EXIT;
     }
     if (asnArr[0].len + asnArr[1].len + asnArr[2].len == 0) { // [0]:hash + [1]:mgf + [2]:salt all default
         return ret;
@@ -423,9 +423,8 @@ int32_t CRYPT_EAL_EncodeRsaPssAlgParam(CRYPT_RSA_PssPara *rsaPssParam, uint8_t *
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, X509_RSAPSS_ELEM_NUMBER, buf, bufLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
     }
-ERR:
+EXIT:
     for (uint32_t i = 0; i < X509_RSAPSS_ELEM_NUMBER; i++) {
         BSL_SAL_Free(asnArr[i].buff);
     }

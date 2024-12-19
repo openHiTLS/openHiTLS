@@ -349,7 +349,7 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC001(int version, int type)
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverName = serverName;
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverNameSize = serverNameSize;
 
-exit:
+EXIT:
     BSL_SAL_FREE(g_sessionId);
     CleanRecordBody(&frameMsg);
     HITLS_CFG_FreeConfig(testInfo.clientConfig);
@@ -447,7 +447,7 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC002()
     ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertInfo.description, ALERT_UNRECOGNIZED_NAME);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(clientconfig);
     HITLS_CFG_FreeConfig(serverconfig);
     FRAME_FreeLink(client);

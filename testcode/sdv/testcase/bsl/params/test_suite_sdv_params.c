@@ -44,7 +44,7 @@ void SDV_BSL_BSL_PARAM_InitValue_API_TC001()
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_CTX_PTR, valPtr, 0), BSL_SUCCESS);
     valPtr = NULL;
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -83,7 +83,7 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC001()
     ASSERT_EQ(BSL_PARAM_GetPtrValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, (void **)&valPtr, NULL), BSL_SUCCESS);
     ASSERT_EQ(*valPtr, 0);
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -109,7 +109,7 @@ void SDV_BSL_BSL_PARAM_FindParam_API_TC001()
     temp = BSL_PARAM_FindParam(param, 5);
     ASSERT_EQ(temp, NULL);
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

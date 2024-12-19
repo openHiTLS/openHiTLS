@@ -315,7 +315,7 @@ HITLS_Session *SESSMGR_Find(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t ses
             BSL_LOG_BINLOG_FIXLEN(
                 BINLOG_ID15353, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN, "not find sess", 0, 0, 0, 0);
                 sess = NULL;
-                goto exit;
+                goto EXIT;
         }
     }
 
@@ -326,7 +326,7 @@ HITLS_Session *SESSMGR_Find(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t ses
         sess = NULL;
     }
 
-exit:
+EXIT:
     BSL_SAL_ThreadUnlock(mgr->lock);
     return sess;
 }
