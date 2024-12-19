@@ -50,7 +50,7 @@ int main(void) {
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (pkey == NULL) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Initialize the random number.
@@ -58,7 +58,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Generate a key pair.
@@ -66,7 +66,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyGen: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Data to be encrypted.
@@ -81,7 +81,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyEncrypt: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Decrypt data.
@@ -89,7 +89,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyDecrypt: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     if (memcmp(dcrypt, data, dataLen) == 0) {
@@ -97,7 +97,7 @@ int main(void) {
     } else {
         ret = -1;
     }
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_RandDeinit();

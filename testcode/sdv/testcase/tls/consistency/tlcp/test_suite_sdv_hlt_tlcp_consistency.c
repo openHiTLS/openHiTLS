@@ -180,7 +180,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC001(int version, int connType)
         cnt++;
     } while (cnt <= 2);
 
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -284,7 +284,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC002(int version, int connType)
         }
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -389,7 +389,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC003(int version, int connType)
         }
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -527,7 +527,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC004(int version, int connType)
         }
         count++;
     } while (count <= 2);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -640,7 +640,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC005(int version, int connType)
         }
         cnt++;
     } while (cnt <= 4);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -751,7 +751,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC006(int version, int connType)
         }
         cnt++;
     } while (cnt <= 2);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -862,7 +862,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC007(int version, int connType)
         }
         cnt++;
     } while (cnt <= 2);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -969,7 +969,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC008(int version, int connType)
         }
         cnt++;
     } while (cnt <= 2);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1008,7 +1008,7 @@ void SDV_TLS_TLCP_CONSISTENCY_TRANSPORT_FUNC_TC01(void)
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
     ASSERT_TRUE(readLen == 16384);
 
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1117,7 +1117,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
             ASSERT_TRUE(session != NULL);
         }cnt++;
     }while(cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1131,12 +1131,7 @@ static int32_t SendAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Description de
     data[0] = level;
     data[1] = description;
     /** Write records. */
-    int32_t ret = REC_Write(ctx, REC_TYPE_ALERT, data, ALERT_BODY_LEN);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    return HITLS_SUCCESS;
+    return REC_Write(ctx, REC_TYPE_ALERT, data, ALERT_BODY_LEN);
 }
 
 /* BEGIN_CASE */
@@ -1165,7 +1160,7 @@ void SDV_TLS_TLCP1_1_LEVEL_UNKNOWN_ALERT_TC001(void)
     ALERT_GetInfo(Ctx, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1198,7 +1193,7 @@ void SDV_TLS_TLCP1_1_LEVEL_UNKNOWN_ALERT_TC002(void)
     ALERT_GetInfo(Ctx, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1250,7 +1245,7 @@ void SDV_TLS_TLCP1_1_TRANSPORT_FUNC_TC01(void)
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
     ASSERT_TRUE(readLen == 16384);
 
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1284,7 +1279,7 @@ static void TEST_Client_SessionidLength_TooLong(HITLS_Ctx *ctx, uint8_t *data, u
     sessionId_temp, sizeof(sessionId_temp) / sizeof(uint8_t)) == 0);
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -1334,7 +1329,7 @@ void SDV_TLS_TLCP1_1_RESUME_FAILED_TC001(void)
     ASSERT_TRUE(clientRes == NULL);
 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes) , HITLS_PARSE_INVALID_MSG_LEN);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }

@@ -185,7 +185,7 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
     HLT_SetPrivKeyPath(ctxConfig, (char *)privKeyPath);
     return 0;
-exit:
+EXIT:
     return -1;
 }
 
@@ -254,7 +254,7 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -331,7 +331,7 @@ void SDV_TLS_CFG_SET_GET_CLIENTVERIFYUPPORT_FUNC_TC001(int clientverify)
     ASSERT_TRUE(HITLS_GetFinishVerifyData(server->ssl, verifyDataNew, sizeof(verifyDataNew),
         &verifyDataNewSize) == HITLS_SUCCESS);
     ASSERT_TRUE(memcmp(verifyDataNew, verifyDataOld, verifyDataOldSize) != 0);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
     FRAME_FreeLink(client);
@@ -372,7 +372,7 @@ void SDV_TLS_CFG_ADD_CAINDICATION_FUNC_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_CFG_AddCAIndication(config, HITLS_TRUSTED_CA_CERT_SHA1, data, len) == HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_CFG_AddCAIndication(config, HITLS_TRUSTED_CA_UNKNOWN, data, len) == HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -400,7 +400,7 @@ void SDV_TLS_CFG_GET_CIPHERBYID_FUNC_TC001()
     HITLS_CFG_GetCipherId(cipher, &cipherAlgo);
     ASSERT_EQ(cipherAlgo, HITLS_CIPHER_AES_128_GCM);
 
-exit:
+EXIT:
      return;
 }
 /* END_CASE */
@@ -426,7 +426,7 @@ void SDV_TLS_CFG_GET_AUTHID_FUNC_TC001()
     HITLS_CFG_GetAuthId(cipher, &cipherSuite);
     ASSERT_EQ(cipherSuite, HITLS_AUTH_NULL);
 
-exit:
+EXIT:
      free(cipher);
 }
 /* END_CASE */
@@ -450,7 +450,7 @@ void SDV_TLS_CFG_GET_CIPHERSUITENAME_FUNC_TC001()
 
     const uint8_t* name = HITLS_CFG_GetCipherSuiteName(cipher);
     ASSERT_TRUE(strcmp((char *)name, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -486,7 +486,7 @@ void SDV_TLS_CFG_GET_CIPHERVERSION_FUNC_TC001()
     cipher = HITLS_CFG_GetCipherByID(HITLS_RSA_WITH_AES_128_CBC_SHA);
     ASSERT_EQ(HITLS_CFG_GetCipherVersion(cipher, &version), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_VERSION_SSL30, version);
-exit:
+EXIT:
     version = 1;
 }
 /* END_CASE */
@@ -513,7 +513,7 @@ void SDV_TLS_CFG_GET_CIPHERSUITE_FUNC_TC001()
     HITLS_CFG_GetCipherSuite(cipher, &cipherSuite);
     ASSERT_EQ(cipherSuite, HITLS_AES_128_GCM_SHA256);
 
-exit:
+EXIT:
      return;
 }
 /* END_CASE */
@@ -603,7 +603,7 @@ void SDV_TLS_CFG_GET_FLIGHTTRANSMITSWITH_FUNC_TC001(int version)
     }
 
     HLT_CleanFrameHandle();
-exit:
+EXIT:
     g_flag = 0;
     g_flight = 0;
     HLT_CleanFrameHandle();
@@ -669,7 +669,7 @@ void SDV_TLS_CFG_GET_MAXCERTLIST_API_TC001()
     ASSERT_TRUE(HITLS_SetMaxCertList(ctx, MIN_CERT_LIST) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetMaxCertList(ctx, &maxSize) == HITLS_SUCCESS);
     ASSERT_TRUE(maxSize == MIN_CERT_LIST);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }

@@ -145,7 +145,7 @@ void ClientCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
         ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) != 0);
     }
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -191,7 +191,7 @@ void ServerCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
         ASSERT_TRUE(clientRes == NULL);
     }
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -303,7 +303,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
         }cnt++;
     } while (cnt < 3); // Perform the connection twice.
 
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -323,7 +323,7 @@ static void FrameCallBack_ClientHello_PskBinder_Miss(void *msg, void *userData)
     clienthello->psks.binderSize.data = 0;
     clienthello->psks.exLen.state = INITIAL_FIELD;
 
-exit:
+EXIT:
     return;
 }
 
@@ -337,7 +337,7 @@ static void FrameCallBack_ClientHello_LegacyVersion_Unsafe(void *msg, void *user
 
     clienthello->version.state = ASSIGNED_FIELD;
     clienthello->version.data = HITLS_VERSION_SSL30;
-exit:
+EXIT:
     return;
 }
 
@@ -429,7 +429,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_VERSION_FUNC_TC001()
 
     ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) != 0);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -451,7 +451,7 @@ static void TEST_Server13_33_Err(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     }
     return;
     }
-exit:
+EXIT:
     return;
 }
 
@@ -510,7 +510,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_EMPTY_RECORDS_FUNC_TC001(int rec_type)
     ASSERT_EQ(HLT_RpcTlsGetAlertFlag(remoteProcess, clientRes->sslId), ALERT_FLAG_SEND);
     ASSERT_EQ(
         (ALERT_Description)HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId),ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -566,7 +566,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_APPDATA_MAX_LENGTH(void)
     ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, serverRes, readData, readLen, &readLen) , 0);
     ASSERT_EQ(readLen , REC_MAX_PLAIN_LENGTH);
     ASSERT_EQ(memcmp(writeData, readData, readLen) , 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */

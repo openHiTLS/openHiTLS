@@ -128,7 +128,7 @@ void UT_TLS_CERT_CM_SetVerifyDepth_API_TC001(int version)
     ASSERT_EQ(depth, dep);
     ASSERT_TRUE(HITLS_GetVerifyDepth(NULL, &dep) == HITLS_NULL_INPUT);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -161,7 +161,7 @@ void UT_TLS_CERT_CFG_SetDefaultPasswordCb_FUNC_001(int version, char *keyFile, c
 
     ASSERT_EQ(HITLS_CFG_LoadKeyFile(tlsConfig, keyFile, TLS_PARSE_FORMAT_ASN1), HITLS_CONFIG_ERR_LOAD_KEY_FILE);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -199,7 +199,7 @@ void UT_TLS_CERT_CM_SetDefaultPasswordCbUserdata_API_TC001(int version)
     ASSERT_TRUE(HITLS_GetDefaultPasswordCbUserdata(NULL) == NULL);
     ASSERT_TRUE(HITLS_GetDefaultPasswordCbUserdata(ctx) == userData);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -232,7 +232,7 @@ void UT_TLS_CERT_CFG_LoadCertFile_API_TC001(int version, char *certFile1, char *
     ASSERT_TRUE(HITLS_CFG_LoadCertFile(tlsConfig, certFile2, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_LoadKeyFile(tlsConfig, keyFile2, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -288,7 +288,7 @@ void UT_TLS_CERT_CFG_LoadCertBuffer_FUNC_001(int version, char *certPath)
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf2, bufLen + 1, TLS_PARSE_FORMAT_ASN1) != HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -318,7 +318,7 @@ void UT_TLS_CERT_CM_LoadCertFile_API_TC001(int version, char *certFile)
 
     ASSERT_TRUE(HITLS_LoadCertFile(NULL, NULL, TLS_PARSE_FORMAT_ASN1) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_LoadCertFile(ctx, certFile, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -352,7 +352,7 @@ void UT_TLS_CERT_CM_LoadCertBuffer_API_TC001(int version, char *certFile)
 
     ASSERT_TRUE(HITLS_LoadCertBuffer(NULL, certBuffer, certBuffLen, TLS_PARSE_FORMAT_ASN1) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_LoadCertBuffer(ctx, certBuffer, certBuffLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -405,7 +405,7 @@ void UT_TLS_CERT_CFG_LoadKeyBuffer_FUNC_TC001(int version, char *keyPath)
         HITLS_CFG_LoadKeyBuffer(tlsConfig, buf2, bufLen + 1, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_LoadKeyBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -435,7 +435,7 @@ void UT_TLS_CERT_CM_LoadKeyFile_API_TC001(int version, char *keyFile)
 
     ASSERT_TRUE(HITLS_LoadKeyFile(NULL, keyFile, TLS_PARSE_FORMAT_ASN1) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_LoadKeyFile(ctx, keyFile, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -471,7 +471,7 @@ void UT_TLS_SetAndGetCert_FUNC_TC001(int version)
     ASSERT_TRUE(HITLS_SetVerifyResult(ctx, HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetVerifyResult(ctx, &result) == HITLS_SUCCESS);
     ASSERT_TRUE(result == HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -505,7 +505,7 @@ void UT_TLS_CERT_CM_LoadKeyBuffer_API_TC001(int version, char *keyFile)
 
     ASSERT_TRUE(HITLS_LoadKeyBuffer(NULL, keyBuffer, keyBuffLen, TLS_PARSE_FORMAT_ASN1) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_LoadKeyBuffer(ctx, keyBuffer, keyBuffLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -562,7 +562,7 @@ void UT_TLS_CERT_CFG_SetTlcpCertificate_FUNC_001(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -602,7 +602,7 @@ void UT_TLS_CERT_CFG_SetVerifyCb_API_TC001(int version)
     tlsConfig->certMgrCtx = NULL;
     ASSERT_TRUE(HITLS_CFG_SetVerifyCb(tlsConfig, TestHITLS_VerifyCb) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetVerifyCb(tlsConfig) == NULL);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -636,7 +636,7 @@ void UT_TLS_CERT_CM_SetVerifyCb_API_TC001(int version)
     ASSERT_TRUE(HITLS_SetVerifyCb(ctx, TestHITLS_VerifyCb) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetVerifyCb(NULL) == NULL);
     ASSERT_TRUE(HITLS_GetVerifyCb(ctx) == TestHITLS_VerifyCb);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -679,7 +679,7 @@ void UT_TLS_CERT_GET_CERTIFICATE_API_TC001(int version)
     ASSERT_TRUE(HITLS_GetPeerCertificate(ctx) == NULL);
     ASSERT_TRUE(HITLS_GetPeerCertChain(ctx) == NULL);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -783,7 +783,7 @@ void UT_TLS_CERT_GET_CALIST_FUNC_TC001(int version)
     ASSERT_TRUE(caList != NULL);
     ASSERT_EQ(caList->count, 2);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
     BSL_LIST_DeleteAll((BslList *)peerCert->chain, StubListDataDestroy);

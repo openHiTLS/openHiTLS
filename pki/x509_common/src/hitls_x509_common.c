@@ -100,7 +100,6 @@ static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNod
     ret = BSL_ASN1_DecodeItem(&temp, &tempLen, &node->nameValue);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
     return ret;
 }
@@ -298,7 +297,7 @@ int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
     while (node != NULL) {
         ret = X509_EncodeRdName(list, &asnBuf[iter]);
         if (ret != HITLS_PKI_SUCCESS) {
-            goto ERR;
+            goto EXIT;
         }
         iter++;
         node = BSL_LIST_Curr(list);
@@ -309,7 +308,7 @@ int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
     };
     BSL_ASN1_Template templ = {x509Name, 1};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, iter, &templ, asnBuf, iter, name);
-ERR:
+EXIT:
     for (uint32_t index = 0; index < iter; index++) {
         BSL_SAL_Free(asnBuf[index].buff);
     }

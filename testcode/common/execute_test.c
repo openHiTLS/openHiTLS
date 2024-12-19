@@ -257,23 +257,23 @@ int ProcessMutiArgs(int argc, char **argv, const char *fileName)
         }
         if (found != 1) {
             Print("test function '%s' do not exist\n", argv[i]);
-            goto exit;
+            goto EXIT;
         }
     }
 
     if (curTestCnt == 0) {
         ret = ExecuteTest(fileName, printDetail, -1);
-        goto exit;
+        goto EXIT;
     }
 
     for (int i = 0; i < curTestCnt; i++) {
         if (ExecuteTest(fileName, printDetail, funcIndex[i]) != 0) {
-            goto exit;
+            goto EXIT;
         }
     }
     ret = 0;
 
-exit:
+EXIT:
     free(funcIndex);
     return ret;
 }
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 #endif
     char testName[MAX_FILE_PATH_LEN] = {0};
     if (sprintf_s(testName, MAX_FILE_PATH_LEN, "%s.datax", suiteName) <= 0) {
-        goto END;
+        goto EXIT;
     }
     if (argc == 1) {
         ret = ExecuteTest(testName, 1, -1);
@@ -304,7 +304,7 @@ int main(int argc, char **argv)
     if (ret != 0) {
         Print("execute test failed\n");
     }
-END:
+EXIT:
 #ifndef PRINT_TO_TERMINAL
     (void)fclose(fp);
 #endif

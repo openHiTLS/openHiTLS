@@ -129,9 +129,8 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, u
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15813, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack handshake[%u] msg error.", type, 0, 0, 0);
-        return ret;
     }
-    return HITLS_SUCCESS;
+    return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_PROTO_DTLS12

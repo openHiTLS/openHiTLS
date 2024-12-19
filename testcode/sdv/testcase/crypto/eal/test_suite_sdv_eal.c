@@ -125,7 +125,7 @@ static int32_t MdTest(CRYPT_EAL_MdCTX *ctx, Hex *msg, Hex *hash)
     }
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
     return 0;
-exit:
+EXIT:
     return -1;
 }
 /* END_HEADER */
@@ -144,7 +144,7 @@ void SDV_CRYPTO_MAC_ALG_CHECK_TC001(int algId)
 {
     int isValid = IsMacAlgIdValid(algId);
     ASSERT_TRUE(CRYPT_EAL_MacIsValidAlgId(algId) == isValid);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -163,7 +163,7 @@ void SDV_CRYPTO_CIPHER_ALG_CHECK_TC001(int algId)
 {
     int isValid = IsCipherAlgIdValid(algId);
     ASSERT_TRUE(CRYPT_EAL_CipherIsValidAlgId(algId) == isValid);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -197,7 +197,7 @@ void SDV_CRYPTO_MD_COPY_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
     ASSERT_EQ(MdTest(cpyCtx, msg, hash), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
 }
@@ -217,7 +217,7 @@ void SDV_CRYPTO_EAL_PKEY_NEW_CTX_API_TC001(void)
 {
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MAX);
     ASSERT_TRUE(pkey == NULL);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -264,7 +264,7 @@ void SDV_CRYPTO_EAL_PKEY_SET_PARA_API_TC001(void)
 
     para.id = CRYPT_PKEY_RSA;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_ALGID);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -283,7 +283,7 @@ void SDV_CRYPTO_EAL_PKEY_ALG_CHECK_TC001(int algId)
 {
     int isValid = IsPkeyAlgIdValid(algId);
     ASSERT_TRUE(CRYPT_EAL_PkeyIsValidAlgId(algId) == isValid);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -315,7 +315,7 @@ void SDV_CRYPTO_EAL_PKEY_SET_PRV_API_TC001(void)
 
     prv.id = CRYPT_PKEY_DSA;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_EAL_ERR_ALGID);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -347,7 +347,7 @@ void SDV_CRYPTO_EAL_PKEY_SET_PUB_API_TC001(void)
 
     pub.id = CRYPT_PKEY_DSA;
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_EAL_ERR_ALGID);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -365,7 +365,7 @@ exit:
 void SDV_CRYPTO_EAL_PKEY_GEN_API_TC001(void)
 {
     ASSERT_EQ(CRYPT_EAL_PkeyGen(NULL), CRYPT_NULL_INPUT);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -408,7 +408,7 @@ void SDV_CRYPTO_EAL_PKEY_CMP_TC001(void)
     ctx1.method = pkey->method;
     ctx2.method = pkey->method;
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(&ctx1, &ctx2), CRYPT_NULL_INPUT);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -436,7 +436,7 @@ void SDV_CRYPTO_EAL_PKEY_GET_ID_API_TC001(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetId(ctx), pkeyId);
     ASSERT_EQ(CRYPT_EAL_PkeyGetId(NULL), CRYPT_PKEY_MAX);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -475,7 +475,7 @@ void SDV_CRYPTO_EAL_PKEY_EXT_DATA_API_TC001(void)
     ptr = CRYPT_EAL_PkeyGetExtData(ctx);
     ASSERT_TRUE(ptr != NULL);
     ASSERT_EQ(*(int *)ptr, data);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */

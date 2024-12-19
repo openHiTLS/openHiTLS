@@ -151,12 +151,12 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
         // 5 indicates the maximum length of temp. For details, see the temp statement.
         if ((ret = meth->update(mdCtx, temp, 5)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
 
         if ((ret = DRBG_UpdateDataInHashDf(ctx, in1, in2, in3, in4)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
 
         uint8_t tmpOut[DRBG_HASH_MAX_MDSIZE];
@@ -164,7 +164,7 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
         if (len < mdSize) {
             if ((ret = meth->final(mdCtx, tmpOut, &tmpOutLen)) != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
-                goto ERR;
+                goto EXIT;
             }
             // tmpOutLen is the maximum supported MD length,
             // and len is the actual length, which must be smaller than tmpOutLen.
@@ -174,7 +174,7 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
         }
         if ((ret = meth->final(mdCtx, buf, &tmpOutLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
 
         buf += mdSize;
@@ -182,7 +182,7 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
         temp[0]++;
     } while (len > 0);
 
-ERR:
+EXIT:
     meth->deinit(mdCtx);
     return ret;
 }
@@ -210,20 +210,20 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
 
         if ((ret = md->update(mdCtx, data, ctx->seedLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
 
         if (len >= mdSize) {
             if ((ret = md->final(mdCtx, buf, &tmpLen)) != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
-                goto ERR;
+                goto EXIT;
             }
         } else {
             uint8_t temp[DRBG_HASH_MAX_SEEDLEN];
             uint32_t tempLen = DRBG_HASH_MAX_SEEDLEN;
             if ((ret = md->final(mdCtx, temp, &tempLen)) != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
-                goto ERR;
+                goto EXIT;
             }
 
             (void)memcpy_s(buf, len, temp, len);
@@ -235,7 +235,7 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
         DRBG_HashAddV(data, ctx->seedLen, &n, 1);
     }
 
-ERR:
+EXIT:
     // Clear MD data.
     md->deinit(mdCtx);
     return ret;
@@ -265,10 +265,8 @@ int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy,
     ret = DRBG_HashDf(ctx, ctx->c, ctx->seedLen, &temp, &seed, NULL, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t DRBG_HashAdinInHashGenerate(DRBG_HashCtx *ctx, const CRYPT_Data *adin)
@@ -289,28 +287,28 @@ static int32_t DRBG_HashAdinInHashGenerate(DRBG_HashCtx *ctx, const CRYPT_Data *
     ret = md->update(mdCtx, &temp, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = md->update(mdCtx, ctx->v, ctx->seedLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = md->update(mdCtx, adin->data, adin->len);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     ret = md->final(mdCtx, w, &wLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     DRBG_HashAddV(ctx->v, ctx->seedLen, w, mdSize);
 
-ERR:
+EXIT:
     // Clear MD data.
     md->deinit(mdCtx);
     return ret;
@@ -358,18 +356,18 @@ int32_t DRBG_HashGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     ret = md->update(mdCtx, &temp, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = md->update(mdCtx, ctx->v, ctx->seedLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     ret = md->final(mdCtx, h, &mdSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     // V = (V + H + C + reseed_counter) mod 2^seedlen
@@ -378,7 +376,7 @@ int32_t DRBG_HashGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     reseedCtrBe = CRYPT_HTONL((uint32_t)(drbg->reseedCtr));
     DRBG_HashAddV(ctx->v, ctx->seedLen, (uint8_t*)&reseedCtrBe, sizeof(reseedCtrBe));
 
-ERR :
+EXIT:
     // Clear MD data.
     md->deinit(mdCtx);
     return ret;
@@ -412,10 +410,9 @@ int32_t DRBG_HashReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropy, const CRYPT_D
     ret = DRBG_HashDf(ctx, ctx->c, ctx->seedLen, &temp, &v, NULL, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 void DRBG_HashUnInstantiate(DRBG_Ctx *drbg)

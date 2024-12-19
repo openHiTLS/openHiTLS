@@ -62,7 +62,7 @@ static void FrameCallBack_SerrverHello_MasteKey_Add(void *msg, void *userData)
     serverhello->extendedMasterSecret.exType.data = HS_EX_TYPE_EXTENDED_MASTER_SECRET;
     serverhello->extendedMasterSecret.exLen.state = INITIAL_FIELD;
     serverhello->extendedMasterSecret.exLen.data = 0u;
-exit:
+EXIT:
     return;
 }
 static void FrameCallBack_SerrverHello_MasteKey_MISS(void *msg, void *userData)
@@ -73,7 +73,7 @@ static void FrameCallBack_SerrverHello_MasteKey_MISS(void *msg, void *userData)
     FRAME_ServerHelloMsg *serverhello = &frameMsg->body.hsMsg.body.serverHello;
 
     serverhello->extendedMasterSecret.exState = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -191,7 +191,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
 
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -311,7 +311,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC007(int ver
         }
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -431,7 +431,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
         HLT_CloseFd(sockFd.srcFd, localProcess->connType);
         cunt++;
     } while (cunt <= 2);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -456,7 +456,7 @@ static void Test_ClientHelloWithnoEMS(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
     clientMsg->extendedMasterSecret.exState = MISSING_FIELD;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -566,7 +566,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
  
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     ClearWrapper();
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);

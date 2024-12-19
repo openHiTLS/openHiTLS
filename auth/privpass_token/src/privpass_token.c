@@ -552,9 +552,7 @@ int32_t HITLS_AUTH_PrivPassSetPubkey(HITLS_AUTH_PrivPassCtx *ctx, uint8_t *pki, 
     return HITLS_AUTH_SUCCESS;
 
 ERR:
-    if (ctx->method.freePkeyCtx != NULL) {
-        ctx->method.freePkeyCtx(pubKeyCtx);
-    }
+    ctx->method.freePkeyCtx(pubKeyCtx);
     return ret;
 }
 
@@ -572,15 +570,15 @@ int32_t HITLS_AUTH_PrivPassSetPrvkey(HITLS_AUTH_PrivPassCtx *ctx, void *param, u
     }
     if (ctx->pubKeyCtx != NULL) {
         if (ctx->method.checkKeyPair == NULL) {
+            ctx->method.freePkeyCtx(prvKeyCtx);
             BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_NO_KEYPAIR_CHECK_CALLBACK);
-            ret = HITLS_AUTH_PRIVPASS_NO_KEYPAIR_CHECK_CALLBACK;
-            goto ERR;
+            return HITLS_AUTH_PRIVPASS_NO_KEYPAIR_CHECK_CALLBACK;
         }
         ret = ctx->method.checkKeyPair(ctx->pubKeyCtx, prvKeyCtx);
         if (ret != HITLS_AUTH_SUCCESS) {
-            ret = HITLS_AUTH_PRIVPASS_CHECK_KEYPAIR_FAILED;
+            ctx->method.freePkeyCtx(prvKeyCtx);
             BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_CHECK_KEYPAIR_FAILED);
-            goto ERR;
+            return HITLS_AUTH_PRIVPASS_CHECK_KEYPAIR_FAILED;
         }
     }
     if (ctx->prvKeyCtx != NULL) {
@@ -588,10 +586,6 @@ int32_t HITLS_AUTH_PrivPassSetPrvkey(HITLS_AUTH_PrivPassCtx *ctx, void *param, u
     }
     ctx->prvKeyCtx = prvKeyCtx;
     return HITLS_AUTH_SUCCESS;
-
-ERR:
-    ctx->method.freePkeyCtx(prvKeyCtx);
-    return ret;
 }
 
 static int32_t PrivPassGetTokenChallengeRequest(HITLS_AUTH_PrivPassToken *ctx, BSL_Param *param)

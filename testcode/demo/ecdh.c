@@ -73,7 +73,7 @@ int main(void)
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     if (prvCtx == NULL || pubCtx == NULL) {
-        goto exit;
+        goto EXIT;
     }
 
     // Set the curve parameters.
@@ -81,7 +81,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the private key of one end.
@@ -92,7 +92,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the curve parameters.
@@ -100,7 +100,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the public key of the other end.
@@ -111,7 +111,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // The shared key involves only the X axis. The length of the public key is not compressed in the returned results.
@@ -120,7 +120,7 @@ int main(void)
     if (shareKey == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Initialize the random number.
@@ -128,7 +128,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Calculate the shared key.
@@ -136,19 +136,19 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Compare the calculation result with the expected one.
     if (shareLen != sizeof(resSharekey) || memcmp(shareKey, resSharekey, shareLen) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
-        goto exit;
+        goto EXIT;
     }
 
     printf("pass \n");
 
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(prvCtx);

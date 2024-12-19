@@ -115,7 +115,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_APP_DATA_BEFORE_FINISH_FUNC_TC001(int isCl
     } else {
         ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     }
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -171,7 +171,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_NO_SUPPORTED_GROUP_FUNC_TC001()
     FRAME_AlertMsg *alertMsg = &parsedAlert.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_HANDSHAKE_FAILURE);
-exit:
+EXIT:
     FRAME_CleanNonHsRecord(REC_TYPE_ALERT, &parsedAlert);
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -222,7 +222,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RSAE_PSS_FUNC_TC001()
     ASSERT_TRUE(server != NULL);
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
     FRAME_FreeLink(client);
@@ -273,7 +273,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RSAE_PSS_FUNC_TC002()
 
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
     FRAME_FreeLink(client);
@@ -306,7 +306,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SIG_FUNC_TC001(int sig)
     FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
     FRAME_FreeLink(client);
@@ -347,7 +347,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RSAE_SUPPORT_BY_TLS12SERVER_FUNC_TC001()
     FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
     FRAME_FreeLink(client);
@@ -408,7 +408,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_SESSID_FROM_SH_FUNC_TC001()
     ALERT_GetInfo(client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &parsedSH);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -470,7 +470,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_SESSID_FROM_SH_FUNC_TC002()
     ALERT_GetInfo(client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &parsedSH);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -537,7 +537,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_CIPHERSUITE_FROM_SH_FUNC_TC001()
     FRAME_AlertMsg *alertMsg = &parsedAlert.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &parsedSH);
     FRAME_CleanNonHsRecord(REC_TYPE_ALERT, &parsedAlert);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -609,7 +609,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MISSING_SIG_ALG_FROM_CH_FUNC_TC001()
     FRAME_AlertMsg *alertMsg = &parsedAlert.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_MISSING_EXTENSION);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &parsedCH);
     FRAME_CleanNonHsRecord(REC_TYPE_ALERT, &parsedAlert);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -675,7 +675,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_CERT_VERIFY_FUNC_TC001(int isClie
     ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, isClient, HS_STATE_BUTT) != HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -710,7 +710,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMPTION_FUNC_TC001()
     server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
     HITLS_SetSession(client->ssl, clientSession);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -739,7 +739,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FUNC_TC001()
     HITLS_CFG_SetGroups(config, serverGroups, sizeof(serverGroups) / sizeof(uint16_t));
     FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -785,7 +785,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PREFER_PSS_TO_PKCS1_FUNC_TC001()
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->negotiatedInfo.signScheme, CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
     FRAME_FreeLink(client);
@@ -843,7 +843,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_WITH_INVALID_REQ_VAL_FUNC_TC001(
     ALERT_Info alertInfo = {0};
     ALERT_GetInfo(serverTlsCtx, &alertInfo);
     ASSERT_EQ(alertInfo.description, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -890,7 +890,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_WITH_INVALID_REQ_VAL_FUNC_TC002(
     ALERT_Info alertInfo = {0};
     ALERT_GetInfo(clientTlsCtx, &alertInfo);
     ASSERT_EQ(alertInfo.description, ALERT_ILLEGAL_PARAMETER);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -948,7 +948,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_WITH_NO_REPLY_FUNC_TC001()
     ALERT_Info alertInfo = {0};
     ALERT_GetInfo(server->ssl, &alertInfo);
     ASSERT_EQ(alertInfo.description, ALERT_BAD_RECORD_MAC);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1005,7 +1005,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_WITH_NO_REPLY_FUNC_TC002()
     ALERT_Info alertInfo = {0};
     ALERT_GetInfo(client->ssl, &alertInfo);
     ASSERT_EQ(alertInfo.description, ALERT_BAD_RECORD_MAC);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1064,7 +1064,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_READ_WRITE_AFTER_FATAL_ALEART_FUNC_TC001(v
     /* 4. After receiving the fatal alert, the server invokes the write interface. */
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(clientTlsCtx, src, sizeof(src), &writeLen), HITLS_CM_LINK_FATAL_ALERTED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1119,7 +1119,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_READ_WRITE_AFTER_FATAL_ALEART_FUNC_TC002(v
     /* 4. After receiving the fatal alert, the server invokes the write interface. */
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(serverTlsCtx, src, sizeof(src), &writeLen), HITLS_CM_LINK_FATAL_ALERTED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1153,7 +1153,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_BEFORE_FINISH_FUNC_TC001()
     RegisterWrapper(wrapper);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1188,7 +1188,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_BEFORE_FINISH_FUNC_TC002()
     RecWrapper wrapper = {TRY_RECV_FINISH, REC_TYPE_HANDSHAKE, isRecRead, NULL, Test_ModifyFinish};
     RegisterWrapper(wrapper);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1228,7 +1228,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_BEFORE_FINISH_FUNC_TC003()
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1277,7 +1277,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_BEFORE_FINISH_FUNC_TC004()
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1319,7 +1319,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_BEFORE_FINISH_FUNC_TC005()
     RegisterWrapper(wrapper);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1365,7 +1365,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_BEFORE_FINISH_FUNC_TC006()
     RecWrapper wrapper = {TRY_RECV_FINISH, REC_TYPE_HANDSHAKE, isRecRead, NULL, Test_ModifyFinish};
     RegisterWrapper(wrapper);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1437,7 +1437,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECVAPP_AFTER_CERT_FUNC_TC001(int isClient
     } else {
         ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     }
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1447,11 +1447,7 @@ exit:
 
 static int32_t SendCcs(HITLS_Ctx *ctx, uint8_t *data, uint8_t len)
 {
-    int32_t ret = REC_Write(ctx, REC_TYPE_CHANGE_CIPHER_SPEC, data, len);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    return HITLS_SUCCESS;
+    return REC_Write(ctx, REC_TYPE_CHANGE_CIPHER_SPEC, data, len);
 }
 
 /**
@@ -1501,7 +1497,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC001(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1573,7 +1569,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC002(int isClient
         ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
         ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
     }
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1649,7 +1645,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ZERO_APPMSG_FUNC_TC001(int isZeroClient)
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_SUCCESS);
     ASSERT_TRUE(readLen == clientDataSize && memcmp(clientData, readBuf, readLen) == 0);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1718,7 +1714,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_INCORRECT_LENGTH_CHMSG_FUNC_TC001(voi
     ALERT_GetInfo(server->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alert.description, ALERT_DECODE_ERROR);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1786,7 +1782,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLOSE_NOTIFY_FUNC_TC001(void)
     ASSERT_TRUE(serverframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
                 serverframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1855,7 +1851,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLOSE_NOTIFY_FUNC_TC003(void)
     ASSERT_TRUE(clientframeMsg.type == REC_TYPE_ALERT && clientframeMsg.bodyLen == ALERT_BODY_LEN);
     ASSERT_TRUE(clientframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
                 clientframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1911,7 +1907,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_WRITE_FUNC_TC001(void)
     uint8_t data[] = "Hello World";
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(client->ssl, data, sizeof(data), &writeLen), HITLS_CM_LINK_CLOSED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1969,7 +1965,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_CLOSE_NOTIFY_WRITE_FUNC_TC001(void)
 
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(server->ssl, data, sizeof(data), &writeLen), HITLS_CM_LINK_CLOSED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2063,7 +2059,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_RECV_CLOSE_NOTIFY_CLIENTHELLO_FUNC_
     ASSERT_TRUE(server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_CM_LINK_FATAL_ALERTED);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2126,7 +2122,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_HRR_FUNC_TC001(void)
     ASSERT_TRUE(client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_CM_LINK_CLOSED);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, TRY_RECV_CERTIFICATE), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2187,7 +2183,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_APP_FUNC_TC001(void)
     ASSERT_TRUE(client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2253,7 +2249,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC001(void)
     ALERT_GetInfo(client->ssl, &alert);
     ASSERT_NE(alert.level, ALERT_LEVEL_WARNING);
     ASSERT_NE(alert.description, ALERT_CLOSE_NOTIFY);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2319,7 +2315,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC002(void)
     ALERT_GetInfo(server->ssl, &alert);
     ASSERT_NE(alert.level, ALERT_LEVEL_WARNING);
     ASSERT_NE(alert.description, ALERT_CLOSE_NOTIFY);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2369,7 +2365,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC003(void)
 
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_CM_LINK_CLOSED);
     ASSERT_EQ(server->ssl->shutdownState, HITLS_RECEIVED_SHUTDOWN);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2419,7 +2415,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC004(void)
 
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_CM_LINK_CLOSED);
     ASSERT_EQ(client->ssl->shutdownState, HITLS_RECEIVED_SHUTDOWN);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2491,7 +2487,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC001()
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2552,7 +2548,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC002()
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
@@ -2612,7 +2608,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC003(void)
     FRAME_AlertMsg *alertMsg = &parsedAlert.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_TRUE(alertMsg->alertDescription.data == ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     FRAME_CleanNonHsRecord(REC_TYPE_ALERT, &parsedAlert);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2672,7 +2668,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC004(void)
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_TRUE(alertMsg->alertDescription.data == ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2731,7 +2727,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC005()
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
@@ -2788,7 +2784,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC006()
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2863,7 +2859,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC003(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2937,7 +2933,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC004(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -3020,7 +3016,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC001(void)
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_RECORD_OVERFLOW);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -3093,7 +3089,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC002(void)
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_RECORD_OVERFLOW);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -3153,7 +3149,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_DESCRIPTION_FUNC_TC001()
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -3209,7 +3205,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_DESCRIPTION_FUNC_TC002()
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_ALERTED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -3278,7 +3274,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ERROR_ENUM_FUNC_TC001()
     ASSERT_NE(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_NE(alert.description, ALERT_ILLEGAL_PARAMETER);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -3339,7 +3335,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC001(void)
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_DECODE_ERROR);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -3400,7 +3396,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC002(void)
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_DECODE_ERROR);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);

@@ -70,12 +70,7 @@ int WriteToFile(GenTestParams *genParam)
         return ret;
     }
     // Write execute_test.c to fpOut
-    ret = LoadHelper(genParam->fpHelper, genParam->fpOut);
-    if (ret != 0) {
-        return ret;
-    }
-
-    return ret;
+    return LoadHelper(genParam->fpHelper, genParam->fpOut);
 }
 
 int main(int argc, char **argv)
@@ -114,54 +109,54 @@ int main(int argc, char **argv)
     if (genParam.fpOut == NULL) {
         Print("Error generating c file\n");
         ret = 1;
-        goto end_fpIn;
+        goto END_FP_IN;
     }
 
     genParam.fpData = OpenFile(argv[1], "r", "%s.data");
     if (genParam.fpData == NULL) {
         Print("An error occurred while opening the data file.\n");
         ret = 1;
-        goto end_fpOut;
+        goto END_FP_OUT;
     }
 
     genParam.fpDatax = OpenFile(genParam.suiteName, "w", "%s.datax");
     if (genParam.fpDatax == NULL) {
         Print("Error generating datax file\n");
         ret = 1;
-        goto end_fpData;
+        goto END_FP_DATA;
     }
 
     genParam.fpBase = fopen(EXECUTE_BASE_FILE, "r");
     if (genParam.fpBase == NULL) {
         Print("An error occurred when opening the base file.\n");
         ret = 1;
-        goto end_fpDatax;
+        goto END_FP_DATAX;
     }
 
     genParam.fpHelper = fopen(EXECUTE_TEST_FILE, "r");
     if (genParam.fpHelper == NULL) {
         Print("Error opening secondary file\n");
         ret = 1;
-        goto end_fpBase;
+        goto END_FP_BASE;
     }
 
     ret = WriteToFile(&genParam);
 
     (void)fclose(genParam.fpHelper);
 
-end_fpBase:
+END_FP_BASE:
     (void)fclose(genParam.fpBase);
 
-end_fpDatax:
+END_FP_DATAX:
     (void)fclose(genParam.fpDatax);
 
-end_fpData:
+END_FP_DATA:
     (void)fclose(genParam.fpData);
 
-end_fpOut:
+END_FP_OUT:
     (void)fclose(genParam.fpOut);
 
-end_fpIn:
+END_FP_IN:
     (void)fclose(genParam.fpIn);
 #ifndef PRINT_TO_TERMINAL
     (void)fclose(fp);
