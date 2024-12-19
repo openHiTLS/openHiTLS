@@ -39,23 +39,23 @@ static int32_t RandGenerate(BN_BigNum *r, uint32_t bits)
     ret = CRYPT_Rand(buf, bufSize);
     if (ret == CRYPT_NO_REGIST_RAND) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if (ret != CRYPT_SUCCESS) {
         ret = CRYPT_BN_RAND_GEN_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_BN_RAND_GEN_FAIL);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Bin2Bn(r, buf, bufSize);
     BSL_SAL_CleanseData((void *)buf, bufSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     mask = (BN_UINT)(-1) >> ((BN_UINT_BITS - bits % BN_UINT_BITS) % BN_UINT_BITS);
     r->data[room - 1] &= mask;
     r->size = BinFixSize(r->data, room);
-ERR:
+EXIT:
     BSL_SAL_FREE(buf);
     return ret;
 }

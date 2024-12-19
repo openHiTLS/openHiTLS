@@ -180,11 +180,7 @@ int32_t CRYPT_HKDF(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const EA
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_HKDF_Expand(macMeth, macId, mdMeth, prk, prkLen, info, infoLen, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_SUCCESS;
+    return CRYPT_HKDF_Expand(macMeth, macId, mdMeth, prk, prkLen, info, infoLen, out, len);
 }
 
 CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void)

@@ -242,7 +242,7 @@ void Test_MisClientHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     ASSERT_NE(parseLen, *len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }

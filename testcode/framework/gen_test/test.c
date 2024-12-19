@@ -87,14 +87,14 @@ int ConvertHex(const char *str, Hex *output)
     // Every 2 bytes in a group
     for (uint32_t i = 0; i < 2 * len; i += 2) {
         if ((IsValidHexChar(str[i]) == 1) || (IsValidHexChar(str[i + 1]) == 1)) {
-            goto hex_error;
+            goto ERR;
         }
         // hex to int formulas: (Hex % 32 + 9) % 25 = int, hex
         output->x[i / 2] = (str[i] % 32 + 9) % 25 * 16 + (str[i + 1] % 32 + 9) % 25;
     }
     return 0;
 
-hex_error:
+ERR:
     free(output->x);
     output->len = 0;
     return 1;

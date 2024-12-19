@@ -226,10 +226,9 @@ int32_t ParseClientKeyExchange(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, 
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15644, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "parse client key exchange msg fail.", 0, 0, 0, 0);
         CleanClientKeyExchange(msg);
-        return ret;
     }
 
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 void CleanClientKeyExchange(ClientKeyExchangeMsg *msg)

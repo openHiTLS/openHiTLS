@@ -88,7 +88,7 @@ void SDV_CRYPTO_SM4_INIT_API_TC001(int id, Hex *key, Hex *iv)
         ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, BLOCKSIZE + 1, true);
         ASSERT_TRUE(ret != CRYPT_SUCCESS);
     }
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -151,7 +151,7 @@ void SDV_CRYPTO_SM4_INIT_API_TC002(Hex *key, Hex *iv, int enc)
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -193,7 +193,7 @@ void SDV_CRYPTO_SM4_INIT_API_TC003(int id, Hex *key, Hex *iv)
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, BLOCKSIZE + 1, iv->x, iv->len, true);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -220,7 +220,7 @@ void SDV_CRYPTO_SM4_DEINIT_API_TC001(int id)
 
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherDeinit(NULL);
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -266,7 +266,7 @@ void SDV_CRYPTO_SM4_REINIT_API_TC001(int id, Hex *key, Hex *iv)
     } else {
         ASSERT_TRUE(ret == CRYPT_MODES_IVLEN_ERROR);
     }
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -333,7 +333,7 @@ void SDV_CRYPTO_SM4_UPDATE_API_TC001(int id, Hex *key, Hex *iv, Hex *in, int enc
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(len == BLOCKSIZE);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -406,7 +406,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC001(Hex *key, Hex *iv, Hex *msg)
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, iv2, len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(iv2, iv1, BLOCKSIZE) != 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -461,7 +461,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC003(Hex *key, Hex *iv)
         CRYPT_MODE_ERR_INPUT_LEN);
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_MAX, iv->x, iv->len), CRYPT_MODES_CTRL_TYPE_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -519,7 +519,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC001(int id, Hex *key, Hex *iv, int padding, i
     decLen = MAXSIZE - totalLen;
     ret = CRYPT_EAL_CipherFinal(ctxDec, result + totalLen, &decLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
@@ -586,7 +586,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC002(int algId, Hex *key, Hex *iv, int inLen, 
     ASSERT_EQ(CRYPT_EAL_CipherFinal(ctxDec, result + len, &leftLen), CRYPT_SUCCESS);
 
     ASSERT_TRUE(memcmp(input, result, inLen) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
@@ -621,7 +621,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC003(int isProvider, int id, Hex *key, Hex *pl
     ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plainText->x, plainText->len, out, &len), CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, cipherText->x, len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -658,7 +658,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC004(int isProvider, int id, Hex *key, Hex *pl
     ret = CRYPT_EAL_CipherUpdate(ctx, cipherText->x, cipherText->len, out, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, plainText->x, len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -734,7 +734,7 @@ void SDV_CRYPTO_SM4_MULTI_UPDATE_TC001(int algId, Hex *key, Hex *iv, Hex *in, in
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(in->x, result, in->len) == 0);
     ASSERT_TRUE(memcmp(in->x, result + in->len, in->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
@@ -823,7 +823,7 @@ void SDV_CRYPTO_SM4_MULTI_UPDATE_TC002(int algId, Hex *key, Hex *iv, Hex *in, in
 
     ASSERT_TRUE(memcmp(in->x, result, BLOCKSIZE - 1) == 0);
     ASSERT_TRUE(memcmp(in->x, result + BLOCKSIZE - 1, BLOCKSIZE) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
@@ -852,7 +852,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC004(int id, Hex *key, Hex *iv)
 
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, niv, iv->len);
     ASSERT_TRUE(memcmp(niv, iv->x, iv->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -880,7 +880,7 @@ void SDV_CRYPTO_SM4_CTRL_API_TC005(int id, Hex *key, Hex *iv)
 
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, niv, iv->len);
     ASSERT_TRUE(memcmp(niv, iv->x, iv->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -923,7 +923,7 @@ void SDV_CRYPTO_SM4_REINIT_API_TC002(int algId, Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherReinit(ctx, iv->x, BLOCKSIZE + 1);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -983,7 +983,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(int isProvider, Hex *key, Hex *in1, Hex *
     ret = CRYPT_EAL_CipherUpdate(ctx, in1->x, in1->len, outTmp, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out1->x, out1->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1017,7 +1017,7 @@ void SM4_MultiThreadTest(void *arg)
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, pTestVector->out, pTestVector->outLen) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -1062,7 +1062,7 @@ void SDV_CRYPTO_SM4_MULTI_THREAD_TC001(int algId, Hex *key, Hex *in, Hex *out, H
     for (uint32_t i = 0; i < THREAD_NUM; i++) {
         pthread_join(thrd[i], NULL);
     }
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -1100,7 +1100,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC006(int id, Hex *key, Hex *iv, Hex *msg, int 
     outlen = MAX_OUTPUT;
     ret = CRYPT_EAL_CipherFinal(ctx, out, &outlen);
     ASSERT_TRUE(ret != CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1140,7 +1140,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC007(int id, Hex *key, Hex *iv, int enc)
         ASSERT_TRUE(ret == CRYPT_SUCCESS);
     }
     ASSERT_TRUE(outlen == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1197,7 +1197,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
     ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1254,7 +1254,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex 
     ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1329,7 +1329,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC010(int algId, Hex *key, Hex *iv, int inLen, 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     ASSERT_TRUE(memcmp(input, result, inLen) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
@@ -1407,7 +1407,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC011(int algId, Hex *key, Hex *iv, int inLen, 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     ASSERT_TRUE(memcmp(input, result, inLen) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
@@ -1452,7 +1452,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC012(int algId, Hex *key, Hex *iv, Hex *in, He
         ASSERT_TRUE(ret == CRYPT_SUCCESS);
     }
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1511,7 +1511,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC013(Hex *key, Hex *iv, Hex *aad, Hex *pt, Hex
     }
     ASSERT_COMPARE("Compare Tag", outTag, tagLen, tag->x, tag->len);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     free(out);
     free(outTag);
@@ -1568,7 +1568,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC014(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(memcmp(out->x, outTmp, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
 }
@@ -1621,7 +1621,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC015(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(memcmp(out->x, result, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctxDec);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }

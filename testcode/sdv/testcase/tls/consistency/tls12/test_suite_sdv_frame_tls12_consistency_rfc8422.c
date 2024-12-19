@@ -69,7 +69,7 @@ void UT_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_LOSE_POINT_FUNC_TC001(void)
     // the client can receive the server hello done message.
     ASSERT_TRUE(
         FRAME_CreateConnection(testInfo.client, testInfo.server, true, TRY_RECV_SERVER_HELLO_DONE) == HITLS_SUCCESS);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);

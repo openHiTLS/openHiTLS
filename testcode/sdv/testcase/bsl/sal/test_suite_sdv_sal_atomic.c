@@ -100,7 +100,7 @@ void SDV_BSL_SAL_ATOMIC_ADD_TC001(void)
     }
     ASSERT_EQ(g_threadStartNum, 0);
 
-exit:
+EXIT:
     g_threadStartNum = 0;
     BSL_SAL_ThreadLockFree(g_lock);
     return;

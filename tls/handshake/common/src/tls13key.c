@@ -462,7 +462,6 @@ int32_t HS_TLS13CalcServerFinishProcessSecret(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16909, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveApplicationTrafficSecret fail", 0, 0, 0, 0);
-        return ret;
     }
     return ret;
 }

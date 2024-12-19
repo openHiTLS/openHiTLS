@@ -155,7 +155,7 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
     ASSERT_TRUE(clientRes != NULL);
     HLT_RpcTlsConnect(remoteProcess, clientRes->sslId);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -265,7 +265,7 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_EQ((ALERT_Description)HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId),
         testPara->expectDescription);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -377,7 +377,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_TRUE(((HITLS_Ctx *)(clientRes->ssl))->hsCtx != NULL);
     ASSERT_EQ(((HITLS_Ctx *)(clientRes->ssl))->hsCtx->state, testPara->expectHsState);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -404,7 +404,7 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
     HLT_SetPrivKeyPath(ctxConfig, (char *)privKeyPath);
     return 0;
-exit:
+EXIT:
     return -1;
 }
 
@@ -429,7 +429,7 @@ static int SetCertPath1(HLT_Ctx_Config *ctxConfig, const char *certStr, const ch
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
     HLT_SetPrivKeyPath(ctxConfig, (char *)privKeyPath);
     return 0;
-exit:
+EXIT:
     return -1;
 }
 
@@ -455,7 +455,7 @@ static void MalformedServerHelloMsgCallback001(void *msg, void *userData)
 
     GetDefaultPointFormats(&serverHello->pointFormats);
     serverHello->pointFormats.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -500,7 +500,7 @@ static void MalformedServerHelloMsgCallback002(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ServerHelloMsg *serverHello = &frameMsg->body.hsMsg.body.serverHello;
     serverHello->extendedMasterSecret.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -544,7 +544,7 @@ static void MalformedServerHelloMsgCallback003(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ServerHelloMsg *serverHello = &frameMsg->body.hsMsg.body.serverHello;
     serverHello->secRenego.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -589,7 +589,7 @@ static void MalformedServerHelloMsgCallback004(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ServerHelloMsg *serverHello = &frameMsg->body.hsMsg.body.serverHello;
     serverHello->sessionTicket.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -634,7 +634,7 @@ static void MalformedServerHelloMsgCallback005(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ServerHelloMsg *serverHello = &frameMsg->body.hsMsg.body.serverHello;
     serverHello->serverName.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -679,7 +679,7 @@ static void MalformedServerHelloMsgCallback006(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ServerHelloMsg *serverHello = &frameMsg->body.hsMsg.body.serverHello;
     serverHello->alpn.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -724,7 +724,7 @@ static void MalformedClientHelloMsgCallback002(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->pointFormats.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -767,7 +767,7 @@ static void MalformedClientHelloMsgCallback003(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->signatureAlgorithms.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -810,7 +810,7 @@ static void MalformedClientHelloMsgCallback004(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->supportedGroups.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -854,7 +854,7 @@ static void MalformedClientHelloMsgCallback005(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->extendedMasterSecret.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -898,7 +898,7 @@ static void MalformedClientHelloMsgCallback006(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->sessionTicket.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -949,7 +949,7 @@ static void MalformedClientHelloMsgCallback007(void *msg, void *userData)
     FRAME_ModifyMsgInteger(HS_EX_TYPE_SERVER_NAME, &clientHello->serverName.exType);
     uint8_t uu[13] = {0x00, 0x00, 0x09, 0x75, 0x61, 0x77, 0x65, 0x69, 0x2e, 0x63, 0x6F, 0x6d};
     FRAME_ModifyMsgArray8(uu, sizeof(uu)-1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
-exit:
+EXIT:
     return;
 }
 
@@ -995,7 +995,7 @@ static void MalformedClientHelloMsgCallback008(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->alpn.exState = DUPLICATE_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -1144,7 +1144,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
 
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1257,7 +1257,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
 
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1369,7 +1369,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
 
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1481,7 +1481,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
 
         cnt++;
     } while (cnt < 3);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1534,7 +1534,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC001(int version, 
 
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1594,7 +1594,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC003(int version, 
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, sizeof(readBuf), &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1613,7 +1613,7 @@ void MalformedClientHellocallback001(void *msg, void *userData)
     ASSERT_TRUE(FRAME_ModifyMsgArray16(suite, sizeof(suite)/sizeof(uint16_t),
     &(clientHello->cipherSuites), &(clientHello->cipherSuitesSize)) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     return;
 }
 
@@ -1686,7 +1686,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC002(int version, 
     ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_REC_BAD_RECORD_MAC);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1703,7 +1703,7 @@ void MalformedServerHellocallback001(void *msg, void *userData)
     /* Determine algorithm suite */
     ASSERT_EQ(serverHello->cipherSuite.data, 0x6d);
 
-exit:
+EXIT:
     return;
 }
 
@@ -1776,7 +1776,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC004(int version, 
     ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), HITLS_SUCCESS);
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1799,7 +1799,7 @@ static void MalformedClientHelloMsgCallback009(void *msg, void *userData)
     FRAME_ModifyMsgArray8(uu, sizeof(uu)-1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data--;
     clientHello->serverName.exLen.data--;
-exit:
+EXIT:
     return;
 }
 
@@ -1853,7 +1853,7 @@ static void MalformedClientHelloMsgCallback010(void *msg, void *userData)
     FRAME_ModifyMsgArray8(uu, sizeof(uu)-1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data++;
     clientHello->serverName.exLen.data++;
-exit:
+EXIT:
     return;
 }
 
@@ -1907,7 +1907,7 @@ static void MalformedClientHelloMsgCallback011(void *msg, void *userData)
     FRAME_ModifyMsgArray8(uu, sizeof(uu)-1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data = 0;
     clientHello->serverName.exDataLen.data = 0;
-exit:
+EXIT:
     return;
 }
 
@@ -1959,7 +1959,7 @@ static void MalformedClientHelloMsgCallback012(void *msg, void *userData)
     clientHello->serverName.exData.state = MISSING_FIELD;
     FRAME_ModifyMsgInteger(HS_EX_TYPE_SERVER_NAME, &clientHello->serverName.exType);
     clientHello->serverName.exLen.data = 0;
-exit:
+EXIT:
     return;
 }
 
@@ -2043,7 +2043,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHERSUITE_NOT_SUITABLE_CERT_TC003(int v
 
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -2178,7 +2178,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC002(int version,
         ASSERT_TRUE(HITLS_SESS_IsResumable(session) == true);
         cunt++;
     } while (cunt <= 2);
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }

@@ -51,7 +51,7 @@ void Sha3MultiThreadTest(void *arg)
         ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->hash, threadParameter->hashLen);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 
@@ -85,7 +85,7 @@ void SDV_CRYPT_EAL_SHA3_API_TC001(void)
 
     // The length of the SHAKE256 digest is 0.
     ASSERT_EQ(CRYPT_EAL_MdGetDigestSize(CRYPT_MD_SHAKE256), 0);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -145,7 +145,7 @@ void SDV_CRYPT_EAL_SHA3_API_TC002(int algId)
     ASSERT_EQ(CRYPT_EAL_MdGetId(sha3Ctx), algId);
     ASSERT_EQ(CRYPT_EAL_MdDeinit(sha3Ctx), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(sha3Ctx);
 }
 /* END_CASE */
@@ -206,7 +206,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC001(int algId)
 
     ASSERT_EQ(memcmp(out1, out2, outLen), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx1);
     CRYPT_EAL_MdFreeCtx(ctx2);
 }
@@ -242,7 +242,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC002(int algId, Hex *data, Hex *hash)
         pthread_join(thrd[i], NULL);
     }
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -278,7 +278,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC003(int algId, Hex *in, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -307,7 +307,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC004(int algId, Hex *in, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -370,7 +370,7 @@ void SDV_CRYPTO_SHA3_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
     CRYPT_EAL_MdFreeCtx(dupCtx);
@@ -398,7 +398,7 @@ void SDV_CRYPTO_SHA3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */

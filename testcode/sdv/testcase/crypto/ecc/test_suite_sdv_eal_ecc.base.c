@@ -105,7 +105,7 @@ static int32_t EccPointToBuffer(Hex *pubKeyX, Hex *pubKeyY, CRYPT_PKEY_PointForm
     }
     return SUCCESS;
 
-exit:
+EXIT:
     return -1; /* -1 indicates an exception. */
 }
 
@@ -234,7 +234,7 @@ static int Ecc_GenKey(
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return SUCCESS;
-exit:
+EXIT:
     free(ecdsaPubKey.key.eccPub.data);
     free(ecdsaPrvKey.key.eccPrv.data);
     STUB_Reset(&tmpRpInfo);
@@ -254,7 +254,7 @@ int EAL_PkeyNewCtx_Api_TC001(int algId)
 
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return ERROR;
 }
@@ -269,7 +269,7 @@ int EAL_PkeyFreeCtx_Api_TC001(int algId)
     pkeyCtx = NULL;
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return ERROR;
 }
@@ -293,7 +293,7 @@ int EAL_PkeySetParaById_Api_TC001(int algId)
     ASSERT_TRUE_AND_LOG(
         "CRYPT_ECC_BRAINPOOLP512R1", CRYPT_EAL_PkeySetParaById(pkeyCtx, CRYPT_ECC_BRAINPOOLP512R1) == CRYPT_SUCCESS);
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return ret;
 }
@@ -313,7 +313,7 @@ int EAL_PkeyCtrl_Api_TC001(int algId, int type, int expect)
 
     ret = SUCCESS;
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return ret;
 }
@@ -353,7 +353,7 @@ int EAL_PkeyCtrl_Api_TC002(int algId)
 
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     return ERROR;
 }
@@ -409,7 +409,7 @@ int EAL_PkeyCtrl_Api_TC003(int algId, int eccId, Hex *pubKeyX, Hex *pubKeyY)
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();
     return SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();
     return ERROR;
@@ -447,7 +447,7 @@ int EAL_PkeyGetPrv_Api_TC001(int algId, Hex *prvKey)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -484,7 +484,7 @@ int EAL_PkeyGetPrv_Provider_Api_TC001(int algId, Hex *prvKey)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -523,7 +523,7 @@ int EAL_PkeyGetPub_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub2), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -562,7 +562,7 @@ int EAL_PkeyGetPub_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub2), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -597,7 +597,7 @@ int EAL_PkeySetPrv_Api_TC001(int algId, Hex *prvKey, Hex *errorPrvKey)
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv), CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 
     return ret;
@@ -634,7 +634,7 @@ int EAL_PkeySetPrv_Api_TC002(int algId, Hex *prvKey, Hex *pubKeyX, Hex *pubKeyY)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pub2), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -667,7 +667,7 @@ int EAL_PkeySetPub_Api_TC001(int algId, Hex *pubKeyVector)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 
     return ret;
@@ -703,7 +703,7 @@ int EAL_PkeySetPub_Api_TC002(int algId, Hex *prvKey, Hex *pubKey)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv2), CRYPT_SUCCESS);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }
@@ -753,7 +753,7 @@ int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey
 
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return SUCCESS;
-exit:
+EXIT:
     if (pub.key.eccPub.data != NULL) {
         free(pub.key.eccPub.data);
     }
@@ -779,7 +779,7 @@ int EAL_PkeyGetParaId_Api_TC001(int algId, int paraId)
     ASSERT_TRUE(CRYPT_EAL_PkeyGetParaId(pkey) == (CRYPT_PKEY_ParaId)paraId);
 
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return ret;
 }
@@ -814,7 +814,7 @@ int EAL_PkeyCmp_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
@@ -851,7 +851,7 @@ int EAL_PkeyCmp_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
@@ -931,7 +931,7 @@ int EAL_PkeyGetPara_Func_TC001(int algId, Hex *p, Hex *a, Hex *b, Hex *x, Hex *y
     ASSERT_TRUE(para.para.eccPara.hLen == h->len);
     ASSERT_TRUE(memcmp(hData, h->x, h->len) == 0);
     ret = SUCCESS;
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     return ret;
 }

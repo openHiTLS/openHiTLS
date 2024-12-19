@@ -66,25 +66,25 @@ int main(void)
     ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
     if (ctx == NULL) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_MdInit(ctx);
     if (ret != 0) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_MdUpdate(ctx, data, sizeof(data));
     if (ret != 0) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_MdFinal(ctx, digest, &digestLen);
     if (ret != 0) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     printf("hash result: ");
     for (uint32_t i = 0; i < digestLen; i++) {
@@ -94,11 +94,11 @@ int main(void)
     // result compare
     if (digestLen != sizeof(expResult) || memcmp(expResult, digest, digestLen) != 0) {
         printf("hash result comparison failed\n");
-        goto exit;
+        goto EXIT;
     }
     printf("pass \n");
 
-exit:
+EXIT:
     BSL_ERR_DeInit();
     CRYPT_EAL_MdFreeCtx(ctx);
     return ret;

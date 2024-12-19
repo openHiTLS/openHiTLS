@@ -563,11 +563,11 @@ static int IncludeBase(char *line, uint32_t len, FILE *outFile, const char *dir)
     while (ReadLine(fpBase, buf, MAX_FUNCTION_LINE_LEN, 0, 0) == 0) {
         ret = fprintf(outFile, "%s\n", buf);
         if (ret < 0) {
-            goto include_end;
+            goto EXIT;
         }
     }
 
-include_end:
+EXIT:
     if (fclose(fpBase) != 0) {
         Print("base file close failed\n");
     }
@@ -576,9 +576,7 @@ include_end:
 
 int WriteHeader(FILE *outFile)
 {
-    int ret;
-    ret = fprintf(outFile, "#include \"helper.h\"\n#include \"test.h\"\n#include <time.h>\n");
-    if (ret < 0) {
+    if (fprintf(outFile, "#include \"helper.h\"\n#include \"test.h\"\n#include <time.h>\n") < 0) {
         return 1;
     }
     return 0;
@@ -1005,20 +1003,20 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
         }
         // len of ".log" is 4
         if (strlen(dir->d_name) <= 4 || strlen(dir->d_name) > MAX_FILE_PATH_LEN - 1) {
-            goto FINISH;
+            goto EXIT;
         }
         fpLog = OpenFile(dir->d_name, "r", LOG_FILE_FORMAT);
         if (fpLog == NULL) {
-            goto FINISH;
+            goto EXIT;
         }
         if (suiteCount >= resultLen) {
             Print("Reached maximum suite count\n");
-            goto FINISH;
+            goto EXIT;
         }
 
         if (strcpy_s(result[suiteCount].name, MAX_TEST_FUNCTION_NAME - 1, dir->d_name) != EOK) {
             Print("Dir's Name is too long\n");
-            goto FINISH;
+            goto EXIT;
         }
         // len of ".log" is 4
         result[suiteCount].name[strlen(dir->d_name) - 4] = '\0';
@@ -1039,11 +1037,11 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
             }
             if (buf[cur] == '\0') {
                 Print("Read log file %s failed\n", dir->d_name);
-                goto FINISH;
+                goto EXIT;
             }
             if (strncpy_s(testCaseName, sizeof(testCaseName) - 1, buf, cur) != EOK) {
                 Print("TestCaseName is too long\n");
-                goto FINISH;
+                goto EXIT;
             }
             testCaseName[cur] = '\0';
             while (buf[cur] == '.') {
@@ -1076,7 +1074,7 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
     *totalSuiteCount = suiteCount;
     err = 0;
 
-FINISH:
+EXIT:
     FileClose(fpLog);
     FileClose(fpAllLog);
     return err;
@@ -1153,18 +1151,17 @@ int GenResult(void)
     ret = ReadAllLogFile(logDir, &testSuiteCount, fpTmp, result, sizeof(result));
     if (ret != 0) {
         Print("read log failed\n");
-        goto END;
+        goto EXIT;
     }
 
     rewind(fpTmp);
     ret = GenResultFile(fpTmp, fpResult, result, testSuiteCount);
     if (ret != 0) {
         Print("gen result failed\n");
-        goto END;
+        goto EXIT;
     }
-    ret = 0;
 
-END:
+EXIT:
     (void)closedir(logDir);
     (void)fclose(fpTmp);
     (void)fclose(fpResult);

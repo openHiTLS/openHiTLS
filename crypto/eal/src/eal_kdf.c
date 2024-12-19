@@ -194,9 +194,8 @@ int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, BSL_Param *param)
     ret = ctx->method->setParam(ctx->data, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen)

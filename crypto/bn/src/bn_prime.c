@@ -319,7 +319,6 @@ static uint32_t GetP(const BN_BigNum *bn)
 // and CRYPT_BN_NOR_CHECK_PRIME is returned for a non-prime number. Other error codes are returned.
 static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
 {
-    int32_t ret = CRYPT_SUCCESS;
     uint32_t p;
     if (PrimeLimbCheck(bn) == CRYPT_SUCCESS) { /* 2 and 3 directly determine that the number is a prime number. */
         return CRYPT_SUCCESS;
@@ -328,7 +327,7 @@ static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_CHECK_PRIME);
         return CRYPT_BN_NOR_CHECK_PRIME;
     }
-    ret = OptimizerStart(opt);
+    int32_t ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -341,12 +340,12 @@ static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
     ret = BnCheck(bnSubOne, bnSubThree, divisor, rnd, mont);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BnSubGet(bnSubOne, bnSubThree, bn);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // 1. Extract the power p of factor 2 in bnSubOne.
     p = GetP(bnSubOne);
@@ -354,10 +353,10 @@ static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
     ret = BN_Rshift(divisor, bnSubOne, p);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = MillerRabinCheckCore(bn, mont, rnd, divisor, bnSubOne, bnSubThree, p, opt);
-ERR:
+EXIT:
     BN_MontDestroy(mont);
     OptimizerEnd(opt);
     return ret;
@@ -387,8 +386,7 @@ int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = MillerRabinPrimeVerify(bn, opt);
-    return ret;
+    return MillerRabinPrimeVerify(bn, opt);
 }
 
 static int32_t GenPrimeLimb(BN_BigNum *bn, uint32_t bits, bool half, BN_Optimizer *opt)

@@ -56,7 +56,6 @@ static int32_t BlindUpdate(RSA_Blind *b, BN_BigNum *n, BN_Optimizer *opt)
     ret = BN_ModMul(b->rInv, b->rInv, b->rInv, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
     return ret;
 }
@@ -73,7 +72,6 @@ int32_t RSA_BlindCovert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
     ret = BN_ModMul(data, data, b->r, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -85,7 +83,6 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
     ret = BN_ModMul(data, data, b->rInv, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
     return ret;
 }
@@ -133,31 +130,31 @@ int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimi
     ret = RSA_CreateBlind(b, BN_Bits(n));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        return ret;
     }
 
     // b->r = random_integer_uniform(1, n)
     ret = BN_RandRange(b->r, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto ERR;
     }
 
     // b->rInv = inverse_mod(r, n)
     ret = BN_ModInv(b->rInv, b->r, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto ERR;
     }
 
     // b->r = RSAVP1(pk, r)
     ret = BN_ModExp(b->r, b->r, e, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto ERR;
     }
     return ret;
-END:
+ERR:
     BN_Destroy(b->r);
     BN_Destroy(b->rInv);
     b->r = NULL;
