@@ -427,9 +427,8 @@ int32_t CRYPT_EAL_CipherSetPadding(CRYPT_EAL_CipherCtx *ctx, CRYPT_PaddingType t
     int32_t ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_SET_PADDING, (void *)&type, sizeof(type));
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_EAL_CipherGetPadding(CRYPT_EAL_CipherCtx *ctx)

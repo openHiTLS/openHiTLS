@@ -79,7 +79,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_ERRO_COMPRESSION_FRAGMENT_TC001(void)
     ASSERT_TRUE(HLT_SetFrameHandle(&frameHandle) == HITLS_SUCCESS);
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret != 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -147,7 +147,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_ERRO_COMPRESSION_FRAGMENT_TC002(void)
 
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -201,7 +201,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CERTFICATE_VERITY_FAIL_TC008(void)
     ASSERT_TRUE(clientRes != NULL);
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret != 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -209,14 +209,12 @@ exit:
 
 int32_t SendKeyupdate_Err(HITLS_Ctx *ctx)
 {
-    int32_t ret;
     /** Initialize the message buffer. */
     uint8_t buf[5] = {KEY_UPDATE, 0x00, 0x00, 0x01, 0x01};
     size_t len = 5;
 
     /** Write records. */
-    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
-    return ret;
+    return REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
 }
 /* tls12 receive keyupdate message during transporting*/
 /* BEGIN_CASE */
@@ -273,7 +271,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_KEYUPDATE_TC001(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -281,14 +279,12 @@ exit:
 
 int32_t SendNEW_SESSION_TICKET_Err(HITLS_Ctx *ctx)
 {
-    int32_t ret;
     /** Initialize the message buffer. */
     uint8_t buf[32] = {NEW_SESSION_TICKET,0,0,0x1c,0x20,0xc1,};
     size_t len = 32;
 
     /** Write records. */
-    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
-    return ret;
+    return REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
 }
 /* tls12 receive NST message during transporting*/
 /* BEGIN_CASE */
@@ -345,7 +341,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_NST_TC001(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -405,7 +401,7 @@ void SDV_TLS_TLS12_StateTrans_FUNC_TC001(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_RECV);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -418,7 +414,7 @@ static void MalformedCipherSuiteLenCallback_01(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuitesSize.data = 1000;
     clientHello->cipherSuitesSize.state = ASSIGNED_FIELD;
-exit:
+EXIT:
     return;
 }
 void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *testPara)
@@ -460,7 +456,7 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
     ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertInfo.description, testPara->expectDescription);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;

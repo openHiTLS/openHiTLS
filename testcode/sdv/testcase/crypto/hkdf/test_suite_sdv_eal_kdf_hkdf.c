@@ -116,7 +116,7 @@ void SDV_CRYPT_EAL_KDF_HKDF_API_TC001(int algId)
     ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
-exit:
+EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */
@@ -160,7 +160,7 @@ void SDV_CRYPT_EAL_KDF_HKDF_FUN_TC001(int algId, Hex *key, Hex *salt, Hex *info,
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
-exit:
+EXIT:
     if (out != NULL) {
         free(out);
     }
@@ -204,7 +204,7 @@ void SDV_CRYPTO_HKDF_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *salt,
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
-exit:
+EXIT:
     if (out != NULL) {
         free(out);
     }

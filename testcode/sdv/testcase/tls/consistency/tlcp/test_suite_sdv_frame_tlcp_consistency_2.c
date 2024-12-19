@@ -59,7 +59,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC003()
     uint8_t isReused = 0;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, 0);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -122,7 +122,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC004()
     uint8_t isReused = 0;
     ASSERT_EQ(HITLS_IsSessionReused(clientResume->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, 1);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(clientResume);
     FRAME_FreeLink(serverResume);
@@ -188,7 +188,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC005()
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, 1);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -234,7 +234,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC006()
     uint8_t isReused = 0;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, 0);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -277,7 +277,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC007()
     uint8_t isReused = 0;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, 0);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

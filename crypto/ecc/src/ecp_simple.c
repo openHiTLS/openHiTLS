@@ -249,14 +249,22 @@ ERR:
 }
 
 // consttime
-static int32_t ECP_PointCopyWithMask(ECC_Point *r, const ECC_Point *a, const ECC_Point *b,
-    BN_UINT mask)
+static int32_t ECP_PointCopyWithMask(ECC_Point *r, const ECC_Point *a, const ECC_Point *b, BN_UINT mask)
 {
-    int32_t ret;
-    GOTO_ERR_IF(BN_CopyWithMask(r->x, a->x, b->x, mask), ret);
-    GOTO_ERR_IF(BN_CopyWithMask(r->y, a->y, b->y, mask), ret);
-    GOTO_ERR_IF(BN_CopyWithMask(r->z, a->z, b->z, mask), ret);
-ERR:
+    int32_t ret = BN_CopyWithMask(r->x, a->x, b->x, mask);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = BN_CopyWithMask(r->y, a->y, b->y, mask);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = BN_CopyWithMask(r->z, a->z, b->z, mask);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 
@@ -695,7 +703,7 @@ int32_t ECP_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *
     GOTO_ERR_IF(ECP_PointJacMulZ(para, bz, a->z, opt), ret);
     if ((BN_Cmp(az->x, bz->x) != 0) || (BN_Cmp(az->y, bz->y) != 0)) {
         ret = CRYPT_ECC_POINT_NOT_EQUAL;
-        goto ERR;
+        BSL_ERR_PUSH_ERROR(ret);
     }
 ERR:
     ECC_FreePoint(az);
@@ -723,10 +731,15 @@ int32_t ECP_PointInvertAtAffine(const ECC_Para *para, ECC_Point *r, const ECC_Po
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_NOT_AFFINE);
         return CRYPT_ECC_POINT_NOT_AFFINE;
     }
-    int32_t ret;
-    GOTO_ERR_IF(ECC_CopyPoint(r, a), ret);
-    GOTO_ERR_IF(BN_Sub(r->y, para->p, r->y), ret);
-ERR:
+    int32_t ret = ECC_CopyPoint(r, a);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = BN_Sub(r->y, para->p, r->y);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 
@@ -780,14 +793,15 @@ static int32_t ECP_ParaPrecompute(ECC_Para *para)
         // The pre-computation table already exists.
         return CRYPT_SUCCESS;
     }
-    int32_t ret;
     ECC_Point *pt = ECC_GetGFromPara(para);
     if (pt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    GOTO_ERR_IF(ECP_PointPreCompute(para, para->tableG, pt), ret);
-ERR:
+    int32_t ret = ECP_PointPreCompute(para, para->tableG, pt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     ECC_FreePoint(pt);
     return ret;
 }
@@ -922,25 +936,36 @@ static int32_t GetFirstData(const ECC_Para *para, ECC_Point *t, MulAddOffData *o
     if (offData->codeK1->baseBits == offData->codeK2->baseBits) {
         int8_t offset1 = NUMTOOFFSET(offData->codeK1->num[offData->offsetK1]);
         int8_t offset2 = NUMTOOFFSET(offData->codeK2->num[offData->offsetK2]);
-        GOTO_ERR_IF(para->method->pointAdd(para, t, windowsG[offset1], windowsP[offset2]), ret);
+        ret = para->method->pointAdd(para, t, windowsG[offset1], windowsP[offset2]);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
         offData->offsetK1++;
         offData->offsetK2++;
         offData->bit1 = offData->codeK1->wide[offData->offsetK1 - 1];
         offData->bit2 = offData->codeK2->wide[offData->offsetK2 - 1];
     } else if (offData->codeK1->baseBits > offData->codeK2->baseBits) {
         int8_t offset = NUMTOOFFSET(offData->codeK1->num[offData->offsetK1]);
-        GOTO_ERR_IF(ECC_CopyPoint(t, windowsG[offset]), ret);
+        ret = ECC_CopyPoint(t, windowsG[offset]);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
         offData->offsetK1++;
         offData->bit1 = offData->codeK1->wide[offData->offsetK1 - 1];
         offData->bit2 = offData->baseBits - offData->codeK2->baseBits;
     } else {
         int8_t offset = NUMTOOFFSET(offData->codeK2->num[offData->offsetK2]);
-        GOTO_ERR_IF(ECC_CopyPoint(t, windowsP[offset]), ret);
+        ret = ECC_CopyPoint(t, windowsP[offset]);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
         offData->offsetK2++;
         offData->bit1 = offData->baseBits - offData->codeK1->baseBits;
         offData->bit2 = offData->codeK2->wide[offData->offsetK2 - 1];
     }
-ERR:
     return ret;
 }
 

@@ -30,25 +30,6 @@ extern "C" {
 #endif
 
 /**
- * Check whether conditions are met. If yes, an error code is returned.
- */
-#define HITLS_X509_RETURN_RET_IF(ret)            \
-    do {                                         \
-        if ((ret) != 0) {                          \
-            BSL_ERR_PUSH_ERROR((ret));             \
-            return (ret);                          \
-        }                                        \
-    } while (0)
-
-#define HITLS_X509_GOTO_RET_IF(ret)              \
-    do {                                         \
-        if ((ret) != 0) {                          \
-            BSL_ERR_PUSH_ERROR((ret));             \
-            goto ERR;                            \
-        }                                        \
-    } while (0)
-
-/**
  * RFC 5280: section 4.1.2.5.1
  */
 #define BSL_TIME_UTC_MAX_YEAR 2049

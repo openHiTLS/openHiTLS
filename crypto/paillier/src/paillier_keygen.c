@@ -57,7 +57,7 @@ static CRYPT_PAILLIER_PubKey *PaillierPubKeyDupCtx(CRYPT_PAILLIER_PubKey *pubKey
 
     return newPubKey;
 
-ERR :
+ERR:
     PAILLIER_FREE_PUB_KEY(newPubKey);
     return NULL;
 }
@@ -78,7 +78,7 @@ static CRYPT_PAILLIER_PrvKey *PaillierPrvKeyDupCtx(CRYPT_PAILLIER_PrvKey *prvKey
     GOTO_ERR_IF_SRC_NOT_NULL(newPrvKey->n2, prvKey->n2, BN_Dup(prvKey->n2), CRYPT_MEM_ALLOC_FAIL);
 
     return newPrvKey;
-ERR :
+ERR:
     PAILLIER_FREE_PRV_KEY(newPrvKey);
     return NULL;
 }
@@ -99,7 +99,7 @@ static CRYPT_PAILLIER_Para *PaillierParaDupCtx(CRYPT_PAILLIER_Para *para)
 
     return newPara;
 
-ERR :
+ERR:
     PAILLIER_FREE_PARA(newPara);
     return NULL;
 }
@@ -125,7 +125,7 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_DupCtx(CRYPT_PAILLIER_Ctx *keyCtx)
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
-ERR :
+ERR:
     CRYPT_PAILLIER_FreeCtx(newKeyCtx);
     return NULL;
 }
@@ -387,9 +387,8 @@ static int32_t Paillier_GenPQ(CRYPT_PAILLIER_Para *para, BN_Optimizer *optimizer
     ret = BN_GenPrime(para->q, bits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t Paillier_CalcPubKey(CRYPT_PAILLIER_PubKey *pubKey, CRYPT_PAILLIER_Para *para, BN_Optimizer *optimizer)
@@ -407,9 +406,8 @@ static int32_t Paillier_CalcPubKey(CRYPT_PAILLIER_PubKey *pubKey, CRYPT_PAILLIER
     ret = BN_Sqr(pubKey->n2, pubKey->n, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t Paillier_CalcLambda(BN_BigNum *lambda, CRYPT_PAILLIER_Para *para, BN_Optimizer *optimizer)
@@ -420,24 +418,23 @@ static int32_t Paillier_CalcLambda(BN_BigNum *lambda, CRYPT_PAILLIER_Para *para,
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     if (pMinus1 == NULL || qMinus1 == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto OUT;
+        goto EXIT;
     }
     ret = BN_SubLimb(pMinus1, para->p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
     ret = BN_SubLimb(qMinus1, para->q, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
     ret = BN_Lcm(lambda, pMinus1, qMinus1, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
     }
-OUT :
+EXIT:
     BN_Destroy(pMinus1);
     BN_Destroy(qMinus1);
     return ret;
@@ -453,33 +450,32 @@ static int32_t Paillier_CalcMu(BN_BigNum *mu, const BN_BigNum *lambda, CRYPT_PAI
     if (x == NULL || xMinus1 == NULL || Lx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_ModExp(x, pubKey->g, lambda, pubKey->n2, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_SubLimb(xMinus1, x, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_Div(Lx, NULL, xMinus1, pubKey->n, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_ModInv(mu, Lx, pubKey->n, optimizer);
      if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
     }
-OUT :
+EXIT:
     BN_Destroy(x);
     BN_Destroy(xMinus1);
     BN_Destroy(Lx);
@@ -498,9 +494,8 @@ int32_t Paillier_CalcPrvKey(CRYPT_PAILLIER_Ctx *ctx, BN_Optimizer *optimizer)
     ret = Paillier_CalcMu(ctx->prvKey->mu, ctx->prvKey->lambda, ctx->pubKey, ctx->para->bits, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_PAILLIER_Gen(CRYPT_PAILLIER_Ctx *ctx)
@@ -550,7 +545,7 @@ int32_t CRYPT_PAILLIER_Gen(CRYPT_PAILLIER_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    
+
     GOTO_ERR_IF(BN_Copy(newCtx->prvKey->n, newCtx->pubKey->n), ret);
     GOTO_ERR_IF(BN_Copy(newCtx->prvKey->n2, newCtx->pubKey->n2), ret);
 

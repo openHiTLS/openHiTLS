@@ -321,7 +321,6 @@ int32_t HITLS_X509_ParseCrlList(BSL_ASN1_Buffer *crl, BSL_ASN1_List *list)
     int32_t ret = BSL_ASN1_DecodeListItem(&listParam, crl, &HITLS_CRL_ParseCrlAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
-        return ret;
     }
     return ret;
 }
@@ -442,7 +441,7 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
         ret = X509_EncodeCrlEntry(crlEntry, &asnBuf[iter]);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         iter += X509_CRLENTRY_ELEM_NUMBER;
     }
@@ -454,7 +453,7 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
     };
     BSL_ASN1_Template templ = {crlEntryTempl, sizeof(crlEntryTempl) / sizeof(crlEntryTempl[0])};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, iter, revokeBuf);
-ERR:
+EXIT:
     for (int32_t i = 0; i < count; i++) {
         /**
          * The memory for the extension in CRLentry needs to be freed up.
@@ -711,9 +710,8 @@ static int32_t X509_CheckCrlTbs(HITLS_X509_Crl *crl)
     ret = X509_CheckCrlRevoke(crl);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return HITLS_PKI_SUCCESS;
+    return ret;
 }
 
 int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, BSL_Buffer *buff)

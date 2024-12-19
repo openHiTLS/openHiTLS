@@ -59,7 +59,7 @@ int main(void)
 
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (ctx == NULL) {
-        goto exit;
+        goto EXIT;
     }
 
     // Set a user ID.
@@ -67,7 +67,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Initialize the random number.
@@ -75,7 +75,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Generate a key pair.
@@ -83,7 +83,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Sign.
@@ -91,7 +91,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Verify the signature.
@@ -99,12 +99,12 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     printf("pass \n");
 
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();

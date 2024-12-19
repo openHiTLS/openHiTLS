@@ -84,7 +84,7 @@ int GetRpcFuncNum(void)
 
 int RpcTlsNewCtx(CmdData *cmdData)
 {
-    int id, ret;
+    int id;
     TLS_VERSION tlsVersion;
     (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
 
@@ -94,16 +94,15 @@ int RpcTlsNewCtx(CmdData *cmdData)
     if (ctx == NULL) {
         LOG_ERROR("HLT_TlsNewCtx Return NULL");
         id = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     // Insert to CTX linked list
     id = InsertCtxToList(ctx);
 
-ERR:
+EXIT:
     // Return Result
-    ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, id);
-    if (ret <= 0) {
+    if (sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, id) <= 0) {
         return ERROR;
     }
     return SUCCESS;
@@ -121,7 +120,7 @@ int RpcTlsSetCtx(CmdData *cmdData)
     if (ctx == NULL) {
         LOG_ERROR("GetResFromId Error");
         ret = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     // Configurations related to parsing
@@ -130,13 +129,13 @@ int RpcTlsSetCtx(CmdData *cmdData)
     if (ret != SUCCESS) {
         LOG_ERROR("ParseCtxConfigFromString Error");
         ret = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     // Configure the data
     ret = HLT_TlsSetCtx(ctx, &ctxConfig);
 
-ERR:
+EXIT:
     // Return the result
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
@@ -155,20 +154,20 @@ int RpcTlsNewSsl(CmdData *cmdData)
     if (ctx == NULL) {
         LOG_ERROR("Not Find Ctx");
         id = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     void *ssl = HLT_TlsNewSsl(ctx);
     if (ssl == NULL) {
         LOG_ERROR("HLT_TlsNewSsl Return NULL");
         id = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     // Insert to the SSL linked list.
     id = InsertSslToList(ctx, ssl);
 
-ERR:
+EXIT:
     // Return the result.
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, id);
     ASSERT_RETURN(ret > 0);
@@ -187,7 +186,7 @@ int RpcTlsSetSsl(CmdData *cmdData)
     if (ssl == NULL) {
         LOG_ERROR("Not Find Ssl");
         ret = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     HLT_Ssl_Config sslConfig = {0};
@@ -196,7 +195,7 @@ int RpcTlsSetSsl(CmdData *cmdData)
     // The third parameter of indicates the Ctrl command that needs to register the hook.
     sslConfig.connPort = atoi(cmdData->paras[3]);
     ret = HLT_TlsSetSsl(ssl, &sslConfig);
-ERR:
+EXIT:
     // Return the result.
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
@@ -214,12 +213,12 @@ int RpcTlsListen(CmdData *cmdData)
     if (ssl == NULL) {
         LOG_ERROR("Not Find Ssl");
         ret = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     ret = HLT_TlsListenBlock(ssl);
 
-ERR:
+EXIT:
     // Return the result
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
@@ -237,13 +236,13 @@ int RpcTlsAccept(CmdData *cmdData)
     if (ssl == NULL) {
         LOG_ERROR("Not Find Ssl");
         ret = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     // If there is a problem, the user must use non-blocking, and the remote call must use blocking
     ret = HLT_TlsAcceptBlock(ssl);
 
-ERR:
+EXIT:
     // Return the result
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
@@ -262,12 +261,12 @@ int RpcTlsConnect(CmdData *cmdData)
     if (ssl == NULL) {
         LOG_ERROR("Not Find Ssl");
         ret = ERROR;
-        goto ERR;
+        goto EXIT;
     }
 
     ret = HLT_TlsConnect(ssl);
 
-ERR:
+EXIT:
     // Return the result
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
@@ -372,12 +371,12 @@ int RpcTlsRenegotiate(CmdData *cmdData)
     void *ssl = GetTlsResFromId(sslList, sslId);
     if (ssl == NULL) {
         LOG_ERROR("Not Find Ssl");
-        goto ERR;
+        goto EXIT;
     }
 
     ret = HLT_TlsRenegotiate(ssl);
 
-ERR:
+EXIT:
     // Return the result
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
@@ -392,12 +391,12 @@ int RpcTlsVerifyClientPostHandshake(CmdData *cmdData)
     void *ssl = GetTlsResFromId(sslList, sslId);
     if (ssl == NULL) {
         LOG_ERROR("Not Find Ssl");
-        goto ERR;
+        goto EXIT;
     }
 
     ret = HLT_TlsVerifyClientPostHandshake(ssl);
 
-ERR:
+EXIT:
     // Return Result
     ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);

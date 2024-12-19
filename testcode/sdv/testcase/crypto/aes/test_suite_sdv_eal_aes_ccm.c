@@ -78,7 +78,7 @@ void MultiThreadTest(void *arg)
     ASSERT_COMPARE("Compare Pt", out, threadParameter->ptLen, threadParameter->pt, threadParameter->ptLen);
     ASSERT_COMPARE("Compare Dec Tag", tag, tagLen, threadParameter->tag, threadParameter->tagLen);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 
@@ -122,7 +122,7 @@ void SDV_CRYPTO_AES_CCM_REINIT_API_TC001(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, (uint8_t *)iv, ivLen) == CRYPT_SUCCESS);
     ivLen = 14;
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, (uint8_t *)iv, ivLen) == CRYPT_MODES_IVLEN_ERROR);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -194,7 +194,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC001(int id, int keyLen)
     count = (uint64_t)1 << ((15 - 12) * 8);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &count, sizeof(count)) ==
         CRYPT_MODES_CTRL_MSGLEN_ERROR);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -247,7 +247,7 @@ void SDV_CRYPTO_AES_CCM_UPDATE_API_TC001(int id, int keyLen)
     outLen = sizeof(out);
     dataLen = 10;
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, dataLen, out, &outLen) == CRYPT_MODES_MSGLEN_OVERFLOW);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -287,7 +287,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC002(int id, int keyLen)
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &count, sizeof(count)), CRYPT_MODES_AAD_IS_SET_ERROR);
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv, ivLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &count, sizeof(count)) == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -326,7 +326,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC003(int id, int keyLen)
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)), CRYPT_MODES_AAD_REPEAT_SET_ERROR);
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv, ivLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -406,7 +406,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC004(int id, int keyLen)
     tagLen = 5;
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) ==
         CRYPT_MODES_CTRL_TAGLEN_ERROR);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -468,7 +468,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC005(int id, int keyLen)
 
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv, ivLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -530,7 +530,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC006(int id, int keyLen)
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)), CRYPT_EAL_ERR_STATE);
     tagLen = 16;
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_MODES_MSGLEN_LEFT_ERROR);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -600,7 +600,7 @@ void SDV_CRYPTO_AES_CCM_UPDATE_FUNC_TC001(int isProvider, int id, Hex *key, Hex 
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, plaintext->x, outLen) == 0);
     ASSERT_TRUE(memcmp(tag, ciphertext->x + outLen, tagLen) == 0);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -718,7 +718,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC007(int id, int keyLen)
 
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)), CRYPT_EAL_ERR_STATE);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -803,7 +803,7 @@ void SDV_CRYPTO_AES_CCM_UPDATE_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *aad
     ASSERT_COMPARE("Compare Pt", out, pt->len, pt->x, pt->len);
     ASSERT_COMPARE("Compare Dec Tag", outTag, tagLen, tag->x, tag->len);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     free(out);
     free(outTag);
@@ -854,7 +854,7 @@ void SDV_CRYPTO_AES_CCM_MULTI_THREAD_FUNC_TC001(int isProvider, int algId, Hex *
         pthread_join(thrd[i], NULL);
     }
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

@@ -246,9 +246,8 @@ int32_t EAL_RandDrbgGenerate(CRYPT_EAL_RndCtx *drbgCtx, uint8_t *bytes, uint32_t
     int32_t ret = drbgCtx->meth->gen(drbgCtx->ctx, bytes, len, adin, adinLen, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, drbgCtx->id, ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t EAL_RandDrbgReseed(CRYPT_EAL_RndCtx *drbgCtx, const uint8_t *adin, uint32_t adinLen)
@@ -260,9 +259,8 @@ int32_t EAL_RandDrbgReseed(CRYPT_EAL_RndCtx *drbgCtx, const uint8_t *adin, uint3
     int32_t ret = drbgCtx->meth->reSeed(drbgCtx->ctx, adin, adinLen, NULL);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, drbgCtx->id, ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static CRYPT_EAL_RndCtx *EAL_RandInitDrbg(CRYPT_RAND_AlgId id, BSL_Param *param)

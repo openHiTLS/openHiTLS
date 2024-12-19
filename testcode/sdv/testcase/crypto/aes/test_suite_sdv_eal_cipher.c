@@ -88,7 +88,7 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *a
     ASSERT_COMPARE("dec result1", (uint8_t *)result, pt1->len, pt1->x, pt1->len);
     ASSERT_COMPARE("dec result2", (uint8_t *)result + pt1->len, pt2->len, pt2->x, pt2->len);
     ASSERT_COMPARE("dec tagResult", (uint8_t *)tagResult, tag->len, tag->x, tag->len);
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
@@ -160,7 +160,7 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key,
     ASSERT_TRUE(memcmp(result + pt1->len + pt2->len, pt3->x, pt3->len) == 0);
     ASSERT_TRUE(memcmp(tagResult, tag->x,  tag->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     CRYPT_EAL_CipherFreeCtx(decCtx);
 }
@@ -215,7 +215,7 @@ void SDV_CRYPTO_AES_GETINFO_API_TC001(void)
     uint32_t keyLen = 0;
     ASSERT_TRUE(CRYPT_EAL_CipherGetInfo(CRYPT_CIPHER_AES192_CBC, CRYPT_INFO_KEY_LEN, &keyLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(keyLen == 24);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

@@ -137,15 +137,12 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
 
 int32_t SendHelloReqWithIndex(HITLS_Ctx *ctx, uint8_t index)
 {
-    int32_t ret;
-
     uint8_t buf[DTLS_HS_MSG_HEADER_SIZE] = {0u};
     buf[5] = index;
     size_t len = DTLS_HS_MSG_HEADER_SIZE;
 
 
-    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
-    return ret;
+    return REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
 }
 
 int32_t ConstructAnEmptyCertMsg(FRAME_LinkObj *link)

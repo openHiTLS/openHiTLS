@@ -111,7 +111,7 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
     ret = BSL_SAL_UnLoadLib(NULL);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
 
-exit:
+EXIT:
     if (handle1 != NULL) {
         BSL_SAL_UnLoadLib(handle1);
     }
@@ -169,7 +169,7 @@ void SDV_BSL_SAL_CONVERTER_NAME_TC001(char *name, int cmd, char *aimResult)
     ret = BSL_SAL_LibNameFormat(INVALID_COMMEND, name, &convertedName);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
 
-exit:
+EXIT:
     return;
 }
 
