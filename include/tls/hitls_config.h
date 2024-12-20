@@ -200,6 +200,8 @@ typedef enum {
     /* TLCP 1.1 cipher suite */
     HITLS_ECDHE_SM4_CBC_SM3 = 0xE011,
     HITLS_ECC_SM4_CBC_SM3 = 0xE013,
+    HITLS_ECDHE_SM4_GCM_SM3 = 0xE051,
+    HITLS_ECC_SM4_CBC_SM3 = 0xE053,
 } HITLS_CipherSuite;
 
 /**
