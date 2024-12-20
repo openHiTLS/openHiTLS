@@ -201,7 +201,7 @@ typedef enum {
     HITLS_ECDHE_SM4_CBC_SM3 = 0xE011,
     HITLS_ECC_SM4_CBC_SM3 = 0xE013,
     HITLS_ECDHE_SM4_GCM_SM3 = 0xE051,
-    HITLS_ECC_SM4_CBC_SM3 = 0xE053,
+    HITLS_ECC_SM4_GCM_SM3 = 0xE053,
 } HITLS_CipherSuite;
 
 /**
@@ -241,7 +241,7 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void);
  *
  * @attention   The default configuration is as follows:
     Version number: HITLS_VERSION_TLCP11
-    Algorithm suite: HITLS_ECDHE_SM4_CBC_SM3, HITLS_ECC_SM4_CBC_SM3
+    Algorithm suite: HITLS_ECDHE_SM4_CBC_SM3, HITLS_ECC_SM4_CBC_SM3, HITLS_ECDHE_SM4_GCM_SM3, HITLS_ECC_SM4_GCM_SM3
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
     groups:sm2
     Extended Master Key: Enabled
