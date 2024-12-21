@@ -35,6 +35,8 @@
 uint16_t g_tlcpCipherSuites[] = {
     HITLS_ECDHE_SM4_CBC_SM3,
     HITLS_ECC_SM4_CBC_SM3,
+    HITLS_ECDHE_SM4_GCM_SM3,
+    HITLS_ECC_SM4_GCM_SM3,
 };
 #endif
 
