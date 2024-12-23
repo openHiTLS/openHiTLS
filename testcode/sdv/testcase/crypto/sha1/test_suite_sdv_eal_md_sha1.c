@@ -47,7 +47,7 @@ void MultiThreadTest(void *arg)
         ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->hash, threadParameter->hashLen);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 
@@ -76,7 +76,7 @@ void SDV_CRYPT_EAL_SHA1_API_TC001(void)
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -134,7 +134,7 @@ void SDV_CRYPT_EAL_SHA1_API_TC002(void)
     ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(ctx->state, CRYPT_MD_STATE_NEW);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -190,7 +190,7 @@ void SDV_CRYPT_EAL_SHA1_API_TC003(Hex *hash1, Hex *data2, Hex *hash2, Hex *hash3
     ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SHA1, data2->x, data2->len, out, &digestLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hash2 result cmp", out, digestLen, hash2->x, hash2->len);
     
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -211,7 +211,7 @@ void SDV_CRYPT_EAL_SHA1_API_TC004(void)
 {
     ASSERT_EQ(CRYPT_EAL_MdGetDigestSize(CRYPT_MD_MAX), 0);
     ASSERT_EQ(CRYPT_EAL_MdGetDigestSize(CRYPT_MD_SHA1), SHA1_DIGEST_LEN);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -241,7 +241,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC001(Hex *data, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &digestLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hash result cmp", out, digestLen, hash->x, hash->len);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -276,7 +276,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC002(Hex *data, Hex *hash)
         pthread_join(thrd[i], NULL);
     }
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -316,7 +316,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC003(Hex *plain_text1, Hex *plain_text2, Hex *plain
 
     ASSERT_COMPARE("sha1", output, outLen, hash->x, hash->len);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -377,7 +377,7 @@ void SDV_CRYPTO_SHA1_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
     CRYPT_EAL_MdFreeCtx(dupCtx);
@@ -405,7 +405,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC004(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */

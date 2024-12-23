@@ -727,16 +727,16 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     ctx = HLT_TlsNewCtx(tlsVersion);
     if (ctx == NULL) {
         LOG_ERROR("HLT_TlsNewCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (HLT_TlsSetCtx(ctx, ctxConfig) != SUCCESS) {
         LOG_ERROR("HLT_TlsSetCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     ssl = HLT_TlsNewSsl(ctx);
     if (ssl == NULL) {
         LOG_ERROR("HLT_TlsNewSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     // When FD is 0, the default configuration is used.
     if (sslConfig->sockFd == 0) {
@@ -746,12 +746,12 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     }
     if (HLT_TlsSetSsl(ssl, sslConfig) != SUCCESS) {
         LOG_ERROR("HLT_TlsSetSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (ctxConfig->mtu > 0) {
         if (HLT_TlsSetMtu(ssl, ctxConfig->mtu) != SUCCESS) {
             LOG_ERROR("HLT_TlsSetMtu ERROR");
-            goto ERR;
+            return ERROR;
         }
     }
     tlsRes->ctx = ctx;
@@ -759,8 +759,6 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     tlsRes->ctxId = -1; // -1 indicates that the field is discarded.
     tlsRes->sslId = -1; // -1 indicates that the field is discarded.
     return SUCCESS;
-ERR:
-    return ERROR;
 }
 
 static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
@@ -772,16 +770,16 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     ctxId = HLT_RpcTlsNewCtx(process, tlsVersion, ctxConfig->isClient);
     if (ctxId < 0) {
         LOG_ERROR("HLT_RpcTlsNewCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (HLT_RpcTlsSetCtx(process, ctxId, ctxConfig) != SUCCESS) {
         LOG_ERROR("HLT_RpcTlsSetCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     sslId = HLT_RpcTlsNewSsl(process, ctxId);
     if (sslId < 0) {
         LOG_ERROR("HLT_RpcTlsNewSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     // When FD is 0, the default configuration is used.
     if (sslConfig->sockFd == 0) {
@@ -791,12 +789,12 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     }
     if (HLT_RpcTlsSetSsl(process, sslId, sslConfig) != SUCCESS) {
         LOG_ERROR("HLT_RpcTlsSetSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (ctxConfig->mtu > 0) {
         if (HLT_RpcTlsSetMtu(process, sslId, ctxConfig->mtu) != SUCCESS) {
             LOG_ERROR("HLT_RpcTlsSetMtu ERROR");
-            goto ERR;
+            return ERROR;
         }
     }
 
@@ -805,8 +803,6 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     tlsRes->ctxId = ctxId;
     tlsRes->sslId = sslId;
     return SUCCESS;
-ERR:
-    return ERROR;
 }
 
 HLT_Tls_Res *HLT_ProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
@@ -816,7 +812,7 @@ HLT_Tls_Res *HLT_ProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     HLT_Tls_Res *tlsRes = (HLT_Tls_Res*)malloc(sizeof(HLT_Tls_Res));
     if (tlsRes == NULL) {
         LOG_ERROR("Malloc TlsRes ERROR");
-        goto ERR;
+        return NULL;
     }
 
     // Checking Configuration Parameters
@@ -912,7 +908,7 @@ HLT_Tls_Res* HLT_ProcessTlsConnect(HLT_Process *process, TLS_VERSION tlsVersion,
     HLT_Tls_Res *tlsRes = (HLT_Tls_Res*)malloc(sizeof(HLT_Tls_Res));
     if (tlsRes == NULL) {
         LOG_ERROR("Malloc TlsRes ERROR");
-        goto ERR;
+        return NULL;
     }
     (void)memset_s(tlsRes, sizeof(HLT_Tls_Res), 0, sizeof(HLT_Tls_Res));
     // Checking Configuration Parameters

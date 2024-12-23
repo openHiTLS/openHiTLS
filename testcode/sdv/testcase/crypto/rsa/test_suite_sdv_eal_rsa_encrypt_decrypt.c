@@ -113,7 +113,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
     ASSERT_EQ(ptLen, plaintext->len);
     ASSERT_EQ(memcmp(pt, plaintext->x, ptLen), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -185,7 +185,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int
     ASSERT_TRUE(msgLen == plaintext->len);
     ASSERT_TRUE(memcmp(pt, plaintext->x, msgLen) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -269,7 +269,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(cpyCtx, plaintext->x, plaintext->len, ct, &msgLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(cpyCtx, ct, msgLen, pt, &msgLen) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx);

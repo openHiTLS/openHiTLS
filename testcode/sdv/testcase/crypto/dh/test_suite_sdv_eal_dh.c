@@ -131,7 +131,7 @@ void SDV_CRYPTO_DH_FUNC_TC001(
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(shareLen == share->len);
     ASSERT_TRUE(memcmp(shareLocal, share->x, shareLen) == 0);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -193,7 +193,7 @@ void SDV_CRYPTO_DH_FUNC_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -252,7 +252,7 @@ void SDV_CRYPTO_DH_FUNC_TC003(int id, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -316,7 +316,7 @@ void SDV_CRYPTO_DH_FUNC_TC004(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -399,7 +399,7 @@ void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, Hex *pub1, int 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
     if (tmpPub != NULL) {
@@ -477,7 +477,7 @@ void SDV_CRYPTO_DH_FUNC_TC006(
     cmpRet2 = memcmp(shareLocal, share->x, share->len);
 
     ASSERT_TRUE(ret1 != CRYPT_SUCCESS || cmpRet1 != 0 || ret2 != CRYPT_SUCCESS || cmpRet2 != 0);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -538,7 +538,7 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC001(Hex *p, Hex *g, Hex *q, int isProvider)
     para.para.dhPara.q = q->x;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(NULL, &para) == CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -612,7 +612,7 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE_AND_LOG("q greater than 160 but value smaller than 160 bits",
         CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_DH_PARA_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -700,7 +700,7 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC003(Hex *p, Hex *g, Hex *q, int isProvider)
     buf[last] += 4;  // q = p - 2 + 4 = p + 2 > p
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_DH_PARA_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -750,7 +750,7 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC004(Hex *p, Hex *g, Hex *q, int isProvider)
     para.para.dhPara.pLen = p->len;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -808,7 +808,7 @@ void SDV_CRYPTO_DH_SET_PRV_API_TC001(Hex *p, Hex *g, Hex *q, Hex *prvKey, int is
     prv.key.dhPrv.len = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey, &prv) == CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -897,7 +897,7 @@ void SDV_CRYPTO_DH_SET_PRV_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     tmpPrv[last] = 1;
     ASSERT_TRUE_AND_LOG("prvKey = 1", CRYPT_EAL_PkeySetPrv(pkey, &prv) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     if (tmpPrv != NULL) {
         free(tmpPrv);
@@ -945,7 +945,7 @@ void SDV_CRYPTO_DH_SET_PUB_API_TC001(Hex *pubKey, int isProvider)
     pub.key.dhPub.len = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pub) == CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -988,7 +988,7 @@ void SDV_CRYPTO_DH_SET_PUB_API_TC002(int isProvider)
     pubKey[0] = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pub) == CRYPT_DH_KEYINFO_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1056,7 +1056,7 @@ void SDV_CRYPTO_DH_GET_PRV_API_TC001(Hex *p, Hex *g, Hex *q, Hex *prvKey, int is
     ASSERT_TRUE(prv.key.dhPrv.len == prvKey->len);
     ASSERT_TRUE(memcmp(output, prvKey->x, prvKey->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1118,7 +1118,7 @@ void SDV_CRYPTO_DH_GET_PUB_API_TC001(Hex *pubKey, int isProvider)
     ASSERT_TRUE(pub.key.dhPub.len == pubKey->len);
     ASSERT_TRUE(memcmp(output, pubKey->x, pubKey->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1161,7 +1161,7 @@ void SDV_CRYPTO_DH_GET_KEY_LEN_API_TC001(Hex *p, Hex *g, Hex *q, int isProvider)
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetKeyLen(pkey), p->len);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1208,7 +1208,7 @@ void SDV_CRYPTO_DH_GEN_API_TC001(Hex *p, Hex *g, Hex *q)
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -1243,7 +1243,7 @@ void SDV_CRYPTO_DH_SET_PARA_BY_ID_API_TC001(int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(NULL, CRYPT_DH_RFC3526_2048) == CRYPT_NULL_INPUT);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pkey, 100) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1310,7 +1310,7 @@ void SDV_CRYPTO_DH_EXCH_API_TC001(Hex *p, Hex *g, Hex *q, Hex *pubKey, Hex *prvK
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, NULL, &shareLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, (uint8_t *)share, NULL) == CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -1378,7 +1378,7 @@ void SDV_CRYPTO_DH_EXCH_API_TC002(Hex *p, Hex *g, Hex *q, Hex *pubKey, Hex *prvK
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey3, pkey2, share, &shareLen) == CRYPT_DH_KEYINFO_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
     CRYPT_EAL_PkeyFreeCtx(pkey3);
@@ -1437,7 +1437,7 @@ void SDV_CRYPTO_DH_EXCH_API_TC003(Hex *p, Hex *g, Hex *q, Hex *pubKey, Hex *prvK
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, (uint8_t *)share, &shareLen), CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -1504,7 +1504,7 @@ void SDV_CRYPTO_DH_GET_PARA_API_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
     ASSERT_TRUE(para.para.dhPara.gLen == para2.para.dhPara.gLen);
     ASSERT_TRUE(memcmp(para.para.dhPara.g, para2.para.dhPara.g, para.para.dhPara.gLen) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pKey);
 }
 /* END_CASE */
@@ -1562,7 +1562,7 @@ void SDV_CRYPTO_DH_CMP_API_TC001(int paraId, Hex *pubKey, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx2, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_DH_PARA_ERROR);  // ctx2 no para
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
@@ -1604,7 +1604,7 @@ void SDV_CRYPTO_DH_CTRL_API_TC001(int isProvider)
     ASSERT_EQ(
         CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_PADDING, &ref, sizeof(int32_t)), CRYPT_DH_UNSUPPORTED_CTRL_OPTION);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -1679,7 +1679,7 @@ void SDV_CRYPTO_DH_DUP_CTX_FUNC_TC001(int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetParaId(dupCtx) == paraId);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(dupCtx);
@@ -1721,7 +1721,7 @@ void SDV_CRYPTO_DH_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, Hex *p, Hex *g, 
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */

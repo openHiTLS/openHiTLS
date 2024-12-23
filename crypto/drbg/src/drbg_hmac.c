@@ -55,40 +55,39 @@ static int32_t Hmac(DRBG_HmacCtx *ctx, uint8_t mark, const CRYPT_Data *provData[
     // provided_data = in1 || in2 || in3, private_data can be NULL
     if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, ctx->v, ctx->blockLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, &mark, 1)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     for (int32_t i = 0; i < provDataLen; i++) {
         if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, provData[i]->data, provData[i]->len)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
     }
     if ((ret = ctx->hmacMeth->final(ctx->hmacCtx, ctx->k, &ctxKLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // V = HMAC (K, V).
     if ((ret = ctx->hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if ((ret = ctx->hmacMeth->update(ctx->hmacCtx, ctx->v, ctx->blockLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if ((ret = ctx->hmacMeth->final(ctx->hmacCtx, ctx->v, &ctxVLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
     }
-ERR :
+EXIT:
     // clear hmacCtx
     ctx->hmacMeth->deinit(ctx->hmacCtx);
     return ret;
@@ -116,7 +115,6 @@ static int32_t DRBG_HmacUpdate(DRBG_Ctx *drbg, const CRYPT_Data *provData[], int
     ret = Hmac(ctx, 0x01, provData, provDataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
     return ret;
 }
@@ -153,7 +151,6 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
     ret = DRBG_HmacUpdate(drbg, provData, index);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -179,7 +176,6 @@ int32_t DRBG_HmacReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, const CR
     ret = DRBG_HmacUpdate(drbg, seedMaterial, index);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -217,14 +213,14 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
         if ((ret = hmacMeth->init(ctx->hmacCtx, ctx->k, ctx->blockLen, NULL)) != CRYPT_SUCCESS ||
             (ret = hmacMeth->update(ctx->hmacCtx, temp, ctx->blockLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         if (len <= ctx->blockLen) {
             break;
         }
         if ((ret = hmacMeth->final(ctx->hmacCtx, buf, &tmpLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         temp = buf;
         buf += ctx->blockLen;
@@ -234,7 +230,7 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     ctxVLen = sizeof(ctx->v);
     if ((ret = hmacMeth->final(ctx->hmacCtx, ctx->v, &ctxVLen)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // Intercepts the len-length V-value as an output, and because of len <= blockLen,
     // length of V is always greater than blockLen，Therefore, this problem does not exist.
@@ -243,9 +239,8 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     //  (Key, V) = HMAC_DRBG_Update (additional_input, Key, V).
     if ((ret = DRBG_HmacUpdate(drbg, &adin, hasAdin)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
     }
-ERR:
+EXIT:
     // clear hmacCtx
     hmacMeth->deinit(ctx->hmacCtx);
     return ret;

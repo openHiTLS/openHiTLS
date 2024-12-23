@@ -68,7 +68,7 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
     (void)memset_s(buff->x + buff->len - 20, 16, 0, 16); // modify the ciphertext, 16 and 20 are random number.
     ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -84,7 +84,7 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC002(Hex *buff)
     uint32_t pwdlen = strlen(pwd);
     int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     BSL_SAL_Free(output.data);
     return;
 }
@@ -109,7 +109,7 @@ void SDV_CMS_PARSE_DIGESTINFO_TC001(Hex *buff, int alg, Hex *digest)
 
     ASSERT_EQ(alg, cid);
     ASSERT_EQ(memcmp(output.data, digest->x, digest->len), 0);
-exit:
+EXIT:
     BSL_SAL_Free(output.data);
     return;
 }
@@ -127,7 +127,7 @@ void SDV_CMS_PARSE_DIGESTINFO_TC002(Hex *buff, int alg, Hex *digest)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, cid);
     ASSERT_EQ(memcmp(output.data, digest->x, digest->len), 0);
-exit:
+EXIT:
     BSL_SAL_Free(output.data);
     return;
 }
@@ -172,7 +172,7 @@ void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&output, (const uint8_t *)pwd, pwdlen, &verify);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("encode p7-encryptData", data.data, data.dataLen, verify.data, verify.dataLen);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     BSL_SAL_FREE(verify.data);
     BSL_SAL_FREE(output.data);
@@ -210,7 +210,7 @@ void SDV_CMS_ENCODE_DIGESTINFO_TC001()
     ret = HITLS_CMS_ParseDigestInfo(&output, &cid, &digest);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(cid, BSL_CID_MD5);
-exit:
+EXIT:
     BSL_SAL_FREE(digest.data);
     BSL_SAL_FREE(output.data);
     return;
@@ -232,7 +232,7 @@ void SDV_CMS_ENCODE_DIGESTINFO_TC002(int algid, Hex *in)
     ret = HITLS_CMS_ParseDigestInfo(&output, &cid, &digest);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(cid, algid);
-exit:
+EXIT:
     BSL_SAL_FREE(digest.data);
     BSL_SAL_FREE(output.data);
     return;

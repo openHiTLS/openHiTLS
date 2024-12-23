@@ -629,21 +629,21 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16882, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveEarlySecret fail", 0, 0, 0, 0);
-        goto exit;
+        goto EXIT;
     }
     // HKDF.Expand EarlySecret to compute BinderKey
     ret = HS_TLS13DeriveBinderKey(hashAlgo, isExternalPsk, earlySecret, hashLen, binderKey, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16883, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveBinderKey fail", 0, 0, 0, 0);
-        goto exit;
+        goto EXIT;
     }
     // HKDF.Expand BinderKey to compute Binder Finished Key
     ret = HS_TLS13DeriveFinishedKey(hashAlgo, binderKey, hashLen, finishedKey, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16884, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveFinishedKey fail", 0, 0, 0, 0);
-        goto exit;
+        goto EXIT;
     }
 
     hashCtx = SAL_CRYPT_DigestInit(hashAlgo);
@@ -651,19 +651,19 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16885, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DigestInit fail", 0, 0, 0, 0);
         ret = HITLS_CRYPT_ERR_DIGEST;
-        goto exit;
+        goto EXIT;
     }
 
     ret = GetHsDataForBinder(ctx->hsCtx->verifyCtx, &hsDataLen, ctx->isClient, &hsData);
     if (ret != HITLS_SUCCESS) {
-        goto exit;
+        goto EXIT;
     }
     if (hsData != NULL) {
         ret = SAL_CRYPT_DigestUpdate(hashCtx, hsData, hsDataLen);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16886, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "DigestUpdate fail", 0, 0, 0, 0);
-            goto exit;
+            goto EXIT;
         }
     }
 
@@ -672,12 +672,12 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16887, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DigestUpdate or DigestFinal fail", 0, 0, 0, 0);
         ret = HITLS_CRYPT_ERR_DIGEST;
-        goto exit;
+        goto EXIT;
     }
 
     ret = SAL_CRYPT_Hmac(hashAlgo, finishedKey, hashLen, transcriptHash, hashLen, binder, &calcBinderLen);
 
-exit:
+EXIT:
     BSL_SAL_CleanseData(earlySecret, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(binderKey, MAX_DIGEST_SIZE);
     BSL_SAL_CleanseData(finishedKey, MAX_DIGEST_SIZE);

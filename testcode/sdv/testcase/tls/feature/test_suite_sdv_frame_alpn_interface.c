@@ -70,7 +70,7 @@ static int32_t ConfigAlpn(HITLS_Config *tlsConfig, char *AlpnList, bool isCient)
         ret = HITLS_CFG_SetAlpnProtosSelectCb(tlsConfig, ExampleAlpnCbForLlt, &alpnServerCtx);
         ASSERT_EQ(ret, HITLS_SUCCESS);
     }
-exit:
+EXIT:
     return ret;
 }
 
@@ -128,7 +128,7 @@ void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC001(int version)
     ASSERT_TRUE(memcmp(serverTlsCtx->negotiatedInfo.alpnSelected, "http/1.1", 8) == 0);
     ASSERT_TRUE(serverTlsCtx->negotiatedInfo.alpnSelectedSize == 8);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(s_config);
     HITLS_CFG_FreeConfig(c_config);
     FRAME_FreeLink(client);

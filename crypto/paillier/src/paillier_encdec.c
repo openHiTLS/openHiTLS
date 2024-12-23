@@ -54,26 +54,26 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
     if (createFailed) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_Bin2Bn(m, input, inputLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     // Check whether m is less than n and non-negative
     if (BN_Cmp(m, pubKey->n) >= 0 || BN_IsNegative(m)) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
         ret = CRYPT_PAILLIER_ERR_INPUT_VALUE;
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_RandRange(r, pubKey->n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     while (true) {
@@ -81,7 +81,7 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
         ret = BN_Gcd(gcd_result, r, pubKey->n, optimizer);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto EXIT;
         }
         if (BN_IsOne(gcd_result)) {
             break;
@@ -89,34 +89,33 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
         ret = BN_RandRange(r, pubKey->n);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto OUT;
+            goto EXIT;
         }
     }
 
     ret = BN_ModExp(gm, pubKey->g, m, pubKey->n2, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_ModExp(rn, r, pubKey->n, pubKey->n2, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_ModMul(result, gm, rn, pubKey->n2, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_Bn2Bin(result, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
     }
-OUT :
+EXIT:
     BN_Destroy(m);
     BN_Destroy(r);
     BN_Destroy(gm);
@@ -151,39 +150,38 @@ int32_t CRYPT_PAILLIER_PrvDec(const CRYPT_PAILLIER_Ctx *ctx, const BN_BigNum *ci
     if (createFailed) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_ModExp(m, ciphertext, prvKey->lambda, prvKey->n2, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_SubLimb(result, m, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_Div(result, NULL, result, prvKey->n, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_ModMul(result, result, prvKey->mu, prvKey->n, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_Bn2Bin(result, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
     }
-OUT :
+EXIT:
     BN_Destroy(m);
     BN_Destroy(result);
     BN_OptimizerDestroy(optimizer);
@@ -270,19 +268,18 @@ static int32_t CRYPT_PAILLIER_CheckCiphertext(const BN_BigNum* ciphertext, const
     if (gcd_result == NULL || optimizer == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto OUT;
+        goto EXIT;
     }
     ret = BN_Gcd(gcd_result, ciphertext, prvKey->n2, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
     if (BN_IsOne(gcd_result) == false) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
         ret = CRYPT_PAILLIER_ERR_INPUT_VALUE;
-        goto OUT;
     }
-OUT:
+EXIT:
     BN_Destroy(gcd_result);
     BN_OptimizerDestroy(optimizer);
     return ret;
@@ -301,21 +298,20 @@ int32_t CRYPT_PAILLIER_Decrypt(CRYPT_PAILLIER_Ctx *ctx, const uint8_t *data, uin
 
     if (c == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        goto OUT;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
 
     ret = BN_Bin2Bn(c, data, dataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     // check whether c is in Zn2*
     ret = CRYPT_PAILLIER_CheckCiphertext(c, ctx->prvKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = CRYPT_PAILLIER_PrvDec(ctx, c, bits, out, outLen);
@@ -323,7 +319,7 @@ int32_t CRYPT_PAILLIER_Decrypt(CRYPT_PAILLIER_Ctx *ctx, const uint8_t *data, uin
         BSL_ERR_PUSH_ERROR(ret);
     }
 
-OUT:
+EXIT:
     BN_Destroy(c);
     return ret;
 }

@@ -181,24 +181,24 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
     int32_t ret = HITLS_X509_ParseAttr(asn, node);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
     if (parseCb != NULL) {
         ret = parseCb(list, node);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
         }
-        goto EXIT;
+        goto ERR;
     }
 
     ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_AFTER);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
 
     return ret;
-EXIT:
+ERR:
     BSL_SAL_FREE(node);
     return ret;
 }

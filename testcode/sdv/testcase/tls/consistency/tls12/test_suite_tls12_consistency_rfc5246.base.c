@@ -248,14 +248,12 @@ int32_t StatusPark2(HandshakeTestInfo *testInfo)
 
 int32_t SendHelloReq(HITLS_Ctx *ctx)
 {
-    int32_t ret;
     /** Initialize the message buffer. */
     uint8_t buf[HS_MSG_HEADER_SIZE] = {0u};
     size_t len = HS_MSG_HEADER_SIZE;
 
     /** Write records. */
-    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
-    return ret;
+    return REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
 }
 
 int32_t ConstructAnEmptyCertMsg(FRAME_LinkObj *link)
@@ -428,7 +426,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
         testPara->expectDescription);
     ASSERT_EQ(((HITLS_Ctx *)(clientRes->ssl))->hsCtx->state, testPara->expectHsState);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -478,7 +476,7 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_EQ((ALERT_Description)HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId),
         testPara->expectDescription);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;

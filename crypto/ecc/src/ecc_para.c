@@ -559,10 +559,8 @@ static int32_t GetEccParam(const BN_BigNum *x, BSL_Param *param, int32_t key)
     int32_t ret = BN_Bn2Bin(x, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t ECC_GetPara(const ECC_Pkey *pkey, BSL_Param *eccPara)
@@ -608,9 +606,8 @@ int32_t ECC_GetPara(const ECC_Pkey *pkey, BSL_Param *eccPara)
     ret = GetEccParam(pkey->para->y, eccPara, CRYPT_PARAM_EC_Y);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 void ECC_FreePara(ECC_Para *para)

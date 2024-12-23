@@ -65,7 +65,7 @@ void SDV_BSL_USERDATA_API_TC001(void)
     BSL_USER_FreeExDataIndex(BSL_USER_DATA_EX_INDEX_SSL, NULL, &exdata);
     newCtx = BSL_USER_GetExData(&exdata, idx);
     ASSERT_TRUE(newCtx == NULL);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

@@ -81,14 +81,14 @@ int main(void)
         // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     // Set the padding mode.
     ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     /**
      * Enter the data to be calculated. This interface can be called for multiple times.
@@ -100,7 +100,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     outTotalLen += outLen;
@@ -110,7 +110,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     outTotalLen += outLen;
@@ -131,7 +131,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the padding mode, which must be the same as that for encryption.
@@ -139,7 +139,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Enter the ciphertext data.
@@ -147,7 +147,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     outTotalLen += outLen;
     outLen = sizeof(plainText) - outTotalLen;
@@ -157,7 +157,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     outTotalLen += outLen;
@@ -170,11 +170,11 @@ int main(void)
 
     if (outTotalLen != dataLen || memcmp(plainText, data, dataLen) != 0) {
         printf("plaintext comparison failed\n");
-        goto exit;
+        goto EXIT;
     }
     printf("pass \n");
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     BSL_ERR_DeInit();
     return ret;
