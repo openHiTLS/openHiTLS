@@ -65,9 +65,8 @@ int32_t MODES_XTS_SetEncryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uin
     ret = ctx->ciphMeth->setEncryptKey((uint8_t*)ctx->ciphCtx + ctx->ciphMeth->ctxSize, key + keyLen, keyLen); // key2
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t MODES_XTS_SetDecryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uint32_t len)
@@ -86,9 +85,8 @@ int32_t MODES_XTS_SetDecryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uin
     ret = ctx->ciphMeth->setDecryptKey(ctx->ciphCtx, key, keyLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 void GF128Mul_GM(uint8_t *a, uint32_t len)
@@ -303,9 +301,8 @@ int32_t MODES_XTS_SetIv(MODES_CipherXTSCtx *ctx, const uint8_t *val, uint32_t le
         ctx->iv, ctx->tweak, ctx->blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t GetIv(MODES_CipherXTSCtx *ctx, uint8_t *val, uint32_t len)

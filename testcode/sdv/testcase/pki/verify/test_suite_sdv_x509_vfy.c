@@ -129,7 +129,7 @@ void SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001(char *path1, char *path2, char *pat
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_VerifyParamAndExt(storeCtx, chain);
     ASSERT_EQ(ret, exp);
-exit:
+EXIT:
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_GLOBAL_DeInit();
@@ -161,7 +161,7 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
 
     ret = HITLS_X509_VerifyCrl(storeCtx, chain);
     ASSERT_EQ(ret, expResult);
-exit:
+EXIT:
     HITLS_X509_FreeStoreCtxMock(storeCtx);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_GLOBAL_DeInit();
@@ -197,7 +197,7 @@ void SDV_X509_STORE_CTRL_FUNC_TC001(void)
     ASSERT_EQ(ref, 2);
     HITLS_X509_StoreCtxFree(store);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     BSL_GLOBAL_DeInit();
 }
@@ -226,7 +226,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(cert);
     HITLS_X509_CrlFree(crl);
@@ -285,7 +285,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *ce
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);
@@ -325,7 +325,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002(void)
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);
@@ -346,7 +346,6 @@ static int32_t X509_AddCertToChainTest(HITLS_X509_List *chain, HITLS_X509_Cert *
     ret = BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END);
     if (ret != HITLS_PKI_SUCCESS) {
         HITLS_X509_CertFree(cert);
-        return ret;
     }
     return ret;
 }
@@ -375,7 +374,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC003(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);
@@ -402,7 +401,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC004(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -427,7 +426,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC005(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -455,7 +454,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC006(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -496,7 +495,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007(void)
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);
@@ -550,7 +549,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *ce
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret == except);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);
@@ -581,7 +580,7 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -613,7 +612,7 @@ void SDV_X509_BUILD_CERT_CHAIN_WITH_ROOT_FUNC_TC001(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 3);
 
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);
@@ -647,7 +646,7 @@ void SDV_X509_SM2_CERT_USERID_FUNC_TC001(char *caCertPath, char *interCertPath, 
     }
     ASSERT_EQ(HITLS_X509_CertChainBuild(storeCtx, false, entityCert, &chain), 0);
     ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_StoreCtxFree(storeCtx);
     HITLS_X509_CertFree(entityCert);
     HITLS_X509_CertFree(interCert);

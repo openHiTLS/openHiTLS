@@ -98,7 +98,7 @@ void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001(int isProvider, int algId, Hex *key, H
         ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) != 0);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     FREE(out);
     FREE(outTag);
@@ -163,7 +163,7 @@ void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key, H
     }
     ASSERT_COMPARE("Compare Tag", outTag, tagLen, tag->x, tag->len);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     FREE(out);
     FREE(outTag);

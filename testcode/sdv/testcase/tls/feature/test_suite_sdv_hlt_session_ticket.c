@@ -119,7 +119,7 @@ void SDV_TLS12_RESUME_FUNC_TC001()
         cnt++;
     } while (cnt < 3);
 
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -254,7 +254,7 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
         cnt++;
     } while (cnt < 3);
 
-exit:
+EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }

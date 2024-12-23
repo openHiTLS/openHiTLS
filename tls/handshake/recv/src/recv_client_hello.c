@@ -1765,8 +1765,7 @@ static int32_t Tls13ServerBasicCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cl
         return ret;
     }
 
-    ret = ServerSelectCipherSuite(ctx, clientHello);
-    return ret;
+    return ServerSelectCipherSuite(ctx, clientHello);
 }
 
 static int32_t Tls13ServerSelectCert(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)

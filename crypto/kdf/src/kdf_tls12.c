@@ -61,11 +61,7 @@ int32_t KDF_Hmac(const EAL_MacMethod *macMeth, void *macCtx, uint8_t *data, uint
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = macMeth->final(macCtx, data, len);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_SUCCESS;
+    return macMeth->final(macCtx, data, len);
 }
 
 // algorithm implementation see https://datatracker.ietf.org/doc/pdf/rfc5246.pdf, chapter 5, p_hash function

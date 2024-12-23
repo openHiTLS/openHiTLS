@@ -68,7 +68,7 @@ int Compute_Md(CRYPT_MD_AlgId mdId, Hex *msgIn, Hex *mdOut)
     CRYPT_EAL_MdFreeCtx(mdCtx);
     return SUCCESS;
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
     free(mdOut->x);
     mdOut->x = NULL;
@@ -124,7 +124,7 @@ int SignEncode(
     ASSERT_EQ(ASN1_SignDataEncode(dsaSign, vectorSign, vectorSignLen), CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 
-exit:
+EXIT:
     return ERROR;
 }
 
@@ -197,7 +197,7 @@ void SDV_CRYPTO_DSA_SET_PARA_API_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
         para.para.dsaPara.gLen = 128;
         ASSERT_TRUE_AND_LOG("g!= NULL, gLen != 0", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
     }
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -255,7 +255,7 @@ void SDV_CRYPTO_DSA_CMP_API_TC001(Hex *p, Hex *q, Hex *g, Hex *y, int isProvider
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx2, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
@@ -296,7 +296,7 @@ void SDV_CRYPTO_DSA_CTRL_API_TC001(int isProvider)
     ASSERT_EQ(
         CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_PADDING, &ref, sizeof(int32_t)), CRYPT_DSA_UNSUPPORTED_CTRL_OPTION);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -362,7 +362,7 @@ void SDV_CRYPTO_DSA_GET_PARA_API_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
     ASSERT_TRUE(para1.para.dsaPara.gLen == para2.para.dsaPara.gLen);
     ASSERT_TRUE(memcmp(para1.para.dsaPara.g, para2.para.dsaPara.g, para1.para.dsaPara.gLen) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pKey);
 }
 /* END_CASE */
@@ -463,7 +463,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     hitlsSignOutLen = signLen;
     ASSERT_EQ(CRYPT_EAL_PkeySign(cpyCtx, hashId, Msg->x, Msg->len, hitlsSign, &hitlsSignOutLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, hashId, Msg->x, Msg->len, hitlsSign, hitlsSignOutLen), CRYPT_SUCCESS);
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     free(vectorSign);
     free(hitlsSign);
@@ -559,7 +559,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
 
     /* Verify the signature of the hash data. */
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, mdOut.x, mdOut.len, hitlsSign, hitlsSignOutLen), CRYPT_SUCCESS);
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     if (mdOut.x != NULL) {
         free(mdOut.x);
@@ -628,7 +628,7 @@ void SDV_CRYPTO_DSA_GEN_FUNC_TC001(Hex *p, Hex *q, Hex *g, Hex *data, int isProv
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SHA256, data->x, data->len, sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, data->x, data->len, sign, signLen), CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     free(sign);
     CRYPT_EAL_RandDeinit();
@@ -713,7 +713,7 @@ void SDV_CRYPTO_DSA_DUP_CTX_FUNC_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(dupCtx, &prv2), CRYPT_SUCCESS);
     ASSERT_COMPARE("Compare private key", key1, prv1.key.dsaPrv.len, key2, prv2.key.dsaPrv.len);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(dupCtx);
@@ -762,7 +762,7 @@ void SDV_CRYPTO_DSA_KEY_PAIR_CHECK_FUNC_TC001(Hex *P, Hex *Q, Hex *G, Hex *X, He
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), expectRet);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
@@ -800,7 +800,7 @@ void SDV_CRYPTO_DSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, Hex *P, Hex *Q,
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -834,7 +834,7 @@ void SDV_CRYPTO_DSA_GET_SEC_BITS_FUNC_TC001(int id, int secBits, Hex *P, Hex *Q,
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), secBits);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */

@@ -176,11 +176,10 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
             goto ERR;
         }
         ret = RSA_CalcPrvKey(newCtx, optimizer);
+        BN_OptimizerDestroy(optimizer);
         if (ret != CRYPT_SUCCESS) {
-            BN_OptimizerDestroy(optimizer);
             goto ERR;
         }
-        BN_OptimizerDestroy(optimizer);
     }
 
     RSA_FREE_PRV_KEY(ctx->prvKey);

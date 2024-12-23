@@ -190,21 +190,21 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
     /* The decrypted record body is in data */
     ret = RecConnDecrypt(ctx, state, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
     if (ret != HITLS_SUCCESS) {
-        goto exit;
+        goto ERR;
     }
     if (!IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
         ret = funcs->decryptPostProcess(ctx, state->suiteInfo, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
         if (ret != HITLS_SUCCESS) {
-            goto exit;
+            goto ERR;
         }
         RecConnSetSeqNum(state, RecConnGetSeqNum(state) + 1);
     }
     ret = ProcessDecryptedRecord(ctx, decryptBuf->end, encryptedMsg);
     if (ret != HITLS_SUCCESS) {
-        goto exit;
+        goto ERR;
     }
     return HITLS_SUCCESS;
-exit:
+ERR:
     if (decryptBuf->isHoldBuffer) {
         BSL_SAL_FREE(decryptBuf->buf);
     }
