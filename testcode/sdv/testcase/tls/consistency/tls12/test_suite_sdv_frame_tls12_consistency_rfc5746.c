@@ -104,7 +104,7 @@ static void Test_ServerHelloHaveSecRenego(HITLS_Ctx *ctx, uint8_t *data, uint32_
     memset_s(data, bufSize, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -195,7 +195,7 @@ void Test_RenegoWrapperFunc(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     ASSERT_EQ(parseLen, *len);
     ASSERT_EQ(frameMsg.body.hsMsg.body.clientHello.secRenego.exState, INITIAL_FIELD);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -217,7 +217,7 @@ void Test_RenegoRemoveExtension(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, ui
     ASSERT_EQ(parseLen, *len);
     frameMsg.body.hsMsg.body.clientHello.secRenego.exState = MISSING_FIELD;
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -266,7 +266,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC001(void)
     ASSERT_TRUE(FlagScsv == 1);
     ASSERT_TRUE(frameMsg.body.hsMsg.body.clientHello.secRenego.exState == MISSING_FIELD);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -338,7 +338,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC003(void)
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertMsg->alertDescription.data, ALERT_DECODE_ERROR);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -395,7 +395,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC002(void)
     testInfo.state = HS_STATE_BUTT;
     ASSERT_TRUE(DefaultCfgStatusPark1(&testInfo) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -442,7 +442,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC009(void)
     ASSERT_EQ(FRAME_CreateConnection(client1, server1, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(server1->ssl->negotiatedInfo.isSecureRenegotiation == true);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client1);
     FRAME_FreeLink(server1);
@@ -504,7 +504,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC013(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) != HITLS_SUCCESS);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -564,7 +564,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC005(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -649,7 +649,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC010(void)
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_TRUE(alertMsg->alertDescription.data == ALERT_HANDSHAKE_FAILURE);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -701,7 +701,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC011(void)
     RegisterWrapper(wrapper);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -729,7 +729,7 @@ static void Test_ClientHello_SecRenego(HITLS_Ctx *ctx, uint8_t *data, uint32_t *
         clientMsg->cipherSuites.data[clientMsg->cipherSuitesSize.data / 2 - 1] != TLS_EMPTY_RENEGOTIATION_INFO_SCSV);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -777,7 +777,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC004(void)
     RegisterWrapper(wrapper);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -804,7 +804,7 @@ static void Test_ModifyServerHello_Secrenegotiation1(
     serverMsg->secRenego.exData.data[0] = serverMsg->secRenego.exData.data[0] + 1;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -829,7 +829,7 @@ static void Test_ModifyServerHello_Secrenegotiation2(
         serverMsg->secRenego.exData.data[serverMsg->secRenego.exData.size - 1] + 1;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -876,7 +876,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC007(void)
     RegisterWrapper(wrapper);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_MSG_HANDLE_RENEGOTIATION_FAIL);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -927,7 +927,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC008(void)
     RegisterWrapper(wrapper);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_MSG_HANDLE_RENEGOTIATION_FAIL);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -954,7 +954,7 @@ static void Test_ModifyServerHello_Secrenegotiation3(
     serverMsg->secRenego.exState = MISSING_FIELD;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -1005,7 +1005,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC006(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1032,7 +1032,7 @@ static void Test_ModifyClientHello_Secrenegotiation1(
     clientMsg->secRenego.exData.data[0] = clientMsg->secRenego.exData.data[0] + 1;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -1093,7 +1093,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0014(void)
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1120,7 +1120,7 @@ static void Test_ModifyServerHello_No_client_verify_data(
     serverMsg->secRenego.exData.size = 0;
     serverMsg->secRenego.exDataLen.data = 0;
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -1175,7 +1175,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0015(void)
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
 
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1202,7 +1202,7 @@ static void Test_ClientHelloHaveSecRenego(HITLS_Ctx *ctx, uint8_t *data, uint32_
     clientMsg->cipherSuites.data[clientMsg->cipherSuitesSize.data / 2 - 1] = TLS_EMPTY_RENEGOTIATION_INFO_SCSV;
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -1258,7 +1258,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0012(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
-exit:
+EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

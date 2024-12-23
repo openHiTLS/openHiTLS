@@ -231,19 +231,19 @@ int32_t REC_Init(TLS_Ctx *ctx)
 #endif
     ret = RecBufInit(ctx, newRecCtx);
     if (ret != HITLS_SUCCESS) {
-        goto err;
+        goto ERR;
     }
 
     ret = RecConnStatesInit(newRecCtx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15534, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Record: init connect state fail.", 0, 0, 0, 0);
-        goto err;
+        goto ERR;
     }
 
     ctx->recCtx = newRecCtx;
     return HITLS_SUCCESS;
-err:
+ERR:
     RecDeInit(newRecCtx);
     BSL_SAL_FREE(newRecCtx);
     return ret;
@@ -331,14 +331,14 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     RecConnState *writeState = RecConnStateNew();
     if (readState == NULL || writeState == NULL) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17301, "StateNew fail");
-        goto err;
+        goto ERR;
     }
 
     /* 1.Generate a secret */
     ret = RecConnKeyBlockGen(param, &clientSuitInfo, &serverSuitInfo);
     if (ret != HITLS_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17302, "KeyBlockGen fail");
-        goto err;
+        goto ERR;
     }
 
     /* 2.Set the corresponding read/write pending state */
@@ -347,12 +347,12 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     ret = RecConnStateSetCipherInfo(writeState, out);
     if (ret != HITLS_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17303, "SetCipherInfo fail");
-        goto err;
+        goto ERR;
     }
     ret = RecConnStateSetCipherInfo(readState, in);
     if (ret != HITLS_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17304, "SetCipherInfo fail");
-        goto err;
+        goto ERR;
     }
 
     /* Clear sensitive information */
@@ -361,7 +361,7 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     recordCtx->readStates.pendingState = readState;
     recordCtx->writeStates.pendingState = writeState;
     return HITLS_SUCCESS;
-err:
+ERR:
     /* Clear sensitive information */
     FreeDataAndState(&clientSuitInfo, &serverSuitInfo, readState, writeState);
     BSL_ERR_PUSH_ERROR(ret);

@@ -41,7 +41,7 @@ void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
     HITLS_X509_Cert *cert = NULL;
     int32_t ret = HITLS_X509_CertParseFile(format, path, &cert);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_GLOBAL_DeInit();
 }
@@ -53,7 +53,7 @@ void SDV_X509_CERT_PARSE_VERSION_FUNC_TC001(char *path, int version)
     HITLS_X509_Cert *cert = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -66,7 +66,7 @@ void SDV_X509_CERT_PARSE_SERIALNUM_FUNC_TC001(char *path, Hex *serialNum)
     ASSERT_EQ(cert->tbs.serialNum.tag, 2);
     ASSERT_COMPARE("serialNum", cert->tbs.serialNum.buff, cert->tbs.serialNum.len,
         serialNum->x, serialNum->len);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -83,7 +83,7 @@ void SDV_X509_CERT_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.mgfId, rsaPssMgf1);
     ASSERT_EQ(cert->tbs.signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -133,7 +133,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(cert->tbs.issuerName);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -173,7 +173,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC002(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(cert->tbs.issuerName);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -221,7 +221,7 @@ void SDV_X509_CERT_PARSE_ISSUERNAME_FUNC_TC003(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(cert->tbs.issuerName);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -232,7 +232,7 @@ void SDV_X509_CERT_PARSE_TIME_FUNC_TC001(char *path)
     HITLS_X509_Cert *cert = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_X509_ERR_CHECK_TAG);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_GLOBAL_DeInit();
 }
@@ -251,7 +251,7 @@ void SDV_X509_CERT_PARSE_START_TIME_FUNC_TC001(char *path,
     ASSERT_EQ(cert->tbs.validTime.start.hour, hour);
     ASSERT_EQ(cert->tbs.validTime.start.minute, minute);
     ASSERT_EQ(cert->tbs.validTime.start.second, second);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -269,7 +269,7 @@ void SDV_X509_CERT_PARSE_END_TIME_FUNC_TC001(char *path,
     ASSERT_EQ(cert->tbs.validTime.end.hour, hour);
     ASSERT_EQ(cert->tbs.validTime.end.minute, minute);
     ASSERT_EQ(cert->tbs.validTime.end.second, second);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -319,7 +319,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC001(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(cert->tbs.subjectName);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -359,7 +359,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC002(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(cert->tbs.subjectName);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -407,7 +407,7 @@ void SDV_X509_CERT_PARSE_SUBJECTNAME_FUNC_TC003(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(cert->tbs.subjectName);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -450,7 +450,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuKeyAgreement);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -492,7 +492,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC002(char *path, char *expectedSerialNum, char *ex
     ASSERT_NE(afterTime.data, NULL);
     ASSERT_EQ (afterTime.dataLen, strlen(expectedAfterTime));
     ASSERT_EQ(strcmp((char *)afterTime.data, expectedAfterTime), 0);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_SAL_FREE(subjectName.data);
     BSL_SAL_FREE(issuerName.data);
@@ -514,7 +514,7 @@ void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC001(char *path, char *path2)
 
     ASSERT_EQ(HITLS_X509_CheckSignature(cert2->tbs.ealPubKey, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen,
         &cert->signAlgId, &cert->signature), HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_CertFree(cert2);
 }
@@ -545,7 +545,7 @@ void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
     ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_EXT_KU_KEYAGREEMENT, &isTrue, sizeof(isTrue)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(isTrue, expKuKeyAgreement);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_CertFree(dest);
 }
@@ -557,7 +557,7 @@ void SDV_X509_CERT_PARSE_EXT_ERROR_TC001(char *path, int ret)
     HITLS_X509_Cert *cert = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), ret);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -593,7 +593,7 @@ void SDV_X509_CERT_PARSE_EXTENSIONS_FUNC_TC001(char *path, int extNum, int isCA,
             "value", (*node)->extnValue.buff, (*node)->extnValue.len, arr[i].extnValue.buff, arr[i].extnValue.len);
         node = BSL_LIST_Next(cert->tbs.ext.extList);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -611,7 +611,7 @@ void SDV_X509_CERT_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
     ASSERT_EQ(cert->signAlgId.rsaPssParam.mgfId, rsaPssMgf1);
     ASSERT_EQ(cert->signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -625,7 +625,7 @@ void SDV_X509_CERT_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedB
     ASSERT_EQ(cert->signature.len, buff->len);
     ASSERT_COMPARE("signature", cert->signature.buff, cert->signature.len, buff->x, buff->len);
     ASSERT_EQ(cert->signature.unusedBits, unusedBits);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -638,7 +638,7 @@ void SDV_X509_MUL_CERT_PARSE_FUNC_TC001(int format, char *path, int certNum)
     int32_t ret = HITLS_X509_CertMulParseFile(format, path, &list);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), certNum);
-exit:
+EXIT:
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
 /* END_CASE */
@@ -667,7 +667,7 @@ void SDV_X509_CERT_SET_VERIOSN_FUNC_TC001(void)
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)),
               HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -689,7 +689,7 @@ void SDV_X509_CERT_SET_SERIAL_FUNC_TC001(Hex *serial)
     ASSERT_EQ(cert->tbs.serialNum.len, valLen);
     ASSERT_COMPARE("serial", cert->tbs.serialNum.buff, valLen, val, valLen);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -714,7 +714,7 @@ void SDV_X509_CERT_SET_TIME_FUNC_TC001(void)
     ASSERT_TRUE((cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) != 0);
     ASSERT_EQ(BSL_SAL_DateTimeCompare(&cert->tbs.validTime.end, &time, NULL), BSL_TIME_CMP_EQUAL);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -737,7 +737,7 @@ void SDV_X509_ENCODE_CERT_EXT_TC001(char *path, Hex *expectExt)
         ASSERT_COMPARE("extensions", ext.buff, ext.len, expectExt->x, expectExt->len);
     }
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_SAL_Free(ext.buff);
     BSL_GLOBAL_DeInit();
@@ -762,7 +762,7 @@ void SDV_X509_CERT_GEN_BUFF_API_TC001(void)
     cert->tbs.ext.extList->count = 1;
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_NOT_SIGNED);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_GLOBAL_DeInit();
 }
@@ -780,7 +780,7 @@ void SDV_X509_CERT_GEN_FILE_API_TC001(char *destPath)
     ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, NULL, destPath), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, cert, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -801,7 +801,7 @@ void SDV_X509_CERT_SIGN_API_TC001(void)
     ASSERT_EQ(HITLS_X509_CertSign(BSL_CID_SHA256, NULL, &algParam, cert), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertSign(BSL_CID_SHA256, prvKey, &algParam, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
 }
@@ -821,7 +821,7 @@ void SDV_X509_CERT_FORMAT_CONVERT_FUNC_TC001(char *inCert, int inForm, char *out
 
     ASSERT_COMPARE("Format convert", expectCert.data, expectCert.dataLen, encodeCert.data, encodeCert.dataLen);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_SAL_Free(expectCert.data);
     BSL_SAL_Free(encodeCert.data);
@@ -846,7 +846,7 @@ static int32_t SetCert(HITLS_X509_Cert *raw, HITLS_X509_Cert *new)
     ASSERT_EQ(HITLS_X509_CertCtrl(new, HITLS_X509_SET_ISSUER_DN, rawIssuer, sizeof(BslList)), 0);
 
     ret = 0;
-exit:
+EXIT:
     return ret;
 }
 
@@ -897,7 +897,7 @@ void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyTyp
         ASSERT_COMPARE("Gen cert", encodeNew.data, encodeNew.dataLen, encodeRaw.data, encodeRaw.dataLen);
     }
 
-exit:
+EXIT:
     HITLS_X509_CertFree(raw);
     BSL_SAL_Free(encodeRaw.data);
     if (tmp != NULL) {
@@ -942,7 +942,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC001(char *derCertPath, char *privPath, int keyT
     /* Repeat generate is allowed. */
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encodeCert), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(privKey);
     HITLS_X509_CertFree(cert);
     BSL_SAL_Free(encodeCert.data);
@@ -1040,7 +1040,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
     /* Cannot parse after generating */
     ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeCert, &cert), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(privKey);
     CRYPT_EAL_PkeyFreeCtx(pubKey);
     HITLS_X509_CsrFree(csr);
@@ -1064,7 +1064,7 @@ void SDV_X509_CERT_DIGEST_API_TC001(char *inCert, int inForm, int mdId)
     ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, NULL, &mdLen), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertDigest(cert, mdId, md, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */
@@ -1088,7 +1088,7 @@ void SDV_X509_CERT_DIGEST_FUNC_TC001(char *inCert, int inForm, int mdId, Hex *ex
     ASSERT_EQ(HITLS_X509_CertGenBuff(inForm, cert, &encodeNew), 0);
     ASSERT_COMPARE("digest then gen", encodeRaw.data, encodeRaw.dataLen, encodeNew.data, encodeNew.dataLen);
 
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     BSL_SAL_Free(encodeRaw.data);
     BSL_SAL_Free(encodeNew.data);
@@ -1113,7 +1113,7 @@ void SDV_X509_CERT_SET_CSR_EXT_FUNC_TC001(int inForm, char *inCsr, int ret, Hex 
         ASSERT_TRUE((cert->tbs.ext.flag & HITLS_X509_EXT_FLAG_GEN) != 0);
         ASSERT_COMPARE("Csr ext", encodeExt.buff, encodeExt.len, expect->x, expect->len);
     }
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_CsrFree(csr);
     BSL_SAL_Free(encodeExt.buff);

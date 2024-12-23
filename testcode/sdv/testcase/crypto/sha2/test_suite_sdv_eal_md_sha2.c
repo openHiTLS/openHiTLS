@@ -48,7 +48,7 @@ void Sha2MultiThreadTest(void *arg)
         ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->hash, threadParameter->hashLen);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 
@@ -90,7 +90,7 @@ void SDV_CRYPT_EAL_SHA2_API_TC001(void)
     ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA512);
     ASSERT_TRUE(ctx != NULL);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -117,7 +117,7 @@ void SDV_CRYPT_EAL_SHA2_API_TC002(void)
     ASSERT_EQ(CRYPT_EAL_MdGetDigestSize(CRYPT_MD_SHA384), 48);
     // The length of the SHA512 digest is 64 characters.
     ASSERT_EQ(CRYPT_EAL_MdGetDigestSize(CRYPT_MD_SHA512), 64);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -180,7 +180,7 @@ void SDV_CRYPT_EAL_SHA2_API_TC003(int id)
     ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(ctx->state, CRYPT_MD_STATE_NEW);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -241,7 +241,7 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC001(int id)
 
    ASSERT_COMPARE("sha2", out1, outLen, out2, outLen);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx1);
     CRYPT_EAL_MdFreeCtx(ctx2);
 }
@@ -275,7 +275,7 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC002(int id, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), CRYPT_SUCCESS);
 
     ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -313,7 +313,7 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003(int algId, Hex *in, Hex *digest)
   
     ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("sha2", out, outLen, digest->x, digest->len);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -353,7 +353,7 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC004(int algId, Hex *plain_text1, Hex *plain_te
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
 
     ASSERT_COMPARE("sha2", output, outLen, hash->x, hash->len);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -388,7 +388,7 @@ void SDV_CRYPT_EAL_MD_SHA2_FUNC_TC005(int algId, Hex *data, Hex *hash)
         pthread_join(thrd[i], NULL);
     }
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -449,7 +449,7 @@ void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
     CRYPT_EAL_MdFreeCtx(dupCtx);
@@ -477,7 +477,7 @@ void SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */

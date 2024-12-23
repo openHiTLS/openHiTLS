@@ -98,7 +98,7 @@ void UT_TLS_CERT_CM_SetVerifyStore_API_TC001(int version)
     ASSERT_EQ(HITLS_SetVerifyStore(ctx, verifyStore, true), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetVerifyStore(ctx) == verifyStore);
     ASSERT_TRUE(HITLS_GetVerifyStore(NULL) == NULL);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
     HITLS_X509_Adapt_StoreFree(verifyStore);
@@ -137,7 +137,7 @@ void UT_TLS_CERT_CM_SetChainStore_API_TC001(int version)
     ASSERT_TRUE(HITLS_GetChainStore(ctx) == chainStore);
     ASSERT_TRUE(HITLS_GetChainStore(NULL) == NULL);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -174,7 +174,7 @@ void UT_TLS_CERT_CM_SetCertStore_API_TC001(int version)
     ASSERT_TRUE(HITLS_GetCertStore(ctx) == certStore);
     ASSERT_TRUE(HITLS_GetCertStore(NULL) == NULL);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -213,7 +213,7 @@ void UT_TLS_CERT_CM_SetDefaultPasswordCbUserdata_API_TC001(int version)
     ASSERT_TRUE(HITLS_GetCertStore(ctx) == certStore);
     ASSERT_TRUE(HITLS_GetCertStore(NULL) == NULL);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -254,7 +254,7 @@ void UT_TLS_CERT_SetGetAndCheckPrivateKey_API_TC001(int version, char *keyFile)
     ASSERT_TRUE(HITLS_GetPrivateKey(ctx) != NULL);
     ASSERT_TRUE(HITLS_CheckPrivateKey(NULL) == HITLS_NULL_INPUT);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -296,7 +296,7 @@ void UT_HITLS_CERT_ClearChainCerts_API_TC001(int version, char *certFile, char *
     SAL_CERT_MgrCtxFree(ctx->config.tlsConfig.certMgrCtx);
     ctx->config.tlsConfig.certMgrCtx = NULL;
     ASSERT_EQ(HITLS_ClearChainCerts(ctx), HITLS_NULL_INPUT);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }

@@ -60,7 +60,7 @@ static CRYPT_RSA_PubKey *RSAPubKeyDupCtx(CRYPT_RSA_PubKey *pubKey)
 
     return newPubKey;
 
-ERR :
+ERR:
     RSA_FREE_PUB_KEY(newPubKey);
     return NULL;
 }
@@ -86,8 +86,8 @@ static CRYPT_RSA_PrvKey *RSAPriKeyDupCtx(CRYPT_RSA_PrvKey *prvKey)
 
     return newPriKey;
 ERR:
-     RSA_FREE_PRV_KEY(newPriKey);
-     return NULL;
+    RSA_FREE_PRV_KEY(newPriKey);
+    return NULL;
 }
 
 static CRYPT_RSA_Para *RSAParaDupCtx(CRYPT_RSA_Para *para)
@@ -106,7 +106,7 @@ static CRYPT_RSA_Para *RSAParaDupCtx(CRYPT_RSA_Para *para)
     GOTO_ERR_IF_SRC_NOT_NULL(newPara->q, para->q, BN_Dup(para->q), CRYPT_MEM_ALLOC_FAIL);
     return newPara;
 
-ERR :
+ERR:
     RSA_FREE_PARA(newPara);
     return NULL;
 }
@@ -155,7 +155,7 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
-ERR :
+ERR:
     CRYPT_RSA_FreeCtx(newKeyCtx);
     return NULL;
 }
@@ -440,12 +440,12 @@ static int32_t RSA_Filter(
     if (pMinus1 == NULL || u == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_SubLimb(pMinus1, p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Gcd(u, pMinus1, e, optimizer);
     if (ret == CRYPT_SUCCESS) {
@@ -455,7 +455,7 @@ static int32_t RSA_Filter(
         }
     }
 
-ERR:
+EXIT:
     BN_Destroy(pMinus1);
     BN_Destroy(u);
     return ret;
@@ -549,33 +549,33 @@ static int32_t RsaPrvKeyCalcND(
     if (l == NULL || u == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mul(prvKey->n, prvKey->p, prvKey->q, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mul(l, pMinusOne, qMinusOne, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Gcd(u, pMinusOne, qMinusOne, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Div(l, NULL, l, u, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_ModInv(prvKey->d, ctx->para->e, l, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     BN_Destroy(l);
     BN_Destroy(u);
     return ret;
@@ -592,39 +592,39 @@ int32_t RSA_CalcPrvKey(CRYPT_RSA_Ctx *ctx, BN_Optimizer *optimizer)
     if (pMinusOne == NULL || qMinusOne == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_SubLimb(pMinusOne, prvKey->p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_SubLimb(qMinusOne, prvKey->q, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if (BN_IsZero(prvKey->n)) { // when generating key
         ret = RsaPrvKeyCalcND(ctx, pMinusOne, qMinusOne, optimizer);
         if (ret != CRYPT_SUCCESS) {
-            goto ERR;
+            goto EXIT;
         }
     }
     ret = BN_ModInv(prvKey->qInv, prvKey->q, prvKey->p, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Div(NULL, prvKey->dP, prvKey->d, pMinusOne, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Div(NULL, prvKey->dQ, prvKey->d, qMinusOne, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     BN_Destroy(pMinusOne);
     BN_Destroy(qMinusOne);
     return ret;

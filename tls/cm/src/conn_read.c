@@ -386,7 +386,6 @@ static int32_t ReadEventInClosedState(HITLS_Ctx *ctx, uint8_t *data, uint32_t bu
 }
 static int32_t ReadProcess(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
-    int32_t ret = HITLS_SUCCESS;
     ReadEventProcess readEventProcess[CM_STATE_END] = {
         ReadEventInIdleState,
         ReadEventInHandshakingState,
@@ -406,8 +405,7 @@ static int32_t ReadProcess(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint
     }
 
     ReadEventProcess proc = readEventProcess[GetConnState(ctx)];
-    ret = proc(ctx, data, bufSize, readLen);
-    return ret;
+    return proc(ctx, data, bufSize, readLen);
 }
 
 int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)

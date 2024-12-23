@@ -146,7 +146,7 @@ int32_t STUB_TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uin
     uint32_t dataLen = num;
     ASSERT_EQ(encryptedMsg.textLen, num);
     ret = RecConnDecrypt(ctx, state, &encryptedMsg, data, &dataLen);
-exit:
+EXIT:
     return ret;
 }
 

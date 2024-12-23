@@ -360,7 +360,6 @@ int32_t BSL_BASE64_Decode(const char *srcBuf, const uint32_t srcBufLen, uint8_t 
     ret = BslBase64ArithDecodeProc(srcBuf, srcBufLen, dstBuf, dstBufLen);  /* start decoding */
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;

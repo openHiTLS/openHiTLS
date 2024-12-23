@@ -70,7 +70,7 @@ static void MalformedClientHelloMsgCallback_01(void *msg, void *userData)
     clientHello->compressionMethodsLen.state = MISSING_FIELD;
     clientHello->compressionMethods.state = MISSING_FIELD;
     clientHello->extensionState = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -125,7 +125,7 @@ static void MalformedClientHelloMsgCallback_02(void *msg, void *userData)
     clientHello->compressionMethodsLen.state = MISSING_FIELD;
     clientHello->compressionMethods.state = MISSING_FIELD;
     clientHello->extensionState = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -174,7 +174,7 @@ static void MalformedClientHelloMsgCallback_03(void *msg, void *userData)
     uint8_t sessionId[MAX_SESSION_ID_SIZE] = {0};
     ASSERT_TRUE(FRAME_ModifyMsgArray8(sessionId, MAX_SESSION_ID_SIZE, &clientHello->sessionId, NULL) == HITLS_SUCCESS);
     clientHello->sessionIdSize.data = 0u;
-exit:
+EXIT:
     return;
 }
 
@@ -225,7 +225,7 @@ static void MalformedClientHelloMsgCallback_04(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     uint8_t sessionId[MIN_SESSION_ID_SIZE - 1] = {0};
     FRAME_ModifyMsgArray8(sessionId, sizeof(sessionId), &clientHello->sessionId, &clientHello->sessionIdSize);
-exit:
+EXIT:
     return;
 }
 
@@ -274,7 +274,7 @@ static void MalformedClientHelloMsgCallback_05(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     uint8_t sessionId[MAX_SESSION_ID_SIZE + 1] = {0};
     FRAME_ModifyMsgArray8(sessionId, sizeof(sessionId), &clientHello->sessionId, &clientHello->sessionIdSize);
-exit:
+EXIT:
     return;
 }
 /* @
@@ -324,7 +324,7 @@ static void MalformedClientHelloMsgCallback_06(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuitesSize.data = 0;
     clientHello->cipherSuites.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -380,7 +380,7 @@ static void MalformedClientHelloMsgCallback_07(void *msg, void *userData)
     FRAME_ModifyMsgArray8(
         rawData, sizeof(rawData) - 1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data -= 2;
-exit:
+EXIT:
     return;
 }
 
@@ -430,7 +430,7 @@ static void MalformedClientHelloMsgCallback_08(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuitesSize.data = 0;
-exit:
+EXIT:
     return;
 }
 
@@ -479,7 +479,7 @@ static void MalformedClientHelloMsgCallback_09(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuites.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -527,7 +527,7 @@ static void MalformedClientHelloMsgCallback_10(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuitesSize.data -= sizeof(uint16_t);
-exit:
+EXIT:
     return;
 }
 /* @
@@ -574,7 +574,7 @@ static void MalformedClientHelloMsgCallback_11(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuitesSize.data += sizeof(uint16_t);
-exit:
+EXIT:
     return;
 }
 /* @
@@ -624,7 +624,7 @@ static void MalformedClientHelloMsgCallback_12(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->compressionMethodsLen.data = 0;
     clientHello->compressionMethods.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -676,7 +676,7 @@ static void MalformedClientHelloMsgCallback_13(void *msg, void *userData)
     FRAME_ModifyMsgArray8(compressionMethods, sizeof(compressionMethods),
         &clientHello->compressionMethods, &clientHello->compressionMethodsLen);
     clientHello->compressionMethodsLen.data--;
-exit:
+EXIT:
     return;
 }
 
@@ -728,7 +728,7 @@ static void MalformedClientHelloMsgCallback_14(void *msg, void *userData)
     FRAME_ModifyMsgArray8(compressionMethods, sizeof(compressionMethods),
         &clientHello->compressionMethods, &clientHello->compressionMethodsLen);
     clientHello->compressionMethodsLen.data++;
-exit:
+EXIT:
     return;
 }
 
@@ -779,7 +779,7 @@ static void MalformedClientHelloMsgCallback_15(void *msg, void *userData)
     uint8_t compressionMethods[] = {1};
     FRAME_ModifyMsgArray8(compressionMethods, sizeof(compressionMethods),
         &clientHello->compressionMethods, &clientHello->compressionMethodsLen);
-exit:
+EXIT:
     return;
 }
 
@@ -829,7 +829,7 @@ static void MalformedClientHelloMsgCallback_16(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->extensionLen.state = ASSIGNED_FIELD;
     clientHello->extensionLen.data--;
-exit:
+EXIT:
     return;
 }
 
@@ -880,7 +880,7 @@ static void MalformedClientHelloMsgCallback_17(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->extensionLen.state = ASSIGNED_FIELD;
     clientHello->extensionLen.data++;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -930,7 +930,7 @@ static void MalformedClientHelloMsgCallback_18(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->pointFormats.exLen.state = ASSIGNED_FIELD;
     clientHello->pointFormats.exLen.data--;
-exit:
+EXIT:
     return;
 }
 
@@ -982,7 +982,7 @@ static void MalformedClientHelloMsgCallback_19(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->pointFormats.exLen.state = ASSIGNED_FIELD;
     clientHello->pointFormats.exLen.data++;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1031,7 +1031,7 @@ static void MalformedClientHelloMsgCallback_20(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->pointFormats.exDataLen.data = 0;
     clientHello->pointFormats.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -1080,7 +1080,7 @@ static void MalformedClientHelloMsgCallback_21(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->pointFormats.exDataLen.data = 1;
     clientHello->pointFormats.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -1129,7 +1129,7 @@ static void MalformedClientHelloMsgCallback_22(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->supportedGroups.exLen.data -= sizeof(uint16_t);
     clientHello->supportedGroups.exLen.state = ASSIGNED_FIELD;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1178,7 +1178,7 @@ static void MalformedClientHelloMsgCallback_23(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->supportedGroups.exLen.data += sizeof(uint16_t);
     clientHello->supportedGroups.exLen.state = ASSIGNED_FIELD;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1225,7 +1225,7 @@ static void MalformedClientHelloMsgCallback_24(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->supportedGroups.exDataLen.data--;
-exit:
+EXIT:
     return;
 }
 
@@ -1274,7 +1274,7 @@ static void MalformedClientHelloMsgCallback_25(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->supportedGroups.exDataLen.data = 0;
     clientHello->supportedGroups.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -1323,7 +1323,7 @@ static void MalformedClientHelloMsgCallback_26(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->signatureAlgorithms.exLen.state = ASSIGNED_FIELD;
     clientHello->signatureAlgorithms.exLen.data -= sizeof(uint16_t);
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1371,7 +1371,7 @@ static void MalformedClientHelloMsgCallback_27(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->signatureAlgorithms.exLen.state = ASSIGNED_FIELD;
     clientHello->signatureAlgorithms.exLen.data += sizeof(uint16_t);
-exit:
+EXIT:
     return;
 }
 
@@ -1419,7 +1419,7 @@ static void MalformedClientHelloMsgCallback_28(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->signatureAlgorithms.exDataLen.data--;
-exit:
+EXIT:
     return;
 }
 
@@ -1469,7 +1469,7 @@ static void MalformedClientHelloMsgCallback_29(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->signatureAlgorithms.exDataLen.data = 0;
     clientHello->signatureAlgorithms.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -1519,7 +1519,7 @@ static void MalformedClientHelloMsgCallback_30(void *msg, void *userData)
     uint8_t extendedMasterSecret[] = {0};
     FRAME_ModifyMsgArray8(extendedMasterSecret, sizeof(extendedMasterSecret),
         &clientHello->extendedMasterSecret.exData, NULL);
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1569,7 +1569,7 @@ static void MalformedClientHelloMsgCallback_31(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->sessionTicket.exDataLen.state = ASSIGNED_FIELD;
     clientHello->sessionTicket.exDataLen.data--;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1619,7 +1619,7 @@ static void MalformedClientHelloMsgCallback_32(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->sessionTicket.exDataLen.state = ASSIGNED_FIELD;
     clientHello->sessionTicket.exDataLen.data++;
-exit:
+EXIT:
     return;
 }
 
@@ -1670,7 +1670,7 @@ static void MalformedClientHelloMsgCallback_33(void *msg, void *userData)
     clientHello->sessionTicket.exDataLen.data = 1;
     clientHello->sessionTicket.exDataLen.state = SET_LEN_TO_ONE_BYTE;
     clientHello->sessionTicket.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1725,7 +1725,7 @@ static void MalformedClientHelloMsgCallback_34(void *msg, void *userData)
     FRAME_ModifyMsgArray8(
         rawData, sizeof(rawData) - 1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data -= 2;
-exit:
+EXIT:
     return;
 }
 
@@ -1781,7 +1781,7 @@ static void MalformedClientHelloMsgCallback_35(void *msg, void *userData)
     FRAME_ModifyMsgArray8(
         rawData, sizeof(rawData) - 1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data += 2;
-exit:
+EXIT:
     return;
 }
 
@@ -1838,7 +1838,7 @@ static void MalformedClientHelloMsgCallback_36(void *msg, void *userData)
         rawData, sizeof(rawData) - 1, &clientHello->serverName.exData, &clientHello->serverName.exDataLen);
     clientHello->serverName.exLen.data = 0;
     clientHello->serverName.exDataLen.data = 0;
-exit:
+EXIT:
     return;
 }
 /* @
@@ -1891,7 +1891,7 @@ static void MalformedClientHelloMsgCallback_37(void *msg, void *userData)
     clientHello->serverName.exData.state = MISSING_FIELD;
     FRAME_ModifyMsgInteger(HS_EX_TYPE_SERVER_NAME, &clientHello->serverName.exType);
     clientHello->serverName.exLen.data = 0;
-exit:
+EXIT:
     return;
 }
 
@@ -1945,7 +1945,7 @@ static void MalformedClientHelloMsgCallback_38(void *msg, void *userData)
     uint8_t rawData[13] = {0x00, 0x00, 0x09, 0x75, 0x61, 0x77, 0x65, 0x69, 0x2e, 0x63, 0x6F, 0x6d};
     FRAME_ModifyMsgArray8(rawData, sizeof(rawData) - 1, &clientHello->alpn.exData, &clientHello->alpn.exDataLen);
     clientHello->alpn.exLen.data -= 2;
-exit:
+EXIT:
     return;
 }
 
@@ -2001,7 +2001,7 @@ static void MalformedClientHelloMsgCallback_39(void *msg, void *userData)
     uint8_t rawData[13] = {0x00, 0x00, 0x09, 0x75, 0x61, 0x77, 0x65, 0x69, 0x2e, 0x63, 0x6F, 0x6d};
     FRAME_ModifyMsgArray8(rawData, sizeof(rawData) - 1, &clientHello->alpn.exData, &clientHello->alpn.exDataLen);
     clientHello->alpn.exLen.data += 2;
-exit:
+EXIT:
     return;
 }
 
@@ -2058,7 +2058,7 @@ static void MalformedClientHelloMsgCallback_40(void *msg, void *userData)
     FRAME_ModifyMsgArray8(rawData, sizeof(rawData) - 1, &clientHello->alpn.exData, &clientHello->alpn.exDataLen);
     clientHello->alpn.exLen.data = 0;
     clientHello->alpn.exDataLen.data = 0;
-exit:
+EXIT:
     return;
 }
 
@@ -2113,7 +2113,7 @@ static void MalformedClientHelloMsgCallback_41(void *msg, void *userData)
     clientHello->alpn.exData.state = MISSING_FIELD;
     FRAME_ModifyMsgInteger(HS_EX_TYPE_SERVER_NAME, &clientHello->alpn.exType);
     clientHello->alpn.exLen.data = 0;
-exit:
+EXIT:
     return;
 }
 
@@ -2163,7 +2163,7 @@ static void MalformedClientHelloMsgCallback_42(void *msg, void *userData)
     ASSERT_EQ(frameMsg->body.hsMsg.type.data, handle->expectHsType);
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->extendedMasterSecret.exType.data = 0xFFFFu;
-exit:
+EXIT:
     return;
 }
 
@@ -2213,7 +2213,7 @@ static void MalformedClientHelloMsgCallback_43(void *msg, void *userData)
     clientHello->signatureAlgorithms.exState = MISSING_FIELD;
     clientHello->extendedMasterSecret.exState = MISSING_FIELD;
     clientHello->secRenego.exState = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -2288,7 +2288,7 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     ASSERT_EQ(alertInfo.description, testExpect->expectDescription);
     ASSERT_EQ(HLT_RpcGetTlsAcceptResult(serverRes->acceptId), testExpect->acceptExpect);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -2420,7 +2420,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_SUPPORT_GROUP_TC001(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_MSG_HANDLE_CIPHER_SUITE_ERR);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);
@@ -2467,7 +2467,7 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
     ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alertInfo.description, testPara->expectDescription);
 
-exit:
+EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -2481,7 +2481,7 @@ static void MalformedCipherSuiteLenCallback_01(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->cipherSuitesSize.data = 1000;
     clientHello->cipherSuitesSize.state = ASSIGNED_FIELD;
-exit:
+EXIT:
     return;
 }
 /** @

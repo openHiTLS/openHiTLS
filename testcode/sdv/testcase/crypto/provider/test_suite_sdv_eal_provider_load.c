@@ -142,7 +142,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, "non_existent_provider");
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
@@ -179,7 +179,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
     BSL_SAL_Free(overpath);
 
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
@@ -217,7 +217,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC003(char *path, int cmd, char *test1, char *attr
     ASSERT_TRUE(mdCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(mdCtx), RIGHT_RESULT);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
     CRYPT_EAL_Cleanup(1);
     ASSERT_EQ(CRYPT_EAL_Init(1), CRYPT_SUCCESS);
@@ -267,7 +267,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2
     ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test2);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
@@ -341,7 +341,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2
     ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "!=tesst2", &funcs, &provCtx);
     ASSERT_EQ(ret, CRYPT_PROVIDER_ERR_ATTRIBUTE);
 
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
@@ -375,7 +375,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, 
     CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, NULL);
     ASSERT_TRUE(pkeyCtx == NULL);
 
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
@@ -421,7 +421,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(tempData);
 
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
@@ -470,7 +470,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001(char *path, char *test1, int cmd, He
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
-exit:
+EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }

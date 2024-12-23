@@ -136,7 +136,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC001(void)
 
     // The client returns alert ALERT_UNEXPECTED_MESSAGE
     ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-exit:
+EXIT:
     STUB_Reset(&tmpStubInfo);
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -216,7 +216,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC010(void)
     // The server sends an alert message, and the connection is interrupted.
     ASSERT_TRUE(client->ssl != NULL);
     ASSERT_EQ(HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-exit:
+EXIT:
     STUB_Reset(&tmpStubInfo);
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -269,7 +269,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC018(void)
     // the HITLS_VerifyClientPostHandshake interface is invoked
     ASSERT_EQ(HITLS_VerifyClientPostHandshake(client->ssl), HITLS_INVALID_INPUT);
     ASSERT_EQ(HITLS_VerifyClientPostHandshake(server->ssl), HITLS_MSG_HANDLE_STATE_ILLEGAL);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -319,7 +319,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC019(void)
     // The server invokes the HITLS_VerifyClientPostHandshake interface to initiate authentication
     ASSERT_EQ(HITLS_VerifyClientPostHandshake(client->ssl), HITLS_INVALID_INPUT);
     ASSERT_EQ(HITLS_VerifyClientPostHandshake(server->ssl), HITLS_MSG_HANDLE_STATE_ILLEGAL);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

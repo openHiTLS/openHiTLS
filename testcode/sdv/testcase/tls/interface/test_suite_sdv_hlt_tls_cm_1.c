@@ -138,7 +138,7 @@ void SDV_TLS_CM_KEYUPDATE_FUNC_TC001(int version)
     ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_IO_EXCEPTION);
     ret = HITLS_GetKeyUpdateType(client->ssl);
     ASSERT_EQ(ret, HITLS_UPDATE_REQUESTED);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

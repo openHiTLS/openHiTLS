@@ -67,22 +67,20 @@ int32_t BN_Add(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
     if (!BN_ISNEG(a->flag ^ b->flag)) {
         tmpFlag = BN_GETNEG(a->flag);
         UAdd(r, a, b);
-        goto END;
+        goto EXIT;
     }
     // compare absolute value
     int32_t res = BinCmp(a->data, a->size, b->data, b->size);
     if (res > 0) {
         tmpFlag = BN_GETNEG(a->flag);
         USub(r, a, b);
-        goto END;
     } else if (res < 0) {
         tmpFlag = BN_GETNEG(b->flag);
         USub(r, b, a);
-        goto END;
     } else {
         return BN_Zeroize(r);
     }
-END:
+EXIT:
     BN_CLRNEG(r->flag);
     r->flag |= tmpFlag;
     return CRYPT_SUCCESS;
@@ -269,12 +267,11 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     t->size = BinMul(t->data, t->room, a->data, a->size, b->data, b->size);
     if (r != t) {
         int32_t ret = BN_Copy(r, t);
+        OptimizerEnd(opt); // release occupation from the optimizer
         if (ret != CRYPT_SUCCESS) {
-            OptimizerEnd(opt); // release occupation from the optimizer
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        OptimizerEnd(opt); // release occupation from the optimizer
     }
     return CRYPT_SUCCESS;
 }
@@ -369,8 +366,7 @@ int32_t DivSimple(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x,
     return ret;
 }
 
-int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x,
-    const BN_BigNum *y, BN_Optimizer *opt)
+int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *y, BN_Optimizer *opt)
 {
     int32_t ret = DivInputCheck(q, r, x, y, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -388,19 +384,17 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x,
         return ret;
     }
     /* Apply for temporary space for the q and r of the BN. */
-    BN_BigNum *qTmp =
-        OptimizerGetBn(opt, x->size + 2);  // BinDiv:x->room >= xSize + 2
-    BN_BigNum *rTmp =
-        OptimizerGetBn(opt, x->size + 2);  // BinDiv:x->room >= xSize + 2
+    BN_BigNum *qTmp = OptimizerGetBn(opt, x->size + 2);  // BinDiv:x->room >= xSize + 2
+    BN_BigNum *rTmp = OptimizerGetBn(opt, x->size + 2);  // BinDiv:x->room >= xSize + 2
     if (qTmp == NULL || rTmp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
-        goto ERR;
+        goto EXIT;
     }
 
     ret = BN_Copy(rTmp, x);
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+        goto EXIT;
     }
 
     qTmp->size = qTmp->room;
@@ -415,13 +409,13 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x,
     if (q != NULL) {
         ret = BN_Copy(q, qTmp);
         if (ret != CRYPT_SUCCESS) {
-            goto ERR;
+            goto EXIT;
         }
     }
     if (r != NULL) {
         ret = BN_Copy(r, rTmp);
     }
-ERR:
+EXIT:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -498,11 +492,9 @@ int32_t ModBaseInputCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     return CRYPT_SUCCESS;
 }
 
-int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
 {
-    int32_t ret;
-    ret = ModBaseInputCheck(r, a, b, mod, opt);
+    int32_t ret = ModBaseInputCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -517,27 +509,25 @@ int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Sub(t, a, b);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
 
-int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
 {
-    int32_t ret;
-    ret = ModBaseInputCheck(r, a, b, mod, opt);
+    int32_t ret = ModBaseInputCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -552,28 +542,25 @@ int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Add(t, a, b);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
 
-int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
 {
-    int32_t ret;
-
-    ret = ModBaseInputCheck(r, a, b, mod, opt);
+    int32_t ret = ModBaseInputCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -587,24 +574,23 @@ int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mul(t, a, b, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
 
-int32_t BN_ModSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt)
 {
     bool invalidInput = (r == NULL || a == NULL || mod == NULL || opt == NULL);
     if (invalidInput) {
@@ -632,18 +618,18 @@ int32_t BN_ModSqr(
     if (t == NULL) {
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Sqr(t, a, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mod(r, t, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
@@ -673,8 +659,7 @@ int32_t ModExpInputCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
     return CRYPT_SUCCESS;
 }
 
-int32_t ModExpCore(BN_BigNum *x, BN_BigNum *y, const BN_BigNum *e,
-    const BN_BigNum *m, BN_Optimizer *opt)
+int32_t ModExpCore(BN_BigNum *x, BN_BigNum *y, const BN_BigNum *e, const BN_BigNum *m, BN_Optimizer *opt)
 {
     int32_t ret;
     if (BN_GetBit(e, 0) == 1) {
@@ -701,8 +686,7 @@ int32_t ModExpCore(BN_BigNum *x, BN_BigNum *y, const BN_BigNum *e,
     return CRYPT_SUCCESS;
 }
 
-static int32_t SwitchMont(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
-    const BN_BigNum *m, BN_Optimizer *opt)
+static int32_t SwitchMont(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, const BN_BigNum *m, BN_Optimizer *opt)
 {
     BN_Mont *mont = BN_MontCreate(m);
     if (mont == NULL) {
@@ -714,8 +698,7 @@ static int32_t SwitchMont(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
     return ret;
 }
 
-int32_t BN_ModExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
-    const BN_BigNum *m, BN_Optimizer *opt)
+int32_t BN_ModExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, const BN_BigNum *m, BN_Optimizer *opt)
 {
     int32_t ret = ModExpInputCheck(r, a, e, m, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -808,8 +791,7 @@ int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n)
 }
 
 // '~mask' is the mask of a and 'mask' is the mask of b.
-int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    BN_UINT mask)
+int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_UINT mask)
 {
     if (r == NULL || a == NULL || b == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

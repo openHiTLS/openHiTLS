@@ -165,13 +165,22 @@ int32_t CRYPT_HMAC_Final(CRYPT_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
     *len = method->mdSize;
     uint8_t tmp[HMAC_MAXOUTSIZE];
     uint32_t tmpLen = sizeof(tmp);
-    int32_t ret;
-    GOTO_ERR_IF(method->final(ctx->mdCtx, tmp, &tmpLen), ret);
-    GOTO_ERR_IF(method->copyCtx(ctx->mdCtx, ctx->oCtx), ret);
-    GOTO_ERR_IF(method->update(ctx->mdCtx, tmp, tmpLen), ret);
+    int32_t ret = method->final(ctx->mdCtx, tmp, &tmpLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = method->copyCtx(ctx->mdCtx, ctx->oCtx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = method->update(ctx->mdCtx, tmp, tmpLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     return method->final(ctx->mdCtx, out, len);
-ERR:
-    return ret;
 }
 
 void CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx)

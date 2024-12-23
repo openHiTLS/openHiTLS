@@ -57,7 +57,7 @@ static void Test_CipherOverLap(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, 
         ASSERT_TRUE(memcmp(outTmp + outOffset, out->x, out->len) == 0);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -88,7 +88,7 @@ void SDV_CRYPTO_AES_NEW_CTX_API_TC001(void)
 {
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_MAX);
     ASSERT_TRUE(ctx == NULL);
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -141,7 +141,7 @@ void SDV_CRYPTO_AES_INIT_API_TC001(Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 0, true);
     ASSERT_EQ_LOG("5", ret, CRYPT_MODES_IVLEN_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -169,7 +169,7 @@ void SDV_CRYPTO_AES_DEINIT_API_TC001(void)
 
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherDeinit(NULL);
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -212,7 +212,7 @@ void SDV_CRYPTO_AES_REINIT_API_TC001(Hex *key, Hex *iv)
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
     ret = CRYPT_EAL_CipherReinit(ctx, iv->x, 0);
     ASSERT_TRUE(ret == CRYPT_MODES_IVLEN_ERROR);
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -265,7 +265,7 @@ void SDV_CRYPTO_AES_UPDATE_API_TC001(Hex *key, Hex *iv, Hex *in)
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, out, NULL);
     ASSERT_EQ_LOG("8", ret, CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -314,7 +314,7 @@ void SDV_CRYPTO_AES_FINAL_API_TC001(Hex *key, Hex *iv, Hex *in)
     ret = CRYPT_EAL_CipherFinal(ctx, out, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -378,7 +378,7 @@ void SDV_CRYPTO_AES_CTRL_API_TC001(int id, Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, NULL, sizeof(uint32_t));
     ASSERT_TRUE(ret == CRYPT_MODE_ERR_INPUT_LEN);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -423,7 +423,7 @@ void SDV_CRYPTO_AES_SET_PADDING_API_TC001(Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherSetPadding(ctxCTR, CRYPT_PADDING_ZEROS);
     ASSERT_EQ(ret, CRYPT_MODES_CTRL_TYPE_ERROR);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctxCBC);
     CRYPT_EAL_CipherFreeCtx(ctxCBC);
     CRYPT_EAL_CipherFreeCtx(ctxCCM);
@@ -460,7 +460,7 @@ void SDV_CRYPTO_AES_GET_PADDING_API_TC001(Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherGetPadding(NULL);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -510,7 +510,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC001(int isProvider, int algId, Hex *key, Hex 
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(outTmp, out->x, out->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -561,7 +561,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *in, He
 
     ASSERT_TRUE(memcmp(mctResult[MCT_INNER_LOOP - 1], out->x, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -622,7 +622,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC003(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -732,7 +732,7 @@ void SDV_CRYPTO_AES_STATE_CHANGE_API_TC001(Hex *key, Hex *iv, Hex *in, int enc)
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len) == CRYPT_EAL_ERR_STATE);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -806,7 +806,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC004(int algId, Hex *key, Hex *iv, Hex *in, in
 
     ASSERT_TRUE(memcmp(in->x, result, in->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
     CRYPT_EAL_CipherDeinit(ctxDec);
@@ -865,7 +865,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC005(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -934,7 +934,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC006(int isProvider, int algId, int feed, Hex 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -975,7 +975,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC007(int algId, Hex *key, Hex *iv, Hex *in, He
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(in->x, out->x, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -1015,7 +1015,7 @@ void AES_MultiThreadTest(void *arg)
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, pTestVector->out, pTestVector->outLen) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -1064,7 +1064,7 @@ void SDV_CRYPTO_AES_MULTI_THREAD_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *i
     for (uint32_t i = 0; i < THREAD_NUM; i++) {
         pthread_join(thrd[i], NULL);
     }
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -1141,7 +1141,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(memcmp(out->x, outTmp, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctxEnc);
     CRYPT_EAL_CipherFreeCtx(ctxEnc);
 }
@@ -1201,7 +1201,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(memcmp(out->x, result, out->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_CipherDeinit(ctxDec);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
