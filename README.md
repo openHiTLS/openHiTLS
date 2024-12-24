@@ -25,7 +25,7 @@ openHiTLS include 4 components currently. The BSL component will be used with ot
 
 ### Dependency Preparation
 
-openHiTLS depends on Secure C which should be downloaded to ${openHiTLS_dir}/platform/Secure_C. One of the official git repositories of Secure C is located at <https://gitee.com/openeuler/libboundscheck>.
+openHiTLS depends on Secure C which should be downloaded to ${openHiTLS_dir}/platform/Secure_C. One of the official git repositories of Secure_C is located at <https://gitee.com/openeuler/libboundscheck>.
 
 * Download the security library
 
