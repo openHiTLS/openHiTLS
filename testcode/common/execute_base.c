@@ -119,6 +119,14 @@ EXIT:
             free(g_executeCases[i]);
         }
     }
-    (void)fclose(fpDatax);
+    // Check for exceeding max cases
+    char tmpName[MAX_FILE_NAME];
+    if (ReadLine(fpDatax, tmpName, MAX_FILE_NAME, 1, 1) == 0) {
+        Print("More test cases than max case num %d\n", MAX_IN_CASES);
+        rt = -1;
+    }
+
+    fclose(fpDatax); // Close file at the end
+
     return rt;
 }
