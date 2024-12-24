@@ -79,8 +79,10 @@ void *BSL_LIST_SearchEx(BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_C
  */
 uint32_t BSL_LIST_AddElementInt(BslList *pList, void *pData, BslListPosition enPosition);
 
+/* Get the current list node */
 #define CURR_LIST_NODE(al) ((al)->curr)
 
+/* Set the current list node */
 #define SET_CURR_LIST_NODE(al, listNode) ((al)->curr = (listNode))
 
 #ifdef __cplusplus
