@@ -1,7 +1,7 @@
 [English](./README.md) | 简体中文
 
 # openHiTLS
-欢迎访问openHiTLS代码仓，该代码仓的项目官网是openHiTLS社区<https://openhitls.net>，openHiTLS的目标是提供高效、敏捷的全场景开源密码学开发套件。openHiTLS已支持通用的标准密码算法、(D)TLS、TLCP等安全通信协议，更多特性待规划。
+欢迎访问openHiTLS代码仓，该代码仓的项目官网是openHiTLS社区<https://openhitls.net>，openHiTLS的目标是提供高效、敏捷的全场景开源密码学开发套件。openHiTLS已支持通用的标准密码算法、DTLS、TLCP等安全通信协议，更多特性待规划。
 
 ## 概述
 
