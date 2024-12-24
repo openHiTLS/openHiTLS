@@ -47,6 +47,12 @@ void HITLS_CryptMethodInit(void)
     ecdhMethod.freeEcdhKey = CRYPT_DEFAULT_FreeKey;
     ecdhMethod.getEcdhPubKey = CRYPT_DEFAULT_GetPubKey;
     ecdhMethod.calcEcdhSharedSecret = CRYPT_DEFAULT_CalcSharedSecret;
+
+    if (HITLS_CRYPT_RegisterBaseMethod(&baseMethod) != SUCCESS) {
+        fprintf(stderr, "Failed to register base cryptographic method.\n");
+        return;
+    }
+    
 #ifdef HITLS_TLS_PROTO_TLCP11
     ecdhMethod.sm2CalEcdhSharedSecret = CRYPT_DEFAULT_CalcSM2SharedSecret;
 #endif /* HITLS_TLS_PROTO_TLCP11 */
