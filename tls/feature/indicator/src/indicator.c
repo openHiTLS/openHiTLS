@@ -33,6 +33,6 @@ void INDICATOR_MessageIndicate(int32_t writePoint, uint32_t tlsVersion, int32_t 
         return;
     }
 
-    ctx->config.tlsConfig.msgCb(writePoint, (int32_t)tlsVersion, contentType, msg, msgLen, ctx, arg);
+    ctx->config.tlsConfig.msgCb(writePoint, tlsVersion, contentType, msg, msgLen, ctx, arg);
 }
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
