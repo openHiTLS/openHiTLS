@@ -872,34 +872,34 @@ static int32_t DecryptEncData(BSL_Buffer *ivData, BSL_Buffer *enData, int32_t al
     int32_t ret = CRYPT_EAL_CipherInit(ctx, key->data, key->dataLen, ivData->data, ivData->dataLen, isEnc);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     uint32_t blockSize;
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_BLOCKSIZE, &blockSize, sizeof(blockSize));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if (blockSize != 1) {
         ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
     }
     ret = CRYPT_EAL_CipherUpdate(ctx, enData->data, enData->dataLen, output, dataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     buffLen -= *dataLen;
     ret = CRYPT_EAL_CipherFinal(ctx, output + *dataLen, &buffLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     *dataLen += buffLen;
-ERR:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     return ret;
 }
@@ -1086,9 +1086,8 @@ int32_t CRYPT_EAL_ParsePemPubKey(int32_t type, BSL_Buffer *encode, CRYPT_EAL_Pke
     BSL_SAL_Free(asn1.data);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_EAL_ParseUnknownPubKey(int32_t type, BSL_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPubKey)
@@ -1198,9 +1197,8 @@ int32_t CRYPT_EAL_ParsePemPriKey(int32_t type, BSL_Buffer *encode, const uint8_t
     BSL_SAL_Free(asn1.data);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_EAL_ParseUnknownPriKey(int32_t type, BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
@@ -2055,7 +2053,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
         BSL_SAL_FREE(bitTmp.data);
         ret = CRYPT_ERR_ALGID;
         BSL_ERR_PUSH_ERROR(ret);
-        goto end;
+        goto EXIT;
     }
     algoId[BSL_ASN1_TAG_ALGOID_IDX].buff = (uint8_t *)oidStr->octs;
     algoId[BSL_ASN1_TAG_ALGOID_IDX].len = oidStr->octetLen;
@@ -2064,11 +2062,11 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(bitTmp.data);
         BSL_ERR_PUSH_ERROR(ret);
-        goto end;
+        goto EXIT;
     }
     bitStr->data = bitTmp.data;
     bitStr->dataLen = bitTmp.dataLen;
-end:
+EXIT:
     if (cid == (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS) {
         BSL_SAL_FREE(algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].buff);
     }
@@ -2350,9 +2348,8 @@ static int32_t ParsePKCS7EncryptedContentInfo(BSL_Buffer *encode, const uint8_t 
     ret = ParseEncDataAsn1(symId, &encPara, pwd, pwdlen, output);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 #define HITLS_P7_SPECIFIC_UNPROTECTEDATTRS_EXTENSION 1

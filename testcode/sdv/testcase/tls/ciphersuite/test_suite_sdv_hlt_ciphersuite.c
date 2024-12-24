@@ -184,7 +184,7 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 

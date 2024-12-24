@@ -40,7 +40,7 @@ void SDV_X509_CRL_PARSE_FUNC_TC001(int format, char *path)
     HITLS_X509_Crl *crl = NULL;
 
     ASSERT_EQ(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     BSL_GLOBAL_DeInit();
 }
@@ -57,7 +57,7 @@ void SDV_X509_CRL_CTRL_FUNC_TC001(char *path)
     ASSERT_EQ(ref, 2);
     HITLS_X509_CrlFree(crl);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -68,7 +68,7 @@ void SDV_X509_CRL_PARSE_VERSION_FUNC_TC001(char *path, int version)
     HITLS_X509_Crl *crl = NULL;
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
     ASSERT_EQ(crl->tbs.version, version);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -85,7 +85,7 @@ void SDV_X509_CRL_PARSE_TBS_SIGNALG_FUNC_TC001(char *path, int signAlg,
     ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.mgfId, rsaPssMgf1);
     ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -133,7 +133,7 @@ void SDV_X509_CRL_PARSE_ISSUERNAME_FUNC_TC001(char *path, int count,
             expAsan1Arr[i + 1].buff, expAsan1Arr[i + 1].len);
         nameNode = BSL_LIST_Next(crl->tbs.issuerName);
     }
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -143,7 +143,7 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC001(char *path)
 {
     HITLS_X509_Crl *crl = NULL;
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), BSL_SAL_ERR_FILE_LENGTH);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -170,7 +170,7 @@ void SDV_X509_CRL_PARSE_REVOKED_FUNC_TC003(char *path, int count, int num,
     ASSERT_EQ(nameNode->time.hour, hour1);
     ASSERT_EQ(nameNode->time.minute, minute1);
     ASSERT_EQ(nameNode->time.second, second1);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -180,7 +180,7 @@ void SDV_X509_CRL_PARSE_TIME_FUNC_TC001(char *path)
 {
     HITLS_X509_Crl *crl = NULL;
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_X509_ERR_CHECK_TAG);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -198,7 +198,7 @@ void SDV_X509_CRL_PARSE_START_TIME_FUNC_TC001(char *path,
     ASSERT_EQ(crl->tbs.validTime.start.hour, hour);
     ASSERT_EQ(crl->tbs.validTime.start.minute, minute);
     ASSERT_EQ(crl->tbs.validTime.start.second, second);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -216,7 +216,7 @@ void SDV_X509_CRL_PARSE_END_TIME_FUNC_TC001(char *path,
     ASSERT_EQ(crl->tbs.validTime.end.hour, hour);
     ASSERT_EQ(crl->tbs.validTime.end.minute, minute);
     ASSERT_EQ(crl->tbs.validTime.end.second, second);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -237,7 +237,7 @@ void SDV_X509_CRL_PARSE_EXTENSIONS_FUNC_TC001(char *path,
     ASSERT_COMPARE("extnId", (*nameNode)->extnId.buff, (*nameNode)->extnId.len, value1->x, value1->len);
     ASSERT_EQ((*nameNode)->extnValue.tag, tag2);
     ASSERT_COMPARE("extnValue", (*nameNode)->extnValue.buff, (*nameNode)->extnValue.len, value2->x, value2->len);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     BSL_GLOBAL_DeInit();
 }
@@ -255,7 +255,7 @@ void SDV_X509_CRL_PARSE_SIGNALG_FUNC_TC001(char *path, int signAlg,
     ASSERT_EQ(crl->signAlgId.rsaPssParam.mgfId, rsaPssMgf1);
     ASSERT_EQ(crl->signAlgId.rsaPssParam.saltLen, rsaPssSaltLen);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -268,7 +268,7 @@ void SDV_X509_CRL_PARSE_SIGNATURE_FUNC_TC001(char *path, Hex *buff, int unusedBi
     ASSERT_EQ(crl->signature.len, buff->len);
     ASSERT_COMPARE("signature", crl->signature.buff, crl->signature.len, buff->x, buff->len);
     ASSERT_EQ(crl->signature.unusedBits, unusedBits);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -281,7 +281,7 @@ void SDV_X509_MUL_CRL_PARSE_FUNC_TC001(int format, char *path, int crlNum)
     int32_t ret = HITLS_X509_CrlMulParseFile(format, path, &list);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), crlNum);
-exit:
+EXIT:
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
 }
 /* END_CASE */
@@ -309,7 +309,7 @@ void SDV_X509_CRL_Encode_TC001(int format, char *path)
     }
     ASSERT_EQ(memcmp(encode.data, data, dataLen), 0);
 
-exit:
+EXIT:
     BSL_SAL_Free(data);
     HITLS_X509_CrlFree(crl);
     BSL_SAL_Free(encode.data);
@@ -332,7 +332,7 @@ void SDV_X509_CRL_EncodeParam_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_UNKNOWN, crl, &encode), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode), 0);
-exit:
+EXIT:
     BSL_SAL_Free(data);
     HITLS_X509_CrlFree(crl);
     BSL_SAL_Free(encode.data);
@@ -358,7 +358,7 @@ void SDV_X509_CRL_EncodeFile_TC001(int format, char *path)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_SAL_ReadFile("res.crl", &res, &resLen), BSL_SUCCESS);
     ASSERT_COMPARE("crl_file com", data, dataLen, res, resLen);
-exit:
+EXIT:
     BSL_SAL_Free(data);
     HITLS_X509_CrlFree(crl);
     BSL_SAL_Free(res);
@@ -376,7 +376,7 @@ void SDV_X509_CRL_Check_TC001(char *capath, char *crlpath, int res)
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, capath, &cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(void *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CrlVerify(pubKey, crl), res);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pubKey);
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(cert);
@@ -443,7 +443,7 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
     BSL_TIME getTime = {0};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_BEFORE_TIME, &getTime, sizeof(getTime)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(memcmp(&getTime, &time, sizeof(BSL_TIME)), 0);
-exit:
+EXIT:
     // Clean up resources
     HITLS_X509_CrlFree(crl);
 }
@@ -510,7 +510,7 @@ void SDV_X509_CRL_CTRL_RevokedParamCheck_TC001(void)
 
     // Test HITLS_X509_CrlRevokedFree with valid entry
     HITLS_X509_CrlRevokedFree(entry);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -548,7 +548,7 @@ void SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001(char *parh, int revokedNum)
         memset(&time, 0, sizeof(BSL_TIME));
         memset(&serialNum, 0, sizeof(serialNum));
     }
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */
@@ -597,7 +597,7 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     ASSERT_NE(revokeList, NULL);
     ASSERT_EQ(BSL_LIST_COUNT(revokeList), 3);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 
@@ -631,7 +631,7 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
     ASSERT_EQ(getaki.kid.dataLen, aki.kid.dataLen);
     ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
 }
 
@@ -670,7 +670,7 @@ void SDV_X509_CRL_CTRL_SetFunc_TC001(char *capath)
     HITLS_X509_ExtCrlNumber crlNumberExt = {false, {serialNum, 4}};
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)),
               HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_CertFree(cert);
     HITLS_X509_CrlFree(crl);
 }
@@ -694,7 +694,7 @@ void SDV_X509_CRL_Sign_ParamCheck_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, NULL, &algParam, crl), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, prvKey, &algParam, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
 }
@@ -734,7 +734,7 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
     /* Repeat generate is allowed. */
     ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encodeCrl), 0);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
     BSL_SAL_Free(encodeCrl.data);
@@ -827,7 +827,7 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
     /* Cannot parse after generating */
     ASSERT_EQ(HITLS_X509_CrlParseBuff(BSL_FORMAT_ASN1, &encodeCrl, &crl), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(cert);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
@@ -875,7 +875,7 @@ void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
     algParam.rsaPss.saltLen = 32;
     ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, prvKey, &algParam, crl), CRYPT_EAL_ERR_ALGID);
 
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(cert);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
@@ -918,7 +918,7 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
         HITLS_PKI_SUCCESS);
     HITLS_X509_CrlRevokedFree(entry);
     return HITLS_PKI_SUCCESS;
-exit:
+EXIT:
     return -1;
 }
 
@@ -970,7 +970,7 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlSign(BSL_CID_SHA256, prvKey, &algParam, crl), HITLS_X509_ERR_CRL_TIME_INVALID);
 
     entry->time.year = year;
-exit:
+EXIT:
     crl->tbs.issuerName = issueList;
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CertFree(cert);
@@ -1025,7 +1025,7 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
             sizeof(HITLS_X509_ExtCrlNumber)), HITLS_PKI_SUCCESS);
     }
     return HITLS_PKI_SUCCESS;
-exit:
+EXIT:
     return -1;
 }
 
@@ -1080,7 +1080,7 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, i
     }
 
     ASSERT_EQ(HITLS_X509_CrlVerify(issuerCert->tbs.ealPubKey, parseCrl), HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_CrlFree(crl);
     HITLS_X509_CrlFree(parseCrl);
     HITLS_X509_CertFree(issuerCert);

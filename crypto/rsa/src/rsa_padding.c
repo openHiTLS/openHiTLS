@@ -42,20 +42,20 @@ static int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_Data *hashDa
     int32_t ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     for (uint32_t i = 0; i < size; i++) {
         ret = hashMethod->update(mdCtx, hashData[i].data, hashData[i].len);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
     }
     ret = hashMethod->final(mdCtx, out, &hLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     hashMethod->freeCtx(mdCtx);
     return ret;
 }
@@ -83,17 +83,17 @@ static int32_t Mgf(const EAL_MdMethod *hashMethod, const uint8_t *seed, const ui
         PUT_UINT32_BE(i, counter, 0);
         ret = CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), md, hashLen);
         if (ret != CRYPT_SUCCESS) {
-            goto ERR;
+            goto EXIT;
         }
         // Output the leading maskLen octets of T as the octet string mask
         partLen = (outLen + hashLen <= maskLen) ? hashLen : (maskLen - outLen);
         if (memcpy_s(mask + outLen, maskLen - outLen, md, partLen) != EOK) {
             ret = CRYPT_SECUREC_FAIL;
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
     }
-ERR:
+EXIT:
     BSL_SAL_CleanseData(md, sizeof(md));
     return ret;
 }
@@ -625,12 +625,12 @@ static int32_t OaepSetMaskedDB(const EAL_MdMethod *mgfMethod, uint8_t *db, uint8
     ret = Mgf(mgfMethod, seed, hashLen, maskedDB, maskedDBLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
     for (i = 0; i < maskedDBLen; i++) {
         db[i] ^= maskedDB[i];
     }
-END:
+EXIT:
     BSL_SAL_CleanseData(maskedDB, maskedDBLen);
     BSL_SAL_FREE(maskedDB);
     return ret;
@@ -647,12 +647,12 @@ static int32_t OaepSetSeedMask(const EAL_MdMethod *mgfMethod, uint8_t *db, uint8
     ret = Mgf(mgfMethod, db, maskedDBLen, seedmask, hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
     for (i = 0; i < hashLen; i++) {
         seed[i] ^= seedmask[i];
     }
-END:
+EXIT:
     BSL_SAL_CleanseData(seedmask, hashLen);
     return ret;
 }
@@ -738,7 +738,6 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMetho
     ret = OaepSetSeedMask(mgfMethod, db, seed, padLen, hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;

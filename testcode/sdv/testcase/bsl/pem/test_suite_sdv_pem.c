@@ -32,7 +32,7 @@ void SDV_BSL_PEM_ISPEM_FUNC_TC001(char *data, int expflag)
     uint32_t encodeLen = strlen(data);
     bool isPem = BSL_PEM_IsPemFormat(encode, encodeLen);
     ASSERT_TRUE(isPem == (bool)expflag);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -43,7 +43,7 @@ void SDV_BSL_PEM_ISPEM_FUNC_TC002(void)
     char *aa = "aaaaaaaa";
     ASSERT_TRUE(BSL_PEM_IsPemFormat(NULL, 0) == false);
     ASSERT_TRUE(BSL_PEM_IsPemFormat(aa, strlen(aa)) == false);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -57,7 +57,7 @@ void SDV_BSL_PEM_PARSE_FUNC_TC001(char *encode, char *head, char *tail, int expR
     uint8_t *asn1Encode = NULL;
     uint32_t asn1Len;
     ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&pemdata, &len, &sym, &asn1Encode, &asn1Len) == expRes);
-exit:
+EXIT:
     BSL_SAL_Free(asn1Encode);
     return;
 }
@@ -85,7 +85,7 @@ void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
     ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
     BSL_SAL_Free(asn1Encode);
     ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
-exit:
+EXIT:
     BSL_SAL_Free(asn1Encode);
     return;
 }

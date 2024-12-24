@@ -199,10 +199,7 @@ static int VerifySignData(TLS_Ctx *ctx, uint16_t signHashAlg, const uint8_t *sig
     /** verifying certificate data */
     ret = VERIFY_VerifySignData(ctx, pubkey, signScheme, sign, signSize);
     SAL_CERT_KeyFree(mgrCtx, pubkey);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    return HITLS_SUCCESS;
+    return ret;
 }
 
 int32_t ParseCertificateVerify(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)

@@ -57,7 +57,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Obtain the random number sequence of the **len** value.
@@ -65,7 +65,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     printf("random value is: ");  // Output the random number.
@@ -79,7 +79,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandSeed: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Obtain the random number sequence of the **len** value.
@@ -87,7 +87,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     printf("random value is: "); // Output the random number.
@@ -96,7 +96,7 @@ int main(void)
     }
     printf("\n");
 
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_RandDeinit();
     BSL_ERR_DeInit();

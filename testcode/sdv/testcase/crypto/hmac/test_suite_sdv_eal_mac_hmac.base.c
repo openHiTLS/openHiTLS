@@ -99,6 +99,6 @@ void MultiThreadTest(void *arg)
         ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->mac, threadParameter->macLen);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }

@@ -49,22 +49,21 @@ static int32_t CheckSquare(const BN_BigNum *n2, const BN_BigNum *n, uint32_t bit
     if (optimizer == NULL || tmp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     ret = BN_Sqr(tmp, n, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto OUT;
+        goto EXIT;
     }
 
     if (BN_Cmp(tmp, n2) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
         ret = CRYPT_PAILLIER_ERR_INPUT_VALUE;
-        goto OUT;
     }
 
-OUT:
+EXIT:
     BN_Destroy(tmp);
     BN_OptimizerDestroy(optimizer);
     return ret;

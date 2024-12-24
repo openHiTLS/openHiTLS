@@ -617,30 +617,35 @@ HITLS_AUTH_PrivPassToken *HITLS_AUTH_PrivPassNewToken(int32_t tokenType)
             object->st.tokenChallengeReq = (PrivPass_TokenChallengeReq *)BSL_SAL_Calloc(1u,
                 sizeof(PrivPass_TokenChallengeReq));
             if (object->st.tokenChallengeReq == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
                 goto ERR;
             }
             break;
         case HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE:
             object->st.tokenChallenge = (PrivPass_TokenChallenge *)BSL_SAL_Calloc(1u, sizeof(PrivPass_TokenChallenge));
             if (object->st.tokenChallenge == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
                 goto ERR;
             }
             break;
         case HITLS_AUTH_PRIVPASS_TOKEN_REQUEST:
             object->st.tokenRequest = (PrivPass_TokenRequest *)BSL_SAL_Calloc(1u, sizeof(PrivPass_TokenRequest));
             if (object->st.tokenRequest == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
                 goto ERR;
             }
             break;
         case HITLS_AUTH_PRIVPASS_TOKEN_RESPONSE:
             object->st.tokenResponse = (PrivPass_TokenResponse *)BSL_SAL_Calloc(1u, sizeof(PrivPass_TokenResponse));
             if (object->st.tokenResponse == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
                 goto ERR;
             }
             break;
         case HITLS_AUTH_PRIVPASS_TOKEN_INSTANCE:
             object->st.token = (PrivPass_TokenInstance *)BSL_SAL_Calloc(1u, sizeof(PrivPass_TokenInstance));
             if (object->st.token == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
                 goto ERR;
             }
             break;
@@ -652,7 +657,6 @@ HITLS_AUTH_PrivPassToken *HITLS_AUTH_PrivPassNewToken(int32_t tokenType)
     object->type = tokenType;
     return object;
 ERR:
-    BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
     BSL_SAL_Free(object);
     return NULL;
 }

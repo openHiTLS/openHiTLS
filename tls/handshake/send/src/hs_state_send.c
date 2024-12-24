@@ -67,7 +67,6 @@ static int32_t Tls13SendKeyUpdateProcess(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t SendFinishedProcess(TLS_Ctx *ctx)
 {
-    int32_t ret = HITLS_INTERNAL_EXCEPTION;
 #ifdef HITLS_TLS_PROTO_DTLS12
     uint32_t version = HS_GetVersion(ctx);
 #endif
@@ -75,29 +74,26 @@ static int32_t SendFinishedProcess(TLS_Ctx *ctx)
     if (ctx->isClient) {
 #ifdef HITLS_TLS_PROTO_DTLS12
         if (version == HITLS_VERSION_DTLS12) {
-            ret = DtlsClientSendFinishedProcess(ctx);
-            goto exit;
+            return DtlsClientSendFinishedProcess(ctx);
         }
 #endif
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
-        ret = Tls12ClientSendFinishedProcess(ctx);
-        goto exit;
+        return Tls12ClientSendFinishedProcess(ctx);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
     }
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
 #ifdef HITLS_TLS_PROTO_DTLS12
     if (version == HITLS_VERSION_DTLS12) {
-        ret = DtlsServerSendFinishedProcess(ctx);
-        goto exit;
+        return DtlsServerSendFinishedProcess(ctx);
     }
 #endif
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
-    ret = Tls12ServerSendFinishedProcess(ctx);
+    return Tls12ServerSendFinishedProcess(ctx);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 #endif /* HITLS_TLS_HOST_SERVER */
-exit:
-    return ret;
+
+    return HITLS_INTERNAL_EXCEPTION;
 }
 static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 {

@@ -29,8 +29,7 @@ extern int32_t __real_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t
 
 extern int32_t __wrap_REC_Read(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num)
 {
-    int32_t ret = __real_REC_Read(ctx, recordType, data, readLen, num);
-    return ret;
+    return __real_REC_Read(ctx, recordType, data, readLen, num);
 }
 
 extern int32_t __wrap_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)

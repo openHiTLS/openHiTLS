@@ -144,18 +144,18 @@ static int32_t BslUioCreate(BSL_UIO *uio)
     CustomLowCtx *lowCtx = BSL_SAL_Calloc(1, sizeof(CustomLowCtx));
     if (lowCtx == NULL) {
         ret = BSL_MALLOC_FAIL;
-        goto exit;
+        goto EXIT;
     }
     lowCtx->buff = BSL_SAL_Malloc(len);
     if (lowCtx->buff == NULL) {
         ret = BSL_MALLOC_FAIL;
-        goto exit;
+        goto EXIT;
     }
     lowCtx->len = len;
     BSL_UIO_SetCtx(uio, (void *)lowCtx);
     BSL_UIO_SetInit(uio, 1);
     return BSL_SUCCESS;
-exit:
+EXIT:
     if(lowCtx != NULL) {
         BSL_SAL_FREE(lowCtx->buff);
         BSL_SAL_FREE(lowCtx);
@@ -283,6 +283,7 @@ void SDV_BSL_UIO_NEW_API_TC001(void)
         ASSERT_TRUE(uio != NULL && BSL_UIO_GetTransportType(uio) == BSL_UIO_TCP);
         BSL_UIO_Free(uio);
     }
+
     /* Set transportType to udp and construct the method structure. */
     {
         const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
@@ -295,7 +296,8 @@ void SDV_BSL_UIO_NEW_API_TC001(void)
         ASSERT_TRUE(uio != NULL && BSL_UIO_GetTransportType(uio) == BSL_UIO_UDP);
         BSL_UIO_Free(uio);
     }
-exit:
+
+EXIT:
     return;
 }
 /* END_CASE */
@@ -339,7 +341,7 @@ void SDV_BSL_UIO_NEW_API_TC002(void)
 
     ASSERT_EQ(BSL_UIO_Puts(uio, test, &len), BSL_INVALID_ARG);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
     BSL_UIO_FreeMethod(ori);
 }
@@ -395,7 +397,7 @@ void SDV_BSL_UIO_NEW_FUNC_TC001(void)
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_CUSTOM_UIO_GET_INDEX, sizeof(index), &index), BSL_SUCCESS);
     ASSERT_EQ(index, 0);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
     BSL_UIO_FreeMethod(ori);
 }
@@ -458,7 +460,7 @@ void SDV_BSL_UIO_INIT_FUNC_TC001(int uioType)
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_FD, (int32_t)sizeof(fd), &getFd), BSL_SUCCESS);
     ASSERT_EQ(getFd, fd);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -495,7 +497,7 @@ void SDV_BSL_UIO_INIT_FUNC_TC002(int uioType)
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_INIT, (int32_t)sizeof(init), &init), BSL_SUCCESS);
     ASSERT_EQ(init, 1);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -557,7 +559,7 @@ void SDV_BSL_UIO_SETUSERDATA_API_TC001(void)
     ret = BSL_UIO_SetUserData(uio, userData2);
     ASSERT_TRUE(ret == BSL_SUCCESS);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -596,7 +598,7 @@ void SDV_BSL_UIO_GETUSERDATA_API_TC001(void)
 
     data = BSL_UIO_GetUserData(uio);
     ASSERT_TRUE(data == userData);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -655,7 +657,7 @@ void SDV_BSL_UIO_FLAGS_FUNC_TC001(int uioType)
     ASSERT_EQ(BSL_UIO_SetFlags(uio, INT_MAX), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_UIO_SetFlags(uio, 0), BSL_INVALID_ARG);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -698,7 +700,7 @@ void SDV_BSL_UIO_FLAGS_FUNC_TC002(void)
 
     ASSERT_TRUE(BSL_UIO_TestFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY, &out) == BSL_SUCCESS);
     ASSERT_TRUE(out == BSL_UIO_FLAGS_SHOULD_RETRY);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -733,7 +735,7 @@ void SDV_BSL_UIO_UPREF_API_TC001(void)
     ret = BSL_UIO_UpRef(uio);
     ASSERT_TRUE(ret == BSL_SUCCESS);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
     BSL_UIO_Free(uio);
 #endif
@@ -786,7 +788,7 @@ void SDV_BSL_UIO_WRITE_API_TC001(void)
     /* Test that writeLen is NULL. */
     ret = BSL_UIO_Write(uio, data, len, NULL);
     ASSERT_TRUE(ret == BSL_INTERNAL_EXCEPTION);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -840,7 +842,7 @@ void SDV_BSL_UIO_READ_API_TC001(void)
     /* Test that writeLen is NULL. */
     ret = BSL_UIO_Read(uio, data, len, NULL);
     ASSERT_TRUE(ret == BSL_INTERNAL_EXCEPTION);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -879,7 +881,7 @@ void SDV_BSL_UIO_SET_USERDATA_FREE_TC001(void)
 
     ret = BSL_UIO_SetUserDataFreeFunc(uio, BSL_SAL_Free);
     ASSERT_TRUE(ret == BSL_SUCCESS);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -906,7 +908,7 @@ void SDV_BSL_UIO_GET_METHOD_TC001(void)
     const BSL_UIO_Method *method = BSL_UIO_GetMethod(uio);
     int ret = memcmp(method, ori, sizeof(BSL_UIO_Method));
     ASSERT_TRUE(ret == 0);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -957,7 +959,7 @@ void SDV_BSL_UIO_GET_READANDWRITE_NUM_TC001(void)
     ASSERT_TRUE(BSL_UIO_Read(uio, readBuf, dataLen, &readLen) == BSL_SUCCESS);
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_READ_NUM, (int32_t)sizeof(readNum), &readNum), BSL_SUCCESS);
     ASSERT_EQ(readNum, readLen);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -989,7 +991,7 @@ void SDV_BSL_UIO_SET_FD_TC001(void)
     int32_t fd1 = -1;
     ASSERT_TRUE(BSL_UIO_Ctrl(uio, BSL_UIO_GET_FD, (int32_t)sizeof(fd1), &fd1) == BSL_SUCCESS);
     ASSERT_TRUE(fd == fd1);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
     remove(filename);
 }
@@ -1021,7 +1023,7 @@ void SDV_BSL_UIO_NEXT_TC001(void)
     ASSERT_TRUE(BSL_UIO_Append(tcp1, tcp2) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_UIO_Next(tcp1) == tcp2);
     ASSERT_TRUE(BSL_UIO_Next(tcp2) == NULL);
-exit:
+EXIT:
     BSL_UIO_Free(tcp1);
     BSL_UIO_Free(tcp2);
 }
@@ -1120,7 +1122,7 @@ void SDV_BSL_UIO_SCTP_API_TC001(void)
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_SCTP_SET_APP_STREAM_ID, sizeof(uint16_t), &sendAppStreamId);
     ASSERT_TRUE(ret == BSL_SUCCESS);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 #endif
 }
@@ -1165,7 +1167,7 @@ void SDV_BSL_UIO_BUFFER_RESET_TC001(void)
 
     ret = BSL_UIO_Ctrl(buffer, BSL_UIO_RESET, 0, NULL);
     ASSERT_TRUE(ret = BSL_UIO_FAIL);
-exit:
+EXIT:
     BSL_UIO_Free(buffer);
     BSL_UIO_Free(tcp);
 }
@@ -1201,7 +1203,7 @@ void SDV_BSL_UIO_MEM_BASIC_TC001(void)
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ASSERT_TRUE(pendingLen == 0); // All data has been read
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -1235,7 +1237,7 @@ void SDV_BSL_UIO_MEM_NEW_BUF_TC001(void)
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ASSERT_TRUE(readLen == strlen(testBuf));
     ASSERT_TRUE(memcmp(readBuf, testBuf, readLen) == 0);
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */
@@ -1271,7 +1273,7 @@ void SDV_BSL_UIO_MEM_EOF_TC001(void)
     BSL_UIO_TestFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY, &flags);
     ASSERT_TRUE((flags & BSL_UIO_FLAGS_SHOULD_RETRY) != 0);
 
-exit:
+EXIT:
     BSL_UIO_Free(uio);
 }
 /* END_CASE */

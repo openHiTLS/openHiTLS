@@ -95,7 +95,7 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
         DRBG_CtrInc(ctx->v, AES_BLOCK_LEN);
         if ((ret = ciphMeth->encryptBlock(ctx->ctrCtx, ctx->v, tempData + offset, AES_BLOCK_LEN)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
     }
 
@@ -109,12 +109,12 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
     if (memcpy_s(ctx->k, DRBG_CTR_MAX_KEYLEN, temp.data, ctx->keyLen) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         ret = CRYPT_SECUREC_FAIL;
-        goto ERR;
+        goto EXIT;
     }
     // The length to be copied of ctx->V is AES_BLOCK_LEN, which is also the array length.
     // The lower bits of temp.data are used for ctx->K, and the upper bits are used for ctx->V.
     (void)memcpy_s(ctx->v, AES_BLOCK_LEN, temp.data + ctx->keyLen, AES_BLOCK_LEN);
-ERR:
+EXIT:
     ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
     return ret;
 }
@@ -133,7 +133,6 @@ static int32_t DRBG_CtrBCCUpdateBlock(DRBG_Ctx *drbg, const uint8_t *in, uint8_t
     if ((ret = ctx->ciphMeth->encryptBlock(ctx->dfCtx, out, out, AES_BLOCK_LEN)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         ctx->ciphMeth->cipherDeInitCtx(ctx->dfCtx);
-        return ret;
     }
 
     return ret;
@@ -229,7 +228,6 @@ static int32_t DRBG_CtrBCCFinal(DRBG_Ctx *drbg, uint8_t temp[16], uint32_t tempL
 
     if ((ret = DRBG_CtrBCCUpdateKX(drbg, temp)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -253,7 +251,7 @@ static int32_t BlockCipherDfCal(DRBG_Ctx *drbg, CRYPT_Data *out)
         ret = ciphMeth->encryptBlock(ctx->ctrCtx, ctx->kx + vOffset, ctx->kx + kOffset, AES_BLOCK_LEN);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
 
         vOffset = kOffset;
@@ -263,7 +261,7 @@ static int32_t BlockCipherDfCal(DRBG_Ctx *drbg, CRYPT_Data *out)
     out->data = ctx->kx;
     out->len = ctx->seedLen;
 
-ERR:
+EXIT:
     ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
     return ret;
 }
@@ -336,7 +334,6 @@ static int32_t BlockCipherDf(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_
     */
     if ((ret = BlockCipherDfCal(drbg, out)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -405,7 +402,6 @@ int32_t DRBG_CtrInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy, const CRY
 
     if ((ret = DRBG_CtrUpdate(drbg, &seedMaterial, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -432,7 +428,6 @@ int32_t DRBG_CtrReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropy, const CRYPT_Da
 
     if ((ret = DRBG_CtrUpdate(drbg, &seedMaterial, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;
@@ -539,7 +534,6 @@ int32_t DRBG_CtrGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const CR
     // (Key, V) = CTR_DRBG_Update (additional_input, Key, V).
     if ((ret = DRBG_CtrUpdate(drbg, adin, NULL)) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
 
     return ret;

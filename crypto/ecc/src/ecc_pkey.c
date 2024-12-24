@@ -164,7 +164,7 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
 
     int32_t ret = ECC_DecodePoint(ctx->para, newPubKey, pub->value, pub->valueLen);
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+        goto EXIT;
     }
 
     // Check whether n * pubKey is equal to infinity.
@@ -172,27 +172,26 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
     pointQ = ECC_NewPoint(ctx->para);
     if ((paraN == NULL) || (pointQ == NULL)) {
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        goto EXIT;
     }
 
     ret = ECC_PointMul(ctx->para, pointQ, paraN, newPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
 
     if (BN_IsZero(pointQ->z) == false) {
         ret = CRYPT_ECC_PKEY_ERR_INVALID_PUBLIC_KEY;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
-    ret = CRYPT_SUCCESS;
 
     ECC_FreePoint(ctx->pubkey);
     ctx->pubkey = newPubKey;
     newPubKey = NULL;
 
-ERR:
+EXIT:
     ECC_FreePoint(newPubKey);
     BN_Destroy(paraN);
     ECC_FreePoint(pointQ);
@@ -271,14 +270,14 @@ static int32_t GenPrivateKey(ECC_Pkey *ctx)
         if (ctx->prvkey == NULL) {
             ret = CRYPT_MEM_ALLOC_FAIL;
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            goto ERR;
+            goto EXIT;
         }
     }
     do {
         ret = BN_RandRange(ctx->prvkey, paraN);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         tryCount += 1;
     } while ((BN_IsZero(ctx->prvkey) == true) && (tryCount < CRYPT_ECC_TRY_MAX_CNT));
@@ -287,7 +286,7 @@ static int32_t GenPrivateKey(ECC_Pkey *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_TRY_CNT);
         ret = CRYPT_ECC_PKEY_ERR_TRY_CNT;
     }
-ERR:
+EXIT:
     if (paraN != ctx->para->n) {
         BN_Destroy(paraN);
     }
@@ -319,7 +318,6 @@ static int32_t GenPublicKey(ECC_Pkey *ctx)
         return CRYPT_NULL_INPUT;
     }
 
-    int32_t ret;
     if (ctx->pubkey == NULL) {
         ctx->pubkey = ECC_NewPoint(ctx->para);
         if (ctx->pubkey == NULL) {
@@ -328,12 +326,7 @@ static int32_t GenPublicKey(ECC_Pkey *ctx)
         }
     }
 
-    ret = ECC_PointMul(ctx->para, ctx->pubkey, ctx->prvkey, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
-    return CRYPT_SUCCESS;
+    return ECC_PointMul(ctx->para, ctx->pubkey, ctx->prvkey, NULL);
 }
 
 int32_t ECC_PkeyGen(ECC_Pkey *ctx)

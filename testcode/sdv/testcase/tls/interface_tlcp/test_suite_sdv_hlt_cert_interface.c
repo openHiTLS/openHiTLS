@@ -168,7 +168,7 @@ int Dtls_DataTransfer(HITLS_Ctx *clientCtx, HLT_Process *remoteProcess, HLT_Tls_
     ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, serverRes, readBuf, READ_DATA_18432, &readLen), 0);
     ASSERT_COMPARE("COMPARE DATA", writeBuf, writeLen, readBuf, readLen);
     return SUCCESS;
-exit:
+EXIT:
     return ERROR;
 }
 
@@ -182,7 +182,7 @@ HITLS_Ctx *Dtls_New_Ctx(HLT_Process *localProcess, HITLS_Config* clientConfig)
     ASSERT_TRUE_AND_LOG("HLT_TlsSetSsl", HLT_TlsSetSsl(clientCtx, &clientCtxConfig) == 0);
     return clientCtx;
 
-exit:
+EXIT:
     return NULL;
 }
 
@@ -380,7 +380,7 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
     ASSERT_TRUE(clientRes != NULL);
     ASSERT_EQ(HLT_GetTlsAcceptResultFromId(tlsAcceptId), 0);
     ASSERT_EQ(Dtls_DataTransfer(serverCtx, remoteProcess, clientRes), SUCCESS);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     return;
 }

@@ -242,7 +242,7 @@ void SDV_BSL_BASE64_FUNC_TC001(void)
         ASSERT_TRUE(memcmp((const uint8_t *)decodeBuf, srcBuf, srcLen) == 0);
         ASSERT_TRUE(decodeBufLen == srcLen);
     }
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -324,7 +324,7 @@ void SDV_BSL_BASE64_FUNC_TC002(void)
         free(decodeBuf);
         BSL_BASE64_CtxFree(ctx);
     }
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -371,7 +371,7 @@ void SDV_BSL_BASE64_FUNC_TC003(void)
 
     ASSERT_TRUE(total == sizeof(encodeResult_08_withNL) - 1);
     ASSERT_TRUE(memcmp((const char *)encodeBuf, encodeResult_08_withNL, total) == 0);
-exit:
+EXIT:
     free(encodeBuf);
     BSL_BASE64_CtxFree(ctx);
 }
@@ -419,7 +419,7 @@ void SDV_BSL_BASE64_FUNC_TC004(void)
 
     ASSERT_TRUE(total == srcLen);
     ASSERT_TRUE(memcmp((const uint8_t *)decodeBuf, srcBuf, total) == 0);
-exit:
+EXIT:
     free(decodeBuf);
     BSL_BASE64_CtxFree(ctx);
 }
@@ -451,7 +451,7 @@ void SDV_BSL_BASE64_FUNC_TC005(void)
     uint8_t decodeBuf[4] = {0};
     uint32_t decodeBufLen = HITLS_BASE64_DECODE_LENGTH(4);
     ASSERT_TRUE(BSL_BASE64_Decode(illEncodeResult, 4, decodeBuf, &decodeBufLen) != BSL_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -497,7 +497,7 @@ void SDV_BSL_BASE64_FUNC_TC006(void)
     BSL_BASE64_DecodeInit(ctx);
     ASSERT_TRUE(BSL_BASE64_DecodeUpdate(ctx, illEncodeResult_3, sizeof(illEncodeResult_3),
         decodeBuf, &decodeBufLen) == BSL_INVALID_ARG);
-exit:
+EXIT:
     free(decodeBuf);
     BSL_BASE64_CtxFree(ctx);
 }
@@ -557,7 +557,7 @@ void SDV_BSL_BASE64_FUNC_TC007(void)
     ASSERT_TRUE(BSL_BASE64_DecodeUpdate(ctx, NULL, (const uint32_t)encodeBufLen,
         decodeBuf, &decodeBufLen) == BSL_NULL_INPUT);
     ASSERT_TRUE(BSL_BASE64_DecodeFinal(ctx, decodeBuf, &decodeBufLen) == BSL_SUCCESS);
-exit:
+EXIT:
     free(encodeBuf);
     free(decodeBuf);
     BSL_BASE64_CtxFree(ctx);
@@ -656,7 +656,7 @@ void SDV_BSL_BASE64_FUNC_TC008(void)
     total += tmpLen;
 
     ASSERT_TRUE(srcLen == total);
-exit:
+EXIT:
     free(encodeBuf);
     free(decodeBuf);
     BSL_BASE64_CtxFree(ctx);
@@ -677,7 +677,7 @@ void Base64BlockEncDec(const uint8_t *buf, const uint32_t len)
 
     TRUE_OR_EXIT(BSL_BASE64_Decode(hitlsEncResult, hitlsEncLen, hitlsDecResult, &hitlsDecLen) == BSL_SUCCESS);
     TRUE_OR_EXIT(hitlsDecLen == srcLen);
-exit:
+EXIT:
     BSL_SAL_Free(hitlsEncResult);
     BSL_SAL_Free(hitlsDecResult);
 }
@@ -749,7 +749,7 @@ void Base64Stream(const uint8_t *buf, const uint32_t len)
     TRUE_OR_EXIT(BSL_BASE64_DecodeFinal(ctx, hitlsDecResult + total, &tmpLen) == BSL_SUCCESS);
     total += tmpLen;
 
-exit:
+EXIT:
     BSL_SAL_Free(hitlsEncResult);
     BSL_SAL_Free(hitlsDecResult);
     BSL_BASE64_CtxFree(ctx);
@@ -849,7 +849,7 @@ void Base64StreamMultiUpdate(const BASE64_TEST_DATA data[])
     TRUE_OR_EXIT(BSL_BASE64_DecodeFinal(ctx, hitlsDecResult + total, &tmpLen) == BSL_SUCCESS);
     total += tmpLen;
 
-exit:
+EXIT:
     free(hitlsEncResult);
     free(hitlsDecResult);
     BSL_BASE64_CtxFree(ctx);
@@ -892,7 +892,7 @@ void SDV_BSL_BASE64_FUNC_TC012(char *src, int expectRes)
     uint8_t *dst = BSL_SAL_Malloc(dstBufLen);
     ASSERT_TRUE(dst != NULL);
     ASSERT_EQ(BSL_BASE64_Decode(src, srcBufLen, dst, &dstBufLen), (int32_t)expectRes);
-exit:
+EXIT:
     BSL_SAL_Free(dst);
 }
 /* END_CASE */

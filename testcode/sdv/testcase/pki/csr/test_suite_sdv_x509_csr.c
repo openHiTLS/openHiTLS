@@ -67,7 +67,7 @@ void SDV_X509_CSR_New_FUNC_TC001(void)
     csr = HITLS_X509_CsrNew();
     ASSERT_NE(csr, NULL);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */
@@ -82,7 +82,7 @@ void SDV_X509_CSR_Free_FUNC_TC001(void)
 
     HITLS_X509_CsrFree(NULL);
 
-exit:
+EXIT:
    return;
 }
 /* END_CASE */
@@ -106,7 +106,7 @@ void SDV_X509_CSR_PARSE_API_TC001(void)
 
     /* the csr file don't have read permission */
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */
@@ -127,7 +127,7 @@ void SDV_X509_CSR_PARSE_API_TC002(void)
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &ori, &csr), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &ori, &csr), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_UNKNOWN, &buffer, &csr), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -173,7 +173,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC001(int format, char *path, int expRawDataLen, in
     ASSERT_EQ(memcmp(csr->signature.buff, expectedSign->x, expectedSign->len), 0);
     ASSERT_EQ(csr->signature.unusedBits, expectUnusedbits);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */
@@ -214,7 +214,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC002(int format, char *path, int expectedNum, char
         ASSERT_EQ(memcmp(dnName[i / 2], nameValue.buff, strlen(dnName[i / 2])), 0);
     }
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */
@@ -236,7 +236,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC003(int format, char *path, int attrNum, int attr
     ASSERT_NE(rawAttrs, NULL);
     ASSERT_EQ(attrNum, BSL_LIST_COUNT(rawAttrs->list));
     if (attrNum == 0) {
-        goto exit;
+        goto EXIT;
     }
 
     HITLS_X509_AttrEntry *entry = BSL_LIST_GET_FIRST(rawAttrs->list);
@@ -246,7 +246,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC003(int format, char *path, int attrNum, int attr
     ASSERT_COMPARE("csr attr oid", entry->attrId.buff, entry->attrId.len, (uint8_t *)oid->octs, oid->octetLen);
     ASSERT_COMPARE("csr attr value", entry->attrValue.buff, entry->attrValue.len, attrValue->x, attrValue->len);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */
@@ -269,7 +269,7 @@ void SDV_X509_CSR_GEN_API_TC001(void)
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_UNKNOWN, csr, writePath), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_NE(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, "/errPath/csr.pem"), HITLS_PKI_SUCCESS);
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     return;
 }
@@ -291,7 +291,7 @@ void SDV_X509_CSR_GEN_API_TC002(void)
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, NULL, &buffer), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &buffErr), HITLS_X509_ERR_INVALID_PARAM);
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     return;
 }
@@ -314,7 +314,7 @@ void SDV_X509_CSR_SIGN_API_TC001(void)
     ASSERT_EQ(HITLS_X509_CsrSign(BSL_CID_SHA256, NULL, &algParam, csr), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrSign(BSL_CID_SHA256, prvKey, &algParam, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
 }
@@ -354,7 +354,7 @@ void SDV_X509_CSR_GEN_FUNC_TC001(int inFormat, char *csrPath, int outFormat)
         ASSERT_EQ(csr->rawDataLen, encode.dataLen);
         ASSERT_EQ(memcmp(encode.data, csr->rawData, encode.dataLen), 0);
     }
-exit:
+EXIT:
     BSL_SAL_FREE(data);
     BSL_SAL_FREE(encode.data);
     HITLS_X509_CsrFree(csr);
@@ -408,7 +408,7 @@ static int32_t SetCsr(HITLS_X509_Csr *raw, HITLS_X509_Csr *new)
     }
 
     ret = 0;
-exit:
+EXIT:
     return ret;
 }
 
@@ -471,7 +471,7 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
         ASSERT_EQ(newCsrEncodeLen, rawCsrEncodeLen);
         ASSERT_EQ(memcmp(newCsrEncode, rawCsrEncode, rawCsrEncodeLen), 0);
     }
-exit:
+EXIT:
     HITLS_X509_CsrFree(raw);
     ResetCsrNameList(new);
     ResetCsrAttrsList(new);
@@ -508,7 +508,7 @@ void SDV_X509_CSR_GEN_PROCESS_TC001(char *csrPath, int csrFormat, char *privPath
     encodeCsr.dataLen = 0;
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_ASN1, csr, &encodeCsr), 0); // Repeat generate is allowed.
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(privKey);
     HITLS_X509_CsrFree(csr);
     BSL_SAL_Free(encodeCsr.data);
@@ -567,7 +567,7 @@ void SDV_X509_CSR_GEN_PROCESS_TC002(char *privPath, int keyFormat, int keyType)
     /* Cannot parse after generating */
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encodeCsr, &new), HITLS_X509_ERR_INVALID_PARAM);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(key);
     HITLS_X509_CsrFree(new);
     BSL_SAL_Free(encodeCsr.data);
@@ -629,7 +629,7 @@ void SDV_X509_CSR_CTRL_SET_API_TC001(char *csrPath)
     ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, 0), HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     BSL_SAL_FREE(encodeRaw.data);
     HITLS_X509_CsrFree(csr);
 }
@@ -660,7 +660,7 @@ void SDV_X509_CSR_CTRL_SET_API_TC002(char *csrPath)
     ASSERT_NE(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, NULL, 0), HITLS_PKI_SUCCESS);
     ASSERT_NE(HITLS_X509_CsrCtrl(NULL, HITLS_X509_SET_PUBKEY, rsaPkey, 0), HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     CRYPT_EAL_PkeyFreeCtx(rsaPkey);
     CRYPT_EAL_PkeyFreeCtx(eccPkey);
@@ -711,7 +711,7 @@ void SDV_X509_CSR_CTRL_FUNC_TC001(char *csrPath)
     ASSERT_EQ(HITLS_X509_CsrCtrl(newCsr, HITLS_X509_GET_ENCODELEN, &csrEncodeLen, sizeof(csrEncodeLen)),
         HITLS_PKI_SUCCESS);
 
-exit:
+EXIT:
     BSL_SAL_FREE(encodeRaw.data);
     HITLS_X509_CsrFree(csr);
     HITLS_X509_CsrFree(newCsr);
@@ -764,7 +764,7 @@ void SDV_X509_CSR_AttrCtrl_API_TC001(void)
     ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS,
         &getExt, sizeof(HITLS_X509_Ext *)), HITLS_X509_ERR_ATTR_NOT_FOUND);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     HITLS_X509_ExtFree(ext);
     X509_ExtFree(getExt, true);
@@ -800,7 +800,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC001(int critical1, int maxPath, int crit
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), 0);
     ASSERT_COMPARE("Encode attrs", expect->x, expect->len, encode.buff, encode.len);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     BSL_SAL_Free(encode.buff);
     HITLS_X509_ExtFree(ext);
@@ -839,7 +839,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC002(void)
     // Test 3: encode list item failed
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), BSL_INVALID_ARG);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
     HITLS_X509_ExtFree(ext);
 }
@@ -862,7 +862,7 @@ void SDV_X509_CSR_ParseAttrList_FUNC_TC001(Hex *encode, int ret)
     attrsBuff.tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     ASSERT_EQ(HITLS_X509_ParseAttrList(&attrsBuff, attrs, NULL, NULL), ret);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */
@@ -896,7 +896,7 @@ static int32_t SetNewCsrInfo(HITLS_X509_Csr *new, CRYPT_EAL_PkeyCtx *key, int dn
     ASSERT_EQ(BSL_LIST_COUNT(subjectName), 10);
 
     ret = 0;
-exit:
+EXIT:
     return ret;
 }
 
@@ -924,7 +924,7 @@ void SDV_X509_CSR_AddSubjectName_FUNC_TC001(int keyFormat, int keyType, char *pr
     HITLS_X509_DN dnNameErr[1] = {{BSL_CID_COUNTRYNAME, (uint8_t *)"CNNN", strlen("CNNN")}};
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_ADD_SUBJECT_NAME, dnNameErr, 1),
         HITLS_X509_ERR_SET_DNNAME_INVALID_LEN);
-exit:
+EXIT:
     HITLS_X509_CsrFree(new);
     BSL_SAL_FREE(encode.data);
     CRYPT_EAL_PkeyFreeCtx(privKey);
@@ -938,7 +938,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC004(int format, char *path, int expectedRet)
     HITLS_X509_Csr *csr = NULL;
     ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), expectedRet);
 
-exit:
+EXIT:
     HITLS_X509_CsrFree(csr);
 }
 /* END_CASE */

@@ -698,7 +698,7 @@ static int32_t PackClientHelloMsg(const FRAME_ClientHelloMsg *clientHello, uint8
     if (clientHello->extensionState != MISSING_FIELD) {
         PackInteger16(&clientHello->extensionLen, &buf[offset], bufLen - offset, &offset);
         if (clientHello->extensionLen.state == SET_LEN_TO_ONE_BYTE) {
-            goto PACK_EXIT;
+            goto EXIT;
         }
         PackHsExtArrayForList(&clientHello->serverName, &buf[offset], bufLen - offset, &offset);
         PackHsExtArray16(&clientHello->signatureAlgorithms, &buf[offset], bufLen - offset, &offset);
@@ -720,7 +720,7 @@ static int32_t PackClientHelloMsg(const FRAME_ClientHelloMsg *clientHello, uint8
         }
     }
 
-PACK_EXIT:
+EXIT:
     *usedLen = offset;
     return HITLS_SUCCESS;
 }

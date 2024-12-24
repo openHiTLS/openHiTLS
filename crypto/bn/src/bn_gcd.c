@@ -200,8 +200,7 @@ static int32_t InverseCore(BN_BigNum *r, BN_BigNum *x, BN_BigNum *y, uint32_t mS
     return CRYPT_BN_ERR_NO_INVERSE;
 }
 
-int32_t InverseInputCheck(
-    BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, const BN_Optimizer *opt)
+int32_t InverseInputCheck(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, const BN_Optimizer *opt)
 {
     bool invalidInput = (r == NULL || x == NULL || m == NULL || opt == NULL);
     if (invalidInput) {
@@ -220,8 +219,7 @@ int32_t InverseInputCheck(
     return CRYPT_SUCCESS;
 }
 
-int32_t BN_ModInv(
-    BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, BN_Optimizer *opt)
+int32_t BN_ModInv(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, BN_Optimizer *opt)
 {
     int32_t ret = InverseInputCheck(r, x, m, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -240,27 +238,26 @@ int32_t BN_ModInv(
     if (invalidInput) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
-        goto ERR;
+        goto EXIT;
     }
     /* Take positive numbers a and b first. */
     ret = InverseReady(a, b, x, m, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     /* Extended Euclidean algorithm */
     ret = InverseCore(t, a, b, m->size, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // Prevent the negative number.
     ret = BN_Mod(r, t, m, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
     }
-ERR:
+EXIT:
     OptimizerEnd(opt); // Release occupation from the optimizer.
     return ret;
 }
