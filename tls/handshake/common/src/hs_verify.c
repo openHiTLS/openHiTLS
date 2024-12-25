@@ -182,7 +182,7 @@ static int32_t GetHsData(VerifyCtx *ctx, uint8_t **data, uint32_t *dataLen)
 
 #ifdef HITLS_TLS_PROTO_TLS13
 /* The sender packs the data, calculates the binder, and then appends verified data.
- *  The reciver parses the data, and then calculates the binder. */
+ *  The receiver parses the data, and then calculates the binder. */
 static int32_t GetHsDataForBinder(VerifyCtx *ctx, uint32_t *dataLen, bool isClient, uint8_t **data)
 {
     if (isClient) {
