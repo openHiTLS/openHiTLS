@@ -642,7 +642,7 @@ if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
     return -1;
 }
 
-if (HITLS_CFG_SetClientVerifySupport(config, ture) != HITLS_SUCCESS) {
+if (HITLS_CFG_SetClientVerifySupport(config, true) != HITLS_SUCCESS) {
     printf("HITLS_CFG_SetClientVerifySupport err\n");
     return -1;
 }

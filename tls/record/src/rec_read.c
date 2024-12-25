@@ -638,7 +638,7 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     // decryptBuf.isHoldBuffer == false
     if (recordType != cryptMsg.type) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16513, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "expect type %d, recive type %d", recordType, cryptMsg.type, 0, 0);
+            "expect type %d, receive type %d", recordType, cryptMsg.type, 0, 0);
         return RecordUnexpectedMsg(ctx, &decryptBuf, cryptMsg.type);
     }
     if (decryptBuf.buf == data) {
@@ -944,7 +944,7 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
     /* An unexpected message is received */
     if (recordType != encryptedMsg.type) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17260, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "expect type %d, recive type %d", recordType, encryptedMsg.type, 0, 0);
+            "expect type %d, receive type %d", recordType, encryptedMsg.type, 0, 0);
         return RecordUnexpectedMsg(ctx, &decryptBuf, encryptedMsg.type);
     }
     if (decryptBuf.buf == data) {
