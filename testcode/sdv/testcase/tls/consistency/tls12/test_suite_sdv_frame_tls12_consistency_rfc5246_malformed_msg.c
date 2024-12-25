@@ -62,7 +62,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC009(int messageLen)
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     uint8_t data[REC_MAX_CIPHER_TEXT_LEN];
     ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_APP, data, messageLen), HITLS_SUCCESS);
-exit:
+EXIT:
     TlsCtxFree();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -109,7 +109,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC010(int messageLen)
 
     uint8_t data[REC_MAX_CIPHER_TEXT_LEN];
     ASSERT_EQ(REC_Write(serverTlsCtx, REC_TYPE_APP, data, messageLen), HITLS_SUCCESS);
-exit:
+EXIT:
     TlsCtxFree();
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -176,7 +176,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MISS_CLIENT_KEYEXCHANGE_TC001(void)
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
     ASSERT_TRUE(alertMsg->alertDescription.data == ALERT_UNEXPECTED_MESSAGE);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -237,7 +237,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_FRAGMENTED_MSG_TC001(void)
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -287,7 +287,7 @@ void UT_TLS_TLS12_CONSISTENCY_WRONG_CLIENT_HELLO_MSG_TC001()
     int32_t ret = PackClientHello(clientTlsCtx, hsCtx->msgBuf, sum - sizeof(uint16_t), &hsCtx->msgLen);
     ASSERT_EQ(ret, HITLS_PACK_CLIENT_CIPHER_SUITE_ERR);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

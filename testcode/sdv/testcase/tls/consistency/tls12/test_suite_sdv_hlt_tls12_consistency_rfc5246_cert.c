@@ -58,7 +58,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHER_SUITE_NOT_SUITABLE_CERT_TC001(void
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 
-exit:
+EXIT:
     HLT_FreeAllProcess();
     return;
 }
@@ -103,7 +103,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_NOTSET_CERT_TC001(void)
      * fails. */
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -149,7 +149,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_SERVER_WITHOUT_ROOT_CERT_TC001(void)
 
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -194,7 +194,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_SET_ERRO_ROOT_CERT_TC001(void)
 
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     return;
 }
@@ -243,7 +243,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHERSUITE_SIG_MATCH_CERT_SIG_TC002()
     clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -291,7 +291,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC001()
 
     clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -335,7 +335,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC002()
 
     clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */

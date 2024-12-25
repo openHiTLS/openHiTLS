@@ -52,7 +52,7 @@ void SDV_BSL_OBJ_CID_OID_FUNC_TC001()
         oidIndex++;
     }
     ASSERT_TRUE(ret == (int32_t)g_tableSize);
-exit:
+EXIT:
     return;
 }
 

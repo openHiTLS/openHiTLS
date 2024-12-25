@@ -163,7 +163,7 @@ void UT_TLS_CFG_UPREF_FUNC_TC001()
     ASSERT_TRUE(config->references.count == 2);
     HITLS_CFG_FreeConfig(config);
     ASSERT_TRUE(config->references.count == 1);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -211,7 +211,7 @@ void UT_TLS_CFG_SET_RESUMPTIONONRENEGOSUPPORT_API_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_CFG_SetResumptionOnRenegoSupport(config, support) == HITLS_SUCCESS);
     ASSERT_TRUE(config->isResumptionOnRenego == false);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -271,7 +271,7 @@ void UT_TLS_CFG_SET_GET_NOCLIENTCERTSUPPORT_API_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_CFG_SetNoClientCertSupport(config, support) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_GetNoClientCertSupport(config, &isSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(isSupport == false);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -334,7 +334,7 @@ void UT_TLS_CFG_SET_GET_CLIENTVERIFYSUPPORT_API_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_CFG_SetClientVerifySupport(config, support) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_GetClientVerifySupport(config, &isSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(isSupport == false);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -379,7 +379,7 @@ void UT_TLS_CFG_SET_TMPDH_API_TC001(int tlsVersion)
 
     ASSERT_TRUE(HITLS_CFG_SetTmpDh(config, dhPkey) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -421,7 +421,7 @@ void UT_TLS_CFG_SET_CLIENTHELLOCB_API_TC001(int tlsVersion)
 
     ASSERT_TRUE(HITLS_CFG_SetClientHelloCb(config, UT_ClientHelloCb, &cbRetVal) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -572,7 +572,7 @@ void UT_TLS_CFG_SET_GET_VERSION_API_TC001(void)
     ASSERT_TRUE(HITLS_CFG_GetMaxVersion(tlcpConfig, &maxVersion) == HITLS_SUCCESS);
     ASSERT_TRUE(minVersion == HITLS_VERSION_TLCP11 && maxVersion == HITLS_VERSION_TLCP11);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_CFG_FreeConfig(dtlsConfig);
     HITLS_CFG_FreeConfig(tlcpConfig);
@@ -606,7 +606,7 @@ void UT_TLS_CFG_GET_HASHID_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CFG_GetHashId(cipher, &hashId) == HITLS_SUCCESS);
     ASSERT_TRUE(hashId == HITLS_HASH_SHA1);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -638,7 +638,7 @@ void UT_TLS_CFG_GET_MACID_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CFG_GetMacId(cipher, &macAlg) == HITLS_SUCCESS);
     ASSERT_TRUE(macAlg == HITLS_MAC_1);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -670,7 +670,7 @@ void UT_TLS_CFG_GET_KEYEXCHID_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CFG_GetKeyExchId(cipher, &kxAlg) == HITLS_SUCCESS);
     ASSERT_TRUE(kxAlg == HITLS_KEY_EXCH_RSA);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -696,7 +696,7 @@ void UT_TLS_CFG_GET_CIPHERSUITESTDNAME_API_TC001(void)
     const uint16_t cipherID = HITLS_RSA_WITH_AES_128_CBC_SHA;
     cipher = HITLS_CFG_GetCipherByID(cipherID);
     ASSERT_TRUE(strcmp((char *)HITLS_CFG_GetCipherSuiteStdName(cipher),"TLS_RSA_WITH_AES_128_CBC_SHA") == 0);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -741,7 +741,7 @@ void UT_TLS_CFG_GET_DESCRIPTION_API_TC001(void)
         "************************************************************************************************************";
 
     ASSERT_TRUE(HITLS_CFG_GetDescription(newCipher, (uint8_t *)buff, sizeof(buff)) == HITLS_CONFIG_INVALID_LENGTH);
-exit:
+EXIT:
     free(newCipher);
 }
 /* END_CASE */
@@ -771,7 +771,7 @@ void UT_TLS_CFG_CIPHER_ISAEAD_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CIPHER_IsAead(cipher, &isAead) == HITLS_SUCCESS);
     ASSERT_TRUE(isAead == true);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -829,7 +829,7 @@ void UT_TLS_CFG_SET_GET_VERSIONSUPPORT_API_TC001(int tlsVersion)
     uint32_t getversion = 0;
     ASSERT_TRUE(HITLS_CFG_GetVersionSupport(config, &getversion) == HITLS_SUCCESS);
     ASSERT_TRUE(getversion == config->version);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -883,7 +883,7 @@ void UT_TLS_CFG_SET_GET_QUIETSHUTDOWN_API_TC001(int tlsVersion)
     int32_t getMode = -1;
     ASSERT_TRUE(HITLS_CFG_GetQuietShutdown(config, &getMode) == HITLS_SUCCESS);
     ASSERT_TRUE(getMode == config->isQuietShutdown);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -940,7 +940,7 @@ void UT_TLS_CFG_SET_GET_CIPHERSERVERPREFERENCE_API_TC001(int tlsVersion)
 
     ASSERT_TRUE(HITLS_CFG_GetCipherServerPreference(config, &getIsSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(getIsSupport == false);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -1044,7 +1044,7 @@ void UT_TLS_CFG_SET_GET_RENEGOTIATIONSUPPORT_FUNC_TC001()
     ASSERT_TRUE(HITLS_Renegotiate(serverRes->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Renegotiate(clientRes->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_CreateConnection(clientRes, serverRes, true, HS_STATE_BUTT) == HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(clientRes);
     FRAME_FreeLink(serverRes);
@@ -1104,7 +1104,7 @@ void UT_TLS_CFG_SET_ECPOINTFORMATS_FUNC_TC001(int version)
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(Config);
     HITLS_Free(ctx);
     FRAME_FreeLink(client);
@@ -1172,7 +1172,7 @@ void UT_TLS_CFG_SET_GROUPS_FUNC_TC001(int version)
         ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, testInfo.isClient, HS_STATE_BUTT),
             HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
     }
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
@@ -1205,7 +1205,7 @@ void UT_TLS_CFG_SET_SIGNATURE_FUNC_TC001(int version)
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server == NULL);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -1263,7 +1263,7 @@ void UT_TLS_CFG_InfoCb_API_TC001(void)
     ASSERT_TRUE(infoCallBack != NULL);
     infoCallBack = HITLS_CFG_GetInfoCb(NULL);
     ASSERT_TRUE(infoCallBack == NULL);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -1287,7 +1287,7 @@ void UT_TLS_CFG_SetMsgCb_API_TC001()
     ASSERT_TRUE(tlsConfig != NULL);
     ASSERT_EQ(HITLS_CFG_SetMsgCb(NULL, msg_callback), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_CFG_SetMsgCb(tlsConfig, msg_callback), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -1310,7 +1310,7 @@ void UT_TLS_CFG_SetMsgCbArg_API_TC001()
     ASSERT_TRUE(tlsConfig != NULL);
     ASSERT_EQ(HITLS_CFG_SetMsgCbArg(NULL, msg_callback), HITLS_NULL_INPUT);
     ASSERT_EQ(HITLS_CFG_SetMsgCbArg(tlsConfig, msg_callback), HITLS_SUCCESS);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */
@@ -1374,7 +1374,7 @@ void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
     } else {
         ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     }
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
     FRAME_FreeLink(client);
@@ -1409,7 +1409,7 @@ void UT_TLS_CFG_SET_POSTHANDSHAKEAUTHSUPPORT_API_TC001(int tlsVersion)
     int ret = HITLS_SetPostHandshakeAuthSupport(ctx, true);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ASSERT_TRUE(ctx->config.tlsConfig.isSupportPostHandshakeAuth == true);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
 }
@@ -1447,7 +1447,7 @@ void UT_TLS_CFG_GET_SECURE_RENEGOTIATIONSUPPORET_API_TC001(void)
     ASSERT_TRUE(HITLS_GetSecureRenegotiationSupport(ctx, NULL) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_GetSecureRenegotiationSupport(ctx, &isSecureRenegotiation) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
 }
@@ -1501,7 +1501,7 @@ void UT_TLS_CFG_SET_GET_DHAUTOSUPPORT_FUNC_TC001(void)
     FRAME_TrasferMsgBetweenLink(server, client);
     HITLS_Connect(client->ssl);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_ERR_GET_DH_KEY);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
     FRAME_FreeLink(client);

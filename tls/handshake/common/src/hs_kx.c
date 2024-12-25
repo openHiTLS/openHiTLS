@@ -413,25 +413,25 @@ static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_
     if (ret != EOK) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16831, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "key exchange algo is %d, memcpy fail", ctx->hsCtx->kxCtx->keyExchAlgo, 0, 0, 0);
-        goto memFail;
+        goto ERR;
     }
 
     if (AppendPsk(&tmpPskPmsBufTmp[offset], MAX_PRE_MASTER_SECRET_SIZE - offset, psk, pskLen) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16832, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "AppendPsk fail", 0, 0, 0, 0);
-        goto memFail;
+        goto ERR;
     }
     offset += (sizeof(uint16_t) + pskLen);
 
     if (memcpy_s(pmsBuf, pmsBufLen, tmpPskPmsBufTmp, offset) != EOK) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16833, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
-        goto memFail;
+        goto ERR;
     }
     *pmsUsedLen = offset;
 
     (void)memset_s(tmpPskPmsBufTmp, MAX_PRE_MASTER_SECRET_SIZE, 0, MAX_PRE_MASTER_SECRET_SIZE);
 
     return HITLS_SUCCESS;
-memFail:
+ERR:
     (void)memset_s(tmpPskPmsBufTmp, MAX_PRE_MASTER_SECRET_SIZE, 0, MAX_PRE_MASTER_SECRET_SIZE);
     BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
     return HITLS_MEMCPY_FAIL;

@@ -150,7 +150,7 @@ static int32_t UpdateAttributeValueNode(BSL_HASH_Hash *hash, BSL_HASH_Iterator n
     newValue->valueStr = BSL_SAL_Dump(srcValue->valueStr, BSL_SAL_Strnlen(srcValue->valueStr, UINT32_MAX) + 1);
     if (newValue->judgeStr == NULL || newValue->valueStr == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        ret =  CRYPT_MEM_ALLOC_FAIL;
+        ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
 
@@ -164,11 +164,9 @@ static int32_t UpdateAttributeValueNode(BSL_HASH_Hash *hash, BSL_HASH_Iterator n
     return CRYPT_SUCCESS;
 
 ERR:
-    if (newValue != NULL) {
-        BSL_SAL_FREE(newValue->judgeStr);
-        BSL_SAL_FREE(newValue->valueStr);
-        BSL_SAL_FREE(newValue);
-    }
+    BSL_SAL_FREE(newValue->judgeStr);
+    BSL_SAL_FREE(newValue->valueStr);
+    BSL_SAL_FREE(newValue);
     return ret;
 }
 
@@ -235,14 +233,15 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
     // Allocate space for keys and values
     tempValue = BSL_SAL_Calloc(1, sizeof(AttributeValue));
     if (tempValue == NULL) {
-        ret =  CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     tempKey = BSL_SAL_Calloc(1, keyLen + 1);
     tempValue->judgeStr = BSL_SAL_Calloc(1, judgeLen + 1);
     tempValue->valueStr = BSL_SAL_Calloc(1, valueLen + 1);
     if (tempKey == NULL || tempValue->judgeStr == NULL || tempValue->valueStr == NULL) {
-        ret =  CRYPT_MEM_ALLOC_FAIL;
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
@@ -250,7 +249,8 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
     if (memcpy_s(tempKey, keyLen + 1, attribute + keyStart, keyLen) != EOK ||
         memcpy_s(tempValue->judgeStr, judgeLen + 1, attribute + judgeStart, judgeLen) != EOK ||
         memcpy_s(tempValue->valueStr, valueLen + 1, attribute + valueStart, valueLen) != EOK) {
-        ret =  CRYPT_MEM_ALLOC_FAIL;
+        ret = CRYPT_SECUREC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
@@ -262,7 +262,6 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
 ERR:
     BSL_SAL_FREE(tempKey);
     AttributeValueFree(tempValue);
-    BSL_ERR_PUSH_ERROR(ret);
     return ret;
 }
 

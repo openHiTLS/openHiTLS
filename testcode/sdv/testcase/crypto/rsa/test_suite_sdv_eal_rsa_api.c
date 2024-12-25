@@ -49,7 +49,7 @@ void SDV_CRYPTO_RSA_NEW_API_TC001(int isProvider)
 
         CRYPT_EAL_PkeyFreeCtx(pkey);
     }
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -83,7 +83,7 @@ void SDV_CRYPTO_RSA_NEW_API_TC002(int isProvider)
     }
     ASSERT_TRUE(pkey == NULL);
 
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -145,7 +145,7 @@ void SDV_CRYPTO_RSA_PARA_API_TC001(int isProvider)
     para.para.rsaPara.e = longE;
     ASSERT_TRUE_AND_LOG("e len = 1025", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -179,7 +179,7 @@ void SDV_CRYPTO_RSA_PARA_API_TC002(int bits, int isProvider)
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_EAL_ERR_NEW_PARA_FAIL);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -224,7 +224,7 @@ void SDV_CRYPTO_RSA_PARA_API_TC003(int isProvider)
     SetRsaPara(&para, e7, 7, 16384);
     ASSERT_TRUE_AND_LOG("16k key", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -260,7 +260,7 @@ void SDV_CRYPTO_RSA_GEN_API_TC001(int isProvider)
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_NO_REGIST_RAND);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -336,7 +336,7 @@ void SDV_CRYPTO_RSA_GET_PUB_API_TC001(int isProvider)
     pubKey.key.rsaPub.eLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubKey), CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -413,7 +413,7 @@ void SDV_CRYPTO_RSA_GET_PRV_API_TC001(int isProvider)
     prvKey.key.rsaPrv.d = NULL;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -518,7 +518,7 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey) == CRYPT_SUCCESS);
     ASSERT_COMPARE("rsa e", prvKey.key.rsaPrv.e, prvKey.key.rsaPrv.eLen, e, 3);
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -587,7 +587,7 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC002(int isProvider)
     prvKey.key.rsaPrv.nLen = RSA_MAX_KEYLEN;
     prvKey.key.rsaPrv.dLen = RSA_MAX_KEYLEN;
     ASSERT_TRUE_AND_LOG("Max len success case", CRYPT_EAL_PkeySetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -666,7 +666,7 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC001(int isProvider)
     (void)memset_s(pubE, sizeof(pubE), 0x00, sizeof(pubE));
     ASSERT_TRUE_AND_LOG("e is 0", CRYPT_EAL_PkeySetPub(pkey2, &pubKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -745,7 +745,7 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC002(int isProvider)
     pubE[RSA_MAX_KEYLEN - 1] = 1;
     ASSERT_TRUE_AND_LOG("e = 1", CRYPT_EAL_PkeySetPub(pkey, &pubKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -815,7 +815,7 @@ void SDV_CRYPTO_RSA_ENC_API_TC001(Hex *n, Hex *e, int hashId, Hex *in, int isPro
     cryptLen = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_RandDeinit();
 }
@@ -889,7 +889,7 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
     cryptLen = 2049;  // 2049 is an invalid data length.
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -961,7 +961,7 @@ void SDV_CRYPTO_RSA_CTRL_API_TC001(Hex *n, Hex *d, Hex *salt, int hashId, int is
     pad = CRYPT_PKEY_RSA_NO_PAD;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_RandDeinit();
 }
@@ -1048,7 +1048,7 @@ void SDV_CRYPTO_RSA_CTRL_API_TC002(Hex *n, Hex *d, int hashId, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_CLR_RSA_FLAG, NULL, sizeof(uint32_t)) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_CLR_RSA_FLAG, (void *)&flag, sizeof(uint32_t)) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1171,7 +1171,7 @@ void SDV_CRYPTO_RSA_SET_KEY_API_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey2, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(Compare_PubKey(&pubKey, &pubKey), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
     CRYPT_EAL_RandDeinit();
@@ -1229,7 +1229,7 @@ void SDV_CRYPTO_RSA_DUP_CTX_API_TC001(Hex *e, int bits, int isProvider)
         rsaCtx2->prvKey->d->data,
         rsaCtx2->prvKey->d->size * sizeof(BN_UINT));
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(newPkey);
     CRYPT_EAL_RandDeinit();
@@ -1286,7 +1286,7 @@ void SDV_CRYPTO_RSA_CMP_API_TC001(Hex *n, Hex *e, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx2, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_RSA_PUBKEY_NOT_EQUAL);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
@@ -1324,7 +1324,7 @@ void SDV_CRYPTO_RSA_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *e, int securityBit
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), securityBits);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1340,7 +1340,7 @@ static void *RsaTestAtomic(void *arg)
         ASSERT_EQ(CRYPT_RSA_GetBits(ctx), 2048);  // RSA2048
         CRYPT_RSA_FreeCtx(ctx);
     }
-exit:
+EXIT:
     return NULL;
 }
 
@@ -1455,7 +1455,7 @@ void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
     ASSERT_EQ(pkey->references.count, 1);
     CRYPT_RSA_Ctx *ctx = (CRYPT_RSA_Ctx *)pkey->key;
     ASSERT_EQ(ctx->references.count, 1);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1491,7 +1491,7 @@ void SDV_CRYPTO_RSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, int isProvider)
 
     ASSERT_TRUE_AND_LOG("1k key", CRYPT_EAL_PkeySetPara(pkey, &para) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */

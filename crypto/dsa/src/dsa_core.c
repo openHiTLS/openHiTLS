@@ -91,11 +91,7 @@ static int32_t GetAllDsaParams(const BSL_Param *params,
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = GetDsaParamValue(params, CRYPT_PARAM_DSA_G, *pLen, g, gLen);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_SUCCESS;
+    return GetDsaParamValue(params, CRYPT_PARAM_DSA_G, *pLen, g, gLen);
 }
 
 static int32_t InitDsaParaValues(CRYPT_DSA_Para *para,
@@ -116,9 +112,8 @@ static int32_t InitDsaParaValues(CRYPT_DSA_Para *para,
     ret = BN_Bin2Bn(para->g, g, gLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 CRYPT_DSA_Para *CRYPT_DSA_NewPara(const BSL_Param *params)
@@ -182,39 +177,39 @@ static int32_t ParaPQGCheck(const BN_BigNum *p, const BN_BigNum *q, const BN_Big
     if (r == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // judgment of numeric values
     // r = p - 1
     ret = BN_SubLimb(r, p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // q < p - 1
     if (BN_Cmp(q, r) >= 0) {
         ret = CRYPT_DSA_ERR_KEY_PARA;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // g < p - 1
     if (BN_Cmp(g, r) >= 0) {
         ret = CRYPT_DSA_ERR_KEY_PARA;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // judgment of multiple relationship about p & q
     ret = BN_Div(NULL, r, r, q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // (p - 1) % q == 0
     if (!BN_IsZero(r)) {
         ret = CRYPT_DSA_ERR_KEY_PARA;
         BSL_ERR_PUSH_ERROR(ret);
     }
-ERR:
+EXIT:
     BN_Destroy(r);
     BN_OptimizerDestroy(opt);
     return ret;
@@ -307,10 +302,8 @@ static int32_t GetDsaParam(const BN_BigNum *x, BSL_Param *param, int32_t key)
     int32_t ret = BN_Bn2Bin(x, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, BSL_Param *param)
@@ -338,7 +331,6 @@ int32_t CRYPT_DSA_GetPara(const CRYPT_DSA_Ctx *ctx, BSL_Param *param)
     ret = GetDsaParam(ctx->para->g, param, CRYPT_PARAM_DSA_G);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
     return ret;
 }
@@ -727,25 +719,25 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
     if (k == NULL || montP == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         // Generate random number k of [1, q-1], see RFC6979-2.4.2 */
         ret = RandRangeQ(k, ctx->para->q);
         if (ret != CRYPT_SUCCESS) {
             // Internal function. The BSL_ERR_PUSH_ERROR information exists when the failure occurs.
-            goto ERR;
+            goto EXIT;
         }
         // Compute r = g^k mod p mod q, see RFC6979-2.4.3 */
         ret = BN_MontExpConsttime(r, ctx->para->g, k, montP, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         ret = BN_Mod(r, r, ctx->para->q, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         if (BN_IsZero(r)) {
             continue;
@@ -754,16 +746,16 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
         DSA_Sign sign = { r, s };
         ret = CalcSValue(ctx, &sign, k, d, opt);
         if (ret != CRYPT_SUCCESS) {
-            goto ERR;
+            goto EXIT;
         }
         if (BN_IsZero(s)) {
             continue;
         }
-        goto ERR; // The signature generation meets the requirements and exits successfully.
+        goto EXIT; // The signature generation meets the requirements and exits successfully.
     }
     ret = CRYPT_DSA_ERR_TRY_CNT;
     BSL_ERR_PUSH_ERROR(ret);
-ERR:
+EXIT:
     BN_Destroy(k);
     BN_MontDestroy(montP);
     BN_OptimizerDestroy(opt);
@@ -773,33 +765,34 @@ ERR:
 static int32_t CryptDsaSign(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, BN_BigNum **r,
     BN_BigNum **s)
 {
-    int32_t rc = CRYPT_SUCCESS;
+    int32_t ret;
     BN_BigNum *signR = NULL;
     BN_BigNum *signS = NULL;
     BN_BigNum *d = DSA_Bits2Int(ctx->para->q, data, dataLen);
     if (d == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        rc = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     signR = BN_Create(BN_Bits(ctx->para->p));
     signS = BN_Create(BN_Bits(ctx->para->q));
     if ((signR == NULL) || (signS == NULL)) {
+        BN_Destroy(d);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        rc = CRYPT_MEM_ALLOC_FAIL;
+        ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
-    GOTO_ERR_IF_EX(SignCore(ctx, d, signR, signS), rc);
-
+    ret = SignCore(ctx, d, signR, signS);
+    BN_Destroy(d);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
     *r = signR;
     *s = signS;
-    goto OK;
+    return ret;
 ERR:
     BN_Destroy(signR);
     BN_Destroy(signS);
-OK:
-    BN_Destroy(d);
-    return rc;
+    return ret;
 }
 
 // Data with a value of 0 can also be signed.
@@ -859,7 +852,7 @@ static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (u1 == NULL || u2 == NULL || w == NULL || montP == NULL || opt == NULL) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     /* Calculate w = 1/s mod q
      * u1 = (d * w) mod q
@@ -873,34 +866,34 @@ static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign
     ret = BN_ModInv(w, sign->s, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_ModMul(u1, d, w, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_ModMul(u2, sign->r, w, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_MontExpMul(u1, ctx->para->g, u1, ctx->y, u2, montP, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Mod(u1, u1, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Cmp(u1, sign->r);
     if (ret != 0) {
         BSL_ERR_PUSH_ERROR(ret);
         ret = CRYPT_DSA_VERIFY_FAIL;
     }
-ERR:
+EXIT:
     BN_Destroy(u1);
     BN_Destroy(u2);
     BN_Destroy(w);
@@ -925,14 +918,14 @@ int32_t CRYPT_DSA_VerifyData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint
     BN_BigNum *d = DSA_Bits2Int(ctx->para->q, data, dataLen);
     if (s == NULL || d == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        goto EXIT;
     }
     ret = ASN1_SignDataDecode(s, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
-        goto ERR;
+        goto EXIT;
     }
     ret = VerifyCore(ctx, d, s);
-ERR:
+EXIT:
     SignFree(s);
     BN_Destroy(d);
     return ret;

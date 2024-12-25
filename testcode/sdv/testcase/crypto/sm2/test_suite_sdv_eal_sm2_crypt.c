@@ -83,7 +83,7 @@ void SDV_CRYPTO_SM2_ENC_API_TC001(Hex *pubKey, int isProvider)
     outLen = sizeof(cipherText);
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(ctx, plainText, sizeof(plainText), cipherText, &outLen) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_RandRegist(NULL);
 }
@@ -138,7 +138,7 @@ void SDV_CRYPTO_SM2_ENC_API_TC002(Hex *pubKey, int isProvider)
     CRYPT_RandRegist(RandFunc);
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(ctx, plainText, sizeof(plainText), cipherText, &outLen) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_RandRegist(NULL);
 }
@@ -201,7 +201,7 @@ void SDV_CRYPTO_SM2_DEC_API_TC001(Hex *prvKey, Hex *cipherText, int isProvider)
     outLen = cipherText->len;
     ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(ctx, cipherText->x, cipherText->len, plainText, &outLen), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();
 }
@@ -240,7 +240,7 @@ void SDV_CRYPTO_SM2_CTRL_API_TC001(int isProvider)
                 CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_UP_REFERENCES, &ref, 0), CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -295,7 +295,7 @@ void SDV_CRYPTO_SM2_ENC_FUNC_TC001(Hex *pubKey, Hex *plain, Hex *k, Hex *cipher,
     ASSERT_TRUE(decodeLen + 1 == cipher->len);
     ASSERT_TRUE(memcmp(decodeText, cipher->x, cipher->len) == 0);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     STUB_Reset(&tmpRpInfo);
 }
@@ -346,7 +346,7 @@ void SDV_CRYPTO_SM2_DEC_FUNC_TC001(Hex *prvKey, Hex *plain, Hex *cipher, int isP
     ASSERT_TRUE(outLen == plain->len);
     ASSERT_TRUE(memcmp(plainText, plain->x, plain->len) == 0);
 
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
@@ -387,7 +387,7 @@ void SDV_CRYPTO_SM2_DEC_FUNC_TC002(Hex *prvKey, Hex *cipher, int isProvider)
     /* Different error codes are returned for different phases. */
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(ctx, cipher->x, cipher->len, plainText, &outLen) != CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -435,7 +435,7 @@ void SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC001(Hex *msg, int isProvider)
     ASSERT_TRUE(ptLen == msg->len);
     ASSERT_TRUE(memcmp(plainText, msg->x, msg->len) == 0);
 
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
@@ -484,7 +484,7 @@ void SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC002(Hex *msg, int isProvider)
     ASSERT_TRUE(ptLen == msg->len);
     ASSERT_TRUE(memcmp(buf, msg->x, msg->len) == 0);
 
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
@@ -541,7 +541,7 @@ void SDV_CRYPTO_SM2_CMP_FUNC_TC001(Hex *pubKey, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx2, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
@@ -562,7 +562,7 @@ void SDV_CRYPTO_SM2_ENC_DECODE_FUNC_TC001(Hex *cipher)
     uint8_t decode[MAX_PLAIN_TEXT_LEN] = {0};
     uint32_t decodelen = MAX_PLAIN_TEXT_LEN;
     ASSERT_TRUE(ASN1_Sm2EncryptDataDecode(cipher->x, cipher->len, decode, &decodelen) == CRYPT_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

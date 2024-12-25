@@ -61,29 +61,29 @@ static int32_t Bn2CoordArray(const ECC_Para *para, Coord *aArr, const BN_BigNum 
     if (opt == NULL || aTemp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     if (BN_Cmp(a, para->n) >= 0) {
         ret = BN_Mod(aTemp, a, para->n, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto END;
+            goto EXIT;
         }
         if (BN_IsZero(aTemp)) {  // If x and m are coprime, the module inverse cannot be obtained.
             BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_NO_INVERSE);
             ret = CRYPT_BN_ERR_NO_INVERSE;
-            goto END;
+            goto EXIT;
         }
     } else {
         ret = BN_Copy(aTemp, a);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto END;
+            goto EXIT;
         }
     }
     (void)BN_BN2Array(aTemp, aArr->value, P256_SIZE);
-END:
+EXIT:
     BN_OptimizerDestroy(opt);
     BN_Destroy(aTemp);
     return ret;

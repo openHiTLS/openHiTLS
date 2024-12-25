@@ -49,7 +49,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC001(void)
     ctx = CRYPT_EAL_MacNewCtx(CRYPT_MAC_MAX);
     ASSERT_TRUE(ctx == NULL);
 
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -83,7 +83,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC002(int algId)
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, (uint8_t *)key, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key, len), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -130,7 +130,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC003(int algId)
 
     ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key, len), CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -171,7 +171,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC004(int algId)
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, NULL, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data, dataLen), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -215,7 +215,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC005(int algId)
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_EAL_ERR_STATE);
 
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -258,7 +258,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC006(int algId)
 
     ASSERT_EQ(CRYPT_EAL_MacDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_GetMacLen(ctx), GetMacLen(algId));
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -305,7 +305,7 @@ void SDV_CRYPT_EAL_HMAC_API_TC007(int algId)
 
     ASSERT_EQ(CRYPT_EAL_MacDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_EAL_ERR_STATE);
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
 /* END_CASE */
@@ -338,7 +338,7 @@ void SDV_CRYPT_EAL_HMAC_FUN_TC001(int algId, Hex *key, Hex *data, Hex *vecMac)
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("mac1 result cmp", mac, macLen, vecMac->x, vecMac->len);
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
     free(mac);
 }
@@ -378,7 +378,7 @@ void SDV_CRYPT_EAL_HMAC_FUN_TC002(int algId, Hex *key, Hex *data1, Hex *data2, H
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("mac1 result cmp", mac, macLen, vecMac->x, vecMac->len);
     ASSERT_EQ(CRYPT_EAL_MacDeinit(ctx), CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
     free(mac);
 }
@@ -416,7 +416,7 @@ void SDV_CRYPT_EAL_HMAC_FUN_TC003(int algId, Hex *key1, Hex *data1, Hex *vecMac1
         pthread_join(thrd[i], NULL);
     }
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -450,7 +450,7 @@ void SDV_CRYPT_HMAC_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *data, 
     ASSERT_EQ(CRYPT_EAL_MacDeinit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
     BSL_SAL_FREE(mac);
 }

@@ -58,7 +58,7 @@ void SDV_BSL_TLV_Find_API_TC001(void)
     uint32_t invalidType = 0x0102;
     ret = BSL_TLV_FindValuePos(invalidType, data, encLen, &offset, &length);
     ASSERT_TRUE(ret == BSL_TLV_ERR_NO_WANT_TYPE);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

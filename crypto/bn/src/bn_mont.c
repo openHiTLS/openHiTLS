@@ -692,8 +692,7 @@ static int32_t MontsFactorGetByOptThenCopy(MontsMulFactor *dst, const MontsMulFa
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = BN_Copy(dst->e2, src->e2);
-    return ret;
+    return BN_Copy(dst->e2, src->e2);
 }
 
 /* r = (a1 ^ e1) * (a2 ^ e2) mod mont */

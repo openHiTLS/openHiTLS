@@ -65,7 +65,7 @@ static void *TestFileOpenFunc(void *args)
 
     BSL_SAL_FileClose(stream);
 
-exit:
+EXIT:
     RemoveFile(path);
     return NULL;
 }
@@ -122,7 +122,7 @@ static void *TestFileLengthFunc(void *args)
     ASSERT_TRUE(len > 0); // The length of the existing file is greater than 0.
     ASSERT_EQ(ret, BSL_SUCCESS);
 
-exit:
+EXIT:
     BSL_SAL_FileClose(stream);
     RemoveFile(path);
     return NULL;

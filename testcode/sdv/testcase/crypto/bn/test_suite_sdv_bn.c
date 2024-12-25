@@ -102,7 +102,7 @@ void SDV_CRYPTO_BN_CREATE_API_TC001(void)
 
     bn = BN_Create(0);
     ASSERT_TRUE(bn != NULL);
-exit:
+EXIT:
     BN_Destroy(bn);
 }
 /* END_CASE */
@@ -135,7 +135,7 @@ void SDV_CRYPTO_BN_SETSIGN_API_TC001(void)
 
     ASSERT_TRUE(BN_SetLimb(bn, 1) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_SetSign(bn, false) == CRYPT_SUCCESS);
-exit:
+EXIT:
     BN_Destroy(bn);
 }
 /* END_CASE */
@@ -175,7 +175,7 @@ void SDV_CRYPTO_BN_COPY_API_TC001(void)
 
     ASSERT_TRUE(BN_Copy(r, a) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     BN_Destroy(r);
     BN_Destroy(a);
 }
@@ -194,7 +194,7 @@ exit:
 void SDV_CRYPTO_BN_ZEROIZE_API_TC001(void)
 {
     ASSERT_TRUE(BN_Zeroize(NULL) == CRYPT_NULL_INPUT);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -219,7 +219,7 @@ void SDV_CRYPTO_BN_SETLIMB_API_TC001(void)
 
     ASSERT_TRUE(BN_SetLimb(NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(BN_SetLimb(bn, 0) == CRYPT_SUCCESS);
-exit:
+EXIT:
     BN_Destroy(bn);
     return;
 }
@@ -248,7 +248,7 @@ void SDV_CRYPTO_BN_SETBIT_API_TC001(void)
     ASSERT_TRUE(BN_SetBit(NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(BN_SetBit(bn, (uint32_t)sizeof(BN_UINT) << 3) == CRYPT_BN_SPACE_NOT_ENOUGH);
     ASSERT_TRUE(BN_SetBit(bn, ((uint32_t)sizeof(BN_UINT) << 3) - 1) == CRYPT_SUCCESS);
-exit:
+EXIT:
     BN_Destroy(bn);
     return;
 }
@@ -296,7 +296,7 @@ void SDV_CRYPTO_BN_GETBIT_API_TC001(void)
     ASSERT_TRUE(BN_GetBit(bn, limbBits - 1) == true);
     ASSERT_TRUE(BN_GetBit(bn, limbBits) == false);
     ASSERT_TRUE(BN_GetBit(bn, limbBits + 1) == false);
-exit:
+EXIT:
     BN_Destroy(bn);
 }
 /* END_CASE */
@@ -343,7 +343,7 @@ void SDV_CRYPTO_BN_CLRBIT_API_TC001(void)
 
     ASSERT_EQ(BN_ClrBit(bn, ((uint32_t)sizeof(BN_UINT) << 3)), CRYPT_BN_SPACE_NOT_ENOUGH);  // BN_UINT_BITS
     ASSERT_TRUE(BN_ClrBit(bn, ((uint32_t)sizeof(BN_UINT) << 3) - 1) == CRYPT_SUCCESS);      // BN_UINT_BITS - 1
-exit:
+EXIT:
     BN_Destroy(bn);
     return;
 }
@@ -388,7 +388,7 @@ void SDV_CRYPTO_BN_RSHIFT_FUNC_TC001(int sign, Hex *hex, int n, int signRes, Hex
     ASSERT_EQ(BN_Rshift(q, a, n), CRYPT_SUCCESS);  // r != a
     ASSERT_TRUE(BN_Cmp(r, res) == 0);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(r);
     BN_Destroy(q);
@@ -460,7 +460,7 @@ void SDV_CRYPTO_BN_MODINV_API_TC001(void)
     // r.room.bits > m.bits
     ASSERT_TRUE(BN_ModInv(r257, a, m, opt) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(m);
     BN_Destroy(zero);
@@ -546,7 +546,7 @@ void SDV_CRYPTO_BN_MODINV_FUNC_TC002(int sign, Hex *hex, Hex *modulo, Hex *resul
         ASSERT_TRUE_AND_LOG("r == m", BN_Cmp(r, res) == 0);
     }
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(m);
     BN_Destroy(r);
@@ -600,7 +600,7 @@ void SDV_CRYPTO_BN_MOD_EXP_INPUT_CHECK_API_TC001(void)
     ASSERT_TRUE(BN_SetSign(e, true) == CRYPT_SUCCESS);
     ASSERT_TRUE(ModExpInputCheck(r, a, e, m, opt) == CRYPT_BN_ERR_EXP_NO_NEGATIVE);
 
-exit:
+EXIT:
     BN_Destroy(bn);
     BN_Destroy(r);
     BN_Destroy(a);
@@ -652,7 +652,7 @@ void SDV_CRYPTO_BN_MODEXP_API_TC001(void)
     r = BN_Create(LONG_BN_BITS_256 - BIGNUM_REDUNDANCY_BITS);
     ASSERT_TRUE(BN_ModExp(r, a, e, m, opt) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(e);
     BN_Destroy(r);
@@ -722,7 +722,7 @@ void SDV_CRYPTO_BN_MODEXP_API_TC002(void)
     ASSERT_TRUE(BN_ModExp(r, a, e, negOne, opt) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Cmp(r, zero) == 0);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(e);
     BN_Destroy(r);
@@ -814,7 +814,7 @@ void SDV_CRYPTO_BN_MODEXP_FUNC_TC001(int sign1, Hex *hex1, Hex *hex2, Hex *modul
     ASSERT_TRUE(BN_ModExp(r, a, e, r, opt) == CRYPT_SUCCESS);  // r == m
     ASSERT_TRUE_AND_LOG("r == m", BN_Cmp(r, res) == 0);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(e);
     BN_Destroy(m);
@@ -845,7 +845,7 @@ void SDV_CRYPTO_BN_MODEXPCORE_API_TC001(void)
     ASSERT_TRUE(BN_SetLimb(e, 10) == CRYPT_SUCCESS);
     ASSERT_TRUE(ModExpCore(r, a, e, m, opt) == CRYPT_BN_ERR_DIVISOR_ZERO);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(e);
     BN_Destroy(r);
@@ -884,7 +884,7 @@ void SDV_CRYPTO_BN_MOD_API_TC001(void)
     ASSERT_TRUE(BN_SetLimb(m, 0) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Mod(r, a, m, opt) == CRYPT_BN_ERR_DIVISOR_ZERO);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(r);
     BN_Destroy(m);
@@ -955,7 +955,7 @@ void SDV_CRYPTO_BN_MOD_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *modulo, 
     ASSERT_EQ(BN_Copy(r, a), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Mod(r, r, m, opt), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("r == a", BN_Cmp(r, res) == 0);
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(m);
     BN_Destroy(r);
@@ -985,7 +985,7 @@ void SDV_CRYPTO_BN_PRIMECHECK_API_TC001(void)
     ASSERT_TRUE(BN_SetLimb(bn, 10) == CRYPT_SUCCESS);  // bn == 10
     ASSERT_TRUE(BN_PrimeCheck(bn, opt) == CRYPT_BN_NOR_CHECK_PRIME);
 
-exit:
+EXIT:
     BN_Destroy(bn);
     BN_OptimizerDestroy(opt);
 }
@@ -1026,7 +1026,7 @@ void SDV_CRYPTO_BN_PRIME_CHECK_FUNC_TC001(Hex *hex, int isPrime)
         ASSERT_EQ(ret, CRYPT_BN_NOR_CHECK_PRIME);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_RandDeinit();
     BN_Destroy(bn);
     BN_OptimizerDestroy(opt);
@@ -1084,7 +1084,7 @@ void SDV_CRYPTO_BN_GENPRIMELIMB_API_TC001(void)
 
     ASSERT_TRUE(BN_GenPrime(r, 10, half, opt, cb) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     BN_CbCtxDestroy(cb);
     BN_Destroy(r);
     BN_OptimizerDestroy(opt);
@@ -1121,7 +1121,7 @@ void SDV_CRYPTO_BN_ADDLIMB_FUNC_TC001(int sign, Hex *rHex, int limb, int resSign
         ASSERT_EQ(BN_Cmp(resBn, r), 0);
     }
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(r);
     BN_Destroy(resBn);
@@ -1181,7 +1181,7 @@ void SDV_CRYPTO_BN_SUB_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *hex2, in
     ASSERT_EQ(BN_Sub(a, a, b), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("a == a", BN_Cmp(a, res) == 0);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(b);
     BN_Destroy(r);
@@ -1236,7 +1236,7 @@ void SDV_CRYPTO_BN_SUBLIMB_API_TC001(void)
     ASSERT_TRUE(a != NULL);
     ASSERT_TRUE(BN_SubLimb(r, a, 10) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     BN_Destroy(r);
     BN_Destroy(a);
 }
@@ -1296,7 +1296,7 @@ void SDV_CRYPTO_BN_SUB_LIMB_FUNC_TC001(int sign1, Hex *hex1, Hex *hex2, int sign
     }
     ASSERT_TRUE(BN_Cmp(n, res) == 0);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(r);
     BN_Destroy(n);
@@ -1365,7 +1365,7 @@ void SDV_CRYPTO_BN_DIV_FUNC_TC001(
     ASSERT_EQ(BN_Div(q1, n, x, y, opt), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("q1 != x, n != y", BN_Cmp(q1, resQ) == 0);
     ASSERT_TRUE_AND_LOG("q1 != x, n != y", BN_Cmp(n, resR) == 0);
-exit:
+EXIT:
     BN_Destroy(x);
     BN_Destroy(y);
     BN_Destroy(q);
@@ -1416,7 +1416,7 @@ void SDV_CRYPTO_BN_SQR_API_TC001(void)
     ASSERT_TRUE(BN_Bin2Bn(a, buff, sizeof(buff) / 2) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Sqr(r, a, opt) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(r);
     BN_Destroy(zero);
@@ -1463,7 +1463,7 @@ void SDV_CRYPTO_BN_SQR_FUNC_TC001(int sign1, Hex *hex1, Hex *result)
     ASSERT_TRUE(BN_Sqr(r, a, opt) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Cmp(r, res) == 0);
 
-exit:
+EXIT:
     BN_Destroy(a);
     BN_Destroy(r);
     BN_Destroy(res);
@@ -1510,7 +1510,7 @@ void SDV_CRYPTO_BN_RAND_API_TC001(void)
 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Rand(bn, 0, 0, 0) == CRYPT_SUCCESS);
-exit:
+EXIT:
     BN_Destroy(bn);
     return;
 #endif
@@ -1542,7 +1542,7 @@ void SDV_CRYPTO_BN_RANDRANGE_API_TC001(void)
     ASSERT_TRUE(BN_SetLimb(bn, 1) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_SetSign(bn, true) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_RandRange(bn, bn) == CRYPT_BN_ERR_RAND_NEGATIVE);
-exit:
+EXIT:
     BN_Destroy(bn);
     return;
 }
@@ -1583,7 +1583,7 @@ void SDV_CRYPTO_BN_BNGCDCHECKINPUT_API_TC001(void)
     ASSERT_TRUE(BN_Zeroize(a) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Zeroize(b) == CRYPT_SUCCESS);
     ASSERT_TRUE(BnGcdCheckInput(r, a, b, opt) == CRYPT_BN_ERR_GCD_NO_ZERO);
-exit:
+EXIT:
     BN_Destroy(r);
     BN_Destroy(a);
     BN_Destroy(b);
@@ -1628,7 +1628,7 @@ void SDV_CRYPTO_BN_MODINVINPUTCHECK_API_TC001(void)
     ASSERT_TRUE(BN_Zeroize(x) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Zeroize(m) == CRYPT_SUCCESS);
     ASSERT_TRUE(InverseInputCheck(r, x, m, opt) == CRYPT_BN_ERR_DIVISOR_ZERO);
-exit:
+EXIT:
     BN_Destroy(r);
     BN_Destroy(x);
     BN_Destroy(m);
@@ -1670,7 +1670,7 @@ void SDV_CRYPTO_BN_U64_FUNC_TC001(int len)
     ASSERT_TRUE(BN_U64Array2Bn(a, input, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Bn2U64Array(a, output, &outlen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(input, output, outlen * sizeof(uint64_t)) == 0);
-exit:
+EXIT:
     BN_Destroy(a);
     free(input);
     free(output);
@@ -1703,7 +1703,7 @@ void SDV_CRYPTO_BN_UINT_FUNC_TC001(int len)
     ASSERT_TRUE(BN_Array2BN(a, input, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_BN2Array(a, output, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(input, output, len * sizeof(BN_UINT)) == 0);
-exit:
+EXIT:
     BN_Destroy(a);
     free(input);
     free(output);
@@ -1778,7 +1778,7 @@ void SDV_CRYPTO_BN_GCD_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *hex2, He
     ASSERT_EQ(BN_Gcd(out, bn, out, opt), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("r == b", BN_Cmp(out, res) == 0);
 
-exit:
+EXIT:
     BN_Destroy(bn);
     BN_Destroy(bn2);
     BN_Destroy(res);
@@ -1808,7 +1808,7 @@ void SDV_CRYPTO_BN_CMP_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *hex2, in
 
     ASSERT_EQ(BN_Cmp(bn1, bn2), result);
 
-exit:
+EXIT:
     BN_Destroy(bn1);
     BN_Destroy(bn2);
 }
@@ -1851,7 +1851,7 @@ void SDV_CRYPTO_BN_ADD_FUNC_TC001(int sign1, int sign2, int sign3, Hex *a, Hex *
         }
     }
 
-exit:
+EXIT:
     BN_Destroy(bn1);
     BN_Destroy(bn2);
     BN_Destroy(sum);
@@ -1903,7 +1903,7 @@ void SDV_CRYPTO_BN_TO_BIN_FIX_ZERO_API_TC001(void)
 
     ASSERT_EQ(BN_Bn2BinFixZero(bn, bin, 1), CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
 
-exit:
+EXIT:
     BN_Destroy(bn);
 }
 /* END_CASE */

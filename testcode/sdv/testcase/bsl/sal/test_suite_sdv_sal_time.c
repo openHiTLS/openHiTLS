@@ -52,7 +52,7 @@ static void TestBslSysTimeAndTmCompare(BSL_TIME *dateTime, struct tm *tempTime)
     ASSERT_EQ(dateTime->hour, tempTime->tm_hour);
     ASSERT_EQ(dateTime->minute, tempTime->tm_min);
     ASSERT_EQ(dateTime->second, tempTime->tm_sec);
-exit:
+EXIT:
     return;
 }
 /* END_HEADER */
@@ -93,7 +93,7 @@ void SDV_BSL_TIME_FUNC_GET_DATETIME_TC001(void)
 
     /* 3.The time is legal. */
     ASSERT_EQ(BSL_DateToStrConvert(&dateTime, timeStr, 26), (uint32_t)BSL_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -125,7 +125,7 @@ void SDV_BSL_TIME_FUNC_REGISTER_TC001(void)
     BSL_SysTimeFuncUnReg();
 
     ASSERT_NE(BSL_SAL_CurrentSysTimeGet(), 1);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -178,7 +178,7 @@ void SDV_BSL_SAL_TIME_CMP_TIME_API_TC001(void)
     ASSERT_EQ(BSL_SAL_DateTimeCompare(&dateA, &dateB, &diffSec), BSL_TIME_DATE_AFTER);
     ASSERT_EQ(diffSec, 1);
     dateA.second = 0;
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -231,7 +231,7 @@ void SDV_BSL_SAL_TIME_CMP_TIME_API_TC002(void)
     dateA.microSec = 1;
     ASSERT_EQ(BSL_SAL_DateTimeCompareByUs(&dateA, &dateB), BSL_TIME_DATE_BEFORE);
     dateA.microSec = 0;
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -269,7 +269,7 @@ void SDV_BSL_TIME_SYSTIME_API_TC001(void)
     ret = BSL_SAL_DateToUtcTimeConvert(&systime, &timestamp);
 
     ASSERT_TRUE(curtime >= timestamp && curtime - 5 <= timestamp);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -308,7 +308,7 @@ void SDV_BSL_TIME_CONVERT_TIME_FUNC_TC001(void)
     dateTime.minute = 0;
     dateTime.second = 0;
     ASSERT_TRUE(BSL_SAL_DateToUtcTimeConvert(&dateTime, &utcTime) == (uint32_t)BSL_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -368,7 +368,7 @@ void SDV_BSL_SAL_CONVERT_TIME_API_TC001(void)
     ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
     ASSERT_TRUE(gmtime_r((const time_t *)&utcTime, &tempTime) != NULL);
     TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -401,7 +401,7 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC001(void)
     dateTime.year = 1970;
     ret = BSL_DateTimeCheck(&dateTime);
     ASSERT_EQ(ret, true);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -440,7 +440,7 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC002(void)
     dateTime.month = 12;
     ret = BSL_DateTimeCheck(&dateTime);
     ASSERT_EQ(ret, true);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -539,7 +539,7 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC003(void)
     dateTime.day = 29;
     ret = BSL_DateTimeCheck(&dateTime);
     ASSERT_EQ(ret, true);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -618,7 +618,7 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC004(void)
     ASSERT_EQ(ret, true);
     char buf[256] = {0};
     ASSERT_EQ(BSL_DateToStrConvert(&dateTime, buf, 256), BSL_SUCCESS);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -643,7 +643,7 @@ void SDV_BSL_TIME_FUNC_TICK_TC001(void)
     res = BSL_SAL_TicksPerSec();
     ASSERT_EQ(res, sysconf(_SC_CLK_TCK));
     BSL_SAL_Sleep(1);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -690,7 +690,7 @@ void SDV_BSL_TIME_ADD_TIME_TC001(void)
 
     /* Exceptions */
     ASSERT_TRUE(BSL_DateTimeAddUs(&dateA, NULL, 0) == BSL_INTERNAL_EXCEPTION);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

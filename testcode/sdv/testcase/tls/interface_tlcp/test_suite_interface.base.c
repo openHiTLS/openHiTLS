@@ -72,14 +72,12 @@ typedef struct {
 
 int32_t SendHelloReq(HITLS_Ctx *ctx)
 {
-    int32_t ret;
     /** Initialize the message buffer. */
     uint8_t buf[HS_MSG_HEADER_SIZE] = {0u};
     size_t len = HS_MSG_HEADER_SIZE;
 
     /** Write records. */
-    ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
-    return ret;
+    return REC_Write(ctx, REC_TYPE_HANDSHAKE, buf, len);
 }
 
 #define TEST_CLIENT_SEND_FAIL 1

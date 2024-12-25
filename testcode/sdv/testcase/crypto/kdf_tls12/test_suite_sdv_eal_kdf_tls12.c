@@ -90,7 +90,7 @@ void SDV_CRYPT_EAL_KDF_TLS12_API_TC001(int algId)
     ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
-exit:
+EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */
@@ -133,7 +133,7 @@ void SDV_CRYPT_EAL_KDF_TLS12_FUN_TC001(int algId, Hex *key, Hex *label, Hex *see
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
-exit:
+EXIT:
     if (out != NULL) {
         free(out);
     }
@@ -174,7 +174,7 @@ void SDV_CRYPTO_KDFTLS12_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *l
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
-exit:
+EXIT:
     if (out != NULL) {
         free(out);
     }

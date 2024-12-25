@@ -81,14 +81,14 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret); // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     // Set the padding mode.
     ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Enter the data to be calculated. This interface can be called for multiple times. The input value of **outLen** is the length of the ciphertext, and the output value is the amount of processed data.
@@ -96,7 +96,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     outTotalLen += outLen;
@@ -106,7 +106,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     outTotalLen += outLen;
@@ -127,7 +127,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     //Set the padding mode, which must be the same as that for encryption.
@@ -135,7 +135,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Enter the ciphertext data.
@@ -143,7 +143,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     outTotalLen += outLen;
     outLen = sizeof(plainText) - outTotalLen;
@@ -153,7 +153,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     outTotalLen += outLen;
@@ -166,11 +166,11 @@ int main(void)
 
     if (outTotalLen != dataLen || memcmp(plainText, data, dataLen) != 0) {
         printf("plaintext comparison failed\n");
-        goto exit;
+        goto EXIT;
     }
     printf("pass \n");
 
-exit:
+EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
     BSL_ERR_DeInit();
     return ret;
@@ -217,7 +217,7 @@ int main(void) {
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (pkey == NULL) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Initialize the random number.
@@ -225,7 +225,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Generate a key pair.
@@ -233,7 +233,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyGen: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Data to be encrypted.
@@ -248,7 +248,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyEncrypt: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Decrypt data.
@@ -256,7 +256,7 @@ int main(void) {
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyDecrypt: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     if (memcmp(dcrypt, data, dataLen) == 0) {
@@ -264,7 +264,7 @@ int main(void) {
     } else {
         ret = -1;
     }
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_RandDeinit();
@@ -324,7 +324,7 @@ int main(void)
 
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (ctx == NULL) {
-        goto exit;
+        goto EXIT;
     }
 
     // Set a user ID.
@@ -332,7 +332,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Initialize the random number.
@@ -340,7 +340,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Generate a key pair.
@@ -348,7 +348,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Sign.
@@ -356,7 +356,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Verify the signature.
@@ -364,12 +364,12 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     printf("pass \n");
 
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_RandDeinit();
@@ -443,7 +443,7 @@ int main(void)
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     if (prvCtx == NULL || pubCtx == NULL) {
-        goto exit;
+        goto EXIT;
     }
 
     // Set the curve parameters.
@@ -451,7 +451,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the private key of one end.
@@ -462,7 +462,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the curve parameters.
@@ -470,7 +470,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Set the public key of the other end.
@@ -481,7 +481,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // The shared key involves only the X axis. The length of the public key is not compressed in the returned results.
@@ -490,7 +490,7 @@ int main(void)
     if (shareKey == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Initialize the random number.
@@ -498,7 +498,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Calculate the shared key.
@@ -506,19 +506,19 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Compare the calculation result with the expected one.
     if (shareLen != sizeof(resSharekey) || memcmp(shareKey, resSharekey, shareLen) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
-        goto exit;
+        goto EXIT;
     }
 
     printf("pass \n");
 
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
@@ -597,7 +597,7 @@ int main(void)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     if (ctx == NULL) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -609,24 +609,24 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     if (memcmp(out, result, sizeof(result)) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
-        goto exit;
+        goto EXIT;
     }
     printf("pass \n");
 
-exit:
+EXIT:
     BSL_ERR_DeInit();
     CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;
@@ -704,7 +704,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Obtain the random number sequence of the **len** value.
@@ -712,7 +712,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     printf("random value is: ");  // Output the random number.
@@ -726,7 +726,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandSeed: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     // Obtain the random number sequence of the **len** value.
@@ -734,7 +734,7 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     printf("random value is: "); // Output the random number.
@@ -743,7 +743,7 @@ int main(void)
     }
     printf("\n");
 
-exit:
+EXIT:
     // Release the context memory.
     CRYPT_EAL_RandDeinit();
     BSL_ERR_DeInit();

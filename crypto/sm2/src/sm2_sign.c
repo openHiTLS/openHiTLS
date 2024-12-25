@@ -385,10 +385,8 @@ int32_t KeyCheckAndPubGen(const CRYPT_SM2_Ctx *ctx)
     ret = ECC_GenPublicKey(ctx->pkey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
@@ -439,7 +437,6 @@ ERR:
 
 static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, DSA_Sign *sign)
 {
-    int32_t ret = CRYPT_SUCCESS;
     if (ctx->pkey->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -447,23 +444,21 @@ static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, DSA_Sign *sign)
     BN_BigNum *paraN = ECC_GetParaN(ctx->pkey->para);
     if (paraN == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        goto ERR;
+        return CRYPT_MEM_ALLOC_FAIL;
     }
 
     if ((BN_Cmp(sign->r, paraN) >= 0) || (BN_Cmp(sign->s, paraN) >= 0)) {
-        ret = CRYPT_SM2_VERIFY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        BN_Destroy(paraN);
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_VERIFY_FAIL);
+        return CRYPT_SM2_VERIFY_FAIL;
     }
+    BN_Destroy(paraN);
     if (BN_IsZero(sign->r) || BN_IsZero(sign->s)) {
-        ret = CRYPT_SM2_VERIFY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_VERIFY_FAIL);
+        return CRYPT_SM2_VERIFY_FAIL;
     }
 
-ERR:
-    BN_Destroy(paraN);
-    return ret;
+    return CRYPT_SUCCESS;
 }
 
 static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const DSA_Sign *sign)
@@ -702,15 +697,13 @@ static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 /* consttime memcmp function */
 static int32_t IsDataEqual(const uint8_t *data1, const uint8_t *data2, uint32_t len)
 {
-    int32_t ret;
     uint8_t check = 0;
     for (uint32_t i = 0; i < len; i++) {
         check |= data1[i] ^ data2[i];
     }
     if (check != 0) {
-        ret = CRYPT_SM2_EXCH_VERIFY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_EXCH_VERIFY_FAIL);
+        return CRYPT_SM2_EXCH_VERIFY_FAIL;
     }
     return CRYPT_SUCCESS;
 }
