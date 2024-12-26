@@ -44,6 +44,7 @@ static int Sm4CipherFinal(
     if (algId != CRYPT_CIPHER_SM4_GCM) {
         return CRYPT_EAL_CipherFinal(ctx, outTmp, finLen);
     }
+    *finLen = 0;
     return CRYPT_SUCCESS;
 }
 
@@ -1185,7 +1186,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
     finLen = MAX_OUTPUT - len;
     ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_COMPARE("Cipher compare", out->x, out->len, outTmp, len + finLen);
 
     (void)memset_s(outTmp, MAX_OUTPUT, 0, MAX_OUTPUT);
     len = MAX_OUTPUT;
@@ -1196,7 +1197,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
     finLen = MAX_OUTPUT - len;
     ret = Sm4CipherFinal(algId, ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_COMPARE("Cipher compare", out->x, out->len, outTmp, len + finLen);
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
