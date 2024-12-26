@@ -452,7 +452,7 @@ void UT_TLS_CFG_SET_COOKIEGENERATECB_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, UT_CookieGenerateCb) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -483,7 +483,7 @@ void UT_TLS_CFG_SET_COOKIEVERIFYCB_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, UT_CookieVerifyCb) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
@@ -986,7 +986,7 @@ void UT_TLS_CFG_SET_GET_HELLO_VERIFY_REQ_API_TC001(void)
 
     ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, &getIsSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(getIsSupport == false);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
