@@ -2523,7 +2523,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC001(int setGenerateCb, i
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_UNREGISTERED_CALLBACK);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2561,7 +2561,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC002(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_INTERNAL_EXCEPTION);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2600,7 +2600,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_INTERNAL_EXCEPTION);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2639,7 +2639,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC004(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
