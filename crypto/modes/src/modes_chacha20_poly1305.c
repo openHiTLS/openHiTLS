@@ -56,6 +56,7 @@ void Poly1305SetKey(Poly1305Ctx *ctx, const uint8_t key[POLY1305_KEYSIZE])
     ctx->acc[4] = 0;
     ctx->acc[5] = 0;
 
+    (void)memset_s(ctx->last, sizeof(ctx->last), 0, sizeof(ctx->last));
     ctx->lastLen = 0;
 }
 
