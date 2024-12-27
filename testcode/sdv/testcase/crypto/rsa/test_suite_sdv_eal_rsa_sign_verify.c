@@ -1284,8 +1284,6 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     uint32_t unBlindSigLen = MAX_CIPHERTEXT_LEN;
     uint8_t rBuf[MAX_CIPHERTEXT_LEN] = {0};
     uint32_t rBufLen = MAX_CIPHERTEXT_LEN;
-    uint8_t invBufTest[MAX_CIPHERTEXT_LEN] = {0};
-    uint32_t invBufTestLen = MAX_CIPHERTEXT_LEN;
 
     BN_BigNum *invN = NULL;
     BN_BigNum *inv = BN_Create(0);
@@ -1309,9 +1307,6 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_MD_AlgId mdId = CRYPT_MD_SHA384;
     uint32_t saltLen = salt->len;
-    BSL_Param blindParam[2] = {
-        {CRYPT_PARAM_RSA_BLIND_R_INV, BSL_PARAM_TYPE_OCTETS_PTR, invBufTest, invBufTestLen, 0},
-        BSL_PARAM_END};
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -1343,9 +1338,6 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
         memcpy_s(g_RandBuf, TMP_BUFF_LEN, rBuf, rBufLen);
     } else {
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
-        ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_SUCCESS);
-        ret = memcmp(invBuf->x, invBufTest, invBuf->len);
-        ASSERT_EQ(ret, 0);
     }
 
     uint32_t flag = CRYPT_RSA_BSSA;
@@ -1487,18 +1479,12 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_PkeyBlind(pkey, CRYPT_MD_SHA256, msg, msgLen, blindMsg, &unBlindSigLen)
         == CRYPT_RSA_ERR_MD_ALGID);
 
-    BSL_Param blindParam[2] = {{0}, BSL_PARAM_END};
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, NULL, 0) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_INVALID_ARG);
-    blindParam[0].valueType = BSL_PARAM_TYPE_OCTETS_PTR;
-    blindParam[0].key = CRYPT_PARAM_RSA_BLIND_R_INV;
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam,
-        0) == CRYPT_RSA_ERR_NO_BLIND_INFO);
     uint8_t rBufTest[128] = {1}; // due to key bits = 1024
     uint32_t rBufTestLen = 128;
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
-    // This should fail with CRYPT_NULL_INPUT because blindParam.value is NULL.
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_BSSA_INVERSE_OF_R, &blindParam, 0) == CRYPT_NULL_INPUT);
+    // repeated set
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
