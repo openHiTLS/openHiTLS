@@ -152,8 +152,10 @@ int32_t MODES_GCM_SetIv(MODES_CipherGCMCtx *ctx, const uint8_t *iv, uint32_t ivL
     // Reset information.
     (void)memset_s(ctx->ghash, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
     ctx->aadLen = 0;
+    (void)memset_s(ctx->last, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
     ctx->lastLen = 0;
     ctx->plaintextLen = 0;
+    (void)memset_s(ctx->remCt, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
 
     // Clear sensitive information.
     BSL_SAL_CleanseData(&ctr, sizeof(uint32_t));
