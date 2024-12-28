@@ -431,28 +431,57 @@ static int32_t BSL_ASN1_ProcessWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
     // Any and choice will not have a coexistence scenario, which is meaningless.
     if (tag == BSL_ASN1_TAG_CHOICE) {
         tagCbinfo->previousAsnOrTag = &realTag;
-        ret = BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, expTag);
+        return BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, expTag);
+    }
+    // The tags of any and normal must be present
+    if (tag == BSL_ASN1_TAG_ANY) {
+        ret = BSL_ASN1_AnyOrChoiceTagProcess(true, tagCbinfo, &tag);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
-    } else { // The tags of any and normal must be present
-        if (tag == BSL_ASN1_TAG_ANY) {
-            ret = BSL_ASN1_AnyOrChoiceTagProcess(true, tagCbinfo, &tag);
-            if (ret != BSL_SUCCESS) {
-                return ret;
-            }
-        }
-        if (tag != realTag) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "asn1: expected tag %x is not match %x", tag, realTag, 0, 0);
-            return BSL_ASN1_ERR_TAG_EXPECTED;
-        }
-        *expTag = realTag;
     }
+    if (tag != realTag) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "asn1: expected tag %x is not match %x", tag, realTag, 0, 0);
+        return BSL_ASN1_ERR_TAG_EXPECTED;
+    }
+    *expTag = realTag;
+
     return BSL_SUCCESS;
 }
 
-int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
+static int32_t ProcessOptionalOrDefaultTag(BSL_ASN1_AnyOrChoiceParam *tagCbinfo, uint8_t *tag, uint8_t *realTag)
+{
+    switch (*tag) {
+        case BSL_ASN1_TAG_ANY:
+            return BSL_ASN1_AnyOrChoiceTagProcess(true, tagCbinfo, tag);
+        case BSL_ASN1_TAG_CHOICE:
+            tagCbinfo->previousAsnOrTag = realTag;
+            return BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, tag);
+        default:
+            return BSL_SUCCESS;
+    }
+}
+
+int32_t ProcessIntegerType(uint8_t *temp, uint32_t len, BSL_ASN1_Buffer *asn)
+{
+    // Check if it is a negative number
+    if (*temp & 0x80) {
+        return BSL_ASN1_ERR_DECODE_INT;
+    }
+    // Calculate the actual length (remove leading zeros)
+    uint32_t actualLen = len;
+    uint8_t *actualBuff = temp;
+    while (actualLen > 1 && *actualBuff == 0) {
+        actualLen--;
+        actualBuff++;
+    }
+    asn->len = actualLen;
+    asn->buff = actualBuff;
+    return BSL_SUCCESS;
+}
+
+static int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     BSL_ASN1_TemplateItem *item, uint8_t **encode, uint32_t *encLen, BSL_ASN1_Buffer *asn)
 {
     uint32_t len;
@@ -469,21 +498,11 @@ int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
             return BSL_SUCCESS;
         }
 
-        if (tag == BSL_ASN1_TAG_ANY) {
-            ret = BSL_ASN1_AnyOrChoiceTagProcess(true, tagCbinfo, &tag);
-            if (ret != BSL_SUCCESS) {
-                return ret;
-            }
+        ret = ProcessOptionalOrDefaultTag(tagCbinfo, &tag, temp);
+        if (ret != BSL_SUCCESS) {
+            return ret;
         }
 
-        if (tag == BSL_ASN1_TAG_CHOICE) {
-            tagCbinfo->previousAsnOrTag = temp;
-            ret = BSL_ASN1_AnyOrChoiceTagProcess(false, tagCbinfo, &tag);
-            if (ret != BSL_SUCCESS) {
-                return ret;
-            }
-        }
-        
         if (tag != *temp) { // The optional or default scene is not encoded
             asn->tag = 0;
             asn->len = 0;
@@ -508,19 +527,23 @@ int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
         return ret;
     }
     asn->tag = tag;
-    asn->len = len;
-    asn->buff = (tag == BSL_ASN1_TAG_NULL) ? NULL : temp;
-    if (item->tag & BSL_ASN1_TAG_CONSTRUCTED) {
-        /* struct type, headerOnly flag is set, only the whole is parsed,
-         otherwise the parsed content is traversed */
-        if (item->flags & BSL_ASN1_FLAG_HEADERONLY) {
-            temp += len;
-            tempLen -= len;
+    if ((tag == BSL_ASN1_TAG_INTEGER || tag == BSL_ASN1_TAG_ENUMERATED) && len > 0) {
+        ret = ProcessIntegerType(temp, len, asn);
+        if (ret != BSL_SUCCESS) {
+            return ret;
         }
     } else {
+        asn->len = len;
+        asn->buff = (tag == BSL_ASN1_TAG_NULL) ? NULL : temp;
+    }
+
+    /* struct type, headerOnly flag is set, only the whole is parsed, otherwise the parsed content is traversed */
+    if ((item->tag & BSL_ASN1_TAG_CONSTRUCTED && (item->flags & BSL_ASN1_FLAG_HEADERONLY)) ||
+        (item->tag & BSL_ASN1_TAG_CONSTRUCTED) == 0) {
         temp += len;
         tempLen -= len;
     }
+
     *encode = temp;
     *encLen = tempLen;
     return BSL_SUCCESS;
@@ -1172,5 +1195,20 @@ int32_t BSL_ASN1_EncodeLimb(uint8_t tag, uint64_t limb, BSL_ASN1_Buffer *asn)
     }
     uint32_t offset = 0;
     EncodeNumber(limb, asn->len, asn->buff, &offset);
+    return BSL_SUCCESS;
+}
+
+int32_t BSL_ASN1_GetEncodeLenByContentLen(uint32_t contentLen, uint32_t *encodeLen)
+{
+    if (encodeLen == NULL) {
+        return BSL_NULL_INPUT;
+    }
+    uint8_t lenOctetNum = GetLenOctetNum(contentLen);
+
+    if (contentLen > (UINT32_MAX - lenOctetNum - 1)) {
+        return BSL_ASN1_ERR_LEN_OVERFFLOW;
+    }
+
+    *encodeLen = 1 + lenOctetNum + contentLen;
     return BSL_SUCCESS;
 }
