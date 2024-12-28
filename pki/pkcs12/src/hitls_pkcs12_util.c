@@ -150,8 +150,7 @@ void HITLS_PKCS12_Free(HITLS_PKCS12 *p12)
         p12->key->attributes = NULL;
         BSL_SAL_FREE(p12->key);
     }
-    BSL_LIST_DeleteAll(p12->certList, CertBagFree);
-    BSL_SAL_FREE(p12->certList);
+    BSL_LIST_FREE(p12->certList, CertBagFree);
     HITLS_PKCS12_MacDataFree(p12->macData);
     BSL_SAL_Free(p12);
 }

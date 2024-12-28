@@ -258,8 +258,7 @@ static int32_t ParseDirName(uint8_t **encode, uint32_t *encLen, BslList **list)
         *encode += valueLen;
         *encLen -= valueLen;
     } else {
-        BSL_LIST_DeleteAll(*list, NULL);
-        *list = NULL;
+        BSL_LIST_FREE(*list, NULL);
     }
     return ret;
 }
@@ -293,8 +292,7 @@ static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen,
     HITLS_X509_GeneralName *name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
     if (name == NULL) {
         if (dirNames != NULL) {
-            BSL_LIST_DeleteAll(dirNames, NULL);
-            BSL_SAL_Free(dirNames);
+            BSL_LIST_FREE(dirNames, NULL);
         }
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
@@ -303,8 +301,7 @@ static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen,
     name->value = value;
     ret = BSL_LIST_AddElement(list, name, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
-        BSL_LIST_DeleteAll(dirNames, NULL);
-        BSL_SAL_Free(dirNames);
+        BSL_LIST_FREE(dirNames, NULL);
         BSL_SAL_Free(name);
     }
     return ret;
@@ -548,8 +545,7 @@ void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku)
     if (exku == NULL) {
         return;
     }
-    BSL_LIST_DeleteAll(exku->oidList, NULL);
-    BSL_SAL_FREE(exku->oidList);
+    BSL_LIST_FREE(exku->oidList, NULL);
 }
 
 int32_t HITLS_X509_ParseExtendedKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtExKeyUsage *exku)
