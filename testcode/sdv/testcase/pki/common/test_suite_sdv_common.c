@@ -934,7 +934,7 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_EXT_ParseSan_TC001(Hex *encode, int gnNameCnt, int gnType1, int gnType2, Hex *rfc822, Hex *dnType,
+void SDV_X509_EXT_ParseSan_TC001(Hex *encode, int ret, int gnNameCnt, int gnType1, int gnType2, Hex *rfc822, Hex *dnType,
                                  Hex *dnValue)
 {
     HITLS_X509_ExtSan san = {0};
@@ -944,22 +944,24 @@ void SDV_X509_EXT_ParseSan_TC001(Hex *encode, int gnNameCnt, int gnType1, int gn
     HITLS_X509_NameNode *dirName = NULL;
 
     TestMemInit();
-    ASSERT_EQ(HITLS_X509_ParseSubjectAltName(&entry, &san), 0);
-    ASSERT_EQ(san.critical, entry.critical);
-    ASSERT_EQ(BSL_LIST_COUNT(san.names), gnNameCnt);
+    ASSERT_EQ(HITLS_X509_ParseSubjectAltName(&entry, &san), ret);
+    if (ret == 0) {
+        ASSERT_EQ(san.critical, entry.critical);
+        ASSERT_EQ(BSL_LIST_COUNT(san.names), gnNameCnt);
 
-    gnName = BSL_LIST_GET_FIRST(san.names);
-    ASSERT_EQ(gnName->type, gnType1);
-    ASSERT_COMPARE("gnName 1", rfc822->x, rfc822->len, gnName->value.data, gnName->value.dataLen);
+        gnName = BSL_LIST_GET_FIRST(san.names);
+        ASSERT_EQ(gnName->type, gnType1);
+        ASSERT_COMPARE("gnName 1", rfc822->x, rfc822->len, gnName->value.data, gnName->value.dataLen);
 
-    gnName = BSL_LIST_GET_NEXT(san.names);
-    ASSERT_EQ(gnName->type, gnType2);
-    dirNameList = (BslList *)gnName->value.data;
-    ASSERT_EQ(BSL_LIST_COUNT(dirNameList), 1 + 1); // layer 1 and layer 2
-    dirName = BSL_LIST_GET_FIRST(dirNameList);     // layer 1
-    dirName = BSL_LIST_GET_NEXT(dirNameList);      // layer 2
-    ASSERT_COMPARE("dnname type", dirName->nameType.buff, dirName->nameType.len, dnType->x, dnType->len);
-    ASSERT_COMPARE("dnname value", dirName->nameValue.buff, dirName->nameValue.len, dnValue->x, dnValue->len);
+        gnName = BSL_LIST_GET_NEXT(san.names);
+        ASSERT_EQ(gnName->type, gnType2);
+        dirNameList = (BslList *)gnName->value.data;
+        ASSERT_EQ(BSL_LIST_COUNT(dirNameList), 1 + 1); // layer 1 and layer 2
+        dirName = BSL_LIST_GET_FIRST(dirNameList);     // layer 1
+        dirName = BSL_LIST_GET_NEXT(dirNameList);      // layer 2
+        ASSERT_COMPARE("dnname type", dirName->nameType.buff, dirName->nameType.len, dnType->x, dnType->len);
+        ASSERT_COMPARE("dnname value", dirName->nameValue.buff, dirName->nameValue.len, dnValue->x, dnValue->len);
+    }
 
 EXIT:
     HITLS_X509_ClearSubjectAltName(&san);

@@ -505,10 +505,8 @@ int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *passwo
     }
     ret = SetEntityCert(p12);
 ERR:
-    BSL_LIST_DeleteAll(bagLists, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_SafeBagFree);
-    BSL_SAL_FREE(bagLists);
-    BSL_LIST_DeleteAll(contentList, NULL);
-    BSL_SAL_Free(contentList);
+    BSL_LIST_FREE(bagLists, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_SafeBagFree);
+    BSL_LIST_FREE(contentList, NULL);
     return ret;
 }
 
