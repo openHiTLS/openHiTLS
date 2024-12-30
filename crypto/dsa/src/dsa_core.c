@@ -379,8 +379,14 @@ uint32_t CRYPT_DSA_GetSignLen(const CRYPT_DSA_Ctx *ctx)
     if (ctx == NULL || ctx->para == NULL) {
         return 0;
     }
-    uint32_t qLen = ASN1_SignStringLenOfBn(ctx->para->q);
-    return ASN1_SignEnCodeLen(qLen, qLen);
+    uint32_t qLen = BN_Bytes(ctx->para->q);
+    uint32_t maxSignLen = 0;
+    int32_t ret = CRYPT_EAL_GetSignEncodeLen(qLen, qLen, &maxSignLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return 0;
+    }
+    return maxSignLen;
 }
 
 /* x != 0 && x < q */
@@ -642,33 +648,6 @@ ERR:
     return ret;
 }
 
-static void SignFree(DSA_Sign *sign)
-{
-    if (sign == NULL) {
-        return;
-    }
-    BN_Destroy(sign->r);
-    BN_Destroy(sign->s);
-    BSL_SAL_FREE(sign);
-}
-
-static DSA_Sign *SignNew(const CRYPT_DSA_Ctx *ctx)
-{
-    DSA_Sign *sign = BSL_SAL_Malloc(sizeof(DSA_Sign));
-    if (sign == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    sign->r = BN_Create(BN_Bits(ctx->para->p));
-    sign->s = BN_Create(BN_Bits(ctx->para->q));
-    if (sign->r == NULL || sign->s == NULL) {
-        SignFree(sign);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    return sign;
-}
-
 // Get the input hash data, see RFC6979-2.4.1 and RFC6979-2.3.2
 static BN_BigNum *DSA_Bits2Int(BN_BigNum *q, const uint8_t *data, uint32_t dataLen)
 {
@@ -687,15 +666,15 @@ static BN_BigNum *DSA_Bits2Int(BN_BigNum *q, const uint8_t *data, uint32_t dataL
 }
 
 // s = (h+x*sign->r)/k mod q
-static int32_t CalcSValue(const CRYPT_DSA_Ctx *ctx, DSA_Sign *sign, BN_BigNum *k,
+static int32_t CalcSValue(const CRYPT_DSA_Ctx *ctx, BN_BigNum *r, BN_BigNum *s, BN_BigNum *k,
     BN_BigNum *d, BN_Optimizer *opt)
 {
-    int32_t ret = BN_ModMul(sign->s, ctx->x, sign->r, ctx->para->q, opt);
+    int32_t ret = BN_ModMul(s, ctx->x, r, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_ModAdd(sign->s, d, sign->s, ctx->para->q, opt);
+    ret = BN_ModAdd(s, d, s, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -705,7 +684,7 @@ static int32_t CalcSValue(const CRYPT_DSA_Ctx *ctx, DSA_Sign *sign, BN_BigNum *k
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return BN_ModMul(sign->s, sign->s, k, ctx->para->q, opt);
+    return BN_ModMul(s, s, k, ctx->para->q, opt);
 }
 
 static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
@@ -743,8 +722,7 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
             continue;
         }
         // Compute s = (h+x*sign->r)/k mod q, see RFC6979-2.4.4 */
-        DSA_Sign sign = { r, s };
-        ret = CalcSValue(ctx, &sign, k, d, opt);
+        ret = CalcSValue(ctx, r, s, k, d, opt);
         if (ret != CRYPT_SUCCESS) {
             goto EXIT;
         }
@@ -822,8 +800,7 @@ int32_t CRYPT_DSA_SignData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    DSA_Sign dsaSign = { r, s };
-    ret = ASN1_SignDataEncode(&dsaSign, sign, signLen);
+    ret = CRYPT_EAL_EncodeSign(r, s, sign, signLen);
     BN_Destroy(r);
     BN_Destroy(s);
     return ret;
@@ -842,7 +819,7 @@ int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *d
     return CRYPT_DSA_SignData(ctx, hash, hashLen, sign, signLen);
 }
 
-static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign *sign)
+static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r, BN_BigNum *s)
 {
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     BN_BigNum *u1 = BN_Create(BN_Bits(ctx->para->p));
@@ -863,7 +840,7 @@ static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign
      * v = v mod q
      * If v == r, sign verification is succeeded.
      */
-    ret = BN_ModInv(w, sign->s, ctx->para->q, opt);
+    ret = BN_ModInv(w, s, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -873,7 +850,7 @@ static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    ret = BN_ModMul(u2, sign->r, w, ctx->para->q, opt);
+    ret = BN_ModMul(u2, r, w, ctx->para->q, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -888,7 +865,7 @@ static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    ret = BN_Cmp(u1, sign->r);
+    ret = BN_Cmp(u1, r);
     if (ret != 0) {
         BSL_ERR_PUSH_ERROR(ret);
         ret = CRYPT_DSA_VERIFY_FAIL;
@@ -913,20 +890,24 @@ int32_t CRYPT_DSA_VerifyData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_INFO);
         return CRYPT_DSA_ERR_KEY_INFO;
     }
+
     int32_t ret;
-    DSA_Sign *s = SignNew(ctx);
+    BN_BigNum *r = BN_Create(BN_Bits(ctx->para->p));
+    BN_BigNum *s = BN_Create(BN_Bits(ctx->para->q));
     BN_BigNum *d = DSA_Bits2Int(ctx->para->q, data, dataLen);
-    if (s == NULL || d == NULL) {
+    if (r == NULL || s == NULL || d == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto EXIT;
     }
-    ret = ASN1_SignDataDecode(s, sign, signLen);
+
+    ret = CRYPT_EAL_DecodeSign(sign, signLen, r, s);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }
-    ret = VerifyCore(ctx, d, s);
+    ret = VerifyCore(ctx, d, r, s);
 EXIT:
-    SignFree(s);
+    BN_Destroy(r);
+    BN_Destroy(s);
     BN_Destroy(d);
     return ret;
 }

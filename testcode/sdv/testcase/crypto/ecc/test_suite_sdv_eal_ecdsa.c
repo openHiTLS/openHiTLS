@@ -17,21 +17,16 @@
 /* BEGIN_HEADER */
 int SignEncode(Hex *R, Hex *S, uint8_t *vectorSign, uint32_t *vectorSignLen)
 {
-    int ret = CRYPT_INVALID_ARG;
-    BN_BigNum *bn_r = NULL;
-    BN_BigNum *bn_s = NULL;
-    DSA_Sign dsaSign;
-    bn_r = BN_Create(R->len * BITS_OF_BYTE);
-    bn_s = BN_Create(S->len * BITS_OF_BYTE);
-    ASSERT_TRUE(bn_s != NULL && bn_r != NULL);
-    ASSERT_TRUE(BN_Bin2Bn(bn_r, R->x, R->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(BN_Bin2Bn(bn_s, S->x, S->len) == CRYPT_SUCCESS);
-    dsaSign.r = bn_r;
-    dsaSign.s = bn_s;
-    ret = ASN1_SignDataEncode(&dsaSign, vectorSign, vectorSignLen);
+    int ret;
+    BN_BigNum *bnR = BN_Create(R->len * BITS_OF_BYTE);
+    BN_BigNum *bnS = BN_Create(S->len * BITS_OF_BYTE);
+    ASSERT_TRUE(bnS != NULL && bnR != NULL);
+    ASSERT_TRUE(BN_Bin2Bn(bnR, R->x, R->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Bin2Bn(bnS, S->x, S->len) == CRYPT_SUCCESS);
+    ret = CRYPT_EAL_EncodeSign(bnR, bnS, vectorSign, vectorSignLen);
 EXIT:
-    BN_Destroy(bn_r);
-    BN_Destroy(bn_s);
+    BN_Destroy(bnR);
+    BN_Destroy(bnS);
     return ret;
 }
 /* END_HEADER */
@@ -838,15 +833,15 @@ void SDV_CRYPTO_ECDSA_VERIFY_API_TC001(Hex *data, Hex *pubKeyX, Hex *pubKeyY, He
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &ecdsaPubkey), CRYPT_SUCCESS);
 
     /* Input parameter test of CRYPT_EAL_PkeyVerify. */
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(NULL, mdId, data->x, data->len, sign->x, sign->len) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, NULL, data->len, sign->x, sign->len) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, NULL, 0, sign->x, sign->len) == CRYPT_ECDSA_VERIFY_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, 0, sign->x, sign->len) == CRYPT_ECDSA_VERIFY_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, NULL, sign->len) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, NULL, 0) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, sign->x, 0) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, sign->x, 1) == CRYPT_DSA_DECODE_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, sign->x, sign->len) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(NULL, mdId, data->x, data->len, sign->x, sign->len), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, NULL, data->len, sign->x, sign->len), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, NULL, 0, sign->x, sign->len), CRYPT_ECDSA_VERIFY_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, 0, sign->x, sign->len), CRYPT_ECDSA_VERIFY_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, NULL, sign->len), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, NULL, 0), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, sign->x, 0), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, sign->x, 1), BSL_ASN1_ERR_DECODE_LEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data->x, data->len, sign->x, sign->len), CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);

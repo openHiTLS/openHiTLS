@@ -112,16 +112,13 @@ static void Set_DSA_Prv(CRYPT_EAL_PkeyPrv *prv, uint8_t *key, uint32_t keyLen)
     prv->key.dsaPrv.len = keyLen;
 }
 
-int SignEncode(
-    DSA_Sign *dsaSign, uint8_t *vectorSign, uint32_t *vectorSignLen, Hex *R, Hex *S, BN_BigNum **bn_r, BN_BigNum **bn_s)
+int SignEncode(uint8_t *vectorSign, uint32_t *vectorSignLen, Hex *R, Hex *S, BN_BigNum **bnR, BN_BigNum **bnS)
 {
-    *bn_r = BN_Create(R->len * BITS_OF_BYTE);
-    *bn_s = BN_Create(S->len * BITS_OF_BYTE);
-    ASSERT_EQ(BN_Bin2Bn(*bn_r, R->x, R->len), CRYPT_SUCCESS);
-    ASSERT_EQ(BN_Bin2Bn(*bn_s, S->x, S->len), CRYPT_SUCCESS);
-    dsaSign->r = *bn_r;
-    dsaSign->s = *bn_s;
-    ASSERT_EQ(ASN1_SignDataEncode(dsaSign, vectorSign, vectorSignLen), CRYPT_SUCCESS);
+    *bnR = BN_Create(R->len * BITS_OF_BYTE);
+    *bnS = BN_Create(S->len * BITS_OF_BYTE);
+    ASSERT_EQ(BN_Bin2Bn(*bnR, R->x, R->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Bin2Bn(*bnS, S->x, S->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeSign(*bnR, *bnS, vectorSign, vectorSignLen), CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 
 EXIT:
@@ -402,8 +399,8 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     uint8_t *vectorSign = NULL;
     uint8_t *hitlsSign = NULL;
     uint32_t vectorSignLen, hitlsSignOutLen;
-    BN_BigNum *bn_r = NULL;
-    BN_BigNum *bn_s = NULL;
+    BN_BigNum *bnR = NULL;
+    BN_BigNum *bnS = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
 
@@ -434,10 +431,9 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     ASSERT_TRUE(signLen > 0);
 
     /* Encoding r and s vectors */
-    DSA_Sign dsaSign = {0};
     vectorSign = (uint8_t *)malloc(signLen);
     vectorSignLen = signLen;
-    ASSERT_EQ(SignEncode(&dsaSign, vectorSign, &vectorSignLen, R, S, &bn_r, &bn_s), CRYPT_SUCCESS);
+    ASSERT_EQ(SignEncode(vectorSign, &vectorSignLen, R, S, &bnR, &bnS), CRYPT_SUCCESS);
 
     /* Sign */
     hitlsSign = (uint8_t *)malloc(signLen);
@@ -467,8 +463,8 @@ EXIT:
     STUB_Reset(&tmpRpInfo);
     free(vectorSign);
     free(hitlsSign);
-    BN_Destroy(bn_r);
-    BN_Destroy(bn_s);
+    BN_Destroy(bnR);
+    BN_Destroy(bnS);
     BSL_ERR_RemoveErrorStack(true);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx);
@@ -508,8 +504,8 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     uint8_t *vectorSign = NULL;
     uint8_t *hitlsSign = NULL;
     uint32_t vectorSignLen, hitlsSignOutLen;
-    BN_BigNum *bn_r = NULL;
-    BN_BigNum *bn_s = NULL;
+    BN_BigNum *bnR = NULL;
+    BN_BigNum *bnS = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     Hex mdOut = {0};
 
@@ -540,10 +536,9 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     ASSERT_TRUE(signLen > 0);
 
     /* Encoding r and s vectors */
-    DSA_Sign dsaSign;
     vectorSign = (uint8_t *)malloc(signLen);
     vectorSignLen = signLen;
-    ASSERT_EQ(SignEncode(&dsaSign, vectorSign, &vectorSignLen, R, S, &bn_r, &bn_s), CRYPT_SUCCESS);
+    ASSERT_EQ(SignEncode(vectorSign, &vectorSignLen, R, S, &bnR, &bnS), CRYPT_SUCCESS);
 
     /* Calculates the hash of the msg. */
     ASSERT_EQ(Compute_Md(hashId, Msg, &mdOut), SUCCESS);
@@ -566,8 +561,8 @@ EXIT:
     }
     free(vectorSign);
     free(hitlsSign);
-    BN_Destroy(bn_r);
-    BN_Destroy(bn_s);
+    BN_Destroy(bnR);
+    BN_Destroy(bnS);
     BSL_ERR_RemoveErrorStack(true);
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
