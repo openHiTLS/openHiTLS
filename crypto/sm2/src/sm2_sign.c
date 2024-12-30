@@ -274,39 +274,16 @@ uint32_t CRYPT_SM2_GetSignLen(const CRYPT_SM2_Ctx *ctx)
         return 0;
     }
     uint32_t qLen = (ECC_ParaBits(ctx->pkey->para) / 8) + 1;
-    return ASN1_SignEnCodeLen(qLen, qLen);
+    uint32_t maxSignLen = 0;
+    int32_t ret = CRYPT_EAL_GetSignEncodeLen(qLen, qLen, &maxSignLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return 0;
+    }
+    return maxSignLen;
 }
 
-static void Sm2SignFree(DSA_Sign *sign)
-{
-    if (sign == NULL) {
-        return;
-    }
-    BN_Destroy(sign->r);
-    BN_Destroy(sign->s);
-    BSL_SAL_FREE(sign);
-    return;
-}
-
-static DSA_Sign *Sm2SignNew(const CRYPT_SM2_Ctx *ctx)
-{
-    DSA_Sign *sign = BSL_SAL_Malloc(sizeof(DSA_Sign));
-    if (sign == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    uint32_t keyBits = ECC_PkeyGetBits(ctx->pkey);
-    sign->r = BN_Create(keyBits);
-    sign->s = BN_Create(keyBits);
-    if ((sign->r == NULL) || (sign->s == NULL)) {
-        Sm2SignFree(sign);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    return sign;
-}
-
-static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, DSA_Sign *sign)
+static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r, BN_BigNum *s)
 {
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
     BN_BigNum *k = BN_Create(keyBits);
@@ -330,28 +307,29 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, DSA_Sign *sig
         }
         // pt = k * G
         GOTO_ERR_IF(ECC_PointMul(ctx->pkey->para, pt, k, NULL), ret);
-        // sign->r = (e + pt->x) mod n
+        // r = (e + pt->x) mod n
         GOTO_ERR_IF(ECC_GetPointDataX(ctx->pkey->para, pt, tmp), ret);
-        GOTO_ERR_IF(BN_ModAdd(sign->r, e, tmp, paraN, opt), ret);
-        // if sign->r == 0 || r + k == n, then restart
-        GOTO_ERR_IF(BN_Add(t, sign->r, k), ret);
-        if (BN_IsZero(sign->r) || BN_Cmp(t, paraN) == 0) {
+        GOTO_ERR_IF(BN_ModAdd(r, e, tmp, paraN, opt), ret);
+        // if r == 0 || r + k == n, then restart
+        GOTO_ERR_IF(BN_Add(t, r, k), ret);
+        if (BN_IsZero(r) || BN_Cmp(t, paraN) == 0) {
             continue;
         }
         // prvkey * r mod n == (r * dA) mod n
-        GOTO_ERR_IF(BN_ModMul(sign->s, ctx->pkey->prvkey, sign->r, paraN, opt), ret);
+        GOTO_ERR_IF(BN_ModMul(s, ctx->pkey->prvkey, r, paraN, opt), ret);
         // k - prvkey * r mod n
-        GOTO_ERR_IF(BN_ModSub(sign->s, k, sign->s, paraN, opt), ret);
+        GOTO_ERR_IF(BN_ModSub(s, k, s, paraN, opt), ret);
         // 1/(1 + d) mod n, tmp stores 1/(1 + d)
         GOTO_ERR_IF(BN_AddLimb(t, ctx->pkey->prvkey, 1), ret);
         GOTO_ERR_IF(BN_ModInv(tmp, t, paraN, opt), ret);
-        // sign->s = (1/(1+d)) * (k - prvkey * r) mod n
-        GOTO_ERR_IF(BN_ModMul(sign->s, tmp, sign->s, paraN, opt), ret);
-        // if sign->s == 0, then restart
-        if (BN_IsZero(sign->s) != true) {
+        // s = (1/(1+d)) * (k - prvkey * r) mod n
+        GOTO_ERR_IF(BN_ModMul(s, tmp, s, paraN, opt), ret);
+        // if s == 0, then restart
+        if (BN_IsZero(s) != true) {
             break;
         }
     }
+
     if (i >= CRYPT_ECC_TRY_MAX_CNT) {
         ret = CRYPT_SM2_ERR_TRY_CNT;
         BSL_ERR_PUSH_ERROR(ret);
@@ -415,27 +393,31 @@ int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *d
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
     }
+
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
-    DSA_Sign *s = Sm2SignNew(ctx);
+    BN_BigNum *r = BN_Create(keyBits);
+    BN_BigNum *s = BN_Create(keyBits);
     BN_BigNum *d = BN_Create(keyBits);
-    if (s == NULL || d == NULL) {
+    if (r == NULL || s == NULL || d == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+
     GOTO_ERR_IF_EX(Sm2ComputeMsgHash(ctx, data, dataLen, d), ret);
-    GOTO_ERR_IF_EX(Sm2SignCore(ctx, d, s), ret);
-    ret = ASN1_SignDataEncode(s, sign, signLen);
+    GOTO_ERR_IF_EX(Sm2SignCore(ctx, d, r, s), ret);
+    ret = CRYPT_EAL_EncodeSign(r, s, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
 ERR:
-    Sm2SignFree(s);
+    BN_Destroy(r);
+    BN_Destroy(s);
     BN_Destroy(d);
     return ret;
 }
 
-static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, DSA_Sign *sign)
+static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, BN_BigNum *r, BN_BigNum *s)
 {
     if (ctx->pkey->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -447,13 +429,13 @@ static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, DSA_Sign *sign)
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    if ((BN_Cmp(sign->r, paraN) >= 0) || (BN_Cmp(sign->s, paraN) >= 0)) {
+    if ((BN_Cmp(r, paraN) >= 0) || (BN_Cmp(s, paraN) >= 0)) {
         BN_Destroy(paraN);
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_VERIFY_FAIL);
         return CRYPT_SM2_VERIFY_FAIL;
     }
     BN_Destroy(paraN);
-    if (BN_IsZero(sign->r) || BN_IsZero(sign->s)) {
+    if (BN_IsZero(r) || BN_IsZero(s)) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_VERIFY_FAIL);
         return CRYPT_SM2_VERIFY_FAIL;
     }
@@ -461,7 +443,7 @@ static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, DSA_Sign *sign)
     return CRYPT_SUCCESS;
 }
 
-static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const DSA_Sign *sign)
+static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const BN_BigNum *r, const BN_BigNum *s)
 {
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
     BN_BigNum *t = BN_Create(keyBits);
@@ -477,17 +459,17 @@ static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const DSA_S
         goto ERR;
     }
      // B5: calculate t = (r' + s') modn, verification failed if t=0
-    GOTO_ERR_IF_EX(BN_ModAdd(t, sign->r, sign->s, paraN, opt), ret);
+    GOTO_ERR_IF_EX(BN_ModAdd(t, r, s, paraN, opt), ret);
     if (BN_IsZero(t)) {
         ret = CRYPT_SM2_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
     }
     // calculate the point (x1', y1')=[s']G + [t]PA
-    GOTO_ERR_IF(ECC_PointMulAdd(ctx->pkey->para, tpt, sign->s, t, ctx->pkey->pubkey), ret);
+    GOTO_ERR_IF(ECC_PointMulAdd(ctx->pkey->para, tpt, s, t, ctx->pkey->pubkey), ret);
     GOTO_ERR_IF_EX(ECC_GetPointDataX(ctx->pkey->para, tpt, tptX), ret);
     // calculate R=(e'+x1') modn, verification pass if yes, otherwise failed
     GOTO_ERR_IF_EX(BN_ModAdd(t, e, tptX, paraN, opt), ret);
-    if (BN_Cmp(sign->r, t) != 0) {
+    if (BN_Cmp(r, t) != 0) {
         ret = CRYPT_SM2_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -533,25 +515,26 @@ int32_t CRYPT_SM2_Verify(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t 
         return CRYPT_NULL_INPUT;
     }
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
-    int32_t ret;
-    ret = IsParaVaild(ctx);
+    int32_t ret = IsParaVaild(ctx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    DSA_Sign *s = Sm2SignNew(ctx);
+    BN_BigNum *r = BN_Create(keyBits);
+    BN_BigNum *s = BN_Create(keyBits);
     BN_BigNum *e = BN_Create(keyBits);
-    if (s == NULL || e == NULL) {
+    if (r == NULL || s == NULL || e == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
     GOTO_ERR_IF_EX(Sm2ComputeMsgHash(ctx, data, dataLen, e), ret);
-    GOTO_ERR_IF(ASN1_SignDataDecode(s, sign, signLen), ret);
+    GOTO_ERR_IF(CRYPT_EAL_DecodeSign(sign, signLen, r, s), ret);
     // Verify that r->s and s->s are within the range of 1~n-1.
-    GOTO_ERR_IF_EX(VerifyCheckSign(ctx, s), ret);
-    GOTO_ERR_IF_EX(Sm2VerifyCore(ctx, e, s), ret);
+    GOTO_ERR_IF_EX(VerifyCheckSign(ctx, r, s), ret);
+    GOTO_ERR_IF_EX(Sm2VerifyCore(ctx, e, r, s), ret);
 ERR:
-    Sm2SignFree(s);
+    BN_Destroy(r);
+    BN_Destroy(s);
     BN_Destroy(e);
     return ret;
 }
