@@ -18,7 +18,7 @@
 
 #include "eal_pkey_local.h"
 
-#define SM2_SIGN_MAX_LEN 72
+#define SM2_SIGN_MAX_LEN 74
 #define SM2_PRVKEY_MAX_LEN 32
 #define SM2_PUBKEY_LEN 65
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
@@ -282,7 +282,7 @@ void SDV_CRYPTO_SM2_GET_SIGN_LEN_API_TC001(int isProvider)
     }
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetSignLen(NULL) == 0);
-    ASSERT_TRUE(CRYPT_EAL_PkeyGetSignLen(ctx) == SM2_SIGN_MAX_LEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetSignLen(ctx), SM2_SIGN_MAX_LEN);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -603,10 +603,10 @@ void SDV_CRYPTO_SM2_VERIFY_API_TC001(Hex *pubKey, Hex *userId, Hex *msg, Hex *si
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx, &pub) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId->x, userId->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(
-        CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len - 1) == CRYPT_DSA_DECODE_FAIL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, bigSign, SM2_SIGN_MAX_LEN + 1) ==
-                CRYPT_DSA_DECODE_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len - 1),
+        BSL_ASN1_ERR_DECODE_LEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, bigSign, SM2_SIGN_MAX_LEN + 1),
+        CRYPT_DECODE_ASN1_BUFF_FAILED);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, NULL, msg->len, sign->x, sign->len) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, NULL, sign->len) == CRYPT_NULL_INPUT);
@@ -718,8 +718,9 @@ void SDV_CRYPTO_SM2_SIGN_FUNC_TC001(Hex *prvKey, Hex *userId, Hex *k, Hex *msg, 
     dupCtx = CRYPT_EAL_PkeyDupCtx(ctx);
     ASSERT_TRUE(dupCtx != NULL);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SM3, msg->x, msg->len, signBuf, &signLen) == CRYPT_SUCCESS);
-    ASSERT_TRUE(signLen == sign->len);
+    signLen = sizeof(signBuf);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SM3, msg->x, msg->len, signBuf, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(signLen, sign->len);
     ASSERT_TRUE(memcmp(signBuf, sign->x, sign->len) == 0);
 
 EXIT:
