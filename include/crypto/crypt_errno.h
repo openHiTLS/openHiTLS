@@ -376,11 +376,16 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_PKCS7_INVALIDE_ENCRYPTDATA_TYPE,        /**< Invaild pkcs7-encryptedData. */
     CRYPT_DECODE_UNSUPPORTED_PKCS7_TYPE,                 /**< Unsupported pkcs7 type */
     CRYPT_DECODE_UNSUPPORTED_ENCRYPT_TYPE,               /**< Unsupported encrypt type */
+    CRYPT_DECODE_BUFF_NOT_ENOUGH,                        /**< The input buffer space is not enough */
+    CRYPT_DECODE_ASN1_BUFF_LEN_ZERO,                     /**< The decoding length of asn1 buffer is zero. */
 
     CRYPT_ENCODE_NO_SUPPORT_TYPE = 0x011E0001,           /**< encode no support key type. */
     CRYPT_ENCODE_NO_SUPPORT_FORMAT,                      /**< encode no support key format. */
     CRYPT_ENCODE_ERR_RSA_PAD,                            /**< rsa pad err. */
-    
+    CRYPT_ENCODE_BUFF_NOT_ENOUGH,                        /**< The input buffer space is not enough */
+    CRYPT_ENCODE_ERR_SIGN_LEN_OVERFLOW,                  /**< The r and s length is too large. */
+    CRYPT_ENCODE_ERR_SM2_ENCRYPT_DATA_LEN_OVERFLOW,      /**< The sm2 encrypt data length is too large. */
+
     CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x011F0001, /**< The buffer length is insufficient. */
     CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
     CRYPT_PAILLIER_ERR_KEY_BITS,             /**< Incorrect key length. */

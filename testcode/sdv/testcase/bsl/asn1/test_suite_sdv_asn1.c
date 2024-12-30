@@ -1216,3 +1216,38 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_BSL_ASN1_GET_ENCODE_LEN_FUNC_TC001
+ * @title  Test BSL_ASN1_GetEncodeLen function
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_GET_ENCODE_LEN_FUNC_TC001(int contentLen, int expectLen, int ret)
+{
+    uint32_t encodeLen = 0;
+    ASSERT_EQ(BSL_ASN1_GetEncodeLen(contentLen, &encodeLen), ret);
+    if (ret == BSL_SUCCESS) {
+        ASSERT_EQ(encodeLen, expectLen);
+    }
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_BSL_ASN1_GET_ENCODE_LEN_API_TC001
+ * @title  Test BSL_ASN1_GetEncodeLen abnormal input parameter
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_GET_ENCODE_LEN_API_TC001(void)
+{
+    uint32_t encodeLen = 0;
+    // Test null pointer
+    ASSERT_EQ(BSL_ASN1_GetEncodeLen(1, NULL), BSL_NULL_INPUT);
+
+    // Test length overflow
+    ASSERT_EQ(BSL_ASN1_GetEncodeLen(UINT32_MAX, &encodeLen), BSL_ASN1_ERR_LEN_OVERFFLOW);
+EXIT:
+    return;
+}
+/* END_CASE */
