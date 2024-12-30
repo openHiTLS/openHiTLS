@@ -182,36 +182,13 @@ uint32_t CRYPT_ECDSA_GetSignLen(const CRYPT_ECDSA_Ctx *ctx)
     // If the number of bits is not a multiple of 8,
     // an extra byte needs to be added to store the data with less than 8 bits.
     uint32_t qLen = (ECC_ParaBits(ctx->para) / 8) + 1;    // divided by 8 to converted to bytes
-    return ASN1_SignEnCodeLen(qLen, qLen);
-}
-
-static void EcdsaSignFree(DSA_Sign *sign)
-{
-    if (sign == NULL) {
-        return;
+    uint32_t maxSignLen = 0;
+    int32_t ret = CRYPT_EAL_GetSignEncodeLen(qLen, qLen, &maxSignLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return 0;
     }
-    BN_Destroy(sign->r);
-    BN_Destroy(sign->s);
-    BSL_SAL_FREE(sign);
-    return;
-}
-
-static DSA_Sign *EcdsaSignNew(const CRYPT_ECDSA_Ctx *ctx)
-{
-    DSA_Sign *sign = BSL_SAL_Malloc(sizeof(DSA_Sign));
-    if (sign == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    uint32_t keyBits = ECC_PkeyGetBits(ctx);
-    sign->r = BN_Create(keyBits);
-    sign->s = BN_Create(keyBits);
-    if ((sign->r == NULL) || (sign->s == NULL)) {
-        EcdsaSignFree(sign);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    return sign;
+    return maxSignLen;
 }
 
 // Obtain the input hash data. For details, see RFC6979-2.4.1 and RFC6979-2.3.2
@@ -385,8 +362,7 @@ int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, ui
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    DSA_Sign dsaSign = {r, s};
-    ret = ASN1_SignDataEncode(&dsaSign, sign, signLen);
+    ret = CRYPT_EAL_EncodeSign(r, s, sign, signLen);
     BN_Destroy(r);
     BN_Destroy(s);
     return ret;
@@ -405,7 +381,7 @@ int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_
     return CRYPT_ECDSA_SignData(ctx, hash, hashLen, sign, signLen);
 }
 
-static int32_t VrifyCheckSign(const CRYPT_ECDSA_Ctx *ctx, const DSA_Sign *sign)
+static int32_t VerifyCheckSign(const CRYPT_ECDSA_Ctx *ctx, BN_BigNum *r, BN_BigNum *s)
 {
     int32_t ret = CRYPT_SUCCESS;
     BN_BigNum *paraN = ECC_GetParaN(ctx->para);
@@ -414,13 +390,13 @@ static int32_t VrifyCheckSign(const CRYPT_ECDSA_Ctx *ctx, const DSA_Sign *sign)
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    if ((BN_Cmp(sign->r, paraN) >= 0) || (BN_Cmp(sign->s, paraN) >= 0)) {
+    if ((BN_Cmp(r, paraN) >= 0) || (BN_Cmp(s, paraN) >= 0)) {
         BN_Destroy(paraN);
         BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_VERIFY_FAIL);
         return CRYPT_ECDSA_VERIFY_FAIL;
     }
     BN_Destroy(paraN);
-    if (BN_IsZero(sign->r) || BN_IsZero(sign->s)) {
+    if (BN_IsZero(r) || BN_IsZero(s)) {
         ret = CRYPT_ECDSA_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -428,7 +404,7 @@ static int32_t VrifyCheckSign(const CRYPT_ECDSA_Ctx *ctx, const DSA_Sign *sign)
     return ret;
 }
 
-static int32_t EcdsaVerifyCore(const CRYPT_ECDSA_Ctx *ctx, BN_BigNum *d, const DSA_Sign *sign)
+static int32_t EcdsaVerifyCore(const CRYPT_ECDSA_Ctx *ctx, BN_BigNum *d, const BN_BigNum *r, const BN_BigNum *s)
 {
     uint32_t keyBits = CRYPT_ECDSA_GetBits(ctx);
     BN_BigNum *w = BN_Create(keyBits);
@@ -449,13 +425,13 @@ static int32_t EcdsaVerifyCore(const CRYPT_ECDSA_Ctx *ctx, BN_BigNum *d, const D
     }
 
     // w = 1/s mod n
-    GOTO_ERR_IF(ECC_ModOrderInv(ctx->para, w, sign->s), ret);
+    GOTO_ERR_IF(ECC_ModOrderInv(ctx->para, w, s), ret);
 
     // u1 = msg*(1/s) mod n
     GOTO_ERR_IF(BN_ModMul(u1, d, w, paraN, opt), ret);
 
     // u2 = r*(1/s) mod n
-    GOTO_ERR_IF(BN_ModMul(u2, sign->r, w, paraN, opt), ret);
+    GOTO_ERR_IF(BN_ModMul(u2, r, w, paraN, opt), ret);
 
     // tpt : u1*G + u2*pubkey
     GOTO_ERR_IF(ECC_PointMulAdd(ctx->para, tpt, u1, u2, ctx->pubkey), ret);
@@ -463,7 +439,7 @@ static int32_t EcdsaVerifyCore(const CRYPT_ECDSA_Ctx *ctx, BN_BigNum *d, const D
     GOTO_ERR_IF(ECC_GetPointDataX(ctx->para, tpt, tptX), ret);
     GOTO_ERR_IF(BN_Mod(v, tptX, paraN, opt), ret);
 
-    if (BN_Cmp(v, sign->r) != 0) {
+    if (BN_Cmp(v, r) != 0) {
         BSL_ERR_PUSH_ERROR(ret);
         ret = CRYPT_ECDSA_VERIFY_FAIL;
     }
@@ -500,21 +476,24 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    DSA_Sign *s = EcdsaSignNew(ctx);
+    uint32_t keyBits = ECC_PkeyGetBits(ctx);
+    BN_BigNum *r = BN_Create(keyBits);
+    BN_BigNum *s = BN_Create(keyBits);
     BN_BigNum *d = GetBnByData(paraN, data, dataLen);
-    if ((d == NULL) || ((s == NULL))) {
+    if (r == NULL || s == NULL || d == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
 
-    GOTO_ERR_IF(ASN1_SignDataDecode(s, sign, signLen), ret);
+    GOTO_ERR_IF(CRYPT_EAL_DecodeSign(sign, signLen, r, s), ret);
 
-    GOTO_ERR_IF(VrifyCheckSign(ctx, s), ret);
+    GOTO_ERR_IF(VerifyCheckSign(ctx, r, s), ret);
 
-    GOTO_ERR_IF(EcdsaVerifyCore(ctx, d, s), ret);
+    GOTO_ERR_IF(EcdsaVerifyCore(ctx, d, r, s), ret);
 ERR:
-    EcdsaSignFree(s);
     BN_Destroy(paraN);
+    BN_Destroy(r);
+    BN_Destroy(s);
     BN_Destroy(d);
     return ret;
 }
