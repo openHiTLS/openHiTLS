@@ -43,7 +43,7 @@ int32_t ALPN_SelectProtocol(uint8_t **out, uint32_t *outLen, uint8_t *clientAlpn
                 (memcmp(&servAlpnList[i + 1], &clientAlpnList[j + 1], servAlpnList[i]) == 0)) {
                 *out = &servAlpnList[i + 1];
                 *outLen = servAlpnList[i];
-                goto END;
+                return HITLS_SUCCESS;
             }
             j = j + clientAlpnList[j];
             ++j;
@@ -52,7 +52,6 @@ int32_t ALPN_SelectProtocol(uint8_t **out, uint32_t *outLen, uint8_t *clientAlpn
         ++i;
     }
 
-END:
     return HITLS_SUCCESS;
 }
 

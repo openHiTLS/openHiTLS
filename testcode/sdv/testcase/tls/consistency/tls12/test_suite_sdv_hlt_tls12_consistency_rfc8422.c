@@ -78,7 +78,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC001(void)
     ASSERT_TRUE(serverRes != NULL);
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -126,7 +126,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC002(void)
 
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -177,7 +177,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC001(void)
      *  Set serverkeyexchange to secp256r1 */
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret == 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -227,7 +227,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC002(void)
      *  cipher suite. */
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret != 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -267,7 +267,7 @@ static void Test_SetCipherSuites_With_Link(CipherInfo serverCipher, CipherInfo c
         ASSERT_TRUE(clientRes != NULL);
     } else {
         ASSERT_TRUE(clientRes == NULL);
-        goto exit;
+        goto EXIT;
     }
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
     ASSERT_TRUE(HLT_ProcessTlsWrite(server_local, serverRes, (uint8_t *)"Hello", strlen("Hello")) == 0);
@@ -278,7 +278,7 @@ static void Test_SetCipherSuites_With_Link(CipherInfo serverCipher, CipherInfo c
     ASSERT_TRUE(readLen == strlen("Hello"));
     ASSERT_TRUE(memcmp("Hello", readBuf, readLen) == 0);
 
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 
@@ -386,7 +386,7 @@ static void MalformedClientHelloMsgCallback(void *msg, void *userData)
     FRAME_ClientHelloMsg *clientHello = &frameMsg->body.hsMsg.body.clientHello;
     clientHello->pointFormats.exDataLen.data = 1;
     clientHello->pointFormats.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -444,7 +444,7 @@ static void MalformedServerHelloMsgCallback(void *msg, void *userData)
     serverHello->pointFormats.exLen.data = serverHello->pointFormats.exDataLen.data + sizeof(uint8_t);
     serverHello->pointFormats.exDataLen.data = 1;
     serverHello->pointFormats.exData.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 
@@ -497,7 +497,7 @@ static void MalformedNoCurveExternsionCallback(void *msg, void *userData)
     clientHello->supportedGroups.exDataLen.state = MISSING_FIELD;
     clientHello->supportedGroups.exLen.state = MISSING_FIELD;
     clientHello->supportedGroups.exType.state = MISSING_FIELD;
-exit:
+EXIT:
     return;
 }
 

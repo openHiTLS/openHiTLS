@@ -321,13 +321,14 @@ int32_t ModNistP384(
     if (carry > 0) {
         carry = (int8_t)1 - (int8_t)BinSub(r->data, r->data, MOD_DATA_P384[carry - 1], P384SIZE);
     } else if (carry < 0) {
+        // For details could ref p256.
         carry = (int8_t)1 - (int8_t)BinAdd(r->data, r->data, MOD_DATA_P384[-carry - 1], P384SIZE);
         carry = -carry;
     }
-    if (carry > 0 || BinCmp(r->data, P384SIZE, mod, P384SIZE) >= 0) {
-        BinSub(r->data, r->data, mod, P384SIZE);
-    } else if (carry < 0) {
+    if (carry < 0) {
         BinAdd(r->data, r->data, mod, P384SIZE);
+    } else if (carry > 0 || BinCmp(r->data, P384SIZE, mod, P384SIZE) >= 0) {
+        BinSub(r->data, r->data, mod, P384SIZE);
     }
     UpdateSize(r, P384SIZE);
     return 0;
@@ -391,6 +392,7 @@ static inline int8_t P256ADD(BN_UINT *rr, const BN_UINT *aa, const BN_UINT *bb)
 /**
  *  NIST_P256 curve reduction calculation for parameter P
  *  Reduction item: 2^224 - 2^192 - 2^96 + 2^0
+ *  ref: <Efficient and Secure Elliptic Curve Cryptography Implementation of Curve P-256>
  *
  *  Reduction list:
  *   	 7   6   5   4   3   2   1   0
@@ -404,6 +406,8 @@ static inline int8_t P256ADD(BN_UINT *rr, const BN_UINT *aa, const BN_UINT *bb)
  *  a15	03, 02, 01, 00, -1, -1, -1, 00
  *
  *  Reduction chain
+ *  Compared with the reduce flow of the paper, we have made proper transformation, which can reduce the splicing of
+ *  upper 32 bits and lower 32 bits.
  *  Coefficient  7   6   5   4   3   2  1   0
  *           2	a15	a14	a13	a12	a12	 0	0	0
  *           2		a15	a14	a13	a11
@@ -487,13 +491,29 @@ int32_t ModNistP256(
     if (carry > 0) {
         carry = (int8_t)1 - (int8_t)P256SUB(r->data, r->data, g_modDataP256[carry - 1]);
     } else if (carry < 0) {
+        /**
+         * Here, we take carry < 0 as an example.
+         * If carry = -3, it indicates that ReduceNistP256 needs to be borrowed three times. In this case,
+         * we need to add 3 * p. It is worth that we have estimated (3 * p) in g_modDataP256, but the carry of 3 * p
+         * is not saved, which could be expressed by the following formula:
+         *      g_modDataP256[2] = (3 * p) mod (2 ^ 256), we denoted as 2 + (3 * p)_remain.
+         * Actually, we need to calculate the following formula:
+         *      -3 + r_data + 2 + (3 * p)_remain = -1 + r_data + (3 * p)_remain
+         * Obviously, -1 is a mathmatical borrowing, only r_data + (3 * p)_remain is calculated in actual P256ADD.
+         * Therefore, we still need to consider the carry case of P256ADD.
+         *    1. r_data + (3 * p)_remain has a carry. -1 has been eliminated. We only need to consider
+         *       whether r_data + (3 * p)_remain belongs to [0, p).
+         *    2. r_data + (3 * p)_remain has a carry. It indicates that -1 is not eliminated. We need to add another p
+         *       to eliminate -1. Considering the value of 3 * p in g_modDataP256, r_date + (3 * p)_remain + p must
+         *       generate a carry, and the final value < p.
+         */
         carry = (int8_t)1 - (int8_t)P256ADD(r->data, r->data, g_modDataP256[-carry - 1]);
         carry = -carry;
     }
-    if (carry > 0 || BinCmp(r->data, P256SIZE, mod, P256SIZE) >= 0) {
-        P256SUB(r->data, r->data, mod);
-    } else if (carry < 0) {
+    if (carry < 0) {
         P256ADD(r->data, r->data, mod);
+    } else if (carry > 0 || BinCmp(r->data, P256SIZE, mod, P256SIZE) >= 0) {
+        P256SUB(r->data, r->data, mod);
     }
     UpdateSize(r, P256SIZE);
     return 0;
@@ -574,10 +594,10 @@ int32_t ModNistP224(
     }
     // Obtain the high-order data of r[3] as carry information
     carry = (int8_t)((uint8_t)(BN_UINT_HI(r->data[3]) & 0xFF));
-    if (carry > 0 || BinCmp(r->data, P256SIZE, mod, P256SIZE) >= 0) {
-        P256SUB(r->data, r->data, mod);
-    } else if (carry < 0) {
+    if (carry < 0) {
         P256ADD(r->data, r->data, mod);
+    } else if (carry > 0 || BinCmp(r->data, P256SIZE, mod, P256SIZE) >= 0) {
+        P256SUB(r->data, r->data, mod);
     }
     UpdateSize(r, P224SIZE);
     return 0;
@@ -716,15 +736,16 @@ int32_t ModSm2P256(
     const BN_UINT *mod = MODDATASM2P256[0];
     int8_t carry = ReduceSm2P256(r->data, a->data);
     if (carry < 0) {
+        // For details could ref p256.
         carry = (int8_t)1 - (int8_t)P256ADD(r->data, r->data, MODDATASM2P256[-carry - 1]);
         carry = -carry;
     } else if (carry > 0) {
         carry = (int8_t)1 - (int8_t)P256SUB(r->data, r->data, MODDATASM2P256[carry - 1]);
     }
-    if (carry > 0 || BinCmp(r->data, P256SIZE, mod, P256SIZE) >= 0) {
-        P256SUB(r->data, r->data, mod);
-    } else if (carry < 0) {
+    if (carry < 0) {
         P256ADD(r->data, r->data, mod);
+    } else if (carry > 0 || BinCmp(r->data, P256SIZE, mod, P256SIZE) >= 0) {
+        P256SUB(r->data, r->data, mod);
     }
     UpdateSize(r, P256SIZE);
     return 0;

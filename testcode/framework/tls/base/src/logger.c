@@ -80,13 +80,13 @@ int LogWrite(LogLevel level, const char *file, int line, const char *fmt, ...)
         // In the case of overflow truncation, the maximum value is used
         len = LOG_MAX_SIZE;
         logBuf[len - 1] = '\0';
-        goto END;
+        goto EXIT;
     }
 
     len += ilen;
     logBuf[len] = '\n';
     logBuf[len + 1] = '\0';
-END:
+EXIT:
     va_end(vargs);
 #ifdef TLS_DEBUG
     printf("%s", logBuf);

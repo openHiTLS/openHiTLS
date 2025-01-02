@@ -72,7 +72,7 @@ int main(void)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     if (ctx == NULL) {
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
     CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -84,24 +84,24 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        goto exit;
+        goto EXIT;
     }
 
     if (memcmp(out, result, sizeof(result)) != 0) {
         printf("failed to compare test results\n");
         ret = -1;
-        goto exit;
+        goto EXIT;
     }
     printf("pass \n");
 
-exit:
+EXIT:
     BSL_ERR_DeInit();
     CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;

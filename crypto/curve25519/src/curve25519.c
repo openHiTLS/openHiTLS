@@ -278,22 +278,21 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
     ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->update(mdCtx, prvKey, prvKeyLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->final(mdCtx, prvKeyHash, &hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
     }
 
-END:
+EXIT:
     hashMethod->freeCtx(mdCtx);
     return ret;
 }
@@ -314,28 +313,27 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
     ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->update(mdCtx, prefix, CRYPT_CURVE25519_KEYLEN);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->update(mdCtx, msg, msgLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->final(mdCtx, r, &hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
     }
 
-END:
+EXIT:
     hashMethod->freeCtx(mdCtx);
     return ret;
 }
@@ -357,34 +355,33 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
     ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->update(mdCtx, r, CRYPT_CURVE25519_KEYLEN);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->update(mdCtx, pubKey, CRYPT_CURVE25519_KEYLEN);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->update(mdCtx, msg, msgLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = hashMethod->final(mdCtx, k, &hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
     }
 
-END:
+EXIT:
     hashMethod->freeCtx(mdCtx);
     return ret;
 }
@@ -428,13 +425,13 @@ int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const u
     ret = SignInputCheck(pkey, msg, msgLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ret = PrvKeyHash(pkey->prvKey, CRYPT_CURVE25519_KEYLEN, prvKeyHash, CRYPT_CURVE25519_SIGNLEN, pkey->hashMethod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     prvKeyHash[0] &= 0xf8;
@@ -453,7 +450,7 @@ int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const u
     ret = GetRHash(r, prvKeyHash + CRYPT_CURVE25519_KEYLEN, msg, msgLen, pkey->hashMethod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ModuloL(r);
@@ -463,7 +460,7 @@ int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const u
     ret = GetKHash(k, outSign, pkey->pubKey, msg, msgLen, pkey->hashMethod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     ModuloL(k);
@@ -476,7 +473,7 @@ int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const u
     (void)memcpy_s(sign, *signLen, outSign, CRYPT_CURVE25519_SIGNLEN);
     *signLen = CRYPT_CURVE25519_SIGNLEN;
 
-END:
+EXIT:
     BSL_SAL_CleanseData(prvKeyHash, sizeof(prvKeyHash));
     BSL_SAL_CleanseData(r, sizeof(r));
     BSL_SAL_CleanseData(k, sizeof(k));
@@ -549,7 +546,7 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid,
     ret = VerifyInputCheck(pkey, msg, msgLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        return ret;
     }
 
     // r is first half of sign, length 32
@@ -560,19 +557,19 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid,
     if (!VerifyCheckSValid(s)) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_VERIFY_FAIL);
         ret = CRYPT_CURVE25519_VERIFY_FAIL;
-        goto END;
+        return ret;
     }
 
     if (PointDecoding(&geA, pkey->pubKey) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_VERIFY_FAIL);
         ret = CRYPT_CURVE25519_INVALID_PUBKEY;
-        goto END;
+        return ret;
     }
 
     ret = GetKHash(kHash, r, pkey->pubKey, msg, msgLen, pkey->hashMethod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        return ret;
     }
 
     CURVE25519_FP_NEGATE(geA.x.data, geA.x.data);
@@ -582,14 +579,10 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid,
     KAMulPlusMulBase(&sG, kHash, &geA, s);
     PointEncoding(&sG, localR, CRYPT_CURVE25519_KEYLEN);
 
-    if (memcmp(localR, r, CRYPT_CURVE25519_KEYLEN) == 0) {
-        ret = CRYPT_SUCCESS;
-    } else {
+    if (memcmp(localR, r, CRYPT_CURVE25519_KEYLEN) != 0) {
         ret = CRYPT_CURVE25519_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
     }
-
-END:
     return ret;
 }
 
@@ -618,7 +611,7 @@ int32_t CRYPT_ED25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
     ret = PrvKeyHash(prvKey, CRYPT_CURVE25519_KEYLEN, prvKeyHash, CRYPT_CURVE25519_SIGNLEN, pkey->hashMethod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto END;
+        goto EXIT;
     }
 
     prvKeyHash[0] &= 0xf8;
@@ -637,7 +630,7 @@ int32_t CRYPT_ED25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
     (void)memcpy_s(pkey->prvKey, CRYPT_CURVE25519_KEYLEN, prvKey, CRYPT_CURVE25519_KEYLEN);
     pkey->keyType = CURVE25519_PRVKEY | CURVE25519_PUBKEY;
 
-END:
+EXIT:
     BSL_SAL_CleanseData(prvKey, sizeof(prvKey));
     BSL_SAL_CleanseData(prvKeyHash, sizeof(prvKeyHash));
     return ret;

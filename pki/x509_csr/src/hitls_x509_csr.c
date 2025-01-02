@@ -189,7 +189,7 @@ ERR:
         CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
         csr->reqInfo.ealPubKey = NULL;
     }
-    BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
+    BSL_LIST_DeleteAll(csr->reqInfo.subjectName, NULL);
     return ret;
 }
 
@@ -237,7 +237,7 @@ static int32_t X509CsrBuffAsn1Parse(uint8_t *encode, uint32_t encodeLen, HITLS_X
 ERR:
     HITLS_X509_AttrsFree(csr->reqInfo.attributes, NULL);
     csr->reqInfo.attributes = NULL;
-    BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
+    BSL_LIST_DeleteAll(csr->reqInfo.subjectName, NULL);
     if (csr->reqInfo.ealPubKey != NULL) {
         CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
         csr->reqInfo.ealPubKey = NULL;
@@ -373,7 +373,7 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         false, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
 
     /* encode attribute */
@@ -382,13 +382,13 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         reqInfo->attributes, NULL, attributes);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
 
     publicKey->buff = pub.data;
     publicKey->len = pub.dataLen;
     return ret;
-EXIT:
+ERR:
     BSL_SAL_FREE(subject->buff);
     BSL_SAL_FREE(pub.data);
     BSL_SAL_FREE(attributes->buff);

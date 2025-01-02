@@ -364,7 +364,7 @@ class CMakeGenerator:
         cmake += self._gen_cmd_cmake('add_library', '{} SHARED'.format(tgt_name), tgt_obj_list)
         cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(tgt_name), '${SHARED_LNK_FLAGS}')
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
-        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX})\n' % tgt_name
+        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)\n' % tgt_name
 
         if lib_name == 'hitls_bsl':
             for item in macros:
@@ -392,7 +392,7 @@ class CMakeGenerator:
         cmake = '\n'
         cmake += self._gen_cmd_cmake('add_library', '{} STATIC'.format(tgt_name), tgt_obj_list)
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
-        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX})\n' % tgt_name
+        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)\n' % tgt_name
 
         tgt_list.append(tgt_name)
         return cmake
@@ -405,7 +405,7 @@ class CMakeGenerator:
         cmake += self._gen_cmd_cmake('add_executable', tgt_name, tgt_obj_list)
         cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(tgt_name), '${PIE_EXE_LNK_FLAGS}')
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
-        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX})\n' % tgt_name
+        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/obj)\n' % tgt_name
 
         tgt_list.append(tgt_name)
         return cmake

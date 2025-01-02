@@ -77,7 +77,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC001(Hex *prvKey, Hex *pubKey, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SM2_R_NOT_SET);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -139,7 +139,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC002(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SM2_R_NOT_SET);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -197,7 +197,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC003(Hex *prvKey, Hex *pubKey, Hex *R, int isP
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -255,7 +255,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC004(Hex *prvKey, Hex *pubKey, Hex *R, int isP
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -327,7 +327,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC005(Hex *prvKey, Hex *pubKey, Hex *R, int isP
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SUCCESS);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -402,7 +402,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC006(Hex *prvKey, Hex *pubKey, Hex *R, int isP
     outLen = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_NULL_INPUT);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -477,7 +477,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC007(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_RandRegist(NULL);
@@ -534,7 +534,7 @@ void SDV_CRYPTO_SM2_CTRL_API_TC001(int isProvider)
     ASSERT_TRUE(
         CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR) - 1) == CRYPT_ECC_BUFF_LEN_NOT_ENOUGH);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_RandRegist(NULL);
 }
@@ -581,7 +581,7 @@ void SDV_CRYPTO_SM2_CTRL_API_TC002(Hex *R, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_R, zero, sizeof(zero)) == CRYPT_ECC_ERR_POINT_CODE);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -630,7 +630,7 @@ void SDV_CRYPTO_SM2_CTRL_API_TC003(int isProvider)
     ASSERT_TRUE(
         CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_SERVER, &badServer, sizeof(uint8_t)) == CRYPT_SM2_ERR_CTRL_LEN);
 
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -726,7 +726,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(dupCtx1, dupCtx2, out, &outLen), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
@@ -816,7 +816,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
     ASSERT_TRUE(outLen == shareKey->len);
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
 
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
@@ -934,7 +934,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003(int pkg, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(selfCtx2, peerCtx2, out2, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out1, out2, outLen) == 0);
 
-exit:
+EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_EAL_PkeyFreeCtx(selfCtx1);
     CRYPT_EAL_PkeyFreeCtx(selfCtx2);
@@ -1043,7 +1043,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     ASSERT_TRUE(outLen == shareKey->len);
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
 
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
@@ -1144,7 +1144,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     ASSERT_TRUE(memcmp(val, selfS->x, selfS->len) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len) == CRYPT_SUCCESS);
 
-exit:
+EXIT:
     STUB_Reset(&tmpRpInfo);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);

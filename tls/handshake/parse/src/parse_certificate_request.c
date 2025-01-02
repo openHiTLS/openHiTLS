@@ -355,10 +355,8 @@ int32_t Tls13ParseCertificateRequest(TLS_Ctx *ctx, const uint8_t *buf, uint32_t 
     ret = ParseTls13CertificateRequestExtensions(&pkt, msg);
     if (ret != HITLS_SUCCESS) {
         CleanCertificateRequest(msg);
-        return ret;
     }
-
-    return HITLS_SUCCESS;
+    return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 void CleanCertificateRequest(CertificateRequestMsg *msg)

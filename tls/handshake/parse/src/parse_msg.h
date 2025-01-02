@@ -57,6 +57,21 @@ int32_t ParseClientHello(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg
 int32_t ParseServerHello(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
 
 /**
+ * @brief   Parse Hello Verify Request message
+ *
+ * @param   ctx [IN] TLS context
+ * @param   buf [IN] Message buffer
+ * @param   bufLen [IN] Maximum message length
+ * @param   hsMsg [OUT] Message structure
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  HITLS_MEMALLOC_FAIL Memory allocated failed
+ * @retval  HITLS_MEMCPY_FAIL Memory copy failed
+ * @retval  HITLS_PARSE_INVALID_MSG_LEN The message length is incorrect
+ * @retval  HITLS_PARSE_DUPLICATE_EXTENDED_MSG Extension duplicated
+ */
+int32_t ParseHelloVerifyRequest(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
+/**
  * @brief   Parse TLS 1.3 EncryptedExtensions message
  *
  * @param   ctx [IN] TLS context

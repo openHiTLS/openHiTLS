@@ -86,6 +86,7 @@ static const char *g_stateMachineStr[] = {
     [TRY_SEND_CLIENT_HELLO] = "send client hello",
     [TRY_SEND_CLIENT_KEY_EXCHANGE] = "send client key exchange",
     [TRY_RECV_SERVER_HELLO] = "recv server hello",
+    [TRY_RECV_HELLO_VERIFY_REQUEST] = "recv hello verify request",
     [TRY_RECV_SERVER_KEY_EXCHANGE] = "recv server key exchange",
     [TRY_RECV_SERVER_HELLO_DONE] = "recv server hello done",
     [TRY_RECV_NEW_SESSION_TICKET] = "recv new session ticket",
@@ -94,6 +95,7 @@ static const char *g_stateMachineStr[] = {
 #ifdef HITLS_TLS_HOST_SERVER
     [TRY_SEND_HELLO_REQUEST] = "send hello request",
     [TRY_SEND_SERVER_HELLO] = "send server hello",
+    [TRY_SEND_HELLO_VERIFY_REQUEST] = "send hello verify request",
     [TRY_SEND_SERVER_KEY_EXCHANGE] = "send server key exchange",
     [TRY_RECV_CLIENT_HELLO] = "recv client hello",
     [TRY_RECV_CLIENT_KEY_EXCHANGE] = "recv client key exchange",

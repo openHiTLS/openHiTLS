@@ -115,7 +115,7 @@ void SDV_CRYPT_INIT_FUNC_TC001()
     }
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0) == ret);
     ASSERT_TRUE(CRYPT_EAL_Randbytes(output, len) == CRYPT_SUCCESS);
-exit:
+EXIT:
     ResetStatus();
 #endif
 }
@@ -160,7 +160,7 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC002()
 #endif
 #endif
 #endif
-exit:
+EXIT:
     STUB_Reset(&tmpStubInfo);
     ResetStatus();
 }
@@ -195,7 +195,7 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC003()
 #endif
 #endif
 #endif
-exit:
+EXIT:
     ResetStatus();
 }
 /* END_CASE */
@@ -260,7 +260,7 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC004()
 #endif
 #endif
 #endif
-exit:
+EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
     STUB_Reset(&tmpStubInfo);
     ResetStatus();
@@ -324,7 +324,7 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC005()
 #endif
 #endif
 #endif
-exit:
+EXIT:
     STUB_Reset(&tmpStubInfo);
     ResetStatus();
 }

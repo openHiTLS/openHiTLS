@@ -45,7 +45,7 @@ void MultiThreadTest(void *arg)
         ASSERT_COMPARE("hash result cmp", out, outLen, threadParameter->hash, threadParameter->hashLen);
     }
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 
@@ -111,7 +111,7 @@ void SDV_CRYPT_EAL_SM3_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_MdGetId(ctx), CRYPT_MD_SM3);
     ASSERT_EQ(CRYPT_EAL_MdDeinit(ctx), CRYPT_SUCCESS);
     
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -147,7 +147,7 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC001(Hex *hash)
 
     ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -188,7 +188,7 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC002(Hex *data, Hex *hash)
 
     ASSERT_EQ(CRYPT_EAL_Md(CRYPT_MD_SM3, data->x, data->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -235,7 +235,7 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC003(Hex *data1, Hex *data2, Hex *data3, Hex *hash)
 
     ASSERT_EQ(memcmp(out, hash->x, hash->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -293,7 +293,7 @@ void SDV_CRYPT_EAL_SM3_FUNC_TC004(void)
 
     ASSERT_EQ(memcmp(out1, out2, outLen), CRYPT_SUCCESS);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx1);
     CRYPT_EAL_MdFreeCtx(ctx2);
 }
@@ -354,7 +354,7 @@ void SDV_CRYPTO_SM3_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
     CRYPT_EAL_MdFreeCtx(dupCtx);
@@ -382,7 +382,7 @@ void SDV_CRYPTO_SM3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
 /* END_CASE */
@@ -417,7 +417,7 @@ void SDV_CRYPT_EAL_MD_SM3_FUNC_TC001(Hex *data, Hex *hash)
         pthread_join(thrd[i], NULL);
     }
 
-exit:
+EXIT:
     return;
 }
 /* END_CASE */

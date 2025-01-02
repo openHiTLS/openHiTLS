@@ -91,7 +91,7 @@ void UT_TLS_CFG_SET_SERVERNAME_API_TC001()
     ASSERT_TRUE(HITLS_GetServerName(NULL, HITLS_SNI_HOSTNAME_TYPE) == NULL);
 
     ASSERT_TRUE(HITLS_GetServernameType(ctx) != 0);
-exit:
+EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
 }

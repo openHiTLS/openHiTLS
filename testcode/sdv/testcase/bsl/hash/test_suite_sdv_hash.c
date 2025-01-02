@@ -45,7 +45,7 @@ void *UserHashKeyDupFunc(void *src, size_t size)
     ASSERT_TRUE((char *)retKey != (char *)NULL);
     ASSERT_TRUE(strcpy_s(retKey, size, tmpKey) == EOK);
 
-exit:
+EXIT:
     return (void *)retKey;
 }
 
@@ -58,7 +58,7 @@ void *UserHashDataDupFunc(void *src, size_t size)
     ASSERT_TRUE(ret != (UserData *)NULL);
     ASSERT_TRUE(memcpy_s(ret, size + 1, tmpSrc, size) == EOK);
 
-exit:
+EXIT:
     return ret;
 }
 
@@ -149,7 +149,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC001(void)
 
     ASSERT_TRUE(BSL_HASH_Size(hash) == (size_t)0);
     BSL_HASH_Destory(hash);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -226,7 +226,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC002(void)
 
     ASSERT_TRUE(BSL_HASH_Size(hash) == (size_t)0);
     BSL_HASH_Destory(hash);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -286,7 +286,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC003(void)
 
     ASSERT_TRUE(BSL_ListIterErase(list, it) != NULL);
 
-exit:
+EXIT:
     BSL_ListDeinit(list);
     BSL_SAL_Free(list);
     return;
@@ -338,7 +338,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC004(void)
     ASSERT_EQ(ListRawPopBack(list), BSL_SUCCESS);
 
     ASSERT_EQ(ListRawDeinit(list), BSL_SUCCESS);
-exit:
+EXIT:
     BSL_SAL_Free(list);
     BSL_SAL_Free(node);
     return;

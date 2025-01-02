@@ -23,6 +23,8 @@
 #include "crypt_eal_mac.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_pkey.h"
+#include "eal_cipher_local.h"
+#include "modes_local.h"
 #include "eal_common.h"
 
 static bool IsMacAlgIdValid(int id)
@@ -125,7 +127,7 @@ static int32_t MdTest(CRYPT_EAL_MdCTX *ctx, Hex *msg, Hex *hash)
     }
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
     return 0;
-exit:
+EXIT:
     return -1;
 }
 /* END_HEADER */
@@ -144,7 +146,7 @@ void SDV_CRYPTO_MAC_ALG_CHECK_TC001(int algId)
 {
     int isValid = IsMacAlgIdValid(algId);
     ASSERT_TRUE(CRYPT_EAL_MacIsValidAlgId(algId) == isValid);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -163,7 +165,7 @@ void SDV_CRYPTO_CIPHER_ALG_CHECK_TC001(int algId)
 {
     int isValid = IsCipherAlgIdValid(algId);
     ASSERT_TRUE(CRYPT_EAL_CipherIsValidAlgId(algId) == isValid);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -197,7 +199,7 @@ void SDV_CRYPTO_MD_COPY_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
     ASSERT_EQ(MdTest(cpyCtx, msg, hash), 0);
 
-exit:
+EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
 }
@@ -217,7 +219,7 @@ void SDV_CRYPTO_EAL_PKEY_NEW_CTX_API_TC001(void)
 {
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MAX);
     ASSERT_TRUE(pkey == NULL);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -264,7 +266,7 @@ void SDV_CRYPTO_EAL_PKEY_SET_PARA_API_TC001(void)
 
     para.id = CRYPT_PKEY_RSA;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_ALGID);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -283,7 +285,7 @@ void SDV_CRYPTO_EAL_PKEY_ALG_CHECK_TC001(int algId)
 {
     int isValid = IsPkeyAlgIdValid(algId);
     ASSERT_TRUE(CRYPT_EAL_PkeyIsValidAlgId(algId) == isValid);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -315,7 +317,7 @@ void SDV_CRYPTO_EAL_PKEY_SET_PRV_API_TC001(void)
 
     prv.id = CRYPT_PKEY_DSA;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_EAL_ERR_ALGID);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -347,7 +349,7 @@ void SDV_CRYPTO_EAL_PKEY_SET_PUB_API_TC001(void)
 
     pub.id = CRYPT_PKEY_DSA;
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_EAL_ERR_ALGID);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -365,7 +367,7 @@ exit:
 void SDV_CRYPTO_EAL_PKEY_GEN_API_TC001(void)
 {
     ASSERT_EQ(CRYPT_EAL_PkeyGen(NULL), CRYPT_NULL_INPUT);
-exit:
+EXIT:
     return;
 }
 /* END_CASE */
@@ -408,7 +410,7 @@ void SDV_CRYPTO_EAL_PKEY_CMP_TC001(void)
     ctx1.method = pkey->method;
     ctx2.method = pkey->method;
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(&ctx1, &ctx2), CRYPT_NULL_INPUT);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -436,7 +438,7 @@ void SDV_CRYPTO_EAL_PKEY_GET_ID_API_TC001(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetId(ctx), pkeyId);
     ASSERT_EQ(CRYPT_EAL_PkeyGetId(NULL), CRYPT_PKEY_MAX);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
@@ -475,7 +477,117 @@ void SDV_CRYPTO_EAL_PKEY_EXT_DATA_API_TC001(void)
     ptr = CRYPT_EAL_PkeyGetExtData(ctx);
     ASSERT_TRUE(ptr != NULL);
     ASSERT_EQ(*(int *)ptr, data);
-exit:
+EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_REINIT_TC001
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_REINIT_TC001(int id)
+{
+    uint8_t key[16] = {0};
+    uint32_t keyLen = 16;
+    uint8_t iv[16] = {0};
+    uint32_t ivLen = 16;
+    uint8_t in[15] = {0};
+    uint32_t inLen = 15;
+    uint8_t out[64] = {0};
+    uint32_t outLen = 64;
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx((CRYPT_CIPHER_AlgId)id);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, iv, ivLen, true), CRYPT_SUCCESS);
+    (void)CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv, ivLen), CRYPT_SUCCESS);
+    struct ModesCipherCtx *ciphCtx = ((struct CryptEalCipherCtx *)ctx)->ctx;
+    ASSERT_TRUE(ciphCtx != NULL);
+    // Check data dataLen
+    ASSERT_EQ(ciphCtx->dataLen, 0);
+    for (uint32_t i = 0; i < EAL_MAX_BLOCK_LENGTH; i++) {
+        ASSERT_EQ(ciphCtx->data[i], 0);
+    }
+    // Check paddingType
+    ASSERT_EQ(ciphCtx->pad, CRYPT_PADDING_NONE);
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_REINIT_TC002
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_REINIT_TC002(int id)
+{
+    uint8_t key[32] = {0};
+    uint32_t keyLen = 32;
+    uint8_t iv[12] = {0};
+    uint32_t ivLen = 12;
+    uint8_t in[15] = {0};
+    uint32_t inLen = 15;
+    uint8_t out[64] = {0};
+    uint32_t outLen = 64;
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx((CRYPT_CIPHER_AlgId)id);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, iv, ivLen, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv, ivLen), CRYPT_SUCCESS);
+    struct ModesChaChaCtx *ciphCtx = ((struct CryptEalCipherCtx *)ctx)->ctx;
+    ASSERT_TRUE(ciphCtx != NULL);
+    // Check data dataLen
+    ASSERT_EQ(ciphCtx->chachaCtx.polyCtx.lastLen, 0);
+    uint32_t lastSize = (uint32_t)sizeof(ciphCtx->chachaCtx.polyCtx.last);
+    for (uint32_t i = 0; i < lastSize; i++) {
+        ASSERT_EQ(ciphCtx->chachaCtx.polyCtx.last[i], 0);
+    }
+    // Check aadLen cipherTextLen
+    ASSERT_EQ(ciphCtx->chachaCtx.aadLen, 0);
+    ASSERT_EQ(ciphCtx->chachaCtx.cipherTextLen, 0);
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_REINIT_TC003
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_REINIT_TC003(int id)
+{
+    uint8_t key[16] = {0};
+    uint32_t keyLen = 16;
+    uint8_t iv[12] = {0};
+    uint32_t ivLen = 12;
+    uint8_t in[15] = {0};
+    uint32_t inLen = 15;
+    uint8_t out[64] = {0};
+    uint32_t outLen = 64;
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx((CRYPT_CIPHER_AlgId)id);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, iv, ivLen, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv, ivLen), CRYPT_SUCCESS);
+    struct ModesGcmCtx *ciphCtx = ((struct CryptEalCipherCtx *)ctx)->ctx;
+    ASSERT_TRUE(ciphCtx != NULL);
+    // Check data dataLen
+    ASSERT_EQ(ciphCtx->gcmCtx.aadLen, 0);
+    ASSERT_EQ(ciphCtx->gcmCtx.lastLen, 0);
+    ASSERT_EQ(ciphCtx->gcmCtx.plaintextLen, 0);
+    for (uint32_t i = 0; i < GCM_BLOCKSIZE; i++) {
+        ASSERT_EQ(ciphCtx->gcmCtx.ghash[i], 0);
+        ASSERT_EQ(ciphCtx->gcmCtx.last[i], 0);
+        ASSERT_EQ(ciphCtx->gcmCtx.remCt[i], 0);
+    }
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */

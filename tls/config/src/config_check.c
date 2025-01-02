@@ -279,9 +279,5 @@ int32_t CheckConfig(const TLS_Config *config)
         }
     }
 
-    ret = CheckSign(config);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-    return ret;
+    return CheckSign(config);
 }

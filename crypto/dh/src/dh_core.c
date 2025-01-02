@@ -93,10 +93,8 @@ static int32_t InitDhPara(CRYPT_DH_Para *para, const uint8_t *p, uint32_t pLen,
     ret = BN_Bin2Bn(para->g, g, gLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t InitDhParaQ(CRYPT_DH_Para *para, const uint8_t *q, uint32_t qLen, uint32_t modBits)
@@ -114,10 +112,8 @@ static int32_t InitDhParaQ(CRYPT_DH_Para *para, const uint8_t *q, uint32_t qLen,
     int32_t ret = BN_Bin2Bn(para->q, q, qLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 CRYPT_DH_Para *CRYPT_DH_NewPara(const BSL_Param *params)
@@ -273,26 +269,25 @@ static int32_t ParaDataCheck(const CRYPT_DH_Para *para)
 
     BN_BigNum *r = BN_Create(pBits + 1);
     if (r == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
     }
     // r = p - 1
     ret = BN_SubLimb(r, p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     // g < p - 1
     if (BN_Cmp(g, r) >= 0) {
         ret = CRYPT_DH_PARA_ERROR;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     if (para->q != NULL) {
         ret = ParaQCheck(para->q, r);
     }
-ERR:
+EXIT:
     BN_Destroy(r);
     return ret;
 }
@@ -339,7 +334,7 @@ CRYPT_DH_Ctx *CRYPT_DH_DupCtx(CRYPT_DH_Ctx *ctx)
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
-ERR :
+ERR:
     CRYPT_DH_FreeCtx(newKeyCtx);
     return NULL;
 }
@@ -402,10 +397,8 @@ static int32_t GetDhParamP(const CRYPT_DH_Para *para, BSL_Param *param)
     int32_t ret = BN_Bn2Bin(para->p, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t GetDhParamQ(const CRYPT_DH_Para *para, BSL_Param *param)
@@ -424,10 +417,8 @@ static int32_t GetDhParamQ(const CRYPT_DH_Para *para, BSL_Param *param)
     int32_t ret = BN_Bn2Bin(para->q, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 static int32_t GetDhParamG(const CRYPT_DH_Para *para, BSL_Param *param)
@@ -442,10 +433,8 @@ static int32_t GetDhParamG(const CRYPT_DH_Para *para, BSL_Param *param)
     int32_t ret = BN_Bn2Bin(para->g, temp->value, &temp->useLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, BSL_Param *param)
@@ -469,12 +458,7 @@ int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, BSL_Param *param)
         return ret;
     }
 
-    ret = GetDhParamG(ctx->para, param);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
-    return CRYPT_SUCCESS;
+    return GetDhParamG(ctx->para, param);
 }
 
 /**
@@ -565,46 +549,46 @@ int32_t CRYPT_DH_Gen(CRYPT_DH_Ctx *ctx)
     if (x == NULL || y == NULL || minP == NULL || xLimb == NULL || mont == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_SubLimb(minP, ctx->para->p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = GetXLimb(xLimb, ctx->para->p, ctx->para->q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     for (cnt = 0; cnt < CRYPT_DH_TRY_CNT_MAX; cnt++) {
         /*  Generate private key x for [1, q-1] or [1, p-2] */
         ret = BN_RandRange(x, xLimb);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         ret = BN_AddLimb(x, x, 1);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         /* Calculate the public key y. */
         ret = BN_MontExpConsttime(y, ctx->para->g, x, mont, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
+            goto EXIT;
         }
         /* Check whether the public key meets the requirements. If not, try to generate the key again. */
         // y != 0, y != 1, y < p - 1
         if (BN_IsZero(y) || BN_IsOne(y) || BN_Cmp(y, minP) >= 0) {
             continue;
         }
-        goto ERR; // The function exits successfully.
+        goto EXIT; // The function exits successfully.
     }
     ret = CRYPT_DH_RAND_GENERATE_ERROR;
     BSL_ERR_PUSH_ERROR(ret);
-ERR:
+EXIT:
     RefreshCtx(ctx, x, y, ret);
     BN_Destroy(minP);
     BN_Destroy(xLimb);
@@ -666,23 +650,23 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
     if (minP == NULL || r == NULL || mont == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_SubLimb(minP, ctx->para->p, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     /* Check whether the public key meets the requirements. */
     ret = PubCheck(pubKey->y, minP, ctx->para->q, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_MontExpConsttime(r, pubKey->y, ctx->x, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto EXIT;
     }
     ret = BN_Bn2Bin(r, shareKey, shareKeyLen);
     if (ret != CRYPT_SUCCESS) {
@@ -691,7 +675,7 @@ int32_t CRYPT_DH_ComputeShareKey(const CRYPT_DH_Ctx *ctx, const CRYPT_DH_Ctx *pu
     bytes = BN_Bytes(ctx->para->p);
     CheckAndFillZero(shareKey, shareKeyLen, bytes);
 
-ERR:
+EXIT:
     BN_Destroy(minP);
     BN_Destroy(r);
     BN_MontDestroy(mont);
@@ -918,7 +902,6 @@ int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
     int32_t ret = CRYPT_DH_SetParaEx(ctx, para);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_DH_FreePara(para);
-        return ret;
     }
     return ret;
 }

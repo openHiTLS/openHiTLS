@@ -46,6 +46,9 @@
     #ifndef HITLS_BSL_UIO_SCTP
         #define HITLS_BSL_UIO_SCTP
     #endif
+    #ifndef HITLS_BSL_UIO_UDP
+        #define HITLS_BSL_UIO_UDP
+    #endif
     #ifndef HITLS_BSL_UIO_TCP
         #define HITLS_BSL_UIO_TCP
     #endif

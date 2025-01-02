@@ -39,6 +39,9 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32
         case SERVER_HELLO:
             ret = PackServerHello(ctx, buf, bufLen, usedLen);
             break;
+        case HELLO_VERIFY_REQUEST:
+            ret = PackHelloVerifyRequest(ctx, buf, bufLen, usedLen);
+            break;
         case SERVER_KEY_EXCHANGE:
             ret = PackServerKeyExchange(ctx, buf, bufLen, usedLen);
             break;
@@ -129,9 +132,8 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, u
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15813, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack handshake[%u] msg error.", type, 0, 0, 0);
-        return ret;
     }
-    return HITLS_SUCCESS;
+    return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_PROTO_DTLS12

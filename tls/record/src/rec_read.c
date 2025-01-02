@@ -190,21 +190,21 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
     /* The decrypted record body is in data */
     ret = RecConnDecrypt(ctx, state, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
     if (ret != HITLS_SUCCESS) {
-        goto exit;
+        goto ERR;
     }
     if (!IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
         ret = funcs->decryptPostProcess(ctx, state->suiteInfo, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
         if (ret != HITLS_SUCCESS) {
-            goto exit;
+            goto ERR;
         }
         RecConnSetSeqNum(state, RecConnGetSeqNum(state) + 1);
     }
     ret = ProcessDecryptedRecord(ctx, decryptBuf->end, encryptedMsg);
     if (ret != HITLS_SUCCESS) {
-        goto exit;
+        goto ERR;
     }
     return HITLS_SUCCESS;
-exit:
+ERR:
     if (decryptBuf->isHoldBuffer) {
         BSL_SAL_FREE(decryptBuf->buf);
     }
@@ -638,7 +638,7 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     // decryptBuf.isHoldBuffer == false
     if (recordType != cryptMsg.type) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16513, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "expect type %d, recive type %d", recordType, cryptMsg.type, 0, 0);
+            "expect type %d, receive type %d", recordType, cryptMsg.type, 0, 0);
         return RecordUnexpectedMsg(ctx, &decryptBuf, cryptMsg.type);
     }
     if (decryptBuf.buf == data) {
@@ -944,7 +944,7 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
     /* An unexpected message is received */
     if (recordType != encryptedMsg.type) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17260, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "expect type %d, recive type %d", recordType, encryptedMsg.type, 0, 0);
+            "expect type %d, receive type %d", recordType, encryptedMsg.type, 0, 0);
         return RecordUnexpectedMsg(ctx, &decryptBuf, encryptedMsg.type);
     }
     if (decryptBuf.buf == data) {

@@ -300,7 +300,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
     ret = IteratorInit(input, hmacSize, &iterator, &iteratorSize);
     if (ret != HITLS_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16613, "IteratorInit fail");
-        goto PHASH_END;
+        goto EXIT;
     }
 
     while (alignLen > 0) {
@@ -309,7 +309,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15082, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "P_Hash error: produce output data fail, HMAC ret = 0x%x.", ret, 0, 0, 0);
-            goto PHASH_END;
+            goto EXIT;
         }
 
         alignLen -= tmpLen;
@@ -319,7 +319,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15083, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "P_Hash error: iterator update fail, HMAC ret = 0x%x.", ret, 0, 0, 0);
-            goto PHASH_END;
+            goto EXIT;
         }
     }
 
@@ -327,7 +327,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16614, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         ret = HITLS_MEMCPY_FAIL;
     }
-PHASH_END:
+EXIT:
     BSL_SAL_FREE(iterator);
     BSL_SAL_FREE(data);
     return ret;

@@ -85,7 +85,7 @@ static void Test_FinishToAPP(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -117,7 +117,7 @@ static void Test_ServerHello_Add_PhaExtensions(
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     ASSERT_EQ(memcpy_s(&data[*len], bufSize - *len, &posthandshake, sizeof(posthandshake)), EOK);
     *len += sizeof(posthandshake);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -143,7 +143,7 @@ static void Test_CertificateRequest_Ctx_Zero(HITLS_Ctx *ctx, uint8_t *data, uint
     frameMsg.body.hsMsg.body.certificateReq.certificateReqCtxSize.data = 0;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -169,7 +169,7 @@ static void Test_Certificate_Ctx_Zero(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
     frameMsg.body.hsMsg.body.certificate.certificateReqCtxSize.data = 0;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -194,7 +194,7 @@ static void Test_Certificate_Ctx_NotSame(HITLS_Ctx *ctx, uint8_t *data, uint32_t
     *(frameMsg.body.hsMsg.body.certificate.certificateReqCtx.data) = 123;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -219,7 +219,7 @@ static void Test_Finish_Error(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint
     *(frameMsg.body.hsMsg.body.finished.verifyData.data) = 123;
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-exit:
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
@@ -264,7 +264,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PHA_FUNC_TC001()
     ASSERT_TRUE(readbytes == sizeof(src));
     ASSERT_TRUE(memcmp(src, dest, readbytes) == 0);
     memset_s(dest, READ_BUF_SIZE, 0, READ_BUF_SIZE);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     return;
 }
@@ -326,7 +326,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC002(void)
     ASSERT_TRUE(clientRes == NULL);
 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     ClearWrapper();
 }
@@ -388,7 +388,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC003(void)
     ASSERT_TRUE(clientRes == NULL);
 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
     ClearWrapper();
 }
@@ -464,7 +464,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC004(void)
     // The client returns alert
     ASSERT_TRUE(HLT_RpcTlsRead(remoteProcess, clientRes->sslId, readBuf, READ_BUF_SIZE, &readLen) ==
                 HITLS_MSG_HANDLE_INVALID_CERT_REQ_CTX);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -545,7 +545,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC005(void)
     // The server returns alert
     ASSERT_EQ(HLT_RpcTlsRead(remoteProcess, serverRes->sslId, readBuf, READ_BUF_SIZE, &readLen),
         HITLS_MSG_HANDLE_INVALID_CERT_REQ_CTX);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -627,7 +627,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC006(void)
     // The server returns alert
     ASSERT_EQ(HLT_RpcTlsRead(remoteProcess, serverRes->sslId, readBuf, READ_BUF_SIZE, &readLen),
         HITLS_MSG_HANDLE_INVALID_CERT_REQ_CTX);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -708,7 +708,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC007(void)
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, READ_BUF_SIZE, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -789,7 +789,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC008(void)
     // The server returns alert
     ASSERT_EQ(HLT_RpcTlsRead(remoteProcess, serverRes->sslId, readBuf, READ_BUF_SIZE, &readLen),
         HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -915,7 +915,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC009()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1039,7 +1039,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC011()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1163,7 +1163,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC012()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1289,7 +1289,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC013()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1419,7 +1419,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC014()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1555,7 +1555,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC015()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -1693,7 +1693,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC016()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -1827,7 +1827,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC017()
     HLT_RpcTlsClose(remoteProcess, serverSslId);
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
-exit:
+EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */

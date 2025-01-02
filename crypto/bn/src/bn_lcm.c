@@ -54,8 +54,7 @@ int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     BN_Destroy(gcd);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 #endif /* HITLS_CRYPTO_BN */

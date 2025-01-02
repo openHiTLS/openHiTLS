@@ -30,6 +30,7 @@
 #include "hitls_func.h"
 #include "sctp_channel.h"
 #include "tcp_channel.h"
+#include "udp_channel.h"
 #include "socket_common.h"
 #include "cert_callback.h"
 #include "sctp_channel.h"
@@ -374,6 +375,7 @@ int RunDataChannelBind(void *param)
     switch (channelParam->type) {
         case SCTP: sockFd = SctpBind(channelParam->port); break;
         case TCP: sockFd = TcpBind(channelParam->port); break;
+        case UDP: sockFd = UdpBind(channelParam->port); break;
         default:
             return ERROR;
     }
@@ -397,6 +399,9 @@ int RunDataChannelAccept(void *param)
             break;
         case TCP:
             sockFd = TcpAccept(channelParam->ip, channelParam->bindFd, channelParam->isBlock, true);
+            break;
+        case UDP:
+            sockFd = UdpAccept(channelParam->ip, channelParam->bindFd, channelParam->isBlock, false);
             break;
         default:
             return ERROR;
@@ -426,6 +431,7 @@ int HLT_DataChannelConnect(DataChannelParam *dstChannelParam)
     switch (dstChannelParam->type) {
         case SCTP: return SctpConnect(dstChannelParam->ip, dstChannelParam->port, dstChannelParam->isBlock);
         case TCP: return TcpConnect(dstChannelParam->ip, dstChannelParam->port);
+        case UDP: return UdpConnect(dstChannelParam->ip, dstChannelParam->port);
         default:
             return ERROR;
     }
@@ -497,6 +503,7 @@ void HLT_CloseFd(int fd, int linkType)
     switch (linkType) {
         case TCP: TcpClose(fd); break;
         case SCTP: SctpClose(fd); break;
+        case UDP: UdpClose(fd); break;
         default:
             /* Unknown fd type */
             break;
@@ -727,16 +734,16 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     ctx = HLT_TlsNewCtx(tlsVersion);
     if (ctx == NULL) {
         LOG_ERROR("HLT_TlsNewCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (HLT_TlsSetCtx(ctx, ctxConfig) != SUCCESS) {
         LOG_ERROR("HLT_TlsSetCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     ssl = HLT_TlsNewSsl(ctx);
     if (ssl == NULL) {
         LOG_ERROR("HLT_TlsNewSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     // When FD is 0, the default configuration is used.
     if (sslConfig->sockFd == 0) {
@@ -746,12 +753,12 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     }
     if (HLT_TlsSetSsl(ssl, sslConfig) != SUCCESS) {
         LOG_ERROR("HLT_TlsSetSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (ctxConfig->mtu > 0) {
         if (HLT_TlsSetMtu(ssl, ctxConfig->mtu) != SUCCESS) {
             LOG_ERROR("HLT_TlsSetMtu ERROR");
-            goto ERR;
+            return ERROR;
         }
     }
     tlsRes->ctx = ctx;
@@ -759,8 +766,6 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     tlsRes->ctxId = -1; // -1 indicates that the field is discarded.
     tlsRes->sslId = -1; // -1 indicates that the field is discarded.
     return SUCCESS;
-ERR:
-    return ERROR;
 }
 
 static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
@@ -772,16 +777,16 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     ctxId = HLT_RpcTlsNewCtx(process, tlsVersion, ctxConfig->isClient);
     if (ctxId < 0) {
         LOG_ERROR("HLT_RpcTlsNewCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (HLT_RpcTlsSetCtx(process, ctxId, ctxConfig) != SUCCESS) {
         LOG_ERROR("HLT_RpcTlsSetCtx ERROR");
-        goto ERR;
+        return ERROR;
     }
     sslId = HLT_RpcTlsNewSsl(process, ctxId);
     if (sslId < 0) {
         LOG_ERROR("HLT_RpcTlsNewSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     // When FD is 0, the default configuration is used.
     if (sslConfig->sockFd == 0) {
@@ -791,12 +796,12 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     }
     if (HLT_RpcTlsSetSsl(process, sslId, sslConfig) != SUCCESS) {
         LOG_ERROR("HLT_RpcTlsSetSsl ERROR");
-        goto ERR;
+        return ERROR;
     }
     if (ctxConfig->mtu > 0) {
         if (HLT_RpcTlsSetMtu(process, sslId, ctxConfig->mtu) != SUCCESS) {
             LOG_ERROR("HLT_RpcTlsSetMtu ERROR");
-            goto ERR;
+            return ERROR;
         }
     }
 
@@ -805,8 +810,6 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     tlsRes->ctxId = ctxId;
     tlsRes->sslId = sslId;
     return SUCCESS;
-ERR:
-    return ERROR;
 }
 
 HLT_Tls_Res *HLT_ProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
@@ -816,7 +819,7 @@ HLT_Tls_Res *HLT_ProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     HLT_Tls_Res *tlsRes = (HLT_Tls_Res*)malloc(sizeof(HLT_Tls_Res));
     if (tlsRes == NULL) {
         LOG_ERROR("Malloc TlsRes ERROR");
-        goto ERR;
+        return NULL;
     }
 
     // Checking Configuration Parameters
@@ -912,7 +915,7 @@ HLT_Tls_Res* HLT_ProcessTlsConnect(HLT_Process *process, TLS_VERSION tlsVersion,
     HLT_Tls_Res *tlsRes = (HLT_Tls_Res*)malloc(sizeof(HLT_Tls_Res));
     if (tlsRes == NULL) {
         LOG_ERROR("Malloc TlsRes ERROR");
-        goto ERR;
+        return NULL;
     }
     (void)memset_s(tlsRes, sizeof(HLT_Tls_Res), 0, sizeof(HLT_Tls_Res));
     // Checking Configuration Parameters
