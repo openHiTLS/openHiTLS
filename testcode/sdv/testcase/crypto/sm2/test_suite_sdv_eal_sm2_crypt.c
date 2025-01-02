@@ -23,6 +23,11 @@
 #define MAX_PLAIN_TEXT_LEN 2048
 #define CIPHER_TEXT_EXTRA_LEN 97
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
+
+#define SM3_MD_SIZE 32
+#define SM2_POINT_SINGLE_COORDINATE_LEN 32
+#define SM2_POINT_COORDINATE_LEN 65
+
 /* END_HEADER */
 
 /**
@@ -195,7 +200,8 @@ void SDV_CRYPTO_SM2_DEC_API_TC001(Hex *prvKey, Hex *cipherText, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(ctx, cipherText->x, cipherText->len, plainText, NULL) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(ctx, NULL, 0, plainText, &outLen) == CRYPT_NULL_INPUT);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(ctx, cipherText->x, cipherText->len * 2, plainText, &outLen) ==
+    outLen = 1;
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(ctx, cipherText->x, cipherText->len, plainText, &outLen) ==
                 CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
 
     outLen = cipherText->len;
@@ -290,9 +296,19 @@ void SDV_CRYPTO_SM2_ENC_FUNC_TC001(Hex *pubKey, Hex *plain, Hex *k, Hex *cipher,
 
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(ctx, plain->x, plain->len, cipherText, &outLen) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(ASN1_Sm2EncryptDataDecode(cipherText, outLen, decodeText + 1, &decodeLen) == CRYPT_SUCCESS);
+    CRYPT_SM2_EncryptData encData = {
+        .x = decodeText + 1,
+        .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .y = decodeText + SM2_POINT_SINGLE_COORDINATE_LEN + 1,
+        .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .hash = decodeText + SM2_POINT_COORDINATE_LEN,
+        .hashLen = SM3_MD_SIZE,
+        .cipher = decodeText + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
+        .cipherLen = decodeLen - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE - 1
+    };
+    ASSERT_TRUE(CRYPT_EAL_DecodeSm2EncryptData(cipherText, outLen, &encData) == CRYPT_SUCCESS);
     decodeText[0] = 0x04;
-    ASSERT_TRUE(decodeLen + 1 == cipher->len);
+    ASSERT_EQ(encData.xLen + encData.yLen + encData.hashLen + encData.cipherLen + 1, cipher->len);
     ASSERT_TRUE(memcmp(decodeText, cipher->x, cipher->len) == 0);
 
 EXIT:
@@ -339,9 +355,19 @@ void SDV_CRYPTO_SM2_DEC_FUNC_TC001(Hex *prvKey, Hex *plain, Hex *cipher, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(ASN1_Sm2EncryptDataEncode(cipher->x + 1, cipher->len - 1, encodeText, &encodeLen) == CRYPT_SUCCESS);
+    CRYPT_SM2_EncryptData encData = {
+        .x = cipher->x + 1,
+        .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .y = cipher->x + SM2_POINT_SINGLE_COORDINATE_LEN + 1,
+        .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .hash = cipher->x + SM2_POINT_COORDINATE_LEN,
+        .hashLen = SM3_MD_SIZE,
+        .cipher = cipher->x + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
+        .cipherLen = cipher->len - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeSm2EncryptData(&encData, encodeText, &encodeLen), CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(ctx, encodeText, encodeLen, plainText, &outLen) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(ctx, encodeText, encodeLen, plainText, &outLen), CRYPT_SUCCESS);
 
     ASSERT_TRUE(outLen == plain->len);
     ASSERT_TRUE(memcmp(plainText, plain->x, plain->len) == 0);
@@ -552,7 +578,7 @@ EXIT:
  * @title  SM2: for testing sm2 ciphertext decode.
  * @precon Vector: SM2 ciphertext.
  * @brief
- *    1. Call the ASN1_Sm2EncryptDataDecode to decode the SM2 ciphertext
+ *    1. Call the CRYPT_EAL_DecodeSm2EncryptData to decode the SM2 ciphertext
  * @expect
  *    1. CRYPT_SUCCESS
  */
@@ -561,7 +587,18 @@ void SDV_CRYPTO_SM2_ENC_DECODE_FUNC_TC001(Hex *cipher)
 {
     uint8_t decode[MAX_PLAIN_TEXT_LEN] = {0};
     uint32_t decodelen = MAX_PLAIN_TEXT_LEN;
-    ASSERT_TRUE(ASN1_Sm2EncryptDataDecode(cipher->x, cipher->len, decode, &decodelen) == CRYPT_SUCCESS);
+    
+    CRYPT_SM2_EncryptData encData = {
+        .x = decode,
+        .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .y = decode + SM2_POINT_SINGLE_COORDINATE_LEN,
+        .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .hash = decode + SM2_POINT_COORDINATE_LEN,
+        .hashLen = SM3_MD_SIZE,
+        .cipher = decode + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
+        .cipherLen = decodelen - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
+    };
+    ASSERT_EQ(CRYPT_EAL_DecodeSm2EncryptData(cipher->x, cipher->len, &encData), CRYPT_SUCCESS);
 EXIT:
     return;
 }

@@ -22,266 +22,383 @@
 #include "crypt_encode.h"
 #include "bsl_asn1.h"
 
+#if defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA) || \
+    defined(HITLS_CRYPTO_SM2_CRYPT)
 /**
- * https://docs.microsoft.com/en-us/windows/win32/seccertenroll/about-der-encoding-of-asn-1-types asn1 encoding format
- * https://docs.microsoft.com/en-us/windows/win32/seccertenroll/about-integer interger encoding format
+ * Common function to encode ASN.1 template and copy result
  */
-
-#define CONS_SEQ_TAG 0x30
-#define PRIM_INT_TAG 0x02
-
-static uint32_t GetBytes(uint32_t num)
+static int32_t EncodeAsn1Template(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr, uint32_t asnArrLen,
+    uint8_t *encode, uint32_t *encodeLen)
 {
-    uint32_t val = num;
-    uint32_t ret = 0;
-    while (val != 0) {
-        ret++;
-        val >>= 8; // right shifting 8 bits equals the offset of 1 byte.
+    uint8_t *outBuf = NULL;
+    uint32_t outLen = 0;
+
+    int32_t ret = BSL_ASN1_EncodeTemplate(templ, asnArr, asnArrLen, &outBuf, &outLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
+
+    if (outLen > *encodeLen) {
+        BSL_SAL_Free(outBuf);
+        BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_BUFF_NOT_ENOUGH);
+        return CRYPT_ENCODE_BUFF_NOT_ENOUGH;
+    }
+
+    (void)memcpy_s(encode, *encodeLen, outBuf, outLen);
+    BSL_SAL_Free(outBuf);
+    *encodeLen = outLen;
+
+    return CRYPT_SUCCESS;
 }
 
 /**
- * ANS1 encoding format: When the length is less than 0x80, the first byte indicates the data length.
- * If the length is greater than 0x80, the most significant bit of the first byte is set to 1,
- * the least significant seven bits indicate the length of the len data.
- * For example:
- * The length is 0x40, and the encoded data is represented as 0x40 data...
- * The length is 0x85, and the encoded data is 0x81 0x85 data...
- * The length is 0x50FF, and the encoded data is 0x82 0x50 0xFF data...
+ * Common function to decode ASN.1 template and check remaining length
  */
-static uint32_t GetEnCodeLen(uint32_t dataLen)
+static int32_t DecodeAsn1Template(const uint8_t *encode, uint32_t encodeLen, BSL_ASN1_Template *templ,
+    BSL_ASN1_Buffer *asnArr, uint32_t asnArrLen)
 {
-    uint32_t ret = 2; // tag + len need 2 bytes
-    if (dataLen > 0x7F) { // if the most significant bit is 1
-        ret += GetBytes(dataLen);
+    uint8_t *tmpEnc = (uint8_t *)(uintptr_t)encode;
+    uint32_t tmpEncLen = encodeLen;
+
+    int32_t ret = BSL_ASN1_DecodeTemplate(templ, NULL, &tmpEnc, &tmpEncLen, asnArr, asnArrLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
-}
 
-/** Internal function, which is not supported when rLen/sLen is greater than 32764.
- * When r and s exceed 32764, the total length exceeds 65536 (that is, 0xFFFF) 32764 * 2 + 4 * 2 = 65536.
- * Currently, the DSA key is limited to 3072 bits, that is, 384 bytes. This code can be used to cover this case.
- */
-uint32_t ASN1_SignEnCodeLen(uint32_t rLen, uint32_t sLen)
-{
-    uint32_t rEncodeLen = GetEnCodeLen(rLen) + rLen;
-    uint32_t sEncodeLen = GetEnCodeLen(sLen) + sLen;
-    uint32_t enCodeLen = GetEnCodeLen(rEncodeLen + sEncodeLen);
-    return rEncodeLen + sEncodeLen + enCodeLen;
-}
+    if (tmpEncLen != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
+        return CRYPT_DECODE_ASN1_BUFF_FAILED;
+    }
 
-static void TagLenEncode(uint8_t *data, uint32_t *off, uint8_t tag, uint32_t len)
-{
-    uint32_t offset = *off;
-    data[offset] = tag;
-    offset++;
-    if (len > 0x7F) {
-        uint32_t bytes = GetBytes(len);
-        data[offset++] = 0x80 | (bytes & 0x7F);
-        while (bytes > 0) {
-            data[offset++] = (len >> ((bytes - 1) * 8)) & 0xFF; // * 8 to calculate the number of offset bits.
-            bytes--;
+    for (uint32_t i = 0; i < asnArrLen; i++) {
+        if (asnArr[i].len == 0) {
+            BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_LEN_ZERO);
+            return CRYPT_DECODE_ASN1_BUFF_LEN_ZERO;
         }
-    } else {
-        data[offset] = len & 0xFF;
-        offset++;
     }
-    *off = offset;
-}
 
-uint32_t ASN1_SignStringLenOfBn(const BN_BigNum *num)
+    return CRYPT_SUCCESS;
+}
+#endif
+#if defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA)
+int32_t CRYPT_EAL_GetSignEncodeLen(uint32_t rLen, uint32_t sLen, uint32_t *maxLen)
 {
-    uint32_t bits = BN_Bits(num);
     /**
      * https://docs.microsoft.com/en-us/windows/win32/seccertenroll/about-integer
      * If the integer is positive but the high order bit is set to 1,
      * a leading 0x00 is added to the content to indicate that the number is not negative
      */
-    // When the bit is a multiple of 8, and the most significant bit is 1, 0x00 needs to be added.
-    // If the bit is not a multiple of 8, an extra byte needs to be added to store the data less than 8 bits.
-    return (bits / 8) + 1;
-}
-
-// Encode num into sign.
-static int32_t StringEncode(uint8_t *sign, uint32_t *signLen, const BN_BigNum *num)
-{
-    uint32_t bits = BN_Bits(num);
-    if (*signLen < 1) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_DSA_BUFF_LEN_NOT_ENOUGH;
+    if (rLen == 0 || rLen > UINT32_MAX - 1 || sLen == 0 || sLen > UINT32_MAX -1  || maxLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
-    if (bits == 0) {
-        sign[0] = 0;
-        *signLen = 1;
-        return CRYPT_SUCCESS;
-    }
-
-    uint32_t offset = 0;
-    // If the first byte is greater than 0x7F, and the bit length is a multiple of 8, 0 is added at the beginning.
-    if (bits % 8 == 0) {
-        sign[0] = 0;
-        offset++;
-        (*signLen)--;
-    }
-    int32_t ret = BN_Bn2Bin(num, sign + offset, signLen);
+    uint32_t rEncodeLen = 0;
+    uint32_t sEncodeLen = 0;
+    int32_t ret = BSL_ASN1_GetEncodeLen(rLen + 1, &rEncodeLen); // + 1: if high bit is 1, should add a leading 0x00
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *signLen += offset;
+    ret = BSL_ASN1_GetEncodeLen(sLen + 1, &sEncodeLen); // + 1: if high bit is 1, should add a leading 0x00
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    if (rEncodeLen > UINT32_MAX - sEncodeLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_ERR_SIGN_LEN_OVERFLOW);
+        return CRYPT_ENCODE_ERR_SIGN_LEN_OVERFLOW;
+    }
+    ret = BSL_ASN1_GetEncodeLen(rEncodeLen + sEncodeLen, maxLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 
-// Decode the sign to the num.
-static int32_t StringDecode(const uint8_t *sign, uint32_t signLen, BN_BigNum *num)
+static BSL_ASN1_TemplateItem g_signTempl[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_TAG_INTEGER, 0, 1},
+        {BSL_ASN1_TAG_INTEGER, 0, 1},
+};
+
+static int32_t CheckSignBnParams(const BN_BigNum *r, const BN_BigNum *s, uint8_t *encode, uint32_t *encodeLen)
 {
-    uint32_t offset = 0;
-    // Ignore the first byte 0.
-    if (sign[0] == 0) {
-        offset++;
+    if (r == NULL || s == NULL || encode == NULL || encodeLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-    if (signLen == offset) {
-        return BN_Zeroize(num);
+
+    // The big number must be non-negative.
+    if (BN_IsNegative(r) || BN_IsNegative(s)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
-    if (((sign[offset] & 0x80) != 0) && (offset == 0)) {
-        // The most significant bit is 0x80, indicating that the data is a negative number and decoding fails.
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_DECODE_FAIL);
-        return CRYPT_DSA_DECODE_FAIL;
+
+    // The big number must be non-zero.
+    if (BN_IsZero(r) || BN_IsZero(s)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
-    return BN_Bin2Bn(num, sign + offset, signLen - offset);
+
+    return CRYPT_SUCCESS;
 }
 
-/** Internal function, which is not supported when rLen/sLen is greater than 32764.
- * When r and s exceed 32764, the total length exceeds 65536 (that is, 0xFFFF) 32764 * 2 + 4 * 2 = 65536.
- * Currently the specification of the DSA key is 3072 bits, that is 384 bytes. The code in this case can be implemented.
- * EncodeData: CONS_SEQ_TAG + Len + PRIM_INT_TAG + rLen + r + PRIM_INT_TAG + sLen + s
- * For details about the encoding format, see RFC6979-A.1.3.
+static int32_t ConvertBNToBuffer(const BN_BigNum *bn, uint8_t **outBuf, uint32_t *outLen)
+{
+    uint32_t len = BN_Bytes(bn);
+    uint8_t *buf = (uint8_t *)BSL_SAL_Malloc(len);
+    if (buf == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    int32_t ret = BN_Bn2Bin(bn, buf, &len);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(buf);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    *outBuf = buf;
+    *outLen = len;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_EncodeSign(const BN_BigNum *r, const BN_BigNum *s, uint8_t *encode, uint32_t *encodeLen)
+{
+    int32_t ret = CheckSignBnParams(r, s, encode, encodeLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    uint8_t *rBuf = NULL;
+    uint8_t *sBuf = NULL;
+    uint32_t rLen = 0;
+    uint32_t sLen = 0;
+
+    // Prepare the buffer for r.
+    ret = ConvertBNToBuffer(r, &rBuf, &rLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret; // no need to push err
+    }
+
+    // Prepare the buffer for s.
+    ret = ConvertBNToBuffer(s, &sBuf, &sLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(rBuf);
+        return ret; // no need to push err
+    }
+
+    BSL_ASN1_Buffer asnArr[2] = {
+        {BSL_ASN1_TAG_INTEGER, rLen, rBuf},
+        {BSL_ASN1_TAG_INTEGER, sLen, sBuf}
+    };
+    BSL_ASN1_Template templ = {g_signTempl, sizeof(g_signTempl) / sizeof(g_signTempl[0])};
+    ret = EncodeAsn1Template(&templ, asnArr, 2, encode, encodeLen);
+
+    BSL_SAL_Free(rBuf);
+    BSL_SAL_Free(sBuf);
+
+    return ret;
+}
+
+int32_t CRYPT_EAL_DecodeSign(const uint8_t *encode, uint32_t encodeLen, BN_BigNum *r, BN_BigNum *s)
+{
+    if (encode == NULL || encodeLen == 0 || r == NULL || s == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    // Decode ASN.1 sequence to get r and s components
+    BSL_ASN1_Buffer asnArr[2] = {0};  // 2: r and s
+    BSL_ASN1_Template templ = {g_signTempl, sizeof(g_signTempl) / sizeof(g_signTempl[0])};
+    int32_t ret = DecodeAsn1Template(encode, encodeLen, &templ, asnArr, 2);  // 2: r and s
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    // Convert decoded buffers to big numbers
+    ret = BN_Bin2Bn(r, asnArr[0].buff, asnArr[0].len);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BN_Bin2Bn(s, asnArr[1].buff, asnArr[1].len);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+
+    return ret;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_SM2_CRYPT
+int32_t CRYPT_EAL_GetSm2EncryptDataEncodeLen(uint32_t xLen, uint32_t yLen, uint32_t hashLen, uint32_t dataLen,
+    uint32_t *maxLen)
+{
+    if (maxLen == NULL || xLen > UINT32_MAX - 1 || yLen > UINT32_MAX - 1) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    uint32_t xEncodeLen = 0;
+    uint32_t yEncodeLen = 0;
+    uint32_t hashEncodeLen = 0;
+    uint32_t cipherEncodeLen = 0;
+
+    int32_t ret = BSL_ASN1_GetEncodeLen(xLen + 1, &xEncodeLen); // + 1: if high bit is 1, should add a leading 0x00
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BSL_ASN1_GetEncodeLen(yLen + 1, &yEncodeLen); // + 1: if high bit is 1, should add a leading 0x00
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BSL_ASN1_GetEncodeLen(hashLen, &hashEncodeLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BSL_ASN1_GetEncodeLen(dataLen, &cipherEncodeLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    if (xEncodeLen > UINT32_MAX - yEncodeLen ||
+        (xEncodeLen + yEncodeLen) > UINT32_MAX - hashEncodeLen ||
+        (xEncodeLen + yEncodeLen + hashEncodeLen) > UINT32_MAX - cipherEncodeLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ENCODE_ERR_SM2_ENCRYPT_DATA_LEN_OVERFLOW);
+        return CRYPT_ENCODE_ERR_SM2_ENCRYPT_DATA_LEN_OVERFLOW;
+    }
+
+    // Calculate the total length of the encoded data
+    ret = BSL_ASN1_GetEncodeLen(xEncodeLen + yEncodeLen + hashEncodeLen + cipherEncodeLen, maxLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+/**
+ * Reference: GM/T 0009-2012 7.2
+ * Define template for SM2 encryption data structure:
+ * SM2Cipher ::= SEQUENCE {
+ *     XCoordinate          INTEGER,
+ *     YCoordinate          INTEGER,
+ *     HASH                 OCTET STRING SIZE(32),
+ *     CipherText           OCTET STRING
+ * }
  */
-int32_t ASN1_SignDataEncode(const DSA_Sign *s, uint8_t *sign, uint32_t *signLen)
-{
-    uint32_t rLen = ASN1_SignStringLenOfBn(s->r);
-    uint32_t sLen = ASN1_SignStringLenOfBn(s->s);
-    // Ensure that the data length is sufficient for encoding and decoding.
-    if (ASN1_SignEnCodeLen(rLen, sLen) > *signLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_DSA_BUFF_LEN_NOT_ENOUGH;
-    }
-    uint32_t offset = 0;
-    sign[offset] = CONS_SEQ_TAG;
-    // CONS_SEQ_TAG + Len
-    TagLenEncode(sign, &offset, CONS_SEQ_TAG, rLen + sLen + GetEnCodeLen(rLen) + GetEnCodeLen(sLen));
-    // PRIM_INT_TAG + rLen
-    TagLenEncode(sign, &offset, PRIM_INT_TAG, rLen);
-    uint32_t len = *signLen - offset;
-    // r
-    int32_t ret = StringEncode(sign + offset, &len, s->r);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    offset += len;
-    // PRIM_INT_TAG + sLen
-    TagLenEncode(sign, &offset, PRIM_INT_TAG, sLen);
-    len = *signLen - offset;
-    // s
-    ret = StringEncode(sign + offset, &len, s->s);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    *signLen = offset + len;
-    return ret;
-}
-// Obtain the size of the next data block and check the validity of the length. If 0 is returned, the parsing fails.
-// If other values are returned, that means the parsed data length is obtained.
-static uint32_t GetDecodeLen(const uint8_t *sign, uint32_t signLen, uint32_t *off, uint8_t tag)
-{
-    uint32_t offset = *off;
-    uint32_t cnt = 0;
-    uint32_t ret = 0;
-    // Determine whether out-of-bounds.
-    if (offset >= signLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return 0;
-    }
-    // Check whether the tags are consistent.
-    if (sign[offset] != tag) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return 0;
-    }
-    offset++;
-    // Determine whether out-of-bounds.
-    if (offset >= signLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return 0;
-    }
-    // Obtain the length of the length identifier.
-    if ((sign[offset] & 0x80) != 0) {
-        cnt = sign[offset] & 0x7F;
-        offset++;
-        // Check whether the length is meaningful and out of range.
-        if (cnt == 0 || (offset + cnt) > signLen || cnt > sizeof(int32_t)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-            return 0;
-        }
+static BSL_ASN1_TemplateItem g_sm2EncryptTempl[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {BSL_ASN1_TAG_INTEGER, 0, 1},           // x coordinate
+        {BSL_ASN1_TAG_INTEGER, 0, 1},           // y coordinate
+        {BSL_ASN1_TAG_OCTETSTRING, 0, 1},      // hash (c3)
+        {BSL_ASN1_TAG_OCTETSTRING, 0, 1}       // ciphertext (c2)
+};
+#define SM2_ENCRYPT_DATA_ITEM_NUM 4
 
-        uint32_t i;
-        // Obtain the length.
-        for (i = 0; i < cnt; i++) {
-            ret <<= 8; // Each byte has 8 bits.
-            ret += sign[offset + i];
-        }
-        offset += i;
-        if (ret + offset < ret) { // Prevent the ret is out of range.
-            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-            return 0;
-        }
-    } else {
-        ret = sign[offset];
-        offset++;
-    }
-    // Determine whether out-of-bounds.
-    if (ret == 0 || offset + ret > signLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return 0;
-    }
-    *off = offset;
-    return ret;
-}
-// For details about the decoding format, see RFC6979-A.1.3.
-int32_t ASN1_SignDataDecode(DSA_Sign *s, const uint8_t *sign, uint32_t signLen)
+int32_t CheckSm2EncryptData(const CRYPT_SM2_EncryptData *data)
 {
-    uint32_t len;
-    uint32_t offset = 0;
+    if (data == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
 
-    len = GetDecodeLen(sign, signLen, &offset, CONS_SEQ_TAG);
-    if (len == 0 || len != signLen - offset) { // Check whether the total length is correct.
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_DECODE_FAIL);
-        return CRYPT_DSA_DECODE_FAIL;
+    // Check x and y coordinate
+    if (data->x == NULL || data->xLen == 0 || data->y == NULL || data->yLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
-    len = GetDecodeLen(sign, signLen, &offset, PRIM_INT_TAG);
-    if (len == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_DECODE_FAIL);
-        return CRYPT_DSA_DECODE_FAIL;
+
+    // Check hash
+    if (data->hash == NULL || data->hashLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
-    int32_t ret = StringDecode(sign + offset, len, s->r);
+
+    // Check cipher
+    if (data->cipher == NULL || data->cipherLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_EncodeSm2EncryptData(const CRYPT_SM2_EncryptData *data, uint8_t *encode, uint32_t *encodeLen)
+{
+    int32_t ret = CheckSm2EncryptData(data);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    offset += len;
-    len = GetDecodeLen(sign, signLen, &offset, PRIM_INT_TAG);
-    if (len == 0 || len != (signLen - offset)) { // last block
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_DECODE_FAIL);
-        return CRYPT_DSA_DECODE_FAIL;
+    if (encode == NULL || encodeLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-    ret = StringDecode(sign + offset, len, s->s);
+
+    BSL_ASN1_Buffer asnArr[SM2_ENCRYPT_DATA_ITEM_NUM] = {
+        {BSL_ASN1_TAG_INTEGER, data->xLen, data->x},        // x coordinate
+        {BSL_ASN1_TAG_INTEGER, data->yLen, data->y},        // y coordinate
+        {BSL_ASN1_TAG_OCTETSTRING, data->hashLen, data->hash},       // hash
+        {BSL_ASN1_TAG_OCTETSTRING, data->cipherLen, data->cipher}    // ciphertext
+    };
+    BSL_ASN1_Template templ = {g_sm2EncryptTempl, sizeof(g_sm2EncryptTempl) / sizeof(g_sm2EncryptTempl[0])};
+
+    return EncodeAsn1Template(&templ, asnArr, SM2_ENCRYPT_DATA_ITEM_NUM, encode, encodeLen);
+}
+
+int32_t CRYPT_EAL_DecodeSm2EncryptData(const uint8_t *encode, uint32_t encodeLen, CRYPT_SM2_EncryptData *data)
+{
+    int32_t ret = CheckSm2EncryptData(data);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
-    return ret;
+    if (encode == NULL || encodeLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    BSL_ASN1_Buffer asnArr[SM2_ENCRYPT_DATA_ITEM_NUM] = {0};
+    BSL_ASN1_Template templ = {g_sm2EncryptTempl, sizeof(g_sm2EncryptTempl) / sizeof(g_sm2EncryptTempl[0])};
+    ret = DecodeAsn1Template(encode, encodeLen, &templ, asnArr, SM2_ENCRYPT_DATA_ITEM_NUM);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    // Validate lengths
+    if (asnArr[0].len > data->xLen || asnArr[1].len > data->yLen ||
+        asnArr[2].len > data->hashLen ||   // 2: hash
+        asnArr[3].len > data->cipherLen) { // 3: cipher
+        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_BUFF_NOT_ENOUGH);
+        return CRYPT_DECODE_BUFF_NOT_ENOUGH;
+    }
+
+    (void)memcpy_s(data->x, data->xLen, asnArr[0].buff, asnArr[0].len);
+    (void)memcpy_s(data->y, data->yLen, asnArr[1].buff, asnArr[1].len);
+    (void)memcpy_s(data->hash, data->hashLen, asnArr[2].buff, asnArr[2].len);     // 2: hash
+    (void)memcpy_s(data->cipher, data->cipherLen, asnArr[3].buff, asnArr[3].len); // 3: cipher
+    data->xLen = asnArr[0].len;
+    data->yLen = asnArr[1].len;
+    data->hashLen = asnArr[2].len;   // 2: hash
+    data->cipherLen = asnArr[3].len; // 3: cipher
+
+    return CRYPT_SUCCESS;
 }
+#endif // HITLS_CRYPTO_SM2_CRYPT
 
 int32_t EncodeHashAlg(CRYPT_MD_AlgId mdId, BSL_ASN1_Buffer *asn)
 {
@@ -430,183 +547,5 @@ EXIT:
     }
     return ret;
 }
-
-#ifdef HITLS_CRYPTO_SM2_CRYPT
-
-#define PRIM_OCT_STRING_TAG 0x04
-#define SM2_CURVE_BITS_WIDTH 32
-#define SM2_CURVE_BITS_WIDTH_TWICE 64
-#define SM3_HASH_LEN 32
-
-uint64_t ASN1_Sm2GetEnCodeLen(uint32_t dataLen)
-{
-    uint32_t initBytes = 2; // 'tag', 'len' needs 2 bytes.
-    uint32_t c1EncodeLen = (SM2_CURVE_BITS_WIDTH + initBytes + 1) * 2; // x, y all needs to be encoded.
-    uint32_t c3EncodeLen = SM3_HASH_LEN + initBytes;
-    uint32_t c2EncodeLen = GetEnCodeLen(dataLen) + dataLen;
-    uint32_t sum = GetEnCodeLen(c1EncodeLen + c3EncodeLen + c2EncodeLen);
-    return c1EncodeLen + c3EncodeLen + c2EncodeLen + sum;
-}
-
-static int32_t Sm2FetchString(const uint8_t *encode, uint32_t encodeLen, uint8_t *num, uint32_t numLen, uint8_t tag)
-{
-    if (tag == PRIM_INT_TAG && (encode[0] & 0x80) != 0) {
-        // The most significant bit is not 0. Decoding failed.
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECODE_FAIL);
-        return CRYPT_SM2_DECODE_FAIL;
-    }
-    uint32_t hasPad = 0;
-    uint32_t hasZero = 0;
-    if (tag == PRIM_INT_TAG && encodeLen > SM2_CURVE_BITS_WIDTH) {
-        hasPad = 1; // There are padding of INT_TAG data during encoding.
-    }
-    if (tag == PRIM_INT_TAG && encodeLen < SM2_CURVE_BITS_WIDTH) {
-        // if encodeLen < 32, add 0 to the front of the data to facilitate transcoding during decryption.
-        hasZero = SM2_CURVE_BITS_WIDTH - encodeLen;
-    }
-    (void)memcpy_s(num + hasZero, numLen - hasZero, encode + hasPad, encodeLen - hasPad);
-    return CRYPT_SUCCESS;
-}
-
-static void Sm2EnterString(uint8_t *output, uint32_t *outputLen,
-    const uint8_t *num, uint32_t numLen, bool pad)
-{
-    uint32_t len = *outputLen;
-    if (numLen == 0) {
-        output[0] = 0;
-        *outputLen = 1;
-        return;
-    }
-
-    uint32_t offset = 0;
-    if (pad) {
-        output[0] = 0;
-        offset++;
-        len--;
-    }
-    (void)memcpy_s(output + offset, len, num, numLen);
-    *outputLen = numLen + offset;
-}
-
-static void GetXYstatus(const uint8_t *input, uint32_t *tmpXLen, uint32_t *tmpYLen, bool *xPad, bool *yPad)
-{
-    if ((input[0] & 0x80) != 0) {
-        *tmpXLen += 1;
-        *xPad = true;
-    }
-    if ((input[SM2_CURVE_BITS_WIDTH] & 0x80) != 0) {
-        *tmpYLen += 1;
-        *yPad = true;
-    }
-    return;
-}
-
-// Encode the SM2 ciphertext into the ASNI format according to the GM/T 0009-2012.
-int32_t ASN1_Sm2EncryptDataEncode(const uint8_t *input, uint32_t inputLen, uint8_t *encode, uint32_t *encodeLen)
-{
-    uint32_t tmpXLen = SM2_CURVE_BITS_WIDTH;
-    uint32_t tmpYLen = SM2_CURVE_BITS_WIDTH;
-    uint32_t c2Len = inputLen - SM2_CURVE_BITS_WIDTH_TWICE - SM3_HASH_LEN;
-    bool xPad = false;
-    bool yPad = false;
-    uint32_t len = 0;
-    uint32_t offset = 0;
-
-    // CONS_SEQ_TAG + Len
-    GetXYstatus(input, &tmpXLen, &tmpYLen, &xPad, &yPad);
-    // x, y and hash are all less than 128 bytes long, so only need 2 extra bytes to encode, 2 * 3 = 6
-    TagLenEncode(encode, &offset, CONS_SEQ_TAG, tmpXLen + tmpYLen + SM3_HASH_LEN + 6 + c2Len + GetEnCodeLen(c2Len));
-
-    // x
-    // PRIM_INT_TAG + tmpXLen
-    TagLenEncode(encode, &offset, PRIM_INT_TAG, tmpXLen);
-    len = *encodeLen - offset;
-    Sm2EnterString(encode + offset, &len, input, SM2_CURVE_BITS_WIDTH, xPad);
-    offset += len;
-
-    // y
-    // PRIM_INT_TAG + tmpYLen
-    TagLenEncode(encode, &offset, PRIM_INT_TAG, tmpYLen);
-    len = *encodeLen - offset;
-    Sm2EnterString(encode + offset, &len, input + SM2_CURVE_BITS_WIDTH, SM2_CURVE_BITS_WIDTH, yPad);
-    offset += len;
-
-    // c3
-    // PRIM_INT_TAG + tmpSLen
-    TagLenEncode(encode, &offset, PRIM_OCT_STRING_TAG, SM3_HASH_LEN);
-    len = *encodeLen - offset;
-    Sm2EnterString(encode + offset, &len, input + SM2_CURVE_BITS_WIDTH_TWICE, SM3_HASH_LEN, false);
-    offset += len;
-
-    // c2
-    // PRIM_INT_TAG + tmpSLen
-    TagLenEncode(encode, &offset, PRIM_OCT_STRING_TAG, c2Len);
-    len = *encodeLen - offset;
-    Sm2EnterString(encode + offset, &len, input + SM2_CURVE_BITS_WIDTH_TWICE + SM3_HASH_LEN, c2Len, false);
-
-    *encodeLen = offset + len;
-    return CRYPT_SUCCESS;
-}
-
-int32_t ASN1_Sm2EncryptDataDecode(const uint8_t *eData, uint32_t eLen, uint8_t *decode, uint32_t *decodeLen)
-{
-    uint32_t len;
-    uint32_t offset = 0;
-    int32_t ret = 0;
-    // decode whole len
-    len = GetDecodeLen(eData, eLen, &offset, CONS_SEQ_TAG);
-    if (len == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECODE_FAIL);
-        return CRYPT_SM2_DECODE_FAIL;
-    }
-
-    // get X
-    len = GetDecodeLen(eData, eLen, &offset, PRIM_INT_TAG);
-    if (len == 0 || len > SM2_CURVE_BITS_WIDTH + 1) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECODE_FAIL);
-        return CRYPT_SM2_DECODE_FAIL;
-    }
-
-    ret = Sm2FetchString(eData + offset, len, decode, SM2_CURVE_BITS_WIDTH, PRIM_INT_TAG);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    offset += len;
-
-    // get Y
-    len = GetDecodeLen(eData, eLen, &offset, PRIM_INT_TAG);
-    if (len == 0 || len > SM2_CURVE_BITS_WIDTH + 1) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECODE_FAIL);
-        return CRYPT_SM2_DECODE_FAIL;
-    }
-    ret = Sm2FetchString(eData + offset, len, decode + SM2_CURVE_BITS_WIDTH, SM2_CURVE_BITS_WIDTH, PRIM_INT_TAG);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    offset += len;
-
-    // get c3
-    len = GetDecodeLen(eData, eLen, &offset, PRIM_OCT_STRING_TAG);
-    if (len != SM3_HASH_LEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECODE_FAIL);
-        return CRYPT_SM2_DECODE_FAIL;
-    }
-    (void)Sm2FetchString(eData + offset, len, decode + SM2_CURVE_BITS_WIDTH_TWICE, SM3_HASH_LEN, PRIM_OCT_STRING_TAG);
-    offset += len;
-
-    // get c2
-    len = GetDecodeLen(eData, eLen, &offset, PRIM_OCT_STRING_TAG);
-    if (len == 0 || (len > (*decodeLen - SM2_CURVE_BITS_WIDTH_TWICE - SM3_HASH_LEN))) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECODE_FAIL);
-        return CRYPT_SM2_DECODE_FAIL;
-    }
-    (void)Sm2FetchString(eData + offset, len, decode + SM2_CURVE_BITS_WIDTH_TWICE + SM3_HASH_LEN, len,
-        PRIM_OCT_STRING_TAG);
-    *decodeLen = SM2_CURVE_BITS_WIDTH_TWICE + SM3_HASH_LEN + len;
-    return ret;
-}
-#endif // HITLS_CRYPTO_SM2_CRYPT
 
 #endif // HITLS_CRYPTO_ENCODE

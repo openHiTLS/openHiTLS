@@ -33,27 +33,85 @@ extern "C" {
 #define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN 2
 #define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED 3
 
+#if defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA)
+/**
+ * Get the maximum length of the signature data.
+ *
+ * @param rLen [in] The length of r.
+ * @param sLen [in] The length of s.
+ * @param maxLen [out] The maximum length of the signature data.
+ * @return: CRYPT_SUCCESS: Success, other: Error.
+ */
+int32_t CRYPT_EAL_GetSignEncodeLen(uint32_t rLen, uint32_t sLen, uint32_t *maxLen);
+
+/**
+ * Encode the signature data by big number.
+ *
+ * @param r [in] The r value.
+ * @param s [in] The s value.
+ * @param encode [out] The encoded data.
+ * @param encodeLen [out] The length of the encoded data.
+ * @return: CRYPT_SUCCESS: Success, other: Error.
+ */
+int32_t CRYPT_EAL_EncodeSign(const BN_BigNum *r, const BN_BigNum *s, uint8_t *encode, uint32_t *encodeLen);
+
+/**
+ * Decode the signature data to big number.
+ *
+ * @param encode [in] The encoded data.
+ * @param encodeLen [in] The length of the encoded data.
+ * @param r [out] The r value.
+ * @param s [out] The s value.
+ * @return: CRYPT_SUCCESS: Success, other: Error.
+ */
+int32_t CRYPT_EAL_DecodeSign(const uint8_t *encode, uint32_t encodeLen, BN_BigNum *r, BN_BigNum *s);
+#endif
+
+#ifdef HITLS_CRYPTO_SM2_CRYPT
 typedef struct {
-    BN_BigNum *r;
-    BN_BigNum *s;
-} DSA_Sign;
-// encode signature data
-int32_t ASN1_SignDataEncode(const DSA_Sign *s, uint8_t *sign, uint32_t *signLen);
+    uint8_t *x;         // XCoordinate
+    uint8_t *y;         // YCoordinate
+    uint8_t *hash;      // HASH
+    uint8_t *cipher;    // CipherText
+    uint32_t xLen;
+    uint32_t yLen;
+    uint32_t hashLen;
+    uint32_t cipherLen;
+} CRYPT_SM2_EncryptData;
 
-// decode signature data
-int32_t ASN1_SignDataDecode(DSA_Sign *s, const uint8_t *sign, uint32_t signLen);
+/**
+ * Get the length of the SM2 encoded data.
+ *
+ * @param xLen [in] The length of the x coordinate.
+ * @param yLen [in] The length of the y coordinate.
+ * @param hashLen [in] The length of the hash.
+ * @param dataLen [in] The length of the data.
+ * @param maxLen [out] The length of the SM2 encoded data.
+ * @return: CRYPT_SUCCESS: Success, other: Error.
+ */
+int32_t CRYPT_EAL_GetSm2EncryptDataEncodeLen(uint32_t xLen, uint32_t yLen, uint32_t hashLen, uint32_t dataLen,
+    uint32_t *maxLen);
 
-// Obtain the required length of the signature data.
-uint32_t ASN1_SignEnCodeLen(uint32_t rLen, uint32_t sLen);
+/**
+ * Encode the SM2 encrypt data.
+ *
+ * @param data [in] The SM2 encrypt data.
+ * @param encode [out] The encoded data.
+ * @param encodeLen [out] The length of the encoded data.
+ * @return: CRYPT_SUCCESS: Success, other: Error.
+ */
+int32_t CRYPT_EAL_EncodeSm2EncryptData(const CRYPT_SM2_EncryptData *data, uint8_t *encode, uint32_t *encodeLen);
 
-// Stream length for encoding a BigNum.
-uint32_t ASN1_SignStringLenOfBn(const BN_BigNum *num);
-
-int32_t ASN1_Sm2EncryptDataEncode(const uint8_t *input, uint32_t inputLen, uint8_t *encode, uint32_t *encodeLen);
-
-int32_t ASN1_Sm2EncryptDataDecode(const uint8_t *eData, uint32_t eLen, uint8_t *decode, uint32_t *decodeLen);
-
-uint64_t ASN1_Sm2GetEnCodeLen(uint32_t dataLen);
+/**
+ * Decode the SM2 encrypt data.
+ *
+ * @param encode [in] The encoded data.
+ * @param encodeLen [in] The length of the encoded data.
+ * @param data [out] The SM2 encrypt data.
+ * @return: CRYPT_SUCCESS: Success, other: Error.
+ */
+int32_t CRYPT_EAL_DecodeSm2EncryptData(const uint8_t *encode, uint32_t encodeLen, CRYPT_SM2_EncryptData *data);
+#endif
 
 int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara *para);
 
