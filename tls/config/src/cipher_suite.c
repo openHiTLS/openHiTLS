@@ -1463,6 +1463,38 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .cipherType = HITLS_CBC_CIPHER,
         .strengthBits = 128},
 #endif
+#ifdef HITLS_TLS_SUITE_ECDHE_SM4_GCM_SM3
+    {.enable = true,
+        .name = CIPHER_NAME("HITLS_ECDHE_SM4_GCM_SM3"),
+        .stdName = CIPHER_NAME("TLS_ECDHE_SM4_GCM_SM3"),
+        .cipherSuite = HITLS_ECDHE_SM4_GCM_SM3,
+        .cipherAlg = HITLS_CIPHER_SM4_GCM,
+        .kxAlg = HITLS_KEY_EXCH_ECDHE,
+        .authAlg = HITLS_AUTH_SM2,
+        .macAlg = HITLS_MAC_AEAD,
+        .hashAlg = HITLS_HASH_SM3,
+        .signScheme = CERT_SIG_SCHEME_SM2_SM3,
+        KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 16u),
+        VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
+        .cipherType = HITLS_AEAD_CIPHER,
+        .strengthBits = 128},
+#endif
+#ifdef HITLS_TLS_SUITE_ECC_SM4_GCM_SM3
+    {.enable = true,
+        .name = CIPHER_NAME("HITLS_ECC_SM4_GCM_SM3"),
+        .stdName = CIPHER_NAME("TLS_ECC_SM4_GCM_SM3"),
+        .cipherSuite = HITLS_ECC_SM4_GCM_SM3,
+        .cipherAlg = HITLS_CIPHER_SM4_GCM,
+        .kxAlg = HITLS_KEY_EXCH_ECC,
+        .authAlg = HITLS_AUTH_SM2,
+        .macAlg = HITLS_MAC_AEAD,
+        .hashAlg = HITLS_HASH_SM3,
+        .signScheme = CERT_SIG_SCHEME_SM2_SM3,
+        KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 16u),
+        VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
+        .cipherType = HITLS_AEAD_CIPHER,
+        .strengthBits = 128},
+#endif
 #endif
 };
 
@@ -1567,6 +1599,8 @@ const CipherSuiteCertType g_cipherSuiteAndCertTypes[] = {
     { HITLS_DHE_DSS_WITH_AES_256_GCM_SHA384, CERT_TYPE_DSS_SIGN },
     { HITLS_ECDHE_SM4_CBC_SM3, CERT_TYPE_SM2_SIGN },
     { HITLS_ECC_SM4_CBC_SM3, CERT_TYPE_SM2_SIGN },
+    { HITLS_ECDHE_SM4_GCM_SM3, CERT_TYPE_SM2_SIGN },
+    { HITLS_ECC_SM4_GCM_SM3, CERT_TYPE_SM2_SIGN },
 };
 
 const SignSchemeInfo *CFG_GetSignSchemeList(uint32_t *len)

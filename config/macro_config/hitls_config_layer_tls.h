@@ -462,6 +462,11 @@
         #define HITLS_TLS_SUITE_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256
     #endif
 #endif
+#if defined(HITLS_TLS_SUITE_CIPHER_AEAD) && defined(HITLS_TLS_SUITE_KX_ECDHE) && defined(HITLS_TLS_SUITE_AUTH_SM2)
+    #ifndef HITLS_TLS_SUITE_ECDHE_SM4_GCM_SM3
+        #define HITLS_TLS_SUITE_ECDHE_SM4_GCM_SM3
+    #endif
+#endif
 #if defined(HITLS_TLS_SUITE_CIPHER_CBC) && defined(HITLS_TLS_SUITE_KX_ECDHE) && defined(HITLS_TLS_SUITE_AUTH_RSA)
     #ifndef HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_128_CBC_SHA
         #define HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_128_CBC_SHA
@@ -655,6 +660,12 @@
 #if defined(HITLS_TLS_SUITE_CIPHER_CBC) && defined(HITLS_TLS_SUITE_AUTH_SM2)
     #ifndef HITLS_TLS_SUITE_ECC_SM4_CBC_SM3
         #define HITLS_TLS_SUITE_ECC_SM4_CBC_SM3
+    #endif
+#endif
+
+#if defined(HITLS_TLS_SUITE_CIPHER_AEAD) && defined(HITLS_TLS_SUITE_AUTH_SM2)
+    #ifndef HITLS_TLS_SUITE_ECC_SM4_GCM_SM3
+        #define HITLS_TLS_SUITE_ECC_SM4_GCM_SM3
     #endif
 #endif
 
@@ -952,6 +963,25 @@
 #if defined(HITLS_TLS_SUITE_ECC_SM4_CBC_SM3)
     #ifndef HITLS_TLS_SUITE_CIPHER_CBC
         #define HITLS_TLS_SUITE_CIPHER_CBC
+    #endif
+    #ifndef HITLS_TLS_SUITE_AUTH_SM2
+        #define HITLS_TLS_SUITE_AUTH_SM2
+    #endif
+#endif
+#if defined(HITLS_TLS_SUITE_ECDHE_SM4_GCM_SM3)
+    #ifndef HITLS_TLS_SUITE_CIPHER_AEAD
+        #define HITLS_TLS_SUITE_CIPHER_AEAD
+    #endif
+    #ifndef HITLS_TLS_SUITE_KX_ECDHE
+        #define HITLS_TLS_SUITE_KX_ECDHE
+    #endif
+    #ifndef HITLS_TLS_SUITE_AUTH_SM2
+        #define HITLS_TLS_SUITE_AUTH_SM2
+    #endif
+#endif
+#if defined(HITLS_TLS_SUITE_ECC_SM4_GCM_SM3)
+    #ifndef HITLS_TLS_SUITE_CIPHER_AEAD
+        #define HITLS_TLS_SUITE_CIPHER_AEAD
     #endif
     #ifndef HITLS_TLS_SUITE_AUTH_SM2
         #define HITLS_TLS_SUITE_AUTH_SM2
