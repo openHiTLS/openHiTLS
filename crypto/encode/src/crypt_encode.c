@@ -90,7 +90,7 @@ int32_t CRYPT_EAL_GetSignEncodeLen(uint32_t rLen, uint32_t sLen, uint32_t *maxLe
      * If the integer is positive but the high order bit is set to 1,
      * a leading 0x00 is added to the content to indicate that the number is not negative
      */
-    if (rLen == 0 || rLen > UINT32_MAX - 1 || sLen == 0 || sLen > UINT32_MAX -1  || maxLen == NULL) {
+    if (rLen == 0 || rLen > UINT32_MAX - 1 || sLen == 0 || sLen > UINT32_MAX - 1 || maxLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
