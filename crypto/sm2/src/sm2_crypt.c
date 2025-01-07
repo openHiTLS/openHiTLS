@@ -153,6 +153,13 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     uint8_t *c2 = BSL_SAL_Malloc(datalen);
     uint8_t c3Buf[SM3_MD_SIZE];
     uint32_t c3BufLen = SM3_MD_SIZE;
+    CRYPT_SM2_EncryptData encData = {
+        // +1: Skip one byte for '04'
+        .x = c1Buf + 1,                                   .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .y = c1Buf + SM2_POINT_SINGLE_COORDINATE_LEN + 1, .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .hash = c3Buf,                                    .hashLen = c3BufLen,
+        .cipher = c2,                                     .cipherLen = datalen,
+    };
     GOTO_ERR_IF(MemAllocCheck(k, order, c1, tmp, c2), ret);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
         GOTO_ERR_IF(BN_RandRange(k, order), ret);
@@ -181,13 +188,6 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     // x2 || M || y2, calculate the hash value
     GOTO_ERR_IF(Sm3Hash(ctx->hashMethod, tmpBuf, data, datalen, c3Buf, &c3BufLen), ret);
 
-    CRYPT_SM2_EncryptData encData = {
-        // +1: Skip one byte for '04'
-        .x = c1Buf + 1,                                   .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
-        .y = c1Buf + SM2_POINT_SINGLE_COORDINATE_LEN + 1, .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
-        .hash = c3Buf,                                    .hashLen = c3BufLen,
-        .cipher = c2,                                     .cipherLen = datalen,
-    };
     GOTO_ERR_IF(CRYPT_EAL_EncodeSm2EncryptData(&encData, out, outlen), ret);
 ERR:
     EncryptMemFree(c1, tmp, k, order, c2);
