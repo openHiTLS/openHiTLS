@@ -1315,7 +1315,7 @@ bool IsEnableSctpAuth(void)
     }
     (void)fgets(buf, SCTP_FLAG_BUFF, file);
     fclose(file);
-    if (strcmp(buf, "1") == 0) {
+    if (strcmp(buf, "1\n") == 0) {
         return true;
     }
     return false;

@@ -46,6 +46,16 @@ void SetCert(HLT_Ctx_Config *ctxConfig, char *cert)
     }
 }
 
+void SetGMCert(HLT_Ctx_Config *serverCtxConfig, HLT_Ctx_Config *clientCtxConfig, char *cert)
+{
+    if (strncmp(cert, "SM2", strlen("SM2")) == 0) {
+        HLT_SetCertPath(serverCtxConfig, SM2_VERIFY_PATH, SM2_CHAIN_PATH, SM2_SERVER_ENC_CERT_PATH, SM2_SERVER_ENC_KEY_PATH,
+                    SM2_SERVER_SIGN_CERT_PATH, SM2_SERVER_SIGN_KEY_PATH);
+        HLT_SetCertPath(clientCtxConfig, SM2_VERIFY_PATH, SM2_CHAIN_PATH, SM2_CLIENT_ENC_CERT_PATH, SM2_CLIENT_ENC_KEY_PATH,
+                    SM2_CLIENT_SIGN_CERT_PATH, SM2_CLIENT_SIGN_KEY_PATH);
+    }
+}
+
 char *HITLS_TLS13_Ciphersuite[] = {
     "HITLS_AES_128_GCM_SHA256",
     "HITLS_AES_256_GCM_SHA384",
@@ -144,6 +154,11 @@ char *HITLS_PSK_Ciphersuite[] = {
     "HITLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256",
 };
 
+char *HITLS_GM_Ciphersuite[] = {
+    "HITLS_ECDHE_SM4_CBC_SM3",
+    "HITLS_ECC_SM4_CBC_SM3",
+};
+
 static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, char *cert)
 {
     HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
@@ -151,8 +166,16 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
     ASSERT_TRUE(localProcess != NULL);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
-    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+    if (version == TLCP1_1) {
+        serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
+        clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
+    } else {
+        serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+        clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    }
+    
     ASSERT_TRUE(serverCtxConfig != NULL);
     ASSERT_TRUE(clientCtxConfig != NULL);
 
@@ -165,8 +188,12 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
 
-    SetCert(serverCtxConfig, cert);
-    SetCert(clientCtxConfig, cert);
+    if (version == TLCP1_1) {
+        SetGMCert(serverCtxConfig, clientCtxConfig, cert);
+    } else {
+        SetCert(serverCtxConfig, cert);
+        SetCert(clientCtxConfig, cert);
+    }
 
     HLT_SetCipherSuites(serverCtxConfig, Ciphersuite);
     HLT_SetCipherSuites(clientCtxConfig, Ciphersuite);
@@ -259,5 +286,17 @@ void SDV_TLS_ANON_CIPHER_SUITE(void)
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_ANON_Ciphersuite) / sizeof(HITLS_ANON_Ciphersuite[0]));
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_GM_CIPHER_SUITE(void)
+{
+    for (uint16_t i = 0; i < sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]); i++) {
+        SUB_PROC_BEGIN(continue);
+        CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+        SUB_PROC_END();
+    }
+    SUB_PROC_WAIT(sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]));
 }
 /* END_CASE */
