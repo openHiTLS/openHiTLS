@@ -277,16 +277,16 @@ static int32_t SetAad(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *aad, uint32
      * length of the AAD was already an integral multiple of 16 bytes,
      * this field is zero-length.
      */
+    if (ctx->aadLen != 0 || ctx->cipherTextLen != 0) { // aad is set
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_AAD_REPEAT_SET_ERROR);
+        return CRYPT_MODES_AAD_REPEAT_SET_ERROR;
+    }
     if (aadLen == 0) {
         return CRYPT_SUCCESS;
     }
     if (aad == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
-    }
-    if (ctx->aadLen != 0) { // aad is set
-        BSL_ERR_PUSH_ERROR(CRYPT_MODES_AAD_REPEAT_SET_ERROR);
-        return CRYPT_MODES_AAD_REPEAT_SET_ERROR;
     }
     const uint8_t pad[16] = { 0 };
     ctx->aadLen = aadLen;
