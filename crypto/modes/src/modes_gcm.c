@@ -175,7 +175,7 @@ static int32_t SetAad(MODES_CipherGCMCtx *ctx, const uint8_t *aad, uint32_t aadL
     }
     const uint8_t *off = aad;
     uint32_t i;
-    if (ctx->aadLen != 0) { // aad is set
+    if (ctx->aadLen != 0 || ctx->plaintextLen != 0) { // aad is set
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_AAD_REPEAT_SET_ERROR);
         return CRYPT_MODES_AAD_REPEAT_SET_ERROR;
     }
