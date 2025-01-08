@@ -366,7 +366,7 @@ static uint32_t XorAadLen(MODES_CipherCCMCtx *ctx, uint32_t aadLen)
 // 0 < aadLen < 2^32
 static int32_t SetAad(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
 {
-    if ((ctx->nonce[0] & 0x40) != 0) {
+    if ((ctx->nonce[0] & 0x40) != 0 || ctx->tagInit != 0) {
         // If aad has been set, the setting cannot be repeated.
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_AAD_REPEAT_SET_ERROR);
         return CRYPT_MODES_AAD_REPEAT_SET_ERROR;
