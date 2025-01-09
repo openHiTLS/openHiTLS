@@ -446,13 +446,14 @@ typedef enum {
     CRYPT_CTRL_SET_RSA_FLAG,            /**< RSA set the flag. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15,   /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS, /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15_TLS. */
-
-    CRYPT_CTRL_GET_RSA_SALT,            /**< Obtain the salt length of the RSA algorithm. */
+    CRYPT_CTRL_GET_RSA_SALTLEN,         /**< Obtain the real salt len in pss mode. The salt len can be set to -1, -2, -3
+                                             in sign or verify, which needs additional conversion during encoding.
+                                             If salt len = -3, the max salt len will be returned. */
     CRYPT_CTRL_GET_RSA_PADDING,         /**< Obtain the padding mode of the RSA algorithm. */
     CRYPT_CTRL_GET_RSA_MD,              /**< Obtain the MD algorithm of the RSA algorithm. */
     CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode is PSS. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
-    
+
     // ecc
     CRYPT_CTRL_SET_SM2_USER_ID = 300,
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */

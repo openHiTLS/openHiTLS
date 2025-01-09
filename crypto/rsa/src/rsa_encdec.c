@@ -1256,17 +1256,44 @@ static int32_t SetSalt(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 
 static int32_t GetSaltLen(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
-    (void)len;
-    int32_t *valTmp = val;
-    if (valTmp == NULL) {
+    if (val == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->pad.type != EMSA_PSS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_ALGID);
-        return CRYPT_RSA_ERR_ALGID;
+    if (len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_GET_SALT_LEN_ERROR);
+        return CRYPT_RSA_GET_SALT_LEN_ERROR;
     }
-    *valTmp = ctx->pad.para.pss.saltLen;
+    if (ctx->prvKey == NULL && ctx->pubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
+        return CRYPT_RSA_NO_KEY_INFO;
+    }
+    if (ctx->pad.type != EMSA_PSS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_GET_SALT_NOT_PSS_ERROR);
+        return CRYPT_RSA_GET_SALT_NOT_PSS_ERROR;
+    }
+    int32_t *ret = val;
+    int32_t valTmp;
+    RSA_PadingPara *pad = &(ctx->pad.para.pss);
+    if (pad->mdMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_PSS_PARAMS);
+        return CRYPT_RSA_ERR_PSS_PARAMS;
+    }
+    uint32_t bytes = BN_BITS_TO_BYTES(CRYPT_RSA_GetBits(ctx));
+    if (pad->saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
+        valTmp = (int32_t)pad->mdMeth->mdSize;
+    } else if (pad->saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN ||
+        pad->saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
+        // RFC 8017: Max(salt length) = ceil(bits/8) - mdSize - 2
+        valTmp = (int32_t)(bytes - pad->mdMeth->mdSize - 2);
+    } else {
+        valTmp = (int32_t)pad->saltLen;
+    }
+    if (valTmp < 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_SALT_LEN);
+        return CRYPT_RSA_ERR_SALT_LEN;
+    }
+    *ret = valTmp;
     return CRYPT_SUCCESS;
 }
 
@@ -1558,7 +1585,7 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return SetEmsaPkcsV15(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_SALT:
             return SetSalt(ctx, val, len);
-        case CRYPT_CTRL_GET_RSA_SALT:
+        case CRYPT_CTRL_GET_RSA_SALTLEN:
             return GetSaltLen(ctx, val, len);
         case CRYPT_CTRL_GET_RSA_PADDING:
             return GetPadding(ctx, val, len);
