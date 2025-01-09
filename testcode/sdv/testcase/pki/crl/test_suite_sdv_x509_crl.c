@@ -17,7 +17,8 @@
 
 #include "bsl_sal.h"
 #include "securec.h"
-#include "hitls_pki.h"
+#include "hitls_pki_crl.h"
+#include "hitls_pki_cert.h"
 #include "hitls_pki_errno.h"
 #include "bsl_type.h"
 #include "bsl_log.h"

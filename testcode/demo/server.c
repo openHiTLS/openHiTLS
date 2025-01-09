@@ -20,7 +20,7 @@
 #include "hitls_cert_init.h"
 #include "hitls_cert.h"
 #include "hitls_crypt_init.h"
-#include "hitls_pki.h"
+#include "hitls_pki_cert.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */

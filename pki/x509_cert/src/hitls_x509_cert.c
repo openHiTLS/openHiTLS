@@ -15,7 +15,6 @@
 
 #include <stdio.h>
 #include "securec.h"
-#include "hitls_pki.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "sal_time.h"
@@ -28,8 +27,6 @@
 #include "crypt_eal_encode.h"
 #include "crypt_encode.h"
 #include "crypt_errno.h"
-#include "crypt_types.h"
-#include "crypt_eal_pkey.h"
 #include "crypt_eal_md.h"
 #include "bsl_pem_internal.h"
 #include "bsl_err_internal.h"
@@ -37,6 +34,8 @@
 #include "hitls_cert_local.h"
 #include "hitls_print_local.h"
 #include "crypt_encode.h"
+#include "hitls_pki_csr.h"
+#include "hitls_pki_cert.h"
 
 #define HITLS_CERT_CTX_SPECIFIC_TAG_VER       0
 #define HITLS_CERT_CTX_SPECIFIC_TAG_ISSUERID  1

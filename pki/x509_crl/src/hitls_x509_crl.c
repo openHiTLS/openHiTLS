@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "hitls_pki.h"
+#include "hitls_pki_crl.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "securec.h"

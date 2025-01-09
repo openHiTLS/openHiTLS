@@ -15,9 +15,8 @@
 
 #include <string.h>
 #include "securec.h"
-#include "hitls_pki.h"
+#include "hitls_pki_x509.h"
 #include "sal_atomic.h"
-#include "crypt_eal_pkey.h"
 #include "bsl_err_internal.h"
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"

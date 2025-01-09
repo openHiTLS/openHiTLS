@@ -19,8 +19,8 @@
 #include "crypt_errno.h"
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
+#include "hitls_pki_x509.h"
 #include "hitls_cert_local.h"
-#include "hitls_pki.h"
 #include "hitls_error.h"
 #include "hitls_x509_adapt_local.h"
 
