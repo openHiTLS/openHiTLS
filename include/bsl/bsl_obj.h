@@ -24,7 +24,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "bsl_type.h"
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {

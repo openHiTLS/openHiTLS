@@ -16,7 +16,7 @@
 #ifndef HITLS_CMS_LOCAL_H
 #define HITLS_CMS_LOCAL_H
 
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_obj.h"
 
 #ifdef __cplusplus

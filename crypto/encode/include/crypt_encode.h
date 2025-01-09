@@ -19,7 +19,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ENCODE
 
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_asn1.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_bn.h"

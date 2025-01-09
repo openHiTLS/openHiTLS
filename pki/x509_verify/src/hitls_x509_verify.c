@@ -15,9 +15,8 @@
 
 #include <string.h>
 #include "securec.h"
-#include "hitls_pki.h"
+#include "hitls_pki_x509.h"
 #include "sal_atomic.h"
-#include "crypt_eal_pkey.h"
 #include "bsl_err_internal.h"
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
@@ -612,7 +611,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             crl = BSL_LIST_GET_NEXT(storeCtx->crl);
             continue;
         }
-        if (cert->tbs.version == HITLS_CERT_VERSION_3 && crl->tbs.version == 1) {
+        if (cert->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1) {
             if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName, &parent->tbs.serialNum)
                 != HITLS_PKI_SUCCESS) {
                 crl = BSL_LIST_GET_NEXT(storeCtx->crl);
