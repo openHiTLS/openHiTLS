@@ -1041,8 +1041,8 @@ void SDV_CRYPTO_RSA_CTRL_API_TC002(Hex *n, Hex *d, int hashId, int isProvider)
     ASSERT_EQ(mgfId, hashId);
 
     int32_t saltLen = 0;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALT, NULL, sizeof(int32_t)), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALT, &saltLen, sizeof(int32_t)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALTLEN, NULL, sizeof(int32_t)), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t)), CRYPT_SUCCESS);
     ASSERT_EQ(saltLen, pssSaltLen);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_CLR_RSA_FLAG, NULL, sizeof(uint32_t)) == CRYPT_NULL_INPUT);
@@ -1052,6 +1052,58 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_CTRL_API_TC003
+ * @title  Rsa CRYPT_EAL_PkeyCtrl test.
+ * @precon  Create the context of the rsa algorithm, set the private key(n, d) and set the different saltLen to pss.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_CTRL_API_TC003(Hex *n, Hex *d, int isProvider)
+{
+    CRYPT_EAL_PkeyPrv prvkey = {0};
+    int32_t pssSaltLen = CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
+    int32_t pssMdId = CRYPT_MD_SHA256;
+    int32_t pssMgfId = CRYPT_MD_SHA256;
+    int32_t saltLen = 0;
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssMdId, sizeof(pssMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &pssMgfId, sizeof(pssMgfId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &pssSaltLen, sizeof(pssSaltLen), 0},
+        BSL_PARAM_END};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
+
+    TestMemInit();
+
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    }
+    ASSERT_TRUE(pkey != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prvkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t)), CRYPT_SUCCESS);
+    ASSERT_EQ(saltLen, 32); // saltLen = MdSize(32)
+    pssSaltLen = CRYPT_RSA_SALTLEN_TYPE_MAXLEN;
+    pssParam[2].value = &pssSaltLen; // salt-len index = 2
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t)), CRYPT_SUCCESS);
+    ASSERT_EQ(saltLen, CRYPT_EAL_PkeyGetKeyLen(pkey) - 32 - 2); // saltLen = keyBytes - MdSize(32) - 2
+    pssSaltLen = CRYPT_RSA_SALTLEN_TYPE_AUTOLEN;
+    pssParam[2].value = &pssSaltLen; // salt-len index = 2
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t)), CRYPT_SUCCESS);
+    ASSERT_EQ(saltLen, CRYPT_EAL_PkeyGetKeyLen(pkey) - 32 - 2); // saltLen = keyBytes - MdSize(32) - 2
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
 
 int Compare_PubKey(CRYPT_EAL_PkeyPub *pubKey1, CRYPT_EAL_PkeyPub *pubKey2)
 {
