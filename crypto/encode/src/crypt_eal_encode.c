@@ -1439,7 +1439,8 @@ static int32_t EncodeRsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_
 static int32_t GetPssParamInfo(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_RSA_PssPara *rsaPssParam)
 {
     int32_t ret;
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_SALT, &rsaPssParam->saltLen, sizeof(rsaPssParam->saltLen));
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_SALTLEN, &rsaPssParam->saltLen,
+        sizeof(rsaPssParam->saltLen));
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
