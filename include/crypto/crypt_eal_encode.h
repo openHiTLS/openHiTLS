@@ -24,43 +24,12 @@
 
 #include <stdint.h>
 
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "crypt_eal_pkey.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-typedef enum {
-    CRYPT_ENCODE_UNKNOW,
-    CRYPT_PRIKEY_PKCS8_UNENCRYPT,
-    CRYPT_PRIKEY_PKCS8_ENCRYPT,
-    CRYPT_PRIKEY_RSA,
-    CRYPT_PRIKEY_ECC,
-    CRYPT_PUBKEY_SUBKEY,
-    CRYPT_PUBKEY_RSA
-} CRYPT_ENCODE_TYPE;
-
-typedef enum {
-    CRYPT_DERIVE_PBKDF2,
-} CRYPT_DERIVE_MODE;
-
-typedef struct {
-    uint32_t deriveMode;
-    void *param;
-} CRYPT_EncodeParam;
-
-typedef struct {
-    uint32_t pbesId;
-    uint32_t pbkdfId;
-    uint32_t hmacId;
-    uint32_t symId;
-    uint32_t saltLen;
-    uint8_t *pwd;
-    uint32_t pwdLen;
-    uint32_t itCnt;
-} CRYPT_Pbkdf2Param;
-
 
 /**
  * @ingroup crypt_eal_encode

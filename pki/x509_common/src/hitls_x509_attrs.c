@@ -15,7 +15,6 @@
 
 #include <stdint.h>
 #include "securec.h"
-#include "hitls_pki.h"
 #include "hitls_x509_local.h"
 #include "bsl_obj.h"
 #include "bsl_sal.h"
@@ -24,6 +23,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
 #include "hitls_pki_errno.h"
+#include "hitls_pki_utils.h"
 
 /**
  * RFC 2985: section-5.4.2

@@ -17,9 +17,10 @@
 
 #include "bsl_sal.h"
 #include "securec.h"
-#include "hitls_pki.h"
+#include "hitls_pki_crl.h"
+#include "hitls_pki_cert.h"
 #include "hitls_pki_errno.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_log.h"
 #include "bsl_obj.h"
 #include "crypt_encode.h"
@@ -278,7 +279,7 @@ void SDV_X509_MUL_CRL_PARSE_FUNC_TC001(int format, char *path, int crlNum)
 {
     BSL_GLOBAL_Init();
     HITLS_X509_List *list = NULL;
-    int32_t ret = HITLS_X509_CrlMulParseFile(format, path, &list);
+    int32_t ret = HITLS_X509_CrlParseBundleFile(format, path, &list);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), crlNum);
 EXIT:
@@ -455,61 +456,61 @@ void SDV_X509_CRL_CTRL_RevokedParamCheck_TC001(void)
     HITLS_X509_CrlEntry *entry = NULL;
     BSL_TIME time = {0};
 
-    // Test HITLS_X509_CrlRevokedNew
-    entry = HITLS_X509_CrlRevokedNew();
+    // Test HITLS_X509_CrlEntryNew
+    entry = HITLS_X509_CrlEntryNew();
     ASSERT_NE(entry, NULL);
 
-    // Test HITLS_X509_CrlRevokedCtrl with invalid command
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, 0xFFFF, &time, sizeof(time)), HITLS_X509_ERR_INVALID_PARAM);
+    // Test HITLS_X509_CrlEntryCtrl with invalid command
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, 0xFFFF, &time, sizeof(time)), HITLS_X509_ERR_INVALID_PARAM);
 
-    // Test HITLS_X509_CrlRevokedCtrl with NULL entry
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(NULL, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
+    // Test HITLS_X509_CrlEntryCtrl with NULL entry
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(NULL, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
         HITLS_X509_ERR_INVALID_PARAM);
 
-    // Test HITLS_X509_CrlRevokedCtrl with NULL value pointer
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, NULL, sizeof(time)),
+    // Test HITLS_X509_CrlEntryCtrl with NULL value pointer
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, NULL, sizeof(time)),
         HITLS_X509_ERR_INVALID_PARAM);
 
-    // Test HITLS_X509_CrlRevokedCtrl with invalid value length
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, 0),
+    // Test HITLS_X509_CrlEntryCtrl with invalid value length
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, 0),
         HITLS_X509_ERR_INVALID_PARAM);
 
     // Test setting/getting revoke time
     ASSERT_EQ(BSL_SAL_SysTimeGet(&time), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &time, sizeof(time)),
         HITLS_PKI_SUCCESS);
 
     BSL_TIME getTime = {0};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &getTime, sizeof(getTime)),
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &getTime, sizeof(getTime)),
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(memcmp(&time, &getTime, sizeof(BSL_TIME)), 0);
 
     // Test setting/getting reason
     HITLS_X509_RevokeExtReason reasonExt = {false, 1};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reasonExt,
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reasonExt,
         sizeof(HITLS_X509_RevokeExtReason)), HITLS_PKI_SUCCESS);
 
     int32_t getReason = 0;
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, &getReason, sizeof(getReason)),
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON, &getReason, sizeof(getReason)),
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(reasonExt.reason, getReason);
 
     // Test setting/getting serial number
     uint8_t serial[] = {0x01, 0x02, 0x03, 0x04};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serial, 4),
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serial, 4),
         HITLS_PKI_SUCCESS);
 
     BSL_Buffer getSerial = {0};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &getSerial, sizeof(getSerial)),
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &getSerial, sizeof(getSerial)),
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(4, getSerial.dataLen);
     ASSERT_EQ(memcmp(serial, getSerial.data, getSerial.dataLen), 0);
 
-    // Test HITLS_X509_CrlRevokedFree with NULL
-    HITLS_X509_CrlRevokedFree(NULL);  // Should not crash
+    // Test HITLS_X509_CrlEntryFree with NULL
+    HITLS_X509_CrlEntryFree(NULL);  // Should not crash
 
-    // Test HITLS_X509_CrlRevokedFree with valid entry
-    HITLS_X509_CrlRevokedFree(entry);
+    // Test HITLS_X509_CrlEntryFree with valid entry
+    HITLS_X509_CrlEntryFree(entry);
 EXIT:
     return;
 }
@@ -534,14 +535,14 @@ void SDV_X509_CRL_PARSE_REVOKEDLIST_FUNC_TC001(char *parh, int revokedNum)
     for (entry = (HITLS_X509_CrlEntry *)BSL_LIST_GET_FIRST(revokeList); entry != NULL; entry =
         (HITLS_X509_CrlEntry *)BSL_LIST_GET_NEXT(revokeList)) {
         ASSERT_TRUE(entry->serialNumber.buff != NULL);
-        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &serialNum,
+        ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_SERIALNUM, &serialNum,
             sizeof(BSL_Buffer)), HITLS_PKI_SUCCESS);
         ASSERT_TRUE(serialNum.dataLen > 0 && serialNum.dataLen <= 20);
         ASSERT_NE(serialNum.data, NULL);
-        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(BSL_TIME)),
+        ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME, &time, sizeof(BSL_TIME)),
             HITLS_PKI_SUCCESS);
         ASSERT_NE(time.year, 0);
-        ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON,
+        ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_REASON,
             &reason, sizeof(int32_t)), HITLS_PKI_SUCCESS);
         ASSERT_TRUE(reason >= 0 && reason <= 11);
         reason = 0;
@@ -886,24 +887,24 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
 {
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
     serialNum[3] = ser;
-    HITLS_X509_CrlEntry *entry = HITLS_X509_CrlRevokedNew();
+    HITLS_X509_CrlEntry *entry = HITLS_X509_CrlEntryNew();
     ASSERT_NE(entry, NULL);
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM,
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM,
         serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
 
     BSL_TIME revokeTime = {0};
     ASSERT_EQ(BSL_SAL_SysTimeGet(&revokeTime), BSL_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)),
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)),
         HITLS_PKI_SUCCESS);
     HITLS_X509_RevokeExtReason reason = {0, 1};  // keyCompromise
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason,
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason,
         sizeof(HITLS_X509_RevokeExtReason)), HITLS_PKI_SUCCESS);
 
     // Set invalid time (optional)
     BSL_TIME invalidTime = revokeTime;
     invalidTime.day -= 1;  // Set invalid time to 1 day before revocation
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
         &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
 
     // Set certificate issuer (optional, only needed for indirect CRLs)
@@ -911,12 +912,12 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
         false,  // non-critical
         issuerDN  // Use the same DN as CRL issuer for this test
     };
-    ASSERT_EQ(HITLS_X509_CrlRevokedCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
         &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, sizeof(HITLS_X509_CrlEntry)),
         HITLS_PKI_SUCCESS);
-    HITLS_X509_CrlRevokedFree(entry);
+    HITLS_X509_CrlEntryFree(entry);
     return HITLS_PKI_SUCCESS;
 EXIT:
     return -1;
