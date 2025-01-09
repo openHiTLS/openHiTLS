@@ -25,6 +25,8 @@
 #include "hitls_cert_local.h"
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
+#include "hitls_pki_pkcs12.h"
+#include "hitls_pki_cert.h"
 
 void HITLS_PKCS12_AttributesFree(void *attribute)
 {

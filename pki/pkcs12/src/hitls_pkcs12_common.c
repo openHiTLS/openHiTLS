@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "hitls_pki.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "securec.h"
@@ -23,12 +22,12 @@
 #include "crypt_errno.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
-#include "hitls_pkcs12_local.h"
 #include "crypt_encode.h"
 #include "crypt_eal_encode.h"
-#include "bsl_type.h"
 #include "bsl_bytes.h"
 #include "crypt_eal_md.h"
+#include "hitls_pki_pkcs12.h"
+#include "hitls_pkcs12_local.h"
 
 #define HITLS_P12_CTX_SPECIFIC_TAG_EXTENSION 0
 
