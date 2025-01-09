@@ -17,7 +17,7 @@
 #define PRIVPASS_TOKEN_H
 
 #include <stdint.h>
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_params.h"
 #include "auth_params.h"
 #include "auth_privpass_token.h"
