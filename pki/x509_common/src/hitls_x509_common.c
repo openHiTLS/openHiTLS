@@ -15,11 +15,9 @@
 
 #include "hitls_x509_local.h"
 #include "securec.h"
-#include "bsl_obj.h"
 #include "bsl_sal.h"
 #include "bsl_log_internal.h"
 #include "bsl_binlog_id.h"
-#include "bsl_log.h"
 #include "hitls_pki_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
@@ -29,6 +27,7 @@
 #include "crypt_encode.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "hitls_pki_utils.h"
 
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRawData, uint32_t *tbsRawDataLen)
 {

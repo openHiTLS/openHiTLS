@@ -21,13 +21,13 @@
 #include "crypt_errno.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
-#include "hitls_pki.h"
 #include "hitls_cert_type.h"
 #include "hitls_crypt_type.h"
 #include "crypt_algid.h"
 #include "crypt_eal_pkey.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "hitls_pki_cert.h"
 
 CRYPT_MD_AlgId GetCryptHashAlgFromCertHashAlg(HITLS_HashAlgo hashAlgo)
 {

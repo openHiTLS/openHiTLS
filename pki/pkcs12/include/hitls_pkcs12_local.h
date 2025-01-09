@@ -21,6 +21,7 @@
 #include "bsl_obj.h"
 #include "sal_atomic.h"
 #include "hitls_x509_local.h"
+#include "hitls_pki_cert.h"
 #include "crypt_eal_encode.h"
 
 #ifdef __cplusplus

@@ -15,7 +15,6 @@
 
 #include <stdio.h>
 #include "securec.h"
-#include "hitls_pki.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "sal_time.h"
@@ -28,8 +27,6 @@
 #include "crypt_eal_encode.h"
 #include "crypt_encode.h"
 #include "crypt_errno.h"
-#include "crypt_types.h"
-#include "crypt_eal_pkey.h"
 #include "crypt_eal_md.h"
 #include "bsl_pem_internal.h"
 #include "bsl_err_internal.h"
@@ -37,6 +34,8 @@
 #include "hitls_cert_local.h"
 #include "hitls_print_local.h"
 #include "crypt_encode.h"
+#include "hitls_pki_csr.h"
+#include "hitls_pki_cert.h"
 
 #define HITLS_CERT_CTX_SPECIFIC_TAG_VER       0
 #define HITLS_CERT_CTX_SPECIFIC_TAG_ISSUERID  1
@@ -421,7 +420,7 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
     return ret;
 }
 
-int32_t HITLS_X509_CertMulParseFile(int32_t format, const char *path, HITLS_X509_List **certlist)
+int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X509_List **certlist)
 {
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
@@ -630,8 +629,8 @@ typedef bool (*SetParamCheck)(const void *val, int32_t valLen);
 
 static bool VersionCheck(const void *val, int32_t valLen)
 {
-    return valLen == sizeof(int32_t) && *(const int32_t *)val >= HITLS_CERT_VERSION_1 &&
-        *(const int32_t *)val <= HITLS_CERT_VERSION_3;
+    return valLen == sizeof(int32_t) && *(const int32_t *)val >= HITLS_X509_VERSION_1 &&
+        *(const int32_t *)val <= HITLS_X509_VERSION_3;
 }
 
 static int32_t CertSetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
@@ -809,7 +808,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
         *res = false;
         return HITLS_PKI_SUCCESS;
     }
-    if (issue->tbs.version == HITLS_CERT_VERSION_3 && subject->tbs.version == HITLS_CERT_VERSION_3) {
+    if (issue->tbs.version == HITLS_X509_VERSION_3 && subject->tbs.version == HITLS_X509_VERSION_3) {
         ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.subjectName, &issue->tbs.serialNum);
         if (ret != HITLS_PKI_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
             return ret;
@@ -826,7 +825,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
      * then the certified public key MUST NOT be used to verify certificate signatures.
      */
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)issue->tbs.ext.extData;
-    if (issue->tbs.version == HITLS_CERT_VERSION_3 && !(certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) &&
+    if (issue->tbs.version == HITLS_X509_VERSION_3 && !(certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) &&
         !certExt->isCa) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_CA);
         return HITLS_X509_ERR_CERT_NOT_CA;
@@ -855,7 +854,7 @@ int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject,
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert)
 {
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
-    if (cert->tbs.version == HITLS_CERT_VERSION_3) {
+    if (cert->tbs.version == HITLS_X509_VERSION_3) {
         if (!(certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS)) {
             return false;
         } else {
@@ -891,7 +890,7 @@ static int32_t EncodeTbsItems(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *signAlg,
         goto ERR;
     }
 
-    if (tbs->version == HITLS_CERT_VERSION_3) {
+    if (tbs->version == HITLS_X509_VERSION_3) {
         ret = HITLS_X509_EncodeExt(BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
             HITLS_CERT_CTX_SPECIFIC_TAG_EXTENSION, tbs->ext.extList, ext);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -954,7 +953,7 @@ static int32_t EncodeTbsCertificate(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *tb
     uint8_t ver = (uint8_t)tbs->version;
     BSL_ASN1_Template templ = {g_tbsTempl, sizeof(g_tbsTempl) / sizeof(g_tbsTempl[0])};
     BSL_ASN1_Buffer asns[HITLS_X509_CERT_TBS_SIZE] = {
-        {BSL_ASN1_TAG_INTEGER, ver == HITLS_CERT_VERSION_1 ? 0 : 1, ver == HITLS_CERT_VERSION_1 ? NULL : &ver}, // 0
+        {BSL_ASN1_TAG_INTEGER, ver == HITLS_X509_VERSION_1 ? 0 : 1, ver == HITLS_X509_VERSION_1 ? NULL : &ver}, // 0
         tbs->serialNum,                                        // 1 serial number
         signAlg,                                               // 2 sigAlg
         issuer,                                                // 3 issuer
@@ -971,7 +970,7 @@ static int32_t EncodeTbsCertificate(HITLS_X509_CertTbs *tbs, BSL_ASN1_Buffer *tb
     BSL_SAL_Free(issuer.buff);
     BSL_SAL_Free(subject.buff);
     BSL_SAL_Free(pubkey.buff);
-    if (ver == HITLS_CERT_VERSION_3 && ext.buff != NULL) {
+    if (ver == HITLS_X509_VERSION_3 && ext.buff != NULL) {
         BSL_SAL_Free(ext.buff);
     }
     return ret;
@@ -1023,7 +1022,7 @@ static int32_t CheckCertTbs(HITLS_X509_Cert *cert)
     if (cert == NULL) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (BSL_LIST_COUNT(cert->tbs.ext.extList) > 0 && cert->tbs.version != HITLS_CERT_VERSION_3) {
+    if (BSL_LIST_COUNT(cert->tbs.ext.extList) > 0 && cert->tbs.version != HITLS_X509_VERSION_3) {
         return HITLS_X509_ERR_CERT_INACCURACY_VERSION;
     }
     if (cert->tbs.serialNum.buff == NULL || cert->tbs.serialNum.len == 0) {
