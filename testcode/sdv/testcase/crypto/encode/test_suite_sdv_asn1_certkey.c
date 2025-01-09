@@ -605,7 +605,53 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_ENCODE_RSAPSS_PUBLICKEY_BUFF_TC001(char *path, Hex *asn1)
+void SDV_BSL_ASN1_ENCODE_AND_DECODE_RSAPSS_PUBLICKEY_TC001(int keyLen, int saltLen)
+{
+    TestMemInit();
+    uint8_t e[] = {1, 0, 1};  // RSA public exponent
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *decodedPkey = NULL;
+    int32_t mdId = CRYPT_MD_SHA256;
+    BSL_Buffer encode = {0};
+    // set rsa para
+    para.id = CRYPT_PKEY_RSA;
+    para.para.rsaPara.e = e;
+    para.para.rsaPara.eLen = 3; // public exponent length = 3
+    para.para.rsaPara.bits = keyLen;
+    // pss param
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+        BSL_PARAM_END};
+    // create new pkey ctx
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    ASSERT_TRUE(pkey != NULL);
+
+    // set para and generate key pair
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    // encode key
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode),
+        CRYPT_SUCCESS);
+    // decode key
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encode, NULL, 0, &decodedPkey),
+        CRYPT_SUCCESS);
+    ASSERT_TRUE(decodedPkey != NULL);
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(decodedPkey);
+    BSL_SAL_FREE(encode.data);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_RSAPSS_PUBLICKEY_BUFF_TC002(char *path, Hex *asn1)
 {
     RegisterLogFunc();
     CRYPT_RandRegist(RandFunc);

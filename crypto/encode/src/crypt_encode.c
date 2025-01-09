@@ -477,7 +477,7 @@ static int32_t EncodeMgfAlg(CRYPT_MD_AlgId mgfId, BSL_ASN1_Buffer *asn)
     return CRYPT_SUCCESS;
 }
 
-static int32_t EncodeSaltLen(uint64_t saltLen, BSL_ASN1_Buffer *asn)
+static int32_t EncodeSaltLen(int32_t saltLen, BSL_ASN1_Buffer *asn)
 {
     if (saltLen == 20) { // 20 : default saltLen
         asn->tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED |
@@ -487,7 +487,7 @@ static int32_t EncodeSaltLen(uint64_t saltLen, BSL_ASN1_Buffer *asn)
         return CRYPT_SUCCESS;
     }
     BSL_ASN1_Buffer saltAsn = {0};
-    int32_t ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, saltLen, &saltAsn);
+    int32_t ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, (uint64_t)saltLen, &saltAsn);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
