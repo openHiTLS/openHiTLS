@@ -25,13 +25,12 @@
 #include <stdint.h>
 #include "crypt_types.h"
 #include "bsl_sal.h"
-#include "bsl_params.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-typedef struct EAL_LibCtx CRYPT_EAL_LibCtx;
 /* The hitls framework generates context for each provider */
 typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 

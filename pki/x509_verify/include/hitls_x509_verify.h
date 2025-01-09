@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include "bsl_asn1.h"
-#include "hitls_pki.h"
+#include "hitls_pki_x509.h"
 #include "sal_atomic.h"
 
 #ifdef __cplusplus

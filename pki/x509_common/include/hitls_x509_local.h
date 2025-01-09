@@ -19,11 +19,9 @@
 #include <stdint.h>
 #include "bsl_asn1.h"
 #include "bsl_obj.h"
-#include "bsl_uio.h"
-#include "hitls_pki.h"
-#include "crypt_types.h"
 #include "crypt_eal_pkey.h"
 #include "sal_atomic.h"
+#include "hitls_pki_types.h"
 
 #ifdef __cplusplus
 extern "C" {
