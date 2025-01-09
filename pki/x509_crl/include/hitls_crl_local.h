@@ -72,7 +72,7 @@ typedef struct _HITLS_X509_Crl {
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
-int32_t HITLS_X509_CrlMulParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist);
+int32_t HITLS_X509_CrlParseBundleBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist);
 #ifdef __cplusplus
 }
 #endif

@@ -17,7 +17,7 @@
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
 #include "bsl_sal.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_err_internal.h"
 #include "hitls_pki_errno.h"
 #include "hitls_x509_local.h"

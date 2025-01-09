@@ -17,11 +17,11 @@
 
 #include "bsl_sal.h"
 #include "securec.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_log.h"
 #include "bsl_init.h"
 #include "bsl_list.h"
-#include "hitls_pki.h"
+#include "hitls_pki_x509.h"
 #include "hitls_pki_errno.h"
 #include "hitls_x509_verify.h"
 #include "hitls_cert_local.h"

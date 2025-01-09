@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "hitls_pki.h"
+#include "hitls_pki_crl.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "securec.h"
@@ -126,7 +126,7 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     if (crl->signAlgId.algId == (BslCid)BSL_CID_SM2DSAWITHSM3) {
         BSL_SAL_FREE(crl->signAlgId.sm2UserId.data);
     }
-    BSL_LIST_FREE(crl->tbs.revokedCerts, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlRevokedFree);
+    BSL_LIST_FREE(crl->tbs.revokedCerts, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlEntryFree);
     X509_ExtFree(&crl->tbs.crlExt, false);
     BSL_SAL_ReferencesFree(&(crl->references));
     BSL_SAL_FREE(crl->rawData);
@@ -807,7 +807,7 @@ ERR:
     return ret;
 }
 
-int32_t HITLS_X509_CrlMulParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist)
+int32_t HITLS_X509_CrlParseBundleBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist)
 {
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crllist == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -841,7 +841,7 @@ int32_t HITLS_X509_CrlParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    int32_t ret = HITLS_X509_CrlMulParseBuff(format, encode, &list);
+    int32_t ret = HITLS_X509_CrlParseBundleBuff(format, encode, &list);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -872,7 +872,7 @@ int32_t HITLS_X509_CrlParseFile(int32_t format, const char *path, HITLS_X509_Crl
     return ret;
 }
 
-int32_t HITLS_X509_CrlMulParseFile(int32_t format, const char *path, HITLS_X509_List **crllist)
+int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X509_List **crllist)
 {
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
@@ -882,7 +882,7 @@ int32_t HITLS_X509_CrlMulParseFile(int32_t format, const char *path, HITLS_X509_
     }
 
     BSL_Buffer encode = {data, dataLen};
-    ret = HITLS_X509_CrlMulParseBuff(format, &encode, crllist);
+    ret = HITLS_X509_CrlParseBundleBuff(format, &encode, crllist);
     BSL_SAL_Free(data);
     return ret;
 }
@@ -1219,7 +1219,7 @@ int32_t HITLS_X509_CrlVerify(void *pubkey, const HITLS_X509_Crl *crl)
     return ret;
 }
 
-HITLS_X509_CrlEntry *HITLS_X509_CrlRevokedNew(void)
+HITLS_X509_CrlEntry *HITLS_X509_CrlEntryNew(void)
 {
     HITLS_X509_CrlEntry *entry = BSL_SAL_Malloc(sizeof(HITLS_X509_CrlEntry));
     if (entry == NULL) {
@@ -1233,7 +1233,7 @@ HITLS_X509_CrlEntry *HITLS_X509_CrlRevokedNew(void)
     return entry;
 }
 
-void HITLS_X509_CrlRevokedFree(HITLS_X509_CrlEntry *entry)
+void HITLS_X509_CrlEntryFree(HITLS_X509_CrlEntry *entry)
 {
     if (entry == NULL) {
         return;
@@ -1459,7 +1459,7 @@ static int32_t RevokedGet(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, 
     }
 }
 
-int32_t HITLS_X509_CrlRevokedCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, int32_t valLen)
+int32_t HITLS_X509_CrlEntryCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, int32_t valLen)
 {
     if (revoked == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);

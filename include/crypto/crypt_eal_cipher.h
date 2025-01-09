@@ -26,7 +26,6 @@
 #include <stdbool.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
