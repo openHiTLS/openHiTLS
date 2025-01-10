@@ -43,10 +43,10 @@ typedef struct {
 typedef void (CRYPT_EAL_CvtVoid)(void);
 
 /* capFuncs */
-#define CRYPT_EAL_CAP_GETENTROPY   1 // Callback definition CRYPT_RAL_GetEntropy, in crypt_types.h
-#define CRYPT_EAL_CAP_CLEANENTROPY 2 // Callback definition CRYPT_RAL_CleanEntropy
-#define CRYPT_EAL_CAP_GETNONCE     3 // Callback definition CRYPT_RAL_GetNonce
-#define CRYPT_EAL_CAP_CLEANNONCE   4 // Callback definition CRYPT_RAL_CleanNonce
+#define CRYPT_EAL_CAP_GETENTROPY   1 // Callback definition CRYPT_EAL_GetEntropyCb, in crypt_types.h
+#define CRYPT_EAL_CAP_CLEANENTROPY 2 // Callback definition CRYPT_EAL_CleanEntropyCb
+#define CRYPT_EAL_CAP_GETNONCE     3 // Callback definition CRYPT_EAL_GetNonceCb
+#define CRYPT_EAL_CAP_CLEANNONCE   4 // Callback definition CRYPT_EAL_CleanNonceCb
 
 /* get information from mgrCtx, such as entropy source context */
 #define CRYPT_EAL_CAP_MGRCTXCTRL   5
@@ -112,8 +112,7 @@ typedef int32_t (*CRYPT_EAL_ImplCipherInitCtx)(void *ctx, const uint8_t *key, ui
     const uint8_t *iv, uint32_t ivLen, const BSL_Param *param, bool enc);
 typedef int32_t (*CRYPT_EAL_ImplCipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplCipherFinal)(void *ctx, const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CRYPT_EAL_ImplCipherFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplCipherDeinitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplCipherCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);

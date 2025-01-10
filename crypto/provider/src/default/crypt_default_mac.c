@@ -22,12 +22,38 @@
 #include "crypt_errno.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "crypt_ealinit.h"
+
+#define MAC_DEINIT_FUNC(name) \
+    static int32_t CRYPT_##name##_DeinitWrapper(void *ctx) \
+    { \
+        CRYPT_##name##_Deinit(ctx); \
+        return CRYPT_SUCCESS; \
+    }
+
+#define MAC_REINIT_FUNC(name) \
+    static int32_t CRYPT_##name##_ReinitWrapper(void *ctx) \
+    { \
+        CRYPT_##name##_Reinit(ctx); \
+        return CRYPT_SUCCESS; \
+    }
+
+#define MAC_FUNCS(name) \
+    MAC_DEINIT_FUNC(name) \
+    MAC_REINIT_FUNC(name)
+
+MAC_FUNCS(HMAC)
 
 void *CRYPT_EAL_DefMacNewCtx(void *provCtx, int32_t algId)
 {
     (void) provCtx;
     void *macCtx = NULL;
-
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Mac(algId) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     switch (algId) {
         case CRYPT_MAC_HMAC_MD5:
         case CRYPT_MAC_HMAC_SHA1:
@@ -51,14 +77,14 @@ void *CRYPT_EAL_DefMacNewCtx(void *provCtx, int32_t algId)
 }
 
 const CRYPT_EAL_Func g_defMacHmac[] = {
-    {CRYPT_EAL_IMPLMAC_NEWCTX, CRYPT_EAL_DefMacNewCtx},
-    {CRYPT_EAL_IMPLMAC_INIT, CRYPT_HMAC_Init},
-    {CRYPT_EAL_IMPLMAC_UPDATE, CRYPT_HMAC_Update},
-    {CRYPT_EAL_IMPLMAC_FINAL, CRYPT_HMAC_Final},
-    {CRYPT_EAL_IMPLMAC_DEINITCTX, CRYPT_HMAC_Deinit},
-    {CRYPT_EAL_IMPLMAC_REINITCTX, CRYPT_HMAC_Reinit},
-    {CRYPT_EAL_IMPLMAC_CTRL, CRYPT_HMAC_Ctrl},
-    {CRYPT_EAL_IMPLMAC_FREECTX, CRYPT_HMAC_FreeCtx},
+    {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
+    {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_HMAC_Init},
+    {CRYPT_EAL_IMPLMAC_UPDATE, (CRYPT_EAL_ImplMacUpdate)CRYPT_HMAC_Update},
+    {CRYPT_EAL_IMPLMAC_FINAL, (CRYPT_EAL_ImplMacFinal)CRYPT_HMAC_Final},
+    {CRYPT_EAL_IMPLMAC_DEINITCTX, (CRYPT_EAL_ImplMacDeInitCtx)CRYPT_HMAC_DeinitWrapper},
+    {CRYPT_EAL_IMPLMAC_REINITCTX, (CRYPT_EAL_ImplMacReInitCtx)CRYPT_HMAC_ReinitWrapper},
+    {CRYPT_EAL_IMPLMAC_CTRL, (CRYPT_EAL_ImplMacCtrl)CRYPT_HMAC_Ctrl},
+    {CRYPT_EAL_IMPLMAC_FREECTX, (CRYPT_EAL_ImplMacFreeCtx)CRYPT_HMAC_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 
