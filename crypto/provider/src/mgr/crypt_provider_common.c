@@ -86,11 +86,11 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param
     ctx->seedCtx = seedCtx;
     // Construct input method structure array
     CRYPT_EAL_Func capFuncs[] = {
-        {CRYPT_EAL_CAP_GETENTROPY, meth.getEntropy},
-        {CRYPT_EAL_CAP_CLEANENTROPY, meth.cleanEntropy},
-        {CRYPT_EAL_CAP_GETNONCE, meth.getNonce},
-        {CRYPT_EAL_CAP_CLEANNONCE, meth.cleanNonce},
-        {CRYPT_EAL_CAP_MGRCTXCTRL, CRYPT_EAL_ProvMgrCtrl},
+        {CRYPT_EAL_CAP_GETENTROPY, (CRYPT_EAL_GetEntropyCb)meth.getEntropy},
+        {CRYPT_EAL_CAP_CLEANENTROPY, (CRYPT_EAL_CleanEntropyCb)meth.cleanEntropy},
+        {CRYPT_EAL_CAP_GETNONCE, (CRYPT_EAL_GetNonceCb)meth.getNonce},
+        {CRYPT_EAL_CAP_CLEANNONCE, (CRYPT_EAL_CleanNonceCb)meth.cleanNonce},
+        {CRYPT_EAL_CAP_MGRCTXCTRL, (CRYPT_EAL_ProvMgrCtrlCb)CRYPT_EAL_ProvMgrCtrl},
         CRYPT_EAL_FUNC_END  // End marker
     };
 
