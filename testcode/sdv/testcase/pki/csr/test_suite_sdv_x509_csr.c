@@ -15,7 +15,8 @@
 
 /* BEGIN_HEADER */
 #include "hitls_csr_local.h"
-#include "hitls_pki.h"
+#include "hitls_pki_csr.h"
+#include "hitls_pki_utils.h"
 #include "bsl_list.h"
 #include "sal_file.h"
 #include "bsl_obj_internal.h"

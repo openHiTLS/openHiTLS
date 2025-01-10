@@ -26,8 +26,7 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_eal_provider.h"
-#include "crypt_eal_pkey.h"
+#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {

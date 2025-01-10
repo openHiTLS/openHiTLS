@@ -73,8 +73,6 @@ typedef struct {
     EAL_MdMethod *mdMeth;
 } EAL_CidToMdMeth;
 
-#define DEFAULT_PROVIDER_PARAM_TYPE 0
-
 /* provide asymmetric primitive method */
 typedef void *(*PkeyNew)(void);
 typedef void* (*PkeyProvNew)(void *provCtx, int32_t algId);

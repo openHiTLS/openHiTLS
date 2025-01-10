@@ -24,6 +24,7 @@
 #include "crypt_eal_encode.h"
 #include "crypt_util_rand.h"
 #include "privpass_token.h"
+#include "bsl_sal.h"
 
 static int32_t ConvertCryptoAlgId(int32_t algId)
 {

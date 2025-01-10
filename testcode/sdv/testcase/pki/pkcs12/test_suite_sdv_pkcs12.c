@@ -17,9 +17,9 @@
 
 #include "bsl_sal.h"
 #include "securec.h"
-#include "hitls_pki.h"
+#include "hitls_pki_pkcs12.h"
 #include "hitls_pki_errno.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_log.h"
 #include "sal_file.h"
 #include "bsl_init.h"
@@ -27,7 +27,7 @@
 #include "hitls_crl_local.h"
 #include "hitls_cert_type.h"
 #include "hitls_cert_local.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "crypt_errno.h"
 
 /* END_HEADER */

@@ -19,8 +19,8 @@
  * @brief uio module
  */
 
-#ifndef BSL_TYPE_H
-#define BSL_TYPE_H
+#ifndef BSL_TYPES_H
+#define BSL_TYPES_H
 
 #include <stdint.h>
 
@@ -43,4 +43,4 @@ typedef struct {
 }
 #endif
 
-#endif // BSL_TYPE_H
+#endif // BSL_TYPES_H
