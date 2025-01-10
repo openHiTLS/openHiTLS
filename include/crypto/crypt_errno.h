@@ -144,7 +144,7 @@ enum CRYPT_ERROR {
     CRYPT_EAL_PKEY_CMP_DIFF_KEY_TYPE,   /**< Pkey comparison failure: different algorithm types. */
     CRYPT_EAL_ERR_PART_OVERLAP,         /**< Some memory overlap. */
     CRYPT_EAL_INTO_TYPE_NOT_SUPPORT,    /**< The info type is not supported. */
-	CRYPT_EAL_ALG_ASM_NOT_SUPPORT,      /**< Algorithm assembly is not supported. */
+    CRYPT_EAL_ALG_ASM_NOT_SUPPORT,      /**< Algorithm assembly is not supported. */
 
     CRYPT_SHA2_INPUT_OVERFLOW = 0x01050001, /**< The length of the input data exceeds the maximum
                                                      processing range of SHA2. */

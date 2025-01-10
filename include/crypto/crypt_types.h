@@ -334,7 +334,7 @@ typedef struct {
      * @param lenRange  [IN] Entropy source length range.
      * @retval 0 indicates success, and other values indicate failure.
      */
-typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
+typedef int32_t (*CRYPT_EAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
 
     /**
      * @ingroup crypt_types
@@ -343,7 +343,7 @@ typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32
      * @param entropy [OUT] Entropy source data
      * @retval  void
      */
-typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
+typedef void (*CRYPT_EAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
 
     /**
      * @ingroup crypt_types
@@ -358,7 +358,7 @@ typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
      * @param lenRange [IN] Random number length range.
      * @retval 0 indicates success, and other values indicate failure.
      */
-typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
+typedef int32_t (*CRYPT_EAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
 
     /**
     * @ingroup crypt_types
@@ -367,7 +367,7 @@ typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t s
     * @param nonce [OUT] random number
     * @retval void
     */
-typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
+typedef void (*CRYPT_EAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
 
 /**
  * @ingroup crypt_types
@@ -379,10 +379,10 @@ typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
  * obtaining random numbers can be null.
  */
 typedef struct {
-    CRYPT_RAL_GetEntropyCb getEntropy;
-    CRYPT_RAL_CleanEntropyCb cleanEntropy;
-    CRYPT_RAL_GetNonceCb getNonce;
-    CRYPT_RAL_CleanNonceCb cleanNonce;
+    CRYPT_EAL_GetEntropyCb getEntropy;
+    CRYPT_EAL_CleanEntropyCb cleanEntropy;
+    CRYPT_EAL_GetNonceCb getNonce;
+    CRYPT_EAL_CleanNonceCb cleanNonce;
 } CRYPT_RandSeedMethod;
 
 /**
