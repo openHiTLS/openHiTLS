@@ -32,6 +32,7 @@
 #include "eal_common.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_ealinit.h"
 #include "bsl_err_internal.h"
 #include "crypt_provider.h"
 #include "bsl_params.h"
@@ -101,6 +102,12 @@ ERR:
 
 CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id)
 {
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Pkey(id) != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, id, CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     return PkeyNewDefaultCtx(id);
 }
 
