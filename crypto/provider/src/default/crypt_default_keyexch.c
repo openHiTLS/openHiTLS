@@ -29,22 +29,22 @@ typedef struct {
 } CRYPT_EAL_DefPkeyCtx;
 
 const CRYPT_EAL_Func g_defExchX25519[] = {
-    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_CURVE25519_ComputeSharedKey},
+    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_CURVE25519_ComputeSharedKey},
     CRYPT_EAL_FUNC_END
 };
 
 const CRYPT_EAL_Func g_defExchDh[] = {
-    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_DH_ComputeShareKey},
+    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_DH_ComputeShareKey},
     CRYPT_EAL_FUNC_END
 };
 
 const CRYPT_EAL_Func g_defExchEcdh[] = {
-    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_ECDH_ComputeShareKey},
+    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_ECDH_ComputeShareKey},
     CRYPT_EAL_FUNC_END
 };
 
 const CRYPT_EAL_Func g_defExchSm2[] = {
-    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, CRYPT_SM2_KapComputeKey},
+    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_SM2_KapComputeKey},
     CRYPT_EAL_FUNC_END
 };
 
