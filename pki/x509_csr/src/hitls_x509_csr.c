@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "hitls_pki.h"
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_asn1.h"
@@ -27,7 +26,9 @@
 #include "crypt_errno.h"
 #include "sal_file.h"
 #include "crypt_eal_encode.h"
+#include "hitls_pki_csr.h"
 #include "hitls_csr_local.h"
+#include "hitls_pki_utils.h"
 
 #define HITLS_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE  0
 
