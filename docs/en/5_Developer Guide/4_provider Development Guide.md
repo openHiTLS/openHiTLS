@@ -105,7 +105,7 @@ These interfaces wrap the provider's exposed APIs, automatically initializing al
 - **KDF Interface: `CRYPT_EAL_ProviderKdfNewCtx`**
 - **MAC Interface: `CRYPT_EAL_ProviderMacNewCtx`**
 - **Message Digest Interface: `CRYPT_EAL_ProviderMdNewCtx`**
-- **Random Number Interfaces: `CRYPT_EAL_ProviderRandInitCtx`, `CRYPT_EAL_ProviderDrbgInitCtx`**
+- **Random Number Interfaces: `CRYPT_EAL_ProviderRandInitCtx`, `CRYPT_EAL_ProviderDrbgNewCtx`**
 
 **Provider Layer Exposed Interfaces**:
 
