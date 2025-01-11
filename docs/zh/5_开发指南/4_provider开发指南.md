@@ -105,7 +105,7 @@ OpenHiTLS 的 Provider 管理框架支持动态加载、管理和使用加密 Pr
 - **kdf接口：`CRYPT_EAL_ProviderKdfNewCtx`**
 - **mac接口：`CRYPT_EAL_ProviderMacNewCtx`**
 - **md接口：`CRYPT_EAL_ProviderMdNewCtx`**
-- **随机数接口：`CRYPT_EAL_ProviderRandInitCtx`、`CRYPT_EAL_ProviderDrbgInitCtx`**
+- **随机数接口：`CRYPT_EAL_ProviderRandInitCtx`、`CRYPT_EAL_ProviderDrbgNewCtx`**
 
 
 **provider底层对外接口**：
