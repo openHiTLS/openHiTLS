@@ -183,7 +183,7 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *s
  * @retval Success: cipher ctx.
  *         Fails: NULL.
  */
-CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
+CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
     BSL_Param *param);
 
 /**
