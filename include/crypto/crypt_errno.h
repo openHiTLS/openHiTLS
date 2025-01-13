@@ -114,6 +114,9 @@ enum CRYPT_ERROR {
                                             The blind/unblind operation requires previous blinding parameters. */
     CRYPT_RSA_ERR_NO_PUBKEY_INFO,       /**< The rsa pub key is missing. */
     CRYPT_RSA_PADDING_NOT_SUPPORTED,    /**< The specified RSA padding mode is not supported in blinding. */
+    CRYPT_RSA_GET_SALT_LEN_ERROR,       /**< The input length of getting salt-len is incorrect. */
+    CRYPT_RSA_GET_SALT_NOT_PSS_ERROR,   /**< When the padding type of the key is not pss, and get the salt len. */
+    CRYPT_RSA_ERR_PSS_PARAMS,            /**< The parameter is error when the padding type of the key is pss. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
     CRYPT_EAL_ERR_ALGID,                /**< Incorrect algorithm ID. */
