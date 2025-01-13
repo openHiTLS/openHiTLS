@@ -607,6 +607,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_ASN1_ENCODE_AND_DECODE_RSAPSS_PUBLICKEY_TC001(int keyLen, int saltLen)
 {
+    RegisterLogFunc();
     TestMemInit();
     uint8_t e[] = {1, 0, 1};  // RSA public exponent
     CRYPT_EAL_PkeyCtx *pkey = NULL;
