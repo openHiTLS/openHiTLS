@@ -548,7 +548,7 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         return HITLS_X509_ERR_MGF_NOT_MATCH;
     }
     int32_t saltLen;
-    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_SALT, &saltLen, sizeof(int32_t));
+    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -771,7 +771,7 @@ static int32_t X509_SetRsaPssDefaultParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdI
         return ret;
     }
     int32_t saltLen;
-    ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_SALT, &saltLen, sizeof(int32_t));
+    ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
