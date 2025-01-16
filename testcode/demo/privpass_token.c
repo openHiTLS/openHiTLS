@@ -191,11 +191,11 @@ int main(void) {
     uint8_t originInfo[] = "Example Origin";
 
     BSL_Param param[5] = {
-        {AUTH_PARAM_PRIV_PASS_TOKENTYPE, BSL_PARAM_TYPE_UINT16, &tokenTypeValue, 2, 2},
-        {AUTH_PARAM_PRIV_PASS_ISSUERNAME, BSL_PARAM_TYPE_OCTETS_PTR, issuerName, sizeof(issuerName),
+        {AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_TYPE, BSL_PARAM_TYPE_UINT16, &tokenTypeValue, 2, 2},
+        {AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_ISSUERNAME, BSL_PARAM_TYPE_OCTETS_PTR, issuerName, sizeof(issuerName),
             sizeof(issuerName)},
-        {AUTH_PARAM_PRIV_PASS_REDEMPTION, BSL_PARAM_TYPE_OCTETS_PTR, redemption, 0, 0},
-        {AUTH_PARAM_PRIV_PASS_ORIGININFO, BSL_PARAM_TYPE_OCTETS_PTR, originInfo, sizeof(originInfo),
+        {AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_REDEMPTION, BSL_PARAM_TYPE_OCTETS_PTR, redemption, 0, 0},
+        {AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_ORIGININFO, BSL_PARAM_TYPE_OCTETS_PTR, originInfo, sizeof(originInfo),
             sizeof(originInfo)},
         BSL_PARAM_END
     };
