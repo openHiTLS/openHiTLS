@@ -14,13 +14,12 @@ openHiTLS架构高度模块化，可通过模块和特性配置。RAM/ROM尺寸�
 
 ## 组件简介
 
-目前，openHiTLS有4个组件，其中BSL组件需和其他组件一起使用。
+目前，openHiTLS有5个组件，其中BSL组件需和其他组件一起使用。
 - BSL是Base Support Layer的缩写，提供基础C类标准的增强功能和OS适配器，需与其他模块一起使用
 - 密码算法组件（Crypto）提供了完整的密码功能，且性能较优。该组件既可以被TLS使用，也可与BSL一起使用
 - TLS是Transport Layer Security的缩写，涵盖了TLS1.3及之前的TLS版本，会与Crypto、BSL以及其他三方密码组件或PKI库一起使用
 - PKI组件当前提供了能够支撑TLS协议建链的基础功能，后续逐步完善功能
-- Auth认证组件提供了认证功能，当前提供了基于公钥的认证功能
-
+- Auth认证组件提供了认证功能，当前提供了基于RFC9578的publicly token认证功能
 
 ## 开发
 
