@@ -51,6 +51,17 @@ typedef enum {
     HITLS_AUTH_PRIVPASS_INVALID_TOKEN_BLINDED_MSG,         /* Invalid blinded message in token */
     HITLS_AUTH_PRIVPASS_INVALID_TOKEN_CHALLENGE_DIGEST,    /* Invalid token challenge digest */
     HITLS_AUTH_PRIVPASS_CHECK_KEYPAIR_FAILED,              /* Key pair verification failed */
+    HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_TYPE,          /* Invalid pubkey type, now only support rsa */
+    HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_INFO,  /* Invalid pubkey padding info, now only support rsa-pss */
+    HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_MD,    /* Invalid pubkey padding md, now only support rsa-pss-sha384 */
+    HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_BITS,               /* Invalid pubkey bits, now only support rsa-2048 */
+    HITLS_AUTH_PRIVPASS_INVALID_PRVKEY_TYPE,               /* Invalid prikey type, now only support rsa */
+    HITLS_AUTH_PRIVPASS_INVALID_PRVKEY_BITS,               /* Invalid prikey bits, now only support rsa-2048 */
+    HITLS_AUTH_PRIVPASS_NO_ISSUERNAME,                     /* No issuer name in token challenge */
+    HITLS_AUTH_PRIVPASS_NO_RESPONSE_INFO,                  /* No response info in token response */
+    HITLS_AUTH_PRIVPASS_NO_BLINDEDMSG,                     /* No blinded message in token request */
+    HITLS_AUTH_PRIVPASS_NO_AUTHENTICATOR,                  /* No authenticator in token */
+
 } HITLS_AUTH_ERRNO;
 
 #ifdef __cplusplus
