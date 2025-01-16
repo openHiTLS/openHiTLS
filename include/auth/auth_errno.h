@@ -51,6 +51,8 @@ typedef enum {
     HITLS_AUTH_PRIVPASS_INVALID_TOKEN_BLINDED_MSG,         /* Invalid blinded message in token */
     HITLS_AUTH_PRIVPASS_INVALID_TOKEN_CHALLENGE_DIGEST,    /* Invalid token challenge digest */
     HITLS_AUTH_PRIVPASS_CHECK_KEYPAIR_FAILED,              /* Key pair verification failed */
+    HITLS_AUTH_PRIVPASS_NO_BLINDEDMSG,                    /* No blinded message in token request */
+    HITLS_AUTH_PRIVPASS_NO_AUTHENTICATOR,                  /* No authenticator in token */
 } HITLS_AUTH_ERRNO;
 
 #ifdef __cplusplus
