@@ -814,3 +814,317 @@ int32_t HITLS_AUTH_PrivPassSetCryptCb(HITLS_AUTH_PrivPassCtx *ctx, int32_t cbTyp
     }
     return HITLS_AUTH_SUCCESS;
 }
+
+static int32_t PrivPassGetTokenChallengeRequest(HITLS_AUTH_PrivPassToken *ctx, BSL_Param *param)
+{
+    if (param == NULL || ctx->st.tokenChallengeReq == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    if (ctx->st.tokenChallengeReq->challengeReqLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_NO_TOKEN_CHALLENGE_REQUEST);
+        return HITLS_AUTH_PRIVPASS_NO_TOKEN_CHALLENGE_REQUEST;
+    }
+    BSL_Param *output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_REQUEST);
+    if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    if (output->valueLen < ctx->st.tokenChallengeReq->challengeReqLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    (void)memcpy_s(output->value, output->valueLen, ctx->st.tokenChallengeReq->challengeReq,
+        ctx->st.tokenChallengeReq->challengeReqLen);
+    output->useLen = ctx->st.tokenChallengeReq->challengeReqLen;
+    return HITLS_AUTH_SUCCESS;
+}
+
+static int32_t PrivPassGetTokenChallengeContent(HITLS_AUTH_PrivPassToken *obj, int32_t cmd, BSL_Param *param)
+{
+    if (param == NULL || obj->type != HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE || obj->st.tokenChallenge == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    PrivPass_TokenChallenge *challenge = obj->st.tokenChallenge;
+    int32_t target = 0;
+    uint8_t *targetBuff = 0;
+    uint32_t targetLen = 0;
+    switch (cmd) {
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_TYPE:
+            target = AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_TYPE;
+            targetLen = (uint32_t)sizeof(challenge->tokenType);
+            break;
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ISSUERNAME:
+            target = AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_ISSUERNAME;
+            targetBuff = challenge->issuerName.data;
+            targetLen = challenge->issuerName.dataLen;
+            break;
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_REDEMPTION:
+            target = AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_REDEMPTION;
+            targetBuff = challenge->redemption.data;
+            targetLen = challenge->redemption.dataLen;
+            break;
+        default:
+            target = AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_ORIGININFO;
+            targetBuff = challenge->originInfo.data;
+            targetLen = challenge->originInfo.dataLen;
+            break;
+    }
+    BSL_Param *output = BSL_PARAM_FindParam(param, target);
+    if (target == AUTH_PARAM_PRIVPASS_TOKENCHALLENGE_TYPE) {
+        if (output != NULL && output->valueType == BSL_PARAM_TYPE_UINT16) {
+            return BSL_PARAM_SetValue(output, target, BSL_PARAM_TYPE_UINT16, &challenge->tokenType, targetLen);
+        } else {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+            return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+        }
+    }
+    if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    if (output->valueLen < targetLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
+        return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
+    }
+    (void)memcpy_s(output->value, output->valueLen, targetBuff, targetLen);
+    output->useLen = targetLen;
+    return HITLS_AUTH_SUCCESS;
+}
+
+static int32_t PrivPassGetTokenRequestContent(HITLS_AUTH_PrivPassToken *obj, int32_t cmd, BSL_Param *param)
+{
+    if (param == NULL || obj->type != HITLS_AUTH_PRIVPASS_TOKEN_REQUEST || obj->st.tokenRequest == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    PrivPass_TokenRequest *request = obj->st.tokenRequest;
+    BSL_Param *output = NULL;
+    switch (cmd) {
+        case HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_TYPE:
+            output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_TOKENREQUEST_TYPE);
+            if (output != NULL && output->valueType == BSL_PARAM_TYPE_UINT16) {
+                return BSL_PARAM_SetValue(output, AUTH_PARAM_PRIVPASS_TOKENREQUEST_TYPE, BSL_PARAM_TYPE_UINT16,
+                    &request->tokenType, sizeof(request->tokenType));
+            }
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+            return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+        case HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_TRUNCATEDTOKENKEYID:
+            output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_TOKENREQUEST_TRUNCATEDTOKENKEYID);
+            if (output != NULL && output->valueType == BSL_PARAM_TYPE_UINT8) {
+                return BSL_PARAM_SetValue(output, AUTH_PARAM_PRIVPASS_TOKENREQUEST_TRUNCATEDTOKENKEYID, BSL_PARAM_TYPE_UINT8,
+                    &request->truncatedTokenKeyId, 1); // 1 byte.
+            }
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+            return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+        default:
+            output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_TOKENREQUEST_BLINDEDMSG);
+            if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+                return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+            }
+            if (request->blindedMsg.data == NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_NO_BLINDEDMSG);
+                return HITLS_AUTH_PRIVPASS_NO_BLINDEDMSG;
+            }
+            if (output->valueLen < request->blindedMsg.dataLen) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
+                return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
+            }
+            (void)memcpy_s(output->value, output->valueLen, request->blindedMsg.data, request->blindedMsg.dataLen);
+            output->useLen = request->blindedMsg.dataLen;
+            return HITLS_AUTH_SUCCESS;
+    }
+}
+
+static int32_t PrivPassGetTokenResponseContent(HITLS_AUTH_PrivPassToken *ctx, BSL_Param *param)
+{
+    if (param == NULL || ctx->type != HITLS_AUTH_PRIVPASS_TOKEN_RESPONSE || ctx->st.tokenResponse == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    if (ctx->st.tokenResponse->st.pubResp.blindSig == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_TOKEN_RESPONSE);
+        return HITLS_AUTH_PRIVPASS_INVALID_TOKEN_RESPONSE;
+    }
+    BSL_Param *output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_TOKENRESPONSE_INFO);
+    if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    if (output->valueLen < ctx->st.tokenResponse->st.pubResp.blindSigLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
+        return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
+    }
+    (void)memcpy_s(output->value, output->valueLen, ctx->st.tokenResponse->st.pubResp.blindSig,
+        ctx->st.tokenResponse->st.pubResp.blindSigLen);
+    output->useLen = ctx->st.tokenResponse->st.pubResp.blindSigLen;
+    return HITLS_AUTH_SUCCESS;
+}
+
+static int32_t PrivPassGetTokenContent(HITLS_AUTH_PrivPassToken *obj, int32_t cmd, BSL_Param *param)
+{
+    if (param == NULL || obj->type != HITLS_AUTH_PRIVPASS_TOKEN_INSTANCE || obj->st.token == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    PrivPass_TokenInstance *token = obj->st.token;
+    int32_t target;
+    uint8_t *targetBuff = 0;
+    uint32_t targetLen = 0;
+    switch (cmd) {
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_TYPE:
+            target = AUTH_PARAM_PRIVPASS_TOKEN_TYPE;
+            targetLen = (uint32_t)sizeof(token->tokenType);
+            break;
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_NONCE:
+            target = AUTH_PARAM_PRIVPASS_TOKEN_NONCE;
+            targetBuff = token->nonce;
+            targetLen = PRIVPASS_TOKEN_NONCE_LEN;
+            break;
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_CHALLENGEDIGEST:
+            target = AUTH_PARAM_PRIVPASS_TOKEN_CHALLENGEDIGEST;
+            targetBuff = token->challengeDigest;
+            targetLen = PRIVPASS_TOKEN_SHA256_SIZE;
+            break;
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_TOKENKEYID:
+            target = AUTH_PARAM_PRIVPASS_TOKEN_TOKENKEYID;
+            targetBuff = token->tokenKeyId;
+            targetLen = PRIVPASS_TOKEN_SHA256_SIZE;
+            break;
+        default:
+            target = AUTH_PARAM_PRIVPASS_TOKEN_AUTHENTICATOR;
+            targetBuff = token->authenticator.data;
+            targetLen = token->authenticator.dataLen;
+            break;
+    }
+    BSL_Param *output = BSL_PARAM_FindParam(param, target);
+    if (target == AUTH_PARAM_PRIVPASS_TOKEN_TYPE) {
+        if (output != NULL && output->valueType == BSL_PARAM_TYPE_UINT16) {
+            return BSL_PARAM_SetValue(output, target, BSL_PARAM_TYPE_UINT16, &token->tokenType, sizeof(token->tokenType));
+        } else {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+            return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+        }
+    }
+    if (target == AUTH_PARAM_PRIVPASS_TOKEN_AUTHENTICATOR && token->authenticator.data == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_NO_AUTHENTICATOR);
+        return HITLS_AUTH_PRIVPASS_NO_AUTHENTICATOR;
+    }
+    if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    if (output->valueLen < targetLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
+        return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
+    }
+    (void)memcpy_s(output->value, output->valueLen, targetBuff, targetLen);
+    output->useLen = targetLen;
+    return HITLS_AUTH_SUCCESS;
+}
+
+int32_t HITLS_AUTH_PrivPassTokenCtrl(HITLS_AUTH_PrivPassToken *object, int32_t cmd, void *param, uint32_t paramLen)
+{
+    if (object == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    (void)paramLen;
+    switch (cmd) {
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGEREQUEST_INFO:
+            return PrivPassGetTokenChallengeRequest(object, param);
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_TYPE:
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ISSUERNAME:
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_REDEMPTION:
+        case HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ORIGININFO:
+            return PrivPassGetTokenChallengeContent(object, cmd, param);
+        case HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_TYPE:
+        case HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_TRUNCATEDTOKENKEYID:
+        case HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_BLINDEDMSG:
+            return PrivPassGetTokenRequestContent(object, cmd, param);
+        case HITLS_AUTH_PRIVPASS_GET_TOKENRESPONSE_INFO:
+            return PrivPassGetTokenResponseContent(object, param);
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_TYPE:
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_NONCE:
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_CHALLENGEDIGEST:
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_TOKENKEYID:
+        case HITLS_AUTH_PRIVPASS_GET_TOKEN_AUTHENTICATOR:
+            return PrivPassGetTokenContent(object, cmd, param);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_CMD);
+            return HITLS_AUTH_PRIVPASS_INVALID_CMD;
+    }
+}
+
+static int32_t PrivPassGetCtxContent(HITLS_AUTH_PrivPassCtx *ctx, int32_t cmd, BSL_Param *param)
+{
+    if (param == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    BSL_Param *output = NULL;
+    switch (cmd) {
+        case HITLS_AUTH_PRIVPASS_GET_CTX_NONCE:
+            output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_CTX_NONCE);
+            if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+                return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+            }
+            if (output->valueLen < PRIVPASS_TOKEN_NONCE_LEN) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
+                return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
+            }
+            (void)memcpy_s(output->value, output->valueLen, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
+            output->useLen = PRIVPASS_TOKEN_NONCE_LEN;
+            return HITLS_AUTH_SUCCESS;
+        case HITLS_AUTH_PRIVPASS_GET_CTX_TRUNCATEDTOKENKEYID:
+            if (ctx->pubKeyCtx == NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO);
+                return HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO;
+            }
+            output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_CTX_TRUNCATEDTOKENKEYID);
+            if (output == NULL || output->valueType != BSL_PARAM_TYPE_UINT8) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+                return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+            }
+            return BSL_PARAM_SetValue(output, AUTH_PARAM_PRIVPASS_CTX_TRUNCATEDTOKENKEYID, BSL_PARAM_TYPE_UINT8,
+                &ctx->tokenKeyId[PRIVPASS_TOKEN_SHA256_SIZE - 1], 1); // 1 byte
+        default:
+            if (ctx->pubKeyCtx == NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO);
+                return HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO;
+            }
+            output = BSL_PARAM_FindParam(param, AUTH_PARAM_PRIVPASS_CTX_TOKENKEYID);
+            if (output == NULL || output->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+                return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+            }
+            if (output->valueLen < PRIVPASS_TOKEN_SHA256_SIZE) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
+                return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
+            }
+            (void)memcpy_s(output->value, output->valueLen, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
+            output->useLen = PRIVPASS_TOKEN_SHA256_SIZE;
+            return HITLS_AUTH_SUCCESS;
+    }
+}
+
+int32_t HITLS_AUTH_PrivPassCtxCtrl(HITLS_AUTH_PrivPassCtx *ctx, int32_t cmd, void *param, uint32_t paramLen)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+        return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
+    }
+    (void)paramLen;
+    switch (cmd) {
+        case HITLS_AUTH_PRIVPASS_GET_CTX_TOKENKEYID:
+        case HITLS_AUTH_PRIVPASS_GET_CTX_TRUNCATEDTOKENKEYID:
+        case HITLS_AUTH_PRIVPASS_GET_CTX_NONCE:
+            return PrivPassGetCtxContent(ctx, cmd, param);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_CMD);
+            return HITLS_AUTH_PRIVPASS_INVALID_CMD;
+    }
+}
