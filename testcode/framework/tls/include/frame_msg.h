@@ -204,6 +204,8 @@ typedef struct FrameCertItem_ {
     FieldState state;        /* Certificate Field state */
     FRAME_Integer certLen;   /* Certificate length */
     FRAME_Array8 cert;       /* Certificate Content */
+    FRAME_Integer extensionLen;   /* Certificate extension length. only for tls1.3 */
+    FRAME_Array8 extension;       /* Certificate extension Content. only for tls1.3 */
     struct FrameCertItem_ *next;
 } FrameCertItem;
 

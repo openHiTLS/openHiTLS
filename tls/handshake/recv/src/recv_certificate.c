@@ -27,6 +27,8 @@
 #include "hs_common.h"
 #include "hs_verify.h"
 #include "hs_msg.h"
+#include "hs_extensions.h"
+#include "alert.h"
 
 static const int32_t X509_ERR_ALERT_MAP[] = {
     [(HITLS_X509_V_ERR_UNSPECIFIED - 1) & 0XFF] = ALERT_INTERNAL_ERROR,
@@ -414,7 +416,12 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     if (ctx->isClient == false) {
         ctx->plainAlertForbid = true;
     }
-    int32_t ret = CertificateReqCtxCheck(ctx, certs);
+    int32_t ret = HS_CheckReceivedExtension(
+        ctx, CERTIFICATE, certs->extensionTypeMask, HS_EX_TYPE_TLS1_3_ALLOWED_OF_CERTIFICATE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = CertificateReqCtxCheck(ctx, certs);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
