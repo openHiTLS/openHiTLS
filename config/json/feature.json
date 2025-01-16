@@ -1186,10 +1186,7 @@
             "privpass_token": {
                 ".features" : ["privpass_pubtoken"],
                 ".srcs" : "auth/privpass_token/src/*",
-                ".deps": ["platform::Secure_C", "bsl::sal"],
-                ".include": [
-                    "auth/privpass_token/inlcude"
-                ]
+                ".deps": ["platform::Secure_C", "bsl::sal"]
             }
         }
     }
