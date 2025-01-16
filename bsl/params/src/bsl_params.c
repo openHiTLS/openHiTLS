@@ -45,7 +45,7 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
     }
 }
 
-int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *val, uint32_t len)
+static int32_t ParamCheck(BSL_Param *param, int32_t key, uint32_t type)
 {
     if (key == 0) {
         BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_KEY);
@@ -59,6 +59,48 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
         BSL_ERR_PUSH_ERROR(BSL_PARAMS_MISMATCH);
         return BSL_PARAMS_MISMATCH;
     }
+    return BSL_SUCCESS;
+}
+
+static int32_t SetOtherValues(BSL_Param *param, uint32_t type, void *val, uint32_t len)
+{
+    if (param->valueLen != len || val == NULL || param->value == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    switch (type) {
+        case BSL_PARAM_TYPE_UINT8:
+            *(uint8_t *)param->value = *(uint8_t *)val;
+            param->useLen = len;
+            return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_UINT16:
+            *(uint16_t *)param->value = *(uint16_t *)val;
+            param->useLen = len;
+            return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_UINT32:
+            *(uint32_t *)param->value = *(uint32_t *)val;
+            param->useLen = len;
+            return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_OCTETS:
+            (void)memcpy_s(param->value, len, val, len);
+            param->useLen = len;
+            return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_BOOL:
+            *(bool *)param->value = *(bool *)val;
+            param->useLen = len;
+            return BSL_SUCCESS;
+        default:
+            BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_TYPE);
+            return BSL_PARAMS_INVALID_TYPE;
+    }
+}
+
+int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *val, uint32_t len)
+{
+    int32_t ret = ParamCheck(param, key, type);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
     switch (type) {
         case BSL_PARAM_TYPE_OCTETS_PTR:
         case BSL_PARAM_TYPE_FUNC_PTR:
@@ -66,41 +108,8 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
             param->value = val;
             param->useLen = len;
             return BSL_SUCCESS;
-        case BSL_PARAM_TYPE_UINT16:
-            if (param->valueLen != len || val == NULL || param->value == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-                return BSL_INVALID_ARG;
-            }
-            *(uint16_t *)param->value = *(uint16_t *)val;
-            param->useLen = len;
-            return BSL_SUCCESS;
-        case BSL_PARAM_TYPE_UINT32:
-            if (param->valueLen != len || val == NULL || param->value == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-                return BSL_INVALID_ARG;
-            }
-            *(uint32_t *)param->value = *(uint32_t *)val;
-            param->useLen = len;
-            return BSL_SUCCESS;
-        case BSL_PARAM_TYPE_OCTETS:
-            if (param->valueLen < len || val == NULL || param->value == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-                return BSL_INVALID_ARG;
-            }
-            (void)memcpy_s(param->value, len, val, len);
-            param->useLen = len;
-            return BSL_SUCCESS;
-        case BSL_PARAM_TYPE_BOOL:
-            if (param->valueLen != len || val == NULL || param->value == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-                return BSL_INVALID_ARG;
-            }
-            *(bool *)param->value = *(bool *)val;
-            param->useLen = len;
-            return BSL_SUCCESS;
         default:
-            BSL_ERR_PUSH_ERROR(BSL_PARAMS_INVALID_TYPE);
-            return BSL_PARAMS_INVALID_TYPE;
+            return SetOtherValues(param, type, val, len);
     }
 }
 

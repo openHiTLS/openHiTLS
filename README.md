@@ -14,12 +14,12 @@ The architecture of openHiTLS is highly modular, and openHiTLS can be configured
 
 ## Component Introduction
 
-openHiTLS include 4 components currently. The BSL component will be used with other components.
+openHiTLS include 5 components currently. The BSL component will be used with other components.
 - The bsl is short for Base Support Layer, which provides the base C standand enhanced functions and OS adapter. It will be used with other modules
 - The crypto is short for cryptographic algorithms, which provides the full cryptographic functions with high performance. It will be used by tls, and can also be used with bsl
 - The tls is short for Transport Layer Security, which provides all tls protocol versions up to tls1.3. It will be used with crypto and bsl or other third-party crypto and pki libraries
 - The pki component currently provides basic functions that can support TLS to work, and will gradually improve the functions in the future
-- The auth component currently provides basic functions that can support TLS to work, and will gradually improve the functions in the future
+- The Auth component provides the authentication function. Currently, it provides the publicly token authentication based on RFC9578
 
 ## Development
 

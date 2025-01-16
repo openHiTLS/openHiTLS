@@ -38,13 +38,6 @@ typedef struct PrivPass_Ctx HITLS_AUTH_PrivPassCtx;
  */
 typedef struct PrivPass_Token HITLS_AUTH_PrivPassToken;
 
-/**
- * @ingroup auth_privpass
- *
- * priv pass crypt callback structure.
- */
-typedef struct PrivPassCryptCb HITLS_AUTH_PrivPassCryptCb;
-
 /* Token types for different stages of the Private Pass protocol */
 typedef enum {
     HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE_REQUEST = 1, // Initial request for challenge
@@ -56,18 +49,29 @@ typedef enum {
 
 /* Token types for different stages of the Private Pass protocol */
 typedef enum {
-    HITLS_AUTH_PRIV_PASS_PRV_VERIFY_TOKENS = 1, // Private key verification tokens
-    HITLS_AUTH_PRIV_PASS_PUB_VERIFY_TOKENS = 2, // Public key verification tokens
+    HITLS_AUTH_PRIVPASS_PRV_VERIFY_TOKENS = 1, // Private key verification tokens
+    HITLS_AUTH_PRIVPASS_PUB_VERIFY_TOKENS = 2, // Public key verification tokens
 } HITLS_AUTH_PrivPassType;
 
 /* Commands for token operations and parameter retrieval */
 typedef enum {
-    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_REQUEST = 1,    /** Get the token challenge request data */
+    HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGEREQUEST_INFO = 1,    /** Get the challenge request information from token */
     HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_TYPE = 2,    /** Get the type of token challenge */
     HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ISSUERNAME = 3,    /** Get the issuer name from token challenge */
     HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_REDEMPTION = 4,    /** Get the redemption information from token challenge */
     HITLS_AUTH_PRIVPASS_GET_TOKENCHALLENGE_ORIGININFO = 5,    /** Get the origin information from token challenge */
-    HITLS_AUTH_PRIVPASS_GET_TOKEN_NONCE = 6,    /** Get the nonce value from token */
+    HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_TYPE = 6,    /** Get the type of token request */
+    HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_TRUNCATEDTOKENKEYID = 7, /** Get the truncated tokenKey id from tokenRequest */
+    HITLS_AUTH_PRIVPASS_GET_TOKENREQUEST_BLINDEDMSG = 8,    /** Get the blinded message from token request */
+    HITLS_AUTH_PRIVPASS_GET_TOKENRESPONSE_INFO = 9,    /** Get the origin information from token response */
+    HITLS_AUTH_PRIVPASS_GET_TOKEN_TYPE = 10,    /** Get the nonce value from token */
+    HITLS_AUTH_PRIVPASS_GET_TOKEN_NONCE = 11,    /** Get the nonce value from token */
+    HITLS_AUTH_PRIVPASS_GET_TOKEN_CHALLENGEDIGEST = 12,    /** Get the challenge digest from token */
+    HITLS_AUTH_PRIVPASS_GET_TOKEN_TOKENKEYID = 13,    /** Get the token key id from token */
+    HITLS_AUTH_PRIVPASS_GET_TOKEN_AUTHENTICATOR = 14,    /** Get the authenticator from token */
+    HITLS_AUTH_PRIVPASS_GET_CTX_TOKENKEYID = 15,    /** Get the token key id from ctx */
+    HITLS_AUTH_PRIVPASS_GET_CTX_TRUNCATEDTOKENKEYID = 16,    /** Get the truncated token key id from ctx */
+    HITLS_AUTH_PRIVPASS_GET_CTX_NONCE = 17,    /** Get the nonce from ctx */
 } HITLS_AUTH_PrivPassCmd;
 
 typedef enum {
@@ -454,6 +458,20 @@ int32_t HITLS_AUTH_PrivPassSetPrvkey(HITLS_AUTH_PrivPassCtx *ctx, void *param, u
  *          For other error codes, see auth_errno.h.
  */
 int32_t HITLS_AUTH_PrivPassTokenCtrl(HITLS_AUTH_PrivPassToken *object, int32_t cmd, void *param, uint32_t paramLen);
+
+/**
+ * @ingroup auth_privpass
+ * @brief   Control interface for getting/setting various parameters in Priv-Pass Ctx.
+ *
+ * @param   ctx [IN] PrivPass context
+ * @param   cmd [IN] Command to execute, defined in HITLS_AUTH_PrivPassCmd
+ * @param   param [IN/OUT] Command parameters
+ * @param   paramLen [IN] Length of parameters
+ *
+ * @retval  #HITLS_AUTH_SUCCESS, if successful.
+ *          For other error codes, see auth_errno.h.
+ */
+int32_t HITLS_AUTH_PrivPassCtxCtrl(HITLS_AUTH_PrivPassCtx *ctx, int32_t cmd, void *param, uint32_t paramLen);
 
 #ifdef __cplusplus
 }
