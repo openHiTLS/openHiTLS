@@ -227,6 +227,7 @@ typedef struct {
     uint32_t certCount;             /* Number of certificates */
     uint8_t *certificateReqCtx;     /* Used by the TLS 1.3 */
     uint32_t certificateReqCtxSize; /* Used by the TLS 1.3 */
+    uint64_t extensionTypeMask;     /* Used by the TLS 1.3 */
 } CertificateMsg;
 
 typedef struct {
