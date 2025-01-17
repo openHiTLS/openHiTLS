@@ -863,11 +863,11 @@ static int32_t PackCertificateMsg(FRAME_Type *type, const FRAME_CertificateMsg *
         }
         PackInteger24(&next->certLen, &buf[offset], bufLen - offset, &offset);
         PackArray8(&next->cert, &buf[offset], bufLen - offset, &offset);
-        next = next->next;
         if (type->versionType == HITLS_VERSION_TLS13) {
-            FRAME_Integer status = { INITIAL_FIELD, 0};
-            PackInteger16(&status, &buf[offset], bufLen - offset, &offset);
+            PackInteger16(&next->extensionLen, &buf[offset], bufLen - offset, &offset);
+            PackArray8(&next->extension, &buf[offset], bufLen - offset, &offset);
         }
+        next = next->next;
     }
 
     if (certificate->certsLen.state == INITIAL_FIELD) {
