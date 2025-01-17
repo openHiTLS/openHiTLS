@@ -2323,3 +2323,278 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_EXTENSION_ASSOCIATION_FUNC_TC005()
     WithoutPskMisKeyExtension(&((FRAME_Msg *)0)->body.hsMsg.body.clientHello.keyshares.exState, isResume, isHrr);
 }
 /* END_CASE */
+
+static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CERTIFICATE);
+    FrameCertItem *certItem = frameMsg.body.hsMsg.body.certificate.certItem;
+
+    // status_request Certificate Allowed Extensions. type(2) + len(2) + ctx(len)
+    uint8_t certExtension[] = {0x00, 0x05, 0x00, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00};
+    uint32_t extensionLen = sizeof(certExtension);
+
+    uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
+    ASSERT_TRUE(extensionData != NULL);
+    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
+    certItem->extension.state = ASSIGNED_FIELD;
+    BSL_SAL_FREE(certItem->extension.data);
+    certItem->extension.data = extensionData;
+    certItem->extension.size = extensionLen;
+    certItem->extensionLen.state = ASSIGNED_FIELD;
+    certItem->extensionLen.data = extensionLen;
+    *len += extensionLen;
+
+    memset_s(data, bufSize, 0, bufSize);
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001
+* @spec  -
+* @title The test certificate message carries the extension of the response. However, due to the current feature not
+*        being supported, requests will not be sent proactively. Expected to send illegal alerts and disconnect links.
+* @precon  nan
+* @brief
+*   1. Apply and initialize config
+*   2. Set the certificate message sent by the server to the client to include the status_request extension
+*   3. Establish a connection and observe client behavior
+* @expect
+*   1. Initialization successful
+*   2. Setup successful
+*   3. The client returns alert ALERT_ILLEGAL_PARAMETER.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001()
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+
+    ResumeTestInfo testInfo = {0};
+    testInfo.version = HITLS_VERSION_TLS13;
+    testInfo.uioType = BSL_UIO_TCP;
+
+    testInfo.config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(testInfo.config != NULL);
+    testInfo.config->isSupportClientVerify = true;
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, NULL, Test_CertificateExtensionError001};
+    RegisterWrapper(wrapper);
+
+    HITLS_CFG_SetCheckKeyUsage(testInfo.config, false);
+
+    testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_TRUE(testInfo.client != NULL);
+
+    testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_TRUE(testInfo.server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(testInfo.client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+}
+/* END_CASE */
+
+static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CERTIFICATE);
+    FrameCertItem *certItem = frameMsg.body.hsMsg.body.certificate.certItem;
+
+    // signature_algorithm Certificate-recognized but disallowed extensions. type(2) + len(2) + ctx(len)
+    uint8_t certExtension[] = {0x00, 0x0d, 0x00, 0x04, 0x00, 0x00, 0x08, 0x09};
+    uint32_t extensionLen = sizeof(certExtension);
+
+    uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
+    ASSERT_TRUE(extensionData != NULL);
+    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
+    certItem->extension.state = ASSIGNED_FIELD;
+    BSL_SAL_FREE(certItem->extension.data);
+    certItem->extension.data = extensionData;
+    certItem->extension.size = extensionLen;
+    certItem->extensionLen.state = ASSIGNED_FIELD;
+    certItem->extensionLen.data = extensionLen;
+    *len += extensionLen;
+
+    memset_s(data, bufSize, 0, bufSize);
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC002
+* @spec  -
+* @title The test certificate message carries identifiable but not allowed extensions. Expected to send illegal
+*       alerts and disconnect.
+* @precon  nan
+* @brief
+*   1. Apply and initialize config
+*   2. Set the certificate message sent by the server to the client to include the signature_algorithm extension
+*   3. Establish a connection and observe client behavior
+* @expect
+*   1. Initialization successful
+*   2. Setup successful
+*   3. The client returns alert ALERT_ILLEGAL_PARAMETER.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC002()
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+
+    ResumeTestInfo testInfo = {0};
+    testInfo.version = HITLS_VERSION_TLS13;
+    testInfo.uioType = BSL_UIO_TCP;
+
+    testInfo.config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(testInfo.config != NULL);
+    testInfo.config->isSupportClientVerify = true;
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, NULL, Test_CertificateExtensionError002};
+    RegisterWrapper(wrapper);
+
+    HITLS_CFG_SetCheckKeyUsage(testInfo.config, false);
+
+    testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_TRUE(testInfo.client != NULL);
+
+    testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_TRUE(testInfo.server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(testInfo.client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+}
+/* END_CASE */
+
+static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CERTIFICATE);
+    FrameCertItem *certItem = frameMsg.body.hsMsg.body.certificate.certItem;
+
+    // Unrecognized Extensions. type(2) + len(2) + ctx(len)
+    uint8_t certExtension[] = {0x00, 0x56, 0x00, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00};
+    uint32_t extensionLen = sizeof(certExtension);
+
+    uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
+    ASSERT_TRUE(extensionData != NULL);
+    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
+    certItem->extension.state = ASSIGNED_FIELD;
+    BSL_SAL_FREE(certItem->extension.data);
+    certItem->extension.data = extensionData;
+    certItem->extension.size = extensionLen;
+    certItem->extensionLen.state = ASSIGNED_FIELD;
+    certItem->extensionLen.data = extensionLen;
+    *len += extensionLen;
+
+    memset_s(data, bufSize, 0, bufSize);
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test  UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC003
+* @spec  -
+* @title Test certificate message carrying unrecognized extensions. Expected to send illegal alerts and disconnect
+* @precon  nan
+* @brief
+*   1. Apply and initialize config
+*   2. Set the certificate message sent by the server to the client to include the unrecognized extension
+*   3. Establish a connection and observe client behavior
+* @expect
+*   1. Initialization successful
+*   2. Setup successful
+*   3. The client returns alert ALERT_ILLEGAL_PARAMETER.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC003()
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+
+    ResumeTestInfo testInfo = {0};
+    testInfo.version = HITLS_VERSION_TLS13;
+    testInfo.uioType = BSL_UIO_TCP;
+
+    testInfo.config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(testInfo.config != NULL);
+    testInfo.config->isSupportClientVerify = true;
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, NULL, Test_CertificateExtensionError003};
+    RegisterWrapper(wrapper);
+
+    HITLS_CFG_SetCheckKeyUsage(testInfo.config, false);
+
+    testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_TRUE(testInfo.client != NULL);
+
+    testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_TRUE(testInfo.server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(testInfo.client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+}
+/* END_CASE */
