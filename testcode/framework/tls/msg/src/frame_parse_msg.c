@@ -581,16 +581,16 @@ static int32_t ParseCertificateMsg(
         item->state = INITIAL_FIELD;
         ParseFieldInteger24(&buffer[offset], bufLen - offset, &item->certLen, &offset);
         ParseFieldArray8(&buffer[offset], bufLen - offset, &item->cert, item->certLen.data, &offset);
+        if (type->versionType == HITLS_VERSION_TLS13) {
+            ParseFieldInteger16(&buffer[offset], bufLen - offset, &item->extensionLen, &offset);
+            ParseFieldArray8(&buffer[offset], bufLen - offset, &item->extension, item->extensionLen.data, &offset);
+        }
         if (certificate->certItem == NULL) {
             certificate->certItem = item;
         } else {
             certItem->next = item;
         }
         certItem = item;
-        if (type->versionType == HITLS_VERSION_TLS13) {
-            FRAME_Integer status;
-            ParseFieldInteger16(&buffer[offset], bufLen - offset, &status, &offset);
-        }
     }
     *parseLen += offset;
 
@@ -604,6 +604,7 @@ static void CleanCertificateMsg(FRAME_CertificateMsg *certificate)
     while (certItem != NULL) {
         FrameCertItem *temp = certItem->next;
         BSL_SAL_FREE(certItem->cert.data);
+        BSL_SAL_FREE(certItem->extension.data);
         BSL_SAL_FREE(certItem);
         certItem = temp;
     }
