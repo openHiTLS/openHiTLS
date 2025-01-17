@@ -40,6 +40,7 @@
 #include "change_cipher_spec.h"
 #include "common_func.h"
 #include "uio_base.h"
+#include "hs.h"
 /* END_HEADER */
 
 /* @
@@ -458,7 +459,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC006(void)
     FRAME_CcsMsg *CcsMidMsg = &frameMsg1.body.ccsMsg;
     CcsMidMsg->ccsType.state = MISSING_FIELD;
     CcsMidMsg->extra.state = MISSING_FIELD;
-    CcsMidMsg->extra.size = MISSING_FIELD; 
+    CcsMidMsg->extra.size = MISSING_FIELD;
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -5312,7 +5313,7 @@ void UT_TLS_TLS1_2_RFC5246_Fragmented_Msg_FUNC_TC001(void)
 
     uint32_t msglength = BSL_ByteToUint16(&data[3]);
     uint32_t msgLen = (msglength - 1) / 2;
-    uint32_t len = 5 + msgLen;  
+    uint32_t len = 5 + msgLen;
 
     uint8_t recorddata1[] = {0x16, 0x03, 0x03, 0x00, 0x46};
 
@@ -5341,5 +5342,196 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC001
+* @spec  -
+* @title  There is no alert during the handshake. When the handshake is halfway through, call close to break the chain,
+* and then call hitls_read to read the plaintext app message. It is expected that the read message failed.
+* @precon  nan
+* @brief  1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Stop the handshake state at TRY_RECV_SERVER_HELLO, expected result 2.
+*         3. Call the hitls_close interface to break the chain, expected result 3.
+*         4. Construct plaintext app message, call hitls_read to read, expected result 4.
+* @expect 1. The initialization is successful.
+*         2. Return successful.
+*         3. Return successful.
+*         4. Reading message failed.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t data[] = {0x17, 0x03, 0x03, 0x00, 0x0b, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64};
+    memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, sizeof(data));
+    ioUserData->recMsg.len = sizeof(data);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_CLOSED);
+    ASSERT_TRUE(readLen == 0);
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC002
+* @spec  -
+* @title  A fatal alert occurred during the handshake process. Call close to break the chain,
+* and then call hitls_read to read the plaintext app message. It is expected that the read message failed.
+* @precon  nan
+* @brief  1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Certificate and algorithm set do not match, establish connection, expected result 2.
+*         3. Call the hitls_close interface to break the chain, expected result 3.
+*         4. Construct plaintext app message, call hitls_read to read, expected result 4.
+* @expect 1. The initialization is successful.
+*         2. Send a fatal alert, ALERT_BAD_CERTIFICATE.
+*         3. Return successful.
+*         4. Reading message failed.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    uint16_t cipherSuits[] = {HITLS_RSA_PSK_WITH_AES_128_CBC_SHA};
+    HITLS_CFG_SetCipherSuites(tlsConfig, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
+
+    FRAME_CertInfo certInfo = {
+        "rsa_sha512/root.der",
+        "rsa_sha512/intca.der",
+        "rsa_sha512/usageKeyEncipher.der",
+        0,
+        "rsa_sha512/usageKeyEncipher.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(tlsConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    clientTlsCtx->config.tlsConfig.needCheckKeyUsage = true;
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_CERT_ERR_KEYUSAGE);
+
+    ALERT_Info alertInfo = { 0 };
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_BAD_CERTIFICATE);
+    ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t data[] = {0x17, 0x03, 0x03, 0x00, 0x0b, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64};
+    memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, sizeof(data));
+    ioUserData->recMsg.len = sizeof(data);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_CLOSED);
+    ASSERT_TRUE(readLen == 0);
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+int32_t STUB_HS_DoHandshake_Warning(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t plainLen)
+{
+    (void)recordType;
+    (void)data;
+    (void)plainLen;
+    ctx->method.sendAlert(ctx, ALERT_LEVEL_WARNING, ALERT_NO_CERTIFICATE_RESERVED);
+    return HITLS_INTERNAL_EXCEPTION;
+}
+
+static int32_t UioWriteException(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
+{
+    (void)uio;
+    (void)buf;
+    (void)len;
+    (void)writeLen;
+    return BSL_UIO_IO_EXCEPTION;
+}
+
+/* @
+* @test  UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC003
+* @spec  -
+* @title  During the handshake process, a warning alert occurred, and the construction of the alert failed to send. The
+* status then changed to alerting, call close to break the chain, and then call hitls_read to read the plaintext app
+* message. It is expected that the read message failed.
+* @precon  nan
+* @brief  1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+*         2. Suspend the sending of warning alerts, expected result 2.
+*         3. Call the hitls_close interface to break the chain, expected result 3.
+*         4. Construct plaintext app message, call hitls_read to read, expected result 4.
+* @expect 1. The initialization is successful.
+*         2. The status then changed to alerting.
+*         3. Return successful.
+*         4. Reading message failed.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC003()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    HITLS_CFG_SetRenegotiationSupport(tlsConfig, true);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_KEY_EXCHANGE) == HITLS_SUCCESS);
+    FuncStubInfo tmpRpInfo = { 0 };
+    STUB_Init();
+    STUB_Replace(&tmpRpInfo, HS_DoHandshake, STUB_HS_DoHandshake_Warning);
+    BSL_UIO *uio = HITLS_GetReadUio(clientTlsCtx);
+    BSL_UIO_Method *method = (BSL_UIO_Method *)BSL_UIO_GetMethod(uio);
+    ASSERT_EQ(BSL_UIO_SetMethod(method, BSL_UIO_WRITE_CB, UioWriteException), BSL_SUCCESS);
+    ASSERT_TRUE(HITLS_Connect(clientTlsCtx) == HITLS_REC_ERR_IO_EXCEPTION);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTING);
+
+    ASSERT_EQ(BSL_UIO_SetMethod(method, BSL_UIO_WRITE_CB, FRAME_Write), BSL_SUCCESS);
+    ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_SUCCESS);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_CLOSED);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t data[] = {0x17, 0x03, 0x03, 0x00, 0x0b, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64};
+    memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, sizeof(data));
+    ioUserData->recMsg.len = sizeof(data);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_CLOSED);
+    ASSERT_TRUE(readLen == 0);
+EXIT:
+    STUB_Reset(&tmpRpInfo);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */

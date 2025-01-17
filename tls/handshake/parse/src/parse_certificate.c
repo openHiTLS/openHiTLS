@@ -97,7 +97,7 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg)
     while (offset < certExLen) {
         uint16_t extMsgType = HS_EX_TYPE_END;
         uint32_t extMsgLen = 0u;
-        ret = ParseExHeader(pkt->ctx, &pkt->buf[*pkt->bufOffset], 
+        ret = ParseExHeader(pkt->ctx, &pkt->buf[*pkt->bufOffset],
             pkt->bufLen - *pkt->bufOffset, &extMsgType, &extMsgLen);
         if (ret != HITLS_SUCCESS) {
             return ret;
