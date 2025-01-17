@@ -164,6 +164,28 @@ struct ModesGcmCtx {
 };
 
 typedef struct {
+    // The information can be set once and used multiple times.
+    uint8_t ghash[GCM_BLOCKSIZE];   // Intermediate data for tag calculation.
+    MODES_GCM_GF128 hTable[16]; // The window uses 4 bits, 2 ^ 4 = 16 entries need to be pre-calculated.
+    void *ciphCtx; // Context defined by each symmetric algorithm.
+    const EAL_SymMethod *ciphMeth; // algorithm method
+    uint8_t lastz0[16]; //  A block 16 bytes cached tag last time
+    /**
+     * tagLen from 4 to 16 bytes
+     */
+    uint8_t tagLen;         // use for calc tag
+    uint64_t plaintextLen;  // use for calc tag
+    uint32_t aadLen;        // use for calc tag
+    uint32_t cryptCnt; // Indicate the number of encryption times that the key can be used.
+} MODES_CipherZUCGXMCtx;
+
+struct ModesZucGxmCtx {
+    int32_t algId;
+    MODES_CipherZUCGXMCtx gxmCtx;
+    bool enc;
+};
+
+typedef struct {
     MODES_CipherCommonCtx modeCtx;
     uint8_t feedbackBits;  /* Save the FeedBack length. */
 } MODES_CipherCFBCtx;

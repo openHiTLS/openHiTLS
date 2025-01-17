@@ -197,7 +197,7 @@ static int32_t SetAad(MODES_CipherGCMCtx *ctx, const uint8_t *aad, uint32_t aadL
 }
 
 // Overflow occurs when the encryption length is determined and the encrypted length information is updated.
-int32_t CryptLenCheckAndRefresh(MODES_CipherGCMCtx *ctx, uint32_t len)
+static int32_t CryptLenCheckAndRefresh(MODES_CipherGCMCtx *ctx, uint32_t len)
 {
     // The length of len is only 32 bits. This calculation does not cause overflow.
     uint64_t plaintextLen = ctx->plaintextLen + len;

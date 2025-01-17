@@ -85,12 +85,14 @@
                         "cfb": null,
                         "ccm": null,
                         "gcm": null,
-                        "chacha20poly1305": null
+                        "chacha20poly1305": null,
+                        "zuc_gxm": null
                     },
                     "cipher": {
                         "aes": null,
                         "sm4": null,
-                        "chacha20": {"deps": ["chacha20poly1305"]}
+                        "chacha20": {"deps": ["chacha20poly1305"]},
+                        "zuc": {"deps": ["zuc_gxm"]}
                     },
                     "ecc": {"deps": ["bn"]},
                     "pkey": {
@@ -534,6 +536,7 @@
                     "crypto/aes/include",
                     "crypto/sm4/include",
                     "crypto/chacha20/include",
+                    "crypto/zuc/include",
                     "crypto/bn/include",
                     "crypto/encode/include",
                     "crypto/ecc/include",
@@ -710,7 +713,7 @@
                     }
                 },
                 ".deps": ["bsl::sal"],
-                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include"]
+                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include", "crypto/zuc/include"]
             },
             "aes": {
                 ".features": ["aes"],
@@ -747,6 +750,16 @@
                     "public": "crypto/chacha20/src/chacha20.c",
                     "no_asm": "crypto/chacha20/src/chacha20block.c",
                     "armv8": "crypto/chacha20/src/chacha20block.c"
+                },
+                ".deps": ["bsl::sal"]
+            },
+            "zuc": {
+                ".features": ["zuc"],
+                ".srcs":{
+                    "public": "crypto/zuc/src/crypt_zuc_public.c",
+                    "no_asm": "crypto/zuc/src/crypt_zuc.c",
+                    "armv8": "crypto/zuc/src/crypt_zuc.c",
+                    "x8664": "crypto/zuc/src/crypt_zuc.c"
                 },
                 ".deps": ["bsl::sal"]
             },

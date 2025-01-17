@@ -118,13 +118,16 @@
     #ifndef HITLS_CRYPTO_CHACHA20
         #define HITLS_CRYPTO_CHACHA20
     #endif
+    #ifndef HITLS_CRYPTO_ZUC
+        #define HITLS_CRYPTO_ZUC
+    #endif
 #endif
  
 #if defined(HITLS_CRYPTO_CHACHA20) && !defined(HITLS_CRYPTO_CHACHA20POLY1305)
     #define HITLS_CRYPTO_CHACHA20POLY1305
 #endif
  
-#if defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || defined(HITLS_CRYPTO_CHACHA20)
+#if defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || defined(HITLS_CRYPTO_CHACHA20) || defined(HITLS_CRYPT_ZUC)
     #ifndef HITLS_CRYPTO_CIPHER
         #define HITLS_CRYPTO_CIPHER
     #endif
@@ -159,11 +162,14 @@
     #ifndef HITLS_CRYPTO_CHACHA20POLY1305
         #define HITLS_CRYPTO_CHACHA20POLY1305
     #endif
+    #ifndef HITLS_CRYPTO_ZUC_GXM
+        #define HITLS_CRYPTO_ZUC_GXM
+    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_CTR) || defined(HITLS_CRYPTO_CBC) || defined(HITLS_CRYPTO_GCM) || \
     defined(HITLS_CRYPTO_CCM) || defined(HITLS_CRYPTO_XTS) || defined(HITLS_CRYPTO_CFB) || \
-    defined(HITLS_CRYPTO_OFB) || defined(HITLS_CRYPTO_CHACHA20POLY1305)
+    defined(HITLS_CRYPTO_OFB) || defined(HITLS_CRYPTO_CHACHA20POLY1305) || defined(HITLS_CRYPT_ZUC_GXM)
     #ifndef HITLS_CRYPTO_MODES
         #define HITLS_CRYPTO_MODES
     #endif
