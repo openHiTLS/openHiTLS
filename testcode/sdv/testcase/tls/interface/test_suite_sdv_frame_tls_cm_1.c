@@ -1000,22 +1000,11 @@ void UT_TLS_HITLS_CLOSE_TC001(int uioType)
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
     ioUserData->sndMsg.len = 1; 
     ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_REC_NORMAL_IO_BUSY);
-    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTING);
+    ASSERT_EQ(clientTlsCtx->state, CM_STATE_ALERTED);
 
     ioUserData->sndMsg.len = 0;
     ASSERT_EQ(HITLS_Close(clientTlsCtx), HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_CLOSED);
-
-    ASSERT_EQ(HITLS_Close(clientTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
-    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_CLOSED);
-    uint8_t *buffer = ioUserData->sndMsg.msg;
-    uint32_t readLen = ioUserData->sndMsg.len;
-    uint32_t parseLen = 0;
-    int32_t ret = ParserTotalRecord(client, &sndframeMsg, buffer, readLen, &parseLen);
-    ASSERT_TRUE(ret == HITLS_SUCCESS);
-    ASSERT_TRUE(sndframeMsg.type == REC_TYPE_ALERT && sndframeMsg.bodyLen == ALERT_BODY_LEN);
-    ASSERT_TRUE(sndframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
-        sndframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
 
 EXIT:
     CleanRecordBody(&recvframeMsg);

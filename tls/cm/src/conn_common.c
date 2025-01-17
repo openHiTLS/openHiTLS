@@ -120,15 +120,18 @@ int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
     }
 
     /* If the close_notify message is sent, the link must be disconnected */
-    if ((alertInfo.description == ALERT_CLOSE_NOTIFY) && (ctx->userShutDown == true)) {
-        ChangeConnState(ctx, CM_STATE_CLOSED);
+    if (alertInfo.description == ALERT_CLOSE_NOTIFY) {
+        if (ctx->userShutDown) {
+            ChangeConnState(ctx, CM_STATE_CLOSED);
+        } else {
+            ChangeConnState(ctx, CM_STATE_ALERTED);
+        }
         ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
-        return HITLS_SUCCESS;
-    }
-
-    if ((alertInfo.description == ALERT_CLOSE_NOTIFY) && (ctx->userShutDown == false)) {
-        ChangeConnState(ctx, CM_STATE_ALERTED);
-        ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
+        /* If the previous state was not in the transporting state, the connection should be closed directly, and
+         * reading and writing are not allowed. */
+        if (ctx->preState != CM_STATE_TRANSPORTING) {
+            ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
+        }
         return HITLS_SUCCESS;
     }
 

@@ -2324,7 +2324,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_EXTENSION_ASSOCIATION_FUNC_TC005()
 }
 /* END_CASE */
 
-static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
 {
     (void)ctx;
     (void)user;
@@ -2366,7 +2367,7 @@ EXIT:
 * @test  UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001
 * @spec  -
 * @title The test certificate message carries the extension of the response. However, due to the current feature not
-*           being supported, requests will not be sent proactively. Expected to send illegal alerts and disconnect links.
+*        being supported, requests will not be sent proactively. Expected to send illegal alerts and disconnect links.
 * @precon  nan
 * @brief
 *   1. Apply and initialize config
@@ -2401,7 +2402,8 @@ void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001()
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_TRUE(testInfo.server != NULL);
 
-    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
     ALERT_Info alert = {0};
     ALERT_GetInfo(testInfo.client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
@@ -2414,7 +2416,8 @@ EXIT:
 }
 /* END_CASE */
 
-static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
 {
     (void)ctx;
     (void)user;
@@ -2455,7 +2458,8 @@ EXIT:
 /** @
 * @test  UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC002
 * @spec  -
-* @title The test certificate message carries identifiable but not allowed extensions. Expected to send illegal alerts and disconnect
+* @title The test certificate message carries identifiable but not allowed extensions. Expected to send illegal
+*       alerts and disconnect.
 * @precon  nan
 * @brief
 *   1. Apply and initialize config
@@ -2490,7 +2494,8 @@ void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC002()
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_TRUE(testInfo.server != NULL);
 
-    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
     ALERT_Info alert = {0};
     ALERT_GetInfo(testInfo.client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
@@ -2503,7 +2508,8 @@ EXIT:
 }
 /* END_CASE */
 
-static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
 {
     (void)ctx;
     (void)user;
@@ -2579,7 +2585,8 @@ void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC003()
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_TRUE(testInfo.server != NULL);
 
-    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+    ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
+        HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
     ALERT_Info alert = {0};
     ALERT_GetInfo(testInfo.client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);

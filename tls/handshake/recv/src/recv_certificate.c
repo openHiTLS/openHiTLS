@@ -433,28 +433,22 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     if (certs->certCount == 0) {
         if (ctx->isClient) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16126, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "peer certificate is needed!", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
-            return HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE;
+            return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE, BINLOG_ID16126,
+                "peer certificate is needed!", ALERT_DECODE_ERROR);
         }
         /** Only the server allows the peer certificate to be empty */
         if ((ctx->config.tlsConfig.isSupportClientVerify && ctx->config.tlsConfig.isSupportNoClientCert)) {
             ret = VERIFY_Tls13CalcVerifyData(ctx, true);
             if (ret != HITLS_SUCCESS) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15729, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "server calculate client finished data error.", 0, 0, 0, 0);
-                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-                return ret;
+                return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15729,
+                    "server calculate client finished data error.", ALERT_INTERNAL_ERROR);
             }
             return HS_ChangeState(ctx, TRY_RECV_FINISH);
         }
 
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15727, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "peer certificate is needed!", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_CERTIFICATE_REQUIRED);
-        return HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE;
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE, BINLOG_ID15727,
+            "peer certificate is needed!", ALERT_CERTIFICATE_REQUIRED);
     }
 
     /** Process the obtained peer certificate */

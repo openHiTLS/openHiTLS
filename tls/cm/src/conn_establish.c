@@ -100,15 +100,32 @@ static int32_t EstablishEventInRenegotiationState(HITLS_Ctx *ctx)
     return HITLS_INTERNAL_EXCEPTION;
 #endif
 }
-#ifndef HITLS_TLS_FEATURE_RENEGOTIATION
+
 static int32_t CloseEventInRenegotiationState(HITLS_Ctx *ctx)
 {
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+    if ((ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0) {
+        ALERT_Send(ctx, ALERT_LEVEL_WARNING, ALERT_CLOSE_NOTIFY);
+        int32_t ret = ALERT_Flush(ctx);
+        if (ret != HITLS_SUCCESS) {
+            ChangeConnState(ctx, CM_STATE_ALERTED);
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16528, "ALERT_Flush fail");
+        }
+        ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
+    }
+    /* In the renegotiation state, if the HITLS_Close function is called, the connection is directly disconnected
+     * and read/write operations are not allowed. */
+    ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
+    ChangeConnState(ctx, CM_STATE_CLOSED);
+    return HITLS_SUCCESS;
+#else
     (void)ctx;
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15406, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
         "invalid conn states %d", CM_STATE_RENEGOTIATION, NULL, NULL, NULL);
     return HITLS_INTERNAL_EXCEPTION;
-}
 #endif
+}
+
 static int32_t EstablishEventInAlertedState(HITLS_Ctx *ctx)
 {
     (void)ctx;
@@ -127,6 +144,24 @@ static int32_t CloseEventInIdleState(HITLS_Ctx *ctx)
 {
     ChangeConnState(ctx, CM_STATE_CLOSED);
     ctx->shutdownState |= (HITLS_SENT_SHUTDOWN | HITLS_RECEIVED_SHUTDOWN);
+    return HITLS_SUCCESS;
+}
+
+static int32_t CloseEventInHandshakingState(HITLS_Ctx *ctx)
+{
+    if ((ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0) {
+        ALERT_Send(ctx, ALERT_LEVEL_WARNING, ALERT_CLOSE_NOTIFY);
+        int32_t ret = ALERT_Flush(ctx);
+        if (ret != HITLS_SUCCESS) {
+            ChangeConnState(ctx, CM_STATE_ALERTED);
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16463, "ALERT_Flush fail");
+        }
+        ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
+    }
+    /* In the handshaking state, if the close function is called, the connection is directly disconnected
+     * and read/write operations are not allowed. */
+    ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
+    ChangeConnState(ctx, CM_STATE_CLOSED);
     return HITLS_SUCCESS;
 }
 
@@ -161,7 +196,9 @@ static int32_t CloseEventInAlertedState(HITLS_Ctx *ctx)
      * 2. A fatal alert has been sent to the peer end.
      * 3. Receive the close notification from the peer end.
      */
+    // Read and write operations are not allowed in the alerted state
     ChangeConnState(ctx, CM_STATE_CLOSED);
+    ctx->shutdownState |= (HITLS_SENT_SHUTDOWN | HITLS_RECEIVED_SHUTDOWN);
     return HITLS_SUCCESS;
 }
 
@@ -334,15 +371,11 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
 
     ManageEventProcess closeEventProcess[CM_STATE_END] = {
         CloseEventInIdleState,
-        CloseEventInTransportingState,  // Notify is sent to the peer end when the close interface is invoked during and
+        CloseEventInHandshakingState,  // Notify is sent to the peer end when the close interface is invoked during and
                                         // after link establishment.
         CloseEventInTransportingState,  // Therefore, the same function is used for processing.
-#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-        CloseEventInTransportingState,  // In the renegotiation process, invoking the close function also sends a notify
+        CloseEventInRenegotiationState, // In the renegotiation process, invoking the close function also sends a notify
                                         // message to the peer end.
-#else
-        CloseEventInRenegotiationState,
-#endif
         CloseEventInAlertingState,
         CloseEventInAlertedState,
         CloseEventInClosedState};
