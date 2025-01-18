@@ -8,13 +8,6 @@
 #include "crypt_algid.h" // Algorithm ID list.
 #include "crypt_errno.h" // Error code list.
 
-#define MAKEU32(a, b, c ,d) (\
-((uint32_t)(a) << 24)        \
-| ((uint32_t)(b) << 16)      \
-| ((uint32_t)(c) << 8)       \
-| ((uint32_t)(d)))
-
-
 void *StdMalloc(uint32_t len) {
     return malloc((size_t)len);
 }
@@ -74,6 +67,15 @@ int main(void)
     uint32_t outLen = sizeof(cipherText);
     uint32_t cipherTextLen;
     int32_t ret;
+    uint8_t sessionID[32];
+    uint8_t clientTS[32];
+    uint8_t serverTS[32];
+    uint8_t AAD[96];
+    memcpy(AAD, sessionID, 32);
+    memcpy(AAD + 32, clientTS, 32);
+    memcpy(AAD + 64, serverTS, 32);
+    uint8_t tag1[16];
+    uint8_t tag2[16];
 
     printf("plain text to be encrypted: ");
     for (uint32_t i = 0; i < dataLen; i++) {
@@ -116,6 +118,14 @@ int main(void)
             PrintLastError();
             goto EXIT;
         }
+
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, AAD, 96);
+        if (ret != CRYPT_SUCCESS) {
+            // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
+            printf("error code is %d\n", ret);
+            PrintLastError();
+            goto EXIT;
+        }
         /**
          * Enter the data to be calculated. This interface can be called for multiple times.
          * The input value of **outLen** is the length of the ciphertext,
@@ -132,13 +142,16 @@ int main(void)
         outTotalLen += outLen;
         outLen = sizeof(cipherText) - outTotalLen;
 
-        ret = CRYPT_EAL_CipherFinal(ctx, cipherText + outTotalLen, &outLen);
+        // Get tag1, set state to final
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag1, 16);
         if (ret != CRYPT_SUCCESS) {
             printf("error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
 
+
+        outLen = 0;
         outTotalLen += outLen;
         printf("cipher text value is: ");
 
@@ -159,6 +172,14 @@ int main(void)
             PrintLastError();
             goto EXIT;
         }
+        
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, AAD, 96);
+        if (ret != CRYPT_SUCCESS) {
+            // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
+            printf("error code is %d\n", ret);
+            PrintLastError();
+            goto EXIT;
+        }
 
         // Enter the ciphertext data.
         ret = CRYPT_EAL_CipherUpdate(ctx, cipherText, dataLen, plainText, &outLen);
@@ -170,14 +191,15 @@ int main(void)
         outTotalLen += outLen;
         outLen = sizeof(plainText) - outTotalLen;
 
-        // Decrypt the last segment of data and remove the filled content.
-        ret = CRYPT_EAL_CipherFinal(ctx, plainText + outTotalLen, &outLen);
+        // Get tag2, set state to final
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag2, 16);
         if (ret != CRYPT_SUCCESS) {
             printf("error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
 
+        outLen = 0;
         outTotalLen += outLen;
 
         printf("decrypted plain text value is: ");
@@ -188,6 +210,10 @@ int main(void)
 
         if (outTotalLen != dataLen || memcmp(plainText, data, dataLen) != 0) {
             printf("plaintext comparison failed\n");
+            goto EXIT;
+        }
+        if(memcmp(tag1, tag2, 16) != 0){
+            printf("tag comparison failed\n");
             goto EXIT;
         }
         printf("ZUC128 key %d pass \n", j);
@@ -210,7 +236,15 @@ int main(void)
         ret = CRYPT_EAL_CipherInit(ctx, key[j], 32, iv[j], 23, true);
         if (ret != CRYPT_SUCCESS) {
             // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
-            printf("error code is %d\n", ret);
+            printf("1 error code is %d\n", ret);
+            PrintLastError();
+            goto EXIT;
+        }
+    
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, AAD, 96);
+        if (ret != CRYPT_SUCCESS) {
+            // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
+            printf("2 error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
@@ -222,7 +256,7 @@ int main(void)
         */
         ret = CRYPT_EAL_CipherUpdate(ctx, plainText, dataLen, cipherText, &outLen);
         if (ret != CRYPT_SUCCESS) {
-            printf("error code is %d\n", ret);
+            printf("3 error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
@@ -230,13 +264,15 @@ int main(void)
         outTotalLen += outLen;
         outLen = sizeof(cipherText) - outTotalLen;
 
-        ret = CRYPT_EAL_CipherFinal(ctx, cipherText + outTotalLen, &outLen);
+        // Get tag1, set state to final
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag1, 16);
         if (ret != CRYPT_SUCCESS) {
-            printf("error code is %d\n", ret);
+            printf("4 error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
 
+        outLen = 0;
         outTotalLen += outLen;
         printf("cipher text value is: ");
 
@@ -253,7 +289,15 @@ int main(void)
         // When initializing the decryption function, set the last input parameter to false.
         ret = CRYPT_EAL_CipherInit(ctx, key[j], 32, iv[j], 23, false);
         if (ret != CRYPT_SUCCESS) {
-            printf("error code is %d\n", ret);
+            printf("1 error code is %d\n", ret);
+            PrintLastError();
+            goto EXIT;
+        }
+
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, AAD, 96);
+        if (ret != CRYPT_SUCCESS) {
+            // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
+            printf("2 error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
@@ -261,21 +305,22 @@ int main(void)
         // Enter the ciphertext data.
         ret = CRYPT_EAL_CipherUpdate(ctx, cipherText, dataLen, plainText, &outLen);
         if (ret != CRYPT_SUCCESS) {
-            printf("error code is %d\n", ret);
+            printf("3 error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
         outTotalLen += outLen;
         outLen = sizeof(plainText) - outTotalLen;
 
-        // Decrypt the last segment of data and remove the filled content.
-        ret = CRYPT_EAL_CipherFinal(ctx, plainText + outTotalLen, &outLen);
+        // Get tag2, set state to final
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag2, 16);
         if (ret != CRYPT_SUCCESS) {
-            printf("error code is %d\n", ret);
+            printf("4 error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
 
+        outLen = 0;
         outTotalLen += outLen;
 
         printf("decrypted plain text value is: ");
@@ -288,6 +333,10 @@ int main(void)
             printf("plaintext comparison failed\n");
             goto EXIT;
         }
+        if(memcmp(tag1, tag2, 16) != 0){
+            printf("tag comparison failed\n");
+            goto EXIT;
+        }
         printf("ZUC256 23B IV key %d pass \n", j);
     }
     for(uint8_t j = 0; j < 2; j++){
@@ -298,6 +347,14 @@ int main(void)
         outTotalLen = 0;
         outLen = sizeof(cipherText);
         ret = CRYPT_EAL_CipherInit(ctx, key[j], 32, iv[j], 16, true);
+        if (ret != CRYPT_SUCCESS) {
+            // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
+            printf("error code is %d\n", ret);
+            PrintLastError();
+            goto EXIT;
+        }
+
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, AAD, 96);
         if (ret != CRYPT_SUCCESS) {
             // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
             printf("error code is %d\n", ret);
@@ -320,14 +377,15 @@ int main(void)
         outTotalLen += outLen;
         outLen = sizeof(cipherText) - outTotalLen;
 
-        printf("mark\n");
-        ret = CRYPT_EAL_CipherFinal(ctx, cipherText + outTotalLen, &outLen);
+        // Get tag1, set state to final
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag1, 16);
         if (ret != CRYPT_SUCCESS) {
             printf("error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
 
+        outLen = 0;
         outTotalLen += outLen;
         printf("cipher text value is: ");
 
@@ -349,6 +407,14 @@ int main(void)
             goto EXIT;
         }
 
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, AAD, 96);
+        if (ret != CRYPT_SUCCESS) {
+            // Output the error code. You can find the error information in **crypt_errno.h** based on the error code.
+            printf("error code is %d\n", ret);
+            PrintLastError();
+            goto EXIT;
+        }
+
         // Enter the ciphertext data.
         ret = CRYPT_EAL_CipherUpdate(ctx, cipherText, dataLen, plainText, &outLen);
         if (ret != CRYPT_SUCCESS) {
@@ -359,14 +425,15 @@ int main(void)
         outTotalLen += outLen;
         outLen = sizeof(plainText) - outTotalLen;
 
-        // Decrypt the last segment of data and remove the filled content.
-        ret = CRYPT_EAL_CipherFinal(ctx, plainText + outTotalLen, &outLen);
+        // get tag2, set state to final
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag2, 16);
         if (ret != CRYPT_SUCCESS) {
             printf("error code is %d\n", ret);
             PrintLastError();
             goto EXIT;
         }
 
+        outLen = 0;
         outTotalLen += outLen;
 
         printf("decrypted plain text value is: ");
@@ -379,7 +446,11 @@ int main(void)
             printf("plaintext comparison failed\n");
             goto EXIT;
         }
-        printf("ZUC256 16B IV key %d pass \n", j);
+        if(memcmp(tag1, tag2, 16) != 0){
+            printf("tag comparison failed\n");
+            goto EXIT;
+        }
+        printf("ZUC256 16B IV %d pass \n", j);
     }
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);

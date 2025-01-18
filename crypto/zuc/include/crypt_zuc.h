@@ -48,7 +48,6 @@ typedef struct{
     uint8_t set;  // bit 0 for keyset, bit 1 for iv set
     uint8_t type; // 0x01 for ZUC128, 0x02 for ZUC256
     uint8_t ivlen;
-    uint8_t cache_padding[3]; // aligned 160 bytes
 } CRYPT_ZUC_Ctx;
 
 /**
