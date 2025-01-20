@@ -409,6 +409,17 @@ enum CRYPT_ERROR {
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
     CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
     CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
+
+    CRYPT_ZUC_KEYLEN_ERROR = 0x01220001,    /**< The key length input is incorrect during key setting. */
+    CRYPT_ZUC_IVLEN_ERROR,                  /**< The length of the input initialization vector is incorrect */
+    CRYPT_ZUC_NO_KEYINFO,                       /**< Lack of valid key information during
+                                                          encryption and decryption. */
+    CRYPT_ZUC_NO_IVINFO,                    /**< Lack of valid initialization information during
+                                                          encryption and decryption. */
+    CRYPT_ZUC_CTRLTYPE_ERROR,               /**< The input type is not supported when the
+                                                          ctrl interface is used. */
+    CRYPT_ZUC_KEYSTREAM_TOO_LONG,           /**< Input length is to long for a keystream, causing 
+                                                          bad alloc> */
 };
 #ifdef __cplusplus
 }

@@ -73,6 +73,10 @@ typedef enum {
     BSL_CID_SM4_OFB,
     BSL_CID_SM4_ECB,
 
+    // zuc, preserve 15 modes
+    BSL_CID_ZUC128_GXM = 216,
+    BSL_CID_ZUC256_GXM,
+
     /* asymmetrical algorithm */
     BSL_CID_RSA = 5001,              /**< identifies the RSA algorithm */
     BSL_CID_RSASSAPSS,

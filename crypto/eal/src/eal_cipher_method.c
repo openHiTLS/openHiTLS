@@ -42,6 +42,9 @@
 #ifdef HITLS_CRYPTO_CHACHA20POLY1305
 #include "crypt_modes_chacha20poly1305.h"
 #endif
+#ifdef HITLS_CRYPTO_ZUC_GXM
+#include "crypt_modes_zuc_gxm.h"
+#endif
 
 #ifdef HITLS_CRYPTO_CFB
 #include "crypt_modes_cfb.h"
@@ -62,6 +65,18 @@ static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
     (CipherFinal)MODES_CHACHA20POLY1305_Final,
     (CipherCtrl)MODES_CHACHA20POLY1305_Ctrl,
     (CipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx
+};
+#endif
+
+#ifdef HITLS_CRYPTO_ZUC_GXM
+static const EAL_CipherMethod ZUC_GXM_METHOD = {
+    (CipherNewCtx)MODES_ZUC_GXM_NewCtx,
+    (CipherInitCtx)MODES_ZUC_GXM_InitCtx,
+    (CipherDeInitCtx)MODES_ZUC_GXM_DeInitCtx,
+    (CipherUpdate)MODES_ZUC_GXM_Update,
+    (CipherFinal)MODES_ZUC_GXM_Final,
+    (CipherCtrl)MODES_ZUC_GXM_Ctrl,
+    (CipherFreeCtx)MODES_ZUC_GXM_FreeCtx
 };
 #endif
 
@@ -208,10 +223,15 @@ static const EAL_CipherMethod *g_modeMethod[CRYPT_MODE_MAX] = {
     NULL,
 #endif // cfb
 #ifdef HITLS_CRYPTO_OFB
-    &OFB_METHOD
+    &OFB_METHOD,
 #else
     NULL
 #endif // ofb
+#ifdef HITLS_CRYPTO_ZUC_GXM
+    &ZUC_GXM_METHOD
+#else
+    NULL,
+#endif // zuc
 };
 
 
@@ -259,6 +279,10 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
     {.id = CRYPT_CIPHER_SM4_GCM, .modeId = CRYPT_MODE_GCM },
     {.id = CRYPT_CIPHER_SM4_CFB, .modeId = CRYPT_MODE_CFB },
     {.id = CRYPT_CIPHER_SM4_OFB, .modeId = CRYPT_MODE_OFB },
+#endif
+#ifdef HITLS_CRYPTO_ZUC
+    {.id = CRYPT_CIPHER_ZUC128_GXM, .modeId = CRYPT_MODE_ZUC_GXM }, 
+    {.id = CRYPT_CIPHER_ZUC256_GXM, .modeId = CRYPT_MODE_ZUC_GXM }, 
 #endif
 };
 
@@ -322,6 +346,10 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
     {.id = CRYPT_CIPHER_SM4_GCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
     {.id = CRYPT_CIPHER_SM4_CFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_SM4_OFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_ZUC
+    {.id = CRYPT_CIPHER_ZUC128_GXM, .blockSize = 1, .keyLen = 16, .ivLen = 16}, 
+    {.id = CRYPT_CIPHER_ZUC256_GXM, .blockSize = 1, .keyLen = 16, .ivLen = 23}, 
 #endif
 };
 

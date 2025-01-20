@@ -24,6 +24,7 @@
 #include "crypt_aes.h"
 #include "crypt_sm4.h"
 #include "crypt_chacha20.h"
+#include "crypt_zuc.h"
 #include "crypt_modes_gcm.h"
 #include "crypt_modes_cbc.h"
 
@@ -79,6 +80,32 @@ static const EAL_SymMethod CHACHA20_METHOD = {
 };
 #endif
 
+#ifdef HITLS_CRYPTO_ZUC
+static const EAL_SymMethod ZUC128_METHOD = {
+    (SetEncryptKey)CRYPT_ZUC_SetKey128,
+    (SetDecryptKey)CRYPT_ZUC_SetKey128,
+    (EncryptBlock)CRYPT_ZUC_Update,
+    (DecryptBlock)CRYPT_ZUC_Update,
+    (DeInitBlockCtx)CRYPT_ZUC_Clean,
+    (CipherCtrl)CRYPT_ZUC_Ctrl,
+    1,
+    sizeof(CRYPT_ZUC_Ctx),
+    CRYPT_SYM_ZUC128
+};
+
+static const EAL_SymMethod ZUC256_METHOD = {
+    (SetEncryptKey)CRYPT_ZUC_SetKey256,
+    (SetDecryptKey)CRYPT_ZUC_SetKey256,
+    (EncryptBlock)CRYPT_ZUC_Update,
+    (DecryptBlock)CRYPT_ZUC_Update,
+    (DeInitBlockCtx)CRYPT_ZUC_Clean,
+    (CipherCtrl)CRYPT_ZUC_Ctrl,
+    1,
+    sizeof(CRYPT_ZUC_Ctx),
+    CRYPT_SYM_ZUC256
+};
+#endif
+
 #ifdef HITLS_CRYPTO_SM4
 static const EAL_SymMethod SM4_METHOD = {
     (SetEncryptKey)CRYPT_SM4_SetKey,
@@ -130,6 +157,10 @@ const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
             return &SM4_METHOD;
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return &CHACHA20_METHOD;
+        case CRYPT_CIPHER_ZUC128_GXM:
+            return &ZUC128_METHOD;
+        case CRYPT_CIPHER_ZUC256_GXM:
+            return &ZUC256_METHOD;
         default:
             return NULL;
     }
