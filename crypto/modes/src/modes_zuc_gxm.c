@@ -253,21 +253,29 @@ int32_t MODES_ZUC_GXM_Encrypt(MODES_CipherZUCGXMCtx *ctx, const uint8_t *in, uin
         return ret;
     }
     
-    ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, in, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
     // z0 = 0^128 XOR 128 bits keystream
     uint8_t zeros[GCM_BLOCKSIZE] = {0};
     ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, zeros, ctx->lastz0, GCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
+    // z1 = P XOR |P| bits keystream
+    ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, in, out, len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ctx->plaintextLen += (uint64_t)len;
 
     // GHASH_H(A, C)
-    GcmHashMultiBlock(ctx->ghash, ctx->hTable, out, len);
+    uint32_t blockLen = len& GCM_BLOCK_MASK;
+    uint32_t lastLen = len - blockLen;
+    GcmHashMultiBlock(ctx->ghash, ctx->hTable, out, blockLen);
+    if(lastLen){
+        uint8_t tmp[GCM_BLOCKSIZE] = {0};
+        memcpy_s(tmp, lastLen, out + blockLen, lastLen);
+        GcmHashMultiBlock(ctx->ghash, ctx->hTable, tmp, GCM_BLOCKSIZE);
+    }
     // Calculate Tag only when CIPHER_CTRL(GET_TAG) called
-    ctx->plaintextLen += (uint64_t)len;
     return CRYPT_SUCCESS;
 }
 
@@ -285,25 +293,33 @@ int32_t MODES_ZUC_GXM_Decrypt(MODES_CipherZUCGXMCtx *ctx, const uint8_t *in, uin
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
     int32_t ret = CryptLenCheckAndRefresh(ctx, len);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    // GHASH_H(A, C)
-    GcmHashMultiBlock(ctx->ghash, ctx->hTable, in, len);
-    ctx->plaintextLen += (uint64_t)len;
 
-    ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, in, out, len);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    // GHASH_H(A, C)
+    uint32_t blockLen = len& GCM_BLOCK_MASK;
+    uint32_t lastLen = len - blockLen;
+    GcmHashMultiBlock(ctx->ghash, ctx->hTable, in, blockLen);
+    if(lastLen){
+        uint8_t tmp[GCM_BLOCKSIZE] = {0};
+        memcpy_s(tmp, lastLen, in + blockLen, lastLen);
+        GcmHashMultiBlock(ctx->ghash, ctx->hTable, tmp, GCM_BLOCKSIZE);
     }
+
     // z0 = 0^128 XOR 128 bits keystream
     uint8_t zeros[GCM_BLOCKSIZE] = {0};
     ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, zeros, ctx->lastz0, GCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
+    // z1 = C XOR |C| bits keystream
+    ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, in, out, len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ctx->plaintextLen += (uint64_t)len;
     return CRYPT_SUCCESS;
 }
 

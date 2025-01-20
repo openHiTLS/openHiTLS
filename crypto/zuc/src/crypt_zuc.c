@@ -17,7 +17,6 @@
 #ifdef HITLS_CRYPTO_ZUC
 
 #include "crypt_zuc_local.h"
-#include <stdio.h>
 
 #define MAKEU32(a, b, c ,d) (\
 ((uint32_t)(a) << 24)        \
@@ -281,17 +280,13 @@ void ZUC_Init(CRYPT_ZUC_Ctx *ctx){
 
 // ZUC Generate key stream , KeyStreamLen mod 4 == 0
 void ZUC_GenKeyStream(CRYPT_ZUC_Ctx *ctx, uint8_t* out, int KeyStreamLen){
-    // GB/T 33133.1 ——2016, discard the first output
 
-    printf("raw KeyStream: ");
     for(uint16_t i = 0; i < KeyStreamLen; i += 4){
         BitReorganization(ctx);
         uint32_t v = F(ctx) ^ ctx->X[3];
-        printf("0x%08x ", v);
         PUT_UINT32_BE(v, out, i);
         ZUC_LFSR_WMode(ctx);
     }
-    printf("\n");
 }
 
 #endif // HITLS_CRYPTO_ZUC

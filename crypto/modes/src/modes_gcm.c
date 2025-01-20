@@ -89,7 +89,7 @@ static int32_t CheckUseCnt(const MODES_CipherGCMCtx *ctx)
 /**
  * NIST_800-38D-5.2
  * 1 ≤ len(IV) ≤ 2^64 - 1 (bit)
- * It is currently restricted to no more than 2^32 - 1 bytes
+ * It is currently restricted to no more than 2^32 - 1 bits
  */
 int32_t MODES_GCM_SetIv(MODES_CipherGCMCtx *ctx, const uint8_t *iv, uint32_t ivLen)
 {
