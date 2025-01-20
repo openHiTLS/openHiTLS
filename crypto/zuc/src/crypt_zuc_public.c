@@ -142,8 +142,7 @@ int32_t CRYPT_ZUC_Ctrl(CRYPT_ZUC_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     switch (opt) {
         case CRYPT_CTRL_SET_IV: // every time the initialization vecotr is set, 
                                 // zuc needs to reinit
-            uint8_t * iv = val;
-            ret = CRYPT_ZUC_SetIV(ctx, iv, len);
+            ret = CRYPT_ZUC_SetIV(ctx, val, len);
             if(ret != CRYPT_SUCCESS){
                 BSL_ERR_PUSH_ERROR(ret);
                 return ret;
