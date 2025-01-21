@@ -117,6 +117,7 @@ enum CRYPT_ERROR {
     CRYPT_RSA_GET_SALT_LEN_ERROR,       /**< The input length of getting salt-len is incorrect. */
     CRYPT_RSA_GET_SALT_NOT_PSS_ERROR,   /**< When the padding type of the key is not pss, and get the salt len. */
     CRYPT_RSA_ERR_PSS_PARAMS,            /**< The parameter is error when the padding type of the key is pss. */
+    CRYPT_RSA_ERR_BSSA_PARAM,          /**< The parameter of bssa is invalid. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
     CRYPT_EAL_ERR_ALGID,                /**< Incorrect algorithm ID. */

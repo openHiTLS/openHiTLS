@@ -76,13 +76,13 @@ typedef struct {
 
 typedef struct {
     uint16_t tokenType;
-    uint8_t nonce[PRIVPASS_TOKEN_SHA256_SIZE];
+    uint8_t nonce[PRIVPASS_TOKEN_NONCE_LEN];
     uint8_t challengeDigest[PRIVPASS_TOKEN_SHA256_SIZE];
     uint8_t tokenKeyId[PRIVPASS_TOKEN_SHA256_SIZE];
     BSL_Buffer authenticator;
 } PrivPass_TokenInstance;
 
-typedef struct PrivPass_Token {
+struct PrivPass_Token {
     int32_t type;
     union {
         PrivPass_TokenChallengeReq *tokenChallengeReq;
@@ -91,9 +91,9 @@ typedef struct PrivPass_Token {
         PrivPass_TokenResponse *tokenResponse;
         PrivPass_TokenInstance *token;
     } st;
-} HITLS_AUTH_PrivPassToken;
+};
 
-typedef struct PrivPassCryptCb {
+typedef struct {
     HITLS_AUTH_PrivPassNewPkeyCtx newPkeyCtx;
     HITLS_AUTH_PrivPassFreePkeyCtx freePkeyCtx;
     HITLS_AUTH_PrivPassDigest digest;
@@ -105,22 +105,22 @@ typedef struct PrivPassCryptCb {
     HITLS_AUTH_PrivPassDecodePrvKey decodePrvKey;
     HITLS_AUTH_PrivPassCheckKeyPair checkKeyPair;
     HITLS_AUTH_PrivPassRandom random;
-} HITLS_AUTH_PrivPassCryptCb;
+} PrivPassCryptCb;
 
 /* Main context structure for Private Pass operations */
-typedef struct PrivPass_Ctx {
+struct PrivPass_Ctx {
     void *prvKeyCtx;        // Private key context
     void *pubKeyCtx;        // Public key context
     uint8_t tokenKeyId[PRIVPASS_TOKEN_SHA256_SIZE];      // Token key identifier
     uint8_t nonce[PRIVPASS_TOKEN_NONCE_LEN];             // Random nonce
-    HITLS_AUTH_PrivPassCryptCb method;                   // Cryptographic callbacks
-} HITLS_AUTH_PrivPassCtx;
+    PrivPassCryptCb method;                   // Cryptographic callbacks
+};
 
 /**
  * @brief   Get the default cryptographic callback functions.
  * @retval  PrivPassCryptCb structure containing default callbacks.
  */
-HITLS_AUTH_PrivPassCryptCb PrivPassCryptPubCb(void);
+PrivPassCryptCb PrivPassCryptPubCb(void);
 
 #ifdef __cplusplus
 }

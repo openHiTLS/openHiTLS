@@ -1480,11 +1480,14 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_INVALID_PARAM_TC001(void)
         == CRYPT_RSA_ERR_MD_ALGID);
 
     uint8_t rBufTest[128] = {1}; // due to key bits = 1024
+    uint8_t rBufTest1[128] = {0}; // due to key bits = 1024
     uint32_t rBufTestLen = 128;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
     // repeated set
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest, rBufTestLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBufTest1, rBufTestLen)
+        == CRYPT_RSA_ERR_BSSA_PARAM);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }

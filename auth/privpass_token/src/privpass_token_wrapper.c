@@ -23,6 +23,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
 #include "crypt_util_rand.h"
+#include "auth_privpass_token.h"
 #include "privpass_token.h"
 #include "bsl_sal.h"
 
@@ -211,6 +212,43 @@ int32_t PrivPassPubVerify(void *pkeyCtx, int32_t algId, const uint8_t *data, uin
     return CRYPT_EAL_PkeyVerify(ctx, cryptAlgId, data, dataLen, sign, signLen);
 }
 
+static int32_t PubKeyCheck(CRYPT_EAL_PkeyCtx *ctx)
+{
+    uint32_t padType = 0;
+    uint32_t keyBits = 0;
+    CRYPT_MD_AlgId mdType = 0;
+
+    int32_t ret = CRYPT_EAL_PkeyGetId(ctx);
+    if (ret != CRYPT_PKEY_RSA) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_TYPE);
+        return HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_TYPE;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (padType != CRYPT_PKEY_EMSA_PSS) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_INFO);
+        return HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_INFO;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_RSA_MD, &mdType, sizeof(CRYPT_MD_AlgId));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (mdType != CRYPT_MD_SHA384) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_MD);
+        return HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_MD;
+    }
+    keyBits = CRYPT_EAL_PkeyGetKeyBits(ctx);
+    if (keyBits != 2048) { // now only support rsa-2048
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_BITS);
+        return HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_BITS;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t PrivPassPubDecodePubKey(void *libCtx, const char *attrName, uint8_t *pubKey, uint32_t pubKeyLen, void **pkeyCtx)
 {
     (void)libCtx;
@@ -226,17 +264,10 @@ int32_t PrivPassPubDecodePubKey(void *libCtx, const char *attrName, uint8_t *pub
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    uint32_t padType = 0;
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
+    ret = PubKeyCheck(ctx);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(ctx);
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
-    }
-    if (padType != CRYPT_PKEY_EMSA_PSS) {
-        CRYPT_EAL_PkeyFreeCtx(ctx);
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_ALG);
-        return HITLS_AUTH_PRIVPASS_INVALID_ALG;
     }
     *pkeyCtx = ctx;
     return CRYPT_SUCCESS;
@@ -253,6 +284,7 @@ int32_t PrivPassPubDecodePrvKey(void *libCtx, const char *attrName, void *param,
         return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
     }
     CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint32_t keyBits = 0;
     uint8_t *tmpBuff = BSL_SAL_Malloc(prvKeyLen + 1);
     if (tmpBuff == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -270,8 +302,14 @@ int32_t PrivPassPubDecodePrvKey(void *libCtx, const char *attrName, void *param,
     }
     if (CRYPT_EAL_PkeyGetId(ctx) != CRYPT_PKEY_RSA) {
         CRYPT_EAL_PkeyFreeCtx(ctx);
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_ALG);
-        return HITLS_AUTH_PRIVPASS_INVALID_ALG;
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PRVKEY_TYPE);
+        return HITLS_AUTH_PRIVPASS_INVALID_PRVKEY_TYPE;
+    }
+    keyBits = CRYPT_EAL_PkeyGetKeyBits(ctx);
+    if (keyBits != 2048) { // now only support rsa-2048
+        CRYPT_EAL_PkeyFreeCtx(ctx);
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PRVKEY_BITS);
+        return HITLS_AUTH_PRIVPASS_INVALID_PRVKEY_BITS;
     }
     *pkeyCtx = ctx;
     return CRYPT_SUCCESS;
@@ -299,9 +337,9 @@ int32_t PrivPassPubRandom(uint8_t *buffer, uint32_t bufferLen)
     return CRYPT_Rand(buffer, bufferLen);
 }
 
-HITLS_AUTH_PrivPassCryptCb PrivPassCryptPubCb(void)
+PrivPassCryptCb PrivPassCryptPubCb(void)
 {
-    HITLS_AUTH_PrivPassCryptCb method = {
+    PrivPassCryptCb method = {
         .newPkeyCtx = PrivPassNewPkeyCtx,
         .freePkeyCtx = PrivPassFreePkeyCtx,
         .digest = PrivPassPubDigest,
