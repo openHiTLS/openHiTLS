@@ -310,6 +310,9 @@ enum CRYPT_ERROR {
     CRYPT_ECC_PKEY_ERR_SIGN_LEN,                     /**< Invalid sign length  */
 
     CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL,                   /**< ECC public keys are not equal. */
+    CRYPT_ECC_INVERSE_INPUT_ZERO,                     /** Modulo inverse input is 0. */
+    CRYPT_ECC_POINT_MUL_ERR_K_LEN,                    /** The scalar length exceeds the curve specification
+                                                          when using the dot multiplication function */
 
     CRYPT_SHA3_OUT_BUFF_LEN_NOT_ENOUGH = 0x01140001,  /**< Insufficient buffer length for storing output results. */
 

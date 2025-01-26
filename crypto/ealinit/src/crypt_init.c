@@ -231,6 +231,11 @@ static const EAL_CheckAsm HITLS_ASM_SYM_ALG_CHECK[] = {
     {.id = CRYPT_CIPHER_AES128_OFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES192_OFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES256_OFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
+#if defined(HITLS_CRYPTO_GCM_ASM)
+    {.id = CRYPT_CIPHER_AES128_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
+    {.id = CRYPT_CIPHER_AES192_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
+    {.id = CRYPT_CIPHER_AES256_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
+#endif // HITLS_CRYPTO_GCM_ASM
 #endif // HITLS_CRYPTO_AES_ASM
 #if defined(HITLS_CRYPTO_SM4_ASM)
     {.id = CRYPT_CIPHER_SM4_XTS, .callback = {CRYPT_SM4_AsmCheck, NULL}},
@@ -279,7 +284,7 @@ int32_t CRYPT_ASMCAP_Md(CRYPT_MD_AlgId id)
 #if defined(HITLS_CRYPTO_PKEY)
 static const EAL_CheckAsm HITLS_ASM_PKEY_ALG_CHECK[] = {
     /* Asymmetric algorithm ID */
-#if defined(HITLS_CRYPTO_ECC_ASM)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM)
     {.id = CRYPT_PKEY_ECDSA, .callback = {NULL, CRYPT_ECP256_AsmCheck}},
     {.id = CRYPT_PKEY_ECDH, .callback = {NULL, CRYPT_ECP256_AsmCheck}},
 #endif
