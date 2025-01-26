@@ -5,7 +5,7 @@ Welcome to visit the openHiTLS Code Repository, which is under the openHiTLS com
 
 ## Overview
 
-The architecture of openHiTLS is highly modular, and openHiTLS can be configured in modules and features. The RAM/ROM footprint depends on the features selected. It provides the optimal performance optimization for cryptographic algorithms. Currently, 4 components and cryptographic algorithms are configured, and the performance optimization of ShangMi cryptographic algorithms on ARM, x86 is ready. More architectures and features are to be planned.
+The architecture of openHiTLS is highly modular, and openHiTLS can be configured in modules and features. The RAM/ROM footprint depends on the features selected. It provides the optimal performance optimization for cryptographic algorithms. Currently, 5 components and cryptographic algorithms are configured, and the performance optimization of ShangMi cryptographic algorithms on ARM, x86 is ready. More architectures and features are to be planned.
 
 ## Feature Introduction
 
