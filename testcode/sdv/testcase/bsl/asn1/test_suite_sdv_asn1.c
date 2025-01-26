@@ -694,9 +694,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_ASN1_ENCODE_BOOL_FUNC(int data, Hex *expect)
 {
+    bool bData = (bool)data;
     BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_BOOLEAN, 0, 0}};
     BSL_ASN1_Template templ = {item, 1};
-    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BOOLEAN, 1, (uint8_t *)&data};
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BOOLEAN, 1, (uint8_t *)&bData};
     uint8_t *encode = NULL;
     uint32_t encodeLen = 0;
 
@@ -1119,6 +1120,7 @@ EXIT:
 void SDV_BSL_ASN1_ENCODE_THEN_DECODE_FUNC_TC001(int boolData, int number, Hex *bitString, int unusedBits, Hex *utf8,
     int year, int month, int day, int hour, int minute, int second, Hex *headonly, Hex *expect)
 {
+    bool bData = (bool)boolData;
     BSL_ASN1_TemplateItem items[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
         {BSL_ASN1_TAG_BOOLEAN, 0, 1},
@@ -1136,7 +1138,7 @@ void SDV_BSL_ASN1_ENCODE_THEN_DECODE_FUNC_TC001(int boolData, int number, Hex *b
     BSL_ASN1_BitString bs = {bitString->x, bitString->len, unusedBits};
     BSL_TIME time = {year, month, day, hour, minute, 0, second, 0};
     BSL_ASN1_Buffer asns[] = {
-        {BSL_ASN1_TAG_BOOLEAN, sizeof(bool), (uint8_t *)&boolData},                     // 0
+        {BSL_ASN1_TAG_BOOLEAN, sizeof(bool), (uint8_t *)&bData},                     // 0
         integer,                                                                        // 1
         {BSL_ASN1_TAG_BITSTRING, sizeof(BSL_ASN1_BitString), (uint8_t *)&bs},           // 2
         {BSL_ASN1_TAG_NULL, 0, NULL},                                                   // 3

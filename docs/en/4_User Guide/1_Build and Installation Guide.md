@@ -81,7 +81,7 @@ openHiTLS provides the CMake build mode, which can be configured using **configu
 |--output_dir |Specifies the output path of the compilation target.|python3 configure.py --output_dir output|
 |--feature_config|Specifies the compilation feature configuration file.|python3 configure.py --feature_config path/to/xxx.json|
 |--compile_config|Specifies the compilation parameter configuration file.|python3 configure.py --compile_config path/to/xxx.json|
-|--enable|Specifies build features.|python3 configure.py --enable hitls_crypto hitls_tls hitls_pse|
+|--enable|Specifies build features.<br>Please refer to [Feature Description](./4_Configuration%20guide.md#1-Feature%20Description) to get supported features|python3 configure.py --enable hitls_crypto hitls_tls hitls_pse|
 |--disable|disable buld features|python3 configure.py --disable sal_thread |
 |--enable-sctp|enable sctp which is DTLS depended on|python3 configure.py --enable-sctp|
 |--asm_type|Indicates the assembly type.|python3 configure.py --lib_type  static --asm_type armv8|

@@ -145,7 +145,7 @@ int32_t CRYPT_SM3_AsmCheck(void)
 #endif // HITLS_CRYPTO_MD
 
 #if defined(HITLS_CRYPTO_PKEY)
-#if defined(HITLS_CRYPTO_ECC_ASM)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM)
 int32_t CRYPT_ECP256_AsmCheck(void)
 {
 #if defined(HITLS_CRYPTO_ECC_X8664)
