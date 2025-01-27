@@ -410,6 +410,8 @@ enum CRYPT_ERROR {
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
     CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
     CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
+    CRYPT_HPKE_FAILED_FETCH_PKEY,                        /**< Failed to fetch pkey. */
+    CRYPT_HPKE_FAILED_FETCH_KDF,                         /**< Failed to fetch kdf. */
 };
 #ifdef __cplusplus
 }
