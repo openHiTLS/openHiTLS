@@ -62,7 +62,7 @@ int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu);
  * @return Success: CRYPT_SUCCESS
  * For other error codes, see crypt_errno.h.
  */
-int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx);
+static int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx);
 
 /**
  * @brief Global DRBG initialization. After initialization is complete,
