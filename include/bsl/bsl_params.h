@@ -36,6 +36,7 @@ typedef enum {
     BSL_PARAM_TYPE_OCTETS_PTR,
     BSL_PARAM_TYPE_FUNC_PTR,
     BSL_PARAM_TYPE_CTX_PTR,
+    BSL_PARAM_TYPE_UINT8,
     BSL_PARAM_TYPE_UINT16,
     BSL_PARAM_TYPE_UINT32,
     BSL_PARAM_TYPE_BOOL,
@@ -43,7 +44,7 @@ typedef enum {
     BSL_PARAM_TYPE_OCTETS,
 } BSL_PARAM_VALUE_TYPE;
 
-typedef struct {
+typedef struct BslParam {
     int32_t key;
     uint32_t valueType;
     void *value;

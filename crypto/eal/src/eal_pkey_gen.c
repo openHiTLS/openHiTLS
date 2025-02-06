@@ -32,6 +32,7 @@
 #include "eal_common.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_ealinit.h"
 #include "bsl_err_internal.h"
 #include "crypt_provider.h"
 #include "bsl_params.h"
@@ -101,6 +102,12 @@ ERR:
 
 CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id)
 {
+#ifdef HITLS_CRYPTO_ASM_CHECK
+    if (CRYPT_ASMCAP_Pkey(id) != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, id, CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return NULL;
+    }
+#endif
     return PkeyNewDefaultCtx(id);
 }
 
@@ -996,9 +1003,6 @@ static int32_t CRYPT_EAL_SetCipherMethod(const CRYPT_EAL_Func *funcsAsyCipher, E
                 case CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT:
                     method->decrypt = funcsAsyCipher[index].func;
                     break;
-                case CRYPT_EAL_IMPLPKEYCIPHER_CTRL:
-                    method->ctrl = funcsAsyCipher[index].func;
-                    break;
                 default:
                     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
                     return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
@@ -1017,9 +1021,6 @@ static int32_t CRYPT_EAL_SetExchMethod(const CRYPT_EAL_Func *funcsExch, EAL_Pkey
             switch (funcsExch[index].id) {
                 case CRYPT_EAL_IMPLPKEYEXCH_EXCH:
                     method->computeShareKey = funcsExch[index].func;
-                    break;
-                case CRYPT_EAL_IMPLPKEYEXCH_CTRL:
-                    method->ctrl = funcsExch[index].func;
                     break;
                 default:
                     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
@@ -1048,9 +1049,6 @@ static int32_t CRYPT_EAL_SetSignMethod(const CRYPT_EAL_Func *funcSign, EAL_PkeyU
                     break;
                 case CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA:
                     method->verifyData = funcSign[index].func;
-                    break;
-                case CRYPT_EAL_IMPLPKEYSIGN_CTRL:
-                    method->ctrl = funcSign[index].func;
                     break;
                 case CRYPT_EAL_IMPLPKEYSIGN_BLIND:
                     method->blind = funcSign[index].func;

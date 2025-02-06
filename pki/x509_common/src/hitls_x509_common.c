@@ -15,11 +15,9 @@
 
 #include "hitls_x509_local.h"
 #include "securec.h"
-#include "bsl_obj.h"
 #include "bsl_sal.h"
 #include "bsl_log_internal.h"
 #include "bsl_binlog_id.h"
-#include "bsl_log.h"
 #include "hitls_pki_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
@@ -29,6 +27,7 @@
 #include "crypt_encode.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "hitls_pki_utils.h"
 
 int32_t HITLS_X509_ParseTbsRawData(uint8_t *encode, uint32_t encodeLen, uint8_t **tbsRawData, uint32_t *tbsRawDataLen)
 {
@@ -549,7 +548,7 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         return HITLS_X509_ERR_MGF_NOT_MATCH;
     }
     int32_t saltLen;
-    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_SALT, &saltLen, sizeof(int32_t));
+    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -772,7 +771,7 @@ static int32_t X509_SetRsaPssDefaultParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdI
         return ret;
     }
     int32_t saltLen;
-    ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_SALT, &saltLen, sizeof(int32_t));
+    ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_SALTLEN, &saltLen, sizeof(int32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

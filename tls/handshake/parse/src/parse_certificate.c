@@ -25,6 +25,8 @@
 #include "hs_common.h"
 #include "parse_msg.h"
 #include "parse_common.h"
+#include "hs_extensions.h"
+#include "parse_extensions.h"
 
 /**
  * @brief   Parse the certificate signature
@@ -75,7 +77,7 @@ int32_t ParseSingleCert(ParsePacket *pkt, CERT_Item **certItem)
     return HITLS_SUCCESS;
 }
 
-static int32_t ParseCertExtension(ParsePacket *pkt)
+static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg)
 {
     if (pkt->ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         return HITLS_SUCCESS;
@@ -88,9 +90,30 @@ static int32_t ParseCertExtension(ParsePacket *pkt)
         return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15590, logStr, ALERT_DECODE_ERROR);
     }
     if (*pkt->bufOffset + certExLen > pkt->bufLen) {
-        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16237, logStr, ALERT_DECODE_ERROR);
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16235, logStr, ALERT_DECODE_ERROR);
     }
-    *pkt->bufOffset += certExLen;
+
+    uint32_t offset = 0;
+    while (offset < certExLen) {
+        uint16_t extMsgType = HS_EX_TYPE_END;
+        uint32_t extMsgLen = 0u;
+        ret = ParseExHeader(pkt->ctx, &pkt->buf[*pkt->bufOffset],
+            pkt->bufLen - *pkt->bufOffset, &extMsgType, &extMsgLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        *pkt->bufOffset += HS_EX_HEADER_LEN;
+        offset += HS_EX_HEADER_LEN;
+        msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
+        *pkt->bufOffset += extMsgLen;
+        offset += extMsgLen;
+    }
+
+    if (offset != certExLen) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15463,
+            BINGLOG_STR("extension len error"), ALERT_DECODE_ERROR);
+    }
+
     return HITLS_SUCCESS;
 }
 
@@ -118,7 +141,7 @@ int32_t ParseCerts(ParsePacket *pkt, HS_Msg *hsMsg)
         }
         cur = item;
 
-        ret = ParseCertExtension(pkt);
+        ret = ParseCertExtension(pkt, msg);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15592, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "parse certificate extension fail.", 0, 0, 0, 0);

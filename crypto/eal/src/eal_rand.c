@@ -148,10 +148,6 @@ int32_t EAL_RandInit(CRYPT_RAND_AlgId id, BSL_Param *param, CRYPT_EAL_RndCtx *ct
     }
 
     EAL_RandUnitaryMethod *meth = ctx->meth;
-    if (meth->gen == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
 
     if ((ctx->isProvider) ? (meth->provNewCtx == NULL) : (meth->newCtx == NULL)) {
         ctx->working = true;
@@ -425,7 +421,7 @@ int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, c
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
+CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
     BSL_Param *param)
 {
     return EAL_ProvRandInitDrbg(libCtx, algId, attrName, param);

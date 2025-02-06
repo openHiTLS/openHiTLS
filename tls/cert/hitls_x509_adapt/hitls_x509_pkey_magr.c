@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include "securec.h"
 #include "bsl_sal.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_err_internal.h"
 #include "hitls_x509_adapt_local.h"
 #include "crypt_eal_encode.h"

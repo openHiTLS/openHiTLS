@@ -20,7 +20,7 @@
 #include "bsl_err_internal.h"
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
-#include "hitls_pki.h"
+#include "hitls_pki_x509.h"
 #include "bsl_list.h"
 #include "hitls_error.h"
 

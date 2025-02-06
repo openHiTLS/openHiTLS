@@ -43,10 +43,10 @@ typedef struct {
 typedef void (CRYPT_EAL_CvtVoid)(void);
 
 /* capFuncs */
-#define CRYPT_EAL_CAP_GETENTROPY   1 // Callback definition CRYPT_RAL_GetEntropy, in crypt_types.h
-#define CRYPT_EAL_CAP_CLEANENTROPY 2 // Callback definition CRYPT_RAL_CleanEntropy
-#define CRYPT_EAL_CAP_GETNONCE     3 // Callback definition CRYPT_RAL_GetNonce
-#define CRYPT_EAL_CAP_CLEANNONCE   4 // Callback definition CRYPT_RAL_CleanNonce
+#define CRYPT_EAL_CAP_GETENTROPY   1 // Callback definition CRYPT_EAL_GetEntropyCb, in crypt_types.h
+#define CRYPT_EAL_CAP_CLEANENTROPY 2 // Callback definition CRYPT_EAL_CleanEntropyCb
+#define CRYPT_EAL_CAP_GETNONCE     3 // Callback definition CRYPT_EAL_GetNonceCb
+#define CRYPT_EAL_CAP_CLEANNONCE   4 // Callback definition CRYPT_EAL_CleanNonceCb
 
 /* get information from mgrCtx, such as entropy source context */
 #define CRYPT_EAL_CAP_MGRCTXCTRL   5
@@ -112,8 +112,7 @@ typedef int32_t (*CRYPT_EAL_ImplCipherInitCtx)(void *ctx, const uint8_t *key, ui
     const uint8_t *iv, uint32_t ivLen, const BSL_Param *param, bool enc);
 typedef int32_t (*CRYPT_EAL_ImplCipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplCipherFinal)(void *ctx, const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CRYPT_EAL_ImplCipherFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplCipherDeinitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplCipherCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
@@ -154,9 +153,8 @@ typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA   2
 #define CRYPT_EAL_IMPLPKEYSIGN_VERIFY     3
 #define CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA 4
-#define CRYPT_EAL_IMPLPKEYSIGN_CTRL       5
-#define CRYPT_EAL_IMPLPKEYSIGN_BLIND      6
-#define CRYPT_EAL_IMPLPKEYSIGN_UNBLIND    7
+#define CRYPT_EAL_IMPLPKEYSIGN_BLIND      5
+#define CRYPT_EAL_IMPLPKEYSIGN_UNBLIND    6
 
 typedef int32_t (*CRYPT_EAL_ImplPkeySign)(void *ctx, int32_t mdAlgId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
@@ -166,7 +164,6 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyVerify)(const void *ctx, int32_t mdAlgId, co
     uint8_t *sign, uint32_t signLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyVerifyData)(const void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t signLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyBlind)(void *ctx, int32_t mdAlgId, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyUnBlind)(const void *ctx, const uint8_t *input, uint32_t inputLen,
@@ -175,20 +172,15 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyUnBlind)(const void *ctx, const uint8_t *inp
 // CRYPT_EAL_OPERAID_ASYMCIPHER
 #define CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT  1
 #define CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT  2
-#define CRYPT_EAL_IMPLPKEYCIPHER_CTRL     3
 
 typedef int32_t (*CRYPT_EAL_ImplPkeyEncrypt)(void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplPkeyDecrypt)(void *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyCryptCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 // CRYPT_EAL_OPERAID_KEYEXCH
 #define CRYPT_EAL_IMPLPKEYEXCH_EXCH  1
-#define CRYPT_EAL_IMPLPKEYEXCH_CTRL  2
-typedef int32_t (*CRYPT_EAL_ImplPkeyExch)(const void *ctx, const void *pubCtx,
-    uint8_t *out, uint32_t *outLen);
-typedef int32_t (*CRYPT_EAL_ImplPkeyExchCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyExch)(const void *ctx, const void *pubCtx, uint8_t *out, uint32_t *outLen);
 
 // CRYPT_EAL_OPERAID_HASH
 #define CRYPT_EAL_IMPLMD_NEWCTX      1

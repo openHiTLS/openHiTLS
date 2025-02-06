@@ -86,11 +86,11 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param
     ctx->seedCtx = seedCtx;
     // Construct input method structure array
     CRYPT_EAL_Func capFuncs[] = {
-        {CRYPT_EAL_CAP_GETENTROPY, meth.getEntropy},
-        {CRYPT_EAL_CAP_CLEANENTROPY, meth.cleanEntropy},
-        {CRYPT_EAL_CAP_GETNONCE, meth.getNonce},
-        {CRYPT_EAL_CAP_CLEANNONCE, meth.cleanNonce},
-        {CRYPT_EAL_CAP_MGRCTXCTRL, CRYPT_EAL_ProvMgrCtrl},
+        {CRYPT_EAL_CAP_GETENTROPY, (CRYPT_EAL_GetEntropyCb)meth.getEntropy},
+        {CRYPT_EAL_CAP_CLEANENTROPY, (CRYPT_EAL_CleanEntropyCb)meth.cleanEntropy},
+        {CRYPT_EAL_CAP_GETNONCE, (CRYPT_EAL_GetNonceCb)meth.getNonce},
+        {CRYPT_EAL_CAP_CLEANNONCE, (CRYPT_EAL_CleanNonceCb)meth.cleanNonce},
+        {CRYPT_EAL_CAP_MGRCTXCTRL, (CRYPT_EAL_ProvMgrCtrlCb)CRYPT_EAL_ProvMgrCtrl},
         CRYPT_EAL_FUNC_END  // End marker
     };
 
@@ -204,19 +204,16 @@ int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* p
         return ret;
     }
 
-    ret = BSL_LIST_AddElement(libCtx->providers, mgrCtx, BSL_LIST_POS_END);
+    mgrCtx->libCtx = libCtx;
+    mgrCtx->providerName = name;
+    ret = CRYPT_EAL_InitProviderMethod(mgrCtx, NULL, CRYPT_EAL_DefaultProvInit);
+    if (ret == BSL_SUCCESS) {
+        ret = BSL_LIST_AddElement(libCtx->providers, mgrCtx, BSL_LIST_POS_END);
+    }
     if (ret != BSL_SUCCESS) {
         BSL_SAL_Free(name);
         BSL_SAL_ReferencesFree(&mgrCtx->ref);
         BSL_SAL_Free(mgrCtx);
-        return ret;
-    }
-    mgrCtx->libCtx = libCtx;
-    mgrCtx->providerName = name;
-    ret = CRYPT_EAL_InitProviderMethod(mgrCtx, NULL, CRYPT_EAL_DefaultProvInit);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_LIST_DeleteAll(libCtx->providers, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
     }
     return ret;
 }

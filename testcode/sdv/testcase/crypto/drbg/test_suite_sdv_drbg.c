@@ -1952,7 +1952,7 @@ void SDV_CRYPT_EAL_DRBG_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
     ASSERT_EQ(BSL_PARAM_InitValue(&param[4],
         CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
 
-    drbgCtx = CRYPT_EAL_ProviderDrbgInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", param);
+    drbgCtx = CRYPT_EAL_ProviderDrbgNewCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", param);
     ASSERT_TRUE(drbgCtx != NULL);
     ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbgCtx, NULL, 0) == CRYPT_SUCCESS);
 

@@ -18,9 +18,10 @@
 #include "bsl_sal.h"
 #include "securec.h"
 #include "stub_replace.h"
-#include "hitls_pki.h"
+#include "hitls_pki_cert.h"
+#include "hitls_pki_csr.h"
 #include "hitls_pki_errno.h"
-#include "bsl_type.h"
+#include "bsl_types.h"
 #include "bsl_log.h"
 #include "hitls_cert_local.h"
 #include "bsl_init.h"
@@ -635,7 +636,7 @@ void SDV_X509_MUL_CERT_PARSE_FUNC_TC001(int format, char *path, int certNum)
 {
     TestMemInit();
     HITLS_X509_List *list = NULL;
-    int32_t ret = HITLS_X509_CertMulParseFile(format, path, &list);
+    int32_t ret = HITLS_X509_CertParseBundleFile(format, path, &list);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), certNum);
 EXIT:
@@ -649,13 +650,13 @@ void SDV_X509_CERT_SET_VERIOSN_FUNC_TC001(void)
     TestMemInit();
     HITLS_X509_Cert *cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
-    ASSERT_EQ(cert->tbs.version, HITLS_CERT_VERSION_1);
+    ASSERT_EQ(cert->tbs.version, HITLS_X509_VERSION_1);
 
-    int32_t version = HITLS_CERT_VERSION_2;
+    int32_t version = HITLS_X509_VERSION_2;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
 
-    version = HITLS_CERT_VERSION_3;
+    version = HITLS_X509_VERSION_3;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(cert->tbs.version, version);
 
@@ -663,7 +664,7 @@ void SDV_X509_CERT_SET_VERIOSN_FUNC_TC001(void)
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, 1), HITLS_X509_ERR_INVALID_PARAM);
 
     // val
-    version = HITLS_CERT_VERSION_3 + 1;
+    version = HITLS_X509_VERSION_3 + 1;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)),
               HITLS_X509_ERR_INVALID_PARAM);
 
@@ -758,7 +759,7 @@ void SDV_X509_CERT_GEN_BUFF_API_TC001(void)
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, NULL, &buff), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, NULL), HITLS_X509_ERR_INVALID_PARAM);
 
-    cert->tbs.version = HITLS_CERT_VERSION_1;
+    cert->tbs.version = HITLS_X509_VERSION_1;
     cert->tbs.ext.extList->count = 1;
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &buff), HITLS_X509_ERR_CERT_NOT_SIGNED);
 

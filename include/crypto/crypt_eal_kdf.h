@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "crypt_algid.h"
-#include "crypt_eal_provider.h"
+#include "crypt_types.h"
 #include "bsl_params.h"
 
 #ifdef __cplusplus

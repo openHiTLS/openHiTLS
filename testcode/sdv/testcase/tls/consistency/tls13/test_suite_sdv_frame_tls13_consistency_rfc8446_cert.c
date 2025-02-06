@@ -1165,6 +1165,7 @@ static void Test_EmptyCertMsg(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint
     while (certItem != NULL) {
         FrameCertItem *temp = certItem->next;
         BSL_SAL_FREE(certItem->cert.data);
+        BSL_SAL_FREE(certItem->extension.data);
         BSL_SAL_FREE(certItem);
         certItem = temp;
     }

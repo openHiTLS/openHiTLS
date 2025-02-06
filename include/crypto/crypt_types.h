@@ -334,7 +334,7 @@ typedef struct {
      * @param lenRange  [IN] Entropy source length range.
      * @retval 0 indicates success, and other values indicate failure.
      */
-typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
+typedef int32_t (*CRYPT_EAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange);
 
     /**
      * @ingroup crypt_types
@@ -343,7 +343,7 @@ typedef int32_t (*CRYPT_RAL_GetEntropyCb)(void *ctx, CRYPT_Data *entropy, uint32
      * @param entropy [OUT] Entropy source data
      * @retval  void
      */
-typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
+typedef void (*CRYPT_EAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
 
     /**
      * @ingroup crypt_types
@@ -358,7 +358,7 @@ typedef void (*CRYPT_RAL_CleanEntropyCb)(void *ctx, CRYPT_Data *entropy);
      * @param lenRange [IN] Random number length range.
      * @retval 0 indicates success, and other values indicate failure.
      */
-typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
+typedef int32_t (*CRYPT_EAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t strength, CRYPT_Range *lenRange);
 
     /**
     * @ingroup crypt_types
@@ -367,7 +367,7 @@ typedef int32_t (*CRYPT_RAL_GetNonceCb)(void *ctx, CRYPT_Data *nonce, uint32_t s
     * @param nonce [OUT] random number
     * @retval void
     */
-typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
+typedef void (*CRYPT_EAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
 
 /**
  * @ingroup crypt_types
@@ -379,10 +379,10 @@ typedef void (*CRYPT_RAL_CleanNonceCb)(void *ctx, CRYPT_Data *nonce);
  * obtaining random numbers can be null.
  */
 typedef struct {
-    CRYPT_RAL_GetEntropyCb getEntropy;
-    CRYPT_RAL_CleanEntropyCb cleanEntropy;
-    CRYPT_RAL_GetNonceCb getNonce;
-    CRYPT_RAL_CleanNonceCb cleanNonce;
+    CRYPT_EAL_GetEntropyCb getEntropy;
+    CRYPT_EAL_CleanEntropyCb cleanEntropy;
+    CRYPT_EAL_GetNonceCb getNonce;
+    CRYPT_EAL_CleanNonceCb cleanNonce;
 } CRYPT_RandSeedMethod;
 
 /**
@@ -446,13 +446,14 @@ typedef enum {
     CRYPT_CTRL_SET_RSA_FLAG,            /**< RSA set the flag. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15,   /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15. */
     CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS, /**< RSA Set the encryption/decryption padding mode to RSAES_PKCSV15_TLS. */
-
-    CRYPT_CTRL_GET_RSA_SALT,            /**< Obtain the salt length of the RSA algorithm. */
+    CRYPT_CTRL_GET_RSA_SALTLEN,         /**< Obtain the real salt len in pss mode. The salt len can be set to -1, -2, -3
+                                             in sign or verify, which needs additional conversion during encoding.
+                                             If salt len = -3, the max salt len will be returned. */
     CRYPT_CTRL_GET_RSA_PADDING,         /**< Obtain the padding mode of the RSA algorithm. */
     CRYPT_CTRL_GET_RSA_MD,              /**< Obtain the MD algorithm of the RSA algorithm. */
     CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode is PSS. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
-    
+
     // ecc
     CRYPT_CTRL_SET_SM2_USER_ID = 300,
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */
@@ -598,7 +599,37 @@ typedef enum {
     CRYPT_KDF_HKDF_MODE_EXPAND,
 } CRYPT_HKDF_MODE;
 
-#define DEFAULT_PROVIDER_PARAM_TYPE 0
+typedef enum {
+    CRYPT_ENCODE_UNKNOW,
+    CRYPT_PRIKEY_PKCS8_UNENCRYPT,
+    CRYPT_PRIKEY_PKCS8_ENCRYPT,
+    CRYPT_PRIKEY_RSA,
+    CRYPT_PRIKEY_ECC,
+    CRYPT_PUBKEY_SUBKEY,
+    CRYPT_PUBKEY_RSA
+} CRYPT_ENCODE_TYPE;
+
+typedef enum {
+    CRYPT_DERIVE_PBKDF2,
+} CRYPT_DERIVE_MODE;
+
+typedef struct {
+    uint32_t deriveMode;
+    void *param;
+} CRYPT_EncodeParam;
+
+typedef struct {
+    uint32_t pbesId;
+    uint32_t pbkdfId;
+    uint32_t hmacId;
+    uint32_t symId;
+    uint32_t saltLen;
+    uint8_t *pwd;
+    uint32_t pwdLen;
+    uint32_t itCnt;
+} CRYPT_Pbkdf2Param;
+
+typedef struct EAL_LibCtx CRYPT_EAL_LibCtx;
 
 #ifdef __cplusplus
 }
