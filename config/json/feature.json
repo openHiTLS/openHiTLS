@@ -126,10 +126,11 @@
                     "ecc": {"ins_set":["x8664", "avx512"]}
                 },
                 "armv8": {
+                    "sha1": null,
+                    "sha2": null,
                     "sm3": null,
                     "aes": null,
                     "modes": null,
-                    "chacha20": null,
                     "sm4": null,
                     "ecc": null
                 }
@@ -745,8 +746,7 @@
                 ".features": ["chacha20"],
                 ".srcs": {
                     "public": "crypto/chacha20/src/chacha20.c",
-                    "no_asm": "crypto/chacha20/src/chacha20block.c",
-                    "armv8": "crypto/chacha20/src/chacha20block.c"
+                    "no_asm": "crypto/chacha20/src/chacha20block.c"
                 },
                 ".deps": ["bsl::sal"]
             },
