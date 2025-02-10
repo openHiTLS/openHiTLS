@@ -28,12 +28,12 @@ extern "C" {
 #endif
 
 #if defined(HITLS_SIXTY_FOUR_BITS)
-#define BN_UINT uint64_t
-#define BN_MASK (0xffffffffffffffffL)
+#define BN_UINT    uint64_t
+#define BN_MASK    (0xffffffffffffffffL)
 #define BN_DEC_VAL (10000000000000000000ULL)
 #elif defined(HITLS_THIRTY_TWO_BITS)
-#define BN_UINT uint32_t
-#define BN_MASK (0xffffffffL)
+#define BN_UINT    uint32_t
+#define BN_MASK    (0xffffffffL)
 #define BN_DEC_VAL (1000000000L)
 #else
 #error BN_UINT MUST be defined first.
@@ -45,9 +45,9 @@ extern "C" {
 
 /* Flag of BigNum. If a new number is added, the value increases by 0x01 0x02 0x04... */
 typedef enum {
-    CRYPT_BN_FLAG_OPTIMIZER = 0x01,      /**< Flag of BigNum, indicating the BigNum obtained from the optimizer */
-    CRYPT_BN_FLAG_CONSTTIME = 0x02,      /**< Flag of BigNum, indicating the constant time execution. */
-    CRYPT_BN_FLAG_ISNEGTIVE = 0x80000000,  /**< Flag of BigNum, indicating the bignum is negtive. */
+    CRYPT_BN_FLAG_OPTIMIZER = 0x01, /**< Flag of BigNum, indicating the BigNum obtained from the optimizer */
+    CRYPT_BN_FLAG_CONSTTIME = 0x02, /**< Flag of BigNum, indicating the constant time execution. */
+    CRYPT_BN_FLAG_ISNEGTIVE = 0x80000000, /**< Flag of BigNum, indicating the bignum is negtive. */
 } CRYPT_BN_FLAG;
 
 typedef struct BnMont BN_Mont;
@@ -384,6 +384,7 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
  * @retval CRYPT_BN_ERR_NO_INVERSE      Cannot calculate the module inverse.
  */
 int32_t BN_ModInv(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, BN_Optimizer *opt);
+
 /**
  * @ingroup bn
  * @brief BigNum comparison
@@ -522,6 +523,7 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
  */
 int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt);
+
 /**
  * @ingroup bn
  * @brief BigNum Modular subtraction
@@ -651,13 +653,13 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
  */
 int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt);
 
-#define BN_RAND_TOP_NOBIT      0 /* Not set bits */
-#define BN_RAND_TOP_ONEBIT     1 /* Set the most significant bit to 1. */
-#define BN_RAND_TOP_TWOBIT     2 /* Set the highest two bits to 1 */
+#define BN_RAND_TOP_NOBIT  0 /* Not set bits */
+#define BN_RAND_TOP_ONEBIT 1 /* Set the most significant bit to 1. */
+#define BN_RAND_TOP_TWOBIT 2 /* Set the highest two bits to 1 */
 
-#define BN_RAND_BOTTOM_NOBIT   0 /* Not set bits */
-#define BN_RAND_BOTTOM_ONEBIT  1 /* Set the least significant bit to 1. */
-#define BN_RAND_BOTTOM_TWOBIT  2 /* Set the least significant two bits to 1. */
+#define BN_RAND_BOTTOM_NOBIT  0 /* Not set bits */
+#define BN_RAND_BOTTOM_ONEBIT 1 /* Set the least significant bit to 1. */
+#define BN_RAND_BOTTOM_TWOBIT 2 /* Set the least significant two bits to 1. */
 
 /**
  * @ingroup bn
@@ -865,7 +867,7 @@ void BN_MontDestroy(BN_Mont *mont);
 int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
 
 int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1, const BN_BigNum *a2, const BN_BigNum *e2,
-    BN_Mont *mont, BN_Optimizer *opt);
+                      BN_Mont *mont, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -955,8 +957,8 @@ int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModSubQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, const BN_Optimizer *opt);
+int32_t BN_ModSubQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod,
+                       const BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -978,8 +980,8 @@ int32_t BN_ModSubQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModAddQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, const BN_Optimizer *opt);
+int32_t BN_ModAddQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod,
+                       const BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -1046,8 +1048,7 @@ int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup ecc
@@ -1068,8 +1069,7 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModSm2EccSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -1098,6 +1098,23 @@ int32_t BN_SecBit(int32_t publen, int32_t prvlen);
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
  */
 int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
+#endif
+
+#ifdef HITLS_CRYPTO_ELGAMAL
+/**
+ * @ingroup bn
+ * @brief BigNum Calculate the original root
+ *
+ * @param g    [OUT] Safety prime
+ * @param p    [IN] Big prime
+ * @param q    [IN] Big prime
+ * @param opt   [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ */
+int32_t BN_OriginalRoot(BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q, BN_Optimizer *opt);
 #endif
 
 #ifdef __cplusplus
