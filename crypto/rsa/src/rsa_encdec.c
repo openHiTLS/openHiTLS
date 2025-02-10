@@ -1604,7 +1604,7 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return SetEmsaPkcsV15(ctx, val, len);
         case CRYPT_CTRL_SET_RSA_SALT:
             return SetSalt(ctx, val, len);
-        case CRYPT_CTRL_GET_RSA_SALTLEN:
+        case CRYPT_CTRL_GET_RSA_SALT:
             return GetSaltLen(ctx, val, len);
         case CRYPT_CTRL_GET_RSA_PADDING:
             return GetPadding(ctx, val, len);
