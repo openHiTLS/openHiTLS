@@ -131,7 +131,7 @@ int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *pas
 /*
  * Parse attributes of a safeBag, and convert decode data to the real data.
 */
-int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attriList);
+int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attrList);
 
 /*
  * Parse AuthSafeData of a p12, and convert decode data to the real data.

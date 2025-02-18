@@ -59,7 +59,7 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl);
  * @param valLen         [IN] The length of val.
  * @return Error code
  */
-int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup pki
@@ -170,7 +170,7 @@ int32_t HITLS_X509_CrlVerify(void *pubkey, const HITLS_X509_Crl *crl);
  * @param crl            [IN/OUT] CRL info.
  * @return Error code
  */
-int32_t HITLS_X509_CrlSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+int32_t HITLS_X509_CrlSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Crl *crl);
 
 /**
@@ -204,7 +204,7 @@ void HITLS_X509_CrlEntryFree(HITLS_X509_CrlEntry *entry);
  * @param crl            [IN] CRL info.
  * @return Error code
  */
-int32_t HITLS_X509_CrlEntryCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_CrlEntryCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, uint32_t valLen);
 
 #ifdef __cplusplus
 }

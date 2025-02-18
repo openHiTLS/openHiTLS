@@ -230,16 +230,16 @@ static int32_t ParseTime(uint8_t tag, uint8_t *val, uint32_t len, BSL_TIME *deco
         return ret;
     }
     if (tag == BSL_ASN1_TAG_UTCTIME) {
-        decodeData->year = DecodeAsciiNum(&temp, 2); // 2: YY
+        decodeData->year = (uint16_t)DecodeAsciiNum(&temp, 2); // 2: YY
         decodeData->year += 2000; // Currently supported after 2000 year
     } else {
-        decodeData->year = DecodeAsciiNum(&temp, 4); // 4: YYYY
+        decodeData->year = (uint16_t)DecodeAsciiNum(&temp, 4); // 4: YYYY
     }
-    decodeData->month = DecodeAsciiNum(&temp, 2);  // 2:MM
-    decodeData->day = DecodeAsciiNum(&temp, 2);    // 2: DD
-    decodeData->hour = DecodeAsciiNum(&temp, 2);   // 2: HH
-    decodeData->minute = DecodeAsciiNum(&temp, 2); // 2: MM
-    decodeData->second = DecodeAsciiNum(&temp, 2); // 2: SS
+    decodeData->month = (uint8_t)DecodeAsciiNum(&temp, 2);  // 2:MM
+    decodeData->day = (uint8_t)DecodeAsciiNum(&temp, 2);    // 2: DD
+    decodeData->hour = (uint8_t)DecodeAsciiNum(&temp, 2);   // 2: HH
+    decodeData->minute = (uint8_t)DecodeAsciiNum(&temp, 2); // 2: MM
+    decodeData->second = (uint8_t)DecodeAsciiNum(&temp, 2); // 2: SS
     return BSL_DateTimeCheck(decodeData) ? BSL_SUCCESS : BSL_ASN1_ERR_CHECK_TIME;
 }
 
@@ -485,7 +485,7 @@ static int32_t ProcessTag(uint8_t flags, BSL_ASN1_AnyOrChoiceParam *tagCbinfo, u
     uint8_t *tag, BSL_ASN1_Buffer *asn)
 {
     int32_t ret = BSL_SUCCESS;
-    if (flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) {
+    if ((flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) != 0) {
         if (tempLen < 1) {
             asn->tag = 0;
             asn->len = 0;
@@ -554,7 +554,7 @@ static int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     }
 
     /* struct type, headerOnly flag is set, only the whole is parsed, otherwise the parsed content is traversed */
-    if (((item->tag & BSL_ASN1_TAG_CONSTRUCTED) && (item->flags & BSL_ASN1_FLAG_HEADERONLY)) ||
+    if (((item->tag & BSL_ASN1_TAG_CONSTRUCTED) != 0 && (item->flags & BSL_ASN1_FLAG_HEADERONLY) != 0) ||
         (item->tag & BSL_ASN1_TAG_CONSTRUCTED) == 0) {
         temp += len;
         tempLen -= len;
@@ -565,9 +565,9 @@ static int32_t BSL_ASN1_ProcessNormal(BSL_ASN1_AnyOrChoiceParam *tagCbinfo,
     return BSL_SUCCESS;
 }
 
-int32_t BSL_ASN1_SkipChildNode(int32_t idx, BSL_ASN1_TemplateItem *item, uint32_t count)
+uint32_t BSL_ASN1_SkipChildNode(uint32_t idx, BSL_ASN1_TemplateItem *item, uint32_t count)
 {
-    size_t i = idx + 1;
+    uint32_t i = idx + 1;
     for (; i < count; i++) {
         if (item[i].depth <= item[idx].depth) {
             break;
@@ -585,7 +585,7 @@ static int32_t BSL_ASN1_FillConstructItemWithNull(BSL_ASN1_Template *templ, uint
     BSL_ASN1_Buffer *asnArr, uint32_t arrNum, uint32_t *arrIdx)
 {
     // The construct type value is marked headeronly
-    if (templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_HEADERONLY) {
+    if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_HEADERONLY) != 0) {
         if (*arrIdx >= arrNum) {
             return BSL_ASN1_ERR_OVERFLOW;
         } else {
@@ -635,20 +635,20 @@ int32_t BSL_ASN1_ProcessConstructResult(BSL_ASN1_Template *templ, uint32_t *temp
 {
     int32_t ret;
     // Optional or default construct type, without any data to be parsed, need to skip all child nodes
-    if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) && asn->tag == 0) {
+    if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) != 0 && asn->tag == 0) {
         ret = BSL_ASN1_SkipChildNodeAndFill(templIdx, templ, asnArr, arrNum, arrIdx);
         if (ret != BSL_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05068, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "asn1: skip and file node err %x, idx %d", ret, *templIdx, 0, 0);
+                "asn1: skip and fill node err %x, idx %u", ret, *templIdx, 0, 0);
             return ret;
         }
         return BSL_SUCCESS;
     }
 
-    if (templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_HEADERONLY) {
+    if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_HEADERONLY) != 0) {
         if (*arrIdx >= arrNum) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05069, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "asn1: array idx %d, overflow %d, templ %d", *arrIdx, arrNum, *templIdx, 0);
+                "asn1: array idx %u, overflow %u, templ %u", *arrIdx, arrNum, *templIdx, 0);
             return BSL_ASN1_ERR_OVERFLOW;
         } else {
             // Shallow copy of structure
@@ -686,7 +686,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
     uint32_t arrIdx = 0;
     BSL_ASN1_Buffer previousAsn = {0};
     BSL_ASN1_AnyOrChoiceParam tagCbinfo = {0, NULL, decTemlCb};
-    
+
     for (uint32_t i = 0; i < templ->templNum;) {
         if (templ->templItems[i].depth > BSL_ASN1_MAX_TEMPLATE_DEPTH) {
             return BSL_ASN1_ERR_MAX_DEPTH;
@@ -697,7 +697,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
             ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05070, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "asn1: parse construct item err %x, idx %d", ret, i, 0, 0);
+                    "asn1: parse construct item err %x, idx %u", ret, i, 0, 0);
                 return ret;
             }
             ret = BSL_ASN1_ProcessConstructResult(templ, &i, &asn, asnArr, arrNum, &arrIdx);
@@ -708,13 +708,13 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
             ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05071, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "asn1: parse primitive item err %x, idx %d", ret, i, 0, 0);
+                    "asn1: parse primitive item err %x, idx %u", ret, i, 0, 0);
                 return ret;
             }
             // Process no construct result
             if (arrIdx >= arrNum) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05072, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "asn1: array idx %d, overflow %d, templ %d", arrIdx, arrNum, i, 0);
+                    "asn1: array idx %u, overflow %u, templ %u", arrIdx, arrNum, i, 0);
                 return BSL_ASN1_ERR_OVERFLOW;
             } else {
                 asnArr[arrIdx++] = asn; //  Shallow copy of structure
@@ -757,7 +757,7 @@ static int32_t EncodeInitItemFlag(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Template
         if (tItems[i].tag != BSL_ASN1_TAG_NULL) {
             eItems[i].optional |= (tItems[i].flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL);
         }
-        eItems[i].skip = (eItems[stack[peek]].skip == 1) || (tItems[stack[peek]].flags & BSL_ASN1_FLAG_HEADERONLY);
+        eItems[i].skip = eItems[stack[peek]].skip == 1 || (tItems[stack[peek]].flags & BSL_ASN1_FLAG_HEADERONLY) != 0;
         stack[++peek] = i;
     }
     return BSL_SUCCESS;
@@ -771,7 +771,7 @@ static inline bool IsAnyOrChoice(uint8_t tag)
 static uint8_t GetOctetNumOfUint(uint64_t number)
 {
     uint8_t cnt = 0;
-    for (uint64_t i = number; i; i >>= 8) { // one byte = 8 bits
+    for (uint64_t i = number; i != 0; i >>= 8) { // one byte = 8 bits
         cnt++;
     }
     return cnt;
@@ -782,86 +782,149 @@ static uint8_t GetLenOctetNum(uint32_t contentOctetNum)
     return contentOctetNum <= BSL_ASN1_DEFINITE_MAX_CONTENT_OCTET_NUM ? 1 : 1 + GetOctetNumOfUint(contentOctetNum);
 }
 
-static uint32_t GetContentLenOfInt(uint8_t *buff, uint32_t len)
+static int32_t GetContentLenOfInt(uint8_t *buff, uint32_t len, uint32_t *outLen)
 {
     if (len == 0) {
-        return 0;
+        *outLen = 0;
+        return BSL_SUCCESS;
     }
     uint32_t res = len;
     for (uint32_t i = 0; i < len; i++) {
-        if (*(buff + i) != 0) {
+        if (buff[i] != 0) {
             break;
         }
         res--;
     }
     if (res == 0) { // The current int value is 0
-        return 1;
+        *outLen = 1;
+        return BSL_SUCCESS;
     }
-    uint8_t high = *(buff + (len - res)) >> 7;
-    return res + (high == 1);
+
+    uint8_t high = buff[len - res] & 0x80;
+    if (high) {
+        if (res == UINT32_MAX) {
+            return BSL_ASN1_ERR_LEN_OVERFLOW;
+        }
+        res++;
+    }
+    *outLen = res;
+    return BSL_SUCCESS;
 }
 
-static uint32_t GetContentLen(BSL_ASN1_Buffer *asn)
+static int32_t GetContentLen(BSL_ASN1_Buffer *asn, uint32_t *len)
 {
+    if (asn == NULL || len == NULL) {
+        return BSL_NULL_INPUT;
+    }
+
     switch (asn->tag) {
         case BSL_ASN1_TAG_NULL:
-            return 0;
+            *len = 0;
+            return BSL_SUCCESS;
         case BSL_ASN1_TAG_INTEGER:
         case BSL_ASN1_TAG_ENUMERATED:
-            return GetContentLenOfInt(asn->buff, asn->len);
+            return GetContentLenOfInt(asn->buff, asn->len, len);
         case BSL_ASN1_TAG_BITSTRING:
-            return ((BSL_ASN1_BitString *)asn->buff)->len + 1;
+            *len = ((BSL_ASN1_BitString *)asn->buff)->len;
+            if (*len == UINT32_MAX) {
+                return BSL_ASN1_ERR_LEN_OVERFLOW;
+            }
+            *len += 1;
+            return BSL_SUCCESS;
         case BSL_ASN1_TAG_UTCTIME:
-            return BSL_ASN1_UTCTIME_LEN;
+            *len = BSL_ASN1_UTCTIME_LEN;
+            return BSL_SUCCESS;
         case BSL_ASN1_TAG_GENERALIZEDTIME:
-            return BSL_ASN1_GENERALIZEDTIME_LEN;
+            *len = BSL_ASN1_GENERALIZEDTIME_LEN;
+            return BSL_SUCCESS;
         case BSL_ASN1_TAG_BMPSTRING:
-            return asn->len * 2; // encodeLen = 2 * asn->len
+            if (asn->len > UINT32_MAX / 2) { // 2: Each character is 2 bytes
+                return BSL_ASN1_ERR_LEN_OVERFLOW;
+            }
+            *len = asn->len * 2; // 2: Each character is 2 bytes
+            return BSL_SUCCESS;
         default:
-            return asn->len;
+            *len = asn->len;
+            return BSL_SUCCESS;
     }
 }
 
-static void ComputeOctetNum(bool optional, BSL_ASN1_EncodeItem *item, BSL_ASN1_Buffer *asn)
+static int32_t ComputeOctetNum(bool optional, BSL_ASN1_EncodeItem *item, BSL_ASN1_Buffer *asn)
 {
     if (optional && asn->len == 0 && (asn->tag != BSL_ASN1_TAG_NULL)) {
-        return;
+        return BSL_SUCCESS;
     }
-    uint32_t contentOctetNum = asn->len == 0 ? 0 : GetContentLen(asn);
+    uint32_t contentOctetNum = 0;
+    if (asn->len != 0) {
+        int32_t ret = GetContentLen(asn, &contentOctetNum);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+    }
+
     item->lenOctetNum = GetLenOctetNum(contentOctetNum);
+    uint64_t tmp = (uint64_t)item->lenOctetNum + contentOctetNum;
+    if (tmp > UINT32_MAX - 1) {
+        return BSL_ASN1_ERR_LEN_OVERFLOW;
+    }
+    
     item->asnOctetNum = 1 + item->lenOctetNum + contentOctetNum;
+    return BSL_SUCCESS;
 }
 
-static void ComputeConstructAsnOctetNum(bool optional, BSL_ASN1_TemplateItem *templ, BSL_ASN1_EncodeItem *item,
-                                        uint32_t itemNum, uint32_t curIdx)
+static int32_t ComputeConstructAsnOctetNum(bool optional, BSL_ASN1_TemplateItem *templ, BSL_ASN1_EncodeItem *item,
+    uint32_t itemNum, uint32_t curIdx)
 {
     uint8_t curDepth = templ[curIdx].depth;
     uint32_t contentOctetNum = 0;
     for (uint32_t i = curIdx + 1; i < itemNum && templ[i].depth != curDepth; i++) {
         if (templ[i].depth - curDepth == 1) {
+            if (item[i].asnOctetNum > UINT32_MAX - contentOctetNum) {
+                return BSL_ASN1_ERR_LEN_OVERFLOW;
+            }
             contentOctetNum += item[i].asnOctetNum;
         }
     }
     if (contentOctetNum == 0 && optional) {
-        return;
+        return BSL_SUCCESS;
     }
     item[curIdx].lenOctetNum = GetLenOctetNum(contentOctetNum);
+
+    // Use 64-bit math to prevent overflow during calculation
+    uint64_t totalLen = (uint64_t)item[curIdx].lenOctetNum + contentOctetNum;
+
+    // Check for 32-bit overflow (ASN.1 length must fit in uint32_t)
+    if (totalLen > UINT32_MAX - 1) { // -1 accounts for tag byte
+        return BSL_ASN1_ERR_LEN_OVERFLOW;
+    }
     item[curIdx].asnOctetNum = 1 + item[curIdx].lenOctetNum + contentOctetNum;
+    return BSL_SUCCESS;
 }
 
+/**
+ * ASN.1 Encode Init Item Content:
+ * 1. Reverse traversal template items (from deepest to root node)
+ * 2. Process two types:
+ *    - Construct type (SEQUENCE/SET): Calculate total length of contained sub-items
+ *    - Basic type: Validate tag and calculate encoding length
+ */
 static int32_t EncodeInitItemContent(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_TemplateItem *tItems, uint32_t itemNum,
-                                     BSL_ASN1_Buffer *asnArr, int32_t *asnNum)
+                                     BSL_ASN1_Buffer *asnArr, uint32_t *asnNum)
 {
-    int32_t asnIdx = *asnNum - 1;
+    int64_t asnIdx = (int64_t)*asnNum - 1;
     uint8_t lastDepth = 0;
+    int32_t ret;
 
-    for (int32_t i = itemNum - 1; i >= 0; i--) {
+    for (int64_t i = itemNum - 1; i >= 0; i--) {
         if (eItems[i].skip == 1) {
             continue;
         }
         if (tItems[i].depth < lastDepth) {
             eItems[i].tag = tItems[i].tag;
-            ComputeConstructAsnOctetNum(eItems[i].optional, tItems, eItems, itemNum, i);
+            ret = ComputeConstructAsnOctetNum(eItems[i].optional, tItems, eItems, itemNum, i);
+            if (ret != BSL_SUCCESS) {
+                return ret;
+            }
         } else {
             if (asnIdx < 0) {
                 return BSL_ASN1_ERR_ENCODE_ASN_LACK;
@@ -869,20 +932,23 @@ static int32_t EncodeInitItemContent(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Templ
             if (eItems[i].optional == false && asnArr[asnIdx].tag != tItems[i].tag && !IsAnyOrChoice(tItems[i].tag)) {
                 return BSL_ASN1_ERR_TAG_EXPECTED;
             }
-            ComputeOctetNum(eItems[i].optional, eItems + i, asnArr + asnIdx);
+            ret = ComputeOctetNum(eItems[i].optional, eItems + i, asnArr + asnIdx);
+            if (ret != BSL_SUCCESS) {
+                return ret;
+            }
             eItems[i].tag = asnArr[asnIdx].tag;
             eItems[i].asn = asnArr + asnIdx; // Shallow copy.
             asnIdx--;
         }
         lastDepth = tItems[i].depth;
     }
-    *asnNum = asnIdx + 1;
+    *asnNum = asnIdx + 1;  // Update the number of used ASN buffers
     return BSL_SUCCESS;
 }
 
 static void EncodeNumber(uint64_t data, uint32_t encodeLen, uint8_t *encode, uint32_t *offset)
 {
-    uint32_t tmp = data;
+    uint64_t tmp = data;
     /* Encode from back to front. */
     uint32_t initOff = *offset + encodeLen - 1;
     for (uint32_t i = 0; i < encodeLen; i++) {
@@ -1070,7 +1136,7 @@ static int32_t CheckAsnArr(BSL_ASN1_Buffer *asnArr, uint32_t arrNum)
 }
 
 static int32_t EncodeItemInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_TemplateItem *tItems, uint32_t itemNum,
-                              BSL_ASN1_Buffer *asnArr, int32_t *arrNum)
+                              BSL_ASN1_Buffer *asnArr, uint32_t *arrNum)
 {
     int32_t ret = EncodeInitItemFlag(eItems, tItems, itemNum);
     if (ret != BSL_SUCCESS) {
@@ -1083,11 +1149,13 @@ static int32_t EncodeItemInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_TemplateItem
 static int32_t EncodeInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr,
                           uint32_t arrNum, uint32_t *encodeLen)
 {
-    int32_t tempArrNum = (int32_t)arrNum;
+    uint32_t tempArrNum = arrNum;
     uint32_t stBegin;
     uint32_t stEnd = templ->templNum - 1;
     int32_t ret;
-    for (int32_t i = templ->templNum - 1; i >= 0; i--) {
+
+    uint32_t i = templ->templNum;
+    while (i-- > 0) {
         if (templ->templItems[i].depth > BSL_ASN1_MAX_TEMPLATE_DEPTH) {
             return BSL_ASN1_ERR_MAX_DEPTH;
         }
@@ -1099,13 +1167,16 @@ static int32_t EncodeInit(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Template *templ,
         if (ret != BSL_SUCCESS) {
             return ret;
         }
+        if ((eItems + stBegin)->asnOctetNum > UINT32_MAX - *encodeLen) {
+            return BSL_ASN1_ERR_LEN_OVERFLOW;
+        }
         *encodeLen += (eItems + stBegin)->asnOctetNum;
         stEnd = i - 1;
     }
-    if (tempArrNum != 0) {
+    if (tempArrNum != 0) { // Check whether all the asn-item has been used.
         return BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH;
     }
-    return ret;
+    return BSL_SUCCESS;
 }
 
 int32_t BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr, uint32_t arrNum, uint8_t **encode,
@@ -1153,6 +1224,9 @@ int32_t BSL_ASN1_EncodeListItem(uint8_t tag, uint32_t listSize, BSL_ASN1_Templat
     if (ret != BSL_SUCCESS) {
         return ret;
     }
+    if (listSize > UINT32_MAX / templ->templNum) {
+        return BSL_ASN1_ERR_LEN_OVERFLOW;
+    }
 
     BSL_ASN1_EncodeItem *eItems =
         (BSL_ASN1_EncodeItem *)BSL_SAL_Calloc(templ->templNum * listSize, sizeof(BSL_ASN1_EncodeItem));
@@ -1160,7 +1234,7 @@ int32_t BSL_ASN1_EncodeListItem(uint8_t tag, uint32_t listSize, BSL_ASN1_Templat
         return BSL_MALLOC_FAIL;
     }
     uint32_t encodeLen = 0;
-    int32_t itemAsnNum;
+    uint32_t itemAsnNum;
     for (uint32_t i = 0; i < listSize; i++) {
         itemAsnNum = arrNum / listSize;
         ret = EncodeItemInit(
@@ -1173,7 +1247,11 @@ int32_t BSL_ASN1_EncodeListItem(uint8_t tag, uint32_t listSize, BSL_ASN1_Templat
             BSL_SAL_Free(eItems);
             return BSL_ASN1_ERR_ENCODE_ASN_TOO_MUCH;
         }
-        encodeLen += (eItems + i * templ->templNum)->asnOctetNum;
+        if (eItems[i * templ->templNum].asnOctetNum > UINT32_MAX - encodeLen) {
+            BSL_SAL_Free(eItems);
+            return BSL_ASN1_ERR_LEN_OVERFLOW;
+        }
+        encodeLen += eItems[i * templ->templNum].asnOctetNum;
     }
 
     out->buff = (uint8_t *)BSL_SAL_Calloc(1, encodeLen);
@@ -1221,7 +1299,7 @@ int32_t BSL_ASN1_GetEncodeLen(uint32_t contentLen, uint32_t *encodeLen)
     }
     uint8_t lenOctetNum = GetLenOctetNum(contentLen);
     if (contentLen > (UINT32_MAX - lenOctetNum - 1)) {
-        return BSL_ASN1_ERR_LEN_OVERFFLOW;
+        return BSL_ASN1_ERR_LEN_OVERFLOW;
     }
 
     *encodeLen = 1 + lenOctetNum + contentLen;
