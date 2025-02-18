@@ -388,7 +388,7 @@ int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *
     uint32_t buffLen = encLen;
     uint32_t nameValueLen;
     uint8_t tag;
-    int32_t ret;
+    int32_t ret = HITLS_PKI_SUCCESS;
 
     while (buffLen != 0) {
         // tag
@@ -882,7 +882,7 @@ static int32_t SetExtSki(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const 
     return ret;
 }
 
-static void SetAsn1Templ(BSL_Buffer *value, int32_t tag, BSL_ASN1_TemplateItem *item, BSL_ASN1_Buffer *asn)
+static void SetAsn1Templ(BSL_Buffer *value, uint8_t tag, BSL_ASN1_TemplateItem *item, BSL_ASN1_Buffer *asn)
 {
     item->tag = tag;
     asn->tag = tag;
@@ -992,7 +992,7 @@ static int32_t SetExtSan(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const 
     /* Encode extnValue */
     BSL_ASN1_TemplateItem *items = NULL;
     BSL_ASN1_Buffer *asns = NULL;
-    uint32_t number = BSL_LIST_COUNT(san->names);
+    uint32_t number = (uint32_t)BSL_LIST_COUNT(san->names);
     int32_t ret = AllocEncodeParam(&items, 1 + number, &asns, number);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1030,7 +1030,7 @@ static int32_t SetExtExKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry,
 
     BSL_ASN1_TemplateItem *items = NULL;
     BSL_ASN1_Buffer *asns = NULL;
-    uint32_t number = BSL_LIST_COUNT(exku->oidList);
+    uint32_t number = (uint32_t)BSL_LIST_COUNT(exku->oidList);
     int32_t ret = AllocEncodeParam(&items, number + 1, &asns, number);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1120,7 +1120,7 @@ int32_t HITLS_X509_SetExtList(void *param, BslList *extList, BslCid cid, BSL_Buf
 
 static int32_t SetExt(HITLS_X509_Ext *ext, BslCid cid, BSL_Buffer *val, uint32_t expectLen, EncodeExtCb encodeExt)
 {
-    if (ext->flag & HITLS_X509_EXT_FLAG_PARSE) {
+    if ((ext->flag & HITLS_X509_EXT_FLAG_PARSE) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
         return HITLS_X509_ERR_EXT_SET_AFTER_PARSE;
     }
@@ -1139,7 +1139,7 @@ static int32_t SetExt(HITLS_X509_Ext *ext, BslCid cid, BSL_Buffer *val, uint32_t
     return ret;
 }
 
-static int32_t SetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+static int32_t SetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen)
 {
     BSL_Buffer buff = {val, valLen};
     switch (cmd) {
@@ -1186,7 +1186,7 @@ int32_t HITLS_X509_GetExt(BslList *ext, BslCid cid, BSL_Buffer *val, uint32_t ex
     return decodeExt(extEntry, val->data);
 }
 
-static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen)
 {
     BSL_Buffer buff = {val, valLen};
     switch (cmd) {
@@ -1205,7 +1205,7 @@ static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t v
     }
 }
 
-static int32_t CheckExtByCid(HITLS_X509_Ext *ext, int32_t cid, bool *val, int32_t valLen)
+static int32_t CheckExtByCid(HITLS_X509_Ext *ext, int32_t cid, bool *val, uint32_t valLen)
 {
     if (valLen != sizeof(bool)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -1225,7 +1225,7 @@ bool X509_CheckCmdVaild(int32_t *cmdSet, uint32_t cmdSize, int32_t cmd)
     return false;
 }
 
-int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen)
 {
     if (cmd >= HITLS_X509_EXT_SET_SKI && cmd < HITLS_X509_EXT_GET_SKI) {
         return SetExtCtrl(ext, cmd, val, valLen);
@@ -1240,7 +1240,7 @@ int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen
     return HITLS_X509_ERR_INVALID_PARAM;
 }
 
-int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen)
+int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen)
 {
     if (ext == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -1275,7 +1275,7 @@ void HITLS_X509_ExtEntryFree(HITLS_X509_ExtEntry *entry)
 #define X509_CRLEXT_ELEM_NUMBER 3
 int32_t HITLS_X509_EncodeExtEntry(BSL_ASN1_List *list, BSL_ASN1_Buffer *ext)
 {
-    int32_t count = BSL_LIST_COUNT(list);
+    uint32_t count = (uint32_t)BSL_LIST_COUNT(list);
     BSL_ASN1_Buffer *asnBuf = BSL_SAL_Malloc(count * X509_CRLEXT_ELEM_NUMBER * sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -1371,7 +1371,7 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (dest->flag & HITLS_X509_EXT_FLAG_PARSE) {
+    if ((dest->flag & HITLS_X509_EXT_FLAG_PARSE) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET_AFTER_PARSE);
         return HITLS_X509_ERR_EXT_SET_AFTER_PARSE;
     }
@@ -1398,7 +1398,6 @@ int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src)
     return HITLS_PKI_SUCCESS;
 }
 
-
 HITLS_X509_Ext *HITLS_X509_ExtNew(int32_t type)
 {
     if (type == HITLS_X509_EXT_TYPE_CERT || type == HITLS_X509_EXT_TYPE_CRL) {
@@ -1410,8 +1409,5 @@ HITLS_X509_Ext *HITLS_X509_ExtNew(int32_t type)
 
 void HITLS_X509_ExtFree(HITLS_X509_Ext *ext)
 {
-    if (ext == NULL) {
-        return;
-    }
     X509_ExtFree(ext, true);
 }

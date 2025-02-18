@@ -71,7 +71,7 @@ int32_t BSL_ASN1_Printf(uint32_t layer, BSL_UIO *uio, const char *fmt, ...)
         BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_PRINTF);
         return BSL_ASN1_ERR_PRINTF;
     }
-    int32_t ret = BSL_ASN1_PrintfBuff(layer, uio, buff, strlen(buff));
+    int32_t ret = BSL_ASN1_PrintfBuff(layer, uio, buff, (uint32_t)strlen(buff));
     va_end(args);
 
     return ret;

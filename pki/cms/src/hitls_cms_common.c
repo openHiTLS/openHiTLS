@@ -16,7 +16,6 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_asn1.h"
-#include "crypt_errno.h"
 #include "bsl_obj_internal.h"
 #include "crypt_eal_encode.h"
 #include "crypt_eal_md.h"

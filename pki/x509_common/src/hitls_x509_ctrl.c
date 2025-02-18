@@ -31,7 +31,7 @@
 #define SM2_MAX_ID_BITS 65535
 #define SM2_MAX_ID_LENGTH (SM2_MAX_ID_BITS / 8)
 
-int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, int32_t valLen)
+int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, uint32_t valLen)
 {
     if (val == NULL || valLen != sizeof(int)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -40,7 +40,7 @@ int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, int32_t val
     return BSL_SAL_AtomicUpReferences(references, val);
 }
 
-int32_t HITLS_X509_GetList(BslList *list, void *val, int32_t valLen)
+int32_t HITLS_X509_GetList(BslList *list, void *val, uint32_t valLen)
 {
     if (list == NULL || val == NULL || valLen != sizeof(BslList *)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -65,7 +65,7 @@ int32_t HITLS_X509_GetPubKey(void *ealPubKey, void **val)
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, int32_t valLen)
+int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen)
 {
     if (val == NULL || valLen != sizeof(BslCid)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -75,7 +75,7 @@ int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, int32_t valLen)
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, int32_t valLen)
+int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen)
 {
     if (val == NULL || valLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -231,7 +231,7 @@ static int32_t CmpDnNameByEncode(const void *pDnName1, const void *pDnName2)
  *      X520countryName ::=     PrintableString
  *      X520dnQualifier ::=     PrintableString
  */
-static int32_t GetAsn1TypeByCid(BslCid cid)
+static uint8_t GetAsn1TypeByCid(BslCid cid)
 {
     switch (cid) {
         case BSL_CID_SERIALNUMBER:
@@ -272,7 +272,7 @@ static void FreeNodePack(NameNodePack *node)
     return;
 }
 
-int32_t HITLS_X509_SetNameList(BslList **dest, void *val, int32_t valLen)
+int32_t HITLS_X509_SetNameList(BslList **dest, void *val, uint32_t valLen)
 {
     if (dest == NULL || val == NULL || valLen != sizeof(BslList)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -401,9 +401,9 @@ void HITLS_X509_DnListFree(BslList *dnList)
     BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
 }
 
-int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size)
+int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t size)
 {
-    if (list == NULL || dnNames == NULL || size <= 0) {
+    if (list == NULL || dnNames == NULL || size == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -418,7 +418,7 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size
         return BSL_MALLOC_FAIL;
     }
     int32_t ret;
-    for (int32_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         ret = X509AddDnNameItemToList(dnNameList, dnNames[i].cid, dnNames[i].data, dnNames[i].dataLen);
         if (ret != HITLS_PKI_SUCCESS) {
             goto EXIT;
@@ -436,7 +436,7 @@ EXIT:
     return ret;
 }
 
-int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen)
+int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t valLen)
 {
     if (valLen <= 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM);
@@ -453,7 +453,7 @@ int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t v
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, int32_t valLen)
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, uint32_t valLen)
 {
     if (valLen != sizeof(BSL_Buffer)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -469,9 +469,9 @@ int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, int32_t valLen)
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, int32_t valLen)
+int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, uint32_t valLen)
 {
-    if (valLen < 0 || valLen > SM2_MAX_ID_LENGTH) {
+    if (valLen == 0 || valLen > SM2_MAX_ID_LENGTH) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
