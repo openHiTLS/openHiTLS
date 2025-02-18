@@ -80,7 +80,7 @@ void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb fre
         return;
     }
 
-    if (attrs->flag & HITLS_X509_ATTRS_PARSE_FLAG) {
+    if ((attrs->flag & HITLS_X509_ATTRS_PARSE_FLAG) != 0) {
         BSL_LIST_FREE(attrs->list, NULL);
     } else {
         BSL_LIST_FREE(attrs->list, (BSL_LIST_PFUNC_FREE)HITLS_X509_AttrEntryFree);
@@ -228,12 +228,12 @@ static int32_t CmpAttrEntryByCid(const void *attrEntry, const void *cid)
     return node->cid == *(const BslCid *)cid ? 0 : 1;
 }
 
-typedef int32_t (*EncodeAttrCb)(HITLS_X509_Attrs *attributes, void *val, int32_t valLen, BSL_ASN1_Buffer *attrValue);
+typedef int32_t (*EncodeAttrCb)(HITLS_X509_Attrs *attributes, void *val, uint32_t valLen, BSL_ASN1_Buffer *attrValue);
 
 typedef int32_t (*DecodeAttrCb)(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
-    int32_t valLen);
+    uint32_t valLen);
 
-static int32_t EncodeReqExtAttr(HITLS_X509_Attrs *attributes, void *val, int32_t valLen, BSL_ASN1_Buffer *attrValue)
+static int32_t EncodeReqExtAttr(HITLS_X509_Attrs *attributes, void *val, uint32_t valLen, BSL_ASN1_Buffer *attrValue)
 {
     (void)valLen;
     (void)attributes;
@@ -285,7 +285,7 @@ ERR:
 }
 
 static int32_t DecodeReqExtAttr(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
-    int32_t valLen)
+    uint32_t valLen)
 {
     (void)attributes;
     if (valLen != sizeof(HITLS_X509_Ext *)) {
@@ -307,7 +307,7 @@ static int32_t DecodeReqExtAttr(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEnt
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t GetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, int32_t valLen, DecodeAttrCb decodeAttrCb)
+static int32_t GetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, uint32_t valLen, DecodeAttrCb decodeAttrCb)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -323,7 +323,7 @@ static int32_t GetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, int3
     return decodeAttrCb(attributes, attrEntry, val, valLen);
 }
 
-int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, int32_t valLen)
+int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, uint32_t valLen)
 {
     if (attributes == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -361,9 +361,9 @@ int32_t HITLS_X509_EncodeAttrEntry(HITLS_X509_AttrEntry *node, BSL_ASN1_Buffer *
     return ret;
 }
 
-void FreeAsnAttrsBuff(BSL_ASN1_Buffer *asnBuf, int32_t count)
+void FreeAsnAttrsBuff(BSL_ASN1_Buffer *asnBuf, uint32_t count)
 {
-    for (int32_t i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         BSL_SAL_FREE(asnBuf[i].buff);
     }
     BSL_SAL_FREE(asnBuf);
@@ -378,14 +378,14 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
         attrAsn1->len = 0;
         return HITLS_PKI_SUCCESS;
     }
-    int32_t count = BSL_LIST_COUNT(attrs->list);
+    uint32_t count = (uint32_t)BSL_LIST_COUNT(attrs->list);
     /* no attribute */
     BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(count, sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t iter = 0;
+    uint32_t iter = 0;
     int32_t ret;
     void *node = NULL;
     for (node = BSL_LIST_GET_FIRST(attrs->list); node != NULL; node = BSL_LIST_GET_NEXT(attrs->list), iter++) {
