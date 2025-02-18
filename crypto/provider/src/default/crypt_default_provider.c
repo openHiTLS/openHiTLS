@@ -64,6 +64,7 @@ static const CRYPT_EAL_AlgInfo g_defKeyMgmt[] = {
     {CRYPT_PKEY_ECDH, g_defKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, g_defKeyMgmtSm2, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_PAILLIER, g_defKeyMgmtPaillier, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ELGAMAL, g_defKeyMgmtElGamal, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -71,6 +72,7 @@ static const CRYPT_EAL_AlgInfo g_defAsymCiphers[] = {
     {CRYPT_PKEY_RSA, g_defAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, g_defAsymCipherSm2, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_PAILLIER, g_defAsymCipherPaillier, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ELGAMAL, g_defAsymCipherElGamal, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
