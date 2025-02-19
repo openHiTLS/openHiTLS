@@ -49,7 +49,8 @@ const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type)
         }
         /* During or after handshake */
         /* TLS protocol version < TLS1.3 session resumption */
-        if ((version < HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS12) && isResume && ctx->session != NULL) {
+        if ((version < HITLS_VERSION_TLS13 || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) &&
+            isResume && ctx->session != NULL) {
             return (char *)hostName;
         }
     } else {
@@ -57,7 +58,7 @@ const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type)
         if (ctx->state == CM_STATE_IDLE) {
             /* resume the session */
             if (ctx->config.tlsConfig.serverName == NULL && ctx->session != NULL &&
-                (version < HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS12)) {
+                (version < HITLS_VERSION_TLS13 || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask))) {
                 return (char *)hostName;
             }
             /* resume non-session */
@@ -65,7 +66,8 @@ const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type)
         } else {
             /* During or after handshake */
             /* resume the session */
-            if (ctx->session != NULL && (version < HITLS_VERSION_TLS13 || version == HITLS_VERSION_DTLS12)) {
+            if (ctx->session != NULL &&
+                (version < HITLS_VERSION_TLS13 || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask))) {
                 return (char *)hostName;
             }
             /* resume non-session */

@@ -407,6 +407,7 @@ static void TEST_SendUnexpectCertificateMsg(void *msg, void *data)
     frameType->recordType = REC_TYPE_HANDSHAKE;
     frameType->handshakeType = CERTIFICATE;
     frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType->transportType = BSL_UIO_TCP;
     if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
         Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
     }
@@ -454,10 +455,12 @@ static void Test_ErrCertVerify(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     FRAME_Type frameType = { 0 };
     frameType.versionType = HITLS_VERSION_TLCP11;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType.transportType = BSL_UIO_TCP;
     FRAME_Msg frameMsg = { 0 };
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
     frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.transportType = BSL_UIO_TCP;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CERTIFICATE_VERIFY);

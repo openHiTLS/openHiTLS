@@ -130,7 +130,8 @@ static uint32_t GetNamedCurveMsgLen(TLS_Ctx *ctx, uint32_t pubKeyLen)
 
         dataLen += sizeof(uint16_t) + signatureLen;
         /* A signature type needs to be added to TLS1.2/DTLS. The signature type does not need to be transferred */
-        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS12 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS12) {
+        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS12 ||
+            IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
             dataLen += sizeof(uint16_t);
         }
     }
@@ -359,8 +360,9 @@ static int32_t PackServerKxMsgDhe(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
         dataLen += (sizeof(uint16_t) + signatureLen);
     }
 #if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12)
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS12 || ctx->negotiatedInfo.version == HITLS_VERSION_DTLS12) {
-        dataLen += sizeof(uint16_t);   // TLS1.2/DTLS needs to add a signature type
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS12 ||
+        IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+        dataLen += sizeof(uint16_t); // TLS1.2/DTLS needs to add a signature type
     }
 #endif /* HITLS_TLS_PROTO_TLS12 || HITLS_TLS_PROTO_DTLS12 */
     if (bufLen < dataLen) {

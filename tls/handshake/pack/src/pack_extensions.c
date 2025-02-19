@@ -73,10 +73,10 @@ static bool IsNeedPreSharedKey(const TLS_Ctx *ctx)
     return true;
 }
 
-bool Tls13NeedPack(uint32_t version)
+bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
 {
     bool tls13NeedPack = false;
-    if (IS_DTLS_VERSION(version)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         tls13NeedPack = false;
     } else {
         tls13NeedPack = (version >= HITLS_VERSION_TLS13) ? true : false;
@@ -186,7 +186,8 @@ static int32_t PackServerName(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen,
     uint8_t *serverName = NULL;
     uint32_t hostNameSize, serverNameSize = 0u;
     const TLS_Config *config = &(ctx->config.tlsConfig);
-    bool isNotTls13 = (config->maxVersion < HITLS_VERSION_TLS13 || config->maxVersion == HITLS_VERSION_DTLS12);
+    bool isNotTls13 =
+        (config->maxVersion < HITLS_VERSION_TLS13 || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask));
     (void)isNotTls13;
     (void)hostNameSize;
     (void)hostName;
@@ -1142,7 +1143,7 @@ static bool IsNeedServerPackServerName(const TLS_Ctx *ctx)
     /* The protocol version is earlier than tls1.3 and the server accepts the server name. The server hello message sent
      * by the server contains an empty server name extension */
     if (negoInfo->isSniStateOK &&
-        (config->maxVersion < HITLS_VERSION_TLS13 || config->maxVersion == HITLS_VERSION_DTLS12)) {
+        (config->maxVersion < HITLS_VERSION_TLS13 || IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask))) {
         return true;
     }
     return false;
@@ -1169,7 +1170,7 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = HS_GetVersion(ctx);
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
-    bool isTls13 = Tls13NeedPack(version);
+    bool isTls13 = Tls13NeedPack(ctx, version);
 #endif /* HITLS_TLS_PROTO_TLS13 */
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;

@@ -36,8 +36,20 @@
     #ifndef HITLS_TLS_PROTO_TLCP11
         #define HITLS_TLS_PROTO_TLCP11
     #endif
+    #ifndef HITLS_TLS_PROTO_DTLCP11
+        #define HITLS_TLS_PROTO_DTLCP11
+    #endif
     #ifndef HITLS_TLS_PROTO_DTLS12
         #define HITLS_TLS_PROTO_DTLS12
+    #endif
+#endif
+
+#if defined(HITLS_TLS_PROTO_DTLCP11)
+    #ifndef HITLS_TLS_PROTO_DTLS12
+        #define HITLS_TLS_PROTO_DTLS12
+    #endif
+    #ifndef HITLS_TLS_PROTO_TLCP11
+        #define HITLS_TLS_PROTO_TLCP11
     #endif
 #endif
 
