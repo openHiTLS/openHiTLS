@@ -518,6 +518,22 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void)
 }
 #endif
 
+HITLS_Config *HITLS_CFG_NewDTLCPConfig(void)
+{
+    HITLS_Config *newConfig = CreateConfig();
+    if (newConfig == NULL) {
+        return NULL;
+    }
+    
+    newConfig->version |= DTLCP11_VERSION_BIT;   // Enable DTLCP 1.1
+    if (DefaultConfig(HITLS_VERSION_DTLCP11, newConfig) != HITLS_SUCCESS) {
+        BSL_SAL_FREE(newConfig);
+        return NULL;
+    }
+    newConfig->originVersionMask = newConfig->version;
+    return newConfig;
+}
+
 #ifdef HITLS_TLS_PROTO_TLCP11
 HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
 {
@@ -525,10 +541,12 @@ HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
     if (newConfig == NULL) {
         return NULL;
     }
+    newConfig->version |= TLCP11_VERSION_BIT;   // Enable TLCP 1.1
     if (DefaultConfig(HITLS_VERSION_TLCP11, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
+    newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
 #endif
@@ -621,7 +639,7 @@ int32_t HITLS_CFG_UpRef(HITLS_Config *config)
 }
 
 #ifdef HITLS_TLS_PROTO_ALL
-static uint32_t MapVersion2VersionBit(uint32_t version)
+static uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version)
 {
     uint32_t ret = 0;
     switch (version) {
@@ -630,6 +648,10 @@ static uint32_t MapVersion2VersionBit(uint32_t version)
             break;
         case HITLS_VERSION_TLS13:
             ret = TLS13_VERSION_BIT;
+            break;
+        case HITLS_VERSION_TLCP11:
+            if(isDatagram) ret = DTLCP11_VERSION_BIT;
+            else ret = TLCP11_VERSION_BIT;
             break;
         default:
             break;
@@ -663,7 +685,7 @@ static int ChangeVersionMask(HITLS_Config *config, uint16_t minVersion, uint16_t
         }
 
         for (uint16_t version = minVersion; version <= maxVersion; version++) {
-            versionBit = MapVersion2VersionBit(version);
+            versionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(originVersionMask), version);
             versionMask |= versionBit;
         }
 
@@ -771,7 +793,7 @@ int32_t HITLS_CFG_SetVersionForbid(HITLS_Config *config, uint32_t noVersion)
     }
     // Now only DTLS1.2 is supported, so single version is not supported (disable to version 0)
     if ((config->originVersionMask & TLS_VERSION_MASK) == TLS_VERSION_MASK) {
-        uint32_t noVersionBit = MapVersion2VersionBit(noVersion);
+        uint32_t noVersionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(config->originVersionMask), noVersion);
         if ((config->version & (~noVersionBit)) == 0) {
             return HITLS_SUCCESS; // Not all is disabled but the return value is SUCCESS
         }

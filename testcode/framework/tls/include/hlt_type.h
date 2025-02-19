@@ -118,6 +118,7 @@ typedef enum {
     TLS1_2,
     TLS1_3,
     TLCP1_1,
+    DTLCP1_1,
 } TLS_VERSION;
 
 typedef enum {

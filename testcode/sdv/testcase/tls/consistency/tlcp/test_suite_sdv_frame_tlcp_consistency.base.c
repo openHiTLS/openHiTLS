@@ -214,4 +214,5 @@ void SetFrameType(FRAME_Type *frametype, uint16_t versionType, REC_Type recordTy
     frametype->recordType = recordType;
     frametype->handshakeType = handshakeType;
     frametype->keyExType = keyExType;
+    frametype->transportType = BSL_UIO_TCP;
 }

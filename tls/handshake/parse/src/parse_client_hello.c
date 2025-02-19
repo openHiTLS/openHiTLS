@@ -216,7 +216,7 @@ int32_t ParseClientHello(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg
     }
 
 #ifdef HITLS_TLS_PROTO_DTLS12
-    if (IS_DTLS_VERSION(HS_GetVersion(ctx))) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         /* Cookies need to be parsed in DTLS */
         ret = ParseCookie(&pkt, &msg->cookieLen, &msg->cookie);
         if (ret != HITLS_SUCCESS) {

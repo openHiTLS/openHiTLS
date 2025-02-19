@@ -55,13 +55,13 @@ static uint32_t RecGetDefaultBufferSize(bool isDtls, bool isRead)
 
 static uint32_t RecGetReadBufferSize(const TLS_Ctx *ctx)
 {
-    uint32_t recSize = RecGetDefaultBufferSize(IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion), true);
+    uint32_t recSize = RecGetDefaultBufferSize(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), true);
     return recSize;
 }
 
 static uint32_t RecGetWriteBufferSize(const TLS_Ctx *ctx)
 {
-    uint32_t recSize = RecGetDefaultBufferSize(IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion), false);
+    uint32_t recSize = RecGetDefaultBufferSize(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), false);
     return recSize;
 }
 
@@ -90,7 +90,7 @@ static int32_t InnerRecRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, ui
 #endif
 
 #ifdef HITLS_TLS_PROTO_DTLS12
-    if (IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return DtlsRecordRead(ctx, recordType, data, readLen, num);
     }
 #endif
@@ -123,7 +123,7 @@ static int32_t InnerRecWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *d
     }
 
 #ifdef HITLS_TLS_PROTO_DTLS12
-    if (IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         /* DTLS */
         return DtlsRecordWrite(ctx, recordType, data, num);
     }
@@ -435,7 +435,7 @@ int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
     RecConnSetSeqNum(states->currentState, 0);
 
 #ifdef HITLS_TLS_PROTO_DTLS12
-    if (IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         if (isOut) {
             ++recordCtx->writeEpoch;
             RecConnSetEpoch(states->currentState, recordCtx->writeEpoch);

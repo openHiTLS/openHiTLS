@@ -436,11 +436,11 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 static int32_t ServerSelectNegoVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
     uint16_t legacyVersion = clientHello->version;
-    if (legacyVersion > HITLS_VERSION_TLS13 && !IS_DTLS_VERSION(HS_GetVersion(ctx))) {
+    if (legacyVersion > HITLS_VERSION_TLS13 && !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         legacyVersion = HITLS_VERSION_TLS12;
     }
     /* Check whether DTLS is used */
-    if (IS_DTLS_VERSION(legacyVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         if (legacyVersion > ctx->config.tlsConfig.minVersion) {
             /** The DTLS version supported by the client is too early and the negotiation cannot be continued */
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
@@ -1906,9 +1906,9 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
     return Tls13ServerSelectCert(ctx, clientHello);
 }
 
-static int32_t CheckVersion(uint16_t version, uint16_t minVersion, uint16_t maxVersion, uint16_t *selectVersion)
+static int32_t CheckVersion(TLS_Ctx *ctx, uint16_t version, uint16_t minVersion, uint16_t maxVersion, uint16_t *selectVersion)
 {
-    if (version >= HITLS_VERSION_TLS13 && !IS_DTLS_VERSION(maxVersion)) {
+    if (version >= HITLS_VERSION_TLS13 && !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         version = HITLS_VERSION_TLS12;
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
@@ -1962,7 +1962,7 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
      * Then the server must negotiate TLS 1.2 or earlier as specified in rfc5246.
      */
     if (clientHello->extension.content.supportedVersionsCount == 0) {
-        ret = CheckVersion(version, minVersion, maxVersion, selectVersion);
+        ret = CheckVersion(ctx, version, minVersion, maxVersion, selectVersion);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16134, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

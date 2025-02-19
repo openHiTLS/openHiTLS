@@ -37,6 +37,7 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
+    BSL_UIO_TransportType transportType;
 } LinkPara;
 
 static void CleanLinkPara(LinkPara *linkPara)
@@ -48,16 +49,9 @@ static void CleanLinkPara(LinkPara *linkPara)
 
 static int32_t PauseState(LinkPara *linkPara, uint16_t version)
 {
-    /* Check the TLS version type, which is converted to connection enumeration. */
-    BSL_UIO_TransportType transportType = BSL_UIO_UNKNOWN;
-    if (IS_DTLS_VERSION(version)) {
-        transportType = BSL_UIO_SCTP;
-    } else if (version == HITLS_VERSION_TLS12 || version == HITLS_VERSION_TLS13 || version == HITLS_VERSION_TLCP11) {
-        transportType = BSL_UIO_TCP;
-    } else {
-        /* Link establishment in other versions is not supported. */
-        return HITLS_INTERNAL_EXCEPTION;
-    }
+    (void)version;
+
+    BSL_UIO_TransportType transportType = linkPara->transportType;
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* Constructing a Link */
     if ( version == HITLS_VERSION_TLCP11 ) {
@@ -143,6 +137,9 @@ static int32_t SetLinkConfig(uint16_t version, HITLS_KeyExchAlgo keyExAlgo, Link
     } else if (version == HITLS_VERSION_TLS13) {
         linkPara->config = HITLS_CFG_NewTLS13Config();
     } else if (version == HITLS_VERSION_TLCP11) {
+        if(IS_TRANSTYPE_DATAGRAM(linkPara->transportType)) {
+            linkPara->config = HITLS_CFG_NewDTLCPConfig();
+        } else 
         linkPara->config = HITLS_CFG_NewTLCPConfig();
         return HITLS_SUCCESS;
     }
@@ -151,12 +148,6 @@ static int32_t SetLinkConfig(uint16_t version, HITLS_KeyExchAlgo keyExAlgo, Link
 #endif /* HITLS_TLS_CONFIG_KEY_USAGE */
 
     int32_t ret;
-#ifdef HITLS_TLS_PROTO_ALL
-    ret = HITLS_CFG_SetVersion(linkPara->config, version, version);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
 #ifdef HITLS_TLS_FEATURE_CERT_MODE
     ret = HITLS_CFG_SetClientVerifySupport(linkPara->config, true);
     if (ret != HITLS_SUCCESS) {
@@ -184,6 +175,7 @@ static int32_t GetdefaultHsMsg(FRAME_Type *frameType, FRAME_Msg *parsedMsg)
     LinkPara linkPara = {0};
 
     /* Configure config. */
+    linkPara.transportType = frameType->transportType;
     ret = SetLinkConfig(frameType->versionType, frameType->keyExType, &linkPara);
     if (ret != HITLS_SUCCESS) {
         CleanLinkPara(&linkPara);
