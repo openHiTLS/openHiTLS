@@ -16,6 +16,7 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
+#include "hitls_cert_type.h"
 #include "cert_method.h"
 #include "cert_mgr.h"
 #include "cert_mgr_ctx.h"
@@ -54,40 +55,57 @@ CERT_Pair *SAL_CERT_PairDup(CERT_MgrCtx *mgrCtx, CERT_Pair *srcCertPair)
         return NULL;
     }
 
-    if (srcCertPair->cert != NULL) {
-        destCertPair->cert = SAL_CERT_X509Dup(mgrCtx, srcCertPair->cert);
-        if (destCertPair->cert == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "X509Dup fail", 0, 0, 0, 0);
-            BSL_SAL_FREE(destCertPair);
-            return NULL;
+    do {
+        if (srcCertPair->cert != NULL) {
+            destCertPair->cert = SAL_CERT_X509Dup(mgrCtx, srcCertPair->cert);
+            if (destCertPair->cert == NULL) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "X509Dup fail", 0, 0, 0, 0);
+                break;
+            }
         }
-    }
 
-    if (srcCertPair->privateKey != NULL) {
-        destCertPair->privateKey = SAL_CERT_KeyDup(mgrCtx, srcCertPair->privateKey);
-        if (destCertPair->privateKey == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16301, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "KeyDup fail", 0, 0, 0, 0);
-            SAL_CERT_X509Free(destCertPair->cert);
-            BSL_SAL_FREE(destCertPair);
-            return NULL;
+#ifdef HITLS_TLS_PROTO_TLCP11
+        if (srcCertPair->encCert != NULL) {
+            destCertPair->encCert = SAL_CERT_X509Dup(mgrCtx, srcCertPair->encCert);
+            if (destCertPair->encCert == NULL) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "X509Dup fail", 0, 0, 0, 0);
+                break;
+            }
         }
-    }
 
-    if (srcCertPair->chain != NULL) {
-        destCertPair->chain = SAL_CERT_ChainDup(mgrCtx, srcCertPair->chain);
-        if (destCertPair->chain == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16302, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "ChainDup fail", 0, 0, 0, 0);
-            SAL_CERT_X509Free(destCertPair->cert);
-            SAL_CERT_KeyFree(mgrCtx, destCertPair->privateKey);
-            BSL_SAL_FREE(destCertPair);
-            return NULL;
+        if (srcCertPair->encPrivateKey != NULL) {
+            destCertPair->encPrivateKey = SAL_CERT_KeyDup(mgrCtx, srcCertPair->encPrivateKey);
+            if (destCertPair->encPrivateKey == NULL) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16301, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "KeyDup fail", 0, 0, 0, 0);
+                break;
+            }
         }
-    }
+#endif
 
-    return destCertPair;
+        if (srcCertPair->privateKey != NULL) {
+            destCertPair->privateKey = SAL_CERT_KeyDup(mgrCtx, srcCertPair->privateKey);
+            if (destCertPair->privateKey == NULL) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16301, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "KeyDup fail", 0, 0, 0, 0);
+                break;
+            }
+        }
+
+        if (srcCertPair->chain != NULL) {
+            destCertPair->chain = SAL_CERT_ChainDup(mgrCtx, srcCertPair->chain);
+            if (destCertPair->chain == NULL) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16302, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "ChainDup fail", 0, 0, 0, 0);
+                break;
+            }
+        }
+        return destCertPair;
+    } while (false);
+    SAL_CERT_PairFree(mgrCtx, destCertPair);
+    return NULL;
 }
 
 void SAL_CERT_PairClear(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair)
@@ -102,6 +120,9 @@ void SAL_CERT_PairClear(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair)
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (certPair->encCert != NULL) {
         SAL_CERT_X509Free(certPair->encCert);
+    }
+    if (certPair->encPrivateKey != NULL) {
+        SAL_CERT_KeyFree(mgrCtx, certPair->encPrivateKey);
     }
 #endif
     if (certPair->privateKey != NULL) {
@@ -121,4 +142,59 @@ void SAL_CERT_PairFree(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair)
     SAL_CERT_PairClear(mgrCtx, certPair);
     BSL_SAL_FREE(certPair);
     return;
+}
+
+CERT_Pair *SAL_CERT_HashFind(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType)
+{
+    if (mgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16299, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx is null", 0, 0, 0, 0);
+        return NULL;
+    }
+    CERT_Pair *certPair = NULL;
+    if (BSL_HASH_At(mgrCtx->certHash, (uintptr_t)keyType, (uintptr_t *)&certPair) != BSL_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(
+            BINLOG_ID15353, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN, "not find certPair", 0, 0, 0, 0);
+            return NULL;
+    }
+    return certPair;
+}
+
+int32_t SAL_CERT_HashInsert(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType, CERT_Pair *certPair)
+{
+    if (mgrCtx == NULL || certPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16299, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx is null", 0, 0, 0, 0);
+        return -1;// TODO 日志
+    }
+    int32_t ret = BSL_HASH_Insert(mgrCtx->certHash, keyType, 0, (uintptr_t)certPair, sizeof(CERT_Pair));
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16299, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx is null", 0, 0, 0, 0);
+        return -1;// TODO 日志
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t SAL_CERT_HashDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx)
+{
+    destMgrCtx->certHash = BSL_HASH_Create(64, NULL, NULL, NULL, NULL);
+    if (destMgrCtx->certHash == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15016, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "new cert manager context error: new store failed.", 0, 0, 0, 0);   // TODO 日志
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    BSL_HASH_Hash *certHash = srcMgrCtx->certHash;
+    BSL_HASH_Iterator iter = BSL_HASH_IterBegin(certHash);
+    while (iter != BSL_HASH_IterEnd(certHash)) {
+        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certHash, iter);
+        CERT_Pair *certPair = (CERT_Pair *)(uintptr_t)BSL_HASH_IterValue(certHash, iter);
+        if (certPair != NULL) {
+            CERT_Pair *newCertPair = SAL_CERT_PairDup(srcMgrCtx, certPair);
+            if (newCertPair == NULL) {
+                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_X509_DUP, BINLOG_ID15042, "x509dup fail");
+            }
+            SAL_CERT_HashInsert(destMgrCtx, keyType, newCertPair);  // TODO 日志
+        }
+        iter = BSL_HASH_IterNext(certHash, iter);
+    }
+    return HITLS_SUCCESS;
 }
