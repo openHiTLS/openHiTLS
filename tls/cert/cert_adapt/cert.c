@@ -486,53 +486,55 @@ int32_t SAL_CERT_CheckCertInfo(HITLS_Ctx *ctx, const CERT_ExpectInfo *expectCert
 static int32_t TlcpSelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
 {
     int32_t ret;
-    int32_t encCertIndex = TLS_CERT_KEY_TYPE_ENC_SM2;
+    int32_t encCertKeyType = TLS_CERT_KEY_TYPE_SM2;
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, encCertKeyType);
+    if (certPair == NULL) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_SELECT_CERTIFICATE, BINLOG_ID15042,
+            "The certificate required by TLCP is not loaded");  // TODO 日志
+    }
+    HITLS_CERT_X509 *cert = certPair->cert;
+    HITLS_CERT_X509 *encCert = certPair->encCert;
     if (ctx->isClient == false || ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE) {
-        if (mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert == NULL || mgrCtx->certPair[encCertIndex].cert == NULL) {
+        if (cert == NULL || encCert == NULL) {
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_SELECT_CERTIFICATE, BINLOG_ID15042,
                 "The certificate required by TLCP is not loaded");
         }
 
-        ret = SAL_CERT_CheckCertInfo(ctx, info, mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert, true, true);
+        ret = SAL_CERT_CheckCertInfo(ctx, info, cert, true, true);
         if (ret != HITLS_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16308, "CheckCertInfo fail");
         }
 
-        ret = SAL_CERT_CheckCertInfo(ctx, info, mgrCtx->certPair[encCertIndex].cert, true, false);
+        ret = SAL_CERT_CheckCertInfo(ctx, info, encCert, true, false);
         if (ret != HITLS_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16309, "CheckCertInfo fail");
         }
-
-        mgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_SM2;
-        return HITLS_SUCCESS;
     } else {
         /* Check whether the certificate is missing when the client sends the certificate
            or sends it to the server for processing. Check whether the authentication-related signature certificate
            or derived encryption certificate exists when the client uses the certificate. */
-        if (mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert != NULL) {
-            ret = SAL_CERT_CheckCertInfo(ctx, info, mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert, true, true);
+        if (cert != NULL) {
+            ret = SAL_CERT_CheckCertInfo(ctx, info, cert, true, true);
             if (ret != HITLS_SUCCESS) {
                 return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16310, "CheckCertInfo fail");
             }
         }
-        if (mgrCtx->certPair[encCertIndex].cert != NULL) {
-            ret = SAL_CERT_CheckCertInfo(ctx, info, mgrCtx->certPair[encCertIndex].cert, true, false);
+        if (encCert != NULL) {
+            ret = SAL_CERT_CheckCertInfo(ctx, info, encCert, true, false);
             if (ret != HITLS_SUCCESS) {
                 return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16311, "CheckCertInfo fail");
             }
         }
-        mgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_SM2;
-        return HITLS_SUCCESS;
     }
+    mgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_SM2;
+    return HITLS_SUCCESS;
 }
 #endif
 
 static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
 {
-    uint32_t i;
     int32_t ret;
-    HITLS_CERT_X509 *cert = NULL;
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
     if (mgrCtx == NULL) {
         /* The user does not set the certificate callback. */
@@ -540,17 +542,22 @@ static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16312, "unregistered callback");
     }
 
-    for (i = 0; i < TLS_CERT_KEY_TYPE_NUM; i++) {
-        cert = mgrCtx->certPair[i].cert;
-        if (cert == NULL) {
+    BSL_HASH_Hash *certHash = mgrCtx->certHash;
+    BSL_HASH_Iterator it = BSL_HASH_IterBegin(certHash);
+    while (it != BSL_HASH_IterEnd(certHash)) {
+        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certHash, it);
+        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certHash, it);
+        if (certPair == NULL || certPair->cert == NULL) {
+            it = BSL_HASH_IterNext(certHash, it);
             continue;
         }
-        ret = SAL_CERT_CheckCertInfo(ctx, info, cert, true, true);
+        ret = SAL_CERT_CheckCertInfo(ctx, info, certPair->cert, true, true);
         if (ret != HITLS_SUCCESS) {
+            it = BSL_HASH_IterNext(certHash, it);
             continue;
         }
         /* Find a proper certificate and record the corresponding subscript. */
-        mgrCtx->currentCertIndex = i;
+        mgrCtx->currentCertIndex = keyType;
         return HITLS_SUCCESS;
     }
     return HITLS_CERT_ERR_SELECT_CERTIFICATE;
@@ -651,13 +658,12 @@ static int32_t EncodeEECert(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     int32_t ret = 0;
     uint32_t offset = 0;
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
-
-    CERT_Pair *currentCertPair = &mgrCtx->certPair[mgrCtx->currentCertIndex];
-    HITLS_CERT_X509 *tmpCert = currentCertPair->cert;
-    if (tmpCert == NULL) {
+    CERT_Pair *currentCertPair = SAL_CERT_HashFind(mgrCtx, mgrCtx->currentCertIndex);
+    if (currentCertPair == NULL || currentCertPair->cert == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_EXP_CERT);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_EXP_CERT, BINLOG_ID16152, "first cert is null");
     }
+    HITLS_CERT_X509 *tmpCert = currentCertPair->cert;
 
 #ifdef HITLS_TLS_FEATURE_SECURITY
     HITLS_CERT_Key *key = currentCertPair->privateKey;
@@ -677,11 +683,10 @@ static int32_t EncodeEECert(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* If the TLCP algorithm is used and the encryption certificate is required,
        write the second encryption certificate. */
-    CERT_Pair *currentCertPairEnc = &mgrCtx->certPair[mgrCtx->currentCertIndex + 1];
-    HITLS_CERT_X509 *certEnc = currentCertPairEnc->cert;
+    HITLS_CERT_X509 *certEnc = currentCertPair->encCert;
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 && certEnc != NULL) {
 #ifdef HITLS_TLS_FEATURE_SECURITY
-        HITLS_CERT_Key *keyEnc = currentCertPairEnc->privateKey;
+        HITLS_CERT_Key *keyEnc = currentCertPair->encPrivateKey;
         ret = CheckKeySecbits(ctx, certEnc, keyEnc);
         if (ret != HITLS_SUCCESS) {
             return ret;
@@ -744,7 +749,12 @@ static int32_t EncodeCertificateChain(HITLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     HITLS_CERT_X509 *tempCert = NULL;
     HITLS_Config *config = &ctx->config.tlsConfig;
     CERT_MgrCtx *mgrCtx = config->certMgrCtx;
-    CERT_Pair *currentCertPair = &mgrCtx->certPair[mgrCtx->currentCertIndex];
+    CERT_Pair *currentCertPair = SAL_CERT_HashFind(mgrCtx, mgrCtx->currentCertIndex);
+    if (currentCertPair == NULL) {
+        // 没有中间证书
+        *usedLen = offset;
+        return HITLS_SUCCESS;
+    }
     tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(currentCertPair->chain);
     uint32_t tempOffset = offset;
     while (tempCert != NULL) {
@@ -817,9 +827,12 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     }
 
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 && mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert == NULL) {
-        *usedLen = 0;
-        return HITLS_SUCCESS;
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+        CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, TLS_CERT_KEY_TYPE_SM2);
+        if (certPair == NULL || certPair->cert == NULL) {
+            *usedLen = 0;
+            return HITLS_SUCCESS;
+        }
     }
 #endif
     if (mgrCtx->currentCertIndex >= TLS_CERT_KEY_TYPE_NUM) {
@@ -827,7 +840,11 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
         *usedLen = 0;
         return HITLS_SUCCESS;
     }
-    CERT_Pair *currentCertPair = &mgrCtx->certPair[mgrCtx->currentCertIndex];
+    CERT_Pair *currentCertPair = SAL_CERT_HashFind(mgrCtx, mgrCtx->currentCertIndex);
+    if (currentCertPair == NULL) {
+        *usedLen = 0;
+        return HITLS_SUCCESS;   // TODO 注意一下
+    }
     uint32_t offset = 0;
     int32_t ret = EncodeEECert(ctx, buf, bufLen, usedLen, &cert);
     if (ret != HITLS_SUCCESS) {
@@ -1097,10 +1114,15 @@ uint8_t *SAL_CERT_SrvrGmEncodeEncCert(HITLS_Ctx *ctx, uint32_t *useLen)
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return NULL;
     }
-    int index = TLS_CERT_KEY_TYPE_ENC_SM2;
+    int index = TLS_CERT_KEY_TYPE_SM2;
 
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
-    CERT_Pair *currentCertPair = &mgrCtx->certPair[index];
+    CERT_Pair *currentCertPair = SAL_CERT_HashFind(mgrCtx, index);
+    if (currentCertPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16337, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return NULL;    // TODO 日志
+    }
     HITLS_CERT_X509 *cert = currentCertPair->cert;
 
     return EncodeEncCert(ctx, cert, useLen);

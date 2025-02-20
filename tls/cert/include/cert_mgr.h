@@ -22,6 +22,7 @@
 #include "hitls_cert_reg.h"
 #include "hitls_cert.h"
 #include "tls_config.h"
+#include "bsl_hash.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +73,37 @@ void SAL_CERT_PairClear(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair);
  * @return  void
  */
 void SAL_CERT_PairFree(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair);
+
+/**
+ * @brief   Release the certificate resource struct
+ *
+ * @param   mgrCtx   [IN] Certificate management struct
+ * @param   keyType [IN] Certificate public key type
+ *
+ * @return  void
+ */
+CERT_Pair *SAL_CERT_HashFind(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType);
+
+/**
+ * @brief   Release the certificate resource struct
+ *
+ * @param   mgrCtx   [IN] Certificate management struct
+ * @param   keyType [IN] Certificate public key type
+ * @param   certPair [IN] Certificate resource struct. The certPair is set NULL by the invoker.
+ *
+ * @retval  HITLS_SUCCESS           succeeded.
+ */
+int32_t SAL_CERT_HashInsert(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType, CERT_Pair *certPair);
+
+/**
+ * @brief   Release the certificate resource struct
+ *
+ * @param   destMgrCtx  [OUT] Certificate management struct
+ * @param   srcMgrCtx   [IN] Certificate management struct
+ *
+ * @retval  HITLS_SUCCESS           succeeded.
+ */
+int32_t SAL_CERT_HashDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx);
 
 /**
  * @brief   Indicates whether to enable the certificate management module.
