@@ -112,25 +112,41 @@ int32_t SAL_CERT_SetCurrentCert(HITLS_Config *config, HITLS_CERT_X509 *cert, boo
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16100, "GET KEY TYPE fail");
     }
 
-    uint32_t index = isTlcpEncCert ? keyType + 1 : keyType;
-    if (index >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16102, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "set certificate error: pubkey type = %u is invalid.", keyType, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_INVALID_KEY_TYPE);
-        return HITLS_CERT_ERR_INVALID_KEY_TYPE;
+    bool isCalloc = false;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, keyType);
+    if (certPair == NULL) {
+        certPair = BSL_SAL_Calloc(1u, sizeof(CERT_Pair));
+        if (certPair == NULL) {
+            return HITLS_MEMALLOC_FAIL;   // TODO 日志
+        }
+        isCalloc = true;
     }
 
-    CERT_Pair *certPair = &mgrCtx->certPair[index];
-    if (certPair->privateKey != NULL) {
-        ret = SAL_CERT_CheckPrivateKey(config, cert, certPair->privateKey);
+    HITLS_CERT_Key **privateKey = NULL;
+    HITLS_CERT_X509 **certPairCert = NULL;
+    if (isTlcpEncCert) {
+#ifdef HITLS_TLS_PROTO_TLCP11
+        privateKey = &certPair->encPrivateKey;
+        certPairCert = &certPair->encCert;
+#endif
+    } else {
+        privateKey = &certPair->privateKey;
+        certPairCert = &certPair->cert;
+    }
+    if (*privateKey != NULL) {
+        ret = SAL_CERT_CheckPrivateKey(config, cert, *privateKey);
         if (ret != HITLS_SUCCESS) {
             /* If the certificate does not match the private key, release the private key. */
-            SAL_CERT_KeyFree(mgrCtx, certPair->privateKey);
-            certPair->privateKey = NULL;
+            SAL_CERT_KeyFree(mgrCtx, *privateKey);   // TODO 日志
+            *privateKey = NULL;
         }
     }
-    SAL_CERT_X509Free(certPair->cert);
-    certPair->cert = cert;
+
+    SAL_CERT_X509Free(*certPairCert);
+    *certPairCert = cert;
+    if (isCalloc) {
+        SAL_CERT_HashInsert(mgrCtx, keyType, certPair);     // TODO 日志
+    }
     mgrCtx->currentCertIndex = keyType;
     return HITLS_SUCCESS;
 }
@@ -141,12 +157,13 @@ HITLS_CERT_X509 *SAL_CERT_GetCurrentCert(CERT_MgrCtx *mgrCtx)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16287, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
-    uint32_t idx = mgrCtx->currentCertIndex;
-    if (idx >= TLS_CERT_KEY_TYPE_NUM) {
+    uint32_t keyType = mgrCtx->currentCertIndex;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, keyType);
+    if (certPair == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16288, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
-    return mgrCtx->certPair[idx].cert;
+    return certPair->cert;
 }
 
 HITLS_CERT_X509 *SAL_CERT_GetCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType)
@@ -156,12 +173,12 @@ HITLS_CERT_X509 *SAL_CERT_GetCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyTyp
         return NULL;
     }
 
-    if (keyType >= TLS_CERT_KEY_TYPE_NUM) {
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, keyType);
+    if (certPair == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16290, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
         return NULL;
     }
-
-    return mgrCtx->certPair[keyType].cert;
+    return certPair->cert;
 }
 
 int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key, bool isTlcpEncCertPriKey)
@@ -183,32 +200,44 @@ int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key,
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16104, "get key type fail");
     }
 
-    uint32_t index =
-#ifdef HITLS_TLS_PROTO_TLCP11
-        isTlcpEncCertPriKey ? keyType + 1 :
-#endif
-        keyType;
-    if (index >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16105, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "set private key error: key type = %u is invalid.", keyType, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_INVALID_KEY_TYPE);
-        return HITLS_CERT_ERR_INVALID_KEY_TYPE;
+    bool isCalloc = false;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx,keyType);
+    if (certPair == NULL) {
+        certPair = BSL_SAL_Calloc(1u, sizeof(CERT_Pair));
+        if (certPair == NULL) {
+            return HITLS_MEMALLOC_FAIL;   // TODO 日志
+        }
+        isCalloc = true;
     }
 
-    CERT_Pair *certPair = &mgrCtx->certPair[index];
-    if (certPair->cert != NULL) {
-        ret = SAL_CERT_CheckPrivateKey(config, certPair->cert, key);
+    HITLS_CERT_Key **certPairPrivateKey = NULL;
+    HITLS_CERT_X509 **cert = NULL;
+    if (isTlcpEncCertPriKey) {
+#ifdef HITLS_TLS_PROTO_TLCP11
+        certPairPrivateKey = &certPair->encPrivateKey;
+        cert = &certPair->encCert;
+#endif
+    } else {
+        certPairPrivateKey = &certPair->privateKey;
+        cert = &certPair->cert;
+    }
+    if (*cert != NULL) {
+        ret = SAL_CERT_CheckPrivateKey(config, *cert, key);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "set private key error: cert and key mismatch, key type = %u.", keyType, 0, 0, 0);
             /* If the certificate does not match the private key, release the certificate. */
-            SAL_CERT_X509Free(certPair->cert);
-            certPair->cert = NULL;
-            return ret;
+            SAL_CERT_X509Free(*cert);
+            *cert = NULL;
+            return ret;     // TODO 日志
         }
     }
-    SAL_CERT_KeyFree(mgrCtx, certPair->privateKey);
-    certPair->privateKey = key;
+
+    SAL_CERT_KeyFree(mgrCtx, *certPairPrivateKey);
+    *certPairPrivateKey = key;
+    if (isCalloc) {
+        SAL_CERT_HashInsert(mgrCtx, keyType, certPair);     // TODO 日志
+    }
     mgrCtx->currentCertIndex = keyType;
     return HITLS_SUCCESS;
 }
@@ -220,16 +249,19 @@ HITLS_CERT_Key *SAL_CERT_GetCurrentPrivateKey(CERT_MgrCtx *mgrCtx, bool isTlcpEn
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16291, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
-    uint32_t index =
-#ifdef HITLS_TLS_PROTO_TLCP11
-        isTlcpEncCert ? mgrCtx->currentCertIndex + 1 :
-#endif
-        mgrCtx->currentCertIndex;
-    if (index >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16292, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
-        return NULL;
+
+    uint32_t keyType = mgrCtx->currentCertIndex;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, keyType);
+    if (certPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16288, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
+        return NULL;     // TODO 日志
     }
-    return mgrCtx->certPair[index].privateKey;
+    if (isTlcpEncCert) {
+#ifdef HITLS_TLS_PROTO_TLCP11
+        return certPair->encPrivateKey;
+#endif
+    }
+    return certPair->privateKey;
 }
 
 HITLS_CERT_Key *SAL_CERT_GetPrivateKey(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType keyType)
@@ -238,13 +270,13 @@ HITLS_CERT_Key *SAL_CERT_GetPrivateKey(CERT_MgrCtx *mgrCtx, HITLS_CERT_KeyType k
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16293, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "mgrCtx null", 0, 0, 0, 0);
         return NULL;
     }
-
-    if (keyType >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16294, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
-        return NULL;
+    // 这里有问题，如果想要国米的加密证书对应的私钥呢
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, keyType);
+    if (certPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16288, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
+        return NULL;     // TODO 日志
     }
-
-    return mgrCtx->certPair[keyType].privateKey;
+    return certPair->privateKey;
 }
 
 int32_t SAL_CERT_AddChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
@@ -254,15 +286,16 @@ int32_t SAL_CERT_AddChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
         return HITLS_NULL_INPUT;
     }
 
-    uint32_t index = mgrCtx->currentCertIndex;
-    if (index >= TLS_CERT_KEY_TYPE_NUM) {
+    uint32_t keyType = mgrCtx->currentCertIndex;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, keyType);
+    if (certPair == NULL) {
         /* the certificate has not been loaded yet */
         BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_ADD_CHAIN_CERT);
         return HITLS_CERT_ERR_ADD_CHAIN_CERT;
     }
 
+    HITLS_CERT_Chain *chain = certPair->chain;
     HITLS_CERT_Chain *newChain = NULL;
-    HITLS_CERT_Chain *chain = mgrCtx->certPair[index].chain;
     if (chain == NULL) {
         newChain = SAL_CERT_ChainNew();
         if (newChain == NULL) {
@@ -277,7 +310,7 @@ int32_t SAL_CERT_AddChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
         BSL_SAL_FREE(newChain);
         return ret;
     }
-    mgrCtx->certPair[index].chain = chain;
+    certPair->chain = chain;
     return HITLS_SUCCESS;
 }
 
@@ -288,13 +321,12 @@ HITLS_CERT_Chain *SAL_CERT_GetCurrentChainCerts(CERT_MgrCtx *mgrCtx)
         return NULL;
     }
 
-    uint32_t id = mgrCtx->currentCertIndex;
-    if (id >= TLS_CERT_KEY_TYPE_NUM) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16297, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
-        return NULL;
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, mgrCtx->currentCertIndex);
+    if (certPair == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16288, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "idx err", 0, 0, 0, 0);
+        return NULL;     // TODO 日志
     }
-
-    return mgrCtx->certPair[id].chain;
+    return certPair->chain;
 }
 
 void SAL_CERT_ClearCurrentChainCerts(CERT_MgrCtx *mgrCtx)
@@ -303,18 +335,12 @@ void SAL_CERT_ClearCurrentChainCerts(CERT_MgrCtx *mgrCtx)
         return;
     }
 
-    uint32_t index = mgrCtx->currentCertIndex;
-    if (index >= TLS_CERT_KEY_TYPE_NUM) {
-        /* the certificate has not been loaded yet */
+    CERT_Pair *certPair = SAL_CERT_HashFind(mgrCtx, mgrCtx->currentCertIndex);
+    if (certPair == NULL || certPair->chain == NULL) {
         return;
     }
-
-    HITLS_CERT_Chain *chain = mgrCtx->certPair[index].chain;
-    if (chain == NULL) {
-        return;
-    }
-    SAL_CERT_ChainFree(chain);
-    mgrCtx->certPair[index].chain = NULL;
+    SAL_CERT_ChainFree(certPair->chain);
+    certPair->chain = NULL;
     return;
 }
 
@@ -324,12 +350,15 @@ void SAL_CERT_ClearCertAndKey(CERT_MgrCtx *mgrCtx)
         return;
     }
 
-    CERT_Pair *certPair = NULL;
-    for (uint32_t i = 0; i < TLS_CERT_KEY_TYPE_NUM; i++) {
-        certPair = &mgrCtx->certPair[i];
+    BSL_HASH_Hash *certHash = mgrCtx->certHash;
+    for (BSL_HASH_Iterator it = BSL_HASH_IterBegin(certHash); it != BSL_HASH_IterEnd(certHash);) {
+        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certHash, it);
+        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certHash, it);
         SAL_CERT_PairClear(mgrCtx, certPair);
+        BSL_SAL_FREE(certPair);
+        it = BSL_HASH_Erase(certHash, keyType);
     }
-    mgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_UNKNOWN;
+    mgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_UNKNOWN;    // TODO 决定用什么值
     return;
 }
 
