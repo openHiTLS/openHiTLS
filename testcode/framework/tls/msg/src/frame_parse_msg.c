@@ -347,7 +347,7 @@ static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer,
     ParseFieldInteger8(&buffer[offset], bufLen - offset, &clientHello->sessionIdSize, &offset);
     ParseFieldArray8(&buffer[offset], bufLen - offset, &clientHello->sessionId,
                      clientHello->sessionIdSize.data, &offset);
-    if (IS_DTLS_VERSION(frameType->versionType)) {
+    if (IS_TRANSTYPE_DATAGRAM(frameType->transportType)) {
         ParseFieldInteger8(&buffer[offset], bufLen - offset, &clientHello->cookiedLen, &offset);
         ParseFieldArray8(&buffer[offset], bufLen - offset, &clientHello->cookie, clientHello->cookiedLen.data, &offset);
     }
@@ -789,7 +789,7 @@ static int32_t ParseClientKxMsg(FRAME_Type *frameType, const uint8_t *buffer, ui
         case HITLS_KEY_EXCH_ECDHE:
             /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
 #ifdef HITLS_TLS_PROTO_TLCP11
-            if (frameType->versionType == HITLS_VERSION_TLCP11) {
+            if (frameType->versionType == HITLS_VERSION_TLCP_DTLCP11) {
                 // Curve type + Curve ID + Public key length
                 uint8_t minLen = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint8_t);
                 if (bufLen < minLen) {
@@ -904,7 +904,7 @@ static int32_t ParseHsMsg(FRAME_Type *frameType, const uint8_t *buffer, uint32_t
     ParseFieldInteger8(&buffer[0], bufLen, &hsMsg->type, &offset);
     ParseFieldInteger24(&buffer[offset], bufLen - offset, &hsMsg->length, &offset);
 
-    if (IS_DTLS_VERSION(frameType->versionType)) {
+    if (IS_TRANSTYPE_DATAGRAM(frameType->transportType)) {
         ParseFieldInteger16(&buffer[offset], bufLen - offset, &hsMsg->sequence, &offset);
         ParseFieldInteger24(&buffer[offset], bufLen - offset, &hsMsg->fragmentOffset, &offset);
         ParseFieldInteger24(&buffer[offset], bufLen - offset, &hsMsg->fragmentLength, &offset);
@@ -1017,7 +1017,7 @@ int32_t FRAME_ParseMsgHeader(
     ParseFieldInteger8(&buffer[0], bufLen, &msg->recType, &offset);
     ParseFieldInteger16(&buffer[offset], bufLen - offset, &msg->recVersion, &offset);
 
-    if (IS_DTLS_VERSION(frameType->versionType)) {
+    if (IS_TRANSTYPE_DATAGRAM(frameType->transportType)) {
         ParseFieldInteger16(&buffer[offset], bufLen - offset, &msg->epoch, &offset);
         ParseFieldInteger48(&buffer[offset], bufLen - offset, &msg->sequence, &offset);
     }

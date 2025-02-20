@@ -525,8 +525,8 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
     ctxConfig->isSupportClientVerify = false;
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportExtendMasterSecret = false;
-    ctxConfig->minVersion = HITLS_VERSION_TLCP11;
-    ctxConfig->maxVersion = HITLS_VERSION_TLCP11;
+    ctxConfig->minVersion = HITLS_VERSION_TLCP_DTLCP11;
+    ctxConfig->maxVersion = HITLS_VERSION_TLCP_DTLCP11;
     ctxConfig->isClient = isClient;
     ctxConfig->setSessionCache = 2;
     HLT_SetGroups(ctxConfig, "NULL");

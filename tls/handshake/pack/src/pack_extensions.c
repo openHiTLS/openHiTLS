@@ -73,10 +73,10 @@ static bool IsNeedPreSharedKey(const TLS_Ctx *ctx)
     return true;
 }
 
-bool Tls13NeedPack(uint32_t version)
+bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
 {
     bool tls13NeedPack = false;
-    if (IS_DTLS_VERSION(version)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         tls13NeedPack = false;
     } else {
         tls13NeedPack = (version >= HITLS_VERSION_TLS13) ? true : false;
@@ -786,7 +786,7 @@ static int32_t PackExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t *bufLen
 
 static bool IsNeedEms(const TLS_Ctx *ctx)
 {
-    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLCP11) {
+    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
         return false;
     }
     return true;
@@ -1169,7 +1169,7 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = HS_GetVersion(ctx);
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
-    bool isTls13 = Tls13NeedPack(version);
+    bool isTls13 = Tls13NeedPack(ctx, version);
 #endif /* HITLS_TLS_PROTO_TLS13 */
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;

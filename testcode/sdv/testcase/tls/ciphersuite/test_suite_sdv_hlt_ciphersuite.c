@@ -168,7 +168,7 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     HLT_Ctx_Config *serverCtxConfig = NULL;
     HLT_Ctx_Config *clientCtxConfig = NULL;
-    if (version == TLCP1_1) {
+    if (version == TLCP1_1 || version == DTLCP1_1) {
         serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
         clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     } else {
@@ -188,7 +188,7 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
 
-    if (version == TLCP1_1) {
+    if (version == TLCP1_1 || version == DTLCP1_1) {
         SetGMCert(serverCtxConfig, clientCtxConfig, cert);
     } else {
         SetCert(serverCtxConfig, cert);
@@ -295,6 +295,9 @@ void SDV_TLS_GM_CIPHER_SUITE(void)
     for (uint16_t i = 0; i < sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]); i++) {
         SUB_PROC_BEGIN(continue);
         CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+        if (IsEnableSctpAuth()) {
+            CONNECT(DTLCP1_1, SCTP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+        }
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]));

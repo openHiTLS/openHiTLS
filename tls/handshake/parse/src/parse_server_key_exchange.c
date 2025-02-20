@@ -181,7 +181,7 @@ static int32_t ParseEcdhePublicKey(ParsePacket *pkt, ServerEcdh *ecdh)
     }
 
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (pkt->ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+    if (pkt->ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         ecdh->ecPara.param.namedcurve = HITLS_EC_GROUP_SM2;
     }
 #endif /* HITLS_TLS_PROTO_TLCP11 */
@@ -279,7 +279,7 @@ static int32_t ParseServerEcdhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
     uint32_t keyExDataLen = *pkt->bufOffset;
     uint16_t signAlgorithm = ctx->negotiatedInfo.cipherSuiteInfo.signScheme;
 
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11) {
         ret = ParseSignAlgorithm(pkt, &signAlgorithm);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17015, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

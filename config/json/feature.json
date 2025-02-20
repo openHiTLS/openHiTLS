@@ -99,6 +99,7 @@
                         "dsa": {"deps": ["bn"]},
                         "dh": {"deps": ["bn"]},
                         "paillier": {"deps":["bn"]},
+                        "elgamal": {"deps":["bn"]},
                         "ecdh": {"deps": ["ecc"]},
                         "ecdsa": {"deps": ["ecc"]},
                         "curve25519": {
@@ -126,10 +127,11 @@
                     "ecc": {"ins_set":["x8664", "avx512"]}
                 },
                 "armv8": {
+                    "sha1": null,
+                    "sha2": null,
                     "sm3": null,
                     "aes": null,
                     "modes": null,
-                    "chacha20": null,
                     "sm4": null,
                     "ecc": null
                 }
@@ -545,6 +547,7 @@
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
                     "crypto/paillier/include",
+                    "crypto/elgamal/include",
                     "crypto/provider/include"
                 ]
             },
@@ -745,8 +748,7 @@
                 ".features": ["chacha20"],
                 ".srcs": {
                     "public": "crypto/chacha20/src/chacha20.c",
-                    "no_asm": "crypto/chacha20/src/chacha20block.c",
-                    "armv8": "crypto/chacha20/src/chacha20block.c"
+                    "no_asm": "crypto/chacha20/src/chacha20block.c"
                 },
                 ".deps": ["bsl::sal"]
             },
@@ -830,6 +832,7 @@
                     "crypto/ecc/include",
                     "crypto/hmac/include",
                     "crypto/paillier/include",
+                    "crypto/elgamal/include",
                     "crypto/drbg/include",
                     "crypto/modes/include",
                     "crypto/entropy/include",
@@ -923,6 +926,12 @@
             "paillier": {
                 ".features": ["paillier"],
                 ".srcs": "crypto/paillier/src/*.c",
+                ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
+            },
+            "elgamal": {
+                ".features": ["elgamal"],
+                ".srcs": "crypto/elgamal/src/*.c",
                 ".deps": ["crypto::bn"],
                 ".include": ["crypto/eal/src"]
             }
