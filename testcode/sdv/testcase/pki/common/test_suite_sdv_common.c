@@ -55,7 +55,7 @@ static void FreeSanListData(void *data)
     }
 }
 
-static int32_t TestSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
+static int32_t TestSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
 {
     (void)signAlgId;
     uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(prvKey);

@@ -237,7 +237,7 @@ CRYPT_EAL_HpkeCtx *CRYPT_EAL_HpkeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *at
     }
 
     if (attrName != NULL && strlen(attrName) > 0) {
-        ctx->attrName = BSL_SAL_Dump(attrName, strlen(attrName) + 1);
+        ctx->attrName = BSL_SAL_Dump(attrName, (uint32_t)strlen(attrName) + 1);
         if (ctx->attrName == NULL) {
             CRYPT_EAL_HpkeFreeCtx(ctx);
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

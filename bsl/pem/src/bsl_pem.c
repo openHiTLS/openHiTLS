@@ -31,8 +31,8 @@
 int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, char **realEncode,
     uint32_t *realLen)
 {
-    uint32_t headLen = strlen(symbol->head);
-    uint32_t tailLen = strlen(symbol->tail);
+    uint32_t headLen = (uint32_t)strlen(symbol->head);
+    uint32_t tailLen = (uint32_t)strlen(symbol->tail);
     if (*encodeLen < headLen + tailLen) {
         BSL_ERR_PUSH_ERROR(BSL_PEM_INVALID);
         return BSL_PEM_INVALID;

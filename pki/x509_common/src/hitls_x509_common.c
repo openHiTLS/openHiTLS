@@ -17,7 +17,6 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_log_internal.h"
-#include "bsl_binlog_id.h"
 #include "hitls_pki_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
@@ -285,7 +284,8 @@ static int32_t X509_EncodeRdName(BSL_ASN1_List *list, BSL_ASN1_Buffer *asnBuf)
 int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
 {
     int32_t ret;
-    int32_t maxCount = (BSL_LIST_COUNT(list) + 1) / 2; // (count + 1) / 2 : round up, the maximum number of set
+    // (count + 1) / 2 : round up, the maximum number of set
+    uint32_t maxCount = ((uint32_t)BSL_LIST_COUNT(list) + 1) / 2;
     BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(maxCount, sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -523,13 +523,13 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
-    uint32_t mdId;
+    CRYPT_MD_AlgId mdId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, &mdId, sizeof(uint32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (mdId == BSL_CID_UNKNOWN) {
+    if (mdId == CRYPT_MD_MAX) {
         /* If the hash algorithm is unknown, no pss parameter is specified in key. */
         return HITLS_PKI_SUCCESS;
     }
@@ -537,7 +537,7 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
-    uint32_t mgfId;
+    CRYPT_MD_AlgId mgfId;
     ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MGF, &mgfId, sizeof(uint32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -786,7 +786,7 @@ static int32_t X509_SetRsaPssDefaultParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdI
 static int32_t X509_SetRsaPssParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITLS_X509_SignAlgParam *algParam,
     bool checkKeyParam, HITLS_X509_Asn1AlgId *signAlgId)
 {
-    if ((int32_t)algParam->rsaPss.mdId != mdId) {
+    if (algParam->rsaPss.mdId != (CRYPT_MD_AlgId)mdId) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
@@ -825,7 +825,7 @@ static int32_t X509_SetRsaPkcsParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, boo
     return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcs15Param, sizeof(int32_t));
 }
 
-int32_t X509_SetRsaSignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITLS_X509_SignAlgParam *algParam,
+static int32_t X509_SetRsaSignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Asn1AlgId *signAlgId)
 {
     CRYPT_RsaPadType pad;
@@ -900,7 +900,7 @@ static int32_t X509_SetSm2SignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, con
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_Sign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
     void *obj, HITLS_X509_SignCb signCb)
 {
     if (!X509_IsValidHashAlg(mdId)) {

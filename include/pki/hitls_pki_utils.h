@@ -24,6 +24,8 @@ extern "C" {
 
 typedef struct _HITLS_X509_Ext HITLS_X509_Ext;
 
+typedef struct _HITLS_X509_Attrs HITLS_X509_Attrs;
+
 /**
  * @ingroup pki
  * @brief Generic function to set/get an extension.
@@ -43,7 +45,7 @@ typedef struct _HITLS_X509_Ext HITLS_X509_Ext;
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup pki
@@ -91,7 +93,7 @@ BslList *HITLS_X509_DnListNew(void);
 void HITLS_X509_DnListFree(BslList *dnList);
 
 /**
- * @ingroup x509
+ * @ingroup pki
  * @brief Add a distinguish name array to list.
  *
  * @param list [IN] The name list
@@ -101,6 +103,20 @@ void HITLS_X509_DnListFree(BslList *dnList);
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size);
+
+/**
+ * @ingroup pki
+ * @brief Generic function to process attribute function
+ *
+ * @param attributes [IN] The attribute list
+ * @param cmd [IN] HITLS_X509_AttrCmd
+ * @param val                                               data type
+ *        HITLS_X509_ATTR_XX_REQUESTED_EXTENSIONS         HITLS_X509_Ext
+ * @param valLen  The length of value.
+ * @retval #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, uint32_t valLen);
 
 #ifdef __cplusplus
 }

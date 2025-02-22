@@ -365,7 +365,7 @@ typedef struct {
 
 typedef struct {
     uint32_t type;
-    uint32_t methodId;
+    int32_t methodId;
     const void *method;
 } EAL_RandMethLookup;
 

@@ -32,13 +32,13 @@ extern "C" {
 #define BSL_ASN1_CLASS_MASK            0xC0
 
 typedef struct _ASN1_AnyOrChoiceParam {
-    int32_t idx;
+    uint32_t idx;
     void *previousAsnOrTag;
     BSL_ASN1_DecTemplCallBack tagCb;
 } BSL_ASN1_AnyOrChoiceParam;
 
 typedef struct _BSL_ASN1_EncodeItem {
-    uint64_t asnOctetNum; // tag + len + content
+    uint32_t asnOctetNum; // tag + len + content
     BSL_ASN1_Buffer *asn;
     uint8_t tag;
     uint8_t depth;
