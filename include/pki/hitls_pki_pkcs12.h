@@ -94,7 +94,7 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup pkcs12

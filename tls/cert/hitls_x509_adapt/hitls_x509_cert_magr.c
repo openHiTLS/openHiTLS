@@ -176,33 +176,33 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
 {
     (void)config;
     (void)input;
-    int32_t valLen = sizeof(int32_t);
+    uint32_t valLen = (uint32_t)sizeof(int32_t);
     int32_t x509Cmd = 0;
     switch (cmd) {
         case CERT_CTRL_GET_ENCODE_LEN:
             x509Cmd = HITLS_X509_GET_ENCODELEN;
             break;
         case CERT_CTRL_GET_PUB_KEY:
-            valLen = (int32_t)sizeof(CRYPT_EAL_PkeyPub *);
+            valLen = (uint32_t)sizeof(CRYPT_EAL_PkeyPub *);
             x509Cmd = HITLS_X509_GET_PUBKEY;
             break;
         case CERT_CTRL_GET_SIGN_ALGO:
             return CertCtrlGetSignAlgo(cert, (HITLS_SignHashAlgo *)output);
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
         case CERT_KEY_CTRL_IS_KEYENC_USAGE:
-            valLen = (int32_t)sizeof(uint8_t);
+            valLen = (uint32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_EXT_KU_KEYENC;
             break;
         case CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE:
-            valLen = (int32_t)sizeof(uint8_t);
+            valLen = (uint32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_EXT_KU_DIGITALSIGN;
             break;
         case CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE:
-            valLen = (int32_t)sizeof(uint8_t);
+            valLen = (uint32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_EXT_KU_CERTSIGN;
             break;
         case CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE:
-            valLen = (int32_t)sizeof(uint8_t);
+            valLen = (uint32_t)sizeof(uint8_t);
             x509Cmd = HITLS_X509_EXT_KU_KEYAGREEMENT;
             break;
 #endif

@@ -106,7 +106,7 @@ int32_t BSL_SAL_ReadFile(const char *path, uint8_t **buff, uint32_t *len)
         return ret;
     }
 
-    uint8_t *fileBuff = BSL_SAL_Malloc(fileLen + 1);
+    uint8_t *fileBuff = BSL_SAL_Malloc((uint32_t)fileLen + 1);
     if (fileBuff == NULL) {
         BSL_SAL_FileClose(stream);
         return BSL_MALLOC_FAIL;

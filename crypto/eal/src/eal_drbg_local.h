@@ -44,8 +44,8 @@ struct EAL_RndCtx {
 };
 
 typedef struct {
-    CRYPT_RAND_AlgId  drbgId;
-    uint32_t depId;
+    CRYPT_RAND_AlgId drbgId;
+    int32_t depId;
     uint32_t type;
 } DrbgIdMap;
 
