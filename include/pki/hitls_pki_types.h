@@ -203,7 +203,7 @@ typedef struct {
  * @brief Signature algorithm parameters.
  */
 typedef struct {
-    uint32_t algId;    /**< Algorithm identifier */
+    int32_t algId;    /**< Algorithm identifier */
     union {
         CRYPT_RSA_PssPara rsaPss;       /**< RSA PSS padding parameters */
         BSL_Buffer sm2UserId;

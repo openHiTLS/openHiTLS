@@ -85,7 +85,7 @@ typedef enum {
 #define BSL_ASN1_ID_ANY_2 24
 #define BSL_ASN1_ID_ANY_3 34
 
-int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx, void *data, void *expVal)
+int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     switch (type) {
         case BSL_ASN1_TYPE_CHECK_CHOICE_TAG: {

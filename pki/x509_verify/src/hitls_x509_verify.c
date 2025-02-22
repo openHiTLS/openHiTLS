@@ -23,7 +23,6 @@
 #include "hitls_x509_local.h"
 #include "bsl_obj_internal.h"
 #include "hitls_pki_errno.h"
-#include "crypt_errno.h"
 #include "bsl_list.h"
 #include "bsl_list_internal.h"
 #include "hitls_x509_verify.h"
@@ -65,22 +64,22 @@ static int32_t HITLS_X509_TrvListWithParent(BslList *list, HITLS_X509_TrvListWit
 
 #define HITLS_X509_MAX_DEPTH 20
 
-void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *ctx)
+void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
 {
-    if (ctx == NULL) {
+    if (storeCtx == NULL) {
         return;
     }
     int ret;
-    (void)BSL_SAL_AtomicDownReferences(&ctx->references, &ret);
+    (void)BSL_SAL_AtomicDownReferences(&storeCtx->references, &ret);
     if (ret > 0) {
         return;
     }
 
-    BSL_SAL_FREE(ctx->verifyParam.sm2UserId.data);
-    BSL_LIST_FREE(ctx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    BSL_LIST_FREE(ctx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
-    BSL_SAL_ReferencesFree(&ctx->references);
-    BSL_SAL_Free(ctx);
+    BSL_SAL_FREE(storeCtx->verifyParam.sm2UserId.data);
+    BSL_LIST_FREE(storeCtx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_LIST_FREE(storeCtx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
+    BSL_SAL_ReferencesFree(&storeCtx->references);
+    BSL_SAL_Free(storeCtx);
 }
 
 static int32_t X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl)
@@ -140,14 +139,14 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
     return ctx;
 }
 
-static int32_t X509_SetMaxDepth(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_SetMaxDepth(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uint32_t valLen)
 {
     if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    int32_t depth = *(int32_t *)val;
+    int32_t depth = *val;
     if (depth > HITLS_X509_MAX_DEPTH) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
@@ -156,49 +155,49 @@ static int32_t X509_SetMaxDepth(HITLS_X509_StoreCtx *storeCtx, void *val, int32_
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_SetParamFlag(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_SetParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val, uint32_t valLen)
 {
     if (valLen != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    storeCtx->verifyParam.flags |= *(uint64_t *)val;
+    storeCtx->verifyParam.flags |= *val;
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_SetVerifyTime(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_SetVerifyTime(HITLS_X509_StoreCtx *storeCtx, int64_t *val, uint32_t valLen)
 {
     if (valLen != sizeof(int64_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    storeCtx->verifyParam.time |= *(int64_t *)val;
+    storeCtx->verifyParam.time = *val;
     storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_TIME;
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_SetVerifySecurityBits(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_SetVerifySecurityBits(HITLS_X509_StoreCtx *storeCtx, uint32_t *val, uint32_t valLen)
 {
     if (valLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    storeCtx->verifyParam.securityBits = *(uint32_t *)val;
+    storeCtx->verifyParam.securityBits = *val;
     storeCtx->verifyParam.flags |= HITLS_X509_VFY_FLAG_SECBITS;
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_ClearParamFlag(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_ClearParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val, uint32_t valLen)
 {
     if (valLen != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    storeCtx->verifyParam.flags &= ~(*(uint64_t *)val);
+    storeCtx->verifyParam.flags &= ~(*val);
     return HITLS_PKI_SUCCESS;
 }
 
@@ -273,7 +272,7 @@ static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val)
     return ret;
 }
 
-static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valLen)
+static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, int *val, uint32_t valLen)
 {
     if (valLen != sizeof(int)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -283,7 +282,7 @@ static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, void *val, int32_t valL
     return BSL_SAL_AtomicUpReferences(&storeCtx->references, val);
 }
 
-int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t valLen)
+int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, uint32_t valLen)
 {
     if (storeCtx == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -529,7 +528,7 @@ static int32_t HITLS_X509_SecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
 
 int32_t HITLS_X509_CheckVerifyParam(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
-    if (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_SECBITS) {
+    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_SECBITS) != 0) {
         return HITLS_X509_TrvList(chain, (HITLS_X509_TrvListCallBack)HITLS_X509_SecBitsCheck, storeCtx);
     }
     return HITLS_PKI_SUCCESS;
@@ -600,7 +599,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     int32_t ret = HITLS_X509_ERR_CRL_NOT_FOUND;
     HITLS_X509_Crl *crl = BSL_LIST_GET_FIRST(storeCtx->crl);
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)parent->tbs.ext.extData;
-    if (certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) {
+    if ((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) {
         if (!(certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN)) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
             return HITLS_X509_ERR_VFY_KU_NO_CRLSIGN;
@@ -653,13 +652,13 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
         return HITLS_PKI_SUCCESS;
     }
 
-    if (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_ALL) {
+    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_ALL) != 0) {
         // Device certificate check is included
         return HITLS_X509_TrvListWithParent(chain,
             (HITLS_X509_TrvListWithParentCallBack)HITLS_X509_CheckCertCrl, storeCtx);
     }
 
-    if (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_DEV) {
+    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_CRL_DEV) != 0) {
         HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(chain);
         HITLS_X509_Cert *parent = BSL_LIST_GET_NEXT(chain);
         return HITLS_X509_CheckCertCrl(storeCtx, cert, parent);
@@ -674,7 +673,7 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     HITLS_X509_Cert *cur = issue;
     int32_t ret;
     while (cur != NULL) {
-        if (storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME) {
+        if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME) != 0) {
             ret = HITLS_X509_CheckTime(storeCtx, &cur->tbs.validTime);
             if (ret != HITLS_PKI_SUCCESS) {
                 return ret;

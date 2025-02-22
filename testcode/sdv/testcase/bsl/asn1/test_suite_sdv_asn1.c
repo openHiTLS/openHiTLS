@@ -155,7 +155,7 @@ typedef enum {
 char *g_oidEcc = "\x2a\x86\x48\xce\x3d\x02\01";
 char *g_oidRsaPss = "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a";
 
-int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, int32_t idx, void *data, void *expVal)
+int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     BSL_ASN1_Buffer *param = NULL;
     uint32_t len = 0;
@@ -1246,7 +1246,7 @@ void SDV_BSL_ASN1_GET_ENCODE_LEN_API_TC001(void)
     ASSERT_EQ(BSL_ASN1_GetEncodeLen(1, NULL), BSL_NULL_INPUT);
 
     // Test length overflow
-    ASSERT_EQ(BSL_ASN1_GetEncodeLen(UINT32_MAX, &encodeLen), BSL_ASN1_ERR_LEN_OVERFFLOW);
+    ASSERT_EQ(BSL_ASN1_GetEncodeLen(UINT32_MAX, &encodeLen), BSL_ASN1_ERR_LEN_OVERFLOW);
 EXIT:
     return;
 }
