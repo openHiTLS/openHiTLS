@@ -127,7 +127,7 @@ int32_t CRYPT_EAL_PriKeyParseFile(BSL_ParseFormat format, int32_t type, const ch
 
 // parse PKCS7-EncryptData：only support PBES2 + PBKDF2.
 int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
-    BSL_Buffer *encryptData);
+    BSL_Buffer *output);
 
 // encode PKCS7-EncryptData：only support PBES2 + PBKDF2.
 int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, const void *encodeParam, BSL_Buffer *encode);

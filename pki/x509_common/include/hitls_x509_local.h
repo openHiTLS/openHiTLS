@@ -83,7 +83,7 @@ typedef enum {
 typedef struct _HITLS_X509_Ext {
     uint32_t flag; // Identifies the status of the current ext, generate or parse
     BslList *extList;
-    uint32_t type;
+    int32_t type;
     void *extData;
 } HITLS_X509_Ext;
 
@@ -138,7 +138,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
 
 void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node);
 
-int32_t HITLS_X509_SetNameList(BslList **dest, void *val, int32_t valLen);
+int32_t HITLS_X509_SetNameList(BslList **dest, void *val, uint32_t valLen);
 
 int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list);
 
@@ -205,17 +205,17 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
 int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
     const HITLS_X509_Asn1AlgId *alg, const BSL_ASN1_BitString *signature);
 
-int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, int32_t valLen);
+int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, uint32_t valLen);
 
-int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, int32_t valLen);
+int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, uint32_t valLen);
 
-int32_t HITLS_X509_GetList(BslList *list, void *val, int32_t valLen);
+int32_t HITLS_X509_GetList(BslList *list, void *val, uint32_t valLen);
 
 int32_t HITLS_X509_GetPubKey(void *ealPubKey, void **val);
 
-int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, int32_t valLen);
+int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen);
 
-int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, int32_t valLen);
+int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen);
 
 int32_t HITLS_X509_GetEncodeData(uint8_t *rawData, uint8_t **val);
 
@@ -223,9 +223,9 @@ int32_t HITLS_X509_SetPkey(void **pkey, void *val);
 
 int32_t HITLS_X509_ExtReplace(HITLS_X509_Ext *dest, HITLS_X509_Ext *src);
 
-int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, int32_t valLen);
+int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t valLen);
 
-int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, int32_t valLen);
+int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, uint32_t valLen);
 
 typedef int32_t (*EncodeExtCb)(void *, HITLS_X509_ExtEntry *, const void *);
 
@@ -246,12 +246,12 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
 
 bool X509_CheckCmdVaild(int32_t *cmdSet, uint32_t cmdSize, int32_t cmd);
 
-int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, int32_t valLen);
+int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen);
 
-typedef int32_t (*HITLS_X509_SignCb)(uint32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId,
+typedef int32_t (*HITLS_X509_SignCb)(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId,
     void *obj);
 
-int32_t HITLS_X509_Sign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
     void *obj, HITLS_X509_SignCb signCb);
 
 #ifdef __cplusplus

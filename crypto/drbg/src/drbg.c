@@ -163,7 +163,7 @@ ERR:
 }
 
 #ifdef HITLS_CRYPTO_DRBG_CTR
-static uint32_t GetAesKeyLen(int32_t id, uint32_t *keyLen)
+static int32_t GetAesKeyLen(int32_t id, uint32_t *keyLen)
 {
     switch (id) {
         case CRYPT_CIPHER_AES128_CTR:

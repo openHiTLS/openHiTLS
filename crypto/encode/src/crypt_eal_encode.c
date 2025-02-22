@@ -265,7 +265,7 @@ static CRYPT_PKEY_ParaId GetParaId(uint8_t *octs, uint32_t octsLen)
     return (CRYPT_PKEY_ParaId)cid;
 }
 
-static int32_t DecSubKeyInfoCb(int32_t type, int32_t idx, void *data, void *expVal)
+static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     (void)idx;
     BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
@@ -612,7 +612,7 @@ typedef enum {
     CRYPT_RSAPSS_MAX
 } CRYPT_RSAPSS_IDX;
 
-static int32_t RsaPssTagGetOrCheck(int32_t type, int32_t idx, void *data, void *expVal)
+static int32_t RsaPssTagGetOrCheck(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     (void) idx;
     (void) data;
@@ -823,7 +823,8 @@ static int32_t ParseDeriveKeyPrfAlgId(BSL_ASN1_Buffer *asn, int32_t *prfId)
     return CRYPT_SUCCESS;
 }
 
-static int32_t ParseDeriveKeyParam(BSL_Buffer *derivekeyData, int *iter, int *keyLen, BSL_Buffer *salt, int *prfId)
+static int32_t ParseDeriveKeyParam(BSL_Buffer *derivekeyData, uint32_t *iter, uint32_t *keyLen, BSL_Buffer *salt,
+    int32_t *prfId)
 {
     uint8_t *tmpBuff = derivekeyData->data;
     uint32_t tmpBuffLen = derivekeyData->dataLen;
@@ -939,8 +940,9 @@ EXIT:
 static int32_t ParseEncDataAsn1(BslCid symAlg, EncryptPara *encPara, const uint8_t *pwd, uint32_t pwdlen,
     BSL_Buffer *decode)
 {
-    int32_t iter, prfId;
-    int32_t keylen = 0;
+    uint32_t iter;
+    int32_t prfId;
+    uint32_t keylen = 0;
     uint8_t key[512] = {0}; // The maximum length of the symmetry algorithm
     BSL_Buffer salt = {0};
     int32_t ret = ParseDeriveKeyParam(encPara->derivekeyData, &iter, &keylen, &salt, &prfId);
@@ -951,7 +953,7 @@ static int32_t ParseEncDataAsn1(BslCid symAlg, EncryptPara *encPara, const uint8
 
     uint32_t symKeyLen;
     ret = CRYPT_EAL_CipherGetInfo((CRYPT_CIPHER_AlgId)symAlg, CRYPT_INFO_KEY_LEN, &symKeyLen);
-    if (keylen != 0 && symKeyLen != (uint32_t)keylen) {
+    if (keylen != 0 && symKeyLen != keylen) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_KEYLEN);
         return CRYPT_DECODE_PKCS8_INVALID_KEYLEN;
     }
@@ -1671,7 +1673,7 @@ static int32_t EncodeEncryptedData(CRYPT_Pbkdf2Param *pkcsParam,
         }
         BSL_Buffer enData = {unEncrypted->data, unEncrypted->dataLen};
         BSL_Buffer ivData = {asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].buff, asn1[CRYPT_PKCS_ENCPRIKEY_SYMIV_IDX].len};
-        ret = DecryptEncData(&ivData, &enData, pkcsParam->symId, true, &keyBuff, output, &pkcsDataLen);
+        ret = DecryptEncData(&ivData, &enData, (int32_t)pkcsParam->symId, true, &keyBuff, output, &pkcsDataLen);
         if (ret != CRYPT_SUCCESS) {
             break;
         }

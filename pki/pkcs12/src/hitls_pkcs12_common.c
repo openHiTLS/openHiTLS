@@ -19,7 +19,6 @@
 #include "hitls_pki_errno.h"
 #include "hitls_x509_local.h"
 #include "hitls_cms_local.h"
-#include "crypt_errno.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_encode.h"
@@ -163,9 +162,9 @@ static int32_t X509_ParseP12AttrItem(BslList *attrList, HITLS_X509_AttrEntry *at
     return ret;
 }
 
-int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attributes)
+int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attrList)
 {
-    return HITLS_X509_ParseAttrList(attrBuff, attributes, X509_ParseP12AttrItem, HITLS_PKCS12_AttributesFree);
+    return HITLS_X509_ParseAttrList(attrBuff, attrList, X509_ParseP12AttrItem, HITLS_PKCS12_AttributesFree);
 }
 /*
  SafeBag ::= SEQUENCE {
@@ -816,9 +815,9 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKC
     return ret;
 }
 
-static void FreeListBuff(BSL_ASN1_Buffer *asnBuf, int32_t count)
+static void FreeListBuff(BSL_ASN1_Buffer *asnBuf, uint32_t count)
 {
-    for (int32_t i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         BSL_SAL_FREE(asnBuf[i].buff);
     }
     BSL_SAL_FREE(asnBuf);
@@ -1040,12 +1039,12 @@ int32_t HITLS_PKCS12_EncodeContentInfo(BSL_Buffer *input, uint32_t encodeType, c
 static int32_t EncodeSafeContent(BSL_ASN1_Buffer **output, BSL_ASN1_List *list, uint32_t encodeType,
     const CRYPT_EncodeParam *encryptParam)
 {
-    BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(list->count, sizeof(BSL_ASN1_Buffer));
+    BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc((uint32_t)list->count, sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t iter = 0;
+    uint32_t iter = 0;
     int32_t ret = HITLS_PKI_SUCCESS;
     HITLS_PKCS12_Bag *node = NULL;
     for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), iter++) {
@@ -1063,12 +1062,12 @@ static int32_t EncodeSafeContent(BSL_ASN1_Buffer **output, BSL_ASN1_List *list, 
 
 static int32_t EncodeContentInfoList(BSL_ASN1_Buffer **output, BSL_ASN1_List *list)
 {
-    BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc(list->count, sizeof(BSL_ASN1_Buffer));
+    BSL_ASN1_Buffer *asnBuf = BSL_SAL_Calloc((uint32_t)list->count, sizeof(BSL_ASN1_Buffer));
     if (asnBuf == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t iter = 0;
+    uint32_t iter = 0;
     int32_t ret = HITLS_PKI_SUCCESS;
     BSL_Buffer *node = NULL;
     for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), iter++) {
@@ -1088,7 +1087,7 @@ static int32_t EncodeContentInfoList(BSL_ASN1_Buffer **output, BSL_ASN1_List *li
 int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
     BSL_Buffer *encode)
 {
-    int32_t count = BSL_LIST_COUNT(list);
+    uint32_t count = (uint32_t)BSL_LIST_COUNT(list);
     BSL_ASN1_Buffer *asnBuffers = NULL;
     int32_t ret;
     switch (encodeType) {
@@ -1763,7 +1762,7 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, CRYPT_MD_AlgId *algId, in
     return ret;
 }
 
-int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, int32_t valLen)
+int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, uint32_t valLen)
 {
     if (p12 == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
