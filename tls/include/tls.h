@@ -40,6 +40,10 @@ extern "C" {
 
 #define IS_DTLS_VERSION(version) (((version) & 0x8u) == 0x8u)
 
+#define IS_SUPPORT_STREAM(versionBits) (((versionBits) & STREAM_VERSION_BITS) != 0x0u)
+#define IS_SUPPORT_DATAGRAM(versionBits) (((versionBits) & DATAGRAM_VERSION_BITS) != 0x0u)
+#define IS_SUPPORT_TLCP(versionBits) (((versionBits) & TLCP_VERSION_BITS) != 0x0u)
+
 #define DTLS_COOKIE_LEN 255
 
 #define MAC_KEY_LEN 32u              /* the length of mac key */

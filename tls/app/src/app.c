@@ -64,7 +64,7 @@ int32_t APP_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len)
 static int32_t SavePendingData(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 {
 #ifdef HITLS_TLS_PROTO_DTLS
-    if (IS_DTLS_VERSION(ctx->negotiatedInfo.version)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return HITLS_SUCCESS;
     }
 #endif

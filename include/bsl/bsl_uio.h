@@ -67,6 +67,8 @@ typedef enum {
     BSL_UIO_EXTEND = 10000, /* extension value */
 } BSL_UIO_TransportType;
 
+#define IS_TRANSTYPE_DATAGRAM(transportType) ((transportType) == BSL_UIO_SCTP || (transportType) == BSL_UIO_UDP)
+
 /**
  * @ingroup bsl_uio
  * @brief   Sctp auth key, hitls Use the BSL_UIO_Method.ctrl method to transfer the BSL_UIO_SCTP_ADD_AUTH_SHARED_KEY

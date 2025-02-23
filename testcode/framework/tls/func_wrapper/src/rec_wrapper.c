@@ -93,7 +93,7 @@ static int32_t WrapperDecryptFunc(TLS_Ctx *ctx, RecConnState *state, const REC_T
     uint8_t *data, uint32_t *dataLen)
 {
     int32_t ret = RecGetOriginCryptFuncs(state->suiteInfo)->decrypt(ctx, state, cryptMsg, data, dataLen);
-    if (ret == HITLS_SUCCESS && IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion) && g_recWrapper.isRecRead ) {
+    if (ret == HITLS_SUCCESS && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && g_recWrapper.isRecRead) {
         if (g_recWrapper.recordType != cryptMsg->type) {
             return ret;
         }

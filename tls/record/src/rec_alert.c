@@ -37,7 +37,7 @@ int32_t RecordSendAlertMsg(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description de
 {
     /* RFC6347 4.1.2.7.  Handling Invalid Records:
        We choose to discard invalid dtls record message and do not generate alerts. */
-    if (IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
     } else {
         ctx->method.sendAlert(ctx, level, description);

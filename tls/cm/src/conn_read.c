@@ -228,7 +228,7 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
 
 static void ConsumeHandshakeMessage(HITLS_Ctx *ctx)
 {
-    bool isDtls = IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion);
+    bool isDtls = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
     uint32_t headerLen = isDtls ? DTLS_HS_MSG_HEADER_SIZE : HS_MSG_HEADER_SIZE;
     int32_t ret = ReadHsMessage(ctx, headerLen);
     if (ret != HITLS_SUCCESS) {
