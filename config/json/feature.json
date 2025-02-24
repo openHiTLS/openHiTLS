@@ -1038,7 +1038,8 @@
                 ".srcs": "tls/crypt/crypt_self/*.c",
                 ".deps": ["tls::crypt", "crypto::eal"],
                 ".include": [
-                    "include"
+                    "include",
+                    "tls/config/include"
                 ]
             },
             "cert": {
@@ -1053,7 +1054,8 @@
                     "bsl/asn1/include",
                     "pki/x509_cert/include",
                     "pki/x509_common/include",
-                    "tls/cert/hitls_x509_adapt"
+                    "tls/cert/hitls_x509_adapt",
+                    "tls/config/include"
                 ]
             },
             "config": {

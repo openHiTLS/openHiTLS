@@ -85,9 +85,9 @@ static uint16_t FindSupportedCurves(const TLS_Ctx *ctx, const uint16_t *perferen
 #ifdef HITLS_TLS_FEATURE_SECURITY
     int32_t id = (int32_t)perferenceGroups[index];
     int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SHARED, 0, id, NULL);
-    if (ret != SECURITY_SUCCESS || !GroupConformToVersion(ctx->negotiatedInfo.version, perferenceGroups[index])) {
+    if (ret != SECURITY_SUCCESS || !GroupConformToVersion(ctx, ctx->negotiatedInfo.version, perferenceGroups[index])) {
 #else
-    if (!GroupConformToVersion(ctx->negotiatedInfo.version, perferenceGroups[index])) {
+    if (!GroupConformToVersion(ctx, ctx->negotiatedInfo.version, perferenceGroups[index])) {
 #endif /* HITLS_TLS_FEATURE_SECURITY */
         return 0;
     }
@@ -1356,7 +1356,8 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
         *isNeedSendHrr = false;
         /* Obtain the peer public key */
         ctx->hsCtx->kxCtx->pubKeyLen = cur->keyExchangeSize;
-        if (HS_GetNamedCurvePubkeyLen(keyShare->group) != ctx->hsCtx->kxCtx->pubKeyLen) {
+        if (SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group) !=
+            ctx->hsCtx->kxCtx->pubKeyLen) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16189, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "invalid keyShare length.", 0, 0, 0, 0);

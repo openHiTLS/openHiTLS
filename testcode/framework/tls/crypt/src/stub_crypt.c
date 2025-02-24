@@ -95,7 +95,7 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(const HITLS_ECParameters
     }
     switch (curveParams->type) {
         case HITLS_EC_CURVE_TYPE_NAMED_CURVE:
-            keyLen = HS_GetNamedCurvePubkeyLen(curveParams->param.namedcurve);
+            keyLen = SAL_CRYPT_GetCryptLength(NULL, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, curveParams->param.namedcurve);
             break;
         default:
             break;

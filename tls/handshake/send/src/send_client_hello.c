@@ -166,7 +166,7 @@ static bool Tls13SelectGroup(TLS_Ctx *ctx, uint16_t *group)
     uint16_t version = (ctx->negotiatedInfo.version == 0) ?
         ctx->config.tlsConfig.maxVersion : ctx->negotiatedInfo.version;
     for (uint32_t i = 0; i < tlsConfig->groupsSize; ++i) {
-        if (GroupConformToVersion(version, tlsConfig->groups[i])) {
+        if (GroupConformToVersion(ctx, version, tlsConfig->groups[i])) {
             *group = tlsConfig->groups[i];
             return true;
         }

@@ -1025,7 +1025,7 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
 
     const KeyShare *keyShare = &serverHello->keyShare;
     uint32_t pubKeyLen = keyShare->keyExchangeSize;
-    if (keyShare->keyExchangeSize != HS_GetNamedCurvePubkeyLen(keyShare->group)) {
+    if (pubKeyLen != SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17326, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "invalid keyShare length [%d]", keyShare->keyExchangeSize, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
