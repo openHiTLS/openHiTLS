@@ -302,7 +302,7 @@ static void TlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
         ctx->hsCtx->haveHrr == false &&
 #endif
 #ifdef HITLS_TLS_PROTO_TLCP11
-        ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP11 &&
+        ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
 #endif
         ctx->config.tlsConfig.maxVersion > HITLS_VERSION_TLS10) {
         plainMsg->version = HITLS_VERSION_TLS10;

@@ -333,6 +333,7 @@ typedef struct {
     uint8_t reverse;    /* To be deleted. The member is not processed because some code uses it */
     uint16_t version;   /* To be deleted. The member is not processed because some code uses it */
     uint16_t bodyLen;   /* To be deleted. The member is not processed because some code uses it */
+    BSL_UIO_TransportType transportType;
     uint64_t epochSeq;  /* To be deleted. The member is not processed because some code uses it */
 
     FRAME_Integer recType;        /* record the message type */
@@ -362,6 +363,7 @@ typedef struct {
     /* To ensure that the memory can be released normally, a value is assigned to the member during parsing */
     HS_MsgType handshakeType;
     HITLS_KeyExchAlgo keyExType;
+    BSL_UIO_TransportType transportType;
 } FRAME_Type;
 
 /**

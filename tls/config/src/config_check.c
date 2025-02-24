@@ -32,7 +32,7 @@ static bool IsSignAlgValid(uint16_t signAlg, uint16_t version)
 {
     uint32_t listLen = 0;
 #ifdef HITLS_TLS_PROTO_TLCP11
-    const SignSchemeInfo *signSchemeList = (version != HITLS_VERSION_TLCP11) ?
+    const SignSchemeInfo *signSchemeList = (version != HITLS_VERSION_TLCP_DTLCP11) ?
         CFG_GetSignSchemeList(&listLen) :
         CFG_GetSignSchemeListTlcp(&listLen);
 #else
@@ -54,7 +54,7 @@ static bool CFG_IsValidVersion(uint16_t version)
         case HITLS_VERSION_TLS12:
         case HITLS_VERSION_TLS13:
         case HITLS_VERSION_DTLS12:
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
             return true;
         default:
             break;
@@ -238,7 +238,7 @@ int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion)
         return HITLS_CONFIG_INVALID_VERSION;
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (minVersion == HITLS_VERSION_TLCP11 || maxVersion == HITLS_VERSION_TLCP11) {
+    if (minVersion == HITLS_VERSION_TLCP_DTLCP11 || maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
         if (minVersion != maxVersion) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16233, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Config max version [0x%x] or min version [0x%x] is invalid.", maxVersion,

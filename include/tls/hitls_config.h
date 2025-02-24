@@ -34,9 +34,9 @@ extern "C" {
 
 /**
 * @ingroup hitls_config
-* @brief   TLCP 1.1 version
+* @brief   (D)TLCP 1.1 version
 */
-#define HITLS_VERSION_TLCP11 0x0101u
+#define HITLS_VERSION_TLCP_DTLCP11 0x0101u
 
 /**
  * @ingroup  hitls_config
@@ -260,7 +260,7 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const cha
  * The user can call the HITLS_CFG_SetXXX interface to modify the settings.
  *
  * @attention   The default configuration is as follows:
-    Version number: HITLS_VERSION_TLCP11
+    Version number: HITLS_VERSION_TLCP_DTLCP11
     Algorithm suite: HITLS_ECDHE_SM4_CBC_SM3, HITLS_ECC_SM4_CBC_SM3, HITLS_ECDHE_SM4_GCM_SM3, HITLS_ECC_SM4_GCM_SM3
     EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
     groups:sm2
@@ -290,6 +290,43 @@ HITLS_Config *HITLS_CFG_NewTLCPConfig(void);
  * @see HITLS_CFG_FreeConfig
  */
 HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Create DTLCP configuration items, including the default settings. The user can call the
+ *          HITLS_CFG_SetXXX interface to modify the settings.
+ *
+ * @attention The default configuration is as follows:
+    Version number: HITLS_VERSION_TLCP_DTLCP11
+    Algorithm suite: HITLS_ECDHE_SM4_CBC_SM3, HITLS_ECC_SM4_CBC_SM3, HITLS_ECDHE_SM4_GCM_SM3, HITLS_ECC_SM4_GCM_SM3
+    EC point format: HITLS_POINT_FORMAT_UNCOMPRESSED
+    groups:sm2
+    Extended Master Key: Enabled
+    Signature algorithm: All signature algorithms in the HITLS_SignHashAlgo table
+    Dual-ended check: Disabled
+    Allow Client No Certificate: Not Allowed
+    Renegotiation: Not supported
+    This API is a version-specific API. After the configuration context is created,
+    the HITLS_SetVersion, HITLS_CFG_SetVersion, HITLS_SetVersionSupport, HITLS_CFG_SetVersionSupport,
+    HITLS_SetMinProtoVersion, or HITLS_SetMaxProtoVersion interface cannot be used to set other supported versions.
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, object application failed.
+ */
+HITLS_Config *HITLS_CFG_NewDTLCPConfig(void);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Create DTLCP configuration items with provider, including the default settings. Same as HITLS_CFG_NewDTLCPConfig
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attrName: The attribute name.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_ProviderNewDTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config

@@ -435,7 +435,7 @@ bool IsNeedServerKeyExchange(const TLS_Ctx *ctx)
         }
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         return true; /* The TLCP needs to send the ServerKeyExchange message. */
     }
 #endif
@@ -687,7 +687,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 
 bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
 {
-    uint32_t versionBits = MapVersion2VersionBit(IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion), version);
+    uint32_t versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);
     const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, group);
     if (groupInfo == NULL || ((groupInfo->versionBits & versionBits) != versionBits)) {
         return false;

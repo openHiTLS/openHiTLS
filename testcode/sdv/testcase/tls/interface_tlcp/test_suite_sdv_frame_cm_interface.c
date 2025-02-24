@@ -483,7 +483,7 @@ void UT_TLS_CM_GET_NEGOTIATED_VERSION_FUNC_TC001(int version)
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
-    uint16_t negoVersion = HITLS_VERSION_TLCP11;
+    uint16_t negoVersion = HITLS_VERSION_TLCP_DTLCP11;
     ret = HITLS_GetNegotiatedVersion(client->ssl, &negoVersion);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_EQ(negoVersion, 0);

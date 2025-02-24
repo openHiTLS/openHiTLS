@@ -1443,7 +1443,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .hashAlg = HITLS_HASH_SM3,
         .signScheme = CERT_SIG_SCHEME_SM2_SM3,
         KEY_BLOCK_PARTITON_LENGTH(16u, 16u, 32u, 16u, 16u, 32u),
-        VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
+        VERSION_SCOPE(HITLS_VERSION_TLCP_DTLCP11, HITLS_VERSION_TLCP_DTLCP11, 0, 0),
         .cipherType = HITLS_CBC_CIPHER,
         .strengthBits = 128},
 #endif
@@ -1459,7 +1459,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .hashAlg = HITLS_HASH_SM3,
         .signScheme = CERT_SIG_SCHEME_SM2_SM3,
         KEY_BLOCK_PARTITON_LENGTH(16u, 16u, 32u, 16u, 16u, 32u),
-        VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
+        VERSION_SCOPE(HITLS_VERSION_TLCP_DTLCP11, HITLS_VERSION_TLCP_DTLCP11, 0, 0),
         .cipherType = HITLS_CBC_CIPHER,
         .strengthBits = 128},
 #endif
@@ -1475,7 +1475,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .hashAlg = HITLS_HASH_SM3,
         .signScheme = CERT_SIG_SCHEME_SM2_SM3,
         KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 16u),
-        VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
+        VERSION_SCOPE(HITLS_VERSION_TLCP_DTLCP11, HITLS_VERSION_TLCP_DTLCP11, 0, 0),
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 128},
 #endif
@@ -1491,7 +1491,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .hashAlg = HITLS_HASH_SM3,
         .signScheme = CERT_SIG_SCHEME_SM2_SM3,
         KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 16u),
-        VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
+        VERSION_SCOPE(HITLS_VERSION_TLCP_DTLCP11, HITLS_VERSION_TLCP_DTLCP11, 0, 0),
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 128},
 #endif
@@ -1749,7 +1749,7 @@ bool CFG_GetSignParamBySchemes(uint16_t version, HITLS_SignHashAlgo scheme, HITL
 {
     bool ret = false;
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (version == HITLS_VERSION_TLCP11) {
+    if (version == HITLS_VERSION_TLCP_DTLCP11) {
         for (uint32_t i = 0; i < (sizeof(g_signSchemeListGm) / sizeof(g_signSchemeListGm[0])); i++) {
             if (scheme == g_signSchemeListGm[i].scheme) {
                 *signAlg = g_signSchemeListGm[i].signAlg;
@@ -1831,8 +1831,8 @@ static const uint8_t* ProtocolToString(uint16_t version)
         case HITLS_VERSION_DTLS12:
             ret = "DTLSv1.2";
             break;
-        case HITLS_VERSION_TLCP11:
-            ret = "TLCP1.1";
+        case HITLS_VERSION_TLCP_DTLCP11:
+            ret = "(D)TLCP1.1";
             break;
         default:
             ret = "unknown";
