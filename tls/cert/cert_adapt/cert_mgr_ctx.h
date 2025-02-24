@@ -57,6 +57,9 @@ struct CertMgrCtxInner {
     HITLS_PasswordCb defaultPasswdCb;           /* Default password callback, used in loading certificate. */
     void *defaultPasswdCbUserData;              /* Set the userData used by the default password callback.  */
     HITLS_VerifyCb verifyCb;                    /* Certificate verification callback function */
+
+    HITLS_Lib_Ctx *libCtx;          /* library context */
+    const char *attrName;              /* attrName */
 };
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType);
@@ -74,6 +77,9 @@ HITLS_CERT_Chain *SAL_CERT_ChainNew(void);
 int32_t SAL_CERT_ChainAppend(HITLS_CERT_Chain *chain, HITLS_CERT_X509 *cert);
 void SAL_CERT_ChainFree(HITLS_CERT_Chain *chain);
 HITLS_CERT_Chain *SAL_CERT_ChainDup(CERT_MgrCtx *mgrCtx, HITLS_CERT_Chain *chain);
+
+#define LIBCTX_FROM_CERT_MGR_CTX(mgrCtx) ((mgrCtx == NULL) ? NULL : (mgrCtx)->libCtx)
+#define ATTRIBUTE_FROM_CERT_MGR_CTX(mgrCtx) ((mgrCtx == NULL) ? NULL : (mgrCtx)->attrName)
 
 #ifdef __cplusplus
 }

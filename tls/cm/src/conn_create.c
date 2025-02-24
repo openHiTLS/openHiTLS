@@ -439,7 +439,7 @@ HITLS_Session *HITLS_GetDupSession(HITLS_Ctx *ctx)
 int32_t HITLS_GetPeerSignatureType(const HITLS_Ctx *ctx, HITLS_SignAlgo *sigType)
 {
     HITLS_SignAlgo signAlg = HITLS_SIGN_BUTT;
-    HITLS_HashAlgo hashAlg = HITLS_HASH_BUTT;
+    HITLS_HashAlgo hashAlg = HITLS_HASH_NULL;
 
     if (ctx == NULL || sigType == NULL) {
         return HITLS_NULL_INPUT;

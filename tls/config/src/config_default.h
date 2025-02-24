@@ -30,7 +30,7 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config);
 #ifdef HITLS_TLS_PROTO_DTLS
 int32_t DefaultDtlsAllConfig(HITLS_Config *config);
 #endif
-int32_t DefaultConfig(uint16_t version, HITLS_Config *config);
+int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t version, HITLS_Config *config);
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t DefaultTLS13Config(HITLS_Config *config);
 #endif

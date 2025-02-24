@@ -113,6 +113,16 @@ HITLS_CERT_MgrMethod *SAL_CERT_GetMgrMethod(void);
 CERT_MgrCtx *SAL_CERT_MgrCtxNew(void);
 
 /**
+ * @brief   Create a certificate management struct with provider
+ *
+ * @param   libCtx     [IN] Provider library context
+ * @param   attrName  [IN] Provider attrName
+ *
+ * @return  Certificate management struct
+ */
+CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName);
+
+/**
  * @brief   Copy the certificate management struct
  *
  * @param   mgrCtx [IN] Certificate management struct

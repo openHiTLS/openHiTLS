@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include "hitls_crypt_type.h"
+#include "tls.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +37,13 @@ typedef struct {
     const uint8_t *seed;        /* Seed */
     uint32_t seedLen;           /* Seed length */
 } CRYPT_KeyDeriveParameters;
+
+enum HITLS_CryptInfoCmd {
+    HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN = 0, /* Get the length of the public key, param is HITLS_NamedGroup */
+    HITLS_CRYPT_INFO_CMD_GET_SHARED_KEY_LEN,     /* Get the length of the shared key, param is HITLS_NamedGroup */
+    HITLS_CRYPT_INFO_CMD_GET_CIPHERTEXT_LEN,     /* Get the length of the ciphertext, param is HITLS_NamedGroup */
+    HITLS_CRYPT_INFO_CMD_GET_HASH_LEN,           /* Get the length of the hash, param is HITLS_HashAlgo */
+};
 
 enum HITLS_CryptoCallBack {
     HITLS_CRYPT_CALLBACK_RAND_BYTES = 0,
@@ -474,6 +482,17 @@ int32_t SAL_CRYPT_HkdfExpand(HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, u
  */
 int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo,
     uint8_t *outSecret, uint32_t outLen);
+
+/**
+ * @brief   Get cryptographic information about length
+ *
+ * @param ctx   [IN] TLS context
+ * @param cmd   [IN] Command type, see enum HITLS_CryptInfoCmd
+ * @param param [IN] Input parameter
+ *
+ * @return Returns key length and other info, returns 0 on failure
+ */
+uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param);
 
 #ifdef __cplusplus
 }

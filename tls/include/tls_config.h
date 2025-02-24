@@ -63,6 +63,8 @@ typedef struct TlsSessionManager TLS_SessionMgr;
  */
 typedef struct TlsConfig {
     BSL_SAL_RefCount references;        /* reference count */
+    HITLS_Lib_Ctx *libCtx;          /* library context */
+    const char *attrName;              /* attrName */
     uint32_t version;                   /* supported proto version */
     uint32_t originVersionMask;         /* the original supported proto version mask */
     uint16_t minVersion;                /* min supported proto version */
@@ -178,6 +180,9 @@ typedef struct TlsConfig {
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
 } TLS_Config;
+
+#define LIBCTX_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->libCtx)
+#define ATTRIBUTE_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->attrName)
 
 #ifdef __cplusplus
 }

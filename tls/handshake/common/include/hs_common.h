@@ -90,15 +90,6 @@ int32_t HS_CombineRandom(const uint8_t *random1, const uint8_t *random2, uint32_
                          uint8_t *dest, uint32_t destSize);
 
 /**
- * @brief Obtain the public key length of the Named Curve curve of the ECDHE key agreement algorithm.
- * @attention The length of the public key cannot exceed 255 bytes.
- * @param namedcurve [IN] Named Curve Enumerated type
- *
- * @retval Length of the public key
- */
-uint32_t HS_GetNamedCurvePubkeyLen(HITLS_NamedGroup namedcurve);
-
-/**
  * @brief Obtain all signature data.
  *
  * @param ctx [IN] TLS context
@@ -233,7 +224,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo* hashAlg);
  *
  * @return  true: valid; false: invalid
  */
-bool GroupConformToVersion(uint16_t version, uint16_t group);
+bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group);
 
 uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlgorithms,
     uint32_t signAlgorithmsSize, uint32_t *newSignAlgorithmsSize);

@@ -35,6 +35,7 @@
 #include "crypt_default.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "config_type.h"
 
 #ifndef HITLS_CRYPTO_EAL
 #error "Missing definition of HITLS_CRYPTO_EAL"
@@ -743,36 +744,11 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaI
 CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_NamedGroup groupId)
 {
 #ifdef HITLS_CRYPTO_PKEY
-    switch (groupId) {
-        case HITLS_EC_GROUP_SECP256R1:
-            return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP256);
-        case HITLS_EC_GROUP_SECP384R1:
-            return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP384);
-        case HITLS_EC_GROUP_SECP521R1:
-            return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_NISTP521);
-        case HITLS_EC_GROUP_CURVE25519:
-            return GeneratePkeyByParaId(CRYPT_PKEY_X25519, CRYPT_PKEY_PARAID_MAX);
-        case HITLS_EC_GROUP_BRAINPOOLP256R1:
-            return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_BRAINPOOLP256R1);
-        case HITLS_EC_GROUP_BRAINPOOLP384R1:
-            return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_BRAINPOOLP384R1);
-        case HITLS_EC_GROUP_BRAINPOOLP512R1:
-            return GeneratePkeyByParaId(CRYPT_PKEY_ECDH, CRYPT_ECC_BRAINPOOLP512R1);
-        case HITLS_EC_GROUP_SM2:
-            return GeneratePkeyByParaId(CRYPT_PKEY_SM2, CRYPT_ECC_SM2);
-        case HITLS_FF_DHE_2048:
-            return GeneratePkeyByParaId(CRYPT_PKEY_DH, CRYPT_DH_RFC7919_2048);
-        case HITLS_FF_DHE_3072:
-            return GeneratePkeyByParaId(CRYPT_PKEY_DH, CRYPT_DH_RFC7919_3072);
-        case HITLS_FF_DHE_4096:
-            return GeneratePkeyByParaId(CRYPT_PKEY_DH, CRYPT_DH_RFC7919_4096);
-        case HITLS_FF_DHE_6144:
-            return GeneratePkeyByParaId(CRYPT_PKEY_DH, CRYPT_DH_RFC7919_6144);
-        case HITLS_FF_DHE_8192:
-            return GeneratePkeyByParaId(CRYPT_PKEY_DH, CRYPT_DH_RFC7919_8192);
-        default:
-            break;
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(NULL, groupId);
+    if (groupInfo == NULL) {
+        return NULL;
     }
+    return GeneratePkeyByParaId(groupInfo->algId, groupInfo->paraId);
 #else
     (void)groupId;
 #endif

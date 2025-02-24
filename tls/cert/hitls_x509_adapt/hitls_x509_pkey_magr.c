@@ -28,6 +28,7 @@
 #include "hitls_type.h"
 #include "crypt_eal_pkey.h"
 #include "hitls_crypt_type.h"
+#include "config_type.h"
 
 static int32_t g_tryTypes[] = { CRYPT_PRIKEY_PKCS8_UNENCRYPT, CRYPT_PRIKEY_PKCS8_ENCRYPT, CRYPT_PRIKEY_RSA,
     CRYPT_PRIKEY_ECC };
@@ -217,39 +218,20 @@ void HITLS_X509_Adapt_KeyFree(HITLS_CERT_Key *key)
     CRYPT_EAL_PkeyFreeCtx(key);
 }
 
-static HITLS_NamedGroup GetCurveNameByParaId(CRYPT_PKEY_ParaId paraId)
+static HITLS_NamedGroup GetCurveNameByKey(HITLS_Config *config, const CRYPT_EAL_PkeyCtx *key)
 {
-    typedef struct {
-        CRYPT_PKEY_ParaId paraId;
-        HITLS_NamedGroup curveName;
-    } CertKeyCurveNameMap;
-    static CertKeyCurveNameMap curveNameMap[] = {
-        { CRYPT_ECC_NISTP256, HITLS_EC_GROUP_SECP256R1 },
-        { CRYPT_ECC_NISTP384, HITLS_EC_GROUP_SECP384R1 },
-        { CRYPT_ECC_NISTP521, HITLS_EC_GROUP_SECP521R1 },
-        { CRYPT_ECC_BRAINPOOLP256R1, HITLS_EC_GROUP_BRAINPOOLP256R1 },
-        { CRYPT_ECC_BRAINPOOLP384R1, HITLS_EC_GROUP_BRAINPOOLP384R1 },
-        { CRYPT_ECC_BRAINPOOLP512R1, HITLS_EC_GROUP_BRAINPOOLP512R1 },
-    };
-    for (size_t i = 0; i < sizeof(curveNameMap) / sizeof(curveNameMap[0]); i++) {
-        if (curveNameMap[i].paraId == paraId) {
-            return curveNameMap[i].curveName;
+    CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(key);
+    if (paraId == CRYPT_PKEY_PARAID_MAX) {
+        return HITLS_NAMED_GROUP_BUTT;
+    }
+    uint32_t size = 0;
+    const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(config, &size);
+    for (size_t i = 0; i < size; i++) {
+        if (groupInfoList[i].paraId == (int32_t)paraId) {
+            return groupInfoList[i].groupId;
         }
     }
     return HITLS_NAMED_GROUP_BUTT;
-}
-
-static HITLS_NamedGroup GetCurveNameByKey(const CRYPT_EAL_PkeyCtx *key)
-{
-    CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(key);
-    if (cid == CRYPT_PKEY_X25519) {
-        return HITLS_EC_GROUP_CURVE25519;
-    }
-    if (cid != CRYPT_PKEY_ECDSA && cid != CRYPT_PKEY_ECDH) {
-        return HITLS_NAMED_GROUP_BUTT;
-    }
-    CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(key);
-    return GetCurveNameByParaId(paraId);
 }
 
 typedef struct {
@@ -300,7 +282,7 @@ int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITL
             *(HITLS_CERT_KeyType *)output = CertKeyAlgId2KeyType(key);
             break;
         case CERT_KEY_CTRL_GET_CURVE_NAME:
-            *(HITLS_NamedGroup *)output = GetCurveNameByKey(key);
+            *(HITLS_NamedGroup *)output = GetCurveNameByKey(config, key);
             break;
         case CERT_KEY_CTRL_GET_POINT_FORMAT:
             /* Currently only uncompressed is used */

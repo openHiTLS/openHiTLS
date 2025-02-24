@@ -34,6 +34,11 @@ bool SAL_CERT_MgrIsEnable(void)
 
 CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
 {
+    return SAL_CERT_MgrCtxProviderNew(NULL, NULL);
+}
+
+CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
     HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
     CERT_MgrCtx *newCtx = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));
     if (newCtx == NULL) {
@@ -62,6 +67,8 @@ CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
             "new cert manager context error: new store failed.", 0, 0, 0, 0);
         return NULL;
     }
+    newCtx->libCtx = libCtx;
+    newCtx->attrName = attrName;
     return newCtx;
 }
 
@@ -145,6 +152,8 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
     newCtx->defaultPasswdCbUserData = mgrCtx->defaultPasswdCbUserData;
     newCtx->verifyCb = mgrCtx->verifyCb;
 
+    newCtx->libCtx = LIBCTX_FROM_CERT_MGR_CTX(mgrCtx);
+    newCtx->attrName = ATTRIBUTE_FROM_CERT_MGR_CTX(mgrCtx);
     return newCtx;
 }
 

@@ -22,6 +22,7 @@
 #include "hitls_security.h"
 #include "tls.h"
 #include "security.h"
+#include "config_type.h"
 /* Number of security bits corresponding to the security level */
 static const int32_t g_minBits[] = {HITLS_SECURITY_LEVEL_ONE_SECBITS,
     HITLS_SECURITY_LEVEL_TWO_SECBITS,
@@ -36,31 +37,6 @@ int32_t SECURITY_GetSecbits(int32_t level)
         level = (level > HITLS_SECURITY_LEVEL_MAX) ? HITLS_SECURITY_LEVEL_MAX : level;
     }
     return g_minBits[level - 1];
-}
-
-static int32_t GetGroupSecbits(HITLS_NamedGroup groupId)
-{
-    switch (groupId) {
-        case HITLS_FF_DHE_2048:
-            return HITLS_SECURITY_LEVEL_TWO_SECBITS;
-        case HITLS_EC_GROUP_SECP256R1:
-        case HITLS_EC_GROUP_BRAINPOOLP256R1:
-        case HITLS_EC_GROUP_SM2:
-        case HITLS_EC_GROUP_CURVE25519:
-        case HITLS_FF_DHE_3072:
-        case HITLS_FF_DHE_4096:
-        case HITLS_FF_DHE_6144:
-            return HITLS_SECURITY_LEVEL_THREE_SECBITS;
-        case HITLS_EC_GROUP_SECP384R1:
-        case HITLS_EC_GROUP_BRAINPOOLP384R1:
-        case HITLS_FF_DHE_8192:
-            return HITLS_SECURITY_LEVEL_FOUR_SECBITS;
-        case HITLS_EC_GROUP_SECP521R1:
-        case HITLS_EC_GROUP_BRAINPOOLP512R1:
-            return HITLS_SECURITY_LEVEL_FIVE_SECBITS;
-        default:
-            return -1;
-    }
 }
 
 static int32_t GetSigalgSecbits(HITLS_SignHashAlgo signScheme)
@@ -164,15 +140,6 @@ static int32_t CheckVersion(int32_t id, int32_t level)
     return SECURITY_SUCCESS;
 }
 
-static int32_t CheckGroup(int32_t id, int32_t level)
-{
-    int32_t secbits = GetGroupSecbits(id);
-    if (secbits < g_minBits[level - 1]) {
-        return SECURITY_ERR;
-    }
-    return SECURITY_SUCCESS;
-}
-
 static int32_t CheckSigalg(int32_t id, int32_t level)
 {
     int32_t secbits = GetSigalgSecbits(id);
@@ -199,6 +166,7 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     int32_t ret;
     int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
     int32_t minBits;
+    const TLS_GroupInfo *groupInfo = NULL;
     if (ctx == NULL && config == NULL) {
         return SECURITY_ERR;
     } else if (config != NULL) {
@@ -238,7 +206,12 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
         case HITLS_SECURITY_SECOP_CURVE_SHARED:
         case HITLS_SECURITY_SECOP_CURVE_CHECK:
             /* Check the group. */
-            ret = CheckGroup(id, level);
+            groupInfo = ConfigGetGroupInfo(config, id);
+            if (groupInfo != NULL && groupInfo->secBits >= g_minBits[level - 1]) {
+                ret = SECURITY_SUCCESS;
+            } else {
+                ret = SECURITY_ERR;
+            }
             break;
         case HITLS_SECURITY_SECOP_TICKET:
             /* Check the session ticket. */
