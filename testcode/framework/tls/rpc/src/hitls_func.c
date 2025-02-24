@@ -252,6 +252,12 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
             hitlsConfig = HITLS_CFG_NewTLCPConfig();
             break;
 #endif
+#ifdef HITLS_TLS_PROTO_DTLCP11
+        case DTLCP1_1:
+            LOG_DEBUG("HiTLS New DTLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_NewDTLCPConfig();
+            break;
+#endif
         default:
             /* Unknown protocol type */
             break;

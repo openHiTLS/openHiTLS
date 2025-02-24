@@ -179,7 +179,12 @@ int32_t HS_SendMsg(TLS_Ctx *ctx)
         case HITLS_VERSION_TLS12:
         case HITLS_VERSION_TLS13:
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
+#if defined(HITLS_TLS_PROTO_DTLCP11)
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+                return DtlsSendHandShakeMsg(ctx);
+            }
+#endif
 #endif
             return TlsSendHandShakeMsg(ctx);
 #endif /* HITLS_TLS_PROTO_TLS */

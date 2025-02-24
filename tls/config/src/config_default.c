@@ -146,7 +146,7 @@ static int32_t SetDefaultGroups(HITLS_Config *config)
 
     const uint16_t *groups = groupsTls;
     uint32_t size = sizeof(groupsTls);
-    if (config->maxVersion == HITLS_VERSION_TLCP11) {
+    if (config->maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
         groups = groupsTlcp;
         size = sizeof(groupsTlcp);
     }
@@ -192,7 +192,7 @@ static int32_t SetDefaultSignHashAlg(HITLS_Config *config)
 {
     uint32_t listLen = 0;
 #ifdef HITLS_TLS_PROTO_TLCP11
-    const SignSchemeInfo *signHashAlgList = (config->maxVersion != HITLS_VERSION_TLCP11) ?
+    const SignSchemeInfo *signHashAlgList = (config->maxVersion != HITLS_VERSION_TLCP_DTLCP11) ?
         CFG_GetSignSchemeList(&listLen) :
         CFG_GetSignSchemeListTlcp(&listLen);
 #else
@@ -270,9 +270,9 @@ static void InitConfig(HITLS_Config *config)
     config->needCheckKeyUsage = true;
 #endif
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
-    config->isSupportDhAuto = (config->maxVersion == HITLS_VERSION_TLCP11) ? false : true;
+    config->isSupportDhAuto = (config->maxVersion == HITLS_VERSION_TLCP_DTLCP11) ? false : true;
 #endif
-    if (config->maxVersion == HITLS_VERSION_TLCP11) {
+    if (config->maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
         config->isSupportExtendMasterSecret = false;
     }
 #ifdef HITLS_TLS_FEATURE_FLIGHT
@@ -312,7 +312,7 @@ static int32_t DefaultCipherSuitesByVersion(uint16_t version, HITLS_Config *conf
     uint32_t size = sizeof(g_tls12CipherSuites);
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
             groups = g_tlcpCipherSuites;
             size = sizeof(g_tlcpCipherSuites);
             break;

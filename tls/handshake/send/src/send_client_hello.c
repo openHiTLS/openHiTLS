@@ -90,7 +90,7 @@ static int32_t ClientPrepareSession(TLS_Ctx *ctx)
 static int32_t ClientChangeStateAfterSendClientHello(TLS_Ctx *ctx)
 {
 #ifdef HITLS_TLS_FEATURE_SESSION
-    if (ctx->session != NULL && IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (ctx->session != NULL && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         /* In the DTLS scenario, enable the receiving of CCS messages to prevent CCS message disorder during session
          * resumption */
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_READY);

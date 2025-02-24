@@ -68,7 +68,7 @@ static int32_t SignKeyExchParams(TLS_Ctx *ctx, uint8_t *kxData, uint32_t kxDataL
         return HITLS_MEMALLOC_FAIL;
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11)
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11)
 #endif /* HITLS_TLS_PROTO_TLCP11 */
     {
         if (ctx->negotiatedInfo.version >= HITLS_VERSION_TLS12) {

@@ -484,7 +484,7 @@ static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHell
     uint16_t clientMaxVersion = ctx->config.tlsConfig.maxVersion;
     uint16_t serverVersion = serverHello->version;
 
-    if (IS_DTLS_VERSION(serverVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         if ((serverVersion > clientMinVersion) || (serverVersion < clientMaxVersion)) {
             /* The DTLS version selected by the server is too early and the negotiation cannot be continued */
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15267, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

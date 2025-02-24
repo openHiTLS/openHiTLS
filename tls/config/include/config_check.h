@@ -29,6 +29,9 @@ int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion);
 /** check whether the TLS configuration is valid */
 int32_t CheckConfig(const HITLS_Config *config);
 
+/** get version bit from transport type and version */
+uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version);
+
 #ifdef __cplusplus
 }
 #endif

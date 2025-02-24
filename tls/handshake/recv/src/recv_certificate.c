@@ -131,7 +131,7 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* The encryption certificate is required for TLS of TLCP. Both ECDHE and ECC of the client depend on the encryption
      * certificate. */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         HITLS_CERT_Key *cert = SAL_CERT_GetTlcpEncCert(peerCert);
         if (cert == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16225, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -163,7 +163,7 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* Service processing logic. The ECDHE exchange algorithm logic requires the encryption certificate */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 &&
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11 &&
         ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE) {
         HITLS_CERT_Key *cert = SAL_CERT_GetTlcpEncCert(peerCert);
         if (cert == NULL) {
@@ -209,7 +209,7 @@ static bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
             case HITLS_KEY_EXCH_ECC:
             case HITLS_KEY_EXCH_RSA_PSK:
 #ifdef HITLS_TLS_PROTO_TLCP11
-                if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+                if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
                     checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE) &&
                                     SAL_CERT_CheckCertKeyUsage(ctx, encCert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
                     break;
@@ -292,7 +292,7 @@ static int32_t VerifyCertChain(TLS_Ctx *ctx)
         return ret;
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11) {
         return ret;
     }
     if (ctx->isClient) {
