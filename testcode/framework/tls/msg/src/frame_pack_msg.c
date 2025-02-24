@@ -1039,7 +1039,7 @@ static int32_t PackClientEcdheMsg(FRAME_Type *type, const FRAME_ClientKeyExchang
     uint32_t bufLen, uint32_t *usedLen)
 {
     uint32_t offset = 0;
-    if (type->versionType == HITLS_VERSION_TLCP11) { /* Three bytes are added to the client key exchange. */
+    if (type->versionType == HITLS_VERSION_TLCP_DTLCP11) { /* Three bytes are added to the client key exchange. */
         buf[offset] = HITLS_EC_CURVE_TYPE_NAMED_CURVE;
         offset += sizeof(uint8_t);
         BSL_Uint16ToByte(HITLS_EC_GROUP_SM2, &buf[offset]);
@@ -1106,8 +1106,9 @@ static int32_t PackFinishedMsg(const FRAME_FinishedMsg *finished, uint8_t *buf,
 }
 
 static void PackHsMsgHeader(uint16_t version, const FRAME_HsMsg *hsMsg, uint32_t bodyLen,
-    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen, BSL_UIO_TransportType transportType)
 {
+    (void)version;
     uint32_t offset = 0;
     uint32_t bufOffset;
 
@@ -1115,7 +1116,7 @@ static void PackHsMsgHeader(uint16_t version, const FRAME_HsMsg *hsMsg, uint32_t
 
     bufOffset = offset;
     PackInteger24(&hsMsg->length, &buf[offset], bufLen - offset, &offset);
-    if (IS_DTLS_VERSION(version)) {
+    if (IS_TRANSTYPE_DATAGRAM(transportType)) {
         PackInteger16(&hsMsg->sequence, &buf[offset], bufLen - offset, &offset);
         PackInteger24(&hsMsg->fragmentOffset, &buf[offset], bufLen - offset, &offset);
         if (hsMsg->fragmentLength.state == INITIAL_FIELD) {
@@ -1212,7 +1213,7 @@ static int32_t PackHandShakeMsg(FRAME_Type *type, const FRAME_Msg *msg,
     uint32_t headerLen;
     uint32_t bodyLen = 0;
 
-    if (IS_DTLS_VERSION(type->versionType)) {      // DTLS
+    if (IS_TRANSTYPE_DATAGRAM(type->transportType)) { // DTLS
         if (bufLen < DTLS_HS_MSG_HEADER_SIZE) {
             return HITLS_INTERNAL_EXCEPTION;
         }
@@ -1237,7 +1238,7 @@ static int32_t PackHandShakeMsg(FRAME_Type *type, const FRAME_Msg *msg,
     }
 
     // Assemble the handshake packet header.
-    PackHsMsgHeader(type->versionType, hsMsg, bodyLen, buf, headerLen, &headerLen);
+    PackHsMsgHeader(type->versionType, hsMsg, bodyLen, buf, headerLen, &headerLen, type->transportType);
 
     // Splicing body and head
     // If some fields are missing in the header, the packet body is filled with an offset forward.
@@ -1287,13 +1288,14 @@ static int32_t PackAppMsg(const FRAME_Msg *msg, uint8_t *buf, uint32_t bufLen, u
 }
 
 static int32_t PackRecordHeader(uint16_t version, const FRAME_Msg *msg, uint32_t bodyLen,
-    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen, BSL_UIO_TransportType transportType)
 {
+    (void)version;
     uint32_t offset = 0;
 
     PackInteger8(&msg->recType, &buf[offset], bufLen, &offset);
     PackInteger16(&msg->recVersion, &buf[offset], bufLen - offset, &offset);
-    if (IS_DTLS_VERSION(version)) {
+    if (IS_TRANSTYPE_DATAGRAM(transportType)) {
         PackInteger16(&msg->epoch, &buf[offset], bufLen - offset, &offset);
         PackInteger48(&msg->sequence, &buf[offset], bufLen - offset, &offset);
     }
@@ -1348,7 +1350,7 @@ int32_t FRAME_PackMsg(FRAME_Type *frameType, const FRAME_Msg *msg, uint8_t *buff
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    if (IS_DTLS_VERSION(frameType->versionType)) {      // DTLS
+    if (IS_TRANSTYPE_DATAGRAM(frameType->transportType)) { // DTLS
         if (bufLen < DTLS_RECORD_HEADER_LEN) {
             return HITLS_INTERNAL_EXCEPTION;
         }
@@ -1373,7 +1375,7 @@ int32_t FRAME_PackMsg(FRAME_Type *frameType, const FRAME_Msg *msg, uint8_t *buff
     }
 
     // Assemble the packet header.
-    PackRecordHeader(frameType->versionType, msg, bodyLen, buffer, headerLen, &headerLen);
+    PackRecordHeader(frameType->versionType, msg, bodyLen, buffer, headerLen, &headerLen, frameType->transportType);
 
     // Splicing body and head
     // If some fields are missing in the header, the packet body is filled with an offset forward.

@@ -1256,11 +1256,11 @@ static void TEST_Client_SessionidLength_TooLong(HITLS_Ctx *ctx, uint8_t *data, u
     (void)ctx;
     (void)user;
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     FRAME_Msg frameMsg = {0};
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(parseLen, *len);

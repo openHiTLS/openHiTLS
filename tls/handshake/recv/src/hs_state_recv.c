@@ -85,7 +85,7 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #ifdef HITLS_TLS_HOST_SERVER
         case TRY_RECV_CLIENT_HELLO:
 #ifdef HITLS_TLS_PROTO_DTLS12
-            if (version == HITLS_VERSION_DTLS12) {
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
                 return DtlsServerRecvClientHelloProcess(ctx, hsMsg);
             }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
@@ -121,7 +121,7 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #ifdef HITLS_TLS_HOST_CLIENT
             if (ctx->isClient) {
 #ifdef HITLS_TLS_PROTO_DTLS12
-                if (version == HITLS_VERSION_DTLS12) {
+                if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
                     return DtlsClientRecvFinishedProcess(ctx, hsMsg);
                 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
@@ -132,7 +132,7 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
 #ifdef HITLS_TLS_PROTO_DTLS12
-            if (version == HITLS_VERSION_DTLS12) {
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
                 return DtlsServerRecvFinishedProcess(ctx, hsMsg);
             }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
@@ -542,7 +542,13 @@ int32_t HS_RecvMsgProcess(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_TLS
         case HITLS_VERSION_TLS12:
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
+#if defined(HITLS_TLS_PROTO_DTLS12)
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+                ret = DtlsTryRecvHandShakeMsg(ctx);
+                break;
+            }
+#endif
 #endif /* HITLS_TLS_PROTO_TLCP11 */
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
             ret = Tls12TryRecvHandShakeMsg(ctx);

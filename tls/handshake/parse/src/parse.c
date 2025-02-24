@@ -161,7 +161,7 @@ static int32_t CheckHsMsgLen(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
         return ParseErrorProcess(ctx, HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE, 0,
             NULL, ALERT_ILLEGAL_PARAMETER);
     }
-    uint32_t headerLen = IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion) ?
+    uint32_t headerLen = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ?
         DTLS_HS_MSG_HEADER_SIZE : HS_MSG_HEADER_SIZE;
     ret = HS_GrowMsgBuf(ctx, headerLen + hsMsgInfo->length, true);
     if (ret != HITLS_SUCCESS) {
@@ -337,7 +337,12 @@ int32_t HS_ParseMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Ms
         case HITLS_VERSION_TLS12:
         case HITLS_VERSION_TLS13:
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
+#if defined(HITLS_TLS_PROTO_DTLCP11)
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+                return DtlsParseHsMsgHeader(ctx, data, len, hsMsgInfo);
+            }
+#endif
 #endif
             return TlsParseHsMsgHeader(ctx, data, len, hsMsgInfo);
 #endif /* HITLS_TLS_PROTO_TLS */
@@ -376,7 +381,12 @@ int32_t HS_ParseMsg(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg)
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
         case HITLS_VERSION_TLS12:
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
+#if defined(HITLS_TLS_PROTO_DTLCP11)
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+                return ParseHandShakeMsg(ctx, &hsMsgInfo->rawMsg[DTLS_HS_MSG_HEADER_SIZE], hsMsgInfo->length, hsMsg);
+            }
+#endif
 #endif
             return ParseHandShakeMsg(ctx, &hsMsgInfo->rawMsg[HS_MSG_HEADER_SIZE], hsMsgInfo->length, hsMsg);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */

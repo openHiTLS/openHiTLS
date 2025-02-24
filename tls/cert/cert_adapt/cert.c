@@ -564,7 +564,7 @@ int32_t SAL_CERT_SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         /* The user does not set the certificate callback. */
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16313, "unregistered callback");
     }
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
 #ifdef HITLS_TLS_PROTO_TLCP11
         ret = TlcpSelectCertByInfo(ctx, info);
 #endif
@@ -679,7 +679,7 @@ static int32_t EncodeEECert(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
        write the second encryption certificate. */
     CERT_Pair *currentCertPairEnc = &mgrCtx->certPair[mgrCtx->currentCertIndex + 1];
     HITLS_CERT_X509 *certEnc = currentCertPairEnc->cert;
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 && certEnc != NULL) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11 && certEnc != NULL) {
 #ifdef HITLS_TLS_FEATURE_SECURITY
         HITLS_CERT_Key *keyEnc = currentCertPairEnc->privateKey;
         ret = CheckKeySecbits(ctx, certEnc, keyEnc);
@@ -817,7 +817,7 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     }
 
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11 && mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert == NULL) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11 && mgrCtx->certPair[TLS_CERT_KEY_TYPE_SM2].cert == NULL) {
         *usedLen = 0;
         return HITLS_SUCCESS;
     }

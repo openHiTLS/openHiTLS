@@ -319,7 +319,7 @@ static uint8_t *GetUnsignData(TLS_Ctx *ctx, uint32_t *dataLen, bool isClient, HI
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         return TlcpGetUnsignData(ctx, dataLen);
     }
 #endif
