@@ -34,6 +34,7 @@ target_include_directories(TLS_TEST_INTF INTERFACE
     ${openHiTLS_SRC}/bsl/log/include
     ${openHiTLS_SRC}/bsl/time/include
     ${openHiTLS_SRC}/bsl/async/include
+    ${openHiTLS_SRC}/bsl/hash/include
     ${openHiTLS_SRC}/bsl/uio/include
     ${openHiTLS_SRC}/bsl/uio/src
     ${openHiTLS_SRC}/pki/x509_cert/include
