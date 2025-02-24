@@ -135,7 +135,7 @@ static uint32_t GetHashOfMACAlgorithm(HITLS_MacAlgo macAlgo)
                 "CBC encrypt error: unsupport MAC algorithm = %u.", macAlgo, 0, 0, 0);
             break;
     }
-    return HITLS_HASH_BUTT;
+    return HITLS_HASH_NULL;
 }
 
 int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
@@ -156,7 +156,7 @@ int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plai
     BSL_Uint16ToByte((uint16_t)plainMsg->textLen, &header[offset]);       // The 11th and 12th bytes are the data length
 
     HITLS_HashAlgo hashAlgo = GetHashOfMACAlgorithm(suiteInfo->macAlg);
-    if (hashAlgo == HITLS_HASH_BUTT) {
+    if (hashAlgo == HITLS_HASH_NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_REC_ERR_GENERATE_MAC, BINLOG_ID17229, "GetHashOfMACAlgorithm fail");
     }
 

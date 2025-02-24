@@ -39,6 +39,8 @@
 #include "hs.h"
 #include "hs_extensions.h"
 #include "hs_common.h"
+#include "config_type.h"
+#include "config_check.h"
 
 #ifdef HITLS_TLS_PROTO_DTLS12
 #define DTLS_SCTP_AUTH_LABEL "EXPORTER_DTLS_OVER_SCTP" /* dtls SCTP auth key label */
@@ -221,48 +223,6 @@ int32_t HS_CombineRandom(const uint8_t *random1, const uint8_t *random2, uint32_
     }
 
     return HITLS_SUCCESS;
-}
-
-typedef struct {
-    HITLS_NamedGroup namedcurve;
-    uint32_t pubKeyLen;
-} HITLS_CurvePubLenInfo;
-
-static const HITLS_CurvePubLenInfo CURVE_PUB_LEN_INFO[] = {
-    {HITLS_EC_GROUP_CURVE25519, 32u}, /* 32 is X25519 public key length */
-    {HITLS_EC_GROUP_SECP256R1, 65u},  /* (32 * 2) + 1 elliptic curve SECP256R1,brainpoolP256r1 public key length */
-    {HITLS_EC_GROUP_BRAINPOOLP256R1, 65u},
-    {HITLS_EC_GROUP_SECP384R1, 97u},  /* (48 * 2) + 1 elliptic curve SECP384R1,brainpoolP384r1 public key length */
-    {HITLS_EC_GROUP_BRAINPOOLP384R1, 97u},
-    {HITLS_EC_GROUP_BRAINPOOLP512R1, 129u}, /* Length of the elliptic curve brainpoolP512r1 public key */
-    {HITLS_EC_GROUP_SECP521R1, 133u}, /* (66 * 2) + 1 elliptic curve SECP521R1 public key length */
-#ifdef HITLS_TLS_PROTO_TLCP11
-    {HITLS_EC_GROUP_SM2, 65u},  /* (32 * 2) + 1 elliptic curve SM2 public key length */
-#endif
-#ifdef HITLS_TLS_PROTO_TLS13
-    {HITLS_FF_DHE_2048, 256u},  /* HITLS_FF_DHE_2048 public key length */
-    {HITLS_FF_DHE_3072, 384u},  /* HITLS_FF_DHE_3072 public key length */
-    {HITLS_FF_DHE_4096, 512u},  /* HITLS_FF_DHE_4096 public key length */
-    {HITLS_FF_DHE_6144, 768u},  /* HITLS_FF_DHE_6144 public key length */
-    {HITLS_FF_DHE_8192, 1024u}, /* HITLS_FF_DHE_8192 public key length */
-#endif // HITLS_TLS_PROTO_TLS13
-};
-
-/**
- * @brief Obtain the public key length of the Named Curve curve of the ECDHE key agreement algorithm.
- * @attention The length of the public key cannot exceed 255 bytes.
- * @param namedcurve [IN] Named Curve Enumerated type
- *
- * @retval len Length of the public key
- */
-uint32_t HS_GetNamedCurvePubkeyLen(HITLS_NamedGroup namedcurve)
-{
-    for (uint32_t i = 0; i < sizeof(CURVE_PUB_LEN_INFO) / sizeof(CURVE_PUB_LEN_INFO[0]); i++) {
-        if (CURVE_PUB_LEN_INFO[i].namedcurve == namedcurve) {
-            return CURVE_PUB_LEN_INFO[i].pubKeyLen;
-        }
-    }
-    return 0;
 }
 
 #ifdef HITLS_TLS_PROTO_TLCP11
@@ -699,7 +659,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
 #ifdef HITLS_TLS_PROTO_TLS13
 uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 {
-    if (*hashAlg > HITLS_HASH_NULL && *hashAlg < HITLS_HASH_BUTT) {
+    if (*hashAlg != HITLS_HASH_NULL) {
         return SAL_CRYPT_HmacSize(*hashAlg);
     }
 
@@ -725,59 +685,14 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
-static struct {
-    uint16_t group;
-    uint16_t minVersion;
-    uint16_t maxVersion;
-    uint16_t minDtlsVersion;
-    uint16_t maxDtlsVersion;
-} g_groupsConfomVersion[] = {
-    {HITLS_EC_GROUP_CURVE25519, HITLS_VERSION_TLS10, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12},
-    {HITLS_EC_GROUP_SECP256R1, HITLS_VERSION_TLS10, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12},
-    {HITLS_EC_GROUP_SECP521R1, HITLS_VERSION_TLS10, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12},
-    {HITLS_EC_GROUP_SECP384R1, HITLS_VERSION_TLS10, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12},
-#ifdef HITLS_TLS_PROTO_TLCP11
-    {HITLS_EC_GROUP_SM2, HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0},
-#endif
-#ifdef HITLS_TLS_PROTO_TLS13
-    {HITLS_FF_DHE_2048, HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0},
-    {HITLS_FF_DHE_3072, HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0},
-    {HITLS_FF_DHE_4096, HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0},
-    {HITLS_FF_DHE_6144, HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0},
-    {HITLS_FF_DHE_8192, HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0},
-#endif
-    {HITLS_EC_GROUP_BRAINPOOLP256R1,
-        HITLS_VERSION_TLS10,
-        HITLS_VERSION_TLS12,
-        HITLS_VERSION_DTLS12,
-        HITLS_VERSION_DTLS12},
-    {HITLS_EC_GROUP_BRAINPOOLP384R1,
-        HITLS_VERSION_TLS10,
-        HITLS_VERSION_TLS12,
-        HITLS_VERSION_DTLS12,
-        HITLS_VERSION_DTLS12},
-    {HITLS_EC_GROUP_BRAINPOOLP512R1,
-        HITLS_VERSION_TLS10,
-        HITLS_VERSION_TLS12,
-        HITLS_VERSION_DTLS12,
-        HITLS_VERSION_DTLS12},
-};
-
-bool GroupConformToVersion(uint16_t version, uint16_t group)
+bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
 {
-    for (size_t i = 0; i < sizeof(g_groupsConfomVersion) / sizeof(g_groupsConfomVersion[0]); i++) {
-        if (group == g_groupsConfomVersion[i].group) {
-            if (version >= g_groupsConfomVersion[i].minVersion && version <= g_groupsConfomVersion[i].maxVersion) {
-                return true;
-            }
-            if (version >= g_groupsConfomVersion[i].minDtlsVersion &&
-                version <= g_groupsConfomVersion[i].maxDtlsVersion) {
-                return true;
-            }
-            break;
-        }
+    uint32_t versionBits = MapVersion2VersionBit(IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion), version);
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, group);
+    if (groupInfo == NULL || ((groupInfo->versionBits & versionBits) != versionBits)) {
+        return false;
     }
-    return false;
+    return true;
 }
 
 uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlgorithms,

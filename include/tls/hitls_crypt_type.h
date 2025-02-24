@@ -24,10 +24,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
+#include "bsl_obj.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef void HITLS_Lib_Ctx;
 
 /**
  * @ingroup hitls_crypt_type
@@ -93,17 +95,15 @@ typedef enum {
  * @brief   Hash algorithm enumeration
  */
 typedef enum {
-    HITLS_HASH_NULL,
-    HITLS_HASH_MD5,
-    HITLS_HASH_SHA1,
-    HITLS_HASH_SHA_224,
-    HITLS_HASH_SHA_256,
-    HITLS_HASH_SHA_384,
-    HITLS_HASH_SHA_512,
-    HITLS_HASH_MD5_SHA1,
-    HITLS_HASH_SM3,
-    HITLS_HASH_BUTT = 255
-} HITLS_HashAlgo;
+    HITLS_HASH_NULL = BSL_CID_UNKNOWN,
+    HITLS_HASH_MD5 = BSL_CID_MD5,
+    HITLS_HASH_SHA1 = BSL_CID_SHA1,
+    HITLS_HASH_SHA_224 = BSL_CID_SHA224,
+    HITLS_HASH_SHA_256 = BSL_CID_SHA256,
+    HITLS_HASH_SHA_384 = BSL_CID_SHA384,
+    HITLS_HASH_SHA_512 = BSL_CID_SHA512,
+    HITLS_HASH_SM3 = BSL_CID_SM3,
+} HITLS_HashAlgo; // CRYPT_MD_AlgId
 
 /**
  * @ingroup hitls_crypt_type
@@ -161,14 +161,12 @@ typedef enum {
  * @brief   Signature algorithm enumeration
  */
 typedef enum {
-    HITLS_SIGN_RSA_PKCS1_V15,
-    HITLS_SIGN_DSA,                 /* Signature algorithm: DSA */
-    HITLS_SIGN_ECDSA,
-    HITLS_SIGN_RSA_PSS_RSAE,
-    HITLS_SIGN_RSA_PSS_PSS,
-    HITLS_SIGN_ED25519,
-    HITLS_SIGN_ED448,
-    HITLS_SIGN_SM2,
+    HITLS_SIGN_RSA_PKCS1_V15 = BSL_CID_RSA,
+    HITLS_SIGN_DSA = BSL_CID_DSA,
+    HITLS_SIGN_ECDSA = BSL_CID_ECDSA,
+    HITLS_SIGN_RSA_PSS = BSL_CID_RSASSAPSS,
+    HITLS_SIGN_ED25519 = BSL_CID_ED25519,
+    HITLS_SIGN_SM2 = BSL_CID_SM2,
     HITLS_SIGN_BUTT = 255
 } HITLS_SignAlgo;
 

@@ -142,7 +142,7 @@ static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, uint8_t *buf, uint32_t bu
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
     HITLS_ECParameters *ecParam = &(kxCtx->keyExchParam.ecdh.curveParams);
-    uint32_t pubKeyLen = HS_GetNamedCurvePubkeyLen(ecParam->param.namedcurve);
+    uint32_t pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, ecParam->param.namedcurve);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15498, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
