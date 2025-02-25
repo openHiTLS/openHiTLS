@@ -644,6 +644,8 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t
     return SAL_CRYPT_HkdfExpand(&expandInput, outSecret, outLen);
 }
 
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+
 static const struct {
     HITLS_NamedGroup namedcurve;
     uint32_t pubKeyLen;
@@ -683,4 +685,6 @@ uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param
     }
     return 0;
 }
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
+
 #endif /* HITLS_TLS_PROTO_TLS13 */

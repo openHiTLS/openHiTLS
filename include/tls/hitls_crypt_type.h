@@ -29,6 +29,8 @@
 extern "C" {
 #endif
 
+typedef void HITLS_Lib_Ctx;
+
 /**
  * @ingroup hitls_crypt_type
  * @brief   Key handle, which is converted into the corresponding structure based on the algorithm library

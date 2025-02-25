@@ -265,12 +265,18 @@ static int32_t DefaultCipherSuitesByVersion(uint16_t version, HITLS_Config *conf
     return SetDefaultCipherSuite(config, groups, size);
 }
 
-int32_t DefaultConfig(uint16_t version, HITLS_Config *config)
+int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t version, HITLS_Config *config)
 {
     // Static settings
     config->minVersion = version;
     config->maxVersion = version;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    config->libCtx = libCtx;
+    config->attrName = attrName;
+#else
+    (void)libCtx;
+    (void)attrName;
+#endif
     InitConfig(config);
 
     int32_t ret = DefaultCipherSuitesByVersion(version, config);
@@ -300,7 +306,7 @@ int32_t DefaultConfig(uint16_t version, HITLS_Config *config)
     }
 
     if (SAL_CERT_MgrIsEnable()) {
-        config->certMgrCtx = SAL_CERT_MgrCtxNew();
+        config->certMgrCtx = SAL_CERT_MgrCtxNewWithProvider(libCtx, attrName);
         if (config->certMgrCtx == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16573, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "sessMgr new fail", 0, 0, 0, 0);
@@ -344,7 +350,7 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
     config->keyExchMode = TLS13_KE_MODE_PSK_WITH_DHE;
 
     if (SAL_CERT_MgrIsEnable()) {
-        config->certMgrCtx = SAL_CERT_MgrCtxNew();
+        config->certMgrCtx = SAL_CERT_MgrCtxNewWithProvider(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config));
         if (config->certMgrCtx == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16576, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "certMgrCtx new fail", 0, 0, 0, 0);
@@ -400,7 +406,7 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
     config->keyExchMode = TLS13_KE_MODE_PSK_WITH_DHE;
 
     if (SAL_CERT_MgrIsEnable()) {
-        config->certMgrCtx = SAL_CERT_MgrCtxNew();
+        config->certMgrCtx = SAL_CERT_MgrCtxNewWithProvider(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config));
         if (config->certMgrCtx == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16579, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "MgrCtx new fail", 0, 0, 0, 0);
@@ -459,7 +465,7 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
     }
 
     if (SAL_CERT_MgrIsEnable()) {
-        config->certMgrCtx = SAL_CERT_MgrCtxNew();
+        config->certMgrCtx = SAL_CERT_MgrCtxNewWithProvider(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config));
         if (config->certMgrCtx == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16582, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "MgrCtxNew fail", 0, 0, 0, 0);
