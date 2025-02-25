@@ -42,6 +42,8 @@ struct CertPairInner {
 };
 
 struct CertMgrCtxInner {
+    CRYPT_EAL_LibCtx *libCtx;          /* library context */
+    const char *attribute;              /* attribute */
     uint32_t currentCertIndex;                  /* points to the certificate in use. */
     /* Indicates the certificate resources on the link. Only one certificate of a type can be loaded. */
     CERT_Pair certPair[TLS_CERT_KEY_TYPE_NUM];
@@ -71,6 +73,14 @@ HITLS_CERT_Chain *SAL_CERT_ChainNew(void);
 int32_t SAL_CERT_ChainAppend(HITLS_CERT_Chain *chain, HITLS_CERT_X509 *cert);
 void SAL_CERT_ChainFree(HITLS_CERT_Chain *chain);
 HITLS_CERT_Chain *SAL_CERT_ChainDup(CERT_MgrCtx *mgrCtx, HITLS_CERT_Chain *chain);
+
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#define LIBCTX_FROM_CERT_MGR_CTX(mgrCtx) ((mgrCtx == NULL) ? NULL : (mgrCtx)->libCtx)
+#define ATTRIBUTE_FROM_CERT_MGR_CTX(mgrCtx) ((mgrCtx == NULL) ? NULL : (mgrCtx)->attribute)
+#else
+#define LIBCTX_FROM_CERT_MGR_CTX(mgrCtx) NULL
+#define ATTRIBUTE_FROM_CERT_MGR_CTX(mgrCtx) NULL
+#endif
 
 #ifdef __cplusplus
 }

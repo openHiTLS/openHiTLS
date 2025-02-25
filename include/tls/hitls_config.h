@@ -27,6 +27,8 @@
 #include "hitls_type.h"
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
+#include "crypt_eal_provider.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -241,6 +243,20 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void);
 
 /**
  * @ingroup hitls_config
+ * @brief   Create DTLS12 configuration items with provider, including the default settings. Same as HITLS_CFG_NewDTLS12Config
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attribute: The attribute.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_NewDTLS12ConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute);
+
+/**
+ * @ingroup hitls_config
  * @brief   Create TLCP configuration items, including default settings.
  *
  * The user can call the HITLS_CFG_SetXXX interface to modify the settings.
@@ -262,6 +278,20 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void);
  * @retval  NULL, object application failed.
  */
 HITLS_Config *HITLS_CFG_NewTLCPConfig(void);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Create TLCP configuration items with provider, including the default settings. Same as HITLS_CFG_NewTLCPConfig
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attribute: The attribute.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_NewTLCPConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute);
 
 /**
  * @ingroup hitls_config
@@ -294,6 +324,20 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void);
 
 /**
  * @ingroup hitls_config
+ * @brief   Create TLS12 configuration items with provider, including the default settings. Same as HITLS_CFG_NewTLS12Config
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attribute: The attribute.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_NewTLS12ConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute);
+
+/**
+ * @ingroup hitls_config
  * @brief   Creates the default TLS13 configuration.
  *
  * The HITLS_CFG_SetXXX interface can be used to modify the default TLS13 configuration.
@@ -315,6 +359,20 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void);
  * @retval  NULL, failed to apply for the object
  */
 HITLS_Config *HITLS_CFG_NewTLS13Config(void);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Create TLS13 configuration items with provider, including the default settings. Same as HITLS_CFG_NewTLS13Config
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attribute: The attribute.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_NewTLS13ConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute);
 
 /**
  * @ingroup hitls_config
@@ -351,6 +409,20 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void);
 
 /**
  * @ingroup hitls_config
+ * @brief   Create TLS configuration items with provider, including the default settings. Same as HITLS_CFG_NewTLSConfig
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attribute: The attribute.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_NewTLSConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute);
+
+/**
+ * @ingroup hitls_config
  * @brief   Create full DTLS configurations. The HITLS_CFG_SetXXX interface can be called
  * to modify the DTLS configuration.
  *
@@ -377,6 +449,20 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void);
  * @retval  NULL, Object application failed.
  */
 HITLS_Config *HITLS_CFG_NewDTLSConfig(void);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Create DTLS configuration items with provider, including the default settings. Same as HITLS_CFG_NewDTLSConfig
+ * except that it requires libCtx and attribute parameters.
+ *
+ * @param[in] libCtx: The library context.
+ * @param[in] attribute: The attribute.
+ *
+ * @retval  HITLS_Config, object pointer succeeded.
+ * @retval  NULL, failed to apply for the object.
+ * @see HITLS_CFG_FreeConfig
+ */
+HITLS_Config *HITLS_CFG_NewDTLSConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute);
 
 /**
  * @ingroup hitls_config

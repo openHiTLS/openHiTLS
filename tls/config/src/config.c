@@ -115,6 +115,8 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
      * Other parameters except CipherSuite, PointFormats, Group, SignAlgorithms, Psk, SessionId, CertMgr, and SessMgr
      * are shallowly copied, and some of them reference globalConfig.
      */
+    destConfig->libCtx = LIBCTX_FROM_CONFIG(srcConfig);
+    destConfig->attribute = ATTRIBUTE_FROM_CONFIG(srcConfig);
     destConfig->minVersion = srcConfig->minVersion;
     destConfig->maxVersion = srcConfig->maxVersion;
     destConfig->isQuietShutdown = srcConfig->isQuietShutdown;
@@ -503,30 +505,40 @@ HITLS_Config *CreateConfig(void)
 #ifdef HITLS_TLS_PROTO_DTLS12
 HITLS_Config *HITLS_CFG_NewDTLS12Config(void)
 {
+    return HITLS_CFG_NewDTLS12ConfigWithProvider(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_NewDTLS12ConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    /* Initialize the version */
     newConfig->version |= DTLS12_VERSION_BIT;   // Enable DTLS 1.2
-    if (DefaultConfig(HITLS_VERSION_DTLS12, newConfig) != HITLS_SUCCESS) {
+    if (DefaultConfig(libCtx, attribute, HITLS_VERSION_DTLS12, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
+
 #endif
 
 #ifdef HITLS_TLS_PROTO_TLCP11
 HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
+{
+    return HITLS_CFG_NewTLCPConfigWithProvider(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_NewTLCPConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
     newConfig->version |= TLCP11_VERSION_BIT;   // Enable TLS 1.2
-    if (DefaultConfig(HITLS_VERSION_TLCP11, newConfig) != HITLS_SUCCESS) {
+    if (DefaultConfig(libCtx, attribute, HITLS_VERSION_TLCP11, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
@@ -538,13 +550,18 @@ HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
 #ifdef HITLS_TLS_PROTO_TLS12
 HITLS_Config *HITLS_CFG_NewTLS12Config(void)
 {
+    return HITLS_CFG_NewTLS12ConfigWithProvider(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_NewTLS12ConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
     /* Initialize the version */
     newConfig->version |= TLS12_VERSION_BIT;   // Enable TLS 1.2
-    if (DefaultConfig(HITLS_VERSION_TLS12, newConfig) != HITLS_SUCCESS) {
+    if (DefaultConfig(libCtx, attribute, HITLS_VERSION_TLS12, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
@@ -556,12 +573,23 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void)
 #ifdef HITLS_TLS_PROTO_ALL
 HITLS_Config *HITLS_CFG_NewTLSConfig(void)
 {
+    return HITLS_CFG_NewTLSConfigWithProvider(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_NewTLSConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    /* Initialize the version */
-    newConfig->version |= TLS_VERSION_MASK;       // Enable All Versions
+    newConfig->version |= TLS_VERSION_MASK;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    newConfig->libCtx = libCtx;
+    newConfig->attribute = attribute;
+#else
+    (void)libCtx;
+    (void)attribute;
+#endif
     if (DefaultTlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
@@ -573,12 +601,23 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void)
 #ifdef HITLS_TLS_PROTO_DTLS
 HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
 {
+    return HITLS_CFG_NewDTLSConfigWithProvider(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_NewDTLSConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    /* Initialize the version */
     newConfig->version |= DTLS_VERSION_MASK;      // Enable All Versions
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    newConfig->libCtx = libCtx;
+    newConfig->attribute = attribute;
+#else
+    (void)libCtx;
+    (void)attribute;
+#endif
     if (DefaultDtlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
@@ -586,6 +625,7 @@ HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
+
 #endif
 
 void HITLS_CFG_FreeConfig(HITLS_Config *config)

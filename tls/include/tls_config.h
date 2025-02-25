@@ -29,6 +29,7 @@
 #include "hitls_sni.h"
 #include "hitls_alpn.h"
 #include "sal_atomic.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +64,8 @@ typedef struct TlsSessionManager TLS_SessionMgr;
  */
 typedef struct TlsConfig {
     BSL_SAL_RefCount references;        /* reference count */
+    CRYPT_EAL_LibCtx *libCtx;          /* library context */
+    const char *attribute;              /* attribute */
     uint32_t version;                   /* supported proto version */
     uint32_t originVersionMask;         /* the original supported proto version mask */
     uint16_t minVersion;                /* min supported proto version */
@@ -178,6 +181,14 @@ typedef struct TlsConfig {
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
 } TLS_Config;
+
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#define LIBCTX_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->libCtx)
+#define ATTRIBUTE_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->attribute)
+#else
+#define LIBCTX_FROM_CONFIG(config) NULL
+#define ATTRIBUTE_FROM_CONFIG(config) NULL
+#endif
 
 #ifdef __cplusplus
 }

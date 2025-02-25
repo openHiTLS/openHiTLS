@@ -291,6 +291,14 @@ struct TlsCtx {
     bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
 };
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
+#define ATTRIBUTE_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.attribute)
+#else
+#define LIBCTX_FROM_CTX(ctx) NULL
+#define ATTRIBUTE_FROM_CTX(ctx) NULL
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
+
 #ifdef __cplusplus
 }
 #endif

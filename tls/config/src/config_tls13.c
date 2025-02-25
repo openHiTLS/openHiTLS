@@ -25,21 +25,28 @@
 
 HITLS_Config *HITLS_CFG_NewTLS13Config(void)
 {
+    return HITLS_CFG_NewTLS13ConfigWithProvider(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_NewTLS13ConfigWithProvider(CRYPT_EAL_LibCtx *libCtx, const char *attribute)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-#ifdef HITLS_TLS_PROTO_ALL
-    /* Initialize the version */
     newConfig->version |= TLS13_VERSION_BIT;  // Enable TLS1.3
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    newConfig->libCtx = libCtx;
+    newConfig->attribute = attribute;
+#else
+    (void)libCtx;
+    (void)attribute;
 #endif
     if (DefaultTLS13Config(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
-#ifdef HITLS_TLS_PROTO_ALL
     newConfig->originVersionMask = newConfig->version;
-#endif
     return newConfig;
 }
 
