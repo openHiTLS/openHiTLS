@@ -18,7 +18,6 @@
 
 #include "hitls_pki_cert.h"
 #include "hitls_pki_crl.h"
-#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +41,7 @@ HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void);
  *
  * @return HITLS_X509_STORE* Store object or NULL on failure
  */
-HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(CRYPT_EAL_LibCtx *libCtx, const char *attrName);
+HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_X509_EalLibCtx *libCtx, const char *attrName);
 
 /**
  * @ingroup pki

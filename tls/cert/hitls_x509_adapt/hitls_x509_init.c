@@ -18,7 +18,7 @@
 #include <stddef.h>
 #include "hitls_error.h"
 #include "hitls_cert_reg.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
 
 int32_t HITLS_CertMethodInit(void)
 {

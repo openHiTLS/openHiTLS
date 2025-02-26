@@ -756,7 +756,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     return ret;
 }
 
-HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(CRYPT_EAL_LibCtx *libCtx, const char *attrName)
+HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_X509_EalLibCtx *libCtx, const char *attrName)
 {
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
     if (storeCtx == NULL) {

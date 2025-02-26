@@ -27,6 +27,8 @@
 extern "C" {
 #endif
 
+typedef void HITLS_X509_EalLibCtx;
+
 #define HITLS_X509_List BslList
 
 #define HITLS_X509_VERSION_1 0
