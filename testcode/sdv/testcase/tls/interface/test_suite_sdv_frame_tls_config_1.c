@@ -1173,8 +1173,8 @@ EXIT:
 *           certificate.(Expected result 1)
 *       3. Invoke the HITLS_CFG_SetCertificate interface. Ensure that tlsConfig and cert are not empty. Perform deep
 *           copy. (Expected result 3)
-*       4. Invoke the HITLS_CFG_GetCertificate interface. The value of tlsConfig->certMgrCtx->currentCertIndex is
-*           greater than the value of TLS_CERT_KEY_TYPE_NUM, Expected result 4 is obtained.
+*       4. Invoke the HITLS_CFG_GetCertificate interface. The value of tlsConfig->certMgrCtx->currentCertKeyType is
+*           greater than the value of TLS_CERT_KEY_TYPE_UNKNOWN, Expected result 4 is obtained.
 *       5. Invoke the HITLS_CFG_GetCertificate interface and leave tlsConfig empty. Expected result 4 is obtained.
 *       6. Invoke the HITLS_CFG_SetCertificate interface, set tlsConfig->certMgrCtx to null, and set cert to a non-empty
 *           device certificate. (Expected result 2)
@@ -1199,7 +1199,7 @@ void UT_TLS_CFG_SET_GET_CERTIFICATE_API_TC001(int version, char *certFile)
     ASSERT_EQ(HITLS_CFG_SetCertificate(tlsConfig, cert, true), HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_CFG_GetCertificate(tlsConfig) != NULL);
-    tlsConfig->certMgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_NUM + 1;
+    tlsConfig->certMgrCtx->currentCertKeyType = TLS_CERT_KEY_TYPE_UNKNOWN;
     ASSERT_TRUE(HITLS_CFG_GetCertificate(tlsConfig) == NULL);
     ASSERT_TRUE(HITLS_CFG_GetCertificate(NULL) == NULL);
     SAL_CERT_MgrCtxFree(tlsConfig->certMgrCtx);
@@ -1218,8 +1218,8 @@ EXIT:
 * @title Test HITLS_CFG_CheckPrivateKey interface
 * @brief 1. Invoke the HITLS_CFG_CheckPrivateKey interface and leave tlsConfig blank. Expected result 1
 *        2. Invoke the HITLS_CFG_CheckPrivateKey interface. The tlsConfig parameter is not empty,
-*           The value of tlsConfig->certMgrCtx->currentCertIndex is greater than or equal to the maximum value
-*           TLS_CERT_KEY_TYPE_NUM. Expected result 2
+*           The value of tlsConfig->certMgrCtx->currentCertKeyType is greater than or equal to the maximum value
+*           TLS_CERT_KEY_TYPE_UNKNOWN. Expected result 2
 *       3. Invoke the HITLS_CFG_CheckPrivateKey interface and leave tlsConfig->certMgrCtx empty. Expected result 3
 * @expect   1. Returns HITLS_NULL_INPUT
 *           2. HITLS_CONFIG_NO_CERT is returned.
@@ -1233,7 +1233,7 @@ void UT_TLS_CFG_CHECK_PRIVATEKEY_API_TC001(int version)
     tlsConfig = HitlsNewCtx(version);
     ASSERT_TRUE(tlsConfig != NULL);
     ASSERT_TRUE(HITLS_CFG_CheckPrivateKey(NULL) == HITLS_NULL_INPUT);
-    tlsConfig->certMgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_NUM;
+    tlsConfig->certMgrCtx->currentCertKeyType = TLS_CERT_KEY_TYPE_UNKNOWN;
     ASSERT_TRUE(HITLS_CFG_CheckPrivateKey(tlsConfig) == HITLS_CONFIG_NO_CERT);
     SAL_CERT_MgrCtxFree(tlsConfig->certMgrCtx);
     tlsConfig->certMgrCtx = NULL;
@@ -1254,10 +1254,10 @@ EXIT:
 *        3. Invoke the HITLS_CFG_AddChainCert interface. Ensure that tlsConfig is not empty and addCert is not empty.
 *           Perform shallow copy. Expected result 2 .
 *       4. Invoke the HITLS_CFG_AddChainCert interface. The value of tlsConfig is not empty and the value of
-*           tlsConfig->certMgrCtx->currentCertIndex is greater than or equal to the maximum value TLS_CERT_KEY_TYPE_NUM.
+*           tlsConfig->certMgrCtx->currentCertKeyType is greater than or equal to the maximum value TLS_CERT_KEY_TYPE_UNKNOWN.
 *          Expected result 4 .
 *       5. Invoke the HITLS_CFG_GetChainCerts interface. Set tlsConfig to a value greater than or equal to the maximum
-*           value TLS_CERT_KEY_TYPE_NUM. (Expected result 3)
+*           value TLS_CERT_KEY_TYPE_UNKNOWN. (Expected result 3)
 *       6. Invoke the HITLS_CFG_GetChainCerts interface and leave tlsConfig blank. Expected result 3 .
 *       7. Invoke the HITLS_CFG_LoadKeyBuffer interface. Set tlsConfig->certMgrCtx to null and addCert to the
 *           certificate to be added. Perform deep copy. Expected result 5 .
@@ -1287,7 +1287,7 @@ void UT_TLS_CFG_ADD_CHAINCERT_API_TC001(int version, char *certFile, char *addCe
     ASSERT_EQ(HITLS_CFG_AddChainCert(tlsConfig, addCert, false), HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_CFG_GetChainCerts(tlsConfig) != NULL);
-    tlsConfig->certMgrCtx->currentCertIndex = TLS_CERT_KEY_TYPE_NUM;
+    tlsConfig->certMgrCtx->currentCertKeyType = TLS_CERT_KEY_TYPE_UNKNOWN;
     ASSERT_EQ(HITLS_CFG_AddChainCert(tlsConfig, cert, true), HITLS_CERT_ERR_ADD_CHAIN_CERT);
     ASSERT_TRUE(HITLS_CFG_GetChainCerts(tlsConfig) == NULL);
     ASSERT_TRUE(HITLS_CFG_GetChainCerts(NULL) == NULL);
@@ -1451,15 +1451,15 @@ void Test_HITLS_KeyLogCb(HITLS_Ctx *ctx, const char *line)
 * @title  Test the HITLS_LogSecret interface.
 * @precon  nan
 * @brief
-*           1. Transfer an empty context. The label and secret are not empty, and the secret length is not 0. 
+*           1. Transfer an empty context. The label and secret are not empty, and the secret length is not 0.
 *              Expected result 1 is obtained.
-*           2. Transfer a non-empty context. The label is empty, the secret is not empty, 
+*           2. Transfer a non-empty context. The label is empty, the secret is not empty,
 *              and the secret length is not 0. Expected result 1 is obtained.
-*           3. Transfer a non-empty context. The label is not empty, the secret is empty, 
+*           3. Transfer a non-empty context. The label is not empty, the secret is empty,
 *              and the secret length is not 0. Expected result 1 is obtained.
-*           4. Transfer a non-empty context. The label and secret are not empty, and the secret length is 0. 
+*           4. Transfer a non-empty context. The label and secret are not empty, and the secret length is 0.
 *              Expected result 1 is obtained.
-*           5. Transfer a non-empty context. The label and secret are not empty, and the secret length is not 0. 
+*           5. Transfer a non-empty context. The label and secret are not empty, and the secret length is not 0.
 *              Expected result 2 is obtained.
 * @expect  1. return HITLS_NULL_INPUT
 *          2. return HITLS_SUCCES

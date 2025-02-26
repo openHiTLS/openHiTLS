@@ -25,7 +25,9 @@ target_include_directories(process PRIVATE
     ${openHiTLS_SRC}/testcode/framework/tls/transfer/include
     ${openHiTLS_SRC}/testcode/framework/tls/rpc/include
     ${openHiTLS_SRC}/include/bsl
+    ${openHiTLS_SRC}/include/crypto
     ${openHiTLS_SRC}/bsl/sal/include
+    ${openHiTLS_SRC}/bsl/hash/include
     ${openHiTLS_SRC}/bsl/uio/src
     ${openHiTLS_SRC}/bsl/uio/include
     ${openHiTLS_SRC}/include/tls
@@ -41,7 +43,7 @@ target_link_directories(process
 )
 
 target_link_libraries(process
-    tls_hlt    
+    tls_hlt
     tls_frame
     hitls_tls
     hitls_pki
