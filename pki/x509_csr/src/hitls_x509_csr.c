@@ -16,6 +16,7 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_asn1.h"
+#include "bsl_binlog_id.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "bsl_pem_internal.h"
@@ -251,7 +252,7 @@ static int32_t X509CsrAsn1Parse(bool isCopy, const BSL_Buffer *encode, HITLS_X50
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
-    if ((csr->flag & HITLS_X509_CSR_GEN_FLAG) != 0) {
+    if (csr->flag & HITLS_X509_CSR_GEN_FLAG) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -420,7 +421,7 @@ static int32_t EncodeCsrReqInfo(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *re
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    uint8_t version = (uint8_t)reqInfo->version;
+    uint8_t version = reqInfo->version;
     BSL_ASN1_Template templ = { g_reqInfoTempl, sizeof(g_reqInfoTempl) / sizeof(g_reqInfoTempl[0]) };
     BSL_ASN1_Buffer reqInfoAsn[HITLS_X509_CSR_REQINFO_SIZE] = {
         {BSL_ASN1_TAG_INTEGER, 1, &version},
@@ -497,7 +498,7 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr)
 static int32_t X509EncodeAsn1Csr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
 {
     int32_t ret;
-    if ((csr->flag & HITLS_X509_CSR_GEN_FLAG) != 0) {
+    if (csr->flag & HITLS_X509_CSR_GEN_FLAG) {
         if (csr->state != HITLS_X509_CSR_STATE_SIGN && csr->state != HITLS_X509_CSR_STATE_GEN) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
             return HITLS_X509_ERR_CSR_NOT_SIGNED;
@@ -665,7 +666,7 @@ int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr)
     return ret;
 }
 
-int32_t CsrSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId,
+int32_t CsrSignCb(uint32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId,
     HITLS_X509_Csr *csr)
 {
     BSL_ASN1_Buffer reqInfoAsn1 = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL};
@@ -702,7 +703,7 @@ int32_t HITLS_X509_CsrSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if ((csr->flag & HITLS_X509_CSR_PARSE_FLAG) != 0) {
+    if (csr->flag & HITLS_X509_CSR_PARSE_FLAG) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SIGN_AFTER_PARSE);
         return HITLS_X509_ERR_SIGN_AFTER_PARSE;
     }

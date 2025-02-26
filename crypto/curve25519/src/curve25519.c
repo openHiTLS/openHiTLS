@@ -124,6 +124,16 @@ static int32_t GetEncodedPubKey(CRYPT_CURVE25519_Ctx *ctx, void *val, uint32_t l
     return CopyPublicKey(ctx, buffer->data, &buffer->dataLen);
 }
 
+static int32_t GetCurve25519ParaId(void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    *(uint32_t *)val = BSL_CID_CURVE25519;
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
     if (pkey == NULL) {
@@ -158,6 +168,8 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
 #endif
         case CRYPT_CTRL_GET_ENCODED_PUB_KEY:
             return GetEncodedPubKey(pkey, val, len);
+        case CRYPT_CTRL_GET_PARAM_ID:
+            return GetCurve25519ParaId(val, len);
         default:
             break;
     }

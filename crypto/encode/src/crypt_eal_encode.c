@@ -1026,7 +1026,7 @@ static int32_t ParseEncDataAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName, 
 static int32_t ParsePk8EncPriKeyBuff(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_Buffer *buff,
     const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
-    if (pwd->dataLen > PWD_MAX_LEN || (pwd->data == NULL && pwd->dataLen != 0)) {
+    if (pwd == NULL || pwd->dataLen > PWD_MAX_LEN || (pwd->data == NULL && pwd->dataLen != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -2242,6 +2242,27 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type, BSL_Buffer *encode
     return CRYPT_EAL_DecodeBuffKey_Ex(NULL, NULL, format, type, encode, &pwdBuffer, ealPKey);
 }
 
+int32_t CRYPT_EAL_UnKnownKeyParseBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_ParseFormat format,
+    const BSL_Buffer *pwd, BSL_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPKey)
+{
+    int32_t ret;
+    for (int32_t type = CRYPT_PRIKEY_PKCS8_UNENCRYPT; type <= CRYPT_PRIKEY_ECC; type++) {
+        ret = CRYPT_EAL_PriKeyParseBuff(libCtx, attrName, format, type, encode, pwd, ealPKey);
+        if (ret == CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+
+    for (int32_t type = CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ; type <= CRYPT_PUBKEY_RSA; type++) {
+        ret = CRYPT_EAL_PubKeyParseBuff(libCtx, attrName, format, type, encode, ealPKey);
+        if (ret == CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return CRYPT_DECODE_NO_SUPPORT_TYPE;
+}
+
 int32_t CRYPT_EAL_DecodeBuffKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
     BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey)
 {
@@ -2255,6 +2276,8 @@ int32_t CRYPT_EAL_DecodeBuffKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
         case CRYPT_PUBKEY_SUBKEY:
         case CRYPT_PUBKEY_RSA:
             return CRYPT_EAL_PubKeyParseBuff(libCtx, attrName, format, type, encode, ealPKey);
+        case CRYPT_ENCODE_UNKNOW:
+            return CRYPT_EAL_UnKnownKeyParseBuff(libCtx, attrName, format, pwd, encode, ealPKey);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_TYPE);
             return CRYPT_DECODE_NO_SUPPORT_TYPE;
@@ -2267,6 +2290,22 @@ int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
     BSL_Buffer pwdBuffer = {pwd, pwdlen};
     return CRYPT_EAL_DecodeFileKey_Ex(NULL, NULL, format, type,
         path, &pwdBuffer, ealPKey);
+}
+
+int32_t CRYPT_EAL_UnKnownKeyParseFile(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_ParseFormat format,
+    const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealKey)
+{
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BSL_Buffer encode = {data, dataLen};
+    ret = CRYPT_EAL_UnKnownKeyParseBuff(libCtx, attrName, format, pwd, &encode, ealKey);
+    BSL_SAL_Free(data);
+    return ret;
 }
 
 int32_t CRYPT_EAL_DecodeFileKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
@@ -2282,9 +2321,12 @@ int32_t CRYPT_EAL_DecodeFileKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
         case CRYPT_PRIKEY_RSA:
         case CRYPT_PRIKEY_ECC:
             return CRYPT_EAL_PriKeyParseFile(libCtx, attrName, format, type, path, pwd, ealPKey);
+        case CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ:
         case CRYPT_PUBKEY_SUBKEY:
         case CRYPT_PUBKEY_RSA:
             return CRYPT_EAL_PubKeyParseFile(libCtx, attrName, format, type, path, ealPKey);
+        case CRYPT_ENCODE_UNKNOW:
+            return CRYPT_EAL_UnKnownKeyParseFile(libCtx, attrName, format, path, pwd, ealPKey);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_NO_SUPPORT_TYPE);
             return CRYPT_DECODE_NO_SUPPORT_TYPE;
