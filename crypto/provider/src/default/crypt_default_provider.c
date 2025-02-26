@@ -180,6 +180,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             *algInfos = g_defKeyExch;
             break;
         case CRYPT_EAL_OPERAID_KEM:
+            ret = CRYPT_NOT_SUPPORT;
             break;
         case CRYPT_EAL_OPERAID_HASH:
             *algInfos = g_defMds;

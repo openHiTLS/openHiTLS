@@ -182,6 +182,17 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyDecrypt)(void *ctx, const uint8_t *data, uin
 #define CRYPT_EAL_IMPLPKEYEXCH_EXCH  1
 typedef int32_t (*CRYPT_EAL_ImplPkeyExch)(const void *ctx, const void *pubCtx, uint8_t *out, uint32_t *outLen);
 
+// CRYPT_EAL_OPERAID_KEM
+#define CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE_INIT  1
+#define CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE_INIT  2
+#define CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE       3
+#define CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE       4
+
+typedef int32_t (*CRYPT_EAL_ImplPkeyEncapsInit)(const void *pkey, const BSL_Param *params);
+typedef int32_t (*CRYPT_EAL_ImplPkeyDecapsInit)(const void *pkey, const BSL_Param *params);
+typedef int32_t (*CRYPT_EAL_ImplPkeyKemEncapsulate)(const void *pkey, uint8_t *cipher, uint32_t *cipherLen, uint8_t *out, uint32_t *outLen);
+typedef int32_t (*CRYPT_EAL_ImplPkeyKemDecapsulate)(const void *pkey, uint8_t *data, uint32_t *dataLen, uint8_t *out, uint32_t *outLen);
+
 // CRYPT_EAL_OPERAID_HASH
 #define CRYPT_EAL_IMPLMD_NEWCTX      1
 #define CRYPT_EAL_IMPLMD_INITCTX     2

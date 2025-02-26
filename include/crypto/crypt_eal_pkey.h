@@ -46,12 +46,14 @@ typedef struct {
         CRYPT_EccPub eccPub; /**< ECC public key structure */
         CRYPT_Curve25519Pub curve25519Pub; /**< ed25519/x25519 public key structure */
         CRYPT_PaillierPub paillierPub; /**< Paillier public key structure */
+        CRYPT_KemEncapsKey kemEk; /**< kem encaps key structure */
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
 #define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
 #define CRYPT_EAL_PKEY_EXCH_OPERATE     2
 #define CRYPT_EAL_PKEY_SIGN_OPERATE     4
+#define CRYPT_EAL_PKEY_KEM_OPERATE      8
 
 /**
  * @ingroup crypt_eal_pkey
@@ -67,6 +69,7 @@ typedef struct {
         CRYPT_EccPrv eccPrv; /**< ECC private key structure */
         CRYPT_Curve25519Prv curve25519Prv; /**< ed25519/x25519 private key structure */
         CRYPT_PaillierPrv paillierPrv; /**< Paillier private key structure */
+        CRYPT_KemDecapsKey kemDk; /**< kem decaps key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
 
@@ -566,6 +569,62 @@ typedef bool (*CRYPT_EAL_Pct)(CRYPT_EAL_PkeyCtx *pkey);
  *          For other error codes see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeyUpRef(CRYPT_EAL_PkeyCtx *pkey);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Initialize asymmetric key encapsulation context
+ *
+ * @param pkey [in] Pointer to the key context
+ * @param params [in] Algorithm parameters
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyEncapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *params);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Initialize asymmetric key decapsulation context
+ *
+ * @param pkey [in] Pointer to the key context
+ * @param params [in] Algorithm parameters
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyDecapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *params);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Perform key encapsulation operation
+ *
+ * @param pkey [in] Initialized key context
+ * @param cipher [out] Output buffer for encapsulated ciphertext
+ * @param cipherLen [in,out] Input: buffer capacity, Output: actual ciphertext length
+ * @param sharekey [out] Output buffer for shared secret
+ * @param shareKeyLen [in,out] Input: buffer capacity, Output: actual secret length
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyEncaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uint32_t *cipherLen, uint8_t *sharekey,
+    uint32_t *shareKeyLen);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Perform key decapsulation operation
+ *
+ * @param pkey [in] Initialized key context
+ * @param cipher [in] Input encapsulated ciphertext
+ * @param cipherLen [in] Length of the input ciphertext
+ * @param sharekey [out] Output buffer for shared secret
+ * @param shareKeyLen [in,out] Input: buffer capacity, Output: actual secret length
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyDecaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uint32_t cipherLen, uint8_t *sharekey,
+    uint32_t *shareKeyLen);
 
 #ifdef __cplusplus
 }
