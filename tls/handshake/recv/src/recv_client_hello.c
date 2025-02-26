@@ -1939,14 +1939,20 @@ bool IsTls13KeyExchAvailable(TLS_Ctx *ctx)
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
     /* The PSK is not used. The certificate must be set */
-    for (uint32_t i = 0; i < TLS_CERT_KEY_TYPE_NUM; i++) {
-        if (i == TLS_CERT_KEY_TYPE_DSA) {
-            /* in TLS1.3, Do not use the DSA certificate. */
+    BSL_HASH_Hash *certPairs = certMgrCtx->certPairs;
+    BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
+    while (it != BSL_HASH_IterEnd(certPairs)) {
+        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, it);
+        if (keyType == TLS_CERT_KEY_TYPE_DSA) {
+             /* in TLS1.3, Do not use the DSA certificate. */
+            it = BSL_HASH_IterNext(certPairs, it);
             continue;
         }
-        if ((SAL_CERT_GetCert(certMgrCtx, i) != NULL) && (SAL_CERT_GetPrivateKey(certMgrCtx, i) != NULL)) {
+        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, it);
+        if (certPair != NULL && certPair->cert != NULL && certPair->privateKey != NULL) {
             return true;
         }
+        it = BSL_HASH_IterNext(certPairs, it);
     }
     return false;
 }

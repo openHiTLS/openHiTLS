@@ -1018,7 +1018,7 @@
             "cm": {
                 ".features": ["proto"],
                 ".srcs": "tls/cm/src/*.c",
-                ".deps": ["bsl::tlv", "tls::alert", "tls::handshake", "tls::ccs", "tls::app", "tls::config"],
+                ".deps": ["bsl::hash", "bsl::tlv", "tls::alert", "tls::handshake", "tls::ccs", "tls::app", "tls::config"],
                 ".include": [
                     "include",
                     "tls/handshake/include",
@@ -1044,7 +1044,7 @@
             "cert": {
                 ".features": ["proto"],
                 ".srcs": "tls/cert/**/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal"],
                 ".include": [
                     "include",
                     "include/tls",
@@ -1059,7 +1059,7 @@
             "config": {
                 ".features": ["proto"],
                 ".srcs": "tls/config/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal", "tls::cert", "tls::crypt"],
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "tls::cert", "tls::crypt"],
                 ".include": [
                     "tls/record/include"
                 ]
@@ -1068,7 +1068,7 @@
             "record": {
                 ".features": ["proto"],
                 ".srcs": "tls/record/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::tlv", "bsl::uio", "tls::config", "tls::crypt"],
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "bsl::tlv", "bsl::uio", "tls::config", "tls::crypt"],
                 ".include": [
                     "tls/handshake/include",
                     "tls/handshake/common/include",
@@ -1113,7 +1113,7 @@
                     "tls/record/src",
                     "tls/alert/include"
                 ],
-                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
             },
             "app": {
                 ".features": ["proto"],
