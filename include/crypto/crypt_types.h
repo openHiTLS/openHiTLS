@@ -196,6 +196,13 @@ typedef CRYPT_Data CRYPT_Curve25519Prv;
 /**
  * @ingroup crypt_types
  *
+ * kem decaps key parameter structure
+ */
+typedef CRYPT_Data CRYPT_KemDecapsKey;
+
+/**
+ * @ingroup crypt_types
+ *
  * RSA public key parameter structure
  */
 typedef struct {
@@ -267,6 +274,13 @@ typedef CRYPT_Data CRYPT_EcdhPub;
  * ed25519/x25519 public key parameter structure
  */
 typedef CRYPT_Data CRYPT_Curve25519Pub;
+
+/**
+ * @ingroup crypt_types
+ *
+ * kem encaps key parameter structure
+ */
+typedef CRYPT_Data CRYPT_KemEncapsKey;
 
 /**
  * @ingroup crypt_types
@@ -531,6 +545,8 @@ typedef enum {
     CRYPT_EVENT_ERR,          /**< An error occurred. */
     CRYPT_EVENT_SETSSP,       /**< Adding and Modifying Password Data and SSP. */
     CRYPT_EVENT_GETSSP,       /**< Access password data and SSP. */
+    CRYPT_EVENT_ENCAPS,       /**< Key encapsulation. */
+    CRYPT_EVENT_DECAPS,       /**< Key decapsulation. */
     CRYPT_EVENT_BLIND,        /**< Message blinding. */
     CRYPT_EVENT_UNBLIND,      /**< Signature unblinding. */
     CRYPT_EVENT_MAX

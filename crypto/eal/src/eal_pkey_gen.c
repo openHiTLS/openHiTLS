@@ -1066,8 +1066,37 @@ static int32_t CRYPT_EAL_SetSignMethod(const CRYPT_EAL_Func *funcSign, EAL_PkeyU
     return CRYPT_SUCCESS;
 }
 
+static int32_t CRYPT_EAL_SetKemMethod(const CRYPT_EAL_Func *funcKem, EAL_PkeyUnitaryMethod *method)
+{
+    int32_t index = 0;
+    if (funcKem != NULL) {
+        while (funcKem[index].id != 0) {
+            switch (funcKem[index].id) {
+                case CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE_INIT:
+                    method->encapsInit = funcKem[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE_INIT:
+                    method->decapsInit = funcKem[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE:
+                    method->encaps = funcKem[index].func;
+                    break;
+                case CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE:
+                    method->decaps = funcKem[index].func;
+                    break;
+                default:
+                    BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                    return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
+            }
+        index++;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
 static int32_t CRYPT_EAL_SetPkeyMethod(CRYPT_EAL_PkeyCtx *ctx, const CRYPT_EAL_Func *funcsKeyMgmt,
-    const CRYPT_EAL_Func *funcsAsyCipher, const CRYPT_EAL_Func *funcsExch, const CRYPT_EAL_Func *funcSign)
+    const CRYPT_EAL_Func *funcsAsyCipher, const CRYPT_EAL_Func *funcsExch, const CRYPT_EAL_Func *funcSign,
+    const CRYPT_EAL_Func *funcKem)
 {
     int32_t ret;
     EAL_PkeyUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_PkeyUnitaryMethod));
@@ -1099,6 +1128,11 @@ static int32_t CRYPT_EAL_SetPkeyMethod(CRYPT_EAL_PkeyCtx *ctx, const CRYPT_EAL_F
         BSL_SAL_FREE(method);
         return ret;
     }
+    ret = CRYPT_EAL_SetKemMethod(funcKem, method);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(method);
+        return ret;
+    }
     ctx->method = method;
     return CRYPT_SUCCESS;
 }
@@ -1110,6 +1144,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_
     const CRYPT_EAL_Func *funcsAsyCipher = NULL;
     const CRYPT_EAL_Func *funcsExch = NULL;
     const CRYPT_EAL_Func *funcSign = NULL;
+    const CRYPT_EAL_Func *funcKem = NULL;
     void *provCtx = NULL;
     int32_t ret;
     ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_KEYMGMT, algId, attrName,
@@ -1142,12 +1177,20 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_
             return NULL;
         }
     }
+    if ((pkeyOperType & CRYPT_EAL_PKEY_KEM_OPERATE) == CRYPT_EAL_PKEY_KEM_OPERATE) {
+        ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_KEM, algId, attrName,
+            &funcKem, &provCtx);
+        if (ret != CRYPT_SUCCESS) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, algId, ret);
+            return NULL;
+        }
+    }
     CRYPT_EAL_PkeyCtx *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_PkeyCtx));
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, algId, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    ret = CRYPT_EAL_SetPkeyMethod(ctx, funcsKeyMgmt, funcsAsyCipher, funcsExch, funcSign);
+    ret = CRYPT_EAL_SetPkeyMethod(ctx, funcsKeyMgmt, funcsAsyCipher, funcsExch, funcSign, funcKem);
     if (ret != BSL_SUCCESS) {
         BSL_SAL_FREE(ctx);
         return NULL;
