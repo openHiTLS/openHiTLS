@@ -296,6 +296,7 @@ typedef enum {
     HITLS_CERT_ERR_KEYUSAGE,                        /**< Failed to verify the certificate keyusage. */
     HITLS_CERT_ERR_INVALID_STORE_TYPE,              /**< Invalid store type */
     HITLS_CERT_ERR_X509_REF,                        /**< Certificate reference counting error. */
+    HITLS_CERT_ERR_INSERT_CERTPAIR,                 /**< Certificate insert certPair error. */
 
     HITLS_CRYPT_FAIL_START = 0x020D0001,           /**< Crypt adaptation module error code start bit. */
     HITLS_CRYPT_ERR_GENERATE_RANDOM,               /**< Failed to generate a random number. */
