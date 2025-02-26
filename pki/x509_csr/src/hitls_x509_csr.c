@@ -170,8 +170,10 @@ static int32_t ParseCertRequestInfo(BSL_ASN1_Buffer *asnArr, HITLS_X509_Csr *csr
         return ret;
     }
     /* public key info */
-    ret = CRYPT_EAL_ParseAsn1SubPubkey(asnArr[HITLS_X509_CSR_REQINFO_PUBKEY_INFO_IDX].buff,
-        asnArr[HITLS_X509_CSR_REQINFO_PUBKEY_INFO_IDX].len, &csr->reqInfo.ealPubKey, false);
+    BSL_Buffer subPubKeyBuff = {asnArr[HITLS_X509_CSR_REQINFO_PUBKEY_INFO_IDX].buff,
+        asnArr[HITLS_X509_CSR_REQINFO_PUBKEY_INFO_IDX].len};
+    ret = CRYPT_EAL_DecodeBuffKey_Ex(csr->libCtx, csr->attrName, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
+        &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&csr->reqInfo.ealPubKey);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
