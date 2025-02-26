@@ -1059,3 +1059,78 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_CURVE25519_GET_ENCODED_PUB_KEY_API_TC001
+ * @title  CURVE25519: CRYPT_EAL_PkeyCtrl with CRYPT_CTRL_GET_ENCODED_PUB_KEY test.
+ * @precon Create a valid public key.
+ * @brief
+ *    1. Create the context of the curve25519 algorithm, expected result 1.
+ *    2. Call the CRYPT_EAL_PkeyCtrl method with CRYPT_CTRL_GET_ENCODED_PUB_KEY:
+ *       (1). pkey = NULL, expected result 2.
+ *       (2). buffer = NULL, expected result 2.
+ *       (3). buffer.data = NULL, expected result 2.
+ *       (4). buffer.dataLen = 0, expected result 2.
+ *       (5). No public key in context, expected result 3.
+ *       (6). buffer.dataLen < CRYPT_CURVE25519_KEYLEN, expected result 4.
+ *       (7). All parameters are valid, expected result 5.
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_NULL_INPUT
+ *    3. CRYPT_CURVE25519_NO_PUBKEY
+ *    4. CRYPT_CURVE25519_BUFF_LEN_NOT_ENOUGH
+ *    5. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_GET_ENCODED_PUB_KEY_API_TC001(int id, int isProvider)
+{
+    uint8_t key[CRYPT_CURVE25519_KEYLEN] = {0};
+    CRYPT_EAL_PkeyPub pub = {0};
+    Set_Curve25519_Pub(&pub, id, key, CRYPT_CURVE25519_KEYLEN);
+    BSL_Buffer buffer = {0};
+    uint8_t bufferData[CRYPT_CURVE25519_KEYLEN] = {0};
+
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    if (isProvider == 1) {
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    } else {
+        pkey = CRYPT_EAL_PkeyNewCtx(id);
+    }
+    ASSERT_TRUE(pkey != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(NULL, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(buffer)), CRYPT_NULL_INPUT);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ENCODED_PUB_KEY, NULL, sizeof(buffer)), CRYPT_NULL_INPUT);
+
+    buffer.data = bufferData;
+    buffer.dataLen = CRYPT_CURVE25519_KEYLEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(buffer)),
+        CRYPT_CURVE25519_NO_PUBKEY);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
+
+    buffer.data = NULL;
+    buffer.dataLen = CRYPT_CURVE25519_KEYLEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(buffer)), CRYPT_NULL_INPUT);
+
+    buffer.data = bufferData;
+    buffer.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(buffer)),
+        CRYPT_CURVE25519_KEYLEN_ERROR);
+
+    buffer.data = bufferData;
+    buffer.dataLen = CRYPT_CURVE25519_KEYLEN - 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(buffer)),
+        CRYPT_CURVE25519_KEYLEN_ERROR);
+
+    buffer.data = bufferData;
+    buffer.dataLen = CRYPT_CURVE25519_KEYLEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(buffer)), CRYPT_SUCCESS);
+    ASSERT_EQ(buffer.dataLen, CRYPT_CURVE25519_KEYLEN);
+    ASSERT_EQ(memcmp(buffer.data, key, CRYPT_CURVE25519_KEYLEN), 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */

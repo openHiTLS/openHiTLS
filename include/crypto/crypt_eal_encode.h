@@ -48,6 +48,10 @@ extern "C" {
 int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
     BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
 
+
+int32_t CRYPT_EAL_DecodeBuffKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
+    BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
+
 /**
  * @ingroup crypt_eal_encode
  * @brief   Decode formatted file of pkey
@@ -64,6 +68,10 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
  */
 int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
     uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
+
+
+int32_t CRYPT_EAL_DecodeFileKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
+    const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_encode

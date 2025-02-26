@@ -355,7 +355,7 @@ void SDV_BSL_ASN1_PARSE_SUBPUBKEY_TC001(int encodeType, Hex *subKeyInfo)
     RegisterLogFunc();
     (void)encodeType;
     CRYPT_EAL_PkeyCtx *pctx = NULL;
-    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(NULL, NULL, subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), 0);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pctx);
@@ -548,15 +548,15 @@ void SDV_BSL_ASN1_ENCODE_ENCRYPTED_PRIKEY_BUFF_TC001(char *path, int fileType, i
 
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     BSL_Buffer encodeAsn1 = {0};
+    BSL_Buffer pwdBuff = {pwd->x, pwd->len};
     BSL_Buffer encodeAsn1Out = {0};
     CRYPT_Pbkdf2Param param = {0};
     param.pbesId = BSL_CID_PBES2;
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = hmacId;
     param.symId = symId;
-    param.pwd = pwd->x;
+    param.pwd = pwdBuff;
     param.saltLen = saltLen;
-    param.pwdLen = pwd->len;
     param.itCnt = itCnt;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, pwd->x, pwd->len, &pkeyCtx), CRYPT_SUCCESS);

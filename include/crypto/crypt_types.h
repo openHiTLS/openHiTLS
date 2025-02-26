@@ -487,6 +487,7 @@ typedef enum {
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey generate pubkey. */
     CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,      /**< Set the random bytes for RSA-BSSA. */
     CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
+    CRYPT_CTRL_GET_ENCODED_PUB_KEY, /**< Get TLS  prikey genarate x25519 pubkey. */
 } CRYPT_PkeyCtrl;
 
 /**
@@ -621,6 +622,7 @@ typedef enum {
     CRYPT_PRIKEY_PKCS8_ENCRYPT,
     CRYPT_PRIKEY_RSA,
     CRYPT_PRIKEY_ECC,
+    CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
     CRYPT_PUBKEY_SUBKEY,
     CRYPT_PUBKEY_RSA
 } CRYPT_ENCODE_TYPE;
@@ -640,8 +642,7 @@ typedef struct {
     uint32_t hmacId;
     uint32_t symId;
     uint32_t saltLen;
-    uint8_t *pwd;
-    uint32_t pwdLen;
+    BSL_Buffer pwd;
     uint32_t itCnt;
 } CRYPT_Pbkdf2Param;
 
