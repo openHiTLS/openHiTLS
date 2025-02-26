@@ -120,65 +120,133 @@ int32_t CheckCertCallBackRetVal(int32_t cmd, int32_t callBackRet, uint32_t bingL
 
 HITLS_CERT_Store *SAL_CERT_StoreNew(const CERT_MgrCtx *mgrCtx)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_ProviderStoreCtxNew(mgrCtx->libCtx, mgrCtx->attrName)
+#else
     return mgrCtx->method.certStoreNew();
+#endif
 }
 
 HITLS_CERT_Store *SAL_CERT_StoreDup(const CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_Adapt_StoreDup(store);
+#else
     return mgrCtx->method.certStoreDup(store);
+#endif
 }
 
 void SAL_CERT_StoreFree(const CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_StoreCtxFree(store);
+#else
     mgrCtx->method.certStoreFree(store);
-    return;
+#endif    
 }
 
 int32_t SAL_CERT_BuildChain(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_X509 *cert,
     HITLS_CERT_X509 **certList, uint32_t *num)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_Adapt_BuildCertChain(config, store, cert, certList, num);
+#else
     int32_t ret = config->certMgrCtx->method.buildCertChain(config, store, cert, certList, num);
     return CheckCertCallBackRetVal(
         HITLS_CERT_CALLBACK_BUILD_CERT_CHAIN, ret, BINLOG_ID16083, HITLS_CERT_ERR_BUILD_CHAIN);
+#endif
 }
 
 int32_t SAL_CERT_VerifyChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT_X509 **certList, uint32_t num)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_Adapt_VerifyCertChain(ctx, store, list, num);
+#else
     int32_t ret = ctx->config.tlsConfig.certMgrCtx->method.verifyCertChain(ctx, store, certList, num);
     return CheckCertCallBackRetVal(
         HITLS_CERT_CALLBACK_VERIFY_CERT_CHAIN, ret, BINLOG_ID16084, HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+#endif
 }
 
 int32_t SAL_CERT_X509Encode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf, uint32_t len, uint32_t *usedLen)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_Adapt_CertEncode(ctx, cert, buf, len, usedLen);
+#else
     int32_t ret = ctx->config.tlsConfig.certMgrCtx->method.certEncode(ctx, cert, buf, len, usedLen);
     return CheckCertCallBackRetVal(HITLS_CERT_CALLBACK_CERT_ENCODE, ret, BINLOG_ID16086,
         HITLS_CERT_ERR_ENCODE_CERT);
+#endif
+}
+
+static HITLS_CERT_X509 *CERT_ProviderCertParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
+    HITLS_ParseType type, HITLS_ParseFormat format)
+{
+    (void)config;
+    BSL_Buffer encodedCert = { NULL, 0 };
+    int ret;
+    HITLS_X509_Cert *cert = NULL;
+    switch (type) {
+        case TLS_PARSE_TYPE_FILE:
+            ret = HITLS_X509_ProviderCertParseFile(config->certMgrCtx->libCtx, config->certMgrCtx->attrName,
+                (const char *)buf, &cert);
+            break;
+        case TLS_PARSE_TYPE_BUFF:
+            encodedCert.data = (uint8_t *)(uintptr_t)buf;
+            encodedCert.dataLen = len;
+            ret = HITLS_X509_ProviderCertParseBuff(config->certMgrCtx->libCtx, config->certMgrCtx->attrName,
+                format, &encodedCert, &cert);
+            break;
+        default:
+            ret = HITLS_X509_ADAPT_UNSUPPORT_FORMAT;
+            break;
+    }
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return NULL;
+    }
+
+    return cert;
 }
 
 HITLS_CERT_X509 *SAL_CERT_X509Parse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return CERT_ProviderCertParse(config, buf, len, type, format);
+#else
     return config->certMgrCtx->method.certParse(config, buf, len, type, format);
+#endif
 }
 
 HITLS_CERT_X509 *SAL_CERT_X509Dup(const CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return (HITLS_CERT_Key *)CRYPT_EAL_PkeyDupCtx(key);
+#else
     return mgrCtx->method.certDup(cert);
+#endif
 }
 
 void SAL_CERT_X509Free(HITLS_CERT_X509 *cert)
 {
+#ifdef HITLS_TLS_PROVIDER
+    HITLS_X509_CertFree(cert);
+#else
     if (cert == NULL) {
         return;
     }
     g_certMgrMethod.certFree(cert);
-    return;
+#endif    
 }
 
 HITLS_CERT_X509 *SAL_CERT_X509Ref(const CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
 {
+#ifdef HITLS_TLS_PROVIDER
+    return HITLS_X509_Adapt_CertRef(cert);
+#else
     return mgrCtx->method.certRef(cert);
+#endif
 }
 
 HITLS_CERT_Key *SAL_CERT_KeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
