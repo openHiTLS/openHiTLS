@@ -1725,3 +1725,69 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_DH_CTRL_GET_ENCODED_PUB_KEY_API_TC001
+ * @title  DH: CRYPT_EAL_PkeyCtrl with CRYPT_CTRL_GET_ENCODED_PUB_KEY test.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Create the context(ctx) of the dh algorithm, expected result 1
+ *    2. Call the CRYPT_EAL_PkeyCtrl method with CRYPT_CTRL_GET_ENCODED_PUB_KEY:
+ *       (1) ctx = NULL, expected result 2
+ *       (2) val = NULL, expected result 3
+ *       (3) len = 0, expected result 4
+ *       (4) ctx has no public key, expected result 5
+ *    3. Set parameters and generate key pair, expected result 6
+ *    4. Call the CRYPT_EAL_PkeyCtrl method with CRYPT_CTRL_GET_ENCODED_PUB_KEY, expected result 7
+ *    5. Verify the encoded public key is not empty, expected result 8
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_NULL_INPUT
+ *    3. CRYPT_NULL_INPUT
+ *    4. CRYPT_INVALID_ARG
+ *    5. CRYPT_DH_KEYINFO_ERROR
+ *    6. CRYPT_SUCCESS
+ *    7. CRYPT_SUCCESS
+ *    8. The encoded public key is not empty.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_CTRL_GET_ENCODED_PUB_KEY_API_TC001(int isProvider, int paraId)
+{
+    uint8_t buffer[1024] = {};
+    BSL_Buffer encodedKey = {buffer, sizeof(buffer)};
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+
+    TestMemInit();
+    if (isProvider == 1) {
+        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DH,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
+    } else {
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    }
+    ASSERT_TRUE(ctx != NULL);
+
+    encodedKey.data = NULL;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(NULL, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &encodedKey, sizeof(BSL_Buffer)), CRYPT_NULL_INPUT);
+    encodedKey.data = buffer;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, NULL, sizeof(BSL_Buffer)), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &encodedKey, 0), CRYPT_INVALID_ARG);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &encodedKey, sizeof(BSL_Buffer)),
+        CRYPT_DH_KEYINFO_ERROR);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, paraId), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    encodedKey.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &encodedKey, sizeof(BSL_Buffer)),
+        CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
+    encodedKey.dataLen = sizeof(buffer);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &encodedKey, sizeof(BSL_Buffer)), CRYPT_SUCCESS);
+    
+    ASSERT_TRUE(encodedKey.dataLen > 0);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */

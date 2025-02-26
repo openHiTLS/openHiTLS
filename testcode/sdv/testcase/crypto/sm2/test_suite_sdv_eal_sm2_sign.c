@@ -16,6 +16,7 @@
 
 /* BEGIN_HEADER */
 
+#include "crypt_eal_pkey.h"
 #include "eal_pkey_local.h"
 
 #define SM2_SIGN_MAX_LEN 74
@@ -1123,5 +1124,86 @@ void SDV_CRYPTO_SM2_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_GET_ENCODED_PUB_KEY_API_TC001
+ * @title  SM2 CRYPT_EAL_PkeyCtrl: Test CRYPT_CTRL_GET_ENCODED_PUB_KEY option.
+ * @precon Vector: public key.
+ * @brief
+ *    1. Create the context of the SM2 algorithm, expected result 1
+ *    2. Test CRYPT_CTRL_GET_ENCODED_PUB_KEY with NULL context, expected result 2
+ *    3. Test CRYPT_CTRL_GET_ENCODED_PUB_KEY with NULL buffer, expected result 3
+ *    4. Test CRYPT_CTRL_GET_ENCODED_PUB_KEY with empty public key, expected result 4
+ *    5. Set public key, expected result 5
+ *    6. Test CRYPT_CTRL_GET_ENCODED_PUB_KEY with NULL buffer data, expected result 6
+ *    7. Test CRYPT_CTRL_GET_ENCODED_PUB_KEY with zero buffer length, expected result 7
+ *    8. Test CRYPT_CTRL_GET_ENCODED_PUB_KEY with valid parameters, expected result 8
+ *    9. Compare the encoded public key with original key, expected result 9
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2-3. CRYPT_NULL_INPUT
+ *    4. CRYPT_ECC_PKEY_ERR_EMPTY_KEY
+ *    5. CRYPT_SUCCESS
+ *    6. CRYPT_NULL_INPUT
+ *    7. CRYPT_NULL_INPUT
+ *    8. CRYPT_SUCCESS
+ *    9. Both are the same.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_GET_ENCODED_PUB_KEY_API_TC001(Hex *pubKey, int isProvider)
+{
+    TestMemInit();
+    uint8_t encodedPubKey[128] = {0};
+    BSL_Buffer buffer = {0};
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pub = {0};
+
+    /* Create context */
+    if (isProvider == 1) {
+        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+            CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    } else {
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    }
+    ASSERT_TRUE(ctx != NULL);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = sizeof(encodedPubKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(NULL, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), 
+              CRYPT_NULL_INPUT);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, NULL, sizeof(BSL_Buffer)), 
+              CRYPT_NULL_INPUT);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = sizeof(encodedPubKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), 
+              CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
+
+    SetSm2PubKey(&pub, pubKey->x, pubKey->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
+
+    buffer.data = NULL;
+    buffer.dataLen = sizeof(encodedPubKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), 
+              CRYPT_NULL_INPUT);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), 
+              CRYPT_NULL_INPUT);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = sizeof(encodedPubKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), 
+              CRYPT_SUCCESS);
+
+    ASSERT_TRUE(buffer.dataLen == pubKey->len);
+    ASSERT_TRUE(memcmp(buffer.data, pubKey->x, pubKey->len) == 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */

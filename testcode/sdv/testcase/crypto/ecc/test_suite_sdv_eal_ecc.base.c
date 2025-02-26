@@ -936,3 +936,91 @@ EXIT:
     return ret;
 }
 
+int EAL_PkeyCtrl_Api_TC004(int algId, int paraId, Hex *pubKeyX, Hex *pubKeyY)
+{
+    int ret = ERROR;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pub = {0};
+    KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
+    BSL_Buffer buffer = {0};
+    uint8_t encodedPubKey[PUBKEY_MAX_LEN] = {0};
+
+    TestMemInit();
+
+    ctx = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
+    ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, paraId) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE_AND_LOG("EccPointToBuffer",
+        EccPointToBuffer(pubKeyX, pubKeyY, CRYPT_POINT_UNCOMPRESSED, &pubKeyVector) == CRYPT_SUCCESS);
+
+    /* Set the public key. */
+    Ecc_SetPubKey(&pub, algId, pubKeyVector.data, pubKeyVector.len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, NULL, sizeof(BSL_Buffer)), CRYPT_NULL_INPUT);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = PUBKEY_MAX_LEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(int)), CRYPT_ECC_PKEY_ERR_CTRL_LEN);
+
+    buffer.data = NULL;
+    buffer.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), CRYPT_NULL_INPUT);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = PUBKEY_MAX_LEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), CRYPT_SUCCESS);
+
+    ASSERT_TRUE_AND_LOG("Compare PubKey Len", buffer.dataLen == pubKeyVector.len);
+    ASSERT_TRUE_AND_LOG("Compare PubKey", memcmp(buffer.data, pubKeyVector.data, pubKeyVector.len) == 0);
+
+    CRYPT_EAL_PkeyCtx *emptyCtx = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_TRUE_AND_LOG("NewEmptyCtx", emptyCtx != NULL);
+    ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(emptyCtx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
+    
+    buffer.data = encodedPubKey;
+    buffer.dataLen = PUBKEY_MAX_LEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(emptyCtx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), 
+              CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
+
+    ret = SUCCESS;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(emptyCtx);
+    return ret;
+}
+
+int EAL_PkeyCtrl_Provider_Api_TC004(int algId, int paraId, Hex *pubKeyX, Hex *pubKeyY)
+{
+    int ret = ERROR;
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pub = {0};
+    KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
+    BSL_Buffer buffer = {0};
+    uint8_t encodedPubKey[PUBKEY_MAX_LEN] = {0};
+
+    TestMemInit();
+
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
+    ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
+    ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, paraId) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE_AND_LOG("EccPointToBuffer",
+        EccPointToBuffer(pubKeyX, pubKeyY, CRYPT_POINT_UNCOMPRESSED, &pubKeyVector) == CRYPT_SUCCESS);
+
+    Ecc_SetPubKey(&pub, algId, pubKeyVector.data, pubKeyVector.len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
+
+    buffer.data = encodedPubKey;
+    buffer.dataLen = PUBKEY_MAX_LEN;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_ENCODED_PUB_KEY, &buffer, sizeof(BSL_Buffer)), CRYPT_SUCCESS);
+
+    ASSERT_TRUE_AND_LOG("Compare PubKey Len", buffer.dataLen == pubKeyVector.len);
+    ASSERT_TRUE_AND_LOG("Compare PubKey", memcmp(buffer.data, pubKeyVector.data, pubKeyVector.len) == 0);
+
+    ret = SUCCESS;
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return ret;
+}
