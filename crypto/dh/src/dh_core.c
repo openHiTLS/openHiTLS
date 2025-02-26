@@ -831,6 +831,43 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
     return CRYPT_SUCCESS;
 }
 
+static int32_t CopyPublicKey(const CRYPT_DH_Ctx *ctx, uint8_t *dest, uint32_t *destLen)
+{
+    if (ctx->y == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
+        return CRYPT_DH_KEYINFO_ERROR;
+    }
+    
+    if (BN_Bytes(ctx->y) > *destLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
+    }
+    
+    int32_t ret = BN_Bn2Bin(ctx->y, dest, destLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetEncodedPubKey(const CRYPT_DH_Ctx *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(BSL_Buffer)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    
+    BSL_Buffer *buffer = (BSL_Buffer *)val;
+    if (buffer == NULL || buffer->data == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    
+    return CopyPublicKey(ctx, buffer->data, &buffer->dataLen);
+}
+
 int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 {
     if (ctx == NULL || para == NULL) {
@@ -842,21 +879,12 @@ int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->y == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
-        return CRYPT_DH_KEYINFO_ERROR;
-    }
-    if (BN_Bytes(ctx->y) > pub->valueLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
-    }
-    uint32_t useLen = pub->valueLen;
-    int32_t ret = BN_Bn2Bin(ctx->y, pub->value, &(useLen));
+    uint32_t usedLen = pub->valueLen;
+    int32_t ret = CopyPublicKey(ctx, pub->value, &usedLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    pub->useLen = useLen;
+    pub->useLen = usedLen;
     return CRYPT_SUCCESS;
 }
 
@@ -938,6 +966,8 @@ int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
                 return CRYPT_INVALID_ARG;
             }
             return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+        case CRYPT_CTRL_GET_ENCODED_PUB_KEY:
+            return GetEncodedPubKey(ctx, val, len);
         default:
             break;
     }

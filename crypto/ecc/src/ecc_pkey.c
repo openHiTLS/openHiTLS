@@ -356,6 +356,31 @@ ERR:
     return ret;
 }
 
+static int32_t GetEncodedPubKey(ECC_Pkey *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(BSL_Buffer)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
+        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
+    }
+    BSL_Buffer *buffer = (BSL_Buffer *)val;
+    if (buffer == NULL || buffer->data == NULL || buffer->dataLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->pubkey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
+        return CRYPT_ECC_PKEY_ERR_EMPTY_KEY;
+    }
+    uint32_t useLen = buffer->dataLen;
+    int32_t ret = ECC_EncodePoint(ctx->para, ctx->pubkey, buffer->data, &useLen, CRYPT_POINT_UNCOMPRESSED);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    buffer->dataLen = useLen;
+    return CRYPT_SUCCESS;
+}
+
 int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
 {
     if ((ctx == NULL) || (val == NULL && opt != CRYPT_CTRL_GEN_ECC_PUBLICKEY)) {
@@ -388,6 +413,8 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
         return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
     } else if (opt == CRYPT_CTRL_GEN_ECC_PUBLICKEY) {
         return GenPublicKey(ctx);
+    } else if (opt == CRYPT_CTRL_GET_ENCODED_PUB_KEY) {
+        return GetEncodedPubKey(ctx, val, len);
     }
 
     BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);

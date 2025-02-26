@@ -94,6 +94,36 @@ static int32_t CRYPT_CURVE25519_GetLen(CRYPT_CURVE25519_Ctx *ctx, GetLenFunc fun
     return CRYPT_SUCCESS;
 }
 
+static int32_t CopyPublicKey(const CRYPT_CURVE25519_Ctx *ctx, uint8_t *dest, uint32_t *destLen)
+{
+    if ((ctx->keyType & CURVE25519_PUBKEY) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_NO_PUBKEY);
+        return CRYPT_CURVE25519_NO_PUBKEY;
+    }
+    if (*destLen < CRYPT_CURVE25519_KEYLEN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_KEYLEN_ERROR);
+        return CRYPT_CURVE25519_KEYLEN_ERROR;
+    }
+    (void)memcpy_s(dest, *destLen, ctx->pubKey, CRYPT_CURVE25519_KEYLEN);
+    *destLen = CRYPT_CURVE25519_KEYLEN;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetEncodedPubKey(CRYPT_CURVE25519_Ctx *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(BSL_Buffer)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+
+    BSL_Buffer *buffer = (BSL_Buffer *)val;
+    if (buffer == NULL || buffer->data == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return CopyPublicKey(ctx, buffer->data, &buffer->dataLen);
+}
+
 int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
     if (pkey == NULL) {
@@ -126,6 +156,8 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
             pkey->keyType |= CURVE25519_PUBKEY;
             return CRYPT_SUCCESS;
 #endif
+        case CRYPT_CTRL_GET_ENCODED_PUB_KEY:
+            return GetEncodedPubKey(pkey, val, len);
         default:
             break;
     }
@@ -209,22 +241,12 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pub->valueLen < CRYPT_CURVE25519_KEYLEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_KEYLEN_ERROR);
-        return CRYPT_CURVE25519_KEYLEN_ERROR;
+    uint32_t usedLen = pub->valueLen;
+    int32_t ret = CopyPublicKey(pkey, pub->value, &usedLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
-
-    if ((pkey->keyType & CURVE25519_PUBKEY) == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_NO_PUBKEY);
-        return CRYPT_CURVE25519_NO_PUBKEY;
-    }
-
-    /* The keyLen has been checked and does not have the overlong problem.
-       The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
-    /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pub->value, pub->valueLen, pkey->pubKey, CRYPT_CURVE25519_KEYLEN);
-
-    pub->useLen = CRYPT_CURVE25519_KEYLEN;
+    pub->useLen = usedLen;
     return CRYPT_SUCCESS;
 }
 

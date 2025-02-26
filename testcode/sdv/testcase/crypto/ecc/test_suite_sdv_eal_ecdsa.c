@@ -519,6 +519,8 @@ EXIT:
 void SDV_CRYPTO_ECDSA_CTRL_API_TC003(int eccId, Hex *pubKeyX, Hex *pubKeyY)
 {
     ASSERT_TRUE(EAL_PkeyCtrl_Api_TC003(CRYPT_PKEY_ECDSA, eccId, pubKeyX, pubKeyY) == 0);
+    ASSERT_TRUE(EAL_PkeyCtrl_Api_TC004(CRYPT_PKEY_ECDSA, eccId, pubKeyX, pubKeyY) == 0);
+    ASSERT_TRUE(EAL_PkeyCtrl_Provider_Api_TC004(CRYPT_PKEY_ECDSA, eccId, pubKeyX, pubKeyY) == 0);
 EXIT:
     return;
 }
