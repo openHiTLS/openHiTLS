@@ -16,6 +16,7 @@
 #define CERT_MGR_CTX_H
 
 #include <stdint.h>
+#include "hitls_crypt_type.h"
 #include "hitls_cert_reg.h"
 #include "cert.h"
 
@@ -54,6 +55,8 @@ struct CertMgrCtxInner {
     HITLS_PasswordCb defaultPasswdCb;           /* Default password callback, used in loading certificate. */
     void *defaultPasswdCbUserData;              /* Set the userData used by the default password callback.  */
     HITLS_VerifyCb verifyCb;                    /* Certificate verification callback function */
+    CRYPT_EalLibCtx *libCtx;
+    const char *attrName;
 };
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType);

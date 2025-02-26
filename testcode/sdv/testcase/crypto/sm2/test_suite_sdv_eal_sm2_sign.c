@@ -932,7 +932,7 @@ void SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001(int isProvider)
     ASSERT_EQ(dupCtx->references.count, 1);
     signLen = sizeof(signBuf);
     ASSERT_EQ(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen), CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen), CRYPT_SUCCESS);
 
     if (isProvider == 1) {
         cpyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
@@ -1202,6 +1202,42 @@ void SDV_CRYPTO_SM2_GET_ENCODED_PUB_KEY_API_TC001(Hex *pubKey, int isProvider)
 
     ASSERT_TRUE(buffer.dataLen == pubKey->len);
     ASSERT_TRUE(memcmp(buffer.data, pubKey->x, pubKey->len) == 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_GET_PARA_ID_FUNC_TC001
+ * @title  SM2: Test CRYPT_EAL_PkeyGetParaId interface.
+ * @precon None
+ * @brief
+ *    1. Test CRYPT_EAL_PkeyGetParaId with NULL context, expected result 1
+ *    2. Test CRYPT_EAL_PkeyGetParaId to get para id, expected result 2
+ * @expect
+ *    1. Return ctx != NULL
+ *    2. Return CRYPT_ECC_SM2
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_GET_PARA_ID_FUNC_TC001(int isProvider)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    TestMemInit();
+
+    CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(NULL);
+    ASSERT_EQ(paraId, CRYPT_PKEY_PARAID_MAX);
+
+    // Create context and test without parameters
+    if (isProvider == 1) {
+        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SM2, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default");
+    } else {
+        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    }
+    ASSERT_TRUE(ctx != NULL);
+    
+    paraId = CRYPT_EAL_PkeyGetParaId(ctx);
+    ASSERT_EQ(paraId, CRYPT_ECC_SM2);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

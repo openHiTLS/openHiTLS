@@ -1053,7 +1053,8 @@
                     "bsl/asn1/include",
                     "pki/x509_cert/include",
                     "pki/x509_common/include",
-                    "tls/cert/hitls_x509_adapt"
+                    "tls/cert/include",
+                    "tls/cert/cert_adapt"
                 ]
             },
             "config": {

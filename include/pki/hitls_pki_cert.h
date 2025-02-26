@@ -37,12 +37,12 @@ HITLS_X509_Cert *HITLS_X509_CertNew(void);
 /**
  * @brief Create a new X509 certificate object using the provider mechanism
  *
- * @param libCtx [IN] Library context from CRYPT_EAL
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
  *
  * @return HITLS_X509_Cert* Certificate object or NULL on failure
  */
-HITLS_X509_Cert *HITLS_X509_ProviderCertNew(CRYPT_EAL_LibCtx *libCtx, const char *attrName);
+HITLS_X509_Cert *HITLS_X509_ProviderCertNew(HITLS_X509_EalLibCtx *libCtx, const char *attrName);
 
 /**
  * @ingroup pki
@@ -130,7 +130,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
  *  If parsing is successful, memory for the certificate is allocated internally,
  *  and the user needs to free it after use.
  *
- * @param libCtx [IN] Library context from CRYPT_EAL
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
  * @param encode [IN] Certificate data buffer
@@ -138,7 +138,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ProviderCertParseBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseBuff(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
     const BSL_Buffer *encode, HITLS_X509_Cert **cert);
 
 /**
@@ -163,7 +163,7 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  *  If parsing is successful, memory for the certificate is allocated internally,
  *  and the user needs to free it after use.
  *
- * @param libCtx [IN] Library context from CRYPT_EAL
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
  * @param path [IN] Certificate file path
@@ -171,7 +171,7 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ProviderCertParseFile(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseFile(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
     const char *path, HITLS_X509_Cert **cert);
 
 /**
@@ -196,7 +196,7 @@ int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X
  *  If parsing is successful, memory for the certificate list is allocated internally,
  *  and the user needs to free it after use.
  *
- * @param libCtx [IN] Library context from CRYPT_EAL
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
  * @param path [IN] Certificate bundle file path
@@ -204,7 +204,7 @@ int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ProviderCertParseBundleFile(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseBundleFile(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
     const char *path, HITLS_X509_List **certlist);
 
 /**

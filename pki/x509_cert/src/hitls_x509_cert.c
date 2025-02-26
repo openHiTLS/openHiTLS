@@ -1178,7 +1178,7 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
     return HITLS_X509_Sign(mdId, prvKey, algParam, cert, (HITLS_X509_SignCb)CertSignCb);
 }
 
-HITLS_X509_Cert *HITLS_X509_ProviderCertNew(CRYPT_EAL_LibCtx *libCtx, const char *attrName)
+HITLS_X509_Cert *HITLS_X509_ProviderCertNew(HITLS_X509_EalLibCtx *libCtx, const char *attrName)
 {
     HITLS_X509_Cert *cert = HITLS_X509_CertNew();
     if (cert == NULL) {
@@ -1189,7 +1189,7 @@ HITLS_X509_Cert *HITLS_X509_ProviderCertNew(CRYPT_EAL_LibCtx *libCtx, const char
     return cert;
 }
 
-int32_t HITLS_X509_ProviderCertParseBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseBuff(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
     const BSL_Buffer *encode, HITLS_X509_Cert **cert)
 {
     HITLS_X509_List *list = NULL;
@@ -1213,7 +1213,7 @@ int32_t HITLS_X509_ProviderCertParseBuff(CRYPT_EAL_LibCtx *libCtx, const char *a
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_ProviderCertParseFile(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseFile(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
     const char *path, HITLS_X509_Cert **cert)
 {
     uint8_t *data = NULL;
@@ -1230,7 +1230,7 @@ int32_t HITLS_X509_ProviderCertParseFile(CRYPT_EAL_LibCtx *libCtx, const char *a
     return ret;
 }
 
-int32_t HITLS_X509_ProviderCertParseBundleFile(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseBundleFile(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
     const char *path, HITLS_X509_List **certlist)
 {
     uint8_t *data = NULL;
