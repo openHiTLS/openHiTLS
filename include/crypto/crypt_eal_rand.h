@@ -121,6 +121,20 @@ int32_t CRYPT_EAL_Randbytes(uint8_t *byte, uint32_t len);
 
 /**
  * @ingroup crypt_eal_rand
+ *
+ * Generate a random number
+ * This interface supports multi-thread access.
+ *
+ * @param libCtx [IN] Library context
+ * @param byte [OUT] Used to store output random numbers, the memory is provided by the user.
+ * @param len  [IN] Required random number length, the length range is(0, 65536].
+ * @retval #CRYPT_SUCCESS, if successful.
+ *         For other error codes, see the crypt_errno.h file.
+ */
+int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t len);
+
+/**
+ * @ingroup crypt_eal_rand
  * @brief Regenerate the seed.
  *
  * @attention The addtional data can set be NULL, and this interface supports multi-thread access.

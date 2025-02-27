@@ -335,7 +335,8 @@ int32_t REC_InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param)
     }
 
     /* 1.Generate a secret */
-    ret = RecConnKeyBlockGen(param, &clientSuitInfo, &serverSuitInfo);
+    ret = RecConnKeyBlockGen(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        param, &clientSuitInfo, &serverSuitInfo);
     if (ret != HITLS_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17302, "KeyBlockGen fail");
         goto ERR;
@@ -389,7 +390,7 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
     }
 
     /* 1.Generate a secret */
-    int32_t ret = RecTLS13ConnKeyBlockGen(param, &suitInfo);
+    int32_t ret = RecTLS13ConnKeyBlockGen(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), param, &suitInfo);
     if (ret != HITLS_SUCCESS) {
         RecConnStateFree(state);
         return ret;

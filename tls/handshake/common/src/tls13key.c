@@ -38,7 +38,8 @@ int32_t HS_TLS13DeriveSecret(CRYPT_KeyDeriveParameters *deriveInfo, bool isHashe
         return HITLS_CRYPT_ERR_DIGEST;
     }
     if (!isHashed) {
-        ret = SAL_CRYPT_Digest(deriveInfo->hashAlgo, deriveInfo->seed, deriveInfo->seedLen, transcriptHash, &hashLen);
+        ret = SAL_CRYPT_Digest(deriveInfo->libCtx, deriveInfo->attrName,
+            deriveInfo->hashAlgo, deriveInfo->seed, deriveInfo->seedLen, transcriptHash, &hashLen);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16889, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Digest fail", 0, 0, 0, 0);
@@ -52,7 +53,8 @@ int32_t HS_TLS13DeriveSecret(CRYPT_KeyDeriveParameters *deriveInfo, bool isHashe
     return SAL_CRYPT_HkdfExpandLabel(deriveInfo, outSecret, outLen);
 }
 
-int32_t TLS13HkdfExtract(HITLS_CRYPT_HkdfExtractInput *extractInput, uint8_t *prk, uint32_t *prkLen)
+int32_t TLS13HkdfExtract(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_CRYPT_HkdfExtractInput *extractInput, uint8_t *prk, uint32_t *prkLen)
 {
     uint32_t hashLen = SAL_CRYPT_DigestSize(extractInput->hashAlgo);
     if (hashLen == 0) {
@@ -71,7 +73,7 @@ int32_t TLS13HkdfExtract(HITLS_CRYPT_HkdfExtractInput *extractInput, uint8_t *pr
         extractInput->inputKeyMaterialLen = hashLen;
     }
 
-    return SAL_CRYPT_HkdfExtract(extractInput, prk, prkLen);
+    return SAL_CRYPT_HkdfExtract(libCtx, attrName, extractInput, prk, prkLen);
 }
 
 /*
@@ -80,7 +82,7 @@ int32_t TLS13HkdfExtract(HITLS_CRYPT_HkdfExtractInput *extractInput, uint8_t *pr
              v
     PSK ->  HKDF-Extract = Early Secret
  */
-int32_t HS_TLS13DeriveEarlySecret(HITLS_HashAlgo hashAlgo, uint8_t *psk, uint32_t pskLen,
+int32_t HS_TLS13DeriveEarlySecret(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo, uint8_t *psk, uint32_t pskLen,
     uint8_t *earlySecret, uint32_t *outLen)
 {
     HITLS_CRYPT_HkdfExtractInput extractInput = {0};
@@ -90,10 +92,11 @@ int32_t HS_TLS13DeriveEarlySecret(HITLS_HashAlgo hashAlgo, uint8_t *psk, uint32_
     extractInput.inputKeyMaterial = psk;
     extractInput.inputKeyMaterialLen = pskLen;
 
-    return TLS13HkdfExtract(&extractInput, earlySecret, outLen);
+    return TLS13HkdfExtract(libCtx, attrName, &extractInput, earlySecret, outLen);
 }
 
-int32_t HS_TLS13DeriveBinderKey(HITLS_HashAlgo hashAlgo, bool isExternalPsk,
+int32_t HS_TLS13DeriveBinderKey(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, bool isExternalPsk,
     uint8_t *earlySecret, uint32_t secretLen, uint8_t *binderKey, uint32_t keyLen)
 {
     uint8_t *binderLabel;
@@ -116,6 +119,8 @@ int32_t HS_TLS13DeriveBinderKey(HITLS_HashAlgo hashAlgo, bool isExternalPsk,
     deriveInfo.labelLen = labelLen;
     deriveInfo.seed = NULL;
     deriveInfo.seedLen = 0;
+    deriveInfo.libCtx = libCtx;
+    deriveInfo.attrName = attrName;
     return HS_TLS13DeriveSecret(&deriveInfo, false, binderKey, keyLen);
 }
 
@@ -134,7 +139,8 @@ int32_t HS_TLS13DeriveBinderKey(HITLS_HashAlgo hashAlgo, bool isExternalPsk,
              v
    0 -> HKDF-Extract = Master Secret
 */
-int32_t HS_TLS13DeriveNextStageSecret(HITLS_HashAlgo hashAlgo, uint8_t *inSecret, uint32_t inLen,
+int32_t HS_TLS13DeriveNextStageSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, uint8_t *inSecret, uint32_t inLen,
     uint8_t *givenSecret, uint32_t givenLen, uint8_t *outSecret, uint32_t *outLen)
 {
     int32_t ret;
@@ -153,6 +159,8 @@ int32_t HS_TLS13DeriveNextStageSecret(HITLS_HashAlgo hashAlgo, uint8_t *inSecret
     deriveInfo.labelLen = sizeof(label) - 1;
     deriveInfo.seed = NULL;
     deriveInfo.seedLen = 0;
+    deriveInfo.libCtx = libCtx;
+    deriveInfo.attrName = attrName;
     ret = HS_TLS13DeriveSecret(&deriveInfo, false, tmpSecret, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16892, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -166,7 +174,7 @@ int32_t HS_TLS13DeriveNextStageSecret(HITLS_HashAlgo hashAlgo, uint8_t *inSecret
     extractInput.saltLen = hashLen;
     extractInput.inputKeyMaterial = givenSecret;
     extractInput.inputKeyMaterialLen = givenLen;
-    return TLS13HkdfExtract(&extractInput, outSecret, outLen);
+    return TLS13HkdfExtract(libCtx, attrName, &extractInput, outSecret, outLen);
 }
 
 /*
@@ -191,7 +199,8 @@ int32_t TLS13DeriveHandshakeSecret(TLS_Ctx *ctx)
     KeyExchCtx *keyCtx = ctx->hsCtx->kxCtx;
     int32_t ret;
     if (keyCtx->peerPubkey != NULL) {
-        ret = SAL_CRYPT_CalcEcdhSharedSecret(keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
+        ret = SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+            keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
             preMasterSecret, &preMasterSecretLen);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16894, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -203,7 +212,8 @@ int32_t TLS13DeriveHandshakeSecret(TLS_Ctx *ctx)
         preMasterSecretLen = hashLen;
     }
     uint32_t handshakeSecretLen = hashLen;
-    ret = HS_TLS13DeriveNextStageSecret(hashAlg, ctx->hsCtx->earlySecret, hashLen,
+    ret = HS_TLS13DeriveNextStageSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlg, ctx->hsCtx->earlySecret, hashLen,
         preMasterSecret, preMasterSecretLen, ctx->hsCtx->handshakeSecret, &handshakeSecretLen);
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16895, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "DeriveNextStageSecret finish", 0, 0, 0, 0);
@@ -230,14 +240,16 @@ int32_t TLS13DeriveMasterSecret(TLS_Ctx *ctx)
     }
     uint32_t masterKeyLen = hashLen;
 
-    return HS_TLS13DeriveNextStageSecret(hashAlg, ctx->hsCtx->handshakeSecret, hashLen,
+    return HS_TLS13DeriveNextStageSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlg, ctx->hsCtx->handshakeSecret, hashLen,
         NULL, 0, ctx->hsCtx->masterKey, &masterKeyLen);
 }
 
 /*
     finished_key = HKDF-Expand-Label(BaseKey, "finished", "", Hash.length)
 */
-int32_t HS_TLS13DeriveFinishedKey(HITLS_HashAlgo hashAlgo, uint8_t *baseKey, uint32_t baseKeyLen,
+int32_t HS_TLS13DeriveFinishedKey(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, uint8_t *baseKey, uint32_t baseKeyLen,
     uint8_t *finishedkey, uint32_t finishedkeyLen)
 {
     uint8_t label[] = "finished";
@@ -250,6 +262,8 @@ int32_t HS_TLS13DeriveFinishedKey(HITLS_HashAlgo hashAlgo, uint8_t *baseKey, uin
     deriveInfo.labelLen = sizeof(label) - 1;
     deriveInfo.seed = NULL;
     deriveInfo.seedLen = 0;
+    deriveInfo.libCtx = libCtx;
+    deriveInfo.attrName = attrName;
     return SAL_CRYPT_HkdfExpandLabel(&deriveInfo, finishedkey, finishedkeyLen);
 }
 
@@ -274,7 +288,8 @@ int32_t HS_TLS13DeriveResumePsk(TLS_Ctx *ctx, const uint8_t *ticketNonce, uint32
     deriveInfo.labelLen = sizeof(label) - 1;
     deriveInfo.seed = ticketNonce;
     deriveInfo.seedLen = ticketNonceSize;
-
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     return SAL_CRYPT_HkdfExpandLabel(&deriveInfo, resumePsk, resumePskLen);
 }
 
@@ -323,6 +338,8 @@ int32_t HS_TLS13DeriveHandshakeTrafficSecret(TLS_Ctx *ctx)
     uint8_t clientLabel[] = "c hs traffic";
     deriveInfo.label = clientLabel;
     deriveInfo.labelLen = sizeof(clientLabel) - 1;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     ret = HS_TLS13DeriveSecret(&deriveInfo, true, ctx->hsCtx->clientHsTrafficSecret, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16901, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -365,6 +382,8 @@ int32_t TLS13DeriveApplicationTrafficSecret(TLS_Ctx *ctx)
     uint8_t clientLabel[] = "c ap traffic";
     deriveInfo.label = clientLabel;
     deriveInfo.labelLen = sizeof(clientLabel) - 1;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     ret = HS_TLS13DeriveSecret(&deriveInfo, true, ctx->clientAppTrafficSecret, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16903, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -410,7 +429,8 @@ int32_t HS_TLS13DeriveResumptionMasterSecret(TLS_Ctx *ctx)
     const uint8_t resLabel[] = "res master";
     deriveInfo.label = resLabel;
     deriveInfo.labelLen = sizeof(resLabel) - 1;
-
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     return HS_TLS13DeriveSecret(&deriveInfo, true, ctx->resumptionMasterSecret, hashLen);
 }
 #endif /* HITLS_TLS_FEATURE_SESSION */
@@ -437,7 +457,8 @@ int32_t HS_TLS13CalcServerHelloProcessSecret(TLS_Ctx *ctx)
     }
 
     uint32_t earlySecretLen = hashLen;
-    int32_t ret = HS_TLS13DeriveEarlySecret(hashAlg, psk, pskLen, ctx->hsCtx->earlySecret, &earlySecretLen);
+    int32_t ret = HS_TLS13DeriveEarlySecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlg, psk, pskLen, ctx->hsCtx->earlySecret, &earlySecretLen);
     BSL_SAL_CleanseData(psk, pskLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16907, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
