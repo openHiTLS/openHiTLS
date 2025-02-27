@@ -63,6 +63,8 @@ typedef enum {
     BSL_CID_AES128_CCM,
     BSL_CID_AES192_CCM,
     BSL_CID_AES256_CCM,
+    BSL_CID_AES128_CCM8,
+    BSL_CID_AES256_CCM8,
 
     // sm4
     BSL_CID_SM4_XTS = 116,
@@ -135,6 +137,7 @@ typedef enum {
     BSL_CID_HMAC_SHA3_384,          /**< identifies hmac with SHA3_384 */
     BSL_CID_HMAC_SHA3_512,          /**< identifies hmac with SHA3_512 */
     BSL_CID_HMAC_SM3,               /**< identifies hmac with SM3 */
+    BSL_CID_MAC_AEAD,
 
     /* Random number algorithm */
     // DRBG

@@ -255,7 +255,7 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16574, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "sessMgr new fail", 0, 0, 0, 0);
@@ -300,7 +300,7 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16577, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "sessMgr new fail", 0, 0, 0, 0);
@@ -356,7 +356,7 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16580, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "sessMgr new fail", 0, 0, 0, 0);
@@ -415,7 +415,7 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16583, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SESSMGR_New fail", 0, 0, 0, 0);

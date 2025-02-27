@@ -148,7 +148,11 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // assume that the two scenarios will not coexist.
     const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+    }
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -229,7 +233,12 @@ int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // assume that the two scenarios will not coexist.
     BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+    }
+
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

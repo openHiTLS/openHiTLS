@@ -481,7 +481,8 @@ EXIT:
 
 static int32_t Stub_GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
 {
-    int32_t ret = SAL_CRYPT_CalcEcdhSharedSecret(ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
+    int32_t ret = SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
         ctx->hsCtx->kxCtx->pubKeyLen, preMasterSecret, preMasterSecretLen);
     *preMasterSecretLen = PREMASTERSECRETLEN;
     return ret;
