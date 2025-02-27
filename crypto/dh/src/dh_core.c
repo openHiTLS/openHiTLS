@@ -767,7 +767,12 @@ int32_t CRYPT_DH_SetPubKey(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // assume that the two scenarios will not coexist.
     const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_DH_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+    }
+    
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -833,11 +838,19 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 
 int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 {
+    int32_t ret;
+    bool tlsType = false;
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // assume that the two scenarios will not coexist.
     BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_DH_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+        tlsType = true;
+    }
+
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -851,7 +864,11 @@ int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
         return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
     }
     uint32_t useLen = pub->valueLen;
-    int32_t ret = BN_Bn2Bin(ctx->y, pub->value, &(useLen));
+    if (tlsType) {
+        ret = BN_Bn2BinFixZero(ctx->y, pub->value, useLen);
+    } else {
+        ret = BN_Bn2Bin(ctx->y, pub->value, &(useLen));
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

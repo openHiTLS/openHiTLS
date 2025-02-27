@@ -30,7 +30,7 @@
 #include "crypt_eal_implprovider.h"
 #include "drbg_local.h"
 #include "eal_md_local.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
 #include "bsl_params.h"
@@ -1894,10 +1894,10 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
 
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default",
         seedCtx->pers->data, seedCtx->pers->len, param), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_RandbytesWithAdin(output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
+    ASSERT_EQ(CRYPT_EAL_RandbytesWithAdinEx(NULL, output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
         CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_Randbytes(output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandIsValidAlgId(id), true);
 EXIT:
     CRYPT_EAL_RandDeinit();
@@ -2026,13 +2026,13 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
         CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
     param[1] = (BSL_Param){0, 0, NULL, 0, 0};
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_RandDeinit();

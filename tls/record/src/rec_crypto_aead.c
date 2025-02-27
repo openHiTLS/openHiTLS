@@ -210,7 +210,8 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
     /** Calculate the encryption length: GenericAEADCipher.content + aead tag */
     uint32_t cipherLen = cryptMsg->textLen - cipherOffset;
     /** Decryption */
-    ret = SAL_CRYPT_Decrypt(&cipherParam, &cryptMsg->text[cipherOffset], cipherLen, data, dataLen);
+    ret = SAL_CRYPT_Decrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &cipherParam, &cryptMsg->text[cipherOffset], cipherLen, data, dataLen);
     /* Clear sensitive information */
     BSL_SAL_CleanseData(nonce, AEAD_NONCE_SIZE);
     BSL_SAL_CleanseData(aad, AEAD_AAD_MAX_SIZE);
@@ -236,7 +237,7 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
  * @retval HITLS_MEMCPY_FAIL The copy fails.
  * @retval For details, see SAL_CRYPT_Encrypt.
  */
-static int32_t AeadEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+static int32_t AeadEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     /** Initialize the encryption length offset */
@@ -286,7 +287,8 @@ static int32_t AeadEncrypt(RecConnState *state, const REC_TextInput *plainMsg, u
     uint32_t cipherLen = cipherTextLen - cipherOffset;
     uint32_t outLen = cipherLen;
     /** Encryption */
-    ret = SAL_CRYPT_Encrypt(&cipherParam, plainMsg->text, plainMsg->textLen, &cipherText[cipherOffset], &outLen);
+    ret = SAL_CRYPT_Encrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &cipherParam, plainMsg->text, plainMsg->textLen, &cipherText[cipherOffset], &outLen);
     /* Clear sensitive information */
     return CleanSensitiveData(ret, nonce, aad, outLen, cipherLen);
 }
