@@ -172,6 +172,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 
+/* Support querying the default table when the condition is equal to null. */
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
     (void)config;
