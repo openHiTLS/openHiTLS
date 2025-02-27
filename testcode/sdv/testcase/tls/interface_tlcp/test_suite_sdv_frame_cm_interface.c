@@ -2179,7 +2179,7 @@ void UT_TLS_CM_HITLS_SetTmpDh_API_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     HITLS_Ctx *ctx = NULL;
-    HITLS_CRYPT_Key *dhPkey = SAL_CRYPT_GenerateDhKeyBySecbits(HITLS_SECURITY_LEVEL_THREE_SECBITS);
+    HITLS_CRYPT_Key *dhPkey = CRYPT_DEFAULT_GenerateDhKeyBySecbits(HITLS_SECURITY_LEVEL_THREE_SECBITS);
     ASSERT_TRUE(HITLS_SetTmpDh(ctx, dhPkey) == HITLS_NULL_INPUT);
 
     config = GetHitlsConfigViaVersion(tlsVersion);

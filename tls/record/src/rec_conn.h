@@ -195,8 +195,8 @@ int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state,
  * @retval  HITLS_INTERNAL_EXCEPTION Invalid null pointer
  * @retval  Reference SAL_CRYPT_PRF
  */
-int32_t RecConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *client, RecConnSuitInfo *server);
-
+int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const REC_SecParameters *param, RecConnSuitInfo *client, RecConnSuitInfo *server)
 /**
  * @brief   TLS1.3 Key generation
  *
@@ -209,7 +209,8 @@ int32_t RecConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *clie
  * @retval  HITLS_CRYPT_ERR_HKDF_EXPAND HKDF-Expand calculation fails
  *
  */
-int32_t RecTLS13ConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *suitInfo);
+int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const REC_SecParameters *param, RecConnSuitInfo *suitInfo);
 
 /*
  * @brief   check the mac
@@ -235,7 +236,8 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
  * @retval  HITLS_SUCCESS
  * @retval  Reference hitls_error.h
  */
-int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
+int32_t RecConnGenerateMac(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
     uint8_t *mac, uint32_t *macLen);
 
 /*

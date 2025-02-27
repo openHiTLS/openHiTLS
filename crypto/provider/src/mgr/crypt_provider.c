@@ -27,6 +27,7 @@
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider_local.h"
 #include "crypt_provider.h"
+#include "crypt_drbg_local.h"
 
 // Name of the dl initialization function
 #define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInit"
@@ -53,6 +54,11 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx)
 
     if (libCtx->lock != NULL) {
         BSL_SAL_ThreadLockFree(libCtx->lock);
+    }
+
+    if (libCtx->drbg != NULL) {
+        CRYPT_RandDeinit(libCtx->drbg);
+        libCtx->drbg = NULL;
     }
 
     BSL_SAL_FREE(libCtx->searchProviderPath);

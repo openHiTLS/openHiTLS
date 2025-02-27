@@ -157,16 +157,21 @@ uint32_t CRYPT_DEFAULT_HMAC_Size(HITLS_HashAlgo hashAlgo)
 }
 
 #ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
-HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
+HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
 {
-#ifdef HITLS_CRYPTO_MAC
+    #ifdef HITLS_CRYPTO_MAC
     CRYPT_MAC_AlgId id = GetHmacAlgId(hashAlgo);
     if (id == CRYPT_MAC_MAX) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16618, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hashAlgo err", 0, 0, 0, 0);
         return NULL;
     }
-
-    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(id);
+    CRYPT_EAL_MacCtx *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, SalGetMDAlgId(hashAlgo), attrName);
+#else
+    ctx = CRYPT_EAL_MacNewCtx(id);
+#endif
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16619, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MacNewCtx fail", 0, 0, 0, 0);
         return NULL;
@@ -184,8 +189,15 @@ HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *
     (void)hashAlgo;
     (void)key;
     (void)len;
+    (void)libCtx;
+    (void)attrName;
     return NULL;
 #endif
+}
+
+HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
+{
+    return HITLS_CRYPT_HMAC_Init(NULL, NULL, hashAlgo, key, len);
 }
 
 int32_t CRYPT_DEFAULT_HMAC_ReInit(HITLS_HMAC_Ctx *ctx)
@@ -233,7 +245,8 @@ int32_t CRYPT_DEFAULT_HMAC_Final(HITLS_HMAC_Ctx *ctx, uint8_t *out, uint32_t *le
 }
 #endif /* HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES */
 
-int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
 #ifdef HITLS_CRYPTO_MAC
@@ -241,8 +254,12 @@ int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t
     if (id == CRYPT_MAC_MAX) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_HMAC, BINLOG_ID16621, "No proper id");
     }
-
-    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(id);
+    CRYPT_EAL_MacCtx *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
+#else
+    ctx = CRYPT_EAL_MacNewCtx(id);
+#endif
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_HMAC, BINLOG_ID16622, "new ctx fail");
     }
@@ -277,8 +294,16 @@ int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t
     (void)inLen;
     (void)out;
     (void)outLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return HITLS_CRYPT_HMAC(NULL, NULL, hashAlgo, key, keyLen, in, inLen, out, outLen);
 }
 
 uint32_t CRYPT_DEFAULT_DigestSize(HITLS_HashAlgo hashAlgo)
@@ -298,7 +323,7 @@ uint32_t CRYPT_DEFAULT_DigestSize(HITLS_HashAlgo hashAlgo)
 #endif
 }
 
-HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo)
+HITLS_HASH_Ctx *HITLS_CRYPT_DigestInit(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo)
 {
 #ifdef HITLS_CRYPTO_MD
     CRYPT_MD_AlgId id = GetMDAlgId(hashAlgo);
@@ -324,8 +349,15 @@ HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo)
     return ctx;
 #else
     (void)hashAlgo;
+    (void)libCtx;
+    (void)attrName;
     return NULL;
 #endif
+}
+
+HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo)
+{
+    return HITLS_CRYPT_DigestInit(NULL, NULL, hashAlgo);
 }
 
 HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestCopy(HITLS_HASH_Ctx *ctx)
@@ -372,17 +404,18 @@ int32_t CRYPT_DEFAULT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *l
 #endif
 }
 
-int32_t CRYPT_DEFAULT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
+int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen)
 {
-#ifdef HITLS_CRYPTO_MD
+    #ifdef HITLS_CRYPTO_MD
     int32_t ret;
-    CRYPT_MD_AlgId id = GetMDAlgId(hashAlgo);
-    if (id == CRYPT_MD_MAX) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID16630, "GetMDAlgId fail");
-    }
-
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
+    CRYPT_EAL_MdCTX *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
+#else
+    ctx = CRYPT_EAL_MdNewCtx(hashAlgo);
+#endif
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID16631, "MdNewCtx fail");
     }
@@ -413,8 +446,16 @@ int32_t CRYPT_DEFAULT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_
     (void)inLen;
     (void)out;
     (void)outLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen)
+{
+
 }
 
 static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher,
@@ -454,7 +495,8 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
 }
 
 #ifdef HITLS_CRYPTO_CIPHER
-static int32_t GetCipherInitCtx(const HITLS_CipherParameters *cipher, CRYPT_EAL_CipherCtx **ctx, bool enc)
+static int32_t GetCipherInitCtx(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_CipherParameters *cipher, CRYPT_EAL_CipherCtx **ctx, bool enc)
 {
     if (*ctx != NULL) {
         return CRYPT_EAL_CipherReinit(*ctx, cipher->iv, cipher->ivLen);
@@ -463,11 +505,11 @@ static int32_t GetCipherInitCtx(const HITLS_CipherParameters *cipher, CRYPT_EAL_
     if (id == CRYPT_CIPHER_MAX) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_ENCRYPT, BINLOG_ID16637, "GetCipherAlgId fail");
     }
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    *ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName);
+#else
     *ctx = CRYPT_EAL_CipherNewCtx(id);
-    if (*ctx == NULL) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_ENCRYPT, BINLOG_ID16638, "CipherNewCtx fail");
-    }
+#endif
 
     int32_t ret = CRYPT_EAL_CipherInit(*ctx, cipher->key, cipher->keyLen, cipher->iv, cipher->ivLen, enc);
     if (ret != CRYPT_SUCCESS) {
@@ -479,16 +521,16 @@ static int32_t GetCipherInitCtx(const HITLS_CipherParameters *cipher, CRYPT_EAL_
 }
 #endif
 
-int32_t CRYPT_DEFAULT_Encrypt(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t *outLen)
+int32_t HITLS_CRYPT_Encrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CipherParameters *cipher,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-#ifdef HITLS_CRYPTO_CIPHER
+    #ifdef HITLS_CRYPTO_CIPHER
     if (cipher == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_NULL_INPUT, BINLOG_ID17313, "encrypt null input");
     }
     CRYPT_EAL_CipherCtx *tmpCtx = NULL;
     CRYPT_EAL_CipherCtx **ctx = cipher->ctx == NULL ? &tmpCtx : (CRYPT_EAL_CipherCtx **)cipher->ctx;
-    int32_t ret = GetCipherInitCtx(cipher, ctx, true);
+    int32_t ret = GetCipherInitCtx(libCtx, attrName, cipher, ctx, true);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16640, "GetCipherInitCtx fail");
     }
@@ -540,8 +582,16 @@ int32_t CRYPT_DEFAULT_Encrypt(const HITLS_CipherParameters *cipher, const uint8_
     (void)inLen;
     (void)out;
     (void)outLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_Encrypt(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen)
+{
+    return HITLS_CRYPT_Encrypt(NULL, NULL, cipher, in, inLen, out, outLen);
 }
 
 static int32_t AeadDecrypt(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher, const uint8_t *in,
@@ -620,6 +670,7 @@ int32_t CbcDecrypt(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint32_t inLen, 
 #endif
 }
 #endif /* HITLS_TLS_SUITE_CIPHER_CBC */
+
 #ifdef HITLS_CRYPTO_CIPHER
 static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher, uint32_t inLen)
 {
@@ -649,8 +700,8 @@ static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_Ciph
 }
 #endif
 
-int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t *outLen)
+int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CipherParameters *cipher,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
 #ifdef HITLS_CRYPTO_CIPHER
     if (cipher == NULL) {
@@ -658,7 +709,7 @@ int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_
     }
     CRYPT_EAL_CipherCtx *tmpCtx = NULL;
     CRYPT_EAL_CipherCtx **ctx = cipher->ctx == NULL ? &tmpCtx : (CRYPT_EAL_CipherCtx **)cipher->ctx;
-    int32_t ret = GetCipherInitCtx(cipher, ctx, false);
+    int32_t ret = GetCipherInitCtx(libCtx, attrName, cipher, ctx, false);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16654, "CipherUpdate fail");
     }
@@ -696,8 +747,16 @@ int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_
     (void)out;
     (void)outLen;
     (void)inLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen)
+{
+    return HITLS_CRYPT_Decrypt(NULL, NULL, cipher, in, inLen, out, outLen);
 }
 
 void CRYPT_DEFAULT_CipherFree(HITLS_Cipher_Ctx *ctx)
@@ -706,10 +765,16 @@ void CRYPT_DEFAULT_CipherFree(HITLS_Cipher_Ctx *ctx)
 }
 
 #ifdef HITLS_CRYPTO_PKEY
-CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaId paraId)
+CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaId paraId)
 {
     int32_t ret;
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(algId);
+    CRYPT_EAL_PkeyCtx *pkey = NULL
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+#else
+    pkey = CRYPT_EAL_PkeyNewCtx(algId);
+#endif
     if (pkey == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16658, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "PkeyNewCtx fail", 0, 0, 0, 0);
@@ -741,10 +806,11 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaI
 }
 #endif
 
-CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_NamedGroup groupId)
+CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *config, HITLS_NamedGroup groupId)
 {
 #ifdef HITLS_CRYPTO_PKEY
-    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(NULL, groupId);
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(config, groupId);
     if (groupInfo == NULL) {
         return NULL;
     }
@@ -752,6 +818,18 @@ CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_NamedGroup groupId)
 #else
     (void)groupId;
 #endif
+    return NULL;
+}
+
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateEcdhKey(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *config, const HITLS_ECParameters *curveParams)
+{
+    switch (curveParams->type) {
+        case HITLS_EC_CURVE_TYPE_NAMED_CURVE:
+            return GenerateKeyByNamedGroup(libCtx, attrName, config, curveParams->param.namedcurve);
+        default:
+            break;
+    }
     return NULL;
 }
 
@@ -787,137 +865,16 @@ void CRYPT_DEFAULT_FreeKey(HITLS_CRYPT_Key *key)
     return;
 }
 
-#ifdef HITLS_TLS_PROTO_TLCP11
-static int32_t SM2KeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
-{
-#ifdef HITLS_CRYPTO_PKEY
-    CRYPT_EAL_PkeyPub pub;
-    pub.id = CRYPT_PKEY_SM2;
-    pub.key.eccPub.data = pubKeyBuf;
-    pub.key.eccPub.len = bufLen;
-
-    int32_t ret = CRYPT_EAL_PkeyGetPub(key, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16661, "GetPub fail");
-    }
-    *pubKeyLen = pub.key.eccPub.len;
-    return HITLS_SUCCESS;
-#else
-    (void)key;
-    (void)pubKeyBuf;
-    (void)bufLen;
-    (void)pubKeyLen;
-    return CRYPT_EAL_ALG_NOT_SUPPORT;
-#endif
-}
-#endif /* HITLS_TLS_PROTO_TLCP11 */
-
-static int32_t EcdhKeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
-{
-#ifdef HITLS_CRYPTO_PKEY
-    CRYPT_EAL_PkeyPub pub;
-    pub.id = CRYPT_PKEY_ECDH;
-    pub.key.eccPub.data = pubKeyBuf;
-    pub.key.eccPub.len = bufLen;
-
-    int32_t ret = CRYPT_EAL_PkeyGetPub(key, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16662, "GetPub fail");
-    }
-
-    *pubKeyLen = pub.key.eccPub.len;
-    return HITLS_SUCCESS;
-#else
-    (void)key;
-    (void)pubKeyBuf;
-    (void)bufLen;
-    (void)pubKeyLen;
-    return CRYPT_EAL_ALG_NOT_SUPPORT;
-#endif
-}
-
-static int32_t X25519KeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
-{
-#ifdef HITLS_CRYPTO_X25519
-    CRYPT_EAL_PkeyPub pub;
-    pub.id = CRYPT_PKEY_X25519;
-    pub.key.curve25519Pub.data = pubKeyBuf;
-    pub.key.curve25519Pub.len = bufLen;
-
-    int32_t ret = CRYPT_EAL_PkeyGetPub(key, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16663, "GetPub fail");
-    }
-
-    *pubKeyLen = pub.key.curve25519Pub.len;
-    return HITLS_SUCCESS;
-#else
-    (void)key;
-    (void)pubKeyBuf;
-    (void)bufLen;
-    (void)pubKeyLen;
-    return CRYPT_EAL_ALG_NOT_SUPPORT;
-#endif
-}
-
-#ifdef HITLS_TLS_SUITE_KX_DHE
-static int32_t DhKeyGetPub(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
-{
-#ifdef HITLS_CRYPTO_DH
-    CRYPT_EAL_PkeyPub pub;
-    pub.id = CRYPT_PKEY_DH;
-    pub.key.dhPub.data = pubKeyBuf;
-    pub.key.dhPub.len = bufLen;
-
-    int32_t ret = CRYPT_EAL_PkeyGetPub(key, &pub);
-    if (ret != CRYPT_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16664, "GetPub fail");
-    }
-
-    *pubKeyLen = pub.key.dhPub.len;
-    uint32_t padLen = bufLen - (*pubKeyLen);
-    if (padLen == 0) {
-        return HITLS_SUCCESS;
-    }
-
-    (void)memmove_s(pubKeyBuf + padLen, *pubKeyLen + padLen, pubKeyBuf, *pubKeyLen);
-    (void)memset_s(pubKeyBuf, *pubKeyLen + padLen, 0, padLen);
-    *pubKeyLen += padLen;
-    return HITLS_SUCCESS;
-#else
-    (void)key;
-    (void)bufLen;
-    (void)pubKeyLen;
-    (void)pubKeyBuf;
-    return CRYPT_EAL_ALG_NOT_SUPPORT;
-#endif
-}
-#endif /* HITLS_TLS_SUITE_KX_DHE */
-
 int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen)
 {
 #ifdef HITLS_CRYPTO_PKEY
-    CRYPT_PKEY_AlgId id = CRYPT_EAL_PkeyGetId(key);
-
-    switch (id) {
-        case CRYPT_PKEY_ECDH:
-            return EcdhKeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
-        case CRYPT_PKEY_X25519:
-            return X25519KeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
-#ifdef HITLS_TLS_SUITE_KX_DHE
-        case CRYPT_PKEY_DH:
-            return DhKeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
-#endif
-#ifdef HITLS_TLS_PROTO_TLCP11
-        case CRYPT_PKEY_SM2:
-            return SM2KeyGetPub(key, pubKeyBuf, bufLen, pubKeyLen);
-#endif
-        default:
-            *pubKeyLen = 0;
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16666, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "unknow id", 0, 0, 0, 0);
-            break;
+    BSL_Param param[2] = { {0}, BSL_PARAM_END };
+    BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, bufLen);
+    int32_t ret = CRYPT_EAL_PkeyGetPubEx(key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16664, "GetPub fail");
     }
-    return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+    return ret;
 #else
     (void)key;
     (void)pubKeyBuf;
@@ -928,29 +885,7 @@ int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32
 }
 
 #ifdef HITLS_CRYPTO_PKEY
-static int32_t SetPubData(CRYPT_EAL_PkeyPub *pub, uint8_t *peerPubkey, uint32_t pubKeyLen)
-{
-    switch (pub->id) {
-        case CRYPT_PKEY_ECDH:
-        case CRYPT_PKEY_SM2:
-            pub->key.eccPub.data = peerPubkey;
-            pub->key.eccPub.len = pubKeyLen;
-            break;
-        case CRYPT_PKEY_X25519:
-            pub->key.curve25519Pub.data = peerPubkey;
-            pub->key.curve25519Pub.len = pubKeyLen;
-            break;
-#ifdef HITLS_TLS_SUITE_KX_DHE
-        case CRYPT_PKEY_DH:
-            pub->key.dhPub.data = peerPubkey;
-            pub->key.dhPub.len = pubKeyLen;
-            break;
-#endif
-        default:
-            return HITLS_CRYPT_ERR_CALC_SHARED_KEY;
-    }
-    return CRYPT_SUCCESS;
-}
+
 
 #ifdef HITLS_TLS_PROTO_TLCP11
 static int32_t SetSM2SelfCtx(CRYPT_EAL_PkeyCtx *selfCtx, HITLS_Sm2GenShareKeyParameters *sm2Params)
@@ -985,13 +920,17 @@ static int32_t SetSM2SelfCtx(CRYPT_EAL_PkeyCtx *selfCtx, HITLS_Sm2GenShareKeyPar
 }
 
 static int32_t CalcSM2SecretPre(
-    CRYPT_EAL_PkeyCtx *peerCtx, HITLS_Sm2GenShareKeyParameters *sm2Params, CRYPT_EAL_PkeyPub *peerPub)
+    CRYPT_EAL_PkeyCtx *peerCtx, HITLS_Sm2GenShareKeyParameters *sm2Params)
 {
-    int32_t ret = CRYPT_EAL_PkeyGetPub(sm2Params->peerPubKey, peerPub);
+    uint8_t peerPubData[SM2_PUBKEY_LEN] = {0};
+    BSL_Param param[2] = { {0}, BSL_PARAM_END };
+    BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, peerPubData, SM2_PUBKEY_LEN);
+    int32_t ret = CRYPT_EAL_PkeyGetPubEx(sm2Params->peerPubKey, param);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16673, "GetPub fail");
     }
-    ret = CRYPT_EAL_PkeySetPub(peerCtx, peerPub);
+    param[0].valueLen = param[0].useLen;
+    ret = CRYPT_EAL_PkeySetPubEx(peerCtx, param);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16674, "SetPub fail");
     }
@@ -1009,7 +948,8 @@ static int32_t CalcSM2SecretPre(
 #endif
 
 #ifdef HITLS_TLS_PROTO_TLCP11
-int32_t CRYPT_DEFAULT_CalcSM2SharedSecret(HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret,
+int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret,
     uint32_t *sharedSecretLen)
 {
 #ifdef HITLS_CRYPTO_PKEY
@@ -1017,20 +957,17 @@ int32_t CRYPT_DEFAULT_CalcSM2SharedSecret(HITLS_Sm2GenShareKeyParameters *sm2Par
         sm2Params->tmpPeerPubkey == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_CALC_SHARED_KEY, BINLOG_ID16670, "input null");
     }
-
-    uint8_t peerPubData[SM2_PUBKEY_LEN] = {0};
-    CRYPT_EAL_PkeyPub peerPub = { 0 };
-    peerPub.id = CRYPT_PKEY_SM2;
-    peerPub.key.eccPub.data = peerPubData;
-    peerPub.key.eccPub.len = sizeof(peerPubData);
-
     CRYPT_EAL_PkeyCtx *selfCtx = (CRYPT_EAL_PkeyCtx *)sm2Params->priKey;
     int32_t ret = SetSM2SelfCtx(selfCtx, sm2Params);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16671, "SetSM2SelfCtx fail");
     }
-
-    CRYPT_EAL_PkeyCtx *peerCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    CRYPT_EAL_PkeyCtx *peerCtx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    peerCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+#else
+    peerCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+#endif
     if (peerCtx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_CALC_SHARED_KEY, BINLOG_ID16672, "peerCtx new fail");
     }
@@ -1046,26 +983,29 @@ EXIT:
     (void)sm2Params;
     (void)sharedSecret;
     (void)sharedSecretLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
 }
+int32_t CRYPT_DEFAULT_CalcSM2SharedSecret(HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret,
+    uint32_t *sharedSecretLen)
+{
+    return HITLS_CRYPT_CalcSM2SharedSecret(NULL, NULL, sm2Params, sharedSecret, sharedSecretLen);
+}
 #endif /* HITLS_TLS_PROTO_TLCP11 */
 
-int32_t CRYPT_DEFAULT_CalcSharedSecret(HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
+int32_t HITLS_CRYPT_CalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
     uint8_t *sharedSecret, uint32_t *sharedSecretLen)
 {
 #ifdef HITLS_CRYPTO_PKEY
-    CRYPT_PKEY_AlgId id = CRYPT_EAL_PkeyGetId(key);
-
-    CRYPT_EAL_PkeyPub pub = {0};
-    pub.id = id;
-    int32_t ret = SetPubData(&pub, peerPubkey, pubKeyLen);
-    if (ret != CRYPT_SUCCESS) {
-        *sharedSecretLen = 0;
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16677, "SetPubData fail");
-    }
-
-    CRYPT_EAL_PkeyCtx *peerPk = CRYPT_EAL_PkeyNewCtx(id);
+    CRYPT_EAL_PkeyCtx *peerPk = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    peerPk = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_EAL_PkeyGetId(key), CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+#else
+    peerPk = CRYPT_EAL_PkeyNewCtx(CRYPT_EAL_PkeyGetId(key));
+#endif
     if (peerPk == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_CALC_SHARED_KEY, BINLOG_ID16678, "peerPk new fail");
     }
@@ -1083,8 +1023,9 @@ int32_t CRYPT_DEFAULT_CalcSharedSecret(HITLS_CRYPT_Key *key, uint8_t *peerPubkey
             goto EXIT;
         }
     }
-
-    ret = CRYPT_EAL_PkeySetPub(peerPk, &pub);
+    BSL_Param param[2] = { {0}, BSL_PARAM_END };
+    BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, peerPubkey, pubKeyLen);
+    ret = CRYPT_EAL_PkeySetPubEx(peerPk, &pub);
     if (ret != CRYPT_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16681, "SetPub fail");
         goto EXIT;
@@ -1104,8 +1045,16 @@ EXIT:
     (void)peerPubkey;
     (void)sharedSecret;
     (void)sharedSecretLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_CalcSharedSecret(HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+{
+    return HITLS_CRYPT_CalcSharedSecret(NULL, NULL, key, peerPubkey, pubKeyLen, sharedSecret, sharedSecretLen);
 }
 
 #ifdef HITLS_TLS_SUITE_KX_DHE
@@ -1126,16 +1075,27 @@ uint32_t GetDhParaIdBySecbits(int32_t secbits)
     return CRYPT_DH_RFC2409_1024;
 }
 
-HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyBySecbits(int32_t secbits)
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, int32_t paraId)
 {
-    CRYPT_PKEY_ParaId id = GetDhParaIdBySecbits(secbits);
-    return GeneratePkeyByParaId(CRYPT_PKEY_DH, id);
+    return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId);
 }
 
-HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyByParameters(uint8_t *p, uint16_t pLen, uint8_t *g, uint16_t gLen)
+HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyBySecbits(int32_t secbits)
+{
+    return GeneratePkeyByParaId(NULL, NULL, CRYPT_PKEY_DH, GetDhParaIdBySecbits(secbits));
+}
+
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyByParameters(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, uint8_t *p, uint16_t pLen, uint8_t *g, uint16_t gLen)
 {
 #ifdef HITLS_CRYPTO_DH
-    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+#else
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+#endif
     if (pkey == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16683, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "PkeyNewCtx fail", 0, 0, 0, 0);
@@ -1169,8 +1129,15 @@ HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyByParameters(uint8_t *p, uint16_t pL
     (void)pLen;
     (void)g;
     (void)gLen;
+    (void)libCtx;
+    (void)attrName;
     return NULL;
 #endif
+}
+
+HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyByParameters(uint8_t *p, uint16_t pLen, uint8_t *g, uint16_t gLen)
+{
+    return HITLS_CRYPT_GenerateDhKeyByParameters(NULL, NULL, p, pLen, g, gLen);
 }
 
 int32_t CRYPT_DEFAULT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *pLen, uint8_t *g, uint16_t *gLen)
@@ -1219,7 +1186,8 @@ int32_t CRYPT_DEFAULT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t
 }
 #endif /* HITLS_TLS_SUITE_KX_DHE */
 
-int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
+int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, const HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
 {
 #ifdef HITLS_CRYPTO_HKDF
     int32_t ret;
@@ -1230,8 +1198,13 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
             "GetHmacAlgId fail", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_HMAC;
     }
-
-    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
+#else
+    kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+#endif
+    
     if (kdfCtx == NULL) {
         return HITLS_CRYPT_ERR_HKDF_EXTRACT;
     }
@@ -1263,11 +1236,19 @@ EXIT:
     (void)input;
     (void)prk;
     (void)prkLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
 }
 
-int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen)
+int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
+{
+    return HITLS_CRYPT_HkdfExtract(NULL, NULL, input, prk, prkLen);
+}
+
+int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen)
 {
 #ifdef HITLS_CRYPTO_HKDF
     int32_t ret;
@@ -1275,8 +1256,12 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
     if (id == CRYPT_MAC_MAX) {
         return HITLS_CRYPT_ERR_HMAC;
     }
-
-    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
+#else
+    kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+#endif
     if (kdfCtx == NULL) {
         return HITLS_CRYPT_ERR_HKDF_EXPAND;
     }
@@ -1300,7 +1285,14 @@ EXIT:
     (void)input;
     (void)okm;
     (void)okmLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen)
+{
+    return HITLS_CRYPT_HkdfExpand(NULL, NULL, input, okm, okmLen);
 }
 #endif /* HITLS_TLS_CALLBACK_CRYPT */

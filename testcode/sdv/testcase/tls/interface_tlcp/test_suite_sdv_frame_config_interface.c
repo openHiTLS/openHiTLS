@@ -360,7 +360,7 @@ void UT_TLS_CFG_SET_TMPDH_API_TC001(int tlsVersion)
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
-    HITLS_CRYPT_Key *dhPkey = SAL_CRYPT_GenerateDhKeyBySecbits(HITLS_SECURITY_LEVEL_THREE_SECBITS);
+    HITLS_CRYPT_Key *dhPkey = CRYPT_DEFAULT_GenerateDhKeyBySecbits(HITLS_SECURITY_LEVEL_THREE_SECBITS);
     ASSERT_TRUE(HITLS_CFG_SetTmpDh(config, dhPkey) == HITLS_NULL_INPUT);
 
     switch (tlsVersion) {
@@ -1357,7 +1357,7 @@ void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
     HITLS_CFG_SetSecurityLevel(clientConfig, level);
 
     HITLS_CFG_SetDhAutoSupport(serverConfig, false);
-    key = SAL_CRYPT_GenerateDhKeyBySecbits(80);
+    key = CRYPT_DEFAULT_GenerateDhKeyBySecbits(80);
     HITLS_CFG_SetTmpDh(serverConfig, key);
 
     FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
