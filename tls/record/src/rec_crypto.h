@@ -40,7 +40,7 @@ typedef int32_t (*CalPlantextBufLenFunc)(TLS_Ctx *ctx, RecConnSuitInfo *suitInfo
     uint32_t ciphertextLen, uint32_t *offset, uint32_t *plaintextLen);
 typedef int32_t (*DecryptFunc)(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *cryptMsg,
     uint8_t *data, uint32_t *dataLen);
-typedef int32_t (*EncryptFunc)(RecConnState *state, const REC_TextInput *plainMsg,
+typedef int32_t (*EncryptFunc)(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg,
     uint8_t *cipherText, uint32_t cipherTextLen);
 typedef int32_t (*DecryptPostProcess)(TLS_Ctx *ctx, RecConnSuitInfo *suitInfo, REC_TextInput *cryptMsg,
     uint8_t *data, uint32_t *dataLen);

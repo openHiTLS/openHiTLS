@@ -24,11 +24,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "bsl_obj.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef void HITLS_Lib_Ctx;
 /**
  * @ingroup hitls_crypt_type
  * @brief   Key handle, which is converted into the corresponding structure based on the algorithm library
@@ -110,16 +112,15 @@ typedef enum {
  * @brief   MAC algorithm enumerated value
  */
 typedef enum {
-    HITLS_MAC_NULL,
-    HITLS_MAC_MD5,
-    HITLS_MAC_1,
-    HITLS_MAC_224,
-    HITLS_MAC_256,
-    HITLS_MAC_384,
-    HITLS_MAC_512,
-    HITLS_MAC_SM3,
-    HITLS_MAC_AEAD,
-    HITLS_MAC_BUTT = 255
+    HITLS_MAC_NULL = BSL_CID_UNKNOWN,
+    HITLS_MAC_MD5 = BSL_CID_HMAC_MD5,
+    HITLS_MAC_1 = BSL_CID_HMAC_SHA1,
+    HITLS_MAC_224 = BSL_CID_HMAC_SHA224,
+    HITLS_MAC_256 = BSL_CID_HMAC_SHA256,
+    HITLS_MAC_384 = BSL_CID_HMAC_SHA384,
+    HITLS_MAC_512 = BSL_CID_HMAC_SHA512,
+    HITLS_MAC_SM3 = BSL_CID_HMAC_SM3,
+    HITLS_MAC_AEAD = BSL_CID_MAC_AEAD,
 } HITLS_MacAlgo;
 
 /**

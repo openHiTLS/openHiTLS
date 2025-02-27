@@ -410,10 +410,10 @@ static int32_t CbcDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput
     return HITLS_SUCCESS;
 }
 
-static int32_t RecConnCopyIV(const RecConnState *state, uint8_t *cipherText, uint32_t cipherTextLen)
+static int32_t RecConnCopyIV(TLS_Ctx *ctx, const RecConnState *state, uint8_t *cipherText, uint32_t cipherTextLen)
 {
     if (!state->suiteInfo->isExportIV) {
-        SAL_CRYPT_Rand(state->suiteInfo->iv, state->suiteInfo->fixedIvLength);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), state->suiteInfo->iv, state->suiteInfo->fixedIvLength);
     }
     /* The IV set by the user can only be used once */
     state->suiteInfo->isExportIV = 0;
@@ -509,7 +509,7 @@ static int32_t GenerateCbcPlainTextAfterMac(const RecConnState *state, const REC
     return HITLS_SUCCESS;
 }
 
-static int32_t RecConnCbcEncryptThenMac(const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+static int32_t RecConnCbcEncryptThenMac(TLS_Ctx *ctx, const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     uint32_t offset = 0;
@@ -553,7 +553,7 @@ static int32_t RecConnCbcEncryptThenMac(const RecConnState *state, const REC_Tex
     return RecConnGenerateMac(state->suiteInfo, &input, &cipherText[offset + encLen], &macLen);
 }
 
-int32_t RecConnCbcMacThenEncrypt(const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+int32_t RecConnCbcMacThenEncrypt(TLS_Ctx *ctx, const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     uint32_t plainTextLen = 0;
@@ -598,7 +598,7 @@ int32_t RecConnCbcMacThenEncrypt(const RecConnState *state, const REC_TextInput 
     return HITLS_SUCCESS;
 }
 
-static int32_t CbcEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+static int32_t CbcEncrypt(TLS_Ctx *ctx, TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     if (plainMsg->isEncryptThenMac) {

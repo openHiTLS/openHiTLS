@@ -35,6 +35,8 @@ typedef struct {
     uint32_t labelLen;          /* Label length */
     const uint8_t *seed;        /* Seed */
     uint32_t seedLen;           /* Seed length */
+    HITLS_Lib_Ctx *libCtx;
+    const char *attrName;
 } CRYPT_KeyDeriveParameters;
 
 enum HITLS_CryptoCallBack {
@@ -83,7 +85,7 @@ enum HITLS_CryptoCallBack {
  * @retval HITLS_UNREGISTERED_CALLBACK      Unregistered callback
  * @retval HITLS_CRYPT_ERR_GENRATE_RANDOM   Failed to generate a random number.
  */
-int32_t SAL_CRYPT_Rand(uint8_t *buf, uint32_t len);
+int32_t SAL_CRYPT_Rand(HITLS_Lib_Ctx *libCtx, uint8_t *buf, uint32_t len);
 
 /**
  * @brief Obtain the HMAC length.

@@ -24,6 +24,8 @@
 #include "hitls_crypt_reg.h"
 #include "crypt.h"
 
+typedef void HITLS_Lib_Ctx;
+
 HITLS_CRYPT_BaseMethod g_cryptBaseMethod = {0};
 HITLS_CRYPT_EcdhMethod g_cryptEcdhMethod = {0};
 HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
@@ -177,22 +179,60 @@ int32_t CheckCallBackRetVal(int32_t cmd, int32_t callBackRet, uint32_t bingLogId
     return HITLS_SUCCESS;
 }
 
-int32_t SAL_CRYPT_Rand(uint8_t *buf, uint32_t len)
+int32_t SAL_CRYPT_Rand(HITLS_Lib_Ctx *libCtx, uint8_t *buf, uint32_t len)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = CRYPT_EAL_RandbytesEx(libCtx, buf, len);
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_RAND_BYTES, ret, BINLOG_ID15068,
+        HITLS_CRYPT_ERR_GENERATE_RANDOM);
+#else
     int32_t ret = g_cryptBaseMethod.randBytes(buf, len);
     return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_RAND_BYTES, ret, BINLOG_ID15068,
         HITLS_CRYPT_ERR_GENERATE_RANDOM);
+#endif
 }
+
+// static uint32_t SalGetMDAlgId(HITLS_HashAlgo hashAlgo)
+// {
+//     switch (hashAlgo) {
+//         case HITLS_HASH_SHA_256:
+//             return HITLS_MAC_256;
+//         case HITLS_HASH_SHA_384:
+//             return HITLS_MAC_384;
+//         case HITLS_HASH_SHA_512:
+//             return HITLS_MAC_512;
+//         case HITLS_HASH_MD5:
+//             return HITLS_MAC_MD5;
+//         case HITLS_HASH_SHA1:
+//             return HITLS_MAC_1;
+//         case HITLS_HASH_SHA_224:
+//             return HITLS_MAC_224;
+//         case HITLS_HASH_SM3:
+//             return HITLS_MAC_SM3;
+//         default:
+//             break;
+//     }
+//     return HITLS_MAC_NULL;
+// }
 
 uint32_t SAL_CRYPT_HmacSize(HITLS_HashAlgo hashAlgo)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return CRYPT_EAL_MdGetDigestSize(SalGetMDAlgId(hashAlgo));
+#else
     return g_cryptBaseMethod.hmacSize(hashAlgo);
+#endif
 }
 
 #ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
-HITLS_HMAC_Ctx *SAL_CRYPT_HmacInit(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
+HITLS_HMAC_Ctx *SAL_CRYPT_HmacInit(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return HITLS_CRYPT_HMAC_Init(libCtx, attrName, hashAlgo, key, len);
+#else
     return g_cryptBaseMethod.hmacInit(hashAlgo, key, len);
+#endif
 }
 
 void SAL_CRYPT_HmacFree(HITLS_HMAC_Ctx *hmac)
@@ -221,10 +261,15 @@ int32_t SAL_CRYPT_HmacFinal(HITLS_HMAC_Ctx *hmac, uint8_t *out, uint32_t *len)
 }
 #endif /* HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES */
 
-int32_t SAL_CRYPT_Hmac(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+int32_t SAL_CRYPT_Hmac(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = HITLS_CRYPT_HMAC(libCtx, attrName, keyLen, in, inLen, out, outLen);
+#else
     int32_t ret = g_cryptBaseMethod.hmac(hashAlgo, key, keyLen, in, inLen, out, outLen);
+#endif
     return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HMAC, ret, BINLOG_ID15077, HITLS_CRYPT_ERR_HMAC);
 }
 
@@ -242,7 +287,8 @@ static int32_t IteratorInit(CRYPT_KeyDeriveParameters *input, uint32_t hmacSize,
     (void)memcpy_s(&seed[hmacSize], input->labelLen, input->label, input->labelLen);
     (void)memcpy_s(&seed[hmacSize + input->labelLen], input->seedLen, input->seed, input->seedLen);
 
-    int32_t ret = SAL_CRYPT_Hmac(input->hashAlgo, input->secret, input->secretLen,
+    int32_t ret = SAL_CRYPT_Hmac(input->libCtx, input->attrName,
+        input->hashAlgo, input->secret, input->secretLen,
         &seed[hmacSize], input->labelLen + input->seedLen, seed, &hmacSize);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15079, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -304,7 +350,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
     }
 
     while (alignLen > 0) {
-        ret = SAL_CRYPT_Hmac(input->hashAlgo, input->secret, input->secretLen,
+        ret = SAL_CRYPT_Hmac(input->libCtx, input->attrName, input->hashAlgo, input->secret, input->secretLen,
             iterator, iteratorSize, data + offset, &tmpLen);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15082, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -315,7 +361,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         alignLen -= tmpLen;
         offset += tmpLen;
 
-        ret = SAL_CRYPT_Hmac(input->hashAlgo, input->secret, input->secretLen, iterator, tmpLen, iterator, &tmpLen);
+        ret = SAL_CRYPT_Hmac(input->libCtx, input->attrName, input->hashAlgo, input->secret, input->secretLen, iterator, tmpLen, iterator, &tmpLen);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15083, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "P_Hash error: iterator update fail, HMAC ret = 0x%x.", ret, 0, 0, 0);
@@ -400,9 +446,13 @@ int32_t SAL_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t o
 }
 
 
-HITLS_HASH_Ctx *SAL_CRYPT_DigestInit(HITLS_HashAlgo hashAlgo)
+HITLS_HASH_Ctx *SAL_CRYPT_DigestInit(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return CRYPT_DEFAULT_DigestInit(libCtx, attrName, hashAlgo);
+#else
     return g_cryptBaseMethod.digestInit(hashAlgo);
+#endif
 }
 
 HITLS_HASH_Ctx *SAL_CRYPT_DigestCopy(HITLS_HASH_Ctx *ctx)
@@ -435,12 +485,21 @@ int32_t SAL_CRYPT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len)
 #ifdef HITLS_TLS_PROTO_TLS13
 uint32_t SAL_CRYPT_DigestSize(HITLS_HashAlgo hashAlgo)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return CRYPT_EAL_MdGetDigestSize(hashAlgo);
+#else
     return g_cryptBaseMethod.digestSize(hashAlgo);
+#endif
 }
 
-int32_t SAL_CRYPT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+int32_t SAL_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = HITLS_CRYPT_Digest(libCtx, attrName, hashAlgo, in, inLen, out, outLen)
+#else
     int32_t ret = g_cryptBaseMethod.digest(hashAlgo, in, inLen, out, outLen);
+#endif
     return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_DIGEST, ret, BINLOG_ID15094, HITLS_CRYPT_ERR_DIGEST);
 }
 #endif

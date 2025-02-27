@@ -156,16 +156,21 @@ uint32_t CRYPT_DEFAULT_HMAC_Size(HITLS_HashAlgo hashAlgo)
 }
 
 #ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
-HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
+HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
 {
-#ifdef HITLS_CRYPTO_MAC
+    #ifdef HITLS_CRYPTO_MAC
     CRYPT_MAC_AlgId id = GetHmacAlgId(hashAlgo);
     if (id == CRYPT_MAC_MAX) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16618, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hashAlgo err", 0, 0, 0, 0);
         return NULL;
     }
-
-    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(id);
+    CRYPT_EAL_MacCtx *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, SalGetMDAlgId(hashAlgo), attrName);
+#else
+    ctx = CRYPT_EAL_MacNewCtx(id);
+#endif
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16619, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MacNewCtx fail", 0, 0, 0, 0);
         return NULL;
@@ -183,8 +188,15 @@ HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *
     (void)hashAlgo;
     (void)key;
     (void)len;
+    (void)libCtx;
+    (void)attrName;
     return NULL;
 #endif
+}
+
+HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
+{
+    return HITLS_CRYPT_HMAC_Init(NULL, NULL, hashAlgo, key, len);
 }
 
 int32_t CRYPT_DEFAULT_HMAC_ReInit(HITLS_HMAC_Ctx *ctx)
@@ -232,7 +244,8 @@ int32_t CRYPT_DEFAULT_HMAC_Final(HITLS_HMAC_Ctx *ctx, uint8_t *out, uint32_t *le
 }
 #endif /* HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES */
 
-int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
 #ifdef HITLS_CRYPTO_MAC
@@ -240,8 +253,12 @@ int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t
     if (id == CRYPT_MAC_MAX) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_HMAC, BINLOG_ID16621, "No proper id");
     }
-
-    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(id);
+    CRYPT_EAL_MacCtx *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
+#else
+    ctx = CRYPT_EAL_MacNewCtx(id);
+#endif
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_HMAC, BINLOG_ID16622, "new ctx fail");
     }
@@ -276,8 +293,16 @@ int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t
     (void)inLen;
     (void)out;
     (void)outLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return HITLS_CRYPT_HMAC(NULL, NULL, hashAlgo, key, keyLen, in, inLen, out, outLen);
 }
 
 uint32_t CRYPT_DEFAULT_DigestSize(HITLS_HashAlgo hashAlgo)
@@ -297,7 +322,7 @@ uint32_t CRYPT_DEFAULT_DigestSize(HITLS_HashAlgo hashAlgo)
 #endif
 }
 
-HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo)
+HITLS_HASH_Ctx *HITLS_CRYPT_DigestInit(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo)
 {
 #ifdef HITLS_CRYPTO_MD
     CRYPT_MD_AlgId id = GetMDAlgId(hashAlgo);
@@ -323,8 +348,15 @@ HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo)
     return ctx;
 #else
     (void)hashAlgo;
+    (void)libCtx;
+    (void)attrName;
     return NULL;
 #endif
+}
+
+HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo)
+{
+    return HITLS_CRYPT_DigestInit(NULL, NULL, hashAlgo);
 }
 
 HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestCopy(HITLS_HASH_Ctx *ctx)
@@ -371,17 +403,18 @@ int32_t CRYPT_DEFAULT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *l
 #endif
 }
 
-int32_t CRYPT_DEFAULT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
+int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen)
 {
-#ifdef HITLS_CRYPTO_MD
+    #ifdef HITLS_CRYPTO_MD
     int32_t ret;
-    CRYPT_MD_AlgId id = GetMDAlgId(hashAlgo);
-    if (id == CRYPT_MD_MAX) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID16630, "GetMDAlgId fail");
-    }
-
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
+    CRYPT_EAL_MdCTX *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
+#else
+    ctx = CRYPT_EAL_MdNewCtx(hashAlgo);
+#endif
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID16631, "MdNewCtx fail");
     }
@@ -412,8 +445,16 @@ int32_t CRYPT_DEFAULT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_
     (void)inLen;
     (void)out;
     (void)outLen;
+    (void)libCtx;
+    (void)attrName;
     return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
+}
+
+int32_t CRYPT_DEFAULT_Digest(HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen)
+{
+
 }
 
 static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher,

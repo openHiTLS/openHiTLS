@@ -26,7 +26,7 @@
 #include "crypt_entropy.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 

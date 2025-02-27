@@ -155,13 +155,8 @@ int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plai
     offset += sizeof(uint16_t);
     BSL_Uint16ToByte((uint16_t)plainMsg->textLen, &header[offset]);       // The 11th and 12th bytes are the data length
 
-    HITLS_HashAlgo hashAlgo = GetHashOfMACAlgorithm(suiteInfo->macAlg);
-    if (hashAlgo == HITLS_HASH_BUTT) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_REC_ERR_GENERATE_MAC, BINLOG_ID17229, "GetHashOfMACAlgorithm fail");
-    }
-
     if (suiteInfo->macCtx == NULL) {
-        suiteInfo->macCtx = SAL_CRYPT_HmacInit(hashAlgo, suiteInfo->macKey, suiteInfo->macKeyLen);
+        suiteInfo->macCtx = SAL_CRYPT_HmacInit(suiteInfo->macAlg, suiteInfo->macKey, suiteInfo->macKeyLen);
         ret = suiteInfo->macCtx == NULL ? HITLS_REC_ERR_GENERATE_MAC : HITLS_SUCCESS;
     } else {
         ret = SAL_CRYPT_HmacReInit(suiteInfo->macCtx);
@@ -232,9 +227,9 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_CIPHER_CBC */
-int32_t RecConnEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
+int32_t RecConnEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
 {
-    return RecGetCryptoFuncs(state->suiteInfo)->encryt(state, plainMsg, cipherText, cipherTextLen);
+    return RecGetCryptoFuncs(state->suiteInfo)->encryt(ctx, state, plainMsg, cipherText, cipherTextLen);
 }
 
 int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *cryptMsg, uint8_t *data,
