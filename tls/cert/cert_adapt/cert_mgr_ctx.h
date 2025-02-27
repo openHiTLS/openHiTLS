@@ -18,12 +18,14 @@
 #include <stdint.h>
 #include "hitls_cert_reg.h"
 #include "cert.h"
+#include "bsl_hash.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define TLS_DEFAULT_VERIFY_DEPTH 20u
+#define CERT_DEFAULT_HASH_BKT_SIZE 64u
 
 struct CertVerifyParamInner {
     uint32_t verifyDepth;   /* depth of verify */
@@ -36,15 +38,16 @@ struct CertPairInner {
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* encrypted device cert. Currently this field is used only when the peer-end encrypted certificate is stored. */
     HITLS_CERT_X509 *encCert;
+    HITLS_CERT_Key *encPrivateKey;
 #endif
     HITLS_CERT_Key *privateKey; /* private key corresponding to the certificate */
     HITLS_CERT_Chain *chain;    /* certificate chain */
 };
 
 struct CertMgrCtxInner {
-    uint32_t currentCertIndex;                  /* points to the certificate in use. */
+    uint32_t currentCertKeyType;                  /* keyType to the certificate in use. */
     /* Indicates the certificate resources on the link. Only one certificate of a type can be loaded. */
-    CERT_Pair certPair[TLS_CERT_KEY_TYPE_NUM];
+    BSL_HASH_Hash *certPairs;                     /* cert hash table. key keyType, value CERT_Pair */
     HITLS_CERT_Chain *extraChain;
     HITLS_CERT_Store *verifyStore;              /* Verifies the store, which is used to verify the certificate chain. */
     HITLS_CERT_Store *chainStore;               /* Certificate chain store, used to assemble the certificate chain */

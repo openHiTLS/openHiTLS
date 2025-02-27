@@ -23,6 +23,7 @@
 #define HITLS_CERT_TYPE_H
 
 #include <stdint.h>
+#include "crypt_algid.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,16 +128,13 @@ typedef enum {
  * @brief   Certificate Public Key Type
  */
 typedef enum {
-    TLS_CERT_KEY_TYPE_RSA,
-    TLS_CERT_KEY_TYPE_RSA_PSS,
-    TLS_CERT_KEY_TYPE_DSA,
-    TLS_CERT_KEY_TYPE_ECDSA,
-    TLS_CERT_KEY_TYPE_ED25519,
-    TLS_CERT_KEY_TYPE_ED448,
-    TLS_CERT_KEY_TYPE_SM2 = 9, /**<  9 is sign type, 10 is enc type */
-    TLS_CERT_KEY_TYPE_ENC_SM2 = 10,
-    TLS_CERT_KEY_TYPE_NUM = 11,
-    TLS_CERT_KEY_TYPE_UNKNOWN = 255
+    TLS_CERT_KEY_TYPE_UNKNOWN = BSL_CID_UNKNOWN,
+    TLS_CERT_KEY_TYPE_RSA = CRYPT_PKEY_RSA,
+    TLS_CERT_KEY_TYPE_RSA_PSS = BSL_CID_RSASSAPSS,
+    TLS_CERT_KEY_TYPE_DSA = CRYPT_PKEY_DSA,
+    TLS_CERT_KEY_TYPE_ECDSA = CRYPT_PKEY_ECDSA,
+    TLS_CERT_KEY_TYPE_ED25519 = CRYPT_PKEY_ED25519,
+    TLS_CERT_KEY_TYPE_SM2 = CRYPT_PKEY_SM2
 } HITLS_CERT_KeyType;
 
 /**
