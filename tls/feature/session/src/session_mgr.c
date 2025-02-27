@@ -99,7 +99,7 @@ static void SessionFreeFunc(void *ptr)
     return;
 }
 
-TLS_SessionMgr *SESSMGR_New(void)
+TLS_SessionMgr *SESSMGR_New(HITLS_Lib_Ctx *libCtx)
 {
     TLS_SessionMgr *mgr = (TLS_SessionMgr *)BSL_SAL_Calloc(1u, sizeof(TLS_SessionMgr));
     if (mgr == NULL) {
@@ -115,9 +115,9 @@ TLS_SessionMgr *SESSMGR_New(void)
     }
 
     /* Prepare the default ticket key */
-    if (SAL_CRYPT_Rand(mgr->ticketKeyName, sizeof(mgr->ticketKeyName)) != HITLS_SUCCESS ||
-        SAL_CRYPT_Rand(mgr->ticketAesKey, sizeof(mgr->ticketAesKey)) != HITLS_SUCCESS ||
-        SAL_CRYPT_Rand(mgr->ticketHmacKey, sizeof(mgr->ticketHmacKey)) != HITLS_SUCCESS) {
+    if (SAL_CRYPT_Rand(libCtx, mgr->ticketKeyName, sizeof(mgr->ticketKeyName)) != HITLS_SUCCESS ||
+        SAL_CRYPT_Rand(libCtx, mgr->ticketAesKey, sizeof(mgr->ticketAesKey)) != HITLS_SUCCESS ||
+        SAL_CRYPT_Rand(libCtx, mgr->ticketHmacKey, sizeof(mgr->ticketHmacKey)) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16704, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Rand fail", 0, 0, 0, 0);
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_FREE(mgr);
@@ -388,7 +388,7 @@ int32_t SESSMGR_GernerateSessionId(TLS_Ctx *ctx, uint8_t *sessionId, uint32_t se
     int32_t retry = 0;
 
     do {
-        ret = SAL_CRYPT_Rand(sessionId, sessionIdSize);
+        ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), sessionId, sessionIdSize);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }

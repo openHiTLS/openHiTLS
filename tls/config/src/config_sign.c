@@ -341,12 +341,10 @@ const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfo(const HITLS_Config *config
     }
     return NULL;
 }
-
+#endif
 const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *config, uint32_t *size)
 {
     (void)config;
     *size = sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SIGNATURE_SCHEME_INFO[0]);
     return SIGNATURE_SCHEME_INFO;
 }
-
-#endif
