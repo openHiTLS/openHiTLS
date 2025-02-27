@@ -130,7 +130,7 @@ int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx)
                 return ret;
             }
 #endif /* HITLS_TLS_FEATURE_SESSION */
-            ret = SAL_CRYPT_Rand(hsCtx->clientRandom, HS_RANDOM_SIZE);
+            ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->clientRandom, HS_RANDOM_SIZE);
             if (ret != HITLS_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15625, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "generate random value fail.", 0, 0, 0, 0);
@@ -174,7 +174,7 @@ static bool Tls13SelectGroup(TLS_Ctx *ctx, uint16_t *group)
     return false;
 }
 
-static int32_t Tls13ClientGenKeyPair(KeyExchCtx *kxCtx, uint16_t selectGroup)
+static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx, KeyExchCtx *kxCtx, uint16_t selectGroup)
 {
     uint16_t curveGroup = selectGroup;
     HITLS_ECParameters curveParams = {
@@ -183,7 +183,7 @@ static int32_t Tls13ClientGenKeyPair(KeyExchCtx *kxCtx, uint16_t selectGroup)
     };
 
     // ecdhe and dhe groups can invoke the same interface to generate keys.
-    HITLS_CRYPT_Key *key = SAL_CRYPT_GenEcdhKeyPair(&curveParams);
+    HITLS_CRYPT_Key *key = SAL_CRYPT_GenEcdhKeyPair(ctx, &curveParams);
     if (key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15629, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -233,7 +233,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
         /* Send the client hello message for the first time and fill in the group in the key share extension */
         keyShare->group = selectGroup;
     }
-    return Tls13ClientGenKeyPair(ctx->hsCtx->kxCtx, selectGroup);
+    return Tls13ClientGenKeyPair(ctx, ctx->hsCtx->kxCtx, selectGroup);
 }
 
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
@@ -248,7 +248,7 @@ static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
             "session Id malloc fail.", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    ret = SAL_CRYPT_Rand(hsCtx->sessionId, HITLS_SESSION_ID_MAX_SIZE);
+    ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->sessionId, HITLS_SESSION_ID_MAX_SIZE);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(hsCtx->sessionId);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15631, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -424,7 +424,7 @@ int32_t Tls13ClientHelloPrepare(TLS_Ctx *ctx)
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17118, "VERIFY_Init fail");
         }
 
-        ret = SAL_CRYPT_Rand(hsCtx->clientRandom, HS_RANDOM_SIZE);
+        ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->clientRandom, HS_RANDOM_SIZE);
         if (ret != HITLS_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15632, "generate random value fail");
         }

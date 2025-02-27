@@ -148,7 +148,8 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
  */
 int32_t HS_TLS13DeriveSecret(CRYPT_KeyDeriveParameters *deriveInfo, bool isHashed, uint8_t *outSecret, uint32_t outLen);
 
-int32_t HS_TLS13DeriveBinderKey(HITLS_HashAlgo hashAlgo, bool isExternalPsk, uint8_t *earlySecret, uint32_t secretLen,
+int32_t HS_TLS13DeriveBinderKey(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, bool isExternalPsk, uint8_t *earlySecret, uint32_t secretLen,
     uint8_t *binderKey, uint32_t keyLen);
 
 /**
@@ -164,7 +165,7 @@ int32_t HS_TLS13DeriveBinderKey(HITLS_HashAlgo hashAlgo, bool isExternalPsk, uin
  * @retval HITLS_UNREGISTERED_CALLBACK Unregistered callback
  * @retval HITLS_CRYPT_ERR_HKDF_EXTRACT HKDF-Extract calculation failure
  */
-int32_t HS_TLS13DeriveEarlySecret(
+int32_t HS_TLS13DeriveEarlySecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
     HITLS_HashAlgo hashAlgo, uint8_t *psk, uint32_t pskLen, uint8_t *earlySecret, uint32_t *outLen);
 
 /**
@@ -184,7 +185,8 @@ int32_t HS_TLS13DeriveEarlySecret(
  * @retval HITLS_CRYPT_ERR_HKDF_EXPAND HKDF-Expand calculation fails.
  * @retval HITLS_CRYPT_ERR_HKDF_EXTRACT HKDF-Extract calculation failure
  */
-int32_t HS_TLS13DeriveNextStageSecret(HITLS_HashAlgo hashAlgo, uint8_t *inSecret, uint32_t inLen, uint8_t *givenSecret,
+int32_t HS_TLS13DeriveNextStageSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, uint8_t *inSecret, uint32_t inLen, uint8_t *givenSecret,
     uint32_t givenLen, uint8_t *outSecret, uint32_t *outLen);
 
 /**
@@ -201,7 +203,7 @@ int32_t HS_TLS13DeriveNextStageSecret(HITLS_HashAlgo hashAlgo, uint8_t *inSecret
  * @retval HITLS_CRYPT_ERR_DIGEST hash calculation failed.
  * @retval HITLS_CRYPT_ERR_HKDF_EXPAND HKDF-Expand calculation fails.
  */
-int32_t HS_TLS13DeriveFinishedKey(
+int32_t HS_TLS13DeriveFinishedKey(HITLS_Lib_Ctx *libCtx, const char *attrName,
     HITLS_HashAlgo hashAlgo, uint8_t *baseKey, uint32_t baseKeyLen, uint8_t *finishedkey, uint32_t finishedkeyLen);
 
 /**

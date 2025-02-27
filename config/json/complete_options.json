@@ -169,7 +169,8 @@
         "CC_DEFINE_FLAGS": [
             "-DHITLS_SIXTY_FOUR_BITS",
             "-DHITLS_THIRTY_TWO_BITS",
-            "-DHITLS_BSL_SAL_LINUX"
+            "-DHITLS_BSL_SAL_LINUX",
+            "-DHITLS_TLS_FEATURE_PROVIDER"
         ],
         "CC_DEBUG_FLAGS": [
             "-g",
