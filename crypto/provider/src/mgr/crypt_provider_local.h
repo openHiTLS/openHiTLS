@@ -36,6 +36,7 @@ struct EAL_LibCtx {
     BslList *providers; // managing providers
     BSL_SAL_ThreadLockHandle lock;
     char *searchProviderPath;
+    void *drbg;
 };
 
 struct EAL_ProviderMgrCtx {

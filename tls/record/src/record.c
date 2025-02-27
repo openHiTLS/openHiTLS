@@ -389,7 +389,7 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
     }
 
     /* 1.Generate a secret */
-    int32_t ret = RecTLS13ConnKeyBlockGen(param, &suitInfo);
+    int32_t ret = RecTLS13ConnKeyBlockGen(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), param, &suitInfo);
     if (ret != HITLS_SUCCESS) {
         RecConnStateFree(state);
         return ret;

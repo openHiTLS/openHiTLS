@@ -134,7 +134,7 @@ static int32_t ProcessServerKxMsgNamedCurve(TLS_Ctx *ctx, const ServerKeyExchang
 
     ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams.type = type;
     ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams.param.namedcurve = namedGroup;
-    HITLS_CRYPT_Key *key = SAL_CRYPT_GenEcdhKeyPair(&ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
+    HITLS_CRYPT_Key *key = SAL_CRYPT_GenEcdhKeyPair(ctx, &ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
     if (key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ERR_ENCODE_ECDH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15517, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -172,7 +172,8 @@ int32_t HS_ProcessServerKxMsgEcdhe(TLS_Ctx *ctx, const ServerKeyExchangeMsg *ser
 int32_t HS_ProcessServerKxMsgDhe(TLS_Ctx *ctx, const ServerKeyExchangeMsg *serverKxMsg)
 {
     const ServerDh *dh = &serverKxMsg->keyEx.dh;
-    HITLS_CRYPT_Key *key = SAL_CRYPT_GenerateDhKeyByParams(dh->p, dh->plen, dh->g, dh->glen);
+    HITLS_CRYPT_Key *key = SAL_CRYPT_GenerateDhKeyByParams(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        dh->p, dh->plen, dh->g, dh->glen);
     if (key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ERR_ENCODE_DH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15519, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -266,7 +267,7 @@ int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         return HITLS_MEMALLOC_FAIL;
     }
     uint8_t premaster[MASTER_SECRET_LEN];
-    ret = SAL_CRYPT_Rand(premaster, MASTER_SECRET_LEN);
+    ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), premaster, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(premasterSecret);
         return ret;
@@ -316,7 +317,7 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     if ((ret != HITLS_SUCCESS) || (secretLen != MASTER_SECRET_LEN)) {
         /* If the server fails to process the message, it is prohibited to send the alert message. The randomly
          * generated premaster secret must be used to continue the handshake */
-        SAL_CRYPT_Rand(keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN);
         BSL_SAL_FREE(preMasterSecret);
         return HITLS_SUCCESS;
     }
@@ -330,7 +331,7 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         // 8：right shift a byte
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version >> 8);
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version);
-        SAL_CRYPT_Rand(keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
         BSL_SAL_CleanseData(preMasterSecret, secretLen);
         BSL_SAL_FREE(preMasterSecret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15348, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -469,7 +470,8 @@ int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_
     }
     deriveInfo.seed = seed;
     deriveInfo.seedLen = seedLen;
-
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     ret = SAL_CRYPT_PRF(&deriveInfo, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15526, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -512,12 +514,14 @@ static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecre
         *preMasterSecretLen = MASTER_SECRET_LEN;
         HITLS_Sm2GenShareKeyParameters sm2ShareKeyParam = {ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
             ctx->hsCtx->kxCtx->pubKeyLen, priKey, peerPubKey, ctx->isClient };
-        ret = SAL_CRYPT_CalcSm2dhSharedSecret(&sm2ShareKeyParam, preMasterSecret, preMasterSecretLen);
+        ret = SAL_CRYPT_CalcSm2dhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+            &sm2ShareKeyParam, preMasterSecret, preMasterSecretLen);
         SAL_CERT_KeyFree(certMgrCtx, peerPubKey);
         return ret;
     }
 #endif
-    return SAL_CRYPT_CalcEcdhSharedSecret(ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
+    return SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
         ctx->hsCtx->kxCtx->pubKeyLen, preMasterSecret, preMasterSecretLen);
 }
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
@@ -537,7 +541,7 @@ static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32
 #ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
-            ret = SAL_CRYPT_CalcDhSharedSecret(keyExchCtx->key,
+            ret = SAL_CRYPT_CalcDhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), keyExchCtx->key,
                 keyExchCtx->peerPubkey, keyExchCtx->pubKeyLen,
                 preMasterSecret, preMasterSecretLen);
             break;

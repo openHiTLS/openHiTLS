@@ -116,7 +116,8 @@ static HITLS_CRYPT_Key *GetDhKeyBySecBits(TLS_Ctx *ctx)
             return NULL;
         }
     }
-    return SAL_CRYPT_GenerateDhKeyBySecbits(secBits);
+    // TODO 这里需要group吗 接口定义有问题？
+    return SAL_CRYPT_GenerateDhKeyBySecbits(ctx, secBits);
 }
 
 static HITLS_CRYPT_Key *GetDhKey(TLS_Ctx *ctx)
@@ -192,7 +193,7 @@ static int32_t PackExchMsgPrepare(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE: /* TLCP is included here. */
         case HITLS_KEY_EXCH_ECDHE_PSK:
-            key = SAL_CRYPT_GenEcdhKeyPair(&ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
+            key = SAL_CRYPT_GenEcdhKeyPair(ctx, &ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
             if (key == NULL) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15746, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "server generate ecdhe key pair error.", 0, 0, 0, 0);

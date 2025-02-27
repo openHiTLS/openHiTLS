@@ -344,6 +344,251 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
  */
 int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen);
 
+
+/**
+ * @brief Initialize the HMAC context.
+ *
+ * This function initializes the HMAC (Hash-based Message Authentication Code) context
+ * with the given library context, attribute name, hash algorithm, key, and key length.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param hashAlgo   [IN] Hash algorithm to be used in the HMAC operation, e.g., HITLS_SHA256.
+ * @param key        [IN] Secret key used for HMAC calculation.
+ * @param len        [IN] Length of the secret key in bytes.
+ *
+ * @return HMAC context
+ *         Returns a pointer to the initialized HMAC context.
+ *         Returns NULL if the initialization fails.
+ */
+HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len);
+
+/**
+ * @brief Perform HMAC calculation.
+ *
+ * This function calculates the HMAC (Hash-based Message Authentication Code)
+ * using the given library context, attribute name, hash algorithm, key, input data,
+ * and stores the result in the output buffer.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param hashAlgo   [IN] Hash algorithm to be used in the HMAC operation, e.g., HITLS_SHA256.
+ * @param key        [IN] Secret key used for HMAC calculation.
+ * @param keyLen     [IN] Length of the secret key in bytes.
+ * @param in         [IN] Input data to be processed for HMAC calculation.
+ * @param inLen      [IN] Length of the input data in bytes.
+ * @param out        [OUT] Buffer to store the calculated HMAC output.
+ * @param outLen     [IN/OUT] IN: Maximum length of the output buffer. OUT: Actual length of the calculated HMAC output.
+ *
+ * @retval HITLS_SUCCESS                succeeded.
+ * @retval Other                        failure
+ */
+int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
+        HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+        const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @brief Initialize the hash context.
+ *
+ * This function initializes the hash context with the given hash algorithm.
+ *
+ * @param hashAlgo   [IN] Hash algorithm to be used in the hash operation, e.g., HITLS_SHA256.
+ *
+ * @return hash context
+ *         Returns a pointer to the initialized hash context.
+ *         Returns NULL if the initialization fails.
+ */
+HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo);
+
+/**
+ * @brief Perform hash calculation.
+ *
+ * This function calculates the hash of the input data using the given library context,
+ * attribute name, hash algorithm, and stores the result in the output buffer.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param hashAlgo   [IN] Hash algorithm to be used in the hash operation, e.g., HITLS_SHA256.
+ * @param in         [IN] Input data to be processed for hash calculation.
+ * @param inLen      [IN] Length of the input data in bytes.
+ * @param out        [OUT] Buffer to store the calculated hash output.
+ * @param outLen     [IN/OUT] IN: Maximum length of the output buffer. OUT: Actual length of the calculated hash output.
+ *
+ * @retval HITLS_SUCCESS                succeeded.
+ * @retval Other                        failure
+ */
+int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen);
+
+/**
+ * @brief Perform encryption operation.
+ *
+ * This function encrypts the input data using the given library context, attribute name,
+ * cipher parameters, and stores the encrypted data in the output buffer.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param cipher     [IN] Key parameters for the encryption operation.
+ * @param in         [IN] Plaintext data to be encrypted.
+ * @param inLen      [IN] Length of the plaintext data in bytes.
+ * @param out        [OUT] Buffer to store the encrypted data (ciphertext).
+ * @param outLen     [IN/OUT] IN: Maximum length of the output buffer. OUT: Actual length of the encrypted data.
+ *
+ * @retval HITLS_SUCCESS                succeeded.
+ * @retval Other                        failure
+ */
+int32_t HITLS_CRYPT_Encrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CipherParameters *cipher,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @brief Perform decryption operation.
+ *
+ * This function decrypts the input ciphertext using the given library context, attribute name,
+ * cipher parameters, and stores the decrypted data in the output buffer.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param cipher     [IN] Key parameters for the decryption operation.
+ * @param in         [IN] Ciphertext data to be decrypted.
+ * @param inLen      [IN] Length of the ciphertext data in bytes.
+ * @param out        [OUT] Buffer to store the decrypted data (plaintext).
+ * @param outLen     [IN/OUT] IN: Maximum length of the output buffer. OUT: Actual length of the decrypted data.
+ *
+ * @retval HITLS_SUCCESS                succeeded.
+ * @retval Other                        failure
+ */
+int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CipherParameters *cipher,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @brief Generate an ECDH key pair.
+ *
+ * This function generates an ECDH (Elliptic Curve Diffie-Hellman) key pair
+ * using the given library context, attribute name, configuration, and curve parameters.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param config     [IN] Configuration for the ECDH key generation.
+ * @param curveParams [IN] ECDH parameter specifying the elliptic curve.
+ *
+ * @return Key handle
+ *         Returns a pointer to the generated ECDH key handle.
+ *         Returns NULL if the key generation fails.
+ */
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateEcdhKey(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *config, const HITLS_ECParameters *curveParams);
+
+
+/**
+ * @brief Calculate the shared secret.
+ *
+ * This function calculates the shared secret using the given library context, attribute name, local key handle, peer public key data, and its length.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param key        [IN] Local key handle.
+ * @param peerPubkey [IN] Peer public key data.
+ * @param pubKeyLen  [IN] Length of the peer public key data.
+ * @param sharedSecret [OUT] Buffer to store the shared secret.
+ * @param sharedSecretLen [IN/OUT] IN: Maximum length of the buffer. OUT: Actual length of the shared secret.
+ *
+ * @retval HITLS_SUCCESS  Succeeded.
+ * @retval Other          Failed.
+ */
+int32_t HITLS_CRYPT_CalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+
+/**
+ * @brief Calculate the SM2 shared secret.
+ *
+ * This function calculates the SM2 shared secret using the given library context, attribute name, and SM2 parameters.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param sm2Params  [IN] Parameters for SM2 shared key generation.
+ * @param sharedSecret [OUT] Buffer to store the shared secret.
+ * @param sharedSecretLen [IN/OUT] IN: Maximum length of the buffer. OUT: Actual length of the shared secret.
+ *
+ * @retval HITLS_SUCCESS  Succeeded.
+ * @retval Other          Failed.
+ */
+int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret,
+    uint32_t *sharedSecretLen);
+
+/**
+ * @brief Generate a DH key pair based on the security level.
+ *
+ * This function generates a DH key pair using the given library context, attribute name, configuration, and named group ID.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param paraId    [IN] param ID.
+ *
+ * @return Key handle
+ *         Returns a pointer to the generated DH key pair handle.
+ *         Returns NULL if the key generation fails.
+ */
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, int32_t paraId);
+
+/**
+ * @brief Generate a DH key pair based on parameters.
+ *
+ * This function generates a DH key pair using the given library context, attribute name, p parameter, and g parameter.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param p          [IN] p parameter.
+ * @param pLen       [IN] Length of the p parameter.
+ * @param g          [IN] g parameter.
+ * @param gLen       [IN] Length of the g parameter.
+ *
+ * @return Key handle
+ *         Returns a pointer to the generated DH key pair handle.
+ *         Returns NULL if the key generation fails.
+ */
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyByParameters(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, uint8_t *p, uint16_t pLen, uint8_t *g, uint16_t gLen);
+
+/**
+ * @brief HKDF expand function.
+ *
+ * This function performs the HKDF expand operation using the given library context, attribute name, and HKDF expand input.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param input      [IN] HKDF expand input.
+ * @param okm        [OUT] Buffer to store the output key.
+ * @param okmLen     [IN] Length of the output key.
+ *
+ * @retval HITLS_SUCCESS  Succeeded.
+ * @retval Other          Failed.
+ */
+int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen);
+
+/**
+ * @brief HKDF extract function.
+ *
+ * This function performs the HKDF extract operation using the given library context, attribute name, and HKDF extract input.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param input      [IN] HKDF extract input.
+ * @param prk        [OUT] Buffer to store the output key.
+ * @param prkLen     [IN/OUT] IN: Maximum length of the buffer. OUT: Actual length of the output key.
+ *
+ * @retval HITLS_SUCCESS  Succeeded.
+ * @retval Other          Failed.
+ */
+int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
+        const char *attrName, const HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen);
+
+
 #ifdef __cplusplus
 }
 #endif
