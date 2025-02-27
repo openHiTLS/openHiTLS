@@ -24,6 +24,8 @@
 #include "hitls_crypt_reg.h"
 #include "crypt.h"
 
+typedef void CRYPT_EalLibCtx;
+
 HITLS_CRYPT_BaseMethod g_cryptBaseMethod = {0};
 HITLS_CRYPT_EcdhMethod g_cryptEcdhMethod = {0};
 HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
@@ -177,11 +179,17 @@ int32_t CheckCallBackRetVal(int32_t cmd, int32_t callBackRet, uint32_t bingLogId
     return HITLS_SUCCESS;
 }
 
-int32_t SAL_CRYPT_Rand(uint8_t *buf, uint32_t len)
+int32_t SAL_CRYPT_Rand(CRYPT_EalLibCtx *libCtx, uint8_t *buf, uint32_t len)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = CRYPT_EAL_RandbytesEx(libCtx, buf, len);
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_RAND_BYTES, ret, BINLOG_ID15068,
+        HITLS_CRYPT_ERR_GENERATE_RANDOM);
+#else
     int32_t ret = g_cryptBaseMethod.randBytes(buf, len);
     return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_RAND_BYTES, ret, BINLOG_ID15068,
         HITLS_CRYPT_ERR_GENERATE_RANDOM);
+#endif
 }
 
 uint32_t SAL_CRYPT_HmacSize(HITLS_HashAlgo hashAlgo)

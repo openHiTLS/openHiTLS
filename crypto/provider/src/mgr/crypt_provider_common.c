@@ -25,7 +25,7 @@
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
-CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void)
+CRYPT_EAL_LibCtx *CRYPT_EAL_GetGlobalLibCtx(void)
 {
     return g_libCtx;
 }

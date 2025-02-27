@@ -57,7 +57,7 @@ static void SetCipherInfo(const TLS_SessionMgr *sessMgr, Ticket *ticket, HITLS_C
     return;
 }
 
-static int32_t GetSessEncryptInfo(const TLS_SessionMgr *sessMgr, Ticket *ticket, HITLS_CipherParameters *cipher)
+static int32_t GetSessEncryptInfo(TLS_Ctx *ctx, const TLS_SessionMgr *sessMgr, Ticket *ticket, HITLS_CipherParameters *cipher)
 {
     int32_t ret;
 #ifdef HITLS_TLS_FEATURE_SESSION
@@ -76,7 +76,7 @@ static int32_t GetSessEncryptInfo(const TLS_SessionMgr *sessMgr, Ticket *ticket,
     /* The user does not register the callback. The default ticket key is used. */
     (void)memcpy_s(ticket->keyName, HITLS_TICKET_KEY_NAME_SIZE, sessMgr->ticketKeyName, HITLS_TICKET_KEY_NAME_SIZE);
 
-    ret = SAL_CRYPT_Rand(ticket->iv, HITLS_TICKET_IV_SIZE);
+    ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), ticket->iv, HITLS_TICKET_IV_SIZE);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_TICKET_KEY_RET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16021, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Rand fail", 0, 0, 0, 0);
@@ -245,7 +245,7 @@ static uint8_t *NewTicketBuf(const HITLS_Session *sess, HITLS_CipherParameters *
     return ticketBuf;
 }
 
-int32_t SESSMGR_EncryptSessionTicket(
+int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
     const TLS_SessionMgr *sessMgr, const HITLS_Session *sess, uint8_t **ticketBuf, uint32_t *ticketBufSize)
 {
     if (sessMgr == NULL || sess == NULL || ticketBuf == NULL) {

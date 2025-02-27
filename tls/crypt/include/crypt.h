@@ -83,7 +83,7 @@ enum HITLS_CryptoCallBack {
  * @retval HITLS_UNREGISTERED_CALLBACK      Unregistered callback
  * @retval HITLS_CRYPT_ERR_GENRATE_RANDOM   Failed to generate a random number.
  */
-int32_t SAL_CRYPT_Rand(uint8_t *buf, uint32_t len);
+int32_t SAL_CRYPT_Rand(CRYPT_EalLibCtx *libCtx, uint8_t *buf, uint32_t len);
 
 /**
  * @brief Obtain the HMAC length.

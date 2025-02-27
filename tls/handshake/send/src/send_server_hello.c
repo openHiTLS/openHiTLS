@@ -149,7 +149,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
             return ret;
         }
 #endif
-        ret = SAL_CRYPT_Rand(hsCtx->serverRandom, HS_RANDOM_SIZE);
+        ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->serverRandom, HS_RANDOM_SIZE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15548, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "get server random error.", 0, 0, 0, 0);
@@ -237,7 +237,7 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = SAL_CRYPT_Rand(hsCtx->serverRandom, HS_RANDOM_SIZE);
+        ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->serverRandom, HS_RANDOM_SIZE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15553, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "get server random error.", 0, 0, 0, 0);

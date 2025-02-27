@@ -110,7 +110,7 @@ typedef struct TlsConfig {
     HITLS_MsgCb msgCb;                  /* message callback function cb for observing all SSL/TLS protocol messages */
     void *msgArg;                       /*  set argument arg to the callback function */
 
-    HITLS_RecordPaddingCb  recordPaddingCb; /* the callback to specify the padding for TLS 1.3 records */
+    HITLS_RecordPaddingCb recordPaddingCb; /* the callback to specify the padding for TLS 1.3 records */
     void *recordPaddingArg;                 /* assign a value arg that is passed to the callback */
 
     uint32_t keyExchMode;               /* TLS1.3 psk exchange mode */
@@ -128,6 +128,9 @@ typedef struct TlsConfig {
 
     void *userData;                     /* user data */
     HITLS_ConfigUserDataFreeCb userDataFreeCb;
+
+    CRYPT_EalLibCtx *libCtx;
+    char *providerAttr;
 
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */

@@ -266,7 +266,7 @@ int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         return HITLS_MEMALLOC_FAIL;
     }
     uint8_t premaster[MASTER_SECRET_LEN];
-    ret = SAL_CRYPT_Rand(premaster, MASTER_SECRET_LEN);
+    ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), premaster, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(premasterSecret);
         return ret;
@@ -316,7 +316,7 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
     if ((ret != HITLS_SUCCESS) || (secretLen != MASTER_SECRET_LEN)) {
         /* If the server fails to process the message, it is prohibited to send the alert message. The randomly
          * generated premaster secret must be used to continue the handshake */
-        SAL_CRYPT_Rand(keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN);
         BSL_SAL_FREE(preMasterSecret);
         return HITLS_SUCCESS;
     }
@@ -330,7 +330,7 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         // 8：right shift a byte
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version >> 8);
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version);
-        SAL_CRYPT_Rand(keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
         BSL_SAL_CleanseData(preMasterSecret, secretLen);
         BSL_SAL_FREE(preMasterSecret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15348, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

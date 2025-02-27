@@ -232,9 +232,9 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_CIPHER_CBC */
-int32_t RecConnEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
+int32_t RecConnEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
 {
-    return RecGetCryptoFuncs(state->suiteInfo)->encryt(state, plainMsg, cipherText, cipherTextLen);
+    return RecGetCryptoFuncs(state->suiteInfo)->encryt(ctx, state, plainMsg, cipherText, cipherTextLen);
 }
 
 int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *cryptMsg, uint8_t *data,
