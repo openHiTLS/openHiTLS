@@ -334,10 +334,6 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
 {
     (void) param;
     int32_t ret;
-    if (person == NULL && persLen != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     CRYPT_Data entropy = {NULL, 0};
     CRYPT_Data nonce = {NULL, 0};
     CRYPT_Data pers = {(uint8_t *)(uintptr_t)person, persLen};
