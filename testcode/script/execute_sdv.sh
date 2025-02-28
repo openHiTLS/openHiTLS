@@ -64,7 +64,14 @@ run_test() {
     if [ ${#testsuite_array[*]} -ne 0 ] && [ ${#testcase_array[*]} -eq 0 ];then
         for i in ${testsuite_array[@]}
         do
-            ./${i} NO_DETAIL
+            if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
+                # 针对特定测试套件设置 LD_LIBRARY_PATH
+                echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
+                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL
+            else
+                # 其他测试套件正常运行
+                ./${i} NO_DETAIL
+            fi
         done
     fi
 
@@ -144,7 +151,12 @@ run_all() {
             # Run tests in parallel.
             read -u5
             {
-                ./$i NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
+                    echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
+                    env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                else
+                    ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                fi
                 echo >&5
             } &
         done
@@ -163,7 +175,12 @@ run_all() {
     else
         for i in $SUITES
         do
-            ./$i NO_DETAIL
+            if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
+                echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
+                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL
+            else
+                ./${i} NO_DETAIL
+            fi
         done
     fi
 

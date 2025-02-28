@@ -218,7 +218,7 @@ typedef struct {
     EncryptBlock encryptBlock;
     DecryptBlock decryptBlock;
     DeInitBlockCtx cipherDeInitCtx;
-    CipherCtrl CipherCtrl;
+    CipherCtrl cipherCtrl;
     uint8_t blockSize;
     uint16_t ctxSize;
     CRYPT_SYM_AlgId algId;
