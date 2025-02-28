@@ -26,7 +26,6 @@
 #include "eal_common.h"
 #include "crypt_utils.h"
 #include "crypt_ealinit.h"
-#include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
 
 
@@ -445,7 +444,7 @@ int32_t CRYPT_EAL_CipherGetPadding(CRYPT_EAL_CipherCtx *ctx)
     int32_t ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_GET_PADDING, (void *)&type, sizeof(type));
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
-        return CRYPT_PADDING_NONE;
+        return CRYPT_PADDING_MAX_COUNT;
     }
     return type;
 }

@@ -25,7 +25,7 @@ int32_t MODES_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint
 {
     // The ctx and key have been checked at the EAL layer and will not be checked again here.
     // The keyMethod will support registration in the future. Therefore, this check is added.
-    if (ctx->ciphMeth == NULL) {
+    if (ctx->ciphMeth == NULL || ctx->ciphCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
