@@ -22,7 +22,6 @@
 #include "crypt_errno.h"
 #include "crypt_chacha20.h"
 #include "chacha20_local.h"
-#include "crypt_local_types.h"
 
 #define KEYSET 0x01
 #define NONCESET 0x02

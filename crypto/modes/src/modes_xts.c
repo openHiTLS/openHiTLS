@@ -390,7 +390,7 @@ int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t k
     }
     ret = MODES_XTS_SetIv(&modeCtx->xtsCtx, iv, ivLen);
     if (ret != CRYPT_SUCCESS) {
-        MODES_XTS_DeInitCtx(modeCtx);
+        (void)MODES_XTS_DeInitCtx(modeCtx);
         return ret;
     }
     

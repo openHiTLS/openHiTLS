@@ -398,7 +398,7 @@ void MODES_CFB_FreeCtx(MODES_CFB_Ctx *modeCtx)
     if (modeCtx == NULL) {
         return ;
     }
-    MODES_CFB_DeInitCtx(modeCtx);
+    (void)MODES_CFB_DeInitCtx(modeCtx);
     BSL_SAL_Free(modeCtx->cfbCtx.modeCtx.ciphCtx);
     BSL_SAL_Free(modeCtx);
 }
