@@ -39,7 +39,6 @@
 #ifdef HITLS_CRYPTO_CIPHER
 #include "eal_cipher_local.h"
 #endif
-#include "crypt_modes.h"
 
 static EAL_RandUnitaryMethod g_randMethod = {
     .newCtx = (RandNewCtx)DRBG_New,

@@ -120,6 +120,7 @@ enum CRYPT_ERROR {
     CRYPT_RSA_ERR_BSSA_PARAM,          /**< The parameter of bssa is invalid. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
+    CRYPT_EAL_BUFF_LEN_TOO_LONG,        /**< Insufficient buffer length. */
     CRYPT_EAL_ERR_ALGID,                /**< Incorrect algorithm ID. */
     CRYPT_EAL_ALG_NOT_SUPPORT,          /**< Algorithm not supported, algorithm behavior not supported. */
     CRYPT_EAL_ERR_NEW_PARA_FAIL,        /**< Failed to generate parameters. */

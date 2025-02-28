@@ -223,11 +223,11 @@ static int32_t SetIv(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *iv, uint32_t
     if (ivLen == 8) { // If the length of the IV is 8, 0 data must be padded before.
         uint8_t tmpBuff[12] = { 0 };
         (void)memcpy_s(tmpBuff + 4, 12 - 4, iv, ivLen);
-        ret = ctx->method->CipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, tmpBuff, 12);
+        ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, tmpBuff, 12);
         // Clear sensitive data.
         (void)BSL_SAL_CleanseData(tmpBuff, sizeof(tmpBuff));
     } else {
-        ret = ctx->method->CipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, (void *)(uintptr_t)iv, ivLen);
+        ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, (void *)(uintptr_t)iv, ivLen);
     }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -238,7 +238,7 @@ static int32_t SetIv(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *iv, uint32_t
      * The block counter is set to zero
      */
     uint8_t initCount[4] = { 0 };
-    ret = ctx->method->CipherCtrl(ctx->key, CRYPT_CTRL_SET_COUNT, initCount, sizeof(initCount));
+    ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_COUNT, initCount, sizeof(initCount));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -256,7 +256,7 @@ static int32_t SetIv(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *iv, uint32_t
      * counter set to 1
      */
     initCount[0] = 0x01;
-    ret = ctx->method->CipherCtrl(ctx->key, CRYPT_CTRL_SET_COUNT, initCount, sizeof(initCount)); // 4bytes count
+    ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_COUNT, initCount, sizeof(initCount)); // 4bytes count
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

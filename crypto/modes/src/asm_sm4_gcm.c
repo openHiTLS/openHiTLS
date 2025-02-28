@@ -131,7 +131,7 @@ int32_t SM4_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t key
     ret = MODES_GCM_SetIv(&modeCtx->gcmCtx, iv, ivLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        MODES_GCM_DeInitCtx(modeCtx);
+        (void)MODES_GCM_DeInitCtx(modeCtx);
         return ret;
     }
     modeCtx->enc = enc;
