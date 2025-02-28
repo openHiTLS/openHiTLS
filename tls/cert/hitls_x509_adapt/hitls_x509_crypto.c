@@ -57,7 +57,7 @@ static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo,
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
         int32_t pad = mdAlgId;
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(pad));
-    } else if  (signAlgo == HITLS_SIGN_RSA_PSS_PSS || signAlgo == HITLS_SIGN_RSA_PSS_RSAE) {
+    } else if (signAlgo == HITLS_SIGN_RSA_PSS) {
         int32_t saltLen = CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
         BSL_Param pssParam[4] = {
             {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},

@@ -36,12 +36,30 @@ typedef struct {
     bool isKem;                // true: KEM, false: KEX
 } GroupInfo;
 
+typedef struct {
+    const char *name;
+    uint16_t signatureScheme; // HITLS_SignHashAlgo, IANA specified
+    int32_t keyType;          // HITLS_CERT_KeyType
+    int32_t paraId;           // CRYPT_PKEY_ParaId
+    int32_t signHashAlgId;    // combined sign hash algorithm id
+    int32_t signAlgId;        // CRYPT_PKEY_AlgId
+    int32_t hashAlgId;        // CRYPT_MD_AlgId
+    int32_t secBits;          // security bits
+    uint32_t certVersionBits;      // TLS_VERSION_MASK
+    uint32_t chainVersionBits; // TLS_VERSION_MASK
+} SignatureSchemeInfo;
 
 int32_t ConfigLoadGroupInfo(HITLS_Config *config);
 
 const GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId);
 
 const GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t *size);
+
+int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config);
+
+const SignatureSchemeInfo *ConfigGetSignatureSchemeInfo(const HITLS_Config *config, uint16_t signatureScheme);
+
+const SignatureSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *config, uint32_t *size);
 
 #ifdef __cplusplus
 }

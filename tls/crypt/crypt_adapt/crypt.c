@@ -383,13 +383,6 @@ int32_t PRF_MD5_SHA1(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t ou
 
 int32_t SAL_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
 {
-#if defined(HITLS_CRYPTO_MD5) && defined(HITLS_CRYPTO_SHA1)
-    // TLS1.0、TLS1.1
-    if (input->hashAlgo == HITLS_HASH_MD5_SHA1) {
-        return PRF_MD5_SHA1(input, out, outLen);
-    }
-#endif
-
     // Other versions
     if (input->hashAlgo < HITLS_HASH_SHA_256) {
         /* The PRF function must use the digest algorithm with SHA-256 or higher strength. */

@@ -659,7 +659,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
 #ifdef HITLS_TLS_PROTO_TLS13
 uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 {
-    if (*hashAlg > HITLS_HASH_NULL && *hashAlg < HITLS_HASH_BUTT) {
+    if (*hashAlg != HITLS_HASH_NULL) {
         return SAL_CRYPT_HmacSize(*hashAlg);
     }
 

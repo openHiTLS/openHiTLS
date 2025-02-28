@@ -66,17 +66,17 @@ static bool  HaveMatchSignAlg(HITLS_AuthAlgo authAlg, const uint16_t *signatureA
     uint32_t signatureAlgorithmsSize, uint16_t version)
 {
     HITLS_SignAlgo signAlg = HITLS_SIGN_BUTT;
-    HITLS_HashAlgo hashAlg = HITLS_HASH_BUTT;
+    HITLS_HashAlgo hashAlg = HITLS_HASH_NULL;
 
     /** Traverse the signature algorithms. If the matching is successful, return true */
     for (uint32_t i = 0u; i < signatureAlgorithmsSize; i++) {
         if (CFG_GetSignParamBySchemes(version, signatureAlgorithms[i], &signAlg, &hashAlg)) {
-            if (((signAlg == HITLS_SIGN_RSA_PKCS1_V15) || (signAlg == HITLS_SIGN_RSA_PSS_RSAE)) &&
+            if (((signAlg == HITLS_SIGN_RSA_PKCS1_V15) || (signAlg == HITLS_SIGN_RSA_PSS)) &&
                 (authAlg == HITLS_AUTH_RSA)) {
                 return true;
             }
 
-            if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519) || (signAlg == HITLS_SIGN_ED448)) &&
+            if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519)) &&
                 (authAlg == HITLS_AUTH_ECDSA)) {
                 return true;
             }

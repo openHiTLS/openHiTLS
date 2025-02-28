@@ -149,7 +149,7 @@ static uint32_t GetHashOfMac(HITLS_MacAlgo macAlgo)
                 "CBC encrypt error: unsupport MAC algorithm = %u.", macAlgo, 0, 0, 0);
             break;
     }
-    return HITLS_HASH_BUTT;
+    return HITLS_HASH_NULL;
 }
 
 static uint32_t GetHmacBLen(HITLS_MacAlgo macAlgo)
@@ -255,7 +255,7 @@ static int32_t RecConnCbcDecMtECheckMacTls(TLS_Ctx *ctx, const REC_TextInput *cr
 {
     const RecConnState *state = ctx->recCtx->readStates.currentState;
     uint32_t hashAlg = GetHashOfMac(state->suiteInfo->macAlg);
-    if (hashAlg == HITLS_HASH_BUTT) {
+    if (hashAlg == HITLS_HASH_NULL) {
         return HITLS_CRYPT_ERR_HMAC;
     }
     
