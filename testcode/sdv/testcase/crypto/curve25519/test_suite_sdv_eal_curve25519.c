@@ -1059,3 +1059,39 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_CURVE25519_GET_PARA_ID_FUNC_TC001
+ * @title  CURVE25519: Test CRYPT_EAL_PkeyGetParaId interface.
+ * @precon None
+ * @brief
+ *    1. Test CRYPT_EAL_PkeyGetParaId with NULL context, expected result 1
+ *    2. Test CRYPT_EAL_PkeyGetParaId to get para id, expected result 2
+ * @expect
+ *    1. Return ctx != NULL
+ *    2. Return CRYPT_ECC_CURVE25519
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_GET_PARA_ID_FUNC_TC001(int algId, int isProvider)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    TestMemInit();
+
+    CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(NULL);
+    ASSERT_EQ(paraId, CRYPT_PKEY_PARAID_MAX);
+
+    // Create context and test without parameters
+    if (isProvider == 1) {
+        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default");
+    } else {
+        ctx = CRYPT_EAL_PkeyNewCtx(algId);
+    }
+    ASSERT_TRUE(ctx != NULL);
+    
+    paraId = CRYPT_EAL_PkeyGetParaId(ctx);
+    ASSERT_EQ(paraId, CRYPT_ECC_CURVE25519);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */

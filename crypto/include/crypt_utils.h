@@ -83,6 +83,18 @@ do {                                         \
     } while (0)
 
 /**
+ * Check whether conditions are met. If yes, an error code is returned.
+ */
+#define RETURN_RET_IF_ERR(func, ret) \
+    do {                              \
+        (ret) = (func);               \
+        if ((ret) != CRYPT_SUCCESS) {              \
+            BSL_ERR_PUSH_ERROR(ret);  \
+            return ret;               \
+        }                             \
+    } while (0)
+
+/**
  * If the return value of func is not CRYPT_SUCCESS, go to the label ERR.
  */
 #define GOTO_ERR_IF(func, ret) do { \

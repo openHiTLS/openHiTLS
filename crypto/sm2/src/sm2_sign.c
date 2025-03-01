@@ -786,6 +786,12 @@ static int32_t CRYPT_SM2_GetLen(const CRYPT_SM2_Ctx *ctx, GetLenFunc func, void 
     return CRYPT_SUCCESS;
 }
 
+CRYPT_PKEY_ParaId CRYPT_SM2_GetParaId(const CRYPT_SM2_Ctx *ctx)
+{
+    (void)ctx;
+    return CRYPT_ECC_SM2;
+}
+
 int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -800,6 +806,8 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSecBits, val, len);
+        case CRYPT_CTRL_GET_PARAM_ID:
+            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetParaId, val, len);
         case CRYPT_CTRL_SET_SM2_SERVER:
             ret = CtrlServerSet(ctx, val, len);
             break;
