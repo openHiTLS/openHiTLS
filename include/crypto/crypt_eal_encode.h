@@ -50,6 +50,24 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
 
 /**
  * @ingroup crypt_eal_encode
+ * @brief   Decode formatted buffer of pkey with provider
+ *
+ * @param   libCtx [IN] the library context of provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL for default provider.
+ * @param   format [IN] the buffer format.
+ * @param   type [IN] the type of pkey.
+ * @param   encode [IN] the encoded asn1 buffer.
+ * @param   pwd [IN] the password buffer, maybe NULL for unencrypted private key / public key.
+ * @param   ealPKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_DecodeBuffKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
+    BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
+
+/**
+ * @ingroup crypt_eal_encode
  * @brief   Decode formatted file of pkey
  *
  * @param   format [IN] the file format.
@@ -64,6 +82,24 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
  */
 int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
     uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey);
+
+/**
+ * @ingroup crypt_eal_encode
+ * @brief   Decode formatted file of pkey with extended parameters
+ *
+ * @param   libCtx [IN] the library context of provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL for default provider.
+ * @param   format [IN] the file format.
+ * @param   type [IN] the type of pkey.
+ * @param   path [IN] the encoded file path.
+ * @param   pwd [IN] the password buffer, maybe NULL for unencrypted private key / public key.
+ * @param   ealPKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the path.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_DecodeFileKey_Ex(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
+    const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_encode

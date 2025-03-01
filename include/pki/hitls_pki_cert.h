@@ -18,6 +18,7 @@
 
 #include "hitls_pki_types.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +33,16 @@ typedef struct _HITLS_X509_Cert HITLS_X509_Cert;
  * @retval HITLS_X509_Cert *
  */
 HITLS_X509_Cert *HITLS_X509_CertNew(void);
+
+/**
+ * @brief Create a new X509 certificate object using the provider mechanism
+ *
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
+ * @param attrName [IN] Provider attribute name for capability matching
+ *
+ * @return HITLS_X509_Cert* Certificate object or NULL on failure
+ */
+HITLS_X509_Cert *HITLS_X509_ProviderCertNew(HITLS_X509_EalLibCtx *libCtx, const char *attrName);
 
 /**
  * @ingroup pki
@@ -114,6 +125,24 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
 
 /**
  * @ingroup pki
+ * @brief Parse a certificate buffer using the provider mechanism
+ * @par Description: Parse the certificate data using a specific provider implementation.
+ *  If parsing is successful, memory for the certificate is allocated internally,
+ *  and the user needs to free it after use.
+ *
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
+ * @param attrName [IN] Provider attribute name for capability matching
+ * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
+ * @param encode [IN] Certificate data buffer
+ * @param cert [OUT] Parsed certificate object
+ * @return #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_ProviderCertParseBuff(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
+    const BSL_Buffer *encode, HITLS_X509_Cert **cert);
+
+/**
+ * @ingroup pki
  * @brief Parse the CERT in the file.
  * @par Description: Parse the CERT in the file.
  *  If the encoding is successful, the memory for the crl is requested from within the function,
@@ -129,6 +158,24 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
 
 /**
  * @ingroup pki
+ * @brief Parse a certificate file using the provider mechanism
+ * @par Description: Parse the certificate from a file using a specific provider implementation.
+ *  If parsing is successful, memory for the certificate is allocated internally,
+ *  and the user needs to free it after use.
+ *
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
+ * @param attrName [IN] Provider attribute name for capability matching
+ * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
+ * @param path [IN] Certificate file path
+ * @param cert [OUT] Parsed certificate object
+ * @return #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_ProviderCertParseFile(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
+    const char *path, HITLS_X509_Cert **cert);
+
+/**
+ * @ingroup pki
  * @brief Parse the CERTs in the file.
  * @par Description: Parse multiple CERTs in the file.
  *  If the encoding is successful, the memory for the certlist is requested from within the function,
@@ -141,6 +188,24 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X509_List **certlist);
+
+/**
+ * @ingroup pki
+ * @brief Parse multiple certificates from a bundle file using the provider mechanism
+ * @par Description: Parse multiple certificates from a file using a specific provider implementation.
+ *  If parsing is successful, memory for the certificate list is allocated internally,
+ *  and the user needs to free it after use.
+ *
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
+ * @param attrName [IN] Provider attribute name for capability matching
+ * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
+ * @param path [IN] Certificate bundle file path
+ * @param certlist [OUT] List of parsed certificate objects
+ * @return #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_ProviderCertParseBundleFile(HITLS_X509_EalLibCtx *libCtx, const char *attrName, int32_t format,
+    const char *path, HITLS_X509_List **certlist);
 
 /**
  * @ingroup pki
