@@ -52,6 +52,7 @@ struct EAL_ProviderMgrCtx {
     CRYPT_EAL_ProvFreeCb provFreeCb;
     CRYPT_EAL_ProvQueryCb provQueryCb;
     CRYPT_EAL_ProvCtrlCb provCtrlCb;
+    CRYPT_EAL_ProvGetCapsCb provGetCap;
 };
 
 int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param,

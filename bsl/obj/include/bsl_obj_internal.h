@@ -19,6 +19,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_OBJ
 
+#include <stdint.h>
 #include "bsl_obj.h"
 
 #ifdef __cplusplus
@@ -27,7 +28,8 @@ extern "C" {
 
 typedef enum {
     BSL_OID_GLOBAL,
-    BSL_OID_HEAP
+    BSL_OID_HEAP,
+    BSL_OID_UNKNOWN,
 } BslOidFlag;
 
 typedef struct {
@@ -61,6 +63,14 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid);
 BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg);
 
 const BslAsn1StrInfo *BSL_OBJ_GetAsn1StrFromCid(BslCid cid);
+
+int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
+
+void BSL_OBJ_FreeSignHashTable(void);
+
+int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid);
+
+void BSL_OBJ_FreeHashTable(void);
 #ifdef __cplusplus
 }
 #endif
