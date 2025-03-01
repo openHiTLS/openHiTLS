@@ -32,6 +32,7 @@
 #include "cert_method.h"
 #include "cert_mgr.h"
 #include "cert.h"
+#include "config_type.h"
 
 static volatile int g_hitlsX509StoreCtxIdx = -1;
 
@@ -78,44 +79,13 @@ CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType)
     return CERT_TYPE_UNKNOWN;
 }
 
-HITLS_CERT_KeyType SAL_CERT_SignScheme2CertKeyType(HITLS_SignHashAlgo signScheme)
+HITLS_CERT_KeyType SAL_CERT_SignScheme2CertKeyType(const HITLS_Ctx *ctx, HITLS_SignHashAlgo signScheme)
 {
-    switch (signScheme) {
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA1:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA224:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA256:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA384:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA512:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512:
-            return TLS_CERT_KEY_TYPE_RSA;
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512:
-            return TLS_CERT_KEY_TYPE_RSA_PSS;
-        case CERT_SIG_SCHEME_DSA_SHA1:
-        case CERT_SIG_SCHEME_DSA_SHA224:
-        case CERT_SIG_SCHEME_DSA_SHA256:
-        case CERT_SIG_SCHEME_DSA_SHA384:
-        case CERT_SIG_SCHEME_DSA_SHA512:
-            return TLS_CERT_KEY_TYPE_DSA;
-        case CERT_SIG_SCHEME_ECDSA_SHA1:
-        case CERT_SIG_SCHEME_ECDSA_SHA224:
-        case CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256:
-        case CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384:
-        case CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512:
-            return TLS_CERT_KEY_TYPE_ECDSA;
-        case CERT_SIG_SCHEME_ED25519:
-            return TLS_CERT_KEY_TYPE_ED25519;
-#ifdef HITLS_TLS_PROTO_TLCP11
-        case CERT_SIG_SCHEME_SM2_SM3:
-            return TLS_CERT_KEY_TYPE_SM2;
-#endif
-        default:
-            break;
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, signScheme);
+    if (info == NULL) {
+        return TLS_CERT_KEY_TYPE_UNKNOWN;
     }
-    return TLS_CERT_KEY_TYPE_UNKNOWN;
+    return info->keyType;
 }
 
 HITLS_SignHashAlgo SAL_CERT_GetDefaultSignHashAlgo(HITLS_CERT_KeyType keyType)
@@ -183,7 +153,7 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
     uint32_t selectSignAlgorithmsSize = select->selectSignAlgorithmsSize;
     const uint16_t *selectSignAlgorithms = select->selectSignAlgorithms;
     for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
-        if (checkedKeyType != SAL_CERT_SignScheme2CertKeyType(baseSignAlgorithms[i])) {
+        if (checkedKeyType != SAL_CERT_SignScheme2CertKeyType(ctx, baseSignAlgorithms[i])) {
             /* The signature algorithm cannot be used for the certificate. Check the next signature algorithm. */
             continue;
         }
@@ -282,7 +252,7 @@ static int32_t TLS13EcdsaCheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchem
     // Cyclically traverse the supported signature algorithms, obtain the elliptic curve based on the signature
     // algorithm, find the one that matches keyCureName, and set it to the negotiated signature algorithm.
     for (uint32_t i = 0; i < signSchemeNum; i++) {
-        HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(signSchemeList[i]);
+        HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(ctx, signSchemeList[i]);
         if (signCureName == HITLS_NAMED_GROUP_BUTT || keyCureName != signCureName ||
             keyCureName == HITLS_NAMED_GROUP_BUTT) {
             continue;
