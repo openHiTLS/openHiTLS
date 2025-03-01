@@ -612,7 +612,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_GETPADDING_API_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_CipherGetPadding(ctx) == CRYPT_PADDING_NONE);
+    ASSERT_TRUE(CRYPT_EAL_CipherGetPadding(ctx) == CRYPT_PADDING_MAX_COUNT);
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);

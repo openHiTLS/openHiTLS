@@ -21,119 +21,8 @@
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "modes_local.h"
-#include "crypt_aes.h"
-#include "crypt_sm4.h"
-#include "crypt_chacha20.h"
 #include "crypt_modes_gcm.h"
 #include "crypt_modes_cbc.h"
-
-#ifdef HITLS_CRYPTO_AES
-static const EAL_SymMethod AES128_METHOD = {
-    (SetEncryptKey)CRYPT_AES_SetEncryptKey128,
-    (SetDecryptKey)CRYPT_AES_SetDecryptKey128,
-    (EncryptBlock)CRYPT_AES_Encrypt,
-    (DecryptBlock)CRYPT_AES_Decrypt,
-    (DeInitBlockCtx)CRYPT_AES_Clean,
-    NULL,
-    16,
-    sizeof(CRYPT_AES_Key),
-    CRYPT_SYM_AES128
-};
-
-static const EAL_SymMethod AES192_METHOD = {
-    (SetEncryptKey)CRYPT_AES_SetEncryptKey192,
-    (SetDecryptKey)CRYPT_AES_SetDecryptKey192,
-    (EncryptBlock)CRYPT_AES_Encrypt,
-    (DecryptBlock)CRYPT_AES_Decrypt,
-    (DeInitBlockCtx)CRYPT_AES_Clean,
-    NULL,
-    16,
-    sizeof(CRYPT_AES_Key),
-    CRYPT_SYM_AES192
-};
-
-static const EAL_SymMethod AES256_METHOD = {
-    (SetEncryptKey)CRYPT_AES_SetEncryptKey256,
-    (SetDecryptKey)CRYPT_AES_SetDecryptKey256,
-    (EncryptBlock)CRYPT_AES_Encrypt,
-    (DecryptBlock)CRYPT_AES_Decrypt,
-    (DeInitBlockCtx)CRYPT_AES_Clean,
-    NULL,
-    16,
-    sizeof(CRYPT_AES_Key),
-    CRYPT_SYM_AES256
-};
-#endif
-
-#ifdef HITLS_CRYPTO_CHACHA20
-static const EAL_SymMethod CHACHA20_METHOD = {
-    (SetEncryptKey)CRYPT_CHACHA20_SetKey,
-    (SetDecryptKey)CRYPT_CHACHA20_SetKey,
-    (EncryptBlock)CRYPT_CHACHA20_Update,
-    (DecryptBlock)CRYPT_CHACHA20_Update,
-    (DeInitBlockCtx)CRYPT_CHACHA20_Clean,
-    (CipherCtrl)CRYPT_CHACHA20_Ctrl,
-    1,
-    sizeof(CRYPT_CHACHA20_Ctx),
-    CRYPT_SYM_CHACHA20
-};
-#endif
-
-#ifdef HITLS_CRYPTO_SM4
-static const EAL_SymMethod SM4_METHOD = {
-    (SetEncryptKey)CRYPT_SM4_SetKey,
-    (SetDecryptKey)CRYPT_SM4_SetKey,
-    (EncryptBlock)CRYPT_SM4_Encrypt,
-    (DecryptBlock)CRYPT_SM4_Decrypt,
-    (DeInitBlockCtx)CRYPT_SM4_Clean,
-    NULL,
-    16,
-    sizeof(CRYPT_SM4_Ctx),
-    CRYPT_SYM_SM4
-};
-#endif
-
-const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
-{
-    switch (algId) {
-        case CRYPT_CIPHER_AES128_CBC:
-        case CRYPT_CIPHER_AES128_ECB:
-        case CRYPT_CIPHER_AES128_CTR:
-        case CRYPT_CIPHER_AES128_CCM:
-        case CRYPT_CIPHER_AES128_GCM:
-        case CRYPT_CIPHER_AES128_CFB:
-        case CRYPT_CIPHER_AES128_OFB:
-            return &AES128_METHOD;
-        case CRYPT_CIPHER_AES192_CBC:
-        case CRYPT_CIPHER_AES192_ECB:
-        case CRYPT_CIPHER_AES192_CTR:
-        case CRYPT_CIPHER_AES192_CCM:
-        case CRYPT_CIPHER_AES192_GCM:
-        case CRYPT_CIPHER_AES192_CFB:
-        case CRYPT_CIPHER_AES192_OFB:
-            return &AES192_METHOD;
-        case CRYPT_CIPHER_AES256_CBC:
-        case CRYPT_CIPHER_AES256_ECB:
-        case CRYPT_CIPHER_AES256_CTR:
-        case CRYPT_CIPHER_AES256_CCM:
-        case CRYPT_CIPHER_AES256_GCM:
-        case CRYPT_CIPHER_AES256_CFB:
-        case CRYPT_CIPHER_AES256_OFB:
-            return &AES256_METHOD;
-        case CRYPT_CIPHER_SM4_XTS:
-        case CRYPT_CIPHER_SM4_CBC:
-        case CRYPT_CIPHER_SM4_ECB:
-        case CRYPT_CIPHER_SM4_CTR:
-        case CRYPT_CIPHER_SM4_GCM:
-        case CRYPT_CIPHER_SM4_CFB:
-        case CRYPT_CIPHER_SM4_OFB:
-            return &SM4_METHOD;
-        case CRYPT_CIPHER_CHACHA20_POLY1305:
-            return &CHACHA20_METHOD;
-        default:
-            return NULL;
-    }
-}
 
 int32_t MODE_NewCtxInternal(MODES_CipherCtx *ctx, const EAL_SymMethod *method)
 {
@@ -203,8 +92,8 @@ int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx,
 int32_t MODE_CheckUpdateParam(uint8_t blockSize, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
 {
     if (inLen + cacheLen < inLen) { // Integer flipping
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_TOO_LONG);
+        return CRYPT_EAL_BUFF_LEN_TOO_LONG;
     }
     if ((*outLen) < ((inLen + cacheLen) / blockSize * blockSize)) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
@@ -526,7 +415,7 @@ int32_t MODES_CipherDeInitCtx(MODES_CipherCtx *modeCtx)
 
 void MODES_CipherFreeCtx(MODES_CipherCtx *modeCtx)
 {
-    MODES_CipherDeInitCtx(modeCtx);
+    (void)MODES_CipherDeInitCtx(modeCtx);
     BSL_SAL_FREE(modeCtx->commonCtx.ciphCtx);
     BSL_SAL_Free(modeCtx);
 }
@@ -566,10 +455,8 @@ int32_t MODES_GetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len)
         return CRYPT_MODE_ERR_INPUT_LEN;
     }
 
-    if (memcpy_s(val, len, ctx->iv, ivLen) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
-    }
+    (void)memcpy_s(val, len, ctx->iv, ivLen);
+
     return CRYPT_SUCCESS;
 }
 

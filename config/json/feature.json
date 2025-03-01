@@ -710,7 +710,7 @@
                     }
                 },
                 ".deps": ["bsl::sal"],
-                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include"]
+                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include", "crypto/eal/src"]
             },
             "aes": {
                 ".features": ["aes"],
