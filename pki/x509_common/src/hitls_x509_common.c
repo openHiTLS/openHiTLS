@@ -326,29 +326,36 @@ static void X509_GetPemSymbol(bool isCert, BSL_PEM_Symbol *symbol)
     }
 }
 
-static int32_t X509_ParseAndAddRes(BSL_Buffer *asn1Buf, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t X509_ParseAndAddRes(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *asn1Buf,
+    X509_ParseFuncCbk *parseFun, HITLS_X509_List *list)
 {
-    void *res = parsefun->x509New();
+    void *res = NULL;
+    if (parseFun->x509ProviderNew != NULL) {
+        res = parseFun->x509ProviderNew(libCtx, attrName);
+    } else if (parseFun->x509New != NULL) {
+        res = parseFun->x509New();
+    }
     if (res == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = parsefun->asn1Parse(&(asn1Buf->data), &(asn1Buf->dataLen), res);
+    int32_t ret = parseFun->asn1Parse(&(asn1Buf->data), &(asn1Buf->dataLen), res);
     if (ret != HITLS_PKI_SUCCESS) {
-        parsefun->x509Free(res);
+        parseFun->x509Free(res);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = BSL_LIST_AddElement(list, res, BSL_LIST_POS_AFTER);
     if (ret != BSL_SUCCESS) {
-        parsefun->x509Free(res);
+        parseFun->x509Free(res);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t HITLS_X509_ParseAsn1(const BSL_Buffer *encode, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list)
+static int32_t HITLS_X509_ParseAsn1(CRYPT_EAL_LibCtx *libCtx, const char *attrName, const BSL_Buffer *encode,
+    X509_ParseFuncCbk *parseFun, HITLS_X509_List *list)
 {
     uint8_t *data = encode->data;
     uint32_t dataLen = encode->dataLen;
@@ -363,7 +370,7 @@ static int32_t HITLS_X509_ParseAsn1(const BSL_Buffer *encode, X509_ParseFuncCbk 
         if (asn1Buf.data == NULL) {
             return BSL_DUMP_FAIL;
         }
-        ret = X509_ParseAndAddRes(&asn1Buf, parsefun, list);
+        ret = X509_ParseAndAddRes(libCtx, attrName, &asn1Buf, parseFun, list);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_SAL_Free(asn1Buf.data);
             return ret;
@@ -374,8 +381,8 @@ static int32_t HITLS_X509_ParseAsn1(const BSL_Buffer *encode, X509_ParseFuncCbk 
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t HITLS_X509_ParsePem(const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
-    HITLS_X509_List *list)
+static int32_t HITLS_X509_ParsePem(CRYPT_EAL_LibCtx *libCtx, const char *attrName, const BSL_Buffer *encode,
+    bool isCert, X509_ParseFuncCbk *parseFun, HITLS_X509_List *list)
 {
     char *nextEncode = (char *)(encode->data);
     uint32_t nextEncodeLen = encode->dataLen;
@@ -388,7 +395,7 @@ static int32_t HITLS_X509_ParsePem(const BSL_Buffer *encode, bool isCert, X509_P
         if (ret != HITLS_PKI_SUCCESS) {
             break;
         }
-        ret = X509_ParseAndAddRes(&asn1Buf, parsefun, list);
+        ret = X509_ParseAndAddRes(libCtx, attrName, &asn1Buf, parseFun, list);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_SAL_Free(asn1Buf.data);
             return ret;
@@ -401,27 +408,27 @@ static int32_t HITLS_X509_ParsePem(const BSL_Buffer *encode, bool isCert, X509_P
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t HITLS_X509_ParseUnknown(const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
-    HITLS_X509_List *list)
+static int32_t HITLS_X509_ParseUnknown(CRYPT_EAL_LibCtx *libCtx, const char *attrName, const BSL_Buffer *encode,
+    bool isCert, X509_ParseFuncCbk *parseFun, HITLS_X509_List *list)
 {
     bool isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
     if (isPem) {
-        return HITLS_X509_ParsePem(encode, isCert, parsefun, list);
+        return HITLS_X509_ParsePem(libCtx, attrName, encode, isCert, parseFun, list);
     } else {
-        return HITLS_X509_ParseAsn1(encode, parsefun, list);
+        return HITLS_X509_ParseAsn1(libCtx, attrName, encode, parseFun, list);
     }
 }
 
-int32_t HITLS_X509_ParseX509(int32_t format, const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
-    HITLS_X509_List *list)
+int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, const BSL_Buffer *encode,
+    bool isCert, X509_ParseFuncCbk *parseFun, HITLS_X509_List *list)
 {
     switch (format) {
         case BSL_FORMAT_ASN1:
-            return HITLS_X509_ParseAsn1(encode, parsefun, list);
+            return HITLS_X509_ParseAsn1(libCtx, attrName, encode, parseFun, list);
         case BSL_FORMAT_PEM:
-            return HITLS_X509_ParsePem(encode, isCert, parsefun, list);
+            return HITLS_X509_ParsePem(libCtx, attrName, encode, isCert, parseFun, list);
         case BSL_FORMAT_UNKNOWN:
-            return HITLS_X509_ParseUnknown(encode, isCert, parsefun, list);
+            return HITLS_X509_ParseUnknown(libCtx, attrName, encode, isCert, parseFun, list);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
             return HITLS_X509_ERR_NOT_SUPPORT_FORMAT;

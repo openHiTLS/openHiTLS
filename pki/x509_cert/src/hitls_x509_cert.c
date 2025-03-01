@@ -268,8 +268,10 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
     }
 
     // subject public key info
-    ret = CRYPT_EAL_ParseAsn1SubPubkey(asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
-        asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len, &cert->tbs.ealPubKey, false);
+    BSL_Buffer subPubKeyBuff = {asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
+        asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len};
+    ret = CRYPT_EAL_ProviderDecodeBuffKey(cert->libCtx, cert->attrName, BSL_FORMAT_ASN1,
+        CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ, &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -352,8 +354,8 @@ ERR:
     return ret;
 }
 
-
-int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **certlist)
+int32_t HITLS_X509_CertMulParseBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format,
+    const BSL_Buffer *encode, HITLS_X509_List **certlist)
 {
     int32_t ret;
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || certlist == NULL) {
@@ -361,9 +363,9 @@ int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HI
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     X509_ParseFuncCbk certCbk = {
-        (HITLS_X509_Asn1Parse)HITLS_X509_ParseAsn1Cert,
-        (HITLS_X509_New)HITLS_X509_CertNew,
-        (HITLS_X509_Free)HITLS_X509_CertFree
+        .asn1Parse = (HITLS_X509_Asn1Parse)HITLS_X509_ParseAsn1Cert,
+        .x509ProviderNew = (HITLS_X509_ProviderNew)HITLS_X509_ProviderCertNew,
+        .x509Free = (HITLS_X509_Free)HITLS_X509_CertFree
     };
     HITLS_X509_List *list = BSL_LIST_New(sizeof(HITLS_X509_Cert));
     if (list == NULL) {
@@ -371,7 +373,7 @@ int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HI
         return BSL_MALLOC_FAIL;
     }
 
-    ret = HITLS_X509_ParseX509(format, encode, true, &certCbk, list);
+    ret = HITLS_X509_ParseX509(libCtx, attrName, format, encode, true, &certCbk, list);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         BSL_ERR_PUSH_ERROR(ret);
@@ -383,56 +385,17 @@ int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HI
 
 int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_Cert **cert)
 {
-    HITLS_X509_List *list = NULL;
-    if (cert == NULL || *cert != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    int32_t ret = HITLS_X509_CertMulParseBuff(format, encode, &list);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    HITLS_X509_Cert *tmp = BSL_LIST_GET_FIRST(list);
-    int ref;
-    ret = HITLS_X509_CertCtrl(tmp, HITLS_X509_REF_UP, &ref, sizeof(int));
-    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    *cert = tmp;
-    return HITLS_PKI_SUCCESS;
+    return HITLS_X509_ProviderCertParseBuff(NULL, NULL, format, encode, cert);
 }
 
 int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Cert **cert)
 {
-    uint8_t *data = NULL;
-    uint32_t dataLen = 0;
-    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    BSL_Buffer encode = {data, dataLen};
-    ret = HITLS_X509_CertParseBuff(format, &encode, cert);
-    BSL_SAL_Free(data);
-    return ret;
+    return HITLS_X509_ProviderCertParseFile(NULL, NULL, format, path, cert);
 }
 
 int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X509_List **certlist)
 {
-    uint8_t *data = NULL;
-    uint32_t dataLen = 0;
-    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-
-    BSL_Buffer encode = {data, dataLen};
-    ret = HITLS_X509_CertMulParseBuff(format, &encode, certlist);
-    BSL_SAL_Free(data);
-    return ret;
+    return HITLS_X509_ProviderCertParseBundleFile(NULL, NULL, format, path, certlist);
 }
 
 static int32_t X509_KeyUsageCheck(HITLS_X509_Cert *cert, bool *val, uint32_t valLen, uint64_t exp)
@@ -603,6 +566,8 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
             return HITLS_X509_GetPubKey(cert->tbs.ealPubKey, val);
         case HITLS_X509_GET_SIGNALG:
             return HITLS_X509_GetSignAlg(cert->signAlgId.algId, val, valLen);
+        case HITLS_X509_GET_SIGN_MDALG:
+            return HITLS_X509_GetSignMdAlg(&cert->signAlgId, val, valLen);
         case HITLS_X509_GET_SUBJECT_DN:
             return HITLS_X509_GetList(cert->tbs.subjectName, val, valLen);
         case HITLS_X509_GET_ISSUER_DN:
@@ -1210,4 +1175,72 @@ int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, cons
         cert->signAlgId.sm2UserId.dataLen = 0;
     }
     return HITLS_X509_Sign(mdId, prvKey, algParam, cert, (HITLS_X509_SignCb)CertSignCb);
+}
+
+HITLS_X509_Cert *HITLS_X509_ProviderCertNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
+{
+    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
+    if (cert == NULL) {
+        return NULL;
+    }
+    cert->libCtx = libCtx;
+    cert->attrName = attrName;
+    return cert;
+}
+
+int32_t HITLS_X509_ProviderCertParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+    const BSL_Buffer *encode, HITLS_X509_Cert **cert)
+{
+    HITLS_X509_List *list = NULL;
+    if (cert == NULL || *cert != NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    int32_t ret = HITLS_X509_CertMulParseBuff(libCtx, attrName, format, encode, &list);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    HITLS_X509_Cert *tmp = BSL_LIST_GET_FIRST(list);
+    int ref;
+    ret = HITLS_X509_CertCtrl(tmp, HITLS_X509_REF_UP, &ref, sizeof(int));
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    *cert = tmp;
+    return HITLS_PKI_SUCCESS;
+}
+
+int32_t HITLS_X509_ProviderCertParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+    const char *path, HITLS_X509_Cert **cert)
+{
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    BSL_Buffer encode = {data, dataLen};
+    ret = HITLS_X509_ProviderCertParseBuff(libCtx, attrName, format, &encode, cert);
+    BSL_SAL_Free(data);
+    return ret;
+}
+
+int32_t HITLS_X509_ProviderCertParseBundleFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+    const char *path, HITLS_X509_List **certlist)
+{
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    BSL_Buffer encode = {data, dataLen};
+    ret = HITLS_X509_CertMulParseBuff(libCtx, attrName, format, &encode, certlist);
+    BSL_SAL_Free(data);
+    return ret;
 }
