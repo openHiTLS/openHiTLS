@@ -185,6 +185,8 @@ typedef enum {
     // standard constant sm series curve
     BSL_CID_SM2PRIME256,             /**< identifies sm2 curve */
 
+    BSL_CID_CURVE25519,
+
     /* standard constant prime */
     BSL_CID_DH_RFC2409_768 = 12651,
     BSL_CID_DH_RFC2409_1024,
