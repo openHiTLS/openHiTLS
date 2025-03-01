@@ -806,7 +806,7 @@
             "provider": {
                 ".features": ["provider"],
                 ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
-                ".deps": ["bsl::sal", "bsl::hash", "bsl::err"],
+                ".deps": ["bsl::sal", "bsl::hash", "bsl::err", "bsl::params"],
                 ".include": [
                     "crypto/provider/include",
                     "crypto/ealinit/include",
@@ -959,7 +959,7 @@
             "obj": {
                 ".features":["obj"],
                 ".srcs":"bsl/obj/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::hash"]
             },
             "base64": {
                 ".features": ["base64"],
@@ -1007,7 +1007,8 @@
             },
             "init": {
                 ".features": ["init"],
-                ".srcs": "bsl/init/*.c"
+                ".srcs": "bsl/init/*.c",
+                ".deps": ["bsl::obj"]
             }
         },
         "platform": {

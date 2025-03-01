@@ -201,4 +201,3 @@ const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t
     *size = sizeof(GROUP_INFO) / sizeof(GROUP_INFO[0]);
     return &GROUP_INFO[0];
 }
-
