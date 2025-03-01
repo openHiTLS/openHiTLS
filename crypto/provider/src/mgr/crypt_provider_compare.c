@@ -418,7 +418,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
         if (ret != CRYPT_SUCCESS) {
             continue;
         }
-        for (index = 0; algInfos[index].algId != 0; index++) {
+        for (index = 0; algInfos != NULL && algInfos[index].algId != 0; index++) {
             if (algInfos[index].algId != algId) {
                 continue;
             }

@@ -755,3 +755,14 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     return ret;
 }
+
+HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
+{
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
+    if (storeCtx == NULL) {
+        return NULL;
+    }
+    storeCtx->libCtx = libCtx;
+    storeCtx->attrName = attrName;
+    return storeCtx;
+}
