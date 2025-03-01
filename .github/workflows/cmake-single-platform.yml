@@ -23,6 +23,7 @@ jobs:
     - uses: actions/checkout@v4
       with: 
         submodules: recursive
+        fetch-depth: 1
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -39,3 +40,9 @@ jobs:
       # Execute tests defined by the CMake configuration.
       run: bash build_sdv.sh no-sctp asan gcov && bash execute_sdv.sh
 
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: openhitls-build
+        path: ${{ github.workspace }}/build
+        retention-days: 5
