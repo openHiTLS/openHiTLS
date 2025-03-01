@@ -16,10 +16,12 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_OBJ
 #include <stddef.h>
+#include "securec.h"
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
-#include "securec.h"
+#include "bsl_hash.h"
 
+BSL_HASH_Hash *g_signHashTable = NULL;
 typedef struct BslSignIdMap {
     BslCid signId;
     BslCid asymId;
@@ -74,4 +76,57 @@ BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg)
     }
     return BSL_CID_UNKNOWN;
 }
+
+int32_t BSL_OBJ_CreateSignId(BslCid signId, BslCid asymId, BslCid hashId)
+{
+    if (signId == BSL_CID_UNKNOWN || asymId == BSL_CID_UNKNOWN || hashId == BSL_CID_UNKNOWN) {
+        return BSL_INTERNAL_EXCEPTION;
+    }
+
+    for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
+        if (signId == g_signIdMap[iter].signId) {
+            return BSL_INTERNAL_EXCEPTION; // 已存在该签名ID
+        }
+    }
+
+    if (g_signHashTable == NULL) {
+        g_signHashTable = BSL_HASH_Create(32, BSL_HASH_CodeCalcInt, BSL_HASH_MatchInt, NULL, NULL);
+        if (g_signHashTable == NULL) {
+            return BSL_INTERNAL_EXCEPTION;
+        }
+    }
+
+    BSL_SignIdMap *newMap = (BSL_SignIdMap *)BSL_SAL_Calloc(1, sizeof(BSL_SignIdMap));
+    if (newMap == NULL) {
+        if (BSL_HASH_Empty(g_signHashTable)) {
+            BSL_HASH_Destory(g_signHashTable);
+            g_signHashTable = NULL;
+        }
+        return BSL_INTERNAL_EXCEPTION;
+    }
+
+    newMap->signId = signId;
+    newMap->asymId = asymId;
+    newMap->hashId = hashId;
+
+    int32_t ret = BSL_HASH_Insert(g_signHashTable, (uintptr_t)signId, sizeof(BslCid), 
+                                  (uintptr_t)newMap, sizeof(BSL_SignIdMap));
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(newMap);
+        return BSL_INTERNAL_EXCEPTION;
+    }
+
+    uintptr_t asymAndHashKey = ((uintptr_t)asymId << 32) | (uintptr_t)hashId;
+    
+    ret = BSL_HASH_Insert(g_signHashTable, asymAndHashKey, sizeof(uintptr_t), 
+                          (uintptr_t)signId, sizeof(BslCid));
+    if (ret != BSL_SUCCESS) {
+        BSL_HASH_Erase(g_signHashTable, (uintptr_t)signId);
+        BSL_SAL_Free(newMap);
+        return BSL_INTERNAL_EXCEPTION;
+    }
+
+    return BSL_SUCCESS;
+}
+
 #endif

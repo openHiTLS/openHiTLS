@@ -16,9 +16,12 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_OBJ
 #include <stddef.h>
+#include "securec.h"
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
-#include "securec.h"
+#include "bsl_hash.h"
+
+BSL_HASH_Hash *g_oidHashTable = NULL;
 
 BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\1\2", BSL_OID_GLOBAL}, "AES128-CBC", BSL_CID_AES128_CBC},
@@ -268,4 +271,6 @@ const BslAsn1StrInfo *BSL_OBJ_GetAsn1StrFromCid(BslCid cid)
 
     return NULL;
 }
+
+
 #endif
