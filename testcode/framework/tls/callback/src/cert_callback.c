@@ -32,7 +32,7 @@
 #include "tls_config.h"
 #include "tls.h"
 #include "bsl_list.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
 #include "hitls_cert_init.h"
 
 #define SUCCESS 0
