@@ -1031,7 +1031,10 @@
             "crypt": {
                 ".features": ["proto"],
                 ".srcs": "tls/crypt/crypt_adapt/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "tls/config/include"
+                ]
             },
             "crypt_self": {
                 ".features": ["proto"],
