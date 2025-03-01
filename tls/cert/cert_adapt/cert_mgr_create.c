@@ -34,10 +34,10 @@ bool SAL_CERT_MgrIsEnable(void)
 
 CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
 {
-    return SAL_CERT_MgrCtxNewWithProvider(NULL, NULL);
+    return SAL_CERT_MgrCtxProviderNew(NULL, NULL);
 }
 
-CERT_MgrCtx *SAL_CERT_MgrCtxNewWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName)
+CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
     CERT_MgrCtx *newCtx = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));

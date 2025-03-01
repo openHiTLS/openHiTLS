@@ -251,7 +251,7 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void);
  * @retval  NULL, failed to apply for the object.
  * @see HITLS_CFG_FreeConfig
  */
-HITLS_Config *HITLS_CFG_NewDTLS12ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config
@@ -289,7 +289,7 @@ HITLS_Config *HITLS_CFG_NewTLCPConfig(void);
  * @retval  NULL, failed to apply for the object.
  * @see HITLS_CFG_FreeConfig
  */
-HITLS_Config *HITLS_CFG_NewTLCPConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config
@@ -332,7 +332,7 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void);
  * @retval  NULL, failed to apply for the object.
  * @see HITLS_CFG_FreeConfig
  */
-HITLS_Config *HITLS_CFG_NewTLS12ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+HITLS_Config *HITLS_CFG_ProviderNewTLS12Config(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config
@@ -370,7 +370,7 @@ HITLS_Config *HITLS_CFG_NewTLS13Config(void);
  * @retval  NULL, failed to apply for the object.
  * @see HITLS_CFG_FreeConfig
  */
-HITLS_Config *HITLS_CFG_NewTLS13ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+HITLS_Config *HITLS_CFG_ProviderNewTLS13Config(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config
@@ -417,7 +417,7 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void);
  * @retval  NULL, failed to apply for the object.
  * @see HITLS_CFG_FreeConfig
  */
-HITLS_Config *HITLS_CFG_NewTLSConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+HITLS_Config *HITLS_CFG_ProviderNewTLSConfig(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config
@@ -460,7 +460,7 @@ HITLS_Config *HITLS_CFG_NewDTLSConfig(void);
  * @retval  NULL, failed to apply for the object.
  * @see HITLS_CFG_FreeConfig
  */
-HITLS_Config *HITLS_CFG_NewDTLSConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+HITLS_Config *HITLS_CFG_ProviderNewDTLSConfig(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @ingroup hitls_config

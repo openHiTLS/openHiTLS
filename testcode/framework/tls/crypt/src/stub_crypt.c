@@ -403,8 +403,6 @@ uint32_t STUB_CRYPT_HmacSizeCallback(HITLS_HashAlgo hashAlgo)
             return SHA384_DIGEST_LENGTH;
         case HITLS_HASH_SHA_512:
             return SHA512_DIGEST_LENGTH;
-        case HITLS_HASH_MD5_SHA1:
-            return (MD5_DIGEST_LENGTH + SHA1_DIGEST_LENGTH);
         default:
             break;
     }

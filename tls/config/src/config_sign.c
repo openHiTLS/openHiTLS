@@ -21,7 +21,7 @@
 #include "hitls_error.h"
 #include "cipher_suite.h"
 
-static const SignatureSchemeInfo SIGNATURE_SCHEME_INFO[] = {
+static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
     {
         "ecdsa_secp521r1_sha512",
         CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
@@ -307,7 +307,7 @@ int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
         return HITLS_INVALID_INPUT;
     }
     uint32_t size = 0;
-    for (uint32_t i = 0; i < sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SignatureSchemeInfo); i++) {
+    for (uint32_t i = 0; i < sizeof(SIGNATURE_SCHEME_INFO) / sizeof(TLS_SigSchemeInfo); i++) {
         if ((config->version & SIGNATURE_SCHEME_INFO[i].chainVersionBits) != 0) {
             size++;
         }
@@ -321,7 +321,7 @@ int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
         return HITLS_MEMALLOC_FAIL;
     }
     uint32_t index = 0;
-    for (uint32_t i = 0; i < sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SignatureSchemeInfo); i++) {
+    for (uint32_t i = 0; i < sizeof(SIGNATURE_SCHEME_INFO) / sizeof(TLS_SigSchemeInfo); i++) {
         if ((config->version & SIGNATURE_SCHEME_INFO[i].chainVersionBits) != 0) {
             config->signAlgorithms[index] = SIGNATURE_SCHEME_INFO[i].signatureScheme;
             index++;
@@ -331,10 +331,10 @@ int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 
-const SignatureSchemeInfo *ConfigGetSignatureSchemeInfo(const HITLS_Config *config, uint16_t signatureScheme)
+const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfo(const HITLS_Config *config, uint16_t signatureScheme)
 {
     (void)config;
-    for (uint32_t i = 0; i < sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SignatureSchemeInfo); i++) {
+    for (uint32_t i = 0; i < sizeof(SIGNATURE_SCHEME_INFO) / sizeof(TLS_SigSchemeInfo); i++) {
         if (SIGNATURE_SCHEME_INFO[i].signatureScheme == signatureScheme) {
             return &SIGNATURE_SCHEME_INFO[i];
         }
@@ -342,7 +342,7 @@ const SignatureSchemeInfo *ConfigGetSignatureSchemeInfo(const HITLS_Config *conf
     return NULL;
 }
 
-const SignatureSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *config, uint32_t *size)
+const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *config, uint32_t *size)
 {
     (void)config;
     *size = sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SIGNATURE_SCHEME_INFO[0]);

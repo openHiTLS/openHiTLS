@@ -225,7 +225,7 @@ static HITLS_NamedGroup GetCurveNameByKey(HITLS_Config *config, const CRYPT_EAL_
         return HITLS_NAMED_GROUP_BUTT;
     }
     uint32_t size = 0;
-    const GroupInfo *groupInfoList = ConfigGetGroupInfoList(config, &size);
+    const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(config, &size);
     for (size_t i = 0; i < size; i++) {
         if (groupInfoList[i].paraId == (int32_t)paraId) {
             return groupInfoList[i].groupId;

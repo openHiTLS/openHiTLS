@@ -181,13 +181,8 @@ typedef struct TlsConfig {
     bool isKeepPeerCert;                /* whether to save the peer certificate */
 } TLS_Config;
 
-#ifdef HITLS_TLS_FEATURE_PROVIDER
 #define LIBCTX_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->libCtx)
 #define ATTRIBUTE_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->attrName)
-#else
-#define LIBCTX_FROM_CONFIG(config) NULL
-#define ATTRIBUTE_FROM_CONFIG(config) NULL
-#endif
 
 #ifdef __cplusplus
 }

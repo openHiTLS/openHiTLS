@@ -505,10 +505,10 @@ HITLS_Config *CreateConfig(void)
 #ifdef HITLS_TLS_PROTO_DTLS12
 HITLS_Config *HITLS_CFG_NewDTLS12Config(void)
 {
-    return HITLS_CFG_NewDTLS12ConfigWithProvider(NULL, NULL);
+    return HITLS_CFG_ProviderNewDTLS12Config(NULL, NULL);
 }
 
-HITLS_Config *HITLS_CFG_NewDTLS12ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName)
+HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
@@ -528,10 +528,10 @@ HITLS_Config *HITLS_CFG_NewDTLS12ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const
 #ifdef HITLS_TLS_PROTO_TLCP11
 HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
 {
-    return HITLS_CFG_NewTLCPConfigWithProvider(NULL, NULL);
+    return HITLS_CFG_ProviderNewTLCPConfig(NULL, NULL);
 }
 
-HITLS_Config *HITLS_CFG_NewTLCPConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName)
+HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
@@ -550,10 +550,10 @@ HITLS_Config *HITLS_CFG_NewTLCPConfigWithProvider(HITLS_Lib_Ctx *libCtx, const c
 #ifdef HITLS_TLS_PROTO_TLS12
 HITLS_Config *HITLS_CFG_NewTLS12Config(void)
 {
-    return HITLS_CFG_NewTLS12ConfigWithProvider(NULL, NULL);
+    return HITLS_CFG_ProviderNewTLS12Config(NULL, NULL);
 }
 
-HITLS_Config *HITLS_CFG_NewTLS12ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName)
+HITLS_Config *HITLS_CFG_ProviderNewTLS12Config(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
@@ -573,23 +573,20 @@ HITLS_Config *HITLS_CFG_NewTLS12ConfigWithProvider(HITLS_Lib_Ctx *libCtx, const 
 #ifdef HITLS_TLS_PROTO_ALL
 HITLS_Config *HITLS_CFG_NewTLSConfig(void)
 {
-    return HITLS_CFG_NewTLSConfigWithProvider(NULL, NULL);
+    return HITLS_CFG_ProviderNewTLSConfig(NULL, NULL);
 }
 
-HITLS_Config *HITLS_CFG_NewTLSConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName)
+HITLS_Config *HITLS_CFG_ProviderNewTLSConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
     newConfig->version |= TLS_VERSION_MASK;
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+
     newConfig->libCtx = libCtx;
     newConfig->attrName = attrName;
-#else
-    (void)libCtx;
-    (void)attrName;
-#endif
+
     if (DefaultTlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
@@ -601,23 +598,20 @@ HITLS_Config *HITLS_CFG_NewTLSConfigWithProvider(HITLS_Lib_Ctx *libCtx, const ch
 #ifdef HITLS_TLS_PROTO_DTLS
 HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
 {
-    return HITLS_CFG_NewDTLSConfigWithProvider(NULL, NULL);
+    return HITLS_CFG_ProviderNewDTLSConfig(NULL, NULL);
 }
 
-HITLS_Config *HITLS_CFG_NewDTLSConfigWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName)
+HITLS_Config *HITLS_CFG_ProviderNewDTLSConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
     newConfig->version |= DTLS_VERSION_MASK;      // Enable All Versions
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+
     newConfig->libCtx = libCtx;
     newConfig->attrName = attrName;
-#else
-    (void)libCtx;
-    (void)attrName;
-#endif
+
     if (DefaultDtlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
