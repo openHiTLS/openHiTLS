@@ -63,15 +63,15 @@ static int32_t PackCertificateTypes(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     uint32_t baseSignAlgorithmsSize = config->signAlgorithmsSize;
     const uint16_t *baseSignAlgorithms = config->signAlgorithms;
     for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
-        HITLS_CERT_KeyType keyType = SAL_CERT_SignScheme2CertKeyType(baseSignAlgorithms[i]);
+        HITLS_CERT_KeyType keyType = SAL_CERT_SignScheme2CertKeyType(ctx, baseSignAlgorithms[i]);
         CERT_Type certType = CertKeyType2CertType(keyType);
         for (uint32_t j = 0; j < certTypeListsSize; j++) {
             if ((certTypeLists[j].certType == certType) && (certTypeLists[j].isSupported == false)) {
                 certTypeLists[j].isSupported = true;
-                supportedCertTypesSize++;
-                break;
-            }
+        supportedCertTypesSize++;
+            break;
         }
+    }
     }
 
     if (bufLen < (sizeof(uint8_t) + supportedCertTypesSize)) {

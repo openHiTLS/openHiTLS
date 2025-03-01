@@ -335,7 +335,7 @@ int32_t VERIFY_CalcSignData(TLS_Ctx *ctx, HITLS_CERT_Key *privateKey, HITLS_Sign
     HITLS_HashAlgo hashAlgo = 0;
     VerifyCtx *verifyCtx = ctx->hsCtx->verifyCtx;
 
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signAlgo, &hashAlgo) != true) {
+    if (CFG_GetSignParamBySchemes(ctx, signScheme, &signAlgo, &hashAlgo) != true) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15482, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get sign parm fail.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
@@ -381,7 +381,7 @@ int32_t VERIFY_VerifySignData(TLS_Ctx *ctx, HITLS_CERT_Key *pubkey, HITLS_SignHa
     HITLS_SignAlgo signAlgo = 0;
     HITLS_HashAlgo hashAlgo = 0;
 
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signAlgo, &hashAlgo) != true) {
+    if (CFG_GetSignParamBySchemes(ctx, signScheme, &signAlgo, &hashAlgo) != true) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15484, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get sign parm fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);

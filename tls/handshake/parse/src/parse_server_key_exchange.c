@@ -130,7 +130,7 @@ int32_t VerifySignature(TLS_Ctx *ctx, const uint8_t *kxData, uint32_t kxDataLen,
     GetServerKeyExSignParam(msg, &signParam, &signScheme);
 
     /* Obtain the signature algorithm and hash algorithm */
-    if (!CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signParam.signAlgo, &signParam.hashAlgo)) {
+    if (!CFG_GetSignParamBySchemes(ctx, signScheme, &signParam.signAlgo, &signParam.hashAlgo)) {
         return ParseErrorProcess(ctx, HITLS_PARSE_GET_SIGN_PARA_ERR, BINLOG_ID15312,
             BINGLOG_STR("get sign param fail."), ALERT_ILLEGAL_PARAMETER);
     }
@@ -468,8 +468,7 @@ static int32_t ParseServerKxMsgEcc(ParsePacket *pkt)
     TLS_Ctx *ctx = pkt->ctx;
     /* The algorithm suite has been determined. The error probability of this function is low. Therefore, the alert is
      * not required. */
-    if (!CFG_GetSignParamBySchemes(
-        ctx->negotiatedInfo.version, ctx->negotiatedInfo.cipherSuiteInfo.signScheme, &signAlgo, &hashAlgo)) {
+    if (!CFG_GetSignParamBySchemes(ctx, ctx->negotiatedInfo.cipherSuiteInfo.signScheme, &signAlgo, &hashAlgo)) {
         return HITLS_PACK_SIGNATURE_ERR;
     }
 
