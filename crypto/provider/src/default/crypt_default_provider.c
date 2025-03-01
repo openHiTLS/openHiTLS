@@ -16,17 +16,34 @@
 #ifdef HITLS_CRYPTO_PROVIDER
 
 #include <stdint.h>
-#include "crypt_eal_implprovider.h"
+#include <string.h>
 #include "bsl_sal.h"
-#include "crypt_algid.h"
-#include "crypt_default_provderimpl.h"
-#include "crypt_errno.h"
+#include "bsl_obj.h"
 #include "bsl_errno.h"
+#include "bsl_params.h"
 #include "bsl_err_internal.h"
+#include "crypt_algid.h"
+#include "crypt_errno.h"
+#include "crypt_eal_implprovider.h"
+#include "crypt_eal_provider.h"
+#include "crypt_default_provderimpl.h"
 #include "crypt_default_provider.h"
 #include "crypt_provider.h"
+#include "crypt_params_key.h"
+#include "hitls_crypt_type.h"
+#include "hitls_cert_type.h"
+#include "hitls_type.h"
 
 #define CRYPT_EAL_DEFAULT_ATTR "provider=default"
+
+#define RETURN_RET_IF_ERR(func, ret) \
+    do {                              \
+        (ret) = (func);               \
+        if ((ret) != CRYPT_SUCCESS) {              \
+            BSL_ERR_PUSH_ERROR(ret);  \
+            return ret;               \
+        }                             \
+    } while (0)
 
 static const CRYPT_EAL_AlgInfo g_defMds[] = {
     {CRYPT_MD_MD5, g_defMdMd5, CRYPT_EAL_DEFAULT_ATTR},
@@ -161,7 +178,7 @@ static const CRYPT_EAL_AlgInfo g_defCiphers[] = {
 
 static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
-    (void) provCtx;
+    (void)provCtx;
     int32_t ret = CRYPT_SUCCESS;
     switch (operaId) {
         case CRYPT_EAL_OPERAID_SYMMCIPHER:
@@ -206,18 +223,560 @@ static void CRYPT_EAL_DefaultProvFree(void *provCtx)
     BSL_SAL_Free(provCtx);
 }
 
+#define TLS_GROUP_PARAM_COUNT 7
+#define TLS_SIGN_SCHEME_PARAM_COUNT 10
+typedef struct {
+    const char *name;           // group name
+    int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
+    int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
+    int32_t secBits;           // security bits
+    uint16_t groupId;           // iana group id
+    uint32_t versionBits;       // TLS_VERSION_MASK
+    bool isKem;                // true: KEM, false: KEX
+} TLS_GroupInfo;
+
+static const TLS_GroupInfo g_tlsGroupInfo[] = {
+    {
+        "secp256r1",
+        CRYPT_ECC_NISTP256, // CRYPT_ECC_NISTP256
+        CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
+        128, // secBits
+        HITLS_EC_GROUP_SECP256R1, // groupId
+        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "secp384r1",
+        CRYPT_ECC_NISTP384, // CRYPT_ECC_NISTP384
+        CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
+        192, // secBits
+        HITLS_EC_GROUP_SECP384R1, // groupId
+        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "secp521r1",
+        CRYPT_ECC_NISTP521, // CRYPT_ECC_NISTP521
+        CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
+        256, // secBits
+        HITLS_EC_GROUP_SECP521R1, // groupId
+        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "brainpoolP256r1",
+        CRYPT_ECC_BRAINPOOLP256R1, // CRYPT_ECC_BRAINPOOLP256R1
+        CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
+        128, // secBits
+        HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "brainpoolP384r1",
+        CRYPT_ECC_BRAINPOOLP384R1, // CRYPT_ECC_BRAINPOOLP384R1
+        CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
+        192, // secBits
+        HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
+        TLS10_VERSION_BIT| TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "brainpoolP512r1",
+        CRYPT_ECC_BRAINPOOLP512R1, // CRYPT_ECC_BRAINPOOLP512R1
+        CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
+        256, // secBits
+        HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
+        TLS10_VERSION_BIT| TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "curve25519",
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_ECC_X25519
+        CRYPT_PKEY_X25519, // CRYPT_PKEY_ECDH
+        128, // secBits
+        (uint16_t)HITLS_EC_GROUP_CURVE25519, // groupId
+        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "sm2",
+        CRYPT_ECC_SM2, // CRYPT_ECC_SM2
+        CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
+        128, // secBits
+        HITLS_EC_GROUP_SM2, // groupId
+        TLCP11_VERSION_BIT, // versionBits
+        false,
+    },
+    {
+        "ffdhe2048",
+        CRYPT_DH_RFC3526_2048, // CRYPT_DH_2048
+        CRYPT_PKEY_DH, // CRYPT_PKEY_DH
+        112, // secBits
+        HITLS_FF_DHE_2048, // groupId
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    },
+    {
+        "ffdhe3072",
+        CRYPT_DH_RFC3526_3072, // Fixed constant name
+        CRYPT_PKEY_DH,
+        128,
+        HITLS_FF_DHE_3072,
+        TLS13_VERSION_BIT,
+        false,
+    },
+    {
+        "ffdhe4096",
+        CRYPT_DH_RFC7919_4096, // CRYPT_DH_4096
+        CRYPT_PKEY_DH, // CRYPT_PKEY_DH
+        128, // secBits
+        HITLS_FF_DHE_4096, // groupId
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    },
+    {
+        "ffdhe6144",
+        CRYPT_DH_RFC7919_6144, // CRYPT_DH_6144
+        CRYPT_PKEY_DH, // CRYPT_PKEY_DH
+        128, // secBits
+        HITLS_FF_DHE_6144, // groupId
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    },
+    {
+        "ffdhe8192",
+        CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
+        CRYPT_PKEY_DH, // CRYPT_PKEY_DH
+        192, // secBits
+        HITLS_FF_DHE_8192, // groupId
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    }
+};
+
+static int32_t BuildTlsGroupParam(const TLS_GroupInfo *groupInfo, BSL_Param *param)
+{
+    int32_t ret = BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME, BSL_PARAM_TYPE_OCTETS_PTR,
+        (void *)(uintptr_t)groupInfo->name, (uint32_t)strlen(groupInfo->name));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID, BSL_PARAM_TYPE_UINT16,
+       (void *)(uintptr_t)&(groupInfo->groupId), sizeof(groupInfo->groupId));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->paraId), sizeof(groupInfo->paraId));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->algId), sizeof(groupInfo->algId));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->secBits), sizeof(groupInfo->secBits));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS, BSL_PARAM_TYPE_UINT32,
+        (void *)(uintptr_t)&(groupInfo->versionBits), sizeof(groupInfo->versionBits));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM, BSL_PARAM_TYPE_BOOL,
+        (void *)(uintptr_t)&(groupInfo->isKem), sizeof(groupInfo->isKem));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    return BSL_SUCCESS;
+}
+
+static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+{
+    for (size_t i = 0; i < sizeof(g_tlsGroupInfo) / sizeof(g_tlsGroupInfo[0]); i++) {
+        BSL_Param param[TLS_GROUP_PARAM_COUNT] = {0};
+        int32_t ret = BuildTlsGroupParam(&g_tlsGroupInfo[i], param);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        ret = cb(param, args);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+typedef struct {
+    const char *name;                   // name
+    uint16_t signatureScheme;           // HITLS_SignHashAlgo, IANA specified
+    int32_t keyType;                    // HITLS_CERT_KeyType
+    int32_t paraId;                     // CRYPT_PKEY_ParaId
+    int32_t signHashAlgId;              // combined sign hash algorithm id
+    int32_t signAlgId;                  // CRYPT_PKEY_AlgId
+    int32_t hashAlgId;                  // CRYPT_MD_AlgId
+    int32_t secBits;                    // security bits
+    uint32_t certVersionBits;           // TLS_VERSION_MASK
+    uint32_t chainVersionBits;          // TLS_VERSION_MASK
+} TLS_SigSchemeInfo;
+
+static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
+    {
+        "ecdsa_secp521r1_sha512",
+        CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
+        TLS_CERT_KEY_TYPE_ECDSA,
+        CRYPT_ECC_NISTP521,
+        BSL_CID_ECDSAWITHSHA512,
+        HITLS_SIGN_ECDSA,
+        HITLS_HASH_SHA_512,
+        256,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "ecdsa_secp384r1_sha384",
+        CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
+        TLS_CERT_KEY_TYPE_ECDSA,
+        CRYPT_ECC_NISTP384,
+        BSL_CID_ECDSAWITHSHA384,
+        HITLS_SIGN_ECDSA,
+        HITLS_HASH_SHA_384,
+        192,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "ed25519",
+        CERT_SIG_SCHEME_ED25519,
+        TLS_CERT_KEY_TYPE_ED25519,
+        0,
+        BSL_CID_ED25519,
+        HITLS_SIGN_ED25519,
+        HITLS_HASH_SHA_512,
+        128,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "ecdsa_secp256r1_sha256",
+        CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
+        TLS_CERT_KEY_TYPE_ECDSA,
+        CRYPT_ECC_NISTP256,
+        BSL_CID_ECDSAWITHSHA256,
+        HITLS_SIGN_ECDSA,
+        HITLS_HASH_SHA_256,
+        128,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "sm2_sm3",
+        CERT_SIG_SCHEME_SM2_SM3,
+        TLS_CERT_KEY_TYPE_SM2,
+        0,
+        BSL_CID_SM2DSAWITHSM3,
+        HITLS_SIGN_SM2,
+        HITLS_HASH_SM3,
+        128,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
+    },
+    {
+        "rsa_pss_pss_sha512",
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512,
+        TLS_CERT_KEY_TYPE_RSA_PSS,
+        0,
+        BSL_CID_RSASSAPSS,
+        HITLS_SIGN_RSA_PSS,
+        HITLS_HASH_SHA_512,
+        256,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "rsa_pss_pss_sha384",
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384,
+        TLS_CERT_KEY_TYPE_RSA_PSS,
+        0,
+        BSL_CID_RSASSAPSS,
+        HITLS_SIGN_RSA_PSS,
+        HITLS_HASH_SHA_384,
+        192,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "rsa_pss_pss_sha256",
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256,
+        TLS_CERT_KEY_TYPE_RSA_PSS,
+        0,
+        BSL_CID_RSASSAPSS,
+        HITLS_SIGN_RSA_PSS,
+        HITLS_HASH_SHA_256,
+        128,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "rsa_pss_rsae_sha512",
+        CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_RSASSAPSS,
+        HITLS_SIGN_RSA_PSS,
+        HITLS_HASH_SHA_512,
+        256,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "rsa_pss_rsae_sha384",
+        CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_RSASSAPSS,
+        HITLS_SIGN_RSA_PSS,
+        HITLS_HASH_SHA_384,
+        192,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "rsa_pss_rsae_sha256",
+        CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_RSASSAPSS,
+        HITLS_SIGN_RSA_PSS,
+        HITLS_HASH_SHA_256,
+        128,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "rsa_pkcs1_sha512",
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA512,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_SHA512WITHRSAENCRYPTION,
+        HITLS_SIGN_RSA_PKCS1_V15,
+        HITLS_HASH_SHA_512,
+        256,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "dsa_sha512",
+        CERT_SIG_SCHEME_DSA_SHA512,
+        TLS_CERT_KEY_TYPE_DSA,
+        0,
+        BSL_CID_DSAWITHSHA512,
+        HITLS_SIGN_DSA,
+        HITLS_HASH_SHA_512,
+        256,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "rsa_pkcs1_sha384",
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA384,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_SHA384WITHRSAENCRYPTION,
+        HITLS_SIGN_RSA_PKCS1_V15,
+        HITLS_HASH_SHA_384,
+        192,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "dsa_sha384",
+        CERT_SIG_SCHEME_DSA_SHA384,
+        TLS_CERT_KEY_TYPE_DSA,
+        0,
+        BSL_CID_DSAWITHSHA384,
+        HITLS_SIGN_DSA,
+        HITLS_HASH_SHA_384,
+        192,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "rsa_pkcs1_sha256",
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA256,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_SHA256WITHRSAENCRYPTION,
+        HITLS_SIGN_RSA_PKCS1_V15,
+        HITLS_HASH_SHA_256,
+        128,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,
+    },
+    {
+        "dsa_sha256",
+        CERT_SIG_SCHEME_DSA_SHA256,
+        TLS_CERT_KEY_TYPE_DSA,
+        0,
+        BSL_CID_DSAWITHSHA256,
+        HITLS_SIGN_DSA,
+        HITLS_HASH_SHA_256,
+        128,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "ecdsa_sha224",
+        CERT_SIG_SCHEME_ECDSA_SHA224,
+        TLS_CERT_KEY_TYPE_ECDSA,
+        0,
+        BSL_CID_ECDSAWITHSHA224,
+        HITLS_SIGN_ECDSA,
+        HITLS_HASH_SHA_224,
+        112,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "rsa_pkcs1_sha224",
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA224,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_SHA224WITHRSAENCRYPTION,
+        HITLS_SIGN_RSA_PKCS1_V15,
+        HITLS_HASH_SHA_224,
+        112,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "dsa_sha224",
+        CERT_SIG_SCHEME_DSA_SHA224,
+        TLS_CERT_KEY_TYPE_DSA,
+        0,
+        BSL_CID_DSAWITHSHA224,
+        HITLS_SIGN_DSA,
+        HITLS_HASH_SHA_224,
+        112,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "ecdsa_sha1",
+        CERT_SIG_SCHEME_ECDSA_SHA1,
+        TLS_CERT_KEY_TYPE_ECDSA,
+        0,
+        BSL_CID_ECDSAWITHSHA1,
+        HITLS_SIGN_ECDSA,
+        HITLS_HASH_SHA1,
+        -1,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "rsa_pkcs1_sha1",
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA1,
+        TLS_CERT_KEY_TYPE_RSA,
+        0,
+        BSL_CID_SHA1WITHRSA,
+        HITLS_SIGN_RSA_PKCS1_V15,
+        HITLS_HASH_SHA1,
+        -1,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+    {
+        "dsa_sha1",
+        CERT_SIG_SCHEME_DSA_SHA1,
+        TLS_CERT_KEY_TYPE_DSA,
+        0,
+        BSL_CID_DSAWITHSHA1,
+        HITLS_SIGN_DSA,
+        HITLS_HASH_SHA1,
+        -1,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+        TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
+    },
+};
+
+static int32_t BuildTlsSigAlgParam(const TLS_SigSchemeInfo *sigSchemeInfo, BSL_Param *param)
+{
+    int32_t ret;
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME,
+        BSL_PARAM_TYPE_OCTETS_PTR, (void *)(uintptr_t)sigSchemeInfo->name, (uint32_t)strlen(sigSchemeInfo->name)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID, BSL_PARAM_TYPE_UINT16,
+        (void *)(uintptr_t)&(sigSchemeInfo->signatureScheme), sizeof(sigSchemeInfo->signatureScheme)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->keyType), sizeof(sigSchemeInfo->keyType)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->paraId), sizeof(sigSchemeInfo->paraId)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->signHashAlgId), sizeof(sigSchemeInfo->signHashAlgId)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->signAlgId), sizeof(sigSchemeInfo->signAlgId)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->hashAlgId), sizeof(sigSchemeInfo->hashAlgId)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[11], CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->secBits), sizeof(sigSchemeInfo->secBits)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[12], CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS,
+        BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(sigSchemeInfo->certVersionBits),
+        sizeof(sigSchemeInfo->certVersionBits)), ret);
+    RETURN_RET_IF_ERR(BSL_PARAM_InitValue(&param[13], CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS,
+        BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(sigSchemeInfo->chainVersionBits),
+        sizeof(sigSchemeInfo->chainVersionBits)), ret);
+    return ret;
+}
+
+static int32_t CryptGetSignAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+{
+    for (size_t i = 0; i < sizeof(g_signSchemeInfo) / sizeof(g_signSchemeInfo[0]); i++) {
+        BSL_Param param[TLS_SIGN_SCHEME_PARAM_COUNT] = {0};
+        int32_t ret = BuildTlsSigAlgParam(&g_signSchemeInfo[i], param);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        ret = cb(param, args);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t CRYPT_EAL_DefaultProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args)
+{
+    (void)provCtx;
+    if (cb == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (cmd) {
+    case CRYPT_EAL_GET_GROUP_CAP:
+        return CryptGetGroupCaps(cb, args);
+    case CRYPT_EAL_GET_SIGALG_CAP:
+        return CryptGetSignAlgCaps(cb, args);
+    default:
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
+}
+
 static CRYPT_EAL_Func g_defProvOutFuncs[] = {
     {CRYPT_EAL_PROVCB_QUERY, CRYPT_EAL_DefaultProvQuery},
     {CRYPT_EAL_PROVCB_FREE, CRYPT_EAL_DefaultProvFree},
     {CRYPT_EAL_PROVCB_CTRL, NULL},
+    {CRYPT_EAL_PROVCB_GETCAPS, CRYPT_EAL_DefaultProvGetCaps},
     CRYPT_EAL_FUNC_END
 };
 
 int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
-    (void) param;
-    (void) capFuncs;
+    (void)param;
+    (void)capFuncs;
     CRYPT_EAL_DefProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_DefProvCtx));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
