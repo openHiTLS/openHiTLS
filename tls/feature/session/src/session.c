@@ -126,7 +126,7 @@ void HITLS_SESS_Free(HITLS_Session *sess)
 
 static HITLS_Session *DeepCopySess(HITLS_Session *src, HITLS_Session *dest)
 {
-    dest->certMgrCtx = SAL_CERT_MgrCtxNewWithProvider(LIBCTX_FROM_CERT_MGR_CTX(src->certMgrCtx),
+    dest->certMgrCtx = SAL_CERT_MgrCtxProviderNew(LIBCTX_FROM_CERT_MGR_CTX(src->certMgrCtx),
         ATTRIBUTE_FROM_CERT_MGR_CTX(src->certMgrCtx));
     if (dest->certMgrCtx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16717, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MgrCtxNew fail", 0, 0, 0, 0);

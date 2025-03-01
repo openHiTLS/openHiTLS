@@ -688,7 +688,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
 {
     uint32_t versionBits = MapVersion2VersionBit(IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion), version);
-    const GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, group);
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, group);
     if (groupInfo == NULL || ((groupInfo->versionBits & versionBits) != versionBits)) {
         return false;
     }

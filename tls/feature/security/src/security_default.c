@@ -166,7 +166,7 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     int32_t ret;
     int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
     int32_t minBits;
-    const GroupInfo *groupInfo = NULL;
+    const TLS_GroupInfo *groupInfo = NULL;
     if (ctx == NULL && config == NULL) {
         return SECURITY_ERR;
     } else if (config != NULL) {

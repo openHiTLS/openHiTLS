@@ -120,7 +120,7 @@ CERT_MgrCtx *SAL_CERT_MgrCtxNew(void);
  *
  * @return  Certificate management struct
  */
-CERT_MgrCtx *SAL_CERT_MgrCtxNewWithProvider(HITLS_Lib_Ctx *libCtx, const char *attrName);
+CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @brief   Copy the certificate management struct

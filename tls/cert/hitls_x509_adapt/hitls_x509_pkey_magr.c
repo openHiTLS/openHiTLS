@@ -221,13 +221,14 @@ void HITLS_X509_Adapt_KeyFree(HITLS_CERT_Key *key)
 static HITLS_NamedGroup GetCurveNameByKey(HITLS_Config *config, const CRYPT_EAL_PkeyCtx *key)
 {
     CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(key);
-    if (paraId == CRYPT_PKEY_PARAID_MAX) {
+    CRYPT_PKEY_AlgId algId = CRYPT_EAL_PkeyGetId(key);
+    if (paraId == CRYPT_PKEY_PARAID_MAX || algId == CRYPT_PKEY_MAX) {
         return HITLS_NAMED_GROUP_BUTT;
     }
     uint32_t size = 0;
-    const GroupInfo *groupInfoList = ConfigGetGroupInfoList(config, &size);
+    const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(config, &size);
     for (size_t i = 0; i < size; i++) {
-        if (groupInfoList[i].paraId == (int32_t)paraId) {
+        if (groupInfoList[i].paraId == (int32_t)paraId && groupInfoList[i].algId == (int32_t)algId) {
             return groupInfoList[i].groupId;
         }
     }

@@ -744,7 +744,7 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaI
 CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_NamedGroup groupId)
 {
 #ifdef HITLS_CRYPTO_PKEY
-    const GroupInfo *groupInfo = ConfigGetGroupInfo(NULL, groupId);
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(NULL, groupId);
     if (groupInfo == NULL) {
         return NULL;
     }

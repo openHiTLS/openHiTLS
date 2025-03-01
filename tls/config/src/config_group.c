@@ -1,3 +1,18 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 #include <stddef.h>
 #include "config_type.h"
 #include "hitls_crypt_type.h"
@@ -6,7 +21,8 @@
 #include "crypt_algid.h"
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER
-static const GroupInfo GROUP_INFO[] = {
+
+static const TLS_GroupInfo GROUP_INFO[] = {
     {
         "secp256r1",
         CRYPT_ECC_NISTP256, // CRYPT_ECC_NISTP256
@@ -132,7 +148,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
         return HITLS_INVALID_INPUT;
     }
     uint32_t size = 0;
-    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(GroupInfo); i++) {
+    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo); i++) {
         if ((config->version & GROUP_INFO[i].versionBits) != 0) {
             size++;
         }
@@ -146,7 +162,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
         return HITLS_MEMALLOC_FAIL;
     }
     uint32_t index = 0;
-    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(GroupInfo); i++) {
+    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo); i++) {
         if ((config->version & GROUP_INFO[i].versionBits) != 0) {
             config->groups[index] = GROUP_INFO[i].groupId;
             index++;
@@ -156,10 +172,10 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 
-const GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
+const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
     (void)config;
-    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(GroupInfo); i++) {
+    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo); i++) {
         if (GROUP_INFO[i].groupId == groupId) {
             return &GROUP_INFO[i];
         }
@@ -167,7 +183,7 @@ const GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId
     return NULL;
 }
 
-const GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t *size)
+const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t *size)
 {
     (void)config;
     *size = sizeof(GROUP_INFO) / sizeof(GROUP_INFO[0]);
