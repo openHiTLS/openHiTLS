@@ -27,7 +27,8 @@ extern "C" {
 
 typedef enum {
     BSL_OID_GLOBAL,
-    BSL_OID_HEAP
+    BSL_OID_HEAP,
+    BSL_OID_UNKNOWN,
 } BslOidFlag;
 
 typedef struct {

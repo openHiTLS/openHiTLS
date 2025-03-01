@@ -37,6 +37,9 @@
 #include "bsl_list.h"
 #include "bsl_errno.h"
 #include "crypt_eal_md.h"
+#include "hitls_crypt_type.h"
+#include "hitls_cert_type.h"
+#include "hitls_type.h"
 /* END_HEADER */
 
 #define PROVIDER_LOAD_SAIZE_2 2
@@ -477,6 +480,212 @@ EXIT:
     }
     if (ctx != NULL) {
         CRYPT_EAL_MdFreeCtx(ctx);
+    }
+    return;
+}
+/* END_CASE */
+
+static int32_t GroupCapsCallback(BSL_Param *param, void *args)
+{
+    int *count = (int *)args;
+    (*count)++;
+
+    BSL_Param *groupNameParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME);
+    ASSERT_TRUE(groupNameParam != NULL);
+    ASSERT_EQ(groupNameParam->valueType, BSL_PARAM_TYPE_STR_PTR);
+    ASSERT_TRUE(groupNameParam->value != NULL);
+    BSL_Param *groupIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID);
+    ASSERT_TRUE(groupIdParam != NULL);
+    ASSERT_EQ(groupIdParam->valueType, BSL_PARAM_TYPE_UINT16);
+    ASSERT_TRUE(groupIdParam->value != NULL);
+    ASSERT_TRUE(groupIdParam->valueLen == sizeof(uint16_t));
+    groupIdParam->useLen = sizeof(uint16_t);
+    BSL_Param *paraIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID);
+    ASSERT_TRUE(paraIdParam != NULL);
+    ASSERT_EQ(paraIdParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(paraIdParam->value != NULL);
+    ASSERT_TRUE(paraIdParam->valueLen == sizeof(int32_t));
+    paraIdParam->useLen = sizeof(int32_t);
+    BSL_Param *algIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID);
+    ASSERT_TRUE(algIdParam != NULL);
+    ASSERT_EQ(algIdParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(algIdParam->value != NULL);
+    ASSERT_TRUE(algIdParam->valueLen == sizeof(int32_t));
+    algIdParam->useLen = sizeof(int32_t);
+    BSL_Param *secBitsParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS);
+    ASSERT_TRUE(secBitsParam != NULL);
+    ASSERT_EQ(secBitsParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(secBitsParam->value != NULL);
+    ASSERT_TRUE(secBitsParam->valueLen == sizeof(int32_t));
+    secBitsParam->useLen = sizeof(int32_t);
+    BSL_Param *versionBitsParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS);
+    ASSERT_TRUE(versionBitsParam != NULL);
+    ASSERT_EQ(versionBitsParam->valueType, BSL_PARAM_TYPE_UINT32);
+    ASSERT_TRUE(versionBitsParam->value != NULL);
+    ASSERT_TRUE(versionBitsParam->valueLen == sizeof(uint32_t));
+    versionBitsParam->useLen = sizeof(uint32_t);
+    BSL_Param *isKemParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM);
+    ASSERT_TRUE(isKemParam != NULL);
+    ASSERT_EQ(isKemParam->valueType, BSL_PARAM_TYPE_BOOL);
+    ASSERT_TRUE(isKemParam->valueLen == sizeof(bool));
+    isKemParam->useLen = sizeof(bool);
+
+    if (groupNameParam->value != NULL && strcmp((char *)groupNameParam->value, "secp256r1") == 0) {
+        ASSERT_EQ(*((uint16_t *)groupIdParam->value), HITLS_EC_GROUP_SECP256R1);
+        ASSERT_EQ(*((int32_t *)paraIdParam->value), CRYPT_ECC_NISTP256);
+        ASSERT_EQ(*((int32_t *)algIdParam->value), CRYPT_PKEY_ECDH);
+        ASSERT_EQ(*((int32_t *)secBitsParam->value), 128);
+        ASSERT_EQ(*((uint32_t *)versionBitsParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
+        ASSERT_EQ(*((bool *)isKemParam->value), false);
+    }
+
+    return CRYPT_SUCCESS;
+EXIT:
+    return CRYPT_NOT_SUPPORT;
+}
+
+static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
+{
+    int *count = (int *)args;
+    (*count)++;
+
+    // 验证必要参数存在
+    BSL_Param *sigNameParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME);
+    ASSERT_TRUE(sigNameParam != NULL);
+    ASSERT_EQ(sigNameParam->valueType, BSL_PARAM_TYPE_STR_PTR);
+    
+    BSL_Param *sigIanaIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID);
+    ASSERT_TRUE(sigIanaIdParam != NULL);
+    ASSERT_EQ(sigIanaIdParam->valueType, BSL_PARAM_TYPE_UINT16);
+    ASSERT_TRUE(sigIanaIdParam->valueLen == sizeof(uint16_t));
+    sigIanaIdParam->useLen = sizeof(uint16_t);
+    
+    BSL_Param *keyTypeParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE);
+    ASSERT_TRUE(keyTypeParam != NULL);
+    ASSERT_EQ(keyTypeParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(keyTypeParam->valueLen == sizeof(int32_t));
+    keyTypeParam->useLen = sizeof(int32_t);
+    
+    BSL_Param *paraIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID);
+    ASSERT_TRUE(paraIdParam != NULL);
+    ASSERT_EQ(paraIdParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(paraIdParam->valueLen == sizeof(int32_t));
+    paraIdParam->useLen = sizeof(int32_t);
+    
+    BSL_Param *signHashAlgIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID);
+    ASSERT_TRUE(signHashAlgIdParam != NULL);
+    ASSERT_EQ(signHashAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(signHashAlgIdParam->valueLen == sizeof(int32_t));
+    signHashAlgIdParam->useLen = sizeof(int32_t);
+    
+    BSL_Param *signAlgIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID);
+    ASSERT_TRUE(signAlgIdParam != NULL);
+    ASSERT_EQ(signAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(signAlgIdParam->valueLen == sizeof(int32_t));
+    signAlgIdParam->useLen = sizeof(int32_t);
+
+    BSL_Param *hashAlgIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID);
+    ASSERT_TRUE(hashAlgIdParam != NULL);
+    ASSERT_EQ(hashAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(hashAlgIdParam->valueLen == sizeof(int32_t));
+    hashAlgIdParam->useLen = sizeof(int32_t);
+    
+    BSL_Param *secBitsParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS);
+    ASSERT_TRUE(secBitsParam != NULL);
+    ASSERT_EQ(secBitsParam->valueType, BSL_PARAM_TYPE_INT32);
+    ASSERT_TRUE(secBitsParam->valueLen == sizeof(int32_t));
+    secBitsParam->useLen = sizeof(int32_t);
+
+    BSL_Param *certVersionParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS);
+    ASSERT_TRUE(certVersionParam != NULL);
+    ASSERT_EQ(certVersionParam->valueType, BSL_PARAM_TYPE_UINT32);
+    ASSERT_TRUE(certVersionParam->valueLen == sizeof(uint32_t));
+    certVersionParam->useLen = sizeof(uint32_t);
+
+    BSL_Param *chainVersionParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS);
+    ASSERT_TRUE(chainVersionParam != NULL);
+    ASSERT_EQ(chainVersionParam->valueType, BSL_PARAM_TYPE_UINT32);
+    ASSERT_TRUE(chainVersionParam->valueLen == sizeof(uint32_t));
+    chainVersionParam->useLen = sizeof(uint32_t);
+
+    if (sigNameParam->value != NULL && strcmp((char *)sigNameParam->value, "ecdsa_secp256r1_sha256") == 0) {
+        ASSERT_EQ(*((uint16_t *)sigIanaIdParam->value), CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256);
+        ASSERT_EQ(*((int32_t *)keyTypeParam->value), TLS_CERT_KEY_TYPE_ECDSA);
+        ASSERT_EQ(*((int32_t *)paraIdParam->value), CRYPT_ECC_NISTP256);
+        ASSERT_EQ(*((int32_t *)signHashAlgIdParam->value), BSL_CID_ECDSAWITHSHA256);
+        ASSERT_EQ(*((int32_t *)signAlgIdParam->value), CRYPT_PKEY_ECDSA);
+        ASSERT_EQ(*((int32_t *)hashAlgIdParam->value), HITLS_HASH_SHA_256);
+        ASSERT_EQ(*((int32_t *)secBitsParam->value), 128);
+        ASSERT_EQ(*((uint32_t *)certVersionParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
+        ASSERT_EQ(*((uint32_t *)chainVersionParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
+    }
+
+    return CRYPT_SUCCESS;
+EXIT:
+    return CRYPT_NOT_SUPPORT;
+}
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_GET_CAPS_TC002
+ * @title Test CRYPT_EAL_ProviderGetCaps for default provider capabilities
+ * @precon None
+ * @brief
+ *    1. Test getting group capabilities (curves)
+ *    2. Test getting signature algorithm capabilities
+ * @expect
+ *    1. Successfully get and verify group parameters
+ *    2. Successfully get and verify signature algorithm parameters
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
+    CRYPT_EAL_ProvMgrCtx provMgrWithGetCapCb = {0};
+    int groupCount = 0;
+    int sigAlgCount = 0;
+
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    // Load default provider
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, &providerMgr), 0);
+    ASSERT_TRUE(providerMgr != NULL);
+
+    // Test getting group capabilities
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback,
+        &groupCount), CRYPT_SUCCESS);
+    ASSERT_EQ(groupCount, 13);
+
+    // Test getting signature algorithm capabilities
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback,
+        &sigAlgCount), CRYPT_SUCCESS);
+    ASSERT_EQ(sigAlgCount, 23);
+
+    // Test invalid mgrCtx
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(NULL, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback,
+        &groupCount), CRYPT_NULL_INPUT);
+
+    // Test invalid CRYPT_EAL_ProcCapsCb
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, NULL, &groupCount), CRYPT_NULL_INPUT);
+
+    // Test invalid mgrCtx
+    provMgrWithGetCapCb.provCtx = NULL;
+    provMgrWithGetCapCb.provGetCap = NULL;
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(&provMgrWithGetCapCb, CRYPT_EAL_GET_GROUP_CAP,
+        (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
+
+    // Test invalid command
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, -1, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount),
+        CRYPT_NOT_SUPPORT);
+
+    // Cleanup
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
+
+EXIT:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
     }
     return;
 }
