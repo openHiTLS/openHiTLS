@@ -611,7 +611,7 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     }
     KeyShareParam *keyShare = &(kxCtx->keyExchParam.share);
 
-    uint32_t pubKeyLen = HS_GetNamedCurvePubkeyLen(keyShare->group);
+    uint32_t pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -992,7 +992,7 @@ static int32_t PackServerKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     if (kxCtx->peerPubkey == NULL) {
         return HITLS_SUCCESS;
     }
-    pubKeyLen = HS_GetNamedCurvePubkeyLen(keyShare->group);
+    pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15428, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

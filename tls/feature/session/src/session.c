@@ -29,6 +29,7 @@
 #include "cert_mgr.h"
 #include "session_type.h"
 #include "session.h"
+#include "cert_mgr_ctx.h"
 #ifdef HITLS_TLS_FEATURE_SESSION
 #define MAX_PRINTF_BUF 1024
 #define CTIME_BUF 26
@@ -125,7 +126,8 @@ void HITLS_SESS_Free(HITLS_Session *sess)
 
 static HITLS_Session *DeepCopySess(HITLS_Session *src, HITLS_Session *dest)
 {
-    dest->certMgrCtx = SAL_CERT_MgrCtxNew();
+    dest->certMgrCtx = SAL_CERT_MgrCtxProviderNew(LIBCTX_FROM_CERT_MGR_CTX(src->certMgrCtx),
+        ATTRIBUTE_FROM_CERT_MGR_CTX(src->certMgrCtx));
     if (dest->certMgrCtx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16717, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MgrCtxNew fail", 0, 0, 0, 0);
         return NULL;

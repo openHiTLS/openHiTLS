@@ -185,14 +185,13 @@ static int32_t ParseEcdhePublicKey(ParsePacket *pkt, ServerEcdh *ecdh)
         ecdh->ecPara.param.namedcurve = HITLS_EC_GROUP_SM2;
     }
 #endif /* HITLS_TLS_PROTO_TLCP11 */
-
     if ((ecdh->ecPara.type == HITLS_EC_CURVE_TYPE_NAMED_CURVE) &&
-        (pubKeySize != HS_GetNamedCurvePubkeyLen(ecdh->ecPara.param.namedcurve))) {
+        (pubKeySize != SAL_CRYPT_GetCryptLength(pkt->ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN,
+            ecdh->ecPara.param.namedcurve))) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ecdhe server pubkey length error, curve id = %u, pubkey len = %u.",
             ecdh->ecPara.param.namedcurve, pubKeySize, 0, 0);
-        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_ECDH_PUBKEY_ERR, 0,
-            NULL, ALERT_ILLEGAL_PARAMETER);
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_ECDH_PUBKEY_ERR, 0, NULL, ALERT_ILLEGAL_PARAMETER);
     }
 
     uint8_t *pubKey = NULL;

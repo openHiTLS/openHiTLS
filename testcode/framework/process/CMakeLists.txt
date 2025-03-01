@@ -31,6 +31,7 @@ target_include_directories(process PRIVATE
     ${openHiTLS_SRC}/bsl/uio/src
     ${openHiTLS_SRC}/bsl/uio/include
     ${openHiTLS_SRC}/include/tls
+    ${openHiTLS_SRC}/include/crypto
     ${openHiTLS_SRC}/tls/include
     ${openHiTLS_SRC}/config/macro_config
 )
