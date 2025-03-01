@@ -51,7 +51,7 @@ static int32_t SignKeyExchParams(TLS_Ctx *ctx, uint8_t *kxData, uint32_t kxDataL
     HITLS_SignHashAlgo signScheme = ctx->negotiatedInfo.signScheme;
     HITLS_SignAlgo signAlgo;
     HITLS_HashAlgo hashAlgo;
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signAlgo, &hashAlgo) != true) {
+    if (CFG_GetSignParamBySchemes(ctx, signScheme, &signAlgo, &hashAlgo) != true) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15496, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get sign parm fail.", 0, 0, 0, 0);
@@ -237,7 +237,7 @@ static int32_t PackServerKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
 
     HITLS_SignAlgo signAlgo;
     HITLS_HashAlgo hashAlgo;
-    if (!CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, ctx->negotiatedInfo.signScheme, &signAlgo, &hashAlgo)) {
+    if (!CFG_GetSignParamBySchemes(ctx, ctx->negotiatedInfo.signScheme, &signAlgo, &hashAlgo)) {
         BSL_SAL_FREE(data);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PACK_SIGNATURE_ERR, BINLOG_ID16220, "get sign parm fail");
