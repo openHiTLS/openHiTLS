@@ -163,17 +163,17 @@ enum CRYPT_ERROR {
     CRYPT_DRBG_INVALID_LEN,             /**< Incorrect data length. */
     CRYPT_DRBG_PARAM_ERROR,             /**< Incorrect input parameter. */
 
-    CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,         /**< No public key. */
-    CRYPT_CURVE25519_NO_PRVKEY,                      /**< No private key. */
-    CRYPT_CURVE25519_KEYLEN_ERROR,                   /**< Incorrect key length. */
-    CRYPT_CURVE25519_SIGNLEN_ERROR,                  /**< Incorrect signature length. */
-    CRYPT_CURVE25519_HASH_METH_ERROR,                /**< Hash method is not SHA512. */
-    CRYPT_CURVE25519_VERIFY_FAIL,                    /**< Signature verification fails due to incorrect signature. */
-    CRYPT_CURVE25519_NO_HASH_METHOD,                 /**< Hash method not set. */
-    CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION,        /**< Unsupported mode of operation. */
-    CRYPT_CURVE25519_KEY_COMPUTE_FAILED,             /**< Failed to generate the shared key. */
-    CRYPT_CURVE25519_INVALID_PUBKEY,                 /**< Invalid public key. */
-    CRYPT_CURVE25519_PUBKEY_NOT_EQUAL,               /**< Public keys are not equal. */
+    CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,    /**< No public key. */
+    CRYPT_CURVE25519_NO_PRVKEY,                 /**< No private key. */
+    CRYPT_CURVE25519_KEYLEN_ERROR,              /**< Incorrect key length. */
+    CRYPT_CURVE25519_SIGNLEN_ERROR,             /**< Incorrect signature length. */
+    CRYPT_CURVE25519_HASH_METH_ERROR,           /**< Hash method is not SHA512. */
+    CRYPT_CURVE25519_VERIFY_FAIL,               /**< Signature verification fails due to incorrect signature. */
+    CRYPT_CURVE25519_NO_HASH_METHOD,            /**< Hash method not set. */
+    CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION,   /**< Unsupported mode of operation. */
+    CRYPT_CURVE25519_KEY_COMPUTE_FAILED,        /**< Failed to generate the shared key. */
+    CRYPT_CURVE25519_INVALID_PUBKEY,            /**< Invalid public key. */
+    CRYPT_CURVE25519_PUBKEY_NOT_EQUAL,          /**< Public keys are not equal. */
 
     CRYPT_SHA1_INPUT_OVERFLOW = 0x01080001,          /**< The length of the input data exceeds the
                                                            maximum processing range of SHA1. */

@@ -27,6 +27,8 @@
 extern "C" {
 #endif
 
+typedef void HITLS_PKI_LibCtx;
+
 #define HITLS_X509_List BslList
 
 #define HITLS_X509_VERSION_1 0
@@ -61,10 +63,11 @@ typedef enum {
     HITLS_X509_GET_ISSUER_DN,          /** Get the list of issuer distinguished name components.
                                            Note: The list is read-only and should not be modified. */
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
-    HITLS_X509_GET_REVOKELIST,         /** Get the certficate revoke list from the crl. */
+    HITLS_X509_GET_REVOKELIST,         /** Get the certificate revoke list from the crl. */
     HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
     HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time */
     HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time */
+    HITLS_X509_GET_SIGN_MDALG,         /** Get the hash algorithm of signature algorithm used to sign the cert/ */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
@@ -183,7 +186,7 @@ typedef struct {
 } HITLS_X509_ExtExKeyUsage;
 
 /**
- * Subject Alternatiive Name
+ * Subject Alternative Name
  */
 typedef struct {
     bool critical;
