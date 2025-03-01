@@ -902,7 +902,6 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
 
     // Set invalid time (optional)
     BSL_TIME invalidTime = revokeTime;
-    invalidTime.day -= 1;  // Set invalid time to 1 day before revocation
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
         &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
