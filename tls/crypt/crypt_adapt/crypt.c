@@ -23,6 +23,7 @@
 #include "hitls_error.h"
 #include "hitls_crypt_reg.h"
 #include "crypt.h"
+#include "config_type.h"
 
 HITLS_CRYPT_BaseMethod g_cryptBaseMethod = {0};
 HITLS_CRYPT_EcdhMethod g_cryptEcdhMethod = {0};
@@ -637,47 +638,24 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t
     return SAL_CRYPT_HkdfExpand(&expandInput, outSecret, outLen);
 }
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
-
-static const struct {
-    HITLS_NamedGroup namedcurve;
-    uint32_t pubKeyLen;
-} CURVE_PUB_LEN_INFO[] = {
-    {HITLS_EC_GROUP_CURVE25519, 32u}, /* 32 is X25519 public key length */
-    {HITLS_EC_GROUP_SECP256R1, 65u},  /* (32 * 2) + 1 elliptic curve SECP256R1,brainpoolP256r1 public key length */
-    {HITLS_EC_GROUP_BRAINPOOLP256R1, 65u},
-    {HITLS_EC_GROUP_SECP384R1, 97u},  /* (48 * 2) + 1 elliptic curve SECP384R1,brainpoolP384r1 public key length */
-    {HITLS_EC_GROUP_BRAINPOOLP384R1, 97u},
-    {HITLS_EC_GROUP_BRAINPOOLP512R1, 129u}, /* Length of the elliptic curve brainpoolP512r1 public key */
-    {HITLS_EC_GROUP_SECP521R1, 133u}, /* (66 * 2) + 1 elliptic curve SECP521R1 public key length */
-#ifdef HITLS_TLS_PROTO_TLCP11
-    {HITLS_EC_GROUP_SM2, 65u},  /* (32 * 2) + 1 elliptic curve SM2 public key length */
-#endif
-#ifdef HITLS_TLS_PROTO_TLS13
-    {HITLS_FF_DHE_2048, 256u},  /* HITLS_FF_DHE_2048 public key length */
-    {HITLS_FF_DHE_3072, 384u},  /* HITLS_FF_DHE_3072 public key length */
-    {HITLS_FF_DHE_4096, 512u},  /* HITLS_FF_DHE_4096 public key length */
-    {HITLS_FF_DHE_6144, 768u},  /* HITLS_FF_DHE_6144 public key length */
-    {HITLS_FF_DHE_8192, 1024u}, /* HITLS_FF_DHE_8192 public key length */
-#endif // HITLS_TLS_PROTO_TLS13
-};
-
 uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param)
 {
-    (void)ctx;
+    const TLS_GroupInfo *groupInfo = NULL;
+    if (ctx == NULL) {
+        return 0;
+    }
     switch (cmd) {
         case HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN:
-            for (uint32_t i = 0; i < sizeof(CURVE_PUB_LEN_INFO) / sizeof(CURVE_PUB_LEN_INFO[0]); i++) {
-                if ((int32_t)CURVE_PUB_LEN_INFO[i].namedcurve == param) {
-                    return CURVE_PUB_LEN_INFO[i].pubKeyLen;
-                }
+            groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, (uint16_t)param);
+            if (groupInfo == NULL) {
+                return 0;
             }
-            break;
+            return groupInfo->pubkeyLen;
         default:
             return 0;
     }
     return 0;
 }
-#endif /* HITLS_TLS_FEATURE_PROVIDER */
+
 
 #endif /* HITLS_TLS_PROTO_TLS13 */
