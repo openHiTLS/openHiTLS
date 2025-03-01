@@ -215,7 +215,7 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17099, "get pubkey type fail");
     }
 
-    if (keyType != SAL_CERT_SignScheme2CertKeyType(signScheme)) {
+    if (keyType != SAL_CERT_SignScheme2CertKeyType(ctx, signScheme)) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17156, "signScheme err");
     }
 
