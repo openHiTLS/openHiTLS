@@ -60,11 +60,12 @@ typedef struct _HITLS_X509_Cert {
     BSL_ASN1_BitString signature;
 
     BSL_SAL_RefCount references;
+    CRYPT_EAL_LibCtx *libCtx;         // Provider context
+    const char *attrName;             // Provider attribute name
 } HITLS_X509_Cert;
 
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res);
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert);
-int32_t HITLS_X509_CertMulParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **certlist);
 
 #ifdef __cplusplus
 }

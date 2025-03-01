@@ -16,6 +16,7 @@
 
 /* BEGIN_HEADER */
 #include "bsl_params.h"
+#include "bsl_err.h"
 #include "crypt_params_key.h"
 
 /* END_HEADER */
@@ -1462,6 +1463,7 @@ static uint64_t pthreadGetId(void)
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
 {
+    BSL_ERR_Init();
     pthread_t pid1;
     pthread_t pid2;
     CRYPT_EAL_PkeyPrv prvkey = {0};
