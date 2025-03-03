@@ -95,7 +95,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
     },
     {
         "sm2",
-        CRYPT_ECC_SM2, // CRYPT_ECC_SM2
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId

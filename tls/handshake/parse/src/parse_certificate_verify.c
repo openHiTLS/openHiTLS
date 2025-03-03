@@ -104,25 +104,18 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
         return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_ILLEGAL_PARAMETER);
     }
 
-    /* check curve matches signature algorithm, only check ec key for tls1.3 */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 || keyType != TLS_CERT_KEY_TYPE_ECDSA) {
-        return HITLS_SUCCESS;
-    }
 #ifdef HITLS_TLS_PROTO_TLS13
     HITLS_Config *config = &ctx->config.tlsConfig;
-    HITLS_NamedGroup keyCureName = HITLS_NAMED_GROUP_BUTT;
-    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&keyCureName);
-    if (ret != HITLS_SUCCESS) {
-        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,
-            BINGLOG_STR("get ec pubkey curve name failed"), ALERT_INTERNAL_ERROR);
+    const TLS_SigSchemeInfo *schemeInfo = ConfigGetSignatureSchemeInfo(config, signScheme);
+    /* check curve matches signature algorithm, only check ec key for tls1.3 */
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 || schemeInfo == NULL || schemeInfo->paraId == 0) {
+        return HITLS_SUCCESS;
     }
-
-    HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(ctx, signScheme);
-    if (signCureName != HITLS_NAMED_GROUP_BUTT && keyCureName != signCureName) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16199, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "key curve does not matches sigAlg, signScheme is 0x%X, keyCureName is %u, signCureName is %u.", signScheme,
-            keyCureName, signCureName, 0);
-        return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_ILLEGAL_PARAMETER);
+    int32_t paramId = 0;
+    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paramId);
+    if (ret != HITLS_SUCCESS || paramId != schemeInfo->paraId) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,
+            BINGLOG_STR("paramId mismatch sigScheme"), ALERT_INTERNAL_ERROR);
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
     return HITLS_SUCCESS;
