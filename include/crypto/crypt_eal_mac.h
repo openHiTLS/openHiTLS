@@ -178,7 +178,7 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx);
  * @param   ctx [IN] MAC context
  * @retval  The MAC length corresponding to the context.
  */
-int32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx);
+uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx);
 
 #ifdef __cplusplus
 }   // end extern "C"

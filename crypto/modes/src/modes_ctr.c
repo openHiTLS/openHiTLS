@@ -170,6 +170,10 @@ int32_t MODES_CTR_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t
         return CRYPT_NULL_INPUT;
     }
     switch (modeCtx->algId) {
+        case CRYPT_CIPHER_AES128_CTR:
+        case CRYPT_CIPHER_AES192_CTR:
+        case CRYPT_CIPHER_AES256_CTR:
+            return AES_CTR_Update(modeCtx, in, inLen, out, outLen);
         case CRYPT_CIPHER_SM4_CTR:
             return SM4_CTR_Update(modeCtx, in, inLen, out, outLen);
         default:

@@ -72,6 +72,8 @@ struct CryptEalCipherCtx {
     EAL_CipherUnitaryMethod *method;          /**< method corresponding to the encryption/decryption mode */
 };
 
+const EAL_SymMethod *MODES_GetSymMethod(int32_t algId);
+
 /**
  * @brief Obtain the EAL_CipherMethod based on the algorithm ID.
  *
