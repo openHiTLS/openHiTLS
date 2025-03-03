@@ -24,6 +24,7 @@
 #include "crypt_local_types.h"
 #include "crypt_modes_xts.h"
 #include "crypt_modes_cbc.h"
+#include "eal_cipher_local.h"
 
 #ifdef __cplusplus
 extern "C" {

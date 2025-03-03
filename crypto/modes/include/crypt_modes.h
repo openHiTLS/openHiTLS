@@ -26,7 +26,7 @@
 extern "C" {
 #endif // __cplusplus
 
-const EAL_SymMethod *MODES_GetSymMethod(int32_t algId);
+typedef struct ModesCipherCtx MODES_CipherCtx;
 
 #ifdef __cplusplus
 }

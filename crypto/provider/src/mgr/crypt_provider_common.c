@@ -47,8 +47,8 @@ int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, in
         return CRYPT_NULL_INPUT;
     }
     if (attribute != NULL && strlen(attribute) > (INT32_MAX >> 1)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_ATTRIBUTE);
+        return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
 
     return CRYPT_EAL_CompareAlgAndAttr(localCtx, operaId, algId, attribute, funcs, provCtx);

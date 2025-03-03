@@ -476,7 +476,7 @@ int32_t MODES_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t k
     
     ret = MODES_GCM_SetIv(&modeCtx->gcmCtx, iv, ivLen);
     if (ret != CRYPT_SUCCESS) {
-        MODES_GCM_DeInitCtx(modeCtx);
+        (void)MODES_GCM_DeInitCtx(modeCtx);
         return ret;
     }
     modeCtx->enc = enc;
@@ -506,7 +506,7 @@ int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
 
     void *ciphCtx = modeCtx->gcmCtx.ciphCtx;
     const EAL_SymMethod *ciphMeth = modeCtx->gcmCtx.ciphMeth;
-    BSL_SAL_CleanseData((void *)(ciphCtx), ciphMeth->ctxSize);
+    ciphMeth->cipherDeInitCtx(ciphCtx);
     BSL_SAL_CleanseData((void *)(modeCtx), sizeof(MODES_GCM_Ctx));
     modeCtx->gcmCtx.ciphCtx = ciphCtx;
     modeCtx->gcmCtx.ciphMeth = ciphMeth;
