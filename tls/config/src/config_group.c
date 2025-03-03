@@ -92,7 +92,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId
-        TLCP11_VERSION_BIT, // versionBits
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
     },
     {

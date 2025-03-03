@@ -54,7 +54,7 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, uint8_t *buf, uint3
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version ==
-        HITLS_VERSION_TLCP11) { /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
+        HITLS_VERSION_TLCP_DTLCP11) { /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
         if (bufLen < (sizeof(uint8_t) + pubKeyLen + sizeof(uint8_t) + sizeof(uint16_t))) {
             return PackBufLenError(BINLOG_ID16216, BINGLOG_STR("ClientKx"));
         }

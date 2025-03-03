@@ -136,7 +136,7 @@ int32_t PackCertificateRequest(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen
 
 #if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12)
     /* TLCP does not have the signature algorithm field */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11) {
         len = 0u;
         ret = PackSignAlgorithms(ctx, &buf[offset], bufLen - offset, &len);
         if (ret != HITLS_SUCCESS) {

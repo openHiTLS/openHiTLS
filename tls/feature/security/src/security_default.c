@@ -123,12 +123,12 @@ static int32_t CheckVersion(int32_t id, int32_t level)
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* If the level is greater than or equal to 1, SSL2.0, SSL3.0, TLS1.0, and TLS1.1 cannot be used. */
     if ((level >= HITLS_SECURITY_LEVEL_ONE) && ((uint32_t)id < HITLS_VERSION_TLS12) &&
-        ((uint32_t)id != HITLS_VERSION_TLCP11)) {
+        ((uint32_t)id != HITLS_VERSION_TLCP_DTLCP11)) {
         return SECURITY_ERR;
     }
     /* Level is greater than or equal to 4 and TLCP1.1 is prohibited because the security strength of the signature
      * algorithm CERT_SIG_SCHEME_SM2_SM3 is 128 bits. */
-    if ((level >= HITLS_SECURITY_LEVEL_FOUR) && ((uint32_t)id == HITLS_VERSION_TLCP11)) {
+    if ((level >= HITLS_SECURITY_LEVEL_FOUR) && ((uint32_t)id == HITLS_VERSION_TLCP_DTLCP11)) {
         return SECURITY_ERR;
     }
 #else

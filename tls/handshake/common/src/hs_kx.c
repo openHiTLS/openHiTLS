@@ -490,7 +490,7 @@ static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecre
 {
 #ifdef HITLS_TLS_PROTO_TLCP11
     int32_t ret = HITLS_SUCCESS;
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP11) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         HITLS_Config *config = &ctx->config.tlsConfig;
         CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
         HITLS_CERT_Key *priKey = SAL_CERT_GetCurrentPrivateKey(certMgrCtx, true);
