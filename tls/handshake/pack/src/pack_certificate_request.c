@@ -68,10 +68,10 @@ static int32_t PackCertificateTypes(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         for (uint32_t j = 0; j < certTypeListsSize; j++) {
             if ((certTypeLists[j].certType == certType) && (certTypeLists[j].isSupported == false)) {
                 certTypeLists[j].isSupported = true;
-        supportedCertTypesSize++;
-            break;
+                supportedCertTypesSize++;
+                break;
+            }
         }
-    }
     }
 
     if (bufLen < (sizeof(uint8_t) + supportedCertTypesSize)) {

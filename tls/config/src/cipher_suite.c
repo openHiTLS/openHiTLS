@@ -1674,7 +1674,7 @@ bool CFG_CheckCipherSuiteVersion(uint16_t cipherSuite, uint16_t minVersion, uint
  * @brief   Obtain the signature algorithm and hash algorithm by combining the parameters of the signature hash
  * algorithm.
  *
- * @param   version [IN] Secure communication version
+ * @param   ctx [IN] HITLS context
  * @param   scheme [IN] Signature and hash algorithm combination
  * @param   signAlg [OUT] Signature algorithm
  * @param   hashAlg [OUT] Hash algorithm
@@ -1700,7 +1700,7 @@ bool CFG_GetSignParamBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme, 
 
 /**
  * @brief   get the group name of the signature algorithm
- *
+ * @param   ctx [IN] HITLS context
  * @param   scheme [IN] signature algorithm
  *
  * @retval  group name
