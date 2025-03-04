@@ -36,6 +36,18 @@ do {                                         \
     (p)[(i) + 3] = (uint8_t)((v) >>  0);     \
 } while (0)
 
+#define PUT_UINT64_BE(v, p, i)               \
+do {                                         \
+    (p)[(i) + 0] = (uint8_t)((v) >> 56);     \
+    (p)[(i) + 1] = (uint8_t)((v) >> 48);     \
+    (p)[(i) + 2] = (uint8_t)((v) >> 40);     \
+    (p)[(i) + 3] = (uint8_t)((v) >> 32);     \
+    (p)[(i) + 4] = (uint8_t)((v) >> 24);     \
+    (p)[(i) + 5] = (uint8_t)((v) >> 16);     \
+    (p)[(i) + 6] = (uint8_t)((v) >>  8);     \
+    (p)[(i) + 7] = (uint8_t)((v) >>  0);     \
+} while (0)
+
 #define GET_UINT32_BE(p, i)                  \
 (                                            \
     ((uint32_t)(p)[(i) + 0] << 24) |         \

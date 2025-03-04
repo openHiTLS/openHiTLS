@@ -428,6 +428,15 @@ enum CRYPT_ERROR {
     CRYPT_ELGAMAL_ERR_DEC_KBITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_ELGAMAL_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
     CRYPT_ELGAMAL_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When elgamal is used for Ctrl. */
+
+
+    CRYPT_SLHDSA_ERR_INVALID_ALGID = 0x01230001,         /**< The algorithm id is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_KEYLEN,                     /**< The key length is invalid. */
+    CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH,                 /**< The signature length is not enough. */
+    CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
+    CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
+    CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
 };
 #ifdef __cplusplus
 }
