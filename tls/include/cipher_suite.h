@@ -22,6 +22,7 @@
 #include "hitls_config.h"
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
+#include "hitls_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,24 +107,6 @@ typedef struct {
 } CipherSuiteCertType;
 
 /**
- * @brief   Obtain the list of supported signature hash algorithms.
- *
- * @param   len [OUT] Return the length of the signature hash algorithm list.
- *
- * @return  Pointer to the signature hash algorithm list
- */
-const SignSchemeInfo *CFG_GetSignSchemeList(uint32_t *len);
-
-/**
- * @brief   Obtain the list of supported signature hash algorithms for TLCP.
- *
- * @param   len [OUT] Return the length of the signature hash algorithm list.
- *
- * @return  Pointer to the signature hash algorithm list
- */
-const SignSchemeInfo *CFG_GetSignSchemeListTlcp(uint32_t *len);
-
-/**
  * @brief   Obtain the cipher suite information.
  *
  * @param   cipherSuite [IN] Cipher suite of the information to be obtained
@@ -161,7 +144,7 @@ bool CFG_CheckCipherSuiteVersion(uint16_t cipherSuite, uint16_t minVersion, uint
 /**
  * @brief  Obtain the signature algorithm and hash algorithm by combining the parameters of
  * the signature hash algorithm.
- * @param   version [IN] Secure communication version
+ * @param   ctx [IN] TLS context
  * @param   scheme [IN] Signature and hash algorithm combination
  * @param   signAlg [OUT] Signature algorithm
  * @param   hashAlg [OUT] Hash algorithm
@@ -169,7 +152,7 @@ bool CFG_CheckCipherSuiteVersion(uint16_t cipherSuite, uint16_t minVersion, uint
  * @retval  true Obtained successfully.
  * @retval  false Obtaining failed.
  */
-bool CFG_GetSignParamBySchemes(uint16_t version, HITLS_SignHashAlgo scheme, HITLS_SignAlgo *signAlg,
+bool CFG_GetSignParamBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme, HITLS_SignAlgo *signAlg,
     HITLS_HashAlgo *hashAlg);
 
 /**
@@ -189,7 +172,7 @@ uint8_t CFG_GetCertTypeByCipherSuite(uint16_t cipherSuite);
  *
  * @retval  group name
  */
-HITLS_NamedGroup CFG_GetEcdsaCurveNameBySchemes(HITLS_SignHashAlgo scheme);
+HITLS_NamedGroup CFG_GetEcdsaCurveNameBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme);
 
 #ifdef __cplusplus
 }
