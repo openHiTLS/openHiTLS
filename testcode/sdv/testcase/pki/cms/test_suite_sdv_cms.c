@@ -142,15 +142,14 @@ void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     BSL_Buffer data = {buff->x, buff->len};
     BSL_Buffer output = {0};
     char *pwd = "123456";
-    uint32_t pwdlen = strlen(pwd);
+    BSL_Buffer pwdBuff = {(uint8_t *)pwd, strlen(pwd)};
     CRYPT_Pbkdf2Param param = {0};
     param.pbesId = BSL_CID_PBES2;
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     param.symId = CRYPT_CIPHER_AES256_CBC;
-    param.pwd = (uint8_t *)pwd;
+    param.pwd = pwdBuff;
     param.saltLen = 16;
-    param.pwdLen = pwdlen;
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
     
@@ -169,7 +168,7 @@ void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     BSL_Buffer verify = {0};
     ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, &paramEx, &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&output, (const uint8_t *)pwd, pwdlen, &verify);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&output, (const uint8_t *)pwd, strlen(pwd), &verify);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("encode p7-encryptData", data.data, data.dataLen, verify.data, verify.dataLen);
 EXIT:

@@ -591,7 +591,7 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_PKCS8SHROUDEDKEYBAG_TC001(Hex *buff)
 
     char *pwd = "123456";
     uint32_t len = strlen(pwd);
-
+    BSL_Buffer pwdBuff = {(uint8_t *)pwd, len};
     BSL_Buffer encode = {0};
     BSL_ASN1_List *bagLists = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBag));
     HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
@@ -620,9 +620,8 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_PKCS8SHROUDEDKEYBAG_TC001(Hex *buff)
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     param.symId = CRYPT_CIPHER_AES256_CBC;
-    param.pwd = (uint8_t *)pwd;
+    param.pwd = pwdBuff;
     param.saltLen = 16;
-    param.pwdLen = len;
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
 
@@ -658,6 +657,7 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_CERTBAGS_TC001(Hex *buff)
 
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
+    BSL_Buffer pwdBuff = {(uint8_t *)pwd, pwdlen};
 
     // parse contentInfo
     int32_t ret = HITLS_PKCS12_ParseContentInfo((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &safeContent);
@@ -676,9 +676,8 @@ void SDV_PKCS12_ENCODE_SAFEBAGS_OF_CERTBAGS_TC001(Hex *buff)
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     param.symId = CRYPT_CIPHER_AES256_CBC;
-    param.pwd = (uint8_t *)pwd;
+    param.pwd = pwdBuff;
     param.saltLen = 16;
-    param.pwdLen = pwdlen;
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
 
@@ -727,6 +726,7 @@ void SDV_PKCS12_ENCODE_AUTHSAFE_TC001(Hex *buff)
 
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
+    BSL_Buffer pwdBuff = {(uint8_t *)pwd, pwdlen};
     // parse authSafe
     int32_t ret = HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
@@ -738,9 +738,8 @@ void SDV_PKCS12_ENCODE_AUTHSAFE_TC001(Hex *buff)
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     param.symId = CRYPT_CIPHER_AES256_CBC;
-    param.pwd = (uint8_t *)pwd;
+    param.pwd = pwdBuff;
     param.saltLen = 16;
-    param.pwdLen = pwdlen;
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
 
@@ -885,9 +884,8 @@ void SDV_PKCS12_ENCODE_P12_TC001(Hex *buff, Hex *cert)
     pbParam.pbkdfId = BSL_CID_PBKDF2;
     pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.pwd = encPwd;
     pbParam.saltLen = 16;
-    pbParam.pwdLen = strlen(pwd);
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
@@ -976,9 +974,8 @@ void SDV_PKCS12_ENCODE_P12_TC002(Hex *buff, Hex *cert)
     pbParam.pbkdfId = BSL_CID_PBKDF2;
     pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.pwd = encPwd;
     pbParam.saltLen = 16;
-    pbParam.pwdLen = strlen(pwd);
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
@@ -1048,9 +1045,8 @@ void SDV_PKCS12_ENCODE_P12_TC003(Hex *buff)
     pbParam.pbkdfId = BSL_CID_PBKDF2;
     pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.pwd = encPwd;
     pbParam.saltLen = 16;
-    pbParam.pwdLen = strlen(pwd);
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
@@ -1185,14 +1181,14 @@ void SDV_PKCS12_ENCODE_P12_TC004(char *pkeyPath, char *certPath)
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_PARAM);
 
     char *pwd = "123456";
+    BSL_Buffer pwdBuff = {(uint8_t *)pwd, strlen(pwd)};
     CRYPT_Pbkdf2Param pbParam = {0};
     pbParam.pbesId = BSL_CID_PBES2;
     pbParam.pbkdfId = BSL_CID_PBKDF2;
     pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.pwd = pwdBuff;
     pbParam.saltLen = 16;
-    pbParam.pwdLen = strlen(pwd);
     pbParam.itCnt = 2048;
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
     HITLS_PKCS12_KdfParam macParam = {0};
@@ -1227,14 +1223,15 @@ void SDV_PKCS12_ENCODE_P12_TC004(char *pkeyPath, char *certPath)
 
     BSL_Buffer output1 = {0};
     char *pwd1 = "1234567";
+    pwdBuff.data = (uint8_t *)pwd1;
+    pwdBuff.dataLen = strlen(pwd1);
     CRYPT_Pbkdf2Param pbParam1 = {0};
     pbParam1.pbesId = BSL_CID_PBES2;
     pbParam1.pbkdfId = BSL_CID_PBKDF2;
     pbParam1.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam1.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam1.pwd = (uint8_t *)pwd1;
+    pbParam1.pwd = pwdBuff;
     pbParam1.saltLen = 16;
-    pbParam1.pwdLen = strlen(pwd1);
     pbParam1.itCnt = 2048;
     CRYPT_EncodeParam encParam1 = {CRYPT_DERIVE_PBKDF2, &pbParam1};
     encodeParam.certEncParam = encParam;
@@ -1251,10 +1248,10 @@ void SDV_PKCS12_ENCODE_P12_TC004(char *pkeyPath, char *certPath)
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_PARAM);
 
     BSL_Buffer output2 = {0};
-    pbParam1.pwd = NULL;
-    pbParam.pwd = NULL;
-    pbParam1.pwdLen = 0;
-    pbParam.pwdLen = 0;
+    pbParam1.pwd.data = NULL;
+    pbParam.pwd.data = NULL;
+    pbParam1.pwd.dataLen = 0;
+    pbParam.pwd.dataLen = 0;
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output2);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 EXIT:
@@ -1296,9 +1293,8 @@ void SDV_PKCS12_GEN_PARSE_P12FILE_TC001(void)
     pbParam.pbkdfId = BSL_CID_PBKDF2;
     pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.pwd = encPwd;
     pbParam.saltLen = 16;
-    pbParam.pwdLen = strlen(pwd);
     pbParam.itCnt = 2048;
 
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
@@ -1632,15 +1628,15 @@ void SDV_PKCS12_GEN_FROM_DATA_TC001(char *pkeyPath, char *enCertPath, char *ca1C
 {
     TestRandInit();
     char *pwd = "123456";
+    BSL_Buffer pwdBuff = {(uint8_t *)pwd, strlen(pwd)};
     HITLS_PKCS12_EncodeParam encodeParam = {0};
     CRYPT_Pbkdf2Param pbParam = {0};
     pbParam.pbesId = BSL_CID_PBES2;
     pbParam.pbkdfId = BSL_CID_PBKDF2;
     pbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
     pbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    pbParam.pwd = (uint8_t *)pwd;
+    pbParam.pwd = pwdBuff;
     pbParam.saltLen = 16;
-    pbParam.pwdLen = strlen(pwd);
     pbParam.itCnt = 2048;
     CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
     encodeParam.keyEncParam = encParam;

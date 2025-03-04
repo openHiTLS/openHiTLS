@@ -61,7 +61,7 @@
 #include "crypt_errno.h"
 #include "bsl_obj.h"
 #include "bsl_errno.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
