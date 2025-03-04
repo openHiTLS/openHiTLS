@@ -93,6 +93,31 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
 int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
 
 /**
+ * @brief Callback function type for processing provider capabilities
+ *
+ * @param params [IN] Parameters containing capability information
+ * @param args [IN] User-provided arguments for capability processing
+ *
+ * @retval #CRYPT_SUCCESS if processing succeeds
+ *         Other error codes see the crypt_errno.h
+ */
+typedef int32_t (*CRYPT_EAL_ProcCapsCb)(const BSL_Param *params, void *args);
+
+/**
+ * @ingroup crypt_eal_provider
+ * @brief Get and process provider capabilities
+ *
+ * @param ctx [IN] Provider context
+ * @param cmd [IN] Command to specify which capabilities to retrieve
+ * @param cb [IN] Callback function to process the retrieved capabilities
+ * @param args [IN] Arguments to be passed to the callback function
+ *
+ * @retval #CRYPT_SUCCESS if capability retrieval and processing succeeds
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args);
+
+/**
  * @ingroup crypt_eal_provider
  * @brief Provider unload interface
  *
@@ -142,6 +167,35 @@ int32_t CRYPT_EAL_ProviderSetLoadPath(CRYPT_EAL_LibCtx *libCtx, const char *sear
 */
 int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
+
+/**
+ * @brief Callback function type for processing a single provider
+ *
+ * @param ctx [IN] Provider context for the current provider being processed
+ * @param args [IN] User-provided arguments for provider processing
+ *
+ * @retval #CRYPT_SUCCESS if processing succeeds
+ *         Other error codes see the crypt_errno.h
+ */
+typedef int32_t (*CRYPT_EAL_ProviderProcessCb)(CRYPT_EAL_ProvMgrCtx *ctx, void *args);
+
+/**
+ * @ingroup crypt_eal_provider
+ * @brief Process all loaded providers with the specified callback function
+ *
+ * This function iterates through all providers loaded in the given library context
+ * and applies the specified callback function to each provider. It allows performing
+ * a common operation across all loaded providers.
+ *
+ * @param ctx [IN] Library context containing the providers to process
+ * @param cb [IN] Callback function to be applied to each provider
+ * @param args [IN] Arguments to be passed to the callback function
+ *
+ * @retval #CRYPT_SUCCESS if all providers were processed successfully
+ *         The first error code encountered if any provider processing fails
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcessCb cb, void *args);
 
 #ifdef __cplusplus
 }

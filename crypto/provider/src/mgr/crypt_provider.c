@@ -27,6 +27,7 @@
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider_local.h"
 #include "crypt_provider.h"
+#include "crypt_drbg_local.h"
 
 // Name of the dl initialization function
 #define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInit"
@@ -53,6 +54,11 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx)
 
     if (libCtx->lock != NULL) {
         BSL_SAL_ThreadLockFree(libCtx->lock);
+    }
+
+    if (libCtx->drbg != NULL) {
+        CRYPT_RandDeinit(libCtx->drbg);
+        libCtx->drbg = NULL;
     }
 
     BSL_SAL_FREE(libCtx->searchProviderPath);
@@ -264,10 +270,14 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
         return CRYPT_SUCCESS;
     }
     if (IsEalPreDefinedProvider(providerFullName)) {
-        ret = CRYPT_EAL_LoadPreDefinedProvider(libCtx, providerFullName);
+        ret = CRYPT_EAL_LoadPreDefinedProvider(libCtx, providerFullName, &providerMgr);
         BSL_SAL_Free(providerFullName);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        if (mgrCtx != NULL) {
+            *mgrCtx = providerMgr;
         }
         return ret;
     }
@@ -397,6 +407,45 @@ int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val
         return CRYPT_NULL_INPUT;
     }
     return ctx->provCtrlCb(ctx->provCtx, cmd, val, valLen);
+}
+
+int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->provGetCap == NULL) {
+        return CRYPT_SUCCESS;
+    }
+    return ctx->provGetCap(ctx->provCtx, cmd, cb, args);
+}
+
+int32_t CRYPT_EAL_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcessCb cb, void *args)
+{
+    if (cb == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_EAL_LibCtx *localCtx = ctx;
+    if (localCtx == NULL) {
+        localCtx = CRYPT_EAL_GetGlobalLibCtx();
+    }
+    if (localCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
+    BslListNode *node = BSL_LIST_FirstNode(localCtx->providers);
+    while (node != NULL) {
+        CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(node);
+        int32_t ret = cb(providerMgr, args);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        node = BSL_LIST_GetNextNode(localCtx->providers, node);
+    }
+    return CRYPT_SUCCESS;
 }
 
 #endif // HITLS_CRYPTO_PROVIDER

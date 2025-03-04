@@ -1,0 +1,92 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
+/* BEGIN_HEADER */
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <semaphore.h>
+#include "securec.h"
+#include "hlt.h"
+#include "logger.h"
+#include "hitls_config.h"
+#include "hitls_cert_type.h"
+#include "crypt_util_rand.h"
+#include "helper.h"
+#include "hitls.h"
+#include "frame_tls.h"
+#include "hitls_type.h"
+
+/* END_HEADER */
+
+#define READ_BUF_LEN_18K (18 * 1024)
+#define PORT 10087
+
+/* BEGIN_CASE */
+void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, int providerLibFmt)
+{
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    (void)path;
+    (void)providerName;
+    (void)providerLibFmt;
+    SKIP_TEST();
+#else
+    HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
+    HLT_Process *remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
+    ASSERT_TRUE(localProcess != NULL);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+    ASSERT_TRUE(clientCtxConfig != NULL);
+
+    HLT_SetProviderPath(serverCtxConfig, path);
+    HLT_SetProviderAttrName(serverCtxConfig, NULL);
+    HLT_SetProviderPath(clientCtxConfig, path);
+    HLT_SetProviderAttrName(clientCtxConfig, NULL);
+    HLT_AddProviderInfo(serverCtxConfig, providerName, providerLibFmt);
+    HLT_AddProviderInfo(serverCtxConfig, "default", BSL_SAL_LIB_FMT_OFF);
+    HLT_AddProviderInfo(clientCtxConfig, providerName, providerLibFmt);
+    HLT_AddProviderInfo(clientCtxConfig, "default", BSL_SAL_LIB_FMT_OFF);
+    /* Set Cert */
+    HLT_SetCertPath(serverCtxConfig, "new_signAlg/ca.der", "new_signAlg/inter.der", "new_signAlg/server.der",
+        "new_signAlg/server.key.der", "NULL", "NULL");
+    HLT_SetCertPath(clientCtxConfig, "new_signAlg/ca.der", "new_signAlg/inter.der", "new_signAlg/client.der",
+        "new_signAlg/client.key.der", "NULL", "NULL");
+
+    HLT_SetGroups(serverCtxConfig, "test_new_group"); // For key exchange algorithm
+    HLT_SetCipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
+    HLT_SetCipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
+
+    HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    HLT_Tls_Res *clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_3, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    uint8_t readBuf[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen;
+    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
+    ASSERT_TRUE(readLen == strlen("Hello World"));
+    ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+EXIT:
+    HLT_FreeAllProcess();
+#endif
+}
+/* END_CASE */

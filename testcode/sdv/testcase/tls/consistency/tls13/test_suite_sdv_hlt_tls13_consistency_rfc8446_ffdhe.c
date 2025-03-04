@@ -287,13 +287,13 @@ void UT_TLS13_RFC8446_FFDHE_TC001()
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -303,6 +303,11 @@ void UT_TLS13_RFC8446_FFDHE_TC001()
     HLT_SetGroups(clientCtxConfig, "HITLS_FF_DHE_4096");
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, NULL, NULL, NULL, 0, NULL);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     serverCtxConfig->isSupportClientVerify = true;
     serverCtxConfig->isSupportPostHandshakeAuth = true;
     serverCtxConfig->securitylevel = 0;
@@ -741,7 +746,6 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC006(int ClientType, int 
     ASSERT_TRUE(serverConfig != NULL);
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-
     // Configure the client and server to support FFDHE2048.
     GetStrGroup(ClientType, group, &clientgroup);
     GetStrGroup(ServerType, group, &servergroup);
@@ -812,7 +816,6 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_DHE_GROUP_FUNC_TC007(int ClientType, int 
     ASSERT_TRUE(serverConfig != NULL);
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-
     // Configure the client and server to support the elliptic curve ffdhe2048.
     GetStrGroup(ClientType, group, &clientgroup);
     GetStrGroup(ServerType, group, &servergroup);

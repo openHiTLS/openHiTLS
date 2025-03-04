@@ -865,7 +865,8 @@ static int32_t ServerCheckResumeTicket(TLS_Ctx *ctx, const ClientHelloMsg *clien
     uint8_t *ticketBuf = clientHello->extension.content.ticket;
     uint32_t ticketBufSize = clientHello->extension.content.ticketSize;
     bool isTicketExpect = false;
-    int32_t ret = SESSMGR_DecryptSessionTicket(sessMgr, &sess, ticketBuf, ticketBufSize, &isTicketExpect);
+    int32_t ret = SESSMGR_DecryptSessionTicket(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        sessMgr, &sess, ticketBuf, ticketBufSize, &isTicketExpect);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16045, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SESSMGR_DecryptSessionTicket return fail when process client hello.", 0, 0, 0, 0);
@@ -1494,8 +1495,8 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
     bool isTicketExcept = 0;
     HITLS_Session *pskSession = NULL;
 
-    int32_t ret = SESSMGR_DecryptSessionTicket(ctx->config.tlsConfig.sessMgr, &pskSession,
-        ticket, ticketLen, &isTicketExcept);
+    int32_t ret = SESSMGR_DecryptSessionTicket(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->config.tlsConfig.sessMgr, &pskSession, ticket, ticketLen, &isTicketExcept);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16048, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Decrypt Ticket fail when processing client hello.", 0, 0, 0, 0);

@@ -29,6 +29,9 @@
 #include "hitls_sni.h"
 #include "hitls_alpn.h"
 #include "sal_atomic.h"
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#include "crypt_eal_provider.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,12 +62,63 @@ typedef struct TlsSessionManager TLS_SessionMgr;
 #define HITLS_MAX_CERT_LIST_DEFAULT (1024 * 100)
 
 /**
+ * @brief Group information
+ */
+typedef struct {
+    char *name;           // group name
+    int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
+    int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
+    int32_t secBits;           // security bits
+    uint16_t groupId;           // iana group id, HITLS_NamedGroup
+    int32_t pubkeyLen;         // public key length(CH keyshare / SH keyshare)
+    int32_t sharedkeyLen;      // shared key length
+    int32_t ciphertextLen;     // ciphertext length(SH keyshare)
+    uint32_t versionBits;       // TLS_VERSION_MASK
+    bool isKem;                // true: KEM, false: KEX
+} TLS_GroupInfo;
+
+/**
+ * @brief Signature scheme information
+ */
+typedef struct {
+    char *name;
+    uint16_t signatureScheme; // HITLS_SignHashAlgo, IANA specified
+    int32_t keyType;          // HITLS_CERT_KeyType
+    int32_t paraId;           // CRYPT_PKEY_ParaId
+    int32_t signHashAlgId;    // combined sign hash algorithm id
+    int32_t signAlgId;        // CRYPT_PKEY_AlgId
+    int32_t hashAlgId;        // CRYPT_MD_AlgId
+    int32_t secBits;          // security bits
+    uint32_t certVersionBits;      // TLS_VERSION_MASK
+    uint32_t chainVersionBits; // TLS_VERSION_MASK
+} TLS_SigSchemeInfo;
+
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+/**
+ * @brief   TLS capability data
+ */
+typedef struct {
+    HITLS_Config *config;
+    CRYPT_EAL_ProvMgrCtx *provMgrCtx;
+} TLS_CapabilityData;
+#define TLS_CAPABILITY_LIST_MALLOC_SIZE 10
+#endif
+
+/**
  * @brief   TLS Global Configuration
  */
 typedef struct TlsConfig {
     BSL_SAL_RefCount references;        /* reference count */
     HITLS_Lib_Ctx *libCtx;          /* library context */
     const char *attrName;              /* attrName */
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    TLS_GroupInfo *groupInfo;
+    uint32_t groupInfolen;
+    uint32_t groupInfoSize;
+    TLS_SigSchemeInfo *sigSchemeInfo;
+    uint32_t sigSchemeInfolen;
+    uint32_t sigSchemeInfoSize;
+#endif
     uint32_t version;                   /* supported proto version */
     uint32_t originVersionMask;         /* the original supported proto version mask */
     uint16_t minVersion;                /* min supported proto version */
@@ -112,7 +166,7 @@ typedef struct TlsConfig {
     HITLS_MsgCb msgCb;                  /* message callback function cb for observing all SSL/TLS protocol messages */
     void *msgArg;                       /*  set argument arg to the callback function */
 
-    HITLS_RecordPaddingCb  recordPaddingCb; /* the callback to specify the padding for TLS 1.3 records */
+    HITLS_RecordPaddingCb recordPaddingCb; /* the callback to specify the padding for TLS 1.3 records */
     void *recordPaddingArg;                 /* assign a value arg that is passed to the callback */
 
     uint32_t keyExchMode;               /* TLS1.3 psk exchange mode */
@@ -130,6 +184,8 @@ typedef struct TlsConfig {
 
     void *userData;                     /* user data */
     HITLS_ConfigUserDataFreeCb userDataFreeCb;
+
+    char *providerAttr;
 
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */

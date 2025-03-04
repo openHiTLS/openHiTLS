@@ -61,12 +61,13 @@
 #include "crypt_errno.h"
 #include "bsl_obj.h"
 #include "bsl_errno.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
+#include "hitls_pki_x509.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
 int32_t g_uiPort = 18886;
-HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(const char *file);
+HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(HITLS_Config *tlsCfg, const char *file);
 
 /* @
 * @test    UT_TLS_CERT_CM_SetVerifyStore_API_TC001
@@ -101,7 +102,7 @@ void UT_TLS_CERT_CM_SetVerifyStore_API_TC001(int version)
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
-    HITLS_X509_Adapt_StoreFree(verifyStore);
+    HITLS_X509_StoreCtxFree(verifyStore);
 }
 /* END_CASE */
 
@@ -278,9 +279,9 @@ void UT_HITLS_CERT_ClearChainCerts_API_TC001(int version, char *certFile, char *
     HITLS_Config *tlsConfig = NULL;
     HITLS_Ctx *ctx = NULL;
 
-    HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(certFile);
+    HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(tlsConfig, certFile);
     ASSERT_TRUE(cert != NULL);
-    HITLS_CERT_X509 *addCert = HiTLS_X509_LoadCertFile(addCertFile);
+    HITLS_CERT_X509 *addCert = HiTLS_X509_LoadCertFile(tlsConfig, addCertFile);
     ASSERT_TRUE(addCert != NULL);
 
     tlsConfig = HitlsNewCtx(version);

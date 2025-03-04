@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_CALLBACK_CERT
+#if defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)
 #include <stdint.h>
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -22,7 +22,7 @@
 #include "hitls_pki_x509.h"
 #include "hitls_cert_local.h"
 #include "hitls_error.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
 
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreNew(void)
 {
@@ -62,4 +62,4 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
             return HITLS_X509_ADAPT_ERR;
     }
 }
-#endif /* HITLS_TLS_CALLBACK_CERT */
+#endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */

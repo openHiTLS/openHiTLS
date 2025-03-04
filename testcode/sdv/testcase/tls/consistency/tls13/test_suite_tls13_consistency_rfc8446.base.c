@@ -52,7 +52,7 @@
 #include "hlt.h"
 #include "sctp_channel.h"
 #include "logger.h"
-
+#include "stub_crypt.h"
 #define SIGNATURE_ALGORITHMS 0x04, 0x03 /* Fields added to the SERVER_HELLOW message */
 #define READ_BUF_SIZE (18 * 1024)       /* Maximum length of the read message buffer */
 #define TEMP_DATA_LEN 1024              /* Length of a single message */

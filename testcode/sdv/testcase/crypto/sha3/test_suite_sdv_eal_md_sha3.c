@@ -322,22 +322,22 @@ EXIT:
  *    The results are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPT_EAL_SHA3_FUNC_TC005(int algId, Hex *in, Hex *digest)
+void SDV_CRYPT_EAL_SHA3_FUNC_TC005(int algId, Hex *in, Hex *digest, int isProvider)
 {
     TestMemInit();
     CRYPT_EAL_MdCTX *ctx = NULL;
 
     uint8_t out[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
-
-    ctx = CRYPT_EAL_MdNewCtx(algId);
-    ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out, outLen), CRYPT_SUCCESS);
-    ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
-    CRYPT_EAL_MdFreeCtx(ctx);
-    ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, algId, "provider=default");
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider) {
+        ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, algId, "provider=default");
+    } else
+#endif
+    {
+        (void)isProvider;
+        ctx = CRYPT_EAL_MdNewCtx(algId);
+    }
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
@@ -358,24 +358,23 @@ EXIT:
  *    The results are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPT_EAL_SHA3_FUNC_TC006(int algId, Hex *in, int outLen, Hex *digest)
+void SDV_CRYPT_EAL_SHA3_FUNC_TC006(int algId, Hex *in, int outLen, Hex *digest, int isProvider)
 {
     TestMemInit();
     CRYPT_EAL_MdCTX *ctx = NULL;
     int32_t squeezeLen = digest->len / 3;
     uint8_t *out = malloc(outLen);
     ASSERT_TRUE(out != NULL);
-    ctx = CRYPT_EAL_MdNewCtx(algId);
-    ASSERT_TRUE(ctx != NULL);
-    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out, squeezeLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out + squeezeLen, squeezeLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out + squeezeLen * 2, squeezeLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out + squeezeLen * 3, outLen - squeezeLen * 3), CRYPT_SUCCESS);
-    ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
-    CRYPT_EAL_MdFreeCtx(ctx);
-    ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, algId, "provider=default");
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider) {
+        ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, algId, "provider=default");
+    } else
+#endif
+    {
+        (void)isProvider;
+        ctx = CRYPT_EAL_MdNewCtx(algId);
+    }
+
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
@@ -466,7 +465,12 @@ EXIT:
 void SDV_CRYPTO_SHA3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
+    CRYPT_EAL_MdCTX *ctx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
+#else
+    ctx = CRYPT_EAL_MdNewCtx(id);
+#endif
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;

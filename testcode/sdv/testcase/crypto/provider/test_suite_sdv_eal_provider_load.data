@@ -34,3 +34,18 @@ SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002:"../testdata/provider/path1":"provider_
 
 SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001
 SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001:"../testdata/provider/path1":"provider_load_test1":2:"a4bc10b1a62c96d459fbaf3a5aa3face73":"d7e6634723ac25cb1879bdb1508da05313530419013fe255967a39e1"
+
+SDV_CRYPTO_PROVIDER_GET_CAPS_TC001
+SDV_CRYPTO_PROVIDER_GET_CAPS_TC001:
+
+SDV_CRYPTO_PROVIDER_PROC_ALL_TC001
+SDV_CRYPTO_PROVIDER_PROC_ALL_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2
+
+SDV_CRYPTO_PROVIDER_PROC_ALL_TC002
+SDV_CRYPTO_PROVIDER_PROC_ALL_TC002:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2
+
+SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001
+SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001:"../testdata/provider/path1":"provider_get_cap_test1":2
+
+SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002
+SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002:"../testdata/provider/path1":"provider_get_cap_test1":2

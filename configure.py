@@ -134,7 +134,8 @@ def get_cfg_args():
 
         # disable uio_sctp by default
         if args['enable_sctp'] or args['module_cmake']:
-            args['disable'].remove('uio_sctp')
+            if 'uio_sctp' in args['disable']:
+                args['disable'].remove('uio_sctp')
 
     except argparse.ArgumentError as e:
         parser.print_help()

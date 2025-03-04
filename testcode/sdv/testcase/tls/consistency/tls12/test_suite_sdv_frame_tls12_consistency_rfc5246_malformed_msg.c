@@ -23,6 +23,7 @@
 #include "hs_extensions.h"
 #include "frame_msg.h"
 #include "pack_msg.h"
+#include "stub_crypt.h"
 /* END_HEADER */
 
 /* @
@@ -181,6 +182,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 

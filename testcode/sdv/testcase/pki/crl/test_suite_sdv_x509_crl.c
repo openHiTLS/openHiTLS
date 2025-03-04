@@ -713,7 +713,7 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
     BSL_Buffer encodeCrl = {0};
     BslList *tmp = NULL;
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_PKI_SUCCESS);
 
     /* Cannot repeat parse */
@@ -758,7 +758,8 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
     BSL_Buffer encodeCrl = {0};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL,
+        &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
 
     crl = HITLS_X509_CrlNew();
@@ -850,7 +851,7 @@ void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
     BslList *issuerDN = NULL;
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
 
     crl = HITLS_X509_CrlNew();
@@ -933,8 +934,8 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
-        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der", &cert),
         HITLS_PKI_SUCCESS);
 
@@ -1041,7 +1042,7 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, i
     TestRandInit();
     // Parse issuer certificate and private key
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_UNKNOWN, keytype, key, NULL, &prvKey), 0);
 
     // Create and initialize CRL
     crl = HITLS_X509_CrlNew();

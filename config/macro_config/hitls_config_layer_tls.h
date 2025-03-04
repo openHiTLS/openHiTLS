@@ -95,12 +95,40 @@
 
 // callback
 #ifdef HITLS_TLS_CALLBACK
+    #ifndef HITLS_TLS_FEATURE_PROVIDER
+        #define HITLS_TLS_FEATURE_PROVIDER
+    #endif
+    #ifndef HITLS_TLS_CALLBACK_SAL
+        #define HITLS_TLS_CALLBACK_SAL
+    #endif
     #ifndef HITLS_TLS_CALLBACK_CERT
         #define HITLS_TLS_CALLBACK_CERT
     #endif
     #ifndef HITLS_TLS_CALLBACK_CRYPT
         #define HITLS_TLS_CALLBACK_CRYPT
     #endif
+#endif
+
+#if defined(HITLS_TLS_FEATURE_PROVIDER)
+    #ifdef HITLS_TLS_CALLBACK_SAL
+        #undef HITLS_TLS_CALLBACK_SAL
+    #endif
+    #ifdef HITLS_TLS_CALLBACK_CERT
+        #undef HITLS_TLS_CALLBACK_CERT
+    #endif
+    #ifdef HITLS_TLS_CALLBACK_CRYPT
+        #undef HITLS_TLS_CALLBACK_CRYPT
+    #endif
+#endif
+
+#if defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_CALLBACK_CRYPT)
+    #ifndef HITLS_TLS_CALLBACK_SAL
+        #define HITLS_TLS_CALLBACK_SAL
+    #endif
+#endif
+
+#if !defined(HITLS_TLS_FEATURE_PROVIDER) && !defined(HITLS_TLS_CALLBACK_SAL)
+    #define HITLS_TLS_FEATURE_PROVIDER
 #endif
 
 // feature

@@ -87,6 +87,9 @@
 #include "hlt_type.h"
 #include "sctp_channel.h"
 #include "hitls_crypt_init.h"
+#include "crypt_default.h"
+#include "stub_crypt.h"
+#include "hitls_crypt.h"
 /* END_HEADER */
 
 #define DEFAULT_DESCRIPTION_LEN 128
@@ -360,9 +363,6 @@ void UT_TLS_CFG_SET_TMPDH_API_TC001(int tlsVersion)
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
-    HITLS_CRYPT_Key *dhPkey = SAL_CRYPT_GenerateDhKeyBySecbits(HITLS_SECURITY_LEVEL_THREE_SECBITS);
-    ASSERT_TRUE(HITLS_CFG_SetTmpDh(config, dhPkey) == HITLS_NULL_INPUT);
-
     switch (tlsVersion) {
         case HITLS_VERSION_TLS12:
             config = HITLS_CFG_NewTLS12Config();
@@ -374,6 +374,10 @@ void UT_TLS_CFG_SET_TMPDH_API_TC001(int tlsVersion)
             config = NULL;
             break;
     }
+    HITLS_CRYPT_Key *dhPkey = HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CONFIG(config),
+        ATTRIBUTE_FROM_CONFIG(config), config, HITLS_SECURITY_LEVEL_THREE_SECBITS );
+    ASSERT_TRUE(HITLS_CFG_SetTmpDh(NULL, dhPkey) == HITLS_NULL_INPUT);
+
 
     ASSERT_TRUE(HITLS_CFG_SetTmpDh(config, NULL) == HITLS_NULL_INPUT);
 
@@ -629,7 +633,7 @@ EXIT:
 void UT_TLS_CFG_GET_MACID_API_TC001(void)
 {
     const HITLS_Cipher *cipher = NULL;
-    HITLS_MacAlgo macAlg = HITLS_MAC_BUTT;
+    HITLS_MacAlgo macAlg = HITLS_MAC_NULL;
     ASSERT_TRUE(HITLS_CFG_GetMacId(cipher, &macAlg) == HITLS_NULL_INPUT);
 
     const uint16_t cipherID = HITLS_RSA_WITH_AES_128_CBC_SHA;
@@ -1333,6 +1337,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
 {
+    (void)level;
     FRAME_Init();
     HITLS_Config *clientConfig = NULL;
     HITLS_Config *serverConfig = NULL;
@@ -1357,7 +1362,8 @@ void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
     HITLS_CFG_SetSecurityLevel(clientConfig, level);
 
     HITLS_CFG_SetDhAutoSupport(serverConfig, false);
-    key = SAL_CRYPT_GenerateDhKeyBySecbits(80);
+    key = HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CONFIG(serverConfig), ATTRIBUTE_FROM_CONFIG(serverConfig),
+        serverConfig, 80);
     HITLS_CFG_SetTmpDh(serverConfig, key);
 
     FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};

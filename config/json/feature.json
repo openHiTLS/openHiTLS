@@ -153,8 +153,13 @@
                         "opts": ["proto"]
                     },
                     "callback": {
-                        "callback_cert": null,
+                        "feature_provider": null,
+                        "callback_sal" :null,
+                        "callback_cert": {
+                            "deps": ["callback_sal"]
+                        },
                         "callback_crypt": {
+                            "deps": ["callback_sal"],
                             "callback_crypt_hmac_primitives": null
                         }
                     },
@@ -808,7 +813,7 @@
             "provider": {
                 ".features": ["provider"],
                 ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
-                ".deps": ["bsl::sal", "bsl::hash", "bsl::err"],
+                ".deps": ["bsl::sal", "bsl::hash", "bsl::err", "bsl::params"],
                 ".include": [
                     "crypto/provider/include",
                     "crypto/ealinit/include",
@@ -968,7 +973,7 @@
             "obj": {
                 ".features":["obj"],
                 ".srcs":"bsl/obj/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::hash"]
             },
             "base64": {
                 ".features": ["base64"],
@@ -1016,7 +1021,8 @@
             },
             "init": {
                 ".features": ["init"],
-                ".srcs": "bsl/init/*.c"
+                ".srcs": "bsl/init/*.c",
+                ".deps": ["bsl::obj"]
             }
         },
         "platform": {
@@ -1040,7 +1046,11 @@
             "crypt": {
                 ".features": ["proto"],
                 ".srcs": "tls/crypt/crypt_adapt/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "tls/config/include",
+                    "tls/crypt/crypt_self"
+                ]
             },
             "crypt_self": {
                 ".features": ["proto"],
@@ -1063,8 +1073,9 @@
                     "bsl/asn1/include",
                     "pki/x509_cert/include",
                     "pki/x509_common/include",
-                    "tls/cert/hitls_x509_adapt",
-                    "tls/config/include"
+                    "tls/config/include",
+                    "tls/cert/include",
+                    "tls/cert/cert_adapt"
                 ]
             },
             "config": {
