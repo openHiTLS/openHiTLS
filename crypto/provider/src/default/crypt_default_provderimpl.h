@@ -69,6 +69,7 @@ extern const CRYPT_EAL_Func g_defExchSm2[];
 extern const CRYPT_EAL_Func g_defAsymCipherRsa[];
 extern const CRYPT_EAL_Func g_defAsymCipherSm2[];
 extern const CRYPT_EAL_Func g_defAsymCipherPaillier[];
+extern const CRYPT_EAL_Func g_defAsymCipherCKKS[];
 
 extern const CRYPT_EAL_Func g_defSignDsa[];
 extern const CRYPT_EAL_Func g_defSignEd25519[];

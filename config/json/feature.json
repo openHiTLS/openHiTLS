@@ -110,7 +110,8 @@
                             "sm2_sign": null,
                             "sm2_exch": null,
                             "deps": ["ecc", "sm3"]
-                        }
+                        },
+                        "ckks": {"deps":["bn"]}
                     },
                     "provider": null,
                     "bn": null
@@ -546,7 +547,8 @@
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
                     "crypto/paillier/include",
-                    "crypto/provider/include"
+                    "crypto/provider/include",
+                    "crypto/ckks/include"
                 ]
             },
             "ealinit": {
@@ -833,6 +835,7 @@
                     "crypto/drbg/include",
                     "crypto/modes/include",
                     "crypto/entropy/include",
+                    "crypto/ckks/include",
                     "crypto/include"
                 ]
             },
@@ -923,6 +926,12 @@
             "paillier": {
                 ".features": ["paillier"],
                 ".srcs": "crypto/paillier/src/*.c",
+                ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
+            },
+            "ckks": {
+                ".features": ["ckks"],
+                ".srcs": "crypto/ckks/src/*.c",
                 ".deps": ["crypto::bn"],
                 ".include": ["crypto/eal/src"]
             }

@@ -409,13 +409,46 @@ enum CRYPT_ERROR {
     CRYPT_PROVIDER_NOT_SUPPORT,
     CRYPT_PROVIDER_ERR_ATTRIBUTE,
     CRYPT_PROVIDER_INVALID_LIB_CTX,
-
+    
     CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01210001,            /**< HPKE Generate asymmetric key error. */
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
     CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
     CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
     CRYPT_HPKE_FAILED_FETCH_PKEY,                        /**< Failed to fetch pkey. */
     CRYPT_HPKE_FAILED_FETCH_KDF,                         /**< Failed to fetch kdf. */
+
+    CRYPT_CKKS_BUFF_LEN_NOT_ENOUGH = 0x01210002, /**< The buffer length is insufficient. */
+    CRYPT_CKKS_NO_KEY_INFO,              /**< Lacks valid key information. */
+    CRYPT_CKKS_ERR_KEY_BITS,             /**< Incorrect key length. */
+    CRYPT_CKKS_COMPLEX_ARRAY_INIT_FAILED,             /**< Complex array init failed. */
+    CRYPT_CKKS_COMPLEX_ARRAY_DISTORY_FAILED,             /**< Complex array distory failed. */
+    CRYPT_CKKS_COMPLEX_ARRAY_CAL_ERROR,              /**< Complex array miscalculation. */
+    CRYPT_CKKS_AGLIN_ALLOC_FAIL,          /**< Alignment memory allocation failed. */
+    CRYPT_CKKS_FFT_CAL_ERROR,              /**< FFT application failed. */
+    CRYPT_CKKS_SIGMA_FAIL,                      /**< Compression vector failed. */
+    CRYPT_CKKS_SIGMA_INV_FAIL,                      /**< Extension vector failed. */
+    CRYPT_CKKS_INCOMPATIBLE_OBJECT,          /**< Objects are not in the same context. */
+    CRYPT_CKKS_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_CKKS_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_CKKS_OUT_OF_MAGNITUDE,          /**< Out of the range of data allowed in the code. */    
+    CRYPT_CKKS_ERR_CAL_VALUE,          /**< Some special values, which are used as calculation errors. */
+    CRYPT_CKKS_NOISE_OUT_BOUND,             /**< The noise exceeded the bound during the operation */
+    CRYPT_CKKS_PAD_NO_SET_ERROR,         /**< Padding information is not set when using RSA key for
+          CKKS                                signature verification. */
+    CRYPT_CKKS_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When RSA is used for Ctrl. */
+    CRYPT_CKKS_SET_EMS_PKCSV15_LEN_ERROR,/**< Sets the PKCSV15 padding information, the length of the input data
+          CKKS                                is incorrect and return failure. */
+    CRYPT_CKKS_SET_EMS_PSS_LEN_ERROR,    /**< Sets the PSS padding information, the length of the input data is
+          CKKS                                incorrect, and return failure. */
+    CRYPT_CKKS_SET_RSAES_OAEP_LEN_ERROR, /**< Sets the OAEP padding information, the length of the input data
+          CKKS                                is incorrect and return failure. */
+    CRYPT_CKKS_SET_FLAG_LEN_ERROR,       /**< The length of the input data is incorrect and return failure When
+          CKKS                                sets the flag. */
+    CRYPT_CKKS_FLAG_NOT_SUPPORT_ERROR,   /**< Unsupported flag. */
+    CRYPT_CKKS_ERR_SALT_LEN,             /**< Salt length error. */
+    CRYPT_CKKS_ERR_ALGID,                /**< The hash ID of the input parameter is incorrect or conflict occurs when
+                                             sets the signature, signature verification, and padding parameters. */
+
 };
 #ifdef __cplusplus
 }

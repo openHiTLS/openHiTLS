@@ -146,6 +146,16 @@ typedef struct {
 
 /**
  * @ingroup crypt_types
+ * 
+ * CKKS private key parameter structure
+ */
+typedef struct {
+    uint8_t *s;  /**< CKKS private key parameter marked as s */
+    uint32_t sLen; /**< Length of the CKKS private key parameter marked as sLen */
+} CRYPT_CKKSPrv;
+
+/**
+ * @ingroup crypt_types
  *
  * DSA private key parameter structure
  */
@@ -225,6 +235,18 @@ typedef struct {
     uint32_t gLen; /**< Length of the Paillier public key parameter marked as g */
     uint32_t n2Len; /**< Length of the Paillier public key parameter marked as n2 */
 } CRYPT_PaillierPub;
+
+/**
+ * @ingroup crypt_types
+ *
+ * CKKS public key parameter structure
+ */
+typedef struct {
+    uint8_t *a;        /**< CKKS public key parameter marked as a */
+    uint8_t *b;        /**< CKKS public key parameter marked as b */
+    uint32_t aLen; /**< Length of the CKKS pubilc key parameter marked as aLen */
+    uint32_t bLen; /**< Length of the CKKS public key parameter marked as bLen */
+} CRYPT_CKKSPub;
 
 /**
  * @ingroup crypt_types
@@ -333,6 +355,17 @@ typedef struct {
     uint32_t qLen; /**< Length of parameter q. */
     uint32_t bits; /**< Bits of para. */
 } CRYPT_PaillierPara;
+
+/**
+ * @ingroup crypt_types
+ *
+ * Para structure of the CKKS algorithm
+ */
+typedef struct {
+    int32_t precision;  /**< Precision bit number */
+    uint32_t m;  /**< Order of polynomial ring, a larger m means support for larger ciphertext computations */
+    uint32_t bits;  /**< The number of bits in the ciphertext modulus */
+} CRYPT_CKKSPara;
 
 /**
  * @ingroup crypt_types
@@ -467,7 +500,7 @@ typedef enum {
     CRYPT_CTRL_GET_RSA_MD,              /**< Obtain the MD algorithm of the RSA algorithm. */
     CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode is PSS. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
-
+    
     // ecc
     CRYPT_CTRL_SET_SM2_USER_ID = 300,
     CRYPT_CTRL_SET_SM2_SERVER,          /* SM2 set the user status. */

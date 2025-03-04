@@ -44,6 +44,9 @@
 #ifdef HITLS_CRYPTO_PAILLIER
 #include "crypt_paillier.h"
 #endif
+#ifdef HITLS_CRYPTO_CKKS
+#include "crypt_ckks.h"
+#endif
 #include "bsl_err_internal.h"
 #include "crypt_types.h"
 #include "eal_common.h"
@@ -319,6 +322,33 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // blind
         NULL  // unBlind
     ), // CRYPT_PKEY_PAILLIER
+#endif
+#ifdef HITLS_CRYPTO_CKKS
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_CKKS,
+        CRYPT_CKKS_NewCtx,
+        CRYPT_CKKS_DupCtx,
+        CRYPT_CKKS_FreeCtx,
+        CRYPT_CKKS_SetPara,
+        NULL,   // getPara
+        CRYPT_CKKS_Gen,
+        CRYPT_CKKS_Ctrl,
+        CRYPT_CKKS_SetPubKey,
+        CRYPT_CKKS_SetPrvKey,
+        CRYPT_CKKS_GetPubKey,
+        CRYPT_CKKS_GetPrvKey,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        CRYPT_CKKS_Encrypt,
+        CRYPT_CKKS_Decrypt,
+        NULL,
+        NULL,  // cmp
+        NULL, // blind
+        NULL  // unBlind
+    ), // CRYPT_PKEY_CKKS
 #endif
 };
 
