@@ -47,6 +47,7 @@ typedef struct {
         CRYPT_Curve25519Pub curve25519Pub; /**< ed25519/x25519 public key structure */
         CRYPT_PaillierPub paillierPub; /**< Paillier public key structure */
         CRYPT_KemEncapsKey kemEk; /**< kem encaps key structure */
+        CRYPT_ElGamalPub elgamalPub; /**< Elgamal public key structure */
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
@@ -70,6 +71,7 @@ typedef struct {
         CRYPT_Curve25519Prv curve25519Prv; /**< ed25519/x25519 private key structure */
         CRYPT_PaillierPrv paillierPrv; /**< Paillier private key structure */
         CRYPT_KemDecapsKey kemDk; /**< kem decaps key structure */
+        CRYPT_ElGamalPrv elgamalPrv; /**< ElGamal private key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
 
@@ -87,6 +89,7 @@ typedef struct {
         CRYPT_DhPara  dhPara;  /**< DH Para structure */
         CRYPT_EccPara eccPara; /**< ECC Para structure */
         CRYPT_PaillierPara paillierPara; /**< Paillier Para structure */
+        CRYPT_ElGamalPara elgamalPara; /**< ElGamal Para structure */
     } para;                            /**<Para union of all algorithms */
 } CRYPT_EAL_PkeyPara;
 
