@@ -79,8 +79,8 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         HITLS_SIGN_SM2,
         HITLS_HASH_SM3,
         128,
-        TLCP11_VERSION_BIT,
-        TLCP11_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
     },
     {
         "rsa_pss_pss_sha512",
@@ -341,12 +341,10 @@ const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfo(const HITLS_Config *config
     }
     return NULL;
 }
-
+#endif
 const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *config, uint32_t *size)
 {
     (void)config;
     *size = sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SIGNATURE_SCHEME_INFO[0]);
     return SIGNATURE_SCHEME_INFO;
 }
-
-#endif

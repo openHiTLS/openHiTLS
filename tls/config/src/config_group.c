@@ -20,8 +20,6 @@
 #include "hitls_error.h"
 #include "crypt_algid.h"
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
-
 static const TLS_GroupInfo GROUP_INFO[] = {
     {
         "secp256r1",
@@ -29,6 +27,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
         HITLS_EC_GROUP_SECP256R1, // groupId
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -38,6 +37,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
         HITLS_EC_GROUP_SECP384R1, // groupId
+        97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -47,6 +47,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
         HITLS_EC_GROUP_SECP521R1, // groupId
+        133, 66, 0, // pubkeyLen=133, sharedkeyLen=66 (521 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -56,6 +57,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
         TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -65,6 +67,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
         HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
+        97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
         TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -74,6 +77,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
+        129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
         TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -83,15 +87,17 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_X25519, // CRYPT_PKEY_ECDH
         128, // secBits
         HITLS_EC_GROUP_CURVE25519, // groupId
+        32, 32, 0, // pubkeyLen=32, sharedkeyLen=32 (256 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
         "sm2",
-        CRYPT_ECC_SM2, // CRYPT_ECC_SM2
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
     },
@@ -101,6 +107,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         112, // secBits
         HITLS_FF_DHE_2048, // groupId
+        256, 256, 0, // pubkeyLen=256, sharedkeyLen=256 (2048 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -110,6 +117,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_DH,
         128,
         HITLS_FF_DHE_3072,
+        384, 384, 0, // pubkeyLen=384, sharedkeyLen=384 (3072 bits)
         TLS13_VERSION_BIT,
         false,
     },
@@ -119,6 +127,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
         HITLS_FF_DHE_4096, // groupId
+        512, 512, 0, // pubkeyLen=512, sharedkeyLen=512 (4096 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -128,6 +137,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
         HITLS_FF_DHE_6144, // groupId
+        768, 768, 0, // pubkeyLen=768, sharedkeyLen=768 (6144 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -137,6 +147,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         192, // secBits
         HITLS_FF_DHE_8192, // groupId
+        1024, 1024, 0, // pubkeyLen=1024, sharedkeyLen=1024 (8192 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     }
@@ -172,6 +183,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 
+/* Support querying the default table when the condition is equal to null. */
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
     (void)config;
@@ -189,4 +201,4 @@ const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t
     *size = sizeof(GROUP_INFO) / sizeof(GROUP_INFO[0]);
     return &GROUP_INFO[0];
 }
-#endif
+

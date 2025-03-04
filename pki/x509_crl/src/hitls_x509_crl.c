@@ -814,30 +814,30 @@ ERR:
     return ret;
 }
 
-int32_t HITLS_X509_CrlParseBundleBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist)
+int32_t HITLS_X509_CrlParseBundleBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crlList)
 {
-    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crllist == NULL) {
+    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || crlList == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
     X509_ParseFuncCbk crlCbk = {
-        (HITLS_X509_Asn1Parse)HITLS_X509_ParseAsn1Crl,
-        (HITLS_X509_New)HITLS_X509_CrlNew,
-        (HITLS_X509_Free)HITLS_X509_CrlFree,
+        .asn1Parse = (HITLS_X509_Asn1Parse)HITLS_X509_ParseAsn1Crl,
+        .x509New = (HITLS_X509_New)HITLS_X509_CrlNew,
+        .x509Free = (HITLS_X509_Free)HITLS_X509_CrlFree,
     };
     HITLS_X509_List *list = BSL_LIST_New(sizeof(HITLS_X509_Crl));
     if (list == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = HITLS_X509_ParseX509(format, encode, false, &crlCbk, list);
+    int32_t ret = HITLS_X509_ParseX509(NULL, NULL, format, encode, false, &crlCbk, list);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *crllist = list;
+    *crlList = list;
     return HITLS_PKI_SUCCESS;
 }
 
@@ -879,7 +879,7 @@ int32_t HITLS_X509_CrlParseFile(int32_t format, const char *path, HITLS_X509_Crl
     return ret;
 }
 
-int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X509_List **crllist)
+int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X509_List **crlList)
 {
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
@@ -889,7 +889,7 @@ int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X5
     }
 
     BSL_Buffer encode = {data, dataLen};
-    ret = HITLS_X509_CrlParseBundleBuff(format, &encode, crllist);
+    ret = HITLS_X509_CrlParseBundleBuff(format, &encode, crlList);
     BSL_SAL_Free(data);
     return ret;
 }

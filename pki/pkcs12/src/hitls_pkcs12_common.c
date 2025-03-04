@@ -1323,7 +1323,7 @@ static int32_t PwdConsistencyCheck(const HITLS_PKCS12_EncodeParam *encodeParam, 
     CRYPT_Pbkdf2Param *certParam = (CRYPT_Pbkdf2Param *)encodeParam->certEncParam.param;
     if (!isNeedMac) {
         // Certificates do not require encryption when integrity verification is disabled.
-        if (keyParam == NULL || keyParam->pwd == NULL) {
+        if (keyParam == NULL || keyParam->pwd.data == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
             return HITLS_PKCS12_ERR_INVALID_PARAM;
         }
@@ -1333,17 +1333,17 @@ static int32_t PwdConsistencyCheck(const HITLS_PKCS12_EncodeParam *encodeParam, 
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
-    uint8_t *certPwd = certParam->pwd;
-    uint8_t *keyPwd = keyParam->pwd;
+    BSL_Buffer certPwd = certParam->pwd;
+    BSL_Buffer keyPwd = keyParam->pwd;
     // Both certificate and key encryption passwords can be NULL simultaneously.
-    if (certPwd == NULL && keyPwd == NULL) {
+    if (certPwd.data == NULL && keyPwd.data == NULL) {
         return HITLS_PKI_SUCCESS;
     }
-    if (certPwd == NULL || keyPwd == NULL) {
+    if (certPwd.data == NULL || keyPwd.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
-    if (keyParam->pwdLen == certParam->pwdLen && memcmp(certPwd, keyPwd, certParam->pwdLen) == 0) {
+    if (keyPwd.dataLen == certPwd.dataLen && memcmp(certPwd.data, keyPwd.data, certPwd.dataLen) == 0) {
         return HITLS_PKI_SUCCESS;
     }
     // Error if certificate and private key encryption passwords do not match.

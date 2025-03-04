@@ -20,6 +20,7 @@
 #include "hitls_crypt_reg.h"
 #include "hitls_error.h"
 #include "hs_common.h"
+#include "config_type.h"
 
 #define MD5_DIGEST_LENGTH 16
 #define SHA1_DIGEST_LENGTH 20
@@ -93,9 +94,15 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(const HITLS_ECParameters
     if (ecdhKey == NULL) {
         return NULL;
     }
+    const TLS_GroupInfo *groupInfo = NULL;
     switch (curveParams->type) {
         case HITLS_EC_CURVE_TYPE_NAMED_CURVE:
-            keyLen = SAL_CRYPT_GetCryptLength(NULL, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, curveParams->param.namedcurve);
+            groupInfo = ConfigGetGroupInfo(NULL, curveParams->param.namedcurve);
+            if (groupInfo == NULL) {
+                BSL_SAL_FREE(ecdhKey);
+                return NULL;
+            }
+            keyLen = groupInfo->pubkeyLen;
             break;
         default:
             break;

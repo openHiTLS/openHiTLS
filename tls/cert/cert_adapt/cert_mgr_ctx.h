@@ -16,6 +16,7 @@
 #define CERT_MGR_CTX_H
 
 #include <stdint.h>
+#include "hitls_crypt_type.h"
 #include "hitls_cert_reg.h"
 #include "cert.h"
 #include "bsl_hash.h"
@@ -63,9 +64,6 @@ struct CertMgrCtxInner {
 };
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType);
-
-int32_t CheckSignScheme(HITLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
-    HITLS_CERT_KeyType checkedKeyType, bool isNegotiateSignAlgo);
 
 int32_t CheckCurveName(HITLS_Config *config, const uint16_t *curveList, uint32_t curveNum, HITLS_CERT_Key *pubkey);
 

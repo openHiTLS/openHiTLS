@@ -1031,7 +1031,11 @@
             "crypt": {
                 ".features": ["proto"],
                 ".srcs": "tls/crypt/crypt_adapt/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "tls/config/include",
+                    "tls/crypt/crypt_self"
+                ]
             },
             "crypt_self": {
                 ".features": ["proto"],
@@ -1054,8 +1058,9 @@
                     "bsl/asn1/include",
                     "pki/x509_cert/include",
                     "pki/x509_common/include",
-                    "tls/cert/hitls_x509_adapt",
-                    "tls/config/include"
+                    "tls/config/include",
+                    "tls/cert/include",
+                    "tls/cert/cert_adapt"
                 ]
             },
             "config": {

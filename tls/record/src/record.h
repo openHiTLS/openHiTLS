@@ -41,6 +41,7 @@ typedef struct {
     RecConnState *currentState;
     RecConnState *pendingState;
 } RecConnStates;
+
 typedef int32_t (*REC_ReadFunc)(TLS_Ctx *, REC_Type, uint8_t *, uint32_t *, uint32_t);
 typedef int32_t (*REC_WriteFunc)(TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
 typedef struct {

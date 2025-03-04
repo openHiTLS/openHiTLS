@@ -491,7 +491,8 @@ void SDV_X509_CSR_GEN_PROCESS_TC001(char *csrPath, int csrFormat, char *privPath
     BSL_Buffer encodeCsr = {NULL, 0};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(keyFormat, keyType, privPath, NULL, 0, &privKey), 0);
+
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, keyFormat, keyType, privPath, NULL, &privKey), 0);
     ASSERT_EQ(HITLS_X509_CsrParseFile(csrFormat, csrPath, &csr), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
@@ -526,7 +527,7 @@ void SDV_X509_CSR_GEN_PROCESS_TC002(char *privPath, int keyFormat, int keyType)
     HITLS_X509_DN dnName[1] = {{BSL_CID_COUNTRYNAME, (uint8_t *)"CN", strlen("CN")}};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(keyFormat, keyType, privPath, NULL, 0, &key), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, keyFormat, keyType, privPath, NULL, &key), 0);
 
     new = HITLS_X509_CsrNew();
     ASSERT_TRUE(new != NULL);

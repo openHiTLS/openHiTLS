@@ -130,62 +130,6 @@ static int32_t SetDefaultPointFormats(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 
-static int32_t SetDefaultSignHashAlg(HITLS_Config *config)
-{
-    uint32_t listLen = 0;
-#ifdef HITLS_TLS_PROTO_TLCP11
-    const SignSchemeInfo *signHashAlgList = (config->maxVersion != HITLS_VERSION_TLCP_DTLCP11) ?
-        CFG_GetSignSchemeList(&listLen) :
-        CFG_GetSignSchemeListTlcp(&listLen);
-#else
-    const SignSchemeInfo *signHashAlgList = CFG_GetSignSchemeList(&listLen);
-#endif
-    if (listLen == 0) {
-        config->signAlgorithmsSize = 0;
-        return HITLS_SUCCESS;
-    }
-    config->signAlgorithms = BSL_SAL_Calloc(1u, listLen * sizeof(uint16_t));
-    if (config->signAlgorithms == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16568, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-    for (uint32_t i = 0; i < listLen; i++) {
-        config->signAlgorithms[i] = signHashAlgList[i].scheme;
-    }
-    config->signAlgorithmsSize = listLen;
-
-    return HITLS_SUCCESS;
-}
-#ifdef HITLS_TLS_PROTO_TLS13
-static int32_t SetTLS13DefaultSignScheme(HITLS_Config *config)
-{
-    uint32_t listSize = 0;
-    uint32_t validNum = 0;
-    const SignSchemeInfo *signHashAlgList = CFG_GetSignSchemeList(&listSize);
-
-    config->signAlgorithms = BSL_SAL_Calloc(listSize, sizeof(uint16_t));
-    if (config->signAlgorithms == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16569, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-    for (uint32_t i = 0; i < listSize; i++) {
-        /* rfc8446 4.2.3 These algorithms are deprecated as of
-        TLS 1.3.  They MUST NOT be offered or negotiated by any
-        implementation.  In particular, MD5 [SLOTH], SHA-224, and DSA
-        MUST NOT be used. */
-        if ((signHashAlgList[i].signAlg == HITLS_SIGN_DSA) || (signHashAlgList[i].hashAlg == HITLS_HASH_SHA1) ||
-            (signHashAlgList[i].hashAlg == HITLS_HASH_SHA_224)) {
-            continue;
-        }
-        config->signAlgorithms[validNum] = signHashAlgList[i].scheme;
-        validNum++;
-    }
-    config->signAlgorithmsSize = validNum;
-
-    return HITLS_SUCCESS;
-}
-#endif
-
 static void BasicInitConfig(HITLS_Config *config)
 {
     config->isSupportExtendMasterSecret = false;
@@ -289,7 +233,7 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
         goto ERR;
     }
 #endif
-    if (SetDefaultSignHashAlg(config) != HITLS_SUCCESS) {
+    if (ConfigLoadSignatureSchemeInfo(config) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16571, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SetSignHashAlg fail", 0, 0, 0, 0);
         goto ERR;
@@ -311,7 +255,7 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16574, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "sessMgr new fail", 0, 0, 0, 0);
@@ -337,7 +281,7 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
     if ((SetTLS13DefaultCipherSuites(config) != HITLS_SUCCESS) ||
         (SetDefaultPointFormats(config) != HITLS_SUCCESS) ||
         (ConfigLoadGroupInfo(config) != HITLS_SUCCESS) ||
-        (SetTLS13DefaultSignScheme(config) != HITLS_SUCCESS)) {
+        (ConfigLoadSignatureSchemeInfo(config) != HITLS_SUCCESS)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16575, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Failed to set the default configuration of tls13", 0, 0, 0, 0);
         CFG_CleanConfig(config);
@@ -356,7 +300,7 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16577, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "sessMgr new fail", 0, 0, 0, 0);
@@ -393,7 +337,7 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
     if ((SetDefaultTlsAllCipherSuites(config) != HITLS_SUCCESS) ||
         (SetDefaultPointFormats(config) != HITLS_SUCCESS) ||
         (ConfigLoadGroupInfo(config) != HITLS_SUCCESS) ||
-        (SetDefaultSignHashAlg(config) != HITLS_SUCCESS)) {
+        (ConfigLoadSignatureSchemeInfo(config) != HITLS_SUCCESS)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16578, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Failed to set the default configuration of tls_all", 0, 0, 0, 0);
         CFG_CleanConfig(config);
@@ -412,7 +356,7 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16580, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "sessMgr new fail", 0, 0, 0, 0);
@@ -454,7 +398,7 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
     if ((SetDefaultDtlsAllCipherSuites(config) != HITLS_SUCCESS) ||
         (SetDefaultPointFormats(config) != HITLS_SUCCESS) ||
         (ConfigLoadGroupInfo(config) != HITLS_SUCCESS) ||
-        (SetDefaultSignHashAlg(config) != HITLS_SUCCESS)) {
+        (ConfigLoadSignatureSchemeInfo(config) != HITLS_SUCCESS)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16581, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "set default config fail", 0, 0, 0, 0);
         CFG_CleanConfig(config);
@@ -471,7 +415,7 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
-    config->sessMgr = SESSMGR_New();
+    config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16583, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SESSMGR_New fail", 0, 0, 0, 0);
