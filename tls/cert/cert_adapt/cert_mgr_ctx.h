@@ -65,9 +65,6 @@ struct CertMgrCtxInner {
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType);
 
-int32_t CheckSignScheme(HITLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
-    HITLS_CERT_KeyType checkedKeyType, bool isNegotiateSignAlgo);
-
 int32_t CheckCurveName(HITLS_Config *config, const uint16_t *curveList, uint32_t curveNum, HITLS_CERT_Key *pubkey);
 
 int32_t CheckPointFormat(HITLS_Config *config, const uint8_t *ecPointFormatList, uint32_t listSize,

@@ -27,26 +27,7 @@
 #include "tls.h"
 #include "tls_config.h"
 #include "cipher_suite.h"
-
-static bool IsSignAlgValid(uint16_t signAlg, uint16_t version)
-{
-    uint32_t listLen = 0;
-#ifdef HITLS_TLS_PROTO_TLCP11
-    const SignSchemeInfo *signSchemeList = (version != HITLS_VERSION_TLCP_DTLCP11) ?
-        CFG_GetSignSchemeList(&listLen) :
-        CFG_GetSignSchemeListTlcp(&listLen);
-#else
-    (void)version;
-    const SignSchemeInfo *signSchemeList = CFG_GetSignSchemeList(&listLen);
-#endif
-    for (uint32_t i = 0; i < listLen; i++) {
-        if (signSchemeList[i].scheme == signAlg) {
-            return true;
-        }
-    }
-
-    return false;
-}
+#include "config_type.h"
 
 static bool CFG_IsValidVersion(uint16_t version)
 {
@@ -62,32 +43,34 @@ static bool CFG_IsValidVersion(uint16_t version)
     return false;
 }
 
-static bool  HaveMatchSignAlg(HITLS_AuthAlgo authAlg, const uint16_t *signatureAlgorithms,
-    uint32_t signatureAlgorithmsSize, uint16_t version)
+static bool  HaveMatchSignAlg(const TLS_Config *config, HITLS_AuthAlgo authAlg, const uint16_t *signatureAlgorithms,
+    uint32_t signatureAlgorithmsSize)
 {
     HITLS_SignAlgo signAlg = HITLS_SIGN_BUTT;
-    HITLS_HashAlgo hashAlg = HITLS_HASH_NULL;
 
     /** Traverse the signature algorithms. If the matching is successful, return true */
     for (uint32_t i = 0u; i < signatureAlgorithmsSize; i++) {
-        if (CFG_GetSignParamBySchemes(version, signatureAlgorithms[i], &signAlg, &hashAlg)) {
-            if (((signAlg == HITLS_SIGN_RSA_PKCS1_V15) || (signAlg == HITLS_SIGN_RSA_PSS)) &&
-                (authAlg == HITLS_AUTH_RSA)) {
-                return true;
-            }
+        const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(config, signatureAlgorithms[i]);
+        if (info == NULL) {
+            continue;
+        }
+        signAlg = info->signAlgId;
+        if (((signAlg == HITLS_SIGN_RSA_PKCS1_V15) || (signAlg == HITLS_SIGN_RSA_PSS)) &&
+            (authAlg == HITLS_AUTH_RSA)) {
+            return true;
+        }
 
-            if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519)) &&
-                (authAlg == HITLS_AUTH_ECDSA)) {
-                return true;
-            }
+        if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519)) &&
+            (authAlg == HITLS_AUTH_ECDSA)) {
+            return true;
+        }
 
-            if (signAlg == HITLS_SIGN_DSA && authAlg == HITLS_AUTH_DSS) {
-                return true;
-            }
+        if (signAlg == HITLS_SIGN_DSA && authAlg == HITLS_AUTH_DSS) {
+            return true;
+        }
 
-            if (signAlg == HITLS_SIGN_SM2 && authAlg == HITLS_AUTH_SM2) {
-                return true;
-            }
+        if (signAlg == HITLS_SIGN_SM2 && authAlg == HITLS_AUTH_SM2) {
+            return true;
         }
     }
 
@@ -134,7 +117,7 @@ static int32_t CheckSign(const TLS_Config *config)
 
     /** Check the validity of the signature algorithms one by one */
     for (uint32_t i = 0; i < signAlgorithmsSize; i++) {
-        if (IsSignAlgValid(signAlgorithms[i], config->maxVersion) == false) {
+        if (ConfigGetSignatureSchemeInfo(config, signAlgorithms[i]) == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_CONFIG_UNSUPPORT_SIGNATURE_ALGORITHM);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15779, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
                 "Unsupported signature algorithms: 0x%04x.", signAlgorithms[i], 0, 0, 0);
@@ -173,7 +156,7 @@ static int32_t CheckSign(const TLS_Config *config)
         }
 
         /** Check whether a signature algorithm matching the cipher suite exists */
-        if (HaveMatchSignAlg(info.authAlg, signAlgorithms, signAlgorithmsSize, config->maxVersion)) {
+        if (HaveMatchSignAlg(config, info.authAlg, signAlgorithms, signAlgorithmsSize)) {
             return HITLS_SUCCESS;
         }
     }
