@@ -663,6 +663,7 @@ typedef enum {
     CRYPT_PRIKEY_PKCS8_ENCRYPT,
     CRYPT_PRIKEY_RSA,
     CRYPT_PRIKEY_ECC,
+    CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
     CRYPT_PUBKEY_SUBKEY,
     CRYPT_PUBKEY_RSA
 } CRYPT_ENCODE_TYPE;
@@ -682,8 +683,7 @@ typedef struct {
     uint32_t hmacId;
     uint32_t symId;
     uint32_t saltLen;
-    uint8_t *pwd;
-    uint32_t pwdLen;
+    BSL_Buffer pwd;
     uint32_t itCnt;
 } CRYPT_Pbkdf2Param;
 
