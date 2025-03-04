@@ -22,7 +22,7 @@
 #include "hitls_pki_x509.h"
 #include "hitls_cert_local.h"
 #include "hitls_error.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
 
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreNew(void)
 {

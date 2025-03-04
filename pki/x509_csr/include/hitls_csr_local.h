@@ -55,6 +55,8 @@ typedef struct _HITLS_X509_Csr {
     BSL_ASN1_BitString signature;
 
     BSL_SAL_RefCount references;
+    CRYPT_EAL_LibCtx *libCtx;         // Provider context
+    const char *attrName;             // Provider attribute name
 } HITLS_X509_Csr;
 
 #ifdef __cplusplus
