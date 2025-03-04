@@ -716,11 +716,7 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaI
         return NULL;
     }
 
-    if (algId != CRYPT_PKEY_X25519
-#ifdef HITLS_TLS_PROTO_TLCP11
-     && algId != CRYPT_PKEY_SM2
-#endif
-     ) {
+    if (paraId != CRYPT_PKEY_PARAID_MAX) {
         ret = CRYPT_EAL_PkeySetParaById(pkey, paraId);
         if (ret != CRYPT_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16659, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
