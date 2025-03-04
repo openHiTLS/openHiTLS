@@ -16,6 +16,7 @@
 #define CERT_MGR_CTX_H
 
 #include <stdint.h>
+#include "hitls_crypt_type.h"
 #include "hitls_cert_reg.h"
 #include "cert.h"
 #include "bsl_hash.h"

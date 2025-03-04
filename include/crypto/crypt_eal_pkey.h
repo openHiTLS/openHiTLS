@@ -51,6 +51,7 @@ typedef struct {
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
+#define CRYPT_EAL_PKEY_UNKNOWN_OPERATE  0
 #define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
 #define CRYPT_EAL_PKEY_EXCH_OPERATE     2
 #define CRYPT_EAL_PKEY_SIGN_OPERATE     4
