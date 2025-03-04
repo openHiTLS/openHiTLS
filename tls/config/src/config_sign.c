@@ -300,7 +300,6 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
     },
 };
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
 int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
 {
     if (config == NULL) {
@@ -348,5 +347,3 @@ const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *co
     *size = sizeof(SIGNATURE_SCHEME_INFO) / sizeof(SIGNATURE_SCHEME_INFO[0]);
     return SIGNATURE_SCHEME_INFO;
 }
-
-#endif

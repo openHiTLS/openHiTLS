@@ -20,8 +20,6 @@
 #include "hitls_error.h"
 #include "crypt_algid.h"
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
-
 static const TLS_GroupInfo GROUP_INFO[] = {
     {
         "secp256r1",
@@ -202,4 +200,4 @@ const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t
     *size = sizeof(GROUP_INFO) / sizeof(GROUP_INFO[0]);
     return &GROUP_INFO[0];
 }
-#endif
+
