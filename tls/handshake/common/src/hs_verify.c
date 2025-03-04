@@ -124,6 +124,8 @@ int32_t VERIFY_CalcVerifyData(TLS_Ctx *ctx, bool isClient, const uint8_t *master
     deriveInfo.labelLen = isClient ? strlen(CLIENT_FINISHED_LABEL) : strlen(SERVER_FINISHED_LABEL);
     deriveInfo.seed = digest;
     deriveInfo.seedLen = digestLen;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     ret = SAL_CRYPT_PRF(&deriveInfo, verifyCtx->verifyData, HS_VERIFY_DATA_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15478, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -335,7 +337,7 @@ int32_t VERIFY_CalcSignData(TLS_Ctx *ctx, HITLS_CERT_Key *privateKey, HITLS_Sign
     HITLS_HashAlgo hashAlgo = 0;
     VerifyCtx *verifyCtx = ctx->hsCtx->verifyCtx;
 
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signAlgo, &hashAlgo) != true) {
+    if (CFG_GetSignParamBySchemes(ctx, signScheme, &signAlgo, &hashAlgo) != true) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15482, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get sign parm fail.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
@@ -381,7 +383,7 @@ int32_t VERIFY_VerifySignData(TLS_Ctx *ctx, HITLS_CERT_Key *pubkey, HITLS_SignHa
     HITLS_SignAlgo signAlgo = 0;
     HITLS_HashAlgo hashAlgo = 0;
 
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signAlgo, &hashAlgo) != true) {
+    if (CFG_GetSignParamBySchemes(ctx, signScheme, &signAlgo, &hashAlgo) != true) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15484, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get sign parm fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -470,7 +472,8 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
     baseKey = GetBaseKey(ctx, isClient);
 
     /* finished_key = HKDF-Expand-Label(BaseKey, "finished", "", Hash.length) */
-    ret = HS_TLS13DeriveFinishedKey(hashAlg, baseKey, hashLen, finishedKey, hashLen);
+    ret = HS_TLS13DeriveFinishedKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlg, baseKey, hashLen, finishedKey, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16876, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveFinishedKey fail", 0, 0, 0, 0);
@@ -490,8 +493,8 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
 
     /* verify_data = HMAC(finished_key, Transcript-Hash(Handshake Context, Certificate*, CertificateVerify*)) */
     verifyCtx->verifyDataSize = hashLen;
-    ret = SAL_CRYPT_Hmac(hashAlg, finishedKey, hashLen, digest, digestLen,
-        verifyCtx->verifyData, &verifyCtx->verifyDataSize);
+    ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlg, finishedKey, hashLen, digest, digestLen, verifyCtx->verifyData, &verifyCtx->verifyDataSize);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15910, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SAL_CRYPT_Hmac fail when calc tls13 verify data.", 0, 0, 0, 0);
@@ -500,7 +503,7 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
     return ret;
 }
 
-static int32_t ConstructMsgHash(HITLS_HashAlgo hashAlgo, HsMsgCache *dataBuf,
+static int32_t ConstructMsgHash(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo, HsMsgCache *dataBuf,
     uint8_t *out, uint32_t *outLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -512,7 +515,7 @@ static int32_t ConstructMsgHash(HITLS_HashAlgo hashAlgo, HsMsgCache *dataBuf,
         BSL_ERR_PUSH_ERROR(BSL_UIO_MEM_ALLOC_FAIL);
         return BSL_UIO_MEM_ALLOC_FAIL;
     }
-    ret = SAL_CRYPT_Digest(hashAlgo, in, inLen, &out[MSG_HASH_HEADER_SIZE], &digestLen);
+    ret = SAL_CRYPT_Digest(libCtx, attrName, hashAlgo, in, inLen, &out[MSG_HASH_HEADER_SIZE], &digestLen);
     BSL_SAL_FREE(in);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16878, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Digest fail", 0, 0, 0, 0);
@@ -562,7 +565,8 @@ int32_t VERIFY_HelloRetryRequestVerifyProcess(TLS_Ctx *ctx)
     HsMsgCache *dataBuf = verifyCtx->dataBuf;
 
     /** Set the verify information. */
-    ret = VERIFY_SetHash(ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
+    ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15491, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "set verify info fail.", 0, 0, 0, 0);
@@ -570,7 +574,8 @@ int32_t VERIFY_HelloRetryRequestVerifyProcess(TLS_Ctx *ctx)
         return ret;
     }
 
-    ret = ConstructMsgHash(verifyCtx->hashAlgo, dataBuf, msgHash, &msgHashLen);
+    ret = ConstructMsgHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        verifyCtx->hashAlgo, dataBuf, msgHash, &msgHashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15493, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "construct msg hash fail.", 0, 0, 0, 0);
@@ -625,28 +630,30 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         return HITLS_CRYPT_ERR_DIGEST;
     }
     // HKDF.Extract PSK to compute EarlySecret
-    ret = HS_TLS13DeriveEarlySecret(hashAlgo, psk, pskLen, earlySecret, &hashLen);
+    ret = HS_TLS13DeriveEarlySecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), hashAlgo, psk, pskLen, earlySecret, &hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16882, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveEarlySecret fail", 0, 0, 0, 0);
         goto EXIT;
     }
     // HKDF.Expand EarlySecret to compute BinderKey
-    ret = HS_TLS13DeriveBinderKey(hashAlgo, isExternalPsk, earlySecret, hashLen, binderKey, hashLen);
+    ret = HS_TLS13DeriveBinderKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlgo, isExternalPsk, earlySecret, hashLen, binderKey, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16883, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveBinderKey fail", 0, 0, 0, 0);
         goto EXIT;
     }
     // HKDF.Expand BinderKey to compute Binder Finished Key
-    ret = HS_TLS13DeriveFinishedKey(hashAlgo, binderKey, hashLen, finishedKey, hashLen);
+    ret = HS_TLS13DeriveFinishedKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlgo, binderKey, hashLen, finishedKey, hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16884, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveFinishedKey fail", 0, 0, 0, 0);
         goto EXIT;
     }
 
-    hashCtx = SAL_CRYPT_DigestInit(hashAlgo);
+    hashCtx = SAL_CRYPT_DigestInit(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), hashAlgo);
     if (hashCtx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16885, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DigestInit fail", 0, 0, 0, 0);
@@ -675,7 +682,8 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         goto EXIT;
     }
 
-    ret = SAL_CRYPT_Hmac(hashAlgo, finishedKey, hashLen, transcriptHash, hashLen, binder, &calcBinderLen);
+    ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlgo, finishedKey, hashLen, transcriptHash, hashLen, binder, &calcBinderLen);
 
 EXIT:
     BSL_SAL_CleanseData(earlySecret, MAX_DIGEST_SIZE);

@@ -406,13 +406,14 @@ void SDV_CRYPT_EAL_HPKE_ABNORMAL_TC001(int role)
     cipherSuite.kdfId = CRYPT_KDF_HKDF_SHA256;
     cipherSuite.aeadId = CRYPT_AEAD_AES_128_GCM;
 
+#ifdef HITLS_CRYPTO_PROVIDER
     hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, "provider=none", role, CRYPT_HPKE_MODE_BASE, cipherSuite);
     ASSERT_TRUE(hpkeCtx == NULL);
 
     hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, "provider=default", role, CRYPT_HPKE_MODE_BASE, cipherSuite);
     ASSERT_TRUE(hpkeCtx != NULL);
     CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
-
+#endif
     hpkeCtx = CRYPT_EAL_HpkeNewCtx(NULL, NULL, role, CRYPT_HPKE_MODE_BASE, cipherSuite);
     ASSERT_TRUE(hpkeCtx != NULL);
 

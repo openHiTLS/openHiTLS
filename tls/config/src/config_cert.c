@@ -285,12 +285,8 @@ int32_t HITLS_CFG_LoadCertFile(HITLS_Config *config, const char *file, HITLS_Par
         return HITLS_NULL_INPUT;
     }
     int32_t ret;
-    CERT_MgrCtx *mgrCtx = config->certMgrCtx;
-    if (mgrCtx == NULL) {
-        return HITLS_UNREGISTERED_CALLBACK;
-    }
-
-    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(config, (const uint8_t *)file, (uint32_t)strlen(file),
+    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+            ATTRIBUTE_FROM_CONFIG(config), config, (const uint8_t *)file, (uint32_t)strlen(file),
         TLS_PARSE_TYPE_FILE, format);
     if (cert == NULL) {
         return HITLS_CONFIG_ERR_LOAD_CERT_FILE;
@@ -316,7 +312,8 @@ int32_t HITLS_CFG_LoadCertBuffer(HITLS_Config *config, const uint8_t *buf, uint3
         return HITLS_NULL_INPUT;
     }
 
-    HITLS_CERT_X509 *newCert = SAL_CERT_X509Parse(config, buf, bufLen, TLS_PARSE_TYPE_BUFF, format);
+    HITLS_CERT_X509 *newCert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+        ATTRIBUTE_FROM_CONFIG(config),config, buf, bufLen, TLS_PARSE_TYPE_BUFF, format);
     if (newCert == NULL) {
         return HITLS_CONFIG_ERR_LOAD_CERT_BUFFER;
     }
@@ -536,7 +533,8 @@ HITLS_CERT_X509 *HITLS_CFG_ParseCert(HITLS_Config *config, const uint8_t *buf, u
         return NULL;
     }
 
-    HITLS_CERT_X509 *newCert = SAL_CERT_X509Parse(config, buf, len, type, format);
+    HITLS_CERT_X509 *newCert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+            ATTRIBUTE_FROM_CONFIG(config), config, buf, len, type, format);
     if (newCert == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17158, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "X509Parse fail", 0, 0, 0, 0);

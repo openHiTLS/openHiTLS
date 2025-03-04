@@ -13,13 +13,13 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_CALLBACK_CERT
+#if defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)
 #include <stdint.h>
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_types.h"
 #include "bsl_err_internal.h"
-#include "hitls_x509_adapt_local.h"
+#include "hitls_x509_adapt.h"
 #include "crypt_eal_encode.h"
 #include "crypt_errno.h"
 #include "hitls_cert.h"
@@ -29,9 +29,8 @@
 #include "crypt_eal_pkey.h"
 #include "hitls_crypt_type.h"
 #include "config_type.h"
-
-static int32_t g_tryTypes[] = { CRYPT_PRIKEY_PKCS8_UNENCRYPT, CRYPT_PRIKEY_PKCS8_ENCRYPT, CRYPT_PRIKEY_RSA,
-    CRYPT_PRIKEY_ECC };
+#include "tls_config.h"
+#include "cert_mgr_ctx.h"
 
 static int32_t GetPassByCb(HITLS_PasswordCb passWordCb, void *passWordCbUserData, char *pass, int32_t *passLen)
 {
@@ -75,137 +74,38 @@ static int32_t GetPrivKeyPassword(HITLS_Config *config, uint8_t *pwd, int32_t *p
     return ret;
 }
 
-static HITLS_CERT_Key *HitlsPrivKeyBuffAsn1Parse(HITLS_Config *config, BSL_Buffer *encode)
-{
-    HITLS_CERT_Key *ealPriKey = NULL;
-    uint8_t pwd[MAX_PASS_LEN] = { 0 };
-    uint32_t pwdLen = MAX_PASS_LEN;
-    int32_t ret;
-    for (size_t i = 0; i < sizeof(g_tryTypes) / sizeof(g_tryTypes[0]); i++) {
-        if (g_tryTypes[i] == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
-            if (GetPrivKeyPassword(config, pwd, (int32_t *)&pwdLen) != HITLS_SUCCESS) {
-                continue;
-            }
-        }
-        ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, g_tryTypes[i], encode, pwd, pwdLen,
-            (CRYPT_EAL_PkeyCtx **)&ealPriKey);
-        if (ret == HITLS_SUCCESS) {
-            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-            return ealPriKey;
-        }
-    }
-    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-    return NULL;
-}
-
-static HITLS_CERT_Key *HitlsPrivKeyBuffPemParse(HITLS_Config *config, BSL_Buffer *encode)
-{
-    HITLS_CERT_Key *ealPriKey = NULL;
-    uint8_t pwd[MAX_PASS_LEN] = { 0 };
-    uint32_t pwdLen = MAX_PASS_LEN;
-    int32_t ret;
-    for (size_t i = 0; i < sizeof(g_tryTypes) / sizeof(g_tryTypes[0]); i++) {
-        if (g_tryTypes[i] == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
-            if (GetPrivKeyPassword(config, pwd, (int32_t *)&pwdLen) != HITLS_SUCCESS) {
-                continue;
-            }
-        }
-        ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, g_tryTypes[i], encode, pwd, pwdLen,
-            (CRYPT_EAL_PkeyCtx **)&ealPriKey);
-        if (ret == HITLS_SUCCESS) {
-            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-            return ealPriKey;
-        }
-    }
-    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-    return NULL;
-}
-
-static HITLS_CERT_Key *HitlsPrivKeyFileAsn1Parse(HITLS_Config *config, const char *path)
-{
-    HITLS_CERT_Key *ealPriKey = NULL;
-    uint8_t pwd[MAX_PASS_LEN] = { 0 };
-    uint32_t pwdLen = MAX_PASS_LEN;
-    for (size_t i = 0; i < sizeof(g_tryTypes) / sizeof(g_tryTypes[0]); i++) {
-        if (g_tryTypes[i] == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
-            if (GetPrivKeyPassword(config, pwd, (int32_t *)&pwdLen) != HITLS_SUCCESS) {
-                continue;
-            }
-        }
-        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, g_tryTypes[i], path, pwd, pwdLen,
-            (CRYPT_EAL_PkeyCtx **)&ealPriKey);
-        if (ret == HITLS_SUCCESS) {
-            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-            return ealPriKey;
-        }
-    }
-    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-    return NULL;
-}
-
-static HITLS_CERT_Key *HitlsPrivKeyFilePemParse(HITLS_Config *config, const char *path)
-{
-    HITLS_CERT_Key *ealPriKey = NULL;
-    uint8_t pwd[MAX_PASS_LEN] = { 0 };
-    uint32_t pwdLen = MAX_PASS_LEN;
-    for (size_t i = 0; i < sizeof(g_tryTypes) / sizeof(g_tryTypes[0]); i++) {
-        if (g_tryTypes[i] == CRYPT_PRIKEY_PKCS8_ENCRYPT) {
-            if (GetPrivKeyPassword(config, pwd, (int32_t *)&pwdLen) != HITLS_SUCCESS) {
-                continue;
-            }
-        }
-        int ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, g_tryTypes[i], path, pwd, pwdLen,
-            (CRYPT_EAL_PkeyCtx **)&ealPriKey);
-        if (ret == HITLS_SUCCESS) {
-            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-            return ealPriKey;
-        }
-    }
-    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-    return NULL;
-}
-
-static HITLS_CERT_Key *HitlsPrivKeyBuffParse(HITLS_Config *config, int32_t format, BSL_Buffer *encode)
-{
-    switch (format) {
-        case TLS_PARSE_FORMAT_PEM:
-            return HitlsPrivKeyBuffPemParse(config, encode);
-        case TLS_PARSE_FORMAT_ASN1:
-            return HitlsPrivKeyBuffAsn1Parse(config, encode);
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
-            return NULL;
-    }
-}
-
-static HITLS_CERT_Key *HitlsPrivKeyFileParse(HITLS_Config *config, int32_t format, const char *path)
-{
-    switch (format) {
-        case TLS_PARSE_FORMAT_PEM:
-            return HitlsPrivKeyFilePemParse(config, path);
-        case TLS_PARSE_FORMAT_ASN1:
-            return HitlsPrivKeyFileAsn1Parse(config, path);
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
-            return NULL;
-    }
-}
-
 HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
+    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(config);
+    const char *attrName = ATTRIBUTE_FROM_CONFIG(config);
+    int32_t ret;
     BSL_Buffer encode = {0};
+    HITLS_CERT_Key *ealPriKey = NULL;
+    uint8_t pwd[MAX_PASS_LEN] = { 0 };
+    BSL_Buffer pwdBuff = {pwd, sizeof(pwd)};
+    (void)GetPrivKeyPassword(config, pwdBuff.data, (int32_t *)&pwdBuff.dataLen);
     switch (type) {
         case TLS_PARSE_TYPE_FILE:
-            return HitlsPrivKeyFileParse(config, format, (const char *)buf);
+            ret = CRYPT_EAL_ProviderDecodeFileKey(libCtx, attrName, format, CRYPT_ENCODE_UNKNOW,
+                (const char *)buf, &pwdBuff, (CRYPT_EAL_PkeyCtx **)&ealPriKey);
+            break;
         case TLS_PARSE_TYPE_BUFF:
             encode.data = (uint8_t *)(uintptr_t)buf;
             encode.dataLen = len;
-            return HitlsPrivKeyBuffParse(config, format, &encode);
+            ret = CRYPT_EAL_ProviderDecodeBuffKey(libCtx, attrName, format, CRYPT_ENCODE_UNKNOW, &encode, &pwdBuff,
+                (CRYPT_EAL_PkeyCtx **)&ealPriKey);
+            break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
+            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
             return NULL;
     }
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
+    return ealPriKey;
 }
 
 HITLS_CERT_Key *HITLS_X509_Adapt_KeyDup(HITLS_CERT_Key *key)
@@ -234,11 +134,6 @@ static HITLS_NamedGroup GetCurveNameByKey(HITLS_Config *config, const CRYPT_EAL_
     return HITLS_NAMED_GROUP_BUTT;
 }
 
-typedef struct {
-    CRYPT_PKEY_AlgId cid;
-    HITLS_CERT_KeyType keyType;
-} CertKeyTypeMap;
-
 static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
 {
     CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(pkey);
@@ -251,27 +146,12 @@ static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
             return TLS_CERT_KEY_TYPE_RSA_PSS;
         }
     }
-    static CertKeyTypeMap signMap[] = {
-        {CRYPT_PKEY_RSA, TLS_CERT_KEY_TYPE_RSA},
-        {CRYPT_PKEY_DSA, TLS_CERT_KEY_TYPE_DSA},
-        {CRYPT_PKEY_ECDSA, TLS_CERT_KEY_TYPE_ECDSA},
-        {CRYPT_PKEY_ED25519, TLS_CERT_KEY_TYPE_ED25519},
-#ifdef HITLS_TLS_PROTO_TLCP11
-        {CRYPT_PKEY_SM2, TLS_CERT_KEY_TYPE_SM2},
-#endif
-    };
-    for (size_t i = 0; i < sizeof(signMap) / sizeof(signMap[0]); i++) {
-        if (signMap[i].cid == cid) {
-            return signMap[i].keyType;
-        }
-    }
-    return TLS_CERT_KEY_TYPE_UNKNOWN;
+    return (HITLS_CERT_KeyType)cid;
 }
 
 int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output)
 {
-    (void)config;
     (void)input;
     int32_t ret = HITLS_SUCCESS;
     switch (cmd) {
@@ -291,6 +171,9 @@ int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITL
         case CERT_KEY_CTRL_GET_SECBITS:
             *(int32_t *)output = CRYPT_EAL_PkeyGetSecurityBits(key);
             break;
+        case CERT_KEY_CTRL_GET_PARAM_ID:
+            *(int32_t *)output = CRYPT_EAL_PkeyGetParaId(key);
+            break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
             ret = HITLS_X509_ADAPT_ERR;
@@ -300,4 +183,4 @@ int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITL
     return ret;
 }
 
-#endif /* HITLS_TLS_CALLBACK_CERT */
+#endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */

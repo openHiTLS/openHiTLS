@@ -166,7 +166,8 @@ int32_t RecConnStateSetCipherInfo(RecConnState *state, RecConnSuitInfo *suitInfo
  * @retval  HITLS_REC_ERR_ENCRYPT Encryption failed
  * @see     SAL_CRYPT_Encrypt
  */
-int32_t RecConnEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen);
+int32_t RecConnEncrypt(TLS_Ctx *ctx,
+    RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen);
 
 /**
  * @brief   Decrypt the record payload
@@ -187,6 +188,8 @@ int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state,
 /**
  * @brief   Key generation
  *
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   param [IN] Security parameter
  * @param   client [OUT] Client key material
  * @param   server [OUT] Server key material
@@ -195,11 +198,13 @@ int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state,
  * @retval  HITLS_INTERNAL_EXCEPTION Invalid null pointer
  * @retval  Reference SAL_CRYPT_PRF
  */
-int32_t RecConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *client, RecConnSuitInfo *server);
-
+int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const REC_SecParameters *param, RecConnSuitInfo *client, RecConnSuitInfo *server);
 /**
  * @brief   TLS1.3 Key generation
  *
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   param [IN] Security parameter
  * @param   suitInfo [OUT] key material
  *
@@ -209,7 +214,8 @@ int32_t RecConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *clie
  * @retval  HITLS_CRYPT_ERR_HKDF_EXPAND HKDF-Expand calculation fails
  *
  */
-int32_t RecTLS13ConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *suitInfo);
+int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const REC_SecParameters *param, RecConnSuitInfo *suitInfo);
 
 /*
  * @brief   check the mac
@@ -228,6 +234,8 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
 /*
  * @brief   generate the mac
  *
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   suiteInfo [IN] ciphersuiteInfo
  * @param   plainMsg [IN] text info
  * @param   mac [OUT] mac buffer
@@ -235,7 +243,8 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
  * @retval  HITLS_SUCCESS
  * @retval  Reference hitls_error.h
  */
-int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
+int32_t RecConnGenerateMac(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
     uint8_t *mac, uint32_t *macLen);
 
 /*

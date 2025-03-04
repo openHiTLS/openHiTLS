@@ -95,7 +95,6 @@ static int32_t DoHandshake(HsTestInfo *testInfo)
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBSOLETE_RESERVED_FUNC_TC001(int signAlg)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -125,7 +124,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBSOLETE_RESERVED_FUNC_TC002(int group)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -178,7 +176,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -220,7 +217,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC002()
 {
 
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -336,7 +332,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -384,7 +379,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC004()
 {
 
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -422,7 +416,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -497,7 +490,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -585,7 +577,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC007()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = { 0 };
     testInfo.version = HITLS_VERSION_TLS13;
@@ -625,7 +616,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NECESSARY_EXTENSION_FUNC_TC008()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;

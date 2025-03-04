@@ -414,7 +414,7 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg,
+void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg, int expSignMdAlg,
     int expKuDigitailSign, int expKuCertSign, int expKuKeyAgreement)
 {
     HITLS_X509_Cert *cert = NULL;
@@ -433,8 +433,12 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     CRYPT_EAL_PkeyFreeCtx(ealKey);
 
     int32_t alg = 0;
+    int32_t mdAlg = 0;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, expSignAlg);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &mdAlg, sizeof(mdAlg) - 1), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &mdAlg, sizeof(mdAlg)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(mdAlg, expSignMdAlg);
 
     int32_t ref = 0;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_REF_UP, &ref, sizeof(ref)), HITLS_PKI_SUCCESS);
@@ -877,7 +881,7 @@ void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyTyp
 
     TestMemInit();
     TestRandInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, keyType, privPath, NULL, &privKey), 0);
     ASSERT_EQ(BSL_SAL_ReadFile(derCertPath, &encodeRaw.data, &encodeRaw.dataLen), 0);
     ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_ASN1, &encodeRaw, &raw), 0);
 
@@ -920,7 +924,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC001(char *derCertPath, char *privPath, int keyT
     BSL_Buffer encodeCert = {0};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, keyType, privPath, NULL, &privKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, derCertPath, &cert), HITLS_PKI_SUCCESS);
 
     /* Cannot repeat parse */
@@ -965,7 +969,7 @@ void SDV_X509_CERT_GEN_PROCESS_TC002(char *csrPath, char *privPath, int keyType,
     BSL_Buffer encodeCert = {0};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, keyType, privPath, NULL, 0, &privKey), 0);
+    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(NULL, NULL, BSL_FORMAT_ASN1, keyType, privPath, NULL, &privKey), 0);
     ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csrPath, &csr), HITLS_PKI_SUCCESS);
 
     cert = HITLS_X509_CertNew();

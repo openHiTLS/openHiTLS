@@ -43,6 +43,8 @@ struct _HITLS_X509_StoreCtx {
     HITLS_X509_List *crl;
     BSL_SAL_RefCount references;
     HITLS_X509_VerifyParam verifyParam;
+    CRYPT_EAL_LibCtx *libCtx;         // Provider context
+    const char *attrName;             // Provider attribute name
 };
 
 

@@ -21,6 +21,10 @@
 #ifndef HITLS_CONFIG_CHECK_H
 #define HITLS_CONFIG_CHECK_H
 
+#if defined(HITLS_TLS_FEATURE_PROVIDER) && !defined(HITLS_CRYPTO_PROVIDER)
+#error "[HiTLS] The tls-provider must work with crypto-provider"
+#endif
+
 #if defined(HITLS_CRYPTO_HMAC) && !defined(HITLS_CRYPTO_MD)
 #error "[HiTLS] The hmac must work with hash."
 #endif

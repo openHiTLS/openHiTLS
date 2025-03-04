@@ -78,7 +78,7 @@ typedef struct {
 
 int32_t StatusPark(HandshakeTestInfo *testInfo, int uioType)
 {
-
+    int ret;
     testInfo->client = FRAME_CreateLink(testInfo->config, uioType);
     if (testInfo->client == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
@@ -89,10 +89,10 @@ int32_t StatusPark(HandshakeTestInfo *testInfo, int uioType)
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-
-    if (FRAME_CreateConnection(testInfo->client, testInfo->server,
-                               testInfo->isClient, testInfo->state) != HITLS_SUCCESS) {
-        return HITLS_INTERNAL_EXCEPTION;
+    ret = FRAME_CreateConnection(testInfo->client, testInfo->server,
+        testInfo->isClient, testInfo->state);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 
     return HITLS_SUCCESS;
@@ -101,7 +101,7 @@ int32_t StatusPark(HandshakeTestInfo *testInfo, int uioType)
 int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo, int uioType)
 {
     FRAME_Init();
-    FRAME_RegCryptMethod(); // stub all crypto functions
+    // FRAME_RegCryptMethod(); // stub all crypto functions
 
     testInfo->config = HITLS_CFG_NewDTLS12Config();
     if (testInfo->config == NULL) {

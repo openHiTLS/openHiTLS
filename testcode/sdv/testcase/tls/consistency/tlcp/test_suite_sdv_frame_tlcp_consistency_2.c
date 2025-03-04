@@ -32,7 +32,6 @@
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_RESUME_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -88,7 +87,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_RESUME_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -153,7 +151,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_RESUME_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -212,7 +209,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_RESUME_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -256,7 +252,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_RESUME_TC007()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;

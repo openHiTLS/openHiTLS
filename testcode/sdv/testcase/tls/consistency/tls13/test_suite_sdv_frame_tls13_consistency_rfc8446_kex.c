@@ -990,7 +990,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NULL_KEYSHARE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
@@ -4848,7 +4847,6 @@ void SDV_TLS13_RFC8446_KeyShareGroup_TC003(int version, int connType)
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetTls13CipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
 
@@ -4857,7 +4855,6 @@ void SDV_TLS13_RFC8446_KeyShareGroup_TC003(int version, int connType)
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_CURVE25519");
     HLT_SetTls13CipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");

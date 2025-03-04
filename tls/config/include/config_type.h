@@ -18,39 +18,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "hitls_type.h"
+#include "tls_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @brief Group information
- */
-typedef struct {
-    const char *name;           // group name
-    int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
-    int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
-    int32_t secBits;           // security bits
-    uint16_t groupId;           // iana group id
-    uint32_t versionBits;       // TLS_VERSION_MASK
-    bool isKem;                // true: KEM, false: KEX
-} TLS_GroupInfo;
-
-/**
- * @brief Signature scheme information
- */
-typedef struct {
-    const char *name;
-    uint16_t signatureScheme; // HITLS_SignHashAlgo, IANA specified
-    int32_t keyType;          // HITLS_CERT_KeyType
-    int32_t paraId;           // CRYPT_PKEY_ParaId
-    int32_t signHashAlgId;    // combined sign hash algorithm id
-    int32_t signAlgId;        // CRYPT_PKEY_AlgId
-    int32_t hashAlgId;        // CRYPT_MD_AlgId
-    int32_t secBits;          // security bits
-    uint32_t certVersionBits;      // TLS_VERSION_MASK
-    uint32_t chainVersionBits; // TLS_VERSION_MASK
-} TLS_SigSchemeInfo;
 
 /**
  * @brief Load group information

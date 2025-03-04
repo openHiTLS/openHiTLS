@@ -435,7 +435,12 @@ void SDV_CRYPT_HMAC_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *data, 
         SKIP_TEST();
     }
     TestMemInit();
-    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    CRYPT_EAL_MacCtx *ctx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+#else
+    ctx = CRYPT_EAL_MacNewCtx(algId);
+#endif
     ASSERT_TRUE(ctx != NULL);
 
     uint32_t macLen = GetMacLen(algId);

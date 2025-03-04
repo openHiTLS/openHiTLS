@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include "bsl_obj.h"
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,6 +87,7 @@ typedef enum {
     CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE,      /**< Is it digital signature permission. */
     CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE,     /**< Is the certificate issuing permission. */
     CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE,     /**< Is it the certificate verification permission. */
+    CERT_KEY_CTRL_GET_PARAM_ID,               /**< Obtain the parameter ID. */
 
     CERT_CTRL_BUTT,
 } HITLS_CERT_CtrlCmd;
@@ -105,11 +107,11 @@ typedef enum {
  * @brief   Read data format
  */
 typedef enum {
-    TLS_PARSE_FORMAT_PEM,        /**< PEM format */
-    TLS_PARSE_FORMAT_ASN1,       /**< ASN1 format */
-    TLS_PARSE_FORMAT_PFX_COM,    /**< PFX COM format */
-    TLS_PARSE_FORMAT_PKCS12,     /**< PKCS12 format */
-    TLS_PARSE_FORMAT_BUTT,
+    TLS_PARSE_FORMAT_PEM = BSL_FORMAT_PEM,        /**< PEM format */
+    TLS_PARSE_FORMAT_ASN1 = BSL_FORMAT_ASN1,       /**< ASN1 format */
+    TLS_PARSE_FORMAT_PFX_COM = BSL_FORMAT_PFX_COM,    /**< PFX COM format */
+    TLS_PARSE_FORMAT_PKCS12 = BSL_FORMAT_PKCS12,     /**< PKCS12 format */
+    TLS_PARSE_FORMAT_BUTT = BSL_FORMAT_UNKNOWN,
 } HITLS_ParseFormat;
 
 /**

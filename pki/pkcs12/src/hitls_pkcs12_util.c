@@ -122,6 +122,17 @@ HITLS_PKCS12 *HITLS_PKCS12_New(void)
     return p12;
 }
 
+HITLS_PKCS12 *HITLS_PKCS12_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
+{
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    if (p12 == NULL) {
+        return NULL;
+    }
+    p12->libCtx = libCtx;
+    p12->attrName = attrName;
+    return p12;
+}
+
 static void CertBagFree(void *value)
 {
     if (value == NULL) {

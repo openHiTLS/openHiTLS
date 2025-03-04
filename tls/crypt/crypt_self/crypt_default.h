@@ -344,6 +344,19 @@ int32_t CRYPT_DEFAULT_HkdfExtract(const HITLS_CRYPT_HkdfExtractInput *input, uin
  */
 int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen);
 
+/**
+ * @brief Initialize the hash context.
+ *
+ * This function initializes the hash context with the given hash algorithm.
+ *
+ * @param hashAlgo   [IN] Hash algorithm to be used in the hash operation, e.g., HITLS_SHA256.
+ *
+ * @return hash context
+ *         Returns a pointer to the initialized hash context.
+ *         Returns NULL if the initialization fails.
+ */
+HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo);
+
 #ifdef __cplusplus
 }
 #endif

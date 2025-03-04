@@ -40,33 +40,36 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
 
-    int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
+    int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     BSL_SAL_Free(output.data);
     output.data = NULL;
 
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, (const uint8_t *)pwd, pwdlen, &output);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, NULL, (const uint8_t *)pwd, pwdlen, &output);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, NULL, pwdlen, &output);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, NULL, pwdlen, &output);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, NULL);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, 8192, &output);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, 8192, &output);
     ASSERT_EQ(ret, CRYPT_INVALID_ARG);
 
     char *pwd1 = "123456@123";
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd1, strlen(pwd1), &output);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd1, strlen(pwd1),
+        &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 
     char *pwd2 = "";
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd2, strlen(pwd2), &output);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd2, strlen(pwd2),
+        &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 
     (void)memset_s(buff->x + buff->len - 20, 16, 0, 16); // modify the ciphertext, 16 and 20 are random number.
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen,
+        &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 EXIT:
     return;
@@ -82,7 +85,8 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC002(Hex *buff)
     BSL_Buffer output = {0};
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
-    int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, &output);
+    int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen,
+        &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 EXIT:
     BSL_SAL_Free(output.data);
@@ -142,34 +146,33 @@ void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     BSL_Buffer data = {buff->x, buff->len};
     BSL_Buffer output = {0};
     char *pwd = "123456";
-    uint32_t pwdlen = strlen(pwd);
     CRYPT_Pbkdf2Param param = {0};
     param.pbesId = BSL_CID_PBES2;
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     param.symId = CRYPT_CIPHER_AES256_CBC;
     param.pwd = (uint8_t *)pwd;
+    param.pwdLen = strlen(pwd);
     param.saltLen = 16;
-    param.pwdLen = pwdlen;
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
     
     ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0), HITLS_PKI_SUCCESS);
-    int32_t ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, NULL);
+    int32_t ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, NULL, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, NULL, NULL);
+    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, &paramEx, NULL);
+    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
     param.hmacId = CRYPT_MAC_MAX;
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, &paramEx, &output);
+    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, &output);
     ASSERT_EQ(ret, CRYPT_ERR_ALGID);
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
     BSL_Buffer verify = {0};
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(&data, &paramEx, &output);
+    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(&output, (const uint8_t *)pwd, pwdlen, &verify);
+    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, &output, (const uint8_t *)pwd, strlen(pwd), &verify);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("encode p7-encryptData", data.data, data.dataLen, verify.data, verify.dataLen);
 EXIT:

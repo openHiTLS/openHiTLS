@@ -39,7 +39,7 @@ int32_t GenerateRsaPremasterSecret(TLS_Ctx *ctx)
     BSL_Uint16ToByte(ctx->negotiatedInfo.clientVersion, preMasterSecret);
     offset = sizeof(uint16_t);
     /* 46-byte secure random value */
-    return SAL_CRYPT_Rand(&preMasterSecret[offset], MASTER_SECRET_LEN - offset);
+    return SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), &preMasterSecret[offset], MASTER_SECRET_LEN - offset);
 }
 #endif /* HITLS_TLS_SUITE_KX_RSA */
 #ifdef HITLS_TLS_PROTO_TLCP11
@@ -54,7 +54,7 @@ int32_t GenerateEccPremasterSecret(TLS_Ctx *ctx)
     BSL_Uint16ToByte(ctx->config.tlsConfig.maxVersion, premasterSecret);
     offset = sizeof(uint16_t);
     /* 46-byte secure random value */
-    return SAL_CRYPT_Rand(&premasterSecret[offset], MASTER_SECRET_LEN - offset);
+    return SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), &premasterSecret[offset], MASTER_SECRET_LEN - offset);
 }
 #endif
 
