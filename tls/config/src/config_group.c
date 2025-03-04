@@ -14,6 +14,7 @@
  */
 
 #include <stddef.h>
+#include "hitls_build.h"
 #include "config_type.h"
 #include "hitls_crypt_type.h"
 #include "tls_config.h"
