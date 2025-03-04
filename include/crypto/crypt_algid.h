@@ -103,6 +103,27 @@ typedef enum {
 /**
  * @ingroup  crypt_algid
  *
+ * SLH-DSA algorithm id
+ */
+typedef enum {
+    CRYPT_SLH_DSA_SHA2_128S,
+    CRYPT_SLH_DSA_SHAKE_128S,
+    CRYPT_SLH_DSA_SHA2_128F,
+    CRYPT_SLH_DSA_SHAKE_128F,
+    CRYPT_SLH_DSA_SHA2_192S,
+    CRYPT_SLH_DSA_SHAKE_192S,
+    CRYPT_SLH_DSA_SHA2_192F,
+    CRYPT_SLH_DSA_SHAKE_192F,
+    CRYPT_SLH_DSA_SHA2_256S,
+    CRYPT_SLH_DSA_SHAKE_256S,
+    CRYPT_SLH_DSA_SHA2_256F,
+    CRYPT_SLH_DSA_SHAKE_256F,
+    CRYPT_SLH_DSA_ALG_ID_MAX,
+} CRYPT_SLH_DSA_AlgId;
+
+/**
+ * @ingroup  crypt_algid
+ *
  * Asymmetric algorithm ID
  */
 typedef enum {
@@ -116,6 +137,7 @@ typedef enum {
     CRYPT_PKEY_SM2 = BSL_CID_SM2,
     CRYPT_PKEY_PAILLIER = BSL_CID_PAILLIER,
     CRYPT_PKEY_ELGAMAL = BSL_CID_ELGAMAL,
+    CRYPT_PKEY_SLH_DSA = BSL_CID_SLH_DSA,
     CRYPT_PKEY_MAX = BSL_CID_UNKNOWN
 } CRYPT_PKEY_AlgId;
 
