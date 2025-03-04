@@ -47,6 +47,9 @@
 #ifdef HITLS_CRYPTO_ELGAMAL
 #include "crypt_elgamal.h"
 #endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+#include "crypt_slh_dsa.h"
+#endif
 #include "bsl_err_internal.h"
 #include "crypt_types.h"
 #include "eal_common.h"
@@ -349,6 +352,33 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // blind
         NULL  // unBlind
     ), // CRYPT_PKEY_ELGAMAL
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_SLH_DSA,
+        CRYPT_SLH_DSA_NewCtx,
+        NULL,
+        CRYPT_SLH_DSA_FreeCtx,
+        NULL,
+        NULL,
+        CRYPT_SLH_DSA_Gen,
+        CRYPT_SLH_DSA_Ctrl,
+        CRYPT_SLH_DSA_SetPubKey,
+        CRYPT_SLH_DSA_SetPrvKey,
+        CRYPT_SLH_DSA_GetPubKey,
+        CRYPT_SLH_DSA_GetPrvKey,
+        CRYPT_SLH_DSA_Sign,
+        CRYPT_SLH_DSA_SignData,
+        CRYPT_SLH_DSA_Verify,
+        CRYPT_SLH_DSA_VerifyData,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    ), // CRYPT_PKEY_SLH_DSA
 #endif
 };
 
