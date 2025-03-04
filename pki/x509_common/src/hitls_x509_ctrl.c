@@ -75,6 +75,17 @@ int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen)
     return HITLS_PKI_SUCCESS;
 }
 
+int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *val, int32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(BslCid)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    *val = signAlgId->algId == BSL_CID_RSASSAPSS ?
+        signAlgId->rsaPssParam.mdId : BSL_OBJ_GetHashIdFromSignId(signAlgId->algId);
+    return HITLS_PKI_SUCCESS;
+}
+
 int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen)
 {
     if (val == NULL || valLen != sizeof(uint32_t)) {

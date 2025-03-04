@@ -16,6 +16,7 @@
 
 /* BEGIN_HEADER */
 
+#include "crypt_eal_pkey.h"
 #include "eal_pkey_local.h"
 
 #define SM2_SIGN_MAX_LEN 74
@@ -931,7 +932,7 @@ void SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001(int isProvider)
     ASSERT_EQ(dupCtx->references.count, 1);
     signLen = sizeof(signBuf);
     ASSERT_EQ(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen), CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen), CRYPT_SUCCESS);
 
     if (isProvider == 1) {
         cpyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
