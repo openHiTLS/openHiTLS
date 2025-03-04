@@ -24,6 +24,7 @@
 #include "tls.h"
 #include "tls_config.h"
 #include "cipher_suite.h"
+#include "config_type.h"
 
 #ifndef HITLS_TLS_CONFIG_CIPHER_SUITE
 #define CIPHER_NAME(name) NULL
@@ -1498,55 +1499,6 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
 #endif
 };
 
-const SignSchemeInfo g_signSchemeList[] = {
-#ifdef HITLS_TLS_SUITE_AUTH_RSA
-    { CERT_SIG_SCHEME_RSA_PKCS1_SHA224, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA_224 },
-    { CERT_SIG_SCHEME_RSA_PKCS1_SHA256, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA_256 },
-    { CERT_SIG_SCHEME_RSA_PKCS1_SHA384, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA_384 },
-    { CERT_SIG_SCHEME_RSA_PKCS1_SHA512, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA_512 },
-    { CERT_SIG_SCHEME_RSA_PKCS1_SHA1, HITLS_SIGN_RSA_PKCS1_V15, HITLS_HASH_SHA1 },
-
-    { CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_256 },
-    { CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_384 },
-    { CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_512 },
-
-    { CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_256 },
-    { CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_384 },
-    { CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512, HITLS_SIGN_RSA_PSS, HITLS_HASH_SHA_512 },
-#endif
-
-#ifdef HITLS_TLS_SUITE_AUTH_ECDSA
-    { CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, HITLS_SIGN_ECDSA, HITLS_HASH_SHA_256 },
-    { CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384, HITLS_SIGN_ECDSA, HITLS_HASH_SHA_384 },
-    { CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512, HITLS_SIGN_ECDSA, HITLS_HASH_SHA_512 },
-
-    { CERT_SIG_SCHEME_ECDSA_SHA224, HITLS_SIGN_ECDSA, HITLS_HASH_SHA_224 },
-    { CERT_SIG_SCHEME_ECDSA_SHA1, HITLS_SIGN_ECDSA, HITLS_HASH_SHA1 },
-
-    { CERT_SIG_SCHEME_ED25519, HITLS_SIGN_ED25519, HITLS_HASH_SHA_512 },
-#endif
-
-#ifdef HITLS_TLS_SUITE_AUTH_DSS
-    { CERT_SIG_SCHEME_DSA_SHA224, HITLS_SIGN_DSA, HITLS_HASH_SHA_224 },
-    { CERT_SIG_SCHEME_DSA_SHA256, HITLS_SIGN_DSA, HITLS_HASH_SHA_256 },
-    { CERT_SIG_SCHEME_DSA_SHA384, HITLS_SIGN_DSA, HITLS_HASH_SHA_384 },
-    { CERT_SIG_SCHEME_DSA_SHA512, HITLS_SIGN_DSA, HITLS_HASH_SHA_512 },
-    { CERT_SIG_SCHEME_DSA_SHA1, HITLS_SIGN_DSA, HITLS_HASH_SHA1 },
-#endif
-};
-
-const EcdsaCurveInfo g_ecdsaCurveInfo[] = {
-    { CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, HITLS_EC_GROUP_SECP256R1 },
-    { CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384, HITLS_EC_GROUP_SECP384R1 },
-    { CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512, HITLS_EC_GROUP_SECP521R1 },
-};
-
-#ifdef HITLS_TLS_PROTO_TLCP11
-const SignSchemeInfo g_signSchemeListGm[] = {
-    { CERT_SIG_SCHEME_SM2_SM3, HITLS_SIGN_SM2, HITLS_HASH_SM3 },
-};
-#endif
-
 const CipherSuiteCertType g_cipherSuiteAndCertTypes[] = {
     { HITLS_RSA_WITH_AES_128_CBC_SHA, CERT_TYPE_RSA_SIGN },
     { HITLS_RSA_WITH_AES_256_CBC_SHA, CERT_TYPE_RSA_SIGN },
@@ -1601,20 +1553,6 @@ const CipherSuiteCertType g_cipherSuiteAndCertTypes[] = {
     { HITLS_ECDHE_SM4_GCM_SM3, CERT_TYPE_SM2_SIGN },
     { HITLS_ECC_SM4_GCM_SM3, CERT_TYPE_SM2_SIGN },
 };
-
-const SignSchemeInfo *CFG_GetSignSchemeList(uint32_t *len)
-{
-    *len = sizeof(g_signSchemeList) / sizeof(g_signSchemeList[0]);
-    return g_signSchemeList;
-}
-
-#ifdef HITLS_TLS_PROTO_TLCP11
-const SignSchemeInfo *CFG_GetSignSchemeListTlcp(uint32_t *len)
-{
-    *len = sizeof(g_signSchemeListGm) / sizeof(g_signSchemeListGm[0]);
-    return g_signSchemeListGm;
-}
-#endif
 
 /**
  * @brief   Obtain the cipher suite information
@@ -1736,7 +1674,7 @@ bool CFG_CheckCipherSuiteVersion(uint16_t cipherSuite, uint16_t minVersion, uint
  * @brief   Obtain the signature algorithm and hash algorithm by combining the parameters of the signature hash
  * algorithm.
  *
- * @param   version [IN] Secure communication version
+ * @param   ctx [IN] HITLS context
  * @param   scheme [IN] Signature and hash algorithm combination
  * @param   signAlg [OUT] Signature algorithm
  * @param   hashAlg [OUT] Hash algorithm
@@ -1744,53 +1682,43 @@ bool CFG_CheckCipherSuiteVersion(uint16_t cipherSuite, uint16_t minVersion, uint
  * @retval  true Obtained successfully.
  * @retval  false Obtaining failed.
  */
-bool CFG_GetSignParamBySchemes(uint16_t version, HITLS_SignHashAlgo scheme, HITLS_SignAlgo *signAlg,
+bool CFG_GetSignParamBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme, HITLS_SignAlgo *signAlg,
     HITLS_HashAlgo *hashAlg)
 {
-    bool ret = false;
-#ifdef HITLS_TLS_PROTO_TLCP11
-    if (version == HITLS_VERSION_TLCP_DTLCP11) {
-        for (uint32_t i = 0; i < (sizeof(g_signSchemeListGm) / sizeof(g_signSchemeListGm[0])); i++) {
-            if (scheme == g_signSchemeListGm[i].scheme) {
-                *signAlg = g_signSchemeListGm[i].signAlg;
-                *hashAlg = g_signSchemeListGm[i].hashAlg;
-                return true;
-            }
-        }
+    if (ctx == NULL || signAlg == NULL || hashAlg == NULL) {
         return false;
     }
-#endif
-    (void)version;
-    (void)scheme;
-    (void)signAlg;
-    (void)hashAlg;
-#if (defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_TLS13)  || defined(HITLS_TLS_PROTO_DTLS12)) && \
-    (defined(HITLS_TLS_SUITE_AUTH_RSA) || defined(HITLS_TLS_SUITE_AUTH_ECDSA) || defined(HITLS_TLS_SUITE_AUTH_DSS))
-    /** @alias Search for the signature hash algorithm. If the algorithm is found, ret=true */
-    for (uint32_t i = 0; i < (sizeof(g_signSchemeList) / sizeof(g_signSchemeList[0])); i++) {
-        if (scheme == g_signSchemeList[i].scheme) {
-            *signAlg = g_signSchemeList[i].signAlg;
-            *hashAlg = g_signSchemeList[i].hashAlg;
-            ret = true;
-            break;
-        }
+
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, scheme);
+    if (info == NULL) {
+        return false;
     }
-#endif
-    return ret;
+    *signAlg = info->signAlgId;
+    *hashAlg = info->hashAlgId;
+    return true;
 }
 
 /**
  * @brief   get the group name of the signature algorithm
- *
+ * @param   ctx [IN] HITLS context
  * @param   scheme [IN] signature algorithm
  *
  * @retval  group name
  */
-HITLS_NamedGroup CFG_GetEcdsaCurveNameBySchemes(HITLS_SignHashAlgo scheme)
+HITLS_NamedGroup CFG_GetEcdsaCurveNameBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme)
 {
-    for (uint32_t i = 0; i < (sizeof(g_ecdsaCurveInfo) / sizeof(g_ecdsaCurveInfo[0])); i++) {
-        if (scheme == g_ecdsaCurveInfo[i].scheme) {
-            return g_ecdsaCurveInfo[i].cureName;
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, scheme);
+    if (info == NULL) {
+        return HITLS_NAMED_GROUP_BUTT;
+    }
+    uint32_t groupInfoNum = 0;
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfoList(&ctx->config.tlsConfig, &groupInfoNum);
+    if (groupInfo == NULL || groupInfoNum == 0) {
+        return HITLS_NAMED_GROUP_BUTT;
+    }
+    for (uint32_t i = 0; i < groupInfoNum; i++) {
+        if (groupInfo[i].paraId == info->paraId) {
+            return groupInfo[i].groupId;
         }
     }
     return HITLS_NAMED_GROUP_BUTT;
