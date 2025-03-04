@@ -217,7 +217,12 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32_t bufLen,
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
         case HITLS_VERSION_TLS12:
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
+#if defined(HITLS_TLS_PROTO_DTLCP11)
+            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+                return Dtls12PackMsg(ctx, type, buf, bufLen, usedLen);
+            }
+#endif
 #endif
             return Tls12PackMsg(ctx, type, buf, bufLen, usedLen);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
