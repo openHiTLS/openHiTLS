@@ -416,6 +416,14 @@ enum CRYPT_ERROR {
     CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
     CRYPT_HPKE_FAILED_FETCH_PKEY,                        /**< Failed to fetch pkey. */
     CRYPT_HPKE_FAILED_FETCH_KDF,                         /**< Failed to fetch kdf. */
+
+    CRYPT_SLHDSA_ERR_INVALID_ALGID = 0x01220001,         /**< The algorithm id is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_KEYLEN,                     /**< The key length is invalid. */
+    CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH,                 /**< The signature length is not enough. */
+    CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
+    CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
+    CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
 };
 #ifdef __cplusplus
 }
