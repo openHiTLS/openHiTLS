@@ -500,6 +500,21 @@ int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input,
 int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 
+/**
+ * @ingroup rsa
+ * @brief mgf1 of PKCS1
+ * 
+ * @param hashMethod [IN] Hash method
+ * @param seed [IN] Seed
+ * @param seedLen [IN] Seed length
+ * @param mask [OUT] Mask
+ * @param maskLen [IN] Mask length
+ *
+ * @retval CRYPT_SUCCESS on success
+ */
+int32_t CRYPT_Mgf1(const EAL_MdMethod *hashMethod, const uint8_t *seed, const uint32_t seedLen,
+    uint8_t *mask, uint32_t maskLen);
+
 #ifdef __cplusplus
 }
 #endif

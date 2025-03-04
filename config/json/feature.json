@@ -110,7 +110,8 @@
                             "sm2_sign": null,
                             "sm2_exch": null,
                             "deps": ["ecc", "sm3"]
-                        }
+                        },
+                        "slh_dsa": { "deps": ["sha3", "sha2", "rsa"]}
                     },
                     "provider": null,
                     "bn": null
@@ -546,7 +547,8 @@
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
                     "crypto/paillier/include",
-                    "crypto/provider/include"
+                    "crypto/provider/include",
+                    "crypto/slh_dsa/include"
                 ]
             },
             "ealinit": {
@@ -924,6 +926,12 @@
                 ".features": ["paillier"],
                 ".srcs": "crypto/paillier/src/*.c",
                 ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
+            },
+            "slh_dsa": {
+                ".features": ["slh_dsa"],
+                ".srcs": "crypto/slh_dsa/src/*.c",
+                ".deps": ["crypto::sha3", "crypto::sha2", "crypto::rsa", "bsl::obj", "bsl::asn1"],
                 ".include": ["crypto/eal/src"]
             }
         },
