@@ -132,6 +132,7 @@ HITLS_CERT_Store *SAL_CERT_StoreNew(const CERT_MgrCtx *mgrCtx)
 HITLS_CERT_Store *SAL_CERT_StoreDup(const CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
+    (void)mgrCtx;
     return HITLS_X509_Adapt_StoreDup(store);
 #else
     return mgrCtx->method.certStoreDup(store);
@@ -141,6 +142,7 @@ HITLS_CERT_Store *SAL_CERT_StoreDup(const CERT_MgrCtx *mgrCtx, HITLS_CERT_Store 
 void SAL_CERT_StoreFree(const CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
+    (void)mgrCtx;
     return HITLS_X509_StoreCtxFree(store);
 #else
     mgrCtx->method.certStoreFree(store);
@@ -164,7 +166,7 @@ int32_t SAL_CERT_VerifyChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT
 {
     int32_t ret;
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    ret = HITLS_X509_Adapt_VerifyCertChain(ctx, store, list, num);
+    ret = HITLS_X509_Adapt_VerifyCertChain(ctx, store, certList, num);
 #else
     ret = ctx->config.tlsConfig.certMgrCtx->method.verifyCertChain(ctx, store, certList, num);
 #endif
@@ -198,7 +200,7 @@ HITLS_CERT_X509 *SAL_CERT_X509Dup(const CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *ce
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     (void)mgrCtx;
-    return (HITLS_CERT_Key *)CRYPT_EAL_PkeyDupCtx(key);
+    return (HITLS_CERT_X509 *)HITLS_X509_CertDup(cert);
 #else
     return mgrCtx->method.certDup(cert);
 #endif
@@ -275,6 +277,7 @@ uint32_t g_tlsCertCtrlErrorCode[] = {
     HITLS_CERT_KEY_CTRL_ERR_IS_DIGITAL_SIGN_USAGE,
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_CERT_SIGN_USAGE,
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE,
+    HITLS_CERT_KEY_CTRL_ERR_GET_PARAM_ID,
 };
 
 int32_t SAL_CERT_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd, void *in, void *out)
@@ -373,7 +376,7 @@ int32_t SAL_CERT_KeyDecrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint8_t *
     uint8_t *out, uint32_t *outLen)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    ret = HITLS_X509_Adapt_Decrypt(ctx, key, in, inLen, out, outLen);
+    return HITLS_X509_Adapt_Decrypt(ctx, key, in, inLen, out, outLen);
 #else
     return ctx->config.tlsConfig.certMgrCtx->method.decrypt(ctx, key, in, inLen, out, outLen);
 #endif
