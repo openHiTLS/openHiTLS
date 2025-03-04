@@ -87,6 +87,7 @@ typedef enum {
     CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE,      /**< Is it digital signature permission. */
     CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE,     /**< Is the certificate issuing permission. */
     CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE,     /**< Is it the certificate verification permission. */
+    CERT_KEY_CTRL_GET_PARAM_ID,               /**< Obtain the parameter ID. */
 
     CERT_CTRL_BUTT,
 } HITLS_CERT_CtrlCmd;

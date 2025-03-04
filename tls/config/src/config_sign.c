@@ -79,8 +79,8 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         HITLS_SIGN_SM2,
         HITLS_HASH_SM3,
         128,
-        TLCP11_VERSION_BIT,
-        TLCP11_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
     },
     {
         "rsa_pss_pss_sha512",

@@ -445,7 +445,7 @@ int32_t HITLS_GetPeerSignatureType(const HITLS_Ctx *ctx, HITLS_SignAlgo *sigType
         return HITLS_NULL_INPUT;
     }
 
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, ctx->peerInfo.peerSignHashAlg,
+    if (CFG_GetSignParamBySchemes(ctx, ctx->peerInfo.peerSignHashAlg,
         &signAlg, &hashAlg) == false) {
         return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
     }
