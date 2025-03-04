@@ -21,6 +21,7 @@
 #include "hitls_error.h"
 #include "cipher_suite.h"
 
+#ifndef HITLS_TLS_FEATURE_PROVIDER
 static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
     {
         "ecdsa_secp521r1_sha512",
@@ -300,7 +301,6 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
     },
 };
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
 int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
 {
     if (config == NULL) {
