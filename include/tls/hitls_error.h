@@ -271,6 +271,7 @@ typedef enum {
     HITLS_CERT_KEY_CTRL_ERR_IS_DIGITAL_SIGN_USAGE,  /**< Determine whether the certificate fails to be digital sign. */
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_CERT_SIGN_USAGE, /**< Determine whether the certificate fails to be cert sign. */
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE, /**< Determine whether the certificate fails to be agreement. */
+    HITLS_CERT_KEY_CTRL_ERR_GET_PARAM_ID,          /**< Failed to obtain the parameter ID. */
     HITLS_CERT_ERR_INVALID_KEY_TYPE,                /**< Invalid key type */
     HITLS_CERT_ERR_CHECK_CERT_AND_KEY,              /**< Certificate and private key nonmatch. */
     HITLS_CERT_ERR_NO_CURVE_MATCH,                  /**< Certificate and elliptic curve ID nonmatch. */
