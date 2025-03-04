@@ -43,6 +43,16 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
+ * Constant data structure
+ */
+typedef struct {
+    const uint8_t *data;
+    uint32_t len;
+} CRYPT_ConstData;
+
+/**
+ * @ingroup crypt_types
+ *
  * Data range
  */
 typedef struct {
@@ -241,6 +251,25 @@ typedef struct {
     uint32_t gLen; /**< Length of the Paillier public key parameter marked as g */
     uint32_t n2Len; /**< Length of the Paillier public key parameter marked as n2 */
 } CRYPT_PaillierPub;
+
+
+/**
+ * @brief SLH-DSA public key structure
+ */
+typedef struct {
+    uint8_t *seed; // Seed for generating keys
+    uint8_t *root; // Root node of the top XMSS tree
+    uint32_t len; // key length
+} CRYPT_SlhDsaPub;
+
+/**
+ * @brief SLH-DSA private key structure
+ */
+typedef struct {
+    uint8_t *seed; // Seed for generating keys
+    uint8_t *prf; // To generate randomization value
+    CRYPT_SlhDsaPub pub; // pubkey
+} CRYPT_SlhDsaPrv;
 
 /**
  * @ingroup crypt_types
@@ -530,6 +559,14 @@ typedef enum {
     CRYPT_CTRL_GEN_ECC_PUBLICKEY,       /**< Use prikey generate pubkey. */
     CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,      /**< Set the random bytes for RSA-BSSA. */
     CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
+
+    // slh-dsa
+    CRYPT_CTRL_SET_SLH_DSA_ALG_ID,      /**< Set the SLH-DSA algorithm id. */
+    CRYPT_CTRL_SET_SLH_DSA_CONTEXT,     /**< Set the SLH-DSA context. */
+    CRYPT_CTRL_SET_SLH_DSA_PREHASH_ID,  /**< Set the SLH-DSA prehash id. */
+    CRYPT_CTRL_GET_SLH_DSA_KEY_LEN,     /**< Get the SLH-DSA key length. */
+    CRYPT_CTRL_SET_SLH_DSA_DETERMINISTIC, /**< Set the SLH-DSA deterministic. */
+    CRYPT_CTRL_SET_SLH_DSA_ADDRAND, /**< Set the SLH-DSA additional random bytes. */
 } CRYPT_PkeyCtrl;
 
 /**

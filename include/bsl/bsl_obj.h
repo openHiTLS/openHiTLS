@@ -102,12 +102,13 @@ typedef enum {
     BSL_CID_SM2DSAWITHSHA1,
     BSL_CID_SM2DSAWITHSHA256,
 
-    BSL_CID_DH = 5201,               /**< identifies the Diffie-Hellman algorithm */
-    BSL_CID_ECDH = 5216,             /**< identifies the EC Diffie-Hellman algorithm */
+    BSL_CID_DH = 5201,              /**< identifies the Diffie-Hellman algorithm */
+    BSL_CID_ECDH = 5216,            /**< identifies the EC Diffie-Hellman algorithm */
     BSL_CID_ED25519 = 5261,         /**< Identifies ED25519 algorithm */
     BSL_CID_X25519 = 5276,          /**< Identifies X25519 algorithm */
     BSL_CID_PAILLIER = 5291,        /**< identifies the Paillier algorithm */
-    BSL_CID_ELGAMAL = 5301,        /**< identifies the Elgamal algorithm */
+    BSL_CID_ELGAMAL = 5301,         /**< identifies the Elgamal algorithm */
+    BSL_CID_SLH_DSA = 5306,         /**< Identifies SLH-DSA algorithm */
 
     /* hash algorithm */
     BSL_CID_MD4 = 10001,            /**< identifies MD4 hash algorithm */
