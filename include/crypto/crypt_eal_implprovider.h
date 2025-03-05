@@ -202,6 +202,7 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyKemDecapsulate)(const void *pkey, uint8_t *d
 #define CRYPT_EAL_IMPLMD_DUPCTX      6
 #define CRYPT_EAL_IMPLMD_CTRL        7
 #define CRYPT_EAL_IMPLMD_FREECTX     8
+#define CRYPT_EAL_IMPLMD_SQUEEZE     9
 
 typedef void *(*CRYPT_EAL_ImplMdNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplMdInitCtx)(void *ctx, const BSL_Param *param);
@@ -211,6 +212,7 @@ typedef int32_t (*CRYPT_EAL_ImplMdDeInitCtx)(void *ctx);
 typedef void *(*CRYPT_EAL_ImplMdDupCtx)(const void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplMdCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplMdFreeCtx)(void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplMdSqueeze)(void *ctx, uint8_t *out, uint32_t len);
 
 // CRYPT_EAL_OPERAID_MAC
 #define CRYPT_EAL_IMPLMAC_NEWCTX      1

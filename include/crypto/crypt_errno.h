@@ -315,7 +315,7 @@ enum CRYPT_ERROR {
                                                           when using the dot multiplication function */
 
     CRYPT_SHA3_OUT_BUFF_LEN_NOT_ENOUGH = 0x01140001,  /**< Insufficient buffer length for storing output results. */
-
+    CRYPT_SHA3_INVALID_STATE,                       /**< Invalid state. */
     CRYPT_ECDH_ERR_EMPTY_KEY = 0x01150001,            /**< Key is null. */
     CRYPT_ECDH_ERR_INVALID_COFACTOR,                  /**< Invalid cofactor value. */
 

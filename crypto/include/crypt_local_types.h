@@ -39,6 +39,7 @@ typedef int32_t (*MdCopyCtx)(void *dst, void *src);
 typedef void* (*MdDupCtx)(const void *src);
 typedef void (*MdFreeCtx)(void *data);
 typedef int32_t (*MdCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
+typedef int32_t (*MdSqueeze)(void *data, uint8_t *out, uint32_t len);
 
 typedef struct {
     uint16_t blockSize; // Block size processed by the hash algorithm at a time, which is used with other algorithms.
@@ -52,6 +53,7 @@ typedef struct {
     MdDupCtx dupCtx;  // Dup the MD context.
     MdFreeCtx freeCtx;   // free md context
     MdCtrl ctrl;        // get/set md param
+    MdSqueeze squeeze;  // squeeze the MD context.
 } EAL_MdMethod;
 
 typedef struct {
@@ -66,6 +68,7 @@ typedef struct {
     MdDupCtx dupCtx;
     MdFreeCtx freeCtx;
     MdCtrl ctrl;
+    MdSqueeze squeeze;  // squeeze the MD context.
 } EAL_MdUnitaryMethod;
 
 typedef struct {
