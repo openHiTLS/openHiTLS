@@ -1033,7 +1033,8 @@
                 ".srcs": "tls/crypt/crypt_adapt/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"],
                 ".include": [
-                    "tls/config/include"
+                    "tls/config/include",
+                    "tls/crypt/crypt_self"
                 ]
             },
             "crypt_self": {
