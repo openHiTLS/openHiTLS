@@ -26,17 +26,10 @@
 #include <stdint.h>
 #include "sal_atomic.h"
 #include "crypt_eal_implprovider.h"
-#include "bsl_list.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-struct EAL_LibCtx {
-    BslList *providers; // managing providers
-    BSL_SAL_ThreadLockHandle lock;
-    char *searchProviderPath;
-};
 
 struct EAL_ProviderMgrCtx {
     void *handle; // so handle
@@ -60,7 +53,6 @@ CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal(void);
 int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
     int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx);
 
-CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void);
 void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx  *ctx);
 
 #ifdef __cplusplus

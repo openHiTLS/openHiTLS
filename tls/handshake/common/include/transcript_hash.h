@@ -34,7 +34,7 @@ extern "C" {
  * @retval  HITLS_CRYPT_ERR_DIGEST hash operation failed
  * @retval  HITLS_UNREGISTERED_CALLBACK The callback function is not registered.
  */
-int32_t VERIFY_SetHash(VerifyCtx *ctx, HITLS_HashAlgo hashAlgo);
+int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx, HITLS_HashAlgo hashAlgo);
 
 /**
  * @brief   Add handshake message data
