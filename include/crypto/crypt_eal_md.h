@@ -138,6 +138,22 @@ int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t l
 
 /**
  * @ingroup crypt_eal_md
+ * @brief   Generate output from the sponge construction's squeezing phase.
+ *
+ * This interface implements the squeeze capability of sponge-based hash functions (e.g. SHAKE).
+ * Can be called multiple times to generate additional output. Must be called after finalization.
+ *
+ * @param   ctx [IN/OUT] MD context (must be in squeezed state)
+ * @param   out [OUT] Buffer to store squeezed output
+ * @param   len [IN] Input: requested output length (must be <= buffer size)
+ * @retval  #CRYPT_SUCCESS
+ *          #CRYPT_E_SHORT_BUFFER if output buffer is too small
+ *          For other error codes, see crypt_errno.h
+ */
+int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len);
+
+/**
+ * @ingroup crypt_eal_md
  * @brief   Complete the digest and output the final digest result.
  *
  * @param   ctx [IN/OUT] MD context, which is created by using the CRYPT_EAL_MdNewCtx interface.

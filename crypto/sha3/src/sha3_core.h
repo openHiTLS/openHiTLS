@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 const uint8_t *SHA3_Absorb(uint8_t *state, const uint8_t *in, uint32_t inLen, uint32_t r);
-void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r);
+void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r, bool isNeedKeccak);
 
 #ifdef __cplusplus
 }
