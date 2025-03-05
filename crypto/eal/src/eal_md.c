@@ -67,6 +67,7 @@ static void EalMdCopyMethod(const EAL_MdMethod *method, EAL_MdUnitaryMethod *des
     dest->dupCtx = method->dupCtx;
     dest->freeCtx = method->freeCtx;
     dest->ctrl = method->ctrl;
+    dest->squeeze = method->squeeze;
 }
 
 static CRYPT_EAL_MdCTX *MdNewDefaultCtx(CRYPT_MD_AlgId id)
@@ -128,6 +129,9 @@ static int32_t CRYPT_EAL_SetMdMethod(CRYPT_EAL_MdCTX *ctx, const CRYPT_EAL_Func 
                 break;
             case CRYPT_EAL_IMPLMD_FREECTX:
                 method->freeCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_SQUEEZE:
+                method->squeeze = funcs[index].func;
                 break;
             default:
                 BSL_SAL_FREE(method);
@@ -324,7 +328,8 @@ int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t l
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    if ((ctx->state == CRYPT_MD_STATE_FINAL) || (ctx->state == CRYPT_MD_STATE_NEW)) {
+    if ((ctx->state == CRYPT_MD_STATE_FINAL) || (ctx->state == CRYPT_MD_STATE_NEW)
+        || (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
@@ -348,7 +353,8 @@ int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL)) {
+    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL)
+        || (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
@@ -361,6 +367,31 @@ int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len)
         return ret;
     }
     ctx->state = CRYPT_MD_STATE_FINAL;
+    EAL_EventReport(CRYPT_EVENT_MD, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len)
+{
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->method == NULL || ctx->method->squeeze == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL)) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
+        return CRYPT_EAL_ERR_STATE;
+    }
+
+    int32_t ret = ctx->method->squeeze(ctx->data, out, len);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, ret);
+        return ret;
+    }
+    ctx->state = CRYPT_MD_STATE_SQUEEZE;
     EAL_EventReport(CRYPT_EVENT_MD, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
