@@ -82,7 +82,7 @@ const uint8_t *SHA3_Absorb(uint8_t *state, const uint8_t *in, uint32_t inLen, ui
 }
 
 // Squeezing function of the sponge structure
-void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r)
+void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r, bool isNeedKeccak)
 {
     uint32_t dataLen = outLen;
     uint32_t copyLen;
@@ -99,7 +99,7 @@ void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r)
         }
         (void)memcpy_s(out + outLen - dataLen, dataLen, outTmp, copyLen);
         dataLen -= copyLen;
-        if (dataLen > 0) {
+        if (dataLen > 0 || isNeedKeccak) {
             SHA3_Keccak(state);
         }
     }
