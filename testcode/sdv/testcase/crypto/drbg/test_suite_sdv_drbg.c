@@ -35,6 +35,7 @@
 #include "bsl_err.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "crypt_provider.h"
 /* END_HEADER */
 
 #define CTR_AES128_SEEDLEN (32)
@@ -1900,7 +1901,8 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
     ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandIsValidAlgId(id), true);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     seedCtxFree(seedCtx);
     return;
 }
@@ -2028,14 +2030,16 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
-    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     param[1] = (BSL_Param){0, 0, NULL, 0, 0};
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     return;
 }
 /* END_CASE */

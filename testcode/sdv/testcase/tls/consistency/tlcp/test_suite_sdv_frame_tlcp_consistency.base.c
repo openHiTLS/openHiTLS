@@ -49,6 +49,7 @@
 #include "change_cipher_spec.h"
 #include "common_func.h"
 #include "crypt_default.h"
+#include "stub_crypt.h"
 
 #define PORT 11111
 #define TEMP_DATA_LEN 1024              /* Length of a single message. */
@@ -128,7 +129,11 @@ int32_t STUB_GenerateEccPremasterSecret(TLS_Ctx *ctx)
     BSL_Uint16ToByte(0x0505, premasterSecret);
     offset = sizeof(uint16_t);
     /* 46 bytes secure random number */
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return HITLS_CRYPT_RandbytesEx(NULL, &premasterSecret[offset], MASTER_SECRET_LEN - offset);
+#else
     return CRYPT_DEFAULT_RandomBytes(&premasterSecret[offset], MASTER_SECRET_LEN - offset);
+#endif
 }
 
 int32_t STUB_TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num)

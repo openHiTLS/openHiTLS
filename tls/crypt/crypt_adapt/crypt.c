@@ -516,7 +516,7 @@ void SAL_CRYPT_CipherFree(HITLS_Cipher_Ctx *ctx)
 HITLS_CRYPT_Key *SAL_CRYPT_GenEcdhKeyPair(TLS_Ctx *ctx, const HITLS_ECParameters *curveParams)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    return HITLS_CRYPT_GenerateEcdhKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+    return HITLS_CRYPT_GenerateEcdhKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), 
         &ctx->config.tlsConfig, curveParams); 
 #else
     (void) ctx;
@@ -589,15 +589,8 @@ HITLS_CRYPT_Key *SAL_CRYPT_GenerateDhKeyBySecbits(TLS_Ctx *ctx,
     int32_t secBits)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    uint32_t size = 0;
-    int32_t paraId = 0;
-    const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(&ctx->config.tlsConfig, &size);
-    for (size_t i = 0; i < size; i++) {
-        if (groupInfoList[i].algId == (int32_t)CRYPT_PKEY_DH && groupInfoList[i].secBits == secBits) {
-            paraId = groupInfoList[i].paraId;
-        }
-    }
-    return HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), paraId);
+    return HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &ctx->config.tlsConfig, secBits);
 #else
     (void)ctx;
     return g_cryptDhMethod.generateDhKeyBySecbits(secBits);

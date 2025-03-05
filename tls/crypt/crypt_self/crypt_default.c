@@ -1055,8 +1055,16 @@ uint32_t GetDhParaIdBySecbits(int32_t secbits)
 }
 
 HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
-    const char *attrName, int32_t paraId)
+    const char *attrName, const HITLS_Config *tlsConfig, int32_t secBits)
 {
+    uint32_t size = 0;
+    int32_t paraId = 0;
+    const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(tlsConfig, &size);
+    for (size_t i = 0; i < size; i++) {
+        if (groupInfoList[i].algId == (int32_t)CRYPT_PKEY_DH && groupInfoList[i].secBits == secBits) {
+            paraId = groupInfoList[i].paraId;
+        }
+    }
     return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId);
 }
 

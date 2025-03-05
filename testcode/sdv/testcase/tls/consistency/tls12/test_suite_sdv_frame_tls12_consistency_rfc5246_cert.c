@@ -31,6 +31,7 @@
 #include "app_ctx.h"
 #include "hs_kx.c"
 #include "common_func.h"
+#include "stub_crypt.h"
 /* END_HEADER */
 
 #define g_uiPort 45678
@@ -92,6 +93,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 

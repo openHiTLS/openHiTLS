@@ -533,7 +533,7 @@ int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrN
  *         Returns NULL if the key generation fails.
  */
 HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
-    const char *attrName, int32_t paraId);
+    const char *attrName, const HITLS_Config *tlsConfig, int32_t secBits);
 
 /**
  * @brief Generate a DH key pair based on parameters.

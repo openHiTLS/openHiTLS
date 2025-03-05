@@ -376,7 +376,11 @@ int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, c
 {
     CRYPT_EAL_RndCtx *ctx = NULL;
     CRYPT_EAL_LibCtx *localLibCtx = NULL;
-    if (g_globalRndCtx != NULL) { // Prevent DRBG repeated Init
+    localLibCtx = libCtx;
+    if (localLibCtx == NULL) {
+        localLibCtx = CRYPT_EAL_GetGlobalLibCtx();
+    }
+    if (localLibCtx->drbg != NULL) { // Prevent DRBG repeated Init
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, algId, CRYPT_EAL_ERR_DRBG_REPEAT_INIT);
         return CRYPT_EAL_ERR_DRBG_REPEAT_INIT;
     }
@@ -397,10 +401,6 @@ int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, c
     }
     ctx->working = true;
     CRYPT_RandRegist(CRYPT_EAL_Randbytes); // provide a random number generation function for BigNum.
-    localLibCtx = libCtx;
-    if (localLibCtx == NULL) {
-        localLibCtx = CRYPT_EAL_GetGlobalLibCtx();
-    }
     CRYPT_RandRegist(EalRandbytes); // provide a random number generation function for BigNum.
     localLibCtx->drbg = ctx;
     return CRYPT_SUCCESS;
