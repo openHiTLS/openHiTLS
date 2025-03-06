@@ -186,6 +186,7 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
     ProviderModuleFree(initOpt);
     RandModuleFree(initOpt);
     BslModuleFree(initOpt);
+    BslModuleFree(initOpt);
     g_trigger = false;
 }
 
