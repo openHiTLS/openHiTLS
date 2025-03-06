@@ -21,7 +21,6 @@
 #include "hitls_error.h"
 #include "cipher_suite.h"
 
-
 static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
     {
         "ecdsa_secp521r1_sha512",
