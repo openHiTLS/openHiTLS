@@ -508,7 +508,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_CFG_SET_GET_KEYEXCHMODE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};

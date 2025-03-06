@@ -26,6 +26,7 @@ target_include_directories(TLS_TEST_INTF INTERFACE
     ${openHiTLS_SRC}/include/tls
     ${openHiTLS_SRC}/include/bsl
     ${openHiTLS_SRC}/include/crypto
+    ${openHiTLS_SRC}/include/pki
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/bsl/list/include
     ${openHiTLS_SRC}/bsl/obj/include
