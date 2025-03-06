@@ -34,6 +34,7 @@ struct CryptSha3Ctx {
     // Non-integer multiple data cache. 168 = (1600 - 128 * 2) / 8, that is maximum block size used by shake_*
     uint8_t buf[168];
     uint8_t padChr;         // char for padding, sha3_* use 0x06 and shake_* use 0x1f
+    bool squeeze;
 };
 
 static CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtx(void)
@@ -72,6 +73,7 @@ static int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_
     if (len == 0) {
         return CRYPT_SUCCESS;
     }
+
     const uint8_t *data = in;
     uint32_t left = ctx->blockSize - ctx->num;
     uint32_t dataLen = len;
@@ -122,8 +124,48 @@ static int32_t CRYPT_SHA3_Final(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t *len
     ctx->buf[ctx->blockSize - 1] |= 0x80; // 0x80 is the last 1 of pad 10*1 mode
 
     (void)SHA3_Absorb(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize);
-    SHA3_Squeeze(ctx->state, out, outLen, ctx->blockSize);
+    SHA3_Squeeze(ctx->state, out, outLen, ctx->blockSize, false);
     *len = outLen;
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
+{
+    if (out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (!ctx->squeeze) {
+        uint32_t left = ctx->blockSize - ctx->num;
+        (void)memset_s(ctx->buf + ctx->num, left, 0, left);
+        ctx->buf[ctx->num] = ctx->padChr;
+        ctx->buf[ctx->blockSize - 1] |= 0x80; // 0x80 is the last 1 of pad 10*1 mode
+        (void)SHA3_Absorb(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize);
+        ctx->num = 0;
+        ctx->squeeze = true;
+    }
+    uint32_t tmpLen = len;
+    uint8_t *outTmp = out;
+    if (ctx->num != 0) {
+        uint32_t outLen = (ctx->num > len) ? len : ctx->num;
+        (void)memcpy_s(outTmp, outLen, ctx->buf + ctx->blockSize - ctx->num, outLen);
+        ctx->num -= outLen;
+        tmpLen -= outLen;
+        outTmp += outLen;
+    }
+    if (tmpLen > ctx->blockSize) {
+        uint32_t comLen = tmpLen / ctx->blockSize * ctx->blockSize;
+        SHA3_Squeeze(ctx->state, outTmp, comLen, ctx->blockSize, true);
+        outTmp += comLen;
+        tmpLen -= comLen;
+    }
+    if (tmpLen != 0) {
+        SHA3_Squeeze(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize, true);
+        (void)memcpy_s(outTmp, tmpLen, ctx->buf, tmpLen);
+        ctx->num = ctx->blockSize - tmpLen;
+    }
     return CRYPT_SUCCESS;
 }
 
@@ -314,6 +356,15 @@ int32_t CRYPT_SHAKE128_Final(CRYPT_SHAKE128_Ctx *ctx, uint8_t *out, uint32_t *le
 int32_t CRYPT_SHAKE256_Final(CRYPT_SHAKE256_Ctx *ctx, uint8_t *out, uint32_t *len)
 {
     return CRYPT_SHA3_Final(ctx, out, len);
+}
+
+int32_t CRYPT_SHAKE128_Squeeze(CRYPT_SHAKE128_Ctx *ctx, uint8_t *out, uint32_t len)
+{
+    return CRYPT_SHA3_Squeeze(ctx, out, len);
+}
+int32_t CRYPT_SHAKE256_Squeeze(CRYPT_SHAKE256_Ctx *ctx, uint8_t *out, uint32_t len)
+{
+    return CRYPT_SHA3_Squeeze(ctx, out, len);
 }
 
 void CRYPT_SHA3_224_Deinit(CRYPT_SHA3_224_Ctx *ctx)
