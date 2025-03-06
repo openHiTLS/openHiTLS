@@ -244,22 +244,22 @@ HITLS_Config *HitlsProviderNewCtx(HITLS_Lib_Ctx *libCtx, const char *attrName, T
             break;
         case TLS1_3:
             LOG_DEBUG("HiTLS New TLS1_3 Ctx");
-            hitlsConfig = HITLS_CFG_ProviderewTLS13Config(libCtx, attrName));
+            hitlsConfig = HITLS_CFG_ProviderNewTLS13Config(libCtx, attrName);
             break;
         case TLS_ALL:
             LOG_DEBUG("HiTLS New TLS_ALL Ctx");
-            hitlsConfig = HITLS_CFG_ProviderNewTLSConfig(libCtx, attrName));
+            hitlsConfig = HITLS_CFG_ProviderNewTLSConfig(libCtx, attrName);
             break;
 #ifdef HITLS_TLS_PROTO_TLCP11
         case TLCP1_1:
             LOG_DEBUG("HiTLS New TLCP1_1 Ctx");
-            hitlsConfig = HITLS_CFG_ProviderNewTLCPConfig(libCtx, attrName));
+            hitlsConfig = HITLS_CFG_ProviderNewTLCPConfig(libCtx, attrName);
             break;
 #endif
 #ifdef HITLS_TLS_PROTO_DTLCP11
         case DTLCP1_1:
             LOG_DEBUG("HiTLS New DTLCP1_1 Ctx");
-            hitlsConfig = HITLS_CFG_ProviderNewDTLCPConfig(libCtx, attrName));
+            hitlsConfig = HITLS_CFG_ProviderNewDTLCPConfig(libCtx, attrName);
             break;
 #endif
         default:

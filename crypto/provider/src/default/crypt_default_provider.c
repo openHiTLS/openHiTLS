@@ -214,7 +214,7 @@ static void CRYPT_EAL_DefaultProvFree(void *provCtx)
     BSL_SAL_Free(provCtx);
 }
 
-#define TLS_GROUP_PARAM_COUNT 10
+#define TLS_GROUP_PARAM_COUNT 11
 #define TLS_SIGN_SCHEME_PARAM_COUNT 18
 typedef struct {
     const char *name;           // group name

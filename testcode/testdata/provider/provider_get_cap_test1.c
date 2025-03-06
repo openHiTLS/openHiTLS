@@ -18,84 +18,315 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "bsl_obj.h"
+#include "bsl_params.h"
 #include "crypt_errno.h"
+#include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"
 
-#define TEST_GROUP "test_group"
-#define TEST_GROUP_VALUE "test_group_value"
+#define BSL_PARAM_MAX_NUMBER 1000
+#define NEW_PARA_ALGID (BSL_CID_MAX + 1)
+#define NEW_PKEY_ALGID (BSL_CID_MAX + 2)
+#define NEW_SIGN_HASH_ALGID (BSL_CID_MAX + 3)
+#define NEW_HASH_ALGID (BSL_CID_MAX + 4)
+#define TEST_CRYPT_DEFAULT_SIGNLEN 64
+#define UINT8_MAX_NUM 255
 
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *mgrCtxHandle;
 } TestProvCtx;
 
-void *CRYPT_EAL_PkeyMgmtEcNewCtx(void *provCtx, int32_t algId)
+typedef struct {
+    uint8_t prvkey[72];      // Private key
+    uint32_t prvkeyLen;      // Private key length
+    uint8_t pubkey[256];     // Public key
+    uint32_t pubkeyLen;      // Public key length
+    int32_t paraId;          // Parameter ID
+} TestEccKeyCtx;
+
+void *TestPkeyMgmtEcNewCtx(void *provCtx, int32_t algId)
 {
     (void)provCtx;
-    void *pkeyCtx = NULL;
-    switch (algId) {
-        case CRYPT_PKEY_ECDSA:
-            pkeyCtx = CRYPT_ECDSA_NewCtx();
-            break;
-        case CRYPT_PKEY_ECDH:
-            pkeyCtx = CRYPT_ECDH_NewCtx();
-            break;
-        default:
-            return NULL;
-    }
+    TestEccKeyCtx *pkeyCtx = malloc(sizeof(TestEccKeyCtx));
     if (pkeyCtx == NULL) {
         return NULL;
     }
-    return pkeyCtx;
+    return (void *)pkeyCtx;
 }
-const CRYPT_EAL_Func g_defKeyMgmtEcdsa[] = {
-    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_PkeyMgmtEcNewCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)CRYPT_ECDSA_SetPara},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)CRYPT_ECDSA_GetPara},
-    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_ECDSA_Gen},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_ECDSA_SetPrvKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_ECDSA_SetPubKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_ECDSA_GetPrvKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_ECDSA_GetPubKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_ECDSA_DupCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_ECDSA_Cmp},
-    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ECDSA_Ctrl},
-    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_ECDSA_FreeCtx},
+
+static int32_t TestEccSetParaPara(TestEccKeyCtx *ctx, const BSL_Param *param)
+{
+    (void)ctx;
+    (void)param;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestEccGetParaPara(TestEccKeyCtx *ctx, BSL_Param *param)
+{
+    (void)ctx;
+    (void)param;
+    return CRYPT_SUCCESS;
+}
+
+static void RandFunc(uint8_t *randNum, uint32_t randLen)
+{
+    for (uint32_t i = 0; i < randLen; i++) {
+        randNum[i] = (uint8_t)(rand() % UINT8_MAX_NUM);
+    }
+}
+
+static int32_t TestEccGenKey(TestEccKeyCtx *ctx)
+{
+    if (ctx == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->paraId == BSL_CID_PRIME256V1) {
+        ctx->prvkeyLen = 32;
+        ctx->pubkeyLen = 75;
+    } else if (ctx->paraId == NEW_PARA_ALGID) {
+        ctx->prvkeyLen = 66;
+        ctx->pubkeyLen = 143;
+    } else {
+        return CRYPT_INVALID_ARG;
+    }
+    RandFunc(ctx->prvkey, ctx->prvkeyLen);
+    RandFunc(ctx->pubkey, ctx->pubkeyLen);
+    
+    return CRYPT_SUCCESS;
+}
+
+static const BSL_Param *TestFindConstParam(const BSL_Param *param, int32_t key)
+{
+    if (key == 0) {
+        return NULL;
+    }
+    if (param == NULL) {
+        return NULL;
+    }
+    int32_t index = 0;
+    while (param[index].key != 0 && index < BSL_PARAM_MAX_NUMBER) {
+        if (param[index].key == key) {
+            return &param[index];
+        }
+        index++;
+    }
+    return NULL;
+}
+
+static int32_t TestEccSetPrvKey(TestEccKeyCtx *ctx, const BSL_Param *para)
+{
+     if (ctx == NULL || para == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    const BSL_Param *prv = TestFindConstParam(para, CRYPT_PARAM_EC_PRVKEY);
+    if (prv == NULL || prv->value == NULL || prv->valueLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    (void)memcpy(ctx->prvkey, prv->value, prv->valueLen);
+    ctx->prvkeyLen = prv->valueLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestEccSetPubKey(TestEccKeyCtx *ctx, const BSL_Param *para)
+{
+    if (ctx == NULL || para == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    (void)memcpy(ctx->pubkey, pub->value, pub->valueLen);
+    ctx->pubkeyLen = pub->valueLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestEccGetPrvKey(TestEccKeyCtx *ctx, BSL_Param *para)
+{
+    if (ctx == NULL || para == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    para->key = CRYPT_PARAM_EC_PRVKEY;
+    para->value = ctx->prvkey;
+    para->valueLen = ctx->prvkeyLen;
+    para->useLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestEccGetPubKey(TestEccKeyCtx *ctx, BSL_Param *para)
+{
+    if (ctx == NULL || para == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    para->key = CRYPT_PARAM_EC_POINT_UNCOMPRESSED;
+    para->value = ctx->pubkey;
+    para->valueLen = ctx->pubkeyLen;
+    para->useLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+static void *TestEccDupCtx(const void *ctx)
+{
+    void *dest = malloc(sizeof(TestEccKeyCtx));
+    if (dest == NULL) {
+        return NULL;
+    }
+    (void)memcpy(dest, ctx, sizeof(TestEccKeyCtx));
+    return dest;
+}
+
+int32_t TestEccCtrl(TestEccKeyCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
+{
+    if (ctx == NULL || val == NULL || valLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    switch (cmd) {
+        case CRYPT_CTRL_GET_SECBITS:
+            *((uint32_t *)val) = ctx->paraId == BSL_CID_PRIME256V1 ? 128 : 1024;
+            break;
+        case CRYPT_CTRL_GET_PARAM_ID:
+            *((int32_t *)val) = ctx->paraId;
+            break;
+        case CRYPT_CTRL_SET_PARAM_BY_ID:
+            if (*((int32_t *)val) != BSL_CID_PRIME256V1 && *((int32_t *)val) != NEW_PARA_ALGID) {
+                return CRYPT_INVALID_ARG;
+            }
+            ctx->paraId = *((int32_t *)val);
+            break;
+        case CRYPT_CTRL_GET_SIGNLEN:
+            *((uint32_t *)val) = TEST_CRYPT_DEFAULT_SIGNLEN;
+            break;
+        default:
+            return CRYPT_NOT_SUPPORT;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestEccSign(const TestEccKeyCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen)
+{
+    (void)algId;
+    if (ctx == NULL || data == NULL || sign == NULL || signLen == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (*signLen < TEST_CRYPT_DEFAULT_SIGNLEN || ctx->pubkeyLen < TEST_CRYPT_DEFAULT_SIGNLEN) {
+        return CRYPT_INVALID_ARG;
+    }
+    for (size_t i = 0; i < TEST_CRYPT_DEFAULT_SIGNLEN; i++) {
+        sign[i] = ctx->pubkey[i];
+    }
+    *signLen = TEST_CRYPT_DEFAULT_SIGNLEN;
+    return CRYPT_SUCCESS;
+}
+
+static void TestEccFreeCtx(TestEccKeyCtx *ctx)
+{
+    if (ctx != NULL) {
+        free(ctx);
+    }
+}
+
+static int32_t TestEccVerify(const TestEccKeyCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen)
+{
+    if (ctx == NULL || data == NULL || sign == NULL || signLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (signLen != TEST_CRYPT_DEFAULT_SIGNLEN) {
+        return CRYPT_INVALID_ARG;
+    }
+    if (memcmp(ctx->pubkey, sign, signLen) != 0) {
+        return CRYPT_ECDSA_VERIFY_FAIL;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestEccPkeyExch(const TestEccKeyCtx *ctx, const TestEccKeyCtx *pubCtx, uint8_t *out, uint32_t *outLen)
+{
+    if (ctx == NULL || pubCtx == NULL || out == NULL || outLen == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t len = pubCtx->pubkeyLen < ctx->pubkeyLen ? pubCtx->pubkeyLen : ctx->pubkeyLen;
+    for (uint32_t i = 0; i < len; i++) {
+        out[i] = (ctx->pubkey[i] + pubCtx->pubkey[i]) % 256;
+    }
+    *outLen = len;
+    return CRYPT_SUCCESS;
+}
+
+const CRYPT_EAL_Func g_testKeyMgmtEcdsa[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtEcNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetParaPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)TestEccGetParaPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)TestEccGenKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)TestEccSetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)TestEccSetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)TestEccGetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)TestEccGetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)TestEccDupCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)TestEccCtrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)TestEccFreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defKeyMgmtEcdh[] = {
-    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)CRYPT_ECDH_SetPara},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)CRYPT_ECDH_GetPara},
-    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_ECDH_Gen},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_ECDH_SetPrvKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_ECDH_SetPubKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_ECDH_GetPrvKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_ECDH_GetPubKey},
-    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_ECDH_DupCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_ECDH_Cmp},
-    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ECDH_Ctrl},
-    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_ECDH_FreeCtx},
+const CRYPT_EAL_Func g_testKeyMgmtEcdh[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtEcNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetParaPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)TestEccGetParaPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)TestEccGenKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)TestEccSetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)TestEccSetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)TestEccGetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)TestEccGetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)TestEccDupCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)TestEccCtrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)TestEccFreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 
-static const CRYPT_EAL_AlgInfo g_defKeyMgmt[] = {
-    {CRYPT_PKEY_ECDSA, g_defKeyMgmtEcdsa, CRYPT_EAL_DEFAULT_ATTR},
-    {BSL_CID_MAX + 2, g_defKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
+const CRYPT_EAL_Func g_testEcdsaSign[] = {
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)TestEccSign},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)TestEccVerify},
+    CRYPT_EAL_FUNC_END,
+};
+
+const CRYPT_EAL_Func g_defExchDh[] = {
+    {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)TestEccPkeyExch},
+    CRYPT_EAL_FUNC_END
+};
+
+static CRYPT_EAL_AlgInfo g_testKeyMgmt[] = {
+    {CRYPT_PKEY_ECDSA, g_testKeyMgmtEcdsa, "provider=test_getcap"}, // For computing sign
+    {NEW_PKEY_ALGID, g_testKeyMgmtEcdh, "provider=test_getcap"}, // For computing the shared key
     CRYPT_EAL_ALGINFO_END
 };
 
-static int32_t TestProvQuery(void *provCtx, int32_t algid, const char *propQuery, CRYPT_EAL_Func **outFuncs)
+static CRYPT_EAL_AlgInfo g_testSign[] = {
+    {CRYPT_PKEY_ECDSA, g_testEcdsaSign, "provider=test_getcap"}, // ecdsa nistp2516 sign
+    CRYPT_EAL_ALGINFO_END
+};
+
+static CRYPT_EAL_AlgInfo g_testKeyExch[] = {
+    {NEW_PKEY_ALGID, g_defExchDh, "provider=test_getcap"}, // For computing the shared key
+    CRYPT_EAL_ALGINFO_END
+};
+
+static int32_t TestProvQuery(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos)
 {
     (void)provCtx;
     int32_t ret = CRYPT_SUCCESS;
     switch (operaId) {
         case CRYPT_EAL_OPERAID_KEYMGMT:
-            *algInfos = g_defKeyMgmt;
+            *algInfos = g_testKeyMgmt;
+            break;
+        case CRYPT_EAL_OPERAID_SIGN:
+            *algInfos = g_testSign;
+            break;
+        case CRYPT_EAL_OPERAID_KEYEXCH:
+            *algInfos = g_testKeyExch;
             break;
         default:
-            ret = CRYPT_NOT_SUPPORT;
-            break;
+            return CRYPT_NOT_SUPPORT;
     }
 
     return CRYPT_SUCCESS;
@@ -109,16 +340,19 @@ static int32_t TestProvFree(void *provCtx)
     return CRYPT_SUCCESS;
 }
 
+#define TLS12_VERSION_BIT 0x00000010U
+#define TLS13_VERSION_BIT 0x00000020U
+
 static int32_t TestCryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
 {
     if (cb == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    int32_t groupId = 477;
-    int32_t paraId = BSL_CID_MAX + 1;
-    int32_t algId = BSL_CID_MAX + 2;
+    uint16_t groupId = 477;
+    int32_t paraId = NEW_PARA_ALGID;
+    int32_t algId = NEW_PKEY_ALGID;
     int32_t secBits = 1024;
-    int32_t versionBits = TLS_VERSION_MASK;
+    int32_t versionBits = TLS12_VERSION_BIT | TLS13_VERSION_BIT;
     bool isKem = false;
     BSL_Param param[] = {
         {
@@ -131,7 +365,7 @@ static int32_t TestCryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
             CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID,
             BSL_PARAM_TYPE_UINT16,
             (void *)(uintptr_t)&(groupId),
-            sizeof(groupId)
+            sizeof(uint16_t)
         },
         {
             CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID,
@@ -167,41 +401,20 @@ static int32_t TestCryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
     return cb(param, args);
 }
 
-typedef struct {
-    const char *name;                   // name
-    uint16_t signatureScheme;           // HITLS_SignHashAlgo, IANA specified
-    int32_t keyType;                    // HITLS_CERT_KeyType
-    char *keyTypeOid;                   // key type oid
-    char *keyTypeOidName;               // key type oid name
-    int32_t paraId;                     // CRYPT_PKEY_ParaId
-    char *paraOid;                      // parameter oid
-    char *paraOidName;                  // parameter oid name
-    int32_t signHashAlgId;              // combined sign hash algorithm id
-    char *signHashAlgOid;               // sign hash algorithm oid
-    char *signHashAlgOidName;           // sign hash algorithm oid name
-    int32_t signAlgId;                  // CRYPT_PKEY_AlgId
-    int32_t hashAlgId;                  // CRYPT_MD_AlgId
-    char *hashAlgOid;                   // hash algorithm oid
-    char *hashAlgOidName;               // hash algorithm oid name
-    int32_t secBits;                    // security bits
-    uint32_t certVersionBits;           // TLS_VERSION_MASK
-    uint32_t chainVersionBits;          // TLS_VERSION_MASK
-} TLS_SigSchemeInfo;
-
 static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
 {
     if (cb == NULL) {
         return CRYPT_NULL_INPUT;
     }
     uint16_t signatureScheme = 23333;
-    int32_t keyType = CRYPT_PKEY_ECDH;
-    int32_t paraId = BSL_CID_MAX + 1;
-    int32_t signHashAlgId = BSL_CID_MAX + 2;
-    int32_t signAlgId = BSL_CID_MAX + 3;
-    int32_t hashAlgId = BSL_CID_MAX + 4;
+    int32_t keyType = CRYPT_PKEY_ECDSA;
+    int32_t paraId = BSL_CID_PRIME256V1;
+    int32_t signHashAlgId = NEW_SIGN_HASH_ALGID;
+    int32_t signAlgId = CRYPT_PKEY_ECDSA;
+    int32_t hashAlgId = NEW_HASH_ALGID;
     int32_t secBits = 1024;
-    uint32_t certVersionBits = TLS_VERSION_MASK;
-    uint32_t chainVersionBits = TLS_VERSION_MASK;
+    uint32_t certVersionBits = TLS12_VERSION_BIT | TLS13_VERSION_BIT;
+    uint32_t chainVersionBits = TLS12_VERSION_BIT | TLS13_VERSION_BIT;
     BSL_Param param[] = {
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME,
@@ -213,7 +426,7 @@ static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
             CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID,
             BSL_PARAM_TYPE_UINT16,
             (void *)(uintptr_t)&(signatureScheme),
-            sizeof(signatureScheme)
+            sizeof(uint16_t)
         },
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE,
@@ -228,28 +441,16 @@ static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
             sizeof(paraId)
         },
         {
-            CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_OID,
-            BSL_PARAM_TYPE_OCTETS_PTR,
-            (void *)(uintptr_t)"test_new_para_oid",
-            (uint32_t)strlen("test_new_para_oid")
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_OID_NAME,
-            BSL_PARAM_TYPE_OCTETS_PTR,
-            (void *)(uintptr_t)"test_new_para_oid_name",
-            (uint32_t)strlen("test_new_para_oid_name")
-        },
-        {
             CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID,
-            BSL_PARAM_TYPE_UINT16,
+            BSL_PARAM_TYPE_INT32,
             (void *)(uintptr_t)&(signHashAlgId),
             sizeof(signHashAlgId)
         },
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_OID,
             BSL_PARAM_TYPE_OCTETS_PTR,
-            (void *)(uintptr_t)"test_new_sign_with_md_oid",
-            (uint32_t)strlen("test_new_sign_with_md_oid")
+            (void *)(uintptr_t)"\150\40\66\77\55",
+            (uint32_t)strlen("\150\40\66\77\55")
         },
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_NAME,
@@ -265,15 +466,15 @@ static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
         },
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID,
-            BSL_PARAM_TYPE_UINT16,
+            BSL_PARAM_TYPE_INT32,
             (void *)(uintptr_t)&(hashAlgId),
             sizeof(hashAlgId)
         },
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID,
             BSL_PARAM_TYPE_OCTETS_PTR,
-            (void *)(uintptr_t)"test_new_md_oid",
-            (uint32_t)strlen("test_new_md_oid")
+            (void *)(uintptr_t)"\150\40\66\71\55",
+            (uint32_t)strlen("\150\40\66\71\55")
         },
         {
             CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME,
@@ -323,16 +524,9 @@ static CRYPT_EAL_Func g_testProvOutFuncs[] = {
     CRYPT_EAL_FUNC_END
 };
 
-
-// 修改初始化函数，添加GetCaps回调
-static int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
+int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
-    // ... existing initialization code ...
-
-    // 设置GetCaps回调
-    mgrCtx->provGetCap = TestProvGetCaps;
-
-    // ... rest of initialization code ...
+   *outFuncs = g_testProvOutFuncs;
     return CRYPT_SUCCESS;
 }

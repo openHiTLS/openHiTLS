@@ -44,6 +44,10 @@
 
 #define PROVIDER_LOAD_SAIZE_2 2
 #define PATH_EXCEED 4097
+#define NEW_PARA_ALGID (BSL_CID_MAX + 1)
+#define NEW_PKEY_ALGID (BSL_CID_MAX + 2)
+#define NEW_SIGN_HASH_ALGID (BSL_CID_MAX + 3)
+#define NEW_HASH_ALGID (BSL_CID_MAX + 4)
 
 /**
  * @test SDV_CRYPTO_PROVIDER_LOAD_FUNC_TC001
@@ -529,6 +533,14 @@ static int32_t GroupCapsCallback(BSL_Param *param, void *args)
         ASSERT_EQ(*((int32_t *)secBitsParam->value), 128);
         ASSERT_EQ(*((uint32_t *)versionBitsParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
         ASSERT_EQ(*((bool *)isKemParam->value), false);
+    } else if (groupNameParam->value != NULL && strcmp((char *)groupNameParam->value, "test_new_group") == 0) {
+        // Verify the custom group parameters from provider_get_cap_test1
+        ASSERT_EQ(*((uint16_t *)groupIdParam->value), 477);
+        ASSERT_EQ(*((int32_t *)paraIdParam->value), NEW_PARA_ALGID);
+        ASSERT_EQ(*((int32_t *)algIdParam->value), NEW_PKEY_ALGID);
+        ASSERT_EQ(*((int32_t *)secBitsParam->value), 1024);
+        ASSERT_EQ(*((uint32_t *)versionBitsParam->value), (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
+        ASSERT_EQ(*((bool *)isKemParam->value), false);
     }
 
     return CRYPT_SUCCESS;
@@ -570,6 +582,9 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
     ASSERT_TRUE(signHashAlgIdParam->valueLen == sizeof(int32_t));
     signHashAlgIdParam->useLen = sizeof(int32_t);
 
+    BSL_Param *signHashAlgOidParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_OID);
+    BSL_Param *signHashAlgNameParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_NAME);
+
     BSL_Param *signAlgIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID);
     ASSERT_TRUE(signAlgIdParam != NULL);
     ASSERT_EQ(signAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
@@ -581,7 +596,8 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
     ASSERT_EQ(hashAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
     ASSERT_TRUE(hashAlgIdParam->valueLen == sizeof(int32_t));
     hashAlgIdParam->useLen = sizeof(int32_t);
-
+    BSL_Param *hashAlgOidParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID);
+    BSL_Param *hashAlgNameParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME);
     BSL_Param *secBitsParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS);
     ASSERT_TRUE(secBitsParam != NULL);
     ASSERT_EQ(secBitsParam->valueType, BSL_PARAM_TYPE_INT32);
@@ -610,6 +626,32 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
         ASSERT_EQ(*((int32_t *)secBitsParam->value), 128);
         ASSERT_EQ(*((uint32_t *)certVersionParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
         ASSERT_EQ(*((uint32_t *)chainVersionParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
+    } else if (sigNameParam->value != NULL && strcmp((char *)sigNameParam->value, "test_new_sign_alg_name") == 0) {
+        ASSERT_EQ(*((uint16_t *)sigIanaIdParam->value), 23333);
+        ASSERT_EQ(*((int32_t *)keyTypeParam->value), CRYPT_PKEY_ECDSA);
+        ASSERT_EQ(*((int32_t *)paraIdParam->value), BSL_CID_PRIME256V1);
+        if (signHashAlgOidParam != NULL) {
+            char *signHashAlgOid = (char *)signHashAlgOidParam->value;
+            ASSERT_EQ(strcmp(signHashAlgOid, "\150\40\66\77\55"), 0);
+        }
+        if (signHashAlgNameParam != NULL) {
+            char *signHashAlgName = (char *)signHashAlgNameParam->value;
+            ASSERT_EQ(strcmp(signHashAlgName, "test_new_sign_with_md_name"), 0);
+        }
+        ASSERT_EQ(*((int32_t *)signHashAlgIdParam->value), NEW_SIGN_HASH_ALGID);
+        ASSERT_EQ(*((int32_t *)signAlgIdParam->value), CRYPT_PKEY_ECDSA);
+        ASSERT_EQ(*((int32_t *)hashAlgIdParam->value), NEW_HASH_ALGID);
+        if (hashAlgOidParam != NULL) {
+            char *hashAlgOid = (char *)hashAlgOidParam->value;
+            ASSERT_EQ(strcmp(hashAlgOid, "\150\40\66\71\55"), 0);
+        }
+        if (hashAlgNameParam != NULL) {
+            char *hashAlgName = (char *)hashAlgNameParam->value;
+            ASSERT_EQ(strcmp(hashAlgName, "test_new_md_name"), 0);
+        }
+        ASSERT_EQ(*((int32_t *)secBitsParam->value), 1024);
+        ASSERT_EQ(*((uint32_t *)certVersionParam->value), (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
+        ASSERT_EQ(*((uint32_t *)chainVersionParam->value), (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
     }
 
     return CRYPT_SUCCESS;
@@ -847,6 +889,75 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, in
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     CRYPT_EAL_LibCtxFree(emptyLibCtx);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001
+ * @title Test provider_get_cap_test1 provider functionality
+ * @precon None
+ * @brief
+ *    1. Load provider_get_cap_test1 provider
+ *    2. Test key generation, shared key computation, signing and verification
+ * @expect
+ *    1. Successfully load the provider
+ *    2. Successfully perform cryptographic operations
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
+    CRYPT_EAL_PkeyCtx *keyCtx1 = NULL;
+    CRYPT_EAL_PkeyCtx *keyCtx2 = NULL;
+    uint8_t sharedKey1[256] = {0};
+    uint32_t sharedKeyLen1 = sizeof(sharedKey1);
+    uint8_t sharedKey2[256] = {0};
+    uint32_t sharedKeyLen2 = sizeof(sharedKey2);
+    
+    // Initialize library context
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, get_cap_test1, NULL, &providerMgr), CRYPT_SUCCESS);
+    ASSERT_TRUE(providerMgr != NULL);
+
+    int groupCount = 0;
+    int sigAlgCount = 0;
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP,
+        (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
+    ASSERT_EQ(groupCount, 1);
+
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP,
+        (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback, &sigAlgCount), CRYPT_SUCCESS);
+    ASSERT_EQ(sigAlgCount, 1);
+
+    keyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=test_getcap");
+    ASSERT_TRUE(keyCtx1 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx1, NEW_PARA_ALGID), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx1), CRYPT_SUCCESS);
+
+    keyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=test_getcap");
+    ASSERT_TRUE(keyCtx2 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx2, NEW_PARA_ALGID), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(keyCtx1, keyCtx2, sharedKey1, &sharedKeyLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(keyCtx2, keyCtx1, sharedKey2, &sharedKeyLen2), CRYPT_SUCCESS);
+    ASSERT_TRUE(sharedKeyLen1 > 0);
+    ASSERT_TRUE(sharedKeyLen2 > 0);
+    ASSERT_EQ(memcmp(sharedKey1, sharedKey2, sharedKeyLen1), 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(keyCtx1);
+    CRYPT_EAL_PkeyFreeCtx(keyCtx2);
+    CRYPT_EAL_ProviderUnload(libCtx, cmd, get_cap_test1);
+    CRYPT_EAL_LibCtxFree(libCtx);
     return;
 }
 /* END_CASE */
