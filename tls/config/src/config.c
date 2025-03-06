@@ -81,6 +81,15 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->pointFormats);
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->signAlgorithms);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    BSL_SAL_FREE(config->groupInfo);
+    config->groupInfoSize = 0;
+    config->groupInfolen = 0;
+    BSL_SAL_FREE(config->sigSchemeInfo);
+    config->sigSchemeInfoSize = 0;
+    config->sigSchemeInfolen = 0;
+#endif
+
 #if defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_TLS_FEATURE_PSK)
     BSL_SAL_FREE(config->pskIdentityHint);
 #endif
@@ -235,6 +244,17 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
         }
         destConfig->groupsSize = srcConfig->groupsSize;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (srcConfig->groupInfo != NULL) {
+        int32_t ret = DeepCopy((void **)&destConfig->groupInfo, srcConfig->groupInfo, BINLOG_ID16585,
+            srcConfig->groupInfoSize * sizeof(TLS_GroupInfo));
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        destConfig->groupInfoSize = srcConfig->groupInfoSize;
+        destConfig->groupInfolen = srcConfig->groupInfolen;
+    }
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -263,6 +283,17 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
         }
         destConfig->signAlgorithmsSize = srcConfig->signAlgorithmsSize;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (srcConfig->sigSchemeInfo != NULL) {
+        int32_t ret = DeepCopy((void **)&destConfig->sigSchemeInfo, srcConfig->sigSchemeInfo, BINLOG_ID16587,
+            srcConfig->sigSchemeInfoSize * sizeof(TLS_SigSchemeInfo));
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        destConfig->sigSchemeInfoSize = srcConfig->sigSchemeInfoSize;
+        destConfig->sigSchemeInfolen = srcConfig->sigSchemeInfolen;
+    }
+#endif
     return HITLS_SUCCESS;
 }
 

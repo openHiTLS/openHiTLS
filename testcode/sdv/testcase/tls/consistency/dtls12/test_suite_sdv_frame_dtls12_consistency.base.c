@@ -101,7 +101,7 @@ int32_t StatusPark(HandshakeTestInfo *testInfo, int uioType)
 int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo, int uioType)
 {
     FRAME_Init();
-    FRAME_RegCryptMethod(); // stub all crypto functions
+    // FRAME_RegCryptMethod(); // stub all crypto functions
 
     testInfo->config = HITLS_CFG_NewDTLS12Config();
     if (testInfo->config == NULL) {

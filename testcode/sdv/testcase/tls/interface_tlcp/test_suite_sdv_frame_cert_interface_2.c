@@ -62,6 +62,7 @@
 #include "bsl_obj.h"
 #include "bsl_errno.h"
 #include "hitls_x509_adapt.h"
+#include "hitls_pki_x509.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
@@ -101,7 +102,7 @@ void UT_TLS_CERT_CM_SetVerifyStore_API_TC001(int version)
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
-    HITLS_X509_Adapt_StoreFree(verifyStore);
+    HITLS_X509_StoreCtxFree(verifyStore);
 }
 /* END_CASE */
 

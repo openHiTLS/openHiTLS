@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "hitls_build.h"
 #include "securec.h"
 #include "bsl_sal.h"
 #include "hitls_crypt_reg.h"
@@ -23,6 +24,9 @@
 #include "config_type.h"
 #include "stub_replace.h"
 #include "crypt_default.h"
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#include "hitls_crypt.h"
+#endif
 
 #define MD5_DIGEST_LENGTH 16
 #define SHA1_DIGEST_LENGTH 20
@@ -848,6 +852,7 @@ int32_t STUB_CRYPT_DecryptCallbackLibCtx(void *libCtx, const char *attrName,
 FuncStubInfo g_tmpRpInfo[16] = {0};
 void FRAME_RegCryptMethod(void)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CRYPT_BaseMethod cryptMethod = { 0 };
     cryptMethod.randBytes = STUB_CRYPT_RandBytesCallback;
     cryptMethod.hmacSize = STUB_CRYPT_HmacSizeCallback;
@@ -882,7 +887,7 @@ void FRAME_RegCryptMethod(void)
     dhMethod.getDhPubKey = STUB_CRYPT_GetDhEncodedPubKeyCallback;
     dhMethod.calcDhSharedSecret = STUB_CRYPT_CalcDhSharedSecretCallback;
     HITLS_CRYPT_RegisterDhMethod(&dhMethod);
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#else
     STUB_Init();
     STUB_Replace(&g_tmpRpInfo[0], HITLS_CRYPT_RandbytesEx, STUB_CRYPT_RandBytesCallbackLibCtx);
     STUB_Replace(&g_tmpRpInfo[1], HITLS_CRYPT_HMAC_Init, STUB_CRYPT_HmacInitCallbackLibCtx);
@@ -901,6 +906,7 @@ void FRAME_RegCryptMethod(void)
 
 void FRAME_DeRegCryptMethod(void)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CRYPT_BaseMethod cryptMethod = { 0 };
     HITLS_CRYPT_RegisterBaseMethod(&cryptMethod);
 
@@ -909,7 +915,7 @@ void FRAME_DeRegCryptMethod(void)
 
     HITLS_CRYPT_DhMethod dhMethod = { 0 };
     HITLS_CRYPT_RegisterDhMethod(&dhMethod);
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#else
     STUB_Reset(&g_tmpRpInfo[0]);
     STUB_Reset(&g_tmpRpInfo[1]);
     STUB_Reset(&g_tmpRpInfo[2]);

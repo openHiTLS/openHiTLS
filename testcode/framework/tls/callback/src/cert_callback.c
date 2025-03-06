@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "hitls_build.h"
 #include "crypt_eal_pkey.h"
 #include "hlt_type.h"
 #include "hitls_cert_type.h"
@@ -34,6 +35,7 @@
 #include "bsl_list.h"
 #include "hitls_x509_adapt.h"
 #include "hitls_cert_init.h"
+#include "hitls_pki_x509.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -44,7 +46,9 @@ int32_t RegCertCallback(CertCallbackType type)
 {
     switch (type) {
         case CERT_CALLBACK_DEFAULT:
+#ifndef HITLS_TLS_FEATURE_PROVIDER
             HITLS_CertMethodInit();
+#endif
             break;
         default:
             return ERROR;
@@ -115,7 +119,7 @@ void *HiTLS_X509_LoadCertListToStore(const char *fileList)
         return NULL;
     }
 
-    void *store = HITLS_X509_Adapt_StoreNew();
+    void *store = HITLS_X509_StoreCtxNew();
     if(store == NULL){
         return NULL;
     }
@@ -127,20 +131,20 @@ void *HiTLS_X509_LoadCertListToStore(const char *fileList)
         ret = sprintf_s(certPath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
         if (ret <= 0) {
             LOG_ERROR("sprintf_s Error");
-            HITLS_X509_Adapt_StoreFree(store);
+            HITLS_X509_StoreCtxFree(store);
             return NULL;
         }
         LOG_DEBUG("Load Cert Path is %s", certPath);
 
         HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(certPath);
         if (cert == NULL) {
-            HITLS_X509_Adapt_StoreFree(store);
+            HITLS_X509_StoreCtxFree(store);
             return NULL;
         }
         ret = HITLS_X509_Adapt_StoreCtrl(NULL, store, CERT_STORE_CTRL_ADD_CERT_LIST, cert, NULL);
         if (ret != SUCCESS) {
             LOG_ERROR("X509_STORE_add_cert Error: path = %s.", certPath);
-            HITLS_X509_Adapt_StoreFree(store);
+            HITLS_X509_StoreCtxFree(store);
             return NULL;
         }
         token = strtok_s(NULL, ":", &rest);
@@ -241,10 +245,10 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
 void FRAME_HITLS_X509_FreeCert(HITLS_CERT_Store *caStore, HITLS_CERT_Store *chainStore)
 {
     if (caStore != NULL) {
-        HITLS_X509_Adapt_StoreFree(caStore);
+        HITLS_X509_StoreCtxFree(caStore);
     }
     if (chainStore != NULL) {
-        HITLS_X509_Adapt_StoreFree(chainStore);
+        HITLS_X509_StoreCtxFree(chainStore);
     }
     return;
 }
@@ -260,7 +264,7 @@ int32_t HiTLS_X509_LoadCertAndKey(HITLS_Config *tlsCfg, const char *caFile, cons
         }
         ret = HITLS_CFG_SetCertStore(tlsCfg, caStore, 0);
         if (ret != SUCCESS) {
-            HITLS_X509_Adapt_StoreFree(caStore);
+            HITLS_X509_StoreCtxFree(caStore);
             return ret;
         }
     }
@@ -272,7 +276,7 @@ int32_t HiTLS_X509_LoadCertAndKey(HITLS_Config *tlsCfg, const char *caFile, cons
         }
         ret = HITLS_CFG_SetChainStore(tlsCfg, chainStore, 0);
         if (ret != SUCCESS) {
-            HITLS_X509_Adapt_StoreFree(chainStore);
+            HITLS_X509_StoreCtxFree(chainStore);
             return ret;
         }
     }
