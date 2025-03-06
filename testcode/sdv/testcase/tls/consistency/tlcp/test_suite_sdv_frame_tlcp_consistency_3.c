@@ -176,6 +176,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLIENTKXCH_VERSIONERR_TC001(char *cipherSuite)
 {
     FRAME_Init();
     STUB_Init();
+    RegDefaultMemCallback();
     HITLS_Config *tlsConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;

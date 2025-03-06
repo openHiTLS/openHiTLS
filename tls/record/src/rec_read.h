@@ -62,7 +62,7 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
  * @retval  HITLS_REC_NORMAL_RECV_UNEXPECT_MSG Unexpected message received
  *
  */
-int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *len, uint32_t bufSize);
+int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num);
 
 /**
  * @brief   Read data from the UIO of the TLS context to the inBuf

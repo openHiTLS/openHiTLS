@@ -22,10 +22,11 @@
 #include "string.h"
 #include "bsl_err_internal.h"
 #include "crypt_entropy.h"
+#include "crypt_drbg_local.h"
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
-CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void)
+CRYPT_EAL_LibCtx *CRYPT_EAL_GetGlobalLibCtx(void)
 {
     return g_libCtx;
 }
@@ -253,6 +254,11 @@ void CRYPT_EAL_FreePreDefinedProviders(void)
     // Free thread lock
     if (libCtx->lock != NULL) {
         BSL_SAL_ThreadLockFree(libCtx->lock);
+    }
+
+    if (libCtx->drbg != NULL) {
+        CRYPT_RandDeinit(libCtx->drbg);
+        libCtx->drbg = NULL;
     }
 
     // Free the libctx structure itself
