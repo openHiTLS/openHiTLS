@@ -329,6 +329,8 @@ int32_t CalcSctpAuthKey(const TLS_Ctx *ctx, uint8_t *authKey, uint32_t authKeyLe
     deriveInfo.labelLen = strlen(DTLS_SCTP_AUTH_LABEL);
     deriveInfo.seed = randomValue;
     deriveInfo.seedLen = randomValueSize;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     /** Key derivation */
     ret = SAL_CRYPT_PRF(&deriveInfo, authKey, authKeyLen);
     if (ret != HITLS_SUCCESS) {

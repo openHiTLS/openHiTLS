@@ -79,7 +79,7 @@ int32_t Tls13ServerSendCertRequestProcess(TLS_Ctx *ctx)
                 "cert req ctx malloc fail.", 0, 0, 0, 0);
             return HITLS_MEMALLOC_FAIL;
         }
-        ret = SAL_CRYPT_Rand(ctx->certificateReqCtx, CERT_REQ_CTX_SIZE);
+        ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), ctx->certificateReqCtx, CERT_REQ_CTX_SIZE);
         if (ret != HITLS_SUCCESS) {
             BSL_SAL_FREE(ctx->certificateReqCtx);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15631, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
