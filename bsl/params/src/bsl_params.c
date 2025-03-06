@@ -26,6 +26,8 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
     }
 
     switch (type) {
+        case BSL_PARAM_TYPE_UINT8:
+        case BSL_PARAM_TYPE_UINT16:
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_OCTETS:
         case BSL_PARAM_TYPE_BOOL:
@@ -33,6 +35,7 @@ int32_t BSL_PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *
         case BSL_PARAM_TYPE_FUNC_PTR:
         case BSL_PARAM_TYPE_CTX_PTR:
         case BSL_PARAM_TYPE_INT32:
+        case BSL_PARAM_TYPE_OCTETS_PTR:
             param->value = val;
             param->valueLen = valueLen;
             param->valueType = type;
