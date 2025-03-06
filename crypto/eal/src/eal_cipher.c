@@ -28,7 +28,6 @@
 #include "crypt_ealinit.h"
 #include "crypt_provider.h"
 
-
 static void CipherCopyMethod(const EAL_CipherMethod *modeMethod, EAL_CipherUnitaryMethod *method)
 {
     method->newCtx = modeMethod->newCtx;

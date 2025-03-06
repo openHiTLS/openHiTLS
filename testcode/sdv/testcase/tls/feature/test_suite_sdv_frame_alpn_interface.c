@@ -30,6 +30,7 @@
 #include "bsl_uio.h"
 #include "hitls.h"
 #include "frame_tls.h"
+#include "cert_callback.h"
 /* END_HEADER */
 
 /* UserData structure transferred from the server to the alpnCb callback */
@@ -86,7 +87,7 @@ EXIT:
 void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC001(int version)
 {
     FRAME_Init();
-
+    RegDefaultMemCallback();
     HITLS_Config *s_config = NULL;
     HITLS_Config *c_config = NULL;
     FRAME_LinkObj *client = NULL;

@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#define CRYPT_PARAM_PKEY_BASE 1000
+#define CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY  (CRYPT_PARAM_PKEY_BASE + 1)
 
 #define CRYPT_PARAM_RSA_BASE         0
 #define CRYPT_PARAM_RSA_N            (CRYPT_PARAM_RSA_BASE + 1)
