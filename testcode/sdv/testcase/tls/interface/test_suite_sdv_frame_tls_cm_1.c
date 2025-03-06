@@ -1075,7 +1075,6 @@ int32_t ParseServerCookie(ParsePacket *pkt, ServerHelloMsg *msg);
 /* BEGIN_CASE */
 void UT_TLS_PARSE_Cookie_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(config != NULL);

@@ -87,7 +87,6 @@ extern int32_t __real_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC001(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     // Apply and initialize config
@@ -164,7 +163,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC010(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     // Apply and initialize config
