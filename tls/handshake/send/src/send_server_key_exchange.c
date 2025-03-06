@@ -37,7 +37,7 @@
 #define TLS_DHE_PARAM_MAX_LEN 1024
 
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
-static HITLS_CRYPT_Key *GenerateDhEphemeralKey(HITLS_CRYPT_Key *priKey)
+static HITLS_CRYPT_Key *GenerateDhEphemeralKey(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_CRYPT_Key *priKey)
 {
     uint8_t p[TLS_DHE_PARAM_MAX_LEN] = {0};
     uint8_t g[TLS_DHE_PARAM_MAX_LEN] = {0};
@@ -48,7 +48,7 @@ static HITLS_CRYPT_Key *GenerateDhEphemeralKey(HITLS_CRYPT_Key *priKey)
     if (ret != HITLS_SUCCESS) {
         return NULL;
     }
-    return SAL_CRYPT_GenerateDhKeyByParams(p, pLen, g, gLen);
+    return SAL_CRYPT_GenerateDhKeyByParams(libCtx, attrName, p, pLen, g, gLen);
 }
 
 static HITLS_CRYPT_Key *GetDhKeyByDhTmp(TLS_Ctx *ctx)
@@ -59,7 +59,7 @@ static HITLS_CRYPT_Key *GetDhKeyByDhTmp(TLS_Ctx *ctx)
     HITLS_Config *config = &ctx->config.tlsConfig;
     key = ctx->config.tlsConfig.dhTmp;
     if (key != NULL) {
-        key = GenerateDhEphemeralKey(key);
+        key = GenerateDhEphemeralKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), key);
     }
     if ((key == NULL) && (ctx->config.tlsConfig.dhTmpCb != NULL)) {
         key = ctx->config.tlsConfig.dhTmpCb(ctx, 0, TLS_DHE_PARAM_MAX_LEN);
@@ -116,7 +116,8 @@ static HITLS_CRYPT_Key *GetDhKeyBySecBits(TLS_Ctx *ctx)
             return NULL;
         }
     }
-    return SAL_CRYPT_GenerateDhKeyBySecbits(secBits);
+
+    return SAL_CRYPT_GenerateDhKeyBySecbits(ctx, secBits);
 }
 
 static HITLS_CRYPT_Key *GetDhKey(TLS_Ctx *ctx)
@@ -192,7 +193,7 @@ static int32_t PackExchMsgPrepare(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE: /* TLCP is included here. */
         case HITLS_KEY_EXCH_ECDHE_PSK:
-            key = SAL_CRYPT_GenEcdhKeyPair(&ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
+            key = SAL_CRYPT_GenEcdhKeyPair(ctx, &ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
             if (key == NULL) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15746, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "server generate ecdhe key pair error.", 0, 0, 0, 0);
