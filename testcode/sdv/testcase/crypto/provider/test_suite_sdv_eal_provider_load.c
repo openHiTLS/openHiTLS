@@ -380,9 +380,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, 
     ASSERT_TRUE(pkeyCtx == NULL);
 
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
-    }
+    CRYPT_EAL_LibCtxFree(libCtx);
     return;
 }
 /* END_CASE */
@@ -426,9 +424,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
     BSL_SAL_FREE(tempData);
 
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
-    }
+    CRYPT_EAL_LibCtxFree(libCtx);
     return;
 }
 /* END_CASE */
@@ -475,12 +471,8 @@ void SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001(char *path, char *test1, int cmd, He
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
-    }
-    if (ctx != NULL) {
-        CRYPT_EAL_MdFreeCtx(ctx);
-    }
+    CRYPT_EAL_LibCtxFree(libCtx);
+    CRYPT_EAL_MdFreeCtx(ctx);
     return;
 }
 /* END_CASE */
@@ -684,9 +676,177 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
 
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return;
+}
+/* END_CASE */
+
+static int32_t CountProvidersCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    (void)provMgr;
+    int *count = (int *)args;
+    if (count != NULL) {
+        (*count)++;
     }
+    return CRYPT_SUCCESS;
+}
+
+// Callback function that returns an error
+static int32_t ErrorCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    (void)provMgr;
+    int *count = (int *)args;
+    if (count != NULL) {
+        (*count)++;
+    }
+    return CRYPT_NOT_SUPPORT;
+}
+    
+/**
+ * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC001
+ * @title Test CRYPT_EAL_ProviderProcAll functionality
+ * @precon None
+ * @brief
+ *    1. Test processing all loaded providers with a callback function
+ *    2. Test error handling for NULL inputs
+ *    3. Test error propagation from callback function
+ * @expect
+ *    1. Successfully process all providers
+ *    2. Return CRYPT_NULL_INPUT for NULL inputs
+ *    3. Properly propagate errors from callback function
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_PROC_ALL_TC001(char *path, char *test1, char *test2, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    int providerCount = 0;
+    int errorProviderCount = 0;
+
+    // Initialize library context
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    // Set provider path
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    
+    // Load multiple providers
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    
+    // Test 1: Process all providers with a counting callback
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
+    ASSERT_EQ(providerCount, 3); // Should have processed 3 providers
+
+    // Test 2: Test NULL libCtx
+    providerCount = 0;
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(NULL, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
+    ASSERT_EQ(providerCount, 1);
+
+    // Test 3: Test NULL inputs
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, NULL, &providerCount), CRYPT_NULL_INPUT);
+    
+    // Test 4: Test error propagation from callback
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, ErrorCallback, &errorProviderCount), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(errorProviderCount, 1); // Should have processed only the first provider before error
+    
+    // Cleanup
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
+    
+EXIT:
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return;
+}
+/* END_CASE */
+
+typedef struct {
+    int totalProviders;
+    int providersWithMd5;
+    int providersWithSha256;
+} ProviderStats;
+
+int32_t CheckAlgorithmsCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    ProviderStats *stats = (ProviderStats *)args;
+    if (stats != NULL) {
+        stats->totalProviders++;
+
+        const CRYPT_EAL_Func *funcs;
+        void *provCtx;
+        int32_t ret = CRYPT_EAL_ProviderGetFuncs(provMgr->libCtx, CRYPT_EAL_OPERAID_HASH, 
+                                                CRYPT_MD_MD5, NULL, &funcs, &provCtx);
+        if (ret == CRYPT_SUCCESS && funcs != NULL) {
+            stats->providersWithMd5++;
+        }
+
+        ret = CRYPT_EAL_ProviderGetFuncs(provMgr->libCtx, CRYPT_EAL_OPERAID_HASH, 
+                                        CRYPT_MD_SHA256, NULL, &funcs, &provCtx);
+        if (ret == CRYPT_SUCCESS && funcs != NULL) {
+            stats->providersWithSha256++;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC002
+ * @title Test CRYPT_EAL_ProviderProcAll with specific provider operations
+ * @precon None
+ * @brief
+ *    1. Test processing all providers to collect specific information
+ *    2. Test processing all providers to perform specific operations
+ * @expect
+ *    1. Successfully collect information from all providers
+ *    2. Successfully perform operations on all providers
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    ProviderStats stats = {0};
+
+    // Initialize library context
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    // Set provider path
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    
+    // Load multiple providers
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    
+    // Process all providers to collect algorithm information
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, CheckAlgorithmsCallback, &stats), CRYPT_SUCCESS);
+    
+    // Verify results
+    ASSERT_EQ(stats.totalProviders, 3);
+    ASSERT_TRUE(stats.providersWithMd5 > 0); // At least one provider should support MD5
+    ASSERT_TRUE(stats.providersWithSha256 > 0); // At least one provider should support SHA256
+    
+    // Test with empty provider list
+    CRYPT_EAL_LibCtx *emptyLibCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(emptyLibCtx != NULL);
+    
+    ProviderStats emptyStats = {0};
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(emptyLibCtx, CheckAlgorithmsCallback, &emptyStats), CRYPT_SUCCESS);
+    ASSERT_EQ(emptyStats.totalProviders, 0); // No providers should be processed
+    
+    // Cleanup
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
+    
+EXIT:
+    CRYPT_EAL_LibCtxFree(libCtx);
+    CRYPT_EAL_LibCtxFree(emptyLibCtx);
     return;
 }
 /* END_CASE */
