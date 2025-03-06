@@ -159,7 +159,7 @@ char *HITLS_GM_Ciphersuite[] = {
     "HITLS_ECC_SM4_CBC_SM3",
 };
 
-static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, char *cert)
+static void CONNECT(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int version, int connType, char *Ciphersuite, int hasPsk, char *cert)
 {
     HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
     HLT_Process *remoteProcess = HLT_LinkRemoteProcess(HITLS, connType, PORT, true);
@@ -187,7 +187,12 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverCtxConfig->libCtx = libCtx;
+    serverCtxConfig->attrName = attrName;
+    clientCtxConfig->libCtx = libCtx;
+    clientCtxConfig->attrName = attrName;
+#endif
     if (version == TLCP1_1 || version == DTLCP1_1) {
         SetGMCert(serverCtxConfig, clientCtxConfig, cert);
     } else {
@@ -219,7 +224,7 @@ EXIT:
 void SDV_TLS_TLS13_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_TLS13_Ciphersuite) / sizeof(HITLS_TLS13_Ciphersuite[0]); i++) {
-        CONNECT(TLS1_3, TCP, HITLS_TLS13_Ciphersuite[i], 0, "RSA");
+        CONNECT(NULL, NULL, TLS1_3, TCP, HITLS_TLS13_Ciphersuite[i], 0, "RSA");
     }
 }
 /* END_CASE */
@@ -229,11 +234,11 @@ void SDV_TLS_RSA_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_RSA_Ciphersuite) / sizeof(HITLS_RSA_Ciphersuite[0]); i++) {
         SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
+        CONNECT(NULL, NULL, TLS1_2, TCP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
         if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
+            CONNECT(NULL, NULL, DTLS1_2, SCTP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
         }
-        CONNECT(DTLS1_2, UDP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
+        CONNECT(NULL, NULL, DTLS1_2, UDP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_RSA_Ciphersuite) / sizeof(HITLS_RSA_Ciphersuite[0]));
@@ -245,11 +250,11 @@ void SDV_TLS_ECDSA_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_ECDSA_Ciphersuite) / sizeof(HITLS_ECDSA_Ciphersuite[0]); i++) {
         SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
+        CONNECT(NULL, NULL, TLS1_2, TCP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
         if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
+            CONNECT(NULL, NULL, DTLS1_2, SCTP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
         }
-        CONNECT(DTLS1_2, UDP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
+        CONNECT(NULL, NULL, DTLS1_2, UDP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_ECDSA_Ciphersuite) / sizeof(HITLS_ECDSA_Ciphersuite[0]));
@@ -262,11 +267,11 @@ void SDV_TLS_PSK_CIPHER_SUITE(void)
     for (uint16_t i = 0; i < sizeof(HITLS_PSK_Ciphersuite) / sizeof(HITLS_PSK_Ciphersuite[0]); i++)
     {
         SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
+        CONNECT(NULL, NULL, TLS1_2, TCP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
         if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
+            CONNECT(NULL, NULL, DTLS1_2, SCTP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
         }
-        CONNECT(DTLS1_2, UDP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
+        CONNECT(NULL, NULL, DTLS1_2, UDP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_PSK_Ciphersuite) / sizeof(HITLS_PSK_Ciphersuite[0]));
@@ -278,11 +283,11 @@ void SDV_TLS_ANON_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_ANON_Ciphersuite) / sizeof(HITLS_ANON_Ciphersuite[0]); i++) {
         SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
+        CONNECT(NULL, NULL, TLS1_2, TCP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
         if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
+            CONNECT(NULL, NULL, DTLS1_2, SCTP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
         }
-        CONNECT(DTLS1_2, UDP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
+        CONNECT(NULL, NULL, DTLS1_2, UDP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_ANON_Ciphersuite) / sizeof(HITLS_ANON_Ciphersuite[0]));
@@ -294,9 +299,9 @@ void SDV_TLS_GM_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]); i++) {
         SUB_PROC_BEGIN(continue);
-        CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+        CONNECT(NULL, NULL, TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");
         if (IsEnableSctpAuth()) {
-            CONNECT(DTLCP1_1, SCTP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+            CONNECT(NULL, NULL, DTLCP1_1, SCTP, HITLS_GM_Ciphersuite[i], 0, "SM2");
         }
         SUB_PROC_END();
     }

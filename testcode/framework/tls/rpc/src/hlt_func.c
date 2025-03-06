@@ -67,6 +67,30 @@ void* HLT_TlsNewCtx(TLS_VERSION tlsVersion)
     return ctx;
 }
 
+void* HLT_TlsProviderNewCtx(HITLS_Lib_Ctx *libCtx, const char *attrName, TLS_VERSION tlsVersion)
+{
+    int ret;
+    void *ctx = NULL;
+    Process *process;
+    process = GetProcess();
+    switch (process->tlsType) {
+        case HITLS:
+            ctx = HitlsProviderNewCtx(libCtx, attrName, tlsVersion);
+            break;
+        default:
+            ctx = NULL;
+    }
+    if ((process->remoteFlag == 0) && (ctx != NULL)) {
+        // If the value is LocalProcess, insert it to the CTX linked list.
+        ret =  InsertCtxToList(ctx);
+        if (ret == ERROR) {
+            LOG_ERROR("InsertCtxToList ERROR");
+            return NULL;
+        }
+    }
+    return ctx;
+}
+
 void* HLT_TlsNewSsl(void *ctx)
 {
     int ret;
@@ -730,8 +754,11 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
                                HLT_Ctx_Config *ctxConfig, HLT_Ssl_Config *sslConfig, HLT_Tls_Res *tlsRes)
 {
     void *ctx, *ssl;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = HLT_TlsProviderNewCtx(ctxConfig->libCtx, ctxConfig->attrName, tlsVersion);
+#else
     ctx = HLT_TlsNewCtx(tlsVersion);
+#endif
     if (ctx == NULL) {
         LOG_ERROR("HLT_TlsNewCtx ERROR");
         return ERROR;

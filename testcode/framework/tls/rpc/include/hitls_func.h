@@ -34,6 +34,8 @@ int HitlsInit(void);
 */
 void* HitlsNewCtx(TLS_VERSION tlsVersion);
 
+HITLS_Config *HitlsProviderNewCtx(HITLS_Lib_Ctx *libCtx, const char *attrName, TLS_VERSION tlsVersion);
+
 /**
 * @brief HiTLS Releases connection management resources.
 */

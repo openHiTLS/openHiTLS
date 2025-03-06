@@ -215,7 +215,7 @@ static void CRYPT_EAL_DefaultProvFree(void *provCtx)
 }
 
 #define TLS_GROUP_PARAM_COUNT 10
-#define TLS_SIGN_SCHEME_PARAM_COUNT 10
+#define TLS_SIGN_SCHEME_PARAM_COUNT 18
 typedef struct {
     const char *name;           // group name
     int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
