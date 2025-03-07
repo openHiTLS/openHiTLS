@@ -27,9 +27,8 @@
 #include "tls.h"
 #include "cert_mgr_ctx.h"
 #include "cert_method.h"
-
+#ifndef HITLS_TLS_FEATURE_PROVIDER
 HITLS_CERT_MgrMethod g_certMgrMethod = {0};
-
 static bool IsMethodValid(const HITLS_CERT_MgrMethod *method)
 {
     if (method == NULL ||
@@ -85,6 +84,8 @@ HITLS_CERT_MgrMethod *HITLS_CERT_GetMgrMethod(void)
 {
     return SAL_CERT_GetMgrMethod();
 }
+
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
 
 const char *g_certCallBackStr[] = {
     [HITLS_CERT_CALLBACK_STORE_NEW] = "cert store new",

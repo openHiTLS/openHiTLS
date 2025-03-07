@@ -28,8 +28,12 @@
 
 bool SAL_CERT_MgrIsEnable(void)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return true;
+#else
     HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
     return (method->certStoreNew != NULL);
+#endif
 }
 
 CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
@@ -39,7 +43,6 @@ CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
 
 CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
-    HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
     CERT_MgrCtx *newCtx = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
@@ -57,8 +60,10 @@ CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrN
     }
 
     newCtx->verifyParam.verifyDepth = TLS_DEFAULT_VERIFY_DEPTH;
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
     (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), method, sizeof(HITLS_CERT_MgrMethod));
-
+#endif
     newCtx->certStore = SAL_CERT_StoreNew(newCtx);
     if (newCtx->certStore == NULL) {
         BSL_HASH_Destory(newCtx->certPairs);
@@ -116,9 +121,9 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
             "dup cert manager context error: out of memory.", 0, 0, 0, 0);
         return NULL;
     }
-
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), &mgrCtx->method, sizeof(HITLS_CERT_MgrMethod));
-
+#endif
     ret = SAL_CERT_HashDup(newCtx, mgrCtx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16283, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

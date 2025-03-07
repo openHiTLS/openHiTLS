@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_CALLBACK_CERT
+#if defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)
 #include <stdio.h>
 #include <string.h>
 #include "crypt_types.h"
@@ -157,4 +157,4 @@ int32_t HITLS_X509_Adapt_CheckPrivateKey(const HITLS_Config *config, HITLS_CERT_
     }
     return ret;
 }
-#endif /* HITLS_TLS_CALLBACK_CERT */
+#endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */
