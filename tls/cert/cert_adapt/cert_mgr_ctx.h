@@ -54,7 +54,9 @@ struct CertMgrCtxInner {
     HITLS_CERT_Store *chainStore;               /* Certificate chain store, used to assemble the certificate chain */
     HITLS_CERT_Store *certStore;                /* Default CA store */
     HITLS_CertVerifyParam verifyParam;          /* Verification Parameters */
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CERT_MgrMethod method;                /* callback function */
+#endif
     HITLS_PasswordCb defaultPasswdCb;           /* Default password callback, used in loading certificate. */
     void *defaultPasswdCbUserData;              /* Set the userData used by the default password callback.  */
     HITLS_VerifyCb verifyCb;                    /* Certificate verification callback function */

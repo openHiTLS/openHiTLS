@@ -14,12 +14,59 @@
  */
 
 #include <stddef.h>
+#include "hitls_build.h"
 #include "config_type.h"
 #include "hitls_crypt_type.h"
 #include "tls_config.h"
 #include "hitls_error.h"
 #include "crypt_algid.h"
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#include "securec.h"
+#include "crypt_eal_provider.h"
+#include "crypt_params_key.h"
+#include "crypt_eal_implprovider.h"
+#include "crypt_eal_pkey.h"
+#endif
 
+static int32_t UpdateGroupsArray(TLS_Config *config, const TLS_GroupInfo *groups, uint32_t groupInfolen)
+{
+    if (config == NULL || groups == NULL || groupInfolen == 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    uint32_t size = 0;
+    uint16_t *tempGroups = BSL_SAL_Calloc(groupInfolen, sizeof(uint16_t));
+    if (tempGroups == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+    for (uint32_t i = 0; i < groupInfolen; i++) {
+        if ((config->version & groups[i].versionBits) != 0) {
+            bool isDuplicate = false;
+            // Check if this groupId already exists
+            for (uint32_t j = 0; j < size; j++) {
+                if (tempGroups[j] == groups[i].groupId) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                tempGroups[size] = groups[i].groupId;
+                size++;
+            }
+        }
+    }
+
+    if (size == 0) {
+        BSL_SAL_Free(tempGroups);
+        return HITLS_INVALID_INPUT;
+    }
+
+    BSL_SAL_FREE(config->groups);
+    config->groups = tempGroups;
+    config->groupsSize = size;
+    return HITLS_SUCCESS;
+}
+
+#ifndef HITLS_TLS_FEATURE_PROVIDER
 static const TLS_GroupInfo GROUP_INFO[] = {
     {
         "secp256r1",
@@ -158,32 +205,9 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     if (config == NULL) {
         return HITLS_INVALID_INPUT;
     }
-    uint32_t size = 0;
-    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo); i++) {
-        if ((config->version & GROUP_INFO[i].versionBits) != 0) {
-            size++;
-        }
-    }
-    if (size == 0) {
-        return HITLS_INVALID_INPUT;
-    }
-    BSL_SAL_FREE(config->groups);
-    config->groups = BSL_SAL_Calloc(size, sizeof(uint16_t));
-    if (config->groups == NULL) {
-        return HITLS_MEMALLOC_FAIL;
-    }
-    uint32_t index = 0;
-    for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo); i++) {
-        if ((config->version & GROUP_INFO[i].versionBits) != 0) {
-            config->groups[index] = GROUP_INFO[i].groupId;
-            index++;
-        }
-    }
-    config->groupsSize = size;
-    return HITLS_SUCCESS;
+    return UpdateGroupsArray(config, GROUP_INFO, sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo));
 }
 
-/* Support querying the default table when the condition is equal to null. */
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
     (void)config;
@@ -201,3 +225,143 @@ const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t
     *size = sizeof(GROUP_INFO) / sizeof(GROUP_INFO[0]);
     return &GROUP_INFO[0];
 }
+#else
+
+static int32_t ProviderAddGroupInfo(const BSL_Param *params, void *args)
+{
+    if (params == NULL || args == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+    TLS_CapabilityData *data = (TLS_CapabilityData *)args;
+    TLS_Config *config = data->config;
+    TLS_GroupInfo *group = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    BSL_Param *param = NULL;
+    int32_t ret = HITLS_CONFIG_ERR_LOAD_GROUP_INFO;
+    if (config->groupInfolen == config->groupInfoSize) {
+        
+        void *ptr = BSL_SAL_Realloc(config->groupInfo,
+            (config->groupInfoSize + TLS_CAPABILITY_LIST_MALLOC_SIZE) * sizeof(TLS_GroupInfo),
+            config->groupInfoSize * sizeof(TLS_GroupInfo));
+        if (ptr == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        config->groupInfo = ptr;
+        (void)memset_s(config->groupInfo + config->groupInfoSize,
+            TLS_CAPABILITY_LIST_MALLOC_SIZE * sizeof(TLS_GroupInfo),
+            0,
+            TLS_CAPABILITY_LIST_MALLOC_SIZE * sizeof(TLS_GroupInfo));
+        config->groupInfoSize += TLS_CAPABILITY_LIST_MALLOC_SIZE;
+    }
+    group = config->groupInfo + config->groupInfolen;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_OCTETS_PTR) {
+        goto ERR;
+    }
+    group->name = BSL_SAL_Calloc(param->valueLen + 1, sizeof(char));
+    if (group->name == NULL) {
+        goto ERR;
+    }
+    (void)memcpy_s(group->name, param->valueLen + 1, param->value, param->valueLen);
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_UINT16) {
+        goto ERR;
+    }
+    group->groupId = *(uint16_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_INT32) {
+        goto ERR;
+    }
+    group->paraId = *(int32_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_INT32) {
+        goto ERR;
+    }
+    group->algId = *(int32_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_INT32) {
+        goto ERR;
+    }
+    group->secBits = *(int32_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_UINT32) {
+        goto ERR;
+    }
+    group->versionBits = *(uint32_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_BOOL) {
+        goto ERR;
+    }
+    group->isKem = *(bool *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_INT32) {
+        goto ERR;
+    }
+    group->pubkeyLen = *(uint32_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_INT32) {
+        goto ERR;
+    }
+    group->sharedkeyLen = *(uint32_t *)param->value;
+    param = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN);
+    if (param == NULL || param->valueType != BSL_PARAM_TYPE_INT32) {
+        goto ERR;
+    }
+    group->ciphertextLen = *(uint32_t *)param->value;
+    ret = HITLS_SUCCESS;
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), group->algId, CRYPT_EAL_PKEY_EXCH_OPERATE, ATTRIBUTE_FROM_CONFIG(config));
+    if (pkey != NULL) {
+        config->groupInfolen++;
+        CRYPT_EAL_PkeyFreeCtx(pkey);
+        group = NULL;
+    }
+    
+ERR:
+    if (group != NULL) {
+        BSL_SAL_Free(group->name);
+        (void)memset_s(group, sizeof(TLS_GroupInfo), 0, sizeof(TLS_GroupInfo));
+    }
+    return ret;
+}   
+
+
+static int32_t ProviderLoadGroupInfo(CRYPT_EAL_ProvMgrCtx *ctx, void *args)
+{
+    if (ctx == NULL || args == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+    TLS_CapabilityData data = {
+        .config = (TLS_Config *)args,
+        .provMgrCtx = ctx,
+    };
+    return CRYPT_EAL_ProviderGetCaps(ctx, CRYPT_EAL_GET_GROUP_CAP, ProviderAddGroupInfo, &data);
+}
+
+int32_t ConfigLoadGroupInfo(HITLS_Config *config)
+{
+    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(config);
+    int32_t ret = CRYPT_EAL_ProviderProcAll(libCtx, ProviderLoadGroupInfo, config);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return UpdateGroupsArray(config, config->groupInfo, config->groupInfolen);
+}
+
+const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
+{
+    (void)config;
+    for (uint32_t i = 0; i < config->groupInfolen; i++) {
+        if (config->groupInfo[i].groupId == groupId) {
+            return &config->groupInfo[i];
+        }
+    }
+    return NULL;
+}
+
+const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t *size)
+{
+    (void)config;
+    *size = config->groupInfolen;
+    return config->groupInfo;
+}
+#endif

@@ -24,6 +24,12 @@ int *GetJmpAddress(void)
 
 void handleSignal(int sigNum)
 {
+    static int count = 0;
+    if (count != 0) {
+        printf("frame error occur\n");
+        exit(-1);
+    }
+    count++;
     (void)sigNum;
     siglongjmp(env, 1);
 }

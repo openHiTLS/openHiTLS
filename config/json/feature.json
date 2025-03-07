@@ -153,8 +153,13 @@
                         "opts": ["proto"]
                     },
                     "callback": {
-                        "callback_cert": null,
+                        "feature_provider": null,
+                        "callback_sal" :null,
+                        "callback_cert": {
+                            "deps": ["callback_sal"]
+                        },
                         "callback_crypt": {
+                            "deps": ["callback_sal"],
                             "callback_crypt_hmac_primitives": null
                         }
                     },

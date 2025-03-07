@@ -990,7 +990,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_NULL_KEYSHARE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
