@@ -27,19 +27,18 @@
 
 /* BASE64 mapping table */
 static const uint8_t BASE64_DECODE_MAP_TABLE[] = {
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 64U, 67U, 67U, 64U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 64U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 62U, 67U, 66U,
-    67U, 63U, 52U, 53U, 54U, 55U, 56U, 57U, 58U, 59U, 60U, 61U, 67U, 67U, 67U, 65U, 67U, 67U, 67U, 0U,  1U,  2U,  3U,
-    4U,  5U,  6U,  7U,  8U,  9U,  10U, 11U, 12U, 13U, 14U, 15U, 16U, 17U, 18U, 19U, 20U, 21U, 22U, 23U, 24U, 25U, 67U,
-    67U, 67U, 67U, 67U, 67U, 26U, 27U, 28U, 29U, 30U, 31U, 32U, 33U, 34U, 35U, 36U, 37U, 38U, 39U, 40U, 41U, 42U, 43U,
-    44U, 45U, 46U, 47U, 48U, 49U, 50U, 51U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
-    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 64U, 67U, 67U, 64U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,67U, 
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 64U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 62U,67U, 66U, 
+    67U, 63U, 52U, 53U, 54U, 55U, 56U, 57U, 58U, 59U, 60U, 61U, 67U, 67U, 67U, 65U, 67U, 67U, 67U, 0U,1U,  2U,  3U,  
+    4U,  5U,  6U,  7U,  8U,  9U,  10U, 11U, 12U, 13U, 14U, 15U, 16U, 17U, 18U, 19U, 20U, 21U, 22U,23U, 24U, 25U, 67U,
+    67U, 67U, 67U, 67U, 67U, 26U, 27U, 28U, 29U, 30U, 31U, 32U, 33U, 34U, 35U, 36U, 37U, 38U,39U, 40U, 41U, 42U, 43U, 
+    44U, 45U, 46U, 47U, 48U, 49U, 50U, 51U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,67U, 67U, 67U, 67U, 67U, 67U, 
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,67U, 67U, 67U, 67U, 67U, 67U, 67U, 
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 
+    67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 
     67U, 67U, 67U};
-
 
 BSL_Base64Ctx *BSL_BASE64_CtxNew(void)
 {
@@ -56,8 +55,7 @@ void BSL_BASE64_CtxClear(BSL_Base64Ctx *ctx)
     BSL_SAL_CleanseData(ctx, (uint32_t)sizeof(BSL_Base64Ctx));
 }
 
-static int32_t BslBase64EncodeParamsValidate(const uint8_t *srcBuf, const uint32_t srcBufLen,
-    const char *dstBuf, uint32_t *dstBufLen)
+static int32_t BslBase64EncodeParamsValidate(const uint8_t *srcBuf, const uint32_t srcBufLen, const char *dstBuf, uint32_t *dstBufLen)
 {
     if (srcBuf == NULL || srcBufLen == 0U || dstBuf == NULL || dstBufLen == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
@@ -72,8 +70,7 @@ static int32_t BslBase64EncodeParamsValidate(const uint8_t *srcBuf, const uint32
     return BSL_SUCCESS;
 }
 
-static void BslBase64ArithEncodeProc(const uint8_t *srcBuf, const uint32_t srcBufLen,
-    char *dstBuf, uint32_t *dstBufLen)
+static void BslBase64ArithEncodeProc(const uint8_t *srcBuf, const uint32_t srcBufLen, char *dstBuf, uint32_t *dstBufLen)
 {
     /* base64-encoding mapping table */
     static const char *base64Letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -121,8 +118,7 @@ static void BslBase64ArithEncodeProc(const uint8_t *srcBuf, const uint32_t srcBu
 }
 
 /* Encode the entire ctx->buf, 48 characters in total, and return the number of decoded characters. */
-static void BslBase64EncodeBlock(BSL_Base64Ctx *ctx, const uint8_t **srcBuf, uint32_t *srcBufLen,
-    char **dstBuf, uint32_t *dstBufLen, uint32_t remainLen)
+static void BslBase64EncodeBlock(BSL_Base64Ctx *ctx, const uint8_t **srcBuf, uint32_t *srcBufLen, char **dstBuf, uint32_t *dstBufLen, uint32_t remainLen)
 {
     uint32_t tmpOutLen = 0;
     uint32_t offset = 0;
@@ -145,8 +141,7 @@ static void BslBase64EncodeBlock(BSL_Base64Ctx *ctx, const uint8_t **srcBuf, uin
     *(*dstBuf) = '\0';
 }
 
-static void BslBase64EncodeProcess(BSL_Base64Ctx *ctx, const uint8_t **srcBuf, uint32_t *srcBufLen,
-    char *dstBuf, uint32_t *dstBufLen)
+static void BslBase64EncodeProcess(BSL_Base64Ctx *ctx, const uint8_t **srcBuf, uint32_t *srcBufLen, char *dstBuf, uint32_t *dstBufLen)
 {
     uint32_t remainLen = 0;
     const uint8_t *bufTmp = &(ctx->buf[0]);
@@ -259,8 +254,7 @@ static int32_t BslBase64DecodeCheckAndRmvEqualSign(uint8_t *buf, uint32_t *bufLe
     return ret;
 }
 
-static int32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBufLen, uint8_t *filterBuf,
-    uint32_t *filterBufLen)
+static int32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBufLen, uint8_t *filterBuf, uint32_t *filterBufLen)
 {
     (void)memset_s(filterBuf, *filterBufLen, 0, *filterBufLen);
     BslBase64DecodeRemoveBlank((const uint8_t *)srcBuf, srcBufLen, filterBuf, filterBufLen);
@@ -271,8 +265,7 @@ static int32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBufL
 }
 
 /* can ensure that dstBuf and dstBufLen are sufficient and that srcBuf does not contain invalid characters */
-static int32_t BslBase64DecodeBuffer(const uint8_t *srcBuf, const uint32_t srcBufLen, uint8_t *dstBuf,
-    uint32_t *dstBufLen)
+static int32_t BslBase64DecodeBuffer(const uint8_t *srcBuf, const uint32_t srcBufLen, uint8_t *dstBuf, uint32_t *dstBufLen)
 {
     uint32_t idx = 0U;
     uint32_t tmpLen;
@@ -310,8 +303,7 @@ static int32_t BslBase64DecodeBuffer(const uint8_t *srcBuf, const uint32_t srcBu
     return BSL_SUCCESS;
 }
 
-static int32_t BslBase64ArithDecodeProc(const char *srcBuf, const uint32_t srcBufLen, uint8_t *dstBuf,
-    uint32_t *dstBufLen)
+static int32_t BslBase64ArithDecodeProc(const char *srcBuf, const uint32_t srcBufLen, uint8_t *dstBuf, uint32_t *dstBufLen)
 {
     uint8_t *buf = NULL;
     uint32_t bufLen; /* length to be decoded after redundant characters are deleted */
@@ -357,7 +349,7 @@ int32_t BSL_BASE64_Decode(const char *srcBuf, const uint32_t srcBufLen, uint8_t 
         return BSL_BASE64_BUF_NOT_ENOUGH;
     }
 
-    ret = BslBase64ArithDecodeProc(srcBuf, srcBufLen, dstBuf, dstBufLen);  /* start decoding */
+    ret = BslBase64ArithDecodeProc(srcBuf, srcBufLen, dstBuf, dstBufLen); /* start decoding */
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -377,8 +369,7 @@ int32_t BSL_BASE64_EncodeInit(BSL_Base64Ctx *ctx)
     return BSL_SUCCESS;
 }
 
-int32_t BSL_BASE64_EncodeUpdate(BSL_Base64Ctx *ctx, const uint8_t *srcBuf, uint32_t srcBufLen,
-    char *dstBuf, uint32_t *dstBufLen)
+int32_t BSL_BASE64_EncodeUpdate(BSL_Base64Ctx *ctx, const uint8_t *srcBuf, uint32_t srcBufLen, char *dstBuf, uint32_t *dstBufLen)
 {
     /* ensure the validity of dstBuf */
     if (ctx == NULL || srcBuf == NULL || dstBuf == NULL || srcBufLen == 0 || dstBufLen == NULL) {
@@ -456,8 +447,7 @@ int32_t BSL_BASE64_DecodeInit(BSL_Base64Ctx *ctx)
     return BSL_SUCCESS;
 }
 
-int32_t BSL_BASE64_DecodeUpdate(BSL_Base64Ctx *ctx, const char *srcBuf, const uint32_t srcBufLen,
-    uint8_t *dstBuf, uint32_t *dstBufLen)
+int32_t BSL_BASE64_DecodeUpdate(BSL_Base64Ctx *ctx, const char *srcBuf, const uint32_t srcBufLen, uint8_t *dstBuf, uint32_t *dstBufLen)
 {
     if (ctx == NULL || srcBuf == NULL || dstBuf == NULL || srcBufLen == 0 || dstBufLen == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
@@ -544,7 +534,7 @@ int32_t BSL_BASE64_DecodeFinal(BSL_Base64Ctx *ctx, uint8_t *dstBuf, uint32_t *ds
         BSL_ERR_PUSH_ERROR(BSL_BASE64_DECODE_FAILED);
         return BSL_BASE64_DECODE_FAILED;
     }
-    
+
     *dstBufLen = totalLen;
     return ret;
 }
