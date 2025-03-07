@@ -27,6 +27,7 @@
 #include "session_type.h"
 #include "cert_mgr_ctx.h"
 #include "session_enc.h"
+#include "cert_method.h"
 
 typedef int32_t (*PfuncEncSessionObjFunc)(const HITLS_Session *sess, SessionObjType type, uint8_t *data,
     uint32_t length, uint32_t *encLen);
@@ -320,16 +321,21 @@ static int32_t PackCertToBuf(const HITLS_Session *sess, uint8_t *buf, uint32_t b
 {
     CERT_Pair *peerCert = sess->peerCert;
     HITLS_CERT_X509 *cert = peerCert->cert;
+    uint32_t encodeLen = 0;
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     CERT_MgrCtx *mgrCtx = sess->certMgrCtx;
     if (mgrCtx->method.certEncode == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16254, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "mgrCtx->method.certEncode is null.", 0, 0, 0, 0);
         return HITLS_NULL_INPUT;
     }
-    uint32_t encodeLen = 0;
     /* Write the certificate data. */
     int32_t ret = mgrCtx->method.certEncode(NULL, cert, &buf[CERT_LEN_TAG_SIZE],
         bufLen - CERT_LEN_TAG_SIZE, &encodeLen);
+#else
+    int32_t ret = SAL_CERT_X509Encode(NULL, cert, &buf[CERT_LEN_TAG_SIZE],
+        bufLen - CERT_LEN_TAG_SIZE, &encodeLen);
+#endif
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16255, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "certEncode error.", 0, 0, 0, 0);
@@ -349,11 +355,15 @@ static uint32_t GetPeertCertSize(const HITLS_Session *sess)
 {
     uint32_t certLen = 0;
     CERT_Pair *peerCert = sess->peerCert;
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     CERT_MgrCtx *mgrCtx = sess->certMgrCtx;
     if (mgrCtx == NULL || mgrCtx->method.certCtrl == NULL || peerCert->cert == NULL) {
         return 0;
     }
     int32_t ret = mgrCtx->method.certCtrl(NULL, peerCert->cert, CERT_CTRL_GET_ENCODE_LEN, NULL, (void *)&certLen);
+#else
+    int32_t ret = SAL_CERT_X509Ctrl(NULL, peerCert->cert, CERT_CTRL_GET_ENCODE_LEN, NULL, (void *)&certLen);
+#endif
     if (ret != HITLS_SUCCESS || certLen == 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16257, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CERT_CTRL_GET_ENCODE_LEN error.", 0, 0, 0, 0);

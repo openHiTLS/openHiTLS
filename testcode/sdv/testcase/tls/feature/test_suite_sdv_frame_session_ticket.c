@@ -42,7 +42,6 @@ static int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
 /* BEGIN_CASE */
 void UT_TLS12_RESUME_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
 

@@ -949,7 +949,9 @@ int32_t HITLS_CFG_SetCheckPriKeyCb(HITLS_Config *config, CERT_CheckPrivateKeyCal
         return HITLS_NULL_INPUT;
     }
 
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     config->certMgrCtx->method.checkPrivateKey = checkPrivateKey;
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -958,8 +960,11 @@ CERT_CheckPrivateKeyCallBack HITLS_CFG_GetCheckPriKeyCb(HITLS_Config *config)
     if (config == NULL || config->certMgrCtx == NULL) {
         return NULL;
     }
-
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     return config->certMgrCtx->method.checkPrivateKey;
+#else
+    return NULL;
+#endif
 }
 #endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
 
