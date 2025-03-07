@@ -116,7 +116,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_CERT_FUNC_TC001()
 {
 
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -160,7 +159,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_MISMATCH_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -222,7 +220,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_CERTREQ_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -266,7 +263,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_MISMATCH_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -305,7 +301,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_MISMATCH_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -368,7 +363,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_MISMATCH_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_ClientHelloMissKeyShare};
     RegisterWrapper(wrapper);
@@ -408,7 +402,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_MISMATCH_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_ClientHelloMissKeyShare};
@@ -480,7 +473,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ERR_HEELO_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_ErrorOrderPsk};
     RegisterWrapper(wrapper);
@@ -533,7 +525,6 @@ EXIT:
 
 static void RepeatClientHelloExtension(void *memberAddress, bool isPsk)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -762,7 +753,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ERR_HEELO_FUNC_TC012()
 {
 
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -798,7 +788,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ERR_HEELO_FUNC_TC013()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -834,7 +823,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -893,7 +881,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_ErrLegacyVersion};
     RegisterWrapper(wrapper);
@@ -927,7 +914,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -992,7 +978,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     uint16_t version = HITLS_VERSION_TLS13;
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, &version, Test_UnknownVersion};
@@ -1029,7 +1014,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     uint16_t version = HITLS_VERSION_TLS12;
     RecWrapper wrapper = {
@@ -1110,7 +1094,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC007()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     uint16_t version = 0;
     RecWrapper wrapper = {TRY_SEND_SERVER_HELLO, REC_TYPE_HANDSHAKE, false, &version, Test_ServerVersion};
@@ -1149,7 +1132,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_CHECK_SERVERHELLO_MASTER_SECRET_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1216,7 +1198,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMESH_SESSIONId_LENGTHERR_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1264,7 +1245,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC008()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     uint16_t version = HITLS_VERSION_TLS12;
     RecWrapper wrapper = {TRY_SEND_SERVER_HELLO, REC_TYPE_HANDSHAKE, false, &version, Test_ServerVersion};
@@ -1299,7 +1279,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC009()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     uint16_t version = HITLS_VERSION_TLS13;
     RecWrapper wrapper = {
@@ -1361,7 +1340,6 @@ EXIT:
 
 static void ErrorServerVersion(uint16_t version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_SERVER_HELLO,
@@ -1485,7 +1463,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_CLIENT_HELLO,
@@ -1517,7 +1494,6 @@ EXIT:
 
 static void HelloRetryRequest(WrapperFunc func)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_HELLO_RETRY_REQUEST,
@@ -1646,7 +1622,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC003()
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_HELLO_RETRY_REQUEST,
@@ -1692,7 +1667,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -1763,7 +1737,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_SERVER_HELLO,
@@ -1809,7 +1782,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -1885,7 +1857,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_SERVER_HELLO,
@@ -1933,7 +1904,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_CLIENT_HELLO,
@@ -1979,7 +1949,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -2062,7 +2031,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC007()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_CERTIFICATE_VERIFY,
@@ -2104,7 +2072,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC008()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -2170,7 +2137,6 @@ EXIT:
 
 static void WithoutPskMisKeyExtension(void *memberAddress, bool isResume, bool isHrr)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -2381,7 +2347,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2473,7 +2438,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2564,7 +2528,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CERT_EXTENSION_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};

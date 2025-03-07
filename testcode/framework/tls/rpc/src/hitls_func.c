@@ -225,8 +225,8 @@ int HitlsInit(void)
     CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
 #else
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
-#endif
     HITLS_CryptMethodInit();
+#endif
     return ret;
 }
 

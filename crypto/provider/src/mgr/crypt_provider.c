@@ -423,11 +423,19 @@ int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_
 
 int32_t CRYPT_EAL_ProviderProcAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcCb cb, void *args)
 {
-    if (ctx == NULL || cb == NULL) {
+    if (cb == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BslListNode *node = BSL_LIST_FirstNode(ctx->providers);
+    CRYPT_EAL_LibCtx *localCtx = ctx;
+    if (localCtx == NULL) {
+        localCtx = CRYPT_EAL_GetGlobalLibCtx();
+    }
+    if (localCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
+    BslListNode *node = BSL_LIST_FirstNode(localCtx->providers);
     while (node != NULL) {
         CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(node);
         int32_t ret = cb(providerMgr, args);
@@ -435,7 +443,7 @@ int32_t CRYPT_EAL_ProviderProcAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcC
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        node = BSL_LIST_GetNextNode(ctx->providers, node);
+        node = BSL_LIST_GetNextNode(localCtx->providers, node);
     }
     return CRYPT_SUCCESS;
 }

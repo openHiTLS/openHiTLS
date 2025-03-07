@@ -214,14 +214,17 @@ static void CRYPT_EAL_DefaultProvFree(void *provCtx)
     BSL_SAL_Free(provCtx);
 }
 
-#define TLS_GROUP_PARAM_COUNT 7
+#define TLS_GROUP_PARAM_COUNT 10
 #define TLS_SIGN_SCHEME_PARAM_COUNT 10
 typedef struct {
     const char *name;           // group name
     int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
     int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
     int32_t secBits;           // security bits
-    uint16_t groupId;           // iana group id
+    uint16_t groupId;           // iana group id, HITLS_NamedGroup
+    int32_t pubkeyLen;         // public key length(CH keyshare / SH keyshare)
+    int32_t sharedkeyLen;      // shared key length
+    int32_t ciphertextLen;     // ciphertext length(SH keyshare)
     uint32_t versionBits;       // TLS_VERSION_MASK
     bool isKem;                // true: KEM, false: KEX
 } TLS_GroupInfo;
@@ -233,6 +236,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
         HITLS_EC_GROUP_SECP256R1, // groupId
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -242,6 +246,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
         HITLS_EC_GROUP_SECP384R1, // groupId
+        97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -251,6 +256,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
         HITLS_EC_GROUP_SECP521R1, // groupId
+        133, 66, 0, // pubkeyLen=133, sharedkeyLen=66 (521 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
@@ -260,7 +266,8 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
+        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -269,7 +276,8 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
         HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
+        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -278,7 +286,8 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
+        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -286,17 +295,19 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_PARAID_MAX, // CRYPT_ECC_X25519
         CRYPT_PKEY_X25519, // CRYPT_PKEY_ECDH
         128, // secBits
-        (uint16_t)HITLS_EC_GROUP_CURVE25519, // groupId
+        HITLS_EC_GROUP_CURVE25519, // groupId
+        32, 32, 0, // pubkeyLen=32, sharedkeyLen=32 (256 bits)
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
         "sm2",
-        CRYPT_ECC_SM2, // CRYPT_ECC_SM2
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId
-        TLCP11_VERSION_BIT, // versionBits
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
     },
     {
@@ -305,6 +316,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         112, // secBits
         HITLS_FF_DHE_2048, // groupId
+        256, 256, 0, // pubkeyLen=256, sharedkeyLen=256 (2048 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -314,6 +326,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_DH,
         128,
         HITLS_FF_DHE_3072,
+        384, 384, 0, // pubkeyLen=384, sharedkeyLen=384 (3072 bits)
         TLS13_VERSION_BIT,
         false,
     },
@@ -323,6 +336,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
         HITLS_FF_DHE_4096, // groupId
+        512, 512, 0, // pubkeyLen=512, sharedkeyLen=512 (4096 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -332,6 +346,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
         HITLS_FF_DHE_6144, // groupId
+        768, 768, 0, // pubkeyLen=768, sharedkeyLen=768 (6144 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -341,6 +356,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         192, // secBits
         HITLS_FF_DHE_8192, // groupId
+        1024, 1024, 0, // pubkeyLen=1024, sharedkeyLen=1024 (8192 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     }
@@ -383,6 +399,22 @@ static int32_t BuildTlsGroupParam(const TLS_GroupInfo *groupInfo, BSL_Param *par
     if (ret != BSL_SUCCESS) {
         return ret;
     }
+    ret = BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->pubkeyLen), sizeof(groupInfo->pubkeyLen));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->sharedkeyLen), sizeof(groupInfo->sharedkeyLen));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->ciphertextLen), sizeof(groupInfo->ciphertextLen));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
     return BSL_SUCCESS;
 }
 
