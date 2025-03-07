@@ -700,7 +700,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC001(int version)
 {
-    HITLS_CryptMethodInit();
+
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -774,7 +774,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC002(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -848,7 +847,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC003(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -979,7 +977,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC005(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -1049,7 +1046,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC006(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1125,7 +1121,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC007(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1206,7 +1201,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC008(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1287,7 +1281,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC009(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1369,7 +1362,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC010(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1449,7 +1441,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC011(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1529,7 +1520,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC012(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;

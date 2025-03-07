@@ -1056,7 +1056,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_EXCHANGE_MODES_MISS_FUNC_TC002()
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_EXCHANGE_MODES_ADD_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1192,7 +1191,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_MISS_FUNC_TC001()
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_MISS_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1256,7 +1254,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1356,7 +1353,6 @@ static int32_t CompareBinder_Success(TLS_Ctx *ctx, const PreSharedKey *pskNode, 
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1430,7 +1426,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1647,7 +1642,6 @@ static int32_t Test_PskFindSessionCb_Default(HITLS_Ctx *ctx, const uint8_t *iden
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1707,7 +1701,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC007()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1767,7 +1760,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1831,7 +1823,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1913,7 +1904,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1976,7 +1966,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2041,7 +2030,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2097,7 +2085,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKBINDER_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2160,7 +2147,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKBINDER_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2223,7 +2209,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECODE_VERSION_FUNC_TC001(int value, int expect)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2296,7 +2281,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECODE_VERSION_FUNC_TC002(int value, int expect)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2368,7 +2352,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2449,7 +2432,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2530,7 +2512,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2617,7 +2598,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};

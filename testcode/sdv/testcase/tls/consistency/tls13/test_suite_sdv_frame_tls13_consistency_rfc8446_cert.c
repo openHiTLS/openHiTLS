@@ -174,7 +174,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC003(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     /* 1. Use the default configuration items to configure the client and server. */
@@ -245,7 +244,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC004(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     /*  1. Use the default configuration items to configure the client and server. */
@@ -360,7 +358,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC005(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -427,7 +424,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC006(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     /* 1. Use the default configuration items to configure the client and server. */
@@ -495,7 +491,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC007(void)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     /* 1. Use the default configuration items to configure the client and server. */
@@ -537,7 +532,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTMSG_FUNC_TC001()
 {
 
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -598,7 +592,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -970,7 +963,6 @@ message and disconnects the connection.
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -1017,7 +1009,6 @@ static void Test_CertReqPackAndParseNoSign(HITLS_Ctx *ctx, uint8_t *data, uint32
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -1075,7 +1066,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -1109,7 +1099,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC005()
 {
 
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -1189,7 +1178,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTMSG_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -1219,7 +1207,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTMSG_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;
@@ -1275,7 +1262,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC000()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HsTestInfo testInfo = {0};
     testInfo.version = HITLS_VERSION_TLS13;

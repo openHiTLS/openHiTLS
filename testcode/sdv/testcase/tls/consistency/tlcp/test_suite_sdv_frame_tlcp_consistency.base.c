@@ -50,6 +50,9 @@
 #include "common_func.h"
 #include "crypt_default.h"
 #include "stub_crypt.h"
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#include "hitls_crypt.h"
+#endif
 
 #define PORT 11111
 #define TEMP_DATA_LEN 1024              /* Length of a single message. */
