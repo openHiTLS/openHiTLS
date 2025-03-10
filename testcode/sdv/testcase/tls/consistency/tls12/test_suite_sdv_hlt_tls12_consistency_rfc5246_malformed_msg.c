@@ -2263,6 +2263,9 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
 
     serverConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
@@ -2270,7 +2273,9 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientConfig != NULL);
     ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLCP1_1, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
     // Client Initialization
@@ -2289,6 +2294,10 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     ASSERT_EQ(HLT_RpcGetTlsAcceptResult(serverRes->acceptId), testExpect->acceptExpect);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -2438,6 +2447,9 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
 
     HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
     serverConfig->isSupportExtendMasterSecret = false;
     HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_2, serverConfig, NULL);
@@ -2446,6 +2458,9 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
 
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     serverConfig->isSupportExtendMasterSecret = false;
     HLT_Tls_Res *clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
@@ -2468,6 +2483,10 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
     ASSERT_EQ(alertInfo.description, testPara->expectDescription);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;

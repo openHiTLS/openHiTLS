@@ -271,6 +271,9 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
     // The local server listens on the TLS connection.
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
@@ -281,11 +284,18 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     HLT_RpcTlsConnect(remoteProcess, clientRes->sslId);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -309,6 +319,9 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
     ASSERT_TRUE(HLT_SetSessionTicketSupport(serverConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportDhCipherSuites) {
@@ -332,6 +345,9 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     ASSERT_TRUE(HLT_SetSessionTicketSupport(clientConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportDhCipherSuites) {
@@ -370,6 +386,10 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_EQ(
         (ALERT_Description)HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), testPara->expectDescription);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -393,6 +413,9 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetSessionTicketSupport(serverConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportSni) {
         ASSERT_TRUE(HLT_SetServerNameCb(serverConfig, "ExampleSNIArg") == 0);
@@ -421,6 +444,9 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetSessionTicketSupport(clientConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportSni) {
         ASSERT_TRUE(HLT_SetServerNameCb(clientConfig, "testServer") == 0);
@@ -475,6 +501,10 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_EQ(((HITLS_Ctx *)(clientRes->ssl))->hsCtx->state, testPara->expectHsState);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;

@@ -223,8 +223,10 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
-    SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
+    ASSERT_EQ(SetCertPath(serverCtxConfig, "ecdsa_sha256", true), 0);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
 
     serverRes = HLT_ProcessTlsAccept(localProcess, version, serverCtxConfig, NULL);
@@ -235,7 +237,9 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetCertPath(clientCtxConfig, "ecdsa_sha256/ca.der", "NULL", "NULL", "NULL", "NULL", "NULL");
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
 
@@ -255,6 +259,10 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -572,13 +580,17 @@ void SDV_TLS_CFG_GET_FLIGHTTRANSMITSWITH_FUNC_TC001(int version)
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetFlightTransmitSwitch(serverCtxConfig, false);
     serverRes = HLT_ProcessTlsAccept(remoteProcess, version, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetFlightTransmitSwitch(clientCtxConfig, true);
     clientRes = HLT_ProcessTlsInit(localProcess, version, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
@@ -604,6 +616,10 @@ void SDV_TLS_CFG_GET_FLIGHTTRANSMITSWITH_FUNC_TC001(int version)
 
     HLT_CleanFrameHandle();
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     g_flag = 0;
     g_flight = 0;
     HLT_CleanFrameHandle();

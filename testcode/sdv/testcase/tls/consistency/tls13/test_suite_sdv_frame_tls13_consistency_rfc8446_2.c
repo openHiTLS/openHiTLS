@@ -149,7 +149,10 @@ void ClientCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(serverConfig != NULL);
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     // Configure the config file.
     SetConfig(clientConfig, serverConfig, setInfo);
 
@@ -172,6 +175,10 @@ void ClientCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     }
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -197,7 +204,10 @@ void ServerCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(serverConfig != NULL);
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     // Configure the config file.
     SetConfig(clientConfig, serverConfig, setInfo);
 
@@ -218,6 +228,10 @@ void ServerCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     }
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -228,6 +242,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -241,7 +256,6 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(remoteProcess != NULL);
 
     // Apply for the config context.
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
     void *clientConfig = HLT_TlsNewCtx(TLS1_3);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -249,7 +263,14 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, TLS1_3, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -330,6 +351,10 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     } while (cnt < 3); // Perform the connection twice.
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HITLS_SESS_Free(session);
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();

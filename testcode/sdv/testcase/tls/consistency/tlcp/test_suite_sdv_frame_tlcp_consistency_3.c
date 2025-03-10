@@ -298,11 +298,16 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientConfig != NULL);
     ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLCP1_1, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
     // Client Initialization
@@ -321,6 +326,10 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     ASSERT_EQ(HLT_RpcGetTlsAcceptResult(serverRes->acceptId), testExpect->acceptExpect);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }

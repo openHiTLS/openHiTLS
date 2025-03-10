@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 
 #include "uio_base.h"
+#include "hitls.h"
 #include "hitls_cert_type.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -42,6 +43,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_algid.h"
 #include "channel_res.h"
+#include "crypt_eal_provider.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -230,6 +232,79 @@ int HitlsInit(void)
     return ret;
 }
 
+HITLS_Config *HitlsProviderNewCtx(char **providerNames, int *providerLibFmts, int providerCnt, char *attrName,
+    TLS_VERSION tlsVersion)
+{
+    char *tmpAttrName = NULL;
+    if (attrName != NULL && strlen(attrName) > 0) {
+        tmpAttrName = attrName;
+    }
+    HITLS_Config *hitlsConfig = NULL;
+    int32_t ret;
+    HITLS_Lib_Ctx *libCtx = CRYPT_EAL_LibCtxNew();
+    if (libCtx == NULL) {
+        LOG_ERROR("CRYPT_EAL_LibCtxNew Error");
+        return NULL;
+    }
+
+    ret = CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL);
+    if (ret != EOK) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+        LOG_ERROR("CRYPT_EAL_ProviderLoad Error");
+        return NULL;
+    }
+    for (int i = 0; i < providerCnt - 1; i++) {
+        ret = CRYPT_EAL_ProviderLoad(libCtx, (BSL_SAL_LibFmtCmd)providerLibFmts[i], providerNames[i], NULL, NULL);
+        if (ret != EOK) {
+            CRYPT_EAL_LibCtxFree(libCtx);
+            LOG_ERROR("CRYPT_EAL_ProviderLoad Error");
+            return NULL;
+        }
+    }
+    switch (tlsVersion) {
+        case DTLS1_2:
+            LOG_DEBUG("HiTLS New DTLS1_2 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLS12Config(libCtx, tmpAttrName);
+            break;
+        case TLS1_2:
+            LOG_DEBUG("HiTLS New TLS1_2 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLS12Config(libCtx, tmpAttrName);
+            break;
+        case TLS1_3:
+            LOG_DEBUG("HiTLS New TLS1_3 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLS13Config(libCtx, tmpAttrName);
+            break;
+        case TLS_ALL:
+            LOG_DEBUG("HiTLS New TLS_ALL Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLSConfig(libCtx, tmpAttrName);
+            break;
+#ifdef HITLS_TLS_PROTO_TLCP11
+        case TLCP1_1:
+            LOG_DEBUG("HiTLS New TLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLCPConfig(libCtx, tmpAttrName);
+            break;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLCP11
+        case DTLCP1_1:
+            LOG_DEBUG("HiTLS New DTLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLCPConfig(libCtx, tmpAttrName);
+            break;
+#endif
+        default:
+            /* Unknown protocol type */
+            break;
+    }
+    if (hitlsConfig == NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+        LOG_ERROR("HITLS Not Support This TlsVersion's ID %d", tlsVersion);
+    }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    // Setting the security level
+    HITLS_CFG_SetSecurityLevel(hitlsConfig, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    return hitlsConfig;
+}
+
 HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
 {
     HITLS_Config *hitlsConfig = NULL;
@@ -278,7 +353,11 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
 
 void HitlsFreeCtx(void *ctx)
 {
+    HITLS_Config *config = (HITLS_Config *)ctx;
     HITLS_CFG_FreeConfig(ctx);
+    if (config != NULL) {
+        CRYPT_EAL_LibCtxFree(LIBCTX_FROM_CONFIG(config));
+    }
 }
 
 static int32_t GetConfigVauleFromStr(const HitlsConfig *hitlsConfigList, uint32_t configSize, const char *cipherName)

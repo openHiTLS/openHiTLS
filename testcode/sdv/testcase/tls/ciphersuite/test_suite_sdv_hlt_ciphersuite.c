@@ -187,7 +187,10 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     if (version == TLCP1_1 || version == DTLCP1_1) {
         SetGMCert(serverCtxConfig, clientCtxConfig, cert);
     } else {
@@ -212,6 +215,10 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 

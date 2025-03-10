@@ -304,6 +304,9 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256");
     rootCAFilePath1 = DEFAULT_CERT_PATH""RSA_ROOT_CERT_DER;
     caFilePath1 = DEFAULT_CERT_PATH""RSA_CA_CERT_DER;
@@ -381,6 +384,9 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
     ASSERT_EQ(HLT_GetTlsAcceptResultFromId(tlsAcceptId), 0);
     ASSERT_EQ(Dtls_DataTransfer(serverCtx, remoteProcess, clientRes), SUCCESS);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_FreeAllProcess();
     return;
 }

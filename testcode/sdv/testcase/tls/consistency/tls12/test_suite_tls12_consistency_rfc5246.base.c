@@ -391,7 +391,9 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     // The remote server listens on the TLS link.
     HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetCipherSuites(serverConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0);
     ASSERT_TRUE(HLT_SetGroups(serverConfig, "HITLS_EC_GROUP_SECP256R1") == 0);
     ASSERT_TRUE(HLT_SetSignature(serverConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256") == 0);
@@ -404,6 +406,9 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     // Configure the TLS connection on the local client.
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetCipherSuites(clientConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0);
     ASSERT_TRUE(HLT_SetGroups(clientConfig, "HITLS_EC_GROUP_SECP256R1") == 0);
     ASSERT_TRUE(HLT_SetSignature(clientConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256") == 0);
@@ -428,6 +433,10 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_EQ(((HITLS_Ctx *)(clientRes->ssl))->hsCtx->state, testPara->expectHsState);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -443,6 +452,9 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     // The local server listens on the TLS link.
     HLT_Ctx_Config *serverConfig1 = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig1 != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig1, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig1, testPara->isSupportClientVerify) == 0);
 
     ASSERT_TRUE(HLT_SetCipherSuites(serverConfig1, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0);
@@ -459,7 +471,9 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     // Set up a TLS link on the remote client.
     HLT_Ctx_Config *clientConfig1 = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig1 != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig1, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetCipherSuites(clientConfig1, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0);
     ASSERT_TRUE(HLT_SetGroups(clientConfig1, "HITLS_EC_GROUP_SECP256R1") == 0);
     ASSERT_TRUE(HLT_SetSignature(clientConfig1, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256") == 0);
@@ -478,6 +492,10 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
         testPara->expectDescription);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig1);
+    HLT_FreeCtxConfig(clientConfig1);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;

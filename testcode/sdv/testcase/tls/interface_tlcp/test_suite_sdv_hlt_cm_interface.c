@@ -103,7 +103,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(serverCtxConfig, serverCipherSuite);
     HLT_SetGroups(serverCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
     HLT_SetCipherSuites(serverCtxConfig, serverCipherSuite);
@@ -114,7 +116,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(clientCtxConfig, clientCipherSuite);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP384R1:HITLS_EC_GROUP_SECP256R1");
     HLT_SetCipherSuites(clientCtxConfig, clientCipherSuite);
@@ -141,6 +145,10 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
     ASSERT_TRUE(testCtx->negotiatedInfo.signScheme == CERT_SIG_SCHEME_RSA_PKCS1_SHA512);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -183,7 +191,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(serverCtxConfig, serverCipherSuite);
     HLT_SetGroups(serverCtxConfig, "NULL");
     HLT_SetCipherSuites(serverCtxConfig, serverCipherSuite);
@@ -196,6 +206,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(clientCtxConfig, clientCipherSuite);
     HLT_SetGroups(clientCtxConfig, "NULL");
     HLT_SetCipherSuites(clientCtxConfig, clientCipherSuite);
@@ -218,6 +231,10 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
     ASSERT_TRUE(testCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite == expectResult);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -260,7 +277,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(serverCtxConfig, serverCipherSuite);
     HLT_SetCipherSuites(serverCtxConfig, serverCipherSuite);
     HLT_SetGroups(serverCtxConfig, "NULL");
@@ -274,7 +293,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(clientCtxConfig, clientCipherSuite);
     HLT_SetCipherSuites(clientCtxConfig, clientCipherSuite);
     HLT_SetGroups(clientCtxConfig, "NULL");
@@ -297,6 +318,10 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, ch
     ASSERT_TRUE(testCtx->negotiatedInfo.signScheme == CERT_SIG_SCHEME_RSA_PKCS1_SHA384);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -339,7 +364,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(serverCtxConfig, serverCipherSuite);
     HLT_SetCipherSuites(serverCtxConfig, serverCipherSuite);
     HLT_SetGroups(serverCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
@@ -353,7 +380,9 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath_2(clientCtxConfig, clientCipherSuite);
     HLT_SetCipherSuites(clientCtxConfig, clientCipherSuite);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP384R1:HITLS_EC_GROUP_SECP256R1");
@@ -376,6 +405,10 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, ch
     ASSERT_TRUE(testCtx->negotiatedInfo.negotiatedGroup == HITLS_EC_GROUP_SECP256R1);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -425,7 +458,10 @@ void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(serverConfig != NULL);
     ASSERT_TRUE(clientConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     serverRes = HLT_ProcessTlsAccept(remoteProcess, DTLS1_2, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
@@ -438,6 +474,10 @@ void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
 
     ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) == 0);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientConfig);
+    HLT_FreeCtxConfig(serverConfig);
+#endif
     STUB_Reset(&stubInfo);
     HLT_FreeAllProcess();
 }

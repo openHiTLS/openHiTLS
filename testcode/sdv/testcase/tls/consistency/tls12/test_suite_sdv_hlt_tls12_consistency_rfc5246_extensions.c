@@ -139,6 +139,9 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
     //The local server listens on the TLS link.
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
@@ -150,12 +153,19 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
     //Set up a TLS link on the remote client.
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     HLT_RpcTlsConnect(remoteProcess, clientRes->sslId);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -180,6 +190,9 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
     serverConfig->isSupportSessionTicket = testPara->isSupportSessionTicket;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
     ASSERT_TRUE(HLT_SetRenegotiationSupport(serverConfig, testPara->isSupportRenegotiation) == 0);
 
@@ -212,6 +225,9 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     //Set up a TLS link on the remote client.
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     ASSERT_TRUE(HLT_SetRenegotiationSupport(clientConfig, testPara->isSupportRenegotiation) == 0);
     clientConfig->isSupportSessionTicket = testPara->isSupportSessionTicket;
@@ -266,6 +282,10 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
         testPara->expectDescription);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -289,6 +309,9 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     //The remote server listens on the TLS link.
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverConfig, NULL, 0, NULL);
+#endif
     if (testPara->isSupportDhCipherSuites) {
         ASSERT_TRUE(HLT_SetCipherSuites(serverConfig, "HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256") == 0);
         ASSERT_TRUE(HLT_SetSignature(serverConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256") == 0);
@@ -320,6 +343,9 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     //Configure the TLS connection on the local client.
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientConfig, NULL, 0, NULL);
+#endif
     ASSERT_TRUE(HLT_SetRenegotiationSupport(clientConfig, testPara->isSupportRenegotiation) == 0);
     clientConfig->isSupportSessionTicket = testPara->isSupportSessionTicket;
     if (testPara->isSupportSni) {
@@ -378,6 +404,10 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     ASSERT_EQ(((HITLS_Ctx *)(clientRes->ssl))->hsCtx->state, testPara->expectHsState);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverConfig);
+    HLT_FreeCtxConfig(clientConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -1049,6 +1079,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -1061,7 +1092,6 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -1072,6 +1102,14 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     serverCtxConfig->isSupportSessionTicket = true;
     serverCtxConfig->isSupportRenegotiation = false;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
 
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
@@ -1145,6 +1183,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1167,6 +1209,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -1179,7 +1222,6 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -1190,6 +1232,14 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     serverCtxConfig->isSupportSessionTicket = false;
     serverCtxConfig->isSupportRenegotiation = false;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
 
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
@@ -1258,6 +1308,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1280,6 +1334,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -1292,7 +1347,6 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -1303,7 +1357,14 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     serverCtxConfig->isSupportSessionTicket = false;
     serverCtxConfig->isSupportRenegotiation = true;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -1370,6 +1431,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1392,6 +1457,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -1404,7 +1470,6 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -1415,7 +1480,14 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     serverCtxConfig->isSupportSessionTicket = false;
     serverCtxConfig->isSupportRenegotiation = false;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -1482,6 +1554,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -1513,7 +1589,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC001(int version, 
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+     HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
     serverCtxConfig->isSupportClientVerify = certverifyflag;
@@ -1523,7 +1601,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC001(int version, 
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+     HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
     clientCtxConfig->isSupportClientVerify = certverifyflag;
@@ -1535,6 +1615,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC001(int version, 
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1566,7 +1650,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC003(int version, 
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_RSA_WITH_AES_128_CBC_SHA256:HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256");
     serverCtxConfig->isSupportClientVerify = certverifyflag;
@@ -1576,7 +1662,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC003(int version, 
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_128_CBC_SHA256:HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256");
     clientCtxConfig->isSupportClientVerify = certverifyflag;
@@ -1595,6 +1683,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC003(int version, 
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1658,6 +1750,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC002(int version, 
     ASSERT_TRUE(serverCtxConfig != NULL);
 
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
     serverCtxConfig->isSupportClientVerify = certverifyflag;
 
@@ -1666,6 +1761,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC002(int version, 
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetLegacyRenegotiateSupport(clientCtxConfig, true);
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
@@ -1687,6 +1785,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC002(int version, 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_REC_BAD_RECORD_MAC);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -1746,6 +1848,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC004(int version, 
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
 
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_DH_ANON_WITH_AES_256_CBC_SHA256:HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256");
@@ -1756,6 +1861,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC004(int version, 
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
 
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_DH_ANON_WITH_AES_256_CBC_SHA256:HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256");
@@ -1777,6 +1885,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC004(int version, 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -2022,7 +2134,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHERSUITE_NOT_SUITABLE_CERT_TC003(int v
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath1(serverCtxConfig, "rsa_sha256", "ecdsa_sha256", true);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_DHE_RSA_WITH_AES_256_CBC_SHA256");
     serverCtxConfig->isSupportClientVerify = certverifyflag;
@@ -2032,7 +2146,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHERSUITE_NOT_SUITABLE_CERT_TC003(int v
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath1(clientCtxConfig, "ecdsa_sha256", "rsa_sha256", false);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_DHE_RSA_WITH_AES_256_CBC_SHA256");
     clientCtxConfig->isSupportClientVerify = certverifyflag;
@@ -2044,6 +2160,10 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHERSUITE_NOT_SUITABLE_CERT_TC003(int v
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -2066,6 +2186,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC002(int version,
     HLT_FD sockFd = {0};
     HLT_FD sockFd2 = {0};
     int cunt = 1;
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
 
@@ -2074,7 +2195,6 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC002(int version,
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     void *clientConfig2 = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
@@ -2084,6 +2204,15 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC002(int version,
     HLT_Ctx_Config *clientCtxConfig2 = HLT_NewCtxConfig(NULL, "CLIENT");
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(clientCtxConfig2, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
 
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig2, clientCtxConfig2) == 0);
@@ -2179,6 +2308,11 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC002(int version,
         cunt++;
     } while (cunt <= 2);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig2);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }

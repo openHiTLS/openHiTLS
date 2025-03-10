@@ -50,7 +50,9 @@ void SDV_TLS_TLCP_CIPHER_SUITE_TC01(char *cipherSuiteType)
     HLT_SetCipherSuites(serverCtxConfig, cipherSuiteType);
     serverCtxConfig->isSupportClientVerify = true;
     serverCtxConfig->needCheckKeyUsage = true;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     // The server listens on the TLS link.
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLCP1_1, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
@@ -58,6 +60,9 @@ void SDV_TLS_TLCP_CIPHER_SUITE_TC01(char *cipherSuiteType)
     // Configure link information on the client.
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetCipherSuites(clientCtxConfig, cipherSuiteType);
 
     // Set up a TLCP link on the client.
@@ -74,6 +79,10 @@ void SDV_TLS_TLCP_CIPHER_SUITE_TC01(char *cipherSuiteType)
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(clientCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 /* END_CASE */

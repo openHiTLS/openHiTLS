@@ -110,6 +110,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_TWO_DISOEDER_CHAIN_CERT_FUNC_TC001(void)
     ASSERT_TRUE(remoteProcess != NULL);
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetCertPath(serverCtxConfig,
         "rsa_sha512/otherRoot.der",
         "rsa_sha512/otherInter.der:rsa_sha512/otherInter2.der",
@@ -120,6 +123,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_TWO_DISOEDER_CHAIN_CERT_FUNC_TC001(void)
     HLT_SetClientVerifySupport(serverCtxConfig, true);
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetCertPath(clientCtxConfig,
         "rsa_sha512/otherRoot.der",
         "rsa_sha512/otherInter.der:rsa_sha512/otherInter2.der",
@@ -150,6 +156,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_TWO_DISOEDER_CHAIN_CERT_FUNC_TC001(void)
     ASSERT_TRUE(clientRes == NULL);
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
     return;

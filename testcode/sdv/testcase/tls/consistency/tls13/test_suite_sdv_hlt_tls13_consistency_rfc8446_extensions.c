@@ -196,6 +196,9 @@ void HITLS_TLS1_2_Config_SDV_23_0_5_0430(int version, int connType)
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
 
     serverRes = HLT_ProcessTlsAccept(remoteProcess, version, serverCtxConfig, NULL);
@@ -203,7 +206,9 @@ void HITLS_TLS1_2_Config_SDV_23_0_5_0430(int version, int connType)
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetCertPath(clientCtxConfig, "ecdsa_sha256/ca.der", "NULL", "NULL", "NULL", "NULL", "NULL");
 
     clientRes = HLT_ProcessTlsInit(localProcess, version, clientCtxConfig, NULL);
@@ -211,8 +216,11 @@ void HITLS_TLS1_2_Config_SDV_23_0_5_0430(int version, int connType)
 
     ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 
-
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -253,7 +261,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC001(int version, int
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetTls13CipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
 
@@ -262,7 +272,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC001(int version, int
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
     HLT_SetTls13CipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
@@ -276,6 +288,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC001(int version, int
     ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_ILLEGAL_PARAMETER);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -341,7 +357,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC002(int version, int
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetTls13CipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
 
@@ -350,7 +368,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC002(int version, int
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
     HLT_SetTls13CipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
@@ -370,6 +390,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC002(int version, int
 
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -411,7 +435,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC003(int version, int
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetTls13CipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
 
@@ -420,7 +446,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC003(int version, int
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_CURVE25519");
     HLT_SetTls13CipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
@@ -439,6 +467,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC003(int version, int
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -512,7 +544,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_NAMEDGROUP_FUNC_TC001(int version, int co
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetGroups(serverCtxConfig, "HITLS_EC_GROUP_CURVE25519:HITLS_EC_GROUP_SECP384R1");
     HLT_SetTls13CipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
@@ -522,7 +556,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_NAMEDGROUP_FUNC_TC001(int version, int co
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
     HLT_SetTls13CipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
@@ -536,6 +572,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_NAMEDGROUP_FUNC_TC001(int version, int co
     ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_ILLEGAL_PARAMETER);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -607,6 +647,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC001( )
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
 
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
 
@@ -615,6 +658,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC001( )
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
 
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
 
@@ -630,6 +676,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC001( )
     ASSERT_EQ(info.description, ALERT_PROTOCOL_VERSION);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -671,7 +721,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC002(int version, int conn
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
     HLT_SetTls13CipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
 
@@ -680,7 +732,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC002(int version, int conn
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     SetCertPath(clientCtxConfig, "ecdsa_sha256", false);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
     HLT_SetTls13CipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
@@ -694,6 +748,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC002(int version, int conn
     ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_ILLEGAL_PARAMETER);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -741,6 +799,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC003()
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL,"SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetVersion(serverCtxConfig, HITLS_VERSION_TLS12, HITLS_VERSION_TLS13);
 
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
@@ -748,7 +809,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC003()
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL,"CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_CleanFrameHandle();
     HLT_FrameHandle handle = {0};
     handle.pointType = POINT_SEND;
@@ -768,6 +831,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC003()
     ASSERT_EQ(HLT_RpcTlsGetAlertLevel(remoteProcess, clientRes->sslId), ALERT_LEVEL_FATAL);
     ASSERT_EQ(HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId), ALERT_ILLEGAL_PARAMETER);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -830,13 +897,17 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC010()
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL,"SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL,"CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     clientRes = HLT_ProcessTlsInit(localProcess, TLS1_3, clientCtxConfig, NULL);
 
     ASSERT_TRUE(clientRes != NULL);
@@ -848,6 +919,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC010()
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_PROTOCOL_VERSION);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -878,6 +953,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC012()
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL,"SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetVersion(serverCtxConfig, HITLS_VERSION_TLS13, HITLS_VERSION_TLS13);
 
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverCtxConfig, NULL);
@@ -885,7 +963,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC012()
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL,"CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientCtxConfig, NULL);
 
     ASSERT_TRUE(clientRes != NULL);
@@ -898,6 +978,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC012()
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_PROTOCOL_VERSION);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -961,6 +1045,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MASTEREXTKEY_FUNC_TC001()
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL,"SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetVersion(serverCtxConfig, HITLS_VERSION_TLS12, HITLS_VERSION_TLS13);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
 
@@ -969,7 +1056,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MASTEREXTKEY_FUNC_TC001()
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL,"CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientCtxConfig, NULL);
 
     ASSERT_TRUE(clientRes != NULL);
@@ -983,6 +1072,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MASTEREXTKEY_FUNC_TC001()
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -1026,6 +1119,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -1038,7 +1132,6 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -1047,7 +1140,14 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     serverCtxConfig->isSupportRenegotiation = false;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -1127,6 +1227,10 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
     } while (cnt < 2);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();

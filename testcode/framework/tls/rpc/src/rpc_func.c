@@ -44,7 +44,11 @@
     } while (0)
 
 RpcFunList g_rpcFuncList[] = {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    {"HLT_RpcProviderTlsNewCtx", RpcProviderTlsNewCtx},
+#else
     {"HLT_RpcTlsNewCtx", RpcTlsNewCtx},
+#endif
     {"HLT_RpcTlsSetCtx", RpcTlsSetCtx},
     {"HLT_RpcTlsNewSsl", RpcTlsNewSsl},
     {"HLT_RpcTlsSetSsl", RpcTlsSetSsl},
@@ -80,6 +84,144 @@ RpcFunList *GetRpcFuncList(void)
 int GetRpcFuncNum(void)
 {
     return sizeof(g_rpcFuncList) / sizeof(g_rpcFuncList[0]);
+}
+
+/**
+ * Parse the provider string in format "name1,fmt1:name2,fmt2:...:nameN,fmtN"
+ */
+static int ParseProviderString(const char *providerStr, char ***providerNames, int32_t **providerLibFmts, int32_t *providerCnt)
+{
+    if (providerStr == NULL || providerNames == NULL || providerLibFmts == NULL || providerCnt == NULL) {
+        LOG_ERROR("Invalid input parameters");
+        return ERROR;
+    }
+
+    int count = 1;
+    const char *ptr = providerStr;
+    while (*ptr) {
+        if (*ptr == ':') {
+            count++;
+        }
+        ptr++;
+    }
+    *providerCnt = count;
+    *providerNames = (char **)malloc(count * sizeof(char *));
+    if (*providerNames == NULL) {
+        LOG_ERROR("Failed to allocate memory for provider names");
+        return ERROR;
+    }
+
+    *providerLibFmts = (int32_t *)malloc(count * sizeof(int32_t));
+    if (*providerLibFmts == NULL) {
+        LOG_ERROR("Failed to allocate memory for provider formats");
+        free(*providerNames);
+        *providerNames = NULL;
+        return ERROR;
+    }
+    char *tempStr = strdup(providerStr);
+    if (tempStr == NULL) {
+        LOG_ERROR("Failed to duplicate provider string");
+        free(*providerNames);
+        free(*providerLibFmts);
+        *providerNames = NULL;
+        *providerLibFmts = NULL;
+        return ERROR;
+    }
+
+    char *saveptr1 = NULL;
+    char *saveptr2 = NULL;
+    char *token = strtok_r(tempStr, ":", &saveptr1);
+    int i = 0;
+
+    while (token != NULL && i < count) {
+        char *name = strtok_r(token, ",", &saveptr2);
+        char *fmt = strtok_r(NULL, ",", &saveptr2);
+
+        if (name == NULL || fmt == NULL) {
+            LOG_ERROR("Invalid provider format");
+            free(tempStr);
+            for (int j = 0; j < i; j++) {
+                free((*providerNames)[j]);
+            }
+            free(*providerNames);
+            free(*providerLibFmts);
+            *providerNames = NULL;
+            *providerLibFmts = NULL;
+            return ERROR;
+        }
+
+        (*providerNames)[i] = strdup(name);
+        if ((*providerNames)[i] == NULL) {
+            LOG_ERROR("Failed to allocate memory for provider name");
+            free(tempStr);
+            for (int j = 0; j < i; j++) {
+                free((*providerNames)[j]);
+            }
+            free(*providerNames);
+            free(*providerLibFmts);
+            *providerNames = NULL;
+            *providerLibFmts = NULL;
+            return ERROR;
+        }
+
+        (*providerLibFmts)[i] = atoi(fmt);
+
+        token = strtok_r(NULL, ":", &saveptr1);
+        i++;
+    }
+
+    free(tempStr);
+    return SUCCESS;
+}
+
+int RpcProviderTlsNewCtx(CmdData *cmdData)
+{
+    int id;
+    TLS_VERSION tlsVersion;
+    (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
+
+    tlsVersion = atoi(cmdData->paras[0]);
+    char *providerNames = cmdData->paras[2];
+    char *attrName = strlen(cmdData->paras[3]) > 0 ? cmdData->paras[3] : NULL;
+    char **parsedProviderNames = NULL;
+    int32_t *providerLibFmts = NULL;
+    int32_t providerCnt = 0;
+    
+    if (ParseProviderString(providerNames, &parsedProviderNames, &providerLibFmts, &providerCnt) != SUCCESS) {
+        LOG_ERROR("Failed to parse provider string");
+        id = ERROR;
+        goto EXIT;
+    }
+
+    // Invoke the corresponding function.
+    void *ctx = HLT_TlsProviderNewCtx(parsedProviderNames, providerLibFmts, providerCnt, attrName, tlsVersion);
+    if (ctx == NULL) {
+        LOG_ERROR("HLT_TlsProviderNewCtx Return NULL");
+        id = ERROR;
+        goto EXIT;
+    }
+
+    // Insert to CTX linked list
+    id = InsertCtxToList(ctx);
+
+EXIT:
+    // Return Result
+    if (sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, id) <= 0) {
+        return ERROR;
+    }
+    if (parsedProviderNames != NULL) {
+        for (int i = 0; i < providerCnt; i++) {
+            if (parsedProviderNames[i] != NULL) {
+                free(parsedProviderNames[i]);
+            }
+        }
+        free(parsedProviderNames);
+    }
+
+    if (providerLibFmts != NULL) {
+        free(providerLibFmts);
+    }
+    return SUCCESS;
 }
 
 int RpcTlsNewCtx(CmdData *cmdData)

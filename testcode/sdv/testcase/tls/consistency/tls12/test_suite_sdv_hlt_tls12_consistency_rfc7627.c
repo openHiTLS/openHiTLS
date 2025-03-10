@@ -98,6 +98,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -110,14 +111,23 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+#endif
     HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     // 1. The client and server do not support the extension connection establishment.
     HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
 
@@ -192,6 +202,10 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -218,6 +232,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC007(int ver
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -229,14 +244,20 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC007(int ver
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -312,6 +333,10 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC007(int ver
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -337,6 +362,8 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
     HLT_FD sockFd = {0};
     HLT_FD sockFd2 = {0};
     int cunt = 1;
+    int32_t serverConfigId = 0;
+    int32_t serverConfigId2 = 0;
 
     HITLS_Session *session = NULL;
 
@@ -345,8 +372,6 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
-    int32_t serverConfigId2 = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -354,6 +379,18 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     HLT_Ctx_Config *serverCtxConfig2 = HLT_NewCtxConfig(NULL, "SERVER");
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig2, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+    serverConfigId2 = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig2->providerNames,
+        serverCtxConfig2->providerLibFmts, serverCtxConfig2->providerCnt, serverCtxConfig2->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+    serverConfigId2 = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     // 2. Apply for another server that does not support the extension and establish a connection.
     HLT_SetExtenedMasterSecretSupport(serverCtxConfig2, false);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
@@ -432,6 +469,11 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
         cunt++;
     } while (cunt <= 2);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig2);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -477,7 +519,10 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
 {
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL; 
+    HLT_Ctx_Config *serverCtxConfig = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
  
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -490,16 +535,23 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
  
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
  
-    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
  
-    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     HLT_SetExtenedMasterSecretSupport(serverCtxConfig, false);
  
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
     do {
@@ -567,6 +619,10 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
         cnt++;
     } while (cnt < 3);
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     ClearWrapper();
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);

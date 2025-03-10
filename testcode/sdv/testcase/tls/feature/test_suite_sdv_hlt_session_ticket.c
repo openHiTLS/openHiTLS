@@ -43,12 +43,12 @@ void SDV_TLS12_RESUME_FUNC_TC001()
     HLT_FD sockFd = {0};
     HITLS_Session *session = NULL;
     int32_t cnt = 0;
+    int32_t serverConfigId = 0;
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -59,6 +59,14 @@ void SDV_TLS12_RESUME_FUNC_TC001()
     serverCtxConfig->isSupportSessionTicket = true;
     HLT_SetPsk(clientCtxConfig, "123456789");
     HLT_SetPsk(serverCtxConfig, "123456789");
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -120,6 +128,10 @@ void SDV_TLS12_RESUME_FUNC_TC001()
     } while (cnt < 3);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
@@ -151,6 +163,7 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -163,7 +176,6 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
 
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -174,6 +186,14 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     serverCtxConfig->isSupportSessionTicket = true;
     serverCtxConfig->isSupportRenegotiation = false;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_SetProviderInfo(clientCtxConfig, NULL, 0, NULL);
+    HLT_SetProviderInfo(serverCtxConfig, NULL, 0, NULL);
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerNames,
+        serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt, serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     memcpy_s(clientCtxConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
     memcpy_s(serverCtxConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
 
@@ -255,6 +275,10 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
     } while (cnt < 3);
 
 EXIT:
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HLT_FreeCtxConfig(clientCtxConfig);
+    HLT_FreeCtxConfig(serverCtxConfig);
+#endif
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
 }
