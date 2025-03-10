@@ -36,6 +36,7 @@
 #include "hitls_x509_adapt.h"
 #include "hitls_cert_init.h"
 #include "hitls_pki_x509.h"
+#include "cert_method.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -101,13 +102,13 @@ int32_t RegMemCallback(MemCallbackType type)
     return SUCCESS;
 }
 
-HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(const char *file)
+HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(HITLS_Config *tlsCfg, const char *file)
 {
-    return HITLS_X509_Adapt_CertParse(NULL, (const uint8_t *)file, strlen(file) + 1, TLS_PARSE_TYPE_FILE,
+    return HITLS_X509_Adapt_CertParse(tlsCfg, (const uint8_t *)file, strlen(file) + 1, TLS_PARSE_TYPE_FILE,
         TLS_PARSE_FORMAT_ASN1);
 }
 
-void *HiTLS_X509_LoadCertListToStore(const char *fileList)
+void *HiTLS_X509_LoadCertListToStore(HITLS_Config *tlsCfg, const char *fileList)
 {
     int32_t ret;
     char certList[MAX_CERT_LEN] = {0};
@@ -119,8 +120,9 @@ void *HiTLS_X509_LoadCertListToStore(const char *fileList)
         return NULL;
     }
 
-    void *store = HITLS_X509_StoreCtxNew();
+    void *store = SAL_CERT_StoreNew(tlsCfg->certMgrCtx);
     if(store == NULL){
+        LOG_ERROR("SAL_CERT_StoreNew Error");
         return NULL;
     }
 
@@ -136,12 +138,12 @@ void *HiTLS_X509_LoadCertListToStore(const char *fileList)
         }
         LOG_DEBUG("Load Cert Path is %s", certPath);
 
-        HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(certPath);
+        HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(tlsCfg, certPath);
         if (cert == NULL) {
             HITLS_X509_StoreCtxFree(store);
             return NULL;
         }
-        ret = HITLS_X509_Adapt_StoreCtrl(NULL, store, CERT_STORE_CTRL_ADD_CERT_LIST, cert, NULL);
+        ret = HITLS_X509_Adapt_StoreCtrl(tlsCfg, store, CERT_STORE_CTRL_ADD_CERT_LIST, cert, NULL);
         if (ret != SUCCESS) {
             LOG_ERROR("X509_STORE_add_cert Error: path = %s.", certPath);
             HITLS_X509_StoreCtxFree(store);
@@ -177,7 +179,7 @@ int32_t HITLS_X509_LoadEECertList(HITLS_Config *tlsCfg, const char *eeFileList, 
         }
         LOG_DEBUG("Load Cert Path is %s", certPath);
 
-        cert = HiTLS_X509_LoadCertFile(certPath);
+        cert = HiTLS_X509_LoadCertFile(tlsCfg, certPath);
         if (cert == NULL) {
             LOG_ERROR("LoadCert Error: path = %s", certPath);
             return ERROR;
@@ -258,7 +260,7 @@ int32_t HiTLS_X509_LoadCertAndKey(HITLS_Config *tlsCfg, const char *caFile, cons
 {
     int32_t ret;
     if ((caFile != NULL) && (strncmp(caFile, "NULL", strlen(caFile)) != 0)) {
-        HITLS_CERT_Store *caStore = HiTLS_X509_LoadCertListToStore(caFile);
+        HITLS_CERT_Store *caStore = HiTLS_X509_LoadCertListToStore(tlsCfg, caFile);
         if (caStore == NULL) {
             return ERROR;
         }
@@ -270,7 +272,7 @@ int32_t HiTLS_X509_LoadCertAndKey(HITLS_Config *tlsCfg, const char *caFile, cons
     }
 
     if ((chainFile != NULL) && (strncmp(chainFile, "NULL", strlen(chainFile)) != 0)) {
-        HITLS_CERT_Store *chainStore = HiTLS_X509_LoadCertListToStore(chainFile);
+        HITLS_CERT_Store *chainStore = HiTLS_X509_LoadCertListToStore(tlsCfg, chainFile);
         if (chainStore == NULL) {
             return ERROR;
         }

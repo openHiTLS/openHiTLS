@@ -100,6 +100,7 @@ typedef struct ProcessSt HLT_Process;
 
 typedef enum {
     HITLS,
+    HITLS_PROVIDER,
 } TLS_TYPE;
 
 typedef enum {
@@ -235,6 +236,8 @@ typedef struct {
 
     bool isClient;
     uint32_t emptyRecordsNum;
+    CRYPT_EAL_LibCtx *libCtx;
+    const char *attrName;
 } HLT_Ctx_Config;
 
 typedef struct {

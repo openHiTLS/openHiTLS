@@ -230,6 +230,52 @@ int HitlsInit(void)
     return ret;
 }
 
+HITLS_Config *HitlsProviderNewCtx(HITLS_Lib_Ctx *libCtx, const char *attrName, TLS_VERSION tlsVersion)
+{
+    HITLS_Config *hitlsConfig = NULL;
+    switch (tlsVersion) {
+        case DTLS1_2:
+            LOG_DEBUG("HiTLS New DTLS1_2 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLS12Config(libCtx, attrName);
+            break;
+        case TLS1_2:
+            LOG_DEBUG("HiTLS New TLS1_2 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLS12Config(libCtx, attrName);
+            break;
+        case TLS1_3:
+            LOG_DEBUG("HiTLS New TLS1_3 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderewTLS13Config(libCtx, attrName));
+            break;
+        case TLS_ALL:
+            LOG_DEBUG("HiTLS New TLS_ALL Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLSConfig(libCtx, attrName));
+            break;
+#ifdef HITLS_TLS_PROTO_TLCP11
+        case TLCP1_1:
+            LOG_DEBUG("HiTLS New TLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLCPConfig(libCtx, attrName));
+            break;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLCP11
+        case DTLCP1_1:
+            LOG_DEBUG("HiTLS New DTLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLCPConfig(libCtx, attrName));
+            break;
+#endif
+        default:
+            /* Unknown protocol type */
+            break;
+    }
+    if (hitlsConfig == NULL) {
+        LOG_ERROR("HITLS Not Support This TlsVersion's ID %d", tlsVersion);
+    }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    // Setting the security level
+    HITLS_CFG_SetSecurityLevel(hitlsConfig, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    return hitlsConfig;
+}
+
 HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
 {
     HITLS_Config *hitlsConfig = NULL;

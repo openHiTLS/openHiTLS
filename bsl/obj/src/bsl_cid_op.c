@@ -174,8 +174,7 @@ int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId)
 
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
         if (signId == (int32_t)g_signIdMap[iter].signId) {
-            BSL_ERR_PUSH_ERROR(BSL_OBJ_IS_EXIST);
-            return BSL_OBJ_IS_EXIST;
+            return BSL_SUCCESS;
         }
     }
 
@@ -190,8 +189,7 @@ int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId)
     BSL_SignIdMap *signIdMap = NULL;
     int32_t ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signId, (uintptr_t *)&signIdMap);
     if (ret == BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(BSL_OBJ_IS_EXIST);
-        return BSL_OBJ_IS_EXIST;
+        return BSL_SUCCESS;
     }
     BSL_SignIdMap newSignIdMap = {signId, asymId, hashId};
     ret = BSL_HASH_Insert(g_signHashTable, (uintptr_t)signId, sizeof(BslCid), (uintptr_t)&newSignIdMap,
