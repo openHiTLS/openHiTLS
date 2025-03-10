@@ -281,6 +281,7 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+
     ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
@@ -332,6 +333,7 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+
     ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     ASSERT_TRUE(HLT_SetSessionTicketSupport(clientConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportDhCipherSuites) {
@@ -393,6 +395,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+
     ASSERT_TRUE(HLT_SetSessionTicketSupport(serverConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportSni) {
         ASSERT_TRUE(HLT_SetServerNameCb(serverConfig, "ExampleSNIArg") == 0);
@@ -421,6 +424,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+
     ASSERT_TRUE(HLT_SetSessionTicketSupport(clientConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportSni) {
         ASSERT_TRUE(HLT_SetServerNameCb(clientConfig, "testServer") == 0);
