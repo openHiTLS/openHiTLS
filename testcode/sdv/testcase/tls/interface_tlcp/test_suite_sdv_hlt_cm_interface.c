@@ -103,7 +103,6 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
     SetCertPath_2(serverCtxConfig, serverCipherSuite);
     HLT_SetGroups(serverCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
     HLT_SetCipherSuites(serverCtxConfig, serverCipherSuite);
@@ -114,7 +113,6 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-
     SetCertPath_2(clientCtxConfig, clientCipherSuite);
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP384R1:HITLS_EC_GROUP_SECP256R1");
     HLT_SetCipherSuites(clientCtxConfig, clientCipherSuite);
@@ -196,6 +194,7 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     SetCertPath_2(clientCtxConfig, clientCipherSuite);
     HLT_SetGroups(clientCtxConfig, "NULL");
     HLT_SetCipherSuites(clientCtxConfig, clientCipherSuite);

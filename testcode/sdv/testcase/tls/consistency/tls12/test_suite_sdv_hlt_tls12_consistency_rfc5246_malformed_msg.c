@@ -2263,6 +2263,7 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
 
     serverConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
     ASSERT_TRUE(serverConfig != NULL);
+
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
@@ -2438,6 +2439,7 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
 
     HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
+
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
     serverConfig->isSupportExtendMasterSecret = false;
     HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_2, serverConfig, NULL);
@@ -2446,6 +2448,7 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
 
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+
     serverConfig->isSupportExtendMasterSecret = false;
     HLT_Tls_Res *clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
