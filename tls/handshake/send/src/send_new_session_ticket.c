@@ -45,7 +45,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
         hsCtx->ticketLifetimeHint = (uint32_t)SESSMGR_GetTimeout(sessMgr);
         BSL_SAL_FREE(hsCtx->ticket);
         hsCtx->ticketSize = 0;
-        ret = SESSMGR_EncryptSessionTicket(LIBCTX_FROM_CTX(ctx), sessMgr, ctx->session, &hsCtx->ticket, &hsCtx->ticketSize);
+        ret = SESSMGR_EncryptSessionTicket(ctx, sessMgr, ctx->session, &hsCtx->ticket, &hsCtx->ticketSize);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16046, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "SESSMGR_EncryptSessionTicket return fail when send new session ticket msg.", 0, 0, 0, 0);
@@ -143,7 +143,7 @@ int32_t Tls13TicketGenerate(TLS_Ctx *ctx)
         return ret;
     }
 
-    ret = SESSMGR_EncryptSessionTicket(LIBCTX_FROM_CTX(ctx), sessMgr, newSession, &hsCtx->ticket, &hsCtx->ticketSize);
+    ret = SESSMGR_EncryptSessionTicket(ctx, sessMgr, newSession, &hsCtx->ticket, &hsCtx->ticketSize);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16051, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Encrypt Session Ticket failed.", 0, 0, 0, 0);
