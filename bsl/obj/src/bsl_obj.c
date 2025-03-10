@@ -331,8 +331,7 @@ int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid
     }
     for (uint32_t i = 0; i < g_tableSize; i++) {
         if ((int32_t)g_oidTable[i].cid == cid) {
-            BSL_ERR_PUSH_ERROR(BSL_OBJ_IS_EXIST);
-            return BSL_OBJ_IS_EXIST;
+            return BSL_SUCCESS;
         }
     }
     if (g_oidHashTable == NULL) {
@@ -346,8 +345,7 @@ int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid
     BslOidInfo *oidInfo = NULL;
     int32_t ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)cid, (uintptr_t *)&oidInfo);
     if (ret == BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(BSL_OBJ_IS_EXIST);
-        return BSL_OBJ_IS_EXIST;
+        return BSL_SUCCESS;
     }
     oidInfo = (BslOidInfo *)BSL_SAL_Calloc(1, sizeof(BslOidInfo));
     if (oidInfo == NULL) {

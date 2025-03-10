@@ -457,9 +457,9 @@ int32_t CRYPT_EAL_RandbytesWithAdinEx(CRYPT_EAL_LibCtx *libCtx,
 int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t len)
 {
     CRYPT_EAL_LibCtx *localCtx = libCtx;
-    if (localCtx == NULL) {
+    // if (localCtx == NULL) {
         localCtx = CRYPT_EAL_GetGlobalLibCtx();
-    }
+    // }
 
     if (localCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
