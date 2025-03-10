@@ -45,6 +45,11 @@ int GetRpcFuncNum(void);
 int RpcTlsNewCtx(CmdData*);
 
 /**
+ * @brief Invoke the RPC to create CTX resources with provider.
+ */
+int RpcProviderTlsNewCtx(CmdData *cmdData);
+
+/**
 * @brief Invoke the RPC to set the CTX information.
 */
 int RpcTlsSetCtx(CmdData*);
