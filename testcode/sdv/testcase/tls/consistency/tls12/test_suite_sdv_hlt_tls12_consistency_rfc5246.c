@@ -56,6 +56,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_ERRO_COMPRESSION_FRAGMENT_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(clientCtxConfig, true);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_256_CBC_SHA");
@@ -125,6 +126,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_ERRO_COMPRESSION_FRAGMENT_TC002(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(clientCtxConfig, true);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_256_CBC_SHA");
@@ -189,6 +191,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CERTFICATE_VERITY_FAIL_TC008(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(serverCtxConfig, true);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_128_GCM_SHA256");
@@ -237,6 +240,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_KEYUPDATE_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     clientCtxConfig->isSupportExtendMasterSecret=true;
     serverCtxConfig->isSupportExtendMasterSecret=true;
     serverCtxConfig->isSupportSessionTicket=true;
@@ -307,6 +311,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_NST_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     clientCtxConfig->isSupportExtendMasterSecret=true;
     serverCtxConfig->isSupportExtendMasterSecret=true;
     serverCtxConfig->isSupportSessionTicket=true;
@@ -367,6 +372,7 @@ void SDV_TLS_TLS12_StateTrans_FUNC_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     clientCtxConfig->isSupportExtendMasterSecret=true;
     serverCtxConfig->isSupportExtendMasterSecret=true;
     serverCtxConfig->isSupportSessionTicket=true;
@@ -435,6 +441,7 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
 
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
+
     serverConfig->isSupportExtendMasterSecret = false;
     HLT_Tls_Res *clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);

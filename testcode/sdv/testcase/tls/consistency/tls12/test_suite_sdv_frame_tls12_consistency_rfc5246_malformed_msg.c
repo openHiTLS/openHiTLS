@@ -24,6 +24,7 @@
 #include "frame_msg.h"
 #include "pack_msg.h"
 #include "stub_crypt.h"
+#include "hlt.h"
 /* END_HEADER */
 
 /* @

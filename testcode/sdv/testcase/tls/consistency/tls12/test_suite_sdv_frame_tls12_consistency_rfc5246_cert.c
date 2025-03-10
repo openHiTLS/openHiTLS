@@ -32,6 +32,7 @@
 #include "hs_kx.c"
 #include "common_func.h"
 #include "stub_crypt.h"
+#include "hlt.h"
 /* END_HEADER */
 
 #define g_uiPort 45678
