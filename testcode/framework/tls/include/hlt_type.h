@@ -45,6 +45,10 @@ extern "C" {
 #define ALPN_CB_NAME_LEN (50)
 #define ALPN_DATA_NAME_LEN (50)
 #define MAX_NO_RENEGOTIATIONCB_LEN (1024)
+#define MAX_PROVIDER_NAME_LEN (256)
+#define MAX_ATTR_NAME_LEN (256)
+#define MAX_PROVIDER_PATH_LEN (256)
+#define MAX_PROVIDER_COUNT (10)
 
 #define DEFAULT_CERT_PATH       "../../testcode/testdata/tls/certificate/der/"
 
@@ -100,6 +104,7 @@ typedef struct ProcessSt HLT_Process;
 
 typedef enum {
     HITLS,
+    HITLS_PROVIDER,
 } TLS_TYPE;
 
 typedef enum {
@@ -235,6 +240,11 @@ typedef struct {
 
     bool isClient;
     uint32_t emptyRecordsNum;
+    char providerPath[MAX_PROVIDER_PATH_LEN];
+    char providerNames[MAX_PROVIDER_COUNT][MAX_PROVIDER_NAME_LEN];
+    int32_t providerLibFmts[MAX_PROVIDER_COUNT];
+    int32_t providerCnt;
+    char attrName[MAX_ATTR_NAME_LEN];
 } HLT_Ctx_Config;
 
 typedef struct {
