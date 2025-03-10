@@ -1,0 +1,5 @@
+UT_TLS13_LOADPROVIDER_GROUP_TC001
+UT_TLS13_LOADPROVIDER_GROUP_TC001:"../testdata/provider/path1":"provider_get_cap_test1":2
+
+UT_TLS13_LOADPROVIDER_SIGNSCHEME_TC001
+UT_TLS13_LOADPROVIDER_SIGNSCHEME_TC001:"../testdata/provider/path1":"provider_get_cap_test1":2
