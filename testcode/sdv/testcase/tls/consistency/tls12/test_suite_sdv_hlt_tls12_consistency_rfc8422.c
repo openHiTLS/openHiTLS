@@ -62,11 +62,13 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC001(void)
 
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256");
     HLT_SetClientVerifySupport(serverCtxConfig, true);
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     // Set the cipher suite to ECDHE_ECDSA and the certificate to ECDSA.
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256");
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
@@ -79,6 +81,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC001(void)
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
 EXIT:
+
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -109,11 +112,13 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC002(void)
 
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(serverCtxConfig, true);
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     // Set the algorithm set to ECDHE_ECDSA and the certificate to the RSA certificate,
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256");
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
@@ -127,6 +132,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC002(void)
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 EXIT:
+
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -164,6 +170,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
@@ -178,6 +185,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC001(void)
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret == 0);
 EXIT:
+
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -211,12 +219,13 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC002(void)
 
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-    TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
 
+    TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
     HLT_SetSignature(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
@@ -228,6 +237,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC002(void)
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret != 0);
 EXIT:
+
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
 }
@@ -248,6 +258,7 @@ static void Test_SetCipherSuites_With_Link(CipherInfo serverCipher, CipherInfo c
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+
     HLT_SetCipherSuites(serverCtxConfig, serverCipher.cipher);
     HLT_SetGroups(serverCtxConfig, serverCipher.groups);
     HLT_SetSignature(serverCtxConfig, serverCipher.signAlg);
@@ -256,6 +267,7 @@ static void Test_SetCipherSuites_With_Link(CipherInfo serverCipher, CipherInfo c
     ASSERT_TRUE(serverRes != NULL);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     HLT_SetCipherSuites(clientCtxConfig, clientCipher.cipher);
     HLT_SetGroups(clientCtxConfig, clientCipher.groups);
     HLT_SetSignature(clientCtxConfig, clientCipher.signAlg);
@@ -279,6 +291,7 @@ static void Test_SetCipherSuites_With_Link(CipherInfo serverCipher, CipherInfo c
     ASSERT_TRUE(memcmp("Hello", readBuf, readLen) == 0);
 
 EXIT:
+
     HLT_FreeAllProcess();
 }
 

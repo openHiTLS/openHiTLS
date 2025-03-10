@@ -150,6 +150,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_TWO_DISOEDER_CHAIN_CERT_FUNC_TC001(void)
     ASSERT_TRUE(clientRes == NULL);
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 EXIT:
+
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
     return;

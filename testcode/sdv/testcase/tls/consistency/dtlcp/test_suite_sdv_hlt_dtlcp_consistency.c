@@ -126,6 +126,7 @@ void SDV_TLS_DTLCP_HANDSHAKE_FUNC_TC001(int connType)
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -146,6 +147,7 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
 {
     int version = TLS1_2;
     int connType = TCP;
+    int32_t serverConfigId = 0;
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
@@ -156,7 +158,6 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(remote);
     ASSERT_TRUE(remoteProcess != NULL);
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -164,6 +165,13 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     HLT_SetRenegotiationSupport(serverCtxConfig, true);
     HLT_SetClientRenegotiateSupport(serverCtxConfig, true);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, serverCtxConfig->providerPath,
+        serverCtxConfig->providerNames, serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt,
+        serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
     DataChannelParam channelParam;
@@ -211,6 +219,7 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
 
 EXIT:
+
     ClearWrapper();
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
@@ -294,6 +303,7 @@ void SDV_TLS_DTLCP_WRITE_APP_FAILED_TC001(int version, int connType)
     ASSERT_TRUE(readLen == strlen("Hello World2"));
     ASSERT_TRUE(memcmp("Hello World2", readBuf, readLen) == 0);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */

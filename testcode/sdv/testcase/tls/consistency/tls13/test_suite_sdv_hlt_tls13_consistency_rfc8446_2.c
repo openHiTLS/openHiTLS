@@ -146,6 +146,7 @@ void ClientCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     }
 
 EXIT:
+
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -192,6 +193,7 @@ void ServerCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     }
 
 EXIT:
+
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
     return;
@@ -202,6 +204,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -215,7 +218,6 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(remoteProcess != NULL);
 
     // Apply for the config context.
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
     void *clientConfig = HLT_TlsNewCtx(TLS1_3);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -224,6 +226,13 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, TLS1_3, false, serverCtxConfig->providerPath,
+        serverCtxConfig->providerNames, serverCtxConfig->providerLibFmts, serverCtxConfig->providerCnt,
+        serverCtxConfig->attrName);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -304,6 +313,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     } while (cnt < 3); // Perform the connection twice.
 
 EXIT:
+
     HITLS_SESS_Free(session);
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -430,6 +440,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_VERSION_FUNC_TC001()
     ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) != 0);
 
 EXIT:
+
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }
@@ -511,6 +522,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_EMPTY_RECORDS_FUNC_TC001(int rec_type)
     ASSERT_EQ(
         (ALERT_Description)HLT_RpcTlsGetAlertDescription(remoteProcess, clientRes->sslId),ALERT_UNEXPECTED_MESSAGE);
 EXIT:
+
     ClearWrapper();
     HLT_FreeAllProcess();
 }
@@ -567,6 +579,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_APPDATA_MAX_LENGTH(void)
     ASSERT_EQ(readLen , REC_MAX_PLAIN_LENGTH);
     ASSERT_EQ(memcmp(writeData, readData, readLen) , 0);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */

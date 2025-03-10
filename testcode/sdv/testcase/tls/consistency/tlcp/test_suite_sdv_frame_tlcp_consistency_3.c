@@ -298,7 +298,6 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
-
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientConfig != NULL);
     ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
@@ -321,6 +320,7 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     ASSERT_EQ(HLT_RpcGetTlsAcceptResult(serverRes->acceptId), testExpect->acceptExpect);
 
 EXIT:
+
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
 }

@@ -42,12 +42,14 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHER_SUITE_NOT_SUITABLE_CERT_TC001(void
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
 
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256");
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL); // failed in
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
 
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
@@ -59,6 +61,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHER_SUITE_NOT_SUITABLE_CERT_TC001(void
     ASSERT_TRUE(clientRes == NULL);
 
 EXIT:
+
     HLT_FreeAllProcess();
     return;
 }
@@ -89,10 +92,13 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_NOTSET_CERT_TC001(void)
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
 
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
+
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_256_CBC_SHA");
     HLT_SetSignature(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
 
@@ -104,6 +110,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_NOTSET_CERT_TC001(void)
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -133,12 +140,14 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_SERVER_WITHOUT_ROOT_CERT_TC001(void)
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
 
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(serverCtxConfig, true);
 
     // Set the root certificate and send a certificate chain that does not contain the root certificate.
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(clientCtxConfig, true);
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_256_CBC_SHA");
@@ -150,6 +159,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_SERVER_WITHOUT_ROOT_CERT_TC001(void)
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -177,6 +187,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_SET_ERRO_ROOT_CERT_TC001(void)
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
 
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
 
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
@@ -185,6 +196,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_SET_ERRO_ROOT_CERT_TC001(void)
     // The root certificate is incorrectly set on the client.
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
 
     HLT_SetCertPath(clientCtxConfig, "rsa_sha512/otherRoot.crt", "rsa_sha512/otherInter.crt",
         "rsa_sha512/otherInter2.crt", "rsa_sha512/otherInter2.key", "NULL", "NULL");
@@ -195,6 +207,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_SET_ERRO_ROOT_CERT_TC001(void)
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 EXIT:
+
     HLT_FreeAllProcess();
     return;
 }
@@ -244,6 +257,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CIPHERSUITE_SIG_MATCH_CERT_SIG_TC002()
     ASSERT_TRUE(clientRes == NULL);
 
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -285,6 +299,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC001()
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
 
+
     HLT_SetCertPath(clientCtxConfig, "rsa_sha512/root.der", "rsa_sha512/intca.der",
         "rsa_sha512/server.der", "rsa_sha512/server.key.der",  "NULL", "NULL");
     clientCtxConfig->needCheckKeyUsage = true;
@@ -292,6 +307,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC001()
     clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */
@@ -336,6 +352,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC002()
     clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
 EXIT:
+
     HLT_FreeAllProcess();
 }
 /* END_CASE */
