@@ -44,6 +44,10 @@
 
 #define PROVIDER_LOAD_SAIZE_2 2
 #define PATH_EXCEED 4097
+#define NEW_PARA_ALGID (BSL_CID_MAX + 1)
+#define NEW_PKEY_ALGID (BSL_CID_MAX + 2)
+#define NEW_SIGN_HASH_ALGID (BSL_CID_MAX + 3)
+#define NEW_HASH_ALGID (BSL_CID_MAX + 4)
 
 /**
  * @test SDV_CRYPTO_PROVIDER_LOAD_FUNC_TC001
@@ -380,9 +384,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, 
     ASSERT_TRUE(pkeyCtx == NULL);
 
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
-    }
+    CRYPT_EAL_LibCtxFree(libCtx);
     return;
 }
 /* END_CASE */
@@ -426,9 +428,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
     BSL_SAL_FREE(tempData);
 
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
-    }
+    CRYPT_EAL_LibCtxFree(libCtx);
     return;
 }
 /* END_CASE */
@@ -475,12 +475,8 @@ void SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001(char *path, char *test1, int cmd, He
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
-    }
-    if (ctx != NULL) {
-        CRYPT_EAL_MdFreeCtx(ctx);
-    }
+    CRYPT_EAL_LibCtxFree(libCtx);
+    CRYPT_EAL_MdFreeCtx(ctx);
     return;
 }
 /* END_CASE */
@@ -537,6 +533,14 @@ static int32_t GroupCapsCallback(BSL_Param *param, void *args)
         ASSERT_EQ(*((int32_t *)secBitsParam->value), 128);
         ASSERT_EQ(*((uint32_t *)versionBitsParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
         ASSERT_EQ(*((bool *)isKemParam->value), false);
+    } else if (groupNameParam->value != NULL && strcmp((char *)groupNameParam->value, "test_new_group") == 0) {
+        // Verify the custom group parameters from provider_get_cap_test1
+        ASSERT_EQ(*((uint16_t *)groupIdParam->value), 477);
+        ASSERT_EQ(*((int32_t *)paraIdParam->value), NEW_PARA_ALGID);
+        ASSERT_EQ(*((int32_t *)algIdParam->value), NEW_PKEY_ALGID);
+        ASSERT_EQ(*((int32_t *)secBitsParam->value), 1024);
+        ASSERT_EQ(*((uint32_t *)versionBitsParam->value), (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
+        ASSERT_EQ(*((bool *)isKemParam->value), false);
     }
 
     return CRYPT_SUCCESS;
@@ -578,6 +582,9 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
     ASSERT_TRUE(signHashAlgIdParam->valueLen == sizeof(int32_t));
     signHashAlgIdParam->useLen = sizeof(int32_t);
 
+    BSL_Param *signHashAlgOidParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_OID);
+    BSL_Param *signHashAlgNameParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_NAME);
+
     BSL_Param *signAlgIdParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID);
     ASSERT_TRUE(signAlgIdParam != NULL);
     ASSERT_EQ(signAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
@@ -589,7 +596,8 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
     ASSERT_EQ(hashAlgIdParam->valueType, BSL_PARAM_TYPE_INT32);
     ASSERT_TRUE(hashAlgIdParam->valueLen == sizeof(int32_t));
     hashAlgIdParam->useLen = sizeof(int32_t);
-
+    BSL_Param *hashAlgOidParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID);
+    BSL_Param *hashAlgNameParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME);
     BSL_Param *secBitsParam = BSL_PARAM_FindParam(param, CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS);
     ASSERT_TRUE(secBitsParam != NULL);
     ASSERT_EQ(secBitsParam->valueType, BSL_PARAM_TYPE_INT32);
@@ -618,6 +626,32 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
         ASSERT_EQ(*((int32_t *)secBitsParam->value), 128);
         ASSERT_EQ(*((uint32_t *)certVersionParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
         ASSERT_EQ(*((uint32_t *)chainVersionParam->value), (TLS_VERSION_MASK | DTLS_VERSION_MASK));
+    } else if (sigNameParam->value != NULL && strcmp((char *)sigNameParam->value, "test_new_sign_alg_name") == 0) {
+        ASSERT_EQ(*((uint16_t *)sigIanaIdParam->value), 23333);
+        ASSERT_EQ(*((int32_t *)keyTypeParam->value), CRYPT_PKEY_ECDSA);
+        ASSERT_EQ(*((int32_t *)paraIdParam->value), BSL_CID_SECP384R1);
+        if (signHashAlgOidParam != NULL) {
+            char *signHashAlgOid = (char *)signHashAlgOidParam->value;
+            ASSERT_EQ(strcmp(signHashAlgOid, "\150\40\66\77\55"), 0);
+        }
+        if (signHashAlgNameParam != NULL) {
+            char *signHashAlgName = (char *)signHashAlgNameParam->value;
+            ASSERT_EQ(strcmp(signHashAlgName, "test_new_sign_with_md_name"), 0);
+        }
+        ASSERT_EQ(*((int32_t *)signHashAlgIdParam->value), NEW_SIGN_HASH_ALGID);
+        ASSERT_EQ(*((int32_t *)signAlgIdParam->value), CRYPT_PKEY_ECDSA);
+        ASSERT_EQ(*((int32_t *)hashAlgIdParam->value), NEW_HASH_ALGID);
+        if (hashAlgOidParam != NULL) {
+            char *hashAlgOid = (char *)hashAlgOidParam->value;
+            ASSERT_EQ(strcmp(hashAlgOid, "\150\40\66\71\55"), 0);
+        }
+        if (hashAlgNameParam != NULL) {
+            char *hashAlgName = (char *)hashAlgNameParam->value;
+            ASSERT_EQ(strcmp(hashAlgName, "test_new_md_name"), 0);
+        }
+        ASSERT_EQ(*((int32_t *)secBitsParam->value), 1024);
+        ASSERT_EQ(*((uint32_t *)certVersionParam->value), (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
+        ASSERT_EQ(*((uint32_t *)chainVersionParam->value), (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
     }
 
     return CRYPT_SUCCESS;
@@ -684,9 +718,303 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
 
 EXIT:
-    if (libCtx != NULL) {
-        CRYPT_EAL_LibCtxFree(libCtx);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return;
+}
+/* END_CASE */
+
+static int32_t CountProvidersCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    (void)provMgr;
+    int *count = (int *)args;
+    if (count != NULL) {
+        (*count)++;
     }
+    return CRYPT_SUCCESS;
+}
+
+// Callback function that returns an error
+static int32_t ErrorCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    (void)provMgr;
+    int *count = (int *)args;
+    if (count != NULL) {
+        (*count)++;
+    }
+    return CRYPT_NOT_SUPPORT;
+}
+    
+/**
+ * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC001
+ * @title Test CRYPT_EAL_ProviderProcAll functionality
+ * @precon None
+ * @brief
+ *    1. Test processing all loaded providers with a callback function
+ *    2. Test error handling for NULL inputs
+ *    3. Test error propagation from callback function
+ * @expect
+ *    1. Successfully process all providers
+ *    2. Return CRYPT_NULL_INPUT for NULL inputs
+ *    3. Properly propagate errors from callback function
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_PROC_ALL_TC001(char *path, char *test1, char *test2, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    int providerCount = 0;
+    int errorProviderCount = 0;
+
+    // Initialize library context
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    // Set provider path
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    
+    // Load multiple providers
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    
+    // Test 1: Process all providers with a counting callback
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
+    ASSERT_EQ(providerCount, 3); // Should have processed 3 providers
+
+    // Test 2: Test NULL libCtx
+    providerCount = 0;
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(NULL, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
+    ASSERT_EQ(providerCount, 1);
+
+    // Test 3: Test NULL inputs
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, NULL, &providerCount), CRYPT_NULL_INPUT);
+    
+    // Test 4: Test error propagation from callback
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, ErrorCallback, &errorProviderCount), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(errorProviderCount, 1); // Should have processed only the first provider before error
+    
+    // Cleanup
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
+    
+EXIT:
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return;
+}
+/* END_CASE */
+
+typedef struct {
+    int totalProviders;
+    int providersWithMd5;
+    int providersWithSha256;
+} ProviderStats;
+
+int32_t CheckAlgorithmsCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
+{
+    ProviderStats *stats = (ProviderStats *)args;
+    if (stats != NULL) {
+        stats->totalProviders++;
+
+        const CRYPT_EAL_Func *funcs;
+        void *provCtx;
+        int32_t ret = CRYPT_EAL_ProviderGetFuncs(provMgr->libCtx, CRYPT_EAL_OPERAID_HASH,
+                                                CRYPT_MD_MD5, NULL, &funcs, &provCtx);
+        if (ret == CRYPT_SUCCESS && funcs != NULL) {
+            stats->providersWithMd5++;
+        }
+
+        ret = CRYPT_EAL_ProviderGetFuncs(provMgr->libCtx, CRYPT_EAL_OPERAID_HASH,
+                                        CRYPT_MD_SHA256, NULL, &funcs, &provCtx);
+        if (ret == CRYPT_SUCCESS && funcs != NULL) {
+            stats->providersWithSha256++;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC002
+ * @title Test CRYPT_EAL_ProviderProcAll with specific provider operations
+ * @precon None
+ * @brief
+ *    1. Test processing all providers to collect specific information
+ *    2. Test processing all providers to perform specific operations
+ * @expect
+ *    1. Successfully collect information from all providers
+ *    2. Successfully perform operations on all providers
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    ProviderStats stats = {0};
+
+    // Initialize library context
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    // Set provider path
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    
+    // Load multiple providers
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
+    
+    // Process all providers to collect algorithm information
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, CheckAlgorithmsCallback, &stats), CRYPT_SUCCESS);
+    
+    // Verify results
+    ASSERT_EQ(stats.totalProviders, 3);
+    ASSERT_TRUE(stats.providersWithMd5 > 0); // At least one provider should support MD5
+    ASSERT_TRUE(stats.providersWithSha256 > 0); // At least one provider should support SHA256
+    
+    // Test with empty provider list
+    CRYPT_EAL_LibCtx *emptyLibCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(emptyLibCtx != NULL);
+    
+    ProviderStats emptyStats = {0};
+    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(emptyLibCtx, CheckAlgorithmsCallback, &emptyStats), CRYPT_SUCCESS);
+    ASSERT_EQ(emptyStats.totalProviders, 0); // No providers should be processed
+    
+    // Cleanup
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
+    
+EXIT:
+    CRYPT_EAL_LibCtxFree(libCtx);
+    CRYPT_EAL_LibCtxFree(emptyLibCtx);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001
+ * @title Test provider_get_cap_test1 provider functionality
+ * @precon None
+ * @brief
+ *    1. Load provider_get_cap_test1 provider
+ *    2. Test key generation, shared key computation, signing and verification
+ * @expect
+ *    1. Successfully load the provider
+ *    2. Successfully perform cryptographic operations
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
+    CRYPT_EAL_PkeyCtx *keyCtx1 = NULL;
+    CRYPT_EAL_PkeyCtx *keyCtx2 = NULL;
+    uint8_t sharedKey1[256] = {0};
+    uint32_t sharedKeyLen1 = sizeof(sharedKey1);
+    uint8_t sharedKey2[256] = {0};
+    uint32_t sharedKeyLen2 = sizeof(sharedKey2);
+    
+    // Initialize library context
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, get_cap_test1, NULL, &providerMgr), CRYPT_SUCCESS);
+    ASSERT_TRUE(providerMgr != NULL);
+
+    int groupCount = 0;
+    int sigAlgCount = 0;
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP,
+        (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
+    ASSERT_EQ(groupCount, 1);
+
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP,
+        (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback, &sigAlgCount), CRYPT_SUCCESS);
+    ASSERT_EQ(sigAlgCount, 1);
+
+    keyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=test_getcap");
+    ASSERT_TRUE(keyCtx1 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx1, NEW_PARA_ALGID), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx1), CRYPT_SUCCESS);
+
+    keyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=test_getcap");
+    ASSERT_TRUE(keyCtx2 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx2, NEW_PARA_ALGID), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(keyCtx1, keyCtx2, sharedKey1, &sharedKeyLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(keyCtx2, keyCtx1, sharedKey2, &sharedKeyLen2), CRYPT_SUCCESS);
+    ASSERT_TRUE(sharedKeyLen1 > 0);
+    ASSERT_TRUE(sharedKeyLen2 > 0);
+    ASSERT_EQ(memcmp(sharedKey1, sharedKey2, sharedKeyLen1), 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(keyCtx1);
+    CRYPT_EAL_PkeyFreeCtx(keyCtx2);
+    CRYPT_EAL_ProviderUnload(libCtx, cmd, get_cap_test1);
+    CRYPT_EAL_LibCtxFree(libCtx);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002
+ * @title Test provider_get_cap_test1 provider signature and verification
+ * @precon None
+ * @brief
+ *    1. Load provider_get_cap_test1 provider
+ *    2. Test signature generation and verification with ECDSA
+ * @expect
+ *    1. Successfully load the provider
+ *    2. Successfully sign and verify data
+ *    3. Verification fails with modified signature
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002(char *path, char *get_cap_test1, int cmd)
+{
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
+    CRYPT_EAL_PkeyCtx *keyCtx = NULL;
+    uint8_t signature[128] = {0};
+    uint32_t signatureLen = sizeof(signature);
+    uint8_t testData[] = "Test data for signing and verification with ECDSA";
+    uint32_t testDataLen = sizeof(testData) - 1;
+    
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, get_cap_test1, NULL, &providerMgr), CRYPT_SUCCESS);
+    ASSERT_TRUE(providerMgr != NULL);
+    
+    keyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDSA, 0, "provider=test_getcap");
+    ASSERT_TRUE(keyCtx != NULL);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx, NEW_PARA_ALGID), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeySign(keyCtx, CRYPT_MD_SHA256, testData, testDataLen, signature, &signatureLen), 0);
+    ASSERT_TRUE(signatureLen > 0);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(keyCtx, CRYPT_MD_SHA256, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
+    
+    // Test 4: Modify signature and verify it should fail
+    signature[10] ^= 0xFF; // Flip bits in the signature
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(keyCtx, CRYPT_MD_SHA256, testData, testDataLen, signature, signatureLen),
+        CRYPT_ECDSA_VERIFY_FAIL);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(keyCtx);
+    CRYPT_EAL_ProviderUnload(libCtx, cmd, get_cap_test1);
+    CRYPT_EAL_LibCtxFree(libCtx);
     return;
 }
 /* END_CASE */
