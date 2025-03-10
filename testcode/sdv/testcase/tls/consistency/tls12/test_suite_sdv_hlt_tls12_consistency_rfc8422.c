@@ -109,6 +109,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC002(void)
 
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
+
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
     HLT_SetClientVerifySupport(serverCtxConfig, true);
 
@@ -159,7 +160,6 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC001(void)
 
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
-
     TestSetCertPath(serverCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -216,7 +216,6 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC002(void)
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
     TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
-
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
     HLT_SetSignature(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");

@@ -456,10 +456,10 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     // Configure the interface for constructing abnormal messages.
     handle->ctx = serverRes->ssl;
     ASSERT_TRUE(HLT_SetFrameHandle(handle) == 0);
+
     // Set up a TLS link on the remote client.
     HLT_Ctx_Config *clientConfig1 = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig1 != NULL);
-
     ASSERT_TRUE(HLT_SetCipherSuites(clientConfig1, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0);
     ASSERT_TRUE(HLT_SetGroups(clientConfig1, "HITLS_EC_GROUP_SECP256R1") == 0);
     ASSERT_TRUE(HLT_SetSignature(clientConfig1, "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256") == 0);

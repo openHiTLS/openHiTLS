@@ -2263,6 +2263,7 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
 
     serverConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
     ASSERT_TRUE(serverConfig != NULL);
+
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
