@@ -81,9 +81,9 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001()
     BslCid retrievedSignId = BSL_OBJ_GetSignIdFromHashAndAsymId(asymId, hashId);
     ASSERT_EQ(signId, retrievedSignId);
 
-    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_OBJ_IS_EXIST);
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
     signId = BSL_CID_SHA256WITHRSAENCRYPTION;
-    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_OBJ_IS_EXIST);
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
 
     ASSERT_EQ(BSL_OBJ_CreateSignId(BSL_CID_UNKNOWN, asymId, hashId), BSL_INVALID_ARG);
 
@@ -115,7 +115,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     char aesOidData[] = "\140\206\110\1\145\3\4\1\2";
     BslOidString aesOid = {9, aesOidData, BSL_OID_GLOBAL};
 
-    ASSERT_EQ(BSL_OBJ_Create(&aesOid, aesOidName, aesCid), BSL_OBJ_IS_EXIST);
+    ASSERT_EQ(BSL_OBJ_Create(&aesOid, aesOidName, aesCid), BSL_SUCCESS);
 
     ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, testCid), BSL_SUCCESS);
 
@@ -131,7 +131,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     ASSERT_TRUE(retrievedName != NULL);
     ASSERT_EQ(strcmp(testOidName, retrievedName), 0);
 
-    ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, testCid), BSL_OBJ_IS_EXIST);
+    ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, testCid), BSL_SUCCESS);
 
     ASSERT_EQ(BSL_OBJ_Create(NULL, testOidName, testCid), BSL_INVALID_ARG);
 
