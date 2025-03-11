@@ -1032,7 +1032,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
 #ifdef HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_128_CBC_SHA256
     {.enable = true,
         .name = CIPHER_NAME("HITLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256"),
-        .stdName = CIPHER_NAME("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"),
+        .stdName = CIPHER_NAME("TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256"),
         .cipherSuite = HITLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256,
         .cipherAlg = HITLS_CIPHER_AES_128_CBC,
         .kxAlg = HITLS_KEY_EXCH_ECDHE_PSK,
@@ -1048,7 +1048,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
 #ifdef HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_256_CBC_SHA384
     {.enable = true,
         .name = CIPHER_NAME("HITLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384"),
-        .stdName = CIPHER_NAME("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"),
+        .stdName = CIPHER_NAME("TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384"),
         .cipherSuite = HITLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384,
         .cipherAlg = HITLS_CIPHER_AES_256_CBC,
         .kxAlg = HITLS_KEY_EXCH_ECDHE_PSK,
