@@ -72,7 +72,10 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
     uint32_t len = 0u;
     int32_t ret = 0;
 
-    uint16_t version = HITLS_VERSION_DTLS1;
+    uint16_t version = HITLS_VERSION_DTLS10;
+    if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+        version = HITLS_VERSION_TLCP_DTLCP11;
+    }
 
     BSL_Uint16ToByte(version, &buf[offset]); // version number
     offset += sizeof(uint16_t);
