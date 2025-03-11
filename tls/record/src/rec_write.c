@@ -117,6 +117,9 @@ void DtlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
 
     if (ctx->negotiatedInfo.version == 0) {
         plainMsg->version = HITLS_VERSION_DTLS10;
+        if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+            plainMsg->version = HITLS_VERSION_TLCP_DTLCP11;
+        }
     } else {
         plainMsg->version = ctx->negotiatedInfo.version;
     }

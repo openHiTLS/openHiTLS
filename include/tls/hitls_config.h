@@ -87,12 +87,6 @@ extern "C" {
 #define HITLS_DTLS_ANY_VERSION 0xfe00u
 
 /**
- * @ingroup  hitls_config
- * @brief    DTLS HelloVerifyRequest version
-*/
-#define HITLS_VERSION_DTLS1 0xfeffu
-
-/**
   * @ingroup hitls_config
   * @brief   DTLS 1.2 version
  */
