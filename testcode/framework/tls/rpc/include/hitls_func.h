@@ -34,6 +34,9 @@ int HitlsInit(void);
 */
 void* HitlsNewCtx(TLS_VERSION tlsVersion);
 
+HITLS_Config *HitlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN], int *providerLibFmts,
+    int providerCnt, char *attrName, TLS_VERSION tlsVersion);
+
 /**
 * @brief HiTLS Releases connection management resources.
 */

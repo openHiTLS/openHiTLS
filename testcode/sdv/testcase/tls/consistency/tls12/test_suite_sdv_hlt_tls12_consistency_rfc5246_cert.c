@@ -93,6 +93,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_NOTSET_CERT_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
+
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_RSA_WITH_AES_256_CBC_SHA");
     HLT_SetSignature(clientCtxConfig, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256");
 
