@@ -87,7 +87,6 @@ typedef enum {
 
 static void Test_PskConnect(uint32_t serverMode, PskStatus pskStatus)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -207,7 +206,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_MODES_FUNC_TC004()
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_MODES_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     ResumeTestInfo testInfo = {0};
     testInfo.uioType = BSL_UIO_TCP;
@@ -254,7 +252,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_MODES_FUNC_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     RecWrapper wrapper = {
         TRY_SEND_CLIENT_HELLO,
@@ -295,7 +292,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_CERTICATE_VERIFY_FAIL_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -369,7 +365,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKMODEZERO_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     RecWrapper wrapper = {
@@ -441,7 +436,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     uint64_t groupreturn[] = {HITLS_EC_GROUP_SECP384R1, };
 
@@ -509,7 +503,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKKEYSHARE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     RecWrapper wrapper = {
@@ -592,7 +585,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKKEYSHARE_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     RecWrapper wrapper = {TRY_SEND_SERVER_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_Server_Keyshare4};
@@ -971,7 +963,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKETLIFETIME_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};

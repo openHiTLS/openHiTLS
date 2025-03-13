@@ -26,7 +26,7 @@
 #include "crypt_entropy.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 
@@ -241,10 +241,6 @@ static int32_t RandInitCheck(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod **seedMet
 DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
 {
     int32_t ret;
-    if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DRBG_PARAM_ERROR);
-        return NULL;
-    }
     CRYPT_RandSeedMethod seedMethArray = {0};
     CRYPT_RandSeedMethod *seedMeth = &seedMethArray;
     void *seedCtx = NULL;

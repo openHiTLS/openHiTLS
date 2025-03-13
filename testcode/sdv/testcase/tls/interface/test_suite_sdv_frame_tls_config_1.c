@@ -110,7 +110,7 @@ typedef struct {
     HITLS_Session *clientSession; /* Set the session to the client for session resume. */
 } ResumeTestInfo;
 
-HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(const char *file);
+HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(HITLS_Config *tlsCfg, const char *file);
 void SAL_CERT_X509Free(HITLS_CERT_X509 *cert);
 
 static HITLS_Config *GetHitlsConfigViaVersion(int ver)
@@ -508,7 +508,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_CFG_SET_GET_KEYEXCHMODE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1191,7 +1190,7 @@ void UT_TLS_CFG_SET_GET_CERTIFICATE_API_TC001(int version, char *certFile)
 {
     HitlsInit();
     HITLS_Config *tlsConfig = NULL;
-    HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(certFile);
+    HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(tlsConfig, certFile);
     tlsConfig = HitlsNewCtx(version);
     ASSERT_TRUE(tlsConfig != NULL);
     ASSERT_TRUE(HITLS_CFG_SetCertificate(NULL, cert, false) == HITLS_NULL_INPUT);
@@ -1276,8 +1275,8 @@ void UT_TLS_CFG_ADD_CHAINCERT_API_TC001(int version, char *certFile, char *addCe
     HITLS_Config *tlsConfig = NULL;
     HITLS_CERT_X509 *cert = HITLS_CFG_ParseCert(tlsConfig, (const uint8_t *)certFile, strlen(certFile) + 1, TLS_PARSE_TYPE_FILE,
         TLS_PARSE_FORMAT_ASN1);
-    cert = HiTLS_X509_LoadCertFile(certFile);
-    HITLS_CERT_X509 *addCert = HiTLS_X509_LoadCertFile(addCertFile);
+    cert = HiTLS_X509_LoadCertFile(tlsConfig, certFile);
+    HITLS_CERT_X509 *addCert = HiTLS_X509_LoadCertFile(tlsConfig, addCertFile);
 
     tlsConfig = HitlsNewCtx(version);
     ASSERT_TRUE(tlsConfig != NULL);
@@ -1326,7 +1325,7 @@ void UT_HITLS_CFG_REMOVE_CERTANDKEY_API_TC001(int version, char *certFile, char 
 {
     HitlsInit();
     HITLS_Config *tlsConfig = NULL;
-    HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(certFile);
+    HITLS_CERT_X509 *cert = HiTLS_X509_LoadCertFile(tlsConfig, certFile);
 
     tlsConfig = HitlsNewCtx(version);
     ASSERT_TRUE(tlsConfig != NULL);
@@ -1379,8 +1378,8 @@ void UT_HITLS_CFG_ADD_EXTRA_CHAINCERT_API_TC001(int version, char *certFile1, ch
 {
     HitlsInit();
     HITLS_Config *tlsConfig = NULL;
-    HITLS_CERT_X509 *cert1 = HiTLS_X509_LoadCertFile(certFile1);
-    HITLS_CERT_X509 *cert2 = HiTLS_X509_LoadCertFile(certFile2);
+    HITLS_CERT_X509 *cert1 = HiTLS_X509_LoadCertFile(tlsConfig, certFile1);
+    HITLS_CERT_X509 *cert2 = HiTLS_X509_LoadCertFile(tlsConfig, certFile2);
     tlsConfig = HitlsNewCtx(version);
     ASSERT_TRUE(tlsConfig != NULL);
     ASSERT_TRUE(HITLS_CFG_AddExtraChainCert(NULL, cert1) == HITLS_NULL_INPUT);

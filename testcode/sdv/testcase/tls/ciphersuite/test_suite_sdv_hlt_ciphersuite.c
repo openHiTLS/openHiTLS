@@ -187,7 +187,6 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
-
     if (version == TLCP1_1 || version == DTLCP1_1) {
         SetGMCert(serverCtxConfig, clientCtxConfig, cert);
     } else {

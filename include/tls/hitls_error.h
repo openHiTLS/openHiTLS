@@ -104,7 +104,8 @@ typedef enum {
     HITLS_CONFIG_ERR_LOAD_CERT_BUFFER,             /**< Failed to load the certificate buffer. */
     HITLS_CONFIG_ERR_LOAD_KEY_FILE,                /**< Failed to load the key file. */
     HITLS_CONFIG_ERR_LOAD_KEY_BUFFER,              /**< Failed to load the key buffer. */
-
+    HITLS_CONFIG_ERR_LOAD_GROUP_INFO,              /**< Failed to load the group info. */
+    HITLS_CONFIG_ERR_LOAD_SIGN_SCHEME_INFO,        /**< Failed to load the signature scheme info. */
     HITLS_CM_FAIL_START = 0x02030001,              /**< Error start bit of the conn module. */
     HITLS_CM_LINK_FATAL_ALERTED,                   /**< link sent fatal alert. */
     HITLS_CM_LINK_CLOSED,                          /**< Link has been closed. */
@@ -271,6 +272,7 @@ typedef enum {
     HITLS_CERT_KEY_CTRL_ERR_IS_DIGITAL_SIGN_USAGE,  /**< Determine whether the certificate fails to be digital sign. */
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_CERT_SIGN_USAGE, /**< Determine whether the certificate fails to be cert sign. */
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE, /**< Determine whether the certificate fails to be agreement. */
+    HITLS_CERT_KEY_CTRL_ERR_GET_PARAM_ID,          /**< Failed to obtain the parameter ID. */
     HITLS_CERT_ERR_INVALID_KEY_TYPE,                /**< Invalid key type */
     HITLS_CERT_ERR_CHECK_CERT_AND_KEY,              /**< Certificate and private key nonmatch. */
     HITLS_CERT_ERR_NO_CURVE_MATCH,                  /**< Certificate and elliptic curve ID nonmatch. */

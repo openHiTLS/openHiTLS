@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 
 #include "uio_base.h"
+#include "hitls.h"
 #include "hitls_cert_type.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -31,6 +32,7 @@
 #include "hitls_alpn.h"
 #include "hitls_security.h"
 #include "hitls_crypt_init.h"
+#include "tls.h"
 #include "hlt_type.h"
 #include "logger.h"
 #include "tls_res.h"
@@ -42,6 +44,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_algid.h"
 #include "channel_res.h"
+#include "crypt_eal_provider.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -181,6 +184,7 @@ static const HitlsConfig g_groupList[] = {
     {"HITLS_FF_DHE_4096", HITLS_FF_DHE_4096},
     {"HITLS_FF_DHE_6144", HITLS_FF_DHE_6144},
     {"HITLS_FF_DHE_8192", HITLS_FF_DHE_8192},
+    {"test_new_group", 477}, // for new group
 };
 
 static const HitlsConfig g_signatureList[] = {
@@ -221,9 +225,101 @@ int HitlsInit(void)
     int ret;
     ret = RegMemCallback(MEM_CALLBACK_DEFAULT);
     ret |= RegCertCallback(CERT_CALLBACK_DEFAULT);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
     HITLS_CryptMethodInit();
+#endif
     return ret;
+}
+
+static HITLS_Lib_Ctx *InitProviderLibCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN],
+    int *providerLibFmts, int providerCnt)
+{
+    int ret;
+    HITLS_Lib_Ctx *libCtx = CRYPT_EAL_LibCtxNew();
+    if (libCtx == NULL) {
+        LOG_ERROR("CRYPT_EAL_LibCtxNew Error");
+        return NULL;
+    }
+    if (providerPath != NULL && strlen(providerPath) > 0) {
+        ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, providerPath);
+        if (ret != EOK) {
+            CRYPT_EAL_LibCtxFree(libCtx);
+            LOG_ERROR("CRYPT_EAL_ProviderSetLoadPath Error");
+            return NULL;
+        }
+    }
+    for (int i = 0; i < providerCnt; i++) {
+        ret = CRYPT_EAL_ProviderLoad(libCtx, (BSL_SAL_LibFmtCmd)providerLibFmts[i], providerNames[i], NULL, NULL);
+        if (ret != EOK) {
+            CRYPT_EAL_LibCtxFree(libCtx);
+            LOG_ERROR("CRYPT_EAL_ProviderLoad Error");
+            return NULL;
+        }
+    }
+    return libCtx;
+}
+
+HITLS_Config *HitlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN], int *providerLibFmts,
+    int providerCnt, char *attrName, TLS_VERSION tlsVersion)
+{
+    char *tmpAttrName = NULL;
+    if (attrName != NULL && strlen(attrName) > 0) {
+        tmpAttrName = attrName;
+    }
+    HITLS_Config *hitlsConfig = NULL;
+    HITLS_Lib_Ctx *libCtx = NULL;
+    if (providerCnt > 0) {
+        libCtx = InitProviderLibCtx(providerPath, providerNames, providerLibFmts, providerCnt);
+        if (libCtx == NULL) {
+            LOG_ERROR("InitProviderLibCtx Error");
+            return NULL;
+        }
+    }
+    switch (tlsVersion) {
+        case DTLS1_2:
+            LOG_DEBUG("HiTLS New DTLS1_2 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLS12Config(libCtx, tmpAttrName);
+            break;
+        case TLS1_2:
+            LOG_DEBUG("HiTLS New TLS1_2 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLS12Config(libCtx, tmpAttrName);
+            break;
+        case TLS1_3:
+            LOG_DEBUG("HiTLS New TLS1_3 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLS13Config(libCtx, tmpAttrName);
+            break;
+        case TLS_ALL:
+            LOG_DEBUG("HiTLS New TLS_ALL Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLSConfig(libCtx, tmpAttrName);
+            break;
+#ifdef HITLS_TLS_PROTO_TLCP11
+        case TLCP1_1:
+            LOG_DEBUG("HiTLS New TLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewTLCPConfig(libCtx, tmpAttrName);
+            break;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLCP11
+        case DTLCP1_1:
+            LOG_DEBUG("HiTLS New DTLCP1_1 Ctx");
+            hitlsConfig = HITLS_CFG_ProviderNewDTLCPConfig(libCtx, tmpAttrName);
+            break;
+#endif
+        default:
+            /* Unknown protocol type */
+            break;
+    }
+    if (hitlsConfig == NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+        LOG_ERROR("HITLS Not Support This TlsVersion's ID %d", tlsVersion);
+    }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    // Setting the security level
+    HITLS_CFG_SetSecurityLevel(hitlsConfig, HITLS_SECURITY_LEVEL_ZERO);
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    return hitlsConfig;
 }
 
 HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
@@ -274,6 +370,9 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
 
 void HitlsFreeCtx(void *ctx)
 {
+    if (ctx == NULL) {
+        return;
+    }
     HITLS_CFG_FreeConfig(ctx);
 }
 
@@ -563,7 +662,10 @@ void *HitlsNewSsl(void *ctx)
 
 void HitlsFreeSsl(void *ssl)
 {
-    HITLS_Free(ssl);
+    HITLS_Ctx *ctx = (HITLS_Ctx *)ssl;
+    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CTX(ctx);
+    HITLS_Free(ctx);
+    CRYPT_EAL_LibCtxFree(libCtx);
 }
 
 const BSL_UIO_Method *GetDefaultMethod(HILT_TransportType type)

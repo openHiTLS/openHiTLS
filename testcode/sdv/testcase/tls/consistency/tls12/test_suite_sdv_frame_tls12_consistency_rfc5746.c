@@ -49,6 +49,7 @@
 #include "change_cipher_spec.h"
 #include "common_func.h"
 #include "uio_base.h"
+#include "stub_crypt.h"
 
 #define READ_BUF_SIZE (18 * 1024)
 /* END_HEADER */
@@ -271,6 +272,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -343,6 +345,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -448,6 +451,7 @@ EXIT:
     FRAME_FreeLink(server1);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -654,6 +658,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 

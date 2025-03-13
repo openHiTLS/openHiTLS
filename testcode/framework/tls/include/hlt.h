@@ -55,6 +55,9 @@ int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetExtenedMasterSecretSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support);
 int HLT_SetCipherSuites(HLT_Ctx_Config* ctxConfig, const char* cipherSuites);
+int HLT_SetProviderPath(HLT_Ctx_Config *ctxConfig, char *providerPath);
+int HLT_SetProviderAttrName(HLT_Ctx_Config *ctxConfig, char *attrName);
+int HLT_AddProviderInfo(HLT_Ctx_Config *ctxConfig, char *providerName, int providerLibFmt);
 int HLT_SetTls13CipherSuites(HLT_Ctx_Config *ctxConfig, const char *cipherSuites);
 int HLT_SetEcPointFormats(HLT_Ctx_Config* ctxConfig, const char* pointFormat);
 int HLT_SetGroups(HLT_Ctx_Config* ctxConfig, const char* groups);
@@ -90,6 +93,8 @@ int HLT_LibraryInit(TLS_TYPE tlsType);
 HLT_Tls_Res* HLT_ProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     HLT_Ctx_Config *ctxConfig, HLT_Ssl_Config *sslConfig);
 void* HLT_TlsNewCtx(TLS_VERSION tlsVersion);
+void* HLT_TlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN], int *providerLibFmts,
+    int providerCnt, char *attrName, TLS_VERSION tlsVersion);
 HLT_Ctx_Config* HLT_NewCtxConfig(char* setFile, const char* key);
 HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClient);
 int HLT_TlsSetCtx(void* ctx, HLT_Ctx_Config* config);
@@ -120,6 +125,8 @@ void HLT_TlsFreeSession(void *session);
 
 // The RPC controls the remote process to invoke TLS functions
 int HLT_RpcTlsNewCtx(HLT_Process* peerProcess, TLS_VERSION tlsVersion, bool isClient);
+int HLT_RpcProviderTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, bool isClient, char *providerPath,
+    char (*providerNames)[MAX_PROVIDER_NAME_LEN], int32_t *providerLibFmts, int32_t providerCnt, char *attrName);
 int HLT_RpcTlsSetCtx(HLT_Process* peerProcess, int ctxId, HLT_Ctx_Config* config);
 int HLT_RpcTlsNewSsl(HLT_Process* peerProcess, int ctxId);
 int HLT_RpcTlsSetSsl(HLT_Process* peerProcess, int sslId, HLT_Ssl_Config* config);

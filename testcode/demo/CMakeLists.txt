@@ -21,9 +21,15 @@ set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
                   ${HITLS_ROOT}/include/tls
                   ${HITLS_ROOT}/include/pki
                   ${HITLS_ROOT}/include/auth
+                  ${HITLS_ROOT}/config/macro_config
                   ${HITLS_ROOT}/platform/Secure_C/include)
 
+if(CUSTOM_CFLAGS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CUSTOM_CFLAGS}")
+endif()
+
 if(ENABLE_GCOV)
+
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
 endif()
 

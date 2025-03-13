@@ -262,7 +262,7 @@ static int32_t RecConnCbcDecMtECheckMacTls(TLS_Ctx *ctx, const REC_TextInput *cr
     HITLS_HASH_Ctx *ihashCtx = NULL;
     HITLS_HASH_Ctx *ohashCtx = NULL;
     HITLS_HASH_Ctx *obscureHashCtx = NULL;
-    ihashCtx = SAL_CRYPT_DigestInit(hashAlg);
+    ihashCtx = SAL_CRYPT_DigestInit(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), hashAlg);
     ohashCtx = SAL_CRYPT_DigestCopy(ihashCtx);
     obscureHashCtx = SAL_CRYPT_DigestCopy(ihashCtx);
     if (ihashCtx == NULL || ohashCtx == NULL || obscureHashCtx == NULL) {
@@ -320,7 +320,8 @@ static int32_t RecConnCbcDecryptByMacThenEncrypt(TLS_Ctx *ctx, const RecConnStat
     cipherParam.iv = cryptMsg->text;
     offset = state->suiteInfo->fixedIvLength;
 
-    ret = SAL_CRYPT_Decrypt(&cipherParam, &cryptMsg->text[offset], cryptMsg->textLen - offset, data, &plaintextLen);
+    ret = SAL_CRYPT_Decrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &cipherParam, &cryptMsg->text[offset], cryptMsg->textLen - offset, data, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15398, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "record cbc mode decrypt error.", 0, 0, 0, 0);
@@ -370,7 +371,8 @@ static int32_t RecConnCbcDecryptByEncryptThenMac(TLS_Ctx *ctx, const RecConnStat
     cipherParam.iv = cryptMsg->text;
     offset = state->suiteInfo->fixedIvLength;
 
-    ret = SAL_CRYPT_Decrypt(&cipherParam, &cryptMsg->text[offset],
+    ret = SAL_CRYPT_Decrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &cipherParam, &cryptMsg->text[offset],
         cryptMsg->textLen - offset - macLen, data, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15915, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -410,10 +412,10 @@ static int32_t CbcDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput
     return HITLS_SUCCESS;
 }
 
-static int32_t RecConnCopyIV(const RecConnState *state, uint8_t *cipherText, uint32_t cipherTextLen)
+static int32_t RecConnCopyIV(TLS_Ctx *ctx, const RecConnState *state, uint8_t *cipherText, uint32_t cipherTextLen)
 {
     if (!state->suiteInfo->isExportIV) {
-        SAL_CRYPT_Rand(state->suiteInfo->iv, state->suiteInfo->fixedIvLength);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), state->suiteInfo->iv, state->suiteInfo->fixedIvLength);
     }
     /* The IV set by the user can only be used once */
     state->suiteInfo->isExportIV = 0;
@@ -471,7 +473,8 @@ static int32_t PreparePlainText(const RecConnState *state, const REC_TextInput *
 }
 
 /* Data that needs to be encrypted (after filling the mac) */
-static int32_t GenerateCbcPlainTextAfterMac(const RecConnState *state, const REC_TextInput *plainMsg,
+static int32_t GenerateCbcPlainTextAfterMac(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const RecConnState *state, const REC_TextInput *plainMsg,
     uint32_t cipherTextLen, uint8_t *plainText, uint32_t *textLen)
 {
     /* Fill content */
@@ -487,7 +490,8 @@ static int32_t GenerateCbcPlainTextAfterMac(const RecConnState *state, const REC
     uint32_t macLen = state->suiteInfo->macLen;
     REC_TextInput input = {0};
     RecConnInitGenerateMacInput(plainMsg, plainMsg->text, plainMsg->textLen, &input);
-    int32_t ret = RecConnGenerateMac(state->suiteInfo, &input, &plainText[plainTextLen], &macLen);
+    int32_t ret = RecConnGenerateMac(libCtx, attrName, state->suiteInfo,
+        &input, &plainText[plainTextLen], &macLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17248, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "RecConnGenerateMac fail.", 0, 0, 0, 0);
@@ -509,7 +513,7 @@ static int32_t GenerateCbcPlainTextAfterMac(const RecConnState *state, const REC
     return HITLS_SUCCESS;
 }
 
-static int32_t RecConnCbcEncryptThenMac(const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+static int32_t RecConnCbcEncryptThenMac(TLS_Ctx *ctx, const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     uint32_t offset = 0;
@@ -521,7 +525,7 @@ static int32_t RecConnCbcEncryptThenMac(const RecConnState *state, const REC_Tex
         return ret;
     }
 
-    ret = RecConnCopyIV(state, cipherText, cipherTextLen);
+    ret = RecConnCopyIV(ctx, state, cipherText, cipherTextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(plainText);
         return ret;
@@ -532,7 +536,8 @@ static int32_t RecConnCbcEncryptThenMac(const RecConnState *state, const REC_Tex
     uint32_t encLen = cipherTextLen - offset - macLen;
     HITLS_CipherParameters cipherParam = {0};
     RecConnInitCipherParam(&cipherParam, state);
-    ret = SAL_CRYPT_Encrypt(&cipherParam, plainText, plainTextLen, &cipherText[offset], &encLen);
+    ret = SAL_CRYPT_Encrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &cipherParam, plainText, plainTextLen, &cipherText[offset], &encLen);
     BSL_SAL_FREE(plainText);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15848, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -550,10 +555,11 @@ static int32_t RecConnCbcEncryptThenMac(const RecConnState *state, const REC_Tex
     /* fill MAC */
     REC_TextInput input = {0};
     RecConnInitGenerateMacInput(plainMsg, cipherText, cipherTextLen - macLen, &input);
-    return RecConnGenerateMac(state->suiteInfo, &input, &cipherText[offset + encLen], &macLen);
+    return RecConnGenerateMac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        state->suiteInfo, &input, &cipherText[offset + encLen], &macLen);
 }
 
-int32_t RecConnCbcMacThenEncrypt(const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+int32_t RecConnCbcMacThenEncrypt(TLS_Ctx *ctx, const RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     uint32_t plainTextLen = 0;
@@ -564,13 +570,14 @@ int32_t RecConnCbcMacThenEncrypt(const RecConnState *state, const REC_TextInput 
             "Record CBC encrypt error: out of memory.", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    int32_t ret = GenerateCbcPlainTextAfterMac(state, plainMsg, cipherTextLen, plainText, &plainTextLen);
+    int32_t ret = GenerateCbcPlainTextAfterMac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        state, plainMsg, cipherTextLen, plainText, &plainTextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(plainText);
         return ret;
     }
     uint32_t offset = 0;
-    ret = RecConnCopyIV(state, cipherText, cipherTextLen);
+    ret = RecConnCopyIV(ctx, state, cipherText, cipherTextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(plainText);
         return ret;
@@ -580,7 +587,8 @@ int32_t RecConnCbcMacThenEncrypt(const RecConnState *state, const REC_TextInput 
     uint32_t encLen = cipherTextLen - offset;
     HITLS_CipherParameters cipherParam = {0};
     RecConnInitCipherParam(&cipherParam, state);
-    ret = SAL_CRYPT_Encrypt(&cipherParam, plainText, plainTextLen, &cipherText[offset], &encLen);
+    ret = SAL_CRYPT_Encrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &cipherParam, plainText, plainTextLen, &cipherText[offset], &encLen);
     BSL_SAL_FREE(plainText);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15391, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -598,13 +606,13 @@ int32_t RecConnCbcMacThenEncrypt(const RecConnState *state, const REC_TextInput 
     return HITLS_SUCCESS;
 }
 
-static int32_t CbcEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
+static int32_t CbcEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText,
     uint32_t cipherTextLen)
 {
     if (plainMsg->isEncryptThenMac) {
-        return RecConnCbcEncryptThenMac(state, plainMsg, cipherText, cipherTextLen);
+        return RecConnCbcEncryptThenMac(ctx, state, plainMsg, cipherText, cipherTextLen);
     }
-    return RecConnCbcMacThenEncrypt(state, plainMsg, cipherText, cipherTextLen);
+    return RecConnCbcMacThenEncrypt(ctx, state, plainMsg, cipherText, cipherTextLen);
 }
 
 const RecCryptoFunc *RecGetCbcCryptoFuncs(DecryptPostProcess decryptPostProcess, EncryptPreProcess encryptPreProcess)
