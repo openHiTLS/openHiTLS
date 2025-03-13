@@ -146,6 +146,7 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
 {
     int version = TLS1_2;
     int connType = TCP;
+    int32_t serverConfigId = 0;
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
@@ -156,7 +157,6 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(remote);
     ASSERT_TRUE(remoteProcess != NULL);
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -164,6 +164,11 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     HLT_SetRenegotiationSupport(serverCtxConfig, true);
     HLT_SetClientRenegotiateSupport(serverCtxConfig, true);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, NULL, NULL, NULL, 0, NULL);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
     DataChannelParam channelParam;
