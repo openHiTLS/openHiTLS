@@ -293,7 +293,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "curve25519",
+        "x25519",
         CRYPT_PKEY_PARAID_MAX, // CRYPT_ECC_X25519
         CRYPT_PKEY_X25519, // CRYPT_PKEY_ECDH
         128, // secBits
