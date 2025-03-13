@@ -277,6 +277,19 @@ static int32_t SetPaillierParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_PaillierPa
     return pkey->method->setPara(pkey->key, param);
 }
 
+static int32_t SetElGamalParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_ElGamalPara *elgamalPara)
+{
+    uint32_t bits =elgamalPara->bits;
+    uint32_t k_bits =elgamalPara->k_bits;
+    BSL_Param param[4] = {
+        {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, elgamalPara->q, elgamalPara->qLen, 0},
+        {CRYPT_PARAM_ELGAMAL_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        {CRYPT_PARAM_ELGAMAL_KBITS, BSL_PARAM_TYPE_UINT32, &k_bits, sizeof(k_bits), 0},
+        BSL_PARAM_END
+    };
+    return pkey->method->setPara(pkey->key, param);
+}
+
 static int32_t GetDsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DsaPara *dsaPara)
 {
     BSL_Param param[4] = {
@@ -356,6 +369,9 @@ static int32_t CvtBslParamAndSetParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_
         case CRYPT_PKEY_PAILLIER:
             ret = SetPaillierParams(pkey, &para->para.paillierPara);
             break;
+         case CRYPT_PKEY_ELGAMAL:
+            ret = SetElGamalParams(pkey, &para->para.elgamalPara);
+            break;
         case CRYPT_PKEY_ED25519:
         case CRYPT_PKEY_X25519:
         case CRYPT_PKEY_SM2:
@@ -383,6 +399,7 @@ static int32_t CvtBslParamAndGetParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_
             ret =  GetEccParams(pkey, &para->para.eccPara);
             break;
         case CRYPT_PKEY_PAILLIER:
+        case CRYPT_PKEY_ELGAMAL:
         case CRYPT_PKEY_RSA:
         case CRYPT_PKEY_ED25519:
         case CRYPT_PKEY_X25519:
@@ -470,6 +487,7 @@ int32_t CRYPT_EAL_PkeyGen(CRYPT_EAL_PkeyCtx *pkey)
     }
     /* Invoke the algorithm entity to generate a key pair. */
     ret = pkey->method->gen(pkey->key);
+    
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
         return ret;
@@ -560,6 +578,18 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
             ret = pkey->method->setPub(pkey->key, &paParam);
             break;
         }
+        case CRYPT_PKEY_ELGAMAL: {
+            BSL_Param paParam[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.p,
+                key->key.elgamalPub.pLen, 0},
+                {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.g, key->key.elgamalPub.gLen, 0},
+                {CRYPT_PARAM_ELGAMAL_Y, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.y, key->key.elgamalPub.pLen,
+                    0},
+                {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.q, key->key.elgamalPub.qLen,
+                0},
+                 BSL_PARAM_END};
+            ret = pkey->method->setPub(pkey->key, &paParam);
+            break;
+        }
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -634,6 +664,17 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
             ret = pkey->method->setPrv(pkey->key, &paParam);
             break;
         }
+        case CRYPT_PKEY_ELGAMAL: {
+            BSL_Param paParam[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.p,
+                    key->key.elgamalPrv.pLen, 0},
+                {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.g,key->key.elgamalPrv.gLen, 
+                    0},
+                {CRYPT_PARAM_ELGAMAL_X, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.x, key->key.elgamalPrv.xLen,
+                    0},
+                 BSL_PARAM_END};
+            ret = pkey->method->setPrv(pkey->key, &paParam);
+            break;
+        }
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -686,6 +727,24 @@ static int32_t GetPaillierPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPub *
     return CRYPT_SUCCESS;
 }
 
+static int32_t GetElGamalPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_ElGamalPub *pub)
+{
+     BSL_Param param[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, pub->p, pub->pLen, 0},
+        {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, pub->g, pub->gLen, 0},
+        {CRYPT_PARAM_ELGAMAL_Y, BSL_PARAM_TYPE_OCTETS, pub->y, pub->yLen, 0},
+        {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, pub->q, pub->qLen, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method->getPub(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    pub->pLen = param[0].useLen;
+    pub->gLen = param[1].useLen;
+    pub->yLen = param[2].useLen;
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key)
 {
     int32_t ret = PriAndPubParamIsValid(pkey, key, false);
@@ -719,6 +778,9 @@ int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k
             break;
         case CRYPT_PKEY_PAILLIER:
             ret = GetPaillierPub(pkey, &key->key.paillierPub);
+            break;
+        case CRYPT_PKEY_ELGAMAL:
+            ret = GetElGamalPub(pkey, &key->key.elgamalPub);
             break;
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
@@ -787,6 +849,23 @@ static int32_t GetPaillierPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPrv *
     return CRYPT_SUCCESS;
 }
 
+static int32_t GetElGamalPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_ElGamalPrv *prv)
+{
+    BSL_Param param[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, prv->p, prv->pLen, 0},
+        {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, prv->g, prv->gLen, 0},
+        {CRYPT_PARAM_ELGAMAL_X, BSL_PARAM_TYPE_OCTETS, prv->x, prv->xLen, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method->getPrv(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    prv->pLen = param[0].useLen;
+    prv->gLen = param[1].useLen;
+    prv->xLen = param[2].useLen;
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key)
 {
     int32_t ret = PriAndPubParamIsValid(pkey, key, true);
@@ -819,6 +898,9 @@ int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k
             break;
         case CRYPT_PKEY_PAILLIER:
             ret = GetPaillierPrv(pkey, &key->key.paillierPrv);
+            break;
+        case CRYPT_PKEY_ELGAMAL:
+            ret = GetElGamalPrv(pkey, &key->key.elgamalPrv);
             break;
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
