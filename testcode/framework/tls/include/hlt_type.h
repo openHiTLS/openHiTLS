@@ -48,6 +48,15 @@ extern "C" {
 
 #define DEFAULT_CERT_PATH       "../../testcode/testdata/tls/certificate/der/"
 
+#define RSAPSS_SHA256_CA_PATH      "rsa_pss_sha256/rsa_pss_root.der:rsa_pss_sha256/rsa_pss_intCa.der"
+#define RSAPSS_SHA256_CHAIN_PATH   "rsa_pss_sha256/rsa_pss_intCa.der"
+#define RSAPSS_SHA256_EE_PATH      "rsa_pss_sha256/rsa_pss_dev.der"
+#define RSAPSS_SHA256_PRIV_PATH    "rsa_pss_sha256/rsa_pss_dev.key.der"
+#define RSAPSS_RSAE_CA_PATH        "rsa_pss_rsae/rsa_root.der:rsa_pss_rsae/rsa_intCa.der"
+#define RSAPSS_RSAE_CHAIN_PATH     "rsa_pss_rsae/rsa_intCa.der"
+#define RSAPSS_RSAE_EE_PATH        "rsa_pss_rsae/rsa_dev.der"
+#define RSAPSS_RSAE_PRIV_PATH      "rsa_pss_rsae/rsa_dev.key.der"
+
 #define RSA_SHA_CA_PATH         "rsa_sha/ca-3072.der:rsa_sha/inter-3072.der"
 #define RSA_SHA_CHAIN_PATH      "rsa_sha/inter-3072.der"
 #define RSA_SHA1_EE_PATH        "rsa_sha/end-sha1.der"
