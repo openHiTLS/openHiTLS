@@ -224,7 +224,7 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverCtxConfig != NULL);
 
-    SetCertPath(serverCtxConfig, "ecdsa_sha256", true);
+    ASSERT_EQ(SetCertPath(serverCtxConfig, "ecdsa_sha256", true), 0);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
 
     serverRes = HLT_ProcessTlsAccept(localProcess, version, serverCtxConfig, NULL);
