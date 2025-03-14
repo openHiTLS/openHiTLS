@@ -164,6 +164,13 @@ EXIT:
     HLT_FreeAllProcess();
 }
 
+static void CONNECT_V12(char *Ciphersuite, char *groups, char *signature, int hasPsk, char *cert)
+{
+    CONNECT(TLS1_2, TCP, Ciphersuite, groups, signature, hasPsk, cert);
+    CONNECT(DTLS1_2, SCTP, Ciphersuite, groups, signature, hasPsk, cert);
+    CONNECT(DTLS1_2, UDP, Ciphersuite, groups, signature, hasPsk, cert);
+}
+
 /* BEGIN_CASE */
 void SDV_TLS_13_GROUP(void)
 {
@@ -174,18 +181,9 @@ void SDV_TLS_13_GROUP(void)
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_TLS_12_GROUP(void)
+void SDV_TLS_12_GROUP(char *groups)
 {
-    for (uint16_t i = 0; i < sizeof(HITLS_Groups) / sizeof(HITLS_Groups[0]) - 5; i++) {
-        SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", HITLS_Groups[i], "CERT_SIG_SCHEME_RSA_PKCS1_SHA256", 0, "RSA");
-        if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", HITLS_Groups[i], "CERT_SIG_SCHEME_RSA_PKCS1_SHA256", 0, "RSA");
-        }
-        CONNECT(DTLS1_2, UDP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", HITLS_Groups[i], "CERT_SIG_SCHEME_RSA_PKCS1_SHA256", 0, "RSA");
-        SUB_PROC_END();
-    }
-    SUB_PROC_WAIT(sizeof(HITLS_Groups) / sizeof(HITLS_Groups[0]) - 5);
+    CONNECT_V12("HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", groups, "CERT_SIG_SCHEME_RSA_PKCS1_SHA256", 0, "RSA");
 }
 /* END_CASE */
 
@@ -199,18 +197,9 @@ tls12 dtls12
 "CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512",
  */
 /* BEGIN_CASE */
-void SDV_TLS_ECDSA_SIGNATURE(void)
-{
-    for (uint16_t i = 11; i < sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0]); i++) {
-        SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, "HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "ECDSA");
-        if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, "HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "ECDSA");
-        }
-        CONNECT(DTLS1_2, UDP, "HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "ECDSA");
-        SUB_PROC_END();
-    }
-    SUB_PROC_WAIT(sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0] - 11));
+void SDV_TLS_ECDSA_SIGNATURE(char *signature)
+{    
+    CONNECT_V12("HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "HITLS_EC_GROUP_SECP256R1", signature, 0, "ECDSA");
 }
 /* END_CASE */
 
@@ -226,18 +215,9 @@ tls12 dtls12
 "CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512",
  */
 /* BEGIN_CASE */
-void SDV_TLS_RSA_SIGNATURE(void)
+void SDV_TLS_RSA_SIGNATURE(char *signature)
 {
-    for (uint16_t i = 0; i < sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0]) - 8; i++) {
-        SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_2, TCP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAE");
-        if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAE");
-        }
-        CONNECT(DTLS1_2, UDP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAE");
-        SUB_PROC_END();
-    }
-    SUB_PROC_WAIT(sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0] - 8));
+    CONNECT_V12("HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", signature, 0, "RSAE");
 }
 /* END_CASE */
 
@@ -248,19 +228,10 @@ tls12 dtls12 tls13
 "CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512",
 */
 /* BEGIN_CASE */
-void SDV_TLS_RSAPSS_SIGNATURE(void)
+void SDV_TLS_RSAPSS_SIGNATURE(char *signature)
 {
-    for (uint16_t i = 8; i < sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0]) - 5; i++) {
-        SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAPSS");
-        CONNECT(TLS1_2, TCP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAPSS");
-        if (IsEnableSctpAuth()) {
-            CONNECT(DTLS1_2, SCTP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAPSS");
-        }
-        CONNECT(DTLS1_2, UDP, "HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSAPSS");
-        SUB_PROC_END();
-    }
-    SUB_PROC_WAIT(sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0] - 13));
+    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", signature, 0, "RSAPSS");
+    CONNECT_V12("HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "HITLS_EC_GROUP_SECP256R1", signature, 0, "RSAPSS");
 }
 /* END_CASE */
 
@@ -271,14 +242,9 @@ tls13
 "CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512",
  */
 /* BEGIN_CASE */
-void SDV_TLS13_RSA_SIGNATURE(void)
+void SDV_TLS13_RSA_SIGNATURE(char *signature)
 {
-    for (uint16_t i = 5; i < sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0]) - 8; i++) {
-        SUB_PROC_BEGIN(continue);
-        CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", HITLS_Signatures[i], 0, "RSA");
-        SUB_PROC_END();
-    }
-    SUB_PROC_WAIT(sizeof(HITLS_Signatures) / sizeof(HITLS_Signatures[0]) - 13);
+    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", signature, 0, "RSA");
 }
 /* END_CASE */
 
@@ -289,11 +255,9 @@ tls13
 "CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512",
  */
 /* BEGIN_CASE */
-void SDV_TLS13_ECDSA_SIGNATURE(void)
+void SDV_TLS13_ECDSA_SIGNATURE(char *signature, char *cert)
 {
-    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", "CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256", 0, "ECDSA");
-    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384", 0, "ECDSA-384");
-    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", "CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512", 0, "ECDSA-512");
+    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_SECP256R1", signature, 0, cert);
 }
 /* END_CASE */
 
