@@ -105,6 +105,7 @@ typedef enum {
     BSL_CID_ED25519 = 5261,         /**< Identifies ED25519 algorithm */
     BSL_CID_X25519 = 5276,          /**< Identifies X25519 algorithm */
     BSL_CID_PAILLIER = 5291,        /**< identifies the Paillier algorithm */
+    BSL_CID_ELGAMAL = 5301,        /**< identifies the Elgamal algorithm */
 
     /* hash algorithm */
     BSL_CID_MD4 = 10001,            /**< identifies MD4 hash algorithm */
