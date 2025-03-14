@@ -436,6 +436,7 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     int32_t mdAlg = 0;
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, expSignAlg);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &mdAlg, sizeof(mdAlg) - 1), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &mdAlg, sizeof(mdAlg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(mdAlg, expSignMdAlg);
 
