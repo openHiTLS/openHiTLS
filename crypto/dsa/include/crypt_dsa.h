@@ -48,6 +48,17 @@ CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void);
 
 /**
  * @ingroup dsa
+ * @brief dsa Allocates context memory space.
+ * 
+ * @param libCtx [IN] Library context
+ *
+ * @retval (CRYPT_DSA_Ctx *) Pointer to the memory space of the allocated context
+ * @retval NULL              Invalid null pointer
+ */
+CRYPT_DSA_Ctx *CRYPT_DSA_NewCtxEx(void *libCtx);
+
+/**
+ * @ingroup dsa
  * @brief Copy the DSA context. After the duplication is complete, invoke the CRYPT_DSA_FreeCtx to release the memory.
  *
  * @param ctx [IN] Source DSA context

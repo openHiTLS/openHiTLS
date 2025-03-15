@@ -45,6 +45,8 @@ typedef struct ELGAMAL_Para CRYPT_ELGAMAL_Para;
    */
 CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_NewCtx(void);
 
+CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_NewCtxEx(void *libCtx);
+
 /**
    * @ingroup elgamal
    * @brief Copy the ElGamal context. After the duplication is complete, call the CRYPT_ELGAMAL_FreeCtx to release the memory.
@@ -330,7 +332,7 @@ int32_t CRYPT_ELGAMAL_Ctrl(CRYPT_ELGAMAL_Ctx *ctx, int32_t opt, void *val, uint3
  * @retval CRYPT_NULL_INPUT             Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
  */
-int32_t OriginalRoot(BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q, uint32_t bits);
+int32_t OriginalRoot(void *libCtx, BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q, uint32_t bits);
 #endif
 
 #ifdef _cplusplus

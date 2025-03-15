@@ -42,9 +42,10 @@
 static uint8_t g_kRandBuf[64];
 static uint32_t g_kRandBufLen = 0;
 
-int32_t STUB_RandRangeK(BN_BigNum *r, const BN_BigNum *p)
+int32_t STUB_RandRangeK(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
 {
     (void)p;
+    (void)libCtx;
     BN_Bin2Bn(r, g_kRandBuf, g_kRandBufLen);
     return CRYPT_SUCCESS;
 }
@@ -432,7 +433,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     ASSERT_EQ(memcpy_s(g_kRandBuf, sizeof(g_kRandBuf), K->x, K->len), 0);
     g_kRandBufLen = K->len;
     STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRange, STUB_RandRangeK);
+    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
 
     TestMemInit();
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -540,7 +541,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     ASSERT_EQ(memcpy_s(g_kRandBuf, sizeof(g_kRandBuf), K->x, K->len), 0);
     g_kRandBufLen = K->len;
     STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRange, STUB_RandRangeK);
+    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
 
     CRYPT_EAL_PkeyPara para;
     CRYPT_EAL_PkeyPrv prv = {0};
@@ -661,7 +662,7 @@ void SDV_CRYPTO_DSA_GEN_FUNC_TC001(Hex *p, Hex *q, Hex *g, Hex *data, int isProv
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     free(sign);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -748,7 +749,7 @@ void SDV_CRYPTO_DSA_DUP_CTX_FUNC_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
     ASSERT_COMPARE("Compare private key", key1, prv1.key.dsaPrv.len, key2, prv2.key.dsaPrv.len);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(dupCtx);
     BSL_SAL_Free(key1);
@@ -797,7 +798,7 @@ void SDV_CRYPTO_DSA_KEY_PAIR_CHECK_FUNC_TC001(Hex *P, Hex *Q, Hex *G, Hex *X, He
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), expectRet);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
 }

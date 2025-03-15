@@ -26,6 +26,7 @@
 #include "crypt_errno.h"
 #include "cert_callback.h"
 #include "test.h"
+#include "crypt_eal_rand.h"
 /* END_HEADER */
 
 
@@ -52,7 +53,10 @@ void UT_TLS13_LOADPROVIDER_GROUP_TC001(char *path, char *get_cap_test1, int cmd)
     ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, get_cap_test1, NULL, &providerMgr);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
-
+    // Random Unloading Test Case
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, GetAvailableRandAlgId(),
+        "provider=provider_get_cap_test1", NULL, 0, NULL), CRYPT_SUCCESS);
+  
     config = HITLS_CFG_ProviderNewTLS13Config(libCtx, NULL);
     ASSERT_TRUE(config != NULL);
     uint16_t group = 477;
@@ -99,7 +103,9 @@ void UT_TLS13_LOADPROVIDER_SIGNSCHEME_TC001(char *path, char *get_cap_test1, int
     ret = CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
-
+    // Random Unloading Test Case
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, GetAvailableRandAlgId(),
+        "provider=provider_get_cap_test1", NULL, 0, NULL), CRYPT_SUCCESS);
     config = HITLS_CFG_ProviderNewTLS13Config(libCtx, NULL);
     ASSERT_TRUE(config != NULL);
     uint16_t signScheme = 23333;

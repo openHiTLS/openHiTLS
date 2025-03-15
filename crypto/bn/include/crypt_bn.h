@@ -637,6 +637,27 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
 
 /**
  * @ingroup bn
+ * @brief generate BN prime
+ *
+ * @param libCtx [IN] Library context
+ * @param r    [OUT] Generate a prime number.
+ * @param bits [IN] Length of the generated prime number
+ * @param half [IN] Whether to generate a prime number greater than the maximum value of this prime number by 1/2:
+ *                  Yes: True, No: false
+ * @param opt  [IN] Optimizer
+ * @param cb   [IN] BigNum callback
+ * @retval CRYPT_SUCCESS                    The prime number is successfully generated.
+ * @retval CRYPT_NULL_INPUT                 Invalid null pointer.
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+ * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
+ * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
+ * @retval CRYPT_BN_NOR_GEN_PRIME           Failed to generate prime numbers.
+ * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
+ */
+int32_t BN_GenPrimeEx(void *libCtx, BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb);
+
+/**
+ * @ingroup bn
  * @brief check prime number
  *
  * @param bn  [IN] Prime number to be checked
@@ -650,6 +671,23 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
  * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
  */
 int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief check prime number
+ *
+ * @param libCtx [IN] Library context
+ * @param bn  [IN] Prime number to be checked
+ * @param opt [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS                    The check result is a prime number.
+ * @retval CRYPT_BN_NOR_CHECK_PRIME         The check result is a non-prime number.
+ * @retval CRYPT_NULL_INPUT                 Invalid null pointer
+ * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
+ * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
+ * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
+ */
+int32_t BN_PrimeCheckEx(void *libCtx, const BN_BigNum *bn, BN_Optimizer *opt);
 
 #define BN_RAND_TOP_NOBIT      0 /* Not set bits */
 #define BN_RAND_TOP_ONEBIT     1 /* Set the most significant bit to 1. */
@@ -681,6 +719,25 @@ int32_t BN_Rand(BN_BigNum *r, uint32_t bits, uint32_t top, uint32_t bottom);
  * @ingroup bn
  * @brief generate random BigNum
  *
+ * @param libCtx [IN] provider libCtx
+ * @param r      [OUT] Generate a random number.
+ * @param bits   [IN] Length of the generated prime number
+ * @param top    [IN] Generating the flag indicating whether to set the most significant bit of a random number
+ * @param bottom [IN] Generate the flag indicating whether to set the least significant bit of the random number.
+ *
+ * @retval CRYPT_SUCCESS                        A random number is generated successfully.
+ * @retval CRYPT_NULL_INPUT                     Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL                 Memory allocation failure
+ * @retval CRYPT_BN_ERR_RAND_TOP_BOTTOM         The top or bottom is invalid during random number generation.
+ * @retval CRYPT_BN_RAND_GEN_FAIL               Failed to generate a random number.
+ * @retval CRYPT_BN_ERR_RAND_BITS_NOT_ENOUGH    The bit is too small during random number generation.
+ */
+int32_t BN_RandEx(void *libCtx, BN_BigNum *r, uint32_t bits, uint32_t top, uint32_t bottom);
+
+/**
+ * @ingroup bn
+ * @brief generate random BigNum
+ *
  * @param r [OUT] Generate a random number.
  * @param p [IN] Compare data so that the generated r < p
  *
@@ -692,6 +749,23 @@ int32_t BN_Rand(BN_BigNum *r, uint32_t bits, uint32_t top, uint32_t bottom);
  * @retval CRYPT_BN_ERR_RAND_NEGATE Generate a negative random number.
  */
 int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p);
+
+/**
+ * @ingroup bn
+ * @brief generate random BigNum
+ * 
+ * @param libCtx [IN] provider libCtx
+ * @param r [OUT] Generate a random number.
+ * @param p [IN] Compare data so that the generated r < p
+ *
+ * @retval CRYPT_SUCCESS            A random number is successfully generated.
+ * @retval CRYPT_NULL_INPUT         Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
+ * @retval CRYPT_BN_RAND_GEN_FAIL   Failed to generate a random number.
+ * @retval CRYPT_BN_ERR_RAND_ZERO   Generate a random number smaller than 0.
+ * @retval CRYPT_BN_ERR_RAND_NEGATE Generate a negative random number.
+ */
+int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p);
 
 /**
  * @ingroup bn
@@ -888,6 +962,30 @@ int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1, co
  * @retval CRYPT_BN_ERR_NO_SQUARE_ROOT  The square root cannot be found.
  */
 int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief Mould opening root
+ * @par Description: r^2 = a mod p; p-1=q*2^s.
+ *      In the current implementation s=1 will take a special branch, and the calculation speed is faster.
+ *      Currently, the s corresponding to the mod p of the EC nist224, 256, 384, and 521 is 96, 1, 1, and 1 respectively
+ *      The branch with s=2 is not used.
+ *      The root number is provided for the EC.
+ * @param libCtx [IN] provider libCtx
+ * @param r   [OUT] Modular root result
+ * @param a   [IN] Source data, 0 <= a <= p-1
+ * @param p   [IN] module, odd prime number
+ * @param opt [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS                calculated successfully.
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_BN_ERR_SQRT_PARA       The input parameter is incorrect.
+ * @retval CRYPT_BN_ERR_LEGENDE_DATA:
+ * Failed to find the specific number of the Legendre sign (z|p) of z to p equal to -1 when calculating the square root.
+ * @retval CRYPT_BN_ERR_NO_SQUARE_ROOT  The square root cannot be found.
+ */
+int32_t BN_ModSqrtEx(void *libCtx,
+    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt);
 
 /**
  * @ingroup bn

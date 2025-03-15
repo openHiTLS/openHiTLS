@@ -46,6 +46,17 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void);
 
 /**
  * @ingroup ecdh
+ * @brief ecdh Allocate the context memory space.
+ * 
+ * @param libCtx [IN] Library context
+ *
+ * @retval (CRYPT_ECDH_Ctx *) Pointer to the memory space of the allocated context
+ * @retval NULL               Invalid null pointer
+ */
+CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtxEx(void *libCtx);
+
+/**
+ * @ingroup ecdh
  * @brief Copy the ECDH context. After the duplication is complete, call the CRYPT_ECDH_FreeCtx to release the memory.
  *
  * @param ctx [IN] Source ECDH context
