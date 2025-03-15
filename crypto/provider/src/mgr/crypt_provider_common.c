@@ -251,6 +251,11 @@ void CRYPT_EAL_FreePreDefinedProviders(void)
     if (libCtx == NULL) {
         return;
     }
+
+    if (libCtx->drbg != NULL) {
+        CRYPT_RandDeinit(libCtx->drbg);
+        libCtx->drbg = NULL;
+    }
     // Free the providers list and each EAL_ProviderMgrCtx in it
     if (libCtx->providers != NULL) {
         BSL_LIST_FREE(libCtx->providers, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
@@ -261,11 +266,6 @@ void CRYPT_EAL_FreePreDefinedProviders(void)
     // Free thread lock
     if (libCtx->lock != NULL) {
         BSL_SAL_ThreadLockFree(libCtx->lock);
-    }
-
-    if (libCtx->drbg != NULL) {
-        CRYPT_RandDeinit(libCtx->drbg);
-        libCtx->drbg = NULL;
     }
 
     // Free the libctx structure itself

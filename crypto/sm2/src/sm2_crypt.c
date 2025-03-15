@@ -162,7 +162,7 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     };
     GOTO_ERR_IF(MemAllocCheck(k, order, c1, tmp, c2), ret);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
-        GOTO_ERR_IF(BN_RandRange(k, order), ret);
+        GOTO_ERR_IF(BN_RandRangeEx(ctx->pkey->libCtx, k, order), ret);
         if (BN_IsZero(k)) {
             continue;
         }

@@ -42,6 +42,16 @@ int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
     return 0;
 }
 
+int32_t RandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
+{
+    (void)libCtx;
+    for (uint32_t i = 0; i < randLen; i++) {
+        randNum[i] = (uint8_t)(rand() % UINT8_MAX_NUM);
+    }
+
+    return 0;
+}
+
 int32_t SetFakeRandOutput(uint8_t *in, uint32_t inLen)
 {
     g_RandBufLen = inLen;
@@ -56,9 +66,19 @@ int32_t FakeRandFunc(uint8_t *randNum, uint32_t randLen)
     return memcpy_s(randNum, randLen, g_RandOutput, randLen);
 }
 
-int32_t STUB_RandRangeK(BN_BigNum *r, const BN_BigNum *p)
+int32_t FakeRandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
+{
+    (void)libCtx;
+    if (randLen > RAND_BUF_LEN) {
+        return ERR_BAD_RAND;
+    }
+    return memcpy_s(randNum, randLen, g_RandOutput, randLen);
+}
+
+int32_t STUB_RandRangeK(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
 {
     (void)p;
+    (void)libCtx;
     BN_Bin2Bn(r, g_RandOutput, g_RandBufLen);
     return CRYPT_SUCCESS;
 }

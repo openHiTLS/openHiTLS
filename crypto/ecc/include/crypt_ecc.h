@@ -406,6 +406,15 @@ int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, con
  */
 int32_t ECC_GetSecBits(const ECC_Para *para);
 
+/**
+ * @brief Set the library context for elliptic curve parameters
+ *
+ *
+ * @param libCtx [IN] Pointer to the library context
+ * @param para [OUT] Pointer to the elliptic curve parameters
+ */
+void ECC_SetLibCtx(void *libCtx, ECC_Para *para);
+
 #ifdef __cplusplus
 }
 #endif

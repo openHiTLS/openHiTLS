@@ -116,21 +116,58 @@ int32_t TestSimpleRand(uint8_t *buff, uint32_t len)
 
 int TestRandInit(void)
 {
+    int32_t ret;
     int drbgAlgId = GetAvailableRandAlgId();
     if (drbgAlgId == -1) {
         Print("Drbg algs are disabled.");
         return CRYPT_NOT_SUPPORT;
     }
-
 #ifdef HITLS_CRYPTO_ENTROPY
     CRYPT_RandSeedMethod seedMeth = {GetEntropy, CleanEntropy, NULL, NULL};
     uint8_t entropy[64] = {0};
     CRYPT_Data tempEntropy = {entropy, sizeof(entropy)};
     DRBG_Vec_t seedCtx = {0};
     seedCtx.entropy = &tempEntropy;
-    return CRYPT_EAL_RandInit(drbgAlgId, &seedMeth, (void *)&seedCtx, NULL, 0);
+#endif
+
+#ifdef HITLS_CRYPTO_PROVIDER
+ #ifdef HITLS_CRYPTO_ENTROPY
+    BSL_Param param[4] = {0};
+    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, 0);
+    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanEntropy, 0);
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)drbgAlgId, "provider=default", NULL, 0, param);
+    if (ret!= CRYPT_SUCCESS) {
+        return ret;
+    }
+ #else
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)drbgAlgId, "provider=default", NULL, 0, NULL),
+    if (ret!= CRYPT_SUCCESS) {
+        return ret;
+    }
+ #endif
 #else
-    return CRYPT_EAL_RandInit(drbgAlgId, NULL, NULL, NULL, 0);
+ #ifdef HITLS_CRYPTO_ENTROPY
+    ret = CRYPT_EAL_RandInit(drbgAlgId, &seedMeth, (void *)&seedCtx, NULL, 0);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+ #else
+    ret = CRYPT_EAL_RandInit(drbgAlgId, NULL, NULL, NULL, 0);
+    if (ret!= CRYPT_SUCCESS) {
+        return ret;
+    }
+ #endif
+#endif
+    return ret;
+}
+
+void TestRandDeInit(void)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_EAL_RandDeinitEx(NULL);
+#else
+    CRYPT_EAL_RandDeinit();
 #endif
 }
 #endif

@@ -657,7 +657,7 @@ int32_t ECP_PointBlind(const ECC_Para *para, ECC_Point *pt)
         goto ERR;
     }
     // Generate random numbers as salt information.
-    GOTO_ERR_IF(BN_RandRange(blind, para->p), ret);
+    GOTO_ERR_IF(BN_RandRangeEx(para->libCtx, blind, para->p), ret);
     if (BN_IsZero(blind)) {
         ret = CRYPT_ECC_POINT_BLIND_WITH_ZERO;
         BSL_ERR_PUSH_ERROR(ret);
