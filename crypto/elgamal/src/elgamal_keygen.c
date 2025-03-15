@@ -303,7 +303,7 @@ static int32_t IsELGAMALSetParaVaild(const CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_E
         BSL_ERR_PUSH_ERROR(CRYPT_ELGAMAL_ERR_KEY_KBITS);
         return CRYPT_ELGAMAL_ERR_KEY_KBITS;
     }
-    if (para->bits <= para->k_bits){
+    if (para->bits <= para->k_bits) {
         BSL_ERR_PUSH_ERROR(CRYPT_ELGAMAL_ERR_KEY_BITS_KBITS);
         return CRYPT_ELGAMAL_ERR_KEY_BITS_KBITS;
     }
@@ -397,7 +397,7 @@ CRYPT_ELGAMAL_PrvKey *ElGamal_NewPrvKey(uint32_t bits)
     prvKey->g = BN_Create(bits);
     prvKey->x = BN_Create(bits);
 
-    if (prvKey->p == NULL || prvKey->g == NULL || prvKey->x == NULL ) {
+    if (prvKey->p == NULL || prvKey->g == NULL || prvKey->x == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ELGAMAL_FREE_PRV_KEY(prvKey);
     }
@@ -505,9 +505,17 @@ EXIT:
 
 static int32_t ElGamal_CalcPubKey(CRYPT_ELGAMAL_PubKey *pubKey, CRYPT_ELGAMAL_PrvKey *prvKey, BN_Optimizer *optimizer)
 {
-    pubKey->p = BN_Dup(prvKey->p);
-    pubKey->g = BN_Dup(prvKey->g);
-    int32_t ret = BN_ModExp(pubKey->y, pubKey->g, prvKey->x, pubKey->p, optimizer);
+    int32_t ret = BN_Copy(pubKey->p, prvKey->p);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = BN_Copy(pubKey->g, prvKey->g);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = BN_ModExp(pubKey->y, pubKey->g, prvKey->x, pubKey->p, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
