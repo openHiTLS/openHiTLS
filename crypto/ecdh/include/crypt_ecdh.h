@@ -44,6 +44,8 @@ typedef struct EccPara CRYPT_EcdhPara;
  */
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void);
 
+CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtxEx(void *libCtx);
+
 /**
  * @ingroup ecdh
  * @brief Copy the ECDH context. After the duplication is complete, call the CRYPT_ECDH_FreeCtx to release the memory.

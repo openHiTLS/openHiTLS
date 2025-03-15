@@ -42,6 +42,16 @@ CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)
     return ctx;
 }
 
+CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtxEx(void *libCtx)
+{
+    CRYPT_ECDSA_Ctx *ctx = CRYPT_ECDSA_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 CRYPT_ECDSA_Ctx *CRYPT_ECDSA_DupCtx(CRYPT_ECDSA_Ctx *ctx)
 {
     return ECC_DupCtx(ctx);
@@ -108,7 +118,7 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPara *para)
 
     ECC_FreePara(ctx->para);
     ctx->para = para;
-
+    ECC_SetLibCtx(ctx->libCtx, ctx->para);
     return CRYPT_SUCCESS;
 }
 
@@ -132,7 +142,7 @@ int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
 
     ECC_FreePara(ctx->para);
     ctx->para = ecdsaPara;
-
+    ECC_SetLibCtx(ctx->libCtx, ctx->para);
     return CRYPT_SUCCESS;
 }
 
@@ -244,7 +254,7 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, BN_BigNum *d,
     }
 
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
-        GOTO_ERR_IF(BN_RandRange(k, paraN), ret);
+        GOTO_ERR_IF(BN_RandRangeEx(ctx->libCtx, k, paraN), ret);
         if (BN_IsZero(k)) {
             continue;
         }
