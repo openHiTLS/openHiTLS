@@ -60,9 +60,20 @@ static int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
     return 0;
 }
 
-static int32_t STUB_RandRangeK(BN_BigNum *r, const BN_BigNum *p)
+static int32_t RandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
+{
+    (void)libCtx;
+    const int maxNum = 255;
+    for (uint32_t i = 0; i < randLen; i++) {
+        randNum[i] = (uint8_t)(rand() % maxNum);
+    }
+    return 0;
+}
+
+static int32_t STUB_RandRangeK(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
 {
     (void)p;
+    (void)libCtx;
     BN_Bin2Bn(r, gkRandBuf, gkRandBufLen);
     return CRYPT_SUCCESS;
 }
@@ -194,7 +205,7 @@ static int Ecc_GenKey(
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), prvKeyVector->x, prvKeyVector->len) == 0);
     gkRandBufLen = prvKeyVector->len;
     STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRange, STUB_RandRangeK);
+    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
 
     /* Generate a key pair */
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
@@ -235,14 +246,14 @@ static int Ecc_GenKey(
     free(ecdsaPubKey.key.eccPub.data);
     free(ecdsaPrvKey.key.eccPrv.data);
     STUB_Reset(&tmpRpInfo);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return SUCCESS;
 EXIT:
     free(ecdsaPubKey.key.eccPub.data);
     free(ecdsaPrvKey.key.eccPrv.data);
     STUB_Reset(&tmpRpInfo);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return ERROR;
 }
@@ -374,6 +385,7 @@ int EAL_PkeyCtrl_Api_TC003(int algId, int eccId, Hex *pubKeyX, Hex *pubKeyY)
 
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
 
     /* Create a key structure. */
     ctx = CRYPT_EAL_PkeyNewCtx(algId);
@@ -831,7 +843,7 @@ int EAL_PkeyCmp_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
     ret = SUCCESS;
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     return ret;
@@ -875,7 +887,7 @@ int EAL_PkeyCmp_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_SUCCESS);
     ret = SUCCESS;
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     return ret;

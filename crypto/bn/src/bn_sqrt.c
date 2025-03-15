@@ -153,7 +153,7 @@ ERR:
 }
 
 // Find z so that legendre(z / p) = z^((p-1)/2) mod p != 1
-static int32_t GetLegendreZ(BN_BigNum *z, const BN_BigNum *p, BN_Optimizer *opt)
+static int32_t GetLegendreZ(void *libCtx, BN_BigNum *z, const BN_BigNum *p, BN_Optimizer *opt)
 {
     uint32_t maxCnt = 50; // A random number can be generated cyclically for a maximum of 50 times.
     int32_t ret = OptimizerStart(opt);
@@ -172,7 +172,7 @@ static int32_t GetLegendreZ(BN_BigNum *z, const BN_BigNum *p, BN_Optimizer *opt)
     GOTO_ERR_IF_EX(BN_Rshift(exp, exp, 1), ret);
 
     while (maxCnt > 0) {
-        GOTO_ERR_IF_EX(BN_RandRange(z, p), ret);
+        GOTO_ERR_IF_EX(BN_RandRangeEx(libCtx, z, p), ret);
 
         maxCnt--;
         if (BN_IsZero(z)) {
@@ -298,6 +298,12 @@ static int32_t BN_ModSqrtTempDataCheck(const BN_BigNum *pSubOne, const BN_BigNum
     return CRYPT_SUCCESS;
 }
 
+int32_t BN_ModSqrt(
+    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt)
+{
+    return BN_ModSqrtEx(NULL, r, a, p, opt);
+}
+
 /* 1. Input parameters a and p. p is an odd prime number, and a is an integer (0 <= a <= p-1)
 2. For P-1 processing, let p-1 = q * 2^s
 3. If s=1, r = a^((p + 1)/4)
@@ -308,7 +314,7 @@ static int32_t BN_ModSqrtTempDataCheck(const BN_BigNum *pSubOne, const BN_BigNum
     2) Find an i (0 < i < m) so that t^(2^i) = 1.
     3) b = c^(2^(m-i-1)), r = r * b, t = t*b*b, c = b*b, m = i
 7. Verification */
-int32_t BN_ModSqrt(
+int32_t BN_ModSqrtEx(void *libCtx,
     BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt)
 {
     if (r == NULL || a == NULL || p == NULL || opt == NULL) {
@@ -353,7 +359,7 @@ int32_t BN_ModSqrt(
         goto VERIFY;
     }
     // Randomly select z(1<= z <= p-1), so that the Legendre symbol of z to p equals -1. (z, p) = 1, (z/p) = a^((p-1)/2)
-    GOTO_ERR_IF(GetLegendreZ(z, p, opt), ret);
+    GOTO_ERR_IF(GetLegendreZ(libCtx, z, p, opt), ret);
 
     GOTO_ERR_IF(BN_MontExp(c, z, q, mont, opt), ret); // c = z^q mod p
     GOTO_ERR_IF(BN_MontExp(t, a, q, mont, opt), ret); // t = a^q mod p

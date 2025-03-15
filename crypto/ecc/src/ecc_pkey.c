@@ -283,7 +283,7 @@ static int32_t GenPrivateKey(ECC_Pkey *ctx)
         }
     }
     do {
-        ret = BN_RandRange(ctx->prvkey, paraN);
+        ret = BN_RandRangeEx(ctx->libCtx, ctx->prvkey, paraN);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;

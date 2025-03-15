@@ -43,6 +43,16 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
     return ctx;
 }
 
+CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtxEx(void *libCtx)
+{
+    CRYPT_ECDH_Ctx *ctx = CRYPT_ECDH_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 CRYPT_ECDH_Ctx *CRYPT_ECDH_DupCtx(CRYPT_ECDH_Ctx *ctx)
 {
     return ECC_DupCtx(ctx);
@@ -109,6 +119,7 @@ int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPara *para)
 
     ECC_FreePara(ctx->para);
     ctx->para = para;
+    ECC_SetLibCtx(ctx->libCtx, ctx->para);
 
     return CRYPT_SUCCESS;
 }
@@ -132,6 +143,7 @@ int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
 
     ECC_FreePara(ctx->para);
     ctx->para = ecdhPara;
+    ECC_SetLibCtx(ctx->libCtx, ctx->para);
 
     return CRYPT_SUCCESS;
 }

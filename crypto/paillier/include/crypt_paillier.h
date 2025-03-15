@@ -47,6 +47,16 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtx(void);
 
 /**
  * @ingroup paillier
+ * @brief Allocate paillier context memory space.
+ * @param libCtx [IN] Library context
+ *
+ * @retval (CRYPT_PAILLIER_Ctx *)   Pointer to the memory space of the allocated context
+ * @retval NULL                     Invalid null pointer.
+*/
+CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtxEx(void *libCtx);
+
+/**
+ * @ingroup paillier
  * @brief Copy the Paillier context. After the duplication is complete, call the CRYPT_PAILLIER_FreeCtx to release the memory.
  *
  * @param ctx [IN] PAILLIER context

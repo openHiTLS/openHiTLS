@@ -92,6 +92,16 @@ void CRYPT_EAL_RandDeinit(void);
 
 /**
  * @ingroup crypt_eal_rand
+ * @brief   Deinitializing the libCtx RAND interface, this interface does not support multiple threads.
+ *
+ * @param libCtx [IN] Library context
+ * 
+ * @retval  void, no return value.
+ */
+void CRYPT_EAL_RandDeinitEx(CRYPT_EAL_LibCtx *libCtx);
+
+/**
+ * @ingroup crypt_eal_rand
  * @brief   Generate a random number.
  *
  * The addtional data marked as "addin" can be NULL, and additional data specified by the user.

@@ -70,7 +70,7 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
         goto EXIT;
     }
 
-    ret = BN_RandRange(r, pubKey->n);
+    ret = BN_RandRangeEx(ctx->libCtx, r, pubKey->n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -86,7 +86,7 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
         if (BN_IsOne(gcd_result)) {
             break;
         }
-        ret = BN_RandRange(r, pubKey->n);
+        ret = BN_RandRangeEx(ctx->libCtx, r, pubKey->n);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;

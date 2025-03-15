@@ -49,6 +49,17 @@ CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void);
 
 /**
  * @ingroup dh
+ * @brief dh Allocate the context of dh.
+ *
+ * @param libCtx [IN] Library context
+ * 
+ * @retval (CRYPT_DH_Ctx *) Pointer to the memory space of the allocated context
+ * @retval NULL             Invalid null pointer
+ */
+CRYPT_DH_Ctx *CRYPT_DH_NewCtxEx(void *libCtx);
+
+/**
+ * @ingroup dh
  * @brief Copy the DH context. After the duplicated context is used up, call CRYPT_DH_FreeCtx to release the memory.
  *
  * @param ctx [IN] Source DH context
