@@ -28,7 +28,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: mkdir build && cd build && python3  ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --add_options="-DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK" --bits=64 --system=linux --add_link_flags="-ldl" && cmake ..
+      run: mkdir build && cd build && python3  ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --add_options="-DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK -fprofile-arcs -ftest-coverage" --bits=64 --system=linux --add_link_flags="-ldl" && cmake ..
 
     - name: Build
       # Build your program with the given configuration
@@ -46,3 +46,7 @@ jobs:
         name: openhitls-build
         path: ${{ github.workspace }}/build
         retention-days: 5
+    - name: Upload coverage
+      uses: codecov/codecov-action@v5
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
