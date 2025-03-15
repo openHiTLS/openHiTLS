@@ -45,7 +45,7 @@ int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Sym
         BSL_ERR_PUSH_ERROR(BSL_PEM_SYMBOL_NOT_FOUND);
         return BSL_PEM_SYMBOL_NOT_FOUND;
     }
-    char *end = strstr(begin, symbol->tail);
+    char *end = strstr(begin + headLen, symbol->tail);
     if (end == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_PEM_SYMBOL_NOT_FOUND);
         return BSL_PEM_SYMBOL_NOT_FOUND;

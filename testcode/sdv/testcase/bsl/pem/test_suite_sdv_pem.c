@@ -90,3 +90,20 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_PEM_PARSE_FUNC_TC003(void)
+{
+    BSL_PEM_Symbol sym = {BSL_PEM_EC_PRI_KEY_BEGIN_STR, BSL_PEM_EC_PRI_KEY_END_STR};
+    char *pemdata = "-----BEGIN EC PRIVATE KEY-----END EC PRIVATE KEY------------------END-----\n";
+    int32_t len = strlen(pemdata);
+    char *next = pemdata;
+    uint32_t nextLen = len;
+    uint8_t *asn1Encode = NULL;
+    uint32_t asn1Len;
+    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_PEM_SYMBOL_NOT_FOUND);
+EXIT:
+    BSL_SAL_Free(asn1Encode);
+    return;
+}
+/* END_CASE */
