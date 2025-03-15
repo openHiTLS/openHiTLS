@@ -24,6 +24,8 @@ void TestMemInit(void);
 
 int TestRandInit(void);
 
+void TestRandDeInit(void);
+
 bool IsMdAlgDisabled(int id);
 
 bool IsHmacAlgDisabled(int id);

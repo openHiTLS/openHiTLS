@@ -48,17 +48,16 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx)
         return;
     }
 
+    if (libCtx->drbg != NULL) {
+        CRYPT_RandDeinit(libCtx->drbg);
+        libCtx->drbg = NULL;
+    }
     if (libCtx->providers != NULL) {
         BSL_LIST_FREE(libCtx->providers, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
     }
 
     if (libCtx->lock != NULL) {
         BSL_SAL_ThreadLockFree(libCtx->lock);
-    }
-
-    if (libCtx->drbg != NULL) {
-        CRYPT_RandDeinit(libCtx->drbg);
-        libCtx->drbg = NULL;
     }
 
     BSL_SAL_FREE(libCtx->searchProviderPath);

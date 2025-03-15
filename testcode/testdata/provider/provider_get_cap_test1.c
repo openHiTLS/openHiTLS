@@ -161,7 +161,7 @@ static int32_t TestEccGetPubKey(TestEccKeyCtx *ctx, BSL_Param *para)
     if (ctx == NULL || para == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
     if (pub == NULL) {
         pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
     }
@@ -347,6 +347,94 @@ static CRYPT_EAL_AlgInfo g_testKeyExch[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
+void *TEST_DRBG_RandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
+{
+    (void)provCtx;
+    (void)algId;
+    (void)param;
+    return malloc(1);
+}
+
+int32_t TEST_DRBG_Instantiate(void *ctx, const uint8_t *person, uint32_t persLen, BSL_Param *param)
+{
+    (void)ctx;
+    (void)person;
+    (void)persLen;
+    (void)param;
+    return CRYPT_SUCCESS;
+}
+
+int32_t TEST_DRBG_Uninstantiate(void *ctx)
+{
+    (void)ctx;
+    return CRYPT_SUCCESS;
+}
+
+int32_t TEST_DRBG_Generate(void *ctx, uint8_t *out, uint32_t outLen,
+    const uint8_t *adin, uint32_t adinLen,  BSL_Param *param)
+{
+    (void)ctx;
+    (void)adin;
+    (void)adinLen;
+    (void)param;
+    RandFunc(out, outLen);
+    return CRYPT_SUCCESS;
+}
+
+int32_t TEST_DRBG_Reseed(void *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Param *param)
+{
+    (void)ctx;
+    (void)adin;
+    (void)adinLen;
+    (void)param;
+    return CRYPT_SUCCESS;
+}
+
+int32_t TEST_DRBG_Ctrl(void *ctx, int32_t cmd, void *val, uint32_t valLen)
+{
+    (void)ctx;
+    (void)cmd;
+    (void)val;
+    (void)valLen;
+    return CRYPT_SUCCESS;
+}
+
+void TEST_DRBG_Free(void *ctx)
+{
+    free(ctx);
+}
+
+const CRYPT_EAL_Func g_testRand[] = {
+    {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, (CRYPT_EAL_ImplRandDrbgNewCtx)TEST_DRBG_RandNewCtx},
+    {CRYPT_EAL_IMPLRAND_DRBGINST, (CRYPT_EAL_ImplRandDrbgInst)TEST_DRBG_Instantiate},
+    {CRYPT_EAL_IMPLRAND_DRBGUNINST, (CRYPT_EAL_ImplRandDrbgUnInst)TEST_DRBG_Uninstantiate},
+    {CRYPT_EAL_IMPLRAND_DRBGGEN, (CRYPT_EAL_ImplRandDrbgGen)TEST_DRBG_Generate},
+    {CRYPT_EAL_IMPLRAND_DRBGRESEED, (CRYPT_EAL_ImplRandDrbgReSeed)TEST_DRBG_Reseed},
+    {CRYPT_EAL_IMPLRAND_DRBGCTRL, (CRYPT_EAL_ImplRandDrbgCtrl)TEST_DRBG_Ctrl},
+    {CRYPT_EAL_IMPLRAND_DRBGFREECTX, (CRYPT_EAL_ImplRandDrbgFreeCtx)TEST_DRBG_Free},
+    CRYPT_EAL_FUNC_END,
+};
+
+static CRYPT_EAL_AlgInfo g_testRands[] = {
+    {CRYPT_RAND_SHA1, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_SHA224, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_SHA256, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_SHA384, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_SHA512, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_HMAC_SHA1, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_HMAC_SHA224, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_HMAC_SHA256, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_HMAC_SHA384, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_HMAC_SHA512, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_AES128_CTR, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_AES192_CTR, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_AES256_CTR, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_AES128_CTR_DF, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_AES192_CTR_DF, g_testRand, "provider=test_getcap"},
+    {CRYPT_RAND_AES256_CTR_DF, g_testRand, "provider=test_getcap"},
+    CRYPT_EAL_ALGINFO_END
+};
+
 static int32_t TestProvQuery(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos)
 {
     (void)provCtx;
@@ -360,6 +448,9 @@ static int32_t TestProvQuery(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo *
             break;
         case CRYPT_EAL_OPERAID_KEYEXCH:
             *algInfos = g_testKeyExch;
+            break;
+        case CRYPT_EAL_OPERAID_RAND:
+            *algInfos = g_testRands;
             break;
         default:
             return CRYPT_NOT_SUPPORT;

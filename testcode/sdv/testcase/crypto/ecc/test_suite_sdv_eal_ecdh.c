@@ -151,7 +151,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey);
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey2);
     CRYPT_EAL_PkeyFreeCtx(peerEcdhPkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -624,7 +624,7 @@ void SDV_CRYPTO_ECDH_EXCH_FUNC_TC001(
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey);
     CRYPT_EAL_PkeyFreeCtx(peerEcdhPubPkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     free(shareKey);
 }
 /* END_CASE */

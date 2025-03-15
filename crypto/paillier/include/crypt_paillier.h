@@ -45,6 +45,8 @@ typedef struct PAILLIER_Para CRYPT_PAILLIER_Para;
 */
 CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtx(void);
 
+CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtxEx(void *libCtx);
+
 /**
  * @ingroup paillier
  * @brief Copy the Paillier context. After the duplication is complete, call the CRYPT_PAILLIER_FreeCtx to release the memory.

@@ -382,7 +382,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC002(int mdId, Hex *n, Hex *d, Hex *msg, int 
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     free(signdata);
 }
@@ -445,7 +445,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC003(Hex *n, Hex *d, Hex *msg, int saltLen, i
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, CRYPT_MD_SHA224, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     free(signdata);
 }
@@ -548,7 +548,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PKCSV15_FUNC_TC001(int bits, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, mdId, data, dataLen, sign, signLen), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx);
     free(sign);
@@ -647,7 +647,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PSS_FUNC_TC001(int bits, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(cpyCtx, hash, hashLen, sign, signLen), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx);
     free(sign);
@@ -734,7 +734,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PKCSV15_FUNC_TC002(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey2, CRYPT_MD_SHA256, data, dataLen, sign, signLen), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -835,7 +835,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PKCSV15_FUNC_TC003(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, data, dataLen, sign, signLen), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -1130,7 +1130,7 @@ void SDV_CRYPTO_RSA_BLINDING_FUNC_TC001(int keyLen, int hashId, int padMode, Hex
     ASSERT_EQ(CRYPT_EAL_PkeySign(newCtx, hashId, msg->x, msg->len, sign, &dataLen), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(newCtx);
 }
@@ -1202,7 +1202,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(newCtx);
     free(signdata);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -1338,7 +1338,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int keyLen, int mdId, Hex *msg, 
     ASSERT_TRUE(CRYPT_EAL_PkeySignData(newCtx, blindMsg, blindMsgLen, sign, &signLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(newCtx, mdId, msg->x, msg->len, unBlindSig, unBlindSigLen) == CRYPT_SUCCESS);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(newCtx);
 }
@@ -1413,6 +1413,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &priKey), CRYPT_SUCCESS);
     if (isStub) {
         CRYPT_RandRegist(STUB_ReplaceRandom);
+        CRYPT_RandRegistEx(STUB_ReplaceRandomEx);
     } else {
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
@@ -1450,7 +1451,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA384, prepared_msg->x, prepared_msg->len, unBlindSig,
         unBlindSigLen) == CRYPT_SUCCESS);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     BN_OptimizerDestroy(opt);
     BN_Destroy(inv);

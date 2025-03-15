@@ -39,6 +39,16 @@ CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void)
     return ctx;
 }
 
+CRYPT_DSA_Ctx *CRYPT_DSA_NewCtxEx(void *libCtx)
+{
+    CRYPT_DSA_Ctx *ctx = CRYPT_DSA_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 static bool InputBufferCheck(const uint8_t *buffer, uint32_t bufferLen)
 {
     if (buffer == NULL || bufferLen == 0) {
@@ -566,11 +576,11 @@ int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, BSL_Param *para)
     return CRYPT_SUCCESS;
 }
 
-static int32_t RandRangeQ(BN_BigNum *r, const BN_BigNum *q)
+static int32_t RandRangeQ(void *libCtx, BN_BigNum *r, const BN_BigNum *q)
 {
     int32_t cnt = 0;
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
-        int32_t ret = BN_RandRange(r, q);
+        int32_t ret = BN_RandRangeEx(libCtx, r, q);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -621,7 +631,7 @@ int32_t CRYPT_DSA_Gen(CRYPT_DSA_Ctx *ctx)
     }
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         /* Generate the private key x of [1, q-1], see RFC6979-2.2. */
-        ret = RandRangeQ(x, ctx->para->q);
+        ret = RandRangeQ(ctx->libCtx, x, ctx->para->q);
         if (ret != CRYPT_SUCCESS) {
             // Internal API, the BSL_ERR_PUSH_ERROR info is already exists when failed.
             goto ERR;
@@ -702,7 +712,7 @@ static int32_t SignCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r,
     }
     for (cnt = 0; cnt < CRYPT_DSA_TRY_MAX_CNT; cnt++) {
         // Generate random number k of [1, q-1], see RFC6979-2.4.2 */
-        ret = RandRangeQ(k, ctx->para->q);
+        ret = RandRangeQ(ctx->libCtx, k, ctx->para->q);
         if (ret != CRYPT_SUCCESS) {
             // Internal function. The BSL_ERR_PUSH_ERROR information exists when the failure occurs.
             goto EXIT;
