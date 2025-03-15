@@ -43,6 +43,8 @@ typedef struct EccPara CRYPT_EcdsaPara;
  */
 CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void);
 
+CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtxEx(void *libCtx);
+
 /**
  * @ingroup ecdsa
  * @brief Copy the ECDSA context. After the duplication is complete, call the CRYPT_ECDSA_FreeCtx to release the memory.

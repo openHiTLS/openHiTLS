@@ -118,6 +118,7 @@ struct RSA_Ctx {
     CRYPT_Data label; // Used for oaep padding
     BSL_SAL_RefCount references;
     RSA_BlindParam *blindParam;
+    void *libCtx;
 };
 
 CRYPT_RSA_PrvKey *RSA_NewPrvKey(uint32_t bits);
@@ -125,7 +126,7 @@ CRYPT_RSA_PubKey *RSA_NewPubKey(uint32_t bits);
 void RSA_FreePrvKey(CRYPT_RSA_PrvKey *prvKey);
 void RSA_FreePubKey(CRYPT_RSA_PubKey *pubKey);
 int32_t RSA_CalcPrvKey(CRYPT_RSA_Ctx *ctx, BN_Optimizer *optimizer);
-int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen);
+int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen);
 void ShallowCopyCtx(CRYPT_RSA_Ctx *ctx, CRYPT_RSA_Ctx *newCtx);
 CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para);
 
@@ -182,7 +183,7 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
  *
  * @retval Return the error code.
  */
-int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt);
+int32_t RSA_BlindCreateParam(void *libCtx, RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt);
 
 int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits);
 

@@ -15,6 +15,7 @@
 
 #include "securec.h"
 #include "crypt_eal_pkey.h"
+#include "crypt_eal_rand.h"
 #include "auth_params.h"
 #include "auth_errno.h"
 #include "bsl_errno.h"
@@ -334,7 +335,11 @@ int32_t PrivPassPubRandom(uint8_t *buffer, uint32_t bufferLen)
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
         return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
     }
-    return CRYPT_Rand(buffer, bufferLen);
+#ifdef HITLS_CRYPTO_PROVIDER
+    return CRYPT_EAL_RandbytesEx(NULL, buffer, bufferLen);
+#else
+    return CRYPT_EAL_Randbytes(buffer, bufferLen);
+#endif
 }
 
 PrivPassCryptCb PrivPassCryptPubCb(void)

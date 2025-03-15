@@ -47,6 +47,8 @@ typedef struct DH_Ctx CRYPT_DH_Ctx;
  */
 CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void);
 
+CRYPT_DH_Ctx *CRYPT_DH_NewCtxEx(void *libCtx);
+
 /**
  * @ingroup dh
  * @brief Copy the DH context. After the duplicated context is used up, call CRYPT_DH_FreeCtx to release the memory.

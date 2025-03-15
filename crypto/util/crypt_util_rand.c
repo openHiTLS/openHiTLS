@@ -23,6 +23,7 @@
 #include "crypt_util_rand.h"
 
 static CRYPT_RandFunc g_randFunc = NULL;
+static CRYPT_RandFuncEx g_randFuncEx = NULL;
 
 void CRYPT_RandRegist(CRYPT_RandFunc func)
 {
@@ -41,4 +42,28 @@ int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen)
     }
     return ret;
 }
+
+void CRYPT_RandRegistEx(CRYPT_RandFuncEx func)
+{
+    g_randFuncEx = func;
+}
+
+int32_t CRYPT_RandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
+{
+#if defined(HITLS_CRYPTO_PROVIDER)
+    if (g_randFuncEx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NO_REGIST_RAND);
+        return CRYPT_NO_REGIST_RAND;
+    }
+    int32_t ret = g_randFuncEx(libCtx, rand, randLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+#else
+    (void) libCtx;
+    return CRYPT_Rand(rand, randLen);
+#endif
+}
+
 #endif

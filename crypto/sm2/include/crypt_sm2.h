@@ -40,6 +40,8 @@ typedef struct EccPara CRYPT_Sm2Para;
  */
 CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void);
 
+CRYPT_SM2_Ctx *CRYPT_SM2_NewCtxEx(void *libCtx);  
+
 /**
  * @ingroup sm2
  * @brief Copy the sm2 context. After the duplication is complete, invoke the CRYPT_SM2_FreeCtx to release the memory.

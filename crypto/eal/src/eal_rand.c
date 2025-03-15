@@ -366,11 +366,6 @@ static CRYPT_EAL_RndCtx *EAL_ProvRandInitDrbg(CRYPT_EAL_LibCtx *libCtx, CRYPT_RA
     return randCtx;
 }
 
-static int32_t EalRandbytes(uint8_t *byte, uint32_t len)
-{
-    return CRYPT_EAL_RandbytesEx(NULL, byte, len);
-}
-
 int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
     const uint8_t *pers, uint32_t persLen, BSL_Param *param)
 {
@@ -400,10 +395,20 @@ int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, c
         return ret;
     }
     ctx->working = true;
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes); // provide a random number generation function for BigNum.
-    CRYPT_RandRegist(EalRandbytes); // provide a random number generation function for BigNum.
+    CRYPT_RandRegistEx((CRYPT_RandFuncEx)CRYPT_EAL_RandbytesEx); // provide a random number generation function for BigNum.
     localLibCtx->drbg = ctx;
     return CRYPT_SUCCESS;
+}
+
+void CRYPT_EAL_RandDeinitEx(CRYPT_EAL_LibCtx *libCtx)
+{
+    CRYPT_EAL_LibCtx *localLibCtx = libCtx;
+    if (localLibCtx == NULL) {
+        localLibCtx = CRYPT_EAL_GetGlobalLibCtx();
+    }
+    CRYPT_RandDeinit(localLibCtx->drbg);
+    localLibCtx->drbg = NULL;
+    return;
 }
 
 CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
@@ -457,8 +462,9 @@ int32_t CRYPT_EAL_RandbytesWithAdinEx(CRYPT_EAL_LibCtx *libCtx,
 int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t len)
 {
     CRYPT_EAL_LibCtx *localCtx = libCtx;
-    // TODO: To create a new drbg ctx for libCtx
-    localCtx = CRYPT_EAL_GetGlobalLibCtx();
+    if (localCtx == NULL) {
+        localCtx = CRYPT_EAL_GetGlobalLibCtx();
+    }
     if (localCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

@@ -46,6 +46,8 @@ typedef struct DSA_Ctx CRYPT_DSA_Ctx;
  */
 CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void);
 
+CRYPT_DSA_Ctx *CRYPT_DSA_NewCtxEx(void *libCtx);
+
 /**
  * @ingroup dsa
  * @brief Copy the DSA context. After the duplication is complete, invoke the CRYPT_DSA_FreeCtx to release the memory.

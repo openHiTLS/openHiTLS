@@ -52,6 +52,7 @@ struct PAILLIER_Ctx {
     CRYPT_PAILLIER_PrvKey *prvKey;
     CRYPT_PAILLIER_Para *para;
     BSL_SAL_RefCount references;
+    void *libCtx;
 };
 
 CRYPT_PAILLIER_PrvKey *Paillier_NewPrvKey(uint32_t bits);

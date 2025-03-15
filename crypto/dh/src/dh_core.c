@@ -40,6 +40,16 @@ CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
     return ctx;
 }
 
+CRYPT_DH_Ctx *CRYPT_DH_NewCtxEx(void *libCtx)
+{
+    CRYPT_DH_Ctx *ctx = CRYPT_DH_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 static CRYPT_DH_Para *ParaMemGet(uint32_t bits)
 {
     CRYPT_DH_Para *para = BSL_SAL_Calloc(1u, sizeof(CRYPT_DH_Para));
@@ -563,7 +573,7 @@ int32_t CRYPT_DH_Gen(CRYPT_DH_Ctx *ctx)
     }
     for (cnt = 0; cnt < CRYPT_DH_TRY_CNT_MAX; cnt++) {
         /*  Generate private key x for [1, q-1] or [1, p-2] */
-        ret = BN_RandRange(x, xLimb);
+        ret = BN_RandRangeEx(ctx->libCtx, x, xLimb);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;
