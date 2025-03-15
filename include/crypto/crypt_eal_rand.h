@@ -90,6 +90,8 @@ int32_t CRYPT_EAL_ProviderRandInitCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, c
  */
 void CRYPT_EAL_RandDeinit(void);
 
+void CRYPT_EAL_RandDeinitEx(CRYPT_EAL_LibCtx *libCtx);
+
 /**
  * @ingroup crypt_eal_rand
  * @brief   Generate a random number.

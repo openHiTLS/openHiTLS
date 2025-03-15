@@ -25,7 +25,7 @@
 #include "bn_bincal.h"
 #include "crypt_util_rand.h"
 
-static int32_t RandGenerate(BN_BigNum *r, uint32_t bits)
+static int32_t RandGenerate(void *libCtx, BN_BigNum *r, uint32_t bits)
 {
     int32_t ret;
     uint32_t room = BITS_TO_BN_UNIT(bits);
@@ -36,7 +36,7 @@ static int32_t RandGenerate(BN_BigNum *r, uint32_t bits)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = CRYPT_Rand(buf, bufSize);
+    ret = CRYPT_RandEx(libCtx, buf, bufSize);
     if (ret == CRYPT_NO_REGIST_RAND) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -79,6 +79,11 @@ static int32_t CheckTopAndBottom(uint32_t bits, uint32_t top, uint32_t bottom)
 
 int32_t BN_Rand(BN_BigNum *r, uint32_t bits, uint32_t top, uint32_t bottom)
 {
+    return BN_RandEx(NULL, r, bits, top, bottom);
+}
+
+int32_t BN_RandEx(void *libCtx, BN_BigNum *r, uint32_t bits, uint32_t top, uint32_t bottom)
+{
     if (r == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -101,7 +106,7 @@ int32_t BN_Rand(BN_BigNum *r, uint32_t bits, uint32_t top, uint32_t bottom)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = RandGenerate(r, bits);
+    ret = RandGenerate(libCtx, r, bits);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -141,6 +146,11 @@ static int32_t InputCheck(BN_BigNum *r, const BN_BigNum *p)
 
 int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p)
 {
+    return BN_RandRangeEx(NULL, r, p);    
+}
+
+int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
+{
     const int32_t maxCnt = 100; /* try 100 times */
     int32_t tryCnt = 0;
     int32_t ret;
@@ -167,7 +177,7 @@ int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p)
             BSL_ERR_PUSH_ERROR(CRYPT_BN_RAND_GEN_FAIL);
             return CRYPT_BN_RAND_GEN_FAIL;
         }
-        ret = RandGenerate(r, bits);
+        ret = RandGenerate(libCtx, r, bits);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;

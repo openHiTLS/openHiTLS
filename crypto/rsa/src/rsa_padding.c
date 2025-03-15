@@ -153,7 +153,7 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
     return CRYPT_SUCCESS;
 }
 
-int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
+int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
 {
     uint32_t hashLen = mdMethod->mdSize;
     if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
@@ -171,7 +171,7 @@ int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltL
         return CRYPT_MEM_ALLOC_FAIL;
     }
     // Obtain the salt through the public random number.
-    int32_t ret = CRYPT_Rand(salt->data, salt->len);
+    int32_t ret = CRYPT_RandEx(libCtx, salt->data, salt->len);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(salt->data);
         BSL_ERR_PUSH_ERROR(ret);
@@ -682,10 +682,11 @@ EXIT:
 *
 *                   Figure 1: EME-OAEP Encoding Operation <rfc8017>
 */
-int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, const uint8_t *in,
-    uint32_t inLen, const uint8_t *param, uint32_t paramLen, uint8_t *pad, uint32_t padLen)
+int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *pad, uint32_t padLen)
 {
     int32_t ret;
+    const EAL_MdMethod *hashMethod = ctx->pad.para.oaep.mdMeth;
+    const EAL_MdMethod *mgfMethod = ctx->pad.para.oaep.mgfMeth;
 
     if (hashMethod == NULL || mgfMethod == NULL || (in == NULL && inLen != 0) || pad == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -706,7 +707,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMetho
     *pad = 0x00;
     uint8_t *seed = pad + 1;
     // Generate a random octet string seed of length hLen<rfc8017>
-    ret = CRYPT_Rand(seed, hashLen);
+    ret = CRYPT_RandEx(ctx->libCtx, seed, hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -714,8 +715,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMetho
     uint8_t *db = seed + hashLen;
 
     // Calculate hash
-    CRYPT_Data data = {(uint8_t *)(uintptr_t)param, paramLen};
-    ret = CalcHash(hashMethod, &data, 1, db, hashLen);
+    ret = CalcHash(hashMethod, &ctx->label, 1, db, hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -885,7 +885,7 @@ ERR:
 }
 
 // Pad output format: EM = 00 || 02 || PS || 00 || M; where M indicates message.
-int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
+int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t outLen)
 {
     // If mLen > k - 11, output "message too long" and stop.<rfc8017>
@@ -910,7 +910,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
     }
 
     // cal ps
-    ret = CRYPT_Rand(ps, psLen);
+    ret = CRYPT_RandEx(libCtx, ps, psLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -921,7 +921,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
         }
         do {
             // no zero
-            ret = CRYPT_Rand(ps + i, 1);
+            ret = CRYPT_RandEx(libCtx, ps + i, 1);
             if (ret != CRYPT_SUCCESS) {
                 return ret;
             }

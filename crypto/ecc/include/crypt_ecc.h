@@ -406,6 +406,9 @@ int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, con
  */
 int32_t ECC_GetSecBits(const ECC_Para *para);
 
+
+void ECC_SetLibCtx(void *libCtx, ECC_Para *para);
+
 #ifdef __cplusplus
 }
 #endif

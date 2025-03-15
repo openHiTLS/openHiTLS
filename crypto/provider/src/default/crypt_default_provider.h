@@ -32,7 +32,7 @@ extern "C" {
 #endif // __cplusplus
 
 typedef struct EalDefProvCtx {
-    void *mgrCtxHandle; // default provider may need libCtx
+    void *libCtx;
 } CRYPT_EAL_DefProvCtx;
 
 #ifdef __cplusplus

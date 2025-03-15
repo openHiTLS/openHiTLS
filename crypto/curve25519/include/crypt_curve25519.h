@@ -41,6 +41,8 @@ typedef struct CryptCurve25519Ctx CRYPT_CURVE25519_Ctx;
  */
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
 
+CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx);
+
 /**
  * @ingroup ed25519
  * @brief curve25519 Create a key pair structure for ED25519 algorithm and allocate memory space.
@@ -49,6 +51,9 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
  * @retval NULL                     Invalid null pointer
  */
 CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void);
+
+
+CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtxEx(void *libCtx);
 
 /**
  * @ingroup curve25519

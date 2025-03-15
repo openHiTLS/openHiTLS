@@ -114,7 +114,7 @@ int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
  * 2. Computes r^(-1) mod n (modular inverse)
  * 3. Computes r^e mod n (where e is the public exponent)
  */
-int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt)
+int32_t RSA_BlindCreateParam(void *libCtx, RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt)
 {
     int32_t ret;
     if (b == NULL || e == NULL || n == NULL) {
@@ -134,7 +134,7 @@ int32_t RSA_BlindCreateParam(RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimi
     }
 
     // b->r = random_integer_uniform(1, n)
-    ret = BN_RandRange(b->r, n);
+    ret = BN_RandRangeEx(libCtx, b->r, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
