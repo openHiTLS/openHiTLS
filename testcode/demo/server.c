@@ -21,6 +21,7 @@
 #include "hitls_cert.h"
 #include "hitls_crypt_init.h"
 #include "hitls_pki_cert.h"
+#include "crypt_errno.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
@@ -44,7 +45,15 @@ int main(int32_t argc, char *argv[])
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
     BSL_ERR_Init();
 
-    CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
+    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
+    if (ret != CRYPT_SUCCESS) {
+        printf("Init rand failed.\n");
+        goto EXIT;
+    }
 #ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();

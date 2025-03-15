@@ -145,6 +145,7 @@ void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
 {
     BSL_Buffer data = {buff->x, buff->len};
     BSL_Buffer output = {0};
+    BSL_Buffer verify = {0};
     char *pwd = "123456";
     CRYPT_Pbkdf2Param param = {0};
     param.pbesId = BSL_CID_PBES2;
@@ -156,27 +157,26 @@ void SDV_CMS_ENCODE_ENCRYPTEDDATA_TC001(Hex *buff)
     param.saltLen = 16;
     param.itCnt = 2048;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};
-    
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0), HITLS_PKI_SUCCESS);
-    int32_t ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, NULL, NULL, NULL);
+
+    ASSERT_EQ(TestRandInit(), HITLS_PKI_SUCCESS);
+    int32_t ret = CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, NULL, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, NULL, NULL);
+    ret = CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, NULL, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, NULL);
+    ret = CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
 
     param.hmacId = CRYPT_MAC_MAX;
     ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, &output);
     ASSERT_EQ(ret, CRYPT_ERR_ALGID);
     param.hmacId = CRYPT_MAC_HMAC_SHA256;
-    BSL_Buffer verify = {0};
-    ret =  CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, &output);
+    ret = CRYPT_EAL_EncodePKCS7EncryptDataBuff(NULL, NULL, &data, &paramEx, &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, &output, (const uint8_t *)pwd, strlen(pwd), &verify);
+    ret = CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, &output, (const uint8_t *)pwd, strlen(pwd), &verify);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("encode p7-encryptData", data.data, data.dataLen, verify.data, verify.dataLen);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     BSL_SAL_FREE(verify.data);
     BSL_SAL_FREE(output.data);
     return;

@@ -53,6 +53,17 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void); // create key structure
 
 /**
  * @ingroup rsa
+ * @brief Allocate rsa context memory space.
+ * 
+ * @param libCtx [IN] Library context
+ *
+ * @retval (CRYPT_RSA_Ctx *) Pointer to the memory space of the allocated context
+ * @retval NULL              Invalid null pointer.
+ */
+CRYPT_RSA_Ctx *CRYPT_RSA_NewCtxEx(void *libCtx); 
+
+/**
+ * @ingroup rsa
  * @brief Copy the RSA context. After the duplication is complete, call the CRYPT_RSA_FreeCtx to release the memory.
  *
  * @param ctx [IN] RSA context
@@ -409,12 +420,9 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b);
  * @ingroup rsa
  * @brief oaep padding
  *
- * @param hashMethod [IN] Hash method. Only sha1, sha244, sha256, sha384, and sha512 are supported.
- * @param mgfMethod [IN] Hash method required by mgf
+ * @param ctx [IN] RSA context structure
  * @param in [IN] Original data
  * @param inLen [IN] Original data length
- * @param param [IN] oaep parameter, which can be null
- * @param paramLen [IN] oaep Parameter length
  * @param pad [IN] Data after padding
  * @param padLen [IN] Data length after padding
  *
@@ -424,8 +432,7 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b);
  * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    Outbuf Insufficient
  * */
-int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, const uint8_t *in,
-    uint32_t inLen, const uint8_t *param, uint32_t paramLen, uint8_t *pad, uint32_t padLen);
+int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *pad, uint32_t padLen);
 
 /**
  * @ingroup rsa
@@ -449,7 +456,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMetho
 int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, const uint8_t *in,
     uint32_t inLen, const uint8_t *param, uint32_t paramLen, uint8_t *msg, uint32_t *msgLen);
 
-int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
+int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t outLen);
 
 int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);

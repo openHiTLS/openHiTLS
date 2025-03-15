@@ -172,7 +172,7 @@ static int32_t GetLegendreZ(BN_BigNum *z, const BN_BigNum *p, BN_Optimizer *opt)
     GOTO_ERR_IF_EX(BN_Rshift(exp, exp, 1), ret);
 
     while (maxCnt > 0) {
-        GOTO_ERR_IF_EX(BN_RandRange(z, p), ret);
+        GOTO_ERR_IF_EX(BN_RandRangeEx(opt->libCtx, z, p), ret);
 
         maxCnt--;
         if (BN_IsZero(z)) {
@@ -308,8 +308,7 @@ static int32_t BN_ModSqrtTempDataCheck(const BN_BigNum *pSubOne, const BN_BigNum
     2) Find an i (0 < i < m) so that t^(2^i) = 1.
     3) b = c^(2^(m-i-1)), r = r * b, t = t*b*b, c = b*b, m = i
 7. Verification */
-int32_t BN_ModSqrt(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt)
+int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt)
 {
     if (r == NULL || a == NULL || p == NULL || opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

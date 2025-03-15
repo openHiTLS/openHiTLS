@@ -149,6 +149,7 @@ struct SlhDsaCtx {
     SlhDsaPrvKey prvKey;
     SlhDsaHashFuncs hashFuncs;
     AdrsOps adrsOps;
+    void *libCtx;
 };
 
 #endif // HITLS_CRYPTO_SLH_DSA
