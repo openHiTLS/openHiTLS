@@ -1913,8 +1913,7 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
     ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandIsValidAlgId(id), true);
 EXIT:
-    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
-    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
+    CRYPT_EAL_RandDeinitEx(NULL);
     seedCtxFree(seedCtx);
     return;
 #endif
@@ -2068,8 +2067,7 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
     ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
-    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
+    CRYPT_EAL_RandDeinitEx(NULL);
     return;
 #endif
 }

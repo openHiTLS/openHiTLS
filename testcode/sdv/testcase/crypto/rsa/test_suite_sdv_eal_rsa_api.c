@@ -365,7 +365,7 @@ void SDV_CRYPTO_RSA_GET_PUB_API_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubKey), CRYPT_BN_BUFF_LEN_NOT_ENOUGH);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -446,7 +446,7 @@ void SDV_CRYPTO_RSA_GET_PRV_API_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_NULL_INPUT);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -558,7 +558,7 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey2, &prvKey) == CRYPT_SUCCESS);
     ASSERT_COMPARE("rsa e", prvKey.key.rsaPrv.e, prvKey.key.rsaPrv.eLen, e, 3);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -717,7 +717,7 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC001(int isProvider)
     ASSERT_TRUE_AND_LOG("e is 0", CRYPT_EAL_PkeySetPub(pkey2, &pubKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }
@@ -875,7 +875,7 @@ void SDV_CRYPTO_RSA_ENC_API_TC001(Hex *n, Hex *e, int hashId, Hex *in, int isPro
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -982,6 +982,7 @@ void SDV_CRYPTO_RSA_CTRL_API_TC001(Hex *n, Hex *d, Hex *salt, int hashId, int is
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
     TestMemInit();
     CRYPT_RandRegist(STUB_ReplaceRandom);
+    CRYPT_RandRegistEx(STUB_ReplaceRandomEx);
 
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
@@ -1029,7 +1030,7 @@ void SDV_CRYPTO_RSA_CTRL_API_TC001(Hex *n, Hex *d, Hex *salt, int hashId, int is
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 
 /* END_CASE */
@@ -1247,6 +1248,7 @@ void SDV_CRYPTO_RSA_SET_KEY_API_TC001(int isProvider)
 
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
     CRYPT_EAL_PkeyCtx *pkey1 = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -1305,7 +1307,7 @@ void SDV_CRYPTO_RSA_SET_KEY_API_TC001(int isProvider)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -1328,6 +1330,7 @@ void SDV_CRYPTO_RSA_DUP_CTX_API_TC001(Hex *e, int bits, int isProvider)
 
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
 
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
@@ -1367,7 +1370,7 @@ void SDV_CRYPTO_RSA_DUP_CTX_API_TC001(Hex *e, int bits, int isProvider)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(newPkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 

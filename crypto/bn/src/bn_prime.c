@@ -154,7 +154,7 @@ static int32_t FillUp(BN_BigNum *rnd, const BN_UINT *mods, uint32_t modsLen)
 }
 
 /* Generate random numbers that can be mutually primed with the data in the small prime number table. */
-static int32_t ProbablePrime(BN_BigNum *rnd, uint32_t bits, bool half, BN_Optimizer *opt)
+static int32_t ProbablePrime(void *libCtx, BN_BigNum *rnd, uint32_t bits, bool half, BN_Optimizer *opt)
 {
     const int32_t maxCnt = 100;
     int32_t tryCnt = 0;
@@ -184,7 +184,7 @@ static int32_t ProbablePrime(BN_BigNum *rnd, uint32_t bits, bool half, BN_Optimi
         }
         // 'top' can control whether to set the most two significant bits to 1.
         // RSA key generation usually focuses on this parameter to ensure the length of p*q.
-        ret = BN_Rand(rnd, bits, top, BN_RAND_BOTTOM_ONEBIT);
+        ret = BN_RandEx(libCtx, rnd, bits, top, BN_RAND_BOTTOM_ONEBIT);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             OptimizerEnd(opt);
@@ -221,9 +221,9 @@ static int32_t BnCheck(const BN_BigNum *bnSubOne, const BN_BigNum *bnSubThree,
     return CRYPT_SUCCESS;
 }
 
-static int32_t GenRnd(BN_BigNum *rnd, const BN_BigNum *bnSubThree)
+static int32_t GenRnd(void *libCtx, BN_BigNum *rnd, const BN_BigNum *bnSubThree)
 {
-    int32_t ret = BN_RandRange(rnd, bnSubThree);
+    int32_t ret = BN_RandRangeEx(libCtx, rnd, bnSubThree);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -240,7 +240,7 @@ static bool SumCorrect(BN_BigNum *sum, const BN_BigNum *bnSubOne)
     return false;
 }
 
-int32_t MillerRabinCheckCore(const BN_BigNum *bn, BN_Mont *mont, BN_BigNum *rnd,
+int32_t MillerRabinCheckCore(void *libCtx, const BN_BigNum *bn, BN_Mont *mont, BN_BigNum *rnd,
     const BN_BigNum *divisor, const BN_BigNum *bnSubOne, const BN_BigNum *bnSubThree,
     uint32_t p, BN_Optimizer *opt)
 {
@@ -250,7 +250,7 @@ int32_t MillerRabinCheckCore(const BN_BigNum *bn, BN_Mont *mont, BN_BigNum *rnd,
     BN_BigNum *sum = rnd;
     for (i = 0; i < checks; i++) {
         // 3.1  Generate a random number rnd, 2 < rnd < n-1
-        ret = GenRnd(rnd, bnSubThree);
+        ret = GenRnd(libCtx, rnd, bnSubThree);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -317,7 +317,7 @@ static uint32_t GetP(const BN_BigNum *bn)
 
 // CRYPT_SUCCESS is returned for a prime number,
 // and CRYPT_BN_NOR_CHECK_PRIME is returned for a non-prime number. Other error codes are returned.
-static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
+static int32_t MillerRabinPrimeVerify(void *libCtx, const BN_BigNum *bn, BN_Optimizer *opt)
 {
     uint32_t p;
     if (PrimeLimbCheck(bn) == CRYPT_SUCCESS) { /* 2 and 3 directly determine that the number is a prime number. */
@@ -355,16 +355,21 @@ static int32_t MillerRabinPrimeVerify(const BN_BigNum *bn, BN_Optimizer *opt)
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    ret = MillerRabinCheckCore(bn, mont, rnd, divisor, bnSubOne, bnSubThree, p, opt);
+    ret = MillerRabinCheckCore(libCtx, bn, mont, rnd, divisor, bnSubOne, bnSubThree, p, opt);
 EXIT:
     BN_MontDestroy(mont);
     OptimizerEnd(opt);
     return ret;
 }
 
+int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt)
+{
+    return BN_PrimeCheckEx(NULL, bn, opt);
+}
+
 // CRYPT_SUCCESS is returned for a prime number,
 // and CRYPT_BN_NOR_CHECK_PRIME is returned for a non-prime number. Other error codes are returned.
-int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt)
+int32_t BN_PrimeCheckEx(void *libCtx, const BN_BigNum *bn, BN_Optimizer *opt)
 {
     if (bn == NULL || opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -386,10 +391,10 @@ int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return MillerRabinPrimeVerify(bn, opt);
+    return MillerRabinPrimeVerify(libCtx, bn, opt);
 }
 
-static int32_t GenPrimeLimb(BN_BigNum *bn, uint32_t bits, bool half, BN_Optimizer *opt)
+static int32_t GenPrimeLimb(void *libCtx, BN_BigNum *bn, uint32_t bits, bool half, BN_Optimizer *opt)
 {
     const BN_UINT baseAll[13]  = {0, 2, 4, 6, 11, 18, 31, 54, 97,  172, 309, 564, 1028};
     const BN_UINT cntAll[13]   = {2, 2, 2, 5, 7,  13, 23, 43, 75,  137, 255, 464, 872};
@@ -414,7 +419,7 @@ static int32_t GenPrimeLimb(BN_BigNum *bn, uint32_t bits, bool half, BN_Optimize
         return CRYPT_BN_OPTIMIZER_GET_FAIL;
     }
     (void)BN_SetLimb(bnCnt, cnt[bits - 2]); /* offset, the minimum bit of the interface is 2. */
-    ret = BN_RandRange(bnRnd, bnCnt);
+    ret = BN_RandRangeEx(libCtx, bnRnd, bnCnt);
     if (ret != CRYPT_SUCCESS) {
         OptimizerEnd(opt);
         BSL_ERR_PUSH_ERROR(ret);
@@ -447,7 +452,7 @@ static int32_t GenCheck(BN_BigNum *bn, uint32_t bits, const BN_Optimizer *opt)
 }
 
 // Create a new optimizer to prevent optimizer from using too much memory.
-static int32_t PrimeVerifyGenPrime(const BN_BigNum *bn)
+static int32_t PrimeVerifyGenPrime(void *libCtx, const BN_BigNum *bn)
 {
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
@@ -455,7 +460,7 @@ static int32_t PrimeVerifyGenPrime(const BN_BigNum *bn)
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    int32_t ret = MillerRabinPrimeVerify(bn, opt);
+    int32_t ret = MillerRabinPrimeVerify(libCtx, bn, opt);
     BN_OptimizerDestroy(opt);
     return ret;
 }
@@ -464,6 +469,11 @@ static int32_t PrimeVerifyGenPrime(const BN_BigNum *bn)
 // If the prime number r fails to be generated, CRYPT_BN_NOR_GEN_PRIME is returned. Other error codes are returned.
 // If half is 1, the prime number whose two most significant bits are 1 is generated.
 int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb)
+{
+    return BN_GenPrimeEx(NULL, r, bits, half, opt, cb);
+}
+
+int32_t BN_GenPrimeEx(void *libCtx, BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb)
 {
     int32_t time = 0;
     int32_t maxTime = 256; // if cb == NULL, The maximum number of cycles is 256.
@@ -474,7 +484,7 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
     }
     PrimeTableGen(); // Generate a small prime number table.
     if (bits <= 14) { // The number within 14 bits is less than 17863 and can be obtained from the small prime table.
-        return GenPrimeLimb(r, bits, half, opt);
+        return GenPrimeLimb(libCtx, r, bits, half, opt);
     }
     ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
@@ -500,13 +510,13 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
             return CRYPT_BN_NOR_GEN_PRIME;
         }
         // Generate a random number bn that may be a prime.
-        ret = ProbablePrime(rnd, bits, half, opt);
+        ret = ProbablePrime(libCtx, rnd, bits, half, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             OptimizerEnd(opt);
             return ret;
         }
-        ret = PrimeVerifyGenPrime(rnd);
+        ret = PrimeVerifyGenPrime(libCtx, rnd);
         time++;
     } while (ret != CRYPT_SUCCESS);
 
