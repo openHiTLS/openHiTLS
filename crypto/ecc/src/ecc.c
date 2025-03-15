@@ -58,6 +58,11 @@ void ECC_FreePoint(ECC_Point *pt)
     BSL_SAL_FREE(pt);
 }
 
+void ECC_SetLibCtx(void *libCtx, ECC_Para *para)
+{
+    para->libCtx = libCtx;
+}
+
 int32_t ECC_CopyPoint(ECC_Point *dst, const ECC_Point *src)
 {
     if (dst == NULL || src == NULL) {

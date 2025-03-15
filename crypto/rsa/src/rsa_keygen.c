@@ -39,6 +39,17 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
     return keyCtx;
 }
 
+CRYPT_RSA_Ctx *CRYPT_RSA_NewCtxEx(void *libCtx)
+{
+    CRYPT_RSA_Ctx *keyCtx = NULL;
+    keyCtx = CRYPT_RSA_NewCtx();
+    if (keyCtx == NULL) {
+        return NULL;
+    }
+    keyCtx->libCtx = libCtx;
+    return keyCtx;
+}
+
 static CRYPT_RSA_PubKey *RSAPubKeyDupCtx(CRYPT_RSA_PubKey *pubKey)
 {
     CRYPT_RSA_PubKey *newPubKey = BSL_SAL_Malloc(sizeof(CRYPT_RSA_PubKey));
@@ -488,10 +499,10 @@ EXIT:
     return ret;
 }
 
-static int32_t RsaPGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *optimizer)
+static int32_t RsaPGen(void *libCtx, CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *optimizer)
 {
     uint32_t pBits = (para->bits + 1) / 2;
-    int32_t ret = BN_GenPrime(priKey->p, pBits, true, optimizer, NULL);
+    int32_t ret = BN_GenPrimeEx(libCtx, priKey->p, pBits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -499,11 +510,11 @@ static int32_t RsaPGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimi
     return RSA_Filter(priKey->p, pBits, para->e, optimizer);
 }
 
-static int32_t RsaQGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *optimizer)
+static int32_t RsaQGen(void *libCtx, CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *optimizer)
 {
     uint32_t pBits = (para->bits + 1) / 2;
     uint32_t qBits = para->bits - pBits;
-    int32_t ret = BN_GenPrime(priKey->q, qBits, true, optimizer, NULL);
+    int32_t ret = BN_GenPrimeEx(libCtx, priKey->q, qBits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -511,7 +522,7 @@ static int32_t RsaQGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimi
     return RSA_Filter(priKey->q, qBits, para->e, optimizer);
 }
 
-static int32_t RsaPQGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *optimizer)
+static int32_t RsaPQGen(void *libCtx, CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *optimizer)
 {
     int32_t ret = CRYPT_BN_RAND_GEN_FAIL;
     uint32_t i;
@@ -527,7 +538,7 @@ static int32_t RsaPQGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optim
 
     // FIPS 186-4 B.3.3 4.7, retry 5(nlen/2) times
     for (i = 0; i < 5 * halfBits; i++) {
-        ret = RsaPGen(para, priKey, optimizer);
+        ret = RsaPGen(libCtx, para, priKey, optimizer);
         if (ret == CRYPT_SUCCESS) {
             break;
         }
@@ -539,7 +550,7 @@ static int32_t RsaPQGen(CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optim
 
     // FIPS 186-4 B.3.3 5.8, retry 5(nlen/2) times
     for (i = 0; i < 5 * halfBits; i++) {
-        ret = RsaQGen(para, priKey, optimizer);
+        ret = RsaQGen(libCtx, para, priKey, optimizer);
         if (ret != CRYPT_SUCCESS) {
             continue;
         }
@@ -686,7 +697,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = RsaPQGen(newCtx->para, newCtx->prvKey, optimizer);
+    ret = RsaPQGen(ctx->libCtx, newCtx->para, newCtx->prvKey, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
