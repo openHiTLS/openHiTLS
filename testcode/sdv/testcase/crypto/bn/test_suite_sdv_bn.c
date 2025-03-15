@@ -54,6 +54,16 @@ static int32_t TEST_Random(uint8_t *r, uint32_t randLen)
     return 0;
 }
 
+static int32_t TEST_RandomEx(void *libCtx, uint8_t *r, uint32_t randLen)
+{
+    (void) libCtx;
+    for (uint32_t i = 0; i < randLen; i++) {
+        r[i] = rand() % UINT8_MAX_NUM;
+    }
+    return 0;
+}
+
+
 uint32_t TEST_GetMax(uint32_t num1, uint32_t num2, uint32_t num3)
 {
     uint32_t res = num1;
@@ -1027,7 +1037,7 @@ void SDV_CRYPTO_BN_PRIME_CHECK_FUNC_TC001(Hex *hex, int isPrime)
     }
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     BN_Destroy(bn);
     BN_OptimizerDestroy(opt);
 #endif
@@ -1077,6 +1087,7 @@ void SDV_CRYPTO_BN_GENPRIMELIMB_API_TC001(void)
     ASSERT_TRUE(r != NULL);
 
     CRYPT_RandRegist(TEST_Random);
+    CRYPT_RandRegistEx(TEST_RandomEx);
 
     ASSERT_TRUE(BN_GenPrime(r, bits, half, opt, cb) == CRYPT_SUCCESS);
 

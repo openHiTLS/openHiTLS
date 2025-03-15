@@ -39,6 +39,7 @@ struct CryptCurve25519Ctx {
     uint8_t pubKey[CRYPT_CURVE25519_KEYLEN];
     uint8_t prvKey[CRYPT_CURVE25519_KEYLEN];
     BSL_SAL_RefCount references;
+    void *libCtx;
 };
 
 typedef struct Fp25 {

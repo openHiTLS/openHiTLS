@@ -1460,7 +1460,11 @@ int32_t CRYPT_EAL_HpkeGenerateKeyPair(CRYPT_EAL_LibCtx *libCtx, const char *attr
     }
 
     uint8_t ikmNew[HPKE_KEM_MAX_PRIVATE_KEY_LEN];
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_RandbytesEx(NULL, ikmNew, ikmNewLen);
+#else
     ret = CRYPT_EAL_Randbytes(ikmNew, ikmNewLen);
+#endif
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

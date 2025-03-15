@@ -1634,7 +1634,12 @@ static int32_t EncodeDeriveKeyParam(CRYPT_Pbkdf2Param *param, BSL_Buffer *encode
     derParam[CRYPT_PKCS_ENC_DERALG_IDX].len = oidPbkdf->octetLen;
     derParam[CRYPT_PKCS_ENC_DERALG_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
     /* salt */
-    int32_t ret = CRYPT_EAL_Randbytes(salt->data, salt->dataLen);
+    int32_t ret;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_RandbytesEx(NULL, salt->data, salt->dataLen);
+#else
+    ret = CRYPT_EAL_Randbytes(salt->data, salt->dataLen);
+#endif
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1763,7 +1768,11 @@ static int32_t GenRandIv(CRYPT_Pbkdf2Param *pkcsParam, BSL_ASN1_Buffer *asn1)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_RandbytesEx(NULL, iv, ivLen);
+#else
     ret = CRYPT_EAL_Randbytes(iv, ivLen);
+#endif
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(iv);
         BSL_ERR_PUSH_ERROR(ret);

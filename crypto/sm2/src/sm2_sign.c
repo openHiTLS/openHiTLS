@@ -72,6 +72,17 @@ CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void)
     return ctx;
 }
 
+CRYPT_SM2_Ctx *CRYPT_SM2_NewCtxEx(void *libCtx)
+{
+    CRYPT_SM2_Ctx *ctx = CRYPT_SM2_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->pkey->libCtx = libCtx;
+    ECC_SetLibCtx(ctx->pkey->libCtx, ctx->pkey->para);
+    return ctx;
+}
+
 CRYPT_SM2_Ctx *CRYPT_SM2_DupCtx(CRYPT_SM2_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -301,7 +312,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
         goto ERR;
     }
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
-        GOTO_ERR_IF(BN_RandRange(k, paraN), ret);
+        GOTO_ERR_IF(BN_RandRangeEx(ctx->pkey->libCtx, k, paraN), ret);
         if (BN_IsZero(k)) {
             continue;
         }
@@ -570,7 +581,7 @@ static int32_t Sm2GenerateR(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
         goto ERR;
     }
     for (; tryNum < CRYPT_ECC_TRY_MAX_CNT; tryNum++) {
-        GOTO_ERR_IF_EX(BN_RandRange(ctx->r, order), ret);
+        GOTO_ERR_IF_EX(BN_RandRangeEx(ctx->pkey->libCtx, ctx->r, order), ret);
         if (!BN_IsZero(ctx->r)) {
             break;
         }

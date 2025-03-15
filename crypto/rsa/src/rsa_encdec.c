@@ -374,7 +374,7 @@ static int32_t RSA_InitBlind(CRYPT_RSA_Ctx *ctx, BN_Optimizer *opt)
 
     ctx->scBlind = RSA_BlindNewCtx();
 
-    int32_t ret = RSA_BlindCreateParam(ctx->scBlind, e, ctx->prvKey->n, opt);
+    int32_t ret = RSA_BlindCreateParam(ctx->libCtx, ctx->scBlind, e, ctx->prvKey->n, opt);
     if (needDestoryE) {
         BN_Destroy(e);
     }
@@ -566,7 +566,7 @@ static int32_t PssPad(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLe
         ctx->pad.salt.len = 0;
     } else if (ctx->pad.para.pss.saltLen != 0) {
         // Generate a salt information to the salt.
-        int32_t ret = GenPssSalt(&salt, ctx->pad.para.pss.mdMeth, ctx->pad.para.pss.saltLen, outLen);
+        int32_t ret = GenPssSalt(ctx->libCtx, &salt, ctx->pad.para.pss.mdMeth, ctx->pad.para.pss.saltLen, outLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_GEN_SALT);
             return CRYPT_RSA_ERR_GEN_SALT;
@@ -764,7 +764,7 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
         if (param == NULL) {
             goto ERR;
         }
-        GOTO_ERR_IF(RSA_BlindCreateParam(param->para.bssa, e, n, opt), ret);
+        GOTO_ERR_IF(RSA_BlindCreateParam(ctx->libCtx, param->para.bssa, e, n, opt), ret);
     }
     blind = param->para.bssa;
     GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->r, n, opt), ret);
@@ -999,15 +999,14 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     switch (ctx->pad.type) {
         case RSAES_PKCSV15_TLS:
         case RSAES_PKCSV15:
-            ret = CRYPT_RSA_SetPkcsV15Type2(data, dataLen, pad, padLen);
+            ret = CRYPT_RSA_SetPkcsV15Type2(ctx->libCtx, data, dataLen, pad, padLen);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 goto EXIT;
             }
             break;
         case RSAES_OAEP:
-            ret = CRYPT_RSA_SetPkcs1Oaep(ctx->pad.para.oaep.mdMeth,
-                ctx->pad.para.oaep.mgfMeth, data, dataLen, ctx->label.data, ctx->label.len, pad, padLen);
+            ret = CRYPT_RSA_SetPkcs1Oaep(ctx, data, dataLen, pad, padLen);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 goto EXIT;
