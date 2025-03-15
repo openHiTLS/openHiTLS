@@ -166,6 +166,7 @@ EXIT:
     BN_Destroy(c1);
     BN_Destroy(c2);
     BN_Destroy(gcd_result);
+    BN_Destroy(top);
     BN_OptimizerDestroy(optimizer);
     BN_MontDestroy(mont);
     return ret;

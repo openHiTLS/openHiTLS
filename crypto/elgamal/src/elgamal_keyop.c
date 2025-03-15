@@ -81,7 +81,7 @@ static int32_t SetPrvBasicCheck(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para, C
     prv->g = BSL_PARAM_FindParam(para, CRYPT_PARAM_ELGAMAL_G);
     prv->x = BSL_PARAM_FindParam(para, CRYPT_PARAM_ELGAMAL_X);
     if (PARAMISNULL(prv->p) || PARAMISNULL(prv->g) || PARAMISNULL(prv->x) ||
-        prv->p->valueLen == 0 || prv->g->valueLen == 0 || prv->x->valueLen == 0 ) {
+        prv->p->valueLen == 0 || prv->g->valueLen == 0 || prv->x->valueLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_ELGAMAL_ERR_INPUT_VALUE);
         return CRYPT_ELGAMAL_ERR_INPUT_VALUE;
     }
