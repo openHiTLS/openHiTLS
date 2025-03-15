@@ -31,10 +31,10 @@
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
+#include "crypt_default_provider.h"
 
-void *CRYPT_EAL_DefPkeyMgmtNewCtx(void *provCtx, int32_t algId)
+void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 {
-    (void)provCtx;
     void *pkeyCtx = NULL;
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Pkey(algId) != CRYPT_SUCCESS) {
@@ -44,37 +44,37 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(void *provCtx, int32_t algId)
 #endif
     switch (algId) {
         case CRYPT_PKEY_DSA:
-            pkeyCtx = CRYPT_DSA_NewCtx();
+            pkeyCtx = CRYPT_DSA_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_ED25519:
-            pkeyCtx = CRYPT_ED25519_NewCtx();
+            pkeyCtx = CRYPT_ED25519_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_X25519:
-            pkeyCtx = CRYPT_X25519_NewCtx();
+            pkeyCtx = CRYPT_X25519_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_RSA:
-            pkeyCtx = CRYPT_RSA_NewCtx();
+            pkeyCtx = CRYPT_RSA_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_DH:
-            pkeyCtx = CRYPT_DH_NewCtx();
+            pkeyCtx = CRYPT_DH_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_ECDSA:
-            pkeyCtx = CRYPT_ECDSA_NewCtx();
+            pkeyCtx = CRYPT_ECDSA_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_ECDH:
-            pkeyCtx = CRYPT_ECDH_NewCtx();
+            pkeyCtx = CRYPT_ECDH_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_SM2:
-            pkeyCtx = CRYPT_SM2_NewCtx();
+            pkeyCtx = CRYPT_SM2_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_PAILLIER:
-            pkeyCtx = CRYPT_PAILLIER_NewCtx();
+            pkeyCtx = CRYPT_PAILLIER_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_ELGAMAL:
-            pkeyCtx = CRYPT_ELGAMAL_NewCtx();
+            pkeyCtx = CRYPT_ELGAMAL_NewCtxEx(provCtx->libCtx);
             break;
         case CRYPT_PKEY_SLH_DSA:
-            pkeyCtx = CRYPT_SLH_DSA_NewCtx();
+            pkeyCtx = CRYPT_SLH_DSA_NewCtxEx(provCtx->libCtx);
             break;
     }
     if (pkeyCtx == NULL) {

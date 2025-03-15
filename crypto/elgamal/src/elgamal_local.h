@@ -53,6 +53,7 @@ struct ELGAMAL_Ctx {
     CRYPT_ELGAMAL_PrvKey *prvKey;
     CRYPT_ELGAMAL_Para *para;
     BSL_SAL_RefCount references;
+    void *libCtx;
 };
 
 CRYPT_ELGAMAL_PrvKey *ElGamal_NewPrvKey(uint32_t bits);

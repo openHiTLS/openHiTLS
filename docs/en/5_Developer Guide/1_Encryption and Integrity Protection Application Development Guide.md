@@ -221,7 +221,11 @@ int main(void) {
     }
 
     // Initialize the random number.
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
@@ -336,7 +340,11 @@ int main(void)
     }
 
     // Initialize the random number.
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
@@ -494,7 +502,11 @@ int main(void)
     }
 
     // Initialize the random number.
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
@@ -700,7 +712,11 @@ int main(void)
     BSL_ERR_Init();// Initialize the error module.
 
     // Initialize the global random number by using the default entropy source from **/dev/random** of Linux.
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
     ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
@@ -708,7 +724,11 @@ int main(void)
     }
 
     // Obtain the random number sequence of the **len** value.
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_RandbytesEx(NULL, output, len);
+#else
     ret = CRYPT_EAL_Randbytes(output, len);
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();
@@ -722,7 +742,11 @@ int main(void)
     printf("\n");
 
     // Reseeding
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_RandSeedEx(NULL);
+#else
     ret = CRYPT_EAL_RandSeed();
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandSeed: error code is %x\n", ret);
         PrintLastError();
@@ -730,7 +754,11 @@ int main(void)
     }
 
     // Obtain the random number sequence of the **len** value.
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_RandbytesEx(NULL, output, len);
+#else
     ret = CRYPT_EAL_Randbytes(output, len);
+#endif
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();

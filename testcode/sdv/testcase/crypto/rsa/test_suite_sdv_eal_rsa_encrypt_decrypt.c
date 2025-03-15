@@ -97,6 +97,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
 
     if (padMode != CRYPT_CTRL_SET_RSA_PADDING) {
         CRYPT_RandRegist(RandFunc);
+        CRYPT_RandRegistEx(RandFuncEx);
     }
 
     /* HiTLS private key decrypts the data. */
@@ -175,6 +176,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int
     ASSERT_TRUE(pkey != NULL);
 
     CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
 
     /* HiTLS public key encrypt: OAEP */
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pubkey) == CRYPT_SUCCESS);
@@ -254,6 +256,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     ASSERT_TRUE(pkey != NULL);
 
     CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
 
     /* HiTLS pubenc, prvdec */
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pubkey) == CRYPT_SUCCESS);

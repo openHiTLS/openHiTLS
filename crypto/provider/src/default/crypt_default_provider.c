@@ -828,13 +828,26 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
     (void)param;
-    (void)capFuncs;
+    void *libCtx = NULL;
+    CRYPT_EAL_ProvMgrCtrlCb mgrCtrl = NULL;
+    int32_t index = 0;
+    while (capFuncs[index].id != 0) {
+        if (capFuncs[index].id == CRYPT_EAL_CAP_MGRCTXCTRL) {
+            mgrCtrl = capFuncs[index].func;
+            break;
+        }
+        index++;
+    }
+    int32_t ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     CRYPT_EAL_DefProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_DefProvCtx));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    temp->mgrCtxHandle = mgrCtx;
+    temp->libCtx = libCtx;
     *provCtx = temp;
     *outFuncs = g_defProvOutFuncs;
     return CRYPT_SUCCESS;

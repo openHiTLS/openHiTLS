@@ -53,6 +53,12 @@ int32_t RandInjection(uint8_t *rand, uint32_t randLen)
     return CRYPT_SUCCESS;
 }
 
+int32_t RandInjectionEx(void *libCtx, uint8_t *rand, uint32_t randLen)
+{
+    (void)libCtx;
+    return RandInjection(rand, randLen);
+}
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_SLH_DSA_API_NEW_TC001(void)
 {
@@ -220,6 +226,7 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_KAT_TC001(int id, Hex *key, Hex *root)
     uint32_t stubRandLen[3] = {keyLen, keyLen, keyLen};
     RandInjectionSet(stubRand, stubRandLen);
     CRYPT_RandRegist(RandInjection);
+    CRYPT_RandRegistEx(RandInjectionEx);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
 
     uint8_t pubSeed[32] = {0};
