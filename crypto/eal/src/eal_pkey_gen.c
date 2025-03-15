@@ -279,8 +279,8 @@ static int32_t SetPaillierParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_PaillierPa
 
 static int32_t SetElGamalParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_ElGamalPara *elgamalPara)
 {
-    uint32_t bits =elgamalPara->bits;
-    uint32_t k_bits =elgamalPara->k_bits;
+    uint32_t bits = elgamalPara->bits;
+    uint32_t k_bits = elgamalPara->k_bits;
     BSL_Param param[4] = {
         {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, elgamalPara->q, elgamalPara->qLen, 0},
         {CRYPT_PARAM_ELGAMAL_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
@@ -667,7 +667,7 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
         case CRYPT_PKEY_ELGAMAL: {
             BSL_Param paParam[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.p,
                     key->key.elgamalPrv.pLen, 0},
-                {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.g,key->key.elgamalPrv.gLen, 
+                {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.g, key->key.elgamalPrv.gLen, 
                     0},
                 {CRYPT_PARAM_ELGAMAL_X, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.x, key->key.elgamalPrv.xLen,
                     0},

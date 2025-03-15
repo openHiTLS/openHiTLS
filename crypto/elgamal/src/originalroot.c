@@ -35,7 +35,7 @@ int32_t OriginalRoot(BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q,  uint
     }
 
     BN_Optimizer *optimizer = BN_OptimizerCreate();
-    if (optimizer == NULL ) {
+    if (optimizer == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         BN_OptimizerDestroy(optimizer);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -83,6 +83,9 @@ int32_t OriginalRoot(BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q,  uint
         }
     }
 EXIT:
+    BN_Destroy(x_top);
+    BN_Destroy(x2);
+    BN_Destroy(x1);
     BN_OptimizerDestroy(optimizer);
     return ret;
 }
