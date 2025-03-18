@@ -67,6 +67,7 @@ void* HLT_TlsNewCtx(TLS_VERSION tlsVersion)
     return ctx;
 }
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
 void* HLT_TlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN], int *providerLibFmts,
     int providerCnt, char *attrName, TLS_VERSION tlsVersion)
 {
@@ -92,7 +93,7 @@ void* HLT_TlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_PROVID
     }
     return ctx;
 }
-
+#endif
 void* HLT_TlsNewSsl(void *ctx)
 {
     int ret;

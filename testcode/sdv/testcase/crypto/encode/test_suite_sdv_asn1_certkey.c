@@ -729,6 +729,7 @@ void SDV_BSL_ASN1_PARSE_BUFF_PROVIDER_TC001(int format, int type, char *path, He
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, format, type, &encode, &pass, &pkeyCtx), 0);
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     pkeyCtx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     /* default provider not loading */
     CRYPT_EAL_Cleanup(9); // 9 denotes to deinit CRYPT_EAL_INIT_CPU and CRYPT_EAL_INIT_PROVIDER
     encode.data = data;
@@ -743,6 +744,7 @@ void SDV_BSL_ASN1_PARSE_BUFF_PROVIDER_TC001(int format, int type, char *path, He
     encode.dataLen = dataLen;
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, format, type, &encode, &pass, &pkeyCtx),
         CRYPT_SUCCESS);
+#endif
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(data);

@@ -38,6 +38,12 @@
 /* BEGIN_CASE */
 void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, int providerLibFmt)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    (void)path;
+    (void)providerName;
+    (void)providerLibFmt;
+    SKIP_TEST();
+#else
     HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
     HLT_Process *remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
     ASSERT_TRUE(localProcess != NULL);
@@ -81,5 +87,6 @@ void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, 
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 EXIT:
     HLT_FreeAllProcess();
+#endif
 }
 /* END_CASE */

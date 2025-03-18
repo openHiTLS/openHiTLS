@@ -79,6 +79,7 @@ static CRYPT_EAL_CipherCtx *CipherNewDefaultCtx(CRYPT_CIPHER_AlgId id)
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
@@ -162,6 +163,7 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, in
     ctx->isProvider = true;
     return ctx;
 }
+#endif
 
 CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id)
 {

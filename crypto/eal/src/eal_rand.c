@@ -72,7 +72,7 @@ int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx)
     return CRYPT_SUCCESS;
 }
 
-
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
@@ -114,6 +114,7 @@ static int32_t CRYPT_EAL_SetRandMethod(CRYPT_EAL_RndCtx *ctx, const CRYPT_EAL_Fu
     ctx->meth = method;
     return CRYPT_SUCCESS;
 }
+#endif
 
 /* Initialize the global DRBG. */
 int32_t EAL_RandInit(CRYPT_RAND_AlgId id, BSL_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx)
@@ -320,6 +321,7 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *s
     return EAL_RandInitDrbg(id, param);
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static CRYPT_EAL_RndCtx *EAL_ProvRandInitDrbg(CRYPT_EAL_LibCtx *libCtx, CRYPT_RAND_AlgId id,
     const char *attrName, BSL_Param *param)
 {
@@ -411,6 +413,7 @@ CRYPT_EAL_RndCtx *CRYPT_EAL_ProviderDrbgNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t
 {
     return EAL_ProvRandInitDrbg(libCtx, algId, attrName, param);
 }
+#endif
 
 void CRYPT_EAL_RandDeinit(void)
 {
@@ -439,6 +442,7 @@ int32_t CRYPT_EAL_Randbytes(uint8_t *byte, uint32_t len)
     return CRYPT_EAL_RandbytesWithAdin(byte, len, NULL, 0);
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 int32_t CRYPT_EAL_RandbytesWithAdinEx(CRYPT_EAL_LibCtx *libCtx,
     uint8_t *byte, uint32_t len, uint8_t *addin, uint32_t addinLen)
 {
@@ -465,6 +469,7 @@ int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t 
     }
     return CRYPT_EAL_DrbgbytesWithAdin(localCtx->drbg, byte, len, NULL, 0);
 }
+#endif
 
 int32_t CRYPT_EAL_RandSeedWithAdin(uint8_t *addin, uint32_t addinLen)
 {
@@ -480,6 +485,7 @@ int32_t CRYPT_EAL_RandSeed(void)
     return CRYPT_EAL_RandSeedWithAdin(NULL, 0);
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 int32_t CRYPT_EAL_RandSeedEx(CRYPT_EAL_LibCtx *libCtx)
 {
     CRYPT_EAL_LibCtx *localCtx = libCtx;
@@ -493,6 +499,7 @@ int32_t CRYPT_EAL_RandSeedEx(CRYPT_EAL_LibCtx *libCtx)
     }
     return CRYPT_EAL_DrbgSeedWithAdin(localCtx->drbg, NULL, 0);
 }
+#endif
 
 int32_t CRYPT_EAL_DrbgbytesWithAdin(CRYPT_EAL_RndCtx *ctx, uint8_t *byte, uint32_t len, uint8_t *addin,
     uint32_t addinLen)
