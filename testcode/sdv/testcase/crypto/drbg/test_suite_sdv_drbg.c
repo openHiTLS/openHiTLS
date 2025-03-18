@@ -1867,6 +1867,18 @@ EXIT:
 void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *pers,
     Hex *addin1, Hex *entropyPR1, Hex *addin2, Hex *entropyPR2, Hex *retBits)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    (void)entropy;
+    (void)nonce;
+    (void)pers;
+    (void)addin1;
+    (void)entropyPR1;
+    (void)addin2;
+    (void)entropyPR2;
+    (void)retBits;
+    SKIP_TEST();
+#else
     if (IsRandAlgDisabled(id)) {
         SKIP_TEST();
     }
@@ -1905,6 +1917,7 @@ EXIT:
     CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     seedCtxFree(seedCtx);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -1927,6 +1940,18 @@ EXIT:
 void SDV_CRYPT_EAL_DRBG_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *pers,
     Hex *addin1, Hex *entropyPR1, Hex *addin2, Hex *entropyPR2, Hex *retBits)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    (void)entropy;
+    (void)nonce;
+    (void)pers;
+    (void)addin1;
+    (void)entropyPR1;
+    (void)addin2;
+    (void)entropyPR2;
+    (void)retBits;
+    SKIP_TEST();
+#else  
     if (IsRandAlgDisabled(id)) {
         SKIP_TEST();
     }
@@ -1970,6 +1995,7 @@ EXIT:
     seedCtxFree(seedCtx);
     free(output);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -1994,6 +2020,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    SKIP_TEST();
+#else
     if (IsRandAlgDisabled(id)) {
         SKIP_TEST();
     }
@@ -2041,5 +2071,6 @@ EXIT:
     CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
     CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     return;
+#endif
 }
 /* END_CASE */

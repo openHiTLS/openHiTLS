@@ -86,6 +86,7 @@ int GetRpcFuncNum(void)
     return sizeof(g_rpcFuncList) / sizeof(g_rpcFuncList[0]);
 }
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
 /**
  * Parse the provider string in format "name1,fmt1:name2,fmt2:...:nameN,fmtN"
  */
@@ -192,6 +193,7 @@ EXIT:
     }
     return SUCCESS;
 }
+#endif
 
 int RpcTlsNewCtx(CmdData *cmdData)
 {

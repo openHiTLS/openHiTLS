@@ -116,8 +116,13 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key,
     uint8_t tagResult[tagLen];
     uint32_t outLen = DATA_MAX_LEN;
     uint64_t count;
+#ifdef HITLS_CRYPTO_PROVIDER
     ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
         CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
+#else
+    (void)isProvider;
+    ctx = CRYPT_EAL_CipherNewCtx(algId);
+#endif
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true) == CRYPT_SUCCESS);
     if (algId == CRYPT_CIPHER_AES128_CCM || algId == CRYPT_CIPHER_AES192_CCM || algId == CRYPT_CIPHER_AES256_CCM) {
