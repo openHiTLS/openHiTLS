@@ -158,8 +158,12 @@ void SDV_CRYPTO_KDFTLS12_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *l
     uint32_t outLen = result->len;
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
-
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_KDFTLS12, "provider=default");
+    CRYPT_EAL_KdfCTX *ctx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_KDFTLS12, "provider=default");
+#else
+    ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_KDFTLS12);
+#endif
     ASSERT_TRUE(ctx != NULL);
 
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};

@@ -47,6 +47,7 @@ static void EalMacCopyMethod(const EAL_MacMethod *src, EAL_MacUnitaryMethod *dst
     dst->freeCtx = src->freeCtx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
@@ -133,7 +134,7 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t 
 
     return macCtx;
 }
-
+#endif
 CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
 {
     int32_t ret;

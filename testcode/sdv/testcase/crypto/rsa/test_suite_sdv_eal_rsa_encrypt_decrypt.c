@@ -83,10 +83,14 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
     ASSERT_TRUE(ciphertext->len == KEYLEN_IN_BYTES((uint32_t)keyLen));
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -158,11 +162,14 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int
 
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
-
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -234,11 +241,14 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
 
     TestMemInit();
-
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -256,10 +266,14 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     ASSERT_TRUE(memcmp(pt, plaintext->x, msgLen) == 0);
 
     /* HiTLS copy ctx, pubenc, prvdec */
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         cpyCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ED25519,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         cpyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ED25519);
     }
     ASSERT_TRUE(cpyCtx != NULL);

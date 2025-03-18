@@ -864,17 +864,18 @@ void FRAME_RegCryptMethod(void)
     cryptMethod.digestSize = STUB_CRYPT_DigestSizeCallback;
     cryptMethod.digestInit = STUB_CRYPT_DigestInitCallback;
     cryptMethod.digestCopy = STUB_CRYPT_DigestCopyCallback;
-    cryptMethod.digestFree = STUB_CRYPT_DigestFreeCallback;
+    cryptMethod.digestFree = CRYPT_DEFAULT_DigestFree;
     cryptMethod.digestUpdate = STUB_CRYPT_DigestUpdateCallback;
     cryptMethod.digestFinal = STUB_CRYPT_DigestFinalCallback;
     cryptMethod.digest = STUB_CRYPT_DigestCallback;
     cryptMethod.encrypt = STUB_CRYPT_EncryptCallback;
     cryptMethod.decrypt = STUB_CRYPT_DecryptCallback;
+    cryptMethod.cipherFree =  CRYPT_DEFAULT_CipherFree;
     HITLS_CRYPT_RegisterBaseMethod(&cryptMethod);
 
     HITLS_CRYPT_EcdhMethod ecdhMethod = { 0 };
     ecdhMethod.generateEcdhKeyPair = STUB_CRYPT_GenerateEcdhKeyPairCallback;
-    ecdhMethod.freeEcdhKey = STUB_CRYPT_FreeEcdhKeyCallback;
+    ecdhMethod.freeEcdhKey = CRYPT_DEFAULT_FreeKey;
     ecdhMethod.getEcdhPubKey = STUB_CRYPT_GetEcdhEncodedPubKeyCallback;
     ecdhMethod.calcEcdhSharedSecret = STUB_CRYPT_CalcEcdhSharedSecretCallback;
     HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
@@ -882,7 +883,7 @@ void FRAME_RegCryptMethod(void)
     HITLS_CRYPT_DhMethod dhMethod = { 0 };
     dhMethod.generateDhKeyBySecbits = STUB_CRYPT_GenerateDhKeyBySecbitsCallback;
     dhMethod.generateDhKeyByParams = STUB_CRYPT_GenerateDhKeyByParamsCallback;
-    dhMethod.freeDhKey = STUB_CRYPT_FreeDhKeyCallback;
+    dhMethod.freeDhKey = CRYPT_DEFAULT_FreeKey;
     dhMethod.getDhParameters = STUB_CRYPT_DHGetParametersCallback;
     dhMethod.getDhPubKey = STUB_CRYPT_GetDhEncodedPubKeyCallback;
     dhMethod.calcDhSharedSecret = STUB_CRYPT_CalcDhSharedSecretCallback;

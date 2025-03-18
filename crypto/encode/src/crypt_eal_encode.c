@@ -412,7 +412,7 @@ static int32_t EccEalKeyNew(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_
 #else
     (void)libctx;
     (void)attrName;
-    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_PkeyNewCtx(algId);
+    CRYPT_EAL_PkeyCtx *key = CRYPT_EAL_PkeyNewCtx(algId);
 #endif
     if (key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

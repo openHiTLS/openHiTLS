@@ -239,6 +239,7 @@ int HitlsInit(void)
     return ret;
 }
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
 static HITLS_Lib_Ctx *InitProviderLibCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN],
     int *providerLibFmts, int providerCnt)
 {
@@ -326,6 +327,7 @@ HITLS_Config *HitlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_
 #endif /* HITLS_TLS_FEATURE_SECURITY */
     return hitlsConfig;
 }
+#endif
 
 HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
 {
@@ -668,9 +670,13 @@ void *HitlsNewSsl(void *ctx)
 void HitlsFreeSsl(void *ssl)
 {
     HITLS_Ctx *ctx = (HITLS_Ctx *)ssl;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
     HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CTX(ctx);
     HITLS_Free(ctx);
     CRYPT_EAL_LibCtxFree(libCtx);
+#else
+    HITLS_Free(ctx);
+#endif
 }
 
 const BSL_UIO_Method *GetDefaultMethod(HILT_TransportType type)
