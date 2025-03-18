@@ -32,12 +32,6 @@ typedef enum {
 } BslOidFlag;
 
 typedef struct {
-    uint32_t octetLen;
-    char *octs;
-    uint32_t flags;
-} BslOidString;
-
-typedef struct {
     BslOidString strOid;
     const char *oidName;
     BslCid cid;
@@ -63,11 +57,7 @@ BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg);
 
 const BslAsn1StrInfo *BSL_OBJ_GetAsn1StrFromCid(BslCid cid);
 
-int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
-
 void BSL_OBJ_FreeSignHashTable(void);
-
-int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid);
 
 void BSL_OBJ_FreeHashTable(void);
 

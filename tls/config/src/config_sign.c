@@ -374,15 +374,6 @@ const TLS_SigSchemeInfo *ConfigGetSignatureSchemeInfoList(const HITLS_Config *co
 }
 #else
 
-typedef struct {
-    uint32_t octetLen;
-    char *octs;
-    uint32_t flags;
-} BslOidString;
-
-int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid);
-int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
-
 static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *args)
 {
     if (params == NULL || args == NULL) {
