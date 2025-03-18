@@ -167,7 +167,9 @@ EXIT:
 static void CONNECT_V12(char *Ciphersuite, char *groups, char *signature, int hasPsk, char *cert)
 {
     CONNECT(TLS1_2, TCP, Ciphersuite, groups, signature, hasPsk, cert);
-    CONNECT(DTLS1_2, SCTP, Ciphersuite, groups, signature, hasPsk, cert);
+    if (IsEnableSctpAuth()) {
+        CONNECT(DTLS1_2, SCTP, Ciphersuite, groups, signature, hasPsk, cert);
+    }
     CONNECT(DTLS1_2, UDP, Ciphersuite, groups, signature, hasPsk, cert);
 }
 
