@@ -25,12 +25,19 @@
 #include "crypt_provider.h"
 #include "crypt_errno.h"
 #include "cert_callback.h"
+#include "test.h"
 /* END_HEADER */
 
 
 /* BEGIN_CASE */
 void UT_TLS13_LOADPROVIDER_GROUP_TC001(char *path, char *get_cap_test1, int cmd)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    (void)path;
+    (void)get_cap_test1;
+    (void)cmd;
+    SKIP_TEST();
+#else
     FRAME_Init();
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
@@ -65,12 +72,19 @@ EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
+#endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
 void UT_TLS13_LOADPROVIDER_SIGNSCHEME_TC001(char *path, char *get_cap_test1, int cmd)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    (void)path;
+    (void)get_cap_test1;
+    (void)cmd;
+    SKIP_TEST();
+#else
     FRAME_Init();
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
@@ -113,5 +127,6 @@ EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
+#endif
 }
 /* END_CASE */

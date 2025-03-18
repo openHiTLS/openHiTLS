@@ -58,6 +58,17 @@
 void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *test2, char *testNoInit,
     char *testNoFullfunc, int cmd, int cmd2)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)path2;
+    (void)test1;
+    (void)test2;
+    (void)testNoInit;
+    (void)testNoFullfunc;
+    (void)cmd;
+    (void)cmd2;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
@@ -155,6 +166,7 @@ EXIT:
         CRYPT_EAL_LibCtxFree(libCtx);
     }
     return;
+#endif
 }
 /* END_CASE */
 
@@ -172,6 +184,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
@@ -192,6 +207,7 @@ EXIT:
         CRYPT_EAL_LibCtxFree(libCtx);
     }
     return;
+#endif
 }
 /* END_CASE */
 
@@ -207,6 +223,13 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_TC003(char *path, int cmd, char *test1, char *attrName)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)cmd;
+    (void)test1;
+    (void)attrName;
+    SKIP_TEST();
+#else
     CRYPT_EAL_MdCTX *mdCtx = NULL;
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(NULL, path), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(NULL, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
@@ -229,6 +252,7 @@ EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
     CRYPT_EAL_Cleanup(1);
     ASSERT_EQ(CRYPT_EAL_Init(1), CRYPT_SUCCESS);
+#endif
 }
 /* END_CASE */
 
@@ -247,6 +271,15 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001(char *path, char *test1, char *test2, int cmd, char *attribute, int result)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)test1;
+    (void)test2;
+    (void)cmd;
+    (void)attribute;
+    (void)result;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
@@ -280,6 +313,7 @@ EXIT:
         CRYPT_EAL_LibCtxFree(libCtx);
     }
     return;
+#endif
 }
 /* END_CASE */
 
@@ -301,6 +335,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2, int cmd, int result)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)test1;
+    (void)test2;
+    (void)cmd;
+    (void)result;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int32_t ret;
 
@@ -354,6 +396,7 @@ EXIT:
         CRYPT_EAL_LibCtxFree(libCtx);
     }
     return;
+#endif
 }
 /* END_CASE */
 
@@ -368,6 +411,12 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, int cmd)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)providerNoInit;
+    (void)cmd;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
@@ -386,6 +435,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001(char *path, char *providerNoInit, 
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -400,6 +450,12 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, int cmd)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)providerNoFree;
+    (void)cmd;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
@@ -430,6 +486,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002(char *path, char *providerNoFree, 
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -442,6 +499,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001(char *path, char *test1, int cmd, Hex *msg, Hex *hash)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)test1;
+    (void)cmd;
+    (void)msg;
+    (void)hash;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_MdCTX *ctx = NULL;
     int32_t ret;
@@ -478,9 +543,11 @@ EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     CRYPT_EAL_MdFreeCtx(ctx);
     return;
+#endif
 }
 /* END_CASE */
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t GroupCapsCallback(BSL_Param *param, void *args)
 {
     int *count = (int *)args;
@@ -658,6 +725,7 @@ static int32_t SigAlgCapsCallback(BSL_Param *param, void *args)
 EXIT:
     return CRYPT_NOT_SUPPORT;
 }
+#endif
 
 /**
  * @test SDV_CRYPTO_PROVIDER_GET_CAPS_TC002
@@ -675,6 +743,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     CRYPT_EAL_ProvMgrCtx provMgrWithGetCapCb = {0};
@@ -720,9 +791,11 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     return;
+#endif
 }
 /* END_CASE */
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CountProvidersCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
 {
     (void)provMgr;
@@ -743,7 +816,8 @@ static int32_t ErrorCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
     }
     return CRYPT_NOT_SUPPORT;
 }
-    
+#endif
+
 /**
  * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC001
  * @title Test CRYPT_EAL_ProviderProcAll functionality
@@ -762,6 +836,13 @@ static int32_t ErrorCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_PROC_ALL_TC001(char *path, char *test1, char *test2, int cmd)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)test1;
+    (void)test2;
+    (void)cmd;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     int providerCount = 0;
     int errorProviderCount = 0;
@@ -802,9 +883,11 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC001(char *path, char *test1, char *test2, in
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     return;
+#endif
 }
 /* END_CASE */
 
+#ifdef HITLS_CRYPTO_PROVIDER
 typedef struct {
     int totalProviders;
     int providersWithMd5;
@@ -833,7 +916,7 @@ int32_t CheckAlgorithmsCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
     }
     return CRYPT_SUCCESS;
 }
-
+#endif
 /**
  * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC002
  * @title Test CRYPT_EAL_ProviderProcAll with specific provider operations
@@ -850,6 +933,13 @@ int32_t CheckAlgorithmsCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, int cmd)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)test1;
+    (void)test2;
+    (void)cmd;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     ProviderStats stats = {0};
 
@@ -890,6 +980,7 @@ EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     CRYPT_EAL_LibCtxFree(emptyLibCtx);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -909,6 +1000,12 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int cmd)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)get_cap_test1;
+    (void)cmd;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     CRYPT_EAL_PkeyCtx *keyCtx1 = NULL;
@@ -959,6 +1056,7 @@ EXIT:
     CRYPT_EAL_ProviderUnload(libCtx, cmd, get_cap_test1);
     CRYPT_EAL_LibCtxFree(libCtx);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -979,6 +1077,12 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002(char *path, char *get_cap_test1, int cmd)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)get_cap_test1;
+    (void)cmd;
+    SKIP_TEST();
+#else
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     CRYPT_EAL_PkeyCtx *keyCtx = NULL;
@@ -1016,5 +1120,6 @@ EXIT:
     CRYPT_EAL_ProviderUnload(libCtx, cmd, get_cap_test1);
     CRYPT_EAL_LibCtxFree(libCtx);
     return;
+#endif
 }
 /* END_CASE */
