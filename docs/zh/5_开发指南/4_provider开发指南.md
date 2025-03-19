@@ -148,7 +148,55 @@ OpenHiTLS 的 Provider 管理框架支持动态加载、管理和使用加密 Pr
     - `cmd`：控制命令。
     - `val`：与命令相关的值。
     - `valLen`：值的长度。
+### 2.5 capabilities
 
+capabilities 提供了一种机制：使得应用程序可以获取provider支持的能力集；provider通过capabilites 向使用者表明自身支持的能力
+
+#### 2.5.1 "CRYPT_EAL_GET_GROUP_CAP"
+
+`"CRYPT_EAL_GET_GROUP_CAP"` 用于获取`tls`握手中支持的`group` 列表。在创建`HITLS_Config`时, 会查询并收集所有`provider`支持的`group`列表，`group`会应用于握手时的密钥协商。每个`group` 必须支持`kex` 或者`kem`算法。通过这种方式，`provider`可以向`tls`握手增加新的`group`。
+
+`provider`支持的每个`group`都可以通过传递给`CRYPT_EAL_PROVCB_GETCAPS`的回调进行声明。每个`group`可以有以下字段。
+
+- `CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NA` ：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，在IANA中注册的TLS supported groups。可以参考[IANA](https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8)
+- `CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID` ：`BSL_PARAM_TYPE_UINT16` 类型，在IANA中注册的TLS supported groups对应的ID。
+- `CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID` ：`BSL_PARAM_TYPE_INT32` 类型，group对应的参数ID, 会传入`CRYPT_EAL_PkeySetParaById`接口。
+- `CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID` ：`BSL_PARAM_TYPE_INT32` 类型，group对应的算法ID，会传入`CRYPT_EAL_ProviderPkeyNewCtx`接口。
+- `CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS` ：`BSL_PARAM_TYPE_INT32` 类型，group提供的安全强度。
+- `CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS` ：`BSL_PARAM_TYPE_UINT32` 类型，group支持的TLS版本位图。可以参考`hitls_type.h`中的`*_VERSION_BIT` 
+- `CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM` ：`BSL_PARAM_TYPE_BOOL` 类型，标识group是否为KEM算法。
+- `CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN` ：`BSL_PARAM_TYPE_INT32` 类型，group公钥长度。
+- `CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN` ：`BSL_PARAM_TYPE_INT32` 类型，group共享密钥长度。
+- `CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN` ：`BSL_PARAM_TYPE_INT32` 类型，KEM算法的密文长度。
+
+示例代码可参考`crypt_default_provider.c:CryptGetGroupCaps`
+
+#### 2.5.2 “CRYPT_EAL_GET_SIGALG_CAP”
+
+`“CRYPT_EAL_GET_SIGALG_CAP”` 用于获取`tls`握手中支持的`signature algorithms` 列表。在创建`HITLS_Config`时, 会查询并收集所有`provider`支持的`signature algorithms`列表，`signature algorithms` 会应用于握手时的身份认证。通过这种方式，`provider`可以向 `tls` 握手增加新的`signature algorithms`。
+
+`provider`支持的每个`signature algorithms`都可以通过传递给`CRYPT_EAL_PROVCB_GETCAPS`的回调进行声明。每个`signature algorithms`可以有以下字段。
+
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，在IANA中注册的TLS signature scheme名称。可以参考[IANA](https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-signaturescheme)
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID`：`BSL_PARAM_TYPE_UINT16` 类型，在IANA中注册的TLS signature scheme对应的ID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE`：`BSL_PARAM_TYPE_INT32` 类型，签名算法使用的密钥类型。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_OID`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，密钥类型对应的OID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_NAME`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，密钥类型的名称。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID`：`BSL_PARAM_TYPE_INT32` 类型，签名算法参数ID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_OID`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，签名算法参数对应的OID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_NAME`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，签名算法参数的名称。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID`：`BSL_PARAM_TYPE_INT32` 类型，签名算法与摘要算法组合的ID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_OID`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，签名算法与摘要算法组合对应的OID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_NAME`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，签名算法与摘要算法组合的名称。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID`：`BSL_PARAM_TYPE_INT32` 类型，签名算法ID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID`：`BSL_PARAM_TYPE_INT32` 类型，摘要算法ID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，摘要算法对应的OID。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME`：`BSL_PARAM_TYPE_OCTETS_PTR` 类型，摘要算法的名称。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS`：`BSL_PARAM_TYPE_INT32` 类型，签名算法提供的安全强度。
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS`：`BSL_PARAM_TYPE_UINT32` 类型，签名算法支持的证书链版本位图，可以参考`hitls_type.h`中的`*_VERSION_BIT`
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS`：`BSL_PARAM_TYPE_UINT32` 类型，签名算法支持的证书版本位图，可以参考`hitls_type.h`中的`*_VERSION_BIT`
+
+示例代码可参考`crypt_default_provider.c:CryptGetSignAlgCaps`
 ---
 
 ## 3. provider管理模块使用说明
