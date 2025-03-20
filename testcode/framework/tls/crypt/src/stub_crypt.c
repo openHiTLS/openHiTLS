@@ -870,7 +870,7 @@ void FRAME_RegCryptMethod(void)
     cryptMethod.digest = STUB_CRYPT_DigestCallback;
     cryptMethod.encrypt = STUB_CRYPT_EncryptCallback;
     cryptMethod.decrypt = STUB_CRYPT_DecryptCallback;
-    cryptMethod.cipherFree =  CRYPT_DEFAULT_CipherFree;
+    cryptMethod.cipherFree = CRYPT_DEFAULT_CipherFree;
     HITLS_CRYPT_RegisterBaseMethod(&cryptMethod);
 
     HITLS_CRYPT_EcdhMethod ecdhMethod = { 0 };

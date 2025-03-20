@@ -269,7 +269,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -313,32 +313,12 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "ffdhe2048",
-        CRYPT_DH_RFC3526_2048, // CRYPT_DH_2048
+        "ffdhe8192",
+        CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
-        112, // secBits
-        HITLS_FF_DHE_2048, // groupId
-        256, 256, 0, // pubkeyLen=256, sharedkeyLen=256 (2048 bits)
-        TLS13_VERSION_BIT, // versionBits
-        false,
-    },
-    {
-        "ffdhe3072",
-        CRYPT_DH_RFC3526_3072, // Fixed constant name
-        CRYPT_PKEY_DH,
-        128,
-        HITLS_FF_DHE_3072,
-        384, 384, 0, // pubkeyLen=384, sharedkeyLen=384 (3072 bits)
-        TLS13_VERSION_BIT,
-        false,
-    },
-    {
-        "ffdhe4096",
-        CRYPT_DH_RFC7919_4096, // CRYPT_DH_4096
-        CRYPT_PKEY_DH, // CRYPT_PKEY_DH
-        128, // secBits
-        HITLS_FF_DHE_4096, // groupId
-        512, 512, 0, // pubkeyLen=512, sharedkeyLen=512 (4096 bits)
+        192, // secBits
+        HITLS_FF_DHE_8192, // groupId
+        1024, 1024, 0, // pubkeyLen=1024, sharedkeyLen=1024 (8192 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
@@ -353,12 +333,32 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "ffdhe8192",
-        CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
+        "ffdhe4096",
+        CRYPT_DH_RFC7919_4096, // CRYPT_DH_4096
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
-        192, // secBits
-        HITLS_FF_DHE_8192, // groupId
-        1024, 1024, 0, // pubkeyLen=1024, sharedkeyLen=1024 (8192 bits)
+        128, // secBits
+        HITLS_FF_DHE_4096, // groupId
+        512, 512, 0, // pubkeyLen=512, sharedkeyLen=512 (4096 bits)
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    },
+    {
+        "ffdhe3072",
+        CRYPT_DH_RFC3526_3072, // Fixed constant name
+        CRYPT_PKEY_DH,
+        128,
+        HITLS_FF_DHE_3072,
+        384, 384, 0, // pubkeyLen=384, sharedkeyLen=384 (3072 bits)
+        TLS13_VERSION_BIT,
+        false,
+    },
+    {
+        "ffdhe2048",
+        CRYPT_DH_RFC3526_2048, // CRYPT_DH_2048
+        CRYPT_PKEY_DH, // CRYPT_PKEY_DH
+        112, // secBits
+        HITLS_FF_DHE_2048, // groupId
+        256, 256, 0, // pubkeyLen=256, sharedkeyLen=256 (2048 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     }
@@ -477,7 +477,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "ed25519",
         CERT_SIG_SCHEME_ED25519,
         TLS_CERT_KEY_TYPE_ED25519,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_ED25519,
         HITLS_SIGN_ED25519,
         HITLS_HASH_SHA_512,
@@ -501,7 +501,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "sm2_sm3",
         CERT_SIG_SCHEME_SM2_SM3,
         TLS_CERT_KEY_TYPE_SM2,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_SM2DSAWITHSM3,
         HITLS_SIGN_SM2,
         HITLS_HASH_SM3,
@@ -513,7 +513,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pss_pss_sha512",
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512,
         TLS_CERT_KEY_TYPE_RSA_PSS,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_RSASSAPSS,
         HITLS_SIGN_RSA_PSS,
         HITLS_HASH_SHA_512,
@@ -525,7 +525,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pss_pss_sha384",
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384,
         TLS_CERT_KEY_TYPE_RSA_PSS,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_RSASSAPSS,
         HITLS_SIGN_RSA_PSS,
         HITLS_HASH_SHA_384,
@@ -537,7 +537,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pss_pss_sha256",
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256,
         TLS_CERT_KEY_TYPE_RSA_PSS,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_RSASSAPSS,
         HITLS_SIGN_RSA_PSS,
         HITLS_HASH_SHA_256,
@@ -549,7 +549,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pss_rsae_sha512",
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_RSASSAPSS,
         HITLS_SIGN_RSA_PSS,
         HITLS_HASH_SHA_512,
@@ -561,7 +561,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pss_rsae_sha384",
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_RSASSAPSS,
         HITLS_SIGN_RSA_PSS,
         HITLS_HASH_SHA_384,
@@ -573,7 +573,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pss_rsae_sha256",
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_RSASSAPSS,
         HITLS_SIGN_RSA_PSS,
         HITLS_HASH_SHA_256,
@@ -585,7 +585,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pkcs1_sha512",
         CERT_SIG_SCHEME_RSA_PKCS1_SHA512,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_SHA512WITHRSAENCRYPTION,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA_512,
@@ -597,7 +597,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "dsa_sha512",
         CERT_SIG_SCHEME_DSA_SHA512,
         TLS_CERT_KEY_TYPE_DSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_DSAWITHSHA512,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA_512,
@@ -609,7 +609,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pkcs1_sha384",
         CERT_SIG_SCHEME_RSA_PKCS1_SHA384,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_SHA384WITHRSAENCRYPTION,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA_384,
@@ -621,7 +621,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "dsa_sha384",
         CERT_SIG_SCHEME_DSA_SHA384,
         TLS_CERT_KEY_TYPE_DSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_DSAWITHSHA384,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA_384,
@@ -633,7 +633,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pkcs1_sha256",
         CERT_SIG_SCHEME_RSA_PKCS1_SHA256,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_SHA256WITHRSAENCRYPTION,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA_256,
@@ -645,7 +645,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "dsa_sha256",
         CERT_SIG_SCHEME_DSA_SHA256,
         TLS_CERT_KEY_TYPE_DSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_DSAWITHSHA256,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA_256,
@@ -657,7 +657,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "ecdsa_sha224",
         CERT_SIG_SCHEME_ECDSA_SHA224,
         TLS_CERT_KEY_TYPE_ECDSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_ECDSAWITHSHA224,
         HITLS_SIGN_ECDSA,
         HITLS_HASH_SHA_224,
@@ -669,7 +669,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pkcs1_sha224",
         CERT_SIG_SCHEME_RSA_PKCS1_SHA224,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_SHA224WITHRSAENCRYPTION,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA_224,
@@ -681,7 +681,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "dsa_sha224",
         CERT_SIG_SCHEME_DSA_SHA224,
         TLS_CERT_KEY_TYPE_DSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_DSAWITHSHA224,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA_224,
@@ -693,7 +693,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "ecdsa_sha1",
         CERT_SIG_SCHEME_ECDSA_SHA1,
         TLS_CERT_KEY_TYPE_ECDSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_ECDSAWITHSHA1,
         HITLS_SIGN_ECDSA,
         HITLS_HASH_SHA1,
@@ -705,7 +705,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "rsa_pkcs1_sha1",
         CERT_SIG_SCHEME_RSA_PKCS1_SHA1,
         TLS_CERT_KEY_TYPE_RSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_SHA1WITHRSA,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA1,
@@ -717,7 +717,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         "dsa_sha1",
         CERT_SIG_SCHEME_DSA_SHA1,
         TLS_CERT_KEY_TYPE_DSA,
-        0,
+        CRYPT_PKEY_PARAID_MAX,
         BSL_CID_DSAWITHSHA1,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA1,

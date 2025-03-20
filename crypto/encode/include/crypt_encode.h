@@ -127,11 +127,12 @@ int32_t CRYPT_EAL_PriKeyParseFile(CRYPT_EAL_LibCtx *libctx, const char *attrName
     const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPriKey);
 
 // parse PKCS7-EncryptData：only support PBES2 + PBKDF2.
-int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(BSL_Buffer *encode, const uint8_t *pwd, uint32_t pwdlen,
-    BSL_Buffer *output);
+int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *encode,
+    const uint8_t *pwd, uint32_t pwdlen, BSL_Buffer *output);
 
 // encode PKCS7-EncryptData：only support PBES2 + PBKDF2.
-int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(BSL_Buffer *data, const void *encodeParam, BSL_Buffer *encode);
+int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *data,
+    const void *encodeParam, BSL_Buffer *encode);
 
 #ifdef __cplusplus
 }

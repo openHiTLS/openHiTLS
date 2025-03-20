@@ -187,12 +187,16 @@ int32_t SAL_CERT_X509Encode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf,
         HITLS_CERT_ERR_ENCODE_CERT);
 }
 
-HITLS_CERT_X509 *SAL_CERT_X509Parse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
+HITLS_CERT_X509 *SAL_CERT_X509Parse(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    return HITLS_X509_Adapt_CertParse(config, buf, len, type, format);
+    (void)config;
+    return HITLS_CERT_ProviderCertParse(libCtx, attrName, buf, len, type, format);
 #else
+    (void)libCtx;
+    (void)attrName;
     return config->certMgrCtx->method.certParse(config, buf, len, type, format);
 #endif
 }

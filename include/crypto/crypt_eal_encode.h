@@ -53,7 +53,7 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
  * @brief   Decode formatted buffer of pkey with provider
  *
  * @param   libCtx [IN] the library context of provider.
- * @param   attrName [IN] provider attribute name, maybe NULL for default provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL.
  * @param   format [IN] the buffer format.
  * @param   type [IN] the type of pkey.
  * @param   encode [IN] the encoded asn1 buffer.
@@ -88,7 +88,7 @@ int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
  * @brief   Decode formatted file of pkey with extended parameters
  *
  * @param   libCtx [IN] the library context of provider.
- * @param   attrName [IN] provider attribute name, maybe NULL for default provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL.
  * @param   format [IN] the file format.
  * @param   type [IN] the type of pkey.
  * @param   path [IN] the encoded file path.
@@ -119,6 +119,24 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
 
 /**
  * @ingroup crypt_eal_encode
+ * @brief   Encode formatted buffer of pkey with provider
+ *
+ * @param   libCtx [IN] the library context of provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL.
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   encodeParam [IN] pkcs8 encode params.
+ * @param   format [IN] the buffer format.
+ * @param   type [IN] the type of pkey.
+ * @param   encode [OUT] the encoded asn1 buffer.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderEncodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
+    const CRYPT_EncodeParam *encodeParam, int32_t format, int32_t type, BSL_Buffer *encode);
+
+/**
+ * @ingroup crypt_eal_encode
  * @brief   Encode formatted file of pkey
  *
  * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
@@ -132,6 +150,24 @@ int32_t CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodePa
  */
 int32_t CRYPT_EAL_EncodeFileKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
     int32_t format, int32_t type, const char *path);
+
+/**
+ * @ingroup crypt_eal_encode
+ * @brief   Encode formatted file of pkey with provider
+ *
+ * @param   libCtx [IN] the library context of provider.
+ * @param   attrName [IN] provider attribute name, maybe NULL.
+ * @param   ealPKey [IN] CRYPT_EAL_PkeyCtx to encode.
+ * @param   encodeParam [IN] pkcs8 encode params.
+ * @param   format [IN] the file format.
+ * @param   type [IN] the type of pkey.
+ * @param   path [IN] the encoded file path.
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderEncodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx *ealPKey,
+    const CRYPT_EncodeParam *encodeParam, int32_t format, int32_t type, const char *path);
 
 #ifdef __cplusplus
 }

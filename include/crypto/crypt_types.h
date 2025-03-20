@@ -683,7 +683,8 @@ typedef struct {
     uint32_t hmacId;
     uint32_t symId;
     uint32_t saltLen;
-    BSL_Buffer pwd;
+    uint8_t *pwd;
+    uint32_t pwdLen;
     uint32_t itCnt;
 } CRYPT_Pbkdf2Param;
 
