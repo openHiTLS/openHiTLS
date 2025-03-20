@@ -98,11 +98,11 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
             break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
+            (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
             return NULL;
     }
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
-        return NULL;
+        BSL_ERR_PUSH_ERROR(ret);
     }
     (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     return ealPriKey;
@@ -152,7 +152,6 @@ static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
 int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output)
 {
-    (void)config;
     (void)input;
     int32_t ret = HITLS_SUCCESS;
     switch (cmd) {

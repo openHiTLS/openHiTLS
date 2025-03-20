@@ -86,6 +86,7 @@ enum HITLS_CryptoCallBack {
 /**
  * @brief Generate a random number.
  *
+ * @param libCtx [IN] Library context, used to manage cryptographic operations.
  * @param buf [OUT] Random number
  * @param len [IN] Random number length
  *
@@ -386,6 +387,9 @@ int32_t SAL_CRYPT_EncodeEcdhPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uin
 /**
  * @brief Calculate the ECDH shared key.
  *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ *                      algorithm provided by the algorithm provider
  * @param key               [IN] Local key handle
  * @param peerPubkey        [IN] Peer public key data
  * @param pubKeyLen         [IN] Public key data length
@@ -403,6 +407,9 @@ int32_t SAL_CRYPT_CalcEcdhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrNa
 /**
  * @brief SM2 calculates the ECDH shared key.
  *
+ * @param libCtx            [IN] Library context, used to manage cryptographic operations.
+ * @param attrName          [IN] Attribute name, used to configure the cryptographic 
+ *                              algorithm provided by the algorithm provider
  * @param sm2ShareKeyParam  [IN] Parameters required for calculating the shared key
  * @param sharedSecret      [OUT] Shared key
  * @param sharedSecretLen   [IN/OUT] IN: Maximum length of data padding OUT: length of the shared key
@@ -417,8 +424,9 @@ int32_t SAL_CRYPT_CalcSm2dhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrN
 
 /**
  * @brief Generate a DH key pair.
- *
- * @param secbits [IN] Key security level
+ * 
+ * @param ctx      [IN] TLS context
+ * @param secbits  [IN] Key security level
  *
  * @return Key handle
  */
@@ -428,10 +436,13 @@ HITLS_CRYPT_Key *SAL_CRYPT_GenerateDhKeyBySecbits(TLS_Ctx *ctx,
 /**
  * @brief Generate a DH key pair.
  *
- * @param p     [IN] p Parameter
- * @param plen  [IN] p Parameter length
- * @param g     [IN] g Parameter
- * @param glen  [IN] g Parameter length
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ *                      algorithm provided by the algorithm provider
+ * @param p          [IN] p Parameter
+ * @param plen       [IN] p Parameter length
+ * @param g          [IN] g Parameter
+ * @param glen       [IN] g Parameter length
  *
  * @return Key handle
  */
@@ -485,6 +496,9 @@ int32_t SAL_CRYPT_EncodeDhPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint3
 /**
  * @brief Calculate the DH shared key.
  *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ *                      algorithm provided by the algorithm provider
  * @param key                [IN] Local key handle
  * @param peerPubkey         [IN] Peer public key data
  * @param pubKeyLen          [IN] Public key data length
@@ -502,9 +516,12 @@ int32_t SAL_CRYPT_CalcDhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
 /**
  * @brief HKDF-Extract
  *
- * @param input  [IN] Input key material
- * @param prk    [OUT] Output key
- * @param prkLen [IN/OUT] IN: Maximum buffer length OUT: Output key length
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ *                      algorithm provided by the algorithm provider
+ * @param input      [IN] Input key material
+ * @param prk        [OUT] Output key
+ * @param prkLen     [IN/OUT] IN: Maximum buffer length OUT: Output key length
  *
  * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
@@ -516,9 +533,12 @@ int32_t SAL_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx, const char *attrName,
 /**
  * @brief   HKDF-Expand
  *
- * @param input  [IN] Input key material
- * @param okm    [OUT] Output key
- * @param okmLen [IN] Output key length
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ *                      algorithm provided by the algorithm provider
+ * @param input      [IN] Input key material
+ * @param okm        [OUT] Output key
+ * @param okmLen     [IN] Output key length
  *
  * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
@@ -530,9 +550,12 @@ int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx, const char *attrName,
 /**
  * @brief   HKDF-ExpandLabel
  *
- * @param input  [IN] Input key material.
- * @param prk    [OUT] Output key
- * @param prkLen [IN/OUT] IN: Maximum buffer length OUT: Output key length
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ *                      algorithm provided by the algorithm provider
+ * @param input      [IN] Input key material.
+ * @param prk        [OUT] Output key
+ * @param prkLen     [IN/OUT] IN: Maximum buffer length OUT: Output key length
  *
  * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback

@@ -24,7 +24,12 @@
 #include "bsl_hash.h"
 
 #define BSL_OBJ_HASH_BKT_SIZE 256u
+
 BSL_HASH_Hash *g_oidHashTable = NULL;
+
+static BSL_SAL_ThreadLockHandle g_oidHashRwLock = NULL;
+
+static uint32_t g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
 
 BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\1\2", BSL_OID_GLOBAL}, "AES128-CBC", BSL_CID_AES128_CBC},
@@ -167,6 +172,31 @@ static const BslAsn1StrInfo g_asn1StrTab[] = {
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
 
+static void FreeBslOidInfo(void *data)
+{
+    BslOidInfo *oidInfo = (BslOidInfo *)data;
+    BSL_SAL_Free(oidInfo->strOid.octs);
+    BSL_SAL_Free((char *)(uintptr_t)oidInfo->oidName);
+    BSL_SAL_Free(oidInfo);
+}
+
+static void InitOidHashTableOnce(void)
+{
+    int32_t ret = BSL_SAL_ThreadLockNew(&g_oidHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return;
+    }
+
+    ListDupFreeFuncPair valueFunc = {NULL, FreeBslOidInfo};
+    g_oidHashTable = BSL_HASH_Create(BSL_OBJ_HASH_BKT_SIZE, NULL, NULL, NULL, &valueFunc);
+    if (g_oidHashTable == NULL) {
+        (void)BSL_SAL_ThreadLockFree(g_oidHashRwLock);
+        g_oidHashRwLock = NULL;
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+    }
+}
+
 static int32_t GetOidIndex(int32_t inputCid)
 {
     int32_t left = 0;
@@ -200,12 +230,19 @@ BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
         }
     }
 
-    /* Second, search in the g_oidHashTable */
     if (g_oidHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return BSL_CID_UNKNOWN;
     }
-    
+
+    /* Second, search in the g_oidHashTable with read lock */
+    BslCid cid = BSL_CID_UNKNOWN;
+    int32_t ret = BSL_SAL_ThreadReadLock(g_oidHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return BSL_CID_UNKNOWN;
+    }
+
     /* Since g_oidHashTable is keyed by cid, we need to iterate through all entries */
     BSL_HASH_Iterator iter = BSL_HASH_IterBegin(g_oidHashTable);
     BSL_HASH_Iterator end = BSL_HASH_IterEnd(g_oidHashTable);
@@ -214,12 +251,14 @@ BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
         if (oidInfo != NULL && oidInfo->strOid.octetLen == oid->octetLen &&
             memcmp(oidInfo->strOid.octs, oid->octs, oid->octetLen) == 0) {
-            return oidInfo->cid;
+            cid = oidInfo->cid;
+            break;
         }
         iter = BSL_HASH_IterNext(g_oidHashTable, iter);
     }
 
-    return BSL_CID_UNKNOWN;
+    (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+    return cid;
 }
 
 BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
@@ -228,32 +267,36 @@ BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return NULL;
     }
-    
+
     /* First, search in the g_oidTable */
     int32_t index = GetOidIndex(inputCid);
     if (index != -1) {
         return &g_oidTable[index].strOid;
     }
-    
-    /* Second, search in the g_oidHashTable */
+
+    /* Initialize hash table if needed */
     if (g_oidHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return NULL;
     }
-    
-    /* Since g_oidHashTable is keyed by cid, we can directly look up the entry */
+
+    /* Second, search in the g_oidHashTable with read lock */
     BslOidInfo *oidInfo = NULL;
-    int32_t ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)inputCid, (uintptr_t *)&oidInfo);
+    int32_t ret = BSL_SAL_ThreadReadLock(g_oidHashRwLock);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
+        BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
-    
-    if (oidInfo != NULL && oidInfo->cid == inputCid) {
-        return &oidInfo->strOid;
+
+    /* Since g_oidHashTable is keyed by cid, we can directly look up the entry */
+    ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)inputCid, (uintptr_t *)&oidInfo);
+    (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+    BslOidString *oidString = (ret == BSL_SUCCESS && oidInfo != NULL) ? &oidInfo->strOid : NULL;
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
     }
     
-    return NULL;
+    return oidString;
 }
 
 const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
@@ -271,12 +314,19 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
         }
     }
 
-    /* Second, search in the g_oidHashTable */
     if (g_oidHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return NULL;
     }
-    
+
+    /* Second, search in the g_oidHashTable with read lock */
+    const char *oidName = NULL;
+    int32_t ret = BSL_SAL_ThreadReadLock(g_oidHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return NULL;
+    }
+
     /* Since g_oidHashTable is keyed by cid, we need to iterate through all entries */
     BSL_HASH_Iterator iter = BSL_HASH_IterBegin(g_oidHashTable);
     BSL_HASH_Iterator end = BSL_HASH_IterEnd(g_oidHashTable);
@@ -285,12 +335,14 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
         if (oidInfo != NULL && oidInfo->strOid.octetLen == oid->octetLen &&
             memcmp(oidInfo->strOid.octs, oid->octs, oid->octetLen) == 0) {
-            return oidInfo->oidName;
+            oidName = oidInfo->oidName;
+            break;
         }
         iter = BSL_HASH_IterNext(g_oidHashTable, iter);
     }
-    
-    return NULL;
+
+    (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+    return oidName;
 }
 
 const BslAsn1StrInfo *BSL_OBJ_GetAsn1StrFromCid(BslCid cid)
@@ -316,64 +368,146 @@ static int32_t BslOidStringCopy(const BslOidString *srcOidStr, BslOidString *oid
     return BSL_SUCCESS;
 }
 
-static void FreeBslOidInfo(void *data)
+static bool IsOidCidInStaticTable(int32_t cid)
 {
-    BslOidInfo *oidInfo = (BslOidInfo *)data;
-    BSL_SAL_Free(oidInfo->strOid.octs);
-    BSL_SAL_Free(oidInfo);
+    for (uint32_t i = 0; i < g_tableSize; i++) {
+        if ((int32_t)g_oidTable[i].cid == cid) {
+            return true;
+        }
+    }
+    return false;
 }
 
+static int32_t IsOidCidInHashTable(int32_t cid)
+{
+    BslOidInfo *oidInfo = NULL;
+    int32_t ret = BSL_SAL_ThreadReadLock(g_oidHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    
+    ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)cid, (uintptr_t *)&oidInfo);
+    (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+    return ret;
+}
+
+static int32_t CreateOidInfo(const BslOidString *oid, const char *oidName, int32_t cid, BslOidInfo **newOidInfo)
+{
+    BslOidInfo *oidInfo = (BslOidInfo *)BSL_SAL_Calloc(1, sizeof(BslOidInfo));
+    if (oidInfo == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+
+    int32_t ret = BslOidStringCopy(oid, &oidInfo->strOid);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        BSL_SAL_Free(oidInfo);
+        return ret;
+    }
+
+    oidInfo->oidName = BSL_SAL_Dump(oidName, strlen(oidName) + 1);
+    if (oidInfo->oidName == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        BSL_SAL_Free(oidInfo->strOid.octs);
+        BSL_SAL_Free(oidInfo);
+        return BSL_MALLOC_FAIL;
+    }
+
+    oidInfo->cid = cid;
+    *newOidInfo = oidInfo;
+    return BSL_SUCCESS;
+}
+
+// Insert OID info into hash table with write lock
+static int32_t InsertOidInfoToHashTable(int32_t cid, BslOidInfo *oidInfo)
+{
+    int32_t ret = BSL_SAL_ThreadWriteLock(g_oidHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    BslOidInfo *checkInfo = NULL;
+    ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)cid, (uintptr_t *)&checkInfo);
+    if (ret == BSL_SUCCESS) {
+        (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+        return BSL_SUCCESS;
+    }
+
+    ret = BSL_HASH_Insert(g_oidHashTable, (uintptr_t)cid, sizeof(int32_t), (uintptr_t)oidInfo, sizeof(BslOidInfo));
+    (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+    return ret;
+}
+
+// Free OID info resources
+static void FreeOidInfoResources(BslOidInfo *oidInfo)
+{
+    if (oidInfo != NULL) {
+        BSL_SAL_Free((char *)(uintptr_t)oidInfo->oidName);
+        BSL_SAL_Free(oidInfo->strOid.octs);
+        BSL_SAL_Free(oidInfo);
+    }
+}
+
+// Main function for creating and registering OIDs
 int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid)
 {
     if (oid == NULL || oidName == NULL || cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    for (uint32_t i = 0; i < g_tableSize; i++) {
-        if ((int32_t)g_oidTable[i].cid == cid) {
-            return BSL_SUCCESS;
-        }
+
+    if (IsOidCidInStaticTable(cid)) {
+        return BSL_SUCCESS;
+    }
+
+    int32_t ret = BSL_SAL_ThreadRunOnce(&g_oidHashInitOnce, InitOidHashTableOnce);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
     if (g_oidHashTable == NULL) {
-        ListDupFreeFuncPair valueFunc = {NULL, FreeBslOidInfo};
-        g_oidHashTable = BSL_HASH_Create(BSL_OBJ_HASH_BKT_SIZE, NULL, NULL, NULL, &valueFunc);
-        if (g_oidHashTable == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
-        }
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
+        return BSL_OBJ_INVALID_HASH_TABLE;
     }
-    BslOidInfo *oidInfo = NULL;
-    int32_t ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)cid, (uintptr_t *)&oidInfo);
+    ret = IsOidCidInHashTable(cid);
     if (ret == BSL_SUCCESS) {
         return BSL_SUCCESS;
     }
-    oidInfo = (BslOidInfo *)BSL_SAL_Calloc(1, sizeof(BslOidInfo));
-    if (oidInfo == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    ret = BslOidStringCopy(oid, &oidInfo->strOid);
+
+    BslOidInfo *oidInfo = NULL;
+    ret = CreateOidInfo(oid, oidName, cid, &oidInfo);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        BSL_SAL_Free(oidInfo);
         return ret;
     }
-    oidInfo->oidName = oidName;
-    oidInfo->cid = cid;
-    ret = BSL_HASH_Insert(g_oidHashTable, (uintptr_t)cid, sizeof(int32_t), (uintptr_t)oidInfo, sizeof(BslOidInfo));
+
+    ret = InsertOidInfoToHashTable(cid, oidInfo);
     if (ret != BSL_SUCCESS) {
-        BSL_SAL_Free(oidInfo);
-        BSL_SAL_Free(oidInfo->strOid.octs);
+        FreeOidInfoResources(oidInfo);
         return ret;
     }
+
     return BSL_SUCCESS;
 }
 
 void BSL_OBJ_FreeHashTable(void)
 {
     if (g_oidHashTable != NULL) {
+        int32_t ret = BSL_SAL_ThreadWriteLock(g_oidHashRwLock);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return;
+        }
         BSL_HASH_Destory(g_oidHashTable);
         g_oidHashTable = NULL;
+        (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
+        if (g_oidHashRwLock != NULL) {
+            (void)BSL_SAL_ThreadLockFree(g_oidHashRwLock);
+            g_oidHashRwLock = NULL;
+        }
+        g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
     }
 }
 #endif

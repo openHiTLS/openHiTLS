@@ -421,7 +421,7 @@ int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_
     return ctx->provGetCap(ctx->provCtx, cmd, cb, args);
 }
 
-int32_t CRYPT_EAL_ProviderProcAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcCb cb, void *args)
+int32_t CRYPT_EAL_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcessCb cb, void *args)
 {
     if (cb == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

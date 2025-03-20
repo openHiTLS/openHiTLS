@@ -106,10 +106,14 @@ void SDV_CRYPTO_ELGAMAL_NEW_API_TC001(int isProvider)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     /* Run 100 times */
     for (int i = 0; i < 100; i++) {
+#ifdef HITLS_CRYPTO_PROVIDER
         if (isProvider == 1) {
             pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
                 CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-        } else {
+        } else
+#endif
+        {
+            (void)isProvider;
             pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
         }
         ASSERT_TRUE(pkey != NULL);
@@ -143,11 +147,14 @@ void SDV_CRYPTO_ELGAMAL_NEW_API_TC002(int isProvider)
     ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, malloc_fail) == 0);
 
     TestMemInit();
-
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey == NULL);
@@ -184,10 +191,14 @@ void SDV_CRYPTO_ELGAMAL_SET_PARA_API_TC001(Hex *q,int k_bits, int bits, int isPr
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -232,10 +243,14 @@ void SDV_CRYPTO_ELGAMAL_GEN_API_TC001( Hex *q,int k_bits, int bits, int isProvid
 
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -287,10 +302,14 @@ void SDV_CRYPTO_ELGAMAL_GET_PUB_API_TC001( Hex *q, int k_bits, int bits, int isP
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
 
@@ -382,10 +401,14 @@ void SDV_CRYPTO_ELGAMAL_GET_PRV_API_TC001(Hex *q, int k_bits,int bits, int isPro
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -455,12 +478,16 @@ void SDV_CRYPTO_ELGAMAL_SET_PRV_API_TC001(Hex *q,int k_bits, int bits, int isPro
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
         pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
         pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
@@ -559,12 +586,16 @@ void SDV_CRYPTO_ELGAMAL_SET_PUB_API_TC001( Hex *q,int k_bits, int bits, int isPr
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
         pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
         pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
@@ -650,10 +681,14 @@ void SDV_CRYPTO_ELGAMAL_ENC_API_TC001(Hex *q,Hex *p, Hex *g, Hex *y, Hex *in, in
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -719,10 +754,14 @@ void SDV_CRYPTO_ELGAMAL_DEC_API_TC001(Hex *p, Hex *g ,Hex *x,  Hex *in, int isPr
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -823,12 +862,17 @@ void SDV_CRYPTO_ELGAMAL_SET_KEY_API_TC001( Hex *q, int k_bits, int bits, int isP
 
     CRYPT_EAL_PkeyCtx *pkey1;
     CRYPT_EAL_PkeyCtx *pkey2;
+
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
         pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
         pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
@@ -896,10 +940,14 @@ void SDV_CRYPTO_ELGAMAL_DUP_CTX_API_TC001( Hex *q,int k_bits, int bits, int isPr
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -951,10 +999,14 @@ void SDV_CRYPTO_ELGAMAL_GET_SECURITY_BITS_FUNC_TC001(Hex *q,Hex *p, Hex *g, Hex 
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ELGAMAL);
     }
     ASSERT_TRUE(pkey != NULL);
