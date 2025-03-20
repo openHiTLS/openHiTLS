@@ -27,6 +27,8 @@ int32_t BSL_GLOBAL_Init(void)
 
 int32_t BSL_GLOBAL_DeInit(void)
 {
+    BSL_ERR_RemoveErrStringBatch();
+    BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
     BSL_OBJ_FreeSignHashTable();
     BSL_OBJ_FreeHashTable();

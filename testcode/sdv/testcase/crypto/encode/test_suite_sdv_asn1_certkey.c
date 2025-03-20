@@ -568,14 +568,14 @@ void SDV_BSL_ASN1_ENCODE_ENCRYPTED_PRIKEY_BUFF_TC001(char *path, int fileType, i
 
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     BSL_Buffer encodeAsn1 = {0};
-    BSL_Buffer pwdBuff = {pwd->x, pwd->len};
     BSL_Buffer encodeAsn1Out = {0};
     CRYPT_Pbkdf2Param param = {0};
     param.pbesId = BSL_CID_PBES2;
     param.pbkdfId = BSL_CID_PBKDF2;
     param.hmacId = hmacId;
     param.symId = symId;
-    param.pwd = pwdBuff;
+    param.pwd = pwd->x;
+    param.pwdLen = pwd->len;
     param.saltLen = saltLen;
     param.itCnt = itCnt;
     CRYPT_EncodeParam paramEx = {CRYPT_DERIVE_PBKDF2, &param};

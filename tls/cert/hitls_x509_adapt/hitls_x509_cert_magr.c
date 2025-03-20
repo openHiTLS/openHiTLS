@@ -54,11 +54,9 @@ int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8
     return ret;
 }
 
-HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
-    HITLS_ParseType type, HITLS_ParseFormat format)
+HITLS_CERT_X509 *HITLS_CERT_ProviderCertParse(HITLS_Lib_Ctx *libCtx, const char *attrName, const uint8_t *buf,
+    uint32_t len, HITLS_ParseType type, HITLS_ParseFormat format)
 {
-    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(config);
-    const char *attrName = ATTRIBUTE_FROM_CONFIG(config);
     BSL_Buffer encodedCert = { NULL, 0 };
     int ret;
     HITLS_X509_Cert *cert = NULL;
@@ -78,6 +76,20 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
     }
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return NULL;
+    }
+
+    return cert;
+}
+
+HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
+    HITLS_ParseType type, HITLS_ParseFormat format)
+{
+    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(config);
+    const char *attrName = ATTRIBUTE_FROM_CONFIG(config);
+
+    HITLS_CERT_X509 *cert = HITLS_CERT_ProviderCertParse(libCtx, attrName, buf, len, type, format);
+    if (cert == NULL) {
         return NULL;
     }
 
@@ -130,6 +142,10 @@ static int32_t CertCtrlGetSignAlgo(HITLS_Config *config, HITLS_CERT_X509 *cert, 
         return ret;
     }
     ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &hashCid, sizeof(BslCid));
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     *algSign = BslCid2SignHashAlgo(config, signAlgCid, hashCid);
     return HITLS_SUCCESS;
 }

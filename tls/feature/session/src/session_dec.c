@@ -292,7 +292,8 @@ static int32_t ParseBufToCert(HITLS_Session *sess, const uint8_t *buf, uint32_t 
     HITLS_CERT_X509 *cert = certMgrCtx->method.certParse(NULL, &pkt.buf[*pkt.bufOffset], certLen,
         TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
 #else
-    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(NULL, &pkt.buf[*pkt.bufOffset], certLen,
+    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_SESSION_CTX(sess),
+        ATTRIBUTE_FROM_SESSION_CTX(sess), NULL, &pkt.buf[*pkt.bufOffset], certLen,
         TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
 #endif
     if (cert == NULL) {

@@ -252,7 +252,10 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     if (srcConfig->groupInfo != NULL) {
-        BSL_SAL_FREE(destConfig->groupInfo);
+        if (destConfig->groupInfo != NULL) {
+            BSL_SAL_FREE(destConfig->groupInfo->name);
+            BSL_SAL_FREE(destConfig->groupInfo);
+        }
         destConfig->groupInfo= BSL_SAL_Calloc(srcConfig->groupInfolen, sizeof(TLS_GroupInfo));
         if (destConfig->groupInfo == NULL) {
             return HITLS_MEMALLOC_FAIL;
@@ -2009,5 +2012,49 @@ int32_t HITLS_CFG_GetEmptyRecordsNum(const HITLS_Config *config, uint32_t *empty
     }
     *emptyNum = config->emptyRecordsNum;
 
+    return HITLS_SUCCESS;
+}
+
+int32_t ConfigUpdateTlsConfigArray(uint16_t **destArray, uint32_t *destSize, const void *sourceArray,
+    uint32_t sourceLen, uint32_t versionBits, uint32_t (*getVersionBitsFn)(const void *, uint32_t),
+    uint16_t (*getItemIdFn)(const void *, uint32_t))
+{
+    if (destArray == NULL || destSize == NULL || sourceArray == NULL || sourceLen == 0 || 
+        getVersionBitsFn == NULL || getItemIdFn == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+
+    uint32_t size = 0;
+    uint16_t *tempItems = BSL_SAL_Calloc(sourceLen, sizeof(uint16_t));
+    if (tempItems == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    for (uint32_t i = 0; i < sourceLen; i++) {
+        if ((versionBits & getVersionBitsFn(sourceArray, i)) != 0) {
+            bool isDuplicate = false;
+            uint16_t itemId = getItemIdFn(sourceArray, i);
+            // Check if this item already exists
+            for (uint32_t j = 0; j < size; j++) {
+                if (tempItems[j] == itemId) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                tempItems[size] = itemId;
+                size++;
+            }
+        }
+    }
+
+    if (size == 0) {
+        BSL_SAL_Free(tempItems);
+        return HITLS_INVALID_INPUT;
+    }
+
+    BSL_SAL_FREE(*destArray);
+    *destArray = tempItems;
+    *destSize = size;
     return HITLS_SUCCESS;
 }

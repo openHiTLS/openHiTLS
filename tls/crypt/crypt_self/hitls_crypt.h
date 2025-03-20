@@ -61,9 +61,8 @@ HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrNam
  * @retval HITLS_SUCCESS                succeeded.
  * @retval Other                        failure
  */
-int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
-        HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
-        const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo, const uint8_t *key,
+    uint32_t keyLen, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 /**
  * @brief Perform hash calculation.
@@ -82,9 +81,8 @@ int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
  * @retval HITLS_SUCCESS                succeeded.
  * @retval Other                        failure
  */
-int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t *outLen);
+int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo, const uint8_t *in,
+    uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 /**
  * @brief Perform encryption operation.
@@ -161,9 +159,8 @@ HITLS_CRYPT_Key *HITLS_CRYPT_GenerateEcdhKey(HITLS_Lib_Ctx *libCtx, const char *
  * @retval HITLS_SUCCESS  Succeeded.
  * @retval Other          Failed.
  */
-int32_t HITLS_CRYPT_CalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
-    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+int32_t HITLS_CRYPT_CalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_CRYPT_Key *key,
+    uint8_t *peerPubkey, uint32_t pubKeyLen, uint8_t *sharedSecret, uint32_t *sharedSecretLen);
 
 /**
  * @brief Calculate the SM2 shared secret.
@@ -179,9 +176,8 @@ int32_t HITLS_CRYPT_CalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
  * @retval HITLS_SUCCESS  Succeeded.
  * @retval Other          Failed.
  */
-int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret,
-    uint32_t *sharedSecretLen);
+int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName, 
+    HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret, uint32_t *sharedSecretLen);
 
 /**
  * @brief Generate a DH key pair based on the security level.
@@ -190,14 +186,15 @@ int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrN
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
  * @param attrName   [IN] Attribute name, which may be used for specific configuration.
- * @param paraId    [IN] param ID.
+ * @param tlsConfig  [IN] TLS configuration.
+ * @param secBits    [IN] Security level.
  *
  * @return Key handle
  *         Returns a pointer to the generated DH key pair handle.
  *         Returns NULL if the key generation fails.
  */
-HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
-    const char *attrName, const HITLS_Config *tlsConfig, int32_t secBits);
+HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *tlsConfig, int32_t secBits);
 
 /**
  * @brief Generate a DH key pair based on parameters.
@@ -232,8 +229,8 @@ HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyByParameters(HITLS_Lib_Ctx *libCtx,
  * @retval HITLS_SUCCESS  Succeeded.
  * @retval Other          Failed.
  */
-int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
-    const char *attrName, const HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen);
+int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CRYPT_HkdfExpandInput *input,
+    uint8_t *okm, uint32_t okmLen);
 
 /**
  * @brief HKDF extract function.
@@ -249,8 +246,8 @@ int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
  * @retval HITLS_SUCCESS  Succeeded.
  * @retval Other          Failed.
  */
-int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
-        const char *attrName, const HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen);
+int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CRYPT_HkdfExtractInput *input,
+    uint8_t *prk, uint32_t *prkLen);
 
 /**
  * @brief Generate a sequence of random bytes of the specified length.
@@ -266,6 +263,15 @@ int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
  */
 int32_t HITLS_CRYPT_RandbytesEx(HITLS_Lib_Ctx *libCtx, uint8_t *bytes, uint32_t bytesLen);
 
+/**
+ * @brief Initialize the hash context.
+ *
+ * This function initializes the hash context with the given library context, attribute name, and hash algorithm.
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations.
+ * @param attrName   [IN] Attribute name, which may be used for specific configuration.
+ * @param hashAlgo   [IN] Hash algorithm to be used in the hash operation, e.g., HITLS_SHA256.
+ */
 HITLS_HASH_Ctx *HITLS_CRYPT_DigestInit(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo);
 
 /**
@@ -387,7 +393,6 @@ void HITLS_CRYPT_CipherFree(HITLS_Cipher_Ctx *ctx);
  * @return New key handle copy. Returns NULL on failure.
  */
 HITLS_CRYPT_Key *HITLS_CRYPT_DupKey(HITLS_CRYPT_Key *key);
-
 
 /**
  * @brief Get the public key of a cryptographic key.

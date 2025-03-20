@@ -86,6 +86,9 @@ struct TlsSessCtx {
     uint32_t ticketAgeAdd;                              /* A random number generated each time a ticket is issued */
 };
 
+#define LIBCTX_FROM_SESSION_CTX(sessCtx) (sessCtx == NULL) ? NULL : ((sessCtx)->certMgrCtx == NULL ? NULL : (sessCtx)->certMgrCtx->libCtx)
+#define ATTRIBUTE_FROM_SESSION_CTX(sessCtx) (sessCtx == NULL) ? NULL : ((sessCtx)->certMgrCtx == NULL ? NULL : (sessCtx)->certMgrCtx->attrName)
+
 #ifdef __cplusplus
 }
 #endif

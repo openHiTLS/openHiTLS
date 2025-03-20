@@ -177,7 +177,7 @@ int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, in
  * @retval #CRYPT_SUCCESS if processing succeeds
  *         Other error codes see the crypt_errno.h
  */
-typedef int32_t (*CRYPT_EAL_ProviderProcCb)(CRYPT_EAL_ProvMgrCtx *ctx, void *args);
+typedef int32_t (*CRYPT_EAL_ProviderProcessCb)(CRYPT_EAL_ProvMgrCtx *ctx, void *args);
 
 /**
  * @ingroup crypt_eal_provider
@@ -195,7 +195,7 @@ typedef int32_t (*CRYPT_EAL_ProviderProcCb)(CRYPT_EAL_ProvMgrCtx *ctx, void *arg
  *         The first error code encountered if any provider processing fails
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ProviderProcAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcCb cb, void *args);
+int32_t CRYPT_EAL_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderProcessCb cb, void *args);
 
 #ifdef __cplusplus
 }

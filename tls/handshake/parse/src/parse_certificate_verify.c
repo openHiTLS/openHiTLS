@@ -20,6 +20,7 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
+#include "crypt_algid.h"
 #include "hitls_error.h"
 #include "cert_method.h"
 #include "hs_msg.h"
@@ -104,14 +105,20 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
         return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_ILLEGAL_PARAMETER);
     }
 
+    /* check curve matches signature algorithm, only check ec key for tls1.3 */
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+        return HITLS_SUCCESS;
+    }
 #ifdef HITLS_TLS_PROTO_TLS13
     HITLS_Config *config = &ctx->config.tlsConfig;
     const TLS_SigSchemeInfo *schemeInfo = ConfigGetSignatureSchemeInfo(config, signScheme);
-    /* check curve matches signature algorithm, only check ec key for tls1.3 */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 || schemeInfo == NULL || schemeInfo->paraId == 0) {
+    if (schemeInfo == NULL) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_ILLEGAL_PARAMETER);
+    }
+    if (schemeInfo->paraId == CRYPT_PKEY_PARAID_MAX) {
         return HITLS_SUCCESS;
     }
-    int32_t paramId = 0;
+    int32_t paramId = CRYPT_PKEY_PARAID_MAX;
     int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paramId);
     if (ret != HITLS_SUCCESS || paramId != schemeInfo->paraId) {
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,

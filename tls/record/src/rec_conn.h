@@ -188,6 +188,8 @@ int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state,
 /**
  * @brief   Key generation
  *
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   param [IN] Security parameter
  * @param   client [OUT] Client key material
  * @param   server [OUT] Server key material
@@ -201,6 +203,8 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
 /**
  * @brief   TLS1.3 Key generation
  *
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   param [IN] Security parameter
  * @param   suitInfo [OUT] key material
  *
@@ -230,6 +234,8 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
 /*
  * @brief   generate the mac
  *
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   suiteInfo [IN] ciphersuiteInfo
  * @param   plainMsg [IN] text info
  * @param   mac [OUT] mac buffer
