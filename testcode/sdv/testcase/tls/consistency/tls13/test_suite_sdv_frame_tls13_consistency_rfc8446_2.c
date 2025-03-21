@@ -149,7 +149,6 @@ void ClientCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(serverConfig != NULL);
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-
     // Configure the config file.
     SetConfig(clientConfig, serverConfig, setInfo);
 
@@ -197,7 +196,6 @@ void ServerCreatConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(serverConfig != NULL);
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-
     // Configure the config file.
     SetConfig(clientConfig, serverConfig, setInfo);
 
@@ -228,6 +226,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -241,7 +240,6 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(remoteProcess != NULL);
 
     // Apply for the config context.
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
     void *clientConfig = HLT_TlsNewCtx(TLS1_3);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -249,7 +247,11 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, TLS1_3, false, NULL, NULL, NULL, 0, NULL);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -1056,7 +1058,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_EXCHANGE_MODES_MISS_FUNC_TC002()
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_EXCHANGE_MODES_ADD_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1192,7 +1193,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_MISS_FUNC_TC001()
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_MISS_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1256,7 +1256,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1356,7 +1355,6 @@ static int32_t CompareBinder_Success(TLS_Ctx *ctx, const PreSharedKey *pskNode, 
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1430,7 +1428,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1647,7 +1644,6 @@ static int32_t Test_PskFindSessionCb_Default(HITLS_Ctx *ctx, const uint8_t *iden
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1707,7 +1703,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC007()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1767,7 +1762,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1831,7 +1825,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1913,7 +1906,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -1976,7 +1968,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2041,7 +2032,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKHASH_FUNC_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2097,7 +2087,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKBINDER_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2160,7 +2149,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKBINDER_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2223,7 +2211,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECODE_VERSION_FUNC_TC001(int value, int expect)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2296,7 +2283,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECODE_VERSION_FUNC_TC002(int value, int expect)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2368,7 +2354,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2449,7 +2434,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC002()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2530,7 +2514,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC003()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
@@ -2617,7 +2600,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMEPSK_AND_SETPSK_FUNC_TC004()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};

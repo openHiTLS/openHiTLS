@@ -59,9 +59,10 @@ typedef enum {
 } CRYPT_EAL_PROVMGRCTRL;
 
 /* outFuncs */
-#define CRYPT_EAL_PROVCB_FREE  1
-#define CRYPT_EAL_PROVCB_QUERY 2
-#define CRYPT_EAL_PROVCB_CTRL  3
+#define CRYPT_EAL_PROVCB_FREE       1
+#define CRYPT_EAL_PROVCB_QUERY      2
+#define CRYPT_EAL_PROVCB_CTRL       3
+#define CRYPT_EAL_PROVCB_GETCAPS    4
 
 
 typedef void (*CRYPT_EAL_ProvFreeCb)(void *provCtx);
@@ -81,6 +82,11 @@ typedef int32_t (*CRYPT_EAL_ProvQueryCb)(void *provCtx, int32_t operaId, CRYPT_E
 /* Used for obtaining provider information through the eal layer interface */
 typedef int32_t (*CRYPT_EAL_ProvCtrlCb)(void *provCtx, int32_t cmd, void *val, uint32_t valLen);
 
+#define CRYPT_EAL_GET_GROUP_CAP 1
+#define CRYPT_EAL_GET_SIGALG_CAP 2
+
+/* Used for obtaining the capabilities of provider through the eal layer interface */
+typedef int32_t (*CRYPT_EAL_ProvGetCapsCb)(void *provCtx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args);
 
 /**
  * @ingroup crypt_eal_provider

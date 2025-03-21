@@ -31,6 +31,7 @@
 #include "app_ctx.h"
 #include "hs_kx.c"
 #include "common_func.h"
+#include "stub_crypt.h"
 /* END_HEADER */
 
 #define g_uiPort 45678
@@ -92,6 +93,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -481,7 +483,8 @@ EXIT:
 
 static int32_t Stub_GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
 {
-    int32_t ret = SAL_CRYPT_CalcEcdhSharedSecret(ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
+    int32_t ret = SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
         ctx->hsCtx->kxCtx->pubKeyLen, preMasterSecret, preMasterSecretLen);
     *preMasterSecretLen = PREMASTERSECRETLEN;
     return ret;

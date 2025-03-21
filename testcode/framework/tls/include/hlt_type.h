@@ -45,8 +45,21 @@ extern "C" {
 #define ALPN_CB_NAME_LEN (50)
 #define ALPN_DATA_NAME_LEN (50)
 #define MAX_NO_RENEGOTIATIONCB_LEN (1024)
+#define MAX_PROVIDER_NAME_LEN (256)
+#define MAX_ATTR_NAME_LEN (256)
+#define MAX_PROVIDER_PATH_LEN (256)
+#define MAX_PROVIDER_COUNT (10)
 
 #define DEFAULT_CERT_PATH       "../../testcode/testdata/tls/certificate/der/"
+
+#define RSAPSS_SHA256_CA_PATH      "rsa_pss_sha256/rsa_pss_root.der:rsa_pss_sha256/rsa_pss_intCa.der"
+#define RSAPSS_SHA256_CHAIN_PATH   "rsa_pss_sha256/rsa_pss_intCa.der"
+#define RSAPSS_SHA256_EE_PATH      "rsa_pss_sha256/rsa_pss_dev.der"
+#define RSAPSS_SHA256_PRIV_PATH    "rsa_pss_sha256/rsa_pss_dev.key.der"
+#define RSAPSS_RSAE_CA_PATH        "rsa_pss_rsae/rsa_root.der:rsa_pss_rsae/rsa_intCa.der"
+#define RSAPSS_RSAE_CHAIN_PATH     "rsa_pss_rsae/rsa_intCa.der"
+#define RSAPSS_RSAE_EE_PATH        "rsa_pss_rsae/rsa_dev.der"
+#define RSAPSS_RSAE_PRIV_PATH      "rsa_pss_rsae/rsa_dev.key.der"
 
 #define RSA_SHA_CA_PATH         "rsa_sha/ca-3072.der:rsa_sha/inter-3072.der"
 #define RSA_SHA_CHAIN_PATH      "rsa_sha/inter-3072.der"
@@ -100,6 +113,7 @@ typedef struct ProcessSt HLT_Process;
 
 typedef enum {
     HITLS,
+    HITLS_PROVIDER,
 } TLS_TYPE;
 
 typedef enum {
@@ -235,6 +249,11 @@ typedef struct {
 
     bool isClient;
     uint32_t emptyRecordsNum;
+    char providerPath[MAX_PROVIDER_PATH_LEN];
+    char providerNames[MAX_PROVIDER_COUNT][MAX_PROVIDER_NAME_LEN];
+    int32_t providerLibFmts[MAX_PROVIDER_COUNT];
+    int32_t providerCnt;
+    char attrName[MAX_ATTR_NAME_LEN];
 } HLT_Ctx_Config;
 
 typedef struct {

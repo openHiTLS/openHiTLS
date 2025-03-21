@@ -274,14 +274,14 @@ static int32_t ParseBufToCert(HITLS_Session *sess, const uint8_t *buf, uint32_t 
     ParsePacket pkt = {.ctx = NULL, .buf = buf, .bufLen = bufLen, .bufOffset = &offset};
     /* Obtain the certificate length */
     uint32_t certLen = 0;
-    CERT_MgrCtx *certMgrCtx = sess->certMgrCtx;
     int32_t ret = ParseBytesToUint24(&pkt, &certLen);
     if (ret != HITLS_SUCCESS || (certLen != (pkt.bufLen - CERT_LEN_TAG_SIZE))) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16260, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "decode certLen fail.", 0, 0, 0, 0);
         return HITLS_PARSE_INVALID_MSG_LEN;
     }
-
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    CERT_MgrCtx *certMgrCtx = sess->certMgrCtx;
     if (certMgrCtx == NULL || certMgrCtx->method.certParse == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16261, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "certMgrCtx or certMgrCtx->method.certParse is null.", 0, 0, 0, 0);
@@ -291,6 +291,11 @@ static int32_t ParseBufToCert(HITLS_Session *sess, const uint8_t *buf, uint32_t 
     /* Parse the first device certificate. */
     HITLS_CERT_X509 *cert = certMgrCtx->method.certParse(NULL, &pkt.buf[*pkt.bufOffset], certLen,
         TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
+#else
+    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_SESSION_CTX(sess),
+        ATTRIBUTE_FROM_SESSION_CTX(sess), NULL, &pkt.buf[*pkt.bufOffset], certLen,
+        TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
+#endif
     if (cert == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16262, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "parse peer eecert error", 0, 0, 0, 0);

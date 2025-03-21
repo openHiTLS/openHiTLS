@@ -261,7 +261,7 @@ bool SAL_CERT_CheckCertKeyUsage(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, HITLS_CER
  *
  * @retval  cert key type
  */
-HITLS_CERT_KeyType SAL_CERT_SignScheme2CertKeyType(HITLS_SignHashAlgo signScheme);
+HITLS_CERT_KeyType SAL_CERT_SignScheme2CertKeyType(const HITLS_Ctx *ctx, HITLS_SignHashAlgo signScheme);
 
 #ifdef __cplusplus
 }

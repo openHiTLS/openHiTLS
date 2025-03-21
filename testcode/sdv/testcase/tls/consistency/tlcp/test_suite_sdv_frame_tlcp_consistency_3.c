@@ -58,7 +58,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_SESSIONID_MISS_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -176,6 +175,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLIENTKXCH_VERSIONERR_TC001(char *cipherSuite)
 {
     FRAME_Init();
     STUB_Init();
+    RegDefaultMemCallback();
     HITLS_Config *tlsConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
@@ -298,7 +298,6 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
-
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientConfig != NULL);
     ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
@@ -487,7 +486,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client;
@@ -527,7 +525,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client;

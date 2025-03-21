@@ -18,6 +18,7 @@
 
 #include "bsl_err.h"
 #include "bsl_errno.h"
+#include "bsl_obj_internal.h"
 
 int32_t BSL_GLOBAL_Init(void)
 {
@@ -26,7 +27,11 @@ int32_t BSL_GLOBAL_Init(void)
 
 int32_t BSL_GLOBAL_DeInit(void)
 {
+    BSL_ERR_RemoveErrStringBatch();
+    BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
+    BSL_OBJ_FreeSignHashTable();
+    BSL_OBJ_FreeHashTable();
     return BSL_SUCCESS;
 }
 

@@ -138,7 +138,8 @@ static uint32_t GetHashOfMACAlgorithm(HITLS_MacAlgo macAlgo)
     return HITLS_HASH_NULL;
 }
 
-int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
+int32_t RecConnGenerateMac(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    RecConnSuitInfo *suiteInfo, const REC_TextInput *plainMsg,
     uint8_t *mac, uint32_t *macLen)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -161,7 +162,8 @@ int32_t RecConnGenerateMac(RecConnSuitInfo *suiteInfo, const REC_TextInput *plai
     }
 
     if (suiteInfo->macCtx == NULL) {
-        suiteInfo->macCtx = SAL_CRYPT_HmacInit(hashAlgo, suiteInfo->macKey, suiteInfo->macKeyLen);
+        suiteInfo->macCtx = SAL_CRYPT_HmacInit(libCtx, attrName,
+            hashAlgo, suiteInfo->macKey, suiteInfo->macKeyLen);
         ret = suiteInfo->macCtx == NULL ? HITLS_REC_ERR_GENERATE_MAC : HITLS_SUCCESS;
     } else {
         ret = SAL_CRYPT_HmacReInit(suiteInfo->macCtx);
@@ -211,7 +213,8 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
     uint8_t mac[MAX_DIGEST_SIZE] = {0};
     uint32_t macLen = MAX_DIGEST_SIZE;
     RecConnInitGenerateMacInput(cryptMsg, text, textLen - suiteInfo->macLen, &input);
-    int32_t ret = RecConnGenerateMac(suiteInfo, &input, mac, &macLen);
+    int32_t ret = RecConnGenerateMac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        suiteInfo, &input, mac, &macLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17233, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "RecConnGenerateMac fail.", 0, 0, 0, 0);
@@ -232,9 +235,9 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_CIPHER_CBC */
-int32_t RecConnEncrypt(RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
+int32_t RecConnEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
 {
-    return RecGetCryptoFuncs(state->suiteInfo)->encryt(state, plainMsg, cipherText, cipherTextLen);
+    return RecGetCryptoFuncs(state->suiteInfo)->encryt(ctx, state, plainMsg, cipherText, cipherTextLen);
 }
 
 int32_t RecConnDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *cryptMsg, uint8_t *data,
@@ -311,7 +314,8 @@ static void RecConnCalcWriteKey(const REC_SecParameters *param, uint8_t *keyBuf,
     PackSuitInfo(server, param);
 }
 
-int32_t RecConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *client, RecConnSuitInfo *server)
+int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const REC_SecParameters *param, RecConnSuitInfo *client, RecConnSuitInfo *server)
 {
     /** Calculate the key length: 2MAC, 2key, 2IV  */
     uint32_t keyLen = ((uint32_t)param->macKeyLen * 2) + ((uint32_t)param->encKeyLen * 2) +
@@ -334,6 +338,8 @@ int32_t RecConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *clie
     keyDeriveParam.secretLen = REC_MASTER_SECRET_LEN;
     keyDeriveParam.label = (const uint8_t *)KEY_EXPANSION_LABEL;
     keyDeriveParam.labelLen = strlen(KEY_EXPANSION_LABEL);
+    keyDeriveParam.libCtx = libCtx;
+    keyDeriveParam.attrName = attrName;
 
     uint8_t randomValue[REC_RANDOM_LEN * 2];
     /** Random value of the replication server */
@@ -377,7 +383,8 @@ int32_t RecTLS13CalcWriteIv(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t *iv, 
     return SAL_CRYPT_HkdfExpandLabel(deriveInfo, iv, ivLen);
 }
 
-int32_t RecTLS13ConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo *suitInfo)
+int32_t RecTLS13ConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const REC_SecParameters *param, RecConnSuitInfo *suitInfo)
 {
     const uint8_t *secret = (const uint8_t *)param->masterSecret;
     uint32_t secretLen = SAL_CRYPT_DigestSize(param->prfAlg);
@@ -398,6 +405,8 @@ int32_t RecTLS13ConnKeyBlockGen(const REC_SecParameters *param, RecConnSuitInfo 
     deriveInfo.hashAlgo = param->prfAlg;
     deriveInfo.secret = secret;
     deriveInfo.secretLen = secretLen;
+    deriveInfo.libCtx = libCtx;
+    deriveInfo.attrName = attrName;
     int32_t ret = RecTLS13CalcWriteKey(&deriveInfo, suitInfo->key, keyLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17235, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

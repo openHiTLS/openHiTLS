@@ -215,8 +215,8 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC002(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-    TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
 
+    TestSetCertPath(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");
     HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
     HLT_SetSignature(clientCtxConfig, "CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384");

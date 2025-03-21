@@ -95,6 +95,7 @@ static CRYPT_EAL_MdCTX *MdNewDefaultCtx(CRYPT_MD_AlgId id)
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetMdMethod(CRYPT_EAL_MdCTX *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
@@ -183,7 +184,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t al
     ctx->isProvider = true;
     return ctx;
 }
-
+#endif
 CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id)
 {
 #ifdef HITLS_CRYPTO_ASM_CHECK

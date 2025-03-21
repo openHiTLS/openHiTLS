@@ -63,6 +63,8 @@ typedef enum {
     BSL_CID_AES128_CCM,
     BSL_CID_AES192_CCM,
     BSL_CID_AES256_CCM,
+    BSL_CID_AES128_CCM8,
+    BSL_CID_AES256_CCM8,
 
     // sm4
     BSL_CID_SM4_XTS = 116,
@@ -136,6 +138,7 @@ typedef enum {
     BSL_CID_HMAC_SHA3_384,          /**< identifies hmac with SHA3_384 */
     BSL_CID_HMAC_SHA3_512,          /**< identifies hmac with SHA3_512 */
     BSL_CID_HMAC_SM3,               /**< identifies hmac with SM3 */
+    BSL_CID_MAC_AEAD,
 
     /* Random number algorithm */
     // DRBG
@@ -274,6 +277,33 @@ typedef enum {
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,
 } BslCid;
+
+typedef struct {
+    uint32_t octetLen;
+    char *octs;
+    uint32_t flags;
+} BslOidString;
+
+/**
+ * @ingroup bsl_obj
+ * @brief Create an object identifier mapping
+ * @param[in] oid The object identifier string
+ * @param[in] oidName The name of the object identifier
+ * @param[in] cid The algorithm ID to map to
+ * @return HITLS_OK on success, error code on failure
+ */
+int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid);
+
+
+/**
+ * @ingroup bsl_obj
+ * @brief Create a signature algorithm ID mapping
+ * @param[in] signId The signature algorithm ID
+ * @param[in] asymId The asymmetric algorithm ID
+ * @param[in] hashId The hash algorithm ID
+ * @return HITLS_OK on success, error code on failure
+ */
+int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
 
 #ifdef __cplusplus
 }

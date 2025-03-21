@@ -16,6 +16,7 @@
 #define CERT_MGR_CTX_H
 
 #include <stdint.h>
+#include "hitls_crypt_type.h"
 #include "hitls_cert_reg.h"
 #include "cert.h"
 #include "bsl_hash.h"
@@ -53,7 +54,9 @@ struct CertMgrCtxInner {
     HITLS_CERT_Store *chainStore;               /* Certificate chain store, used to assemble the certificate chain */
     HITLS_CERT_Store *certStore;                /* Default CA store */
     HITLS_CertVerifyParam verifyParam;          /* Verification Parameters */
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CERT_MgrMethod method;                /* callback function */
+#endif
     HITLS_PasswordCb defaultPasswdCb;           /* Default password callback, used in loading certificate. */
     void *defaultPasswdCbUserData;              /* Set the userData used by the default password callback.  */
     HITLS_VerifyCb verifyCb;                    /* Certificate verification callback function */
@@ -63,9 +66,6 @@ struct CertMgrCtxInner {
 };
 
 CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType);
-
-int32_t CheckSignScheme(HITLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
-    HITLS_CERT_KeyType checkedKeyType, bool isNegotiateSignAlgo);
 
 int32_t CheckCurveName(HITLS_Config *config, const uint16_t *curveList, uint32_t curveNum, HITLS_CERT_Key *pubkey);
 

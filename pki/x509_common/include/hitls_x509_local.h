@@ -120,11 +120,13 @@ typedef struct _HITLS_X509_Asn1AlgId {
 } HITLS_X509_Asn1AlgId;
 
 typedef int32_t (*HITLS_X509_Asn1Parse)(uint8_t **encode, uint32_t *encodeLen, void *out);
+typedef void *(*HITLS_X509_ProviderNew)(CRYPT_EAL_LibCtx *libCtx, const char *attrName);
 typedef void *(*HITLS_X509_New)(void);
 typedef void (*HITLS_X509_Free)(void *elem);
 
 typedef struct {
     HITLS_X509_Asn1Parse asn1Parse;
+    HITLS_X509_ProviderNew x509ProviderNew;
     HITLS_X509_New x509New;
     HITLS_X509_Free x509Free;
 } X509_ParseFuncCbk;
@@ -178,8 +180,9 @@ int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *l
 
 int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HITLS_X509_ValidTime *time);
 
-int32_t HITLS_X509_ParseX509(int32_t format, const BSL_Buffer *encode, bool isCert, X509_ParseFuncCbk *parsefun,
-    HITLS_X509_List *list);
+int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, const BSL_Buffer *encode,
+    bool isCert, X509_ParseFuncCbk *parsefun, HITLS_X509_List *list);
+
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg);
@@ -214,6 +217,8 @@ int32_t HITLS_X509_GetList(BslList *list, void *val, uint32_t valLen);
 int32_t HITLS_X509_GetPubKey(void *ealPubKey, void **val);
 
 int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen);
+
+int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *val, int32_t valLen);
 
 int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen);
 
