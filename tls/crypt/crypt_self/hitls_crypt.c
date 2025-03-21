@@ -737,7 +737,8 @@ static int32_t CalcSM2SecretPre(
 {
     uint8_t peerPubData[SM2_PUBKEY_LEN] = {0};
     BSL_Param param[2] = { {0}, BSL_PARAM_END };
-    BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, peerPubData, SM2_PUBKEY_LEN);
+    (void)BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
+        peerPubData, SM2_PUBKEY_LEN);
     int32_t ret = CRYPT_EAL_PkeyGetPubEx(sm2Params->peerPubKey, param);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16673, "GetPub fail");
@@ -839,7 +840,7 @@ int32_t HITLS_CRYPT_CalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
         }
     }
     BSL_Param param[2] = { {0}, BSL_PARAM_END };
-    BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, peerPubkey, pubKeyLen);
+    (void)BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, peerPubkey, pubKeyLen);
     ret = CRYPT_EAL_PkeySetPubEx(peerPk, param);
     if (ret != CRYPT_SUCCESS) {
         (void)RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16681, "SetPub fail");
@@ -872,10 +873,10 @@ HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
     const char *attrName, const HITLS_Config *tlsConfig, int32_t secBits)
 {
     uint32_t size = 0;
-    int32_t paraId = 0;
+    int32_t paraId = CRYPT_DH_RFC2409_1024;
     const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(tlsConfig, &size);
     for (size_t i = 0; i < size; i++) {
-        if (groupInfoList[i].algId == (int32_t)CRYPT_PKEY_DH && groupInfoList[i].secBits >= secBits) {
+        if (groupInfoList[i].algId == (int32_t)CRYPT_PKEY_DH && secBits >= groupInfoList[i].secBits) {
             paraId = groupInfoList[i].paraId;
             break;
         }
@@ -1174,7 +1175,7 @@ int32_t HITLS_CRYPT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t
 {
 #ifdef HITLS_CRYPTO_PKEY
     BSL_Param param[2] = { {0}, BSL_PARAM_END };
-    BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, bufLen);
+    (void)BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, pubKeyBuf, bufLen);
     int32_t ret = CRYPT_EAL_PkeyGetPubEx(key, param);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16664, "GetPub fail");

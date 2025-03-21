@@ -31,7 +31,9 @@ extern "C" {
 typedef enum {
     BSL_FORMAT_UNKNOWN,
     BSL_FORMAT_PEM,
-    BSL_FORMAT_ASN1
+    BSL_FORMAT_ASN1,
+    BSL_FORMAT_PFX_COM,
+    BSL_FORMAT_PKCS12,
 } BSL_ParseFormat;
 
 typedef struct {

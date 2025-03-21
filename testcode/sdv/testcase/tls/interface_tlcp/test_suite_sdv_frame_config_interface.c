@@ -1338,53 +1338,53 @@ EXIT:
 void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
 {
     (void)level;
-//     FRAME_Init();
-//     HITLS_Config *clientConfig = NULL;
-//     HITLS_Config *serverConfig = NULL;
-//     FRAME_LinkObj *client = NULL;
-//     FRAME_LinkObj *server = NULL;
-//     HITLS_CRYPT_Key *key = NULL;
-//     uint16_t pfsCipherSuites[] = {HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256};
+    FRAME_Init();
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_CRYPT_Key *key = NULL;
+    uint16_t pfsCipherSuites[] = {HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256};
 
-//     clientConfig = HITLS_CFG_NewTLS12Config();
-//     serverConfig = HITLS_CFG_NewTLS12Config();
-//     ASSERT_TRUE(clientConfig != NULL);
-//     ASSERT_TRUE(serverConfig != NULL);
+    clientConfig = HITLS_CFG_NewTLS12Config();
+    serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    ASSERT_TRUE(serverConfig != NULL);
 
-//     ASSERT_TRUE(HiTLS_X509_LoadCertAndKey(clientConfig, RSA_SHA_CA_PATH, RSA_SHA_CHAIN_PATH,
-//                 RSA_SHA256_EE_PATH3, NULL, RSA_SHA256_PRIV_PATH3,NULL) == HITLS_SUCCESS);
-//     ASSERT_TRUE(HiTLS_X509_LoadCertAndKey(serverConfig, RSA_SHA_CA_PATH, RSA_SHA_CHAIN_PATH,
-//                 RSA_SHA256_EE_PATH3, NULL, RSA_SHA256_PRIV_PATH3,NULL) == HITLS_SUCCESS);
+    ASSERT_TRUE(HiTLS_X509_LoadCertAndKey(clientConfig, RSA_SHA_CA_PATH, RSA_SHA_CHAIN_PATH,
+                RSA_SHA256_EE_PATH3, NULL, RSA_SHA256_PRIV_PATH3,NULL) == HITLS_SUCCESS);
+    ASSERT_TRUE(HiTLS_X509_LoadCertAndKey(serverConfig, RSA_SHA_CA_PATH, RSA_SHA_CHAIN_PATH,
+                RSA_SHA256_EE_PATH3, NULL, RSA_SHA256_PRIV_PATH3,NULL) == HITLS_SUCCESS);
 
-//     ASSERT_TRUE(HITLS_CFG_SetCipherSuites(clientConfig, pfsCipherSuites, sizeof(pfsCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
-//     ASSERT_TRUE(HITLS_CFG_SetCipherSuites(serverConfig, pfsCipherSuites, sizeof(pfsCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
-//     HITLS_CFG_SetSecurityLevel(serverConfig, level);
-//     HITLS_CFG_SetSecurityLevel(clientConfig, level);
+    ASSERT_TRUE(HITLS_CFG_SetCipherSuites(clientConfig, pfsCipherSuites, sizeof(pfsCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetCipherSuites(serverConfig, pfsCipherSuites, sizeof(pfsCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
+    HITLS_CFG_SetSecurityLevel(serverConfig, level);
+    HITLS_CFG_SetSecurityLevel(clientConfig, level);
 
-//     HITLS_CFG_SetDhAutoSupport(serverConfig, false);
-//     key = HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CONFIG(serverConfig), ATTRIBUTE_FROM_CONFIG(serverConfig),
-//         serverConfig, 80);
-//     HITLS_CFG_SetTmpDh(serverConfig, key);
+    HITLS_CFG_SetDhAutoSupport(serverConfig, false);
+    key = HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CONFIG(serverConfig), ATTRIBUTE_FROM_CONFIG(serverConfig),
+        serverConfig, 80);
+    HITLS_CFG_SetTmpDh(serverConfig, key);
 
-//     FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
-//     client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
-//     server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
-//     ASSERT_TRUE(client != NULL);
-//     ASSERT_TRUE(server != NULL);
+    FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
+    client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
+    server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
 
-//     if (level > 1) {
-//         ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_KEY_EXCHANGE), HITLS_SUCCESS);
-//         FRAME_TrasferMsgBetweenLink(server, client);
-//         HITLS_Connect(client->ssl);
-//         ASSERT_EQ(HITLS_Accept(server->ssl) , HITLS_MSG_HANDLE_ERR_GET_DH_KEY);
-//     } else {
-//         ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-//     }
-// EXIT:
-//     HITLS_CFG_FreeConfig(clientConfig);
-//     HITLS_CFG_FreeConfig(serverConfig);
-//     FRAME_FreeLink(client);
-//     FRAME_FreeLink(server);
+    if (level > 1) {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_KEY_EXCHANGE), HITLS_SUCCESS);
+        FRAME_TrasferMsgBetweenLink(server, client);
+        HITLS_Connect(client->ssl);
+        ASSERT_EQ(HITLS_Accept(server->ssl) , HITLS_MSG_HANDLE_ERR_GET_DH_KEY);
+    } else {
+        ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    }
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */
 

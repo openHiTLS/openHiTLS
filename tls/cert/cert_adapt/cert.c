@@ -793,7 +793,8 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
 
     CERT_Item *listNode = item;
     while (listNode != NULL) {
-        HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(config, listNode->data, listNode->dataSize,
+        HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+            ATTRIBUTE_FROM_CONFIG(config), config, listNode->data, listNode->dataSize,
             TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
         if (cert == NULL) {
             DestoryParseChain(*encCert, NULL, newChain);
@@ -841,7 +842,8 @@ int32_t SAL_CERT_ParseCertChain(HITLS_Ctx *ctx, CERT_Item *item, CERT_Pair **cer
     }
 
     /* Parse the first device certificate. */
-    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(config, item->data, item->dataSize,
+    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+        ATTRIBUTE_FROM_CONFIG(config), config, item->data, item->dataSize,
         TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
     if (cert == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_PARSE_MSG, BINLOG_ID15052, "X509Parse fail");

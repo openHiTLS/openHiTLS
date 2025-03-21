@@ -26,7 +26,9 @@ extern "C" {
 
 /**
  * @brief   Set the hash algorithm
- *
+ * 
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   ctx [IN] verify context
  * @param   hashAlgo [IN] hash algorithm
  *

@@ -820,7 +820,7 @@ static int32_t ErrorCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
 
 /**
  * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC001
- * @title Test CRYPT_EAL_ProviderProcAll functionality
+ * @title Test CRYPT_EAL_ProviderProcessAll functionality
  * @precon None
  * @brief
  *    1. Test processing all loaded providers with a callback function
@@ -860,19 +860,19 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC001(char *path, char *test1, char *test2, in
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
     
     // Test 1: Process all providers with a counting callback
-    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(libCtx, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
     ASSERT_EQ(providerCount, 3); // Should have processed 3 providers
 
     // Test 2: Test NULL libCtx
     providerCount = 0;
-    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(NULL, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(NULL, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
     ASSERT_EQ(providerCount, 1);
 
     // Test 3: Test NULL inputs
-    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, NULL, &providerCount), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(libCtx, NULL, &providerCount), CRYPT_NULL_INPUT);
     
     // Test 4: Test error propagation from callback
-    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, ErrorCallback, &errorProviderCount), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(libCtx, ErrorCallback, &errorProviderCount), CRYPT_NOT_SUPPORT);
     ASSERT_EQ(errorProviderCount, 1); // Should have processed only the first provider before error
     
     // Cleanup
@@ -919,7 +919,7 @@ int32_t CheckAlgorithmsCallback(CRYPT_EAL_ProvMgrCtx *provMgr, void *args)
 #endif
 /**
  * @test SDV_CRYPTO_PROVIDER_PROC_ALL_TC002
- * @title Test CRYPT_EAL_ProviderProcAll with specific provider operations
+ * @title Test CRYPT_EAL_ProviderProcessAll with specific provider operations
  * @precon None
  * @brief
  *    1. Test processing all providers to collect specific information
@@ -956,7 +956,7 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, in
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, BSL_SAL_LIB_FMT_OFF, "default", NULL, NULL), CRYPT_SUCCESS);
     
     // Process all providers to collect algorithm information
-    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(libCtx, CheckAlgorithmsCallback, &stats), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(libCtx, CheckAlgorithmsCallback, &stats), CRYPT_SUCCESS);
     
     // Verify results
     ASSERT_EQ(stats.totalProviders, 3);
@@ -968,7 +968,7 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, in
     ASSERT_TRUE(emptyLibCtx != NULL);
     
     ProviderStats emptyStats = {0};
-    ASSERT_EQ(CRYPT_EAL_ProviderProcAll(emptyLibCtx, CheckAlgorithmsCallback, &emptyStats), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(emptyLibCtx, CheckAlgorithmsCallback, &emptyStats), CRYPT_SUCCESS);
     ASSERT_EQ(emptyStats.totalProviders, 0); // No providers should be processed
     
     // Cleanup
