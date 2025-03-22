@@ -48,6 +48,7 @@ BslOidInfo g_oidTable[] = {
     {{8, "\52\201\34\317\125\1\203\165", BSL_OID_GLOBAL}, "SM2DSAWITHSM3", BSL_CID_SM2DSAWITHSM3},
     {{8, "\52\201\34\317\125\1\203\166", BSL_OID_GLOBAL}, "SM2DSAWITHSHA1", BSL_CID_SM2DSAWITHSHA1},
     {{8, "\52\201\34\317\125\1\203\167", BSL_OID_GLOBAL}, "SM2DSAWITHSHA256", BSL_CID_SM2DSAWITHSHA256},
+    {{3, "\53\145\160", BSL_OID_GLOBAL}, "ED25519", BSL_CID_ED25519},
     {{8, "\52\206\110\206\367\15\2\5", BSL_OID_GLOBAL}, "MD5", BSL_CID_MD5},
     {{5, "\53\16\3\2\32", BSL_OID_GLOBAL}, "SHA1", BSL_CID_SHA1},
     {{9, "\140\206\110\1\145\3\4\2\4", BSL_OID_GLOBAL}, "SHA224", BSL_CID_SHA224},
@@ -134,27 +135,6 @@ BslOidInfo g_oidTable[] = {
     {{11, "\52\206\110\206\367\15\1\14\12\1\6", BSL_OID_GLOBAL}, "safeContent", BSL_CID_SAFECONTENTSBAG},
 };
 
-typedef struct {
-    BslCid signId;
-    BslCid asymId;
-    BslCid hashId;
-} BslSignIdMap;
-
-static BslSignIdMap g_signIdMap[] = {
-    {BSL_CID_MD5WITHRSA, BSL_CID_RSA, BSL_CID_MD5},
-    {BSL_CID_SHA1WITHRSA, BSL_CID_RSA, BSL_CID_SHA1},
-    {BSL_CID_SHA224WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SHA224},
-    {BSL_CID_SHA256WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SHA256},
-    {BSL_CID_SHA384WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SHA384},
-    {BSL_CID_SHA512WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SHA512},
-    {BSL_CID_SM3WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SM3},
-    {BSL_CID_ECDSAWITHSHA1, BSL_CID_ECDSA, BSL_CID_SHA1},
-    {BSL_CID_ECDSAWITHSHA224, BSL_CID_ECDSA, BSL_CID_SHA224},
-    {BSL_CID_ECDSAWITHSHA256, BSL_CID_ECDSA, BSL_CID_SHA256},
-    {BSL_CID_ECDSAWITHSHA384, BSL_CID_ECDSA, BSL_CID_SHA384},
-    {BSL_CID_ECDSAWITHSHA512, BSL_CID_ECDSA, BSL_CID_SHA512},
-    {BSL_CID_SM2DSAWITHSM3, BSL_CID_SM2, BSL_CID_SM3},
-};
 
 /**
  * RFC 5280: A.1. Explicitly Tagged Module, 1988 Syntax
@@ -180,19 +160,6 @@ static const BslAsn1StrInfo g_asn1StrTab[] = {
     {BSL_CID_DOMAINCOMPONENT, 1, -1, }, // no limited
     {BSL_CID_USERID, 1, 256}, // RFC1274
 };
-
-BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg)
-{
-    if (asymAlg == BSL_CID_UNKNOWN || hashAlg == BSL_CID_UNKNOWN) {
-        return BSL_CID_UNKNOWN;
-    }
-    for (uint32_t i = 0; i < sizeof(g_signIdMap) / sizeof(g_signIdMap[0]); i++) {
-        if (g_signIdMap[i].asymId == asymAlg && g_signIdMap[i].hashId == hashAlg) {
-            return g_signIdMap[i].signId;
-        }
-    }
-    return BSL_CID_UNKNOWN;
-}
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
 
