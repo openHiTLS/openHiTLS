@@ -22,6 +22,9 @@ SDV_X509_STORE_CTRL_FUNC_TC001:
 SDV_X509_STORE_CTRL_CERT_FUNC_TC002
 SDV_X509_STORE_CTRL_CERT_FUNC_TC002:
 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ed25519-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/ed25519/ed25519.ca.der":"../testdata/cert/ed25519/ed25519.intca.pem":"../testdata/cert/ed25519/ed25519.end.pem":"../testdata/cert/ed25519/ed25519.crl.der"
+
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3/rootca.der":"../testdata/cert/chain/rsa-v3/ca.der":"../testdata/cert/chain/rsa-v3/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 

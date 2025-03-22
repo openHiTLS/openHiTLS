@@ -931,6 +931,7 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
             }
             break;
         case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ED25519:
             signAlgId.algId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)keyAlgId, (BslCid)mdId);
             if (signAlgId.algId == BSL_CID_UNKNOWN) {
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ENCODE_SIGNID);

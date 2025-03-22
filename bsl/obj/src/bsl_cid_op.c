@@ -47,6 +47,7 @@ BSL_SignIdMap g_signIdMap[] = {
     {BSL_CID_SM2DSAWITHSM3, BSL_CID_SM2, BSL_CID_SM3},
     {BSL_CID_SM2DSAWITHSHA1, BSL_CID_SM2, BSL_CID_SHA1},
     {BSL_CID_SM2DSAWITHSHA256, BSL_CID_SM2, BSL_CID_SHA256},
+    {BSL_CID_ED25519, BSL_CID_ED25519, BSL_CID_SHA512},
 };
 
 BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
@@ -57,6 +58,19 @@ BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
         if (signAlg == g_signIdMap[iter].signId) {
             return g_signIdMap[iter].hashId;
+        }
+    }
+    return BSL_CID_UNKNOWN;
+}
+
+BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg)
+{
+    if (asymAlg == BSL_CID_UNKNOWN || hashAlg == BSL_CID_UNKNOWN) {
+        return BSL_CID_UNKNOWN;
+    }
+    for (uint32_t i = 0; i < sizeof(g_signIdMap) / sizeof(g_signIdMap[0]); i++) {
+        if (g_signIdMap[i].asymId == asymAlg && g_signIdMap[i].hashId == hashAlg) {
+            return g_signIdMap[i].signId;
         }
     }
     return BSL_CID_UNKNOWN;
