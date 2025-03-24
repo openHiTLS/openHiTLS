@@ -25,66 +25,66 @@ extern "C" {
 
 #define PROCESS_PARAM_INT32(tmpParam, paramObj, params, paramName, destField) \
     do { \
-        tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, paramName); \
-        if (tmpParam == NULL || tmpParam->valueType != BSL_PARAM_TYPE_INT32) { \
+        (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (paramName)); \
+        if ((tmpParam) == NULL || (tmpParam)->valueType != BSL_PARAM_TYPE_INT32) { \
             goto ERR; \
         } \
-        paramObj->destField = *(int32_t *)tmpParam->value; \
+        (paramObj)->destField = *(int32_t *)(tmpParam)->value; \
     } while (0)
 
 #define PROCESS_PARAM_UINT16(tmpParam, paramObj, params, paramName, destField) \
     do { \
-        tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, paramName); \
-        if (tmpParam == NULL || tmpParam->valueType != BSL_PARAM_TYPE_UINT16) { \
+        (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (paramName)); \
+        if ((tmpParam) == NULL || (tmpParam)->valueType != BSL_PARAM_TYPE_UINT16) { \
             goto ERR; \
         } \
-        paramObj->destField = *(uint16_t *)tmpParam->value; \
+        (paramObj)->destField = *(uint16_t *)(tmpParam)->value; \
     } while (0)
 
 #define PROCESS_PARAM_UINT32(tmpParam, paramObj, params, paramName, destField) \
     do { \
-        tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, paramName); \
-        if (tmpParam == NULL || tmpParam->valueType != BSL_PARAM_TYPE_UINT32) { \
+        (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (paramName)); \
+        if ((tmpParam) == NULL || (tmpParam)->valueType != BSL_PARAM_TYPE_UINT32) { \
             goto ERR; \
         } \
-        paramObj->destField = *(uint32_t *)tmpParam->value; \
+        (paramObj)->destField = *(uint32_t *)(tmpParam)->value; \
     } while (0)
 
 #define PROCESS_PARAM_BOOL(tmpParam, paramObj, params, paramName, destField) \
     do { \
-        tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, paramName); \
-        if (tmpParam == NULL || tmpParam->valueType != BSL_PARAM_TYPE_BOOL) { \
+        (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (paramName)); \
+        if ((tmpParam) == NULL || (tmpParam)->valueType != BSL_PARAM_TYPE_BOOL) { \
             goto ERR; \
         } \
-        paramObj->destField = *(bool *)tmpParam->value; \
+        (paramObj)->destField = *(bool *)(tmpParam)->value; \
     } while (0)
 
 #define PROCESS_STRING_PARAM(tmpParam, paramObj, params, paramName, destField) \
     do { \
-        tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, paramName); \
-        if (tmpParam == NULL || tmpParam->valueType != BSL_PARAM_TYPE_OCTETS_PTR) { \
+        (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (paramName)); \
+        if ((tmpParam) == NULL || (tmpParam)->valueType != BSL_PARAM_TYPE_OCTETS_PTR) { \
             goto ERR; \
         } \
-        paramObj->destField = BSL_SAL_Calloc(tmpParam->valueLen + 1, sizeof(char)); \
-        if (paramObj->destField == NULL) { \
+        (paramObj)->destField = BSL_SAL_Calloc((tmpParam)->valueLen + 1, sizeof(char)); \
+        if ((paramObj)->destField == NULL) { \
             goto ERR; \
         } \
-        (void)memcpy_s(paramObj->destField, tmpParam->valueLen + 1, tmpParam->value, tmpParam->valueLen); \
+        (void)memcpy_s((paramObj)->destField, (tmpParam)->valueLen + 1, (tmpParam)->value, (tmpParam)->valueLen); \
     } while (0)
 
 #define PROCESS_OPTIONAL_STRING_PARAM(tmpParam, params, paramName, outString, outStringLen, nameParamName, outName) \
     do { \
-        tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, paramName); \
-        if (tmpParam == NULL) { \
-            outString = NULL; \
-        } else if (tmpParam->valueType == BSL_PARAM_TYPE_OCTETS_PTR) { \
-            outString = (const char *)tmpParam->value; \
-            outStringLen = tmpParam->valueLen; \
-            tmpParam = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)params, nameParamName); \
-            if (tmpParam == NULL || tmpParam->valueType != BSL_PARAM_TYPE_OCTETS_PTR) { \
+        (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (paramName)); \
+        if ((tmpParam) == NULL) { \
+            (outString) = NULL; \
+        } else if ((tmpParam)->valueType == BSL_PARAM_TYPE_OCTETS_PTR) { \
+            (outString) = (const char *)(tmpParam)->value; \
+            (outStringLen) = (tmpParam)->valueLen; \
+            (tmpParam) = BSL_PARAM_FindParam((BSL_Param *)(uintptr_t)(params), (nameParamName)); \
+            if ((tmpParam) == NULL || (tmpParam)->valueType != BSL_PARAM_TYPE_OCTETS_PTR) { \
                 goto ERR; \
             } \
-            outName = tmpParam->value; \
+            (outName) = (const char *)(tmpParam)->value; \
         } else { \
             goto ERR; \
         } \
