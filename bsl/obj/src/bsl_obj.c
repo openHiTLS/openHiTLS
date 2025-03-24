@@ -174,6 +174,9 @@ uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
 
 static void FreeBslOidInfo(void *data)
 {
+    if (data == NULL) {
+        return;
+    }
     BslOidInfo *oidInfo = (BslOidInfo *)data;
     BSL_SAL_Free(oidInfo->strOid.octs);
     BSL_SAL_Free((char *)(uintptr_t)oidInfo->oidName);
@@ -441,16 +444,6 @@ static int32_t InsertOidInfoToHashTable(int32_t cid, BslOidInfo *oidInfo)
     return ret;
 }
 
-// Free OID info resources
-static void FreeOidInfoResources(BslOidInfo *oidInfo)
-{
-    if (oidInfo != NULL) {
-        BSL_SAL_Free((char *)(uintptr_t)oidInfo->oidName);
-        BSL_SAL_Free(oidInfo->strOid.octs);
-        BSL_SAL_Free(oidInfo);
-    }
-}
-
 // Main function for creating and registering OIDs
 int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid)
 {
@@ -485,7 +478,7 @@ int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid
 
     ret = InsertOidInfoToHashTable(cid, oidInfo);
     if (ret != BSL_SUCCESS) {
-        FreeOidInfoResources(oidInfo);
+        FreeBslOidInfo(oidInfo);
         return ret;
     }
 
