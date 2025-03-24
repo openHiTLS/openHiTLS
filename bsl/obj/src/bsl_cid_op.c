@@ -99,7 +99,7 @@ static void InitSignHashTableOnce(void)
         (void)BSL_SAL_ThreadLockFree(g_signHashRwLock);
         g_signHashRwLock = NULL;
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-    } 
+    }
 }
 
 BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
@@ -224,7 +224,7 @@ static int32_t IsSignIdInHashTable(int32_t signId)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    
+
     ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signId, (uintptr_t *)&signIdMap);
     (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
     if (ret != BSL_SUCCESS || signIdMap == NULL) {
@@ -267,7 +267,7 @@ static int32_t InsertSignIdMapping(int32_t signId, int32_t asymId, int32_t hashI
         BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_INSERT_HASH_TABLE);
         return BSL_OBJ_ERR_INSERT_HASH_TABLE;
     }
-    
+
     (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
     return BSL_SUCCESS;
 }
