@@ -666,7 +666,7 @@ EXIT:
     HITLS_X509_CsrFree(csr);
     CRYPT_EAL_PkeyFreeCtx(rsaPkey);
     CRYPT_EAL_PkeyFreeCtx(eccPkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -718,7 +718,7 @@ EXIT:
     HITLS_X509_CsrFree(csr);
     HITLS_X509_CsrFree(newCsr);
     CRYPT_EAL_PkeyFreeCtx(pkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
