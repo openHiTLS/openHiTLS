@@ -880,16 +880,12 @@ static int32_t X509_SetSm2SignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, con
     HITLS_X509_Asn1AlgId *signAlgId)
 {
     int32_t ret;
-    signAlgId->algId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)CRYPT_PKEY_SM2, (BslCid)mdId);
-    if (signAlgId->algId == BSL_CID_UNKNOWN) {
+    if (mdId != BSL_CID_SM3) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ENCODE_SIGNID);
         return HITLS_X509_ERR_ENCODE_SIGNID;
     }
+    signAlgId->algId = BSL_CID_SM2DSAWITHSM3;
     if (algParam != NULL && algParam->sm2UserId.data != NULL && algParam->sm2UserId.dataLen != 0) {
-        if (algParam->algId != BSL_CID_SM2DSAWITHSM3) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
-            return HITLS_X509_ERR_MD_NOT_MATCH;
-        }
         ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_SM2_USER_ID, algParam->sm2UserId.data,
             algParam->sm2UserId.dataLen);
         if (ret != CRYPT_SUCCESS) {
@@ -938,6 +934,7 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
             }
             break;
         case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_ED25519:
             signAlgId.algId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)keyAlgId, (BslCid)mdId);
             if (signAlgId.algId == BSL_CID_UNKNOWN) {
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ENCODE_SIGNID);

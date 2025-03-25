@@ -104,7 +104,7 @@ int32_t BSL_ASN1_DecodeTagLen(uint8_t tag, uint8_t **encode, uint32_t *encLen, u
     if (tempLen < 1) {
         return BSL_INVALID_ARG;
     }
-    
+
     if (tag != *temp) {
         return BSL_ASN1_ERR_MISMATCH_TAG;
     }
@@ -505,6 +505,9 @@ static int32_t ProcessTag(uint8_t flags, BSL_ASN1_AnyOrChoiceParam *tagCbinfo, u
             if (ret != BSL_SUCCESS) {
                 return ret;
             }
+        }
+        if (*tag == BSL_ASN1_TAG_EMPTY) {
+            return BSL_ASN1_ERR_TAG_EXPECTED;
         }
 
         if (*tag != *temp) { // The optional or default scene is not encoded
