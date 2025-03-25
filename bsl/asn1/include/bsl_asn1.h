@@ -60,6 +60,7 @@ extern "C" {
 /* Custom types, use private class to prevent conflicts */
 #define BSL_ASN1_TAG_CHOICE (BSL_ASN1_CLASS_PRIVATE | 1)
 #define BSL_ASN1_TAG_ANY (BSL_ASN1_CLASS_PRIVATE | 2)
+#define BSL_ASN1_TAG_EMPTY 0x00 /* Empty tag, used to indicate that the tag is not encoded */
 
 /* The current value is flags, is used to guide asn1 encoding or decoding */
 #define BSL_ASN1_FLAG_OPTIONAL 1
