@@ -439,6 +439,38 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_ED25519PRIKEY_FILE_TC001(int alg, char *path, int format, int type, Hex *prv)
+{
+    RegisterLogFunc();
+    uint8_t rawPriKey[32] = {0};
+    uint32_t rawPriKeyLen = 32;
+    CRYPT_EAL_PkeyPrv pkeyPrv = {0};
+    pkeyPrv.id = alg;
+    pkeyPrv.key.eccPrv.data = rawPriKey;
+    pkeyPrv.key.eccPrv.len = rawPriKeyLen;
+
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkeyCtx, &pkeyPrv), CRYPT_SUCCESS);
+    ASSERT_COMPARE("key cmp", prv->x, prv->len, pkeyPrv.key.eccPrv.data, pkeyPrv.key.eccPrv.len);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_ED25519PRIKEY_FILE_TC002(char *path, int format, int type, int ret)
+{
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &pkeyCtx), ret);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_ENCPK8_TC001(int isProvider, char *path, int fileType, Hex *pass, int mdId, Hex *msg, Hex *sign)
 {
     RegisterLogFunc();
