@@ -1,29 +1,40 @@
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <unistd.h>
+/*
+基于证书认证的DTLS服务端
+*/
+#define HITLS_CRYPTO_EAL
+#define HITLS_CRYPTO_CIPHER
+#include <stdio.h> 
+#include<string.h>
+#include<unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <stdlib.h> 
 #include <arpa/inet.h>
-
+#include <netinet/sctp.h>
+#include <fcntl.h>
+#include "bsl_sal.h" 
+#include "bsl_err.h" 
+#include "bsl_log.h"
+#include "bsl_errno.h"
+#include "hitls_error.h" 
+#include "hitls_config.h" 
+#include "hitls.h" 
+#include "hitls_security.h"
 #include "securec.h"
-
-#include "bsl_sal.h"
-#include "bsl_err.h"
-#include "crypt_algid.h"
-#include "crypt_eal_rand.h"
-#include "crypt_eal_pkey.h"
-#include "crypt_eal_encode.h"
-#include "hitls_error.h"
-#include "hitls_config.h"
-#include "hitls.h"
-#include "hitls_cert_init.h"
-#include "hitls_cert.h"
-#include "hitls_crypt_init.h"
 #include "hitls_pki_cert.h"
+#include "hitls_cert.h"
+#include "hitls_cert_init.h"
 
-#define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
+#include "hitls_crypt_init.h"
+
+#include "crypt_eal_rand.h"
+#include "crypt_eal_encode.h"
+
+#define CERTS_PATH "../../testcode/testdata/tls/certificate/der/sm2_with_userid/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
+
+#define SUCCESS 0
+#define ERROR (-1)
 
 int main(int32_t argc, char *argv[])
 {
@@ -80,16 +91,33 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    config = HITLS_CFG_NewTLS12Config();//config = HITLS_CFG_NewTLS12Config();
+    config = HITLS_CFG_NewTLCPConfig();//config = HITLS_CFG_NewTLS12Config();
     if (config == NULL) {
-        printf("HITLS_CFG_NewTLS12Config failed.\n");
+        printf("HITLS_CFG_NewTLCPConfig failed.\n");
         goto EXIT;
     }
+    
     ret = HITLS_CFG_SetClientVerifySupport(config, false);  // disable peer verify
     if (ret != HITLS_SUCCESS) {
         printf("Disable peer verify faild.\n");
         goto EXIT;
     }
+
+	uint16_t cipherSuite = HITLS_ECDHE_SM4_GCM_SM3;
+	// 配置算法套
+    if (HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1) != HITLS_SUCCESS) {
+        printf("HITLS_CFG_SetCipherSuites err\n");
+        return -1;
+    }
+/*
+    if (HITLS_CFG_SetClientVerifySupport(config, false) != HITLS_SUCCESS) {
+        printf("HITLS_CFG_SetClientVerifySupport err\n");
+        return -1;
+    }
+    if (HITLS_CFG_SetNoClientCertSupport(config, true) != HITLS_SUCCESS) {
+        printf("HHITLS_CFG_SetNoClientCertSupport err\n");
+        return -1;
+    }*/
 
     /* 加载证书：需要用户实现 */
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, CERTS_PATH "ca.der", &rootCA);
@@ -104,8 +132,50 @@ int main(int32_t argc, char *argv[])
     }
     HITLS_CFG_AddCertToStore(config, rootCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
     HITLS_CFG_AddCertToStore(config, subCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
-    HITLS_CFG_LoadCertFile(config, CERTS_PATH "server.der", TLS_PARSE_FORMAT_ASN1);
-    HITLS_CFG_LoadKeyFile(config, CERTS_PATH "server.key.der", TLS_PARSE_FORMAT_ASN1);
+    // 从文件中加载加密证书和私钥
+    HITLS_X509_Cert *signCert = NULL;
+    HITLS_CERT_Key *signKey = NULL;
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, CERTS_PATH "sign.der", &signCert);
+    if (ret != HITLS_SUCCESS) {
+        printf("Parse sign failed.\n");
+        goto EXIT;
+    }
+    ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_ECC, 
+    CERTS_PATH "sign.key.der", NULL, 0, (CRYPT_EAL_PkeyCtx **)&signKey);
+    if (ret != HITLS_SUCCESS) {
+        printf("Parse sign key failed.\n");
+        goto EXIT;
+    }
+
+    HITLS_X509_Cert *encCert = NULL;
+    HITLS_CERT_Key *encKey = NULL;
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, CERTS_PATH "enc.der", &encCert);
+    if (ret != HITLS_SUCCESS) {
+        printf("Parse enc failed.\n");
+        goto EXIT;
+    }
+    ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_ECC, 
+    CERTS_PATH "enc.key.der", NULL, 0, (CRYPT_EAL_PkeyCtx **)&encKey);
+    if (ret != HITLS_SUCCESS) {
+        printf("Parse enc key failed.\n");
+        goto EXIT;
+    }
+    //设置添加国密签名证书和私钥
+    ret = HITLS_CFG_SetTlcpCertificate(config, signCert, false, false);
+    printf("Set tlcp error=0x%x\n", ret);
+    ret = HITLS_CFG_SetTlcpPrivateKey(config, signKey, false, false);
+    printf("Set tlcp error=0x%x\n", ret);
+    //设置添加国密加密证书和私钥
+    ret = HITLS_CFG_SetTlcpCertificate(config, encCert, false, true);
+    printf("Set tlcp error=0x%x\n", ret);
+    ret = HITLS_CFG_SetTlcpPrivateKey(config, encKey, false, true);
+    printf("Set tlcp error=0x%x\n", ret);
+    // HITLS_CFG_LoadCertFile(config, CERTS_PATH"server.der", TLS_PARSE_FORMAT_ASN1);
+    // HITLS_CFG_LoadKeyFile(config, CERTS_PATH"server.key.der", TLS_PARSE_FORMAT_ASN1);
+
+
+
+
 
     /* 新建openHiTLS上下文 */
     ctx = HITLS_New(config);

@@ -262,6 +262,7 @@ int32_t ProcessCtxState(HITLS_Ctx *ctx)
      * processing result */
     if (GetConnState(ctx) == CM_STATE_ALERTING) {
         ret = CommonEventInAlertingState(ctx);
+
         if (ret != HITLS_SUCCESS) {
             /* If the alert fails to be sent, a response is returned to the user */
             return ret;
