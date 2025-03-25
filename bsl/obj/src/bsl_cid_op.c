@@ -16,17 +16,29 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_OBJ
 #include <stddef.h>
-#include "bsl_obj.h"
-#include "bsl_obj_internal.h"
 #include "securec.h"
+#include "bsl_obj.h"
+#include "bsl_sal.h"
+#include "bsl_obj_internal.h"
+#include "bsl_err_internal.h"
+#include "bsl_hash.h"
 
+// Hash table for signature algorithm mappings
+BSL_HASH_Hash *g_signHashTable = NULL;
+// Read-write lock for thread-safe access to g_signHashTable
+static BSL_SAL_ThreadLockHandle g_signHashRwLock = NULL;
+// Once control for thread-safe initialization
+static uint32_t g_signHashInitOnce = BSL_SAL_ONCE_INIT;
+
+#define BSL_OBJ_SIGN_HASH_BKT_SIZE 64u
 typedef struct BslSignIdMap {
     BslCid signId;
     BslCid asymId;
     BslCid hashId;
 } BSL_SignIdMap;
 
-BSL_SignIdMap g_signIdMap[] = {
+static BSL_SignIdMap g_signIdMap[] = {
+    {BSL_CID_MD5WITHRSA, BSL_CID_RSA, BSL_CID_MD5},
     {BSL_CID_SHA1WITHRSA, BSL_CID_RSA, BSL_CID_SHA1},
     {BSL_CID_SHA224WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SHA224},
     {BSL_CID_SHA256WITHRSAENCRYPTION, BSL_CID_RSA, BSL_CID_SHA256},
@@ -49,17 +61,79 @@ BSL_SignIdMap g_signIdMap[] = {
     {BSL_CID_SM2DSAWITHSHA256, BSL_CID_SM2, BSL_CID_SHA256},
 };
 
+static void FreeBslSignIdMap(void *data)
+{
+    BSL_SignIdMap *signIdMap = (BSL_SignIdMap *)data;
+    BSL_SAL_Free(signIdMap);
+}
+
+static void *DupBslSignIdMap(void *data, size_t size)
+{
+    if (data == NULL || size != sizeof(BSL_SignIdMap)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return NULL;
+    }
+    BSL_SignIdMap *signIdMap = (BSL_SignIdMap *)data;
+    BSL_SignIdMap *newSignIdMap = BSL_SAL_Malloc(sizeof(BSL_SignIdMap));
+    if (newSignIdMap == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return NULL;
+    }
+    newSignIdMap->signId = signIdMap->signId;
+    newSignIdMap->asymId = signIdMap->asymId;
+    newSignIdMap->hashId = signIdMap->hashId;
+    return (void *)newSignIdMap;
+}
+
+static void InitSignHashTableOnce(void)
+{
+    int32_t ret = BSL_SAL_ThreadLockNew(&g_signHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return;
+    }
+
+    ListDupFreeFuncPair valueFunc = {DupBslSignIdMap, FreeBslSignIdMap};
+    g_signHashTable = BSL_HASH_Create(BSL_OBJ_SIGN_HASH_BKT_SIZE, NULL, NULL, NULL, &valueFunc);
+    if (g_signHashTable == NULL) {
+        (void)BSL_SAL_ThreadLockFree(g_signHashRwLock);
+        g_signHashRwLock = NULL;
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+    }
+}
+
 BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
 {
     if (signAlg == BSL_CID_UNKNOWN) {
         return BSL_CID_UNKNOWN;
     }
+    
+    // First, search in the static g_signIdMap table
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
         if (signAlg == g_signIdMap[iter].signId) {
             return g_signIdMap[iter].hashId;
         }
     }
-    return BSL_CID_UNKNOWN;
+    if (g_signHashTable == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
+        return BSL_CID_UNKNOWN;
+    }
+    // Second, search in the dynamic hash table with read lock
+    BSL_SignIdMap *signIdMap = NULL;
+    int32_t ret = BSL_SAL_ThreadReadLock(g_signHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return BSL_CID_UNKNOWN;
+    }
+    ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signAlg, (uintptr_t *)&signIdMap);
+    BslCid result = (ret == BSL_SUCCESS && signIdMap != NULL) ? signIdMap->hashId : BSL_CID_UNKNOWN;
+    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
+    }
+
+    return result;
 }
 
 BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg)
@@ -67,11 +141,184 @@ BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg)
     if (signAlg == BSL_CID_UNKNOWN) {
         return BSL_CID_UNKNOWN;
     }
+    
+    // First, search in the static g_signIdMap table
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
         if (signAlg == g_signIdMap[iter].signId) {
             return g_signIdMap[iter].asymId;
         }
     }
-    return BSL_CID_UNKNOWN;
+    if (g_signHashTable == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
+        return BSL_CID_UNKNOWN;
+    }
+    // Second, search in the dynamic hash table with read lock
+    BSL_SignIdMap *signIdMap = NULL;
+    int32_t ret = BSL_SAL_ThreadReadLock(g_signHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return BSL_CID_UNKNOWN;
+    }
+    ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signAlg, (uintptr_t *)&signIdMap);
+    BslCid asymCid = (ret == BSL_SUCCESS && signIdMap != NULL) ? signIdMap->asymId : BSL_CID_UNKNOWN;
+    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+    
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
+    }
+    
+    return asymCid;
 }
+
+BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg)
+{
+    if (asymAlg == BSL_CID_UNKNOWN || hashAlg == BSL_CID_UNKNOWN) {
+        return BSL_CID_UNKNOWN;
+    }
+    
+    // First, search in the static g_signIdMap table
+    for (uint32_t i = 0; i < sizeof(g_signIdMap) / sizeof(g_signIdMap[0]); i++) {
+        if (g_signIdMap[i].asymId == asymAlg && g_signIdMap[i].hashId == hashAlg) {
+            return g_signIdMap[i].signId;
+        }
+    }
+    if (g_signHashTable == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
+        return BSL_CID_UNKNOWN;
+    }
+    
+    // Second, search in the dynamic hash table with read lock
+    BSL_SignIdMap *signIdMap = NULL;
+    uint64_t asymAndHashKey = ((uint64_t)asymAlg << 32) | ((uint64_t)hashAlg & 0xFFFFFFFF);
+    int32_t ret = BSL_SAL_ThreadReadLock(g_signHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return BSL_CID_UNKNOWN;
+    }
+    ret = BSL_HASH_At(g_signHashTable, (uintptr_t)asymAndHashKey, (uintptr_t *)&signIdMap);
+    BslCid signCid = (ret == BSL_SUCCESS && signIdMap != NULL) ? signIdMap->signId : BSL_CID_UNKNOWN;
+    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+    
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
+    }
+    
+    return signCid;
+}
+
+static bool IsSignIdInStaticTable(int32_t signId)
+{
+    for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
+        if (signId == (int32_t)g_signIdMap[iter].signId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int32_t IsSignIdInHashTable(int32_t signId)
+{
+    BSL_SignIdMap *signIdMap = NULL;
+    int32_t ret = BSL_SAL_ThreadReadLock(g_signHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signId, (uintptr_t *)&signIdMap);
+    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+    if (ret != BSL_SUCCESS || signIdMap == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
+        return BSL_OBJ_ERR_FIND_HASH_TABLE;
+    }
+    return BSL_SUCCESS;
+}
+
+// Inserts a new signature ID mapping into the hash table (using write lock)
+static int32_t InsertSignIdMapping(int32_t signId, int32_t asymId, int32_t hashId)
+{
+    BSL_SignIdMap *signIdMap = NULL;
+    BSL_SignIdMap newSignIdMap = {signId, asymId, hashId};
+    uint64_t asymAndHashKey;
+    int32_t ret = BSL_SAL_ThreadWriteLock(g_signHashRwLock);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signId, (uintptr_t *)&signIdMap);
+    if (ret == BSL_SUCCESS && signIdMap != NULL) {
+        (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+        return BSL_SUCCESS;
+    }
+    ret = BSL_HASH_Insert(g_signHashTable, (uintptr_t)signId, sizeof(BslCid), 
+                         (uintptr_t)&newSignIdMap, sizeof(BSL_SignIdMap));
+    if (ret != BSL_SUCCESS) {
+        (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_INSERT_HASH_TABLE);
+        return BSL_OBJ_ERR_INSERT_HASH_TABLE;
+    }
+    asymAndHashKey = ((uint64_t)asymId << 32) | ((uint64_t)hashId & 0xFFFFFFFF);
+    ret = BSL_HASH_Insert(g_signHashTable, (uintptr_t)asymAndHashKey, sizeof(uintptr_t),
+                         (uintptr_t)&newSignIdMap, sizeof(BSL_SignIdMap));
+    if (ret != BSL_SUCCESS) {
+        BSL_HASH_Erase(g_signHashTable, (uintptr_t)signId);
+        (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_INSERT_HASH_TABLE);
+        return BSL_OBJ_ERR_INSERT_HASH_TABLE;
+    }
+
+    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+    return BSL_SUCCESS;
+}
+
+// Main function - now more concise
+int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId)
+{
+    // Parameter validation
+    if (signId == BSL_CID_UNKNOWN || asymId == BSL_CID_UNKNOWN || hashId == BSL_CID_UNKNOWN) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+
+    if (IsSignIdInStaticTable(signId)) {
+        return BSL_SUCCESS;
+    }
+
+    int32_t ret = BSL_SAL_ThreadRunOnce(&g_signHashInitOnce, InitSignHashTableOnce);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (g_signHashTable == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
+        return BSL_OBJ_INVALID_HASH_TABLE;
+    }
+    ret = IsSignIdInHashTable(signId);
+    if (ret == BSL_SUCCESS) {
+        return BSL_SUCCESS;
+    }
+
+    return InsertSignIdMapping(signId, asymId, hashId);
+}
+
+void BSL_OBJ_FreeSignHashTable(void)
+{
+    if (g_signHashTable != NULL) {
+        int32_t ret = BSL_SAL_ThreadWriteLock(g_signHashRwLock);
+        if (ret != BSL_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return;
+        }
+        BSL_HASH_Destory(g_signHashTable);
+        g_signHashTable = NULL;
+        (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+        if (g_signHashRwLock != NULL) {
+            (void)BSL_SAL_ThreadLockFree(g_signHashRwLock);
+            g_signHashRwLock = NULL;
+        }
+        g_signHashInitOnce = BSL_SAL_ONCE_INIT;
+    }
+}
+
 #endif

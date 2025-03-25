@@ -32,6 +32,7 @@
 #include "cert_method.h"
 #include "cert_mgr.h"
 #include "cert.h"
+#include "config_type.h"
 
 static volatile int g_hitlsX509StoreCtxIdx = -1;
 
@@ -78,44 +79,13 @@ CERT_Type CertKeyType2CertType(HITLS_CERT_KeyType keyType)
     return CERT_TYPE_UNKNOWN;
 }
 
-HITLS_CERT_KeyType SAL_CERT_SignScheme2CertKeyType(HITLS_SignHashAlgo signScheme)
+HITLS_CERT_KeyType SAL_CERT_SignScheme2CertKeyType(const HITLS_Ctx *ctx, HITLS_SignHashAlgo signScheme)
 {
-    switch (signScheme) {
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA1:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA224:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA256:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA384:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA512:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512:
-            return TLS_CERT_KEY_TYPE_RSA;
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512:
-            return TLS_CERT_KEY_TYPE_RSA_PSS;
-        case CERT_SIG_SCHEME_DSA_SHA1:
-        case CERT_SIG_SCHEME_DSA_SHA224:
-        case CERT_SIG_SCHEME_DSA_SHA256:
-        case CERT_SIG_SCHEME_DSA_SHA384:
-        case CERT_SIG_SCHEME_DSA_SHA512:
-            return TLS_CERT_KEY_TYPE_DSA;
-        case CERT_SIG_SCHEME_ECDSA_SHA1:
-        case CERT_SIG_SCHEME_ECDSA_SHA224:
-        case CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256:
-        case CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384:
-        case CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512:
-            return TLS_CERT_KEY_TYPE_ECDSA;
-        case CERT_SIG_SCHEME_ED25519:
-            return TLS_CERT_KEY_TYPE_ED25519;
-#ifdef HITLS_TLS_PROTO_TLCP11
-        case CERT_SIG_SCHEME_SM2_SM3:
-            return TLS_CERT_KEY_TYPE_SM2;
-#endif
-        default:
-            break;
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, signScheme);
+    if (info == NULL) {
+        return TLS_CERT_KEY_TYPE_UNKNOWN;
     }
-    return TLS_CERT_KEY_TYPE_UNKNOWN;
+    return info->keyType;
 }
 
 HITLS_SignHashAlgo SAL_CERT_GetDefaultSignHashAlgo(HITLS_CERT_KeyType keyType)
@@ -176,17 +146,27 @@ typedef struct {
 } SelectSignAlgorithms;
 
 static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithms *select,
-    HITLS_CERT_KeyType checkedKeyType, bool isNegotiateSignAlgo)
+    HITLS_CERT_KeyType checkedKeyType, HITLS_CERT_Key *pubkey, bool isNegotiateSignAlgo)
 {
     uint32_t baseSignAlgorithmsSize = select->baseSignAlgorithmsSize;
     const uint16_t *baseSignAlgorithms = select->baseSignAlgorithms;
     uint32_t selectSignAlgorithmsSize = select->selectSignAlgorithmsSize;
     const uint16_t *selectSignAlgorithms = select->selectSignAlgorithms;
+    const TLS_SigSchemeInfo *info = NULL;
+#ifdef HITLS_TLS_PROTO_TLS13
+    int32_t paraId = 0;
+    (void)SAL_CERT_KeyCtrl(&ctx->config.tlsConfig, pubkey, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paraId);
+#endif
     for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
-        if (checkedKeyType != SAL_CERT_SignScheme2CertKeyType(baseSignAlgorithms[i])) {
-            /* The signature algorithm cannot be used for the certificate. Check the next signature algorithm. */
+        info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, baseSignAlgorithms[i]);
+        if (info == NULL || info->keyType != (int32_t)checkedKeyType) {
             continue;
         }
+#ifdef HITLS_TLS_PROTO_TLS13
+        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && info->paraId != 0 && info->paraId != paraId) {
+            continue;
+        }
+#endif
         if (!IsSignSchemeExist(selectSignAlgorithms, selectSignAlgorithmsSize, baseSignAlgorithms[i])) {
             /* The signature algorithm must be the same as the algorithm configured on the peer end. */
             continue;
@@ -229,8 +209,8 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
     return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
 }
 
-int32_t CheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
-    HITLS_CERT_KeyType checkedKeyType, bool isNegotiateSignAlgo)
+static int32_t CheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
+    HITLS_CERT_KeyType checkedKeyType, HITLS_CERT_Key *pubkey, bool isNegotiateSignAlgo)
 {
     if (signSchemeList == NULL) {
         if (!isNegotiateSignAlgo) {
@@ -260,71 +240,8 @@ int32_t CheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t s
     select.selectSignAlgorithmsSize = supportServer ? signSchemeNum : ctx->config.tlsConfig.signAlgorithmsSize;
     select.selectSignAlgorithms = supportServer ? signSchemeList : ctx->config.tlsConfig.signAlgorithms;
 
-    return CheckSelectSignAlgorithms(ctx, &select, checkedKeyType, isNegotiateSignAlgo);
+    return CheckSelectSignAlgorithms(ctx, &select, checkedKeyType, pubkey, isNegotiateSignAlgo);
 }
-
-
-#ifdef HITLS_TLS_PROTO_TLS13
-static int32_t TLS13EcdsaCheckSignScheme(TLS_Ctx *ctx, const uint16_t *signSchemeList, uint32_t signSchemeNum,
-    HITLS_CERT_Key *pubkey, bool isNegotiateSignAlgo)
-{
-    HITLS_Config *config = &ctx->config.tlsConfig;
-    HITLS_NamedGroup keyCureName = HITLS_NAMED_GROUP_BUTT;
-    // Obtains the elliptic curve type of the certificate.
-    int32_t ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&keyCureName);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16198, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get ec pubkey curve name failed when verify sign data.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return false;
-    }
-
-    // Cyclically traverse the supported signature algorithms, obtain the elliptic curve based on the signature
-    // algorithm, find the one that matches keyCureName, and set it to the negotiated signature algorithm.
-    for (uint32_t i = 0; i < signSchemeNum; i++) {
-        HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(signSchemeList[i]);
-        if (signCureName == HITLS_NAMED_GROUP_BUTT || keyCureName != signCureName ||
-            keyCureName == HITLS_NAMED_GROUP_BUTT) {
-            continue;
-        }
-
-        if (!IsSignSchemeExist(ctx->config.tlsConfig.signAlgorithms,
-            ctx->config.tlsConfig.signAlgorithmsSize, signSchemeList[i])) {
-            /* The signature algorithm must be the same in the local configuration. */
-            continue;
-        }
-#ifdef HITLS_TLS_FEATURE_SECURITY
-        if (!SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, signSchemeList[i], NULL)) {
-            continue;
-        }
-#endif
-        if (!isNegotiateSignAlgo) {
-            /* Only the signature algorithm in the certificate is checked.
-               The signature algorithm in the handshake message is not negotiated. */
-            return HITLS_SUCCESS;
-        }
-        const uint32_t rsaPkcsv15Mask = 0x01;
-        const uint32_t dsaMask = 0x02;
-        const uint32_t sha1Mask = 0x0200;
-        const uint32_t sha224Mask = 0x0300;
-        /* rfc8446 4.2.3.  Signature Algorithms */
-        if (((signSchemeList[i] & 0xff) == rsaPkcsv15Mask) ||
-            ((signSchemeList[i] & 0xff) == dsaMask) ||
-            ((signSchemeList[i] & 0xff00) == sha1Mask) ||
-            ((signSchemeList[i] & 0xff00) == sha224Mask)) {
-            /* not defined for use in signed TLS handshake messages in TLS1.3 */
-            continue;
-        }
-        /* Save the negotiated signature algorithm. */
-        ctx->negotiatedInfo.signScheme = signSchemeList[i];
-        return HITLS_SUCCESS;
-    }
-    BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
-    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16205, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "unexpect cert: no available signature scheme, keyCureName = %u.", keyCureName, 0, 0, 0);
-    return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
-}
-#endif /* HITLS_TLS_PROTO_TLS13 */
 
 int32_t CheckCurveName(HITLS_Config *config, const uint16_t *curveList, uint32_t curveNum, HITLS_CERT_Key *pubkey)
 {
@@ -410,15 +327,8 @@ static int32_t CheckCertTypeAndSignScheme(HITLS_Ctx *ctx, const CERT_ExpectInfo 
     }
     /* Check the signature algorithm. */
     if (signCheck == true) {
-#ifdef HITLS_TLS_PROTO_TLS13
-        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && keyType == TLS_CERT_KEY_TYPE_ECDSA) {
-            ret = TLS13EcdsaCheckSignScheme(ctx, expectCertInfo->signSchemeList, expectCertInfo->signSchemeNum,
-                pubkey, isNegotiateSignAlgo);
-            return ret;
-        }
-#endif
         ret = CheckSignScheme(ctx, expectCertInfo->signSchemeList, expectCertInfo->signSchemeNum,
-            keyType, isNegotiateSignAlgo);
+            keyType, pubkey, isNegotiateSignAlgo);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -427,7 +337,7 @@ static int32_t CheckCertTypeAndSignScheme(HITLS_Ctx *ctx, const CERT_ExpectInfo 
     /* ECDSA certificate. The curve ID and point format must be checked.
     TLS_CERT_KEY_TYPE_SM2 does not check the curve ID and point format.
     TLCP curves is sm2 and is not compressed. */
-    if (keyType == TLS_CERT_KEY_TYPE_ECDSA) {
+    if (keyType == TLS_CERT_KEY_TYPE_ECDSA && ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         ret = IsEcParamCompatible(config, expectCertInfo, pubkey);
     }
 
@@ -883,7 +793,8 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
 
     CERT_Item *listNode = item;
     while (listNode != NULL) {
-        HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(config, listNode->data, listNode->dataSize,
+        HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+            ATTRIBUTE_FROM_CONFIG(config), config, listNode->data, listNode->dataSize,
             TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
         if (cert == NULL) {
             DestoryParseChain(*encCert, NULL, newChain);
@@ -931,7 +842,8 @@ int32_t SAL_CERT_ParseCertChain(HITLS_Ctx *ctx, CERT_Item *item, CERT_Pair **cer
     }
 
     /* Parse the first device certificate. */
-    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(config, item->data, item->dataSize,
+    HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config),
+        ATTRIBUTE_FROM_CONFIG(config), config, item->data, item->dataSize,
         TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
     if (cert == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_PARSE_MSG, BINLOG_ID15052, "X509Parse fail");
@@ -1039,7 +951,9 @@ int32_t HITLS_CFG_SetCheckPriKeyCb(HITLS_Config *config, CERT_CheckPrivateKeyCal
         return HITLS_NULL_INPUT;
     }
 
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     config->certMgrCtx->method.checkPrivateKey = checkPrivateKey;
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -1048,8 +962,11 @@ CERT_CheckPrivateKeyCallBack HITLS_CFG_GetCheckPriKeyCb(HITLS_Config *config)
     if (config == NULL || config->certMgrCtx == NULL) {
         return NULL;
     }
-
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     return config->certMgrCtx->method.checkPrivateKey;
+#else
+    return NULL;
+#endif
 }
 #endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
 

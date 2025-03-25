@@ -26,7 +26,9 @@ extern "C" {
 
 /**
  * @brief   Set the hash algorithm
- *
+ * 
+ * @param   libCtx [IN] library context for provider
+ * @param   attrName [IN] attribute name of the provider, maybe NULL
  * @param   ctx [IN] verify context
  * @param   hashAlgo [IN] hash algorithm
  *
@@ -34,7 +36,7 @@ extern "C" {
  * @retval  HITLS_CRYPT_ERR_DIGEST hash operation failed
  * @retval  HITLS_UNREGISTERED_CALLBACK The callback function is not registered.
  */
-int32_t VERIFY_SetHash(VerifyCtx *ctx, HITLS_HashAlgo hashAlgo);
+int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *ctx, HITLS_HashAlgo hashAlgo);
 
 /**
  * @brief   Add handshake message data

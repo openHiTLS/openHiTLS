@@ -16,7 +16,7 @@ SET(HLT_LIBNAME "tls_hlt")
 SET(WRAPPER_LIBNAME "rec_wrapper")
 
 add_library(TLS_TEST_INTF INTERFACE)
-if(ENABLE_TLS_DEBUG)
+if(TLS_DEBUG)
     add_compile_definitions(TLS_TEST_INTF INTERFACE TLS_DEBUG)
 endif()
 
@@ -26,6 +26,7 @@ target_include_directories(TLS_TEST_INTF INTERFACE
     ${openHiTLS_SRC}/include/tls
     ${openHiTLS_SRC}/include/bsl
     ${openHiTLS_SRC}/include/crypto
+    ${openHiTLS_SRC}/include/pki
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/bsl/list/include
     ${openHiTLS_SRC}/bsl/obj/include
@@ -54,6 +55,7 @@ target_include_directories(TLS_TEST_INTF INTERFACE
     ${openHiTLS_SRC}/tls/handshake/pack/include
     ${openHiTLS_SRC}/tls/ccs/include
     ${openHiTLS_SRC}/tls/alert/include
+    ${openHiTLS_SRC}/tls/crypt/crypt_self
     ${openHiTLS_SRC}/testcode/framework/stub
     ${openHiTLS_SRC}/testcode/framework/tls/include
     ${openHiTLS_SRC}/testcode/framework/tls/io/include

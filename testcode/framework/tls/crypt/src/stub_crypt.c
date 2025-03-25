@@ -15,11 +15,18 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "hitls_build.h"
 #include "securec.h"
 #include "bsl_sal.h"
 #include "hitls_crypt_reg.h"
 #include "hitls_error.h"
 #include "hs_common.h"
+#include "config_type.h"
+#include "stub_replace.h"
+#include "crypt_default.h"
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#include "hitls_crypt.h"
+#endif
 
 #define MD5_DIGEST_LENGTH 16
 #define SHA1_DIGEST_LENGTH 20
@@ -74,6 +81,15 @@ int32_t STUB_CRYPT_RandBytesCallback(uint8_t *buf, uint32_t len)
     return HITLS_SUCCESS;
 }
 
+int32_t STUB_CRYPT_RandBytesCallbackLibCtx(void *libCtx, uint8_t *buf, uint32_t len)
+{
+    (void)libCtx;
+    if (memset_s(buf, len, 1, len) != EOK) {
+        return HITLS_MEMCPY_FAIL;
+    }
+    return HITLS_SUCCESS;
+}
+
 /**
  * @ingroup hitls_crypt_reg
  * @brief   Generate a key pair based on the elliptic curve parameters
@@ -93,9 +109,15 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(const HITLS_ECParameters
     if (ecdhKey == NULL) {
         return NULL;
     }
+    const TLS_GroupInfo *groupInfo = NULL;
     switch (curveParams->type) {
         case HITLS_EC_CURVE_TYPE_NAMED_CURVE:
-            keyLen = SAL_CRYPT_GetCryptLength(NULL, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, curveParams->param.namedcurve);
+            groupInfo = ConfigGetGroupInfo(NULL, curveParams->param.namedcurve);
+            if (groupInfo == NULL) {
+                BSL_SAL_FREE(ecdhKey);
+                return NULL;
+            }
+            keyLen = groupInfo->pubkeyLen;
             break;
         default:
             break;
@@ -121,6 +143,15 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(const HITLS_ECParameters
     ecdhKey->privateKey = privateKey;
     ecdhKey->privateKeyLen = keyLen;
     return ecdhKey;
+}
+
+HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallbackLibCtx(void *libCtx, 
+    const char *attrName, const HITLS_Config *config, const HITLS_ECParameters *curveParams)
+{
+    (void)libCtx;
+    (void)attrName;
+    (void)config;
+    return STUB_CRYPT_GenerateEcdhKeyPairCallback(curveParams);
 }
 
 /**
@@ -202,6 +233,15 @@ int32_t STUB_CRYPT_CalcEcdhSharedSecretCallback(HITLS_CRYPT_Key *key, uint8_t *p
     return HITLS_SUCCESS;
 }
 
+int32_t STUB_CRYPT_CalcEcdhSharedSecretCallbackLibCtx(void *libCtx, const char *attrName,
+    HITLS_CRYPT_Key *key, uint8_t *peerPubkey,
+    uint32_t pubKeyLen, uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_CalcEcdhSharedSecretCallback(key, peerPubkey, pubKeyLen, sharedSecret, sharedSecretLen);
+}
+
 void STUB_CRYPT_FreeDhKeyCallback(HITLS_CRYPT_Key *key)
 {
     FRAME_DhKey *dhKey = (FRAME_DhKey *)key;
@@ -270,6 +310,13 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateDhKeyBySecbitsCallback(int32_t secbits)
     return dhKey;
 }
 
+HITLS_CRYPT_Key *STUB_CRYPT_GenerateDhKeyBySecbitsCallbackLibCtx(void *libCtx, const char *attrName, int32_t secbits)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_GenerateDhKeyBySecbitsCallback(secbits);
+}
+
 HITLS_CRYPT_Key *STUB_CRYPT_GenerateDhKeyByParamsCallback(uint8_t *p, uint16_t plen, uint8_t *g, uint16_t glen)
 {
     if ((p == NULL) || (plen == 0) || (g == NULL) || (glen == 0)) {
@@ -318,6 +365,14 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateDhKeyByParamsCallback(uint8_t *p, uint16_t p
     dhKey->privateKeyLen = plen;
 
     return dhKey;
+}
+
+HITLS_CRYPT_Key *STUB_CRYPT_GenerateDhKeyByParamsCallbackLibCtx(void *libCtx, const char *attrName,
+    uint8_t *p, uint16_t plen, uint8_t *g, uint16_t glen)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_GenerateDhKeyByParamsCallback(p, plen, g, glen);
 }
 
 int32_t STUB_CRYPT_DHGetParametersCallback(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *plen, uint8_t *g, uint16_t *glen)
@@ -435,6 +490,14 @@ HITLS_HMAC_Ctx *STUB_CRYPT_HmacInitCallback(HITLS_HashAlgo hashAlgo, const uint8
     return ctx;
 }
 
+HITLS_HMAC_Ctx *STUB_CRYPT_HmacInitCallbackLibCtx(void *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_HmacInitCallback(hashAlgo, key, len);
+}
+
 /**
  * @ingroup hitls_crypt_reg
  * @brief   Release the HMAC context
@@ -532,6 +595,15 @@ int32_t STUB_CRYPT_HmacCallback(HITLS_HashAlgo hashAlgo, const uint8_t *key, uin
     return HITLS_SUCCESS;
 }
 
+int32_t STUB_CRYPT_HmacCallbackLibCtx(void *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t keyLen,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_HmacCallback(hashAlgo, key, keyLen, in, inLen, out, outLen);
+}
+
 /**
  * @ingroup hitls_crypt_reg
  * @brief   Obtain the hash length
@@ -561,6 +633,13 @@ HITLS_HASH_Ctx *STUB_CRYPT_DigestInitCallback(HITLS_HashAlgo hashAlgo)
     }
     ctx->algo = hashAlgo;
     return ctx;
+}
+
+HITLS_HASH_Ctx *STUB_CRYPT_DigestInitCallbackLibCtx(void *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_DigestInitCallback(hashAlgo);
 }
 
 /**
@@ -679,6 +758,15 @@ int32_t STUB_CRYPT_DigestCallback(HITLS_HashAlgo hashAlgo, const uint8_t *in, ui
     return HITLS_SUCCESS;
 }
 
+int32_t STUB_CRYPT_DigestCallbackLibCtx(void *libCtx, const char *attrName,
+    HITLS_HashAlgo hashAlgo, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_DigestCallback(hashAlgo, in, inLen, out, outLen);
+}
+
 /**
  * @ingroup hitls_crypt_reg
  * @brief   Encryption
@@ -709,6 +797,15 @@ int32_t STUB_CRYPT_EncryptCallback(const HITLS_CipherParameters *cipher, const u
     }
 
     return HITLS_SUCCESS;
+}
+
+int32_t STUB_CRYPT_EncryptCallbackLibCtx(void *libCtx, const char *attrName, 
+    const HITLS_CipherParameters *cipher, const uint8_t *in,
+    uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_EncryptCallback(cipher, in, inLen, out, outLen);
 }
 
 /**
@@ -743,8 +840,19 @@ int32_t STUB_CRYPT_DecryptCallback(const HITLS_CipherParameters *cipher, const u
     return HITLS_SUCCESS;
 }
 
+int32_t STUB_CRYPT_DecryptCallbackLibCtx(void *libCtx, const char *attrName,
+    const HITLS_CipherParameters *cipher, const uint8_t *in,
+    uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    (void)libCtx;
+    (void)attrName;
+    return STUB_CRYPT_DecryptCallback(cipher, in, inLen, out, outLen);
+}
+
+FuncStubInfo g_tmpRpInfo[16] = {0};
 void FRAME_RegCryptMethod(void)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CRYPT_BaseMethod cryptMethod = { 0 };
     cryptMethod.randBytes = STUB_CRYPT_RandBytesCallback;
     cryptMethod.hmacSize = STUB_CRYPT_HmacSizeCallback;
@@ -756,17 +864,18 @@ void FRAME_RegCryptMethod(void)
     cryptMethod.digestSize = STUB_CRYPT_DigestSizeCallback;
     cryptMethod.digestInit = STUB_CRYPT_DigestInitCallback;
     cryptMethod.digestCopy = STUB_CRYPT_DigestCopyCallback;
-    cryptMethod.digestFree = STUB_CRYPT_DigestFreeCallback;
+    cryptMethod.digestFree = CRYPT_DEFAULT_DigestFree;
     cryptMethod.digestUpdate = STUB_CRYPT_DigestUpdateCallback;
     cryptMethod.digestFinal = STUB_CRYPT_DigestFinalCallback;
     cryptMethod.digest = STUB_CRYPT_DigestCallback;
     cryptMethod.encrypt = STUB_CRYPT_EncryptCallback;
     cryptMethod.decrypt = STUB_CRYPT_DecryptCallback;
+    cryptMethod.cipherFree = CRYPT_DEFAULT_CipherFree;
     HITLS_CRYPT_RegisterBaseMethod(&cryptMethod);
 
     HITLS_CRYPT_EcdhMethod ecdhMethod = { 0 };
     ecdhMethod.generateEcdhKeyPair = STUB_CRYPT_GenerateEcdhKeyPairCallback;
-    ecdhMethod.freeEcdhKey = STUB_CRYPT_FreeEcdhKeyCallback;
+    ecdhMethod.freeEcdhKey = CRYPT_DEFAULT_FreeKey;
     ecdhMethod.getEcdhPubKey = STUB_CRYPT_GetEcdhEncodedPubKeyCallback;
     ecdhMethod.calcEcdhSharedSecret = STUB_CRYPT_CalcEcdhSharedSecretCallback;
     HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
@@ -774,16 +883,31 @@ void FRAME_RegCryptMethod(void)
     HITLS_CRYPT_DhMethod dhMethod = { 0 };
     dhMethod.generateDhKeyBySecbits = STUB_CRYPT_GenerateDhKeyBySecbitsCallback;
     dhMethod.generateDhKeyByParams = STUB_CRYPT_GenerateDhKeyByParamsCallback;
-    dhMethod.freeDhKey = STUB_CRYPT_FreeDhKeyCallback;
+    dhMethod.freeDhKey = CRYPT_DEFAULT_FreeKey;
     dhMethod.getDhParameters = STUB_CRYPT_DHGetParametersCallback;
     dhMethod.getDhPubKey = STUB_CRYPT_GetDhEncodedPubKeyCallback;
     dhMethod.calcDhSharedSecret = STUB_CRYPT_CalcDhSharedSecretCallback;
     HITLS_CRYPT_RegisterDhMethod(&dhMethod);
+#else
+    STUB_Init();
+    STUB_Replace(&g_tmpRpInfo[0], HITLS_CRYPT_RandbytesEx, STUB_CRYPT_RandBytesCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[1], HITLS_CRYPT_HMAC_Init, STUB_CRYPT_HmacInitCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[2], HITLS_CRYPT_HMAC, STUB_CRYPT_HmacCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[3], HITLS_CRYPT_DigestInit, STUB_CRYPT_DigestInitCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[4], HITLS_CRYPT_Digest, STUB_CRYPT_DigestCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[5], HITLS_CRYPT_Encrypt, STUB_CRYPT_EncryptCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[6], HITLS_CRYPT_Decrypt, STUB_CRYPT_DecryptCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[7], HITLS_CRYPT_GenerateEcdhKey, STUB_CRYPT_GenerateEcdhKeyPairCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[8], HITLS_CRYPT_CalcSharedSecret, STUB_CRYPT_CalcEcdhSharedSecretCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[9], HITLS_CRYPT_GenerateDhKeyByParameters, STUB_CRYPT_GenerateDhKeyByParamsCallbackLibCtx);
+    STUB_Replace(&g_tmpRpInfo[10], HITLS_CRYPT_GenerateDhKeyBySecbits, STUB_CRYPT_GenerateDhKeyBySecbitsCallbackLibCtx);
+#endif
     return;
 }
 
 void FRAME_DeRegCryptMethod(void)
 {
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CRYPT_BaseMethod cryptMethod = { 0 };
     HITLS_CRYPT_RegisterBaseMethod(&cryptMethod);
 
@@ -792,5 +916,18 @@ void FRAME_DeRegCryptMethod(void)
 
     HITLS_CRYPT_DhMethod dhMethod = { 0 };
     HITLS_CRYPT_RegisterDhMethod(&dhMethod);
+#else
+    STUB_Reset(&g_tmpRpInfo[0]);
+    STUB_Reset(&g_tmpRpInfo[1]);
+    STUB_Reset(&g_tmpRpInfo[2]);
+    STUB_Reset(&g_tmpRpInfo[3]);
+    STUB_Reset(&g_tmpRpInfo[4]);
+    STUB_Reset(&g_tmpRpInfo[5]);
+    STUB_Reset(&g_tmpRpInfo[6]);
+    STUB_Reset(&g_tmpRpInfo[7]);
+    STUB_Reset(&g_tmpRpInfo[8]);
+    STUB_Reset(&g_tmpRpInfo[9]);
+    STUB_Reset(&g_tmpRpInfo[10]);
+#endif
     return;
 }

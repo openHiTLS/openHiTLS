@@ -67,6 +67,33 @@ void* HLT_TlsNewCtx(TLS_VERSION tlsVersion)
     return ctx;
 }
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+void* HLT_TlsProviderNewCtx(char *providerPath, char (*providerNames)[MAX_PROVIDER_NAME_LEN], int *providerLibFmts,
+    int providerCnt, char *attrName, TLS_VERSION tlsVersion)
+{
+    int ret;
+    void *ctx = NULL;
+    Process *process;
+    process = GetProcess();
+    switch (process->tlsType) {
+        case HITLS:
+            ctx = HitlsProviderNewCtx(providerPath, providerNames, providerLibFmts, providerCnt,
+                attrName, tlsVersion);
+            break;
+        default:
+            ctx = NULL;
+    }
+    if ((process->remoteFlag == 0) && (ctx != NULL)) {
+        // If the value is LocalProcess, insert it to the CTX linked list.
+        ret =  InsertCtxToList(ctx);
+        if (ret == ERROR) {
+            LOG_ERROR("InsertCtxToList ERROR");
+            return NULL;
+        }
+    }
+    return ctx;
+}
+#endif
 void* HLT_TlsNewSsl(void *ctx)
 {
     int ret;
@@ -549,7 +576,6 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
         ctxConfig = NULL;
         return NULL;
     }
-
     // Store CTX configuration resources and release them later.
     localProcess = GetProcess();
     localProcess->tlsResArray[localProcess->tlsResNum] = ctxConfig;
@@ -614,7 +640,6 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
         ctxConfig = NULL;
         return NULL;
     }
-
     // Store CTX configuration resources and release them later.
     localProcess = GetProcess();
     localProcess->tlsResArray[localProcess->tlsResNum] = ctxConfig;
@@ -730,10 +755,14 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
                                HLT_Ctx_Config *ctxConfig, HLT_Ssl_Config *sslConfig, HLT_Tls_Res *tlsRes)
 {
     void *ctx, *ssl;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctx = HLT_TlsProviderNewCtx(ctxConfig->providerPath, ctxConfig->providerNames, ctxConfig->providerLibFmts,
+        ctxConfig->providerCnt, ctxConfig->attrName, tlsVersion);
+#else
     ctx = HLT_TlsNewCtx(tlsVersion);
+#endif
     if (ctx == NULL) {
-        LOG_ERROR("HLT_TlsNewCtx ERROR");
+        LOG_ERROR("HLT_TlsNewCtx or HLT_TlsProviderNewCtx ERROR");
         return ERROR;
     }
     if (HLT_TlsSetCtx(ctx, ctxConfig) != SUCCESS) {
@@ -773,8 +802,12 @@ static int RemoteProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
 {
     int ctxId;
     int sslId;
-
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ctxId = HLT_RpcProviderTlsNewCtx(process, tlsVersion, ctxConfig->isClient, ctxConfig->providerPath,
+        ctxConfig->providerNames, ctxConfig->providerLibFmts, ctxConfig->providerCnt, ctxConfig->attrName);
+#else
     ctxId = HLT_RpcTlsNewCtx(process, tlsVersion, ctxConfig->isClient);
+#endif
     if (ctxId < 0) {
         LOG_ERROR("HLT_RpcTlsNewCtx ERROR");
         return ERROR;
@@ -1070,6 +1103,34 @@ int HLT_SetCipherSuites(HLT_Ctx_Config *ctxConfig, const char *cipherSuites)
     ret = sprintf_s(ctxConfig->cipherSuites, sizeof(ctxConfig->cipherSuites), cipherSuites);
     if (ret <= 0) {
         return ERROR;
+    }
+    return SUCCESS;
+}
+
+int HLT_SetProviderPath(HLT_Ctx_Config *ctxConfig, char *providerPath)
+{
+    if (strcpy_s(ctxConfig->providerPath, sizeof(ctxConfig->providerPath), providerPath) != EOK) {
+        return ERROR;
+    }
+    return SUCCESS;
+}
+
+int HLT_SetProviderAttrName(HLT_Ctx_Config *ctxConfig, char *attrName)
+{
+    if (strcpy_s(ctxConfig->attrName, sizeof(ctxConfig->attrName), attrName) != EOK) {
+        return ERROR;
+    }
+    return SUCCESS;
+}
+
+int HLT_AddProviderInfo(HLT_Ctx_Config *ctxConfig, char *providerName, int providerLibFmt)
+{
+    if (providerName != NULL) {
+        if (strcpy_s(ctxConfig->providerNames[ctxConfig->providerCnt], MAX_PROVIDER_NAME_LEN, providerName) != EOK) {
+            return ERROR;
+        }
+        ctxConfig->providerLibFmts[ctxConfig->providerCnt] = providerLibFmt;
+        ctxConfig->providerCnt += 1;
     }
     return SUCCESS;
 }

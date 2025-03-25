@@ -81,6 +81,21 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->pointFormats);
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->signAlgorithms);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    for (uint32_t i = 0; i < config->groupInfolen; i++) {
+        BSL_SAL_FREE(config->groupInfo[i].name);
+    }
+    BSL_SAL_FREE(config->groupInfo);
+    config->groupInfoSize = 0;
+    config->groupInfolen = 0;
+    for (uint32_t i = 0; i < config->sigSchemeInfolen; i++) {
+        BSL_SAL_FREE(config->sigSchemeInfo[i].name);
+    }
+    BSL_SAL_FREE(config->sigSchemeInfo);
+    config->sigSchemeInfoSize = 0;
+    config->sigSchemeInfolen = 0;
+#endif
+
 #if defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_TLS_FEATURE_PSK)
     BSL_SAL_FREE(config->pskIdentityHint);
 #endif
@@ -235,6 +250,27 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
         }
         destConfig->groupsSize = srcConfig->groupsSize;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (srcConfig->groupInfo != NULL) {
+        if (destConfig->groupInfo != NULL) {
+            BSL_SAL_FREE(destConfig->groupInfo->name);
+            BSL_SAL_FREE(destConfig->groupInfo);
+        }
+        destConfig->groupInfo= BSL_SAL_Calloc(srcConfig->groupInfolen, sizeof(TLS_GroupInfo));
+        if (destConfig->groupInfo == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        for (uint32_t i = 0; i < srcConfig->groupInfolen; i++) {
+            destConfig->groupInfo[i] = srcConfig->groupInfo[i];
+            destConfig->groupInfo[i].name = BSL_SAL_Dump(srcConfig->groupInfo[i].name, strlen(srcConfig->groupInfo[i].name) + 1);
+            if (destConfig->groupInfo[i].name == NULL) {
+                return HITLS_MEMALLOC_FAIL;
+            }
+        }
+        destConfig->groupInfoSize = srcConfig->groupInfolen;
+        destConfig->groupInfolen = srcConfig->groupInfolen;
+    }
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -263,6 +299,24 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
         }
         destConfig->signAlgorithmsSize = srcConfig->signAlgorithmsSize;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (srcConfig->sigSchemeInfo != NULL) {
+        BSL_SAL_FREE(destConfig->sigSchemeInfo);
+        destConfig->sigSchemeInfo = BSL_SAL_Calloc(srcConfig->sigSchemeInfolen, sizeof(TLS_SigSchemeInfo));
+        if (destConfig->sigSchemeInfo == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        for (uint32_t i = 0; i < srcConfig->sigSchemeInfolen; i++) {
+            destConfig->sigSchemeInfo[i] = srcConfig->sigSchemeInfo[i];
+            destConfig->sigSchemeInfo[i].name = BSL_SAL_Dump(srcConfig->sigSchemeInfo[i].name, strlen(srcConfig->sigSchemeInfo[i].name) + 1);
+            if (destConfig->sigSchemeInfo[i].name == NULL) {
+                return HITLS_MEMALLOC_FAIL;
+            }
+        }
+        destConfig->sigSchemeInfoSize = srcConfig->sigSchemeInfolen;
+        destConfig->sigSchemeInfolen = srcConfig->sigSchemeInfolen;
+    }
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -1958,5 +2012,49 @@ int32_t HITLS_CFG_GetEmptyRecordsNum(const HITLS_Config *config, uint32_t *empty
     }
     *emptyNum = config->emptyRecordsNum;
 
+    return HITLS_SUCCESS;
+}
+
+int32_t ConfigUpdateTlsConfigArray(uint16_t **destArray, uint32_t *destSize, const void *sourceArray,
+    uint32_t sourceLen, uint32_t versionBits, uint32_t (*getVersionBitsFn)(const void *, uint32_t),
+    uint16_t (*getItemIdFn)(const void *, uint32_t))
+{
+    if (destArray == NULL || destSize == NULL || sourceArray == NULL || sourceLen == 0 || 
+        getVersionBitsFn == NULL || getItemIdFn == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+
+    uint32_t size = 0;
+    uint16_t *tempItems = BSL_SAL_Calloc(sourceLen, sizeof(uint16_t));
+    if (tempItems == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    for (uint32_t i = 0; i < sourceLen; i++) {
+        if ((versionBits & getVersionBitsFn(sourceArray, i)) != 0) {
+            bool isDuplicate = false;
+            uint16_t itemId = getItemIdFn(sourceArray, i);
+            // Check if this item already exists
+            for (uint32_t j = 0; j < size; j++) {
+                if (tempItems[j] == itemId) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                tempItems[size] = itemId;
+                size++;
+            }
+        }
+    }
+
+    if (size == 0) {
+        BSL_SAL_Free(tempItems);
+        return HITLS_INVALID_INPUT;
+    }
+
+    BSL_SAL_FREE(*destArray);
+    *destArray = tempItems;
+    *destSize = size;
     return HITLS_SUCCESS;
 }

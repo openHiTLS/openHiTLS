@@ -30,11 +30,12 @@
 #include "crypt_eal_implprovider.h"
 #include "drbg_local.h"
 #include "eal_md_local.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "crypt_provider.h"
 /* END_HEADER */
 
 #define CTR_AES128_SEEDLEN (32)
@@ -1866,6 +1867,18 @@ EXIT:
 void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *pers,
     Hex *addin1, Hex *entropyPR1, Hex *addin2, Hex *entropyPR2, Hex *retBits)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    (void)entropy;
+    (void)nonce;
+    (void)pers;
+    (void)addin1;
+    (void)entropyPR1;
+    (void)addin2;
+    (void)entropyPR2;
+    (void)retBits;
+    SKIP_TEST();
+#else
     if (IsRandAlgDisabled(id)) {
         SKIP_TEST();
     }
@@ -1894,15 +1907,17 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, 
 
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default",
         seedCtx->pers->data, seedCtx->pers->len, param), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_RandbytesWithAdin(output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
+    ASSERT_EQ(CRYPT_EAL_RandbytesWithAdinEx(NULL, output, sizeof(uint8_t) * retBits->len, addin1->x, addin1->len),
         CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_Randbytes(output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, sizeof(uint8_t) * retBits->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_RandIsValidAlgId(id), true);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     seedCtxFree(seedCtx);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -1925,6 +1940,18 @@ EXIT:
 void SDV_CRYPT_EAL_DRBG_DEFAULT_PROVIDER_BYTES_FUNC_TC001(int id, Hex *entropy, Hex *nonce, Hex *pers,
     Hex *addin1, Hex *entropyPR1, Hex *addin2, Hex *entropyPR2, Hex *retBits)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    (void)entropy;
+    (void)nonce;
+    (void)pers;
+    (void)addin1;
+    (void)entropyPR1;
+    (void)addin2;
+    (void)entropyPR2;
+    (void)retBits;
+    SKIP_TEST();
+#else  
     if (IsRandAlgDisabled(id)) {
         SKIP_TEST();
     }
@@ -1968,6 +1995,7 @@ EXIT:
     seedCtxFree(seedCtx);
     free(output);
     return;
+#endif
 }
 /* END_CASE */
 
@@ -1992,6 +2020,10 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    SKIP_TEST();
+#else
     if (IsRandAlgDisabled(id)) {
         SKIP_TEST();
     }
@@ -2026,16 +2058,19 @@ void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC002(int id)
         CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
-    CRYPT_EAL_RandDeinit();
+    ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     param[1] = (BSL_Param){0, 0, NULL, 0, 0};
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_RandSeed(), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
     return;
+#endif
 }
 /* END_CASE */

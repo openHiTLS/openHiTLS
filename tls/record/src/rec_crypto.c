@@ -191,10 +191,11 @@ static int32_t PlainDecrypt(TLS_Ctx *ctx, RecConnState *suiteInfo, const REC_Tex
     return HITLS_SUCCESS;
 }
 
-static int32_t PlainEncrypt(RecConnState *ctx, const REC_TextInput *plainMsg,
+static int32_t PlainEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg,
     uint8_t *cipherText, uint32_t cipherTextLen)
 {
     (void)ctx;
+    (void)state;
     if (memcpy_s(cipherText, cipherTextLen, plainMsg->text, plainMsg->textLen) != EOK) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15926, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -215,10 +216,11 @@ static int32_t UnsupoortDecrypt(TLS_Ctx *ctx, RecConnState *suiteInfo, const REC
     return HITLS_REC_ERR_NOT_SUPPORT_CIPHER;
 }
 
-static int32_t UnsupoortEncrypt(RecConnState *ctx, const REC_TextInput *plainMsg,
+static int32_t UnsupoortEncrypt(TLS_Ctx *ctx, RecConnState *State, const REC_TextInput *plainMsg,
     uint8_t *cipherText, uint32_t cipherTextLen)
 {
     (void)ctx;
+    (void)State;
     (void)plainMsg;
     (void)cipherText;
     (void)cipherTextLen;

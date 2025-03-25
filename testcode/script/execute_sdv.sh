@@ -20,7 +20,8 @@ HITLS_ROOT_DIR=`pwd`
 paramList=$@
 paramNum=$#
 is_concurrent=1
-
+need_run_all=1
+threadsNum=$(grep -c ^processor /proc/cpuinfo)
 testsuite_array=()
 testcase_array=()
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(realpath ${HITLS_ROOT_DIR}/build):$(realpath ${HITLS_ROOT_DIR}/platform/Secure_C/lib)
@@ -134,11 +135,9 @@ run_all() {
         mkfifo tmppipe
         exec 5<>tmppipe
         rm -f tmppipe
-        procNum=$(grep -c ^processor /proc/cpuinfo)
-        let procNum=$procNum+5
-        echo "procNum = $procNum"
+        echo "threadsNum = $threadsNum"
         # procNum indicates the maximum number of concurrent processes.
-        for ((i=1;i<=$procNum;i++)); do
+        for ((i=1;i<=$threadsNum;i++)); do
             echo >&5
         done
         retPipe=$tmpPipe.ret
@@ -225,7 +224,13 @@ parse_option()
                 printf "%-50s %-30s\n" "Run All Testsuites Of The Output"     "sh ${BASH_SOURCE[0]}"
                 printf "%-50s %-30s\n" "Run The Specified Testsuite"          "sh ${BASH_SOURCE[0]} test_suites_xxx test_suites_xxx"
                 printf "%-50s %-30s\n" "Run The Specified Testcase"           "sh ${BASH_SOURCE[0]} UT_CRYPTO_xxx SDV_CRYPTO_xxx"
+                printf "%-50s %-30s\n" "Set Thread Pool Size"                 "sh ${BASH_SOURCE[0]} threads=N"
+                printf "%-50s %-30s\n" "Example: Run with 4 threads"          "sh ${BASH_SOURCE[0]} threads=4"
                 exit 0
+                ;;
+            "threads"*)
+                threads_num=${i#*=}
+                threadsNum=$threads_num
                 ;;
             *)
                 parse_testsuite_testcase $i
@@ -233,6 +238,7 @@ parse_option()
                     echo "Not Find This Testsuite or Testcase : ${i}"
                     exit 1
                 fi
+                need_run_all=0
                 ;;
         esac
     done
@@ -267,9 +273,7 @@ clean()
 
 clean
 parse_option
-if [ ${paramNum} -eq 0 ]; then
-    run_all
-elif [ ${paramNum} -eq 1 ] && [ $is_concurrent = 0 ]; then
+if [ ${need_run_all} -eq 1 ]; then
     run_all
 else
     run_test

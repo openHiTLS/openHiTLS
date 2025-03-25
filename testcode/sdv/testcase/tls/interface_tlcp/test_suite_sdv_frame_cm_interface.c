@@ -44,6 +44,9 @@
 #include "bsl_list.h"
 #include "simulate_io.h"
 #include "alert.h"
+#include "crypt_default.h"
+#include "stub_crypt.h"
+#include "hitls_crypt.h"
 
 #define READ_BUF_SIZE 18432
 #define MAX_CERT_LIST 4294967295
@@ -1346,7 +1349,6 @@ EXIT:
 void UT_TLS_CM_GET_RANDOM_FUNC_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
-    HITLS_CryptMethodInit();
     FRAME_Init();
 
     testInfo.config = HITLS_CFG_NewTLS13Config();
@@ -2179,11 +2181,12 @@ void UT_TLS_CM_HITLS_SetTmpDh_API_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     HITLS_Ctx *ctx = NULL;
-    HITLS_CRYPT_Key *dhPkey = SAL_CRYPT_GenerateDhKeyBySecbits(HITLS_SECURITY_LEVEL_THREE_SECBITS);
-    ASSERT_TRUE(HITLS_SetTmpDh(ctx, dhPkey) == HITLS_NULL_INPUT);
-
     config = GetHitlsConfigViaVersion(tlsVersion);
     ASSERT_TRUE(config != NULL);
+    HITLS_CRYPT_Key *dhPkey = HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CONFIG(config),
+        ATTRIBUTE_FROM_CONFIG(config), config, HITLS_SECURITY_LEVEL_THREE_SECBITS);
+    ASSERT_TRUE(HITLS_SetTmpDh(ctx, dhPkey) == HITLS_NULL_INPUT);
+
     ctx = HITLS_New(config);
     ASSERT_TRUE(ctx != NULL);
 

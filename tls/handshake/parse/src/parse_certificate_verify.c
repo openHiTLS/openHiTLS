@@ -20,6 +20,7 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
+#include "crypt_algid.h"
 #include "hitls_error.h"
 #include "cert_method.h"
 #include "hs_msg.h"
@@ -27,23 +28,8 @@
 #include "hs_verify.h"
 #include "parse_msg.h"
 #include "parse_common.h"
+#include "config_type.h"
 
-#ifdef HITLS_TLS_PROTO_TLS13
-/* rfc8446 section 4.2.3 and 4.4.3 do not allow sha1 and PKCS1 */
-static HITLS_SignHashAlgo g_tls13AllowSignHashAlgo[] = {
-    CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
-    CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
-    CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
-    CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
-    CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384,
-    CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512,
-    CERT_SIG_SCHEME_ED25519,
-    CERT_SIG_SCHEME_ED448,
-    CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256,
-    CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384,
-    CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512
-};
-#endif /* HITLS_TLS_PROTO_TLS13 */
 static int32_t CheckSignHashAlg(TLS_Ctx *ctx, uint16_t signHashAlg)
 {
     int32_t ret = CheckPeerSignScheme(ctx, ctx->hsCtx->peerCert, signHashAlg);
@@ -54,14 +40,8 @@ static int32_t CheckSignHashAlg(TLS_Ctx *ctx, uint16_t signHashAlg)
     TLS_Config *config = &ctx->config.tlsConfig;
 #ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        bool find = false;
-        for (uint32_t i = 0; i < (sizeof(g_tls13AllowSignHashAlgo) / sizeof(g_tls13AllowSignHashAlgo[0])); i++) {
-            if (signHashAlg == g_tls13AllowSignHashAlgo[i]) {
-                find = true;
-                break;
-            }
-        }
-        if (!find) {
+        const TLS_SigSchemeInfo *schemeInfo = ConfigGetSignatureSchemeInfo(config, signHashAlg);
+        if (schemeInfo == NULL || ((schemeInfo->certVersionBits & TLS13_VERSION_BIT) == 0)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16195, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "not allowed to use 0x%X signAlg tls1.3.", signHashAlg, 0, 0, 0);
             return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_HANDSHAKE_FAILURE);
@@ -117,7 +97,7 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
     HITLS_CERT_Key *key)
 {
     (void)key;
-    HITLS_CERT_KeyType certKeyType = SAL_CERT_SignScheme2CertKeyType(signScheme);
+    HITLS_CERT_KeyType certKeyType = SAL_CERT_SignScheme2CertKeyType(ctx, signScheme);
     if (certKeyType != keyType) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16197, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "signScheme not matche key, signScheme is 0x%X, certKeyType is %u, keyType is %u", signScheme, certKeyType,
@@ -126,24 +106,23 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
     }
 
     /* check curve matches signature algorithm, only check ec key for tls1.3 */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 || keyType != TLS_CERT_KEY_TYPE_ECDSA) {
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         return HITLS_SUCCESS;
     }
 #ifdef HITLS_TLS_PROTO_TLS13
     HITLS_Config *config = &ctx->config.tlsConfig;
-    HITLS_NamedGroup keyCureName = HITLS_NAMED_GROUP_BUTT;
-    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&keyCureName);
-    if (ret != HITLS_SUCCESS) {
-        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,
-            BINGLOG_STR("get ec pubkey curve name failed"), ALERT_INTERNAL_ERROR);
-    }
-
-    HITLS_NamedGroup signCureName = CFG_GetEcdsaCurveNameBySchemes(signScheme);
-    if (signCureName != HITLS_NAMED_GROUP_BUTT && keyCureName != signCureName) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16199, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "key curve does not matches sigAlg, signScheme is 0x%X, keyCureName is %u, signCureName is %u.", signScheme,
-            keyCureName, signCureName, 0);
+    const TLS_SigSchemeInfo *schemeInfo = ConfigGetSignatureSchemeInfo(config, signScheme);
+    if (schemeInfo == NULL) {
         return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORT_SIGN_ALG, 0, NULL, ALERT_ILLEGAL_PARAMETER);
+    }
+    if (schemeInfo->paraId == CRYPT_PKEY_PARAID_MAX) {
+        return HITLS_SUCCESS;
+    }
+    int32_t paramId = CRYPT_PKEY_PARAID_MAX;
+    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paramId);
+    if (ret != HITLS_SUCCESS || paramId != schemeInfo->paraId) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,
+            BINGLOG_STR("paramId mismatch sigScheme"), ALERT_INTERNAL_ERROR);
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
     return HITLS_SUCCESS;

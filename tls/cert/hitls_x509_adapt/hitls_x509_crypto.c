@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_CALLBACK_CERT
+#if defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)
 #include <stdio.h>
 #include <string.h>
 #include "crypt_types.h"
@@ -29,30 +29,7 @@
 #include "crypt_params_key.h"
 #include "hitls_pki_cert.h"
 
-CRYPT_MD_AlgId GetCryptHashAlgFromCertHashAlg(HITLS_HashAlgo hashAlgo)
-{
-    typedef struct {
-        HITLS_HashAlgo certHashAlg;
-        CRYPT_MD_AlgId cryptMdAlgId;
-    } CertHashAlgoMap;
-    CertHashAlgoMap hashAlgMap[] = {
-        { HITLS_HASH_SHA_224, CRYPT_MD_SHA224 },
-        { HITLS_HASH_SHA_256, CRYPT_MD_SHA256 },
-        { HITLS_HASH_SHA_384, CRYPT_MD_SHA384 },
-        { HITLS_HASH_SHA_512, CRYPT_MD_SHA512 },
-        { HITLS_HASH_MD5, CRYPT_MD_MD5 },
-        { HITLS_HASH_SHA1, CRYPT_MD_SHA1 },
-        { HITLS_HASH_SM3, CRYPT_MD_SM3 },
-    };
-    for (size_t i = 0; i < sizeof(hashAlgMap) / sizeof(hashAlgMap[0]); i++) {
-        if (hashAlgMap[i].certHashAlg == hashAlgo) {
-            return hashAlgMap[i].cryptMdAlgId;
-        }
-    }
-    return CRYPT_MD_MAX;
-}
-
-static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, CRYPT_MD_AlgId mdAlgId)
+static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, int32_t mdAlgId)
 {
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
         int32_t pad = mdAlgId;
@@ -74,37 +51,24 @@ static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo,
     return HITLS_SUCCESS;
 }
 
-static int32_t SignOrVerifySignPre(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, HITLS_HashAlgo hashAlgo,
-    CRYPT_MD_AlgId *mdAlgId)
-{
-    *mdAlgId = GetCryptHashAlgFromCertHashAlg(hashAlgo);
-    if (*mdAlgId == CRYPT_MD_MAX) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
-        return HITLS_X509_ADAPT_ERR;
-    }
-    return SetPkeySignParam(ctx, signAlgo, *mdAlgId);
-}
-
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen)
 {
     (void)ctx;
-    CRYPT_MD_AlgId mdAlgId = CRYPT_MD_MAX;
-    if (SignOrVerifySignPre(key, signAlgo, hashAlgo, &mdAlgId) != HITLS_SUCCESS) {
+    if (SetPkeySignParam(key, signAlgo, hashAlgo) != HITLS_SUCCESS) {
         return HITLS_X509_ADAPT_ERR;
     }
-    return CRYPT_EAL_PkeySign(key, mdAlgId, data, dataLen, sign, signLen);
+    return CRYPT_EAL_PkeySign(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
 }
 
 int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, const uint8_t *sign, uint32_t signLen)
 {
     (void)ctx;
-    CRYPT_MD_AlgId mdAlgId = CRYPT_MD_MAX;
-    if (SignOrVerifySignPre(key, signAlgo, hashAlgo, &mdAlgId) != HITLS_SUCCESS) {
+    if (SetPkeySignParam(key, signAlgo, hashAlgo) != HITLS_SUCCESS) {
         return HITLS_X509_ADAPT_ERR;
     }
-    return CRYPT_EAL_PkeyVerify(key, mdAlgId, data, dataLen, sign, signLen);
+    return CRYPT_EAL_PkeyVerify(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
 }
 
 #if defined(HITLS_TLS_SUITE_KX_RSA) || defined(HITLS_TLS_PROTO_TLCP11)
@@ -157,4 +121,4 @@ int32_t HITLS_X509_Adapt_CheckPrivateKey(const HITLS_Config *config, HITLS_CERT_
     }
     return ret;
 }
-#endif /* HITLS_TLS_CALLBACK_CERT */
+#endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */

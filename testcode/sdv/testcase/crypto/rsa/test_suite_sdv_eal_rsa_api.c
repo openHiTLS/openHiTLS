@@ -16,6 +16,7 @@
 
 /* BEGIN_HEADER */
 #include "bsl_params.h"
+#include "bsl_err.h"
 #include "crypt_params_key.h"
 
 /* END_HEADER */
@@ -39,10 +40,14 @@ void SDV_CRYPTO_RSA_NEW_API_TC001(int isProvider)
 
     /* Run 100 times */
     for (int i = 0; i < 100; i++) {
+#ifdef HITLS_CRYPTO_PROVIDER
         if (isProvider == 1) {
             pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
                 CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-        } else {
+        } else
+#endif
+        {
+            (void)isProvider;
             pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
         }
         ASSERT_TRUE(pkey != NULL);
@@ -76,9 +81,13 @@ void SDV_CRYPTO_RSA_NEW_API_TC002(int isProvider)
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey == NULL);
@@ -119,10 +128,13 @@ void SDV_CRYPTO_RSA_PARA_API_TC001(int isProvider)
     SetRsaPara(&para, e, 3, 1024);  // bits: 1024 is valid
 
     TestMemInit();
-
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -170,9 +182,13 @@ void SDV_CRYPTO_RSA_PARA_API_TC002(int bits, int isProvider)
     TestMemInit();
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -204,10 +220,14 @@ void SDV_CRYPTO_RSA_PARA_API_TC003(int isProvider)
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -249,9 +269,13 @@ void SDV_CRYPTO_RSA_GEN_API_TC001(int isProvider)
     TestMemInit();
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -301,9 +325,13 @@ void SDV_CRYPTO_RSA_GET_PUB_API_TC001(int isProvider)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -380,9 +408,13 @@ void SDV_CRYPTO_RSA_GET_PRV_API_TC001(int isProvider)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -459,14 +491,21 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
         pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
@@ -557,9 +596,13 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC002(int isProvider)
     TestMemInit();
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -626,14 +669,21 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC001(int isProvider)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
         pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
@@ -705,9 +755,13 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC002(int isProvider)
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -790,10 +844,14 @@ void SDV_CRYPTO_RSA_ENC_API_TC001(Hex *n, Hex *e, int hashId, Hex *in, int isPro
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -861,10 +919,14 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -921,9 +983,13 @@ void SDV_CRYPTO_RSA_CTRL_API_TC001(Hex *n, Hex *d, Hex *salt, int hashId, int is
     TestMemInit();
     CRYPT_RandRegist(STUB_ReplaceRandom);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -1014,10 +1080,13 @@ void SDV_CRYPTO_RSA_CTRL_API_TC002(Hex *n, Hex *d, int hashId, int isProvider)
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
 
     TestMemInit();
-
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -1076,10 +1145,13 @@ void SDV_CRYPTO_RSA_CTRL_API_TC003(Hex *n, Hex *d, int isProvider)
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);
 
     TestMemInit();
-
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -1177,14 +1249,21 @@ void SDV_CRYPTO_RSA_SET_KEY_API_TC001(int isProvider)
     CRYPT_RandRegist(RandFunc);
     CRYPT_EAL_PkeyCtx *pkey1 = NULL;
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
         pkey2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
@@ -1250,9 +1329,13 @@ void SDV_CRYPTO_RSA_DUP_CTX_API_TC001(Hex *e, int bits, int isProvider)
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -1317,14 +1400,21 @@ void SDV_CRYPTO_RSA_CMP_API_TC001(Hex *n, Hex *e, int isProvider)
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx1 = NULL;
     CRYPT_EAL_PkeyCtx *ctx2 = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         ctx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
         ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
@@ -1366,9 +1456,13 @@ void SDV_CRYPTO_RSA_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *e, int securityBit
 
     TestMemInit();
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -1462,6 +1556,7 @@ static uint64_t pthreadGetId(void)
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
 {
+    BSL_ERR_Init();
     pthread_t pid1;
     pthread_t pid2;
     CRYPT_EAL_PkeyPrv prvkey = {0};
@@ -1479,9 +1574,13 @@ void SDV_CRYPTO_RSA_REFERENCES_API_TC001(Hex *n, Hex *d, int isProvider)
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_UNLOCK_CB_FUNC, pthreadRWLockUnlock) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, pthreadGetId) == BSL_SUCCESS);
 
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     }
     ASSERT_TRUE(pkey != NULL);
@@ -1526,9 +1625,13 @@ EXIT:
 void SDV_CRYPTO_RSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else {
+    } else
+#endif
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(id);
     }
     ASSERT_TRUE(pkey != NULL);

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <unistd.h>
+#include "hitls_build.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -39,9 +40,11 @@ int main(int32_t argc, char *argv[])
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
     BSL_ERR_Init();
 
-    HITLS_CertMethodInit();
     CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
+#endif
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) {
