@@ -96,9 +96,13 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_TC001(int isProvider)
     TestMemInit();
     TestRandInit();
     CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    } else {
+    } else
+#endif 
+    {
+        (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     }
     ASSERT_TRUE(pkey != NULL);
