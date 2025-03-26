@@ -147,6 +147,55 @@ These interfaces wrap the provider's exposed APIs, automatically initializing al
     - `cmd`: Control command.
     - `val`: The value associated with the command.
     - `valLen`: The length of the value.
+### 2.5 Capabilities
+
+Capabilities provide a mechanism for applications to obtain the set of capabilities supported by a provider. Through capabilities, providers can indicate their supported capabilities to users.
+
+#### 2.5.1 "CRYPT_EAL_GET_GROUP_CAP"
+
+`"CRYPT_EAL_GET_GROUP_CAP"` is used to obtain the list of `groups` supported in TLS handshakes. When creating a `HITLS_Config`, it queries and collects the list of `groups` supported by all providers. These `groups` are used for key negotiation during handshakes. Each `group` must support either a `kex` or `kem` algorithm. Through this mechanism, providers can add new `groups` to TLS handshakes.
+
+Each `group` supported by a provider can be declared through the callback passed to `CRYPT_EAL_PROVCB_GETCAPS`. Each `group` can have the following fields:
+
+- `CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, TLS supported groups registered in IANA. See [IANA](https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8)
+- `CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID`: Type `BSL_PARAM_TYPE_UINT16`, corresponding ID of TLS supported groups registered in IANA.
+- `CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID`: Type `BSL_PARAM_TYPE_INT32`, parameter ID for the group, passed to `CRYPT_EAL_PkeySetParaById` interface.
+- `CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID`: Type `BSL_PARAM_TYPE_INT32`, algorithm ID for the group, passed to `CRYPT_EAL_ProviderPkeyNewCtx` interface.
+- `CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS`: Type `BSL_PARAM_TYPE_INT32`, security strength provided by the group.
+- `CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS`: Type `BSL_PARAM_TYPE_UINT32`, TLS version bitmap supported by the group. See `*_VERSION_BIT` in `hitls_type.h`
+- `CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM`: Type `BSL_PARAM_TYPE_BOOL`, indicates whether the group is a KEM algorithm.
+- `CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN`: Type `BSL_PARAM_TYPE_INT32`, public key length for the group.
+- `CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN`: Type `BSL_PARAM_TYPE_INT32`, shared key length for the group.
+- `CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN`: Type `BSL_PARAM_TYPE_INT32`, ciphertext length for KEM algorithms.
+
+For example code, refer to `crypt_default_provider.c:CryptGetGroupCaps`
+
+#### 2.5.2 "CRYPT_EAL_GET_SIGALG_CAP"
+
+`"CRYPT_EAL_GET_SIGALG_CAP"` is used to obtain the list of `signature algorithms` supported in TLS handshakes. When creating a `HITLS_Config`, it queries and collects the list of `signature algorithms` supported by all providers. These `signature algorithms` are used for authentication during handshakes. Through this mechanism, providers can add new `signature algorithms` to TLS handshakes.
+
+Each `signature algorithm` supported by a provider can be declared through the callback passed to `CRYPT_EAL_PROVCB_GETCAPS`. Each `signature algorithm` can have the following fields:
+
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, TLS signature scheme name registered in IANA. See [IANA](https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-signaturescheme)
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID`: Type `BSL_PARAM_TYPE_UINT16`, corresponding ID of TLS signature scheme registered in IANA.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE`: Type `BSL_PARAM_TYPE_INT32`, key type used by the signature algorithm.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_OID`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, OID corresponding to the key type.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_NAME`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, name of the key type.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID`: Type `BSL_PARAM_TYPE_INT32`, parameter ID for the signature algorithm.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_OID`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, OID corresponding to the signature algorithm parameter.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_NAME`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, name of the signature algorithm parameter.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID`: Type `BSL_PARAM_TYPE_INT32`, ID for the combination of signature and digest algorithms.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_OID`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, OID corresponding to the combination of signature and digest algorithms.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_NAME`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, name of the combination of signature and digest algorithms.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID`: Type `BSL_PARAM_TYPE_INT32`, signature algorithm ID.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID`: Type `BSL_PARAM_TYPE_INT32`, digest algorithm ID.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, OID corresponding to the digest algorithm.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME`: Type `BSL_PARAM_TYPE_OCTETS_PTR`, name of the digest algorithm.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS`: Type `BSL_PARAM_TYPE_INT32`, security strength provided by the signature algorithm.
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS`: Type `BSL_PARAM_TYPE_UINT32`, certificate chain version bitmap supported by the signature algorithm. See `*_VERSION_BIT` in `hitls_type.h`
+- `CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS`: Type `BSL_PARAM_TYPE_UINT32`, certificate version bitmap supported by the signature algorithm. See `*_VERSION_BIT` in `hitls_type.h`
+
+For example code, refer to `crypt_default_provider.c:CryptGetSignAlgCaps`
 
 ---
 
