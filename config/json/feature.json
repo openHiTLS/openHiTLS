@@ -111,7 +111,8 @@
                             "sm2_sign": null,
                             "sm2_exch": null,
                             "deps": ["ecc", "sm3"]
-                        }
+                        },
+                        "slh_dsa": { "deps": ["sha3", "sha2"]}
                     },
                     "provider": null,
                     "bn": null
@@ -553,7 +554,8 @@
                     "crypto/sm2/include",
                     "crypto/paillier/include",
                     "crypto/elgamal/include",
-                    "crypto/provider/include"
+                    "crypto/provider/include",
+                    "crypto/slh_dsa/include"
                 ]
             },
             "ealinit": {
@@ -838,6 +840,7 @@
                     "crypto/hmac/include",
                     "crypto/paillier/include",
                     "crypto/elgamal/include",
+                    "crypto/slh_dsa/include",
                     "crypto/drbg/include",
                     "crypto/modes/include",
                     "crypto/entropy/include",
@@ -891,7 +894,7 @@
                     "sha1", "sha224", "sha256", "sha384", "sha512",
                     "bn",
                     "drbg_hash", "drbg_hmac", "drbg_ctr",
-                    "rsa", "ed25519", "x25519"
+                    "rsa", "ed25519", "x25519", "slh_dsa"
                 ],
                 ".srcs": "crypto/util/*.c",
                 ".deps": ["platform::Secure_C"]
@@ -938,6 +941,12 @@
                 ".features": ["elgamal"],
                 ".srcs": "crypto/elgamal/src/*.c",
                 ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
+            },
+            "slh_dsa": {
+                ".features": ["slh_dsa"],
+                ".srcs": "crypto/slh_dsa/src/*.c",
+                ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj", "bsl::asn1"],
                 ".include": ["crypto/eal/src"]
             }
         },

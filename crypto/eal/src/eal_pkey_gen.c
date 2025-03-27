@@ -590,6 +590,15 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
             ret = pkey->method->setPub(pkey->key, &paParam);
             break;
         }
+        case CRYPT_PKEY_SLH_DSA: {
+            BSL_Param slhDsaPub[3] = {{CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPub.seed,
+                key->key.slhDsaPub.len, 0},
+                {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPub.root, key->key.slhDsaPub.len,
+                    0},
+                BSL_PARAM_END};
+            ret = pkey->method->setPub(pkey->key, &slhDsaPub);
+            break;
+        }
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -662,6 +671,19 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
                     0},
                  BSL_PARAM_END};
             ret = pkey->method->setPrv(pkey->key, &paParam);
+            break;
+        }   
+        case CRYPT_PKEY_SLH_DSA: {
+            BSL_Param slhDsaParam[5] = {{CRYPT_PARAM_SLH_DSA_PRV_SEED, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.seed,
+                key->key.slhDsaPrv.pub.len, 0},
+                {CRYPT_PARAM_SLH_DSA_PRV_PRF, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.prf, key->key.slhDsaPrv.pub.len,
+                    0},
+                {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.pub.seed, key->key.slhDsaPrv.pub.len,
+                    0},
+                {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.pub.root, key->key.slhDsaPrv.pub.len,
+                    0},
+                BSL_PARAM_END};
+            ret = pkey->method->setPrv(pkey->key, &slhDsaParam);
             break;
         }
         case CRYPT_PKEY_ELGAMAL: {
@@ -781,6 +803,20 @@ int32_t CRYPT_EAL_PkeySetPubEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param)
     return ret;
 }
 
+static int32_t GetSlhDsaPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPub *pub)
+{
+    BSL_Param param[3] = {{CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pub->seed, pub->len, 0},
+        {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pub->root, pub->len, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method->getPub(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    pub->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key)
 {
     int32_t ret = PriAndPubParamIsValid(pkey, key, false);
@@ -817,6 +853,9 @@ int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k
             break;
         case CRYPT_PKEY_ELGAMAL:
             ret = GetElGamalPub(pkey, &key->key.elgamalPub);
+            break;
+        case CRYPT_PKEY_SLH_DSA:
+            ret = GetSlhDsaPub(pkey, &key->key.slhDsaPub);
             break;
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
@@ -902,6 +941,23 @@ static int32_t GetElGamalPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_ElGamalPrv *pr
     return CRYPT_SUCCESS;
 }
 
+static int32_t GetSlhDsaPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPrv *prv)
+{
+    BSL_Param param[5] = {{CRYPT_PARAM_SLH_DSA_PRV_SEED, BSL_PARAM_TYPE_OCTETS, prv->seed, prv->pub.len, 0},
+        {CRYPT_PARAM_SLH_DSA_PRV_PRF, BSL_PARAM_TYPE_OCTETS, prv->prf, prv->pub.len, 0},
+        {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, prv->pub.seed, prv->pub.len, 0},
+        {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, prv->pub.root, prv->pub.len, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method->getPrv(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    prv->pub.len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+
+
 int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key)
 {
     int32_t ret = PriAndPubParamIsValid(pkey, key, true);
@@ -937,6 +993,9 @@ int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k
             break;
         case CRYPT_PKEY_ELGAMAL:
             ret = GetElGamalPrv(pkey, &key->key.elgamalPrv);
+            break;
+        case CRYPT_PKEY_SLH_DSA:
+            ret = GetSlhDsaPrv(pkey, &key->key.slhDsaPrv);
             break;
         case CRYPT_PKEY_MAX:
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;

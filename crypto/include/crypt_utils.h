@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "crypt_algid.h"
+#include "crypt_local_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +35,18 @@ do {                                         \
     (p)[(i) + 1] = (uint8_t)((v) >> 16);     \
     (p)[(i) + 2] = (uint8_t)((v) >>  8);     \
     (p)[(i) + 3] = (uint8_t)((v) >>  0);     \
+} while (0)
+
+#define PUT_UINT64_BE(v, p, i)               \
+do {                                         \
+    (p)[(i) + 0] = (uint8_t)((v) >> 56);     \
+    (p)[(i) + 1] = (uint8_t)((v) >> 48);     \
+    (p)[(i) + 2] = (uint8_t)((v) >> 40);     \
+    (p)[(i) + 3] = (uint8_t)((v) >> 32);     \
+    (p)[(i) + 4] = (uint8_t)((v) >> 24);     \
+    (p)[(i) + 5] = (uint8_t)((v) >> 16);     \
+    (p)[(i) + 6] = (uint8_t)((v) >>  8);     \
+    (p)[(i) + 7] = (uint8_t)((v) >>  0);     \
 } while (0)
 
 #define GET_UINT32_BE(p, i)                  \
@@ -203,6 +216,35 @@ do {                                         \
             }                                                   \
         }                                                       \
     } while (0)
+
+/**
+ * @brief Calculate the hash value of the input data.
+ *
+ * @param hashMethod [IN] Hash method
+ * @param hashData [IN] Hash data
+ * @param size [IN] Size of hash data
+ * @param out [OUT] Output hash value
+ */
+int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size,
+    uint8_t *out, uint32_t *outlen);
+
+/**
+ * @ingroup rsa
+ * @brief mgf1 of PKCS1
+ *
+ * @param hashMethod [IN] Hash method
+ * @param seed [IN] Seed
+ * @param seedLen [IN] Seed length
+ * @param mask [OUT] Mask
+ * @param maskLen [IN] Mask length
+ *
+ * @retval CRYPT_SUCCESS on success
+ */
+int32_t CRYPT_Mgf1(const EAL_MdMethod *hashMethod, const uint8_t *seed, const uint32_t seedLen,
+    uint8_t *mask, uint32_t maskLen);
+
+
+
 
 /* Assumes that x is uint32_t and 0 < n < 32 */
 #define ROTL32(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
