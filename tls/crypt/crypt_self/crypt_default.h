@@ -357,6 +357,30 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
  */
 HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo);
 
+/**
+ * @brief KEM-Encapsulate
+ *
+ * @param params [IN] KEM encapsulation parameters
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ */
+int32_t CRYPT_DEFAULT_KemEncapsulate(HITLS_KemEncapsulateParams *params);
+
+/**
+ * @brief KEM-Decapsulate
+ *
+ * @param key [IN] Key handle
+ * @param ciphertext [IN] Ciphertext data
+ * @param ciphertextLen [IN] Ciphertext data length
+ * @param sharedSecret [OUT] Shared key
+ * @param sharedSecretLen [IN/OUT] IN: Maximum length of data padding OUT: length of the shared key
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ * @retval Other         failure
+ */
+int32_t CRYPT_DEFAULT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+
 #ifdef __cplusplus
 }
 #endif
