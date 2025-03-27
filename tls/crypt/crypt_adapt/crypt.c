@@ -91,6 +91,8 @@ const char *g_cryptCallBackStr[] = {
 
     [HITLS_CRYPT_CALLBACK_HKDF_EXTRACT] = "HKDF-Extract",
     [HITLS_CRYPT_CALLBACK_HKDF_EXPAND] = "HKDF-Expand",
+    [HITLS_CRYPT_CALLBACK_KEM_ENCAPSULATE] = "KEM-Encapsulate",
+    [HITLS_CRYPT_CALLBACK_KEM_DECAPSULATE] = "KEM-Decapsulate",
 };
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER
@@ -839,6 +841,42 @@ uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param
     }
     return 0;
 }
+#ifdef HITLS_TLS_FEATURE_KEM
+int32_t SAL_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_KemEncapsulateParams *params)
+{
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = HITLS_CRYPT_KemEncapsulate(libCtx, attrName, params);
+#else
+    (void)libCtx;
+    (void)attrName;
+    if (g_cryptEcdhMethod.kemEncapsulate == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16617, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "kemEncapsulate callback not registered", 0, 0, 0, 0);
+        return HITLS_UNREGISTERED_CALLBACK;
+    }
 
+    int32_t ret = g_cryptEcdhMethod.kemEncapsulate(params);
+#endif
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_KEM_ENCAPSULATE, ret, BINLOG_ID16617,
+        HITLS_CRYPT_ERR_KEM_ENCAPSULATE);
+}
 
+int32_t SAL_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+{
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = HITLS_CRYPT_KemDecapsulate(key, ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
+#else
+    if (g_cryptEcdhMethod.kemDecapsulate == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16617, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "kemDecapsulate callback not registered", 0, 0, 0, 0);
+        return HITLS_UNREGISTERED_CALLBACK;
+    }
+
+    int32_t ret = g_cryptEcdhMethod.kemDecapsulate(key, ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
+#endif
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_KEM_DECAPSULATE, ret, BINLOG_ID16617,
+        HITLS_CRYPT_ERR_KEM_DECAPSULATE);
+}
+#endif /* HITLS_TLS_FEATURE_KEM */
 #endif /* HITLS_TLS_PROTO_TLS13 */
