@@ -19,14 +19,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include "bsl_obj.h"
-#include "bsl_params.h"
+#include "bsl_err.h"
+// #include "bsl_params.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"
+#include "hitls_type.h"
 
 #define BSL_PARAM_MAX_NUMBER 1000
 #define NEW_PARA_ALGID (BSL_CID_MAX + 1)
 #define NEW_PKEY_ALGID (BSL_CID_MAX + 2)
+
+#define NEW_KEM_ALGID (BSL_CID_MAX + 5)
+#define NEW_KEM_PARAM_ID (BSL_CID_MAX + 6)
+
 #define NEW_SIGN_HASH_ALGID (BSL_CID_MAX + 3)
 #define NEW_HASH_ALGID (BSL_CID_MAX + 4)
 #define TEST_CRYPT_DEFAULT_SIGNLEN 70
@@ -36,6 +42,22 @@ typedef struct {
     CRYPT_EAL_ProvMgrCtx *mgrCtxHandle;
 } TestProvCtx;
 
+/**
+ * @brief Group information
+ */
+typedef struct {
+    char *name;           // group name
+    int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
+    int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
+    int32_t secBits;           // security bits
+    uint16_t groupId;           // iana group id, HITLS_NamedGroup
+    int32_t pubkeyLen;         // public key length(CH keyshare / SH keyshare)
+    int32_t sharedkeyLen;      // shared key length
+    int32_t ciphertextLen;     // ciphertext length(SH keyshare)
+    uint32_t versionBits;       // TLS_VERSION_MASK
+    bool isKem;                // true: KEM, false: KEX
+} Provider_Group;
+
 typedef struct {
     uint8_t prvkey[72];      // Private key
     uint32_t prvkeyLen;      // Private key length
@@ -43,6 +65,14 @@ typedef struct {
     uint32_t pubkeyLen;      // Public key length
     int32_t paraId;          // Parameter ID
 } TestEccKeyCtx;
+
+typedef struct {
+    uint8_t pubkey[20];     // Public key
+    uint32_t pubkeyLen;      // Public key length
+    uint8_t shared[20];
+    uint32_t sharedLen;
+    int32_t paraId;          // Parameter ID
+} TestKemKeyCtx;
 
 void *TestPkeyMgmtEcNewCtx(void *provCtx, int32_t algId)
 {
@@ -290,6 +320,101 @@ static int32_t TestEccPkeyExch(const TestEccKeyCtx *ctx, const TestEccKeyCtx *pu
     return CRYPT_SUCCESS;
 }
 
+
+void *TestPkeyMgmtKemNewCtx(void *provCtx, int32_t algId)
+{
+    printf("TestPkeyMgmtKemNewCtx [%d] \n", algId);
+    TestKemKeyCtx *ctx = NULL;
+    if (algId != NEW_KEM_ALGID) {
+        return NULL;
+    }
+    ctx = (TestKemKeyCtx *)malloc(sizeof(TestKemKeyCtx));
+    if (ctx == NULL) {
+        return NULL;
+    }
+    memset(ctx, 0, sizeof(TestKemKeyCtx));
+    return ctx;
+}
+
+static int32_t TestKemGenKey(TestKemKeyCtx *ctx)
+{
+    printf("TestKemGenKey call\n");
+    if (ctx == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->paraId == NEW_KEM_PARAM_ID) {
+        ctx->pubkeyLen = 20;
+    } else {
+        return CRYPT_INVALID_ARG;
+    }
+    RandFunc(ctx->pubkey, ctx->pubkeyLen);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestKemSetPubKey(TestKemKeyCtx *ctx, const BSL_Param *para)
+{
+    (void)ctx;
+    (void)para;
+    printf("TestKemSetPubKey call\n");
+    if (ctx == NULL || para == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    (void)memcpy(ctx->pubkey, pub->value, pub->valueLen);
+    ctx->pubkeyLen = pub->valueLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestKemGetPubKey(const TestKemKeyCtx *ctx, BSL_Param *para)
+{
+    printf("TestKemGetPubKey call\n");
+    if (ctx == NULL || para == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    (void)memcpy(pub->value, ctx->pubkey, ctx->pubkeyLen);
+    pub->useLen = ctx->pubkeyLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestKemCtrl(TestKemKeyCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
+{
+    printf("TestKemCtrl call ");
+    (void)ctx;
+    (void)cmd;
+    (void)val;
+    (void)valLen;
+    if (ctx == NULL || val == NULL || valLen == 0) {
+        return CRYPT_NULL_INPUT;
+    }
+    switch (cmd) {
+        case CRYPT_CTRL_SET_PARA_BY_ID:
+            printf("CRYPT_CTRL_SET_PARA_BY_ID \n");
+            if (*((int32_t *)val) != NEW_KEM_PARAM_ID) {
+                return CRYPT_INVALID_ARG;
+            }
+            ctx->paraId = *((int32_t *)val);
+            break;
+        default:
+            return CRYPT_NOT_SUPPORT;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static void TestKemFreeCtx(TestKemKeyCtx *ctx)
+{
+    printf("TestKemFreeCtx call\n");
+    if (ctx != NULL) {
+        free(ctx);
+    }
+}
+
 const CRYPT_EAL_Func g_testKeyMgmtEcdsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtEcNewCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetParaPara},
@@ -320,6 +445,17 @@ const CRYPT_EAL_Func g_testKeyMgmtEcdh[] = {
     CRYPT_EAL_FUNC_END,
 };
 
+
+const CRYPT_EAL_Func g_testKeyMgmtKem[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtKemNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)TestKemGenKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)TestKemSetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)TestKemGetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)TestKemCtrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)TestKemFreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+
 const CRYPT_EAL_Func g_testEcdsaSign[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)TestEccSign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)TestEccVerify},
@@ -331,9 +467,61 @@ const CRYPT_EAL_Func g_defExchDh[] = {
     CRYPT_EAL_FUNC_END
 };
 
+
+static int32_t TestKemEncapsulate(const void *pkey, uint8_t *cipher, uint32_t *cipherLen, uint8_t *out, uint32_t *outLen)
+{
+    (void)pkey;
+    (void)cipher;
+    (void)cipherLen;
+    (void)out;
+    (void)outLen;
+    printf("TestKemEncapsulate call \n");
+    TestKemKeyCtx *ctx = pkey;
+    if (ctx == NULL || cipherLen == NULL || cipher == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (*cipherLen < 40 || ctx->pubkeyLen != 20) {
+        return CRYPT_INVALID_ARG;
+    }
+    ctx->sharedLen = 20;
+    RandFunc(ctx->shared, ctx->sharedLen);
+    memcpy_s(cipher, *cipherLen, ctx->pubkey, ctx->pubkeyLen);
+    memcpy_s(&cipher[ctx->pubkeyLen], *cipherLen - ctx->pubkeyLen, ctx->shared, ctx->sharedLen);
+    memcpy_s(out, *outLen, ctx->shared, ctx->sharedLen);
+    *outLen = ctx->sharedLen;
+    *cipherLen = ctx->pubkeyLen + ctx->sharedLen;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t TestKemDecapsulate(const void *pkey, uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
+{
+    (void)pkey;
+    (void)data;
+    (void)dataLen;
+    (void)out;
+    (void)outLen;
+    TestKemKeyCtx *ctx = pkey;
+    if (dataLen != 40 || ctx->pubkeyLen != 20 || *outLen < 20) {
+        return CRYPT_INVALID_ARG;
+    }
+    if (memcmp(data, ctx->pubkey, ctx->pubkeyLen) != 0) {
+        return CRYPT_INVALID_ARG;
+    }
+    memcpy_s(out, *outLen, &data[ctx->pubkeyLen], dataLen - ctx->pubkeyLen);
+    *outLen = dataLen - ctx->pubkeyLen; // 20
+    return CRYPT_SUCCESS;
+}
+
+const CRYPT_EAL_Func g_defKem[] = {
+    {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)TestKemEncapsulate},
+    {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)TestKemDecapsulate},
+    CRYPT_EAL_FUNC_END
+};
+
 static CRYPT_EAL_AlgInfo g_testKeyMgmt[] = {
     {CRYPT_PKEY_ECDSA, g_testKeyMgmtEcdsa, "provider=provider_get_cap_test1"}, // For computing sign
     {NEW_PKEY_ALGID, g_testKeyMgmtEcdh, "provider=provider_get_cap_test1"}, // For computing the shared key
+    {NEW_KEM_ALGID, g_testKeyMgmtKem, "provider=provider_get_cap_test1"}, // For computing the shared key
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -435,6 +623,11 @@ static CRYPT_EAL_AlgInfo g_testRands[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
+static CRYPT_EAL_AlgInfo g_testKem[] = {
+    {NEW_KEM_ALGID, g_defKem, "provider=provider_get_cap_test1"}, // For computing the shared key
+    CRYPT_EAL_ALGINFO_END
+};
+
 static int32_t TestProvQuery(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos)
 {
     (void)provCtx;
@@ -452,6 +645,9 @@ static int32_t TestProvQuery(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo *
         case CRYPT_EAL_OPERAID_RAND:
             *algInfos = g_testRands;
             break;
+        case CRYPT_EAL_OPERAID_KEM:
+            *algInfos = g_testKem;
+            break;
         default:
             return CRYPT_NOT_SUPPORT;
     }
@@ -465,88 +661,6 @@ static int32_t TestProvFree(void *provCtx)
         free(provCtx);
     }
     return CRYPT_SUCCESS;
-}
-
-#define TLS12_VERSION_BIT 0x00000010U
-#define TLS13_VERSION_BIT 0x00000020U
-
-static int32_t TestCryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
-{
-    if (cb == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-    uint16_t groupId = 477;
-    int32_t paraId = NEW_PARA_ALGID;
-    int32_t algId = NEW_PKEY_ALGID;
-    int32_t secBits = 1024;
-    int32_t pubkeyLen = 143;
-    int32_t sharedKeyLen = 143;
-    int32_t ciphertextLen = 0;
-    int32_t versionBits = TLS12_VERSION_BIT | TLS13_VERSION_BIT;
-    bool isKem = false;
-    BSL_Param param[] = {
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME,
-            BSL_PARAM_TYPE_OCTETS_PTR,
-            (void *)(uintptr_t)"test_new_group",
-            (uint32_t)strlen("test_new_group")
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID,
-            BSL_PARAM_TYPE_UINT16,
-            (void *)(uintptr_t)&(groupId),
-            sizeof(uint16_t)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID,
-            BSL_PARAM_TYPE_INT32,
-            (void *)(uintptr_t)&(paraId),
-            sizeof(paraId)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID,
-            BSL_PARAM_TYPE_INT32,
-            (void *)(uintptr_t)&(algId),
-            sizeof(algId)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS,
-            BSL_PARAM_TYPE_INT32,
-            (void *)(uintptr_t)&(secBits),
-            sizeof(secBits)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN,
-            BSL_PARAM_TYPE_INT32,
-            (void *)(uintptr_t)&(pubkeyLen),
-            sizeof(pubkeyLen)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN,
-            BSL_PARAM_TYPE_INT32,
-            (void *)(uintptr_t)&(sharedKeyLen),
-            sizeof(sharedKeyLen)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN,
-            BSL_PARAM_TYPE_INT32,
-            (void *)(uintptr_t)&(ciphertextLen),
-            sizeof(ciphertextLen)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS,
-            BSL_PARAM_TYPE_UINT32,
-            (void *)(uintptr_t)&(versionBits),
-            sizeof(versionBits)
-        },
-        {
-            CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM,
-            BSL_PARAM_TYPE_BOOL,
-            (void *)(uintptr_t)&(isKem),
-            sizeof(isKem)
-        }
-    };
-    return cb(param, args);
 }
 
 static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
@@ -652,11 +766,150 @@ static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
     return cb(param, args);
 }
 
+#define TLS_GROUP_PARAM_COUNT 11
+static const Provider_Group g_tlsGroupInfo[] = {
+    {
+        "test_new_group",
+        NEW_PARA_ALGID,      // paraId
+        NEW_PKEY_ALGID,      // algId
+        1024,                // secBits
+        477,                 // groupId
+        143,                 // pubkeyLen
+        143,                 // sharedkeyLen
+        0,                   // ciphertextLen
+        TLS12_VERSION_BIT | TLS13_VERSION_BIT,  // versionBits
+        false               // isKem
+    },
+    {
+        "test_new_group_kem",
+        NEW_KEM_PARAM_ID,      // paraId
+        NEW_KEM_ALGID,      // algId
+        1024,                // secBits
+        478,                 // groupId
+        20,                 // pubkeyLen
+        20,                 // sharedkeyLen
+        40,                   // ciphertextLen
+        TLS13_VERSION_BIT,  // versionBits
+        true                // isKem
+    }
+};
+
+static PARAM_InitValue(BSL_Param *param, int32_t key, uint32_t type, void *val, uint32_t valueLen)
+{
+    if (key == 0) {
+        return BSL_PARAMS_INVALID_KEY;
+    }
+    if (param == NULL) {
+
+        return BSL_INVALID_ARG;
+    }
+    if (type != BSL_PARAM_TYPE_FUNC_PTR && type != BSL_PARAM_TYPE_CTX_PTR) {
+        /* Parameter validation: param cannot be NULL, if val is NULL, valueLen must be 0 */
+        if (val == NULL && valueLen != 0) {
+
+            return BSL_INVALID_ARG;
+        }
+    }
+
+    switch (type) {
+        case BSL_PARAM_TYPE_UINT8:
+        case BSL_PARAM_TYPE_UINT16:
+        case BSL_PARAM_TYPE_UINT32:
+        case BSL_PARAM_TYPE_OCTETS:
+        case BSL_PARAM_TYPE_BOOL:
+        case BSL_PARAM_TYPE_UINT32_PTR:
+        case BSL_PARAM_TYPE_FUNC_PTR:
+        case BSL_PARAM_TYPE_CTX_PTR:
+        case BSL_PARAM_TYPE_INT32:
+        case BSL_PARAM_TYPE_OCTETS_PTR:
+            param->value = val;
+            param->valueLen = valueLen;
+            param->valueType = type;
+            param->key = key;
+            param->useLen = 0;
+            return BSL_SUCCESS;
+        default:
+            return BSL_PARAMS_INVALID_TYPE;
+    }
+}
+
+static int32_t BuildTlsGroupParam(const Provider_Group *groupInfo, BSL_Param *param)
+{
+    int32_t ret = PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME, BSL_PARAM_TYPE_OCTETS_PTR,
+        (void *)(uintptr_t)groupInfo->name, (uint32_t)strlen(groupInfo->name));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID, BSL_PARAM_TYPE_UINT16,
+       (void *)(uintptr_t)&(groupInfo->groupId), sizeof(groupInfo->groupId));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->paraId), sizeof(groupInfo->paraId));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->algId), sizeof(groupInfo->algId));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->secBits), sizeof(groupInfo->secBits));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS, BSL_PARAM_TYPE_UINT32,
+        (void *)(uintptr_t)&(groupInfo->versionBits), sizeof(groupInfo->versionBits));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM, BSL_PARAM_TYPE_BOOL,
+        (void *)(uintptr_t)&(groupInfo->isKem), sizeof(groupInfo->isKem));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->pubkeyLen), sizeof(groupInfo->pubkeyLen));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->sharedkeyLen), sizeof(groupInfo->sharedkeyLen));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    ret = PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->ciphertextLen), sizeof(groupInfo->ciphertextLen));
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    return BSL_SUCCESS;
+}
+
+static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+{
+    for (size_t i = 0; i < sizeof(g_tlsGroupInfo) / sizeof(g_tlsGroupInfo[0]); i++) {
+        BSL_Param param[TLS_GROUP_PARAM_COUNT] = {0};
+        int32_t ret = BuildTlsGroupParam(&g_tlsGroupInfo[i], param);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        ret = cb(param, args);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
 static int32_t TestProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args)
 {
     switch (cmd) {
         case CRYPT_EAL_GET_GROUP_CAP:
-            return TestCryptGetGroupCaps(cb, args);
+            return CryptGetGroupCaps(cb, args);
         case CRYPT_EAL_GET_SIGALG_CAP:
             return TestCryptGetSigAlgCaps(cb, args);
         default:

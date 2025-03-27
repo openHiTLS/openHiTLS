@@ -201,7 +201,8 @@
                         },
                         "feature_key_update": null,
                         "feature_flight": null,
-                        "feature_cert_mode": null
+                        "feature_cert_mode": null,
+                        "feature_kem": null
                     },
                     "proto": {
                         "deps": ["tlv", "sal", "eal", "list"],
