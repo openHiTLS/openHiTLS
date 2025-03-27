@@ -50,6 +50,10 @@ void HITLS_CryptMethodInit(void)
 #ifdef HITLS_TLS_PROTO_TLCP11
     ecdhMethod.sm2CalEcdhSharedSecret = CRYPT_DEFAULT_CalcSM2SharedSecret;
 #endif /* HITLS_TLS_PROTO_TLCP11 */
+#ifdef HITLS_TLS_FEATURE_KEM
+    ecdhMethod.kemEncapsulate = CRYPT_DEFAULT_KemEncapsulate;
+    ecdhMethod.kemDecapsulate = CRYPT_DEFAULT_KemDecapsulate;
+#endif /* HITLS_TLS_FEATURE_KEM */
     HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
 
 #ifdef HITLS_TLS_SUITE_KX_DHE

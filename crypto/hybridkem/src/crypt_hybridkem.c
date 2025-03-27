@@ -305,6 +305,9 @@ int32_t CRYPT_HYBRID_KEM_GetEncapsKey(const CRYPT_HybridKemCtx *ctx, BSL_Param *
     int32_t ret;
     RETURN_RET_IF((ctx == NULL), CRYPT_NULL_INPUT);
     BSL_Param *pub = BSL_PARAM_FindParam(param, CRYPT_PARAM_HYBRID_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindParam(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    }
     RETURN_RET_IF(pub == NULL || pub->value == NULL, CRYPT_NULL_INPUT);
 
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_POINT_UNCOMPRESSED, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0} , BSL_PARAM_END};
@@ -348,6 +351,9 @@ int32_t CRYPT_HYBRID_KEM_SetEncapsKey(CRYPT_HybridKemCtx *ctx, const BSL_Param *
     int32_t ret;
     RETURN_RET_IF((ctx == NULL || param == NULL), CRYPT_NULL_INPUT);
     const BSL_Param *pub = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_HYBRID_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    }
     RETURN_RET_IF(pub == NULL || pub->value == NULL, CRYPT_NULL_INPUT);
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_POINT_UNCOMPRESSED, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0} , BSL_PARAM_END};
     BSL_Param kemEK[2] = {{CRYPT_PARAM_ML_KEM_ENCAPSKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0} , BSL_PARAM_END};
