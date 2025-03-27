@@ -72,14 +72,15 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
         BSL_SAL_FREE(keyExchCtx->pskInfo13.userPskSess->identity);
         BSL_SAL_FREE(keyExchCtx->pskInfo13.userPskSess);
     }
+    BSL_SAL_FREE(keyExchCtx->ciphertext);
 #endif /* HITLS_TLS_PROTO_TLS13 */
+    BSL_SAL_FREE(keyExchCtx->peerPubkey);
     switch (keyExchCtx->keyExchAlgo) {
         case HITLS_KEY_EXCH_NULL:
         case HITLS_KEY_EXCH_ECDHE:
         case HITLS_KEY_EXCH_ECDH:
         case HITLS_KEY_EXCH_ECDHE_PSK:
             SAL_CRYPT_FreeEcdhKey(keyExchCtx->key);
-            BSL_SAL_FREE(keyExchCtx->peerPubkey);
             break;
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
@@ -87,7 +88,6 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
             SAL_CRYPT_FreeDhKey(keyExchCtx->key);
             BSL_SAL_FREE(keyExchCtx->keyExchParam.dh.p);
             BSL_SAL_FREE(keyExchCtx->keyExchParam.dh.g);
-            BSL_SAL_FREE(keyExchCtx->peerPubkey);
             break;
         case HITLS_KEY_EXCH_RSA:
         default:

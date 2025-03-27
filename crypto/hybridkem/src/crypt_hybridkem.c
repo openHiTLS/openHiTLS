@@ -96,7 +96,7 @@ CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtxEx(void *libCtx)
 
 void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
 {
-    if (hybridKey == NULL || hybridKey->pKeyMethod == NULL || hybridKey->kemMethod == NULL) {
+    if (hybridKey == NULL) {
         return;
     }
     int ref = 0;
@@ -105,8 +105,12 @@ void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
         return;
     }
     BSL_SAL_ReferencesFree(&(hybridKey->references));
-    hybridKey->pKeyMethod->freeCtx(hybridKey->pkeyCtx);
-    hybridKey->kemMethod->freeCtx(hybridKey->kemCtx);
+    if (hybridKey->pKeyMethod != NULL && hybridKey->pKeyMethod->freeCtx != NULL) {
+        hybridKey->pKeyMethod->freeCtx(hybridKey->pkeyCtx);
+    }
+    if (hybridKey->kemMethod != NULL && hybridKey->kemMethod->freeCtx != NULL) {
+        hybridKey->kemMethod->freeCtx(hybridKey->kemCtx);
+    }
     BSL_SAL_FREE(hybridKey);
 }
 
@@ -305,6 +309,9 @@ int32_t CRYPT_HYBRID_KEM_GetEncapsKey(const CRYPT_HybridKemCtx *ctx, BSL_Param *
     int32_t ret;
     RETURN_RET_IF((ctx == NULL), CRYPT_NULL_INPUT);
     BSL_Param *pub = BSL_PARAM_FindParam(param, CRYPT_PARAM_HYBRID_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindParam(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    }
     RETURN_RET_IF(pub == NULL || pub->value == NULL, CRYPT_NULL_INPUT);
 
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_POINT_UNCOMPRESSED, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0} , BSL_PARAM_END};
@@ -348,6 +355,9 @@ int32_t CRYPT_HYBRID_KEM_SetEncapsKey(CRYPT_HybridKemCtx *ctx, const BSL_Param *
     int32_t ret;
     RETURN_RET_IF((ctx == NULL || param == NULL), CRYPT_NULL_INPUT);
     const BSL_Param *pub = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_HYBRID_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    }
     RETURN_RET_IF(pub == NULL || pub->value == NULL, CRYPT_NULL_INPUT);
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_POINT_UNCOMPRESSED, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0} , BSL_PARAM_END};
     BSL_Param kemEK[2] = {{CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0} , BSL_PARAM_END};

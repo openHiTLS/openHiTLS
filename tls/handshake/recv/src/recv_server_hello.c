@@ -41,7 +41,7 @@
 #include "alpn.h"
 #include "alert.h"
 #include "hs_kx.h"
-
+#include "config_type.h"
 
 typedef int32_t (*CheckExtFunc)(TLS_Ctx *ctx, const ServerHelloMsg *serverHello);
 
@@ -1012,7 +1012,7 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     if (serverHello->haveKeyShare == false) {
         return HITLS_SUCCESS;
     }
-
+    uint32_t keyshareLen = 0u;
     /* The keyshare extension of the server must contain the keyExchange field */
     if (serverHello->keyShare.keyExchangeSize == 0 ||
         /* Check whether the sent support group is the same as the negotiated group */
@@ -1025,14 +1025,24 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     }
 
     const KeyShare *keyShare = &serverHello->keyShare;
-    uint32_t pubKeyLen = keyShare->keyExchangeSize;
-    if (pubKeyLen != SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group)) {
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->group);
+    if (groupInfo == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16247, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "group info not found", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    if (groupInfo->isKem) {
+        keyshareLen = groupInfo->ciphertextLen;
+    } else {
+        keyshareLen = groupInfo->pubkeyLen;
+    }
+    if (keyshareLen == 0u || keyshareLen != keyShare->keyExchangeSize) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17326, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "invalid keyShare length [%d]", keyShare->keyExchangeSize, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
     }
-    uint8_t *peerPubkey = BSL_SAL_Dump(keyShare->keyExchange, pubKeyLen);
+    uint8_t *peerPubkey = BSL_SAL_Dump(keyShare->keyExchange, keyshareLen);
     if (peerPubkey == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15290, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "malloc peerPubkey fail when process server hello key share.", 0, 0, 0, 0);
@@ -1041,8 +1051,9 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
         return HITLS_MEMALLOC_FAIL;
     }
 
+    BSL_SAL_FREE(ctx->hsCtx->kxCtx->peerPubkey);
     ctx->hsCtx->kxCtx->peerPubkey = peerPubkey;
-    ctx->hsCtx->kxCtx->pubKeyLen = pubKeyLen;
+    ctx->hsCtx->kxCtx->pubKeyLen = keyshareLen;
     ctx->negotiatedInfo.negotiatedGroup = serverHello->keyShare.group;
 
     return HITLS_SUCCESS;

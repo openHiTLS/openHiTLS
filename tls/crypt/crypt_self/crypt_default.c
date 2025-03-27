@@ -222,4 +222,17 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
     return HITLS_CRYPT_HkdfExpand(NULL, NULL, input, okm, okmLen);
 }
 
+#ifdef HITLS_TLS_FEATURE_KEM
+int32_t CRYPT_DEFAULT_KemEncapsulate(HITLS_KemEncapsulateParams *params)
+{
+    return HITLS_CRYPT_KemEncapsulate(NULL, NULL, NULL, params);
+}
+
+int32_t CRYPT_DEFAULT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+{
+    return HITLS_CRYPT_KemDecapsulate(key, ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
+}
+#endif /* HITLS_TLS_FEATURE_KEM */
+
 #endif /* HITLS_TLS_CALLBACK_CRYPT */
