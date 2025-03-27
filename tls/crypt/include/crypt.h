@@ -81,6 +81,8 @@ enum HITLS_CryptoCallBack {
 
     HITLS_CRYPT_CALLBACK_HKDF_EXTRACT,
     HITLS_CRYPT_CALLBACK_HKDF_EXPAND,
+    HITLS_CRYPT_CALLBACK_KEM_ENCAPSULATE,
+    HITLS_CRYPT_CALLBACK_KEM_DECAPSULATE,
 };
 
 /**
@@ -575,6 +577,42 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo,
  * @return Returns key length and other info, returns 0 on failure
  */
 uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param);
+
+/**
+ * @brief   KEM: Encapsulate a shared secret using peer's public key
+ *
+ * @param   ctx [IN] TLS context
+ * @param   params [IN/OUT] Parameters for KEM encapsulation, including:
+ *                         - groupId: Named group ID
+ *                         - peerPubkey: Peer's public key
+ *                         - pubKeyLen: Length of peer's public key  
+ *                         - ciphertext: [OUT] Encapsulated ciphertext
+ *                         - ciphertextLen: [IN/OUT] Maximum/actual ciphertext length
+ *                         - sharedSecret: [OUT] Generated shared secret
+ *                         - sharedSecretLen: [IN/OUT] Maximum/actual shared secret length
+ *
+ * @retval HITLS_SUCCESS                succeeded
+ * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
+ * @retval HITLS_CRYPT_ERR_KEM_ENCAP    Failed to encapsulate shared secret
+ */
+int32_t SAL_CRYPT_KemEncapsulate(TLS_Ctx *ctx, HITLS_KemEncapsulateParams *params);
+
+/**
+ * @brief   KEM: Decapsulate the ciphertext to recover shared secret
+ *
+ * @param   key [IN] Key handle
+ * @param   ciphertext [IN] Ciphertext buffer
+ * @param   ciphertextLen [IN] Ciphertext length
+ * @param   sharedSecret [OUT] Shared secret buffer
+ * @param   sharedSecretLen [IN/OUT] IN: Maximum shared secret buffer length OUT: Actual shared secret length
+ *
+ * @retval HITLS_SUCCESS                succeeded.
+ * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
+ * @retval HITLS_CRYPT_ERR_KEM_DECAP    Failed to decapsulate ciphertext
+ */
+int32_t SAL_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+
 
 #ifdef __cplusplus
 }
