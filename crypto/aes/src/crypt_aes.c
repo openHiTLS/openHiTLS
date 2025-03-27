@@ -586,8 +586,6 @@ static const uint32_t TD3[256] = {
     0xcb84617bU, 0x32b670d5U, 0x6c5c7448U, 0xb85742d0U,
 };
 
-void SetDecryptKey(CRYPT_AES_Key *ctx);
-
 static inline uint32_t AES_G(uint32_t w, uint32_t rcon)
 {
     uint32_t ret = 0;
@@ -690,7 +688,7 @@ void SetEncryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key)
     ekey[11] = ekey[10] ^ ekey[3];
 }
 
-void SetDecryptKey(CRYPT_AES_Key *ctx)
+static void ReverseRoundKey(CRYPT_AES_Key *ctx)
 {
     uint32_t i, j;
     uint32_t *dkey = ctx->key;
@@ -708,19 +706,19 @@ void SetDecryptKey(CRYPT_AES_Key *ctx)
 void SetDecryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key)
 {
     SetEncryptKey128(ctx, key);
-    SetDecryptKey(ctx);
+    ReverseRoundKey(ctx);
 }
 
 void SetDecryptKey192(CRYPT_AES_Key *ctx, const uint8_t *key)
 {
     SetEncryptKey192(ctx, key);
-    SetDecryptKey(ctx);
+    ReverseRoundKey(ctx);
 }
 
 void SetDecryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key)
 {
     SetEncryptKey256(ctx, key);
-    SetDecryptKey(ctx);
+    ReverseRoundKey(ctx);
 }
 
 #define AES_ROUND_INIT(in, r, enc)    \
