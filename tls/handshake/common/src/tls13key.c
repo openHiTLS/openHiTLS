@@ -27,6 +27,7 @@
 #include "hs_kx.h"
 #include "hs_common.h"
 #include "transcript_hash.h"
+#include "config_type.h"
 
 int32_t HS_TLS13DeriveSecret(CRYPT_KeyDeriveParameters *deriveInfo, bool isHashed, uint8_t *outSecret, uint32_t outLen)
 {
@@ -177,6 +178,52 @@ int32_t HS_TLS13DeriveNextStageSecret(HITLS_Lib_Ctx *libCtx, const char *attrNam
     return TLS13HkdfExtract(libCtx, attrName, &extractInput, outSecret, outLen);
 }
 
+int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen, uint32_t hashLen)
+{
+    KeyExchCtx *keyCtx = ctx->hsCtx->kxCtx;
+    if (keyCtx->peerPubkey == NULL) {
+        *preMasterSecretLen = hashLen;
+        return HITLS_SUCCESS;
+    }
+
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, ctx->negotiatedInfo.negotiatedGroup);
+    if (groupInfo == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16244, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "group info not found", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    if (!groupInfo->isKem) {
+        return SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+                keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
+                preMasterSecret, preMasterSecretLen);
+    }
+#ifdef HITLS_TLS_FEATURE_KEM
+    if (ctx->isClient) {
+        return SAL_CRYPT_KemDecapsulate(keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
+            preMasterSecret, preMasterSecretLen);
+    }
+    BSL_SAL_Free(keyCtx->ciphertext);
+    keyCtx->ciphertext = BSL_SAL_Calloc(1, groupInfo->ciphertextLen);
+    if (keyCtx->ciphertext == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16245, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ciphertext malloc fail", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    keyCtx->ciphertextLen = groupInfo->ciphertextLen;
+    return SAL_CRYPT_KemEncapsulate(ctx,
+        &(HITLS_KemEncapsulateParams){
+            .groupId = ctx->negotiatedInfo.negotiatedGroup,
+            .peerPubkey = keyCtx->peerPubkey,
+            .pubKeyLen = keyCtx->pubKeyLen,
+            .ciphertext = keyCtx->ciphertext,
+            .ciphertextLen = &keyCtx->ciphertextLen,
+            .sharedSecret = preMasterSecret,
+            .sharedSecretLen = preMasterSecretLen,
+        });
+#else
+    return HITLS_INTERNAL_EXCEPTION;
+#endif
+}
 /*
         Early Secret
              |
@@ -196,20 +243,11 @@ int32_t TLS13DeriveHandshakeSecret(TLS_Ctx *ctx)
     }
     uint8_t preMasterSecret[MAX_PRE_MASTER_SECRET_SIZE] = {0};
     uint32_t preMasterSecretLen = MAX_PRE_MASTER_SECRET_SIZE;
-    KeyExchCtx *keyCtx = ctx->hsCtx->kxCtx;
-    int32_t ret;
-    if (keyCtx->peerPubkey != NULL) {
-        ret = SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-            keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
-            preMasterSecret, &preMasterSecretLen);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16894, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "CalcEcdhSharedSecret fail", 0, 0, 0, 0);
-            return ret;
-        }
-    } else {
-        /* In psk-only mode, the key is an all-zero array of the hash length. */
-        preMasterSecretLen = hashLen;
+    int32_t ret = TLS13DeriveDheSecret(ctx, preMasterSecret, &preMasterSecretLen, hashLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16894, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "DeriveDheSecret fail", 0, 0, 0, 0);
+        return ret;
     }
     uint32_t handshakeSecretLen = hashLen;
     ret = HS_TLS13DeriveNextStageSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),

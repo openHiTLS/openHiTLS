@@ -17,7 +17,7 @@
 #define HITLS_CRYPT_H
 #include <stdint.h>
 #include "hitls_crypt_type.h"
-
+#include "hitls_crypt_reg.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -405,6 +405,34 @@ HITLS_CRYPT_Key *HITLS_CRYPT_DupKey(HITLS_CRYPT_Key *key);
  * @retval Other          Failed.
  */
 int32_t HITLS_CRYPT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen);
+
+/**
+ * @brief KEM-Encapsulate
+ *
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic algorithm
+ * @param config     [IN] TLS configuration
+ * @param params     [IN] KEM encapsulation parameters
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ */
+int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *config, HITLS_KemEncapsulateParams *params);
+
+/**
+ * @brief KEM-Decapsulate
+ *
+ * @param key [IN] Key handle
+ * @param ciphertext [IN] Ciphertext data
+ * @param ciphertextLen [IN] Ciphertext data length
+ * @param sharedSecret [OUT] Shared key
+ * @param sharedSecretLen [IN/OUT] IN: Maximum length of data padding OUT: length of the shared key
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ * @retval Other         failure
+ */
+int32_t HITLS_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
 
 #ifdef __cplusplus
 }

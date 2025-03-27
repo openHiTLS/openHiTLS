@@ -39,6 +39,7 @@
 #include "hs_verify.h"
 #include "pack_common.h"
 #include "pack_extensions.h"
+#include "config_type.h"
 
 #define EXTENSION_MSG(exMsgT, needP, packF) \
     .exMsgType = (exMsgT), \
@@ -992,8 +993,14 @@ static int32_t PackServerKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     if (kxCtx->peerPubkey == NULL) {
         return HITLS_SUCCESS;
     }
-    pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
-    if (pubKeyLen == 0u) {
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, ctx->negotiatedInfo.negotiatedGroup);
+    if (groupInfo == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16246, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "group info not found", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    pubKeyLen = groupInfo->isKem ? groupInfo->ciphertextLen : groupInfo->pubkeyLen;
+    if (pubKeyLen == 0u || (groupInfo->isKem && pubKeyLen != kxCtx->ciphertextLen)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15428, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "invalid keyShare length.", 0, 0, 0, 0);
@@ -1018,14 +1025,18 @@ static int32_t PackServerKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     offset += sizeof(uint16_t);
 
     uint32_t pubKeyUsedLen = 0;
-    /* Pack KeyExChange */
-    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyUsedLen);
-    if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15429, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "encode server keyShare key fail.", 0, 0, 0, 0);
-        return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+    if (groupInfo->isKem) {
+        (void)memcpy_s(&buf[offset], pubKeyLen, kxCtx->ciphertext, kxCtx->ciphertextLen);
+    } else {
+        ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyUsedLen);
+        if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
+            BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15429, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "encode server keyShare key fail.", 0, 0, 0, 0);
+            return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+        }
     }
+    /* Pack KeyExChange */
 
     ctx->hsCtx->extFlag.haveKeyShare = true;
     *usedLen = offset + pubKeyLen;

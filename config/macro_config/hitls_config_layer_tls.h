@@ -166,6 +166,9 @@
     #ifndef HITLS_TLS_FEATURE_CERT_MODE
         #define HITLS_TLS_FEATURE_CERT_MODE
     #endif
+    #ifndef HITLS_TLS_FEATURE_KEM
+        #define HITLS_TLS_FEATURE_KEM
+    #endif
 #endif /* HITLS_TLS_FEATURE */
 
 #ifdef HITLS_TLS_FEATURE_SESSION

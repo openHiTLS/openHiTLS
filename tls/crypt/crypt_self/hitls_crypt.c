@@ -631,15 +631,16 @@ int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const H
 
 #ifdef HITLS_CRYPTO_PKEY
 CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaId paraId)
+    CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaId paraId, bool isKem)
 {
     int32_t ret;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
 #else
     (void)libCtx;
     (void)attrName;
+    (void)isKem;
     pkey = CRYPT_EAL_PkeyNewCtx(algId);
 #endif
     if (pkey == NULL) {
@@ -677,7 +678,7 @@ CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_Lib_Ctx *libCtx, const char *at
     if (groupInfo == NULL) {
         return NULL;
     }
-    return GeneratePkeyByParaId(libCtx, attrName, groupInfo->algId, groupInfo->paraId);
+    return GeneratePkeyByParaId(libCtx, attrName, groupInfo->algId, groupInfo->paraId, groupInfo->isKem);
 #else
     (void)libCtx;
     (void)attrName;
@@ -881,7 +882,7 @@ HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
             break;
         }
     }
-    return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId);
+    return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId, false);
 }
 
 HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyByParameters(HITLS_Lib_Ctx *libCtx,
@@ -1191,5 +1192,62 @@ int32_t HITLS_CRYPT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t
 #endif
 }
 
+#ifdef HITLS_TLS_FEATURE_KEM
+int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *config, HITLS_KemEncapsulateParams *params)
+{
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(config, params->groupId);
+    if (groupInfo == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+        int32_t ret;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, groupInfo->algId, CRYPT_EAL_PKEY_KEM_OPERATE, attrName);
+#else
+    (void)libCtx;
+    (void)attrName;
+    pkey = CRYPT_EAL_PkeyNewCtx(groupInfo->algId);
+#endif
+    if (pkey == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16658, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PkeyNewCtx fail", 0, 0, 0, 0);
+        return HITLS_CRYPT_ERR_KEM_ENCAPSULATE;
+    }
+
+    if (groupInfo->paraId != CRYPT_PKEY_PARAID_MAX) {
+        ret = CRYPT_EAL_PkeySetParaById(pkey, groupInfo->paraId);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16659, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "PkeySetParaById fail", 0, 0, 0, 0);
+            CRYPT_EAL_PkeyFreeCtx(pkey);
+            return ret;
+        }
+    }
+    BSL_Param param[2] = { {0}, BSL_PARAM_END };
+    (void)BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, params->peerPubkey, params->pubKeyLen);
+    ret = CRYPT_EAL_PkeySetPubEx(pkey, param);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16660, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PkeySetPub fail", 0, 0, 0, 0);
+        CRYPT_EAL_PkeyFreeCtx(pkey);
+        return ret;
+    }
+
+    ret = CRYPT_EAL_PkeyEncaps(pkey, params->ciphertext, params->ciphertextLen, params->sharedSecret, params->sharedSecretLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16661, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PkeyEncaps fail", 0, 0, 0, 0);
+    }
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    return ret;
+}
+
+int32_t HITLS_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+{
+    return CRYPT_EAL_PkeyDecaps(key, (uint8_t *)(uintptr_t)ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
+}
+#endif /* HITLS_TLS_FEATURE_KEM */
 
 #endif /* HITLS_TLS_CALLBACK_CRYPT || HITLS_TLS_FEATURE_PROVIDER */
