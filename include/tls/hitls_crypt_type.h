@@ -279,6 +279,19 @@ typedef struct {
     uint32_t infoLen;           /* Extend the data length. */
 } HITLS_CRYPT_HkdfExpandInput;
 
+/**
+ * @ingroup hitls_crypt_reg
+ * @brief   Input parameters for KEM encapsulation
+ */
+typedef struct {
+    HITLS_NamedGroup groupId;      /**< Named group ID */
+    uint8_t *peerPubkey;           /**< Peer's public key */
+    uint32_t pubKeyLen;            /**< Length of peer's public key */
+    uint8_t *ciphertext;           /**< [OUT] Encapsulated ciphertext */
+    uint32_t *ciphertextLen;       /**< [IN/OUT] IN: Maximum ciphertext buffer length OUT: Actual ciphertext length */
+    uint8_t *sharedSecret;         /**< [OUT] Generated shared secret */
+    uint32_t *sharedSecretLen;     /**< [IN/OUT] IN: Maximum shared secret buffer length OUT: Actual shared secret length */
+} HITLS_KemEncapsulateParams;
 
 #ifdef __cplusplus
 }

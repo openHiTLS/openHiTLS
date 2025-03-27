@@ -1191,5 +1191,28 @@ int32_t HITLS_CRYPT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t
 #endif
 }
 
+#ifdef HITLS_TLS_FEATURE_KEM
+int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    HITLS_KemEncapsulateParams *params)
+{
+    (void)libCtx;
+    (void)attrName;
+    (void)params;
+    // todo:
+    return 0;
+}
+
+int32_t HITLS_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen)
+{
+    (void)key;
+    (void)ciphertext;
+    (void)ciphertextLen;
+    (void)sharedSecret;
+    (void)sharedSecretLen;
+    // todo:
+    return 0;
+}
+#endif /* HITLS_TLS_FEATURE_KEM */
 
 #endif /* HITLS_TLS_CALLBACK_CRYPT || HITLS_TLS_FEATURE_PROVIDER */

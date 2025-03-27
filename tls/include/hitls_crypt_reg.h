@@ -88,6 +88,31 @@ typedef int32_t (*CRYPT_GetEcdhEncodedPubKeyCallback)(HITLS_CRYPT_Key *key, uint
 typedef int32_t (*CRYPT_CalcEcdhSharedSecretCallback)(HITLS_CRYPT_Key *key, uint8_t *peerPubkey, uint32_t pubKeyLen,
     uint8_t *sharedSecret, uint32_t *sharedSecretLen);
 
+
+/**
+ * @ingroup hitls_crypt_reg
+ * @brief   KEM: Encapsulate a shared secret using peer's public key.
+ *
+ * @param   params [IN/OUT] Parameters for KEM encapsulation
+ *
+ * @retval 0 indicates success. Other values indicate failure.
+ */
+typedef int32_t (*CRYPT_KemEncapsulateCallback)(HITLS_KemEncapsulateParams *params);
+/**
+ * @ingroup hitls_crypt_reg
+ * @brief   KEM: Decapsulate the ciphertext to recover shared secret.
+ *
+ * @param   key [IN] Key handle
+ * @param   ciphertext [IN] Ciphertext buffer
+ * @param   ciphertextLen [IN] Ciphertext length
+ * @param   sharedSecret [OUT] Shared secret buffer
+ * @param   sharedSecretLen [IN/OUT] IN: Maximum length of the shared secret buffer OUT: Actual shared secret length
+ *
+ * @retval 0 indicates success. Other values indicate failure.
+ */
+typedef int32_t (*CRYPT_KemDecapsulateCallback)(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+
 /**
  * @ingroup hitls_crypt_reg
  * @brief   SM2 calculates the shared key based on the local key and peer public key.
@@ -457,6 +482,8 @@ typedef struct {
     CRYPT_CalcEcdhSharedSecretCallback calcEcdhSharedSecret;    /**< ECDH: calculate the shared key based on
                                                                            the local key and peer public key. */
     CRYPT_Sm2CalcEcdhSharedSecretCallback sm2CalEcdhSharedSecret;
+    CRYPT_KemEncapsulateCallback kemEncapsulate;                 /**< KEM: encapsulate a shared secret */
+    CRYPT_KemDecapsulateCallback kemDecapsulate;                 /**< KEM: decapsulate the ciphertext */
 } HITLS_CRYPT_EcdhMethod;
 
 /**
