@@ -43,16 +43,16 @@ target_link_directories(process
     ${openHiTLS_SRC}/platform/Secure_C/lib
 )
 
-target_link_libraries(process
-    tls_hlt
-    tls_frame
-    hitls_tls
-    hitls_pki
-    hitls_crypto
-    hitls_bsl
-    boundscheck
-    pthread
-    dl
-    sctp
-    rec_wrapper
-)
+set(PROCESS_LIBS tls_hlt tls_frame hitls_tls)
+
+if(ENABLE_PKI AND ${BUILD_PKI} GREATER -1)
+    list(APPEND PROCESS_LIBS hitls_pki)
+endif()
+
+list(APPEND PROCESS_LIBS hitls_crypto hitls_bsl boundscheck pthread dl rec_wrapper)
+
+if (ENABLE_UIO_SCTP)
+    list(APPEND PROCESS_LIBS sctp)
+endif()
+
+target_link_libraries(process ${PROCESS_LIBS})

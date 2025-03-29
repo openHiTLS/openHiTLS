@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_PKCS12
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_asn1.h"
@@ -22,6 +24,7 @@
 #include "crypt_encode.h"
 #include "hitls_pki_errno.h"
 
+#ifdef HITLS_PKI_PKCS12_PARSE
 /**
  * Data Content Type
  * Data ::= OCTET STRING
@@ -56,6 +59,7 @@ int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
     dataValue->dataLen = decodeLen;
     return HITLS_PKI_SUCCESS;
 }
+#endif
 
 /**
  * DigestInfo ::= SEQUENCE {
@@ -123,6 +127,7 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
     return HITLS_PKI_SUCCESS;
 }
 
+#ifdef HITLS_PKI_PKCS12_GEN
 int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
 {
     if (in == NULL || encode == NULL || encode->data != NULL || (in->data == NULL && in->dataLen != 0)) {
@@ -151,3 +156,5 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
     encode->dataLen = tmp.dataLen;
     return HITLS_PKI_SUCCESS;
 }
+#endif
+#endif // HITLS_PKI_PKCS12

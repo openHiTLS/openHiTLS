@@ -143,7 +143,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC001(int format, char *path, int expRawDataLen, in
     uint32_t rawDataLen = 0;
     ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_PKI_SUCCESS);
     if (isUseSm2UserId != 0) {
-        ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
+        ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VFY_SM2_USER_ID, g_sm2DefaultUserid,
             strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
     }
     ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
@@ -795,8 +795,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC001(int critical1, int maxPath, int crit
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
 
     // Set ext into attr
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0),
-              0);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0), 0);
 
     // Test: Encode and check
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), 0);

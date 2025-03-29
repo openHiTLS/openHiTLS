@@ -30,6 +30,7 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
 #include "crypt_eal_encode.h"
+#include "crypt_eal_encode_local.h"
 #include "crypt_encode.h"
 #include "crypt_util_rand.h"
 #include "bsl_obj_internal.h"

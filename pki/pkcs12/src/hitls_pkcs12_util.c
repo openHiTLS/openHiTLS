@@ -13,8 +13,12 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_PKCS12
 #include "bsl_sal.h"
+#ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
+#endif
 #include "securec.h"
 #include "hitls_pkcs12_local.h"
 #include "bsl_sal.h"
@@ -628,3 +632,4 @@ int32_t HITLS_PKCS12_CalMac(BSL_Buffer *output, BSL_Buffer *pwd, BSL_Buffer *ini
     output->dataLen = macSize;
     return ret;
 }
+#endif // HITLS_PKI_PKCS12

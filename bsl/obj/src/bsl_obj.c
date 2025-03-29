@@ -21,6 +21,7 @@
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
+#ifdef HITLS_BSL_HASH
 #include "bsl_hash.h"
 
 #define BSL_OBJ_HASH_BKT_SIZE 256u
@@ -30,6 +31,7 @@ BSL_HASH_Hash *g_oidHashTable = NULL;
 static BSL_SAL_ThreadLockHandle g_oidHashRwLock = NULL;
 
 static uint32_t g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
+#endif // HITLS_BSL_HASH
 
 BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\1\2", BSL_OID_GLOBAL}, "AES128-CBC", BSL_CID_AES128_CBC},
@@ -173,6 +175,7 @@ static const BslAsn1StrInfo g_asn1StrTab[] = {
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
 
+#ifdef HITLS_BSL_HASH
 static void FreeBslOidInfo(void *data)
 {
     if (data == NULL) {
@@ -200,6 +203,7 @@ static void InitOidHashTableOnce(void)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
     }
 }
+#endif // HITLS_BSL_HASH
 
 static int32_t GetOidIndex(int32_t inputCid)
 {
@@ -233,7 +237,9 @@ BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
             }
         }
     }
-
+#ifndef HITLS_BSL_HASH
+    return BSL_CID_UNKNOWN;
+#else
     if (g_oidHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return BSL_CID_UNKNOWN;
@@ -263,6 +269,7 @@ BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
 
     (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
     return cid;
+#endif // HITLS_BSL_HASH
 }
 
 BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
@@ -277,6 +284,9 @@ BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
     if (index != -1) {
         return &g_oidTable[index].strOid;
     }
+#ifndef HITLS_BSL_HASH
+    return NULL;
+#else
 
     /* Initialize hash table if needed */
     if (g_oidHashTable == NULL) {
@@ -299,8 +309,9 @@ BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
     }
-    
+
     return oidString;
+#endif // HITLS_BSL_HASH
 }
 
 const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
@@ -317,7 +328,9 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
             }
         }
     }
-
+#ifndef HITLS_BSL_HASH
+    return NULL;
+#else
     if (g_oidHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return NULL;
@@ -334,7 +347,7 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
     /* Since g_oidHashTable is keyed by cid, we need to iterate through all entries */
     BSL_HASH_Iterator iter = BSL_HASH_IterBegin(g_oidHashTable);
     BSL_HASH_Iterator end = BSL_HASH_IterEnd(g_oidHashTable);
-    
+
     while (iter != end) {
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
         if (oidInfo != NULL && oidInfo->strOid.octetLen == oid->octetLen &&
@@ -347,6 +360,7 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
 
     (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
     return oidName;
+#endif // HITLS_BSL_HASH
 }
 
 const BslAsn1StrInfo *BSL_OBJ_GetAsn1StrFromCid(BslCid cid)
@@ -360,6 +374,7 @@ const BslAsn1StrInfo *BSL_OBJ_GetAsn1StrFromCid(BslCid cid)
     return NULL;
 }
 
+#ifdef HITLS_BSL_HASH
 static int32_t BslOidStringCopy(const BslOidString *srcOidStr, BslOidString *oidString)
 {
     oidString->octs = BSL_SAL_Dump(srcOidStr->octs, srcOidStr->octetLen);
@@ -390,7 +405,7 @@ static int32_t IsOidCidInHashTable(int32_t cid)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    
+
     ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)cid, (uintptr_t *)&oidInfo);
     (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
     return ret;
@@ -504,4 +519,6 @@ void BSL_OBJ_FreeHashTable(void)
         g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
     }
 }
+#endif // HITLS_BSL_HASH
+
 #endif

@@ -31,7 +31,7 @@
 #include "stub_replace.h"
 #include "crypt_util_rand.h"
 
-#include "crypt_encode.h"
+#include "crypt_encode_internal.h"
 #include "crypt_eal_md.h"
 /* END_HEADER */
 
