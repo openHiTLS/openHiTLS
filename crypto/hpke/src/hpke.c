@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_HPKE)
-
+#include <stdio.h>
 #include <string.h>
 #include "securec.h"
 #include "crypt_eal_pkey.h"
@@ -63,6 +63,10 @@ struct CRYPT_EAL_HpkeCtx {
     uint32_t exporterSecretLen;
     uint32_t sharedSecretLen;
     uint64_t seq;                   // Message sequence number
+    uint8_t* psk;
+    uint32_t pskLen;
+    uint8_t* pskId;
+    uint32_t pskIdLen; 
     CRYPT_EAL_KdfCTX *kdfCtx;
     CRYPT_EAL_CipherCtx *cipherCtx;
     CRYPT_EAL_LibCtx *libCtx;
@@ -112,6 +116,7 @@ static HPKE_AeadAlgInfo g_hpkeAeadAlgInfo[] = {
     {CRYPT_AEAD_AES_128_GCM, 16, CRYPT_CIPHER_AES128_GCM},
     {CRYPT_AEAD_AES_256_GCM, 32, CRYPT_CIPHER_AES256_GCM},
     {CRYPT_AEAD_CHACHA20_POLY1305, 32, CRYPT_CIPHER_CHACHA20_POLY1305},
+    {CRYPT_AEAD_Export_Only, 32, CRYPT_CIPHER_AES128_GCM},
 };
 
 static int32_t HpkeCheckCipherSuite(const CRYPT_HPKE_CipherSuite *cipherSuite, uint8_t *kemIndex, uint8_t *kdfIndex,
@@ -176,34 +181,20 @@ static int32_t HpkeInitCipherSuite(CRYPT_EAL_HpkeCtx *ctx, CRYPT_HPKE_CipherSuit
     CRYPT_EAL_CipherCtx *cipherCtx = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
 
-#ifdef HITLS_CRYPTO_PROVIDER
     pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, g_hpkeKemAlgInfo[kemIndex].pkeyId, CRYPT_EAL_PKEY_EXCH_OPERATE,
         attrName);
-#else
-    (void)libCtx;
-    (void)attrName;
-    pkeyCtx = CRYPT_EAL_PkeyNewCtx(g_hpkeKemAlgInfo[kemIndex].pkeyId);
-#endif
     if (pkeyCtx == NULL) {
         ret = CRYPT_HPKE_FAILED_FETCH_PKEY;
         goto EXIT;
     }
 
-#ifdef HITLS_CRYPTO_PROVIDER
     kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
-#else
-    kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
-#endif
     if (kdfCtx == NULL) {
         ret = CRYPT_HPKE_FAILED_FETCH_KDF;
         goto EXIT;
     }
 
-#ifdef HITLS_CRYPTO_PROVIDER
     cipherCtx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, g_hpkeAeadAlgInfo[aeadIndex].cipherId, attrName);
-#else
-    cipherCtx = CRYPT_EAL_CipherNewCtx(g_hpkeAeadAlgInfo[aeadIndex].cipherId);
-#endif
     if (cipherCtx == NULL) {
         ret = CRYPT_HPKE_FAILED_FETCH_CIPHER;
         goto EXIT;
@@ -233,7 +224,7 @@ CRYPT_EAL_HpkeCtx *CRYPT_EAL_HpkeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *at
         return NULL;
     }
 
-    if (mode != CRYPT_HPKE_MODE_BASE) {
+    if (mode != CRYPT_HPKE_MODE_BASE && mode != CRYPT_HPKE_MODE_PSK && mode !=CRYPT_HPKE_MODE_AUTH && mode != CRYPT_HPKE_MODE_AUTH_PSK) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
     }
@@ -285,14 +276,7 @@ static int32_t HpkeCreatePkeyCtx(uint8_t kemIdex, CRYPT_EAL_PkeyCtx **pkeyCtx, C
     const char *attrName)
 {
     CRYPT_PKEY_AlgId algId = g_hpkeKemAlgInfo[kemIdex].pkeyId;
-    CRYPT_EAL_PkeyCtx *pkey = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
-#else
-    (void)libCtx;
-    (void)attrName;
-    pkey = CRYPT_EAL_PkeyNewCtx(algId);
-#endif
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
     if (pkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_HPKE_FAILED_FETCH_PKEY);
         return CRYPT_HPKE_FAILED_FETCH_PKEY;
@@ -612,10 +596,10 @@ static int32_t GetPubKeyData(CRYPT_EAL_PkeyCtx *pkey, uint8_t *out, uint32_t *ou
     return CRYPT_SUCCESS;
 }
 
-static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *priKey, CRYPT_EAL_PkeyCtx *pubKey,
+static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *priKey, CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx* otherKey,
     uint8_t *kemContext, uint32_t kemContextLen, uint8_t *sharedSecret, uint32_t sharedSecretLen)
 {
-    uint8_t dh[HPKE_KEM_DH_MAX_SHARED_KEY_LEN];
+    uint8_t dh[HPKE_KEM_DH_MAX_SHARED_KEY_LEN * 2];
     uint32_t dhLen = HPKE_KEM_DH_MAX_SHARED_KEY_LEN;
 
     int32_t ret = CRYPT_EAL_PkeyComputeShareKey(priKey, pubKey, dh, &dhLen);
@@ -623,6 +607,21 @@ static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx
         return ret;
     }
 
+    if(ctx->mode==CRYPT_HPKE_MODE_AUTH||ctx->mode==CRYPT_HPKE_MODE_AUTH_PSK){
+        uint8_t dh0[HPKE_KEM_DH_MAX_SHARED_KEY_LEN];
+        uint32_t dh0Len = HPKE_KEM_DH_MAX_SHARED_KEY_LEN;
+
+	if(ctx->role == CRYPT_HPKE_SENDER)
+            ret = CRYPT_EAL_PkeyComputeShareKey(otherKey, pubKey, dh0, &dh0Len);
+        if(ctx->role == CRYPT_HPKE_RECIPIENT)
+            ret = CRYPT_EAL_PkeyComputeShareKey(priKey,otherKey,  dh0, &dh0Len);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        (void)memcpy_s(dh+dhLen,dh0Len,dh0,dh0Len);
+        dhLen=dhLen+dh0Len;        
+    }
+    
     uint8_t suiteId[HPKE_KEM_SUITEID_LEN];
     HpkeGenerateKemSuiteId(ctx->kemIndex, suiteId, HPKE_KEM_SUITEID_LEN);
 
@@ -630,7 +629,7 @@ static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx
     uint32_t eaePrkLen = g_hpkeKemAlgInfo[ctx->kemIndex].hkdfExtractKeyLen;
     uint8_t eaePrk[HPKE_HKDF_MAX_EXTRACT_KEY_LEN];
 
-    HPKE_LabeledExtractParams extractParams = {macId, NULL, 0, (uint8_t *)"eae_prk", strlen("eae_prk"), dh, dhLen,
+    HPKE_LabeledExtractParams extractParams = {macId, NULL, 0, (uint8_t *)"eae_prk", strlen("eae_prk"), dh, dhLen, 
         suiteId, HPKE_KEM_SUITEID_LEN};
     ret = HpkeLabeledExtract(ctx->kdfCtx, &extractParams, eaePrk, eaePrkLen);
     BSL_SAL_CleanseData(dh, dhLen);
@@ -641,6 +640,7 @@ static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx
     HPKE_LabeledExpandParams expandParams = {macId, eaePrk, eaePrkLen, (uint8_t *)"shared_secret",
         strlen("shared_secret"), kemContext, kemContextLen, suiteId, HPKE_KEM_SUITEID_LEN};
     ret = HpkeLabeledExpand(ctx->kdfCtx, &expandParams, sharedSecret, sharedSecretLen);
+
     BSL_SAL_CleanseData(eaePrk, eaePrkLen);
     return ret;
 }
@@ -686,7 +686,7 @@ static int32_t HpkeEncap(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_
     (void)memcpy_s(kemContext, kemContextLen, enc, encLen);
     (void)memcpy_s(kemContext + encLen, pkRLen, pkR, pkRLen);
 
-    ret = HpkeComputeSharedSecret(ctx, pkeyS, pkeyR, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
+    ret = HpkeComputeSharedSecret(ctx, pkeyS, pkeyR, NULL, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
     if (ret == CRYPT_SUCCESS) {
         (void)memcpy_s(encapsulatedKey, *encapsulatedKeyLen, enc, encLen);
         *encapsulatedKeyLen = encLen;
@@ -697,6 +697,63 @@ EXIT:
     if (pkey == NULL) {
         CRYPT_EAL_PkeyFreeCtx(pkeyS);
     }
+    return ret;
+}
+
+static int32_t HpkeAuthEncap(CRYPT_EAL_HpkeCtx* ctx, CRYPT_EAL_PkeyCtx* pkeyE, CRYPT_EAL_PkeyCtx *pkeyS,uint8_t* pkR, uint32_t pkRLen, uint8_t* encapsulatedKey, 
+    uint32_t* encapsulatedKeyLen, uint8_t* sharedSecret, uint32_t sharedSecretLen)
+{
+    int32_t ret;
+    
+    if (pkeyE == NULL) {
+        CRYPT_HPKE_CipherSuite cipherSuite = {g_hpkeKemAlgInfo[ctx->kemIndex].hpkeKemId,
+            g_hpkeKdfAlgInfo[ctx->kdfIndex].hpkeKdfId, g_hpkeAeadAlgInfo[ctx->aeadIndex].hpkeAeadId};
+        ret = CRYPT_EAL_HpkeGenerateKeyPair(ctx->libCtx, ctx->attrName, cipherSuite, NULL, 0, &pkeyE);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    CRYPT_EAL_PkeyCtx* pkeyR = NULL;
+    uint8_t enc[HPKE_KEM_MAX_PUBLIC_KEY_LEN] = { 0 };
+    uint32_t encLen = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+    uint32_t kemContextLen = 0;
+    uint8_t* kemContext = NULL;
+
+    ret = GetPubKeyData(pkeyE, enc, &encLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    ret = HpkeCreatePubKey(ctx->kemIndex, pkR, pkRLen, &pkeyR, ctx->libCtx, ctx->attrName);
+    if (ret != CRYPT_SUCCESS){
+        goto EXIT;
+    }
+
+    uint8_t pkSm[HPKE_KEM_MAX_PUBLIC_KEY_LEN] = { 0 };
+    uint32_t pkSmLen = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+    ret = GetPubKeyData(pkeyS, pkSm, &pkSmLen);
+
+    //kemContext=enc||pkRm||pkSm
+    kemContextLen = encLen + pkRLen + pkSmLen;
+    kemContext = (uint8_t*)BSL_SAL_Malloc(kemContextLen);
+    if (kemContext == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
+    }
+    (void)memcpy_s(kemContext, kemContextLen, enc, encLen);
+    (void)memcpy_s(kemContext + encLen, pkRLen, pkR, pkRLen);
+    (void)memcpy_s(kemContext + encLen + pkRLen, pkSmLen, pkSm, pkSmLen);
+
+    ret = HpkeComputeSharedSecret(ctx, pkeyE, pkeyR, pkeyS, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
+    if (ret == CRYPT_SUCCESS) {
+        (void)memcpy_s(encapsulatedKey, *encapsulatedKeyLen, enc, encLen);
+        *encapsulatedKeyLen = encLen;
+    }
+EXIT:
+    BSL_SAL_FREE(kemContext);
+    CRYPT_EAL_PkeyFreeCtx(pkeyR);
+    //CRYPT_EAL_PkeyFreeCtx(pkeyE);
     return ret;
 }
 
@@ -783,7 +840,7 @@ static int32_t HpkeKeySchedule(CRYPT_EAL_HpkeCtx *ctx, uint8_t *sharedSecret, ui
 
     uint32_t contextLen;
     uint8_t *context = NULL;
-    int32_t ret = HpkeGenKeyScheduleCtx(ctx, info, infoLen, NULL, 0, suiteId, suiteIdLen, &context, &contextLen);
+    int32_t ret = HpkeGenKeyScheduleCtx(ctx, info, infoLen, ctx->pskId, ctx->pskIdLen, suiteId, suiteIdLen, &context, &contextLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -792,7 +849,7 @@ static int32_t HpkeKeySchedule(CRYPT_EAL_HpkeCtx *ctx, uint8_t *sharedSecret, ui
     uint8_t secret[HPKE_KEM_MAX_SHARED_KEY_LEN] = {0};
     uint32_t secretLen = g_hpkeKdfAlgInfo[ctx->kdfIndex].hkdfExtractKeyLen;
     HPKE_LabeledExtractParams extractparams = {macId, sharedSecret, sharedSecretLen, (uint8_t*)"secret",
-        strlen("secret"), NULL, 0, suiteId, suiteIdLen};
+        strlen("secret"), ctx->psk, ctx->pskLen, suiteId, suiteIdLen};
     HPKE_LabeledExpandParams expandParams = {macId, secret, secretLen, (uint8_t*)"key", strlen("key"), context,
         contextLen, suiteId, suiteIdLen};
 
@@ -806,18 +863,21 @@ static int32_t HpkeKeySchedule(CRYPT_EAL_HpkeCtx *ctx, uint8_t *sharedSecret, ui
         goto EXIT;
     }
 
-    ret = HpkeLabeledExpand(ctx->kdfCtx, &expandParams, ctx->symKey, ctx->symKeyLen);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
+    CRYPT_HPKE_AEAD_AlgId aeadId = g_hpkeAeadAlgInfo[ctx->aeadIndex].hpkeAeadId;
+    if(aeadId != CRYPT_AEAD_Export_Only){
+    	ret = HpkeLabeledExpand(ctx->kdfCtx, &expandParams, ctx->symKey, ctx->symKeyLen);
+    	if (ret != CRYPT_SUCCESS) {
+        	goto EXIT;
+    	}
 
-    expandParams.label = (uint8_t*)"base_nonce";
-    expandParams.labelLen = strlen("base_nonce");
-    ret = HpkeLabeledExpand(ctx->kdfCtx, &expandParams, ctx->baseNonce, ctx->baseNonceLen);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
+    	expandParams.label = (uint8_t*)"base_nonce";
+    	expandParams.labelLen = strlen("base_nonce");
+    	ret = HpkeLabeledExpand(ctx->kdfCtx, &expandParams, ctx->baseNonce, ctx->baseNonceLen);
+    	if (ret != CRYPT_SUCCESS) {
+        	goto EXIT;
+    	}
     }
-
+    
     expandParams.label = (uint8_t*)"exp";
     expandParams.labelLen = strlen("exp");
     ret = HpkeLabeledExpand(ctx->kdfCtx, &expandParams, ctx->exporterSecret, ctx->exporterSecretLen);
@@ -872,7 +932,7 @@ static int32_t HpkeCheckSenderParams(CRYPT_EAL_HpkeCtx *ctx, uint8_t *info, uint
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
+int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyCtx *pkeyS, uint8_t *info, uint32_t infoLen,
     uint8_t *pkR, uint32_t pkRLen, uint8_t *encapKey, uint32_t *encapKeyLen)
 {
     int32_t ret = HpkeCheckSenderParams(ctx, info, infoLen, pkR, pkRLen, encapKey, encapKeyLen);
@@ -887,7 +947,13 @@ int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pke
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = HpkeEncap(ctx, pkey, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    if(ctx->mode==CRYPT_HPKE_MODE_BASE||ctx->mode==CRYPT_HPKE_MODE_PSK){
+    	ret = HpkeEncap(ctx, pkey, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    }
+    else{
+        ret = HpkeAuthEncap(ctx, pkey, pkeyS, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    }
+    
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
         return ret;
@@ -1071,10 +1137,54 @@ static int32_t HpkeDecap(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_
     (void)memcpy_s(kemContext, kemContextLen, encKey, encKeyLen);
     (void)memcpy_s(kemContext + encKeyLen, pubKeyDataLen, pubKeyData, pubKeyDataLen);
 
-    ret = HpkeComputeSharedSecret(ctx, pkey, pkeyS, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
+    ret = HpkeComputeSharedSecret(ctx, pkey, pkeyS, NULL, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
+    BSL_SAL_FREE(kemContext);
+    return ret;
+}
+
+static int32_t HpkeAuthDecap(CRYPT_EAL_HpkeCtx* ctx, CRYPT_EAL_PkeyCtx* pkey, CRYPT_EAL_PkeyCtx* pkeyS, uint8_t* encKey, uint32_t encKeyLen, uint8_t* sharedSecret, uint32_t sharedSecretLen)
+{
+    CRYPT_EAL_PkeyCtx* pkeyE = NULL;
+    int32_t ret = HpkeCreatePubKey(ctx->kemIndex, encKey, encKeyLen, &pkeyE, ctx->libCtx, ctx->attrName);
+    if (ret != CRYPT_SUCCESS)
+        return ret;
+
+    uint8_t* kemContext = NULL;
+    uint32_t kemContextLen;
+    uint8_t pubKeyData[HPKE_KEM_MAX_PUBLIC_KEY_LEN];
+    uint32_t pubKeyDataLen = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+    ret = GetPubKeyData(pkey, pubKeyData, &pubKeyDataLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    uint8_t pkSmData[HPKE_KEM_MAX_PUBLIC_KEY_LEN];
+    uint32_t pkSmDataLen = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+    ret = GetPubKeyData(pkeyS, pkSmData, &pkSmDataLen);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+
+    //kemContext=enc||pkRm||pkSm
+    kemContextLen = encKeyLen + pubKeyDataLen + pkSmDataLen;
+    kemContext = (uint8_t*)BSL_SAL_Malloc(kemContextLen);
+    if (kemContext == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
+    }
+
+    (void)memcpy_s(kemContext, kemContextLen, encKey, encKeyLen);
+    (void)memcpy_s(kemContext + encKeyLen, pubKeyDataLen, pubKeyData, pubKeyDataLen);
+    (void)memcpy_s(kemContext + encKeyLen + pubKeyDataLen, pkSmDataLen, pkSmData, pkSmDataLen);
+    
+    ret = HpkeComputeSharedSecret(ctx, pkey, pkeyE, pkeyS, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyE);
     BSL_SAL_FREE(kemContext);
     return ret;
 }
@@ -1115,7 +1225,7 @@ static int32_t HpkeCheckRecipientParams(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCt
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
+int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyCtx* pkeyS, uint8_t *info, uint32_t infoLen,
     uint8_t *encapKey, uint32_t encapKeyLen)
 {
     int32_t ret = HpkeCheckRecipientParams(ctx, pkey, info, infoLen, encapKey, encapKeyLen);
@@ -1130,7 +1240,12 @@ int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = HpkeDecap(ctx, pkey, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    if(ctx->mode==CRYPT_HPKE_MODE_BASE||ctx->mode==CRYPT_HPKE_MODE_PSK) {
+    	ret = HpkeDecap(ctx, pkey, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    }
+    else {
+    	ret = HpkeAuthDecap(ctx, pkey, pkeyS, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
         return ret;
@@ -1375,13 +1490,7 @@ static int32_t HpkeDeriveKeyPair(uint8_t kemIndex, uint8_t *ikm, uint32_t ikmLen
     uint32_t skLen = g_hpkeKemAlgInfo[kemIndex].privateKeyLen;
     uint32_t counter = 0;
 
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
-#else
-    kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
-#endif
-
+    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
     if (kdfCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_HPKE_FAILED_FETCH_KDF);
         return CRYPT_HPKE_FAILED_FETCH_KDF;
@@ -1569,6 +1678,50 @@ int32_t CRYPT_EAL_HpkeSetSharedSecret(CRYPT_EAL_HpkeCtx *ctx, uint8_t *info, uin
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ctx->sharedSecretLen = buffLen;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_HpkeCheckPsk(CRYPT_EAL_HpkeCtx* ctx, uint8_t* psk, uint32_t pskLen, 
+    uint8_t* pskId, uint32_t pskIdLen)
+{
+    if (psk != NULL) 
+    {
+        if (ctx->mode == CRYPT_HPKE_MODE_BASE || ctx->mode == CRYPT_HPKE_MODE_AUTH)
+        {
+            BSL_ERR_PUSH_ERROR(CRYPT_HPKE_ERR_CALL);
+            return CRYPT_HPKE_ERR_CALL;
+        }
+        if (pskId == NULL)
+        {
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+            return CRYPT_NULL_INPUT;
+        }
+        if ((ctx->psk = BSL_SAL_Malloc(pskLen))== NULL)
+        {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        if ((ctx->pskId = BSL_SAL_Malloc(pskIdLen)) == NULL)
+        {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        ctx->pskLen = pskLen;
+        memcpy_s(ctx->psk, pskLen, psk, pskLen);
+        ctx->pskIdLen = pskIdLen;
+        memcpy_s(ctx->pskId, pskIdLen, pskId, pskIdLen);
+    }
+    else if (pskId != NULL)
+    {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    } 
+    else if (ctx->mode==CRYPT_HPKE_MODE_BASE||ctx->mode==CRYPT_HPKE_MODE_AUTH) 
+    {
+        BSL_ERR_PUSH_ERROR(CRYPT_HPKE_ERR_CALL);
+        return CRYPT_HPKE_ERR_CALL;
+    }
+    
     return CRYPT_SUCCESS;
 }
 
