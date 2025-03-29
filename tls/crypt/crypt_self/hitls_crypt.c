@@ -1193,25 +1193,58 @@ int32_t HITLS_CRYPT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t
 
 #ifdef HITLS_TLS_FEATURE_KEM
 int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    HITLS_KemEncapsulateParams *params)
+    const HITLS_Config *config, HITLS_KemEncapsulateParams *params)
 {
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(config, params->groupId);
+    if (groupInfo == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+        int32_t ret;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, groupInfo->algId, CRYPT_EAL_PKEY_KEM_OPERATE, attrName);
+#else
     (void)libCtx;
     (void)attrName;
-    (void)params;
-    // todo:
-    return 0;
+    pkey = CRYPT_EAL_PkeyNewCtx(groupInfo->algId);
+#endif
+    if (pkey == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16658, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PkeyNewCtx fail", 0, 0, 0, 0);
+        return HITLS_CRYPT_ERR_KEM_ENCAPSULATE;
+    }
+
+    if (groupInfo->paraId != CRYPT_PKEY_PARAID_MAX) {
+        ret = CRYPT_EAL_PkeySetParaById(pkey, groupInfo->paraId);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16659, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "PkeySetParaById fail", 0, 0, 0, 0);
+            CRYPT_EAL_PkeyFreeCtx(pkey);
+            return ret;
+        }
+    }
+    CRYPT_EAL_PkeyPub ek = { 0 };
+    ek.id = groupInfo->algId;
+    ek.key.kemEk.data = params->peerPubkey;
+    ek.key.kemEk.len = params->pubKeyLen;
+    // todo:CRYPT_EAL_PkeySetPubEX
+    ret = CRYPT_EAL_PkeySetPub(pkey, &ek);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16660, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PkeyGetPub fail", 0, 0, 0, 0);
+        CRYPT_EAL_PkeyFreeCtx(pkey);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyEncaps(pkey, params->ciphertext, params->ciphertextLen, params->sharedSecret, params->sharedSecretLen);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    return ret;
 }
 
 int32_t HITLS_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
     uint8_t *sharedSecret, uint32_t *sharedSecretLen)
 {
-    (void)key;
-    (void)ciphertext;
-    (void)ciphertextLen;
-    (void)sharedSecret;
-    (void)sharedSecretLen;
-    // todo:
-    return 0;
+    // todo: The ciphertext parameter in decapsulation interface should be const
+    return CRYPT_EAL_PkeyDecaps(key, (uint8_t *)(uintptr_t)ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
 }
 #endif /* HITLS_TLS_FEATURE_KEM */
 

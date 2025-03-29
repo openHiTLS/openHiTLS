@@ -208,7 +208,7 @@ int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *p
             "ciphertext malloc fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    return SAL_CRYPT_KemEncapsulate(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+    return SAL_CRYPT_KemEncapsulate(ctx,
         &(HITLS_KemEncapsulateParams){
             .groupId = ctx->negotiatedInfo.negotiatedGroup,
             .peerPubkey = keyCtx->peerPubkey,

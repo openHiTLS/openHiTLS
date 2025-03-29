@@ -409,11 +409,15 @@ int32_t HITLS_CRYPT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t
 /**
  * @brief KEM-Encapsulate
  *
- * @param params [IN] KEM encapsulation parameters
+ * @param libCtx     [IN] Library context, used to manage cryptographic operations
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic algorithm
+ * @param config     [IN] TLS configuration
+ * @param params     [IN] KEM encapsulation parameters
  *
  * @retval HITLS_SUCCESS succeeded.
  */
-int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_KemEncapsulateParams *params);
+int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
+    const HITLS_Config *config, HITLS_KemEncapsulateParams *params);
 
 /**
  * @brief KEM-Decapsulate
