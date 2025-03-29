@@ -39,6 +39,7 @@ typedef int32_t (*MdCopyCtx)(void *dst, void *src);
 typedef void* (*MdDupCtx)(const void *src);
 typedef void (*MdFreeCtx)(void *data);
 typedef int32_t (*MdCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
+typedef int32_t (*MdSqueeze)(void *data, uint8_t *out, uint32_t len);
 
 typedef struct {
     uint16_t blockSize; // Block size processed by the hash algorithm at a time, which is used with other algorithms.
@@ -52,6 +53,7 @@ typedef struct {
     MdDupCtx dupCtx;  // Dup the MD context.
     MdFreeCtx freeCtx;   // free md context
     MdCtrl ctrl;        // get/set md param
+    MdSqueeze squeeze;  // squeeze the MD context.
 } EAL_MdMethod;
 
 typedef struct {
@@ -66,6 +68,7 @@ typedef struct {
     MdDupCtx dupCtx;
     MdFreeCtx freeCtx;
     MdCtrl ctrl;
+    MdSqueeze squeeze;  // squeeze the MD context.
 } EAL_MdUnitaryMethod;
 
 typedef struct {
@@ -107,6 +110,13 @@ typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t data
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
+typedef int32_t (*PkeyEncapsulate)(const void *key, uint8_t *cipher, uint32_t *cipherLen,
+    uint8_t *share, uint32_t *shareLen);
+typedef int32_t (*PkeyDecapsulate)(const void *key, uint8_t *cipher, uint32_t cipherLen,
+    uint8_t *share, uint32_t *shareLen);
+
+typedef int32_t (*PkeyEncapsulateInit)(const void *key, const BSL_Param *params);
+typedef int32_t (*PkeyDecapsulateInit)(const void *key, const BSL_Param *params);
 typedef int32_t (*PkeyBlind)(void *pkey, int32_t mdAlgId, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyUnBlind)(const void *pkey, const uint8_t *input, uint32_t inputLen,
@@ -166,6 +176,10 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
+    PkeyEncapsulateInit encapsInit;        // Key encapsulation init.
+    PkeyDecapsulateInit decapsInit;        // Key decapsulation init.
+    PkeyEncapsulate encaps;                // Key encapsulation.
+    PkeyDecapsulate decaps;                // Key decapsulation.
     PkeyBlind blind;                        // msg blind
     PkeyUnBlind unBlind;                    // sig unBlind.
 } EAL_PkeyUnitaryMethod;
@@ -207,7 +221,7 @@ typedef struct {
     EncryptBlock encryptBlock;
     DecryptBlock decryptBlock;
     DeInitBlockCtx cipherDeInitCtx;
-    CipherCtrl CipherCtrl;
+    CipherCtrl cipherCtrl;
     uint8_t blockSize;
     uint16_t ctxSize;
     CRYPT_SYM_AlgId algId;
@@ -365,7 +379,7 @@ typedef struct {
 
 typedef struct {
     uint32_t type;
-    uint32_t methodId;
+    int32_t methodId;
     const void *method;
 } EAL_RandMethLookup;
 

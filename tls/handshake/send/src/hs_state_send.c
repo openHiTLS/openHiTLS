@@ -67,13 +67,10 @@ static int32_t Tls13SendKeyUpdateProcess(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t SendFinishedProcess(TLS_Ctx *ctx)
 {
-#ifdef HITLS_TLS_PROTO_DTLS12
-    uint32_t version = HS_GetVersion(ctx);
-#endif
 #ifdef HITLS_TLS_HOST_CLIENT
     if (ctx->isClient) {
 #ifdef HITLS_TLS_PROTO_DTLS12
-        if (version == HITLS_VERSION_DTLS12) {
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
             return DtlsClientSendFinishedProcess(ctx);
         }
 #endif
@@ -84,7 +81,7 @@ static int32_t SendFinishedProcess(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_HOST_CLIENT */
 #ifdef HITLS_TLS_HOST_SERVER
 #ifdef HITLS_TLS_PROTO_DTLS12
-    if (version == HITLS_VERSION_DTLS12) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         return DtlsServerSendFinishedProcess(ctx);
     }
 #endif
@@ -212,7 +209,7 @@ int32_t HS_SendMsgProcess(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
         case HITLS_VERSION_TLS12:
 #ifdef HITLS_TLS_PROTO_TLCP11
-        case HITLS_VERSION_TLCP11:
+        case HITLS_VERSION_TLCP_DTLCP11:
 #endif
             return ProcessSendHandshakeMsg(ctx);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */

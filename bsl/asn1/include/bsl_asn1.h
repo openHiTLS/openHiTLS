@@ -60,6 +60,7 @@ extern "C" {
 /* Custom types, use private class to prevent conflicts */
 #define BSL_ASN1_TAG_CHOICE (BSL_ASN1_CLASS_PRIVATE | 1)
 #define BSL_ASN1_TAG_ANY (BSL_ASN1_CLASS_PRIVATE | 2)
+#define BSL_ASN1_TAG_EMPTY 0x00 /* Empty tag, used to indicate that the tag is not encoded */
 
 /* The current value is flags, is used to guide asn1 encoding or decoding */
 #define BSL_ASN1_FLAG_OPTIONAL 1
@@ -116,7 +117,7 @@ typedef struct _BSL_ASN1_BitString {
  * @param data [IN] The data to be processed.
  * @param expVal [OUT] Output value.
  */
-typedef int32_t(*BSL_ASN1_DecTemplCallBack) (int32_t type, int32_t idx, void *data, void *expVal);
+typedef int32_t(*BSL_ASN1_DecTemplCallBack) (int32_t type, uint32_t idx, void *data, void *expVal);
 
 /**
  * @ingroup bsl_asn1

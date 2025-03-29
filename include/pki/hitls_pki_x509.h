@@ -34,6 +34,16 @@ typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
 HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void);
 
 /**
+ * @brief Create a new X509 store object using the provider mechanism
+ *
+ * @param libCtx [IN] Library context from CRYPT_EAL
+ * @param attrName [IN] Provider attribute name for capability matching
+ *
+ * @return HITLS_X509_STORE* Store object or NULL on failure
+ */
+HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_PKI_LibCtx *libCtx, const char *attrName);
+
+/**
  * @ingroup pki
  * @brief Release the StoreCtx.
  *
@@ -63,7 +73,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup pki

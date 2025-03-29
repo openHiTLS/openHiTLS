@@ -26,7 +26,7 @@
 #include "crypt_entropy.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 
@@ -163,7 +163,7 @@ ERR:
 }
 
 #ifdef HITLS_CRYPTO_DRBG_CTR
-static uint32_t GetAesKeyLen(int32_t id, uint32_t *keyLen)
+static int32_t GetAesKeyLen(int32_t id, uint32_t *keyLen)
 {
     switch (id) {
         case CRYPT_CIPHER_AES128_CTR:
@@ -241,10 +241,6 @@ static int32_t RandInitCheck(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod **seedMet
 DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
 {
     int32_t ret;
-    if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DRBG_PARAM_ERROR);
-        return NULL;
-    }
     CRYPT_RandSeedMethod seedMethArray = {0};
     CRYPT_RandSeedMethod *seedMeth = &seedMethArray;
     void *seedCtx = NULL;
@@ -334,10 +330,6 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
 {
     (void) param;
     int32_t ret;
-    if (person == NULL && persLen != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     CRYPT_Data entropy = {NULL, 0};
     CRYPT_Data nonce = {NULL, 0};
     CRYPT_Data pers = {(uint8_t *)(uintptr_t)person, persLen};

@@ -354,8 +354,8 @@ void SDV_ENCODE_GET_SIGN_LEN_API_TC001(void)
     // Overflow test
     ASSERT_EQ(CRYPT_EAL_GetSignEncodeLen(UINT32_MAX, 32, &maxLen), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_GetSignEncodeLen(32, UINT32_MAX, &maxLen), CRYPT_INVALID_ARG);
-    ASSERT_EQ(CRYPT_EAL_GetSignEncodeLen(UINT32_MAX - 1, 32, &maxLen), BSL_ASN1_ERR_LEN_OVERFFLOW);
-    ASSERT_EQ(CRYPT_EAL_GetSignEncodeLen(32, UINT32_MAX - 1, &maxLen), BSL_ASN1_ERR_LEN_OVERFFLOW);
+    ASSERT_EQ(CRYPT_EAL_GetSignEncodeLen(UINT32_MAX - 1, 32, &maxLen), BSL_ASN1_ERR_LEN_OVERFLOW);
+    ASSERT_EQ(CRYPT_EAL_GetSignEncodeLen(32, UINT32_MAX - 1, &maxLen), BSL_ASN1_ERR_LEN_OVERFLOW);
 
     // 1(tag) + 1(len) + 1(integer)
     // Indefinite form: 1(tag) + 1 + 1(lenNum) + 1(len)
@@ -388,7 +388,7 @@ void SDV_ENCODE_GET_SM2_ENC_LEN_API_TC001(void)
 
     // Overflow test
     ASSERT_EQ(CRYPT_EAL_GetSm2EncryptDataEncodeLen(UINT32_MAX - 1, UINT32_MAX - 1, 32, 32, &encodeLen),
-        BSL_ASN1_ERR_LEN_OVERFFLOW);
+        BSL_ASN1_ERR_LEN_OVERFLOW);
 
     ASSERT_EQ(CRYPT_EAL_GetSm2EncryptDataEncodeLen(1000, 1000, UINT32_MAX - 2000, 32, &encodeLen),
         CRYPT_ENCODE_ERR_SM2_ENCRYPT_DATA_LEN_OVERFLOW);

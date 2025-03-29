@@ -28,12 +28,12 @@ static void Test_MisSessionId(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     (void)bufSize;
     (void)user;
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
     FRAME_Msg frameMsg = { 0 };
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
@@ -58,7 +58,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_SESSIONID_MISS_TC001()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -103,12 +102,12 @@ static void Test_DiffServerKeyEx(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     (void)bufSize;
     (void)user;
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
     FRAME_Msg frameMsg = { 0 };
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_KEY_EXCHANGE);
@@ -176,6 +175,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLIENTKXCH_VERSIONERR_TC001(char *cipherSuite)
 {
     FRAME_Init();
     STUB_Init();
+    RegDefaultMemCallback();
     HITLS_Config *tlsConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
@@ -298,7 +298,6 @@ static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpec
     if (isSupportClientVerify) {
         ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, isSupportClientVerify) == 0);
     }
-
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     ASSERT_TRUE(clientConfig != NULL);
     ASSERT_TRUE(HLT_SetClientVerifySupport(clientConfig, isSupportClientVerify) == 0);
@@ -407,6 +406,7 @@ static void TEST_SendUnexpectCertificateMsg(void *msg, void *data)
     frameType->recordType = REC_TYPE_HANDSHAKE;
     frameType->handshakeType = CERTIFICATE;
     frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType->transportType = BSL_UIO_TCP;
     if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
         Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
     }
@@ -452,12 +452,14 @@ static void Test_ErrCertVerify(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     (void)bufSize;
     (void)user;
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType.transportType = BSL_UIO_TCP;
     FRAME_Msg frameMsg = { 0 };
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
+    frameMsg.transportType = BSL_UIO_TCP;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CERTIFICATE_VERIFY);
@@ -484,7 +486,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC005()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client;
@@ -524,7 +525,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_CERTFICATE_TC006()
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client;
@@ -632,11 +632,11 @@ static void Test_Finish_Len_TooLong(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len
     (void)bufSize;
     (void)user;
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     FRAME_Msg frameMsg = { 0 };
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(parseLen, *len);
@@ -659,11 +659,11 @@ static void Test_Finish_Len_TooLong_client(HITLS_Ctx *ctx, uint8_t *data, uint32
     (void)bufSize;
     (void)user;
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     FRAME_Msg frameMsg = { 0 };
     frameMsg.recType.data = REC_TYPE_HANDSHAKE;
     frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLCP11;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
     uint32_t parseLen = 0;
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(parseLen, *len);
@@ -695,7 +695,7 @@ void UT_TLS_TLCP_CONSISTENCY_ERROR_FINISH_001(void)
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
-    testInfo.version = HITLS_VERSION_TLCP11;
+    testInfo.version = HITLS_VERSION_TLCP_DTLCP11;
     testInfo.uioType = BSL_UIO_TCP;
     RecWrapper wrapper = {
         TRY_SEND_FINISH,
@@ -740,7 +740,7 @@ void UT_TLS_TLCP_CONSISTENCY_ERROR_FINISH_002(void)
     FRAME_Init();
 
     ResumeTestInfo testInfo = {0};
-    testInfo.version = HITLS_VERSION_TLCP11;
+    testInfo.version = HITLS_VERSION_TLCP_DTLCP11;
     testInfo.uioType = BSL_UIO_TCP;
     RecWrapper wrapper = {
         TRY_SEND_FINISH,
@@ -943,7 +943,7 @@ void UT_TLS_TLCP_CONSISTENCY_DISORDER_TC003(void)
 
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_HANDSHAKE;
     frameType.handshakeType = CLIENT_KEY_EXCHANGE;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
@@ -1445,7 +1445,7 @@ void UT_TLS_TLCP_CONSISTENCY_AMEND_APPDATA_TC001(char *cipherSuite, int isClient
     ASSERT_TRUE(recvLen != 0);
 
     uint32_t parseLen = 0;
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_APP;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);

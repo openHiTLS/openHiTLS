@@ -46,12 +46,17 @@ typedef struct {
         CRYPT_EccPub eccPub; /**< ECC public key structure */
         CRYPT_Curve25519Pub curve25519Pub; /**< ed25519/x25519 public key structure */
         CRYPT_PaillierPub paillierPub; /**< Paillier public key structure */
+        CRYPT_KemEncapsKey kemEk; /**< kem encaps key structure */
+        CRYPT_ElGamalPub elgamalPub; /**< Elgamal public key structure */
+        CRYPT_SlhDsaPub slhDsaPub; /**< SLH-DSA public key structure */
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
+#define CRYPT_EAL_PKEY_UNKNOWN_OPERATE  0
 #define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
 #define CRYPT_EAL_PKEY_EXCH_OPERATE     2
 #define CRYPT_EAL_PKEY_SIGN_OPERATE     4
+#define CRYPT_EAL_PKEY_KEM_OPERATE      8
 
 /**
  * @ingroup crypt_eal_pkey
@@ -67,6 +72,9 @@ typedef struct {
         CRYPT_EccPrv eccPrv; /**< ECC private key structure */
         CRYPT_Curve25519Prv curve25519Prv; /**< ed25519/x25519 private key structure */
         CRYPT_PaillierPrv paillierPrv; /**< Paillier private key structure */
+        CRYPT_KemDecapsKey kemDk; /**< kem decaps key structure */
+        CRYPT_ElGamalPrv elgamalPrv; /**< ElGamal private key structure */
+        CRYPT_SlhDsaPrv slhDsaPrv; /**< SLH-DSA private key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
 
@@ -84,6 +92,7 @@ typedef struct {
         CRYPT_DhPara  dhPara;  /**< DH Para structure */
         CRYPT_EccPara eccPara; /**< ECC Para structure */
         CRYPT_PaillierPara paillierPara; /**< Paillier Para structure */
+        CRYPT_ElGamalPara elgamalPara; /**< ElGamal Para structure */
     } para;                            /**<Para union of all algorithms */
 } CRYPT_EAL_PkeyPara;
 
@@ -226,6 +235,21 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
 
 /**
  * @ingroup crypt_eal_pkey
+ * @brief   Extended interface to set the public key.
+ *
+ * This function is an extended version of CRYPT_EAL_PkeySetPub, which allows passing additional parameters
+ * to meet more complex public key setting requirements.
+ *
+ * @param   pkey [OUT] Key pair structure for receiving key data
+ * @param   key  [IN] Public key data
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeySetPubEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param);
+
+/**
+ * @ingroup crypt_eal_pkey
  * @brief   Set the private key. The caller applies for and releases memory for the private key marked as "key".
  *
  * @param   pkey [OUT] Key pair structure for receiving key data
@@ -247,6 +271,21 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Extended interface to obtain the public key.
+ *
+ * This function is an extended version of CRYPT_EAL_PkeyGetPub, which allows passing parameters
+ * through the BSL_Param structure to meet more complex public key acquisition requirements.
+ *
+ * @param   pkey [IN] Key session
+ * @param   param [IN] parameters
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyGetPubEx(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -566,6 +605,62 @@ typedef bool (*CRYPT_EAL_Pct)(CRYPT_EAL_PkeyCtx *pkey);
  *          For other error codes see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeyUpRef(CRYPT_EAL_PkeyCtx *pkey);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Initialize asymmetric key encapsulation context
+ *
+ * @param pkey [in] Pointer to the key context
+ * @param params [in] Algorithm parameters
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyEncapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *params);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Initialize asymmetric key decapsulation context
+ *
+ * @param pkey [in] Pointer to the key context
+ * @param params [in] Algorithm parameters
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyDecapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *params);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Perform key encapsulation operation
+ *
+ * @param pkey [in] Initialized key context
+ * @param cipher [out] Output buffer for encapsulated ciphertext
+ * @param cipherLen [in,out] Input: buffer capacity, Output: actual ciphertext length
+ * @param sharekey [out] Output buffer for shared secret
+ * @param shareKeyLen [in,out] Input: buffer capacity, Output: actual secret length
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyEncaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uint32_t *cipherLen, uint8_t *sharekey,
+    uint32_t *shareKeyLen);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief Perform key decapsulation operation
+ *
+ * @param pkey [in] Initialized key context
+ * @param cipher [in] Input encapsulated ciphertext
+ * @param cipherLen [in] Length of the input ciphertext
+ * @param sharekey [out] Output buffer for shared secret
+ * @param shareKeyLen [in,out] Input: buffer capacity, Output: actual secret length
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyDecaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uint32_t cipherLen, uint8_t *sharekey,
+    uint32_t *shareKeyLen);
 
 #ifdef __cplusplus
 }

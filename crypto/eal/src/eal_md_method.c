@@ -44,7 +44,7 @@
         (MdNewCtx)CRYPT_##name##_NewCtx,  (MdInit)CRYPT_##name##_Init,            \
         (MdUpdate)CRYPT_##name##_Update,  (MdFinal)CRYPT_##name##_Final,          \
         (MdDeinit)CRYPT_##name##_Deinit,  (MdCopyCtx)CRYPT_##name##_CopyCtx,      \
-        (MdDupCtx)CRYPT_##name##_DupCtx,  (MdFreeCtx)CRYPT_##name##_FreeCtx, NULL \
+        (MdDupCtx)CRYPT_##name##_DupCtx,  (MdFreeCtx)CRYPT_##name##_FreeCtx, NULL, NULL \
     }
 
 #ifdef HITLS_CRYPTO_MD5
@@ -70,8 +70,22 @@ CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_224);
 CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_256);
 CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_384);
 CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_512);
-CRYPT_MD_IMPL_METHOD_DECLARE(SHAKE128);
-CRYPT_MD_IMPL_METHOD_DECLARE(SHAKE256);
+EAL_MdMethod g_mdMethod_SHAKE128 = {
+    CRYPT_SHAKE128_BLOCKSIZE,         CRYPT_SHAKE128_DIGESTSIZE,
+    (MdNewCtx)CRYPT_SHAKE128_NewCtx,  (MdInit)CRYPT_SHAKE128_Init,
+    (MdUpdate)CRYPT_SHAKE128_Update,  (MdFinal)CRYPT_SHAKE128_Final,
+    (MdDeinit)CRYPT_SHAKE128_Deinit,  (MdCopyCtx)CRYPT_SHAKE128_CopyCtx,
+    (MdDupCtx)CRYPT_SHAKE128_DupCtx,  (MdFreeCtx)CRYPT_SHAKE128_FreeCtx,
+    NULL, (MdSqueeze)CRYPT_SHAKE128_Squeeze
+};
+EAL_MdMethod g_mdMethod_SHAKE256 = {
+    CRYPT_SHAKE256_BLOCKSIZE,         CRYPT_SHAKE256_DIGESTSIZE,
+    (MdNewCtx)CRYPT_SHAKE256_NewCtx,  (MdInit)CRYPT_SHAKE256_Init,
+    (MdUpdate)CRYPT_SHAKE256_Update,  (MdFinal)CRYPT_SHAKE256_Final,
+    (MdDeinit)CRYPT_SHAKE256_Deinit,  (MdCopyCtx)CRYPT_SHAKE256_CopyCtx,
+    (MdDupCtx)CRYPT_SHAKE256_DupCtx,  (MdFreeCtx)CRYPT_SHAKE256_FreeCtx,
+    NULL, (MdSqueeze)CRYPT_SHAKE256_Squeeze
+};
 #endif
 #ifdef HITLS_CRYPTO_SM3
 CRYPT_MD_IMPL_METHOD_DECLARE(SM3);

@@ -28,13 +28,21 @@
 
 bool SAL_CERT_MgrIsEnable(void)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    return true;
+#else
     HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
     return (method->certStoreNew != NULL);
+#endif
 }
 
 CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
 {
-    HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
+    return SAL_CERT_MgrCtxProviderNew(NULL, NULL);
+}
+
+CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
     CERT_MgrCtx *newCtx = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
@@ -42,51 +50,31 @@ CERT_MgrCtx *SAL_CERT_MgrCtxNew(void)
             "new cert manager context error: out of memory.", 0, 0, 0, 0);
         return NULL;
     }
-    newCtx->currentCertIndex = TLS_CERT_KEY_TYPE_UNKNOWN;
-    newCtx->verifyParam.verifyDepth = TLS_DEFAULT_VERIFY_DEPTH;
-    (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), method, sizeof(HITLS_CERT_MgrMethod));
+    newCtx->currentCertKeyType = TLS_CERT_KEY_TYPE_UNKNOWN;
+    newCtx->certPairs = BSL_HASH_Create(CERT_DEFAULT_HASH_BKT_SIZE, NULL, NULL, NULL, NULL);
+    if (newCtx->certPairs == NULL) {
+        BSL_SAL_FREE(newCtx);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17338, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "new cert manager context error: new certPairs failed.", 0, 0, 0, 0);
+        return NULL;
+    }
 
+    newCtx->verifyParam.verifyDepth = TLS_DEFAULT_VERIFY_DEPTH;
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
+    (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), method, sizeof(HITLS_CERT_MgrMethod));
+#endif
     newCtx->certStore = SAL_CERT_StoreNew(newCtx);
     if (newCtx->certStore == NULL) {
+        BSL_HASH_Destory(newCtx->certPairs);
         BSL_SAL_FREE(newCtx);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15016, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "new cert manager context error: new store failed.", 0, 0, 0, 0);
         return NULL;
     }
+    newCtx->libCtx = libCtx;
+    newCtx->attrName = attrName;
     return newCtx;
-}
-
-static int32_t CertResourceDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx)
-{
-    CERT_Pair *destCertPair = NULL;
-    CERT_Pair *srcCertPair = NULL;
-    for (uint32_t i = 0; i < TLS_CERT_KEY_TYPE_NUM; i++) {
-        destCertPair = &(destMgrCtx->certPair[i]);
-        srcCertPair = &(srcMgrCtx->certPair[i]);
-        if (srcCertPair->cert != NULL) {
-            destCertPair->cert = SAL_CERT_X509Dup(srcMgrCtx, srcCertPair->cert);
-            if (destCertPair->cert == NULL) {
-                /* releasing resources at the call point */
-                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_X509_DUP, BINLOG_ID16088, "X509Dup fail");
-            }
-        }
-        if (srcCertPair->privateKey != NULL) {
-            destCertPair->privateKey = SAL_CERT_KeyDup(srcMgrCtx, srcCertPair->privateKey);
-            if (destCertPair->privateKey == NULL) {
-                /* releasing resources at the call point */
-                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_KEY_DUP, BINLOG_ID16089, "KeyDup fail");
-            }
-        }
-        if (srcCertPair->chain != NULL) {
-            destCertPair->chain = SAL_CERT_ChainDup(srcMgrCtx, srcCertPair->chain);
-            if (destCertPair->chain == NULL) {
-                BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_CHAIN_DUP);
-                /* releasing resources at the call point */
-                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_CHAIN_DUP, BINLOG_ID15019, "ChainDup fail");
-            }
-        }
-    }
-    return HITLS_SUCCESS;
 }
 
 int32_t StoreDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx)
@@ -133,13 +121,13 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
             "dup cert manager context error: out of memory.", 0, 0, 0, 0);
         return NULL;
     }
-
+#ifndef HITLS_TLS_FEATURE_PROVIDER
     (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), &mgrCtx->method, sizeof(HITLS_CERT_MgrMethod));
-
-    ret = CertResourceDup(newCtx, mgrCtx);
+#endif
+    ret = SAL_CERT_HashDup(newCtx, mgrCtx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16283, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "CertResourceDup fail, ret %d", ret, 0, 0, 0);
+            "SAL_CERT_HashDup fail, ret %d", ret, 0, 0, 0);
         SAL_CERT_MgrCtxFree(newCtx);
         return NULL;
     }
@@ -162,13 +150,15 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
         return NULL;
     }
 
-    newCtx->currentCertIndex = mgrCtx->currentCertIndex;
+    newCtx->currentCertKeyType = mgrCtx->currentCertKeyType;
     (void)memcpy_s(&newCtx->verifyParam, sizeof(HITLS_CertVerifyParam),
         &mgrCtx->verifyParam, sizeof(HITLS_CertVerifyParam));
     newCtx->defaultPasswdCb = mgrCtx->defaultPasswdCb;
     newCtx->defaultPasswdCbUserData = mgrCtx->defaultPasswdCbUserData;
     newCtx->verifyCb = mgrCtx->verifyCb;
 
+    newCtx->libCtx = LIBCTX_FROM_CERT_MGR_CTX(mgrCtx);
+    newCtx->attrName = ATTRIBUTE_FROM_CERT_MGR_CTX(mgrCtx);
     return newCtx;
 }
 
@@ -186,6 +176,8 @@ void SAL_CERT_MgrCtxFree(CERT_MgrCtx *mgrCtx)
     mgrCtx->chainStore = NULL;
     SAL_CERT_StoreFree(mgrCtx, mgrCtx->certStore);
     mgrCtx->certStore = NULL;
+    BSL_HASH_Destory(mgrCtx->certPairs);
+    mgrCtx->certPairs = NULL;
     BSL_SAL_FREE(mgrCtx);
     return;
 }

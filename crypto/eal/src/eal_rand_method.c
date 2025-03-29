@@ -29,7 +29,7 @@
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #include "crypt_drbg.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #ifdef HITLS_CRYPTO_MD
 #include "eal_md_local.h"
 #endif
@@ -39,7 +39,6 @@
 #ifdef HITLS_CRYPTO_CIPHER
 #include "eal_cipher_local.h"
 #endif
-#include "crypt_modes.h"
 
 static EAL_RandUnitaryMethod g_randMethod = {
     .newCtx = (RandNewCtx)DRBG_New,

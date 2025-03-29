@@ -23,6 +23,8 @@
 #define HITLS_CERT_TYPE_H
 
 #include <stdint.h>
+#include "bsl_obj.h"
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,6 +87,7 @@ typedef enum {
     CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE,      /**< Is it digital signature permission. */
     CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE,     /**< Is the certificate issuing permission. */
     CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE,     /**< Is it the certificate verification permission. */
+    CERT_KEY_CTRL_GET_PARAM_ID,               /**< Obtain the parameter ID. */
 
     CERT_CTRL_BUTT,
 } HITLS_CERT_CtrlCmd;
@@ -104,11 +107,11 @@ typedef enum {
  * @brief   Read data format
  */
 typedef enum {
-    TLS_PARSE_FORMAT_PEM,        /**< PEM format */
-    TLS_PARSE_FORMAT_ASN1,       /**< ASN1 format */
-    TLS_PARSE_FORMAT_PFX_COM,    /**< PFX COM format */
-    TLS_PARSE_FORMAT_PKCS12,     /**< PKCS12 format */
-    TLS_PARSE_FORMAT_BUTT,
+    TLS_PARSE_FORMAT_PEM = BSL_FORMAT_PEM,        /**< PEM format */
+    TLS_PARSE_FORMAT_ASN1 = BSL_FORMAT_ASN1,       /**< ASN1 format */
+    TLS_PARSE_FORMAT_PFX_COM = BSL_FORMAT_PFX_COM,    /**< PFX COM format */
+    TLS_PARSE_FORMAT_PKCS12 = BSL_FORMAT_PKCS12,     /**< PKCS12 format */
+    TLS_PARSE_FORMAT_BUTT = BSL_FORMAT_UNKNOWN,
 } HITLS_ParseFormat;
 
 /**
@@ -127,16 +130,13 @@ typedef enum {
  * @brief   Certificate Public Key Type
  */
 typedef enum {
-    TLS_CERT_KEY_TYPE_RSA,
-    TLS_CERT_KEY_TYPE_RSA_PSS,
-    TLS_CERT_KEY_TYPE_DSA,
-    TLS_CERT_KEY_TYPE_ECDSA,
-    TLS_CERT_KEY_TYPE_ED25519,
-    TLS_CERT_KEY_TYPE_ED448,
-    TLS_CERT_KEY_TYPE_SM2 = 9, /**<  9 is sign type, 10 is enc type */
-    TLS_CERT_KEY_TYPE_ENC_SM2 = 10,
-    TLS_CERT_KEY_TYPE_NUM = 11,
-    TLS_CERT_KEY_TYPE_UNKNOWN = 255
+    TLS_CERT_KEY_TYPE_UNKNOWN = BSL_CID_UNKNOWN,
+    TLS_CERT_KEY_TYPE_RSA = BSL_CID_RSA,
+    TLS_CERT_KEY_TYPE_RSA_PSS = BSL_CID_RSASSAPSS,
+    TLS_CERT_KEY_TYPE_DSA = BSL_CID_DSA,
+    TLS_CERT_KEY_TYPE_ECDSA = BSL_CID_ECDSA,
+    TLS_CERT_KEY_TYPE_ED25519 = BSL_CID_ED25519,
+    TLS_CERT_KEY_TYPE_SM2 = BSL_CID_SM2
 } HITLS_CERT_KeyType;
 
 /**

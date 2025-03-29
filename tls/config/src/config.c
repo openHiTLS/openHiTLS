@@ -81,6 +81,21 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->pointFormats);
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->signAlgorithms);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    for (uint32_t i = 0; i < config->groupInfolen; i++) {
+        BSL_SAL_FREE(config->groupInfo[i].name);
+    }
+    BSL_SAL_FREE(config->groupInfo);
+    config->groupInfoSize = 0;
+    config->groupInfolen = 0;
+    for (uint32_t i = 0; i < config->sigSchemeInfolen; i++) {
+        BSL_SAL_FREE(config->sigSchemeInfo[i].name);
+    }
+    BSL_SAL_FREE(config->sigSchemeInfo);
+    config->sigSchemeInfoSize = 0;
+    config->sigSchemeInfolen = 0;
+#endif
+
 #if defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_TLS_FEATURE_PSK)
     BSL_SAL_FREE(config->pskIdentityHint);
 #endif
@@ -115,6 +130,8 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
      * Other parameters except CipherSuite, PointFormats, Group, SignAlgorithms, Psk, SessionId, CertMgr, and SessMgr
      * are shallowly copied, and some of them reference globalConfig.
      */
+    destConfig->libCtx = LIBCTX_FROM_CONFIG(srcConfig);
+    destConfig->attrName = ATTRIBUTE_FROM_CONFIG(srcConfig);
     destConfig->minVersion = srcConfig->minVersion;
     destConfig->maxVersion = srcConfig->maxVersion;
     destConfig->isQuietShutdown = srcConfig->isQuietShutdown;
@@ -233,6 +250,27 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
         }
         destConfig->groupsSize = srcConfig->groupsSize;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (srcConfig->groupInfo != NULL) {
+        if (destConfig->groupInfo != NULL) {
+            BSL_SAL_FREE(destConfig->groupInfo->name);
+            BSL_SAL_FREE(destConfig->groupInfo);
+        }
+        destConfig->groupInfo= BSL_SAL_Calloc(srcConfig->groupInfolen, sizeof(TLS_GroupInfo));
+        if (destConfig->groupInfo == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        for (uint32_t i = 0; i < srcConfig->groupInfolen; i++) {
+            destConfig->groupInfo[i] = srcConfig->groupInfo[i];
+            destConfig->groupInfo[i].name = BSL_SAL_Dump(srcConfig->groupInfo[i].name, strlen(srcConfig->groupInfo[i].name) + 1);
+            if (destConfig->groupInfo[i].name == NULL) {
+                return HITLS_MEMALLOC_FAIL;
+            }
+        }
+        destConfig->groupInfoSize = srcConfig->groupInfolen;
+        destConfig->groupInfolen = srcConfig->groupInfolen;
+    }
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -261,6 +299,24 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
         }
         destConfig->signAlgorithmsSize = srcConfig->signAlgorithmsSize;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (srcConfig->sigSchemeInfo != NULL) {
+        BSL_SAL_FREE(destConfig->sigSchemeInfo);
+        destConfig->sigSchemeInfo = BSL_SAL_Calloc(srcConfig->sigSchemeInfolen, sizeof(TLS_SigSchemeInfo));
+        if (destConfig->sigSchemeInfo == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        for (uint32_t i = 0; i < srcConfig->sigSchemeInfolen; i++) {
+            destConfig->sigSchemeInfo[i] = srcConfig->sigSchemeInfo[i];
+            destConfig->sigSchemeInfo[i].name = BSL_SAL_Dump(srcConfig->sigSchemeInfo[i].name, strlen(srcConfig->sigSchemeInfo[i].name) + 1);
+            if (destConfig->sigSchemeInfo[i].name == NULL) {
+                return HITLS_MEMALLOC_FAIL;
+            }
+        }
+        destConfig->sigSchemeInfoSize = srcConfig->sigSchemeInfolen;
+        destConfig->sigSchemeInfolen = srcConfig->sigSchemeInfolen;
+    }
+#endif
     return HITLS_SUCCESS;
 }
 
@@ -503,13 +559,64 @@ HITLS_Config *CreateConfig(void)
 #ifdef HITLS_TLS_PROTO_DTLS12
 HITLS_Config *HITLS_CFG_NewDTLS12Config(void)
 {
+    return HITLS_CFG_ProviderNewDTLS12Config(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    /* Initialize the version */
     newConfig->version |= DTLS12_VERSION_BIT;   // Enable DTLS 1.2
-    if (DefaultConfig(HITLS_VERSION_DTLS12, newConfig) != HITLS_SUCCESS) {
+    if (DefaultConfig(libCtx, attrName, HITLS_VERSION_DTLS12, newConfig) != HITLS_SUCCESS) {
+        BSL_SAL_FREE(newConfig);
+        return NULL;
+    }
+    newConfig->originVersionMask = newConfig->version;
+    return newConfig;
+}
+
+#endif
+
+#ifdef HITLS_TLS_PROTO_DTLCP11
+HITLS_Config *HITLS_CFG_NewDTLCPConfig(void)
+{
+    return HITLS_CFG_ProviderNewDTLCPConfig(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewDTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
+    HITLS_Config *newConfig = CreateConfig();
+    if (newConfig == NULL) {
+        return NULL;
+    }
+    
+    newConfig->version |= DTLCP11_VERSION_BIT;   // Enable DTLCP 1.1
+    if (DefaultConfig(libCtx, attrName, HITLS_VERSION_TLCP_DTLCP11, newConfig) != HITLS_SUCCESS) {
+        BSL_SAL_FREE(newConfig);
+        return NULL;
+    }
+    newConfig->originVersionMask = newConfig->version;
+    return newConfig;
+}
+
+#endif
+
+#ifdef HITLS_TLS_PROTO_TLCP11
+HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
+{
+    return HITLS_CFG_ProviderNewTLCPConfig(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
+    HITLS_Config *newConfig = CreateConfig();
+    if (newConfig == NULL) {
+        return NULL;
+    }
+    newConfig->version |= TLCP11_VERSION_BIT;   // Enable TLCP 1.1
+    if (DefaultConfig(libCtx, attrName, HITLS_VERSION_TLCP_DTLCP11, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
@@ -518,23 +625,13 @@ HITLS_Config *HITLS_CFG_NewDTLS12Config(void)
 }
 #endif
 
-#ifdef HITLS_TLS_PROTO_TLCP11
-HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
-{
-    HITLS_Config *newConfig = CreateConfig();
-    if (newConfig == NULL) {
-        return NULL;
-    }
-    if (DefaultConfig(HITLS_VERSION_TLCP11, newConfig) != HITLS_SUCCESS) {
-        BSL_SAL_FREE(newConfig);
-        return NULL;
-    }
-    return newConfig;
-}
-#endif
-
 #ifdef HITLS_TLS_PROTO_TLS12
 HITLS_Config *HITLS_CFG_NewTLS12Config(void)
+{
+    return HITLS_CFG_ProviderNewTLS12Config(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewTLS12Config(HITLS_Lib_Ctx *libCtx, const char *attrName)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
@@ -542,7 +639,7 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void)
     }
     /* Initialize the version */
     newConfig->version |= TLS12_VERSION_BIT;   // Enable TLS 1.2
-    if (DefaultConfig(HITLS_VERSION_TLS12, newConfig) != HITLS_SUCCESS) {
+    if (DefaultConfig(libCtx, attrName, HITLS_VERSION_TLS12, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
@@ -554,12 +651,20 @@ HITLS_Config *HITLS_CFG_NewTLS12Config(void)
 #ifdef HITLS_TLS_PROTO_ALL
 HITLS_Config *HITLS_CFG_NewTLSConfig(void)
 {
+    return HITLS_CFG_ProviderNewTLSConfig(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewTLSConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    /* Initialize the version */
-    newConfig->version |= TLS_VERSION_MASK;       // Enable All Versions
+    newConfig->version |= TLS_VERSION_MASK;
+
+    newConfig->libCtx = libCtx;
+    newConfig->attrName = attrName;
+
     if (DefaultTlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
@@ -571,12 +676,20 @@ HITLS_Config *HITLS_CFG_NewTLSConfig(void)
 #ifdef HITLS_TLS_PROTO_DTLS
 HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
 {
+    return HITLS_CFG_ProviderNewDTLSConfig(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewDTLSConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    /* Initialize the version */
     newConfig->version |= DTLS_VERSION_MASK;      // Enable All Versions
+
+    newConfig->libCtx = libCtx;
+    newConfig->attrName = attrName;
+
     if (DefaultDtlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
@@ -584,6 +697,7 @@ HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
+
 #endif
 
 void HITLS_CFG_FreeConfig(HITLS_Config *config)
@@ -621,8 +735,9 @@ int32_t HITLS_CFG_UpRef(HITLS_Config *config)
 }
 
 #ifdef HITLS_TLS_PROTO_ALL
-static uint32_t MapVersion2VersionBit(uint32_t version)
+uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version)
 {
+    (void)isDatagram;
     uint32_t ret = 0;
     switch (version) {
         case HITLS_VERSION_TLS12:
@@ -630,6 +745,16 @@ static uint32_t MapVersion2VersionBit(uint32_t version)
             break;
         case HITLS_VERSION_TLS13:
             ret = TLS13_VERSION_BIT;
+            break;
+        case HITLS_VERSION_TLCP_DTLCP11:
+            if (isDatagram) {
+                ret = DTLCP11_VERSION_BIT;
+            } else {
+                ret = TLCP11_VERSION_BIT;
+            }
+            break;
+        case HITLS_VERSION_DTLS12:
+            ret = DTLS12_VERSION_BIT;
             break;
         default:
             break;
@@ -663,7 +788,7 @@ static int ChangeVersionMask(HITLS_Config *config, uint16_t minVersion, uint16_t
         }
 
         for (uint16_t version = minVersion; version <= maxVersion; version++) {
-            versionBit = MapVersion2VersionBit(version);
+            versionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(originVersionMask), version);
             versionMask |= versionBit;
         }
 
@@ -771,7 +896,7 @@ int32_t HITLS_CFG_SetVersionForbid(HITLS_Config *config, uint32_t noVersion)
     }
     // Now only DTLS1.2 is supported, so single version is not supported (disable to version 0)
     if ((config->originVersionMask & TLS_VERSION_MASK) == TLS_VERSION_MASK) {
-        uint32_t noVersionBit = MapVersion2VersionBit(noVersion);
+        uint32_t noVersionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(config->originVersionMask), noVersion);
         if ((config->version & (~noVersionBit)) == 0) {
             return HITLS_SUCCESS; // Not all is disabled but the return value is SUCCESS
         }
@@ -1887,5 +2012,49 @@ int32_t HITLS_CFG_GetEmptyRecordsNum(const HITLS_Config *config, uint32_t *empty
     }
     *emptyNum = config->emptyRecordsNum;
 
+    return HITLS_SUCCESS;
+}
+
+int32_t ConfigUpdateTlsConfigArray(uint16_t **destArray, uint32_t *destSize, const void *sourceArray,
+    uint32_t sourceLen, uint32_t versionBits, uint32_t (*getVersionBitsFn)(const void *, uint32_t),
+    uint16_t (*getItemIdFn)(const void *, uint32_t))
+{
+    if (destArray == NULL || destSize == NULL || sourceArray == NULL || sourceLen == 0 || 
+        getVersionBitsFn == NULL || getItemIdFn == NULL) {
+        return HITLS_INVALID_INPUT;
+    }
+
+    uint32_t size = 0;
+    uint16_t *tempItems = BSL_SAL_Calloc(sourceLen, sizeof(uint16_t));
+    if (tempItems == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    for (uint32_t i = 0; i < sourceLen; i++) {
+        if ((versionBits & getVersionBitsFn(sourceArray, i)) != 0) {
+            bool isDuplicate = false;
+            uint16_t itemId = getItemIdFn(sourceArray, i);
+            // Check if this item already exists
+            for (uint32_t j = 0; j < size; j++) {
+                if (tempItems[j] == itemId) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                tempItems[size] = itemId;
+                size++;
+            }
+        }
+    }
+
+    if (size == 0) {
+        BSL_SAL_Free(tempItems);
+        return HITLS_INVALID_INPUT;
+    }
+
+    BSL_SAL_FREE(*destArray);
+    *destArray = tempItems;
+    *destSize = size;
     return HITLS_SUCCESS;
 }

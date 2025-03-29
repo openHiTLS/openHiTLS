@@ -229,8 +229,7 @@ static int32_t PackSessionAndCookie(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 
 #ifdef HITLS_TLS_PROTO_DTLS12
     const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    uint16_t version = (tlsConfig->maxVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 : tlsConfig->maxVersion;
-    if (IS_DTLS_VERSION(version)) {
+    if (IS_SUPPORT_DATAGRAM(tlsConfig->originVersionMask)) {
         len = 0u;
         ret = PackClientCookie(ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize,
             &buf[offset], bufLen - offset, &len);

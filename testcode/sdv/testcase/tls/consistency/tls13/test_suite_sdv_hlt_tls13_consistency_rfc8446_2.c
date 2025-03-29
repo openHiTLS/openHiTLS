@@ -202,6 +202,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
     HLT_FD sockFd = {0};
+    int32_t serverConfigId = 0;
 
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
@@ -215,7 +216,6 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
     ASSERT_TRUE(remoteProcess != NULL);
 
     // Apply for the config context.
-    int32_t serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
     void *clientConfig = HLT_TlsNewCtx(TLS1_3);
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -224,6 +224,11 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, TLS1_3, false, NULL, NULL, NULL, 0, NULL);
+#else
+    serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, TLS1_3, false);
+#endif
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 

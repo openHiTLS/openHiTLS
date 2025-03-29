@@ -20,6 +20,7 @@
 
 #include "crypt_eal_provider.h"
 #include "crypt_eal_implprovider.h"
+#include "bsl_list.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,13 +31,24 @@ extern "C" {
 // Maximum length of provider name
 #define DEFAULT_PROVIDER_NAME_LEN_MAX 255
 
+struct EAL_LibCtx {
+    BslList *providers; // managing providers
+    BSL_SAL_ThreadLockHandle lock;
+    char *searchProviderPath;
+    void *drbg;
+};
+
 int32_t CRYPT_EAL_InitPreDefinedProviders(void);
 void CRYPT_EAL_FreePreDefinedProviders(void);
 
 int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx);
 
-int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* providerName);
+int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* providerName,
+    CRYPT_EAL_ProvMgrCtx **ctx);
+
+
+CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void);
 
 #ifdef __cplusplus
 }

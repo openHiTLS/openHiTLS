@@ -49,6 +49,15 @@
 #ifdef HITLS_CRYPTO_OFB
 #include "crypt_modes_ofb.h"
 #endif
+#ifdef HITLS_CRYPTO_AES
+#include "crypt_aes.h"
+#endif
+#ifdef HITLS_CRYPTO_SM4
+#include "crypt_sm4.h"
+#endif
+#ifdef HITLS_CRYPTO_CHACHA20
+#include "crypt_chacha20.h"
+#endif
 #include "eal_common.h"
 #include "bsl_sal.h"
 
@@ -285,6 +294,114 @@ int32_t EAL_FindCipher(CRYPT_CIPHER_AlgId id, const EAL_CipherMethod **modeMetho
         return CRYPT_EAL_ERR_ALGID;
     }
     return CRYPT_SUCCESS;
+}
+
+#ifdef HITLS_CRYPTO_AES
+static const EAL_SymMethod AES128_METHOD = {
+    (SetEncryptKey)CRYPT_AES_SetEncryptKey128,
+    (SetDecryptKey)CRYPT_AES_SetDecryptKey128,
+    (EncryptBlock)CRYPT_AES_Encrypt,
+    (DecryptBlock)CRYPT_AES_Decrypt,
+    (DeInitBlockCtx)CRYPT_AES_Clean,
+    NULL,
+    16,
+    sizeof(CRYPT_AES_Key),
+    CRYPT_SYM_AES128
+};
+
+static const EAL_SymMethod AES192_METHOD = {
+    (SetEncryptKey)CRYPT_AES_SetEncryptKey192,
+    (SetDecryptKey)CRYPT_AES_SetDecryptKey192,
+    (EncryptBlock)CRYPT_AES_Encrypt,
+    (DecryptBlock)CRYPT_AES_Decrypt,
+    (DeInitBlockCtx)CRYPT_AES_Clean,
+    NULL,
+    16,
+    sizeof(CRYPT_AES_Key),
+    CRYPT_SYM_AES192
+};
+
+static const EAL_SymMethod AES256_METHOD = {
+    (SetEncryptKey)CRYPT_AES_SetEncryptKey256,
+    (SetDecryptKey)CRYPT_AES_SetDecryptKey256,
+    (EncryptBlock)CRYPT_AES_Encrypt,
+    (DecryptBlock)CRYPT_AES_Decrypt,
+    (DeInitBlockCtx)CRYPT_AES_Clean,
+    NULL,
+    16,
+    sizeof(CRYPT_AES_Key),
+    CRYPT_SYM_AES256
+};
+#endif
+
+#ifdef HITLS_CRYPTO_CHACHA20
+static const EAL_SymMethod CHACHA20_METHOD = {
+    (SetEncryptKey)CRYPT_CHACHA20_SetKey,
+    (SetDecryptKey)CRYPT_CHACHA20_SetKey,
+    (EncryptBlock)CRYPT_CHACHA20_Update,
+    (DecryptBlock)CRYPT_CHACHA20_Update,
+    (DeInitBlockCtx)CRYPT_CHACHA20_Clean,
+    (CipherCtrl)CRYPT_CHACHA20_Ctrl,
+    1,
+    sizeof(CRYPT_CHACHA20_Ctx),
+    CRYPT_SYM_CHACHA20
+};
+#endif
+
+#ifdef HITLS_CRYPTO_SM4
+static const EAL_SymMethod SM4_METHOD = {
+    (SetEncryptKey)CRYPT_SM4_SetKey,
+    (SetDecryptKey)CRYPT_SM4_SetKey,
+    (EncryptBlock)CRYPT_SM4_Encrypt,
+    (DecryptBlock)CRYPT_SM4_Decrypt,
+    (DeInitBlockCtx)CRYPT_SM4_Clean,
+    NULL,
+    16,
+    sizeof(CRYPT_SM4_Ctx),
+    CRYPT_SYM_SM4
+};
+#endif
+
+const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
+{
+    switch (algId) {
+        case CRYPT_CIPHER_AES128_CBC:
+        case CRYPT_CIPHER_AES128_ECB:
+        case CRYPT_CIPHER_AES128_CTR:
+        case CRYPT_CIPHER_AES128_CCM:
+        case CRYPT_CIPHER_AES128_GCM:
+        case CRYPT_CIPHER_AES128_CFB:
+        case CRYPT_CIPHER_AES128_OFB:
+            return &AES128_METHOD;
+        case CRYPT_CIPHER_AES192_CBC:
+        case CRYPT_CIPHER_AES192_ECB:
+        case CRYPT_CIPHER_AES192_CTR:
+        case CRYPT_CIPHER_AES192_CCM:
+        case CRYPT_CIPHER_AES192_GCM:
+        case CRYPT_CIPHER_AES192_CFB:
+        case CRYPT_CIPHER_AES192_OFB:
+            return &AES192_METHOD;
+        case CRYPT_CIPHER_AES256_CBC:
+        case CRYPT_CIPHER_AES256_ECB:
+        case CRYPT_CIPHER_AES256_CTR:
+        case CRYPT_CIPHER_AES256_CCM:
+        case CRYPT_CIPHER_AES256_GCM:
+        case CRYPT_CIPHER_AES256_CFB:
+        case CRYPT_CIPHER_AES256_OFB:
+            return &AES256_METHOD;
+        case CRYPT_CIPHER_SM4_XTS:
+        case CRYPT_CIPHER_SM4_CBC:
+        case CRYPT_CIPHER_SM4_ECB:
+        case CRYPT_CIPHER_SM4_CTR:
+        case CRYPT_CIPHER_SM4_GCM:
+        case CRYPT_CIPHER_SM4_CFB:
+        case CRYPT_CIPHER_SM4_OFB:
+            return &SM4_METHOD;
+        case CRYPT_CIPHER_CHACHA20_POLY1305:
+            return &CHACHA20_METHOD;
+        default:
+            return NULL;
+    }
 }
 
 static CRYPT_CipherInfo g_cipherInfo[] = {

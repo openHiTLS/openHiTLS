@@ -150,6 +150,8 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/crypto/sm2/src
         ${openHiTLS_SRC}/crypto/paillier/include
         ${openHiTLS_SRC}/crypto/paillier/src
+        ${openHiTLS_SRC}/crypto/elgamal/include
+        ${openHiTLS_SRC}/crypto/elgamal/src
         ${openHiTLS_SRC}/crypto/encode/include
         ${openHiTLS_SRC}/bsl/err/include
         ${openHiTLS_SRC}/bsl/err/src
@@ -177,7 +179,6 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/pki/cms/include
         ${openHiTLS_SRC}/pki/x509_verify/include
         ${openHiTLS_SRC}/pki/print/include
-        ${openHiTLS_SRC}/auth/privpass_token/inlcude
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/include
         ${openHiTLS_SRC}/tls/handshake/common/include
@@ -196,6 +197,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/tls/crypt/crypt_self
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/parse/src
+        ${openHiTLS_SRC}/auth/privpass_token/include
         ${openHiTLS_SRC}/config/macro_config)
 
 add_library(TESTCASE_PRE ${TEST_SOURCE})

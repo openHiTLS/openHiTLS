@@ -47,6 +47,7 @@ static void EalMacCopyMethod(const EAL_MacMethod *src, EAL_MacUnitaryMethod *dst
     dst->freeCtx = src->freeCtx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
@@ -133,7 +134,7 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t 
 
     return macCtx;
 }
-
+#endif
 CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
 {
     int32_t ret;
@@ -357,11 +358,11 @@ int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_
     return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
 }
 
-int32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
+uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
 {
-    int32_t result = 0;
+    uint32_t result = 0;
     int32_t ret = CRYPT_EAL_MacCtrl((CRYPT_EAL_MacCtx *)(uintptr_t)ctx,
-        CRYPT_CTRL_GET_MACLEN, &result, sizeof(result));
+        CRYPT_CTRL_GET_MACLEN, &result, sizeof(uint32_t));
     return (ret == CRYPT_SUCCESS) ? result : 0;
 }
 

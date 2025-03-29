@@ -22,6 +22,7 @@
 #include "hitls_security.h"
 #include "tls.h"
 #include "security.h"
+#include "config_type.h"
 /* Number of security bits corresponding to the security level */
 static const int32_t g_minBits[] = {HITLS_SECURITY_LEVEL_ONE_SECBITS,
     HITLS_SECURITY_LEVEL_TWO_SECBITS,
@@ -36,66 +37,6 @@ int32_t SECURITY_GetSecbits(int32_t level)
         level = (level > HITLS_SECURITY_LEVEL_MAX) ? HITLS_SECURITY_LEVEL_MAX : level;
     }
     return g_minBits[level - 1];
-}
-
-static int32_t GetGroupSecbits(HITLS_NamedGroup groupId)
-{
-    switch (groupId) {
-        case HITLS_FF_DHE_2048:
-            return HITLS_SECURITY_LEVEL_TWO_SECBITS;
-        case HITLS_EC_GROUP_SECP256R1:
-        case HITLS_EC_GROUP_BRAINPOOLP256R1:
-        case HITLS_EC_GROUP_SM2:
-        case HITLS_EC_GROUP_CURVE25519:
-        case HITLS_FF_DHE_3072:
-        case HITLS_FF_DHE_4096:
-        case HITLS_FF_DHE_6144:
-            return HITLS_SECURITY_LEVEL_THREE_SECBITS;
-        case HITLS_EC_GROUP_SECP384R1:
-        case HITLS_EC_GROUP_BRAINPOOLP384R1:
-        case HITLS_FF_DHE_8192:
-            return HITLS_SECURITY_LEVEL_FOUR_SECBITS;
-        case HITLS_EC_GROUP_SECP521R1:
-        case HITLS_EC_GROUP_BRAINPOOLP512R1:
-            return HITLS_SECURITY_LEVEL_FIVE_SECBITS;
-        default:
-            return -1;
-    }
-}
-
-static int32_t GetSigalgSecbits(HITLS_SignHashAlgo signScheme)
-{
-    switch (signScheme) {
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA224:
-        case CERT_SIG_SCHEME_DSA_SHA224:
-        case CERT_SIG_SCHEME_ECDSA_SHA224:
-            return HITLS_SECURITY_LEVEL_TWO_SECBITS;
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA256:
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256:
-        case CERT_SIG_SCHEME_DSA_SHA256:
-        case CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256:
-        case CERT_SIG_SCHEME_ED25519:
-#ifdef HITLS_TLS_PROTO_TLCP11
-        case CERT_SIG_SCHEME_SM2_SM3:
-#endif
-            return HITLS_SECURITY_LEVEL_THREE_SECBITS;
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA384:
-        case CERT_SIG_SCHEME_DSA_SHA384:
-        case CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384:
-        case CERT_SIG_SCHEME_ED448:
-            return HITLS_SECURITY_LEVEL_FOUR_SECBITS;
-        case CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512:
-        case CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512:
-        case CERT_SIG_SCHEME_RSA_PKCS1_SHA512:
-        case CERT_SIG_SCHEME_DSA_SHA512:
-        case CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512:
-            return HITLS_SECURITY_LEVEL_FIVE_SECBITS;
-        default:
-            return -1;
-    }
 }
 
 static int32_t CheckCipherSuite(void *other, int32_t level)
@@ -147,12 +88,12 @@ static int32_t CheckVersion(int32_t id, int32_t level)
 #ifdef HITLS_TLS_PROTO_TLCP11
     /* If the level is greater than or equal to 1, SSL2.0, SSL3.0, TLS1.0, and TLS1.1 cannot be used. */
     if ((level >= HITLS_SECURITY_LEVEL_ONE) && ((uint32_t)id < HITLS_VERSION_TLS12) &&
-        ((uint32_t)id != HITLS_VERSION_TLCP11)) {
+        ((uint32_t)id != HITLS_VERSION_TLCP_DTLCP11)) {
         return SECURITY_ERR;
     }
     /* Level is greater than or equal to 4 and TLCP1.1 is prohibited because the security strength of the signature
      * algorithm CERT_SIG_SCHEME_SM2_SM3 is 128 bits. */
-    if ((level >= HITLS_SECURITY_LEVEL_FOUR) && ((uint32_t)id == HITLS_VERSION_TLCP11)) {
+    if ((level >= HITLS_SECURITY_LEVEL_FOUR) && ((uint32_t)id == HITLS_VERSION_TLCP_DTLCP11)) {
         return SECURITY_ERR;
     }
 #else
@@ -161,24 +102,6 @@ static int32_t CheckVersion(int32_t id, int32_t level)
         return SECURITY_ERR;
     }
 #endif
-    return SECURITY_SUCCESS;
-}
-
-static int32_t CheckGroup(int32_t id, int32_t level)
-{
-    int32_t secbits = GetGroupSecbits(id);
-    if (secbits < g_minBits[level - 1]) {
-        return SECURITY_ERR;
-    }
-    return SECURITY_SUCCESS;
-}
-
-static int32_t CheckSigalg(int32_t id, int32_t level)
-{
-    int32_t secbits = GetSigalgSecbits(id);
-    if (secbits < g_minBits[level - 1]) {
-        return SECURITY_ERR;
-    }
     return SECURITY_SUCCESS;
 }
 
@@ -199,6 +122,8 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     int32_t ret;
     int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
     int32_t minBits;
+    const TLS_GroupInfo *groupInfo = NULL;
+    const TLS_SigSchemeInfo *schemeInfo = NULL;
     if (ctx == NULL && config == NULL) {
         return SECURITY_ERR;
     } else if (config != NULL) {
@@ -232,13 +157,23 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
         case HITLS_SECURITY_SECOP_SIGALG_SHARED:
         case HITLS_SECURITY_SECOP_SIGALG_CHECK:
             /* Check the signature algorithm. */
-            ret = CheckSigalg(id, level);
+            schemeInfo = ConfigGetSignatureSchemeInfo(config, id);
+            if (schemeInfo != NULL && schemeInfo->secBits >= g_minBits[level - 1]) {
+                ret = SECURITY_SUCCESS;
+            } else {
+                ret = SECURITY_ERR;
+            }
             break;
         case HITLS_SECURITY_SECOP_CURVE_SUPPORTED:
         case HITLS_SECURITY_SECOP_CURVE_SHARED:
         case HITLS_SECURITY_SECOP_CURVE_CHECK:
             /* Check the group. */
-            ret = CheckGroup(id, level);
+            groupInfo = ConfigGetGroupInfo(config, id);
+            if (groupInfo != NULL && groupInfo->secBits >= g_minBits[level - 1]) {
+                ret = SECURITY_SUCCESS;
+            } else {
+                ret = SECURITY_ERR;
+            }
             break;
         case HITLS_SECURITY_SECOP_TICKET:
             /* Check the session ticket. */

@@ -120,6 +120,7 @@ enum CRYPT_ERROR {
     CRYPT_RSA_ERR_BSSA_PARAM,          /**< The parameter of bssa is invalid. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
+    CRYPT_EAL_BUFF_LEN_TOO_LONG,        /**< Insufficient buffer length. */
     CRYPT_EAL_ERR_ALGID,                /**< Incorrect algorithm ID. */
     CRYPT_EAL_ALG_NOT_SUPPORT,          /**< Algorithm not supported, algorithm behavior not supported. */
     CRYPT_EAL_ERR_NEW_PARA_FAIL,        /**< Failed to generate parameters. */
@@ -162,17 +163,17 @@ enum CRYPT_ERROR {
     CRYPT_DRBG_INVALID_LEN,             /**< Incorrect data length. */
     CRYPT_DRBG_PARAM_ERROR,             /**< Incorrect input parameter. */
 
-    CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,         /**< No public key. */
-    CRYPT_CURVE25519_NO_PRVKEY,                      /**< No private key. */
-    CRYPT_CURVE25519_KEYLEN_ERROR,                   /**< Incorrect key length. */
-    CRYPT_CURVE25519_SIGNLEN_ERROR,                  /**< Incorrect signature length. */
-    CRYPT_CURVE25519_HASH_METH_ERROR,                /**< Hash method is not SHA512. */
-    CRYPT_CURVE25519_VERIFY_FAIL,                    /**< Signature verification fails due to incorrect signature. */
-    CRYPT_CURVE25519_NO_HASH_METHOD,                 /**< Hash method not set. */
-    CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION,        /**< Unsupported mode of operation. */
-    CRYPT_CURVE25519_KEY_COMPUTE_FAILED,             /**< Failed to generate the shared key. */
-    CRYPT_CURVE25519_INVALID_PUBKEY,                 /**< Invalid public key. */
-    CRYPT_CURVE25519_PUBKEY_NOT_EQUAL,               /**< Public keys are not equal. */
+    CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,    /**< No public key. */
+    CRYPT_CURVE25519_NO_PRVKEY,                 /**< No private key. */
+    CRYPT_CURVE25519_KEYLEN_ERROR,              /**< Incorrect key length. */
+    CRYPT_CURVE25519_SIGNLEN_ERROR,             /**< Incorrect signature length. */
+    CRYPT_CURVE25519_HASH_METH_ERROR,           /**< Hash method is not SHA512. */
+    CRYPT_CURVE25519_VERIFY_FAIL,               /**< Signature verification fails due to incorrect signature. */
+    CRYPT_CURVE25519_NO_HASH_METHOD,            /**< Hash method not set. */
+    CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION,   /**< Unsupported mode of operation. */
+    CRYPT_CURVE25519_KEY_COMPUTE_FAILED,        /**< Failed to generate the shared key. */
+    CRYPT_CURVE25519_INVALID_PUBKEY,            /**< Invalid public key. */
+    CRYPT_CURVE25519_PUBKEY_NOT_EQUAL,          /**< Public keys are not equal. */
 
     CRYPT_SHA1_INPUT_OVERFLOW = 0x01080001,          /**< The length of the input data exceeds the
                                                            maximum processing range of SHA1. */
@@ -309,9 +310,12 @@ enum CRYPT_ERROR {
     CRYPT_ECC_PKEY_ERR_SIGN_LEN,                     /**< Invalid sign length  */
 
     CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL,                   /**< ECC public keys are not equal. */
+    CRYPT_ECC_INVERSE_INPUT_ZERO,                     /** Modulo inverse input is 0. */
+    CRYPT_ECC_POINT_MUL_ERR_K_LEN,                    /** The scalar length exceeds the curve specification
+                                                          when using the dot multiplication function */
 
     CRYPT_SHA3_OUT_BUFF_LEN_NOT_ENOUGH = 0x01140001,  /**< Insufficient buffer length for storing output results. */
-
+    CRYPT_SHA3_INVALID_STATE,                       /**< Invalid state. */
     CRYPT_ECDH_ERR_EMPTY_KEY = 0x01150001,            /**< Key is null. */
     CRYPT_ECDH_ERR_INVALID_COFACTOR,                  /**< Invalid cofactor value. */
 
@@ -396,7 +400,7 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
     CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
-    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When RSA is used for Ctrl. */
+    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When paillier is used for Ctrl. */
 
     CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01200001,     /**< Unexpected impl */
     CRYPT_PROVIDER_ERR_IMPL_NULL,
@@ -410,6 +414,29 @@ enum CRYPT_ERROR {
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
     CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
     CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
+    CRYPT_HPKE_FAILED_FETCH_PKEY,                        /**< Failed to fetch pkey. */
+    CRYPT_HPKE_FAILED_FETCH_KDF,                         /**< Failed to fetch kdf. */
+    
+    CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer length is insufficient. */
+    CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */
+    CRYPT_ELGAMAL_ERR_KEY_BITS,             /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_ELGAMAL_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_ELGAMAL_ERR_KEY_KBITS,             /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_KEY_BITS_KBITS,       /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_ENC_KBITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_ELGAMAL_ERR_DEC_KBITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_ELGAMAL_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
+    CRYPT_ELGAMAL_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When elgamal is used for Ctrl. */
+
+
+    CRYPT_SLHDSA_ERR_INVALID_ALGID = 0x01230001,         /**< The algorithm id is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_KEYLEN,                     /**< The key length is invalid. */
+    CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH,                 /**< The signature length is not enough. */
+    CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
+    CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
+    CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
 };
 #ifdef __cplusplus
 }

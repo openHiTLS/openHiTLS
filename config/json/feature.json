@@ -99,6 +99,7 @@
                         "dsa": {"deps": ["bn"]},
                         "dh": {"deps": ["bn"]},
                         "paillier": {"deps":["bn"]},
+                        "elgamal": {"deps":["bn"]},
                         "ecdh": {"deps": ["ecc"]},
                         "ecdsa": {"deps": ["ecc"]},
                         "curve25519": {
@@ -110,7 +111,8 @@
                             "sm2_sign": null,
                             "sm2_exch": null,
                             "deps": ["ecc", "sm3"]
-                        }
+                        },
+                        "slh_dsa": { "deps": ["sha3", "sha2"]}
                     },
                     "provider": null,
                     "bn": null
@@ -126,10 +128,11 @@
                     "ecc": {"ins_set":["x8664", "avx512"]}
                 },
                 "armv8": {
+                    "sha1": null,
+                    "sha2": null,
                     "sm3": null,
                     "aes": null,
                     "modes": null,
-                    "chacha20": null,
                     "sm4": null,
                     "ecc": null
                 }
@@ -151,8 +154,13 @@
                         "opts": ["proto"]
                     },
                     "callback": {
-                        "callback_cert": null,
+                        "feature_provider": null,
+                        "callback_sal" :null,
+                        "callback_cert": {
+                            "deps": ["callback_sal"]
+                        },
                         "callback_crypt": {
+                            "deps": ["callback_sal"],
                             "callback_crypt_hmac_primitives": null
                         }
                     },
@@ -545,7 +553,9 @@
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
                     "crypto/paillier/include",
-                    "crypto/provider/include"
+                    "crypto/elgamal/include",
+                    "crypto/provider/include",
+                    "crypto/slh_dsa/include"
                 ]
             },
             "ealinit": {
@@ -710,7 +720,7 @@
                     }
                 },
                 ".deps": ["bsl::sal"],
-                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include"]
+                ".include": ["crypto/sm4/include", "crypto/aes/include", "crypto/chacha20/include", "crypto/eal/src"]
             },
             "aes": {
                 ".features": ["aes"],
@@ -745,8 +755,7 @@
                 ".features": ["chacha20"],
                 ".srcs": {
                     "public": "crypto/chacha20/src/chacha20.c",
-                    "no_asm": "crypto/chacha20/src/chacha20block.c",
-                    "armv8": "crypto/chacha20/src/chacha20block.c"
+                    "no_asm": "crypto/chacha20/src/chacha20block.c"
                 },
                 ".deps": ["bsl::sal"]
             },
@@ -806,7 +815,7 @@
             "provider": {
                 ".features": ["provider"],
                 ".srcs": ["crypto/provider/src/mgr/*.c", "crypto/provider/src/default/*.c"],
-                ".deps": ["bsl::sal", "bsl::hash", "bsl::err"],
+                ".deps": ["bsl::sal", "bsl::hash", "bsl::err", "bsl::params"],
                 ".include": [
                     "crypto/provider/include",
                     "crypto/ealinit/include",
@@ -830,6 +839,8 @@
                     "crypto/ecc/include",
                     "crypto/hmac/include",
                     "crypto/paillier/include",
+                    "crypto/elgamal/include",
+                    "crypto/slh_dsa/include",
                     "crypto/drbg/include",
                     "crypto/modes/include",
                     "crypto/entropy/include",
@@ -883,7 +894,7 @@
                     "sha1", "sha224", "sha256", "sha384", "sha512",
                     "bn",
                     "drbg_hash", "drbg_hmac", "drbg_ctr",
-                    "rsa", "ed25519", "x25519"
+                    "rsa", "ed25519", "x25519", "slh_dsa"
                 ],
                 ".srcs": "crypto/util/*.c",
                 ".deps": ["platform::Secure_C"]
@@ -925,6 +936,18 @@
                 ".srcs": "crypto/paillier/src/*.c",
                 ".deps": ["crypto::bn"],
                 ".include": ["crypto/eal/src"]
+            },
+            "elgamal": {
+                ".features": ["elgamal"],
+                ".srcs": "crypto/elgamal/src/*.c",
+                ".deps": ["crypto::bn"],
+                ".include": ["crypto/eal/src"]
+            },
+            "slh_dsa": {
+                ".features": ["slh_dsa"],
+                ".srcs": "crypto/slh_dsa/src/*.c",
+                ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj", "bsl::asn1"],
+                ".include": ["crypto/eal/src"]
             }
         },
         "bsl":{
@@ -959,7 +982,7 @@
             "obj": {
                 ".features":["obj"],
                 ".srcs":"bsl/obj/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::hash"]
             },
             "base64": {
                 ".features": ["base64"],
@@ -1007,7 +1030,8 @@
             },
             "init": {
                 ".features": ["init"],
-                ".srcs": "bsl/init/*.c"
+                ".srcs": "bsl/init/*.c",
+                ".deps": ["bsl::obj"]
             }
         },
         "platform": {
@@ -1018,7 +1042,7 @@
             "cm": {
                 ".features": ["proto"],
                 ".srcs": "tls/cm/src/*.c",
-                ".deps": ["bsl::tlv", "tls::alert", "tls::handshake", "tls::ccs", "tls::app", "tls::config"],
+                ".deps": ["bsl::hash", "bsl::tlv", "tls::alert", "tls::handshake", "tls::ccs", "tls::app", "tls::config"],
                 ".include": [
                     "include",
                     "tls/handshake/include",
@@ -1031,20 +1055,25 @@
             "crypt": {
                 ".features": ["proto"],
                 ".srcs": "tls/crypt/crypt_adapt/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": [
+                    "tls/config/include",
+                    "tls/crypt/crypt_self"
+                ]
             },
             "crypt_self": {
                 ".features": ["proto"],
                 ".srcs": "tls/crypt/crypt_self/*.c",
                 ".deps": ["tls::crypt", "crypto::eal"],
                 ".include": [
-                    "include"
+                    "include",
+                    "tls/config/include"
                 ]
             },
             "cert": {
                 ".features": ["proto"],
                 ".srcs": "tls/cert/**/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal"],
                 ".include": [
                     "include",
                     "include/tls",
@@ -1053,13 +1082,15 @@
                     "bsl/asn1/include",
                     "pki/x509_cert/include",
                     "pki/x509_common/include",
-                    "tls/cert/hitls_x509_adapt"
+                    "tls/config/include",
+                    "tls/cert/include",
+                    "tls/cert/cert_adapt"
                 ]
             },
             "config": {
                 ".features": ["proto"],
                 ".srcs": "tls/config/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal", "tls::cert", "tls::crypt"],
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "tls::cert", "tls::crypt"],
                 ".include": [
                     "tls/record/include"
                 ]
@@ -1068,7 +1099,7 @@
             "record": {
                 ".features": ["proto"],
                 ".srcs": "tls/record/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::tlv", "bsl::uio", "tls::config", "tls::crypt"],
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "bsl::tlv", "bsl::uio", "tls::config", "tls::crypt"],
                 ".include": [
                     "tls/handshake/include",
                     "tls/handshake/common/include",
@@ -1113,7 +1144,7 @@
                     "tls/record/src",
                     "tls/alert/include"
                 ],
-                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
+                ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
             },
             "app": {
                 ".features": ["proto"],
@@ -1186,10 +1217,7 @@
             "privpass_token": {
                 ".features" : ["privpass_pubtoken"],
                 ".srcs" : "auth/privpass_token/src/*",
-                ".deps": ["platform::Secure_C", "bsl::sal"],
-                ".include": [
-                    "auth/privpass_token/inlcude"
-                ]
+                ".deps": ["platform::Secure_C", "bsl::sal"]
             }
         }
     }

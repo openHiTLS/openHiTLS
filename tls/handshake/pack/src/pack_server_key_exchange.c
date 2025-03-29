@@ -51,7 +51,7 @@ static int32_t SignKeyExchParams(TLS_Ctx *ctx, uint8_t *kxData, uint32_t kxDataL
     HITLS_SignHashAlgo signScheme = ctx->negotiatedInfo.signScheme;
     HITLS_SignAlgo signAlgo;
     HITLS_HashAlgo hashAlgo;
-    if (CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, signScheme, &signAlgo, &hashAlgo) != true) {
+    if (CFG_GetSignParamBySchemes(ctx, signScheme, &signAlgo, &hashAlgo) != true) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15496, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get sign parm fail.", 0, 0, 0, 0);
@@ -68,7 +68,7 @@ static int32_t SignKeyExchParams(TLS_Ctx *ctx, uint8_t *kxData, uint32_t kxDataL
         return HITLS_MEMALLOC_FAIL;
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP11)
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11)
 #endif /* HITLS_TLS_PROTO_TLCP11 */
     {
         if (ctx->negotiatedInfo.version >= HITLS_VERSION_TLS12) {
@@ -142,7 +142,7 @@ static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, uint8_t *buf, uint32_t bu
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
     HITLS_ECParameters *ecParam = &(kxCtx->keyExchParam.ecdh.curveParams);
-    uint32_t pubKeyLen = HS_GetNamedCurvePubkeyLen(ecParam->param.namedcurve);
+    uint32_t pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, ecParam->param.namedcurve);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15498, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -237,7 +237,7 @@ static int32_t PackServerKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
 
     HITLS_SignAlgo signAlgo;
     HITLS_HashAlgo hashAlgo;
-    if (!CFG_GetSignParamBySchemes(ctx->negotiatedInfo.version, ctx->negotiatedInfo.signScheme, &signAlgo, &hashAlgo)) {
+    if (!CFG_GetSignParamBySchemes(ctx, ctx->negotiatedInfo.signScheme, &signAlgo, &hashAlgo)) {
         BSL_SAL_FREE(data);
         BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PACK_SIGNATURE_ERR, BINLOG_ID16220, "get sign parm fail");

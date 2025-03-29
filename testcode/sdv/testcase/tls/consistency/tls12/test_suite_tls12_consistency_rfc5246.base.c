@@ -54,6 +54,7 @@
 #include "sctp_channel.h"
 #include "logger.h"
 #include "alert.h"
+#include "stub_crypt.h"
 
 #define PARSEMSGHEADER_LEN 13           /* Message header length */
 #define ILLEGAL_VALUE 0xFF              /* Invalid value */
@@ -489,4 +490,5 @@ void SetFrameType(FRAME_Type *frametype, uint16_t versionType, REC_Type recordTy
     frametype->recordType = recordType;
     frametype->handshakeType = handshakeType;
     frametype->keyExType = keyExType;
+    frametype->transportType = BSL_UIO_TCP;
 }

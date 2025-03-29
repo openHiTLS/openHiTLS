@@ -39,7 +39,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_RECORDTYPE_TC001(void)
 
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_CHANGE_CIPHER_SPEC;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
     ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType, &frameMsg) == HITLS_SUCCESS);
@@ -75,6 +75,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -100,7 +101,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_RECORDTYPE_TC002(void)
 
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_CHANGE_CIPHER_SPEC;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
     ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType, &frameMsg) == HITLS_SUCCESS);
@@ -136,6 +137,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -161,7 +163,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_RECORDTYPE_TC003(void)
 
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_HANDSHAKE;
     frameType.handshakeType = SERVER_HELLO;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
@@ -198,6 +200,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -308,7 +311,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_RECORDTYPE_TC005(void)
 
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
-    SetFrameType(&frameType, HITLS_VERSION_TLCP11, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
+    SetFrameType(&frameType, HITLS_VERSION_TLCP_DTLCP11, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
     ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType, &frameMsg) == HITLS_SUCCESS);
 
     /* Reassembly */
@@ -697,7 +700,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC001(int version)
 {
-    HITLS_CryptMethodInit();
+
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -771,7 +774,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC002(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -845,7 +847,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC003(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -976,7 +977,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC005(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -1046,7 +1046,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC006(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1122,7 +1121,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC007(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1203,7 +1201,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC008(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1284,7 +1281,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC009(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1366,7 +1362,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC010(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1446,7 +1441,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC011(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
@@ -1526,7 +1520,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC012(int version)
 {
-    HITLS_CryptMethodInit();
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -1613,7 +1606,7 @@ void UT_TLS_TLCP_CONSISTENCY_MSGLENGTH_TOOLONG_TC001(void)
     uint32_t parseLen = 0;
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_HANDSHAKE;
     frameType.handshakeType = CERTIFICATE;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
@@ -1646,6 +1639,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -1682,7 +1676,7 @@ void UT_TLS_TLCP_CONSISTENCY_MSGLENGTH_TOOLONG_TC002(void)
     uint32_t parseLen = 0;
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_HANDSHAKE;
     frameType.handshakeType = CERTIFICATE;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
@@ -1716,6 +1710,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -1746,7 +1741,7 @@ void UT_TLS_TLCP_CONSISTENCY_MSGLENGTH_TOOLONG_TC003(void)
 
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_CHANGE_CIPHER_SPEC;
     ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType, &frameMsg) == HITLS_SUCCESS);
 
@@ -1778,6 +1773,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -1808,7 +1804,7 @@ void UT_TLS_TLCP_CONSISTENCY_MSGLENGTH_TOOLONG_TC004(void)
 
     FRAME_Msg frameMsg1 = {0};
     FRAME_Type frameType1 = {0};
-    frameType1.versionType = HITLS_VERSION_TLCP11;
+    frameType1.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType1.recordType = REC_TYPE_CHANGE_CIPHER_SPEC;
     ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType1, &frameMsg1) == HITLS_SUCCESS);
 
@@ -1842,6 +1838,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -1957,7 +1954,7 @@ void UT_TLS_TLCP_CONSISTENCY_NONZERO_MESSAGELEN_TC001()
     ASSERT_TRUE(recvLen != 0);
 
     uint32_t parseLen = 0;
-    frameType.versionType = HITLS_VERSION_TLCP11;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
     frameType.recordType = REC_TYPE_HANDSHAKE;
     frameType.handshakeType = SERVER_HELLO_DONE;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
@@ -2045,6 +2042,7 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */
 
@@ -2108,5 +2106,6 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */

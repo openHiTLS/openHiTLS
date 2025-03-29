@@ -29,11 +29,6 @@
 #include "hitls.h"
 #include "frame_tls.h"
 #include "hitls_type.h"
-
-#include "bsl_log.h"
-#include "../../../../bsl/sal/include/sal_time.h"
-#include "../../../../bsl/sal/include/sal_file.h"
-#include "../../../../bsl/obj/include/bsl_obj_internal.h"
 /* END_HEADER */
 
 #define READ_BUF_LEN_18K (18 * 1024)
@@ -175,7 +170,7 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     HLT_Ctx_Config *serverCtxConfig = NULL;
     HLT_Ctx_Config *clientCtxConfig = NULL;
-    if (version == TLCP1_1) {
+    if (version == TLCP1_1 || version == DTLCP1_1) {
         serverCtxConfig = HLT_NewCtxConfigTLCP(NULL, "SERVER", false);
         clientCtxConfig = HLT_NewCtxConfigTLCP(NULL, "CLIENT", true);
     } else {
@@ -194,8 +189,7 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
-
-    if (version == TLCP1_1) {
+    if (version == TLCP1_1 || version == DTLCP1_1) {
         SetGMCert(serverCtxConfig, clientCtxConfig, cert);
     } else {
         SetCert(serverCtxConfig, cert);
@@ -264,7 +258,7 @@ void SDV_TLS_ECDSA_CIPHER_SUITE(void)
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_TLS_PSK_CIPHER_SUITE(void)         /* 获取PSK算法套件列表 */
+void SDV_TLS_PSK_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_PSK_Ciphersuite) / sizeof(HITLS_PSK_Ciphersuite[0]); i++)
     {
@@ -297,12 +291,15 @@ void SDV_TLS_ANON_CIPHER_SUITE(void)
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_TLS_GM_CIPHER_SUITE(void)          /* 依据国密算法套件列表HITLS_GM_Ciphersuite，以此执行测试 */
+void SDV_TLS_GM_CIPHER_SUITE(void)
 {
     for (uint16_t i = 0; i < sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]); i++) {
-        SUB_PROC_BEGIN(continue);                                           /* SUB_PROC_BEGIN 循环调用测试用例的开始 */
-        CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");           /* 测试函数，见本文第162行 */
-        SUB_PROC_END();                                                     /* SUB_PROC_END 循环调用测试用例的结束 */
+        SUB_PROC_BEGIN(continue);
+        CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+        if (IsEnableSctpAuth()) {
+            CONNECT(DTLCP1_1, SCTP, HITLS_GM_Ciphersuite[i], 0, "SM2");
+        }
+        SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]));
 }

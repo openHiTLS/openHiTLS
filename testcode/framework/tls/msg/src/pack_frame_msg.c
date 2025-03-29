@@ -63,8 +63,8 @@ int32_t GenClientHelloMandatoryCtx(TLS_Ctx *tlsCtx, FRAME_Msg *msg)
         tlsCtx->hsCtx->sessionIdSize = clientHello->sessionIdSize;
     }
 
-#ifndef HITLS_NO_DTLS12
-    if (IS_DTLS_VERSION(clientHello->version) && clientHello->cookieLen > 0) {
+#ifdef HITLS_TLS_PROTO_DTLS12
+    if (IS_SUPPORT_DATAGRAM(tlsConfig->originVersionMask) && clientHello->cookieLen > 0) {
         tlsCtx->negotiatedInfo.cookieSize = clientHello->cookieLen;
         tlsCtx->negotiatedInfo.cookie = (uint8_t *)BSL_SAL_Dump(clientHello->cookie, clientHello->cookieLen);
         if (tlsCtx->negotiatedInfo.cookie == NULL) {
@@ -408,8 +408,8 @@ int32_t PackRecordHeader(FRAME_Msg *msg)
     BSL_Uint16ToByte(msg->version, &msg->buffer[offset]);
     offset += sizeof(uint16_t);
 
-#ifndef HITLS_NO_DTLS12
-    if (IS_DTLS_VERSION(msg->version)) {
+#ifdef HITLS_TLS_PROTO_DTLS12
+    if (IS_TRANSTYPE_DATAGRAM(msg->transportType)) {
         BSL_Uint64ToByte(msg->epochSeq, &msg->buffer[offset]);
         offset += sizeof(uint64_t);
     }

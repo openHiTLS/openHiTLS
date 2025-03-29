@@ -25,8 +25,6 @@ extern "C" {
 
 typedef struct _HITLS_X509_Csr HITLS_X509_Csr;
 
-typedef struct _HITLS_X509_Attrs HITLS_X509_Attrs;
-
 /**
  * @ingroup pki
  * @brief Allocate a pkcs10 csr.
@@ -100,7 +98,7 @@ int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *p
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, int32_t valLen);
+int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t valLen);
 
 /**
  * @ingroup pki
@@ -136,21 +134,6 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr);
-
-/**
- * @ingroup pki
- * @brief Generic function to process attribute function
- *
- * @param attributes [IN] The attribute list
- * @param cmd [IN] HITLS_X509_AttrCmd
- * @param val                                               data type
- *        HITLS_X509_ATTR_XX_REQUESTED_EXTENSIONS         HITLS_X509_Ext
- * @param valLen  The length of value.
- * @retval #HITLS_PKI_SUCCESS, success.
- *         Error codes can be found in hitls_pki_errno.h
- */
-int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd, void *val, int32_t valLen);
-
 
 #ifdef __cplusplus
 }

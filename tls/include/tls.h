@@ -40,6 +40,10 @@ extern "C" {
 
 #define IS_DTLS_VERSION(version) (((version) & 0x8u) == 0x8u)
 
+#define IS_SUPPORT_STREAM(versionBits) (((versionBits) & STREAM_VERSION_BITS) != 0x0u)
+#define IS_SUPPORT_DATAGRAM(versionBits) (((versionBits) & DATAGRAM_VERSION_BITS) != 0x0u)
+#define IS_SUPPORT_TLCP(versionBits) (((versionBits) & TLCP_VERSION_BITS) != 0x0u)
+
 #define DTLS_COOKIE_LEN 255
 
 #define MAC_KEY_LEN 32u              /* the length of mac key */
@@ -290,6 +294,9 @@ struct TlsCtx {
     bool plainAlertForbid;                  /* tls1.3 forbid to receive plain alert message */
     bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
 };
+
+#define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
+#define ATTRIBUTE_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.attrName)
 
 #ifdef __cplusplus
 }

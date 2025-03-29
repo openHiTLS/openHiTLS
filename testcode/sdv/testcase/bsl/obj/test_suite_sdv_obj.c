@@ -57,3 +57,152 @@ EXIT:
 }
 
 /* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_CREATE_SIGN_ID_TC001
+ * @title Test BSL_OBJ_CreateSignId functionality
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001()
+{
+    BslCid signId = BSL_CID_MAX - 1;
+    BslCid asymId = BSL_CID_RSA;
+    BslCid hashId = BSL_CID_MAX - 2;
+
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
+
+    BslCid retrievedAsymId = BSL_OBJ_GetAsymIdFromSignId(signId);
+    ASSERT_EQ(asymId, retrievedAsymId);
+
+    BslCid retrievedHashId = BSL_OBJ_GetHashIdFromSignId(signId);
+    ASSERT_EQ(hashId, retrievedHashId);
+
+    BslCid retrievedSignId = BSL_OBJ_GetSignIdFromHashAndAsymId(asymId, hashId);
+    ASSERT_EQ(signId, retrievedSignId);
+
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
+    signId = BSL_CID_SHA256WITHRSAENCRYPTION;
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
+
+    ASSERT_EQ(BSL_OBJ_CreateSignId(BSL_CID_UNKNOWN, asymId, hashId), BSL_INVALID_ARG);
+
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, BSL_CID_UNKNOWN, hashId), BSL_INVALID_ARG);
+
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, BSL_CID_UNKNOWN), BSL_INVALID_ARG);
+
+    BSL_OBJ_FreeSignHashTable();
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_CREATE_TC001
+ * @title Test BSL_OBJ_Create functionality
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_CREATE_TC001()
+{
+    char *testOidName = "TEST-OID";
+    BslCid testCid = BSL_CID_MAX + 1;
+    char testOidData[] = "\52\206\110\206\367\15\1\11\30";
+    BslOidString testOid = {9, testOidData, BSL_OID_GLOBAL};
+
+    const char *aesOidName = "AES128-CBC";
+    BslCid aesCid = BSL_CID_AES128_CBC;
+    char aesOidData[] = "\140\206\110\1\145\3\4\1\2";
+    BslOidString aesOid = {9, aesOidData, BSL_OID_GLOBAL};
+
+    ASSERT_EQ(BSL_OBJ_Create(&aesOid, aesOidName, aesCid), BSL_SUCCESS);
+
+    ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, testCid), BSL_SUCCESS);
+
+    BslCid retrievedCid = BSL_OBJ_GetCIDFromOid(&testOid);
+    ASSERT_EQ(testCid, retrievedCid);
+
+    BslOidString *retrievedOid = BSL_OBJ_GetOidFromCID(testCid);
+    ASSERT_TRUE(retrievedOid != NULL);
+    ASSERT_EQ(testOid.octetLen, retrievedOid->octetLen);
+    ASSERT_EQ(memcmp(testOid.octs, retrievedOid->octs, testOid.octetLen), 0);
+
+    const char *retrievedName = BSL_OBJ_GetOidNameFromOid(&testOid);
+    ASSERT_TRUE(retrievedName != NULL);
+    ASSERT_EQ(strcmp(testOidName, retrievedName), 0);
+
+    ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, testCid), BSL_SUCCESS);
+
+    ASSERT_EQ(BSL_OBJ_Create(NULL, testOidName, testCid), BSL_INVALID_ARG);
+
+    ASSERT_EQ(BSL_OBJ_Create(&testOid, NULL, testCid), BSL_INVALID_ARG);
+
+    ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, BSL_CID_UNKNOWN), BSL_INVALID_ARG);
+    
+    BSL_OBJ_FreeHashTable();
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001
+ * @title Test hash table lookup functionality for OIDs and CIDs
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
+{
+    int32_t ret;
+    BslOidString testOid1, testOid2;
+    const char *testOidName1 = "TEST-OID-1";
+    const char *testOidName2 = "TEST-OID-2";
+    BslCid testCid1 = BSL_CID_MAX + 1;
+    BslCid testCid2 = BSL_CID_MAX + 2;
+
+    char testOidData1[] = "\52\206\110\206\367\15\1\11\31";
+    char testOidData2[] = "\52\206\110\206\367\15\1\11\32";
+
+    testOid1.octetLen = sizeof(testOidData1);
+    testOid1.octs = testOidData1;
+    testOid1.flags = BSL_OID_GLOBAL;
+    
+    testOid2.octetLen = sizeof(testOidData2);
+    testOid2.octs = testOidData2;
+    testOid2.flags = BSL_OID_GLOBAL;
+
+    ret = BSL_OBJ_Create(&testOid1, testOidName1, testCid1);
+    ASSERT_EQ(BSL_SUCCESS, ret);
+
+    ret = BSL_OBJ_Create(&testOid2, testOidName2, testCid2);
+    ASSERT_EQ(BSL_SUCCESS, ret);
+
+    BslCid retrievedCid1 = BSL_OBJ_GetCIDFromOid(&testOid1);
+    ASSERT_EQ(testCid1, retrievedCid1);
+
+    BslCid retrievedCid2 = BSL_OBJ_GetCIDFromOid(&testOid2);
+    ASSERT_EQ(testCid2, retrievedCid2);
+
+    BslOidString *retrievedOid1 = BSL_OBJ_GetOidFromCID(testCid1);
+    ASSERT_TRUE(retrievedOid1 != NULL);
+    ASSERT_EQ(testOid1.octetLen, retrievedOid1->octetLen);
+    ASSERT_EQ(memcmp(testOid1.octs, retrievedOid1->octs, testOid1.octetLen), 0);
+
+    BslOidString *retrievedOid2 = BSL_OBJ_GetOidFromCID(testCid2);
+    ASSERT_TRUE(retrievedOid2 != NULL);
+    ASSERT_EQ(testOid2.octetLen, retrievedOid2->octetLen);
+    ASSERT_EQ(memcmp(testOid2.octs, retrievedOid2->octs, testOid2.octetLen), 0);
+
+    const char *retrievedName1 = BSL_OBJ_GetOidNameFromOid(&testOid1);
+    ASSERT_TRUE(retrievedName1 != NULL);
+    ASSERT_EQ(strcmp(testOidName1, retrievedName1), 0);
+
+    const char *retrievedName2 = BSL_OBJ_GetOidNameFromOid(&testOid2);
+    ASSERT_TRUE(retrievedName2 != NULL);
+    ASSERT_EQ(strcmp(testOidName2, retrievedName2), 0);
+
+    BSL_OBJ_FreeHashTable();
+EXIT:
+    return;
+}
+/* END_CASE */

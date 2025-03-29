@@ -113,16 +113,19 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
                 return CRYPT_INVALID_ARG;
             }
             return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
+#ifdef HITLS_CRYPTO_X25519
         case CRYPT_CTRL_GEN_X25519_PUBLICKEY:
-            if (!(pkey->keyType & CURVE25519_PRVKEY)) {
+            if ((pkey->keyType & CURVE25519_PUBKEY) != 0) {
+                return CRYPT_SUCCESS;
+            }
+            if ((pkey->keyType & CURVE25519_PRVKEY) == 0) {
                 BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_NO_PRVKEY);
                 return CRYPT_CURVE25519_NO_PRVKEY;
             }
-            if ((pkey->keyType & CURVE25519_PRVKEY) && !(pkey->keyType & CURVE25519_PUBKEY)) {
-                CRYPT_X25519_PublicFromPrivate(pkey->prvKey, pkey->pubKey);
-                pkey->keyType |= CURVE25519_PUBKEY;
-            }
+            CRYPT_X25519_PublicFromPrivate(pkey->prvKey, pkey->pubKey);
+            pkey->keyType |= CURVE25519_PUBKEY;
             return CRYPT_SUCCESS;
+#endif
         default:
             break;
     }
@@ -151,7 +154,12 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // assume that the two scenarios will not coexist.
     const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+    }
+    
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -201,7 +209,11 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // assume that the two scenarios will not coexist.
     BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
+    if (pub == NULL) {
+        pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+    }
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

@@ -169,7 +169,8 @@
         "CC_DEFINE_FLAGS": [
             "-DHITLS_SIXTY_FOUR_BITS",
             "-DHITLS_THIRTY_TWO_BITS",
-            "-DHITLS_BSL_SAL_LINUX"
+            "-DHITLS_BSL_SAL_LINUX",
+            "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE"
         ],
         "CC_DEBUG_FLAGS": [
             "-g",
@@ -177,7 +178,6 @@
             "-gdwarf-2"
         ],
         "CC_USER_DEFINE_FLAGS": [
-            "-DHITLS_CRYPTO_DRBG_GM_LEVEL=n",
             "-DHITLS_EAL_INIT_OPTS=n"
         ]
     },

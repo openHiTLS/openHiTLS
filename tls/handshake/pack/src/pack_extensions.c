@@ -73,10 +73,10 @@ static bool IsNeedPreSharedKey(const TLS_Ctx *ctx)
     return true;
 }
 
-bool Tls13NeedPack(uint32_t version)
+bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
 {
     bool tls13NeedPack = false;
-    if (IS_DTLS_VERSION(version)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         tls13NeedPack = false;
     } else {
         tls13NeedPack = (version >= HITLS_VERSION_TLS13) ? true : false;
@@ -611,7 +611,7 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     }
     KeyShareParam *keyShare = &(kxCtx->keyExchParam.share);
 
-    uint32_t pubKeyLen = HS_GetNamedCurvePubkeyLen(keyShare->group);
+    uint32_t pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -786,7 +786,7 @@ static int32_t PackExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t *bufLen
 
 static bool IsNeedEms(const TLS_Ctx *ctx)
 {
-    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLCP11) {
+    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
         return false;
     }
     return true;
@@ -992,7 +992,7 @@ static int32_t PackServerKeyShare(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     if (kxCtx->peerPubkey == NULL) {
         return HITLS_SUCCESS;
     }
-    pubKeyLen = HS_GetNamedCurvePubkeyLen(keyShare->group);
+    pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15428, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -1169,7 +1169,7 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = HS_GetVersion(ctx);
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
-    bool isTls13 = Tls13NeedPack(version);
+    bool isTls13 = Tls13NeedPack(ctx, version);
 #endif /* HITLS_TLS_PROTO_TLS13 */
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;

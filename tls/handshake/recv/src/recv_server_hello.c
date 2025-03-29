@@ -484,7 +484,7 @@ static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHell
     uint16_t clientMaxVersion = ctx->config.tlsConfig.maxVersion;
     uint16_t serverVersion = serverHello->version;
 
-    if (IS_DTLS_VERSION(serverVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         if ((serverVersion > clientMinVersion) || (serverVersion < clientMaxVersion)) {
             /* The DTLS version selected by the server is too early and the negotiation cannot be continued */
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15267, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -680,7 +680,8 @@ int32_t ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         return ret;
     }
 
-    ret = VERIFY_SetHash(ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
+    ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17089, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "VERIFY_SetHash fail", 0, 0, 0, 0);
@@ -1025,7 +1026,7 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
 
     const KeyShare *keyShare = &serverHello->keyShare;
     uint32_t pubKeyLen = keyShare->keyExchangeSize;
-    if (keyShare->keyExchangeSize != HS_GetNamedCurvePubkeyLen(keyShare->group)) {
+    if (pubKeyLen != SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17326, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "invalid keyShare length [%d]", keyShare->keyExchangeSize, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -1168,7 +1169,8 @@ int32_t Tls13ProcessServerHello(TLS_Ctx *ctx, const HS_Msg *msg)
         return ret;
     }
 
-    ret = VERIFY_SetHash(ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
+    ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

@@ -49,7 +49,7 @@ static bool IsNeedtoRead(const TLS_Ctx *ctx, const RecBuf *inBuf)
     (void)ctx;
     uint32_t headLen = REC_TLS_RECORD_HEADER_LEN;
 #ifdef HITLS_TLS_PROTO_DTLS12
-    if (IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         headLen = REC_DTLS_RECORD_HEADER_LEN;
     }
 #endif
@@ -126,7 +126,7 @@ static int32_t ProcessDecryptedRecord(TLS_Ctx *ctx, uint32_t dataLen,
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
     }
 
-    if (!IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion) &&
+    if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
         ctx->negotiatedInfo.version != HITLS_VERSION_TLS13 &&
         ctx->method.isRecvCCS(ctx) &&
         encryptedMsg->type != REC_TYPE_HANDSHAKE) {
@@ -192,7 +192,7 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
     if (ret != HITLS_SUCCESS) {
         goto ERR;
     }
-    if (!IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+    if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         ret = funcs->decryptPostProcess(ctx, state->suiteInfo, encryptedMsg, decryptBuf->buf, &decryptBuf->end);
         if (ret != HITLS_SUCCESS) {
             goto ERR;
@@ -255,7 +255,8 @@ int32_t DtlsCheckVersionField(const TLS_Ctx *ctx, uint16_t version, uint8_t type
     /* Tolerate alerts with non-negotiated version. For example, after the server sends server hello, the client
      * replies with an earlier version alert */
     if (ctx->negotiatedInfo.version == 0u || type == (uint8_t)REC_TYPE_ALERT) {
-        if ((version != HITLS_VERSION_DTLS10) && (version != HITLS_VERSION_DTLS12)) {
+        if ((version != HITLS_VERSION_DTLS10) && (version != HITLS_VERSION_DTLS12) &&
+            (version != HITLS_VERSION_TLCP_DTLCP11)) {
             BSL_ERR_PUSH_ERROR(HITLS_REC_INVALID_PROTOCOL_VERSION);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15436, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "get a record with illegal version(0x%x).", version, 0, 0, 0);
@@ -683,7 +684,7 @@ int32_t TlsCheckVersionField(TLS_Ctx *ctx, uint16_t version, uint8_t type)
 {
     if (ctx->negotiatedInfo.version == 0u) {
 #ifdef HITLS_TLS_PROTO_TLCP11
-        if (((version >> 8u) != HITLS_VERSION_TLS_MAJOR) && (version != HITLS_VERSION_TLCP11)) {
+        if (((version >> 8u) != HITLS_VERSION_TLS_MAJOR) && (version != HITLS_VERSION_TLCP_DTLCP11)) {
 #else
         if ((version >> 8u) != HITLS_VERSION_TLS_MAJOR) {
 #endif

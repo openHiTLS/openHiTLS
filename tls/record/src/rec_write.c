@@ -117,6 +117,9 @@ void DtlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
 
     if (ctx->negotiatedInfo.version == 0) {
         plainMsg->version = HITLS_VERSION_DTLS10;
+        if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+            plainMsg->version = HITLS_VERSION_TLCP_DTLCP11;
+        }
     } else {
         plainMsg->version = ctx->negotiatedInfo.version;
     }
@@ -218,7 +221,7 @@ int32_t DtlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, 
     }
 
     /** Encrypt the record body */
-    ret = RecConnEncrypt(state, &plainMsg, &outBuf[REC_DTLS_RECORD_HEADER_LEN], cipherTextLen);
+    ret = RecConnEncrypt(ctx, state, &plainMsg, &outBuf[REC_DTLS_RECORD_HEADER_LEN], cipherTextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17280, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "RecConnEncrypt fail", 0, 0, 0, 0);
@@ -302,7 +305,7 @@ static void TlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
         ctx->hsCtx->haveHrr == false &&
 #endif
 #ifdef HITLS_TLS_PROTO_TLCP11
-        ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP11 &&
+        ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
 #endif
         ctx->config.tlsConfig.maxVersion > HITLS_VERSION_TLS10) {
         plainMsg->version = HITLS_VERSION_TLS10;
@@ -406,7 +409,7 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     }
 
     /** Encrypt the record body */
-    ret = RecConnEncrypt(state, &plainMsg, writeBuf->buf + REC_TLS_RECORD_HEADER_LEN, ciphertextLen);
+    ret = RecConnEncrypt(ctx, state, &plainMsg, writeBuf->buf + REC_TLS_RECORD_HEADER_LEN, ciphertextLen);
     BSL_SAL_FREE(recPlaintext.plainData);
     if (ret != HITLS_SUCCESS) {
         return ret;

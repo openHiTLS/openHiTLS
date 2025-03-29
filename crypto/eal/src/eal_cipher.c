@@ -26,9 +26,7 @@
 #include "eal_common.h"
 #include "crypt_utils.h"
 #include "crypt_ealinit.h"
-#include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
-
 
 static void CipherCopyMethod(const EAL_CipherMethod *modeMethod, EAL_CipherUnitaryMethod *method)
 {
@@ -81,6 +79,7 @@ static CRYPT_EAL_CipherCtx *CipherNewDefaultCtx(CRYPT_CIPHER_AlgId id)
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
@@ -164,6 +163,7 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, in
     ctx->isProvider = true;
     return ctx;
 }
+#endif
 
 CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id)
 {
@@ -445,7 +445,7 @@ int32_t CRYPT_EAL_CipherGetPadding(CRYPT_EAL_CipherCtx *ctx)
     int32_t ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_GET_PADDING, (void *)&type, sizeof(type));
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
-        return CRYPT_PADDING_NONE;
+        return CRYPT_PADDING_MAX_COUNT;
     }
     return type;
 }

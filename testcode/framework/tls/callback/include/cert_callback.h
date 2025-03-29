@@ -43,6 +43,8 @@ void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
 
 void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
     void *format, void *para);
+
+void RegDefaultMemCallback(void);
 	
 #ifdef __cplusplus
 }

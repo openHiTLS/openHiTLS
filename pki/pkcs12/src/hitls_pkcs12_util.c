@@ -122,6 +122,17 @@ HITLS_PKCS12 *HITLS_PKCS12_New(void)
     return p12;
 }
 
+HITLS_PKCS12 *HITLS_PKCS12_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
+{
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    if (p12 == NULL) {
+        return NULL;
+    }
+    p12->libCtx = libCtx;
+    p12->attrName = attrName;
+    return p12;
+}
+
 static void CertBagFree(void *value)
 {
     if (value == NULL) {
@@ -330,7 +341,7 @@ static void KdfUpdate(uint8_t *I, uint8_t *A, uint8_t *B, uint32_t k, const Pkcs
     for (uint32_t m = 0; m < k; m++) { /* K = ceiling(s/v) + ceiling(p/v) */
         uint8_t *tempI = I + m * param->v;
         uint8_t carry = 1;
-        for (int32_t r = (uint32_t)param->v - 1; r >= 0; r--) {
+        for (int32_t r = (int32_t)param->v - 1; r >= 0; r--) {
             uint8_t temp = tempI[r] + carry;
             carry = temp < tempI[r] ? 1 : 0;
             temp += B[r];
@@ -340,7 +351,7 @@ static void KdfUpdate(uint8_t *I, uint8_t *A, uint8_t *B, uint32_t k, const Pkcs
     }
 }
 
-int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen, HITLS_PKCS12_KDF_IDX id,
+int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen, HITLS_PKCS12_KDF_IDX type,
     HITLS_PKCS12_MacData *macData)
 {
     if (output == NULL || output->data == NULL || macData == NULL) {
@@ -377,7 +388,7 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
         CRYPT_EAL_MdFreeCtx(ctx);
         return ret;
     }
-    (void)memset_s(D, param->v, id, param->v);
+    (void)memset_s(D, param->v, type, param->v);
     uint32_t SLen = param->v * ((macData->macSalt->dataLen + param->v - 1) / param->v);
     uint32_t PLen = param->v * ((pwdLen + param->v - 1) / param->v);
     uint32_t k = 0;

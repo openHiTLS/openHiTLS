@@ -22,6 +22,7 @@
 #include "hitls_cert_reg.h"
 #include "hitls_cert.h"
 #include "tls_config.h"
+#include "bsl_hash.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +75,16 @@ void SAL_CERT_PairClear(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair);
 void SAL_CERT_PairFree(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair);
 
 /**
+ * @brief   Copy certificate hash table
+ *
+ * @param   destMgrCtx  [OUT] Certificate management struct
+ * @param   srcMgrCtx   [IN] Certificate management struct
+ *
+ * @retval  HITLS_SUCCESS           succeeded.
+ */
+int32_t SAL_CERT_HashDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx);
+
+/**
  * @brief   Indicates whether to enable the certificate management module.
  *
  * @param   void
@@ -100,6 +111,16 @@ HITLS_CERT_MgrMethod *SAL_CERT_GetMgrMethod(void);
  * @return  Certificate management struct
  */
 CERT_MgrCtx *SAL_CERT_MgrCtxNew(void);
+
+/**
+ * @brief   Create a certificate management struct with provider
+ *
+ * @param   libCtx     [IN] Provider library context
+ * @param   attrName  [IN] Provider attrName
+ *
+ * @return  Certificate management struct
+ */
+CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrName);
 
 /**
  * @brief   Copy the certificate management struct
