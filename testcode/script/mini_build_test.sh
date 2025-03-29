@@ -60,6 +60,7 @@ feature_testfiles=(
     ["uio_sctp"]=""
     ["uio_tcp"]=""
     ["usrdata"]=""
+    ["pem"]=""
     # eal
     ["eal"]=""
     # md
@@ -91,6 +92,7 @@ feature_testfiles=(
     ["drbg"]="test_suite_sdv_drbg"
     ["entropy"]="test_suite_sdv_entropy"
     # cipher
+    ["modes"]=""
     ["cbc"]=""
     ["ctr"]=""
     ["ccm"]=""
@@ -116,6 +118,23 @@ feature_testfiles=(
     ["sm2_exch"]="test_suite_sdv_eal_sm2_exchange"
     ["sm2_sign"]="test_suite_sdv_eal_sm2_sign"
     ["sm2_crypt"]="test_suite_sdv_eal_sm2_crypt"
+    # pki
+    ["key_gen"]="test_suite_sdv_pki_mini"
+    ["key_parse"]="test_suite_sdv_pki_mini"
+    ["x509"]=""
+    ["x509_crl"]=""
+    ["x509_crl_gen"]="test_suite_sdv_pki_mini"
+    ["x509_crl_parse"]="test_suite_sdv_pki_mini"
+    ["x509_csr"]=""
+    ["x509_csr_gen"]="test_suite_sdv_pki_mini"
+    ["x509_csr_parse"]="test_suite_sdv_pki_mini"
+    ["x509_crt"]=""
+    ["x509_crt_gen"]="test_suite_sdv_pki_mini"
+    ["x509_crt_parse"]="test_suite_sdv_pki_mini"
+    ["x509_vfy"]="test_suite_sdv_x509_vfy"
+    ["pkcs12"]=""
+    ["pkcs12_gen"]="test_suite_sdv_pkcs12"
+    ["pkcs12_parse"]="test_suite_sdv_pkcs12"
 )
 
 testfile_testcases=(
@@ -164,6 +183,13 @@ testfile_testcases=(
     ["test_suite_sdv_eal_sm2_exchange"]="SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001 SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003"
     ["test_suite_sdv_eal_sm2_sign"]="SDV_CRYPTO_SM2_SIGN_FUNC_TC001 SDV_CRYPTO_SM2_VERIFY_FUNC_TC001 SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001"
     ["test_suite_sdv_eal_sm2_crypt"]="SDV_CRYPTO_SM2_ENC_FUNC_TC001 SDV_CRYPTO_SM2_DEC_FUNC_TC001 SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC001"
+    # pki
+    ["test_suite_sdv_pki_mini"]=""
+    ["test_suite_sdv_x509_cert"]=""
+    ["test_suite_sdv_x509_csr"]=""
+    ["test_suite_sdv_x509_crl"]=""
+    ["test_suite_sdv_x509_vfy"]="SDV_X509_STORE_VFY_CRL_FUNC_TC001 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 SDV_X509_SM2_CERT_USERID_FUNC_TC001"
+    ["test_suite_sdv_pkcs12"]="SDV_PKCS12_PARSE_P12_TC001 SDV_PKCS12_PARSE_P12_TC002 SDV_PKCS12_PARSE_P12_TC003 SDV_PKCS12_GEN_FROM_DATA_TC001"
 )
 
 print_usage() {
@@ -366,13 +392,15 @@ exe_file_testcases()
 
     if [ "$test_cases" = "" ]; then
         # Execute all test cases when no test case is specified.
-        ./$test_file NO_DETAIL
+        ./$test_file
+        check_cmd_res "execute test cases"
     else
         array=(${test_cases// / })
         for case in ${array[@]}
         do
             echo "test case: $case"
-            ./$test_file $case NO_DETAIL
+            ./$test_file $case
+            check_cmd_res "execute test cases"
         done
     fi
 }
@@ -389,7 +417,7 @@ test_feature()
 
     cd $HITLS_ROOT_DIR/testcode/script
     files2=`echo ${files// /|}`  # Separate test files with vertical bars (|).
-    sh build_sdv.sh run-tests=$files2 $NO_TLS $NO_CRYPTO
+    sh build_sdv.sh run-tests=$files2 $NO_TLS $NO_CRYPTO no-demos
 
     file_array=(${files// / })
     for file in ${file_array[@]}

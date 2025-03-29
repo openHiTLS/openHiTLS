@@ -904,7 +904,7 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
     // Set invalid time (optional)
     BSL_TIME invalidTime = revokeTime;
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
-    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVALID_TIME,
         &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
 
     // Set certificate issuer (optional, only needed for indirect CRLs)
@@ -1076,7 +1076,7 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, i
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, tmp, &parseCrl), HITLS_PKI_SUCCESS);
     ASSERT_NE(parseCrl, NULL);
     if (isUseSm2UserId != 0) {
-        ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
+        ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_SET_VFY_SM2_USER_ID, g_sm2DefaultUserid,
             strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
     }
 

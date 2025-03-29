@@ -28,14 +28,16 @@ extern "C" {
 typedef enum {
     HITLS_X509_VFY_FLAG_SECBITS = 0x100000000,
     HITLS_X509_VFY_FLAG_TIME = 0x200000000,
-} HITLS_X509_IN_VerifyFalg;
+} HITLS_X509_IN_VerifyFlag;
 
 typedef struct _HITLS_X509_VerifyParam {
     int32_t maxDepth;
     int64_t time;
     uint32_t securityBits;
     uint64_t flags;
+#ifdef HITLS_CRYPTO_SM2
     BSL_Buffer sm2UserId;
+#endif
 } HITLS_X509_VerifyParam;
 
 struct _HITLS_X509_StoreCtx {
