@@ -847,13 +847,14 @@ uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param
     return 0;
 }
 #ifdef HITLS_TLS_FEATURE_KEM
-int32_t SAL_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_KemEncapsulateParams *params)
+int32_t SAL_CRYPT_KemEncapsulate(TLS_Ctx *ctx, HITLS_KemEncapsulateParams *params)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    int32_t ret = HITLS_CRYPT_KemEncapsulate(libCtx, attrName, params);
+    int32_t ret = HITLS_CRYPT_KemEncapsulate(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &ctx->config.tlsConfig, params);
 #else
-    (void)libCtx;
-    (void)attrName;
+    (void)ctx;
+    (void)params;
     if (g_cryptEcdhMethod.kemEncapsulate == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16617, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "kemEncapsulate callback not registered", 0, 0, 0, 0);

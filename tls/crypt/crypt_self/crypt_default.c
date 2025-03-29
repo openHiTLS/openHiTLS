@@ -225,7 +225,7 @@ int32_t CRYPT_DEFAULT_HkdfExpand(const HITLS_CRYPT_HkdfExpandInput *input, uint8
 #ifdef HITLS_TLS_FEATURE_KEM
 int32_t CRYPT_DEFAULT_KemEncapsulate(HITLS_KemEncapsulateParams *params)
 {
-    return HITLS_CRYPT_KemEncapsulate(NULL, NULL, params);
+    return HITLS_CRYPT_KemEncapsulate(NULL, NULL, NULL, params);
 }
 
 int32_t CRYPT_DEFAULT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,

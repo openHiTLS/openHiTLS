@@ -581,8 +581,7 @@ uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param
 /**
  * @brief   KEM: Encapsulate a shared secret using peer's public key
  *
- * @param   libCtx [IN] Library context, used to manage cryptographic operations
- * @param   attrName [IN] Attribute name, used to configure the cryptographic algorithm provided by the algorithm provider
+ * @param   ctx [IN] TLS context
  * @param   params [IN/OUT] Parameters for KEM encapsulation, including:
  *                         - groupId: Named group ID
  *                         - peerPubkey: Peer's public key
@@ -596,8 +595,7 @@ uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param
  * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
  * @retval HITLS_CRYPT_ERR_KEM_ENCAP    Failed to encapsulate shared secret
  */
-int32_t SAL_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    HITLS_KemEncapsulateParams *params);
+int32_t SAL_CRYPT_KemEncapsulate(TLS_Ctx *ctx, HITLS_KemEncapsulateParams *params);
 
 /**
  * @brief   KEM: Decapsulate the ciphertext to recover shared secret
