@@ -31,7 +31,10 @@ extern "C" {
 #endif // __cplusplus
 
 typedef enum {
-    CRYPT_HPKE_MODE_BASE = 0x00
+    CRYPT_HPKE_MODE_BASE = 0x00,
+    CRYPT_HPKE_MODE_PSK = 0x01,
+    CRYPT_HPKE_MODE_AUTH = 0x02,
+    CRYPT_HPKE_MODE_AUTH_PSK = 0x03
 } CRYPT_HPKE_Mode;
 
 typedef enum {
@@ -50,7 +53,8 @@ typedef enum {
 typedef enum {
     CRYPT_AEAD_AES_128_GCM = 0x0001,
     CRYPT_AEAD_AES_256_GCM = 0x0002,
-    CRYPT_AEAD_CHACHA20_POLY1305 = 0x0003
+    CRYPT_AEAD_CHACHA20_POLY1305 = 0x0003,
+    CRYPT_AEAD_Export_Only = 0xffff
 } CRYPT_HPKE_AEAD_AlgId;
 
 typedef struct {
@@ -123,6 +127,7 @@ int32_t CRYPT_EAL_HpkeGetEncapKeyLen(CRYPT_HPKE_CipherSuite cipherSuite, uint32_
  *
  * @param ctx [IN] HPKE context for the sender
  * @param pkey [IN] Private key context for the sender, if set to NULL, will generate a keypair randomly
+ * @param pkeyS [IN] key structure for the sender, for base mode and psk mode , set to NULL
  * @param info [IN] Additional information for the key setup
  * @param infoLen [IN] Length of the additional information
  * @param pkR [IN] Recipient's public key. For ec key, the format is 04 || X || Y, for X25519 key, the format is X.
@@ -133,7 +138,7 @@ int32_t CRYPT_EAL_HpkeGetEncapKeyLen(CRYPT_HPKE_CipherSuite cipherSuite, uint32_
  * @retval #CRYPT_SUCCESS if the setup is successful
  *         Other error codes defined in crypt_errno.h if an error occurs
  */
-int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
+int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyCtx *pkeyS, uint8_t *info, uint32_t infoLen,
     uint8_t *pkR, uint32_t pkRLen, uint8_t *encapKey, uint32_t *encapKeyLen);
 
 /**
@@ -163,6 +168,7 @@ int32_t CRYPT_EAL_HpkeSeal(CRYPT_EAL_HpkeCtx *ctx, uint8_t *aad, uint32_t aadLen
  *
  * @param ctx [IN] HPKE context for the recipient
  * @param pkey [IN] Private key context for the recipient
+ * @param pkeyS [IN] Public key context for the sender
  * @param info [IN] Additional information for the key setup
  * @param infoLen [IN] Length of the additional information
  * @param encapKey [IN] Encapsulated key input buffer
@@ -171,7 +177,7 @@ int32_t CRYPT_EAL_HpkeSeal(CRYPT_EAL_HpkeCtx *ctx, uint8_t *aad, uint32_t aadLen
  * @retval #CRYPT_SUCCESS if the setup is successful
  *         Other error codes defined in crypt_errno.h if an error occurs
  */
-int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
+int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyCtx *pkeyS, uint8_t *info, uint32_t infoLen,
     uint8_t *encapKey, uint32_t encapKeyLen);
 
 /**
@@ -270,6 +276,21 @@ int32_t CRYPT_EAL_HpkeSetSharedSecret(CRYPT_EAL_HpkeCtx *ctx, uint8_t *info, uin
  * @param ctx [IN] HPKE context to free
  */
 void CRYPT_EAL_HpkeFreeCtx(CRYPT_EAL_HpkeCtx *ctx);
+
+/**
+ * @ingroup crypt_eal_hpke
+ * @brief Setup psk and pskId for mode_psk and mode_auth_psk
+ *
+ * @param ctx [IN] HPKE context 
+ * @param psk [IN] Pre-shared key (PSK) used for the key exchange
+ * @param pskLen [IN] Length of the pre-shared key (PSK) in bytes
+ * @param pskId [IN] Identifier for the pre-shared key (PSK)
+ * @param pskIdLen [IN] Length of the PSK identifier in bytes
+ *
+ * @retval #CRYPT_SUCCESS if the setup is successful
+ *         Other error codes defined in crypt_errno.h if an error occurs
+ */
+int32_t CRYPT_EAL_HpkeCheckPsk(CRYPT_EAL_HpkeCtx *ctx,uint8_t* psk,uint32_t pskLen,uint8_t* pskId,uint32_t pskIdLen);
 
 #ifdef __cplusplus
 }
