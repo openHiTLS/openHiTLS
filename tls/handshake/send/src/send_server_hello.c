@@ -32,6 +32,8 @@
 #include "pack.h"
 #include "send_process.h"
 #include "hs_kx.h"
+#include "config_type.h"
+
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #ifdef HITLS_TLS_FEATURE_SESSION
 static int32_t ServerPrepareSessionId(TLS_Ctx *ctx)
@@ -207,7 +209,15 @@ static int32_t Tls13ServerPrepareKeyShare(TLS_Ctx *ctx)
                                    need to be calculated again */
         return HITLS_SUCCESS;
     }
-
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->group);
+    if (groupInfo == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16895, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "group info not found", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    if (groupInfo->isKem) {
+        return HITLS_SUCCESS;
+    }
     HITLS_ECParameters curveParams = {
         .type = HITLS_EC_CURVE_TYPE_NAMED_CURVE,
         .param.namedcurve = keyShare->group,
@@ -254,18 +264,19 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, SERVER_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15555, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 server hello msg fail.", 0, 0, 0, 0);
-            return ret;
-        }
         /* Server secret derivation */
         ret = HS_TLS13CalcServerHelloProcessSecret(ctx);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16190, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Derive-Sevret failed.", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            return ret;
+        }
+
+        ret = HS_PackMsg(ctx, SERVER_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15555, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "pack tls1.3 server hello msg fail.", 0, 0, 0, 0);
             return ret;
         }
     }

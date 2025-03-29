@@ -829,13 +829,18 @@ uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param
     if (ctx == NULL) {
         return 0;
     }
+    groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, (uint16_t)param);
     switch (cmd) {
         case HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN:
-            groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, (uint16_t)param);
             if (groupInfo == NULL) {
                 return 0;
             }
             return groupInfo->pubkeyLen;
+        case HITLS_CRYPT_INFO_CMD_GET_CIPHERTEXT_LEN:
+            if (groupInfo == NULL) {
+                return 0;
+            }
+            return groupInfo->ciphertextLen;
         default:
             return 0;
     }

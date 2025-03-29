@@ -103,13 +103,15 @@ typedef struct {
         KeyShareParam share;
     } keyExchParam;
     HITLS_CRYPT_Key *key; /* Local key pair */
-    uint8_t *peerPubkey;
-    uint32_t pubKeyLen;
+    uint8_t *peerPubkey; /* peer public key or peer ciphertext */
+    uint32_t pubKeyLen; /* peer public key length */
 #ifdef HITLS_TLS_FEATURE_PSK
     PskInfo *pskInfo;     /* PSK data tls 1.2 */
 #endif /* HITLS_TLS_FEATURE_PSK */
 #ifdef HITLS_TLS_PROTO_TLS13
     PskInfo13 pskInfo13; /* tls 1.3 psk */
+    uint8_t *ciphertext; /* local ciphertext */
+    uint32_t ciphertextLen; /* ciphertext length */
 #endif /* HITLS_TLS_PROTO_TLS13 */
 } KeyExchCtx;
 
