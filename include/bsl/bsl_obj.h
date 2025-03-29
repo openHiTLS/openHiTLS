@@ -306,6 +306,14 @@ int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid
  */
 int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
 
+/**
+ * @ingroup bsl_obj
+ * @brief Get the object identifier string from the algorithm ID
+ * @param[in] inputCid The algorithm ID
+ * @return The object identifier string
+ */
+BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid);
+
 #ifdef __cplusplus
 }
 #endif

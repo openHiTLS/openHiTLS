@@ -82,4 +82,16 @@
     #endif
 #endif
 
+#ifdef HITLS_BSL_PEM
+    #ifndef HITLS_BSL_BASE64
+        #define HITLS_BSL_BASE64
+    #endif
+#endif
+
+#ifdef HITLS_BSL_ANS1
+    #ifndef HITLS_BSL_SAL_TIME
+        #define HITLS_BSL_SAL_TIME
+    #endif
+#endif
+
 #endif /* HITLS_CONFIG_LAYER_BSL_H */

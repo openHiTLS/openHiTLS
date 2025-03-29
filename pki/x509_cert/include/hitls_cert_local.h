@@ -16,6 +16,8 @@
 #ifndef HITLS_CERT_LOCAL_H
 #define HITLS_CERT_LOCAL_H
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_X509_CRT
 #include <stdint.h>
 #include "bsl_asn1.h"
 #include "bsl_obj.h"
@@ -64,11 +66,15 @@ typedef struct _HITLS_X509_Cert {
     const char *attrName;             // Provider attribute name
 } HITLS_X509_Cert;
 
+#ifdef HITLS_PKI_X509_VFY
 int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res);
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert);
+#endif
 
 #ifdef __cplusplus
 }
 #endif
+
+#endif // HITLS_PKI_X509_CRT
 
 #endif // HITLS_CERT_LOCAL_H
