@@ -160,10 +160,10 @@ char *HITLS_PSK_Ciphersuite[] = {
 };
 
 char *HITLS_GM_Ciphersuite[] = {
-    //"HITLS_ECDHE_SM4_CBC_SM3",
-    //"HITLS_ECC_SM4_CBC_SM3",
+    "HITLS_ECDHE_SM4_CBC_SM3",
+    "HITLS_ECC_SM4_CBC_SM3",
     "HITLS_ECDHE_SM4_GCM_SM3",
-    //"HITLS_ECC_SM4_GCM_SM3",
+    "HITLS_ECC_SM4_GCM_SM3",
 };
 
 static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, char *cert)
@@ -222,17 +222,87 @@ EXIT:
     HLT_FreeAllProcess();
 }
 
-
-
-
+/* BEGIN_CASE */
+void SDV_TLS_TLS13_CIPHER_SUITE(void)
+{
+    for (uint16_t i = 0; i < sizeof(HITLS_TLS13_Ciphersuite) / sizeof(HITLS_TLS13_Ciphersuite[0]); i++) {
+        CONNECT(TLS1_3, TCP, HITLS_TLS13_Ciphersuite[i], 0, "RSA");
+    }
+}
+/* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_TLS_GM_CIPHER_SUITE(void)
+void SDV_TLS_RSA_CIPHER_SUITE(void)
+{
+    for (uint16_t i = 0; i < sizeof(HITLS_RSA_Ciphersuite) / sizeof(HITLS_RSA_Ciphersuite[0]); i++) {
+        SUB_PROC_BEGIN(continue);
+        CONNECT(TLS1_2, TCP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
+        if (IsEnableSctpAuth()) {
+            CONNECT(DTLS1_2, SCTP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
+        }
+        CONNECT(DTLS1_2, UDP, HITLS_RSA_Ciphersuite[i], 0, "RSA");
+        SUB_PROC_END();
+    }
+    SUB_PROC_WAIT(sizeof(HITLS_RSA_Ciphersuite) / sizeof(HITLS_RSA_Ciphersuite[0]));
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_ECDSA_CIPHER_SUITE(void)
+{
+    for (uint16_t i = 0; i < sizeof(HITLS_ECDSA_Ciphersuite) / sizeof(HITLS_ECDSA_Ciphersuite[0]); i++) {
+        SUB_PROC_BEGIN(continue);
+        CONNECT(TLS1_2, TCP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
+        if (IsEnableSctpAuth()) {
+            CONNECT(DTLS1_2, SCTP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
+        }
+        CONNECT(DTLS1_2, UDP, HITLS_ECDSA_Ciphersuite[i], 0, "ECDSA");
+        SUB_PROC_END();
+    }
+    SUB_PROC_WAIT(sizeof(HITLS_ECDSA_Ciphersuite) / sizeof(HITLS_ECDSA_Ciphersuite[0]));
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_PSK_CIPHER_SUITE(void)         /* 获取PSK算法套件列表 */
+{
+    for (uint16_t i = 0; i < sizeof(HITLS_PSK_Ciphersuite) / sizeof(HITLS_PSK_Ciphersuite[0]); i++)
+    {
+        SUB_PROC_BEGIN(continue);
+        CONNECT(TLS1_2, TCP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
+        if (IsEnableSctpAuth()) {
+            CONNECT(DTLS1_2, SCTP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
+        }
+        CONNECT(DTLS1_2, UDP, HITLS_PSK_Ciphersuite[i], 1, "RSA");
+        SUB_PROC_END();
+    }
+    SUB_PROC_WAIT(sizeof(HITLS_PSK_Ciphersuite) / sizeof(HITLS_PSK_Ciphersuite[0]));
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_ANON_CIPHER_SUITE(void)
+{
+    for (uint16_t i = 0; i < sizeof(HITLS_ANON_Ciphersuite) / sizeof(HITLS_ANON_Ciphersuite[0]); i++) {
+        SUB_PROC_BEGIN(continue);
+        CONNECT(TLS1_2, TCP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
+        if (IsEnableSctpAuth()) {
+            CONNECT(DTLS1_2, SCTP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
+        }
+        CONNECT(DTLS1_2, UDP, HITLS_ANON_Ciphersuite[i], 0, "RSA");
+        SUB_PROC_END();
+    }
+    SUB_PROC_WAIT(sizeof(HITLS_ANON_Ciphersuite) / sizeof(HITLS_ANON_Ciphersuite[0]));
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_TLS_GM_CIPHER_SUITE(void)          /* 依据国密算法套件列表HITLS_GM_Ciphersuite，以此执行测试 */
 {
     for (uint16_t i = 0; i < sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]); i++) {
-        SUB_PROC_BEGIN(continue);
-        CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");
-        SUB_PROC_END();
+        SUB_PROC_BEGIN(continue);                                           /* SUB_PROC_BEGIN 循环调用测试用例的开始 */
+        CONNECT(TLCP1_1, TCP, HITLS_GM_Ciphersuite[i], 0, "SM2");           /* 测试函数，见本文第162行 */
+        SUB_PROC_END();                                                     /* SUB_PROC_END 循环调用测试用例的结束 */
     }
     SUB_PROC_WAIT(sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]));
 }

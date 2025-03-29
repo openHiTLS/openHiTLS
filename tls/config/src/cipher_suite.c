@@ -1474,7 +1474,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .macAlg = HITLS_MAC_AEAD,
         .hashAlg = HITLS_HASH_SM3,
         .signScheme = CERT_SIG_SCHEME_SM2_SM3,
-        KEY_BLOCK_PARTITON_LENGTH(12u, 16u, 0u, 0u, 8u, 16u),
+        KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 16u),
         VERSION_SCOPE(HITLS_VERSION_TLCP11, HITLS_VERSION_TLCP11, 0, 0),
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 128},

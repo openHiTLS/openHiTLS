@@ -132,6 +132,8 @@ static uint32_t GetCipherAlgId(HITLS_CipherAlgo cipherAlgo)
             return CRYPT_CIPHER_AES256_CCM;
         case HITLS_CIPHER_SM4_CBC:
             return CRYPT_CIPHER_SM4_CBC;
+        case HITLS_CIPHER_SM4_GCM:
+            return CRYPT_CIPHER_SM4_GCM;
         default:
             break;
     }
