@@ -16,6 +16,9 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_SAL_TIME
 
+#ifdef HITLS_BSL_ERR
+#include "bsl_err_internal.h"
+#endif
 #include "bsl_sal.h"
 #include "sal_timeimpl.h"
 #include "bsl_errno.h"
@@ -125,7 +128,8 @@ uint32_t BSL_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t le
     if (BSL_DateTimeCheck(dateTime) != true) {
         return BSL_INTERNAL_EXCEPTION;
     }
-    if (g_timeCallback.pfDateToStrConvert != NULL && g_timeCallback.pfDateToStrConvert != TIME_DateToStrConvert) {
+
+    if (g_timeCallback.pfDateToStrConvert != NULL && g_timeCallback.pfDateToStrConvert != BSL_DateToStrConvert) {
         return g_timeCallback.pfDateToStrConvert(dateTime, timeStr, len);
     }
 #ifdef HITLS_BSL_SAL_LINUX
@@ -137,7 +141,7 @@ uint32_t BSL_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t le
 
 int64_t BSL_SAL_CurrentSysTimeGet(void)
 {
-    if (g_timeCallback.pfGetSysTime != NULL && g_timeCallback.pfGetSysTime != TIME_GetSysTime) {
+    if (g_timeCallback.pfGetSysTime != NULL && g_timeCallback.pfGetSysTime != BSL_SAL_CurrentSysTimeGet) {
         return g_timeCallback.pfGetSysTime();
     }
 #ifdef HITLS_BSL_SAL_LINUX
@@ -368,7 +372,7 @@ int32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
         return BSL_SAL_ERR_BAD_PARAM;
     }
     if (g_timeCallback.pfUtcTimeToDateConvert != NULL &&
-        g_timeCallback.pfUtcTimeToDateConvert != TIME_UtcTimeToDateConvert) {
+        g_timeCallback.pfUtcTimeToDateConvert != (BslSalUtcTimeToDateConvert)BSL_SAL_UtcTimeToDateConvert) {
         return g_timeCallback.pfUtcTimeToDateConvert(utcTime, sysTime);
     }
 #ifdef HITLS_BSL_SAL_LINUX
@@ -383,7 +387,7 @@ int32_t BSL_SAL_SysTimeGet(BSL_TIME *sysTime)
     if (sysTime == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_timeCallback.pfSysTimeGet != NULL && g_timeCallback.pfSysTimeGet != TIME_SysTimeGet) {
+    if (g_timeCallback.pfSysTimeGet != NULL && g_timeCallback.pfSysTimeGet != (BslSalSysTimeGet)BSL_SAL_SysTimeGet) {
         return g_timeCallback.pfSysTimeGet(sysTime);
     }
 #ifdef HITLS_BSL_SAL_LINUX

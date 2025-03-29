@@ -13,25 +13,19 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef CRYPT_ENCODE_H
-#define CRYPT_ENCODE_H
+#ifndef CRYPT_ENCODE_INTERNAL_H
+#define CRYPT_ENCODE_INTERNAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_ENCODE
-
 #include "bsl_types.h"
 #include "bsl_asn1.h"
-#include "crypt_eal_pkey.h"
 #include "crypt_bn.h"
+#include "crypt_eal_pkey.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
 
-#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_HASH    0
-#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_MASKGEN 1
-#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN 2
-#define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED 3
 
 #if defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA)
 /**
@@ -113,31 +107,8 @@ int32_t CRYPT_EAL_EncodeSm2EncryptData(const CRYPT_SM2_EncryptData *data, uint8_
 int32_t CRYPT_EAL_DecodeSm2EncryptData(const uint8_t *encode, uint32_t encodeLen, CRYPT_SM2_EncryptData *data);
 #endif
 
-int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara *para);
-
-int32_t CRYPT_EAL_ParseAsn1SubPubkey(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff,
-    uint32_t buffLen, void **ealPubKey, bool isComplete);
-
-int32_t CRYPT_EAL_EncodePubKeyBuffInternal(CRYPT_EAL_PkeyCtx *ealPubKey,
-    BSL_ParseFormat format, int32_t type, bool isComplete, BSL_Buffer *encode);
-
-int32_t CRYPT_EAL_EncodeRsaPssAlgParam(CRYPT_RSA_PssPara *rsaPssParam, uint8_t **buf, uint32_t *bufLen);
-
-int32_t CRYPT_EAL_PriKeyParseFile(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_ParseFormat format, int32_t type,
-    const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPriKey);
-
-// parse PKCS7-EncryptData：only support PBES2 + PBKDF2.
-int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *encode,
-    const uint8_t *pwd, uint32_t pwdlen, BSL_Buffer *output);
-
-// encode PKCS7-EncryptData：only support PBES2 + PBKDF2.
-int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *data,
-    const void *encodeParam, BSL_Buffer *encode);
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_ENCODE
-
-#endif // CRYPT_ENCODE_H
+#endif // CRYPT_ENCODE_INTERNAL_H

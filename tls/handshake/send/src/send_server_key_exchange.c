@@ -273,7 +273,7 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
      * certificate, even if the client does not require authentication (isSupportClientVerify equals false). */
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11 &&
-        ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_ECDHE_SM4_CBC_SM3) {
+        ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE) {
         return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
     }
 #endif

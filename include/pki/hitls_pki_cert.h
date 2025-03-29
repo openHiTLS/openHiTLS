@@ -75,7 +75,7 @@ HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src);
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_CertSign(uint32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
+int32_t HITLS_X509_CertSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Cert *cert);
 
 /**
