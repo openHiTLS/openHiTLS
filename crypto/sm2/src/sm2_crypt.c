@@ -28,7 +28,7 @@
 #include "crypt_local_types.h"
 #include "sm2_local.h"
 #include "crypt_sm2.h"
-#include "crypt_encode.h"
+#include "crypt_encode_internal.h"
 
 static void EncryptMemFree(ECC_Point *c1, ECC_Point *tmp, BN_BigNum *k,
     BN_BigNum *order, uint8_t *c2)

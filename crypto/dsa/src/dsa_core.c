@@ -21,7 +21,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
-#include "crypt_encode.h"
+#include "crypt_encode_internal.h"
 #include "dsa_local.h"
 #include "crypt_dsa.h"
 #include "eal_md_local.h"
