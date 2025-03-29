@@ -685,7 +685,7 @@ void SDV_X509_AddDnName_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
     HITLS_X509_DN dnName[1] = {{cid, value->x, value->len}};
     HITLS_X509_DN dnNullName[1] = {{cid, NULL, value->len}};
     HITLS_X509_DN dnZeroLenName[1] = {{cid, value->x, 0}};
-    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
 
     ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_AddDnName(list, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);

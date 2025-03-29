@@ -60,6 +60,11 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
 
+string(FIND "${CUSTOM_CFLAGS}" "-DHITLS_PKI" BUILD_PKI)
+string(FIND "${CUSTOM_CFLAGS}" "-DHITLS_AUTH" BUILD_AUTH)
+string(FIND "${CUSTOM_CFLAGS}" "-DHITLS_CRYPTO" BUILD_CRYPTO)
+string(FIND "${CUSTOM_CFLAGS}" "-DHITLS_TLS" BUILD_TLS)
+
 include(ExternalProject)
 ExternalProject_Add(gen_testcase
     SOURCE_DIR            ${openHiTLS_SRC}
@@ -79,7 +84,7 @@ ExternalProject_Add(gen_testcase
 
 add_subdirectory(${openHiTLS_SRC}/testcode/sdv)
 
-if(ENABLE_TLS)
+if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
     add_subdirectory(${openHiTLS_SRC}/testcode/framework/tls)
     add_subdirectory(${openHiTLS_SRC}/testcode/framework/process)
     add_dependencies(gen_testcase process)

@@ -68,7 +68,7 @@ typedef struct {
     CRYPT_Data *retBits;
 } DRBG_Vec_t;
 
-#ifdef HITLS_CRYPTO_ENTROPY
+#ifndef HITLS_CRYPTO_ENTROPY
 static int32_t GetEntropy(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange)
 {
     if (lenRange == NULL) {
@@ -122,7 +122,7 @@ int TestRandInit(void)
         return CRYPT_NOT_SUPPORT;
     }
 
-#ifdef HITLS_CRYPTO_ENTROPY
+#ifndef HITLS_CRYPTO_ENTROPY
     CRYPT_RandSeedMethod seedMeth = {GetEntropy, CleanEntropy, NULL, NULL};
     uint8_t entropy[64] = {0};
     CRYPT_Data tempEntropy = {entropy, sizeof(entropy)};
