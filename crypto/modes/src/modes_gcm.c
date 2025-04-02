@@ -507,7 +507,7 @@ int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
     void *ciphCtx = modeCtx->gcmCtx.ciphCtx;
     const EAL_SymMethod *ciphMeth = modeCtx->gcmCtx.ciphMeth;
     ciphMeth->cipherDeInitCtx(ciphCtx);
-    BSL_SAL_CleanseData((void *)(modeCtx), sizeof(MODES_GCM_Ctx));
+    BSL_SAL_CleanseData((void *)(&(modeCtx->gcmCtx)), sizeof(MODES_CipherGCMCtx));
     modeCtx->gcmCtx.ciphCtx = ciphCtx;
     modeCtx->gcmCtx.ciphMeth = ciphMeth;
     return CRYPT_SUCCESS;
