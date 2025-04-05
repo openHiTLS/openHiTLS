@@ -28,6 +28,7 @@
 #include "parse_common.h"
 #include "parse_extensions.h"
 #include "parse_msg.h"
+#include "custom_extensions.h"
 
 
 #define SINGLE_CIPHER_SUITE_SIZE 2u                 /* Length of the signature cipher suite */
@@ -231,6 +232,11 @@ int32_t ParseClientHello(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg
     }
     /* Parse compression method */
     ret = ParseClientHelloCompressionMethods(&pkt, msg);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    /* Parse custom extensions */
+    ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, CLIENT_HELLO);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

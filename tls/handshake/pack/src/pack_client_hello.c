@@ -31,6 +31,7 @@
 #include "hs_ctx.h"
 #include "pack_common.h"
 #include "pack_extensions.h"
+#include "custom_extensions.h"
 
 
 #define SINGLE_CIPHER_SUITE_SIZE 2u
@@ -309,6 +310,7 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
     uint32_t msgLen = 0u;
+    uint32_t cuexMsgLen = 0u;
     uint32_t exMsgLen = 0u;
 
     ret = PackClientHelloMandatoryField(ctx, buf, bufLen, &msgLen);
@@ -318,6 +320,14 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
         return ret;
     }
     offset += msgLen;
+    cuexMsgLen = 0u;
+    ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &cuexMsgLen, CLIENT_HELLO);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15736, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "pack client hello extension content fail.", 0, 0, 0, 0);
+        return ret;
+    }
+    offset += cuexMsgLen;
     exMsgLen = 0u;
     ret = PackClientExtension(ctx, &buf[offset], bufLen - offset, &exMsgLen);
     if (ret != HITLS_SUCCESS) {

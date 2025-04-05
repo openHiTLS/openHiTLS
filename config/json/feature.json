@@ -1141,6 +1141,7 @@
                     "tls/handshake/send/include",
                     "tls/handshake/reass/include",
                     "tls/handshake/cookie/include",
+                    "tls/handshake/custom_extensions/include",
                     "tls/record/src",
                     "tls/alert/include"
                 ],
