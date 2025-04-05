@@ -33,17 +33,17 @@
 #include "bsl_sal.h"
 #include "custom_extensions.h"
 
-static uint32_t JudgeCustomExtension(uint8_t context, uint8_t type)
+static uint32_t JudgeCustomExtension(uint8_t ext_context, uint8_t context)
 {
-    if (context != type) {
+    if (ext_context != context) {
         return 0;
     }
     return 1;
 }
 
-custom_ext_method *custom_ext_find(const custom_ext_methods *exts,
+custom_ext_method *FindCustomExtensions(const custom_ext_methods *exts,
                                    uint8_t ext_type,
-                                   uint32_t *idx)
+                                   uint8_t context)
 {
     uint32_t i;
     custom_ext_method *meth = exts->meths;
@@ -52,27 +52,25 @@ custom_ext_method *custom_ext_find(const custom_ext_methods *exts,
         return NULL;
 
     for (i = 0; i < exts->meths_count; i++, meth++) {
-        if (ext_type == meth->ext_type) {
-            if (idx != NULL) {
-                *idx = i;
-            }
+        if (ext_type == meth->ext_type && context == meth->context) {
             return meth;
         }
     }
     return NULL;
 }
 
-int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t type)
+int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t context)
 {
-    //int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
-    //uint32_t exLen = 0u;
+    // uint32_t exLen = 0u;
     uint32_t al = 0;
     void *msg = NULL;
 
-    //custom_ext_methods *exts = ctx->custext;
-    custom_ext_methods *exts = NULL;
+    custom_ext_methods *exts = ctx->customExts;
     custom_ext_method *meth;
+
+    if(exts == NULL)
+        return HITLS_SUCCESS;
 
     for (uint32_t i = 0; i < exts->meths_count; i++) {
         uint8_t *out = NULL;
@@ -80,13 +78,13 @@ int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
 
         meth = exts->meths + i;
 
-        if (!JudgeCustomExtension(meth->context, type)) {
+        if (!JudgeCustomExtension(meth->context, context)) {
             continue;
         }
 
         if (meth->add_cb != NULL) {
             int cb_retval = meth->add_cb(ctx,
-                                         meth->ext_type, type, &out,
+                                         meth->ext_type, context, &out,
                                          &outlen, msg, &al,
                                          meth->add_arg);
             if (cb_retval <= 0) {
@@ -99,16 +97,19 @@ int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
             }
         }
 
-        // Save the custom extension version
-        buf[offset] = (uint8_t)meth->ext_type;
-        offset++;
+        if (outlen > 0)
+        {
+            // Save the custom extension version
+            buf[offset] = (uint8_t)meth->ext_type;
+            offset++;
 
-        (void)memcpy_s(&buf[offset], bufLen - offset, &out, outlen);
-        offset += outlen;
+            (void)memcpy_s(&buf[offset], bufLen - offset, out, outlen);
+            offset += outlen;
+        }
 
         if (meth->free_cb != NULL) {
             meth->free_cb(ctx, meth->ext_type,
-                          type, out, meth->add_arg);
+                          context, out, meth->add_arg);
         }
     }
 
@@ -116,37 +117,38 @@ int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     return HITLS_SUCCESS;
 }
 
-int32_t ParseCustomExtensions(const TLS_Ctx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t type)
+int32_t ParseCustomExtensions(const TLS_Ctx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t context)
 {
     uint32_t al = 0;
-    //custom_ext_methods *exts = ctx->custext;
-    custom_ext_methods *exts = NULL;
+    custom_ext_methods *exts = ctx->customExts;
     custom_ext_method *meth;
     void *msg = NULL;
     uint32_t offset = 0u;
 
+    // Read the extension type
     uint8_t ext_type = buf[offset];
-    offset++;
-    meth = custom_ext_find(exts, ext_type, NULL);
+    offset++;  // offset becomes 1, indicating to skip the type byte
+    meth = FindCustomExtensions(exts, ext_type, context);
     if (!meth) {
         return HITLS_SUCCESS;
     }
 
-    uint32_t len = buf[offset];
-    offset += sizeof(uint32_t);
-
+    uint32_t len = 0;
+    // Create a local pointer starting from the position after the type byte
+    const uint8_t *current = buf + offset;
     if (meth->parse_cb != NULL) {
         int cb_retval = meth->parse_cb(ctx,
-                                       meth->ext_type, type, &buf,
-                                       len, msg, &al,
+                                       meth->ext_type, context, &current,
+                                       &len, msg, &al,
                                        meth->parse_arg);
         if (cb_retval <= 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                                   "parse custom extension content fail.", 0, 0, 0, 0);
-            return cb_retval;       /* error */
+            return cb_retval;  // Error handling
         }
     }
 
-    *bufOffset += len;
+    // Update bufOffset: type byte count (offset) + bytes parsed by parse_cb (len)
+    *bufOffset += offset + len;
     return HITLS_SUCCESS;
 }

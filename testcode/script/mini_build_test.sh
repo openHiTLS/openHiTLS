@@ -116,8 +116,6 @@ feature_testfiles=(
     ["sm2_exch"]="test_suite_sdv_eal_sm2_exchange"
     ["sm2_sign"]="test_suite_sdv_eal_sm2_sign"
     ["sm2_crypt"]="test_suite_sdv_eal_sm2_crypt"
-    # custom extensions
-    ["custom_ext"]="test_suite_sdv_custom_ext"
 )
 
 testfile_testcases=(

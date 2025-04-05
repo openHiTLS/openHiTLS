@@ -18,10 +18,10 @@
 #include "hitls_build.h"
 #include "tls.h"
 
-// 前向声明 struct TlsCtx
+// Forward declaration of struct TlsCtx
 struct TlsCtx;
 
-// 定义回调函数类型，使用 struct TlsCtx * 作为参数
+// Define callback function types, using struct TlsCtx * as parameter
 typedef int (*SSL_custom_ext_add_cb_ex)(const struct TlsCtx *ctx, uint8_t ext_type,
                                         uint8_t context,
                                         uint8_t **out,
@@ -36,10 +36,10 @@ typedef void (*SSL_custom_ext_free_cb_ex)(const struct TlsCtx *ctx, uint8_t ext_
 typedef int (*SSL_custom_ext_parse_cb_ex)(const struct TlsCtx *ctx, uint8_t ext_type,
                                           uint8_t context,
                                           const uint8_t **in,
-                                          uint32_t inlen, void *msg,
+                                          uint32_t *inlen, void *msg,
                                           uint32_t *al, void *parse_arg);
 
-// 定义 custom_ext_method 结构体
+// Define custom_ext_method structure
 typedef struct {
     uint8_t ext_type;
     uint8_t context;
@@ -51,13 +51,13 @@ typedef struct {
     void *parse_arg;
 } custom_ext_method;
 
-// 定义 custom_ext_methods 结构体
+// Define custom_ext_methods structure
 typedef struct {
     custom_ext_method *meths;
     size_t meths_count;
 } custom_ext_methods;
 
-// 函数声明
+// Function declarations
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t type);
 int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t type);
 

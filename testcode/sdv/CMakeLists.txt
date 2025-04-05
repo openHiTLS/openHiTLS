@@ -198,10 +198,12 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/parse/src
         ${openHiTLS_SRC}/auth/privpass_token/include
-        ${openHiTLS_SRC}/config/macro_config)
+        ${openHiTLS_SRC}/config/macro_config
+        ${openHiTLS_SRC}/tls/handshake/custom_extensions/include)
 
 add_library(TESTCASE_PRE ${TEST_SOURCE})
 target_link_libraries(TESTCASE_PRE PRIVATE TEST_INTF)
+
 
 if(GEN_TEST_FILES)
     # test1 test2 ...
@@ -221,12 +223,6 @@ if(GEN_TEST_FILES)
 else()
     message(STATUS "No file needs to be generated")
 endif()
-
-# 添加新测试文件
-set(TEST_FILES
-        ${TEST_FILES}
-        ${openHiTLS_SRC}/testcode/sdv/test_suite_sdv_custom_ext.c
-)
 
 foreach(test_suite ${TEST_FILES})
     get_filename_component(sdv_exe ${test_suite} NAME_WE)

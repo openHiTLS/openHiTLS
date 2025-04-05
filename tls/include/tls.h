@@ -301,7 +301,7 @@ struct TlsCtx {
     bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
 
     /* Custom extensions */
-    struct custom_ext_methods *customExts;  /* 指向自定义扩展的指针 */
+    custom_ext_methods *customExts;  /* Pointer to the custom extension */
 };
 
 #define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)

@@ -1,0 +1,50 @@
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN":0
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----END----------END----------END----------END----------END-----":0
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN aaaaENDaaaaaaaaaaENDaaaaaaaaaENDaaaaaaaENDaaaaaaa-":0
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN aaaaa-----\n----ENDaaaaaaENaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":0
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN aaaaa-----\n-----ENDaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":0
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN aaaaa-----\n-----END aaa ----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":0
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN aaaaa-----\n-----END aaa -----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":1
+
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"aaaa-----BEGIN aaaaa-----\n-----END aaa -----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":1
+
+SDV_BSL_PEM_ISPEM_FUNC_TC002
+SDV_BSL_PEM_ISPEM_FUNC_TC002:
+
+SDV_BSL_PEM_PARSE_FUNC_TC001
+SDV_BSL_PEM_PARSE_FUNC_TC001:"aaaaaaaaaaaaaaaa":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_PEM_INVALID
+
+SDV_BSL_PEM_PARSE_FUNC_TC001
+SDV_BSL_PEM_PARSE_FUNC_TC001:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_PEM_INVALID
+
+SDV_BSL_PEM_PARSE_FUNC_TC001
+SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN CERTIFICATE-----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_PEM_INVALID
+
+SDV_BSL_PEM_PARSE_FUNC_TC001
+SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN CERTIFICATE-----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-----END CERTIFICATE-----\n":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_SUCCESS
+
+SDV_BSL_PEM_PARSE_FUNC_TC001
+SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN RSA PRIVATE KEY-----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-----END RSA PRIVATE KEY-----\n":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_PEM_SYMBOL_NOT_FOUND
+
+SDV_BSL_PEM_PARSE_FUNC_TC001
+SDV_BSL_PEM_PARSE_FUNC_TC001:"-----BEGIN CERTIFICATE-----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-----END RSA PRIVATE KEY-----\n":"-----BEGIN CERTIFICATE-----":"-----END CERTIFICATE-----":BSL_PEM_SYMBOL_NOT_FOUND
+
+SDV_BSL_PEM_PARSE_FUNC_TC002
+SDV_BSL_PEM_PARSE_FUNC_TC002:
+
+SDV_BSL_PEM_PARSE_FUNC_TC003
+SDV_BSL_PEM_PARSE_FUNC_TC003:
