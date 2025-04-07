@@ -1141,9 +1141,9 @@
                     "tls/handshake/send/include",
                     "tls/handshake/reass/include",
                     "tls/handshake/cookie/include",
-                    "tls/handshake/custom_extensions/include",
                     "tls/record/src",
-                    "tls/alert/include"
+                    "tls/alert/include",
+                    "tls/feature/custom_extensions/include"
                 ],
                 ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
             },
@@ -1166,7 +1166,8 @@
                     "bsl/uio/src",
                     "tls/cert/cert_adapt",
                     "tls/handshake/parse/src",
-                    "tls/handshake/common/include"
+                    "tls/handshake/common/include",
+                    "tls/feature/custom_extensions/include"
                 ]
             }
         },

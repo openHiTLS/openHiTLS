@@ -54,12 +54,20 @@ typedef struct {
 // Define custom_ext_methods structure
 typedef struct {
     custom_ext_method *meths;
-    size_t meths_count;
+    uint32_t meths_count;
 } custom_ext_methods;
 
 // Function declarations
+uint32_t SSLCTXAddCustomExtension(struct TlsCtx *ctx, uint8_t ext_type,
+                                  uint8_t context,
+                                  SSL_custom_ext_add_cb_ex add_cb,
+                                  SSL_custom_ext_free_cb_ex free_cb,
+                                  void *add_arg,
+                                  SSL_custom_ext_parse_cb_ex parse_cb,
+                                  void *parse_arg);
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t type);
 int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t type);
 
 #endif // CUSTOM_EXTENSIONS_H
+
 

@@ -41,11 +41,15 @@ static uint32_t JudgeCustomExtension(uint8_t ext_context, uint8_t context)
     return 1;
 }
 
-custom_ext_method *FindCustomExtensions(const custom_ext_methods *exts,
+custom_ext_method *FindCustomExtensions(custom_ext_methods *exts,
                                    uint8_t ext_type,
                                    uint8_t context)
 {
     uint32_t i;
+
+    if(!exts)
+        return NULL;
+
     custom_ext_method *meth = exts->meths;
 
     if(!meth)
@@ -59,7 +63,59 @@ custom_ext_method *FindCustomExtensions(const custom_ext_methods *exts,
     return NULL;
 }
 
-int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t context)
+uint32_t SSLCTXAddCustomExtension(struct TlsCtx *ctx, uint8_t ext_type,
+                                  uint8_t context,
+                                  SSL_custom_ext_add_cb_ex add_cb,
+                                  SSL_custom_ext_free_cb_ex free_cb,
+                                  void *add_arg,
+                                  SSL_custom_ext_parse_cb_ex parse_cb,
+                                  void *parse_arg)
+{
+    custom_ext_method *meth = NULL, *tmp = NULL;
+
+    if (add_cb == NULL && free_cb != NULL) {
+        return 0;
+    }
+    custom_ext_methods *exts = ctx->customExts;
+
+    if (FindCustomExtensions(exts, ext_type, context)) {
+        return 0;
+    }
+
+    if (exts == NULL) {
+        exts = (custom_ext_methods *)BSL_SAL_Malloc(sizeof(custom_ext_methods));
+        if (exts == NULL) {
+            return 0;
+        }
+        exts->meths = NULL;
+        exts->meths_count = 0;
+        ctx->customExts = exts;
+    }
+
+    tmp = BSL_SAL_Realloc(exts->meths,
+                          (exts->meths_count + 1) * sizeof(custom_ext_method),
+                          exts->meths_count * sizeof(custom_ext_method));
+    if (tmp == NULL) {
+        return 0;
+    }
+
+    exts->meths = tmp;
+    meth = exts->meths + exts->meths_count;
+    memset_s(meth, sizeof(*meth), 0, sizeof(*meth));
+    meth->context = context;
+    meth->parse_cb = parse_cb;
+    meth->add_cb = add_cb;
+    meth->free_cb = free_cb;
+    meth->ext_type = ext_type;
+    meth->add_arg = add_arg;
+    meth->parse_arg = parse_arg;
+    exts->meths_count++;
+
+    return HITLS_SUCCESS;
+}
+
+
+int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t context)
 {
     uint32_t offset = 0u;
     // uint32_t exLen = 0u;
@@ -117,7 +173,7 @@ int32_t PackCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, 
     return HITLS_SUCCESS;
 }
 
-int32_t ParseCustomExtensions(const TLS_Ctx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t context)
+int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t context)
 {
     uint32_t al = 0;
     custom_ext_methods *exts = ctx->customExts;
@@ -152,4 +208,5 @@ int32_t ParseCustomExtensions(const TLS_Ctx *ctx, const uint8_t *buf, uint32_t *
     *bufOffset += offset + len;
     return HITLS_SUCCESS;
 }
+
 

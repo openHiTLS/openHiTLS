@@ -22,7 +22,7 @@
 #include "cipher_suite.h"
 #include "tls_config.h"
 #include "hitls_error.h"
-#include "../handshake/custom_extensions/include/custom_extensions.h" // Contains definitions of custom extensions
+#include "../feature/custom_extensions/include/custom_extensions.h" // Contains definitions of custom extensions
 
 #ifdef __cplusplus
 extern "C" {

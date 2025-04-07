@@ -409,3 +409,65 @@ EXIT:
 }
 /* END_CASE */
 
+/** @
+ * @test  SDV_TLS_SSLCTX_ADD_CUSTOM_EXTENSION_API_TC002
+ * @title Test the custom extension addition functionality of the SSLCTXAddCustomExtension function
+ * @precon None
+ * @brief
+ * 1. Initialize the TLS context and add a valid custom extension, verify if the addition is successful. Expected result 1.
+ * 2. Attempt to add a duplicate custom extension, verify if the function rejects the duplicate addition. Expected result 2.
+ * 3. Call the function with invalid parameters (add_cb is NULL, free_cb is not NULL), verify if the function correctly handles the error. Expected result 3.
+ * @expect
+ * 1. Returns HITLS_SUCCESS, the custom extension is correctly added to the context.
+ * 2. Returns 0, the number of extensions does not increase.
+ * 3. Returns 0, the number of extensions does not increase.
+ @ */
+/* BEGIN_CASE */
+void SDV_TLS_SSLCTX_ADD_CUSTOM_EXTENSION_API_TC001(void)
+{
+    FRAME_Init();  // Initialize the test framework
+
+    // Initialize the TLS context
+    TLS_Ctx ctx = {0};
+    uint8_t ext_type = 1;
+    uint8_t context = 1;
+    SSL_custom_ext_add_cb_ex add_cb = SimpleAddCb;
+    SSL_custom_ext_free_cb_ex free_cb = SimpleFreeCb;
+    void *add_arg = NULL;
+    SSL_custom_ext_parse_cb_ex parse_cb = SimpleParseCb;
+    void *parse_arg = NULL;
+
+    // Test normal case: Add a custom extension
+    uint32_t ret = SSLCTXAddCustomExtension(&ctx, ext_type, context, add_cb, free_cb, add_arg, parse_cb, parse_arg);
+    ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
+    ASSERT_EQ(ctx.customExts->meths_count, 1);  // Verify the number of extensions is 1
+    custom_ext_method *meth = &ctx.customExts->meths[0];
+    ASSERT_EQ(meth->ext_type, ext_type);  // Verify the extension type
+    ASSERT_EQ(meth->context, context);    // Verify the context
+    ASSERT_EQ(meth->add_cb, add_cb);      // Verify add_cb
+    ASSERT_EQ(meth->free_cb, free_cb);    // Verify free_cb
+    ASSERT_EQ(meth->add_arg, add_arg);    // Verify add_arg
+    ASSERT_EQ(meth->parse_cb, parse_cb);  // Verify parse_cb
+    ASSERT_EQ(meth->parse_arg, parse_arg); // Verify parse_arg
+
+    // Test boundary case: Attempt to add a duplicate extension
+    ret = SSLCTXAddCustomExtension(&ctx, ext_type, context, add_cb, free_cb, add_arg, parse_cb, parse_arg);
+    ASSERT_EQ(ret, 0);  // Verify the return value is failure
+    ASSERT_EQ(ctx.customExts->meths_count, 1);  // Verify the number of extensions does not increase
+
+    // Test invalid parameters: add_cb is NULL, free_cb is not NULL
+    ret = SSLCTXAddCustomExtension(&ctx, 2, context, NULL, free_cb, add_arg, parse_cb, parse_arg);
+    ASSERT_EQ(ret, 0);  // Verify the return value is failure
+    ASSERT_EQ(ctx.customExts->meths_count, 1);  // Verify the number of extensions does not increase
+
+EXIT:
+    // Clean up memory to prevent leaks
+    if (ctx.customExts != NULL) {
+        BSL_SAL_Free(ctx.customExts->meths);
+        BSL_SAL_Free(ctx.customExts);
+    }
+    return;
+}
+/* END_CASE */
+
+
