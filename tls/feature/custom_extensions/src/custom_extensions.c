@@ -33,9 +33,9 @@
 #include "bsl_sal.h"
 #include "custom_extensions.h"
 
-static uint32_t JudgeCustomExtension(uint8_t ext_context, uint8_t context)
+static uint32_t JudgeCustomExtension(uint32_t ext_context, uint32_t context)
 {
-    if (ext_context != context) {
+    if ((ext_context & context) == 0) {
         return 0;
     }
     return 1;
@@ -43,7 +43,7 @@ static uint32_t JudgeCustomExtension(uint8_t ext_context, uint8_t context)
 
 CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
                                    uint8_t ext_type,
-                                   uint8_t context)
+                                   uint32_t context)
 {
     uint32_t i;
 
@@ -56,7 +56,7 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
         return NULL;
 
     for (i = 0; i < exts->meths_count; i++, meth++) {
-        if (ext_type == meth->ext_type && context == meth->context) {
+        if (ext_type == meth->ext_type && (context & meth->context) != 0) {
             return meth;
         }
     }
@@ -64,7 +64,7 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
 }
 
 uint32_t HITLS_AddCustomExtension(struct TlsCtx *ctx, uint8_t ext_type,
-                                  uint8_t context,
+                                  uint32_t context,
                                   HITLS_CustomExt_Add_Callback add_cb,
                                   HITLS_CustomExt_Free_Callback free_cb,
                                   void *add_arg,
@@ -115,7 +115,7 @@ uint32_t HITLS_AddCustomExtension(struct TlsCtx *ctx, uint8_t ext_type,
 }
 
 
-int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t context)
+int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint32_t context)
 {
     uint32_t offset = 0u;
     // uint32_t exLen = 0u;
@@ -173,7 +173,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
     return HITLS_SUCCESS;
 }
 
-int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t context)
+int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint32_t context)
 {
     uint32_t al = 0;
     CustomExt_Methods *exts = ctx->customExts;

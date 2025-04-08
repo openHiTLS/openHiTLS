@@ -31,6 +31,7 @@
 #include "hs_ctx.h"
 #include "pack_common.h"
 #include "pack_extensions.h"
+#include "hitls_custom_extensions.h"
 #include "custom_extensions.h"
 
 
@@ -320,14 +321,14 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
         return ret;
     }
     offset += msgLen;
+
     cuexMsgLen = 0u;
-    ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &cuexMsgLen, CLIENT_HELLO);
+    ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &cuexMsgLen, HITLS_EX_CTX_CLIENT_HELLO);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15736, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack client hello extension content fail.", 0, 0, 0, 0);
         return ret;
     }
     offset += cuexMsgLen;
+
     exMsgLen = 0u;
     ret = PackClientExtension(ctx, &buf[offset], bufLen - offset, &exMsgLen);
     if (ret != HITLS_SUCCESS) {
@@ -342,3 +343,4 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
 }
 
 #endif /* HITLS_TLS_HOST_CLIENT */
+

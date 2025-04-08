@@ -30,6 +30,8 @@
 #include "hs_ctx.h"
 #include "pack_common.h"
 #include "pack_extensions.h"
+#include "hitls_custom_extensions.h"
+#include "custom_extensions.h"
 
 // Pack the mandatory content of the ServerHello message
 static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
@@ -93,6 +95,7 @@ int32_t PackServerHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
     uint32_t msgLen = 0u;
+    uint32_t cuexMsgLen = 0u;
     uint32_t exMsgLen = 0u;
 
     ret = PackServerHelloMandatoryField(ctx, buf, bufLen, &msgLen);
@@ -103,11 +106,18 @@ int32_t PackServerHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     }
     offset += msgLen;
 
-    exMsgLen = 0u;
-    ret = PackServerExtension(ctx, &buf[offset], bufLen - offset, &exMsgLen);
+    cuexMsgLen = 0u;
+    ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &cuexMsgLen, HITLS_EX_CTX_SERVER_HELLO);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack server hello extension content fail.", 0, 0, 0, 0);
+        return ret;
+    }
+    offset += cuexMsgLen;
+
+    exMsgLen = 0u;
+    ret = PackServerExtension(ctx, &buf[offset], bufLen - offset, &exMsgLen);
+    if (ret != HITLS_SUCCESS) {
         return ret;
     }
     offset += exMsgLen;

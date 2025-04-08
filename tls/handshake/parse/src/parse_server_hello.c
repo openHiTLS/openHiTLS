@@ -26,6 +26,8 @@
 #include "parse_common.h"
 #include "parse_extensions.h"
 #include "parse_msg.h"
+#include "hitls_custom_extensions.h"
+#include "custom_extensions.h"
 
 static int32_t ParseServerHelloCipherSuite(ParsePacket *pkt, ServerHelloMsg *msg)
 {
@@ -103,6 +105,12 @@ int32_t ParseServerHello(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_M
     }
 
     ret = ParseServerHelloCompressionMethod(&pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    /* Parse custom extensions */
+    ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, HITLS_EX_CTX_SERVER_HELLO);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

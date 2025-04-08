@@ -39,7 +39,7 @@
 #include "custom_extensions.h"
 
 // Simple add_cb function, allocates buffer with 1 byte length and 1 byte data
-int SimpleAddCb(const struct TlsCtx *ctx, uint8_t ext_type, uint8_t context, uint8_t **out, uint32_t *outlen, void *msg, uint32_t *al, void *add_arg) {
+int SimpleAddCb(const struct TlsCtx *ctx, uint8_t ext_type, uint32_t context, uint8_t **out, uint32_t *outlen, void *msg, uint32_t *al, void *add_arg) {
     (void)ctx;
     (void)ext_type;
     (void)context;
@@ -60,7 +60,7 @@ int SimpleAddCb(const struct TlsCtx *ctx, uint8_t ext_type, uint8_t context, uin
 }
 
 // Simple free_cb function, frees the allocated data
-void SimpleFreeCb(const struct TlsCtx *ctx, uint8_t ext_type, uint8_t context, uint8_t *out, void *add_arg) {
+void SimpleFreeCb(const struct TlsCtx *ctx, uint8_t ext_type, uint32_t context, uint8_t *out, void *add_arg) {
     (void)ctx;
     (void)ext_type;
     (void)context;
@@ -69,7 +69,7 @@ void SimpleFreeCb(const struct TlsCtx *ctx, uint8_t ext_type, uint8_t context, u
 }
 
 // Simple parse_cb function, reads the length and data, checks the data
-int SimpleParseCb(const struct TlsCtx *ctx, uint8_t ext_type, uint8_t context, const uint8_t **in, uint32_t *inlen, void *msg, uint32_t *al, void *parse_arg) {
+int SimpleParseCb(const struct TlsCtx *ctx, uint8_t ext_type, uint32_t context, const uint8_t **in, uint32_t *inlen, void *msg, uint32_t *al, void *parse_arg) {
     (void)ctx;
     (void)ext_type;
     (void)context;
@@ -331,19 +331,20 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     uint8_t buf[1024] = {1, 1, 0xAA};  // ext_type=1, data=0xAA
     uint32_t bufOffset = 0;
     uint8_t type = 1;
+    uint32_t context = 1;
 
     // Configure a single custom extension with parse callback
     CustomExt_Methods exts = {0};
     CustomExt_Method meth = {0};
     meth.ext_type = type;
-    meth.context = type;
+    meth.context = context;
     meth.parse_cb = SimpleParseCb;
     exts.meths = &meth;
     exts.meths_count = 1;
     ctx.customExts = &exts;
 
     // Call the interface under test
-    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, type);
+    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     ASSERT_EQ(bufOffset, 3);        // ext_type (1 byte) + len (1 byte) + data (1 byte)
 
@@ -366,14 +367,14 @@ EXIT:
  * 3. Returns 0, the number of extensions does not increase.
  @ */
 /* BEGIN_CASE */
-void SDV_TLS_SSLCTX_ADD_CUSTOM_EXTENSION_API_TC001(void)
+void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
 {
     FRAME_Init();  // Initialize the test framework
 
     // Initialize the TLS context
     TLS_Ctx ctx = {0};
     uint8_t ext_type = 1;
-    uint8_t context = 1;
+    uint32_t context = 1;
     HITLS_CustomExt_Add_Callback add_cb = SimpleAddCb;
     HITLS_CustomExt_Free_Callback free_cb = SimpleFreeCb;
     void *add_arg = NULL;

@@ -27,6 +27,8 @@
 #include "parse_common.h"
 #include "hs_extensions.h"
 #include "parse_extensions.h"
+#include "hitls_custom_extensions.h"
+#include "custom_extensions.h"
 
 /**
  * @brief   Parse the certificate signature
@@ -197,6 +199,11 @@ int32_t ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_M
             BINGLOG_STR("Certificate msg parse failed."), ALERT_UNKNOWN);
     }
 
+    ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, HITLS_EX_CTX_CERTIFICATE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
@@ -279,6 +286,11 @@ int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
             BINGLOG_STR("Certificate msg parse failed."), ALERT_UNKNOWN);
     }
 
+    ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, HITLS_EX_CTX_TLS1_3_CERTIFICATE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
@@ -303,3 +315,4 @@ void CleanCertificate(CertificateMsg *msg)
     msg->cert = NULL;
     return;
 }
+

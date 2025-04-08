@@ -28,11 +28,15 @@
 #include "hs_common.h"
 #include "hs_extensions.h"
 #include "pack_common.h"
+#include "hitls_custom_extensions.h"
+#include "custom_extensions.h"
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     int32_t ret = HITLS_SUCCESS;
+    uint32_t offset = 0;
+    uint32_t cuexMsgLen = 0u;
 
     if (bufLen < CERT_LEN_TAG_SIZE) {
         return PackBufLenError(BINLOG_ID15808, BINGLOG_STR("cert"));
@@ -49,6 +53,14 @@ int32_t PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *u
     /* Certificate length */
     BSL_Uint24ToByte(*usedLen, buf);
     *usedLen += CERT_LEN_TAG_SIZE;
+
+    cuexMsgLen = 0u;
+    offset = *usedLen;
+    ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &cuexMsgLen, HITLS_EX_CTX_CERTIFICATE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    *usedLen += cuexMsgLen;
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
@@ -57,6 +69,7 @@ int32_t Tls13PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32
 {
     int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0;
+    uint32_t cuexMsgLen = 0u;
 
     if (bufLen < (CERT_LEN_TAG_SIZE + ctx->certificateReqCtxSize + sizeof(uint16_t))) {
         return PackBufLenError(BINLOG_ID15810, BINGLOG_STR("cert"));
@@ -85,6 +98,15 @@ int32_t Tls13PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32
     /* Certificate length */
     BSL_Uint24ToByte(*usedLen, &buf[certLenFieldOffset]);
     *usedLen += offset;
+
+    cuexMsgLen = 0u;
+    offset = *usedLen;
+    ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &cuexMsgLen, HITLS_EX_CTX_TLS1_3_CERTIFICATE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    *usedLen += cuexMsgLen;
+
     return HITLS_SUCCESS;
 }
 #endif
