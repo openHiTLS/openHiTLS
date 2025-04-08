@@ -198,7 +198,8 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/config/macro_config
         ${openHiTLS_SRC}/tls/handshake/parse/src
         ${openHiTLS_SRC}/auth/privpass_token/include
-        ${openHiTLS_SRC}/config/macro_config)
+        ${openHiTLS_SRC}/config/macro_config
+        ${openHiTLS_SRC}/tls/feature/custom_extensions/include)
 
 add_library(TESTCASE_PRE ${TEST_SOURCE})
 target_link_libraries(TESTCASE_PRE PRIVATE TEST_INTF)

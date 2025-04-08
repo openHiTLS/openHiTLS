@@ -28,6 +28,8 @@
 #include "parse_common.h"
 #include "parse_extensions.h"
 #include "parse_msg.h"
+#include "hitls_custom_extensions.h"
+#include "custom_extensions.h"
 
 
 #define SINGLE_CIPHER_SUITE_SIZE 2u                 /* Length of the signature cipher suite */
@@ -234,6 +236,11 @@ int32_t ParseClientHello(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    /* Parse custom extensions */
+    ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, HITLS_EX_CTX_CLIENT_HELLO);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
     if (len == bufOffset) {
         return HITLS_SUCCESS;
@@ -258,3 +265,4 @@ void CleanClientHello(ClientHelloMsg *msg)
     return;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
+
