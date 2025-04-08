@@ -15,32 +15,15 @@
 
 /* BEGIN_HEADER */
 
-#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <time.h>
 #include <stddef.h>
-#include <sys/types.h>
-#include <regex.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <linux/ioctl.h>
 #include "securec.h"
 #include "bsl_sal.h"
-#include "sal_net.h"
 #include "frame_tls.h"
-#include "cert_callback.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
 #include "bsl_errno.h"
@@ -49,50 +32,10 @@
 #include "uio_abstraction.h"
 #include "tls.h"
 #include "tls_config.h"
-#include "logger.h"
-#include "process.h"
-#include "hs_ctx.h"
-#include "hlt.h"
-#include "stub_replace.h"
 #include "hitls_type.h"
-#include "frame_link.h"
-#include "session_type.h"
-#include "common_func.h"
 #include "hitls_func.h"
-#include "hitls_cert_type.h"
-#include "cert_mgr_ctx.h"
-#include "parser_frame_msg.h"
-#include "recv_process.h"
-#include "simulate_io.h"
-#include "rec_wrapper.h"
-#include "cipher_suite.h"
-#include "alert.h"
-#include "conn_init.h"
 #include "pack.h"
-#include "send_process.h"
-#include "cert.h"
-#include "hitls_cert_reg.h"
-#include "hitls_crypt_type.h"
-#include "hs.h"
-#include "hs_state_recv.h"
-#include "app.h"
-#include "record.h"
-#include "rec_conn.h"
-#include "session.h"
-#include "frame_msg.h"
-#include "pack_frame_msg.h"
-#include "cert_mgr.h"
-#include "hs_extensions.h"
-#include "hlt_type.h"
-#include "sctp_channel.h"
-#include "hitls_crypt_init.h"
-#include "hitls_session.h"
-#include "bsl_log.h"
 #include "bsl_err.h"
-#include "hitls_crypt_reg.h"
-#include "crypt_errno.h"
-#include "bsl_list.h"
-#include "hitls_cert.h"
 #include "custom_extensions.h"
 
 // Simple add_cb function, allocates buffer with 1 byte length and 1 byte data
@@ -182,8 +125,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_API_TC001(void)
     uint8_t type = 1;
 
     // Configure a single custom extension
-    custom_ext_methods exts = {0};
-    custom_ext_method meth = {0};
+    CustomExt_Methods exts = {0};
+    CustomExt_Method meth = {0};
     meth.ext_type = type;
     meth.context = type;
     meth.add_cb = NULL;  // No callback
@@ -223,8 +166,8 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_API_TC001(void)
     uint8_t type = 1;
 
     // Configure a single custom extension
-    custom_ext_methods exts = {0};
-    custom_ext_method meth = {0};
+    CustomExt_Methods exts = {0};
+    CustomExt_Method meth = {0};
     meth.ext_type = type;
     meth.parse_cb = NULL;  // No callback
     exts.meths = &meth;
@@ -264,8 +207,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_MULTIPLE_API_TC001(void)
     uint8_t type = 1;
 
     // Configure multiple custom extensions
-    custom_ext_methods exts = {0};
-    custom_ext_method meths[2] = {{0}, {0}};
+    CustomExt_Methods exts = {0};
+    CustomExt_Method meths[2] = {{0}, {0}};
     meths[0].ext_type = 1;
     meths[0].context = type;
     meths[0].add_cb = NULL;  // No callback
@@ -345,8 +288,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     uint8_t type = 1;
 
     // Configure a single custom extension with callbacks
-    custom_ext_methods exts = {0};
-    custom_ext_method meth = {0};
+    CustomExt_Methods exts = {0};
+    CustomExt_Method meth = {0};
     meth.ext_type = type;
     meth.context = type;
     meth.add_cb = SimpleAddCb;
@@ -390,8 +333,8 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     uint8_t type = 1;
 
     // Configure a single custom extension with parse callback
-    custom_ext_methods exts = {0};
-    custom_ext_method meth = {0};
+    CustomExt_Methods exts = {0};
+    CustomExt_Method meth = {0};
     meth.ext_type = type;
     meth.context = type;
     meth.parse_cb = SimpleParseCb;
@@ -411,7 +354,7 @@ EXIT:
 
 /** @
  * @test  SDV_TLS_SSLCTX_ADD_CUSTOM_EXTENSION_API_TC002
- * @title Test the custom extension addition functionality of the SSLCTXAddCustomExtension function
+ * @title Test the custom extension addition functionality of the HITLS_AddCustomExtension function
  * @precon None
  * @brief
  * 1. Initialize the TLS context and add a valid custom extension, verify if the addition is successful. Expected result 1.
@@ -431,17 +374,17 @@ void SDV_TLS_SSLCTX_ADD_CUSTOM_EXTENSION_API_TC001(void)
     TLS_Ctx ctx = {0};
     uint8_t ext_type = 1;
     uint8_t context = 1;
-    SSL_custom_ext_add_cb_ex add_cb = SimpleAddCb;
-    SSL_custom_ext_free_cb_ex free_cb = SimpleFreeCb;
+    HITLS_CustomExt_Add_Callback add_cb = SimpleAddCb;
+    HITLS_CustomExt_Free_Callback free_cb = SimpleFreeCb;
     void *add_arg = NULL;
-    SSL_custom_ext_parse_cb_ex parse_cb = SimpleParseCb;
+    HITLS_CustomExt_Parse_Callback parse_cb = SimpleParseCb;
     void *parse_arg = NULL;
 
     // Test normal case: Add a custom extension
-    uint32_t ret = SSLCTXAddCustomExtension(&ctx, ext_type, context, add_cb, free_cb, add_arg, parse_cb, parse_arg);
+    uint32_t ret = HITLS_AddCustomExtension(&ctx, ext_type, context, add_cb, free_cb, add_arg, parse_cb, parse_arg);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     ASSERT_EQ(ctx.customExts->meths_count, 1);  // Verify the number of extensions is 1
-    custom_ext_method *meth = &ctx.customExts->meths[0];
+    CustomExt_Method *meth = &ctx.customExts->meths[0];
     ASSERT_EQ(meth->ext_type, ext_type);  // Verify the extension type
     ASSERT_EQ(meth->context, context);    // Verify the context
     ASSERT_EQ(meth->add_cb, add_cb);      // Verify add_cb
@@ -451,12 +394,12 @@ void SDV_TLS_SSLCTX_ADD_CUSTOM_EXTENSION_API_TC001(void)
     ASSERT_EQ(meth->parse_arg, parse_arg); // Verify parse_arg
 
     // Test boundary case: Attempt to add a duplicate extension
-    ret = SSLCTXAddCustomExtension(&ctx, ext_type, context, add_cb, free_cb, add_arg, parse_cb, parse_arg);
+    ret = HITLS_AddCustomExtension(&ctx, ext_type, context, add_cb, free_cb, add_arg, parse_cb, parse_arg);
     ASSERT_EQ(ret, 0);  // Verify the return value is failure
     ASSERT_EQ(ctx.customExts->meths_count, 1);  // Verify the number of extensions does not increase
 
     // Test invalid parameters: add_cb is NULL, free_cb is not NULL
-    ret = SSLCTXAddCustomExtension(&ctx, 2, context, NULL, free_cb, add_arg, parse_cb, parse_arg);
+    ret = HITLS_AddCustomExtension(&ctx, 2, context, NULL, free_cb, add_arg, parse_cb, parse_arg);
     ASSERT_EQ(ret, 0);  // Verify the return value is failure
     ASSERT_EQ(ctx.customExts->meths_count, 1);  // Verify the number of extensions does not increase
 

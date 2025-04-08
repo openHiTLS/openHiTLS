@@ -17,54 +17,28 @@
 
 #include "hitls_build.h"
 #include "tls.h"
+#include "hitls_custom_extensions.h"
 
 // Forward declaration of struct TlsCtx
 struct TlsCtx;
 
-// Define callback function types, using struct TlsCtx * as parameter
-typedef int (*SSL_custom_ext_add_cb_ex)(const struct TlsCtx *ctx, uint8_t ext_type,
-                                        uint8_t context,
-                                        uint8_t **out,
-                                        uint32_t *outlen, void *msg,
-                                        uint32_t *al, void *add_arg);
-
-typedef void (*SSL_custom_ext_free_cb_ex)(const struct TlsCtx *ctx, uint8_t ext_type,
-                                          uint8_t context,
-                                          uint8_t *out,
-                                          void *add_arg);
-
-typedef int (*SSL_custom_ext_parse_cb_ex)(const struct TlsCtx *ctx, uint8_t ext_type,
-                                          uint8_t context,
-                                          const uint8_t **in,
-                                          uint32_t *inlen, void *msg,
-                                          uint32_t *al, void *parse_arg);
-
-// Define custom_ext_method structure
+// Define CustomExt_Method structure
 typedef struct {
     uint8_t ext_type;
     uint8_t context;
-    uint32_t ext_flags;
-    SSL_custom_ext_add_cb_ex add_cb;
-    SSL_custom_ext_free_cb_ex free_cb;
+    HITLS_CustomExt_Add_Callback add_cb;
+    HITLS_CustomExt_Free_Callback free_cb;
     void *add_arg;
-    SSL_custom_ext_parse_cb_ex parse_cb;
+    HITLS_CustomExt_Parse_Callback parse_cb;
     void *parse_arg;
-} custom_ext_method;
+} CustomExt_Method;
 
-// Define custom_ext_methods structure
+// Define CustomExt_Methods structure
 typedef struct {
-    custom_ext_method *meths;
+    CustomExt_Method *meths;
     uint32_t meths_count;
-} custom_ext_methods;
+} CustomExt_Methods;
 
-// Function declarations
-uint32_t SSLCTXAddCustomExtension(struct TlsCtx *ctx, uint8_t ext_type,
-                                  uint8_t context,
-                                  SSL_custom_ext_add_cb_ex add_cb,
-                                  SSL_custom_ext_free_cb_ex free_cb,
-                                  void *add_arg,
-                                  SSL_custom_ext_parse_cb_ex parse_cb,
-                                  void *parse_arg);
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint8_t type);
 int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint8_t type);
 

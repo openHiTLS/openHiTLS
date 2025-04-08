@@ -243,7 +243,7 @@ typedef struct {
     HITLS_TrustedCAList *caList;        /* peer trusted ca list */
 } PeerInfo;
 
-struct custom_ext_methods;
+struct CustomExt_Methods;
 
 struct TlsCtx {
     bool isClient;                          /* is Client */
@@ -298,7 +298,7 @@ struct TlsCtx {
     bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
 
     /* Custom extensions */
-    custom_ext_methods *customExts;  /* Pointer to the custom extension */
+    CustomExt_Methods *customExts;  /* Pointer to the custom extension */
 };
 
 #define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
@@ -309,3 +309,4 @@ struct TlsCtx {
 #endif
 
 #endif /* TLS_H */
+
