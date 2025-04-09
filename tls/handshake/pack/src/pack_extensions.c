@@ -39,6 +39,7 @@
 #include "hs_verify.h"
 #include "pack_common.h"
 #include "pack_extensions.h"
+#include "custom_extensions.h"
 
 #define EXTENSION_MSG(exMsgT, needP, packF) \
     .exMsgType = (exMsgT), \
@@ -71,6 +72,29 @@ static bool IsNeedPreSharedKey(const TLS_Ctx *ctx)
     }
 
     return true;
+}
+
+static bool IsNeedCustomExtensions(const TLS_Ctx *ctx, uint32_t context)
+{
+    uint32_t i = 0;
+    if(ctx == NULL){
+        return false;
+    }
+    CustomExt_Methods *exts = ctx->customExts;
+    if(exts == NULL){
+        return false;
+    }
+    CustomExt_Method *meth = exts->meths;
+    if(meth == NULL){
+        return false;
+    }
+    for (i = 0; i < exts->methsCount; i++, meth++) {
+        if ((context & meth->context) != 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
@@ -743,6 +767,17 @@ static int32_t PackClientPreSharedKey(const TLS_Ctx *ctx, uint8_t *buf, uint32_t
     *usedLen = minLen;
     return HITLS_SUCCESS;
 }
+
+static int32_t PackClientHelloCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+{
+    return PackCustomExtensions(ctx, buf, bufLen, usedLen, HITLS_EX_TYPE_CLIENT_HELLO);
+}
+
+static int32_t PackServerHelloCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+{
+    return PackCustomExtensions(ctx, buf, bufLen, usedLen, HITLS_EX_TYPE_SERVER_HELLO);
+}
+
 #ifdef HITLS_TLS_FEATURE_PHA
 static bool IsNeedPackPha(const TLS_Ctx *ctx)
 {
@@ -853,6 +888,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #ifdef HITLS_TLS_PROTO_TLS13
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, IsNeedPreSharedKey(ctx), PackClientPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
+        { EXTENSION_MSG(HITLS_EX_TYPE_CLIENT_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO), PackClientHelloCustomExtensions) },
     };
 
     uint32_t tmpBufLen = bufLen;
@@ -1211,6 +1247,7 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         /* The preshare key must be the last extension */
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, IsNeedPreSharedKey(ctx), PackServerPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
+        { EXTENSION_MSG(HITLS_EX_TYPE_SERVER_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_SERVER_HELLO), PackServerHelloCustomExtensions) },
     };
 
     /* Calculate the number of extended types */

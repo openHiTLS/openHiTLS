@@ -45,7 +45,7 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
                                    uint16_t extType,
                                    uint32_t context)
 {
-    uint32_t i;
+    uint32_t i = 0;
 
     if(exts == NULL){
         return NULL;
