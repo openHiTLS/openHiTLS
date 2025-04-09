@@ -14,7 +14,8 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_SHA256
+#if defined(HITLS_CRYPTO_SHA256) && !defined(HITLS_CRYPTO_SHA256_SMALL_MEM)
+
 #include "crypt_sha2.h"
 #include "crypt_utils.h"
 #include "sha2_core.h"
@@ -130,4 +131,4 @@ void SHA256CompressMultiBlocks(uint32_t hash[8], const uint8_t *in, uint32_t num
         n--;
     }
 }
-#endif // HITLS_CRYPTO_SHA256
+#endif // HITLS_CRYPTO_SHA256 && !HITLS_CRYPTO_SHA256_SMALL_MEM
