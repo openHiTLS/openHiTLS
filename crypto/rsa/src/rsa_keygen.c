@@ -39,6 +39,16 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
     return keyCtx;
 }
 
+CRYPT_RSA_Ctx *CRYPT_RSA_NewCtxEx(void *libCtx)
+{
+    CRYPT_RSA_Ctx *keyCtx = CRYPT_RSA_NewCtx();
+    if (keyCtx == NULL) {
+        return NULL;
+    }
+    keyCtx->libCtx = libCtx;
+    return keyCtx;
+}
+
 static CRYPT_RSA_PubKey *RSAPubKeyDupCtx(CRYPT_RSA_PubKey *pubKey)
 {
     CRYPT_RSA_PubKey *newPubKey = BSL_SAL_Malloc(sizeof(CRYPT_RSA_PubKey));
@@ -686,6 +696,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+    BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
     ret = RsaPQGen(newCtx->para, newCtx->prvKey, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

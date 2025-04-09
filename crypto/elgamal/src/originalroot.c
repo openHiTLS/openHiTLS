@@ -26,7 +26,7 @@
 #include "crypt_utils.h"
 #include "crypt_params_key.h"
 
-int32_t OriginalRoot(BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q,  uint32_t bits)
+int32_t OriginalRoot(void *libCtx, BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q, uint32_t bits)
 {
     int32_t ret;
     if (g == NULL || p == NULL || q == NULL ) {
@@ -57,7 +57,7 @@ int32_t OriginalRoot(BN_BigNum *g, const BN_BigNum *p, const BN_BigNum *q,  uint
     }
 
     while (true) {
-        ret = BN_RandRange(g, x_top);
+        ret = BN_RandRangeEx(libCtx, g, x_top);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;

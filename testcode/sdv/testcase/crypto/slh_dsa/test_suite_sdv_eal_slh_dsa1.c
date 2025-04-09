@@ -29,30 +29,6 @@
 #include "test.h"
 /* END_HEADER */
 
-uint32_t g_stubRandCounter = 0;
-uint8_t **g_stubRand = NULL;
-uint32_t *g_stubRandLen = NULL;
-
-void RandInjectionInit()
-{
-    g_stubRandCounter = 0;
-    g_stubRand = NULL;
-    g_stubRandLen = NULL;
-}
-
-void RandInjectionSet(uint8_t **rand, uint32_t *len)
-{
-    g_stubRand = rand;
-    g_stubRandLen = len;
-}
-
-int32_t RandInjection(uint8_t *rand, uint32_t randLen)
-{
-    (void)memcpy_s(rand, randLen, g_stubRand[g_stubRandCounter], randLen);
-    g_stubRandCounter++;
-    return CRYPT_SUCCESS;
-}
-
 /* BEGIN_CASE */
 void SDV_CRYPTO_SLH_DSA_VERIFY_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *msg, Hex *context, Hex *sig, int result)
 {

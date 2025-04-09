@@ -258,6 +258,16 @@ CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtx(void)
     return ctx;
 }
 
+CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx)
+{
+    CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 void CRYPT_SLH_DSA_FreeCtx(CryptSlhDsaCtx *ctx)
 {
     if (ctx == NULL) {
@@ -284,19 +294,19 @@ int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx)
     uint32_t n = ctx->para.n;
     uint32_t d = ctx->para.d;
     uint32_t hp = ctx->para.hp;
-    ret = CRYPT_Rand(ctx->prvKey.seed, n);
+    ret = CRYPT_RandEx(ctx->libCtx, ctx->prvKey.seed, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = CRYPT_Rand(ctx->prvKey.prf, n);
+    ret = CRYPT_RandEx(ctx->libCtx, ctx->prvKey.prf, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    ret = CRYPT_Rand(ctx->prvKey.pub.seed, n);
+    ret = CRYPT_RandEx(ctx->libCtx, ctx->prvKey.pub.seed, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -326,7 +336,7 @@ static int32_t GetAddRand(CryptSlhDsaCtx *ctx)
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
-        int32_t ret = CRYPT_Rand(ctx->addrand, ctx->para.n);
+        int32_t ret = CRYPT_RandEx(ctx->libCtx, ctx->addrand, ctx->para.n);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }

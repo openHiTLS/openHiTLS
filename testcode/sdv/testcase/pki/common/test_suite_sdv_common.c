@@ -1059,7 +1059,7 @@ void SDV_X509_SIGN_Func_TC001(char *keyPath, int keyFormat, int keyType, int mdI
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(prvKey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -1106,7 +1106,7 @@ void SDV_X509_SIGN_Func_TC002(void)
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(prvKey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 

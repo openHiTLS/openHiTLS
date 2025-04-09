@@ -43,6 +43,16 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
     return ctx;
 }
 
+CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx)
+{
+    CRYPT_CURVE25519_Ctx *ctx = CRYPT_X25519_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
 {
     CRYPT_CURVE25519_Ctx *ctx = NULL;
@@ -61,6 +71,16 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
     }
     ctx->keyType = CURVE25519_NOKEY;
     BSL_SAL_ReferencesInit(&(ctx->references));
+    return ctx;
+}
+
+CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtxEx(void *libCtx)
+{
+    CRYPT_CURVE25519_Ctx *ctx = CRYPT_ED25519_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
     return ctx;
 }
 
@@ -614,7 +634,7 @@ int32_t CRYPT_ED25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
     uint8_t prvKeyHash[CRYPT_CURVE25519_SIGNLEN];
     GeE tmp;
 
-    ret = CRYPT_Rand(prvKey, sizeof(prvKey));
+    ret = CRYPT_RandEx(pkey->libCtx, prvKey, sizeof(prvKey));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -730,7 +750,7 @@ int32_t CRYPT_X25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
         return CRYPT_NULL_INPUT;
     }
 
-    int32_t ret = CRYPT_Rand(pkey->prvKey, sizeof(pkey->prvKey));
+    int32_t ret = CRYPT_RandEx(pkey->libCtx, pkey->prvKey, sizeof(pkey->prvKey));
     if (ret != CRYPT_SUCCESS) {
         pkey->keyType = 0;
         BSL_ERR_PUSH_ERROR(ret);
