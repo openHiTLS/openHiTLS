@@ -148,12 +148,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
                                          meth->extType, context, &out,
                                          &outLen, msg,
                                          meth->addArg);
-            if (cbRetval <= 0) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                                      "pack custom extension content fail.", 0, 0, 0, 0);
-                return cbRetval;       /* error */
-            }
-            if (cbRetval == 0) {
+            if (cbRetval != 0) {
                 continue;
             }
         }
@@ -183,7 +178,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
     void *msg = NULL;
-    uint32_t offset = 0u;
+    uint32_t offset = *bufOffset;
 
     // Read the extension type
     uint16_t extType = BSL_ByteToUint16(&buf[offset]);
@@ -201,7 +196,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
                                        meth->extType, context, &current,
                                        &len, msg,
                                        meth->parseArg);
-        if (cbRetval <= 0) {
+        if (cbRetval != 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                                   "parse custom extension content fail.", 0, 0, 0, 0);
             return cbRetval;  // Error handling
@@ -209,8 +204,9 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
     }
 
     // Update bufOffset: type byte count (offset) + bytes parsed by parse_cb (len)
-    *bufOffset += offset + len;
+    *bufOffset = offset + len;
     return HITLS_SUCCESS;
 }
+
 
 

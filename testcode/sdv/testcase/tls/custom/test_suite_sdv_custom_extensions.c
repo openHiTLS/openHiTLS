@@ -48,7 +48,7 @@ int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, ui
     (void)addArg;
     *out = malloc(2);
     if (*out == NULL) {
-        return -1;
+        return 1;
     }
     uint32_t bufOffset = 0;
     (*out)[bufOffset] = 1;
@@ -56,7 +56,7 @@ int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, ui
     (*out)[bufOffset] = 0xAA;
     bufOffset++;
     *outLen = bufOffset;
-    return 1;
+    return 0;
 }
 
 // Simple free_cb function, frees the allocated data
@@ -83,20 +83,20 @@ int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
     // Pass the data pointer to BSL_SAL_Dump
     uint8_t *dumpedData = BSL_SAL_Dump(&(*in)[bufOffset], tmpSize);
     if (dumpedData == NULL) {
-        return -1;  // Processing failed
+        return 1;  // Processing failed
     }
 
     // Check the first byte of the returned data
     if (dumpedData[0] != 0xAA) {
         BSL_SAL_Free(dumpedData);  // Free memory
-        return -1;
+        return 1;
     }
 
     // Update *inlen to indicate the number of bytes consumed (including the size byte)
     *inLen = tmpSize + bufOffset;
 
     BSL_SAL_Free(dumpedData);  // Free memory
-    return 1;
+    return 0;
 }
 
 /* END_HEADER */
@@ -417,5 +417,6 @@ EXIT:
     return;
 }
 /* END_CASE */
+
 
 
