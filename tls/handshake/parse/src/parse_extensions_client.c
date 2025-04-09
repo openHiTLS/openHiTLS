@@ -32,6 +32,7 @@
 #include "rec.h"
 #include "parse_common.h"
 #include "parse_extensions.h"
+#include "custom_extensions.h"
 //  Parses the point format message sent by the server
 static int32_t ParseServerPointFormats(ParsePacket *pkt, ServerHelloMsg *msg)
 {
@@ -277,6 +278,16 @@ static int32_t ParseServerEncryptThenMac(ParsePacket *pkt, ServerHelloMsg *msg)
 }
 #endif /* HITLS_TLS_FEATURE_ETM */
 
+static int32_t ParseServerHelloCustomExtensions(ParsePacket *pkt, ServerHelloMsg *msg)
+{
+    if(msg == NULL){
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+    printf("ParseCustomExtensions ready.\n");
+    return ParseCustomExtensions(pkt->ctx, pkt->buf, pkt->bufOffset,
+        HITLS_EX_TYPE_SERVER_HELLO);
+}
+
 /**
  * @brief   Parses the extended message from server
  *
@@ -335,10 +346,13 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_ENCRYPT_THEN_MAC:
             return ParseServerEncryptThenMac(&pkt, msg);
 #endif /* HITLS_TLS_FEATURE_ETM */
+        case HITLS_EX_TYPE_SERVER_HELLO:
+            return ParseServerHelloCustomExtensions(&pkt, msg);
 #ifdef HITLS_TLS_PROTO_TLS13
         case HS_EX_TYPE_SUPPORTED_GROUPS:
             return HITLS_SUCCESS;
 #endif /* HITLS_TLS_PROTO_TLS13 */
+
         default:
             break;
     }

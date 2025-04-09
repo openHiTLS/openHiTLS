@@ -31,6 +31,7 @@
 #include "hs_ctx.h"
 #include "alert.h"
 #include "parse_extensions.h"
+#include "custom_extensions.h"
 
 
 static int32_t StorePeerSupportGroup(TLS_Ctx *ctx, ClientHelloMsg *msg)
@@ -759,6 +760,17 @@ static int32_t ParseClientEncryptThenMac(ParsePacket *pkt, ClientHelloMsg *msg)
         &msg->extension.flag.haveEncryptThenMac);
 }
 #endif /* HITLS_TLS_FEATURE_ETM */
+
+static int32_t ParseClientHelloCustomExtensions(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    if(msg == NULL){
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+    printf("ParseCustomExtensions ready.\n");
+    return ParseCustomExtensions(pkt->ctx, pkt->buf, pkt->bufOffset,
+        HITLS_EX_TYPE_CLIENT_HELLO);
+}
+
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 static int32_t ParseClientTicket(ParsePacket *pkt, ClientHelloMsg *msg)
 {
@@ -788,6 +800,7 @@ static int32_t ParseClientTicket(ParsePacket *pkt, ClientHelloMsg *msg)
 static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     ClientHelloMsg *msg)
 {
+    printf("ParseClientExBody\n");
     uint32_t bufOffset = 0u;
     ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = extMsgLen, .bufOffset = &bufOffset};
     static struct {
@@ -823,6 +836,7 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #ifdef HITLS_TLS_FEATURE_ETM
         { .exMsgType = HS_EX_TYPE_ENCRYPT_THEN_MAC, .parseFunc = ParseClientEncryptThenMac},
 #endif /* HITLS_TLS_FEATURE_ETM */
+        { .exMsgType = HITLS_EX_TYPE_CLIENT_HELLO, .parseFunc = ParseClientHelloCustomExtensions},
     };
     for (uint32_t index = 0; index < sizeof(extMsgList) / sizeof(extMsgList[0]); index++) {
         if (extMsgList[index].exMsgType == extMsgType) {
