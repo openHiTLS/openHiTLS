@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_SHA1
+#if defined(HITLS_CRYPTO_SHA1) && !defined(HITLS_CRYPTO_SHA1_SMALL_MEM)
 
 #include <stdlib.h>
 #include "securec.h"
@@ -192,4 +192,4 @@ const uint8_t *SHA1_Step(const uint8_t *input, uint32_t len, uint32_t *h)
 }
 #endif
 
-#endif // HITLS_CRYPTO_SHA1
+#endif // HITLS_CRYPTO_SHA1 && !HITLS_CRYPTO_SHA1_SMALL_MEM
