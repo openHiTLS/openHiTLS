@@ -22,9 +22,33 @@
 #include "hitls_crypt_init.h"
 #include "hitls_pki_cert.h"
 #include "crypt_errno.h"
+#include "hitls_custom_extensions.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
+#define CUSTOM_EXT_TYPE 0x003F
+
+static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                                     const uint8_t **in, uint32_t *inLen, void *msg, void *parseArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)msg;
+    (void)parseArg;
+    if (*inLen < 2) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+    uint16_t dataLen = ((*in)[0] << 8) | (*in)[1];
+    if (*inLen < 2 + dataLen) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+    const uint8_t *data = *in + 2;
+    printf("Received custom extension data: %.*s\n", dataLen, data);
+    *in += 2 + dataLen;
+    *inLen -= 2 + dataLen;
+    return HITLS_SUCCESS;
+}
 
 int main(int32_t argc, char *argv[])
 {
@@ -122,6 +146,13 @@ int main(int32_t argc, char *argv[])
     ctx = HITLS_New(config);
     if (ctx == NULL) {
         printf("HITLS_New failed.\n");
+        goto EXIT;
+    }
+    
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_CLIENT_HELLO,
+                                   NULL, NULL, NULL, ParseCustomExtClientHello, NULL);
+    if (ret != HITLS_SUCCESS) {
+        printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
     }
 

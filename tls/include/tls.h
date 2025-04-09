@@ -22,6 +22,7 @@
 #include "cipher_suite.h"
 #include "tls_config.h"
 #include "hitls_error.h"
+#include "custom_extensions.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -293,6 +294,9 @@ struct TlsCtx {
     uint32_t certificateReqCtxSize;         /* tls1.3 pha certificate_request_context */
     bool plainAlertForbid;                  /* tls1.3 forbid to receive plain alert message */
     bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
+    
+    /* Custom extensions */
+    CustomExt_Methods *customExts;  /* Pointer to the custom extension */
 };
 
 #define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
