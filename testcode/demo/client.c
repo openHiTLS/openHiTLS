@@ -21,9 +21,43 @@
 #include "hitls_crypt_init.h"
 #include "hitls_pki_cert.h"
 #include "crypt_errno.h"
+#include "hitls_custom_extensions.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
+#define CUSTOM_EXT_TYPE 0x003F
+
+static int AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                                   uint8_t **out, uint32_t *outLen, void *msg, void *addArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)msg;
+    (void)addArg;
+    const char *data = "test custom_extension_client_hello";
+    size_t dataLen = strlen(data);
+    uint8_t *buf = malloc(2 + dataLen);
+    if (buf == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+    buf[0] = (dataLen >> 8) & 0xFF;
+    buf[1] = dataLen & 0xFF;
+    memcpy(buf + 2, data, dataLen);
+    *out = buf;
+    *outLen = 2 + dataLen;
+    return HITLS_SUCCESS;
+}
+
+static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                          uint8_t *out, void *addArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)addArg;
+    free(out);
+}
 
 int main(int32_t argc, char *argv[])
 {
@@ -108,6 +142,13 @@ int main(int32_t argc, char *argv[])
     ctx = HITLS_New(config);
     if (ctx == NULL) {
         printf("HITLS_New failed.\n");
+        goto EXIT;
+    }
+    
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_CLIENT_HELLO,
+                                   AddCustomExtClientHello, FreeCustomExt, NULL, NULL, NULL);
+    if (ret != HITLS_SUCCESS) {
+        printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
     }
 
