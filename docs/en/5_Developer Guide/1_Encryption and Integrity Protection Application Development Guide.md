@@ -221,7 +221,7 @@ int main(void) {
     }
 
     // Initialize the random number.
-    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
@@ -336,7 +336,7 @@ int main(void)
     }
 
     // Initialize the random number.
-    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
@@ -494,7 +494,7 @@ int main(void)
     }
 
     // Initialize the random number.
-    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
@@ -700,7 +700,7 @@ int main(void)
     BSL_ERR_Init();// Initialize the error module.
 
     // Initialize the global random number by using the default entropy source from **/dev/random** of Linux.
-    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandInit: error code is %x\n", ret);
         PrintLastError();
@@ -708,7 +708,7 @@ int main(void)
     }
 
     // Obtain the random number sequence of the **len** value.
-    ret = CRYPT_EAL_Randbytes(output, len);
+    ret = CRYPT_EAL_RandbytesEx(NULL, output, len);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();
@@ -722,7 +722,7 @@ int main(void)
     printf("\n");
 
     // Reseeding
-    ret = CRYPT_EAL_RandSeed();
+    ret = CRYPT_EAL_RandSeedEx(NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_RandSeed: error code is %x\n", ret);
         PrintLastError();
@@ -730,7 +730,7 @@ int main(void)
     }
 
     // Obtain the random number sequence of the **len** value.
-    ret = CRYPT_EAL_Randbytes(output, len);
+    ret = CRYPT_EAL_RandbytesEx(NULL, output, len);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Randbytes: error code is %x\n", ret);
         PrintLastError();

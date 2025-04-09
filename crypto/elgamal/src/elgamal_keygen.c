@@ -41,6 +41,16 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_NewCtx(void)
     return ctx;
 }
 
+CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_NewCtxEx(void *libCtx)
+{
+    CRYPT_ELGAMAL_Ctx *ctx = CRYPT_ELGAMAL_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 static CRYPT_ELGAMAL_PubKey *ElGamalPubKeyDupCtx(CRYPT_ELGAMAL_PubKey *pubKey)
 {
     CRYPT_ELGAMAL_PubKey *newPubKey = (CRYPT_ELGAMAL_PubKey *)BSL_SAL_Malloc(sizeof(CRYPT_ELGAMAL_PubKey));
@@ -424,7 +434,7 @@ CRYPT_ELGAMAL_PubKey *ElGamal_NewPubKey(uint32_t bits)
     return pubKey;
 }
 
-static int32_t ElGamal_GenP(BN_BigNum *p, CRYPT_ELGAMAL_Para *para, BN_Optimizer *optimizer)
+static int32_t ElGamal_GenP(void *libCtx, BN_BigNum *p, CRYPT_ELGAMAL_Para *para, BN_Optimizer *optimizer)
 {
     uint32_t bits = para->bits;
     uint32_t k_bits = para->k_bits;
@@ -442,7 +452,7 @@ static int32_t ElGamal_GenP(BN_BigNum *p, CRYPT_ELGAMAL_Para *para, BN_Optimizer
         goto EXIT;
     }
 
-    ret = BN_Rand(k, (bits - k_bits), 1, 0);
+    ret = BN_RandEx(libCtx, k, (bits - k_bits), 1, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -465,7 +475,8 @@ EXIT:
     return ret;
 }
 
-static int32_t ElGamal_CalcPrvKey(CRYPT_ELGAMAL_PrvKey *prvKey, CRYPT_ELGAMAL_Para *para, BN_Optimizer *optimizer)
+static int32_t ElGamal_CalcPrvKey(void *libCtx, CRYPT_ELGAMAL_PrvKey *prvKey, CRYPT_ELGAMAL_Para *para,
+    BN_Optimizer *optimizer)
 {
     int32_t ret = CRYPT_SUCCESS;
     BN_BigNum *x_top = BN_Create(para->bits);
@@ -475,13 +486,13 @@ static int32_t ElGamal_CalcPrvKey(CRYPT_ELGAMAL_PrvKey *prvKey, CRYPT_ELGAMAL_Pa
         goto EXIT;
     }
 
-    ret = ElGamal_GenP(prvKey->p, para, optimizer);
+    ret = ElGamal_GenP(libCtx, prvKey->p, para, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
-    ret = OriginalRoot(prvKey->g, prvKey->p, para->q, para->bits);
+    ret = OriginalRoot(libCtx, prvKey->g, prvKey->p, para->q, para->bits);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -493,7 +504,7 @@ static int32_t ElGamal_CalcPrvKey(CRYPT_ELGAMAL_PrvKey *prvKey, CRYPT_ELGAMAL_Pa
         goto EXIT;
     }
 
-    ret = BN_RandRange(prvKey->x, x_top);
+    ret = BN_RandRangeEx(libCtx, prvKey->x, x_top);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -552,14 +563,14 @@ int32_t CRYPT_ELGAMAL_Gen(CRYPT_ELGAMAL_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-
-    ret = ElGamal_GenP(newCtx->prvKey->p, newCtx->para, optimizer);
+    BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
+    ret = ElGamal_GenP(ctx->libCtx, newCtx->prvKey->p, newCtx->para, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
-    ret = ElGamal_CalcPrvKey(newCtx->prvKey, newCtx->para, optimizer);
+    ret = ElGamal_CalcPrvKey(ctx->libCtx, newCtx->prvKey, newCtx->para, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

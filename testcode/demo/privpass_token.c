@@ -7,6 +7,7 @@
 #include "bsl_err.h"
 #include "crypt_eal_rand.h"
 #include "auth_errno.h"
+#include "crypt_errno.h"
 
 uint8_t pubKey[] = {0x30, 0x82, 0x01, 0x52, 0x30, 0x3d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
     0x0a, 0x30, 0x30, 0xa0, 0x0d, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
@@ -201,7 +202,12 @@ int main(void) {
     };
     // Initialize random number generator. NULL means using default entropy source, 
     // users can choose to use their own entropy source
-    if (CRYPT_EAL_RandInit(BSL_CID_RAND_SHA256, NULL, NULL, NULL, 0) != 0) { 
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+#else
+    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
+    if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret);
         PrintLastError();
         goto EXIT;
