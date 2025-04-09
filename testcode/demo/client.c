@@ -27,7 +27,7 @@
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
 #define CUSTOM_EXT_TYPE 0x003F
 
-static int AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+int32_t AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
                                    uint8_t **out, uint32_t *outLen, void *msg, void *addArg)
 {
     (void)ctx;
@@ -35,8 +35,8 @@ static int AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint3
     (void)context;
     (void)msg;
     (void)addArg;
-    const char *data = "test custom_extension_client_hello";
-    size_t dataLen = strlen(data);
+    uint8_t *data = "test custom_extension_client_hello";
+    uint16_t dataLen = strlen(data);
     uint8_t *buf = malloc(2 + dataLen);
     if (buf == NULL) {
         return HITLS_MEMALLOC_FAIL;
@@ -210,3 +210,4 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
