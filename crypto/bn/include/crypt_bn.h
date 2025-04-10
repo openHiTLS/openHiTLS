@@ -651,23 +651,6 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
  */
 int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt);
 
-/**
- * @ingroup bn
- * @brief check prime number
- *
- * @param libCtx [IN] Library context
- * @param bn  [IN] Prime number to be checked
- * @param opt [IN] Optimizer
- *
- * @retval CRYPT_SUCCESS                    The check result is a prime number.
- * @retval CRYPT_BN_NOR_CHECK_PRIME         The check result is a non-prime number.
- * @retval CRYPT_NULL_INPUT                 Invalid null pointer
- * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
- * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
- * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
- */
-int32_t BN_PrimeCheckEx(void *libCtx, const BN_BigNum *bn, BN_Optimizer *opt);
-
 #define BN_RAND_TOP_NOBIT      0 /* Not set bits */
 #define BN_RAND_TOP_ONEBIT     1 /* Set the most significant bit to 1. */
 #define BN_RAND_TOP_TWOBIT     2 /* Set the highest two bits to 1 */
