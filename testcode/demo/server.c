@@ -28,6 +28,37 @@
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
 #define CUSTOM_EXT_TYPE 0x003F
 
+int32_t AddCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                                   uint8_t **out, uint32_t *outLen, void *msg, void *addArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)msg;
+    (void)addArg;
+    uint8_t *data = "test Tls1.2 custom_extension_server_hello";
+    uint16_t dataLen = strlen(data);
+    uint8_t *buf = malloc(dataLen);
+    if (buf == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+    memcpy(buf, data, dataLen);
+    *out = buf;
+    *outLen = dataLen;
+    return HITLS_SUCCESS;
+}
+
+static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                          uint8_t *out, void *addArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)addArg;
+    free(out);
+}
+
+
 static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
                                      const uint8_t **in, uint32_t *inLen, void *msg, void *parseArg)
 {
@@ -39,7 +70,7 @@ static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uin
     if (in == NULL || inLen == NULL) {
         return HITLS_CONFIG_INVALID_LENGTH;
     }
-    printf("Received custom extension data: %.*s\n", *inLen, (*in));
+    printf("Received custom extension data from clent: %.*s\n", *inLen, (*in));
     return HITLS_SUCCESS;
 }
 
@@ -149,6 +180,13 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO ,
+                               AddCustomExtServerHello, FreeCustomExt, NULL, NULL, NULL);
+    if (ret != HITLS_SUCCESS) {
+        printf("HITLS_AddCustomExtension failed.\n");
+        goto EXIT;
+    }
+
     /* 用户可按需实现method */
     uio = BSL_UIO_New(BSL_UIO_TcpMethod());
     if (uio == NULL) {
@@ -209,5 +247,6 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
 
 

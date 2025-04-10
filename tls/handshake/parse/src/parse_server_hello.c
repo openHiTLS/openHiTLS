@@ -129,4 +129,3 @@ void CleanServerHello(ServerHelloMsg *msg)
     return;
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
-

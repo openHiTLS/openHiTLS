@@ -57,6 +57,21 @@ static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t conte
     free(out);
 }
 
+static int ParseCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                                     const uint8_t **in, uint32_t *inLen, void *msg, void *parseArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)msg;
+    (void)parseArg;
+    if (in == NULL || inLen == NULL) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+    printf("Received custom extension data from server: %.*s\n", *inLen, (*in));
+    return HITLS_SUCCESS;
+}
+
 int main(int32_t argc, char *argv[])
 {
     int32_t exitValue = -1;
@@ -150,6 +165,13 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO ,
+                                   NULL, NULL, NULL, ParseCustomExtServerHello, NULL);
+    if (ret != HITLS_SUCCESS) {
+        printf("HITLS_AddCustomExtension failed.\n");
+        goto EXIT;
+    }
+
     uio = BSL_UIO_New(BSL_UIO_TcpMethod());
     if (uio == NULL) {
         printf("BSL_UIO_New failed.\n");
@@ -208,5 +230,6 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
 
 

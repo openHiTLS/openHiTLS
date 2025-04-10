@@ -39,21 +39,15 @@ extern "C" {
 
 /**
  * @ingroup hitls_custom_extensions
- * @brief   Extension is used in ServerHello messages.
+ * @brief   Extension is used in Tls1.2 ServerHello messages.
  */
-#define HITLS_EX_TYPE_SERVER_HELLO                    0x00002
+#define HITLS_EX_TYPE_TLS1_2_SERVER_HELLO                    0x00002
 
 /**
  * @ingroup hitls_custom_extensions
- * @brief   Extension is used in Certificate messages.
+ * @brief   Extension is used in Tls1.3 ServerHello messages.
  */
-#define HITLS_EX_TYPE_CERTIFICATE                     0x00004
-
-/**
- * @ingroup hitls_custom_extensions
- * @brief   Extension is used in Tls1.3 ServerKeyExchange messages.
- */
-#define HITLS_EX_TYPE_TLS1_3_CERTIFICATE             0x00008
+#define HITLS_EX_TYPE_TLS1_3_SERVER_HELLO                    0x00004
 
 /**
  * @ingroup hitls_custom_extensions
@@ -144,4 +138,5 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType,
 #endif
 
 #endif /* HITLS_CUSTOM_EXTENSIONS_H */
+
 
