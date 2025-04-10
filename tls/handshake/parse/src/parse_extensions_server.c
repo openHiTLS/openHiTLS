@@ -786,30 +786,6 @@ static int32_t ParseClientTicket(ParsePacket *pkt, ClientHelloMsg *msg)
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 
-bool IsClientNeedCustomExtensions(CustomExt_Methods *exts,
-                                   uint16_t extType,
-                                   uint32_t context)
-{
-    uint32_t i = 0;
-
-    if(exts == NULL){
-        return false;
-    }
-
-    CustomExt_Method *meth = exts->meths;
-
-    if(meth == NULL){
-        return false;
-    }
-
-    for (i = 0; i < exts->methsCount; i++, meth++) {
-        if (extType == meth->extType && (context & meth->context) != 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 // parses the extension message from client
 static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     ClientHelloMsg *msg)
@@ -856,7 +832,7 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         }
     }
 
-    if(IsClientNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)){
+    if(IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)){
         return ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_CLIENT_HELLO);
     }
 
@@ -882,7 +858,7 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         bufOffset += HS_EX_HEADER_LEN;
 
         if(HS_GetExtensionTypeId(extMsgType) == HS_EX_TYPE_ID_UNRECOGNIZED){
-			if(!IsClientNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)){
+			if(!IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)){
                 msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
 			}
         }
@@ -970,5 +946,6 @@ void CleanClientHelloExtension(ClientHelloMsg *msg)
     return;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
+
 
 

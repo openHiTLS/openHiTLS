@@ -33,6 +33,50 @@
 #include "bsl_sal.h"
 #include "custom_extensions.h"
 
+bool IsPackNeedCustomExtensions(CustomExt_Methods *exts, uint32_t context)
+{
+    uint32_t i = 0;
+
+    if(exts == NULL){
+        return false;
+    }
+    CustomExt_Method *meth = exts->meths;
+    if(meth == NULL){
+        return false;
+    }
+    for (i = 0; i < exts->methsCount; i++, meth++) {
+        if ((context & meth->context) != 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool IsParseNeedCustomExtensions(CustomExt_Methods *exts,
+                                   uint16_t extType,
+                                   uint32_t context)
+{
+    uint32_t i = 0;
+
+    if(exts == NULL){
+        return false;
+    }
+
+    CustomExt_Method *meth = exts->meths;
+
+    if(meth == NULL){
+        return false;
+    }
+
+    for (i = 0; i < exts->methsCount; i++, meth++) {
+        if (extType == meth->extType && (context & meth->context) != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static uint32_t JudgeCustomExtension(uint32_t extContext, uint32_t context)
 {
     if ((extContext & context) == 0) {
@@ -200,6 +244,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
 
     return HITLS_SUCCESS;
 }
+
 
 
 
