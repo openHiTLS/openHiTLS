@@ -772,11 +772,13 @@ static int32_t PackClientHelloCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf,
 {
     return PackCustomExtensions(ctx, buf, bufLen, usedLen, HITLS_EX_TYPE_CLIENT_HELLO);
 }
-
+/*
 static int32_t PackServerHelloCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
     return PackCustomExtensions(ctx, buf, bufLen, usedLen, HITLS_EX_TYPE_SERVER_HELLO);
 }
+
+ */
 
 #ifdef HITLS_TLS_FEATURE_PHA
 static bool IsNeedPackPha(const TLS_Ctx *ctx)
@@ -852,6 +854,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     bool isNeedPha = IsNeedPackPha(ctx);
 #endif /* HITLS_TLS_FEATURE_PHA */
     PackExtInfo extMsgList[] = {
+		{ EXTENSION_MSG(HITLS_EX_TYPE_CLIENT_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO), PackClientHelloCustomExtensions) },
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedClientPackServerName(ctx), PackServerName) },
 #endif /* HITLS_TLS_FEATURE_SNI */
@@ -888,8 +891,19 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #ifdef HITLS_TLS_PROTO_TLS13
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, IsNeedPreSharedKey(ctx), PackClientPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
-        { EXTENSION_MSG(HITLS_EX_TYPE_CLIENT_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO), PackClientHelloCustomExtensions) },
     };
+/*
+    uint32_t len = 0;
+    uint32_t offset = 0;
+    if(IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO)){
+        ret = PackClientHelloCustomExtensions(ctx, &buf[offset], bufLen - offset, &len);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        offset += len;
+    }
+
+ */
 
     uint32_t tmpBufLen = bufLen;
     ret = PackExtensions(ctx, buf, &tmpBufLen, extMsgList, sizeof(extMsgList) / sizeof(extMsgList[0]));
@@ -1247,8 +1261,19 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         /* The preshare key must be the last extension */
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, IsNeedPreSharedKey(ctx), PackServerPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
-        { EXTENSION_MSG(HITLS_EX_TYPE_SERVER_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_SERVER_HELLO), PackServerHelloCustomExtensions) },
     };
+
+    /*
+    uint32_t len = 0;
+    if(IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_SERVER_HELLO)){
+        ret = PackServerHelloCustomExtensions(ctx, &buf[offset], bufLen - offset, &len);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        offset += len;
+    }
+
+     */
 
     /* Calculate the number of extended types */
     listSize = sizeof(extMsgList) / sizeof(extMsgList[0]);
@@ -1332,3 +1357,4 @@ int32_t PackServerExtension(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
+

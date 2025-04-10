@@ -278,16 +278,6 @@ static int32_t ParseServerEncryptThenMac(ParsePacket *pkt, ServerHelloMsg *msg)
 }
 #endif /* HITLS_TLS_FEATURE_ETM */
 
-static int32_t ParseServerHelloCustomExtensions(ParsePacket *pkt, ServerHelloMsg *msg)
-{
-    if(msg == NULL){
-        return HITLS_PARSE_INVALID_MSG_LEN;
-    }
-    printf("ParseCustomExtensions ready.\n");
-    return ParseCustomExtensions(pkt->ctx, pkt->buf, pkt->bufOffset,
-        HITLS_EX_TYPE_SERVER_HELLO);
-}
-
 /**
  * @brief   Parses the extended message from server
  *
@@ -346,8 +336,6 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_ENCRYPT_THEN_MAC:
             return ParseServerEncryptThenMac(&pkt, msg);
 #endif /* HITLS_TLS_FEATURE_ETM */
-        case HITLS_EX_TYPE_SERVER_HELLO:
-            return ParseServerHelloCustomExtensions(&pkt, msg);
 #ifdef HITLS_TLS_PROTO_TLS13
         case HS_EX_TYPE_SUPPORTED_GROUPS:
             return HITLS_SUCCESS;
@@ -356,6 +344,8 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         default:
             break;
     }
+
+    //ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_SERVER_HELLO);
 
     // You need to send an alert when an unknown extended field is encountered
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15205, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -415,3 +405,4 @@ void CleanServerHelloExtension(ServerHelloMsg *msg)
     return;
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
+
