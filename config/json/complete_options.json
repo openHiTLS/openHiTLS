@@ -170,7 +170,10 @@
             "-DHITLS_SIXTY_FOUR_BITS",
             "-DHITLS_THIRTY_TWO_BITS",
             "-DHITLS_BSL_SAL_LINUX",
-            "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE"
+            "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE",
+            "-DHITLS_CRYPTO_SHA1_SMALL_MEM",
+            "-DHITLS_CRYPTO_SHA256_SMALL_MEM",
+            "-DHITLS_CRYPTO_SHA512_SMALL_MEM"
         ],
         "CC_DEBUG_FLAGS": [
             "-g",

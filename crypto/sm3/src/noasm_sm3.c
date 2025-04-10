@@ -104,7 +104,7 @@
     (B) = ROTL32((B), 9);   (F) = ROTL32((F), 19);              \
 } while (0)
 
-#define ROUND00_16(A, B, C, D, E, F, G, H, K, Wj, Wi)  \
+#define ROUND00_15(A, B, C, D, E, F, G, H, K, Wj, Wi)  \
     ROUND(A, B, C, D, E, F, G, H, K, FF0, GG0, Wj, Wi)
 
 #define ROUND16_63(A, B, C, D, E, F, G, H, K, Wj, Wi)  \
@@ -149,26 +149,26 @@ void SM3_Compress(uint32_t state[8], const uint8_t *data, uint32_t blockCnt)
         uint32_t h = state[7];
 
         // 0 ~ 15 round
-        ROUND00_16(a, b, c, d, e, f, g, h, K0, w[0], w[0] ^ w[4]);
-        ROUND00_16(h, a, b, c, d, e, f, g, K1, w[1], w[1] ^ w[5]);
-        ROUND00_16(g, h, a, b, c, d, e, f, K2, w[2], w[2] ^ w[6]);
-        ROUND00_16(f, g, h, a, b, c, d, e, K3, w[3], w[3] ^ w[7]);
-        ROUND00_16(e, f, g, h, a, b, c, d, K4, w[4], w[4] ^ w[8]);
-        ROUND00_16(d, e, f, g, h, a, b, c, K5, w[5], w[5] ^ w[9]);
-        ROUND00_16(c, d, e, f, g, h, a, b, K6, w[6], w[6] ^ w[10]);
-        ROUND00_16(b, c, d, e, f, g, h, a, K7, w[7], w[7] ^ w[11]);
-        ROUND00_16(a, b, c, d, e, f, g, h, K8, w[8], w[8] ^ w[12]);
-        ROUND00_16(h, a, b, c, d, e, f, g, K9, w[9], w[9] ^ w[13]);
-        ROUND00_16(g, h, a, b, c, d, e, f, K10, w[10], w[10] ^ w[14]);
-        ROUND00_16(f, g, h, a, b, c, d, e, K11, w[11], w[11] ^ w[15]);
+        ROUND00_15(a, b, c, d, e, f, g, h, K0, w[0], w[0] ^ w[4]);
+        ROUND00_15(h, a, b, c, d, e, f, g, K1, w[1], w[1] ^ w[5]);
+        ROUND00_15(g, h, a, b, c, d, e, f, K2, w[2], w[2] ^ w[6]);
+        ROUND00_15(f, g, h, a, b, c, d, e, K3, w[3], w[3] ^ w[7]);
+        ROUND00_15(e, f, g, h, a, b, c, d, K4, w[4], w[4] ^ w[8]);
+        ROUND00_15(d, e, f, g, h, a, b, c, K5, w[5], w[5] ^ w[9]);
+        ROUND00_15(c, d, e, f, g, h, a, b, K6, w[6], w[6] ^ w[10]);
+        ROUND00_15(b, c, d, e, f, g, h, a, K7, w[7], w[7] ^ w[11]);
+        ROUND00_15(a, b, c, d, e, f, g, h, K8, w[8], w[8] ^ w[12]);
+        ROUND00_15(h, a, b, c, d, e, f, g, K9, w[9], w[9] ^ w[13]);
+        ROUND00_15(g, h, a, b, c, d, e, f, K10, w[10], w[10] ^ w[14]);
+        ROUND00_15(f, g, h, a, b, c, d, e, K11, w[11], w[11] ^ w[15]);
         w[0] = EXPAND(w[0], w[7], w[13], w[3], w[10]);
-        ROUND00_16(e, f, g, h, a, b, c, d, K12, w[12], w[12] ^ w[0]);
+        ROUND00_15(e, f, g, h, a, b, c, d, K12, w[12], w[12] ^ w[0]);
         w[1] = EXPAND(w[1], w[8], w[14], w[4], w[11]);
-        ROUND00_16(d, e, f, g, h, a, b, c, K13, w[13], w[13] ^ w[1]);
+        ROUND00_15(d, e, f, g, h, a, b, c, K13, w[13], w[13] ^ w[1]);
         w[2] = EXPAND(w[2], w[9], w[15], w[5], w[12]);
-        ROUND00_16(c, d, e, f, g, h, a, b, K14, w[14], w[14] ^ w[2]);
+        ROUND00_15(c, d, e, f, g, h, a, b, K14, w[14], w[14] ^ w[2]);
         w[3] = EXPAND(w[3], w[10], w[0], w[6], w[13]);
-        ROUND00_16(b, c, d, e, f, g, h, a, K15, w[15], w[15] ^ w[3]);
+        ROUND00_15(b, c, d, e, f, g, h, a, K15, w[15], w[15] ^ w[3]);
 
         // 16 ~ 63 round
         w[4]  = EXPAND(w[4],  w[11], w[1], w[7],  w[14]);
