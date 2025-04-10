@@ -37,8 +37,9 @@ typedef struct {
 } CustomExt_Methods;
 
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint32_t context);
-int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint32_t context);
+int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint16_t extType, uint32_t extLen, uint32_t context);
 
 #endif // CUSTOM_EXTENSIONS_H
+
 
 

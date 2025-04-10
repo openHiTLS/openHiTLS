@@ -39,10 +39,7 @@ static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uin
     if (in == NULL || inLen == NULL) {
         return HITLS_CONFIG_INVALID_LENGTH;
     }
-    uint16_t dataLen = ((*in)[0] << 8) | (*in)[1];
-    const uint8_t *data = *in + 2;
-    printf("Received custom extension data: %.*s\n", dataLen, data);
-    *inLen = 2 + dataLen;
+    printf("Received custom extension data: %.*s\n", *inLen, (*in));
     return HITLS_SUCCESS;
 }
 
@@ -144,7 +141,7 @@ int main(int32_t argc, char *argv[])
         printf("HITLS_New failed.\n");
         goto EXIT;
     }
-    
+
     ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_CLIENT_HELLO,
                                    NULL, NULL, NULL, ParseCustomExtClientHello, NULL);
     if (ret != HITLS_SUCCESS) {
@@ -212,4 +209,5 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
 

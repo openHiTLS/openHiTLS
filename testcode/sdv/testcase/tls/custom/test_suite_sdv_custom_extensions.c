@@ -51,8 +51,6 @@ int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, ui
         return 1;
     }
     uint32_t bufOffset = 0;
-    (*out)[bufOffset] = 1;
-    bufOffset++;
     (*out)[bufOffset] = 0xAA;
     bufOffset++;
     *outLen = bufOffset;
@@ -76,12 +74,12 @@ int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
     (void)msg;
     (void)parseArg;
 
-    uint32_t bufOffset = 0;
-    uint8_t tmpSize = (*in)[bufOffset];
-    bufOffset++;
 
+    if(*inLen <= 0){
+        return 0;
+    }
     // Pass the data pointer to BSL_SAL_Dump
-    uint8_t *dumpedData = BSL_SAL_Dump(&(*in)[bufOffset], tmpSize);
+    uint8_t *dumpedData = BSL_SAL_Dump(*in, *inLen);
     if (dumpedData == NULL) {
         return 1;  // Processing failed
     }
@@ -91,9 +89,6 @@ int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
         BSL_SAL_Free(dumpedData);  // Free memory
         return 1;
     }
-
-    // Update *inlen to indicate the number of bytes consumed (including the size byte)
-    *inLen = tmpSize + bufOffset;
 
     BSL_SAL_Free(dumpedData);  // Free memory
     return 0;
@@ -161,10 +156,11 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_API_TC001(void)
     FRAME_Init();  // Initialize the test framework
 
     TLS_Ctx ctx = {0};
-    uint8_t buf[1024] = {0, 1, 0, 0, 0};  // ext_type=1, len=0
+    uint8_t buf[1024] = {0xAA};  // ext_type=1, len=0
     uint32_t bufOffset = 0;
     uint16_t extType = 1;
     uint32_t context = 1;
+    uint32_t extLen = 1;
 
     // Configure a single custom extension
     CustomExt_Methods exts = {0};
@@ -176,7 +172,7 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_API_TC001(void)
     ctx.customExts = &exts;
 
     // Call the interface under test
-    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, context);
+    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, extType, extLen, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     // Note: Current implementation doesn't update bufOffset without parse_cb, adjust expectation if needed
 
@@ -303,12 +299,13 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     // Call the interface under test
     int32_t ret = PackCustomExtensions(&ctx, buf, bufLen, &len, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
-    ASSERT_EQ(len, 4);             // ext_type (2 byte) + len (1 byte) + data (1 byte)
+    ASSERT_EQ(len, 5);             // ext_type (2 byte) + len (2 byte) + data (1 byte)
     // Verify the extension type
     uint16_t packedType = BSL_ByteToUint16(&buf[0]);
     ASSERT_EQ(packedType, extType);
-    ASSERT_EQ(buf[2], 1);          // Verify the len
-    ASSERT_EQ(buf[3], 0xAA);       // Verify the data
+    uint16_t packedLen = BSL_ByteToUint16(&buf[2]);
+    ASSERT_EQ(packedLen, 1);          // Verify the len
+    ASSERT_EQ(buf[4], 0xAA);       // Verify the data
 
 EXIT:
     return;
@@ -332,10 +329,11 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     FRAME_Init();  // Initialize the test framework
 
     TLS_Ctx ctx = {0};
-    uint8_t buf[1024] = {0x00, 0x01, 1, 0xAA};  // ext_type=1 (big-endian), len=1, data=0xAA
+    uint8_t buf[1024] = {0xAA};  // ext_type=1 (big-endian), len=1, data=0xAA
     uint32_t bufOffset = 0;
     uint16_t extType = 1;
     uint32_t context = 1;
+    uint32_t extLen = 1;
 
     // Configure a single custom extension with parse callback
     CustomExt_Methods exts = {0};
@@ -348,9 +346,8 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     ctx.customExts = &exts;
 
     // Call the interface under test
-    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, context);
+    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, extType, extLen, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
-    ASSERT_EQ(bufOffset, 4);        // ext_type (2 byte) + len (1 byte) + data (1 byte)
 
 EXIT:
     return;
@@ -417,6 +414,7 @@ EXIT:
     return;
 }
 /* END_CASE */
+
 
 
 

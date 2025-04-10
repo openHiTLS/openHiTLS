@@ -159,6 +159,9 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
             BSL_Uint16ToByte(meth->extType, &buf[offset]);
             offset += 2;
 
+            BSL_Uint16ToByte(outLen, &buf[offset]);
+            offset += 2;
+
             (void)memcpy_s(&buf[offset], bufLen - offset, out, outLen);
             offset += outLen;
         }
@@ -173,28 +176,22 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
     return HITLS_SUCCESS;
 }
 
-int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint32_t context)
+int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint32_t *bufOffset, uint16_t extType, uint32_t extLen, uint32_t context)
 {
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
     void *msg = NULL;
-    uint32_t offset = *bufOffset;
 
-    // Read the extension type
-    uint16_t extType = BSL_ByteToUint16(&buf[offset]);
-    offset += 2;  // offset becomes 2, indicating to skip the type byte
     meth = FindCustomExtensions(exts, extType, context);
     if (meth == NULL) {
         return HITLS_SUCCESS;
     }
-
-    uint32_t len = 0;
+    const uint8_t *offset = buf + *bufOffset;
     // Create a local pointer starting from the position after the type byte
-    const uint8_t *current = buf + offset;
     if (meth->parseCb != NULL) {
         int cbRetval = meth->parseCb(ctx,
-                                       meth->extType, context, &current,
-                                       &len, msg,
+                                       meth->extType, context, &offset,
+                                       &extLen, msg,
                                        meth->parseArg);
         if (cbRetval != 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -203,10 +200,9 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
         }
     }
 
-    // Update bufOffset: type byte count (offset) + bytes parsed by parse_cb (len)
-    *bufOffset = offset + len;
     return HITLS_SUCCESS;
 }
+
 
 
 
