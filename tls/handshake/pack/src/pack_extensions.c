@@ -854,7 +854,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     bool isNeedPha = IsNeedPackPha(ctx);
 #endif /* HITLS_TLS_FEATURE_PHA */
     PackExtInfo extMsgList[] = {
-		{ EXTENSION_MSG(HITLS_EX_TYPE_CLIENT_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO), PackClientHelloCustomExtensions) },
+		//{ EXTENSION_MSG(HITLS_EX_TYPE_CLIENT_HELLO , IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO), PackClientHelloCustomExtensions) },
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedClientPackServerName(ctx), PackServerName) },
 #endif /* HITLS_TLS_FEATURE_SNI */
@@ -892,7 +892,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, IsNeedPreSharedKey(ctx), PackClientPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
     };
-/*
+
     uint32_t len = 0;
     uint32_t offset = 0;
     if(IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO)){
@@ -903,14 +903,12 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         offset += len;
     }
 
- */
-
     uint32_t tmpBufLen = bufLen;
-    ret = PackExtensions(ctx, buf, &tmpBufLen, extMsgList, sizeof(extMsgList) / sizeof(extMsgList[0]));
+    ret = PackExtensions(ctx, &buf[offset], &tmpBufLen, extMsgList, sizeof(extMsgList) / sizeof(extMsgList[0]));
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    *usedLen = tmpBufLen;
+    *usedLen = tmpBufLen + len;
 #ifdef HITLS_TLS_FEATURE_PHA
     ctx->hsCtx->extFlag.havePostHsAuth = isNeedPha;
 #endif /* HITLS_TLS_FEATURE_PHA */
