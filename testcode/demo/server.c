@@ -49,6 +49,27 @@ int32_t AddCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t
     return HITLS_SUCCESS;
 }
 
+int32_t AddCustomExtEncryptedExtension(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                                   uint8_t **out, uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, void *addArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)cert;
+    (void)certId;
+    (void)addArg;
+    uint8_t *data = "test Tls1.2 custom_extension_encrypted_extension";
+    uint16_t dataLen = strlen(data);
+    uint8_t *buf = malloc(dataLen);
+    if (buf == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+    memcpy(buf, data, dataLen);
+    *out = buf;
+    *outLen = dataLen;
+    return HITLS_SUCCESS;
+}
+
 static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
                           uint8_t *out, void *addArg)
 {
@@ -182,8 +203,15 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO ,
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
                                AddCustomExtServerHello, FreeCustomExt, NULL, NULL, NULL);
+    if (ret != HITLS_SUCCESS) {
+        printf("HITLS_AddCustomExtension failed.\n");
+        goto EXIT;
+    }
+
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
+                           AddCustomExtEncryptedExtension, FreeCustomExt, NULL, NULL, NULL);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
@@ -249,6 +277,7 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
 
 
 

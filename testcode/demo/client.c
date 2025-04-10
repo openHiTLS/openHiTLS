@@ -74,6 +74,22 @@ static int ParseCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uin
     return HITLS_SUCCESS;
 }
 
+static int ParseCustomExtEncryptedExtension(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+                                     const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, void *parseArg)
+{
+    (void)ctx;
+    (void)extType;
+    (void)context;
+    (void)cert;
+    (void)certId;
+    (void)parseArg;
+    if (in == NULL || inLen == NULL) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+    printf("Received custom extension data from server: %.*s\n", *inLen, (*in));
+    return HITLS_SUCCESS;
+}
+
 int main(int32_t argc, char *argv[])
 {
     int32_t exitValue = -1;
@@ -167,8 +183,15 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO ,
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
                                    NULL, NULL, NULL, ParseCustomExtServerHello, NULL);
+    if (ret != HITLS_SUCCESS) {
+        printf("HITLS_AddCustomExtension failed.\n");
+        goto EXIT;
+    }
+
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
+                               NULL, NULL, NULL, ParseCustomExtEncryptedExtension, NULL);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
@@ -232,6 +255,7 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
 
 
 
