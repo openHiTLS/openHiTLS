@@ -208,6 +208,7 @@ int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *p
             "ciphertext malloc fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
+    keyCtx->ciphertextLen = groupInfo->ciphertextLen;
     return SAL_CRYPT_KemEncapsulate(ctx,
         &(HITLS_KemEncapsulateParams){
             .groupId = ctx->negotiatedInfo.negotiatedGroup,
