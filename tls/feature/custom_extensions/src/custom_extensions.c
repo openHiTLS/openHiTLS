@@ -124,7 +124,6 @@ uint32_t HITLS_AddCustomExtension(struct TlsCtx *ctx, uint16_t extType,
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint32_t context)
 {
     uint32_t offset = 0u;
-    void *msg = NULL;
 
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
@@ -146,7 +145,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
         if (meth->addCb != NULL) {
             int cbRetval = meth->addCb(ctx,
                                          meth->extType, context, &out,
-                                         &outLen, msg,
+                                         &outLen, NULL, 0,
                                          meth->addArg);
             if (cbRetval != 0) {
                 continue;
@@ -180,7 +179,6 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
 {
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
-    void *msg = NULL;
 
     meth = FindCustomExtensions(exts, extType, context);
     if (meth == NULL) {
@@ -191,7 +189,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
     if (meth->parseCb != NULL) {
         int cbRetval = meth->parseCb(ctx,
                                        meth->extType, context, &offset,
-                                       &extLen, msg,
+                                       &extLen, NULL, 0,
                                        meth->parseArg);
         if (cbRetval != 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -202,6 +200,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
 
     return HITLS_SUCCESS;
 }
+
 
 
 

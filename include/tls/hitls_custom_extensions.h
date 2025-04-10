@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include "hitls_type.h"
+#include "hitls_pki_cert.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,13 +42,44 @@ extern "C" {
  * @ingroup hitls_custom_extensions
  * @brief   Extension is used in Tls1.2 ServerHello messages.
  */
-#define HITLS_EX_TYPE_TLS1_2_SERVER_HELLO                    0x00002
+#define HITLS_EX_TYPE_TLS1_2_SERVER_HELLO             0x00002
 
 /**
  * @ingroup hitls_custom_extensions
  * @brief   Extension is used in Tls1.3 ServerHello messages.
  */
-#define HITLS_EX_TYPE_TLS1_3_SERVER_HELLO                    0x00004
+#define HITLS_EX_TYPE_TLS1_3_SERVER_HELLO             0x00004
+
+/**
+ * @ingroup hitls_custom_extensions
+ * @brief   Extension is used in HelloRetryRequest messages (TLS 1.3).
+ */
+#define HITLS_EX_TYPE_HELLO_RETRY_REQUEST             0x00008
+
+/**
+ * @ingroup hitls_custom_extensions
+ * @brief   Extension is used in EncryptedExtensions messages (TLS 1.3).
+ */
+#define HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS            0x00010
+
+/**
+ * @ingroup hitls_custom_extensions
+ * @brief   Extension is used in Certificate messages.
+ */
+#define HITLS_EX_TYPE_CERTIFICATE                     0x00020
+
+/**
+ * @ingroup hitls_custom_extensions
+ * @brief   Extension is used in CertificateRequest messages.
+ */
+#define HITLS_EX_TYPE_CERTIFICATE_REQUEST             0x00040
+
+/**
+ * @ingroup hitls_custom_extensions
+ * @brief   Extension is used in NewSessionTicket messages (TLS 1.3).
+ */
+#define HITLS_EX_TYPE_NEW_SESSION_TICKET              0x00080
+
 
 /**
  * @ingroup hitls_custom_extensions
@@ -68,7 +100,7 @@ extern "C" {
 typedef int (*HITLS_AddCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
                                          uint32_t context,
                                          uint8_t **out,
-                                         uint32_t *outLen, void *msg,
+                                         uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId,
                                          void *addArg);
 
 /**
@@ -107,7 +139,7 @@ typedef void (*HITLS_FreeCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extTy
 typedef int (*HITLS_ParseCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
                                            uint32_t context,
                                            const uint8_t **in,
-                                           uint32_t *inLen, void *msg,
+                                           uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId,
                                            void *parseArg);
 
 /**
@@ -138,5 +170,6 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType,
 #endif
 
 #endif /* HITLS_CUSTOM_EXTENSIONS_H */
+
 
 

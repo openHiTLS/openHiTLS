@@ -29,12 +29,13 @@
 #define CUSTOM_EXT_TYPE 0x003F
 
 int32_t AddCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
-                                   uint8_t **out, uint32_t *outLen, void *msg, void *addArg)
+                                   uint8_t **out, uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, void *addArg)
 {
     (void)ctx;
     (void)extType;
     (void)context;
-    (void)msg;
+    (void)cert;
+    (void)certId;
     (void)addArg;
     uint8_t *data = "test Tls1.2 custom_extension_server_hello";
     uint16_t dataLen = strlen(data);
@@ -60,12 +61,13 @@ static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t conte
 
 
 static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
-                                     const uint8_t **in, uint32_t *inLen, void *msg, void *parseArg)
+                                     const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, void *parseArg)
 {
     (void)ctx;
     (void)extType;
     (void)context;
-    (void)msg;
+    (void)cert;
+    (void)certId;
     (void)parseArg;
     if (in == NULL || inLen == NULL) {
         return HITLS_CONFIG_INVALID_LENGTH;
@@ -247,6 +249,7 @@ EXIT:
     BSL_UIO_Free(uio);
     return exitValue;
 }
+
 
 
 
