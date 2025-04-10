@@ -278,30 +278,6 @@ static int32_t ParseServerEncryptThenMac(ParsePacket *pkt, ServerHelloMsg *msg)
 }
 #endif /* HITLS_TLS_FEATURE_ETM */
 
-bool IsServerNeedCustomExtensions(CustomExt_Methods *exts,
-                                   uint16_t extType,
-                                   uint32_t context)
-{
-    uint32_t i = 0;
-
-    if(exts == NULL){
-        return false;
-    }
-
-    CustomExt_Method *meth = exts->meths;
-
-    if(meth == NULL){
-        return false;
-    }
-
-    for (i = 0; i < exts->methsCount; i++, meth++) {
-        if (extType == meth->extType && (context & meth->context) != 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /**
  * @brief   Parses the extended message from server
  *
@@ -369,7 +345,7 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
             break;
     }
 
-    if(IsServerNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
+    if(IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
         return ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO);
     }
 
@@ -396,7 +372,7 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         bufOffset += HS_EX_HEADER_LEN;
 
         if(HS_GetExtensionTypeId(extMsgType) == HS_EX_TYPE_ID_UNRECOGNIZED){
-            if(!IsServerNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
+            if(!IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
                 msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
             }
         }
@@ -440,5 +416,6 @@ void CleanServerHelloExtension(ServerHelloMsg *msg)
     return;
 }
 #endif /* HITLS_TLS_HOST_CLIENT */
+
 
 

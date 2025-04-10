@@ -74,29 +74,6 @@ static bool IsNeedPreSharedKey(const TLS_Ctx *ctx)
     return true;
 }
 
-static bool IsNeedCustomExtensions(const TLS_Ctx *ctx, uint32_t context)
-{
-    uint32_t i = 0;
-    if(ctx == NULL){
-        return false;
-    }
-    CustomExt_Methods *exts = ctx->customExts;
-    if(exts == NULL){
-        return false;
-    }
-    CustomExt_Method *meth = exts->meths;
-    if(meth == NULL){
-        return false;
-    }
-    for (i = 0; i < exts->methsCount; i++, meth++) {
-        if ((context & meth->context) != 0) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool Tls13NeedPack(const TLS_Ctx *ctx, uint32_t version)
 {
     bool tls13NeedPack = false;
@@ -768,16 +745,6 @@ static int32_t PackClientPreSharedKey(const TLS_Ctx *ctx, uint8_t *buf, uint32_t
     return HITLS_SUCCESS;
 }
 
-static int32_t PackClientHelloCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
-{
-    return PackCustomExtensions(ctx, buf, bufLen, usedLen, HITLS_EX_TYPE_CLIENT_HELLO);
-}
-
-static int32_t PackServerHelloCustomExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
-{
-    return PackCustomExtensions(ctx, buf, bufLen, usedLen, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO);
-}
-
 #ifdef HITLS_TLS_FEATURE_PHA
 static bool IsNeedPackPha(const TLS_Ctx *ctx)
 {
@@ -892,8 +859,8 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 
     uint32_t len = 0;
     uint32_t offset = 0;
-    if(IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_CLIENT_HELLO)){
-        ret = PackClientHelloCustomExtensions(ctx, &buf[offset], bufLen - offset, &len);
+    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_CLIENT_HELLO)){
+        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_CLIENT_HELLO);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -1259,8 +1226,8 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     };
 
     uint32_t len = 0;
-    if(IsNeedCustomExtensions(ctx, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
-        ret = PackServerHelloCustomExtensions(ctx, &buf[offset], bufLen - offset, &len);
+    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
+        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -1349,5 +1316,6 @@ int32_t PackServerExtension(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
+
 
 

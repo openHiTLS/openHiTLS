@@ -101,7 +101,24 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         }
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-    return ParseTicket(&pkt, msg);
+    ret = ParseTicket(&pkt, msg);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    if(*(pkt.bufOffset) < pkt.bufLen) {
+        uint16_t extMsgType = 0u;
+        uint32_t extMsgLen = 0u;
+        extMsgType = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
+        (pkt.bufOffset) += sizeof(uint16_t);
+        extMsgLen = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
+        (pkt.bufOffset) += sizeof(uint16_t);
+        if(IsParseNeedCustomExtensions(pkt.ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
+            ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_NEW_SESSION_TICKET);
+        }
+        pkt.bufOffset += extMsgLen;
+    }
+    return ret;
 }
 
 void CleanNewSessionTicket(NewSessionTicketMsg *msg)
