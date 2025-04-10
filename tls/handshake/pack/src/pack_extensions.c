@@ -1226,8 +1226,8 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     };
 
     uint32_t len = 0;
-    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO)){
-        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO);
+    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST)){
+        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -1316,6 +1316,7 @@ int32_t PackServerExtension(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
+
 
 
 
