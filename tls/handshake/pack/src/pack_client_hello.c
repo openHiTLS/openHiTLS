@@ -32,6 +32,7 @@
 #include "pack_common.h"
 #include "pack_extensions.h"
 
+
 #define SINGLE_CIPHER_SUITE_SIZE 2u
 #define CIPHER_SUITES_LEN_SIZE   2u
 
@@ -317,7 +318,6 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
         return ret;
     }
     offset += msgLen;
-
     exMsgLen = 0u;
     ret = PackClientExtension(ctx, &buf[offset], bufLen - offset, &exMsgLen);
     if (ret != HITLS_SUCCESS) {
@@ -332,5 +332,3 @@ int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
 }
 
 #endif /* HITLS_TLS_HOST_CLIENT */
-
-

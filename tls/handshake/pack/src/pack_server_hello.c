@@ -116,4 +116,3 @@ int32_t PackServerHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
-
