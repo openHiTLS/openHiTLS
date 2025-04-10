@@ -40,11 +40,12 @@
 #include "custom_extensions.h"
 
 // Simple add_cb function, allocates buffer with 1 byte length and 1 byte data
-int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t **out, uint32_t *outLen, void *msg, void *addArg) {
+int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t **out, uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, void *addArg) {
     (void)ctx;
     (void)extType;
     (void)context;
-    (void)msg;
+    (void)cert;
+    (void)certId;
     (void)addArg;
     *out = malloc(2);
     if (*out == NULL) {
@@ -67,11 +68,12 @@ void SimpleFreeCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
 }
 
 // Simple parse_cb function, reads the length and data, checks the data
-int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, const uint8_t **in, uint32_t *inLen, void *msg, void *parseArg) {
+int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, void *parseArg) {
     (void)ctx;
     (void)extType;
     (void)context;
-    (void)msg;
+    (void)cert;
+    (void)certId;
     (void)parseArg;
 
 
@@ -414,6 +416,7 @@ EXIT:
     return;
 }
 /* END_CASE */
+
 
 
 
