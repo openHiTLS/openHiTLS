@@ -250,7 +250,7 @@ static int32_t ProviderAddGroupInfo(const BSL_Param *params, void *args)
     PROCESS_PARAM_INT32(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, ciphertextLen);
 
     ret = HITLS_SUCCESS;
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), group->algId, CRYPT_EAL_PKEY_EXCH_OPERATE,
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), group->algId, group->isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE,
         ATTRIBUTE_FROM_CONFIG(config));
     if (pkey != NULL) {
         config->groupInfolen++;

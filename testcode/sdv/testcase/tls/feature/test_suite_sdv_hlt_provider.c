@@ -37,7 +37,7 @@
 #define PORT 10087
 
 /* BEGIN_CASE */
-void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, int providerLibFmt)
+void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, int providerLibFmt, char *group)
 {
 #ifndef HITLS_TLS_FEATURE_PROVIDER
     (void)path;
@@ -69,7 +69,7 @@ void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, 
     HLT_SetCertPath(clientCtxConfig, "new_signAlg/ca.der", "new_signAlg/inter.der", "new_signAlg/client.der",
         "new_signAlg/client.key.der", "NULL", "NULL");
 
-    HLT_SetGroups(serverCtxConfig, "test_new_group"); // For key exchange algorithm
+    HLT_SetGroups(serverCtxConfig, group); // For kex or kem group
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
 

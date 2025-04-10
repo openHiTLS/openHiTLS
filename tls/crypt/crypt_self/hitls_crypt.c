@@ -631,12 +631,12 @@ int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const H
 
 #ifdef HITLS_CRYPTO_PKEY
 CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaId paraId)
+    CRYPT_PKEY_AlgId algId, CRYPT_PKEY_ParaId paraId, bool isKem)
 {
     int32_t ret;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
 #else
     (void)libCtx;
     (void)attrName;
@@ -677,7 +677,7 @@ CRYPT_EAL_PkeyCtx *GenerateKeyByNamedGroup(HITLS_Lib_Ctx *libCtx, const char *at
     if (groupInfo == NULL) {
         return NULL;
     }
-    return GeneratePkeyByParaId(libCtx, attrName, groupInfo->algId, groupInfo->paraId);
+    return GeneratePkeyByParaId(libCtx, attrName, groupInfo->algId, groupInfo->paraId, groupInfo->isKem);
 #else
     (void)libCtx;
     (void)attrName;
@@ -881,7 +881,7 @@ HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
             break;
         }
     }
-    return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId);
+    return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId, false);
 }
 
 HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyByParameters(HITLS_Lib_Ctx *libCtx,
@@ -1223,18 +1223,16 @@ int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
             return ret;
         }
     }
-    CRYPT_EAL_PkeyPub ek = { 0 };
-    ek.id = groupInfo->algId;
-    ek.key.kemEk.data = params->peerPubkey;
-    ek.key.kemEk.len = params->pubKeyLen;
-    // todo:CRYPT_EAL_PkeySetPubEX
-    ret = CRYPT_EAL_PkeySetPub(pkey, &ek);
+    BSL_Param param[2] = { {0}, BSL_PARAM_END };
+    (void)BSL_PARAM_InitValue(param, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY, BSL_PARAM_TYPE_OCTETS, params->peerPubkey, params->pubKeyLen);
+    ret = CRYPT_EAL_PkeySetPubEx(pkey, param);
     if (ret != CRYPT_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16660, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "PkeyGetPub fail", 0, 0, 0, 0);
         CRYPT_EAL_PkeyFreeCtx(pkey);
         return ret;
     }
+
     ret = CRYPT_EAL_PkeyEncaps(pkey, params->ciphertext, params->ciphertextLen, params->sharedSecret, params->sharedSecretLen);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return ret;

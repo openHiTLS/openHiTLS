@@ -188,6 +188,7 @@ static const HitlsConfig g_groupList[] = {
     {"HITLS_FF_DHE_6144", HITLS_FF_DHE_6144},
     {"HITLS_FF_DHE_8192", HITLS_FF_DHE_8192},
     {"test_new_group", 477}, // for new group
+    {"test_new_group_kem",  478} // NEW_KEM_ALGID
 };
 
 static const HitlsConfig g_signatureList[] = {

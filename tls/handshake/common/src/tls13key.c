@@ -197,6 +197,7 @@ int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *p
                 keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
                 preMasterSecret, preMasterSecretLen);
     }
+#ifdef HITLS_TLS_FEATURE_KEM
     if (ctx->isClient) {
         return SAL_CRYPT_KemDecapsulate(keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
             preMasterSecret, preMasterSecretLen);
@@ -208,6 +209,7 @@ int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *p
             "ciphertext malloc fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
+    keyCtx->ciphertextLen = groupInfo->ciphertextLen;
     return SAL_CRYPT_KemEncapsulate(ctx,
         &(HITLS_KemEncapsulateParams){
             .groupId = ctx->negotiatedInfo.negotiatedGroup,
@@ -218,6 +220,9 @@ int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *p
             .sharedSecret = preMasterSecret,
             .sharedSecretLen = preMasterSecretLen,
         });
+#else
+    return HITLS_INTERNAL_EXCEPTION;
+#endif
 }
 /*
         Early Secret
