@@ -96,7 +96,7 @@ static void PemFormatBase64(char *src, uint32_t srcLen, char **des)
     *des = tmp;
 }
 
-int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_Symbol *symbol,
+int32_t BSL_PEM_GenAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_Symbol *symbol,
     char **encode, uint32_t *encodeLen)
 {
     int32_t ret;
@@ -142,7 +142,7 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
     return ret;
 }
 
-int32_t BSL_PEM_ParsePem2Asn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
+int32_t BSL_PEM_ParsePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
     uint32_t *asn1Len)
 {
     char *nextEncode = *encode;

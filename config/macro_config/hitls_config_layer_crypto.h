@@ -25,6 +25,36 @@
 #ifndef HITLS_CONFIG_LAYER_CRYPTO_H
 #define HITLS_CONFIG_LAYER_CRYPTO_H
 
+#ifdef HITLS_CRYPTO_ENCODE_DECODE
+    #ifndef HITLS_CRYPTO_KEY_ENCODE
+        #define HITLS_CRYPTO_KEY_ENCODE
+    #endif
+    #ifndef HITLS_CRYPTO_KEY_DECODE
+        #define HITLS_CRYPTO_KEY_DECODE
+    #endif
+    #ifndef HITLS_CRYPTO_KEY_ENCRYPT
+        #define HITLS_CRYPTO_KEY_ENCRYPT
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_KEY_ENCRYPT
+    #ifndef HITLS_CRYPTO_PBKDF2
+        #define HITLS_CRYPTO_PBKDF2
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_KEY_ENCODE) || defined(HITLS_CRYPTO_KEY_DECODE) || defined(HITLS_CRYPTO_KEY_ENCRYPT)
+    #ifndef HITLS_CRYPTO_ENCODE_DECODE
+        #define HITLS_CRYPTO_ENCODE_DECODE
+    #endif
+    #ifndef HITLS_BSL_ASN1
+        #define HITLS_BSL_ASN1
+    #endif
+    #ifndef HITLS_BSL_OBJ
+        #define HITLS_BSL_OBJ
+    #endif
+#endif
+
 /* KDF */
 #ifdef HITLS_CRYPTO_KDF
     #ifndef HITLS_CRYPTO_PBKDF2
@@ -45,6 +75,9 @@
     #ifndef HITLS_CRYPTO_HKDF
         #define HITLS_CRYPTO_HKDF
     #endif
+    #ifndef HITLS_BSL_PARAMS
+        #define HITLS_BSL_PARAMS
+    #endif
 #endif
 
 #ifdef HITLS_CRYPTO_SCRYPT
@@ -61,11 +94,14 @@
     #ifndef HITLS_CRYPTO_KDF
             #define HITLS_CRYPTO_KDF
     #endif
+    #ifndef HITLS_CRYPTO_HMAC
+        #define HITLS_CRYPTO_HMAC
+    #endif
+    #ifndef HITLS_BSL_PARAMS
+        #define HITLS_BSL_PARAMS
+    #endif
 #endif
 
-#if defined(HITLS_CRYPTO_KDF) && !defined(HITLS_CRYPTO_HMAC)
-    #define HITLS_CRYPTO_HMAC
-#endif
 
 /* DRBG */
 #ifdef HITLS_CRYPTO_DRBG
@@ -91,6 +127,9 @@
 #if defined(HITLS_CRYPTO_DRBG_HASH) || defined(HITLS_CRYPTO_DRBG_HMAC) || defined(HITLS_CRYPTO_DRBG_CTR)
     #ifndef HITLS_CRYPTO_DRBG
         #define HITLS_CRYPTO_DRBG
+    #endif
+    #ifndef HITLS_BSL_PARAMS
+        #define HITLS_BSL_PARAMS
     #endif
 #endif
 
@@ -284,9 +323,6 @@
 #endif
 
 #ifdef HITLS_CRYPTO_SM2
-    #ifndef HITLS_CRYPTO_ENCODE
-        #define HITLS_CRYPTO_ENCODE
-    #endif
     #ifndef HITLS_CRYPTO_SM3
         #define HITLS_CRYPTO_SM3
     #endif
@@ -318,12 +354,6 @@
     #define HITLS_CRYPTO_CURVE_SM2
 #endif
 
-#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA)
-    #ifndef HITLS_CRYPTO_ENCODE
-        #define HITLS_CRYPTO_ENCODE
-    #endif
-#endif
-
 #if defined(HITLS_CRYPTO_ECC) || defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DSA)|| defined(HITLS_CRYPTO_DH)
     #ifndef HITLS_CRYPTO_BN
         #define HITLS_CRYPTO_BN
@@ -335,6 +365,9 @@
     defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER)|| defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA)
     #ifndef HITLS_CRYPTO_PKEY
         #define HITLS_CRYPTO_PKEY
+    #endif
+    #ifndef HITLS_BSL_PARAMS
+        #define HITLS_BSL_PARAMS
     #endif
 #endif
 

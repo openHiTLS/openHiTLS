@@ -33,7 +33,6 @@
 #include "bn_basic.h"
 #include "securec.h"
 
-#include "crypt_encode.h"
 /* END_HEADER */
 
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0

@@ -365,6 +365,7 @@ static const EAL_SymMethod SM4_METHOD = {
 const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
 {
     switch (algId) {
+#ifdef HITLS_CRYPTO_AES
         case CRYPT_CIPHER_AES128_CBC:
         case CRYPT_CIPHER_AES128_ECB:
         case CRYPT_CIPHER_AES128_CTR:
@@ -389,6 +390,8 @@ const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_AES256_CFB:
         case CRYPT_CIPHER_AES256_OFB:
             return &AES256_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_SM4
         case CRYPT_CIPHER_SM4_XTS:
         case CRYPT_CIPHER_SM4_CBC:
         case CRYPT_CIPHER_SM4_ECB:
@@ -397,8 +400,11 @@ const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_SM4_CFB:
         case CRYPT_CIPHER_SM4_OFB:
             return &SM4_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_CHACHA20
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return &CHACHA20_METHOD;
+#endif
         default:
             return NULL;
     }

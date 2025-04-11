@@ -218,6 +218,7 @@ static int32_t RandCheckAndGetDefaultEntropy(CRYPT_RAND_AlgId id, bool hasEntrop
             return ret;
         }
 #else
+        (void)seedMethPoint;
         BSL_ERR_PUSH_ERROR(CRYPT_DRBG_PARAM_ERROR);
         return CRYPT_DRBG_PARAM_ERROR;
 #endif

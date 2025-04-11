@@ -16,6 +16,8 @@
 #ifndef HITLS_X509_VERIFY_H
 #define HITLS_X509_VERIFY_H
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_X509_VFY
 #include <stdint.h>
 #include "bsl_asn1.h"
 #include "hitls_pki_x509.h"
@@ -28,14 +30,16 @@ extern "C" {
 typedef enum {
     HITLS_X509_VFY_FLAG_SECBITS = 0x100000000,
     HITLS_X509_VFY_FLAG_TIME = 0x200000000,
-} HITLS_X509_IN_VerifyFalg;
+} HITLS_X509_IN_VerifyFlag;
 
 typedef struct _HITLS_X509_VerifyParam {
     int32_t maxDepth;
     int64_t time;
     uint32_t securityBits;
     uint64_t flags;
+#ifdef HITLS_CRYPTO_SM2
     BSL_Buffer sm2UserId;
+#endif
 } HITLS_X509_VerifyParam;
 
 struct _HITLS_X509_StoreCtx {
@@ -59,5 +63,7 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
 #ifdef __cplusplus
 }
 #endif
+
+#endif // HITLS_PKI_X509_VFY
 
 #endif // HITLS_X509_VERIFY_H

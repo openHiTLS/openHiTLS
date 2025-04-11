@@ -36,38 +36,34 @@ target_link_directories(TEST_INTF INTERFACE
     ${openHiTLS_SRC}/testcode/output/lib
     ${openHiTLS_SRC}/platform/Secure_C/lib
 )
-if(ENABLE_PKI)
-    target_link_libraries(TEST_INTF INTERFACE hitls_pki)
+
+# link libs
+set(TEST_INTF_LIBS "")
+
+if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
+    list(APPEND TEST_INTF_LIBS tls_hlt tls_frame hitls_tls rec_wrapper)
 endif()
 
-if(ENABLE_AUTH)
-    target_link_libraries(TEST_INTF INTERFACE hitls_auth)
+if(ENABLE_PKI AND ${BUILD_PKI} GREATER -1)
+    list(APPEND TEST_INTF_LIBS hitls_pki)
 endif()
 
-if(ENABLE_TLS)
-    target_link_libraries(TEST_INTF INTERFACE
-        tls_hlt
-        tls_frame
-        hitls_tls
-        hitls_pki
-        rec_wrapper
-    )
+if(ENABLE_AUTH AND ${BUILD_AUTH} GREATER -1)
+    list(APPEND TEST_INTF_LIBS hitls_auth)
 endif()
 
-if(ENABLE_CRYPTO OR ENABLE_TLS)
-    target_link_libraries(TEST_INTF INTERFACE hitls_crypto
-    )
+if(ENABLE_CRYPTO AND ${BUILD_CRYPTO} GREATER -1)
+    list(APPEND TEST_INTF_LIBS hitls_crypto)
 endif()
 
-target_link_libraries(TEST_INTF INTERFACE
-    hitls_bsl
-    boundscheck
-    pthread
-    dl
-)
-if(ENABLE_UIO_SCTP OR ENABLE_TLS)
-    target_link_libraries(TEST_INTF INTERFACE sctp)
+list(APPEND TEST_INTF_LIBS hitls_bsl boundscheck pthread dl)
+
+if(ENABLE_UIO_SCTP OR (ENABLE_TLS AND ${BUILD_TLS} GREATER -1))
+    list(APPEND TEST_INTF_LIBS sctp)
 endif()
+
+target_link_libraries(TEST_INTF INTERFACE ${TEST_INTF_LIBS})
+
 target_include_directories(TEST_INTF
         INTERFACE
         ${openHiTLS_SRC}/platform/Secure_C/include
@@ -153,6 +149,8 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/crypto/elgamal/include
         ${openHiTLS_SRC}/crypto/elgamal/src
         ${openHiTLS_SRC}/crypto/encode/include
+        ${openHiTLS_SRC}/crypto/encode_decode/include
+        ${openHiTLS_SRC}/crypto/encode_decode/src
         ${openHiTLS_SRC}/bsl/err/include
         ${openHiTLS_SRC}/bsl/err/src
         ${openHiTLS_SRC}/include/tls

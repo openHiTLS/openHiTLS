@@ -16,6 +16,8 @@
 #ifndef HITLS_CSR_LOCAL_H
 #define HITLS_CSR_LOCAL_H
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_X509_CSR
 #include <stdint.h>
 #include "bsl_asn1.h"
 #include "bsl_obj.h"
@@ -62,5 +64,7 @@ typedef struct _HITLS_X509_Csr {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // HITLS_PKI_X509_CSR
 
 #endif // HITLS_CSR_LOCAL_H
