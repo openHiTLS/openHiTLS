@@ -40,7 +40,9 @@
 #include "custom_extensions.h"
 
 // Simple add_cb function, allocates buffer with 1 byte length and 1 byte data
-int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t **out, uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, void *addArg) {
+int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t **out, uint32_t *outLen,
+    HITLS_X509_Cert *cert, uint32_t certId, uint8_t *addArg)
+{
     (void)ctx;
     (void)extType;
     (void)context;
@@ -59,7 +61,8 @@ int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, ui
 }
 
 // Simple free_cb function, frees the allocated data
-void SimpleFreeCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t *out, void *addArg) {
+void SimpleFreeCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t *out, uint8_t *addArg)
+{
     (void)ctx;
     (void)extType;
     (void)context;
@@ -68,7 +71,9 @@ void SimpleFreeCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
 }
 
 // Simple parse_cb function, reads the length and data, checks the data
-int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, void *parseArg) {
+int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, const uint8_t **in, uint32_t *inLen,
+    HITLS_X509_Cert *cert, uint32_t certId, uint8_t *parseArg)
+{
     (void)ctx;
     (void)extType;
     (void)context;
@@ -380,9 +385,9 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
     uint32_t context = 1;
     HITLS_AddCustomExtCallback addCb = SimpleAddCb;
     HITLS_FreeCustomExtCallback freeCb = SimpleFreeCb;
-    void *addArg = NULL;
+    uint8_t *addArg = NULL;
     HITLS_ParseCustomExtCallback parseCb = SimpleParseCb;
-    void *parseArg = NULL;
+    uint8_t *parseArg = NULL;
 
     // Test normal case: Add a custom extension
     uint32_t ret = HITLS_AddCustomExtension(&ctx, extType, context, addCb, freeCb, addArg, parseCb, parseArg);

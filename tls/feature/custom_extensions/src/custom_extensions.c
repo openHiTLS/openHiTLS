@@ -53,9 +53,7 @@ bool IsPackNeedCustomExtensions(CustomExt_Methods *exts, uint32_t context)
     return false;
 }
 
-bool IsParseNeedCustomExtensions(CustomExt_Methods *exts,
-                                   uint16_t extType,
-                                   uint32_t context)
+bool IsParseNeedCustomExtensions(CustomExt_Methods *exts, uint16_t extType, uint32_t context)
 {
     uint32_t i = 0;
 
@@ -104,9 +102,7 @@ bool JudgeCustomExtension(uint32_t extContext, uint32_t context)
     return true;
 }
 
-CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
-                                   uint16_t extType,
-                                   uint32_t context)
+CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts, uint16_t extType, uint32_t context)
 {
     uint32_t i = 0;
 
@@ -128,13 +124,8 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
     return NULL;
 }
 
-uint32_t HITLS_AddCustomExtension(struct TlsCtx *ctx, uint16_t extType,
-                                  uint32_t context,
-                                  HITLS_AddCustomExtCallback addCb,
-                                  HITLS_FreeCustomExtCallback freeCb,
-                                  void *addArg,
-                                  HITLS_ParseCustomExtCallback parseCb,
-                                  void *parseArg)
+uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t context, HITLS_AddCustomExtCallback addCb,
+    HITLS_FreeCustomExtCallback freeCb, uint8_t *addArg, HITLS_ParseCustomExtCallback parseCb, uint8_t *parseArg)
 {
     CustomExt_Method *meth = NULL, *tmp = NULL;
 
@@ -243,7 +234,8 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
     return HITLS_SUCCESS;
 }
 
-int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint16_t extType, uint32_t extLen, uint32_t context)
+int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint16_t extType, uint32_t extLen,
+    uint32_t context)
 {
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;

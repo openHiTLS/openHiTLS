@@ -98,11 +98,8 @@ extern "C" {
  * @param   addArg  [IN]  Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
-typedef int (*HITLS_AddCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
-                                         uint32_t context,
-                                         uint8_t **out,
-                                         uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId,
-                                         void *addArg);
+typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
+    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint8_t *addArg);
 
 
 /**
@@ -117,10 +114,8 @@ typedef int (*HITLS_AddCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType
  * @param   out [IN] Extension data to be freed
  * @param   add_arg [IN] Additional argument provided when registering the callback
  */
-typedef void (*HITLS_FreeCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
-                                           uint32_t context,
-                                           uint8_t *out,
-                                           void *addArg);
+typedef void (*HITLS_FreeCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+    uint8_t *out, uint8_t *addArg);
 
 /**
  * @ingroup hitls_custom_extensions
@@ -139,11 +134,8 @@ typedef void (*HITLS_FreeCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extTy
  * @param   parseArg [IN] Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
-typedef int (*HITLS_ParseCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
-                                           uint32_t context,
-                                           const uint8_t **in,
-                                           uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId,
-                                           void *parseArg);
+typedef int (*HITLS_ParseCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
+    const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint8_t *parseArg);
 
 
 /**
@@ -161,13 +153,8 @@ typedef int (*HITLS_ParseCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extTy
  * @retval  HITLS_SUCCESS if successful
  *          For other error codes, see hitls_error.h
  */
-uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType,
-                                 uint32_t context,
-                                 HITLS_AddCustomExtCallback addCb,
-                                 HITLS_FreeCustomExtCallback freeCb,
-                                 void *addArg,
-                                 HITLS_ParseCustomExtCallback parseCb,
-                                 void *parseArg);
+uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t context, HITLS_AddCustomExtCallback addCb,
+    HITLS_FreeCustomExtCallback freeCb, uint8_t *addArg, HITLS_ParseCustomExtCallback parseCb, uint8_t *parseArg);
 
 #ifdef __cplusplus
 }

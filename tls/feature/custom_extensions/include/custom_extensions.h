@@ -25,9 +25,9 @@ typedef struct {
     uint32_t context;
     HITLS_AddCustomExtCallback addCb;
     HITLS_FreeCustomExtCallback freeCb;
-    void *addArg;
+    uint8_t *addArg;
     HITLS_ParseCustomExtCallback parseCb;
-    void *parseArg;
+    uint8_t *parseArg;
 } CustomExt_Method;
 
 // Define CustomExt_Methods structure
@@ -37,10 +37,9 @@ typedef struct {
 } CustomExt_Methods;
 
 bool IsPackNeedCustomExtensions(CustomExt_Methods *exts, uint32_t context);
-bool IsParseNeedCustomExtensions(CustomExt_Methods *exts,
-                                   uint16_t extType,
-                                   uint32_t context);
+bool IsParseNeedCustomExtensions(CustomExt_Methods *exts, uint16_t extType, uint32_t context);
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint32_t context);
-int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint16_t extType, uint32_t extLen, uint32_t context);
+int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint16_t extType, uint32_t extLen,
+    uint32_t context);
 
 #endif // CUSTOM_EXTENSIONS_H
