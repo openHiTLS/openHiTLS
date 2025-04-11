@@ -58,11 +58,11 @@ typedef struct {
     const char *tail;
 } BSL_PEM_Symbol;
 
-int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_Symbol *symbol,
+int32_t BSL_PEM_GenAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_Symbol *symbol,
     char **encode, uint32_t *encodeLen);
 
 /* encode must end in '\0' */
-int32_t BSL_PEM_ParsePem2Asn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
+int32_t BSL_PEM_ParsePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
     uint32_t *asn1Len);
 
 /* encode must end in '\0' */

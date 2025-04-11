@@ -23,7 +23,7 @@
 #include "hitls_pki_errno.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
 #include "crypt_eal_encode.h"
 #include "crypt_eal_rand.h"
 #include "eal_pkey_local.h"
@@ -127,7 +127,7 @@ void SDV_X509_CSR_PARSE_API_TC002(void)
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &ori, &csr), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &ori, &csr), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_UNKNOWN, &buffer, &csr), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_UNKNOWN, &buffer, &csr), HITLS_X509_ERR_FORMAT_UNSUPPORT);
 EXIT:
     return;
 }
@@ -143,7 +143,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC001(int format, char *path, int expRawDataLen, in
     uint32_t rawDataLen = 0;
     ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_PKI_SUCCESS);
     if (isUseSm2UserId != 0) {
-        ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VEY_SM2_USER_ID, g_sm2DefaultUserid,
+        ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VFY_SM2_USER_ID, g_sm2DefaultUserid,
             strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
     }
     ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
@@ -267,7 +267,7 @@ void SDV_X509_CSR_GEN_API_TC001(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, NULL, writePath), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_UNKNOWN, csr, writePath), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_UNKNOWN, csr, writePath), HITLS_X509_ERR_FORMAT_UNSUPPORT);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_NE(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, "/errPath/csr.pem"), HITLS_PKI_SUCCESS);
 EXIT:
@@ -288,7 +288,7 @@ void SDV_X509_CSR_GEN_API_TC002(void)
     uint8_t data[MAX_DATA_LEN] = {};
     BSL_Buffer buffer = {NULL, 0};
     BSL_Buffer buffErr = {data, sizeof(data)};
-    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_UNKNOWN, csr, &buffer), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_UNKNOWN, csr, &buffer), HITLS_X509_ERR_FORMAT_UNSUPPORT);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, NULL, &buffer), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &buffErr), HITLS_X509_ERR_INVALID_PARAM);
@@ -795,8 +795,7 @@ void SDV_X509_CSR_EncodeAttrList_FUNC_TC001(int critical1, int maxPath, int crit
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
 
     // Set ext into attr
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0),
-              0);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0), 0);
 
     // Test: Encode and check
     ASSERT_EQ(HITLS_X509_EncodeAttrList(1, attrs, NULL, &encode), 0);

@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_SHA256) && !defined(HITLS_CRYPTO_SHA512_SMALL_MEM)
+#if defined(HITLS_CRYPTO_SHA512) && !defined(HITLS_CRYPTO_SHA512_SMALL_MEM)
 
 #include "crypt_sha2.h"
 #include "crypt_utils.h"

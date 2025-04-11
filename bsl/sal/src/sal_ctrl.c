@@ -17,9 +17,8 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 
-#ifdef HITLS_BSL_SAL_MEM
 #include "sal_memimpl.h"
-#endif
+
 #ifdef HITLS_BSL_SAL_NET
 #include "sal_netimpl.h"
 #endif

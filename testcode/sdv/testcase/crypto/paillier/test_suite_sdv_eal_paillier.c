@@ -32,7 +32,7 @@
 #include "bn_basic.h"
 #include "securec.h"
 
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
 /* END_HEADER */
 
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
@@ -685,7 +685,7 @@ void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC001(Hex *p, Hex *q, int bits, int isProvi
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey2, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
     /*pKey is NULL*/
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(NULL, &pubKey) == CRYPT_NULL_INPUT);
@@ -767,7 +767,7 @@ void SDV_CRYPTO_PAILLIER_SET_PUB_API_TC002(Hex *p, Hex *q, Hex *n, Hex *n2, int 
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey2, &para) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     
     pubKey.key.paillierPub.n2 = n->x;
     pubKey.key.paillierPub.n2Len = n->len;

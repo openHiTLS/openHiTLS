@@ -91,7 +91,7 @@ static int ParseArgs(const TestArgs *arg, TestParam *info)
     return 0;
 }
 
-static void PrintCaseNameResult(FILE *logFile, int vectorCount, int skipCount, int passCount,
+static int PrintCaseNameResult(FILE *logFile, int vectorCount, int skipCount, int passCount,
     const char *suiteName, time_t beginTime)
 {
     static const char *outMem = "out of memory";
@@ -123,6 +123,7 @@ static void PrintCaseNameResult(FILE *logFile, int vectorCount, int skipCount, i
     (void)fprintf(logFile, "End time: %s", asctime(timeinfo));
     (void)fprintf(logFile, "Result: Run %d tests, Passed: %d, Skipped: %d, Failed: %d\n", vectorCount, passCount,
         skipCount, failCount);
+    return failCount;
 }
 
 static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
@@ -190,8 +191,7 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
             break;
         }
     }
-    PrintCaseNameResult(logFile, vectorCount, skipCount, passCount, suiteName, beginTime);
-    return 0;
+    return PrintCaseNameResult(logFile, vectorCount, skipCount, passCount, suiteName, beginTime);
 }
 
 static int ExecuteTest(const char *fileName, bool showDetail, int targetFuncId)
@@ -314,5 +314,5 @@ EXIT:
 #ifndef PRINT_TO_TERMINAL
     (void)fclose(fp);
 #endif
-    return 0;
+    return ret;
 }

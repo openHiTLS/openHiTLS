@@ -1132,8 +1132,8 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModSm2EccSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+#endif
 
 /**
  * @ingroup bn
@@ -1144,7 +1144,6 @@ int32_t BN_ModSm2EccSqr(
  * @retval [OUT] output the result
  */
 int32_t BN_SecBit(int32_t publen, int32_t prvlen);
-#endif
 
 #ifdef HITLS_CRYPTO_PAILLIER
 /**

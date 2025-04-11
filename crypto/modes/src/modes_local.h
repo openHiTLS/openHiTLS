@@ -17,7 +17,7 @@
 #define MODES_LOCAL_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_GCM
+#ifdef HITLS_CRYPTO_MODES
 
 #include <stdint.h>
 #include <stdbool.h>
