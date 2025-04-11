@@ -23,6 +23,8 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_msg.h"
+#include "hs_common.h"
+#include "hs_extensions.h"
 #include "parse_msg.h"
 #include "parse_common.h"
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -109,14 +111,35 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
     while (*(pkt.bufOffset) < pkt.bufLen) {
         uint16_t extMsgType = 0u;
         uint32_t extMsgLen = 0u;
-        extMsgType = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
-        (pkt.bufOffset) += sizeof(uint16_t);
-        extMsgLen = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
-        (pkt.bufOffset) += sizeof(uint16_t);
-        if(IsParseNeedCustomExtensions(pkt.ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
-            ret = ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_NEW_SESSION_TICKET);
+        if(pkt.bufLen - *(pkt.bufOffset) >= sizeof(uint16_t)){
+            extMsgType = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
+            (pkt.bufOffset) += sizeof(uint16_t);
         }
-        pkt.bufOffset += extMsgLen;
+        else {
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
+        if (pkt.bufLen - *(pkt.bufOffset) >= sizeof(uint16_t)){
+            extMsgLen = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
+            (pkt.bufOffset) += sizeof(uint16_t);
+        }
+        else {
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
+
+        if (pkt.bufLen - *(pkt.bufOffset) >= extMsgLen){
+            uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED || !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
+                msg->extensionTypeMask |= 1ULL << hsExTypeId;
+            }
+
+            if(IsParseNeedCustomExtensions(pkt.ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
+                ret = ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_NEW_SESSION_TICKET);
+            }
+            pkt.bufOffset += extMsgLen;
+        }
+        else {
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
     }
     return ret;
 }
