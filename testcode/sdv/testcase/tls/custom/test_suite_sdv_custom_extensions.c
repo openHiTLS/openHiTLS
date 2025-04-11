@@ -49,7 +49,7 @@ int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, ui
     (void)cert;
     (void)certId;
     (void)addArg;
-    *out = malloc(2);
+    *out = malloc(sizeof(uint16_t));
     if (*out == NULL) {
         return 1;
     }
@@ -80,7 +80,6 @@ int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
     (void)cert;
     (void)certId;
     (void)parseArg;
-
 
     if (*inLen <= 0) {
         return 0;
@@ -292,6 +291,7 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     uint32_t len = 0;
     uint16_t extType = 1;
     uint32_t context = 1;
+    uint32_t dataLen = 1;
 
     // Configure a single custom extension with callbacks
     CustomExt_Methods exts = {0};
@@ -307,13 +307,13 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     // Call the interface under test
     int32_t ret = PackCustomExtensions(&ctx, buf, bufLen, &len, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
-    ASSERT_EQ(len, 5);             // ext_type (2 byte) + len (2 byte) + data (1 byte)
+    ASSERT_EQ(len, 2 * sizeof(uint16_t) + dataLen);  // ext_type (2 byte) + len (2 byte) + data (1 byte)
     // Verify the extension type
     uint16_t packedType = BSL_ByteToUint16(&buf[0]);
     ASSERT_EQ(packedType, extType);
     uint16_t packedLen = BSL_ByteToUint16(&buf[2]);
-    ASSERT_EQ(packedLen, 1);          // Verify the len
-    ASSERT_EQ(buf[len - 1], 0xAA);       // Verify the data
+    ASSERT_EQ(packedLen, 1);  // Verify the len
+    ASSERT_EQ(buf[len - 1], 0xAA);  // Verify the data
 
 EXIT:
     return;

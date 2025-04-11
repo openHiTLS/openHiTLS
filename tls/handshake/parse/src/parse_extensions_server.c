@@ -832,8 +832,9 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         }
     }
 
-    if(IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)){
-        return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_CLIENT_HELLO);
+    if (IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)) {
+        return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
+            HITLS_EX_TYPE_CLIENT_HELLO);
     }
 
     // Ignore unknown extensions
@@ -858,7 +859,8 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         bufOffset += HS_EX_HEADER_LEN;
 
         uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
-        if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED || !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)){
+        if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
+                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)) {
             msg->extensionTypeMask |= 1ULL << hsExTypeId;
         }
 

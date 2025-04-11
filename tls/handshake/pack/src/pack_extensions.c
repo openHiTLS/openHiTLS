@@ -38,8 +38,9 @@
 #include "session.h"
 #include "hs_verify.h"
 #include "pack_common.h"
-#include "pack_extensions.h"
 #include "custom_extensions.h"
+#include "pack_extensions.h"
+
 
 #define EXTENSION_MSG(exMsgT, needP, packF) \
     .exMsgType = (exMsgT), \
@@ -859,7 +860,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 
     uint32_t len = 0;
     uint32_t offset = 0;
-    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_CLIENT_HELLO)){
+    if (IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_CLIENT_HELLO)) {
         ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_CLIENT_HELLO);
         if (ret != HITLS_SUCCESS) {
             return ret;

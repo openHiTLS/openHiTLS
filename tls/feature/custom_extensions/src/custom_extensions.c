@@ -203,7 +203,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
         }
 
         if (outLen > 0) {
-            if(bufLen - offset >= outLen + 2 * sizeof(uint16_t)) {
+            if (bufLen - offset >= outLen + sizeof(uint16_t) + sizeof(uint16_t)) {
                 // Save the custom extension version
                 BSL_Uint16ToByte(meth->extType, &buf[offset]);
                 offset += sizeof(uint16_t);
