@@ -88,13 +88,14 @@ extern "C" {
  * This function is invoked when adding a custom extension to a TLS message.
  * It prepares the extension data to be sent, utilizing certificate information if necessary.
  *
- * @param   ctx [IN] TLS context
- * @param   ext_type [IN] Extension type
- * @param   context [IN] Context where the extension applies
- * @param   out [OUT] Pointer to the extension data to be sent
- * @param   outlen [OUT] Length of the extension data
- * @param   msg [IN] Certificate message information
- * @param   add_arg [IN] Additional argument provided when registering the callback
+ * @param   ctx     [IN]  TLS context
+ * @param   extType [IN]  Extension type
+ * @param   context [IN]  Context where the extension applies
+ * @param   out     [OUT] Pointer to the extension data to be sent
+ * @param   outLen  [OUT] Length of the extension data
+ * @param   cert    [IN]  Pointer to the HITLS_X509_Cert structure representing certificate information
+ * @param   certId  [IN]  Certificate ID indicating its position in the certificate chain
+ * @param   addArg  [IN]  Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_AddCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
@@ -102,6 +103,7 @@ typedef int (*HITLS_AddCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType
                                          uint8_t **out,
                                          uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId,
                                          void *addArg);
+
 
 /**
  * @ingroup hitls_custom_extensions
@@ -170,6 +172,3 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType,
 #endif
 
 #endif /* HITLS_CUSTOM_EXTENSIONS_H */
-
-
-

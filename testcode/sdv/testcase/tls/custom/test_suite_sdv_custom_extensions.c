@@ -174,7 +174,7 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_API_TC001(void)
     ctx.customExts = &exts;
 
     // Call the interface under test
-    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, extType, extLen, context);
+    int32_t ret = ParseCustomExtensions(&ctx, buf + bufOffset, extType, extLen, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     // Note: Current implementation doesn't update bufOffset without parse_cb, adjust expectation if needed
 
@@ -348,7 +348,7 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     ctx.customExts = &exts;
 
     // Call the interface under test
-    int32_t ret = ParseCustomExtensions(&ctx, buf, &bufOffset, extType, extLen, context);
+    int32_t ret = ParseCustomExtensions(&ctx, buf + bufOffset, extType, extLen, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
 
 EXIT:
@@ -416,8 +416,3 @@ EXIT:
     return;
 }
 /* END_CASE */
-
-
-
-
-
