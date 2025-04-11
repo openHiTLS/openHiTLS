@@ -82,7 +82,7 @@ int SimpleParseCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, 
     (void)parseArg;
 
 
-    if(*inLen <= 0){
+    if (*inLen <= 0) {
         return 0;
     }
     // Pass the data pointer to BSL_SAL_Dump
@@ -138,7 +138,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_API_TC001(void)
     ctx.customExts = &exts;
 
     // Call the interface under test
-    ASSERT_EQ(PackCustomExtensions(&ctx, buf, bufLen, &len, context), HITLS_SUCCESS);  // Verify the return value is success
+    // Verify the return value is success
+    ASSERT_EQ(PackCustomExtensions(&ctx, buf, bufLen, &len, context), HITLS_SUCCESS);
     ASSERT_EQ(len, 0);  // No data packed without add_cb
 
 EXIT:
@@ -312,7 +313,7 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     ASSERT_EQ(packedType, extType);
     uint16_t packedLen = BSL_ByteToUint16(&buf[2]);
     ASSERT_EQ(packedLen, 1);          // Verify the len
-    ASSERT_EQ(buf[4], 0xAA);       // Verify the data
+    ASSERT_EQ(buf[len - 1], 0xAA);       // Verify the data
 
 EXIT:
     return;
@@ -366,9 +367,12 @@ EXIT:
  * @title Test the custom extension addition functionality of the HITLS_AddCustomExtension function
  * @precon None
  * @brief
- * 1. Initialize the TLS context and add a valid custom extension, verify if the addition is successful. Expected result 1.
- * 2. Attempt to add a duplicate custom extension, verify if the function rejects the duplicate addition. Expected result 2.
- * 3. Call the function with invalid parameters (add_cb is NULL, free_cb is not NULL), verify if the function correctly handles the error. Expected result 3.
+ * 1. Initialize the TLS context and add a valid custom extension, verify if the addition is successful.
+ * Expected result 1.
+ * 2. Attempt to add a duplicate custom extension, verify if the function rejects the duplicate addition.
+ * Expected result 2.
+ * 3. Call the function with invalid parameters (add_cb is NULL, free_cb is not NULL), verify if the function correctly
+ * handles the error. Expected result 3.
  * @expect
  * 1. Returns HITLS_SUCCESS, the custom extension is correctly added to the context.
  * 2. Returns 0, the number of extensions does not increase.
@@ -382,6 +386,7 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
     // Initialize the TLS context
     TLS_Ctx ctx = {0};
     uint16_t extType = 1;
+    uint16_t invalidExtType = 2;
     uint32_t context = 1;
     HITLS_AddCustomExtCallback addCb = SimpleAddCb;
     HITLS_FreeCustomExtCallback freeCb = SimpleFreeCb;
@@ -408,7 +413,7 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
     ASSERT_EQ(ctx.customExts->methsCount, 1);  // Verify the number of extensions does not increase
 
     // Test invalid parameters: add_cb is NULL, free_cb is not NULL
-    ret = HITLS_AddCustomExtension(&ctx, 2, context, NULL, freeCb, addArg, parseCb, parseArg);
+    ret = HITLS_AddCustomExtension(&ctx, invalidExtType, context, NULL, freeCb, addArg, parseCb, parseArg);
     ASSERT_EQ(ret, 0);  // Verify the return value is failure
     ASSERT_EQ(ctx.customExts->methsCount, 1);  // Verify the number of extensions does not increase
 

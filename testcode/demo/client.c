@@ -27,7 +27,6 @@
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
 #define CUSTOM_EXT_TYPE_1 0x003F
 #define CUSTOM_EXT_TYPE_2 0x0040
-#define CUSTOM_EXT_TYPE_3 0x0041
 
 int32_t AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
     uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint8_t *addArg)
@@ -40,6 +39,9 @@ int32_t AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t
     (void)addArg;
     uint8_t *data = "test custom_extension_client_hello";
     uint16_t dataLen = strlen(data);
+    if (dataLen < 0) {
+        return HITLS_MEMALLOC_FAIL;
+    }
     uint8_t *buf = malloc(dataLen);
     if (buf == NULL) {
         return HITLS_MEMALLOC_FAIL;
@@ -177,21 +179,14 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_1, HITLS_EX_TYPE_CLIENT_HELLO,
-                                   AddCustomExtClientHello, FreeCustomExt, NULL, NULL, NULL);
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_1, HITLS_EX_TYPE_CLIENT_HELLO | HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
+                                   AddCustomExtClientHello, FreeCustomExt, NULL, ParseCustomExtServerHello, NULL);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
     }
 
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_2, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
-                                   NULL, NULL, NULL, ParseCustomExtServerHello, NULL);
-    if (ret != HITLS_SUCCESS) {
-        printf("HITLS_AddCustomExtension failed.\n");
-        goto EXIT;
-    }
-
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_3, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
+    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_2, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
                                NULL, NULL, NULL, ParseCustomExtEncryptedExtension, NULL);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");

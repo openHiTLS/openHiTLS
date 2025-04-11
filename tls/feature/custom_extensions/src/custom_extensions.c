@@ -37,11 +37,11 @@ bool IsPackNeedCustomExtensions(CustomExt_Methods *exts, uint32_t context)
 {
     uint32_t i = 0;
 
-    if(exts == NULL){
+    if (exts == NULL) {
         return false;
     }
     CustomExt_Method *meth = exts->meths;
-    if(meth == NULL){
+    if (meth == NULL) {
         return false;
     }
     for (i = 0; i < exts->methsCount; i++, meth++) {
@@ -57,13 +57,13 @@ bool IsParseNeedCustomExtensions(CustomExt_Methods *exts, uint16_t extType, uint
 {
     uint32_t i = 0;
 
-    if(exts == NULL){
+    if (exts == NULL) {
         return false;
     }
 
     CustomExt_Method *meth = exts->meths;
 
-    if(meth == NULL){
+    if (meth == NULL) {
         return false;
     }
 
@@ -79,11 +79,11 @@ bool IsCustomExtensionTypeAdded(CustomExt_Methods *exts, uint16_t extType)
 {
     uint32_t i = 0;
 
-    if(exts == NULL){
+    if (exts == NULL) {
         return false;
     }
     CustomExt_Method *meth = exts->meths;
-    if(meth == NULL){
+    if (meth == NULL) {
         return false;
     }
     for (i = 0; i < exts->methsCount; i++, meth++) {
@@ -106,13 +106,13 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts, uint16_t extType
 {
     uint32_t i = 0;
 
-    if(exts == NULL){
+    if (exts == NULL) {
         return NULL;
     }
 
     CustomExt_Method *meth = exts->meths;
 
-    if(meth == NULL){
+    if (meth == NULL) {
         return NULL;
     }
 
@@ -133,7 +133,7 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t con
         return 0;
     }
 
-    if(ctx == NULL){
+    if (ctx == NULL) {
         return 0;
     }
     CustomExt_Methods *exts = ctx->customExts;
@@ -152,9 +152,8 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t con
         ctx->customExts = exts;
     }
 
-    tmp = BSL_SAL_Realloc(exts->meths,
-                          (exts->methsCount + 1) * sizeof(CustomExt_Method),
-                          exts->methsCount * sizeof(CustomExt_Method));
+    tmp = BSL_SAL_Realloc(exts->meths, (exts->methsCount + 1) * sizeof(CustomExt_Method),
+        exts->methsCount * sizeof(CustomExt_Method));
     if (tmp == NULL) {
         return 0;
     }
@@ -182,7 +181,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
 
-    if(exts == NULL){
+    if (exts == NULL) {
         return HITLS_SUCCESS;
     }
 
@@ -197,36 +196,31 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
         }
 
         if (meth->addCb != NULL) {
-            uint32_t ret = meth->addCb(ctx,
-                                         meth->extType, context, &out,
-                                         &outLen, NULL, 0,
-                                         meth->addArg);
+            uint32_t ret = meth->addCb(ctx, meth->extType, context, &out, &outLen, NULL, 0, meth->addArg);
             if (ret != HITLS_SUCCESS) {
                 continue;
             }
         }
 
-        if (outLen > 0)
-        {
+        if (outLen > 0) {
             if(bufLen - offset >= outLen + 2 * sizeof(uint16_t)) {
                 // Save the custom extension version
                 BSL_Uint16ToByte(meth->extType, &buf[offset]);
-                offset += 2;
+                offset += sizeof(uint16_t);
 
                 BSL_Uint16ToByte(outLen, &buf[offset]);
-                offset += 2;
+                offset += sizeof(uint16_t);
 
                 (void)memcpy_s(&buf[offset], bufLen - offset, out, outLen);
                 offset += outLen;
             }
-            else{
+            else {
                 return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
             }
         }
 
         if (meth->freeCb != NULL) {
-            meth->freeCb(ctx, meth->extType,
-                          context, out, meth->addArg);
+            meth->freeCb(ctx, meth->extType, context, out, meth->addArg);
         }
     }
 
@@ -247,10 +241,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
 
     // Create a local pointer starting from the position after the type byte
     if (meth->parseCb != NULL) {
-        uint32_t ret = meth->parseCb(ctx,
-                                       meth->extType, context, &buf,
-                                       &extLen, NULL, 0,
-                                       meth->parseArg);
+        uint32_t ret = meth->parseCb(ctx, meth->extType, context, &buf, &extLen, NULL, 0, meth->parseArg);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                                   "parse custom extension content fail.", 0, 0, 0, 0);
