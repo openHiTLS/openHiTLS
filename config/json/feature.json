@@ -25,6 +25,7 @@
                     "uio_plt": null,
                     "uio": {
                         "uio_plt": null,
+                        "uio_addr" : {"deps": ["uio_plt"]},
                         "uio_buffer": {"deps": ["uio_plt"]},
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
