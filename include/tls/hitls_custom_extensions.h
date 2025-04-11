@@ -126,16 +126,17 @@ typedef void (*HITLS_FreeCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extTy
  * @ingroup hitls_custom_extensions
  * @brief   Callback function to parse a custom extension.
  *
- * This function is invoked when parsing a received custom extension, interpreting the
- * extension data and updating the TLS context based on certificate information if necessary.
+ * This function is invoked when parsing a received custom extension. It interprets the
+ * extension data and updates the TLS context based on certificate information if necessary.
  *
- * @param   ctx [IN] TLS context
- * @param   ext_type [IN] Extension type
- * @param   context [IN] Context where the extension applies
- * @param   in [IN] Pointer to the received extension data
- * @param   inlen [IN] Length of the extension data
- * @param   msg [IN] Certificate message information
- * @param   parse_arg [IN] Additional argument provided when registering the callback
+ * @param   ctx      [IN] TLS context
+ * @param   extType  [IN] Extension type
+ * @param   context  [IN] Context where the extension applies
+ * @param   in       [IN] Pointer to the received extension data
+ * @param   inlen    [IN] Length of the extension data
+ * @param   cert     [IN] Pointer to the HITLS_X509_Cert structure representing certificate information
+ * @param   certId   [IN] Certificate ID indicating its position in the certificate chain
+ * @param   parseArg [IN] Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_ParseCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extType,
@@ -143,6 +144,7 @@ typedef int (*HITLS_ParseCustomExtCallback)(const HITLS_Ctx *ctx, uint16_t extTy
                                            const uint8_t **in,
                                            uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId,
                                            void *parseArg);
+
 
 /**
  * @ingroup hitls_custom_extensions

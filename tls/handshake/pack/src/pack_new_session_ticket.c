@@ -102,13 +102,21 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
 
     uint32_t len = 0;
     int32_t ret = HITLS_SUCCESS;
-    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
+    if (IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
         ret = PackCustomExtensions(ctx, &buf[offset + sizeof(uint16_t)], bufLen - offset, &len, HITLS_EX_TYPE_NEW_SESSION_TICKET);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+
+        if (bufLen < (offset + sizeof(uint16_t) + len)) {
+            return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+        }
         BSL_Uint16ToByte(len, &buf[offset]);
         offset += len + sizeof(uint16_t);
+    }
+    else {
+        BSL_Uint16ToByte(0, &buf[offset]);
+        offset += sizeof(uint16_t);
     }
 
     *usedLen = offset;

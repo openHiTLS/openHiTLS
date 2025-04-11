@@ -77,12 +77,31 @@ bool IsParseNeedCustomExtensions(CustomExt_Methods *exts,
     return false;
 }
 
-static uint32_t JudgeCustomExtension(uint32_t extContext, uint32_t context)
+bool IsCustomExtensionTypeAdded(CustomExt_Methods *exts, uint16_t extType)
+{
+    uint32_t i = 0;
+
+    if(exts == NULL){
+        return false;
+    }
+    CustomExt_Method *meth = exts->meths;
+    if(meth == NULL){
+        return false;
+    }
+    for (i = 0; i < exts->methsCount; i++, meth++) {
+        if ((extType & meth->extType) != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool JudgeCustomExtension(uint32_t extContext, uint32_t context)
 {
     if ((extContext & context) == 0) {
-        return 0;
+        return false;
     }
-    return 1;
+    return true;
 }
 
 CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts,
@@ -128,7 +147,7 @@ uint32_t HITLS_AddCustomExtension(struct TlsCtx *ctx, uint16_t extType,
     }
     CustomExt_Methods *exts = ctx->customExts;
 
-    if (FindCustomExtensions(exts, extType, context) != NULL) {
+    if (IsCustomExtensionTypeAdded(exts, extType) || FindCustomExtensions(exts, extType, context) != NULL) {
         return 0;
     }
 

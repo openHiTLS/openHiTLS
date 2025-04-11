@@ -321,6 +321,7 @@ typedef struct {
                                     increasing in ascending order. */
     uint32_t ticketSize;
     uint8_t *ticket; /* ticket */
+    uint64_t extensionTypeMask;
 } NewSessionTicketMsg;
 
 /* It is used to transmit finish message */
