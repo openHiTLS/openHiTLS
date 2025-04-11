@@ -28,6 +28,7 @@
 #include "hitls_security.h"
 #include "hitls_sni.h"
 #include "hitls_alpn.h"
+#include "hitls_cookie.h"
 #include "sal_atomic.h"
 #ifdef HITLS_TLS_FEATURE_PROVIDER
 #include "crypt_eal_provider.h"
@@ -159,6 +160,9 @@ typedef struct TlsConfig {
     HITLS_PskFindSessionCb pskFindSessionCb;    /* TLS1.3 PSK server callback */
     HITLS_PskUseSessionCb pskUseSessionCb;      /* TLS1.3 PSK client callback */
 
+    HITLS_DtlsTimerCb dtlsTimerCb;      /* DTLS get the timeout callback */
+    uint32_t dtlsPostHsTimeoutVal;      /* DTLS over UDP completed handshake timeout */
+
     HITLS_CRYPT_Key *dhTmp;             /* Temporary DH key set by the user */
     HITLS_DhTmpCb dhTmpCb;              /* Temporary ECDH key set by the user */
 
@@ -213,7 +217,7 @@ typedef struct TlsConfig {
     bool isSupportServerPreference;     /* server cipher suites can be preferentially selected */
 
     /* DTLS */
-    bool isHelloVerifyReqEnable;    /* is HelloVerifyRequest message enabled on server */
+    bool isSupportDtlsCookieExchange;    /* is dtls support cookie exchange */
 
     /**
      * Configurations in the HITLS_Ctx are classified into private configuration and global configuration.
@@ -229,8 +233,8 @@ typedef struct TlsConfig {
     HITLS_ClientHelloCb clientHelloCb;          /* ClientHello callback */
     void *clientHelloCbArg;                     /* the args for ClientHello callback */
 #ifdef HITLS_TLS_PROTO_DTLS12
-    HITLS_CookieGenerateCb cookieGenerateCb;
-    HITLS_CookieVerifyCb cookieVerifyCb;
+    HITLS_AppGenCookieCb appGenCookieCb;
+    HITLS_AppVerifyCookieCb appVerifyCookieCb;
 #endif
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */

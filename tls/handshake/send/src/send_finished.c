@@ -27,6 +27,7 @@
 #include "pack.h"
 #include "send_process.h"
 #include "hs_kx.h"
+#include "hs_dtls_timer.h"
 
 #ifdef HITLS_TLS_HOST_CLIENT
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -104,20 +105,37 @@ int32_t Tls12ClientSendFinishedProcess(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_DTLS12
 static int32_t DtlsClientChangeStateAfterSendFinished(TLS_Ctx *ctx)
 {
+    int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (ctx->negotiatedInfo.isResume == true) {
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
+#ifdef HITLS_BSL_UIO_UDP
+        ret = HS_Start2MslTimer(ctx);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17133, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Start2MslTimer fail", 0, 0, 0, 0);
+            return ret;
+        }
+#endif /* HITLS_BSL_UIO_UDP */
         return HS_ChangeState(ctx, TLS_CONNECTED);
     }
 #endif /* HITLS_TLS_FEATURE_SESSION */
 
-    int32_t ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
+    ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15367, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
+#ifdef HITLS_BSL_UIO_UDP
+    ret = HS_StartTimer(ctx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17134, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "StartTimer fail", 0, 0, 0, 0);
+        return ret;
+    }
+#endif /* HITLS_BSL_UIO_UDP */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     if (ctx->negotiatedInfo.isTicket == true) {
         return HS_ChangeState(ctx, TRY_RECV_NEW_SESSION_TICKET);
@@ -350,11 +368,27 @@ static int32_t DtlsServerChangeStateAfterSendFinished(TLS_Ctx *ctx)
         }
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_READY);
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_ACTIVE_CIPHER_SPEC);
+#ifdef HITLS_BSL_UIO_UDP
+        ret = HS_StartTimer(ctx);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17141, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "StartTimer fail", 0, 0, 0, 0);
+            return ret;
+        }
+#endif /* HITLS_BSL_UIO_UDP */
         return HS_ChangeState(ctx, TRY_RECV_FINISH);
     }
 #endif /* HITLS_TLS_FEATURE_SESSION */
     /* No CCS messages can be received */
     ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
+#ifdef HITLS_BSL_UIO_UDP
+    ret = HS_Start2MslTimer(ctx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17142, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Start2MslTimer fail", 0, 0, 0, 0);
+        return ret;
+    }
+#endif /* HITLS_BSL_UIO_UDP */
     return HS_ChangeState(ctx, TLS_CONNECTED);
 }
 

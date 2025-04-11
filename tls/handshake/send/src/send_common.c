@@ -116,6 +116,16 @@ int32_t DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen)
             BSL_SAL_FREE(data);
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17128, "Write fail");
         }
+#ifdef HITLS_BSL_UIO_UDP
+        REC_Ctx *recCtx = ctx->recCtx;
+        /* Adding to the retransmission queue */
+        if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+            ret = REC_RetransmitListAppend(recCtx, REC_TYPE_HANDSHAKE, data, fragmentLen + DTLS_HS_MSG_HEADER_SIZE);
+            if (ret != HITLS_SUCCESS) {
+                break;
+            }
+        }
+#endif /* HITLS_BSL_UIO_UDP */
         fragmentOffset += fragmentLen;
         packetLen -= fragmentLen;
     }
@@ -145,6 +155,15 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
                 "send handshake msg to record fail.", 0, 0, 0, 0);
             return ret;
         }
+#ifdef HITLS_BSL_UIO_UDP
+        /* Adding to the retransmission queue */
+        if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+            ret = REC_RetransmitListAppend(ctx->recCtx, REC_TYPE_HANDSHAKE, hsCtx->msgBuf, hsCtx->msgLen);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_BSL_UIO_UDP */
     } else {
         ret = DtlsSendFragmentHsMsg(ctx, maxRecPayloadLen);
         if (ret != HITLS_SUCCESS) {
