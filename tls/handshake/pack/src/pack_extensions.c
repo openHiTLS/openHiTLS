@@ -1226,8 +1226,22 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     };
 
     uint32_t len = 0;
-    if(IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST)){
-        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST);
+    isHrrKeyshare = IsHrrKeyShare(ctx);
+    isTls13 = Tls13NeedPack(ctx, version);
+    uint32_t context = 0;
+
+    if (isTls13) {
+        if (isHrrKeyshare) {
+            context = HITLS_EX_TYPE_HELLO_RETRY_REQUEST;
+        } else {
+            context = HITLS_EX_TYPE_TLS1_3_SERVER_HELLO;
+        }
+    } else {
+        context = HITLS_EX_TYPE_TLS1_2_SERVER_HELLO;
+    }
+
+    if (IsPackNeedCustomExtensions(ctx->customExts, context)) {
+        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, context);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -1316,7 +1330,3 @@ int32_t PackServerExtension(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */
-
-
-
-

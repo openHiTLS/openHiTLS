@@ -106,7 +106,7 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         return ret;
     }
 
-    if(*(pkt.bufOffset) < pkt.bufLen) {
+    while (*(pkt.bufOffset) < pkt.bufLen) {
         uint16_t extMsgType = 0u;
         uint32_t extMsgLen = 0u;
         extMsgType = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
@@ -114,7 +114,7 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         extMsgLen = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
         (pkt.bufOffset) += sizeof(uint16_t);
         if(IsParseNeedCustomExtensions(pkt.ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)){
-            ret = ParseCustomExtensions(pkt.ctx, pkt.buf, pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_NEW_SESSION_TICKET);
+            ret = ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen, HITLS_EX_TYPE_NEW_SESSION_TICKET);
         }
         pkt.bufOffset += extMsgLen;
     }
