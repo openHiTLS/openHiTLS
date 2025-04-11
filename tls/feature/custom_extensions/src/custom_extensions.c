@@ -178,6 +178,7 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t con
 int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len, uint32_t context)
 {
     uint32_t offset = 0u;
+    uint32_t alert = 0u;
 
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
@@ -197,7 +198,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
         }
 
         if (meth->addCb != NULL) {
-            uint32_t ret = meth->addCb(ctx, meth->extType, context, &out, &outLen, NULL, 0, meth->addArg);
+            uint32_t ret = meth->addCb(ctx, meth->extType, context, &out, &outLen, NULL, 0, &alert, meth->addArg);
             if (ret != HITLS_SUCCESS) {
                 continue;
             }
@@ -231,6 +232,8 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
 int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint16_t extType, uint32_t extLen,
     uint32_t context)
 {
+    uint32_t alert = 0u;
+
     CustomExt_Methods *exts = ctx->customExts;
     CustomExt_Method *meth;
 
@@ -241,7 +244,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
 
     // Create a local pointer starting from the position after the type byte
     if (meth->parseCb != NULL) {
-        uint32_t ret = meth->parseCb(ctx, meth->extType, context, &buf, &extLen, NULL, 0, meth->parseArg);
+        uint32_t ret = meth->parseCb(ctx, meth->extType, context, &buf, &extLen, NULL, 0, &alert, meth->parseArg);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                                   "parse custom extension content fail.", 0, 0, 0, 0);

@@ -95,11 +95,12 @@ extern "C" {
  * @param   outLen  [OUT] Length of the extension data
  * @param   cert    [IN]  Pointer to the HITLS_X509_Cert structure representing certificate information
  * @param   certId  [IN]  Certificate ID indicating its position in the certificate chain
+ * @param   alert   [OUT] Alert value provided by the user when requesting to add the custom extension
  * @param   addArg  [IN]  Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
-    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint8_t *addArg);
+    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *addArg);
 
 
 /**
@@ -108,11 +109,11 @@ typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extTyp
  *
  * This function is invoked to release resources allocated for a custom extension.
  *
- * @param   ctx [IN] TLS context
+ * @param   ctx      [IN] TLS context
  * @param   ext_type [IN] Extension type
- * @param   context [IN] Context where the extension applies
- * @param   out [IN] Extension data to be freed
- * @param   add_arg [IN] Additional argument provided when registering the callback
+ * @param   context  [IN] Context where the extension applies
+ * @param   out      [IN] Extension data to be freed
+ * @param   add_arg  [IN] Additional argument provided when registering the callback
  */
 typedef void (*HITLS_FreeCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
     uint8_t *out, uint8_t *addArg);
@@ -124,31 +125,32 @@ typedef void (*HITLS_FreeCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extT
  * This function is invoked when parsing a received custom extension. It interprets the
  * extension data and updates the TLS context based on certificate information if necessary.
  *
- * @param   ctx      [IN] TLS context
- * @param   extType  [IN] Extension type
- * @param   context  [IN] Context where the extension applies
- * @param   in       [IN] Pointer to the received extension data
- * @param   inlen    [IN] Length of the extension data
- * @param   cert     [IN] Pointer to the HITLS_X509_Cert structure representing certificate information
- * @param   certId   [IN] Certificate ID indicating its position in the certificate chain
- * @param   parseArg [IN] Additional argument provided when registering the callback
+ * @param   ctx      [IN]  TLS context
+ * @param   extType  [IN]  Extension type
+ * @param   context  [IN]  Context where the extension applies
+ * @param   in       [IN]  Pointer to the received extension data
+ * @param   inlen    [IN]  Length of the extension data
+ * @param   cert     [IN]  Pointer to the HITLS_X509_Cert structure representing certificate information
+ * @param   certId   [IN]  Certificate ID indicating its position in the certificate chain
+ * @param   alert    [OUT] Alert value provided by the user when requesting to add the custom extension
+ * @param   parseArg [IN]  Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_ParseCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
-    const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint8_t *parseArg);
+    const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *parseArg);
 
 
 /**
  * @ingroup hitls_custom_extensions
  * @brief   Add a custom extension to the TLS context.
  *
- * @param   ctx [OUT] TLS context
- * @param   ext_type [IN] Extension type
- * @param   context [IN] Context where the extension applies
- * @param   add_cb [IN] Callback to add the extension
- * @param   free_cb [IN] Callback to free the extension
- * @param   add_arg [IN] Argument for add/free Callbacks
- * @param   parse_cb [IN] Callback to parse the extension
+ * @param   ctx       [IN] TLS context
+ * @param   ext_type  [IN] Extension type
+ * @param   context   [IN] Context where the extension applies
+ * @param   add_cb    [IN] Callback to add the extension
+ * @param   free_cb   [IN] Callback to free the extension
+ * @param   add_arg   [IN] Argument for add/free Callbacks
+ * @param   parse_cb  [IN] Callback to parse the extension
  * @param   parse_arg [IN] Argument for parse Callback
  * @retval  HITLS_SUCCESS if successful
  *          For other error codes, see hitls_error.h
