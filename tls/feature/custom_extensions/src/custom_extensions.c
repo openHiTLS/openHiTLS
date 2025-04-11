@@ -124,29 +124,30 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts, uint16_t extType
     return NULL;
 }
 
-uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t context, HITLS_AddCustomExtCallback addCb,
-    HITLS_FreeCustomExtCallback freeCb, uint8_t *addArg, HITLS_ParseCustomExtCallback parseCb, uint8_t *parseArg)
+uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, const HITLS_CustomExtParams *params)
 {
     CustomExt_Method *meth = NULL;
     CustomExt_Method *tmp = NULL;
 
-    if (addCb == NULL && freeCb != NULL) {
-        return 0;
+    if (ctx == NULL || params == NULL) {
+        return HITLS_NULL_INPUT;
     }
 
-    if (ctx == NULL) {
-        return 0;
+    if (params->addCb == NULL && params->freeCb != NULL) {
+        return HITLS_INVALID_INPUT;
     }
+
     CustomExt_Methods *exts = ctx->customExts;
 
-    if (IsCustomExtensionTypeAdded(exts, extType) || FindCustomExtensions(exts, extType, context) != NULL) {
-        return 0;
+    if (IsCustomExtensionTypeAdded(exts, params->extType) ||
+        FindCustomExtensions(exts, params->extType, params->context) != NULL) {
+        return HITLS_CONFIG_DUP_CUSTOM_EXT;
     }
 
     if (exts == NULL) {
         exts = (CustomExt_Methods *)BSL_SAL_Malloc(sizeof(CustomExt_Methods));
         if (exts == NULL) {
-            return 0;
+            return HITLS_MEMALLOC_FAIL;
         }
         exts->meths = NULL;
         exts->methsCount = 0;
@@ -154,21 +155,22 @@ uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t con
     }
 
     tmp = BSL_SAL_Realloc(exts->meths, (exts->methsCount + 1) * sizeof(CustomExt_Method),
-        exts->methsCount * sizeof(CustomExt_Method));
+                          exts->methsCount * sizeof(CustomExt_Method));
     if (tmp == NULL) {
-        return 0;
+        return HITLS_MEMALLOC_FAIL;
     }
 
     exts->meths = tmp;
     meth = exts->meths + exts->methsCount;
+
     memset_s(meth, sizeof(*meth), 0, sizeof(*meth));
-    meth->context = context;
-    meth->parseCb = parseCb;
-    meth->addCb = addCb;
-    meth->freeCb = freeCb;
-    meth->extType = extType;
-    meth->addArg = addArg;
-    meth->parseArg = parseArg;
+    meth->extType = params->extType;
+    meth->context = params->context;
+    meth->addCb = params->addCb;
+    meth->freeCb = params->freeCb;
+    meth->addArg = params->addArg;
+    meth->parseCb = params->parseCb;
+    meth->parseArg = params->parseArg;
     exts->methsCount++;
 
     return HITLS_SUCCESS;

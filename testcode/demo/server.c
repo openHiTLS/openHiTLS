@@ -62,7 +62,6 @@ static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t conte
     free(out);
 }
 
-
 static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, const uint8_t **in,
     uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *parseArg)
 {
@@ -179,9 +178,17 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE,
-        HITLS_EX_TYPE_CLIENT_HELLO | HITLS_EX_TYPE_TLS1_2_SERVER_HELLO, AddCustomExtServerHello, FreeCustomExt, NULL,
-        ParseCustomExtClientHello, NULL);
+    HITLS_CustomExtParams customParams = {
+        .extType = CUSTOM_EXT_TYPE,
+        .context = HITLS_EX_TYPE_CLIENT_HELLO | HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
+        .addCb = AddCustomExtServerHello,
+        .freeCb = FreeCustomExt,
+        .addArg = NULL,
+        .parseCb = ParseCustomExtClientHello,
+        .parseArg = NULL
+    };
+
+    ret = HITLS_AddCustomExtension(ctx, &customParams);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;

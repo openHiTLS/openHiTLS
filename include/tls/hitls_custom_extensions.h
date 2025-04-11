@@ -142,21 +142,31 @@ typedef int (*HITLS_ParseCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extT
 
 /**
  * @ingroup hitls_custom_extensions
- * @brief   Add a custom extension to the TLS context.
+ * @brief   Structure to hold parameters for adding a custom extension.
+ */
+typedef struct {
+    uint16_t extType;                           /**< Extension type */
+    uint32_t context;                           /**< Context where the extension applies */
+    HITLS_AddCustomExtCallback addCb;           /**< Callback function to add the extension */
+    HITLS_FreeCustomExtCallback freeCb;         /**< Callback function to free the extension */
+    uint8_t *addArg;                            /**< Additional argument for add and free callbacks */
+    HITLS_ParseCustomExtCallback parseCb;       /**< Callback function to parse the extension */
+    uint8_t *parseArg;                          /**< Additional argument for parse callback */
+} HITLS_CustomExtParams;
+
+/**
+ * @ingroup hitls_custom_extensions
+ * @brief   Add a custom extension to the TLS context using a parameter structure.
  *
- * @param   ctx       [IN] TLS context
- * @param   ext_type  [IN] Extension type
- * @param   context   [IN] Context where the extension applies
- * @param   add_cb    [IN] Callback to add the extension
- * @param   free_cb   [IN] Callback to free the extension
- * @param   add_arg   [IN] Argument for add/free Callbacks
- * @param   parse_cb  [IN] Callback to parse the extension
- * @param   parse_arg [IN] Argument for parse Callback
+ * This function adds a custom extension to the specified TLS context using the provided
+ * parameters encapsulated in the HITLS_CustomExtParams structure.
+ *
+ * @param   ctx     [IN] TLS context
+ * @param   params  [IN] Pointer to the structure containing custom extension parameters
  * @retval  HITLS_SUCCESS if successful
  *          For other error codes, see hitls_error.h
  */
-uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t context, HITLS_AddCustomExtCallback addCb,
-    HITLS_FreeCustomExtCallback freeCb, uint8_t *addArg, HITLS_ParseCustomExtCallback parseCb, uint8_t *parseArg);
+uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, const HITLS_CustomExtParams *params);
 
 #ifdef __cplusplus
 }

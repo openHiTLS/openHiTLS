@@ -401,7 +401,16 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
     uint8_t *parseArg = NULL;
 
     // Test normal case: Add a custom extension
-    uint32_t ret = HITLS_AddCustomExtension(&ctx, extType, context, addCb, freeCb, addArg, parseCb, parseArg);
+    HITLS_CustomExtParams params = {
+        .extType = extType,
+        .context = context,
+        .addCb = addCb,
+        .freeCb = freeCb,
+        .addArg = addArg,
+        .parseCb = parseCb,
+        .parseArg = parseArg
+    };
+    uint32_t ret = HITLS_AddCustomExtension(&ctx, &params);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     ASSERT_EQ(ctx.customExts->methsCount, 1);  // Verify the number of extensions is 1
     CustomExt_Method *meth = &ctx.customExts->meths[0];
@@ -414,13 +423,31 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
     ASSERT_EQ(meth->parseArg, parseArg); // Verify parse_arg
 
     // Test boundary case: Attempt to add a duplicate extension
-    ret = HITLS_AddCustomExtension(&ctx, extType, context, addCb, freeCb, addArg, parseCb, parseArg);
-    ASSERT_EQ(ret, 0);  // Verify the return value is failure
+    HITLS_CustomExtParams duplicateParams = {
+        .extType = extType,
+        .context = context,
+        .addCb = addCb,
+        .freeCb = freeCb,
+        .addArg = addArg,
+        .parseCb = parseCb,
+        .parseArg = parseArg
+    };
+    ret = HITLS_AddCustomExtension(&ctx, &duplicateParams);
+    ASSERT_EQ(ret, HITLS_CONFIG_DUP_CUSTOM_EXT);  // Verify the return value is failure
     ASSERT_EQ(ctx.customExts->methsCount, 1);  // Verify the number of extensions does not increase
 
     // Test invalid parameters: add_cb is NULL, free_cb is not NULL
-    ret = HITLS_AddCustomExtension(&ctx, invalidExtType, context, NULL, freeCb, addArg, parseCb, parseArg);
-    ASSERT_EQ(ret, 0);  // Verify the return value is failure
+    HITLS_CustomExtParams invalidParams = {
+        .extType = invalidExtType,
+        .context = context,
+        .addCb = NULL,
+        .freeCb = freeCb,
+        .addArg = addArg,
+        .parseCb = parseCb,
+        .parseArg = parseArg
+    };
+    ret = HITLS_AddCustomExtension(&ctx, &invalidParams);
+    ASSERT_EQ(ret, HITLS_INVALID_INPUT);  // Verify the return value is failure
     ASSERT_EQ(ctx.customExts->methsCount, 1);  // Verify the number of extensions does not increase
 
 EXIT:

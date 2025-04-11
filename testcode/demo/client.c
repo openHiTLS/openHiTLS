@@ -164,9 +164,18 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE,
-        HITLS_EX_TYPE_CLIENT_HELLO | HITLS_EX_TYPE_TLS1_2_SERVER_HELLO, AddCustomExtClientHello, FreeCustomExt, NULL,
-        ParseCustomExtServerHello, NULL);
+    // 创建HITLS_CustomExtParams结构体实例
+    HITLS_CustomExtParams customParams = {
+        .extType = CUSTOM_EXT_TYPE,
+        .context = HITLS_EX_TYPE_CLIENT_HELLO | HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
+        .addCb = AddCustomExtClientHello,
+        .freeCb = FreeCustomExt,
+        .addArg = NULL,
+        .parseCb = ParseCustomExtServerHello,
+        .parseArg = NULL
+    };
+
+    ret = HITLS_AddCustomExtension(ctx, &customParams);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
