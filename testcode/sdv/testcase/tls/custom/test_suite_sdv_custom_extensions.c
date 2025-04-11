@@ -39,6 +39,9 @@
 #include "bsl_bytes.h"
 #include "custom_extensions.h"
 
+#define CUSTOM_EXTENTIONS_TYPE_1                      0x00001
+#define CUSTOM_EXTENTIONS_TYPE_2                      0x00002
+
 // Simple add_cb function, allocates buffer with 1 byte length and 1 byte data
 int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t **out, uint32_t *outLen,
     HITLS_X509_Cert *cert, uint32_t certId, uint8_t *addArg)
@@ -122,7 +125,7 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_API_TC001(void)
     uint8_t buf[1024] = {0};
     uint32_t bufLen = sizeof(buf);
     uint32_t len = 0;
-    uint16_t extType = 1;
+    uint16_t extType = CUSTOM_EXTENTIONS_TYPE_1;
     uint32_t context = 1;
 
     // Configure a single custom extension
@@ -165,7 +168,7 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_API_TC001(void)
     TLS_Ctx ctx = {0};
     uint8_t buf[1024] = {0xAA};  // ext_type=1, len=0
     uint32_t bufOffset = 0;
-    uint16_t extType = 1;
+    uint16_t extType = CUSTOM_EXTENTIONS_TYPE_1;
     uint32_t context = 1;
     uint32_t extLen = 1;
 
@@ -213,11 +216,11 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_MULTIPLE_API_TC001(void)
     // Configure multiple custom extensions
     CustomExt_Methods exts = {0};
     CustomExt_Method meths[2] = {{0}, {0}};
-    meths[0].extType = 1;
+    meths[0].extType = CUSTOM_EXTENTIONS_TYPE_1;
     meths[0].context = context;
     meths[0].addCb = NULL;  // No callback
     meths[0].freeCb = NULL;
-    meths[1].extType = 2;
+    meths[1].extType = CUSTOM_EXTENTIONS_TYPE_2;
     meths[1].context = context;
     meths[1].addCb = NULL;  // No callback
     meths[1].freeCb = NULL;
@@ -289,7 +292,7 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     uint8_t buf[1024] = {0};
     uint32_t bufLen = sizeof(buf);
     uint32_t len = 0;
-    uint16_t extType = 1;
+    uint16_t extType = CUSTOM_EXTENTIONS_TYPE_1;
     uint32_t context = 1;
     uint32_t dataLen = 1;
 
@@ -339,7 +342,7 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     TLS_Ctx ctx = {0};
     uint8_t buf[1024] = {0xAA};  // ext_type=1 (big-endian), len=1, data=0xAA
     uint32_t bufOffset = 0;
-    uint16_t extType = 1;
+    uint16_t extType = CUSTOM_EXTENTIONS_TYPE_1;
     uint32_t context = 1;
     uint32_t extLen = 1;
 
@@ -385,8 +388,8 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
 
     // Initialize the TLS context
     TLS_Ctx ctx = {0};
-    uint16_t extType = 1;
-    uint16_t invalidExtType = 2;
+    uint16_t extType = CUSTOM_EXTENTIONS_TYPE_1;
+    uint16_t invalidExtType = CUSTOM_EXTENTIONS_TYPE_2;
     uint32_t context = 1;
     HITLS_AddCustomExtCallback addCb = SimpleAddCb;
     HITLS_FreeCustomExtCallback freeCb = SimpleFreeCb;

@@ -148,7 +148,7 @@ int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *
 
         uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
         if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
-                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)){
+                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
             msg->extensionTypeMask |= 1ULL << hsExTypeId;
         }
 

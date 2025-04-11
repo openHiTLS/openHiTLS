@@ -121,8 +121,7 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         if (pkt.bufLen - *(pkt.bufOffset) >= sizeof(uint16_t)) {
             extMsgLen = BSL_ByteToUint16(&(pkt.buf)[*(pkt.bufOffset)]);
             (pkt.bufOffset) += sizeof(uint16_t);
-        }
-        else {
+        } else {
             return HITLS_PARSE_INVALID_MSG_LEN;
         }
 
@@ -138,8 +137,7 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
                     HITLS_EX_TYPE_NEW_SESSION_TICKET);
             }
             pkt.bufOffset += extMsgLen;
-        }
-        else {
+        } else {
             return HITLS_PARSE_INVALID_MSG_LEN;
         }
     }

@@ -64,6 +64,9 @@ int32_t AddCustomExtEncryptedExtension(const HITLS_Ctx *ctx, uint16_t extType, u
     (void)addArg;
     uint8_t *data = "test Tls1.2 custom_extension_encrypted_extension";
     uint16_t dataLen = strlen(data);
+    if (dataLen < 0) {
+        return HITLS_MEMALLOC_FAIL;
+    }
     uint8_t *buf = malloc(dataLen);
     if (buf == NULL) {
         return HITLS_MEMALLOC_FAIL;
@@ -208,7 +211,7 @@ int main(int32_t argc, char *argv[])
     }
 
     ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_2, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
-                           AddCustomExtEncryptedExtension, FreeCustomExt, NULL, NULL, NULL);
+        AddCustomExtEncryptedExtension, FreeCustomExt, NULL, NULL, NULL);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;

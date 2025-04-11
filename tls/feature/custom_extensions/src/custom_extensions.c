@@ -127,7 +127,8 @@ CustomExt_Method *FindCustomExtensions(CustomExt_Methods *exts, uint16_t extType
 uint32_t HITLS_AddCustomExtension(HITLS_Ctx *ctx, uint16_t extType, uint32_t context, HITLS_AddCustomExtCallback addCb,
     HITLS_FreeCustomExtCallback freeCb, uint8_t *addArg, HITLS_ParseCustomExtCallback parseCb, uint8_t *parseArg)
 {
-    CustomExt_Method *meth = NULL, *tmp = NULL;
+    CustomExt_Method *meth = NULL;
+    CustomExt_Method *tmp = NULL;
 
     if (addCb == NULL && freeCb != NULL) {
         return 0;
@@ -213,8 +214,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, uint8_t *buf, uint32_t bu
 
                 (void)memcpy_s(&buf[offset], bufLen - offset, out, outLen);
                 offset += outLen;
-            }
-            else {
+            } else {
                 return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
             }
         }
