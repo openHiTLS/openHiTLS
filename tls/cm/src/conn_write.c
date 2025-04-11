@@ -52,6 +52,13 @@ static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data
     int32_t alertRet;
 
     do {
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        /* In UDP scenarios, the 2MSL timer expires */
+        ret = HS_CheckAndProcess2MslTimeout(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+#endif
         ret = APP_Write(ctx, data, dataLen, writeLen);
         if (ret == HITLS_SUCCESS) {
             /* The message is sent successfully */

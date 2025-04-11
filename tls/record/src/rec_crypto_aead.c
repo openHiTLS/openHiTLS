@@ -218,8 +218,11 @@ static int32_t AeadDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15396, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "decrypt record error. ret:%d", ret, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
-        return HITLS_REC_BAD_RECORD_MAC;
+        if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
+            return HITLS_REC_BAD_RECORD_MAC;
+        }
+        return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
     }
     return HITLS_SUCCESS;
 }

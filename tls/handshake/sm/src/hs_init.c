@@ -29,6 +29,9 @@
 #include "parse.h"
 
 #define DTLS_OVER_UDP_DEFAULT_SIZE 2048u
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#define EXTRA_DATA_SIZE 128u
+#endif
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 static int32_t UIO_Init(TLS_Ctx *ctx)
 {
@@ -42,6 +45,20 @@ static int32_t UIO_Init(TLS_Ctx *ctx)
         return HITLS_MEMALLOC_FAIL;
     }
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    uint32_t bufferLen = (uint32_t)ctx->config.pmtu;
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+        BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        ret = BSL_UIO_Ctrl(bUio, BSL_UIO_SET_BUFFER_SIZE, sizeof(uint32_t), &bufferLen);
+        if (ret != BSL_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17173, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
+                "SET_BUFFER_SIZE fail, ret %d", ret, 0, 0, 0);
+            BSL_UIO_Free(bUio);
+            BSL_ERR_PUSH_ERROR(HITLS_UIO_FAIL);
+            return HITLS_UIO_FAIL;
+        }
+    }
+#endif
     ctx->bUio = bUio;
     ret = BSL_UIO_Append(bUio, ctx->uio);
     if (ret != BSL_SUCCESS) {
@@ -72,7 +89,18 @@ static int32_t UIO_Deinit(TLS_Ctx *ctx)
 static uint32_t GetMsgSize(const TLS_Ctx *ctx)
 {
     (void)ctx;
-    uint32_t msgSize = REC_MAX_PLAIN_DECRYPTO_MAX_LENGTH;
+    uint32_t msgSize = DTLS_OVER_UDP_DEFAULT_SIZE;
+#if defined(HITLS_BSL_UIO_UDP)
+    /* check whether DTLS over udp */
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+        BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        /* Before calling this function, the user has set pmtu or pmtu to the default value 1500. */
+        msgSize = (msgSize > ctx->config.pmtu) ? msgSize : (ctx->config.pmtu + EXTRA_DATA_SIZE);
+    } else
+#endif /* HITLS_BSL_UIO_UDP */
+    {
+        msgSize = REC_MAX_PLAIN_DECRYPTO_MAX_LENGTH;
+    }
     return msgSize;
 }
 

@@ -31,6 +31,7 @@
 #include "crypt.h"
 #include "hs_state_recv.h"
 #include "bsl_bytes.h"
+#include "hs_dtls_timer.h"
 
 #define HS_MESSAGE_LEN_FIELD 3u
 static int32_t ReadEventInIdleState(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
@@ -106,6 +107,9 @@ static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
         }
     }
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    REC_RetransmitListClean(ctx->recCtx); /* dtls over udp scenario, the retransmission queue needs to be cleared */
+#endif
     ChangeConnState(ctx, CM_STATE_RENEGOTIATION);
     if (type == CLIENT_HELLO) {
         (void)HS_ChangeState(ctx, TRY_RECV_CLIENT_HELLO);
@@ -178,6 +182,41 @@ static int32_t RecvNSTPreprocess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_RECV_NEW_SESSION_TICKET);
 }
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+static int32_t RecvPostFinishPreprocess(TLS_Ctx *ctx)
+{
+    if (!IS_DTLS_VERSION(ctx->config.tlsConfig.maxVersion)) {
+        BSL_LOG_BINLOG_VARLEN(BINLOG_ID16131, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Unexpected %s handshake state message.", HS_GetMsgTypeStr(ctx->hsCtx->msgBuf[0]));
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+        return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+    }
+    bool isTimeout = false;
+
+    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16521, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetUioChainTransportType fail", 0, 0, 0, 0);
+        return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+    }
+
+    if (HS_IsTimeout(ctx, &isTimeout) != HITLS_SUCCESS || isTimeout) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16522, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HS_IsTimeout fail or timeout", 0, 0, 0, 0);
+        REC_RetransmitListClean(ctx->recCtx);
+        HS_DeInit(ctx);
+        return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+    }
+    if ((ctx->isClient && !ctx->negotiatedInfo.isResume) || (!ctx->isClient && ctx->negotiatedInfo.isResume)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16523, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "RecvPostFinishPreprocess fail", 0, 0, 0, 0);
+        return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
+    }
+
+    ChangeConnState(ctx, CM_STATE_HANDSHAKING);
+    return HS_ChangeState(ctx, TRY_RECV_FINISH);
+}
+#endif
+
 static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
 {
     if (ctx->hsCtx != NULL) {
@@ -217,6 +256,11 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
         case NEW_SESSION_TICKET:
             ret = RecvNSTPreprocess(ctx);
             break;
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        case FINISHED:
+            ret = RecvPostFinishPreprocess(ctx);
+            break;
+#endif
         default:
             BSL_LOG_BINLOG_VARLEN(BINLOG_ID16529, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Unexpected %s handshake state message.", HS_GetMsgTypeStr(hsCtx->msgBuf[0]));
@@ -253,6 +297,13 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
     int32_t unexpectMsgRet = 0;
 
     do {
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        /* In UDP scenarios, the 2MSL timer expires */
+        ret = HS_CheckAndProcess2MslTimeout(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+#endif
         ret = APP_Read(ctx, data, bufSize, readLen);
         if (ret == HITLS_SUCCESS) {
             if ((!ctx->negotiatedInfo.isRenegotiation) && (ctx->hsCtx != NULL)) {

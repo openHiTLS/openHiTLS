@@ -39,6 +39,7 @@
 #include "hs_verify.h"
 #include "cert_mgr_ctx.h"
 #include "record.h"
+#include "hs_cookie.h"
 #ifdef HITLS_TLS_PROTO_TLS13
 #if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_FEATURE_PSK)
 #define HS_MAX_BINDER_SIZE 64
@@ -1182,58 +1183,71 @@ int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
+{
+    int32_t ret;
+    uint8_t cookie[TLS_HS_MAX_COOKIE_SIZE] = {0};
+    uint32_t cookieSize = TLS_HS_MAX_COOKIE_SIZE;
+    ret = HS_CalcCookie(ctx, clientHello, cookie, &cookieSize);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15241, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "calc cookie fail when process client hello.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        return ret;
+    }
+    BSL_SAL_FREE(ctx->negotiatedInfo.cookie); // Releasing the Old Cookie
+    ctx->negotiatedInfo.cookie = (uint8_t *)BSL_SAL_Dump(cookie, cookieSize);
+    if (ctx->negotiatedInfo.cookie == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15242, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "malloc cookie fail when process client hello.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    ctx->negotiatedInfo.cookieSize = (uint32_t)cookieSize;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+
 // The server processes the DTLS client hello message.
 #ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     int32_t ret;
-    bool ifNeedGenerate = false;
     const ClientHelloMsg *clientHello = &msg->body.clientHello;
-
-    // If isHelloVerifyReqEnable enabled, check ClientHello cookie.
-    if (ctx->config.tlsConfig.isHelloVerifyReqEnable) {
-        if (clientHello->cookieLen == 0) {
-            ifNeedGenerate = true;
-        } else {
-            // Verify cookie field in ClientHello
-            if (ctx->globalConfig->cookieVerifyCb == NULL) {
-                return HITLS_UNREGISTERED_CALLBACK;
-            }
-            ret = ctx->globalConfig->cookieVerifyCb(ctx, clientHello->cookie, clientHello->cookieLen);
-            if (ret != COOKIE_VERIFY_SUCCESS) {
-                ifNeedGenerate = true;
-            }
-        }
-        if (ifNeedGenerate) {
-            // Generate stateless cookie
-            uint32_t cookieSize = 0;
-            if (ctx->globalConfig->cookieGenerateCb == NULL) {
-                return HITLS_UNREGISTERED_CALLBACK;
-            }
-
-            uint8_t *cookieTmp = (uint8_t *)BSL_SAL_Calloc(1, DTLS_COOKIE_LEN);
-            if (cookieTmp == NULL) {
-                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-                BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-                return HITLS_MEMALLOC_FAIL;
-            }
-
-            ret = ctx->globalConfig->cookieGenerateCb(ctx, cookieTmp, &cookieSize);
-            if (ret != COOKIE_GEN_SUCCESS || cookieSize > DTLS_COOKIE_LEN) {
-                BSL_SAL_FREE(cookieTmp);
-                return HITLS_INTERNAL_EXCEPTION;
-            }
-
-            BSL_SAL_FREE(ctx->negotiatedInfo.cookie);
-            ctx->negotiatedInfo.cookie = cookieTmp;
-            ctx->negotiatedInfo.cookieSize = cookieSize;
-            return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
-        }
-    }
-
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     CheckRenegotiate(ctx);
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
+#ifdef HITLS_BSL_UIO_UDP
+    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
+        bool isCookieValid = false;
+        ret = HS_CheckCookie(ctx, clientHello, &isCookieValid);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15243, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "HS_CheckCookie fail when process client hello.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+            return ret;
+        }
+        /* If the cookie fails to be verified, send a hello verify request */
+        if (!isCookieValid) {
+            /* During DTLS renegotiation, if the cookie verification fails, an alert message is sent. If the cookie is
+             * empty, the hello verify request is sent */
+            if ((clientHello->cookieLen != 0u) && (ctx->negotiatedInfo.isRenegotiation)) {
+                BSL_ERR_PUSH_ERROR(HITLS_MSG_VERIFY_COOKIE_ERR);
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15911, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "client hello cookie verify fail during renegotiation.", 0, 0, 0, 0);
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+                return HITLS_MSG_VERIFY_COOKIE_ERR;
+            }
+            ret = PrepareDtlsCookie(ctx, clientHello);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            return HS_ChangeState(ctx, TRY_SEND_HELLO_VERIFY_REQUEST);
+        }
+    }
+#endif /* HITLS_BSL_UIO_UDP */
 #ifdef HITLS_TLS_FEATURE_SNI
     /* Perform the ClientHello callback. The pause handshake status is not considered */
     ret = ClientHelloCbCheck(ctx);

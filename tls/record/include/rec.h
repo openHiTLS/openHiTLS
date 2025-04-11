@@ -153,6 +153,26 @@ int32_t REC_Read(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *rea
  */
 int32_t REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
 
+/**
+ * @ingroup record
+ * @brief   Activate the expired write state. This API is invoked in the retransmission scenario
+ *
+ * @attention Reservation Interface
+ * @param   ctx [IN] TLS object
+ *
+ */
+void REC_ActiveOutdatedWriteState(TLS_Ctx *ctx);
+
+/**
+ * @ingroup record
+ * @brief   Disable the expired write status. This API is invoked in the retransmission scenario
+ *
+ * @attention Reservation Interface
+ * @param   ctx [IN] TLS object
+ *
+ */
+void REC_DeActiveOutdatedWriteState(TLS_Ctx *ctx);
+
 
 /**
  * @ingroup record
@@ -222,6 +242,8 @@ bool REC_HaveReadSuiteInfo(const TLS_Ctx *ctx);
  * @return Length of the remaining readable app message
  */
 uint32_t APP_GetReadPendingBytes(const TLS_Ctx *ctx);
+
+int32_t REC_RecBufReSet(TLS_Ctx *ctx);
 #ifdef __cplusplus
 }
 #endif
