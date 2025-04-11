@@ -1267,6 +1267,28 @@ int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, uint8_t *isSupport);
 
 /**
  * @ingroup hitls
+ * @brief   Sets whether to perform cookie exchange in the dtls.
+ *
+ * @param   ctx [IN] TLS connection handle.
+ * @param   isSupport [IN] Indicates whether to perform cookie exchange
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isSupport);
+
+/**
+ * @ingroup hitls
+ * @brief   Querying whether the DTLS performs cookie exchange.
+ *
+ * @param   ctx [IN] TLS connection handle.
+ * @param   isSupport [IN] Indicates whether to perform cookie exchange.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, uint8_t *isSupport);
+
+/**
+ * @ingroup hitls
  * @brief   Sets whether to send handshake messages by flight distance.
  *
  * @param   ctx [IN/OUT] TLS connection handle.
