@@ -212,6 +212,7 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_MULTIPLE_API_TC001(void)
     uint32_t bufLen = sizeof(buf);
     uint32_t len = 0;
     uint32_t context = 1;
+    uint32_t methsCount = 1;
 
     // Configure multiple custom extensions
     CustomExt_Methods exts = {0};
@@ -225,7 +226,7 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_MULTIPLE_API_TC001(void)
     meths[1].addCb = NULL;  // No callback
     meths[1].freeCb = NULL;
     exts.meths = meths;
-    exts.methsCount = 2;
+    exts.methsCount = methsCount;
     ctx.customExts = &exts;
 
     // Call the interface under test
@@ -310,11 +311,11 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     // Call the interface under test
     int32_t ret = PackCustomExtensions(&ctx, buf, bufLen, &len, context);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
-    ASSERT_EQ(len, 2 * sizeof(uint16_t) + dataLen);  // ext_type (2 byte) + len (2 byte) + data (1 byte)
+    ASSERT_EQ(len, sizeof(uint16_t) + sizeof(uint16_t) + dataLen);  // ext_type (2 byte) + len (2 byte) + data (1 byte)
     // Verify the extension type
-    uint16_t packedType = BSL_ByteToUint16(&buf[0]);
+    uint16_t packedType = BSL_ByteToUint16(buf);
     ASSERT_EQ(packedType, extType);
-    uint16_t packedLen = BSL_ByteToUint16(&buf[2]);
+    uint16_t packedLen = BSL_ByteToUint16(&buf[sizeof(uint16_t)]);
     ASSERT_EQ(packedLen, 1);  // Verify the len
     ASSERT_EQ(buf[len - 1], 0xAA);  // Verify the data
 

@@ -188,7 +188,7 @@ int main(int32_t argc, char *argv[])
     }
 
     ret = HITLS_AddCustomExtension(ctx, CUSTOM_EXT_TYPE_2, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
-                               NULL, NULL, NULL, ParseCustomExtEncryptedExtension, NULL);
+        NULL, NULL, NULL, ParseCustomExtEncryptedExtension, NULL);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
