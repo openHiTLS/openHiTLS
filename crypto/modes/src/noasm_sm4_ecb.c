@@ -17,6 +17,7 @@
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_ECB)
 
 #include "crypt_modes_ecb.h"
+#include "modes_local.h"
 
 int32_t SM4_ECB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)

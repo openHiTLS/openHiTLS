@@ -17,37 +17,32 @@
 #ifdef HITLS_CRYPTO_SM4
 
 #include "bsl_err_internal.h"
-#include "crypt_errno.h"
 #include "crypt_sm4.h"
 #include "modes_local.h"
 
-int32_t MODES_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
-{
-    // The ctx and key have been checked at the EAL layer and will not be checked again here.
-    // The keyMethod will support registration in the future. Therefore, this check is added.
-    if (ctx->ciphMeth == NULL || ctx->ciphCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    return ctx->ciphMeth->setEncryptKey(ctx->ciphCtx, key, len);
-}
-
-int32_t MODES_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
-{
-    // The ctx and key have been checked at the EAL layer and will not be checked again here.
-    // The keyMethod will support registration in the future. Therefore, this check is added.
-    if (ctx->ciphMeth == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    return ctx->ciphMeth->setDecryptKey(ctx->ciphCtx, key, len);
-}
-
+/**
+ * @brief Set the decryption key in SM4-ECB mode.
+ *
+ * @param ctx [IN] Mode handle
+ * @param key [IN] Decrypt key
+ * @param len [IN] Decrypt key length. Only 16 bytes (128 bits) are supported.
+ * @return Success: CRYPT_SUCCESS
+ *         Other error codes are returned if the operation fails.
+ */
 int32_t MODES_SM4_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
 {
     return MODES_SetEncryptKey(ctx, key, len);
 }
 
+/**
+ * @brief Set the decryption key in SM4-ECB mode.
+ *
+ * @param ctx [IN] Mode handle
+ * @param key [IN] Decrypt key
+ * @param len [IN] Decrypt key length. Only 16 bytes (128 bits) are supported.
+ * @return Success: CRYPT_SUCCESS
+ *         Other error codes are returned if the operation fails.
+ */
 int32_t MODES_SM4_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
 {
     return MODES_SetDecryptKey(ctx, key, len);

@@ -21,18 +21,14 @@
 
 #include <stdint.h>
 #include "bsl_sal.h"
-#include "crypt_algid.h"
-#include "crypt_local_types.h"
 #include "crypt_eal_rand.h"
+#include "crypt_algid.h"
+#include "sal_atomic.h"
+#include "crypt_local_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-#define RAND_TYPE_MD 1
-#define RAND_TYPE_MAC 2
-#define RAND_TYPE_AES 3
-#define RAND_TYPE_AES_DF 4
 
 struct EAL_RndCtx {
     bool isProvider;
@@ -40,45 +36,47 @@ struct EAL_RndCtx {
     EAL_RandUnitaryMethod *meth;
     void *ctx;
     bool working; // whether the system is in the working state
+    bool isDefaultSeed;
     BSL_SAL_ThreadLockHandle lock; // thread lock
 };
 
 typedef struct {
-    CRYPT_RAND_AlgId drbgId;
-    int32_t depId;
-    uint32_t type;
-} DrbgIdMap;
+    CRYPT_RAND_AlgId id; // seed-drbg algorithm
+    CRYPT_EAL_RndCtx *seed; // seed-drbg
+    void *seedCtx; // seed-drbg entropy source handle
+    CRYPT_RandSeedMethod seedMeth; // seed-drbg entropy source implementation function
+    BSL_SAL_RefCount references;
+} EAL_SeedDrbg;
 
-const DrbgIdMap *GetDrbgIdMap(CRYPT_RAND_AlgId id);
+int32_t EAL_SeedDrbgInit(EAL_SeedDrbg *seedDrbg);
 
-EAL_RandUnitaryMethod* EAL_RandGetMethod(void);
+void EAL_SeedDrbgEntropyMeth(CRYPT_RandSeedMethod *meth);
+
+void EAL_SeedDrbgRandDeinit(CRYPT_EAL_RndCtx *rndCtx);
 
 int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu);
-
-/**
- * @brief Set the method for global random number
- *
- * @param meth meth method
- * @return Success: CRYPT_SUCCESS
- * For other error codes, see crypt_errno.h.
- */
-int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ctx);
-
-/**
- * @brief Global DRBG initialization. After initialization is complete,
- * call CRYPT_RAND_Deinit before initialization is performed again.
- *
- * @return Success: CRYPT_SUCCESS
- * For other error codes, see crypt_errno.h.
- */
-int32_t EAL_RandInit(CRYPT_RAND_AlgId id, BSL_Param *param, CRYPT_EAL_RndCtx *ctx, void *provCtx);
 
 /**
  * @brief Global random deinitialization
  *
  * @param ctx handle of ctx
  */
-void CRYPT_RandDeinit(CRYPT_EAL_RndCtx *ctx);
+void EAL_RandDeinit(CRYPT_EAL_RndCtx *ctx);
+
+/**
+ * @brief Get default method.
+ *
+ * @param void
+ */
+EAL_RandUnitaryMethod* EAL_RandGetMethod(void);
+
+/**
+ * @brief Get default seed method and ctx.
+ *
+ * @param seedMeth Seed method
+ * @param seedCtx Seed context
+ */
+int32_t EAL_GetDefaultSeed(CRYPT_RandSeedMethod *seedMeth, void **seedCtx);
 
 #ifdef __cplusplus
 }

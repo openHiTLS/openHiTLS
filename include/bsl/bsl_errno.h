@@ -111,6 +111,7 @@ enum BSL_ERROR {
     BSL_LIST_DATA_NOT_AVAILABLE,                /**< Data of current node is NULL */
     BSL_LIST_FULL,                              /**< Number of nodes has reached its limit */
     BSL_LIST_ERR_CONCAT,
+    BSL_LIST_MALLOC_FAIL,
 
     BSL_ASN1_FAIL = 0x03070001,
     BSL_ASN1_ERR_DECODE_BOOL,

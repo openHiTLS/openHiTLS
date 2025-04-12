@@ -22,7 +22,7 @@
 #include "crypt_errno.h"
 #include "crypt_modes_ecb.h"
 #include "modes_local.h"
-
+#include "securec.h"
 
 int32_t MODES_ECB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
@@ -117,7 +117,16 @@ int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
         return CRYPT_NULL_INPUT;
     }
     switch (cmd) {
+        case CRYPT_CTRL_REINIT_STATUS:
+            (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            modeCtx->dataLen = 0;
+            modeCtx->pad = CRYPT_PADDING_NONE;
+            return CRYPT_SUCCESS;
         case CRYPT_CTRL_SET_PADDING:
+            if (modeCtx->commonCtx.blockSize == 1) {
+                BSL_ERR_PUSH_ERROR(CRYPT_EAL_PADDING_NOT_SUPPORT);
+                return CRYPT_EAL_PADDING_NOT_SUPPORT;
+            }
             ret = MODES_SetPaddingCheck(*(int32_t *)val);
             if (ret != CRYPT_SUCCESS) {
                 return ret;
@@ -131,7 +140,7 @@ int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
             if (val == NULL || valLen != sizeof(uint32_t)) {
                 return CRYPT_INVALID_ARG;
             }
-            *(int32_t *)val = 16;
+            *(int32_t *)val = modeCtx->commonCtx.ciphMeth->blockSize;
             return CRYPT_SUCCESS;
         default:
             return MODES_CipherCtrl(modeCtx, cmd, val, valLen);
@@ -147,7 +156,7 @@ void MODES_ECB_FreeCtx(MODES_CipherCtx *modeCtx)
 }
 
 int32_t MODES_ECB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {
@@ -156,7 +165,11 @@ int32_t MODES_ECB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_ECB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_ECB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_ECB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -172,9 +185,17 @@ int32_t MODES_ECB_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t
         case CRYPT_CIPHER_AES128_ECB:
         case CRYPT_CIPHER_AES192_ECB:
         case CRYPT_CIPHER_AES256_ECB:
+#ifdef HITLS_CRYPTO_AES
             return AES_ECB_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_ECB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_ECB_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_ECB_Update(modeCtx, in, inLen, out, outLen);
     }
@@ -190,9 +211,17 @@ int32_t MODES_ECB_FinalEx(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outL
         case CRYPT_CIPHER_AES128_ECB:
         case CRYPT_CIPHER_AES192_ECB:
         case CRYPT_CIPHER_AES256_ECB:
+#ifdef HITLS_CRYPTO_AES
             return AES_ECB_Final(modeCtx, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_ECB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_ECB_Final(modeCtx, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_ECB_Final(modeCtx, out, outLen);
     }

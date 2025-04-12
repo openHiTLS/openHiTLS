@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CBC)
 
+#include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
 .file    "crypt_aes_cbc_armv8.S"
@@ -128,7 +129,7 @@ RDK2    .req    v28
 .globl    CRYPT_AES_CBC_Encrypt
 .type    CRYPT_AES_CBC_Encrypt, %function
 CRYPT_AES_CBC_Encrypt:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     ld1 {IVENC.16b}, [P_IV]                    // load IV
     ldr w6, [KEY, #240]                      // load rounds
     ld1 {BLK0.16b}, [IN], #16                // load in
@@ -235,7 +236,7 @@ CRYPT_AES_CBC_Encrypt:
     st1 {BLK0.16b}, [OUT], #16
     st1 {BLK0.16b}, [P_IV]
     mov x0, #0
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size CRYPT_AES_CBC_Encrypt, .-CRYPT_AES_CBC_Encrypt
 
@@ -260,7 +261,7 @@ CRYPT_AES_CBC_Encrypt:
 .globl	CRYPT_AES_CBC_Decrypt
 .type	CRYPT_AES_CBC_Decrypt, %function
 CRYPT_AES_CBC_Decrypt:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     ld1	{IV0.16b}, [P_IV]
 .Lcbc_aesdec_start:
     cmp    LEN, #64
@@ -475,7 +476,7 @@ CRYPT_AES_CBC_Decrypt:
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
     eor RDK2.16b, RDK2.16b, RDK2.16b
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size	CRYPT_AES_CBC_Decrypt, .-CRYPT_AES_CBC_Decrypt
 

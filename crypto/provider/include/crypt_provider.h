@@ -38,6 +38,12 @@ struct EAL_LibCtx {
     void *drbg;
 };
 
+#if defined(HITLS_CRYPTO_ENTROPY) &&                                                        \
+    (defined(HITLS_CRYPTO_ENTROPY_GETENTROPY) || defined(HITLS_CRYPTO_ENTROPY_DEVRANDOM) || \
+    defined(HITLS_CRYPTO_ENTROPY_SYS) || defined(HITLS_CRYPTO_ENTROPY_HARDWARE))
+#define HITLS_CRYPTO_ENTROPY_DEFAULT
+#endif
+
 int32_t CRYPT_EAL_InitPreDefinedProviders(void);
 void CRYPT_EAL_FreePreDefinedProviders(void);
 

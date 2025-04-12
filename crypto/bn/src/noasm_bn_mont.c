@@ -37,8 +37,10 @@ int32_t MontEncBin(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime)
     return MontEncBinCore(r, mont, opt, consttime);
 }
 
-void Reduce(BN_UINT *r, BN_UINT *x, const BN_UINT *m, uint32_t mSize, BN_UINT m0)
+void Reduce(BN_UINT *r, BN_UINT *x, const BN_UINT *one, const BN_UINT *m, uint32_t mSize, BN_UINT m0)
 {
+    (void)one;
     ReduceCore(r, x, m, mSize, m0);
 }
+
 #endif /* HITLS_CRYPTO_BN */

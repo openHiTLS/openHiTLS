@@ -23,11 +23,16 @@
 #include "bn_basic.h"
 #include "crypt_eal_rand.h"
 #include "crypt_util_rand.h"
+#include "crypto_test_util.h"
 
 #if defined(HITLS_SIXTY_FOUR_BITS)
 #define BN_UINT_MAX UINT64_MAX
+#define BN_DIGITS_MAX 65
+#define DH_BN_DIGITS_MAX 129
 #elif defined(HITLS_THIRTY_TWO_BITS)
 #define BN_UINT_MAX UINT32_MAX
+#define BN_DIGITS_MAX 65 * 2
+#define DH_BN_DIGITS_MAX 129 * 2
 #else
 #error
 #endif
@@ -87,6 +92,17 @@ BN_BigNum *TEST_VectorToBN(int sign, uint8_t *buff, uint32_t length)
         }
     }
     return bn;
+}
+void TEST_RegSimpleRand(void)
+{
+    CRYPT_RandRegist(TestSimpleRand);
+}
+
+int32_t TEST_BnTestCaseInit(void)
+{
+    TEST_RegSimpleRand();
+    TestMemInit();
+    return CRYPT_SUCCESS;
 }
 /* END_HEADER */
 
@@ -993,7 +1009,7 @@ void SDV_CRYPTO_BN_PRIMECHECK_API_TC001(void)
     BN_Optimizer *opt = BN_OptimizerCreate();
 
     ASSERT_TRUE(BN_SetLimb(bn, 10) == CRYPT_SUCCESS);  // bn == 10
-    ASSERT_TRUE(BN_PrimeCheck(bn, opt) == CRYPT_BN_NOR_CHECK_PRIME);
+    ASSERT_TRUE(BN_PrimeCheck(bn, 0, opt, NULL) == CRYPT_BN_NOR_CHECK_PRIME);
 
 EXIT:
     BN_Destroy(bn);
@@ -1029,7 +1045,7 @@ void SDV_CRYPTO_BN_PRIME_CHECK_FUNC_TC001(Hex *hex, int isPrime)
     ASSERT_EQ(BN_Bin2Bn(bn, hex->x, hex->len), CRYPT_SUCCESS);
 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    ret = BN_PrimeCheck(bn, opt);
+    ret = BN_PrimeCheck(bn, 0, opt, NULL);
     if (isPrime != 0) {
         ASSERT_EQ(ret, CRYPT_SUCCESS);
     } else {
@@ -1089,11 +1105,11 @@ void SDV_CRYPTO_BN_GENPRIMELIMB_API_TC001(void)
     CRYPT_RandRegist(TEST_Random);
     CRYPT_RandRegistEx(TEST_RandomEx);
 
-    ASSERT_TRUE(BN_GenPrime(r, bits, half, opt, cb) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GenPrime(r, NULL, bits, half, opt, cb) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(BN_GenPrime(r, 13, true, opt, cb) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GenPrime(r, NULL, 13, true, opt, cb) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(BN_GenPrime(r, 10, half, opt, cb) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GenPrime(r, NULL, 10, half, opt, cb) == CRYPT_SUCCESS);
 
 EXIT:
     BN_CbCtxDestroy(cb);
@@ -1303,7 +1319,7 @@ void SDV_CRYPTO_BN_SUB_LIMB_FUNC_TC001(int sign1, Hex *hex1, Hex *hex2, int sign
 
     ASSERT_TRUE(BN_SetLimb(res, w) == CRYPT_SUCCESS);
     if (w != 0) {
-        res->flag |= CRYPT_BN_FLAG_ISNEGTIVE;
+        res->sign = true;
     }
     ASSERT_TRUE(BN_Cmp(n, res) == 0);
 
@@ -1703,6 +1719,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_BN_UINT_FUNC_TC001(int len)
 {
+#if defined(HITLS_CRYPTO_CURVE_SM2_ASM) || (defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && \
+    defined(HITLS_CRYPTO_NIST_USE_ACCEL))
     TestMemInit();
     BN_BigNum *a = BN_Create(0);
     BN_UINT *input = calloc(1, len * sizeof(BN_UINT));
@@ -1718,6 +1736,9 @@ EXIT:
     BN_Destroy(a);
     free(input);
     free(output);
+#else
+    (void)len;
+#endif
 }
 /* END_CASE */
 
@@ -1916,5 +1937,393 @@ void SDV_CRYPTO_BN_TO_BIN_FIX_ZERO_API_TC001(void)
 
 EXIT:
     BN_Destroy(bn);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_Rand_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_BigNum bn[2] = {{0}};
+    BN_UINT bn_data[DH_BN_DIGITS_MAX * 2] = { 0 };
+    BN_Init(bn, bn_data, DH_BN_DIGITS_MAX, 2);
+    ASSERT_TRUE(BN_Rand(&bn[0], 8192, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_RandRange(&bn[1], &bn[0]) == CRYPT_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_Add_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_BigNum bn[3] = {{0}};
+    BN_UINT bn_data[BN_DIGITS_MAX * 3] = { 0 };
+    BN_Init(bn, bn_data, BN_DIGITS_MAX, 3);
+    ASSERT_TRUE(BN_Rand(&bn[0], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[1], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Add(&bn[2], &bn[0], &bn[1]) == CRYPT_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_Mul_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    BN_BigNum bn[2] = {{0}};
+    BN_BigNum rn = {0};
+    BN_UINT bn_data[BN_DIGITS_MAX * 2] = { 0 };
+    BN_UINT r_data[DH_BN_DIGITS_MAX * 2] = { 0 };
+    BN_Init(bn, bn_data, BN_DIGITS_MAX, 2);
+    ASSERT_TRUE(BN_Rand(&bn[0], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[1], 4096, 1, 1) == CRYPT_SUCCESS);
+    BN_Init(&rn, r_data, DH_BN_DIGITS_MAX, 1);
+    ASSERT_TRUE(BN_Mul(&rn, &bn[0], &bn[1], opt) == CRYPT_SUCCESS);
+EXIT:
+    BN_OptimizerDestroy(opt);
+    return;
+}
+/* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_Div_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_Optimizer *opt = BN_OptimizerCreate();
+
+    BN_BigNum bn[4] = {{0}};
+    BN_UINT bn_data[BN_DIGITS_MAX * 4] = { 0 };
+    BN_Init(bn, bn_data, BN_DIGITS_MAX, 4);
+    ASSERT_TRUE(BN_Rand(&bn[2], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[3], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Div(&bn[0], &bn[1], &bn[2], &bn[3], opt) == CRYPT_SUCCESS);
+EXIT:
+    BN_OptimizerDestroy(opt);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_Mod_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    BN_UINT res = 0;
+    BN_UINT input = 3;
+    BN_BigNum bn[4] = {{0}};
+    BN_UINT bn_data[BN_DIGITS_MAX * 4] = { 0 };
+    BN_Init(bn, bn_data, BN_DIGITS_MAX, 4);
+    ASSERT_TRUE(BN_Rand(&bn[1], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[2], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[3], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_ModMul(&bn[0], &bn[1], &bn[2], &bn[3], opt) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_ModSqr(&bn[0], &bn[1], &bn[2], opt) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_ModAdd(&bn[0], &bn[1], &bn[2], &bn[3], opt) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_ModLimb(&res, &bn[1], input) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_AddLimb(&bn[0], &bn[1], input) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_SetLimb(&bn[0], input) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Cmp(&bn[1], &bn[2]) != CRYPT_SUCCESS);
+
+EXIT:
+    BN_OptimizerDestroy(opt);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_ModLimb_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    ASSERT_TRUE(opt != NULL);
+    BN_UINT res = 0;
+    BN_UINT input = 3;
+    BN_BigNum bn[2] = {{0}};
+    BN_UINT bn_data[DH_BN_DIGITS_MAX * 2] = { 0 };
+    BN_Init(bn, bn_data, DH_BN_DIGITS_MAX, 2);
+    ASSERT_TRUE(BN_ModLimb(&res, &bn[1], input) == CRYPT_SUCCESS);
+EXIT:
+    BN_OptimizerDestroy(opt);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_rshift_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_UINT input = 3;
+    BN_BigNum bn[2] = {{0}};
+    BN_UINT bn_data[DH_BN_DIGITS_MAX * 2] = { 0 };
+    BN_Init(bn, bn_data, DH_BN_DIGITS_MAX, 2);
+    ASSERT_TRUE(BN_Rand(&bn[1], 4096, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rshift(&bn[0], &bn[1], input) == CRYPT_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_ModExp_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    ASSERT_TRUE(opt != NULL);
+    BN_BigNum bn[4] = {{0}};
+    BN_UINT bn_data[DH_BN_DIGITS_MAX * 4] = { 0 };
+    BN_Init(bn, bn_data, DH_BN_DIGITS_MAX, 4);
+    ASSERT_TRUE(BN_Rand(&bn[1], 8192, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[2], 8192, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Rand(&bn[3], 8192, 1, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_ModExp(&bn[0], &bn[1], &bn[2], &bn[3], opt) == CRYPT_SUCCESS);
+EXIT:
+    BN_OptimizerDestroy(opt);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_SET_FLAG_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_BigNum a = {0};
+    ASSERT_TRUE(BN_SetFlag(&a, 0xFF) == CRYPT_BN_FLAG_INVALID);
+    ASSERT_TRUE(BN_SetFlag(&a, CRYPT_BN_FLAG_STATIC) == CRYPT_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_GETLIMB_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    int32_t ret;
+
+    BN_BigNum *a = BN_Create(LONG_BN_BITS_256);
+    ASSERT_TRUE(a != NULL);
+    
+    ASSERT_TRUE(BN_GetLimb(NULL) == 0);
+
+    ret = BN_SetLimb(a, 0);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(a) == 0);
+
+    ret = BN_SetLimb(a, 1);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(a) == 1);
+
+    ret = BN_SetLimb(a, 2);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(a) == 2);
+
+    ret = BN_SetLimb(a, BN_UINT_MAX - 1);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(a) == BN_UINT_MAX - 1);
+
+    ret = BN_SetLimb(a, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(a) == BN_UINT_MAX);
+
+    ret = BN_Lshift(a, a, BN_UINT_MAX + 1);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_GetLimb(a) == BN_UINT_MAX);
+
+EXIT:
+    BN_Destroy(a);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_MASKBIT_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    ASSERT_TRUE(BN_MaskBit(NULL, 0) == CRYPT_NULL_INPUT);
+    int32_t ret;
+    BN_BigNum *bn = BN_Create(1);
+
+    ret = BN_SetBit(bn, 1);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+
+    BN_SetSign(bn, 1);
+    ret = BN_MaskBit(bn, 0);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(bn->sign == 0);
+
+    ret = BN_SetLimb(bn, BN_UINT_MAX * 2);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = BN_MaskBit(bn, BN_UINT_BITS * 3);
+    ASSERT_TRUE(ret == CRYPT_BN_SPACE_NOT_ENOUGH);
+EXIT:
+    BN_Destroy(bn);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_MULLIMB_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    int32_t ret;
+    uint8_t buff[LONG_BN_BYTES_32];
+    BN_BigNum *a = BN_Create(LONG_BN_BITS_256);
+    BN_BigNum *b = BN_Create(LONG_BN_BITS_256);
+    BN_BigNum *r1 = BN_Create(LONG_BN_BITS_256);
+    BN_BigNum *r2 = BN_Create(LONG_BN_BITS_256 * 2); // 512 == 2 * 256
+    BN_BigNum *zero = BN_Create(LONG_BN_BITS_256);
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    ASSERT_TRUE(a != NULL);
+    ASSERT_TRUE(b != NULL);
+    ASSERT_TRUE(r1 != NULL);
+    ASSERT_TRUE(r2 != NULL);
+    ASSERT_TRUE(zero != NULL);
+    ASSERT_TRUE(opt != NULL);
+    memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32);
+
+    ret = BN_Bin2Bn(a, buff, LONG_BN_BYTES_32);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = BN_SetLimb(b, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = BN_Zeroize(zero);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(zero));
+
+    // NULL
+    ASSERT_TRUE(BN_MulLimb(NULL, a, BN_UINT_MAX) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(BN_MulLimb(r1, NULL, BN_UINT_MAX) == CRYPT_NULL_INPUT);
+
+    // a == 0
+    ret = BN_MulLimb(r1, zero, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(r1));
+
+    // w == 0
+    ret = BN_MulLimb(r1, a, 0);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(r1));
+
+    // a == 0
+    ret = BN_MulLimb(r1, a, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+
+    ret = BN_Mul(r2, a, b, opt);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(BN_Cmp(r1, r2) == CRYPT_SUCCESS);
+
+EXIT:
+    BN_Destroy(a);
+    BN_Destroy(b);
+    BN_Destroy(r1);
+    BN_Destroy(r2);
+    BN_Destroy(zero);
+    BN_OptimizerDestroy(opt);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_DIVLIMB_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    int32_t ret;
+    uint8_t buff[LONG_BN_BYTES_32];
+    BN_BigNum *a = BN_Create(LONG_BN_BITS_256);
+    BN_BigNum *b = BN_Create(LONG_BN_BITS_256);
+    BN_BigNum *r1 = BN_Create(LONG_BN_BITS_256);
+    BN_BigNum *r2 = BN_Create(LONG_BN_BITS_256 * 2); // 512 == 2 * 256
+    BN_BigNum *res2 = BN_Create(LONG_BN_BITS_256 * 2); // 512 == 2 * 256
+    BN_BigNum *zero = BN_Create(LONG_BN_BITS_256);
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    ASSERT_TRUE(a != NULL);
+    ASSERT_TRUE(b != NULL);
+    ASSERT_TRUE(r1 != NULL);
+    ASSERT_TRUE(r2 != NULL);
+    ASSERT_TRUE(zero != NULL);
+    ASSERT_TRUE(opt != NULL);
+    BN_UINT res1;
+    // BN_UINT res2;
+    memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32);
+
+    ret = BN_Bin2Bn(a, buff, LONG_BN_BYTES_32);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = BN_SetLimb(b, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = BN_Zeroize(zero);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(zero));
+
+    // NULL
+    ASSERT_TRUE(BN_DivLimb(NULL, &res1, a, BN_UINT_MAX) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_DivLimb(r1, NULL, a, BN_UINT_MAX) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_DivLimb(NULL, NULL, a, BN_UINT_MAX) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(BN_DivLimb(r1, &res1, NULL, BN_UINT_MAX) == CRYPT_NULL_INPUT);
+
+    // a == 0
+    ret = BN_DivLimb(r1, &res1, zero, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_IsZero(r1));
+    ASSERT_TRUE(res1 == 0);
+
+    // w == 0
+    ret = BN_DivLimb(r1, &res1, a, 0);
+    ASSERT_TRUE(ret == CRYPT_BN_ERR_DIVISOR_ZERO);
+
+    ret = BN_Copy(r1, a);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+
+    ret = BN_DivLimb(r1, &res1, r1, BN_UINT_MAX);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+
+    ret = BN_Div(r2, res2, a, b, opt);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(BN_Cmp(r1, r2) == CRYPT_SUCCESS);
+    ASSERT_TRUE(res1 == res2->data[0]);
+EXIT:
+    BN_Destroy(a);
+    BN_Destroy(b);
+    BN_Destroy(r1);
+    BN_Destroy(r2);
+    BN_Destroy(res2);
+    BN_Destroy(zero);
+    BN_OptimizerDestroy(opt);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_EXTEND_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    uint32_t word = BITS_TO_BN_UNIT(BN_MAX_BITS) + 1;
+    BN_BigNum *a = BN_Create(LONG_BN_BITS_256);
+    ASSERT_TRUE(a != NULL);
+    ASSERT_TRUE(BN_Extend(a, 0) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_SetFlag(a, CRYPT_BN_FLAG_STATIC) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Extend(a, word) == CRYPT_BN_NOT_SUPPORT_EXTENSION);
+    ASSERT_TRUE(BN_SetFlag(a, CRYPT_BN_FLAG_CONSTTIME) == CRYPT_SUCCESS);
+    ASSERT_TRUE(BN_Extend(a, word) == CRYPT_BN_BITS_TOO_MAX);
+    ASSERT_TRUE(BN_Extend(a, word - 1) == CRYPT_SUCCESS);
+EXIT:
+    BN_Destroy(a);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_BN_FIXSIZE_API_TC001(void)
+{
+    TEST_BnTestCaseInit();
+    BN_BigNum *a = BN_Create(LONG_BN_BITS_256);
+    ASSERT_TRUE(a != NULL);
+    a->size = 1;
+    BN_FixSize(a);
+    ASSERT_TRUE(a->size == 0);
+EXIT:
+    BN_Destroy(a);
 }
 /* END_CASE */

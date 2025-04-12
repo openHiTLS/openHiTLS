@@ -16,19 +16,18 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_ENTROPY)
 
+#include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
+#include "eal_entropy.h"
 #include "eal_common.h"
-#include "crypt_entropy.h"
-#include "entropy.h"
 #include "crypt_eal_mac.h"
 #include "crypt_eal_md.h"
-#include "securec.h"
-
-#define ECF_ALG_KEY_LEN_128 16
 
 #ifdef HITLS_CRYPTO_MAC
+#define ECF_ALG_KEY_LEN 32
+
 static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
@@ -36,7 +35,7 @@ static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out,
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_ENTROPY_CONDITION_FAILURE;
     }
-    uint32_t keyLen = ECF_ALG_KEY_LEN_128;
+    uint32_t keyLen = ECF_ALG_KEY_LEN;
     uint8_t *ecfKey = (uint8_t *)BSL_SAL_Malloc(keyLen);
     if (ecfKey == NULL) {
         CRYPT_EAL_MacFreeCtx(ctx);

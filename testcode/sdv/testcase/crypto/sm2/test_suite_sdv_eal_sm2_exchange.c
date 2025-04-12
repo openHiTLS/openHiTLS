@@ -78,7 +78,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC001(Hex *prvKey, Hex *pubKey, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
@@ -220,7 +220,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC003(Hex *prvKey, Hex *pubKey, Hex *R, int isP
     SetSm2PubKey(&pub, pubKey->x, pubKey->len);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
@@ -289,7 +289,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC004(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
@@ -361,7 +361,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC005(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
@@ -373,7 +373,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC005(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     server = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SUCCESS);
@@ -448,7 +448,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC006(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
@@ -531,7 +531,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC007(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
@@ -542,7 +542,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC007(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx1, &pub) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SUCCESS);
 
@@ -564,7 +564,7 @@ EXIT:
  *    3. Set the error random number method so that it returns zero, expected result 3
  *    4. Call the CRYPT_EAL_PkeyCtrl, and all parameters are valid, expected result 4
  *    5. Set the correct random number method.
- *    6. Call the CRYPT_EAL_PkeyCtrl, opt = CRYPT_CTRL_SM2_GENE_R:
+ *    6. Call the CRYPT_EAL_PkeyCtrl, opt = CRYPT_CTRL_GENE_SM2_R:
  *       (1) val = null, and other parameters are valid, expected result 5
  *       (2) val = null, len = 0, and other parameters are valid, expected result 6
  *       (3) val != null, len is not enough, and other parameters are valid, expected result 7
@@ -596,19 +596,19 @@ void SDV_CRYPTO_SM2_CTRL_API_TC001(int isProvider)
     }
     ASSERT_TRUE(ctx != NULL);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_NO_REGIST_RAND);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_NO_REGIST_RAND);
 
     CRYPT_RandRegist(FakeRandFunc);
     CRYPT_RandRegistEx(FakeRandFuncEx);
     ASSERT_TRUE(SetFakeRandOutput(zero, sizeof(zero)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SM2_ERR_TRY_CNT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SM2_ERR_TRY_CNT);
 
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, NULL, sizeof(localR)) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, NULL, 0) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GENE_SM2_R, NULL, sizeof(localR)) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GENE_SM2_R, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(
-        CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR) - 1) == CRYPT_ECC_BUFF_LEN_NOT_ENOUGH);
+        CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR) - 1) == CRYPT_ECC_BUFF_LEN_NOT_ENOUGH);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -798,7 +798,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     STUB_Init();
     STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
@@ -814,7 +814,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     dupCtx2 = CRYPT_EAL_PkeyDupCtx(ctx2);
     ASSERT_TRUE(dupCtx1 != NULL && dupCtx2 != NULL);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(dupCtx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(dupCtx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(dupCtx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(dupCtx1, dupCtx2, out, &outLen), CRYPT_SUCCESS);
@@ -900,7 +900,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
     STUB_Init();
     STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, badId, sizeof(badId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
@@ -1031,11 +1031,11 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003(int pkg, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx1, CRYPT_CTRL_SET_SM2_USER_ID, userId1, sizeof(userId1)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx1, CRYPT_CTRL_SM2_GENE_R, localR1, sizeof(localR1)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx1, CRYPT_CTRL_GENE_SM2_R, localR1, sizeof(localR1)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2, sizeof(userId2)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx2, CRYPT_CTRL_SET_SM2_SERVER, &client, sizeof(int32_t)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx2, CRYPT_CTRL_SM2_GENE_R, localR2, sizeof(localR2)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(selfCtx2, CRYPT_CTRL_GENE_SM2_R, localR2, sizeof(localR2)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(peerCtx1, CRYPT_CTRL_SET_SM2_R, localR2, sizeof(localR2)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(peerCtx1, CRYPT_CTRL_SET_SM2_USER_ID, userId2, sizeof(userId2)) == CRYPT_SUCCESS);
@@ -1132,7 +1132,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     STUB_Init();
     STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
@@ -1159,7 +1159,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     }
     ASSERT_TRUE(cpyCtx1 != NULL && cpyCtx2 != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx1, ctx1), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(cpyCtx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(cpyCtx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx2, ctx2), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(cpyCtx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len), CRYPT_SUCCESS);
@@ -1258,7 +1258,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     STUB_Init();
     STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);

@@ -299,27 +299,27 @@ void SDV_CRYPTO_SM4_UPDATE_API_TC001(int id, Hex *key, Hex *iv, Hex *in, int enc
 {
     TestMemInit();
     int32_t ret;
-    uint8_t out[BLOCKSIZE] = {0};
-    uint32_t len = BLOCKSIZE;
+    uint8_t out[BLOCKSIZE * 32] = {0};
+    uint32_t len = BLOCKSIZE * 32;
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    len = BLOCKSIZE;
+    len = BLOCKSIZE * 32;
     ret = CRYPT_EAL_CipherUpdate(NULL, in->x, in->len, out, &len);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
-    len = BLOCKSIZE;
+    len = BLOCKSIZE * 32;
     ret = CRYPT_EAL_CipherUpdate(ctx, NULL, in->len, out, &len);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
-    len = BLOCKSIZE;
+    len = BLOCKSIZE * 32;
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, NULL, &len);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
 
-    len = BLOCKSIZE;
+    len = BLOCKSIZE * 32;
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, 0, out, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    len = BLOCKSIZE;
+    len = BLOCKSIZE * 32;
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, 1, out, &len);
     if (id == CRYPT_CIPHER_SM4_XTS) {
         ASSERT_TRUE(ret != CRYPT_SUCCESS);
@@ -329,10 +329,10 @@ void SDV_CRYPTO_SM4_UPDATE_API_TC001(int id, Hex *key, Hex *iv, Hex *in, int enc
 
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, out, NULL);
     ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
-    len = BLOCKSIZE;
+    len = BLOCKSIZE * 32;
     ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, out, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    ASSERT_TRUE(len == BLOCKSIZE);
+    ASSERT_TRUE(len == in->len);
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);

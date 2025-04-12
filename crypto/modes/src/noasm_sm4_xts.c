@@ -16,7 +16,11 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_XTS)
 
+#include "bsl_err_internal.h"
+#include "crypt_errno.h"
+#include "crypt_sm4.h"
 #include "crypt_modes_xts.h"
+#include "modes_local.h"
 
 int32_t SM4_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {

@@ -46,32 +46,6 @@ void SM4_XTS_Calculate_Tweak(unsigned char *t, const unsigned int idx)
     }
 }
 
-int32_t SM4_XTS_16_En(uint8_t* cipher, const uint8_t* plain, const uint32_t* dataRk, const uint32_t dataLen, uint8_t* t)
-{
-    uint32_t i;
-
-    SM4_XTS_16_EncryptBlock1st(cipher, plain, dataRk, t);
-
-    for (i = CRYPT_SM4_BLOCKSIZE_16; i < dataLen; i += CRYPT_SM4_BLOCKSIZE_16) {
-        SM4_XTS_16_EncryptBlock(cipher + i, plain + i, dataRk, t);
-    }
-
-    return 0;
-}
-
-int32_t SM4_XTS_16_De(uint8_t* plain, const uint8_t* cipher, const uint32_t* dataRk, const uint32_t dataLen, uint8_t* t)
-{
-    uint32_t i;
-
-    SM4_XTS_16_DecryptBlock1st(plain, cipher, dataRk, t);
-
-    for (i = CRYPT_SM4_BLOCKSIZE_16; i < dataLen; i += CRYPT_SM4_BLOCKSIZE_16) {
-        SM4_XTS_16_DecryptBlock(plain + i, cipher + i, dataRk, t);
-    }
-
-    return 0;
-}
-
 static void SM4_XTS_Encrypt_Helper(uint32_t left, const uint32_t dataLen, uint8_t* t, uint8_t *x,
                                    const uint8_t* plain, uint8_t* cipher, const uint32_t* dataRk)
 {
@@ -90,7 +64,7 @@ static void SM4_XTS_Encrypt_Helper(uint32_t left, const uint32_t dataLen, uint8_
                 x[j] = plain[i + j] ^ t[j];
             }
 
-            SM4_Encrypt(cipher + i, x, dataRk);
+            SM4_Encrypt(x, cipher + i, dataRk);
 
             for (j = 0; j < CRYPT_SM4_BLOCKSIZE; j++) {
                 cipher[i + j] = cipher[i + j] ^ t[j];
@@ -112,7 +86,7 @@ static void SM4_XTS_Encrypt_Helper(uint32_t left, const uint32_t dataLen, uint8_
             x[i] = x[i] ^ t[i];
         }
 
-        SM4_Encrypt(cipher + init - CRYPT_SM4_BLOCKSIZE, x, dataRk);
+        SM4_Encrypt(x, cipher + init - CRYPT_SM4_BLOCKSIZE, dataRk);
         for (i = 0; i < CRYPT_SM4_BLOCKSIZE; i++) {
             cipher[init - CRYPT_SM4_BLOCKSIZE + i] = cipher[init - CRYPT_SM4_BLOCKSIZE + i] ^ t[i];
         }
@@ -128,8 +102,8 @@ int32_t SM4_XTS_En(uint8_t* cipher, const uint8_t* plain, const uint32_t* dataRk
     uint8_t t[CRYPT_SM4_BLOCKSIZE_16] = {0};
 
     if (dataLen < CRYPT_SM4_BLOCKSIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
-        return CRYPT_SM4_DATALEN_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_MSG_LEN);
+        return CRYPT_SM4_ERR_MSG_LEN;
     }
     left = dataLen % CRYPT_SM4_BLOCKSIZE_16;
 
@@ -137,7 +111,7 @@ int32_t SM4_XTS_En(uint8_t* cipher, const uint8_t* plain, const uint32_t* dataRk
     memcpy_s(t, CRYPT_SM4_BLOCKSIZE_16, tweak, CRYPT_SM4_BLOCKSIZE);
 
     if (dataLen >= CRYPT_SM4_BLOCKSIZE_16) {
-        SM4_XTS_16_En(cipher, plain, dataRk, dataLen - left, t);
+        SM4_XTS_Encrypt_Blocks(plain, cipher, dataLen, dataRk, t);
     }
 
     if (left == 0) {
@@ -169,7 +143,7 @@ static void SM4_XTS_Decrypt_Helper(uint32_t left, const uint32_t dataLen, uint8_
                 x[j] = cipher[i + j] ^ t[j];
             }
 
-            SM4_Decrypt(plain + i, x, dataRk);
+            SM4_Decrypt(x, plain + i, dataRk);
 
             for (j = 0; j < CRYPT_SM4_BLOCKSIZE; j++) {
                 plain[i + j] = plain[i + j] ^ t[j];
@@ -186,7 +160,7 @@ static void SM4_XTS_Decrypt_Helper(uint32_t left, const uint32_t dataLen, uint8_
         for (j = 0; j < CRYPT_SM4_BLOCKSIZE; j++) {
             x[j] = cipher[init - CRYPT_SM4_BLOCKSIZE + j] ^ t[j];
         }
-        SM4_Decrypt(plain+init - CRYPT_SM4_BLOCKSIZE, x, dataRk);
+        SM4_Decrypt(x, plain + init - CRYPT_SM4_BLOCKSIZE, dataRk);
 
         for (j = 0; j < CRYPT_SM4_BLOCKSIZE; j++) {
             plain[init - CRYPT_SM4_BLOCKSIZE + j] = plain[init - CRYPT_SM4_BLOCKSIZE + j] ^ t[j];
@@ -203,7 +177,7 @@ static void SM4_XTS_Decrypt_Helper(uint32_t left, const uint32_t dataLen, uint8_
             x[i] = x[i] ^ t[CRYPT_SM4_BLOCKSIZE + i];
         }
 
-        SM4_Decrypt(plain + init - CRYPT_SM4_BLOCKSIZE, x, dataRk);
+        SM4_Decrypt(x, plain + init - CRYPT_SM4_BLOCKSIZE, dataRk);
 
         for (i = 0; i < CRYPT_SM4_BLOCKSIZE; i++) {
             plain[init - CRYPT_SM4_BLOCKSIZE + i] = plain[init - CRYPT_SM4_BLOCKSIZE + i]
@@ -222,8 +196,8 @@ int32_t SM4_XTS_De(uint8_t* plain, const uint8_t* cipher, const uint32_t* dataRk
     uint8_t x[CRYPT_SM4_BLOCKSIZE_16] = {0};
 
     if (dataLen < CRYPT_SM4_BLOCKSIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR); // need push error code for error point
-        return CRYPT_SM4_DATALEN_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_MSG_LEN); // need push error code for error point
+        return CRYPT_SM4_ERR_MSG_LEN;
     }
     left = dataLen % CRYPT_SM4_BLOCKSIZE_16;
 
@@ -231,7 +205,7 @@ int32_t SM4_XTS_De(uint8_t* plain, const uint8_t* cipher, const uint32_t* dataRk
     (void)memcpy_s(t, CRYPT_SM4_BLOCKSIZE_16, tweak, CRYPT_SM4_BLOCKSIZE);
 
     if (dataLen >= CRYPT_SM4_BLOCKSIZE_16) {
-        SM4_XTS_16_De(plain, cipher, dataRk, dataLen - left, t);
+        SM4_XTS_Encrypt_Blocks(cipher, plain, dataLen, dataRk, t);
     }
 
     if (left != 0) {
@@ -267,8 +241,8 @@ int32_t CRYPT_SM4_XTS_SetEncryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint
     }
 
     tmk = (CRYPT_SM4_Ctx *)&ctx[1];
-    SM4_SetKey(ctx->rk, key);
-    SM4_SetKey(tmk->rk, key + CRYPT_SM4_BLOCKSIZE);
+    SM4_SetEncKey(key, ctx->rk);
+    SM4_SetEncKey(key + CRYPT_SM4_BLOCKSIZE, tmk->rk);
 
     return CRYPT_SUCCESS;
 }
@@ -292,8 +266,8 @@ int32_t CRYPT_SM4_XTS_SetDecryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint
     }
 
     tmk = (CRYPT_SM4_Ctx *)&ctx[1];
-    SM4_SetKey(ctx->rk, key);
-    SM4_SetKey(tmk->rk, key + CRYPT_SM4_BLOCKSIZE);
+    SM4_SetDecKey(key, ctx->rk);
+    SM4_SetEncKey(key + CRYPT_SM4_BLOCKSIZE, tmk->rk);
 
     return CRYPT_SUCCESS;
 }
@@ -329,7 +303,7 @@ int32_t CRYPT_SM4_SetEncryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t
         return CRYPT_SM4_ERR_KEY_LEN;
     }
 
-    SM4_SetKey(ctx->rk, key);
+    SM4_SetEncKey(key, ctx->rk);
 
     return CRYPT_SUCCESS;
 }
@@ -345,7 +319,7 @@ int32_t CRYPT_SM4_SetDecryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t
         return CRYPT_SM4_ERR_KEY_LEN;
     }
 
-    SM4_SetDecKey(ctx->rk, key);
+    SM4_SetDecKey(key, ctx->rk);
 
     return CRYPT_SUCCESS;
 }
@@ -358,8 +332,8 @@ int32_t SM4_ECB_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *out, uint3
         return CRYPT_NULL_INPUT;
     }
     if (len < CRYPT_SM4_BLOCKSIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
-        return CRYPT_SM4_DATALEN_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_MSG_LEN);
+        return CRYPT_SM4_ERR_MSG_LEN;
     }
     SM4_ECB_Encrypt(in, out, len, ctx->rk);
     return CRYPT_SUCCESS;
@@ -383,9 +357,9 @@ int32_t CRYPT_SM4_CBC_Encrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len % CRYPT_SM4_BLOCKSIZE != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
-        return CRYPT_SM4_DATALEN_ERROR;
+    if (len < CRYPT_SM4_BLOCKSIZE) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_MSG_LEN);
+        return CRYPT_SM4_ERR_MSG_LEN;
     }
     SM4_CBC_Encrypt(in, out, len, ctx->rk, iv, 1);
     return CRYPT_SUCCESS;
@@ -398,8 +372,8 @@ int32_t CRYPT_SM4_CBC_Decrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
         return CRYPT_NULL_INPUT;
     }
     if (len < CRYPT_SM4_BLOCKSIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
-        return CRYPT_SM4_DATALEN_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_MSG_LEN);
+        return CRYPT_SM4_ERR_MSG_LEN;
     }
     SM4_CBC_Encrypt(in, out, len, ctx->rk, iv, 0);
     return CRYPT_SUCCESS;

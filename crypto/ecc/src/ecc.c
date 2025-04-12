@@ -55,7 +55,7 @@ void ECC_FreePoint(ECC_Point *pt)
     BN_Destroy(pt->x);
     BN_Destroy(pt->y);
     BN_Destroy(pt->z);
-    BSL_SAL_FREE(pt);
+    BSL_SAL_Free(pt);
 }
 
 void ECC_SetLibCtx(void *libCtx, ECC_Para *para)
@@ -164,6 +164,17 @@ int32_t ECC_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
+    return ret;
+}
+
+int32_t ECC_GetPoint2Bn(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x, BN_BigNum *y)
+{
+    int32_t ret;
+    GOTO_ERR_IF(ECC_GetPointDataX(para, pt, x), ret);
+    if (y != NULL) {
+        GOTO_ERR_IF(BN_Copy(y, pt->y), ret);
+    }
+ERR:
     return ret;
 }
 
@@ -278,7 +289,18 @@ BN_BigNum *ECC_GetParaA(const ECC_Para *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    return BN_Dup(para->a);
+    BN_BigNum *dupA = BN_Dup(para->a);
+    if (dupA == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto ERR;
+    }
+    if (para->method->bnMontDec != NULL) {
+        para->method->bnMontDec(dupA, para->montP);
+    }
+    return dupA;
+ERR:
+    BN_Destroy(dupA);
+    return NULL;
 }
 
 BN_BigNum *ECC_GetParaB(const ECC_Para *para)
@@ -287,7 +309,18 @@ BN_BigNum *ECC_GetParaB(const ECC_Para *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    return BN_Dup(para->b);
+    BN_BigNum *dupB = BN_Dup(para->b);
+    if (dupB == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto ERR;
+    }
+    if (para->method->bnMontDec != NULL) {
+        para->method->bnMontDec(dupB, para->montP);
+    }
+    return dupB;
+ERR:
+    BN_Destroy(dupB);
+    return NULL;
 }
 
 BN_BigNum *ECC_GetParaX(const ECC_Para *para)
@@ -347,33 +380,67 @@ int32_t ECC_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
     return para->method->modOrdInv(para, r, a);
 }
 
-/**
+int32_t ECC_PointToMont(const ECC_Para *para, ECC_Point *pt, BN_Optimizer *opt)
+{
+    if (para == NULL || pt == NULL || opt == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (para->method->bnMontEnc == NULL) {
+        return CRYPT_SUCCESS;
+    }
+    int32_t ret;
+    GOTO_ERR_IF(para->method->bnMontEnc(pt->x, para->montP, opt, false), ret);
+    GOTO_ERR_IF(para->method->bnMontEnc(pt->y, para->montP, opt, false), ret);
+    GOTO_ERR_IF(para->method->bnMontEnc(pt->z, para->montP, opt, false), ret);
+ERR:
+    return ret;
+}
+
+void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r)
+{
+    if (para == NULL || r == NULL || para->method->bnMontDec == NULL) {
+        return;
+    }
+    para->method->bnMontDec(r->x, para->montP);
+    para->method->bnMontDec(r->y, para->montP);
+    para->method->bnMontDec(r->z, para->montP);
+}
+
+/*
  Prime curve, point addition r = a + b
  Calculation formula:
     X3 = (Y2*Z1^3-Y1)^2 - (X2*Z1^2-X1)^2 * (X1+X2*Z1^2)
     Y3 = (Y2*Z1^3-Y1) * (X1*(X2*Z1^2-X1)^2-X3) - Y1 * (X2*Z1^2-X1)^3
     Z3 = (X2*Z1^2-X1) * Z1
 */
-int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
+int32_t ECC_PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
     int32_t ret;
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (para->method->pointAdd == NULL) {
+    if (para->method->pointAddAffine == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return CRYPT_ECC_NOT_SUPPORT;
     }
+    BN_Optimizer *opt = BN_OptimizerCreate();
     ECC_Point *affineb = ECC_NewPoint(para);
-    if (affineb == NULL) {
+    ECC_Point *dupA = ECC_DupPoint(a);
+    if (affineb == NULL || opt == NULL || dupA == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+        goto ERR;
     }
     GOTO_ERR_IF(ECC_Point2Affine(para, affineb, b), ret);
-
-    GOTO_ERR_IF(para->method->pointAdd(para, r, a, affineb), ret);
+    GOTO_ERR_IF(ECC_PointToMont(para, dupA, opt), ret);
+    GOTO_ERR_IF(ECC_PointToMont(para, affineb, opt), ret);
+    GOTO_ERR_IF(para->method->pointAddAffine(para, r, dupA, affineb), ret);
+    ECC_PointFromMont(para, r);
 ERR:
+    BN_OptimizerDestroy(opt);
+    ECC_FreePoint(dupA);
     ECC_FreePoint(affineb);
     return ret;
 }

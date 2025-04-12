@@ -114,6 +114,12 @@ static int32_t CRYPT_CURVE25519_GetLen(CRYPT_CURVE25519_Ctx *ctx, GetLenFunc fun
     return CRYPT_SUCCESS;
 }
 
+static int32_t CRYPT_CURVE25519_GetKeyLen(const CRYPT_CURVE25519_Ctx *pkey)
+{
+    (void)pkey;
+    return CRYPT_CURVE25519_KEYLEN;
+}
+
 int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
     if (pkey == NULL) {
@@ -127,6 +133,10 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
             return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSignLen, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSecBits, val, len);
+        case CRYPT_CTRL_GET_PUBKEY_LEN:
+        case CRYPT_CTRL_GET_PRVKEY_LEN:
+        case CRYPT_CTRL_GET_SHARED_KEY_LEN:
+            return GetUintCtrl(pkey, val, len, (GetUintCallBack)CRYPT_CURVE25519_GetKeyLen);
         case CRYPT_CTRL_UP_REFERENCES:
             if (val == NULL || len != (uint32_t)sizeof(int)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -375,7 +385,6 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
     const EAL_MdMethod *hashMethod)
 {
     void *mdCtx = NULL;
-    int32_t ret;
     uint32_t hashLen = CRYPT_CURVE25519_SIGNLEN;
 
     mdCtx = hashMethod->newCtx();
@@ -384,7 +393,7 @@ static int32_t GetKHash(uint8_t k[CRYPT_CURVE25519_SIGNLEN], const uint8_t r[CRY
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx, NULL);
+    int32_t ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -440,21 +449,17 @@ static int32_t SignInputCheck(const CRYPT_CURVE25519_Ctx *pkey, const uint8_t *m
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algId, const uint8_t *msg,
     uint32_t msgLen, uint8_t *sign, uint32_t *signLen)
 {
-    if (algid != CRYPT_MD_SHA512) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
-    int32_t ret;
+    (void)algId;
     uint8_t prvKeyHash[CRYPT_CURVE25519_SIGNLEN];
     uint8_t r[CRYPT_CURVE25519_SIGNLEN];
     uint8_t k[CRYPT_CURVE25519_SIGNLEN];
     uint8_t outSign[CRYPT_CURVE25519_SIGNLEN];
     GeE geTmp;
 
-    ret = SignInputCheck(pkey, msg, msgLen, sign, signLen);
+    int32_t ret = SignInputCheck(pkey, msg, msgLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -561,21 +566,20 @@ static bool VerifyCheckSValid(const uint8_t s[CRYPT_CURVE25519_KEYLEN])
     return false;
 }
 
-int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algId, const uint8_t *msg,
     uint32_t msgLen, const uint8_t *sign, uint32_t signLen)
 {
-    if (algid != CRYPT_MD_SHA512) {
+    if (algId != CRYPT_MD_SHA512) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    int32_t ret;
     GeE geA, sG;
     uint8_t kHash[CRYPT_CURVE25519_SIGNLEN];
     uint8_t localR[CRYPT_CURVE25519_KEYLEN];
 
     const uint8_t *r = NULL;
     const uint8_t *s = NULL;
-    ret = VerifyInputCheck(pkey, msg, msgLen, sign, signLen);
+    int32_t ret = VerifyInputCheck(pkey, msg, msgLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -604,8 +608,8 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid,
         return ret;
     }
 
-    CURVE25519_FP_NEGATE(geA.x.data, geA.x.data);
-    CURVE25519_FP_NEGATE(geA.t.data, geA.t.data);
+    CURVE25519_FP_NEGATE(geA.x, geA.x);
+    CURVE25519_FP_NEGATE(geA.t, geA.t);
 
     ModuloL(kHash);
     KAMulPlusMulBase(&sG, kHash, &geA, s);
@@ -733,11 +737,11 @@ void CRYPT_X25519_PublicFromPrivate(const uint8_t privateKey[CRYPT_CURVE25519_KE
 
     ScalarMultiBase(&out, privateCopy);
 
-    CURVE25519_FP_ADD(zPlusY.data, out.z.data, out.y.data);
-    CURVE25519_FP_SUB(zMinusY.data, out.z.data, out.y.data);
-    FpInvert(&zMinusYInvert, &zMinusY);
-    FpMul(&zPlusY, &zPlusY, &zMinusYInvert);
-    PolynomialToData(publicKey, &zPlusY);
+    CURVE25519_FP_ADD(zPlusY, out.z, out.y);
+    CURVE25519_FP_SUB(zMinusY, out.z, out.y);
+    FpInvert(zMinusYInvert, zMinusY);
+    FpMul(zPlusY, zPlusY, zMinusYInvert);
+    PolynomialToData(publicKey, zPlusY);
 
     /* cleanup tmp private key */
     BSL_SAL_CleanseData(privateCopy, sizeof(privateCopy));

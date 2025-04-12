@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA3
 
+#include "crypt_arm.h"
 .arch    armv8-a+crypto
 
 /*
@@ -351,6 +352,7 @@ g_roundConstant:
 .global SHA3_Absorb
 .type   SHA3_Absorb, %function
 SHA3_Absorb:
+AARCH64_PACIASP
     /* push stack protection */
     stp x29, x30, [sp, #-96]!
     stp x19, x20, [sp, #8*2]
@@ -613,7 +615,7 @@ SHA3_Absorb:
     ldp x23, x24, [sp], #8*2
     ldp x25, x26, [sp], #8*2
     ldp x27, x28, [sp], #8*2
-
+AARCH64_AUTIASP
     ret
 .size SHA3_Absorb, .-SHA3_Absorb
 
@@ -634,6 +636,7 @@ SHA3_Absorb:
 .global SHA3_Squeeze
 .type   SHA3_Squeeze, %function
 SHA3_Squeeze:
+AARCH64_PACIASP
     /* push stack protection */
     stp x29, x30, [sp, #-96]!
     stp x19, x20, [sp, #8*2]
@@ -765,6 +768,7 @@ SHA3_Squeeze:
     ldp x25, x26, [sp], #8*2
     ldp x27, x28, [sp], #8*2
     eor x0, x0, x0
+AARCH64_AUTIASP
     ret
 .size SHA3_Squeeze, .-SHA3_Squeeze
 

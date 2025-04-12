@@ -389,12 +389,12 @@ CRYPT_PAILLIER_PubKey *Paillier_NewPubKey(uint32_t bits)
 static int32_t Paillier_GenPQ(CRYPT_PAILLIER_Para *para, BN_Optimizer *optimizer)
 {
     uint32_t bits = para->bits;
-    int32_t ret = BN_GenPrime(para->p, bits, true, optimizer, NULL);
+    int32_t ret = BN_GenPrime(para->p, NULL, bits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_GenPrime(para->q, bits, true, optimizer, NULL);
+    ret = BN_GenPrime(para->q, NULL, bits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

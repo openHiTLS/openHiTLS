@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY)
 
 #include <stdbool.h>
-#include <securec.h>
+#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_md.h"
@@ -30,7 +30,6 @@
 #include "eal_common.h"
 #include "crypt_utils.h"
 
-
 int32_t CRYPT_EAL_PkeySignData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *hash,
     uint32_t hashLen, uint8_t *sign, uint32_t *signLen)
 {
@@ -42,6 +41,7 @@ int32_t CRYPT_EAL_PkeySignData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *has
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
+
     if ((hash == NULL && hashLen != 0) || (hash != NULL && hashLen == 0)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
@@ -83,6 +83,7 @@ int32_t CRYPT_EAL_PkeyVerify(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id,
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
+
     // 2. Hash the plaintext data and verify the hash value.
     int32_t ret = pkey->method->verify(pkey->key, id, data, dataLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
@@ -104,6 +105,7 @@ int32_t CRYPT_EAL_PkeyVerifyData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *h
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
+
     if ((hash == NULL && hashLen != 0) || (hash != NULL && hashLen == 0)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;

@@ -46,8 +46,16 @@ bool IsSm4AlgDisabled(int id);
 
 bool IsCipherAlgDisabled(int id);
 
+bool IsCmacAlgDisabled(int id);
 int32_t TestSimpleRand(uint8_t *buff, uint32_t len);
+int32_t TestSimpleRandEx(void *libCtx, uint8_t *buff, uint32_t len);
 
+#if defined(HITLS_CRYPTO_EAL) && (defined(HITLS_CRYPTO_MAC) || defined(HITLS_CRYPTO_HMAC) || defined(HITLS_CRYPTO_CMAC)\
+    || defined(HITLS_CRYPTO_GMAC) || defined(HITLS_CRYPTO_SIPHASH) || defined(HITLS_CRYPTO_CBC_MAC))
+uint32_t TestGetMacLen(int algId);
+void TestMacSameAddr(int algId, Hex *key, Hex *data, Hex *mac);
+void TestMacAddrNotAlign(int algId, Hex *key, Hex *data, Hex *mac);
+#endif
 #ifdef __cplusplus
 }
 #endif

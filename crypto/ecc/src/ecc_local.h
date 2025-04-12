@@ -36,34 +36,36 @@ extern "C" {
  */
 typedef struct {
     // Calculate  r = k1 * G + k2 * pt
-    int32_t (*pointMulAdd)(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2,
-        const ECC_Point *pt);
+    int32_t (*pointMulAdd)(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt);
     // Calculate r = k * pt. If pt is null, calculate r = k * G. This is the ConstTime processing function.
     int32_t (*pointMul)(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
     // Calculate r = k * pt. If pt is null, calculate r = k * G
     int32_t (*pointMulFast)(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
-    // point addition r = a + b
+    // point addition r = a + b, a all can be the jacobi coordinate, b must be an affine point
+    int32_t (*pointAddAffine)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+    // point addition r = a + b, a, b all can be the jacobi coordinate.
     int32_t (*pointAdd)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
-    // point double r = a + a
+    // point double r = a + a, a can be the jacobi coordinate.
     int32_t (*pointDouble)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
-    // point Multi-double Calculate r = (2^m)*a
+    // point Multi-double Calculate r = (2^m)*a, a can be the jacobi coordinate.
     int32_t (*pointMultDouble)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m);
     // Module inverse
-    int32_t (*modInv)(
-        BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt);
+    int32_t (*modInv)(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt);
     // Convert points to affine coordinates based on the given module inverse information.
-    int32_t (*point2AffineWithInv)(
-        const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const BN_BigNum *inv);
+    int32_t (*point2AffineWithInv)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const BN_BigNum *inv);
     // Convert the point information to affine coordinates.
     int32_t (*point2Affine)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
     // Calculate r = (a*b) % mod
     int32_t (*bnModNistEccMul)(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-        const BN_BigNum *mod, BN_Optimizer *opt);
+        void *mod, BN_Optimizer *opt);
     // Calculate r = (a^2) % mod
-    int32_t (*bnModNistEccSqr)(
-        BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+    int32_t (*bnModNistEccSqr)(BN_BigNum *r, const BN_BigNum *a, void *mod, BN_Optimizer *opt);
     // Inverse mode order.
     int32_t (*modOrdInv)(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
+    // convert date to Montgomery form
+    int32_t (*bnMontEnc)(BN_BigNum *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime);
+    // convert Montgomery form to common form
+    void (*bnMontDec)(BN_BigNum *r, BN_Mont *mont);
 } ECC_Method;
 
 /**
@@ -92,6 +94,7 @@ struct EccPara {
     ECC_Point *tableG[16];
     const ECC_Method *method;
     CRYPT_PKEY_ParaId id;
+	BN_Mont *montP;
     void *libCtx;
 };
 
@@ -258,46 +261,6 @@ int32_t ECP_PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const
 
 /**
  * @ingroup ecc
- * @brief   Calculation of multiplication(double) of points of prime curve: r = a + b
- *
- * @param   para [IN] Curve parameters
- * @param   r [OUT] Output point information
- * @param   a [IN] Input point information
- * @param   b [IN] Input point information
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
-
-/**
- * @ingroup ecc
- * @brief   Calculation of multiplication(double) of points of prime curve: r = a + a
- *
- * @param   para [IN] Curve parameters
- * @param   r [OUT] Output point information
- * @param   a [IN] Input point information
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_PointDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
-
-/**
- * @ingroup ecc
- * @brief   Calculation of multiplication(double) of points of prime curve: r = (2^m)*a
- *
- * @param   para [IN] Curve parameters
- * @param   r [OUT] Output point information
- * @param   a [IN] Input point information
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_PointMultDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m);
-
-/**
- * @ingroup ecc
  * @brief   Obtaining a prime number curve (p + 1)/2
  *
  * @param   p [IN] Input module
@@ -351,8 +314,22 @@ int32_t ECP_NistPointMultDouble(const ECC_Para *para, ECC_Point *r, const ECC_Po
  *
  * @param   para [IN] Curve parameters
  * @param   r [OUT] Output point information
- * @param   a [IN] Input point information
- * @param   b [IN] Input point information
+ * @param   a [IN] Input point information, a can be the jacobi coordinate.
+ * @param   b [IN] Input point information, b must be the affine coordinate.
+ *
+ * @retval CRYPT_SUCCESS    succeeded.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+
+/**
+ * @ingroup ecc
+ * @brief   nist Calculation of multiplication(double) of points of prime curve: r = a + b
+ *
+ * @param   para [IN] Curve parameters
+ * @param   r [OUT] Output point information
+ * @param   a [IN] Input point information, a can be the jacobi coordinate.
+ * @param   b [IN] Input point information, b can be the jacobi coordinate.
  *
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h
@@ -400,6 +377,70 @@ int32_t ECP_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data
  * @retval For details about other errors, see crypt_errno.h
  */
 int32_t ECP_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
+
+#ifdef HITLS_CRYPTO_CURVE_MONT
+
+/**
+ * The nist curve is based on Montgomery's calculation of double points.
+ * r = a + a
+ */
+int32_t ECP_NistPointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
+
+/**
+ * The nist curve is based on Montgomery's calculation of multi-double points.
+ * r = m * (a + a)
+ */
+int32_t ECP_NistPointMultDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m);
+
+/**
+ * The nist curve is based on Montgomery's calculation of add points.
+ * r = a + b, b must be an affine point.
+ */
+int32_t ECP_NistPointAddAffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+
+/**
+ * The nist curve is based on Montgomery's calculation of add points.
+ * r = a + b
+ */
+int32_t ECP_NistPointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+
+/**
+ * The nist curve is based on Montgomery's calculation of turn an point to an affine point.
+ * r = a -> affine a
+ */
+int32_t ECP_Point2AffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt);
+
+/**
+ * The nist curve is based on Montgomery's calculation of turn an point to an affine point.
+ * r = a -> affine a
+ */
+int32_t ECP_PrimePointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
+
+/**
+ * The prime curve is based on Montgomery's calculation of multi-double points.
+ * r = m * (a + a)
+ */
+int32_t ECP_PrimePointMultDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m);
+
+/**
+ * The prime curve is based on Montgomery's calculation of add points.
+ * r = a + b, b must be an affine point.
+ */
+int32_t ECP_PrimePointAddAffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+
+/**
+ * The prime curve is based on Montgomery's calculation of add points.
+ * r = a + b
+ */
+int32_t ECP_PrimePointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+
+/**
+ * The prime curve is based on Montgomery's calculation of  k * pt.
+ * The implementation is based on the Montgomery ladder.
+ */
+int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
+
+#endif // HITLS_CRYPTO_CURVE_MONT
 
 #ifdef __cplusplus
 }

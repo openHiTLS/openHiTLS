@@ -17,11 +17,11 @@
 #ifdef HITLS_CRYPTO_AES
 
 #include "securec.h"
-#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_aes_local.h"
+#include "bsl_sal.h"
 
 int32_t CRYPT_AES_SetEncryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key, uint32_t len)
 {
@@ -113,6 +113,5 @@ void CRYPT_AES_Clean(CRYPT_AES_Key *ctx)
         return;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_AES_Key));
-    return;
 }
 #endif /* HITLS_CRYPTO_AES */

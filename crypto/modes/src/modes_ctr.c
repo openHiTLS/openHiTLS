@@ -148,7 +148,7 @@ void MODES_CTR_FreeCtx(MODES_CipherCtx *modeCtx)
 }
 
 int32_t MODES_CTR_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {
@@ -157,7 +157,11 @@ int32_t MODES_CTR_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_CTR:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CTR_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CTR_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -173,9 +177,17 @@ int32_t MODES_CTR_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t
         case CRYPT_CIPHER_AES128_CTR:
         case CRYPT_CIPHER_AES192_CTR:
         case CRYPT_CIPHER_AES256_CTR:
+#ifdef HITLS_CRYPTO_AES
             return AES_CTR_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_CTR:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CTR_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CTR_Update(modeCtx, in, inLen, out, outLen);
     }

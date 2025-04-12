@@ -164,6 +164,20 @@ int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_D
 
 /**
  * @ingroup ecc
+ * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and get coordinats.
+ *
+ * @param para [IN] Curve parameter information
+ * @param pt [IN/OUT] Point (x, y, z) -> (x/z^2, y/z^3, 1)
+ * @param x [OUT] x/z^2
+ * @param y [OUT] y/z^3
+ *
+ * @retval CRYPT_SUCCESS succeeded.
+ * @retval For details about other errors, see crypt_errno.h.
+ */
+int32_t ECC_GetPoint2Bn(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x, BN_BigNum *y);
+
+/**
+ * @ingroup ecc
  * @brief Convert the Jacobian coordinate point (x, y, z) to affine coordinate (x/z^2, y/z^3, 1) and get x/z^2
  *
  * @param para [IN] Curve parameter information
@@ -394,7 +408,7 @@ int32_t ECC_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
  * @retval CRYPT_SUCCESS succeeded.
  * @retval For other errors, see crypt_errno.h.
  */
-int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+int32_t ECC_PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
 
 /**
  * @ingroup ecc
@@ -407,8 +421,44 @@ int32_t ECC_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, con
 int32_t ECC_GetSecBits(const ECC_Para *para);
 
 /**
- * @brief Set the library context for elliptic curve parameters
+ * @ingroup ecc
+ * @brief   Randomize z for preventing attack.
+ * Converting a point (x, y, z) -> (x/z0^2, y/z0^3, z*z0)
+ * @param   para [IN] Curve parameters
+ * @param   pt [IN/OUT] Point information
  *
+ * @retval CRYPT_SUCCESS    succeeded.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECC_PointBlind(const ECC_Para *para, ECC_Point *pt);
+
+/**
+ * @ingroup ecc
+ * @brief   convert ecc point to mont form
+ * @param   para [IN] Curve parameters
+ * @param   pt [IN/OUT] Point information
+ *
+ * @retval CRYPT_SUCCESS    succeeded.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECC_PointToMont(const ECC_Para *para, ECC_Point *pt, BN_Optimizer *opt);
+
+/**
+ * @ingroup ecc
+ * @brief   recover ecc point from mont form
+ * @param   para [IN] Curve parameters
+ * @param   pt [IN/OUT] Point information
+ *
+ * @retval CRYPT_SUCCESS    succeeded.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r);
+
+/**
+ * @ingroup ecc
+ * @brief   convert ecc point to mont form
+ * @param   para [IN] Curve parameters
+ * @param   pt [IN/OUT] Point information
  *
  * @param libCtx [IN] Pointer to the library context
  * @param para [OUT] Pointer to the elliptic curve parameters

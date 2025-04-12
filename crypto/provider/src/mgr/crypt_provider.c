@@ -27,13 +27,14 @@
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider_local.h"
 #include "crypt_provider.h"
-#include "crypt_drbg_local.h"
+#include "eal_drbg_local.h"
 
 // Name of the dl initialization function
 #define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInit"
 
 // Maximum length of search path
 #define DEFAULT_PROVIDER_PATH_LEN_MAX 4095
+static uint32_t g_threadRunOnce = 0;
 
 
 CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNew(void)
@@ -49,7 +50,7 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx)
     }
 
     if (libCtx->drbg != NULL) {
-        CRYPT_RandDeinit(libCtx->drbg);
+        EAL_RandDeinit(libCtx->drbg);
         libCtx->drbg = NULL;
     }
     if (libCtx->providers != NULL) {
@@ -65,6 +66,32 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx)
     BSL_SAL_Free(libCtx);
 }
 
+static void InitPreDefinedProviders(void)
+{
+    CRYPT_EAL_LibCtx *globalCtx = CRYPT_EAL_GetGlobalLibCtx();
+    if (globalCtx == NULL) {
+        int32_t ret = CRYPT_EAL_InitPreDefinedProviders();
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
+    }
+}
+
+static CRYPT_EAL_LibCtx *GetCurrentProviderLibCtx(CRYPT_EAL_LibCtx *libCtx)
+{
+    CRYPT_EAL_LibCtx *curLibCtx = libCtx;
+    if (curLibCtx == NULL) {
+        int32_t ret = BSL_SAL_ThreadRunOnce(&g_threadRunOnce, InitPreDefinedProviders);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return NULL;
+        }
+        curLibCtx = CRYPT_EAL_GetGlobalLibCtx();
+    }
+
+    return curLibCtx;
+}
+
 // Write a function to search for providers according to BSL_LIST_Search requirements,
 // comparing the input providerName with the providerName in EAL_ProviderMgrCtx for an exact match
 static int32_t ListCompareProvider(const void *a, const void *b)
@@ -78,12 +105,10 @@ static int32_t ListCompareProvider(const void *a, const void *b)
 static int32_t MountEalProviderMgrCtxParams(CRYPT_EAL_LibCtx *libCtx, void *handle, const char *providerName,
     const char *providerPath, BSL_Param *param, CRYPT_EAL_ProvMgrCtx *ctx)
 {
-    int32_t ret;
-
     ctx->handle = handle;
     ctx->libCtx = libCtx;
 
-    ret = BSL_SAL_ReferencesInit(&(ctx->ref));
+    int32_t ret = BSL_SAL_ReferencesInit(&(ctx->ref));
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -116,18 +141,16 @@ static int32_t MountEalProviderMgrCtxParams(CRYPT_EAL_LibCtx *libCtx, void *hand
     return CRYPT_EAL_InitProviderMethod(ctx, param, ctx->provInitFunc);
 }
 
-static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx,
-    const char *providerName, CRYPT_EAL_ProvMgrCtx **providerMgr)
+static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx, const char *providerName,
+    CRYPT_EAL_ProvMgrCtx **providerMgr)
 {
-    int32_t ret;
-    CRYPT_EAL_ProvMgrCtx *tempProviderMgr = NULL;
-
-    ret = BSL_SAL_ThreadReadLock(libCtx->lock);
+    int32_t ret = BSL_SAL_ThreadReadLock(libCtx->lock);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    tempProviderMgr =
+
+    CRYPT_EAL_ProvMgrCtx *tempProviderMgr =
         (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_Search(libCtx->providers, providerName, ListCompareProvider, NULL);
     if (tempProviderMgr != NULL) {
         // Provider is already loaded, increase the reference count
@@ -148,9 +171,7 @@ static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx,
 // Add provider to the list
 static int32_t AddProviderToList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx *providerMgr)
 {
-    int32_t ret;
-
-    ret = BSL_SAL_ThreadWriteLock(libCtx->lock);
+    int32_t ret = BSL_SAL_ThreadWriteLock(libCtx->lock);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -238,10 +259,7 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_EAL_LibCtx *localCtx = libCtx;
-    if (localCtx == NULL) {
-        localCtx = CRYPT_EAL_GetGlobalLibCtx();
-    }
+    CRYPT_EAL_LibCtx *localCtx = GetCurrentProviderLibCtx(libCtx);
     if (localCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
@@ -318,12 +336,11 @@ static void RemoveAndFreeProvider(BslList *providers, CRYPT_EAL_ProvMgrCtx *prov
 // Unload provider
 int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName)
 {
-    int32_t ret = CRYPT_SUCCESS;
-    CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     if (providerName == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+
     CRYPT_EAL_LibCtx *localCtx = libCtx;
     if (localCtx == NULL) {
         localCtx = CRYPT_EAL_GetGlobalLibCtx();
@@ -334,7 +351,7 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
     }
     
     char *providerFullName = NULL;
-    ret = BSL_SAL_LibNameFormat(cmd, providerName, &providerFullName);
+    int32_t ret = BSL_SAL_LibNameFormat(cmd, providerName, &providerFullName);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -347,7 +364,7 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
         BSL_SAL_FREE(providerFullName);
         return ret;
     }
-    providerMgr =
+    CRYPT_EAL_ProvMgrCtx *providerMgr =
         (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_Search(localCtx->providers, providerFullName, ListCompareProvider, NULL);
     BSL_SAL_FREE(providerFullName);
     if (providerMgr == NULL) {
@@ -358,8 +375,8 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
     int refCount = 0;
     ret = BSL_SAL_AtomicDownReferences(&providerMgr->ref, &refCount);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         (void)BSL_SAL_ThreadUnlock(localCtx->lock);
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
@@ -374,13 +391,10 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
 int32_t CRYPT_EAL_ProviderSetLoadPath(CRYPT_EAL_LibCtx *libCtx, const char *searchPath)
 {
     if (BSL_SAL_Strnlen(searchPath, DEFAULT_PROVIDER_PATH_LEN_MAX) >= DEFAULT_PROVIDER_PATH_LEN_MAX) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
-    CRYPT_EAL_LibCtx *localCtx = libCtx;
-    if (localCtx == NULL) {
-        localCtx = CRYPT_EAL_GetGlobalLibCtx();
-    }
+    CRYPT_EAL_LibCtx *localCtx = GetCurrentProviderLibCtx(libCtx);
     if (localCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;

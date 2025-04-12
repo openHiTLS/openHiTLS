@@ -16,8 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
 
+#include "crypt_arm.h"
 .arch	armv8-a+crypto
-.text
 
 rk0       .req  v12
 rk1       .req  v13
@@ -102,9 +102,8 @@ ctr     .req   w5
 ivec    .req   v3
 ivec1   .req   v15
 
-.Lxts_magic:
-	.quad 0x0101010101010187,0x0101010101010101
-
+.section .rodata
+.align 4
 .Ltbox1:
 .word	0xd55b5b8e, 0x924242d0, 0xeaa7a74d, 0xfdfbfb06, 0xcf3333fc, 0xe2878765, 0x3df4f4c9, 0xb5dede6b, 0x1658584e
 .word	0xb4dada6e, 0x14505044, 0xc10b0bca, 0x28a0a088, 0xf8efef17, 0x2cb0b09c, 0x05141411, 0x2bacac87, 0x669d9dfb
@@ -230,6 +229,9 @@ ivec1   .req   v15
 .word	0x8bd45f5f, 0xe7c82f2f, 0xdd39e4e4, 0x68492121
 
 #ifdef HITLS_BIG_ENDIAN
+.Lxts_magic:
+	.quad	0x0101010101010101,0x0101010101010187
+
 .Lsbox_magic:
     .dword 0x0306090c0f020508,0x0b0e0104070a0d00
     .dword 0x22581a6002783a40,0x62185a2042387a00
@@ -240,6 +242,9 @@ ivec1   .req   v15
     .dword 0x0D0C0F0E09080B0A,0x0504070601000302
     .dword 0x0C0F0E0D080B0A09,0x0407060500030201
 #else
+.Lxts_magic:
+	.quad	0x0101010101010187,0x0101010101010101
+
 .Lsbox_magic:
     .dword 0x0b0e0104070a0d00,0x0306090c0f020508
     .dword 0x62185a2042387a00,0x22581a6002783a40
@@ -252,14 +257,16 @@ ivec1   .req   v15
 #endif
 
 .macro LoadSbox
-    ldr MaskQ,      .Lsbox_magic
-    ldr TAHMatQ,    .Lsbox_magic+16
-    ldr TALMatQ,    .Lsbox_magic+32
-    ldr ATAHMatQ,   .Lsbox_magic+48
-    ldr ATALMatQ,   .Lsbox_magic+64
-    ldr vtmp5q,     .Lsbox_magic+80
-    ldr vtmp6q,     .Lsbox_magic+96
-    ldr vtmp7q,     .Lsbox_magic+112
+	adrp	x15,.Lsbox_magic
+	add	x15,x15,:lo12:.Lsbox_magic
+    ldr MaskQ,      [x15]
+    ldr TAHMatQ,    [x15, #16]
+    ldr TALMatQ,    [x15, #32]
+    ldr ATAHMatQ,   [x15, #48]
+    ldr ATALMatQ,   [x15, #64]
+    ldr vtmp5q,     [x15, #80]
+    ldr vtmp6q,     [x15, #96]
+    ldr vtmp7q,     [x15, #112]
 .endm
 
 .macro round x1, x2, x3, x4, rk
@@ -741,24 +748,31 @@ ivec1   .req   v15
 #endif
 .endm
 
+.text
 .type	Sm4Enc4blks,%function
 .align	4
-Sm4Enc4blks: 
+Sm4Enc4blks:
+AARCH64_PACIASP
 	Encrypt4blks
+AARCH64_AUTIASP
 	ret
 .size	Sm4Enc4blks,.-Sm4Enc4blks
 
 .type	Sm4Enc8blks,%function
 .align	4
 Sm4Enc8blks:
+AARCH64_PACIASP
 	Encrypt8blks
+AARCH64_AUTIASP
 	ret 
 .size	Sm4Enc8blks,.-Sm4Enc8blks
 
 .type	Sm4Enc12blks,%function
 .align	4
 Sm4Enc12blks:
+AARCH64_PACIASP
 	Encrypt12blks
+AARCH64_AUTIASP
 	ret 
 .size	Sm4Enc12blks,.-Sm4Enc12blks
 
@@ -766,6 +780,7 @@ Sm4Enc12blks:
 .type	Vpsm4EcbEncrypt,%function
 .align	5
 Vpsm4EcbEncrypt:
+AARCH64_PACIASP
 	// convert length into blocks
 	lsr	x2,x2,4
 	stp	d8,d9,[sp,#-112]!
@@ -911,6 +926,7 @@ Vpsm4EcbEncrypt:
 	ldp	x19,x20,[sp,#80]
 	ldp	x21,x22,[sp,#96]
 	ldp	d8,d9,[sp],#112
+AARCH64_AUTIASP
 	ret
 .size	Vpsm4EcbEncrypt,.-Vpsm4EcbEncrypt
 
@@ -919,6 +935,7 @@ Vpsm4EcbEncrypt:
 .type	Vpsm4CbcEncrypt,%function
 .align	5
 Vpsm4CbcEncrypt:
+AARCH64_PACIASP
 	lsr	len,len,4
 	stp	x29,x30,[sp,#-48]!
 	stp	x19,x20,[sp,#16]
@@ -980,6 +997,7 @@ Vpsm4CbcEncrypt:
 	ldp	x19,x20,[sp,#16]
 	ldp	x21,x22,[sp,#32]
 	ldp	x29,x30,[sp],#48
+AARCH64_AUTIASP
 	ret
 
 .Ldec:
@@ -1191,6 +1209,7 @@ Vpsm4CbcEncrypt:
 	ldp	x19,x20,[sp,#16]
 	ldp	x21,x22,[sp,#32]
 	ldp	x29,x30,[sp],#48
+AARCH64_AUTIASP
 	ret
 .size	Vpsm4CbcEncrypt,.-Vpsm4CbcEncrypt
 
@@ -1200,6 +1219,7 @@ Vpsm4CbcEncrypt:
 .type	Vpsm4Ctr32EncryptBlocks,%function
 .align	5
 Vpsm4Ctr32EncryptBlocks:
+AARCH64_PACIASP
 	ld1	{ivec.4s},[ivp]
 #ifndef HITLS_BIG_ENDIAN
 	rev32	v3.16b,v3.16b
@@ -1236,6 +1256,7 @@ Vpsm4Ctr32EncryptBlocks:
 	rev ctr,ctr
 #endif
 	str ctr,[ivp,#12]
+AARCH64_AUTIASP
 	ret
 1:
 	stp	d8,d9,[sp,#-112]!
@@ -1415,14 +1436,1146 @@ Vpsm4Ctr32EncryptBlocks:
 	rev ctr, ctr
 #endif
 	str ctr, [ivp,#12]
+AARCH64_AUTIASP
 	ret
 .size	Vpsm4Ctr32EncryptBlocks,.-Vpsm4Ctr32EncryptBlocks
 
+.globl	Vpsm4XtsCipher
+.type	Vpsm4XtsCipher,%function
+.align	5
+Vpsm4XtsCipher:
+AARCH64_PACIASP
+	stp	x19, x20, [sp, #-0x10]!
+	stp	x21, x22, [sp, #-0x10]!
+	stp	x23, x24, [sp, #-0x10]!
+	stp	x25, x26, [sp, #-0x10]!
+	stp	x27, x28, [sp, #-0x10]!
+	stp	x29, x30, [sp, #-0x10]!
+	stp	d8, d9, [sp, #-0x10]!
+	stp	d10, d11, [sp, #-0x10]!
+	stp	d12, d13, [sp, #-0x10]!
+	stp	d14, d15, [sp, #-0x10]!
+	sub	sp, sp, #192
+	mov	x24, sp
+	mov	x26,x3
+	mov	x27,x4
+	mov	w28,w6
+	ld1	{v16.4s}, [x5]
+	LoadSbox
+
+	and	x29,x2,#0x0F
+	// convert length into blocks
+	lsr	x2,x2,4
+	cmp	x2,#1
+	b.lt	.Lxts_cipher_return
+
+	cmp	x29,0
+	// If the encryption/decryption Length is N times of 16,
+	// the all blocks are encrypted/decrypted in .xts_encrypt_blocks
+	b.eq	.xts_encrypt_blocks
+
+	// If the encryption/decryption length is not N times of 16,
+	// the last two blocks are encrypted/decrypted in .last_2blks_tweak or .only_2blks_tweak
+	// the other blocks are encrypted/decrypted in .xts_encrypt_blocks
+	subs	x2,x2,#1
+	b.eq	.only_2blks_tweak
+.xts_encrypt_blocks:
+	rbit	v16.16b,v16.16b
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	x12,v16.d[0]
+	mov	x13,v16.d[1]
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+.Lxts_12_blocks_process:
+	mov	x24, sp
+	cmp	x2,#12
+	b.lt	.Lxts_8_blocks_process
+	mov	v16.d[0],x12
+	mov	v16.d[1],x13
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x19,x19,#32
+	extr	x13,x19,x18,#63
+	and	w8,w7,w9,asr#31
+	eor	x12,x8,x18,lsl#1
+	mov	v17.d[0],x14
+	mov	v17.d[1],x15
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	v18.d[0],x16
+	mov	v18.d[1],x17
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v18.16b,v18.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	v19.d[0],x18
+	mov	v19.d[1],x19
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v19.16b,v19.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	rbit	v19.16b,v19.16b
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+	eor	v6.16b, v6.16b, v18.16b
+	eor	v7.16b, v7.16b, v19.16b
+	ld1	{v8.4s,v9.4s,v10.4s,v11.4s},[x0],#64
+	st1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	mov	v16.d[0],x12
+	mov	v16.d[1],x13
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x19,x19,#32
+	extr	x13,x19,x18,#63
+	and	w8,w7,w9,asr#31
+	eor	x12,x8,x18,lsl#1
+	mov	v17.d[0],x14
+	mov	v17.d[1],x15
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	v18.d[0],x16
+	mov	v18.d[1],x17
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v18.16b,v18.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	v19.d[0],x18
+	mov	v19.d[1],x19
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v19.16b,v19.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	rbit	v19.16b,v19.16b
+	eor	v8.16b, v8.16b, v16.16b
+	eor	v9.16b, v9.16b, v17.16b
+	eor	v10.16b, v10.16b, v18.16b
+	eor	v11.16b, v11.16b, v19.16b
+	ld1	{v0.4s,v1.4s,v2.4s,v3.4s},[x0],#64
+	st1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	mov	v16.d[0],x12
+	mov	v16.d[1],x13
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x19,x19,#32
+	extr	x13,x19,x18,#63
+	and	w8,w7,w9,asr#31
+	eor	x12,x8,x18,lsl#1
+	mov	v17.d[0],x14
+	mov	v17.d[1],x15
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	v18.d[0],x16
+	mov	v18.d[1],x17
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v18.16b,v18.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	v19.d[0],x18
+	mov	v19.d[1],x19
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v19.16b,v19.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	rbit	v19.16b,v19.16b
+	eor	v0.16b, v0.16b, v16.16b
+	eor	v1.16b, v1.16b, v17.16b
+	eor	v2.16b, v2.16b, v18.16b
+	eor	v3.16b, v3.16b, v19.16b
+	st1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	mov	v16.16b,v0.16b
+	mov	v17.16b,v1.16b
+	mov	v18.16b,v2.16b
+	mov	v19.16b,v3.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+	rev32	v16.16b,v16.16b
+	rev32	v17.16b,v17.16b
+	rev32	v18.16b,v18.16b
+	rev32	v19.16b,v19.16b
+#endif
+	zip1	v0.4s,v4.4s,v5.4s
+	zip2	v1.4s,v4.4s,v5.4s
+	zip1	v2.4s,v6.4s,v7.4s
+	zip2	v3.4s,v6.4s,v7.4s
+	zip1	v4.2d,v0.2d,v2.2d
+	zip2	v5.2d,v0.2d,v2.2d
+	zip1	v6.2d,v1.2d,v3.2d
+	zip2	v7.2d,v1.2d,v3.2d
+	zip1	v0.4s,v8.4s,v9.4s
+	zip2	v1.4s,v8.4s,v9.4s
+	zip1	v2.4s,v10.4s,v11.4s
+	zip2	v3.4s,v10.4s,v11.4s
+	zip1	v8.2d,v0.2d,v2.2d
+	zip2	v9.2d,v0.2d,v2.2d
+	zip1	v10.2d,v1.2d,v3.2d
+	zip2	v11.2d,v1.2d,v3.2d
+	zip1	v0.4s,v16.4s,v17.4s
+	zip2	v1.4s,v16.4s,v17.4s
+	zip1	v2.4s,v18.4s,v19.4s
+	zip2	v3.4s,v18.4s,v19.4s
+	zip1	v16.2d,v0.2d,v2.2d
+	zip2	v17.2d,v0.2d,v2.2d
+	zip1	v18.2d,v1.2d,v3.2d
+	zip2	v19.2d,v1.2d,v3.2d
+	bl	Sm4Enc12blks
+	zip1	v16.4s,v0.4s,v1.4s
+	zip2	v17.4s,v0.4s,v1.4s
+	zip1	v18.4s,v2.4s,v3.4s
+	zip2	v19.4s,v2.4s,v3.4s
+	zip1	v0.2d,v16.2d,v18.2d
+	zip2	v1.2d,v16.2d,v18.2d
+	zip1	v2.2d,v17.2d,v19.2d
+	zip2	v3.2d,v17.2d,v19.2d
+	zip1	v16.4s,v4.4s,v5.4s
+	zip2	v17.4s,v4.4s,v5.4s
+	zip1	v18.4s,v6.4s,v7.4s
+	zip2	v19.4s,v6.4s,v7.4s
+	zip1	v4.2d,v16.2d,v18.2d
+	zip2	v5.2d,v16.2d,v18.2d
+	zip1	v6.2d,v17.2d,v19.2d
+	zip2	v7.2d,v17.2d,v19.2d
+	zip1	v16.4s,v8.4s,v9.4s
+	zip2	v17.4s,v8.4s,v9.4s
+	zip1	v18.4s,v10.4s,v11.4s
+	zip2	v19.4s,v10.4s,v11.4s
+	zip1	v8.2d,v16.2d,v18.2d
+	zip2	v9.2d,v16.2d,v18.2d
+	zip1	v10.2d,v17.2d,v19.2d
+	zip2	v11.2d,v17.2d,v19.2d
+	mov	x24, sp
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	eor	v0.16b, v0.16b, v16.16b
+	eor	v1.16b, v1.16b, v17.16b
+	eor	v2.16b, v2.16b, v18.16b
+	eor	v3.16b, v3.16b, v19.16b
+
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+	eor	v6.16b, v6.16b, v18.16b
+	eor	v7.16b, v7.16b, v19.16b
+
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	eor	v8.16b, v8.16b, v16.16b
+	eor	v9.16b, v9.16b, v17.16b
+	eor	v10.16b, v10.16b, v18.16b
+	eor	v11.16b, v11.16b, v19.16b
+
+	// save the last tweak
+	mov	v24.16b,v19.16b
+	st1	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
+	st1	{v4.4s,v5.4s,v6.4s,v7.4s},[x1],#64
+	st1	{v8.4s,v9.4s,v10.4s,v11.4s},[x1],#64
+	subs	x2,x2,#12
+	b.gt	.Lxts_12_blocks_process
+	b	100f
+.Lxts_8_blocks_process:
+	mov	x24, sp
+	cmp	x2,#8
+	mov	v16.d[0],x12
+	mov	v16.d[1],x13
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x19,x19,#32
+	extr	x13,x19,x18,#63
+	and		w8,w7,w9,asr#31
+	eor	x12,x8,x18,lsl#1
+	mov	v17.d[0],x14
+	mov	v17.d[1],x15
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	v18.d[0],x16
+	mov	v18.d[1],x17
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v18.16b,v18.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	v19.d[0],x18
+	mov	v19.d[1],x19
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v19.16b,v19.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+	b.lt	.Lxts_4_blocks_process
+	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	rbit	v19.16b,v19.16b
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+	eor	v6.16b, v6.16b, v18.16b
+	eor	v7.16b, v7.16b, v19.16b
+	ld1	{v8.4s,v9.4s,v10.4s,v11.4s},[x0],#64
+	st1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24], #64
+	mov	v16.d[0],x12
+	mov	v16.d[1],x13
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x19,x19,#32
+	extr	x13,x19,x18,#63
+	and	w8,w7,w9,asr#31
+	eor	x12,x8,x18,lsl#1
+	mov	v17.d[0],x14
+	mov	v17.d[1],x15
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	v18.d[0],x16
+	mov	v18.d[1],x17
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v18.16b,v18.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	v19.d[0],x18
+	mov	v19.d[1],x19
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v19.16b,v19.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	rbit	v19.16b,v19.16b
+	eor	v8.16b, v8.16b, v16.16b
+	eor	v9.16b, v9.16b, v17.16b
+	eor	v10.16b, v10.16b, v18.16b
+	eor	v11.16b, v11.16b, v19.16b
+	st1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+	rev32	v8.16b,v8.16b
+	rev32	v9.16b,v9.16b
+	rev32	v10.16b,v10.16b
+	rev32	v11.16b,v11.16b
+#endif
+	zip1	v0.4s,v4.4s,v5.4s
+	zip2	v1.4s,v4.4s,v5.4s
+	zip1	v2.4s,v6.4s,v7.4s
+	zip2	v3.4s,v6.4s,v7.4s
+	zip1	v4.2d,v0.2d,v2.2d
+	zip2	v5.2d,v0.2d,v2.2d
+	zip1	v6.2d,v1.2d,v3.2d
+	zip2	v7.2d,v1.2d,v3.2d
+	zip1	v0.4s,v8.4s,v9.4s
+	zip2	v1.4s,v8.4s,v9.4s
+	zip1	v2.4s,v10.4s,v11.4s
+	zip2	v3.4s,v10.4s,v11.4s
+	zip1	v8.2d,v0.2d,v2.2d
+	zip2	v9.2d,v0.2d,v2.2d
+	zip1	v10.2d,v1.2d,v3.2d
+	zip2	v11.2d,v1.2d,v3.2d
+	bl	Sm4Enc8blks
+	zip1	v8.4s,v0.4s,v1.4s
+	zip2	v9.4s,v0.4s,v1.4s
+	zip1	v10.4s,v2.4s,v3.4s
+	zip2	v11.4s,v2.4s,v3.4s
+	zip1	v0.2d,v8.2d,v10.2d
+	zip2	v1.2d,v8.2d,v10.2d
+	zip1	v2.2d,v9.2d,v11.2d
+	zip2	v3.2d,v9.2d,v11.2d
+	zip1	v8.4s,v4.4s,v5.4s
+	zip2	v9.4s,v4.4s,v5.4s
+	zip1	v10.4s,v6.4s,v7.4s
+	zip2	v11.4s,v6.4s,v7.4s
+	zip1	v4.2d,v8.2d,v10.2d
+	zip2	v5.2d,v8.2d,v10.2d
+	zip1	v6.2d,v9.2d,v11.2d
+	zip2	v7.2d,v9.2d,v11.2d
+	mov	x24, sp
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	eor	v0.16b, v0.16b, v16.16b
+	eor	v1.16b, v1.16b, v17.16b
+	eor	v2.16b, v2.16b, v18.16b
+	eor	v3.16b, v3.16b, v19.16b
+
+	ld1	{v16.4s,v17.4s,v18.4s,v19.4s},[x24],#64
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+	eor	v6.16b, v6.16b, v18.16b
+	eor	v7.16b, v7.16b, v19.16b
+
+	// save the last tweak
+	mov	v24.16b,v19.16b
+	st1	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
+	st1	{v4.4s,v5.4s,v6.4s,v7.4s},[x1],#64
+	subs	x2,x2,#8
+	b.gt	.Lxts_8_blocks_process
+	b	100f
+.Lxts_4_blocks_process:
+	cmp	x2,#4
+	b.lt	1f
+	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	rbit	v19.16b,v19.16b
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+	eor	v6.16b, v6.16b, v18.16b
+	eor	v7.16b, v7.16b, v19.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+	rev32	v7.16b,v7.16b
+#endif
+	zip1	v0.4s,v4.4s,v5.4s
+	zip2	v1.4s,v4.4s,v5.4s
+	zip1	v2.4s,v6.4s,v7.4s
+	zip2	v3.4s,v6.4s,v7.4s
+	zip1	v4.2d,v0.2d,v2.2d
+	zip2	v5.2d,v0.2d,v2.2d
+	zip1	v6.2d,v1.2d,v3.2d
+	zip2	v7.2d,v1.2d,v3.2d
+	bl	Sm4Enc4blks
+	zip1	v4.4s,v0.4s,v1.4s
+	zip2	v5.4s,v0.4s,v1.4s
+	zip1	v6.4s,v2.4s,v3.4s
+	zip2	v7.4s,v2.4s,v3.4s
+	zip1	v0.2d,v4.2d,v6.2d
+	zip2	v1.2d,v4.2d,v6.2d
+	zip1	v2.2d,v5.2d,v7.2d
+	zip2	v3.2d,v5.2d,v7.2d
+	eor	v0.16b, v0.16b, v16.16b
+	eor	v1.16b, v1.16b, v17.16b
+	eor	v2.16b, v2.16b, v18.16b
+	eor	v3.16b, v3.16b, v19.16b
+	st1	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
+	sub	x2,x2,#4
+	// save the last tweak
+	mov	v24.16b,v19.16b
+	mov	v16.d[0],x12
+	mov	v16.d[1],x13
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v16.16b,v16.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x19,x19,#32
+	extr	x13,x19,x18,#63
+	and	w8,w7,w9,asr#31
+	eor	x12,x8,x18,lsl#1
+	mov	v17.d[0],x14
+	mov	v17.d[1],x15
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x13,x13,#32
+	extr	x15,x13,x12,#63
+	and	w8,w7,w9,asr#31
+	eor	x14,x8,x12,lsl#1
+	mov	v18.d[0],x16
+	mov	v18.d[1],x17
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v18.16b,v18.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x15,x15,#32
+	extr	x17,x15,x14,#63
+	and	w8,w7,w9,asr#31
+	eor	x16,x8,x14,lsl#1
+	mov	v19.d[0],x18
+	mov	v19.d[1],x19
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v19.16b,v19.16b
+#endif
+	mov	w7,0x87
+	extr	x9,x17,x17,#32
+	extr	x19,x17,x16,#63
+	and	w8,w7,w9,asr#31
+	eor	x18,x8,x16,lsl#1
+1:
+	// process last block
+	cmp	x2,#1
+	b.lt	100f
+	b.gt	1f
+	ld1	{v4.4s},[x0],#16
+	rbit	v16.16b,v16.16b
+	eor	v4.16b, v4.16b, v16.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+#endif
+	mov	x10,x3
+	mov	w11,#8
+	mov	w12,v4.s[0]
+	mov	w13,v4.s[1]
+	mov	w14,v4.s[2]
+	mov	w15,v4.s[3]
+10:
+	ldp	w7,w8,[x10],8
+	// B0 ^= SBOX(B1 ^ B2 ^ B3 ^ RK0)
+	eor	w6,w14,w15
+	eor	w9,w7,w13
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w12,w12,w6
+	// B1 ^= SBOX(B0 ^ B2 ^ B3 ^ RK1)
+	eor	w6,w14,w15
+	eor	w9,w12,w8
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	ldp	w7,w8,[x10],8
+	eor	w13,w13,w6
+	// B2 ^= SBOX(B0 ^ B1 ^ B3 ^ RK2)
+	eor	w6,w12,w13
+	eor	w9,w7,w15
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w14,w14,w6
+	// B3 ^= SBOX(B0 ^ B1 ^ B2 ^ RK3)
+	eor	w6,w12,w13
+	eor	w9,w14,w8
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w15,w15,w6
+	subs	w11,w11,#1
+	b.ne	10b
+	mov	v4.s[0],w15
+	mov	v4.s[1],w14
+	mov	v4.s[2],w13
+	mov	v4.s[3],w12
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+#endif
+	eor	v4.16b, v4.16b, v16.16b
+	st1	{v4.4s},[x1],#16
+	// save the last tweak
+	mov	v24.16b,v16.16b
+	b	100f
+1:	//	process last 2 blocks
+	cmp	x2,#2
+	b.gt	1f
+	ld1	{v4.4s,v5.4s},[x0],#32
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+#endif
+	zip1	v0.4s,v4.4s,v5.4s
+	zip2	v1.4s,v4.4s,v5.4s
+	zip1	v2.4s,v6.4s,v7.4s
+	zip2	v3.4s,v6.4s,v7.4s
+	zip1	v4.2d,v0.2d,v2.2d
+	zip2	v5.2d,v0.2d,v2.2d
+	zip1	v6.2d,v1.2d,v3.2d
+	zip2	v7.2d,v1.2d,v3.2d
+	bl	Sm4Enc4blks
+	zip1	v4.4s,v0.4s,v1.4s
+	zip2	v5.4s,v0.4s,v1.4s
+	zip1	v6.4s,v2.4s,v3.4s
+	zip2	v7.4s,v2.4s,v3.4s
+	zip1	v0.2d,v4.2d,v6.2d
+	zip2	v1.2d,v4.2d,v6.2d
+	zip1	v2.2d,v5.2d,v7.2d
+	zip2	v3.2d,v5.2d,v7.2d
+	eor	v0.16b, v0.16b, v16.16b
+	eor	v1.16b, v1.16b, v17.16b
+	st1	{v0.4s,v1.4s},[x1],#32
+	// save the last tweak
+	mov	v24.16b,v17.16b
+	b	100f
+1:	//	process last 3 blocks
+	ld1	{v4.4s,v5.4s,v6.4s},[x0],#48
+	rbit	v16.16b,v16.16b
+	rbit	v17.16b,v17.16b
+	rbit	v18.16b,v18.16b
+	eor	v4.16b, v4.16b, v16.16b
+	eor	v5.16b, v5.16b, v17.16b
+	eor	v6.16b, v6.16b, v18.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+	rev32	v5.16b,v5.16b
+	rev32	v6.16b,v6.16b
+#endif
+	zip1	v0.4s,v4.4s,v5.4s
+	zip2	v1.4s,v4.4s,v5.4s
+	zip1	v2.4s,v6.4s,v7.4s
+	zip2	v3.4s,v6.4s,v7.4s
+	zip1	v4.2d,v0.2d,v2.2d
+	zip2	v5.2d,v0.2d,v2.2d
+	zip1	v6.2d,v1.2d,v3.2d
+	zip2	v7.2d,v1.2d,v3.2d
+	bl	Sm4Enc4blks
+	zip1	v4.4s,v0.4s,v1.4s
+	zip2	v5.4s,v0.4s,v1.4s
+	zip1	v6.4s,v2.4s,v3.4s
+	zip2	v7.4s,v2.4s,v3.4s
+	zip1	v0.2d,v4.2d,v6.2d
+	zip2	v1.2d,v4.2d,v6.2d
+	zip1	v2.2d,v5.2d,v7.2d
+	zip2	v3.2d,v5.2d,v7.2d
+	eor	v0.16b, v0.16b, v16.16b
+	eor	v1.16b, v1.16b, v17.16b
+	eor	v2.16b, v2.16b, v18.16b
+	st1	{v0.4s,v1.4s,v2.4s},[x1],#48
+	// save the last tweak
+	mov	v24.16b,v18.16b
+100:
+	cmp	x29,0
+	b.eq	.Lxts_cipher_return
+
+// This branch calculates the last two tweaks, 
+// while the encryption/decryption length is larger than 32
+.last_2blks_tweak:
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v24.16b,v24.16b
+#endif
+	rbit	v2.16b,v24.16b
+	adrp    x26, .Lxts_magic
+    add	    x26, x26, :lo12:.Lxts_magic
+	ldr	    q0, [x26]
+	shl	v17.16b, v2.16b, #1
+	ext	v1.16b, v2.16b, v2.16b,#15
+	ushr	v1.16b, v1.16b, #7
+	mul	v1.16b, v1.16b, v0.16b
+	eor	v17.16b, v17.16b, v1.16b
+	rbit	v17.16b,v17.16b
+	rbit	v2.16b,v17.16b
+	adrp    x26, .Lxts_magic
+    add	    x26, x26, :lo12:.Lxts_magic
+	ldr	    q0, [x26]
+	shl	v18.16b, v2.16b, #1
+	ext	v1.16b, v2.16b, v2.16b,#15
+	ushr	v1.16b, v1.16b, #7
+	mul	v1.16b, v1.16b, v0.16b
+	eor	v18.16b, v18.16b, v1.16b
+	rbit	v18.16b,v18.16b
+	b	.Lxts_check_dec
+
+
+// This branch calculates the last two tweaks, 
+// while the encryption/decryption length is equal to 32, who only need two tweaks
+.only_2blks_tweak:
+	mov	v17.16b,v16.16b
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+#endif
+	rbit	v2.16b,v17.16b
+	adrp    x26, .Lxts_magic
+    add	    x26, x26, :lo12:.Lxts_magic
+	ldr	q0, [x26]
+	shl	v18.16b, v2.16b, #1
+	ext	v1.16b, v2.16b, v2.16b,#15
+	ushr	v1.16b, v1.16b, #7
+	mul	v1.16b, v1.16b, v0.16b
+	eor	v18.16b, v18.16b, v1.16b
+	rbit	v18.16b,v18.16b
+	b	.Lxts_check_dec
+
+
+// Determine whether encryption or decryption is required.
+// The last two tweaks need to be swapped for decryption.
+.Lxts_check_dec:
+	// encryption:1 decryption:0
+	cmp	w28,1
+	b.eq	.Lxts_prcess_last_2blks
+	mov	v0.16B,v17.16b
+	mov	v17.16B,v18.16b
+	mov	v18.16B,v0.16b
+
+.Lxts_prcess_last_2blks:
+#ifdef HITLS_BIG_ENDIAN
+	rev32	v17.16b,v17.16b
+	rev32	v18.16b,v18.16b
+#endif
+	ld1	{v4.4s},[x0],#16
+	eor	v4.16b, v4.16b, v17.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+#endif
+	mov	x10,x3
+	mov	w11,#8
+	mov	w12,v4.s[0]
+	mov	w13,v4.s[1]
+	mov	w14,v4.s[2]
+	mov	w15,v4.s[3]
+10:
+	ldp	w7,w8,[x10],8
+	// B0 ^= SBOX(B1 ^ B2 ^ B3 ^ RK0)
+	eor	w6,w14,w15
+	eor	w9,w7,w13
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w12,w12,w6
+	// B1 ^= SBOX(B0 ^ B2 ^ B3 ^ RK1)
+	eor	w6,w14,w15
+	eor	w9,w12,w8
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	ldp	w7,w8,[x10],8
+	eor	w13,w13,w6
+	// B2 ^= SBOX(B0 ^ B1 ^ B3 ^ RK2)
+	eor	w6,w12,w13
+	eor	w9,w7,w15
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w14,w14,w6
+	// B3 ^= SBOX(B0 ^ B1 ^ B2 ^ RK3)
+	eor	w6,w12,w13
+	eor	w9,w14,w8
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w15,w15,w6
+	subs	w11,w11,#1
+	b.ne	10b
+	mov	v4.s[0],w15
+	mov	v4.s[1],w14
+	mov	v4.s[2],w13
+	mov	v4.s[3],w12
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+#endif
+	eor	v4.16b, v4.16b, v17.16b
+	st1	{v4.4s},[x1],#16
+
+	sub	x26,x1,16
+.Lxts_loop:
+	subs	x29,x29,1
+	ldrb	w7,[x26,x29]
+	ldrb	w8,[x0,x29]
+	strb	w8,[x26,x29]
+	strb	w7,[x1,x29]
+	b.gt	.Lxts_loop
+	ld1	{v4.4s}, [x26]
+	eor	v4.16b, v4.16b, v18.16b
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+#endif
+	mov	x10,x3
+	mov	w11,#8
+	mov	w12,v4.s[0]
+	mov	w13,v4.s[1]
+	mov	w14,v4.s[2]
+	mov	w15,v4.s[3]
+10:
+	ldp	w7,w8,[x10],8
+	// B0 ^= SBOX(B1 ^ B2 ^ B3 ^ RK0)
+	eor	w6,w14,w15
+	eor	w9,w7,w13
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w12,w12,w6
+	// B1 ^= SBOX(B0 ^ B2 ^ B3 ^ RK1)
+	eor	w6,w14,w15
+	eor	w9,w12,w8
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	ldp	w7,w8,[x10],8
+	eor	w13,w13,w6
+	// B2 ^= SBOX(B0 ^ B1 ^ B3 ^ RK2)
+	eor	w6,w12,w13
+	eor	w9,w7,w15
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w14,w14,w6
+	// B3 ^= SBOX(B0 ^ B1 ^ B2 ^ RK3)
+	eor	w6,w12,w13
+	eor	w9,w14,w8
+	eor	w6,w6,w9
+	movi	v31.16b, #0x0f
+	mov	v3.s[0],w6
+	// optimize sbox using AESE instruction
+	tbl	v0.16b, {v3.16b}, v26.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v28.16b}, v0.16b
+	tbl	v2.16b, {v27.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+	eor	v1.16b, v1.16b, v1.16b
+	aese	v0.16b,v1.16b
+	ushr	v2.16b, v0.16b, 4
+	and	v0.16b, v0.16b, v31.16b
+	tbl	v0.16b, {v30.16b}, v0.16b
+	tbl	v2.16b, {v29.16b}, v2.16b
+	eor	v0.16b, v0.16b, v2.16b
+
+	mov	w7,v0.s[0]
+	eor	w6,w7,w7,ror #32-2
+	eor	w6,w6,w7,ror #32-10
+	eor	w6,w6,w7,ror #32-18
+	eor	w6,w6,w7,ror #32-24
+	eor	w15,w15,w6
+	subs	w11,w11,#1
+	b.ne	10b
+	mov	v4.s[0],w15
+	mov	v4.s[1],w14
+	mov	v4.s[2],w13
+	mov	v4.s[3],w12
+#ifndef HITLS_BIG_ENDIAN
+	rev32	v4.16b,v4.16b
+#endif
+	eor	v4.16b, v4.16b, v18.16b
+	st1	{v4.4s}, [x26]
+.Lxts_cipher_return:
+	add	sp, sp, #192
+	ldp	d14, d15, [sp], #0x10
+	ldp	d12, d13, [sp], #0x10
+	ldp	d10, d11, [sp], #0x10
+	ldp	d8, d9, [sp], #0x10
+	ldp	x29, x30, [sp], #0x10
+	ldp	x27, x28, [sp], #0x10
+	ldp	x25, x26, [sp], #0x10
+	ldp	x23, x24, [sp], #0x10
+	ldp	x21, x22, [sp], #0x10
+	ldp	x19, x20, [sp], #0x10
+AARCH64_AUTIASP
+	ret
+.size	Vpsm4XtsCipher,.-Vpsm4XtsCipher
 
 .globl	Vpsm4Cfb128Encrypt
 .type	Vpsm4Cfb128Encrypt,%function
 .align	5
 Vpsm4Cfb128Encrypt:
+AARCH64_PACIASP
 	stp	x29,x30,[sp,#-80]!
 	add	x29,sp,#0
 	stp	x19,x20,[sp,#16]
@@ -1522,7 +2675,7 @@ Vpsm4Cfb128Encrypt:
 	ldp	x23,x8,[sp,#48]
 	ldp	x16,x17,[sp,#64]
 	ldp	x29,x30,[sp],#80
-
+AARCH64_AUTIASP
 	ret
 .size	Vpsm4Cfb128Encrypt,.-Vpsm4Cfb128Encrypt
 
@@ -1531,6 +2684,7 @@ Vpsm4Cfb128Encrypt:
 .type	Vpsm4Cfb128Decrypt,%function
 .align	5
 Vpsm4Cfb128Decrypt:
+AARCH64_PACIASP
 	stp	x29,x30,[sp,#-128]!
 	stp	x19,x20,[sp,#16]
 	stp	x21,x22,[sp,#32]
@@ -1816,7 +2970,7 @@ Vpsm4Cfb128Decrypt:
 	ldp	d12,d13,[sp,#96]
 	ldp	d14,d15,[sp,#112]
 	ldp	x29,x30,[sp],#128
-
+AARCH64_AUTIASP
 	ret
 .size	Vpsm4Cfb128Decrypt,.-Vpsm4Cfb128Decrypt
 

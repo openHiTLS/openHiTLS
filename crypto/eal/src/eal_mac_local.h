@@ -36,6 +36,10 @@ typedef enum {
 
 typedef enum {
     CRYPT_MAC_HMAC = 0,
+    CRYPT_MAC_CMAC,
+    CRYPT_MAC_CBC_MAC,
+    CRYPT_MAC_SIPHASH,
+    CRYPT_MAC_GMAC,
     CRYPT_MAC_INVALID
 } CRYPT_MAC_ID;
 

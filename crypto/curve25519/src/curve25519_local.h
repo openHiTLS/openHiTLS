@@ -42,9 +42,7 @@ struct CryptCurve25519Ctx {
     void *libCtx;
 };
 
-typedef struct Fp25 {
-    int32_t data[10];
-} Fp25;
+typedef int32_t Fp25[10];
 
 typedef struct Fp51 {
     uint64_t data[5];
@@ -100,8 +98,8 @@ typedef struct GeEPre {
 /* low 21 bits for 64bits block */
 #define MASK_64_LOW21 0x1fffffLL
 
-#define CURVE25519_MASK_HIGH_38     MASK_HIGH64(38)
-#define CURVE25519_MASK_HIGH_39     MASK_HIGH64(39)
+#define CURVE25519_MASK_HIGH_38     0xfffffffffc000000LL
+#define CURVE25519_MASK_HIGH_39     0xfffffffffe000000LL
 
 /* process carry from h0_ to h1_, h0_ boundary restrictions is bits */
 #define PROCESS_CARRY(h0_, h1_, signMask_, over_, bits)             \
@@ -110,15 +108,6 @@ typedef struct GeEPre {
         (signMask_) = MASK_HIGH64((bits) + 1) & (-((over_) >> 63)); \
         (h1_) += ((over_) >> ((bits) + 1)) | (signMask_);           \
         (h0_) -= MASK_HIGH64(64 - ((bits) + 1)) & (over_);          \
-    } while (0)
-
-/* process carry from h0_ to h1_, h is int64_t type */
-#define PROCESS_CARRY_INT64(h0_, h1_, signMask_, over_, bits)         \
-    do {                                                              \
-        (over_) = (uint64_t)(h0_) + (1 << (bits));                    \
-        (signMask_) = MASK_HIGH64((bits) + 1) & (-((over_) >> 63));   \
-        (h1_) += (int64_t)(((over_) >> ((bits) + 1)) | (signMask_));  \
-        (h0_) -= (int64_t)(MASK_HIGH64(64 - ((bits) + 1)) & (over_)); \
     } while (0)
 
 /* process carry from h0_ to h1_ ignoring sign, h0_ boundary restrictions is bits */
@@ -251,10 +240,10 @@ typedef struct GeEPre {
 
 #define CURVE25519_GE_COPY(dst, src)                      \
     do {                                                  \
-        CURVE25519_FP_COPY((dst).x.data, (src).x.data);   \
-        CURVE25519_FP_COPY((dst).y.data, (src).y.data);   \
-        CURVE25519_FP_COPY((dst).z.data, (src).z.data);   \
-        CURVE25519_FP_COPY((dst).t.data, (src).t.data);   \
+        CURVE25519_FP_COPY((dst).x, (src).x);   \
+        CURVE25519_FP_COPY((dst).y, (src).y);   \
+        CURVE25519_FP_COPY((dst).z, (src).z);   \
+        CURVE25519_FP_COPY((dst).t, (src).t);   \
     } while (0)
 
 /* Add */
@@ -326,9 +315,9 @@ typedef struct GeEPre {
 
 #define CURVE25519_BYTES3_PADDING_UNLOAD(dst, bits1, bits2, src)                                      \
     do {                                                                                              \
-            const uint32_t posMacro = 8 - (bits1);                                                        \
-            uint32_t valMacro = (uint32_t)(*(src));                                                       \
-            uint32_t signMaskMacro= -(valMacro >> 31);                                                       \
+            const uint32_t posMacro = 8 - (bits1);                                                    \
+            uint32_t valMacro = (uint32_t)(*(src));                                                   \
+            uint32_t signMaskMacro= -(valMacro >> 31);                                                \
             uint32_t expand =( (uint32_t)(*((src) + 1))) << (bits2);                                  \
             *((dst) + 0) = (uint8_t)(valMacro >> (0 + posMacro) | (signMaskMacro>> (0 + posMacro)));                 \
             *((dst) + 1) = (uint8_t)(valMacro >> (8 + posMacro) | (signMaskMacro>> (8 + posMacro)));                 \
@@ -337,9 +326,9 @@ typedef struct GeEPre {
 
 #define CURVE25519_BYTES3_UNLOAD(dst, bits, src)                                           \
     do {                                                                                   \
-            const uint32_t posMacro = 8 - (bits);                                              \
-            uint32_t valMacro = (uint32_t)(*(src));                                            \
-            uint32_t signMaskMacro= -(valMacro >> 31);                                            \
+            const uint32_t posMacro = 8 - (bits);                                          \
+            uint32_t valMacro = (uint32_t)(*(src));                                        \
+            uint32_t signMaskMacro= -(valMacro >> 31);                                     \
             *((dst) + 0) = (uint8_t)((valMacro >> (0 + posMacro)) | (signMaskMacro>> (0 + posMacro)));    \
             *((dst) + 1) = (uint8_t)((valMacro >> (8 + posMacro)) | (signMaskMacro>> (8 + posMacro)));    \
             *((dst) + 2) = (uint8_t)((valMacro >> (16 + posMacro)) | (signMaskMacro>> (16 + posMacro)));  \
@@ -347,8 +336,8 @@ typedef struct GeEPre {
 
 #define CURVE25519_BYTES4_PADDING_UNLOAD(dst, bits, src)                           \
     do {                                                                           \
-            uint32_t valMacro = (uint32_t)(*(src));                                    \
-            uint32_t signMaskMacro= -(valMacro >> 31);                                    \
+            uint32_t valMacro = (uint32_t)(*(src));                                \
+            uint32_t signMaskMacro= -(valMacro >> 31);                             \
             uint32_t expand = ((uint32_t)(*((src) + 1))) << (bits);                \
             *((dst) + 0) = (uint8_t)((valMacro >> 0) | (signMaskMacro>> 0));              \
             *((dst) + 1) = (uint8_t)((valMacro >> 8) | (signMaskMacro>> 8));              \
@@ -375,7 +364,7 @@ typedef struct GeEPre {
 #define CURVE25519_FP_CSWAP(s, a, b)                                    \
     do {                                                                \
             uint32_t tt;                                                \
-            const uint32_t tsMacro = 0 - (s);                               \
+            const uint32_t tsMacro = 0 - (s);                           \
             for (uint32_t ii = 0; ii < 10; ii++) {                      \
                 tt = tsMacro & (((uint32_t)(a)[ii]) ^ ((uint32_t)(b)[ii])); \
                 (a)[ii] = (int32_t)((uint32_t)(a)[ii] ^ tt);            \
@@ -386,9 +375,9 @@ typedef struct GeEPre {
 #define CURVE25519_FP51_CSWAP(s, a, b)                                  \
     do {                                                                \
             uint64_t tt;                                                \
-            const uint64_t tsMacro = 0 - (uint64_t)(s);                     \
+            const uint64_t tsMacro = 0 - (uint64_t)(s);                 \
             for (uint32_t ii = 0; ii < 5; ii++) {                       \
-                tt = tsMacro & ((a)[ii] ^ (b)[ii]);                         \
+                tt = tsMacro & ((a)[ii] ^ (b)[ii]);                     \
                 (a)[ii] = (a)[ii] ^ tt;                                 \
                 (b)[ii] = (b)[ii] ^ tt;                                 \
             }                                                           \
@@ -418,15 +407,15 @@ void KAMulPlusMulBase(GeE *out, const uint8_t hash[CRYPT_CURVE25519_KEYLEN],
 void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32]);
 #endif
 
-void FpInvert(Fp25 *out, const Fp25 *a);
+void FpInvert(Fp25 out, const Fp25 a);
 
-void FpMul(Fp25 *out, const Fp25 *f, const Fp25 *g);
+void FpMul(Fp25 out, const Fp25 f, const Fp25 g);
 
-void FpSquare(Fp25 *out, const Fp25 *in);
+void FpSquareDoubleCore(Fp25 out, const Fp25 in, bool doDouble);
 
-void PolynomialToData(uint8_t out[32], const Fp25 *polynomial);
+void PolynomialToData(uint8_t out[32], const Fp25 polynomial);
 
-void DataToPolynomial(Fp25 *out, const uint8_t data[32]);
+void DataToPolynomial(Fp25 out, const uint8_t data[32]);
 
 #ifdef HITLS_CRYPTO_X25519
 void CRYPT_X25519_PublicFromPrivate(const uint8_t privateKey[CRYPT_CURVE25519_KEYLEN],

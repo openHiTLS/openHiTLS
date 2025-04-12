@@ -47,7 +47,7 @@ static int32_t Sm2KeyDeriveInner(void *ctx, void *peerCtx)
 {
     int rc = CRYPT_SUCCESS;
     uint8_t localR[128] = {0};
-    rc = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SM2_GENE_R, localR, sizeof(localR));
+    rc = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR));
     if (rc != CRYPT_SUCCESS) {
         printf("Failed to generate R\n");
         return rc;

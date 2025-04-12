@@ -43,11 +43,9 @@ typedef struct {
 
 int32_t CRYPT_CHACHA20_SetKey(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *key, uint32_t keyLen);
 
-int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in,
-    uint8_t *out, uint32_t len);
+int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 
-int32_t CRYPT_CHACHA20_Ctrl(CRYPT_CHACHA20_Ctx *ctx, int32_t opt,
-    void *val, uint32_t len);
+int32_t CRYPT_CHACHA20_Ctrl(CRYPT_CHACHA20_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 void CRYPT_CHACHA20_Clean(CRYPT_CHACHA20_Ctx *ctx);
 

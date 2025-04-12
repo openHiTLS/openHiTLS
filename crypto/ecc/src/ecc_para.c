@@ -41,10 +41,15 @@ typedef struct {
     ECC_ReadData y;
 } CURVE_Para;
 
+#if defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP256) || \
+    defined(HITLS_CRYPTO_CURVE_NISTP384) || defined(HITLS_CRYPTO_CURVE_NISTP521) || \
+    defined(HITLS_CRYPTO_CURVE_SM2)
 static const uint8_t NIST_P_H[] = {
     0x01
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_NISTP224
 static const uint8_t NIST_P224_P[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
@@ -74,7 +79,9 @@ static const uint8_t NIST_P224_N[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x16, 0xa2,
     0xe0, 0xb8, 0xf0, 0x3e, 0x13, 0xdd, 0x29, 0x45, 0x5c, 0x5c, 0x2a, 0x3d
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
 static const uint8_t NIST_P256_P[] = {
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
@@ -104,7 +111,9 @@ static const uint8_t NIST_P256_N[] = {
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2, 0xfc, 0x63, 0x25, 0x51
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
 static const uint8_t NIST_P384_P[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
@@ -140,7 +149,9 @@ static const uint8_t NIST_P384_N[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc7, 0x63, 0x4d, 0x81, 0xf4, 0x37, 0x2d, 0xdf,
     0x58, 0x1a, 0x0d, 0xb2, 0x48, 0xb0, 0xa7, 0x7a, 0xec, 0xec, 0x19, 0x6a, 0xcc, 0xc5, 0x29, 0x73
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
 static const uint8_t NIST_P521_P[] = {
     0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -188,11 +199,15 @@ static const uint8_t NIST_P521_N[] = {
     0xa5, 0xd0, 0x3b, 0xb5, 0xc9, 0xb8, 0x89, 0x9c, 0x47, 0xae, 0xbb, 0x6f, 0xb7, 0x1e, 0x91, 0x38,
     0x64, 0x09
 };
+#endif
 
+#if defined(HITLS_CRYPTO_CURVE_BP256R1) || defined(HITLS_CRYPTO_CURVE_BP384R1) || defined(HITLS_CRYPTO_CURVE_BP512R1)
 static const uint8_t BRAINPOOL_P_H[] = {
     0x01
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
 static const uint8_t BRAINPOOL_P256R1_P[] = {
     0xa9, 0xfb, 0x57, 0xdb, 0xa1, 0xee, 0xa9, 0xbc, 0x3e, 0x66, 0x0a, 0x90, 0x9d, 0x83, 0x8d, 0x72,
     0x6e, 0x3b, 0xf6, 0x23, 0xd5, 0x26, 0x20, 0x28, 0x20, 0x13, 0x48, 0x1d, 0x1f, 0x6e, 0x53, 0x77
@@ -222,7 +237,9 @@ static const uint8_t BRAINPOOL_P256R1_N[] = {
     0xa9, 0xfb, 0x57, 0xdb, 0xa1, 0xee, 0xa9, 0xbc, 0x3e, 0x66, 0x0a, 0x90, 0x9d, 0x83, 0x8d, 0x71,
     0x8c, 0x39, 0x7a, 0xa3, 0xb5, 0x61, 0xa6, 0xf7, 0x90, 0x1e, 0x0e, 0x82, 0x97, 0x48, 0x56, 0xa7
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
 static const uint8_t BRAINPOOL_P384R1_P[] = {
     0x8c, 0xb9, 0x1e, 0x82, 0xa3, 0x38, 0x6d, 0x28, 0x0f, 0x5d, 0x6f, 0x7e, 0x50, 0xe6, 0x41, 0xdf,
     0x15, 0x2f, 0x71, 0x09, 0xed, 0x54, 0x56, 0xb4, 0x12, 0xb1, 0xda, 0x19, 0x7f, 0xb7, 0x11, 0x23,
@@ -258,7 +275,9 @@ static const uint8_t BRAINPOOL_P384R1_N[] = {
     0x15, 0x2f, 0x71, 0x09, 0xed, 0x54, 0x56, 0xb3, 0x1f, 0x16, 0x6e, 0x6c, 0xac, 0x04, 0x25, 0xa7,
     0xcf, 0x3a, 0xb6, 0xaf, 0x6b, 0x7f, 0xc3, 0x10, 0x3b, 0x88, 0x32, 0x02, 0xe9, 0x04, 0x65, 0x65
 };
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_BP512R1
 static const uint8_t BRAINPOOL_P512R1_P[] = {
     0xaa, 0xdd, 0x9d, 0xb8, 0xdb, 0xe9, 0xc4, 0x8b, 0x3f, 0xd4, 0xe6, 0xae, 0x33, 0xc9, 0xfc, 0x07,
     0xcb, 0x30, 0x8d, 0xb3, 0xb3, 0xc9, 0xd2, 0x0e, 0xd6, 0x63, 0x9c, 0xca, 0x70, 0x33, 0x08, 0x71,
@@ -300,8 +319,9 @@ static const uint8_t BRAINPOOL_P512R1_N[] = {
     0x55, 0x3e, 0x5c, 0x41, 0x4c, 0xa9, 0x26, 0x19, 0x41, 0x86, 0x61, 0x19, 0x7f, 0xac, 0x10, 0x47,
     0x1d, 0xb1, 0xd3, 0x81, 0x08, 0x5d, 0xda, 0xdd, 0xb5, 0x87, 0x96, 0x82, 0x9c, 0xa9, 0x00, 0x69
 };
+#endif
 
-#ifdef HITLS_CRYPTO_SM2
+#ifdef HITLS_CRYPTO_CURVE_SM2
 static const uint8_t NIST_SM2_P[] = {
     0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
@@ -333,6 +353,9 @@ static const uint8_t NIST_SM2_N[] = {
 };
 #endif
 
+#if defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP256) || \
+    defined(HITLS_CRYPTO_CURVE_NISTP384) || defined(HITLS_CRYPTO_CURVE_NISTP521) || \
+    defined(HITLS_CRYPTO_CURVE_SM2)
 #define CRYPT_CURVE_PARA_DECLARE(name)              \
     static const CURVE_Para paraNist##name = {      \
         .p.data = NIST_##name##_P,                  \
@@ -350,7 +373,9 @@ static const uint8_t NIST_SM2_N[] = {
         .y.data = NIST_##name##_Y,                  \
         .y.dataLen = sizeof(NIST_##name##_Y)        \
     }
+#endif
 
+#if defined(HITLS_CRYPTO_CURVE_BP256R1) || defined(HITLS_CRYPTO_CURVE_BP384R1) || defined(HITLS_CRYPTO_CURVE_BP512R1)
 #define CRYPT_CURVE_BRAINPOOL_PARA_DECLARE(name)       \
     static const CURVE_Para paraBrainpool##name = {    \
         .p.data = BRAINPOOL_##name##_P,                \
@@ -368,16 +393,31 @@ static const uint8_t NIST_SM2_N[] = {
         .y.data = BRAINPOOL_##name##_Y,                \
         .y.dataLen = sizeof(BRAINPOOL_##name##_Y)      \
     }
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_NISTP224
 CRYPT_CURVE_PARA_DECLARE(P224);
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
 CRYPT_CURVE_PARA_DECLARE(P256);
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
 CRYPT_CURVE_PARA_DECLARE(P384);
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
 CRYPT_CURVE_PARA_DECLARE(P521);
+#endif
 
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
 CRYPT_CURVE_BRAINPOOL_PARA_DECLARE(P256R1);
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
 CRYPT_CURVE_BRAINPOOL_PARA_DECLARE(P384R1);
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP512R1
 CRYPT_CURVE_BRAINPOOL_PARA_DECLARE(P512R1);
-#ifdef HITLS_CRYPTO_SM2
+#endif
+#ifdef HITLS_CRYPTO_CURVE_SM2
 CRYPT_CURVE_PARA_DECLARE(SM2);
 #endif
 
@@ -387,14 +427,28 @@ typedef struct {
 } CURVE_ParaMap;
 
 static const CURVE_ParaMap CURVE_PARAS[] = {
+#ifdef HITLS_CRYPTO_CURVE_NISTP224
     { CRYPT_ECC_NISTP224, &paraNistP224 },
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
     { CRYPT_ECC_NISTP256, &paraNistP256 },
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
     { CRYPT_ECC_NISTP384, &paraNistP384 },
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
     { CRYPT_ECC_NISTP521, &paraNistP521 },
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
     { CRYPT_ECC_BRAINPOOLP256R1, &paraBrainpoolP256R1 },
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
     { CRYPT_ECC_BRAINPOOLP384R1, &paraBrainpoolP384R1 },
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP512R1
     { CRYPT_ECC_BRAINPOOLP512R1, &paraBrainpoolP512R1 },
-#ifdef HITLS_CRYPTO_SM2
+#endif
+#ifdef HITLS_CRYPTO_CURVE_SM2
     { CRYPT_ECC_SM2, &paraNistSM2 },
 #endif
 };
@@ -406,7 +460,27 @@ static const CURVE_Para *GetCurvePara(CRYPT_PKEY_ParaId id)
             return CURVE_PARAS[i].curvePara;
         }
     }
+    BSL_ERR_PUSH_ERROR(CRYPT_ECDH_ERR_UNSUPPORT_CURVE_TYPE);
     return NULL;
+}
+
+static int32_t InitMontPara(ECC_Para *para)
+{
+    if (para->method->bnMontEnc == NULL) {
+        return CRYPT_SUCCESS;
+    }
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    para->montP = BN_MontCreate(para->p);
+    if (para->montP == NULL || opt == NULL) {
+        BN_OptimizerDestroy(opt); // The montP is freed by the caller.
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret;
+    GOTO_ERR_IF(para->method->bnMontEnc(para->a, para->montP, opt, false), ret);
+    GOTO_ERR_IF(para->method->bnMontEnc(para->b, para->montP, opt, false), ret);
+ERR:
+    BN_OptimizerDestroy(opt);
+    return ret;
 }
 
 ECC_Para *ECC_NewPara(CRYPT_PKEY_ParaId id)
@@ -427,13 +501,13 @@ ECC_Para *ECC_NewPara(CRYPT_PKEY_ParaId id)
     }
     (void)memset_s(para, sizeof(ECC_Para), 0, sizeof(ECC_Para));
     para->method = method;
-    uint32_t bits = curve->p.dataLen * 8;
+    uint32_t bits = curve->p.dataLen * 8; // bits = bytes * 8
     para->id = id;
     para->p = BN_Create(bits);
     para->a = BN_Create(bits);
     para->b = BN_Create(bits);
     para->n = BN_Create(bits);
-    para->h = BN_Create(bits);
+    para->h = BN_Create(1); // The cofactor is usually 1.
     para->x = BN_Create(bits);
     para->y = BN_Create(bits);
 
@@ -451,6 +525,7 @@ ECC_Para *ECC_NewPara(CRYPT_PKEY_ParaId id)
     GOTO_ERR_IF(BN_Bin2Bn(para->h, curve->h.data, curve->h.dataLen), ret);
     GOTO_ERR_IF(BN_Bin2Bn(para->x, curve->x.data, curve->x.dataLen), ret);
     GOTO_ERR_IF(BN_Bin2Bn(para->y, curve->y.data, curve->y.dataLen), ret);
+    GOTO_ERR_IF(InitMontPara(para), ret);
     return para;
 ERR:
     ECC_FreePara(para);
@@ -578,35 +653,41 @@ int32_t ECC_GetPara(const ECC_Pkey *pkey, BSL_Param *eccPara)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = GetEccParam(pkey->para->a, eccPara, CRYPT_PARAM_EC_A);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    BN_BigNum *paraA = BN_Dup(pkey->para->a);
+    BN_BigNum *paraB = BN_Dup(pkey->para->b);
+    if (paraA == NULL || paraB == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto ERR;
     }
-    ret = GetEccParam(pkey->para->b, eccPara, CRYPT_PARAM_EC_B);
+    if (pkey->para->method->bnMontDec != NULL) {
+        pkey->para->method->bnMontDec(paraA, pkey->para->montP);
+        pkey->para->method->bnMontDec(paraB, pkey->para->montP);
+    }
+    ret = GetEccParam(paraA, eccPara, CRYPT_PARAM_EC_A);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
+    }
+    ret = GetEccParam(paraB, eccPara, CRYPT_PARAM_EC_B);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
     }
     ret = GetEccParam(pkey->para->n, eccPara, CRYPT_PARAM_EC_N);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     ret = GetEccParam(pkey->para->h, eccPara, CRYPT_PARAM_EC_H);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     ret = GetEccParam(pkey->para->x, eccPara, CRYPT_PARAM_EC_X);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     ret = GetEccParam(pkey->para->y, eccPara, CRYPT_PARAM_EC_Y);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
+ERR:
+    BN_Destroy(paraA);
+    BN_Destroy(paraB);
     return ret;
 }
 
@@ -627,7 +708,8 @@ void ECC_FreePara(ECC_Para *para)
         // clear pre-computation table
         ECC_FreePoint(para->tableG[i]);
     }
-    BSL_SAL_FREE(para);
+    BN_MontDestroy(para->montP);
+    BSL_SAL_Free(para);
 }
 
 

@@ -17,8 +17,8 @@
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_CFB)
 
 #include "bsl_err_internal.h"
-#include "crypt_errno.h"
 #include "crypt_sm4.h"
+#include "crypt_errno.h"
 #include "crypt_modes_cfb.h"
 #include "modes_local.h"
 #include "securec.h"
@@ -54,6 +54,7 @@ int32_t SM4_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t key
 {
     int32_t ret;
     if (ivLen != modeCtx->cfbCtx.modeCtx.blockSize) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
         return CRYPT_MODES_IVLEN_ERROR;
     }
 

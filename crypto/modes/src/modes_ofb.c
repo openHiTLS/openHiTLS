@@ -32,7 +32,6 @@ int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *
 
     int32_t ret;
     const uint8_t *input = in;
-    uint8_t *tmp = ctx->buf;
     uint32_t blockSize = ctx->blockSize;
     uint32_t left = len;
     uint8_t *output = out;
@@ -47,25 +46,17 @@ int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *
 
     while (left > 0) {
         // Encrypt the IV.
-        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, tmp, blockSize);
+        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, ctx->iv, blockSize);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-
-        // Update the IV.
-        if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, tmp, blockSize) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
-
         if (left >= blockSize) {
-            /* Plaintext XOR IV. BlockSize must be an integer multiple of 4 bytes. */
-            DATA32_XOR(input, tmp, output, blockSize);
+            DATA32_XOR(input, ctx->iv, output, blockSize);
             UPDATE_VALUES(left, input, output, blockSize);
         } else {
             for (i = 0; i < left; i++) {
-                output[i] = input[i] ^ tmp[i];
+                output[i] = input[i] ^ ctx->iv[i];
             }
             ctx->offset = (uint8_t)left;
             left = 0;
@@ -137,7 +128,7 @@ void MODES_OFB_FreeCtx(MODES_CipherCtx *modeCtx)
 }
 
 int32_t MODES_OFB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
     (void) param;
     if (modeCtx == NULL) {
@@ -146,7 +137,11 @@ int32_t MODES_OFB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_OFB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_OFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -160,7 +155,11 @@ int32_t MODES_OFB_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_OFB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_OFB_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_OFB_Update(modeCtx, in, inLen, out, outLen);
     }

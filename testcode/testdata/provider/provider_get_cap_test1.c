@@ -195,10 +195,10 @@ int32_t TestEccCtrl(TestEccKeyCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
         case CRYPT_CTRL_GET_SECBITS:
             *((uint32_t *)val) = ctx->paraId == BSL_CID_SECP384R1 ? 128 : 1024;
             break;
-        case CRYPT_CTRL_GET_PARAM_ID:
+        case CRYPT_CTRL_GET_PARA_ID:
             *((int32_t *)val) = ctx->paraId;
             break;
-        case CRYPT_CTRL_SET_PARAM_BY_ID:
+        case CRYPT_CTRL_SET_PARA_BY_ID:
             if (*((int32_t *)val) != BSL_CID_SECP384R1 && *((int32_t *)val) != NEW_PARA_ALGID) {
                 return CRYPT_INVALID_ARG;
             }
