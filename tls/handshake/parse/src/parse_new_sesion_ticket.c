@@ -110,13 +110,13 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
     }
 
     while (*(pkt.bufOffset) < pkt.bufLen) {
-        uint16_t extMsgType = HS_EX_TYPE_END;
         uint32_t extMsgLen = 0u;
-
+        uint16_t extMsgType = HS_EX_TYPE_END;
         ret = ParseExHeader(pkt.ctx, &pkt.buf[*pkt.bufOffset], pkt.bufLen - *pkt.bufOffset, &extMsgType, &extMsgLen);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+        *pkt.bufOffset += HS_EX_HEADER_LEN;
 
         if (pkt.bufLen - *(pkt.bufOffset) >= extMsgLen) {
             uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);

@@ -340,7 +340,6 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_SUPPORTED_GROUPS:
             return HITLS_SUCCESS;
 #endif /* HITLS_TLS_PROTO_TLS13 */
-
         default:
             break;
     }
