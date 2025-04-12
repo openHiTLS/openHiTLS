@@ -1181,6 +1181,8 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     uint32_t offset = 0u;
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = HS_GetVersion(ctx);
+    uint32_t len = 0;
+    uint32_t context = 0;
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
     bool isTls13 = Tls13NeedPack(ctx, version);
 #endif /* HITLS_TLS_PROTO_TLS13 */
@@ -1225,11 +1227,6 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         { EXTENSION_MSG(HS_EX_TYPE_PRE_SHARED_KEY, IsNeedPreSharedKey(ctx), PackServerPreSharedKey) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
     };
-
-    uint32_t len = 0;
-    isHrrKeyshare = IsHrrKeyShare(ctx);
-    isTls13 = Tls13NeedPack(ctx, version);
-    uint32_t context = 0;
 
     if (isTls13) {
         if (isHrrKeyshare) {
