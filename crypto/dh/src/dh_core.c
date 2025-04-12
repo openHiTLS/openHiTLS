@@ -900,6 +900,31 @@ uint32_t CRYPT_DH_GetBits(const CRYPT_DH_Ctx *ctx)
     return BN_Bits(ctx->para->p);
 }
 
+static uint32_t CRYPT_DH_GetPrvKeyLen(const CRYPT_DH_Ctx *ctx)
+{
+    return BN_Bytes(ctx->x);
+}
+
+static uint32_t CRYPT_DH_GetPubKeyLen(const CRYPT_DH_Ctx *ctx)
+{
+    if (ctx->para != NULL) {
+        return BN_Bytes(ctx->para->p);
+    }
+    if (ctx->y != NULL) {
+        return BN_Bytes(ctx->y);
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+    return 0;
+}
+
+static uint32_t CRYPT_DH_GetSharedKeyLen(const CRYPT_DH_Ctx *ctx)
+{
+    if (ctx->para != NULL) {
+        return BN_Bytes(ctx->para->p);
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+    return 0;
+}
 
 int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
 {
@@ -951,13 +976,19 @@ int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
-        case CRYPT_CTRL_GET_PARAM_ID:
+        case CRYPT_CTRL_GET_PARA_ID:
             return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetParaId, val, len);
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetBits, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetSecBits, val, len);
-        case CRYPT_CTRL_SET_PARAM_BY_ID:
+        case CRYPT_CTRL_GET_PUBKEY_LEN:
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DH_GetPubKeyLen);
+        case CRYPT_CTRL_GET_PRVKEY_LEN:
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DH_GetPrvKeyLen);
+        case CRYPT_CTRL_GET_SHARED_KEY_LEN:
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DH_GetSharedKeyLen);
+        case CRYPT_CTRL_SET_PARA_BY_ID:
             return CRYPT_DH_SetParamById(ctx, *(CRYPT_PKEY_ParaId *)val);
         case CRYPT_CTRL_UP_REFERENCES:
             if (val == NULL || len != (uint32_t)sizeof(int)) {
@@ -987,9 +1018,9 @@ int32_t CRYPT_DH_GetSecBits(const CRYPT_DH_Ctx *ctx)
         return 0;
     }
     if (ctx->para->q == NULL) {
-        return BN_SecBit(BN_Bits(ctx->para->p), -1);
+        return BN_SecBits(BN_Bits(ctx->para->p), -1);
     }
-    return BN_SecBit(BN_Bits(ctx->para->p), BN_Bits(ctx->para->q));
+    return BN_SecBits(BN_Bits(ctx->para->p), BN_Bits(ctx->para->q));
 }
 
 #endif /* HITLS_CRYPTO_DH */

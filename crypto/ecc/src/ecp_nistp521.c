@@ -24,9 +24,11 @@
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "ecc_utils.h"
+#include "bsl_util_internal.h"
 
-typedef __uint128_t uint128_t;
-
+#ifndef __SIZEOF_INT128__
+#error "This nistp521 implementation require the compiler support 128-bits integer."
+#endif
 
 #define FELEM_BITS          521
 /* Each element of a BigNum array is carried by 2 ^ 58 */

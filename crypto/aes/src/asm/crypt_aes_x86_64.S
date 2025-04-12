@@ -915,7 +915,7 @@ CRYPT_AES_Encrypt:
     aesenc  XM1, XM0
 
     cmpl $10,ROUNDS
-    je  .aesenc_128
+    je  .Laesenc_128
 
     movdqu 160(ARG1), XM1
     aesenc  XM1, XM0
@@ -924,7 +924,7 @@ CRYPT_AES_Encrypt:
     aesenc  XM1, XM0
 
     cmpl $12,ROUNDS
-    je  .aesenc_192
+    je  .Laesenc_192
 
     movdqu 192(ARG1), XM1
     aesenc  XM1, XM0
@@ -933,23 +933,23 @@ CRYPT_AES_Encrypt:
     aesenc  XM1, XM0
 
     cmpl $14,ROUNDS
-    je  .aesenc_256
+    je  .Laesenc_256
 
-.aesenc_128:
+.Laesenc_128:
     movdqu 160(ARG1), XM1
     aesenclast XM1, XM0
-    jmp  .aesenc_end
+    jmp  .Laesenc_end
 
-.aesenc_192:
+.Laesenc_192:
     movdqu 192(ARG1), XM1
     aesenclast XM1, XM0
-    jmp  .aesenc_end
+    jmp  .Laesenc_end
 
-.aesenc_256:
+.Laesenc_256:
     movdqu 224(ARG1), XM1
     aesenclast XM1, XM0
 
-.aesenc_end:
+.Laesenc_end:
     vpxor XM1, XM1, XM1
     movdqu XM0,(ARG3)
     vpxor XM0, XM0, XM0

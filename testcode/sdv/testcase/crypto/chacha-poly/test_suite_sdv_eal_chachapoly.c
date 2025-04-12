@@ -546,7 +546,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, dataLen, out, &outLen) == CRYPT_SUCCESS);
 
     outLen = sizeof(out);
-    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherFinal(ctx, out, &outLen) != CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);

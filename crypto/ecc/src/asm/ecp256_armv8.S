@@ -1,12 +1,28 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
 
+#include "crypt_arm.h"
 #include "ecp256_pre_comp_table.s"
 
 .arch   armv8-a+crypto
 .file   "ecp256_armv8.S"
-.text
 
+.section .rodata
 .align  4
 .Lpoly:         // P
 .quad   0xffffffffffffffff,0x00000000ffffffff,0x0000000000000000,0xffffffff00000001
@@ -24,30 +40,33 @@ Initial z is not set to 1
 0000000300000000, 00000001FFFFFFFE, FFFFFFFD00000002, FFFFFFFE00000003
 */
 
+.text
 .globl  ECP256_GetPreCompTable
 .type   ECP256_GetPreCompTable,%function
 .align  4
 ECP256_GetPreCompTable:
-.inst   0xd503233f
+AARCH64_PACIASP
     adrp x0, g_preCompTable
     add	x0, x0, :lo12:g_preCompTable
+AARCH64_AUTIASP
     ret
-.inst   0xd50323bf
 .size    ECP256_GetPreCompTable,.-ECP256_GetPreCompTable
 
 .globl  ECP256_FromMont
 .type   ECP256_FromMont,%function
 .align  4
 ECP256_FromMont:
-    .inst   0xd503233f
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     add     x29, sp , #0
     stp     x19, x20, [sp, #16]
 
     ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1, #16]
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
+    adrp    x14, .Lpoly+8
+    add x14,x14,:lo12:.Lpoly+8
+    ldr x12,[x14]
+    ldr x13,[x14,#16]
     adrp    x2, .Lone // &bp[0]
     add	    x2, x2, :lo12:.Lone
 
@@ -55,35 +74,14 @@ ECP256_FromMont:
 
     ldp     x19, x20, [sp , #16]
     ldp     x29, x30, [sp], #32
-    .inst   0xd50323bf
+AARCH64_AUTIASP
     ret
 .size    ECP256_FromMont,.-ECP256_FromMont
-
-.globl  ECP256_Add
-.type   ECP256_Add,%function
-.align  4
-ECP256_Add:
-    .inst   0xd503233f
-    stp     x29, x30, [sp, #-16]!
-    add     x29, sp , #0
-
-    ldp     x14, x15, [x1]
-    ldp     x16, x17, [x1, #16]
-    ldp     x8 , x9 , [x2]
-    ldp     x10, x11, [x2, #16]
-    ldr     x12, .Lpoly+8           // x12 = 0x00000000ffffffff
-    ldr     x13, .Lpoly+24          // x13 = 0xffffffff00000001
-
-    bl      ECP256_AddCore
-
-    ldp     x29, x30, [sp], #16
-    .inst   0xd50323bf
-    ret
-.size    ECP256_Add,.-ECP256_Add
 
 .type   ECP256_AddCore,%function
 .align  4
 ECP256_AddCore:
+AARCH64_PACIASP
     adds    x14, x14, x8            // ret = a+b
     adcs    x15, x15, x9
     adcs    x16, x16, x10
@@ -106,31 +104,10 @@ ECP256_AddCore:
 
     stp     x14, x15, [x0]
     stp     x16, x17, [x0, #16]
-
+AARCH64_AUTIASP
     ret
 .size    ECP256_AddCore,.-ECP256_AddCore
 
-.globl  ECP256_Sub
-.type   ECP256_Sub,%function
-.align  4
-ECP256_Sub:
-    .inst   0xd503233f
-    stp     x29, x30, [sp, #-16]!
-    add     x29, sp , #0
-
-    ldp     x14, x15, [x1]
-    ldp     x16, x17, [x1, #16]
-    ldp     x8 , x9 , [x2]
-    ldp     x10, x11, [x2, #16]
-    ldr     x12, .Lpoly+8           // x12 = 0x00000000ffffffff
-    ldr     x13, .Lpoly+24          // x13 = 0xffffffff00000001
-
-    bl      ECP256_SubCore1
-
-    ldp     x29, x30, [sp], #16
-    .inst   0xd50323bf
-    ret
-.size    ECP256_Sub,.-ECP256_Sub
 
 ///////////////////////////////////////
 // x14~x17 = a[0~3], x8~x11 = b[0~3] //
@@ -138,6 +115,7 @@ ECP256_Sub:
 .type   ECP256_SubCore1,%function
 .align  4
 ECP256_SubCore1:
+AARCH64_PACIASP
     subs    x14, x14, x8
     sbcs    x15, x15, x9
     sbcs    x16, x16, x10
@@ -158,13 +136,14 @@ ECP256_SubCore1:
     csel    x17, x17, x11, eq
     stp     x14, x15, [x0]
     stp     x16, x17, [x0, #16]
-
+AARCH64_AUTIASP
     ret
 .size   ECP256_SubCore1,.-ECP256_SubCore1
 
 .type   ECP256_SubCore2,%function
 .align  4
 ECP256_SubCore2:
+AARCH64_PACIASP
     subs    x14, x8 , x14
     sbcs    x15, x9 , x15
     sbcs    x16, x10, x16
@@ -185,33 +164,15 @@ ECP256_SubCore2:
     csel    x17, x17, x11, eq
     stp     x14, x15, [x0]
     stp     x16, x17, [x0, #16]
-
+AARCH64_AUTIASP
     ret
 .size   ECP256_SubCore2,.-ECP256_SubCore2
 
-.globl  ECP256_DivBy2
-.type   ECP256_DivBy2,%function
-.align  4
-ECP256_DivBy2:
-    .inst   0xd503233f
-    stp     x29, x30, [sp, #-16]!
-    add     x29, sp , #0
-
-    ldp     x14, x15, [x1]
-    ldp     x16, x17, [x1, #16]
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
-
-    bl      ECP256_DivBy2Core
-
-    ldp     x29, x30, [sp], #16
-    .inst   0xd50323bf
-    ret
-.size    ECP256_DivBy2,.-ECP256_DivBy2
 
 .type   ECP256_DivBy2Core,%function
 .align  4
 ECP256_DivBy2Core:
+AARCH64_PACIASP
     // a+p
     subs    x8 , x14, #1            // x8  = x14 + 0xffffffffffffffff = x14 - 1
     adcs    x9 , x15, x12           // x9  = x15 + 0x00000000ffffffff
@@ -239,6 +200,7 @@ ECP256_DivBy2Core:
     orr     x17, x17, x1 , lsl#63   // The most significant bit of the highest block is x1.
     stp     x14, x15, [x0]
     stp     x16, x17, [x0, #16]
+AARCH64_AUTIASP
     ret
 .size    ECP256_DivBy2Core,.-ECP256_DivBy2Core
 
@@ -246,7 +208,7 @@ ECP256_DivBy2Core:
 .type   ECP256_Neg,%function
 .align  4
 ECP256_Neg:
-    .inst   0xd503233f              // Paciasp.
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
 
@@ -258,82 +220,23 @@ ECP256_Neg:
     mov     x10, xzr
     mov     x11, xzr
 
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
+    adrp    x7, .Lpoly+8
+    add x7,x7,:lo12:.Lpoly+8
+    ldr x12,[x7]
+    ldr x13,[x7,#16]
     // -a = 0 - a
     bl      ECP256_SubCore2
 
     ldp     x29, x30, [sp], #16
-    .inst   0xd50323bf        // Autiasp.
+AARCH64_AUTIASP
     ret
 .size    ECP256_Neg,.-ECP256_Neg
 
-.globl  ECP256_MulBy2
-.type   ECP256_MulBy2,%function
-.align  4
-ECP256_MulBy2:
-    .inst   0xd503233f
-    stp     x29, x30, [sp,#-16]!
-    add     x29, sp , #0
-
-    ldp     x14, x15, [x1]
-    ldp     x16, x17, [x1,#16]
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
-    mov     x8 , x14
-    mov     x9 , x15
-    mov     x10, x16
-    mov     x11, x17
-
-    bl      ECP256_AddCore    // ret = a+a    // 2*a
-
-    ldp     x29, x30, [sp], #16
-    .inst   0xd50323bf
-    ret
-.size   ECP256_MulBy2,.-ECP256_MulBy2
-
-.globl  ECP256_MulBy3
-.type   ECP256_MulBy3,%function
-.align  4
-ECP256_MulBy3:
-    .inst   0xd503233f
-    stp     x29, x30, [sp, #-16]!
-    add     x29, sp , #0
-
-    ldp     x14, x15, [x1]
-    ldp     x16, x17, [x1, #16]
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
-    // Backup, used for the second addition, to reduce the number of reads from the memory.
-    mov     x8 , x14
-    mov     x9 , x15
-    mov     x10, x16
-    mov     x11, x17
-
-    mov     x4 , x14
-    mov     x5 , x15
-    mov     x6 , x16
-    mov     x7 , x17
-
-    // x14~x17 + x8~x11
-    bl      ECP256_AddCore      // 2*a = a + a
-
-    mov     x8 , x4
-    mov     x9 , x5
-    mov     x10, x6
-    mov     x11, x7
-
-    // x14~x17 + x8~x11
-    bl      ECP256_AddCore      // 3*a = 2*a + a
-
-    ldp     x29, x30, [sp], #16
-    .inst   0xd50323bf
-    ret
-.size    ECP256_MulBy3,.-ECP256_MulBy3
 
 .type   ECP256_MulCore,%function
 .align  4
 ECP256_MulCore:
+AARCH64_PACIASP
     ldr     x3 , [x2]               // b[0]
 
     mul     x14, x4 , x3
@@ -496,7 +399,7 @@ ECP256_MulCore:
 
     stp     x14, x15, [x0]
     stp     x16, x17, [x0, #8*2]
-
+AARCH64_AUTIASP
     ret
 .size   ECP256_MulCore, .-ECP256_MulCore
 
@@ -504,6 +407,7 @@ ECP256_MulCore:
 .type   ECP256_SqrCore,%function
 .align  4
 ECP256_SqrCore:
+AARCH64_PACIASP
 /******************************************
     x7   x1   x20  x19  x17  x16  x15  x14
                              h0*1 l0*1
@@ -633,7 +537,7 @@ ECP256_SqrCore:
 
     stp     x14, x15, [x0]
     stp     x16, x17, [x0, #16]
-
+AARCH64_AUTIASP
     ret
 .size   ECP256_SqrCore,.-ECP256_SqrCore
 
@@ -641,21 +545,24 @@ ECP256_SqrCore:
 .type   ECP256_Mul,%function
 .align  4
 ECP256_Mul:
-    .inst   0xd503233f
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     add     x29, sp , #0
     stp     x19, x20, [sp, #16]
 
     ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1,#16]
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
+
+    adrp    x3, .Lpoly+8
+    add x3,x3,:lo12:.Lpoly+8
+    ldr x12,[x3]
+    ldr x13,[x3,#16]
 
     bl      ECP256_MulCore
 
     ldp     x19, x20, [sp , #16]
     ldp     x29, x30, [sp], #32
-    .inst   0xd50323bf
+AARCH64_AUTIASP
     ret
 .size   ECP256_Mul,.-ECP256_Mul
 
@@ -663,21 +570,23 @@ ECP256_Mul:
 .type   ECP256_Sqr,%function
 .align  4
 ECP256_Sqr:
-    .inst   0xd503233f
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     add     x29, sp , #0
     stp     x19, x20, [sp, #16]
 
     ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1, #16]
-    ldr     x12, .Lpoly+8
-    ldr     x13, .Lpoly+24
+    adrp    x3, .Lpoly+8
+    add x3,x3,:lo12:.Lpoly+8
+    ldr x12,[x3]
+    ldr x13,[x3,#16]
 
     bl      ECP256_SqrCore
 
     ldp     x19, x20, [sp , #16]
     ldp     x29, x30, [sp], #32
-    .inst   0xd50323bf
+AARCH64_AUTIASP
     ret
 .size   ECP256_Sqr,.-ECP256_Sqr
 
@@ -685,7 +594,7 @@ ECP256_Sqr:
 .type   ECP256_AddAffine,%function
 .align  5
 ECP256_AddAffine:
-    .inst   0xd503233f                  // paciasp
+AARCH64_PACIASP
 
     stp     x29, x30, [sp, #-80]!
     add     x29, sp , #0
@@ -704,8 +613,11 @@ ECP256_AddAffine:
     mov     x22, x1                     // CRYPT_P256_Point *a
     mov     x23, x2                     // CRYPT_P256_AffinePoint *b
 
-    ldr     x12, .Lpoly+8               // p[1]
-    ldr     x13, .Lpoly+24              // p[3]
+
+    adrp    x14, .Lpoly+8               // p[1]
+    add x14,x14,:lo12:.Lpoly+8
+    ldr x12,[x14]                       // p[3]
+    ldr x13,[x14,#16]
 
 
     ldp     x4, x5, [x1, #64]           // x1+64     = &(a->z[0]), a->z[0] is marked as z1[0]
@@ -827,20 +739,20 @@ ECP256_AddAffine:
     // x14~x17 + x8~x11
     bl      ECP256_AddCore        // hsqr = 2 * u2
 
-    // x14~x17 saves hsqr, so sub_morf is called.
+    // x14~x17 saves hsqr, so ECP256_SubCore2 is called.
     ldp     x8 , x9 , [sp, #32*7]       // Rsqr = sp[32*7]
     ldp     x10, x11, [sp, #32*7+16]
     // x8~x11 - x14~x17
     add     x0 , sp , #0                // x0 points to res_x
     bl      ECP256_SubCore2       // res_x = Rsqr - hsqr
 
-    // x14~x17 save res_x, so call sub_from
+    // x14~x17 save res_x, so call ECP256_SubCore1
     ldp     x8 , x9 , [sp, #32*9]       // hcub = sp[32*9]
     ldp     x10, x11, [sp, #32*9+16]
     // x14~x17 - x8~x11
     bl      ECP256_SubCore1       // res_x = res_x - hcub
 
-    // x14~x17 save res_x, so call sub_morf
+    // x14~x17 save res_x, so call ECP256_SubCore2
     ldp     x8 , x9 , [sp, #32*4]       // u2 = sp[32*4]
     ldp     x10, x11, [sp, #32*4+16]
     add     x0 , sp , #32*1
@@ -945,7 +857,7 @@ ECP256_AddAffine:
     ldp     x23, x24, [x29, #48]
     ldp     x25, x26, [x29, #64]
     ldp     x29, x30, [sp], #80
-    .inst   0xd50323bf                  // autiasp
+AARCH64_AUTIASP
     ret
 .size   ECP256_AddAffine,.-ECP256_AddAffine
 
@@ -953,7 +865,7 @@ ECP256_AddAffine:
 .type   ECP256_PointAdd,%function
 .align  5
 ECP256_PointAdd:
-    .inst   0xd503233f                  // paciasp
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-96]!
     add     x29, sp , #0
     stp     x19, x20, [sp, #16]
@@ -964,8 +876,10 @@ ECP256_PointAdd:
     sub     sp , sp , #32*12            // Each coordinate is 256 bits, that is, 32 bytes,
                                         // and a space of 10 coordinates is applied for.
 
-    ldr     x12, .Lpoly+8               // p[1] = 0x00000000ffffffff, p[0] = -1, no need to read
-    ldr     x13, .Lpoly+24              // p[3] = 0xffffffff00000001, p[2] = 0 , no need to read
+    adrp    x14, .Lpoly+8               // p[1]
+    add x14,x14,:lo12:.Lpoly+8
+    ldr x12,[x14]                       // p[3]
+    ldr x13,[x14,#16]
 
     // Pointer to the initial backup input parameter.
     // x0 to x2 are used to transfer parameters when the interface is invoked.
@@ -1040,7 +954,7 @@ ECP256_PointAdd:
     bl      ECP256_MulCore        // s1 = y1 * z2^3
 
 
-    // x14 to x17 save the result of s1. Therefore, the sub_morf interface is selected.
+    // x14 to x17 save the result of s1. Therefore, the ECP256_SubCore2 interface is selected.
     ldp     x8 , x9 , [sp, #32*1]       // s2 = sp[32*1]
     ldp     x10, x11, [sp, #32*1+16]
     // x8~x11 - x14~x17
@@ -1064,7 +978,7 @@ ECP256_PointAdd:
     add     x0 , sp , #32*6             // u2 = sp[32*6]
     bl      ECP256_MulCore        // u2 = x2 * z1sqr
 
-    // x14 to x17 save the result of u2. Therefore, the sub_from interface is selected.
+    // x14 to x17 save the result of u2. Therefore, the ECP256_SubCore1 interface is selected.
     ldp     x8 , x9 , [sp, #32*5]       // u1 = sp[32*5]
     ldp     x10, x11, [sp, #32*5+16]
     // x14~x17 - x8~x11
@@ -1162,21 +1076,21 @@ ECP256_PointAdd:
     // x14~x17 + x8~x11
     bl      ECP256_AddCore        // hsqr = 2 * u2
 
-    // x14 to x17 save the hsqr result. Therefore, sub_morf is called.
+    // x14 to x17 save the hsqr result. Therefore, ECP256_SubCore2 is called.
     ldp     x8 , x9 , [sp]              // Rsqr = sp[0]
     ldp     x10, x11, [sp, #16]
     // x8~x11 - x14~x17
     add     x0 , sp , #32*9             // res_x = sp[32*9]
     bl      ECP256_SubCore2       // res_x = Rsqr - hsqr
 
-    // x14 to x17 exactly save the result of res_x, so sub_from is called.
+    // x14 to x17 exactly save the result of res_x, so ECP256_SubCore1 is called.
     ldp     x8 , x9 , [sp, #32*8]       // hcub = sp[32*8]
     ldp     x10, x11, [sp, #32*8+16]
     // x14~x17 - x8~11
     // The previous operation x0 also stores the address of res_x.
     bl      ECP256_SubCore1       // res_x = res_x - hcub
 
-    // x14 to x17 exactly save the result of res_x. Therefore, sub_morf is called.
+    // x14 to x17 exactly save the result of res_x. Therefore, ECP256_SubCore2 is called.
     ldp     x8 , x9 , [sp, #32*6]       // u2 = sp[0]
     ldp     x10, x11, [sp, #32*6+16]
     // x8~x11 - x14~x17
@@ -1195,7 +1109,7 @@ ECP256_PointAdd:
     ldp     x6 , x7 , [x0, #16]
     bl      ECP256_MulCore        // res_y = res_y * R
 
-    // x14 to x17 exactly save the result of res_y. Therefore, sub_from is called.
+    // x14 to x17 exactly save the result of res_y. Therefore, ECP256_SubCore1 is called.
     ldp     x8 , x9 , [sp, #32]         // s2 = sp[32*1]
     ldp     x10, x11, [sp, #32+16]
     // x14~x17 - x8~x11
@@ -1281,7 +1195,7 @@ ECP256_PointAdd:
     ldp     x25, x26, [x29, #64]
     ldp     x27, x28, [x29, #80]
     ldp     x29, x30, [sp], #96
-    .inst   0xd50323bf                  // Autiasp
+AARCH64_AUTIASP
     ret
 .size    ECP256_PointAdd,.-ECP256_PointAdd
 
@@ -1289,7 +1203,7 @@ ECP256_PointAdd:
 .type   ECP256_PointDouble,%function
 .align  5
 ECP256_PointDouble:
-    .inst   0xd503233f                  // Paciasp
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-96]!       // Why is 96 space given here? Only x19~x22 is stacked. Theoretically, only [sp, #-48] is required.
     add     x29, sp , #0                // Whether it is related to the Lpoint_double jump of the ecp_nistz256_point_add interface
     stp     x19, x20, [sp, #16]
@@ -1299,86 +1213,67 @@ ECP256_PointDouble:
 .Lpoint_double:
     ldp     x14, x15, [x1 , #32]        // a->y
     ldp     x16, x17, [x1 , #32+16]
-    ldr     x12 , .Lpoly+8              // p[1]
-    ldr     x13 , .Lpoly+24             // p[3]
-
     // Back up the initial input parameter pointer r, a.
     mov     x21, x0
     mov     x22, x1
+    adrp    x3, .Lpoly+8               // p[1]
+    add x3,x3,:lo12:.Lpoly+8
+    ldr x12,[x3]                       // p[3]
+    ldr x13,[x3,#16]
 
     mov     x8 , x14
     mov     x9 , x15
+    ldp     x4 , x5 , [x22, #64]        // a->z
     mov     x10, x16
     mov     x11, x17
+    ldp     x6 , x7 , [x22, #64+16]
     add     x0 , sp , #0                // s = sp[0]
     bl      ECP256_AddCore        // s = 2 * a->y
 
-    // x14 to x17 save the result of s. Calculate s^2 first.
-    mov     x4 , x14
-    mov     x5 , x15
-    mov     x6 , x16
-    mov     x7 , x17
-    add     x0 , sp , #0                // s = sp[0]
-    bl      ECP256_SqrCore        // s = s^2
-
-    ldp     x4 , x5 , [x22, #64]        // a->z
-    ldp     x6 , x7 , [x22, #64+16]
     add     x0 , sp , #32               // zsqr = sp[32*1]
     bl      ECP256_SqrCore        // zsqr = (a->z)^2
 
-    mov     x4 , x14
-    mov     x5 , x15
-    mov     x6 , x16
-    mov     x7 , x17
+    // x14 to x17 save the result of s. Calculate s^2 first.
+    ldp     x4 , x5 , [sp]
+    add     x0 , sp , #0                // s = sp[0]
+    ldp     x6 , x7 , [sp, #16]
+    bl      ECP256_SqrCore        // s = s^2
+
+    ldp     x14, x15, [sp, #32]             // a->x
     ldp     x8 , x9 , [x22]             // a->x
-    ldp     x10, x11, [x22, #16]
+    ldp     x16, x17, [sp, #32+16]
     add     x0 , sp , #64               // m = sp[32*2]
+    ldp     x10, x11, [x22, #16]
     bl      ECP256_AddCore        // m = a->x + zsqr
 
-    mov     x14, x4
-    mov     x15, x5
-    mov     x16, x6
-    mov     x17, x7
+    ldp     x14 , x15 , [sp, #32]             // a->x
     ldp     x8 , x9 , [x22]             // a->x
-    ldp     x10, x11, [x22, #16]
+    ldp     x16, x17, [sp, #32+16]
     add     x0 , sp , #32
+    ldp     x10, x11, [x22, #16]
     bl      ECP256_SubCore2       // zsqr = a->x - zsqr
 
     ldp     x4 , x5 , [x22, #64]        // a->z
     ldp     x6 , x7 , [x22, #64+16]
-    add     x2 , x22, #32               // a->y
     add     x0 , x21, #64               // res_z
+    add     x2 , x22, #32               // a->y
     bl      ECP256_MulCore        // res_z = a->z * a->y
 
     // x14 to x17 save the result of res_z.
     mov     x8 , x14
     mov     x9 , x15
+    ldp     x4 , x5 , [sp]              // s = sp[0]
     mov     x10, x16
     mov     x11, x17
+    ldp     x6 , x7 , [sp, #16]
     add     x0 , x21, #64               // res_z
     bl      ECP256_AddCore        // res_z = 2 * res_z
 
-    ldp     x4 , x5 , [sp]              // s = sp[0]
-    ldp     x6 , x7 , [sp, #16]
     add     x0 , x21, #32               // x0 points to res_y, that is r->y
     bl      ECP256_SqrCore        // res_y = s^2
 
     add     x0 , x21, #32
     bl      ECP256_DivBy2Core     // res_y = res_y / 2
-
-    ldp     x4 , x5 , [sp]              // s = sp[0]
-    ldp     x6 , x7 , [sp, #16]
-    add     x2 , x22, #0                // a->x
-    add     x0 , sp , #0                // s = sp[0]
-    bl      ECP256_MulCore        // s = s * a->x
-
-    // x14~x17 exactly saves the result of s
-    mov     x8 , x14
-    mov     x9 , x15
-    mov     x10, x16
-    mov     x11, x17
-    add     x0 , sp , #96               // tmp = sp[96]
-    bl      ECP256_AddCore        // tmp = 2 * s
 
     ldp     x4 , x5 , [sp, #64]         // m = sp[64]
     ldp     x6 , x7 , [sp, #64+16]
@@ -1403,11 +1298,23 @@ ECP256_PointDouble:
     mov     x11, x7
     bl      ECP256_AddCore        // m = 3 * m
 
+    ldp     x4 , x5 , [sp]              // s = sp[0]
+    add     x2 , x22, #0                // a->x
+    ldp     x6 , x7 , [sp, #16]
+    add     x0 , sp , #0                // s = sp[0]
+    bl      ECP256_MulCore        // s = s * a->x
+
+    // x14~x17 exactly saves the result of s
+    mov     x8 , x14
+    mov     x9 , x15
+    ldp     x4 , x5 , [sp, #64]
+    mov     x10, x16
+    mov     x11, x17
+    ldp     x6 , x7 , [sp, #64+16]
+    add     x0 , sp , #96               // tmp = sp[96]
+    bl      ECP256_AddCore        // tmp = 2 * s
+
     // x14~x17 exactly saves the result of m.
-    mov     x4 , x14
-    mov     x5 , x15
-    mov     x6 , x16
-    mov     x7 , x17
     add     x0 , x21, #0                // res_x = r->x
     bl      ECP256_SqrCore        // res_x = m^2
 
@@ -1416,7 +1323,7 @@ ECP256_PointDouble:
     ldp     x10, x11, [sp, #96+16]
     bl      ECP256_SubCore1       // res_x = res_x - tmp
 
-    // x14~x17 exactly saves the result of res_x, Therefore, sub_morf is invoked.
+    // x14~x17 exactly saves the result of res_x, Therefore, ECP256_SubCore2 is invoked.
     ldp     x8 , x9 , [sp]              // s = sp[0]
     ldp     x10, x11, [sp, #16]
     add     x0 , sp , #0
@@ -1430,7 +1337,7 @@ ECP256_PointDouble:
     add     x2 , sp , #64               // m = sp[64]
     bl      ECP256_MulCore        // s = s * m
 
-    // x14 to x17 just save the result of s, so call sub_from.
+    // x14 to x17 just save the result of s, so call ECP256_SubCore1.
     add     x0 , x21, #32               // x0 points to res_y
     ldp     x8 , x9 , [x0]              // res_y
     ldp     x10, x11, [x0, #16]
@@ -1440,7 +1347,7 @@ ECP256_PointDouble:
     ldp     x19, x20, [x29, #16]
     ldp     x21, x22, [x29, #32]
     ldp     x29, x30, [sp], #96
-    .inst    0xd50323bf                 // Autiasp
+AARCH64_AUTIASP
     ret
 .size    ECP256_PointDouble,.-ECP256_PointDouble
 
@@ -1448,6 +1355,7 @@ ECP256_PointDouble:
 .type   ECP256_OrdMul,%function
 .align  4
 ECP256_OrdMul:
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     add     x29, sp , #0
     stp     x19, x20, [sp, #16]
@@ -1689,6 +1597,7 @@ ECP256_OrdMul:
     ldp     x21, x22, [sp, #32]
     ldp     x23, x24, [sp, #48]
     ldr     x29, [sp], #64
+AARCH64_AUTIASP
     ret
 .size   ECP256_OrdMul,.-ECP256_OrdMul
 
@@ -1696,6 +1605,7 @@ ECP256_OrdMul:
 .type   ECP256_OrdSqr,%function
 .align  4
 ECP256_OrdSqr:
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     add     x29, sp , #0
     stp     x19, x20, [sp, #16]
@@ -1919,6 +1829,7 @@ ECP256_OrdSqr:
     ldp     x21, x22, [sp, #32]
     ldp     x23, x24, [sp, #48]
     ldr     x29, [sp], #64
+AARCH64_AUTIASP
     ret
 .size   ECP256_OrdSqr,.-ECP256_OrdSqr
 
@@ -1926,6 +1837,7 @@ ECP256_OrdSqr:
 .type   ECP256_Scatterw5,%function
 .align  4
 ECP256_Scatterw5:
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
 
@@ -1961,6 +1873,7 @@ ECP256_Scatterw5:
     str     x7 , [x0, #128*3-8]     // 8*16*3
 
     ldr     x29, [sp], #16
+AARCH64_AUTIASP
     ret
 .size   ECP256_Scatterw5,.-ECP256_Scatterw5
 
@@ -1968,6 +1881,7 @@ ECP256_Scatterw5:
 .type   ECP256_Gatherw5,%function
 .align  4
 ECP256_Gatherw5:
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
 
@@ -2021,6 +1935,7 @@ ECP256_Gatherw5:
     stp     x6 , x7 , [x0, #80]
 
     ldr     x29, [sp], #16
+AARCH64_AUTIASP
     ret
 .size   ECP256_Gatherw5,.-ECP256_Gatherw5
 
@@ -2028,6 +1943,7 @@ ECP256_Gatherw5:
 .type   ECP256_Scatterw7,%function
 .align  4
 ECP256_Scatterw7:
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
 
@@ -2058,6 +1974,7 @@ ECP256_Scatterw7:
     b.ne    .Lscatter_w7
 
     ldr    x29, [sp], #16
+AARCH64_AUTIASP
     ret
 .size   ECP256_Scatterw7,.-ECP256_Scatterw7
 
@@ -2066,6 +1983,7 @@ ECP256_Scatterw7:
 .type   ECP256_Gatherw7,%function
 .align  4
 ECP256_Gatherw7:
+AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
 
@@ -2116,6 +2034,7 @@ ECP256_Gatherw7:
     b.ne    .Lgather_w7
 
     ldr    x29,[sp],#16
+AARCH64_AUTIASP
     ret
 .size   ECP256_Gatherw7,.-ECP256_Gatherw7
 

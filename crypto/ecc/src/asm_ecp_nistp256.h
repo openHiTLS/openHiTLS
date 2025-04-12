@@ -40,7 +40,7 @@ typedef struct p256_pointaffine {
     Coord y;
 } P256_AffinePoint;
 
-#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE)
 
 typedef P256_AffinePoint ECP256_TableRow[64];
 
@@ -70,7 +70,7 @@ void ECP256_Gatherw5(P256_Point *point, const P256_Point *table, uint32_t index)
 
 void ECP256_Gatherw7(P256_AffinePoint *point, const P256_AffinePoint *table, uint32_t index);
 
-#endif /* defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL) */
+#endif /* HITLS_CRYPTO_CURVE_NISTP256_ASM && HITLS_CRYPTO_NIST_ECC_ACCELERATE */
 
 #ifdef __cplusplus
 }

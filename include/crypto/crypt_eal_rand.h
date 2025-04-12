@@ -34,6 +34,49 @@ extern "C" {
 #endif
 
 /**
+  * @ingroup crypt_eal_rand
+  * @brief rand generate callback
+  *
+  * rand[out] randomdata
+  * randLen[in] len
+  *
+  * @return  int32_t, defined by users.
+  */
+  typedef int32_t (*CRYPT_EAL_RandFunc)(uint8_t *rand, uint32_t randLen);
+
+  /**
+    * @ingroup crypt_eal_rand
+    * @brief set rand func callback
+    *
+    * func[in] rand func
+    *
+    * @return  void.
+    */
+  void CRYPT_EAL_SetRandCallback(CRYPT_EAL_RandFunc func);
+
+/**
+  * @ingroup crypt_eal_rand
+  * @brief rand generate callback
+  *
+  * ctx[in] ctx
+  * rand[out] randomdata
+  * randLen[in] len
+  *
+  * @return  int32_t, defined by users.
+  */
+typedef int32_t (*CRYPT_EAL_RandFuncEx)(void *ctx, uint8_t *rand, uint32_t randLen);
+
+/**
+  * @ingroup crypt_eal_rand
+  * @brief set rand func callback
+  *
+  * func[in] rand func
+  *
+  * @return  void.
+  */
+void CRYPT_EAL_SetRandCallbackEx(CRYPT_EAL_RandFuncEx func);
+
+/**
  * @ingroup crypt_eal_rand
  * @brief Random number initialization interface. This interface does not support multiple threads.
  *

@@ -184,9 +184,13 @@ static const uint32_t KBOX_3[] = {
 };
 
 #define KROUND(t, k0, k1, k2, k3, ck, sbox, rki) \
-    do {                                         \
-        ROUND(t, k0, k1, k2, k3, ck, sbox);      \
-        rki = k0;                                \
+    do {                                        \
+        (t) = (k1) ^ (k2) ^ (k3) ^ (ck);        \
+        (k0) ^= (sbox##_3)[((t) >> 24) & 0xff]; \
+        (k0) ^= (sbox##_2)[((t) >> 16) & 0xff]; \
+        (k0) ^= (sbox##_1)[((t) >> 8) & 0xff];  \
+        (k0) ^= (sbox##_0)[(t) & 0xff];         \
+        (rki) = (k0);                           \
     } while (0)
 
 /* Generate a round key */
@@ -206,16 +210,16 @@ int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen
     }
 
     if (keyLen != CRYPT_SM4_BLOCKSIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_KEYLEN_ERROR);
-        return CRYPT_SM4_KEYLEN_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
+        return CRYPT_SM4_ERR_KEY_LEN;
     }
 
     volatile uint32_t k0, k1, k2, k3;
     volatile uint32_t t;
-    k0 = GET_UINT32_BE(key, 0) ^ FK[0];
-    k1 = GET_UINT32_BE(key, 4) ^ FK[1];
-    k2 = GET_UINT32_BE(key, 8) ^ FK[2];
-    k3 = GET_UINT32_BE(key, 12) ^ FK[3];
+    k0 = GET_UINT32_BE(key, 0) ^ FK[0];     // k0: 4 bytes starting from the 0th index of the key⊕FK[0]
+    k1 = GET_UINT32_BE(key, 4) ^ FK[1];     // k1: 4 bytes starting from the 4th index of the key⊕FK[1]
+    k2 = GET_UINT32_BE(key, 8) ^ FK[2];     // k2: 4 bytes starting from the 8th index of the key⊕FK[2]
+    k3 = GET_UINT32_BE(key, 12) ^ FK[3];    // k3: 4 bytes starting from the 12th index of the key⊕FK[3]
     KROUND_FUNCTION(t, k0, k1, k2, k3, KBOX, ctx->rk);
     k0 = 0;
     k1 = 0;

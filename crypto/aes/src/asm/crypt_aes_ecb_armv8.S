@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_ECB)
 
+#include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
 .file    "crypt_aes_ecb_armv8.S"
@@ -83,7 +84,7 @@ RDK1    .req    v18
 .globl CRYPT_AES_ECB_Encrypt
 .type CRYPT_AES_ECB_Encrypt, %function
 CRYPT_AES_ECB_Encrypt:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     mov LTMP, LEN
 .Lecb_aesenc_start:
     cmp LTMP, #64
@@ -177,7 +178,7 @@ CRYPT_AES_ECB_Encrypt:
     mov x0, #0
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
-.inst 0xd50323bf  // Autiasp
+AARCH64_AUTIASP
     ret
 .size CRYPT_AES_ECB_Encrypt, .-CRYPT_AES_ECB_Encrypt
 
@@ -201,7 +202,7 @@ CRYPT_AES_ECB_Encrypt:
 .globl CRYPT_AES_ECB_Decrypt
 .type CRYPT_AES_ECB_Decrypt, %function
 CRYPT_AES_ECB_Decrypt:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     mov LTMP, LEN
 .Lecb_aesdec_start:
     cmp LTMP, #64
@@ -296,7 +297,7 @@ CRYPT_AES_ECB_Decrypt:
     mov x0, #0
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
-.inst 0xd50323bf  // Autiasp
+AARCH64_AUTIASP
     ret
 .size CRYPT_AES_ECB_Decrypt, .-CRYPT_AES_ECB_Decrypt
 

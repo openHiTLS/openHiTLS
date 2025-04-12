@@ -17,7 +17,6 @@
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_GCM)
 
 #include "crypt_modes_gcm.h"
-#include "crypt_errno.h"
 
 int32_t AES_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {

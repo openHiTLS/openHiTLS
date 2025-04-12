@@ -65,6 +65,8 @@ typedef enum {
     BSL_CID_AES256_CCM,
     BSL_CID_AES128_CCM8,
     BSL_CID_AES256_CCM8,
+	BSL_CID_AES128_XTS,
+    BSL_CID_AES256_XTS,
 
     // sm4
     BSL_CID_SM4_XTS = 116,
@@ -110,6 +112,23 @@ typedef enum {
     BSL_CID_ELGAMAL = 5301,         /**< identifies the Elgamal algorithm */
     BSL_CID_SLH_DSA = 5306,         /**< Identifies SLH-DSA algorithm */
 
+	BSL_CID_ML_KEM = 5401,         /**< identifies the KEM algorithm */
+    BSL_CID_HYBRID_KEM ,
+    BSL_CID_X25519_MLKEM512,
+    BSL_CID_X25519_MLKEM768,
+    BSL_CID_X25519_MLKEM1024,
+    BSL_CID_ECDH_NISTP256_MLKEM512,
+    BSL_CID_ECDH_NISTP256_MLKEM768 ,
+    BSL_CID_ECDH_NISTP256_MLKEM1024,
+    BSL_CID_ECDH_NISTP384_MLKEM512,
+    BSL_CID_ECDH_NISTP384_MLKEM768,
+    BSL_CID_ECDH_NISTP384_MLKEM1024,
+    BSL_CID_ECDH_NISTP521_MLKEM512,
+    BSL_CID_ECDH_NISTP521_MLKEM768,
+    BSL_CID_ECDH_NISTP521_MLKEM1024,
+
+    BSL_CID_ML_DSA = 5501,
+
     /* hash algorithm */
     BSL_CID_MD4 = 10001,            /**< identifies MD4 hash algorithm */
     BSL_CID_MD5,                    /**< identifies the MD5 hash algorithm */
@@ -141,6 +160,18 @@ typedef enum {
     BSL_CID_HMAC_SM3,               /**< identifies hmac with SM3 */
     BSL_CID_MAC_AEAD,
 
+	BSL_CID_CMAC_AES = 10601,       /**< identifies cmac with AES */
+    BSL_CID_CMAC_AES128,            /**< identifies cmac with AES128 */
+    BSL_CID_CMAC_AES192,            /**< identifies cmac with AES192 */
+    BSL_CID_CMAC_AES256,            /**< identifies cmac with AES256 */
+    BSL_CID_CMAC_SM4,               /**< identifies cmac with SM4 */
+    BSL_CID_CBC_MAC_SM4,            /**< identifies cbc mac with SM4 */
+    BSL_CID_GMAC_AES128,            /**< identifies gmac with AES128 */
+    BSL_CID_GMAC_AES192,            /**< identifies gmac with AES192 */
+    BSL_CID_GMAC_AES256,            /**< identifies gmac with AES256 */
+    BSL_CID_SIPHASH64,              /**< identifies siphash64 */
+    BSL_CID_SIPHASH128,             /**< identifies siphash128 */
+
     /* Random number algorithm */
     // DRBG
     BSL_CID_RAND_SHA1 = 11001,
@@ -159,6 +190,8 @@ typedef enum {
     BSL_CID_RAND_AES128_CTR_DF,
     BSL_CID_RAND_AES192_CTR_DF,
     BSL_CID_RAND_AES256_CTR_DF,
+    BSL_CID_RAND_SM3,
+    BSL_CID_RAND_SM4_CTR_DF,
 
     /* Key derivation algorithm */
     BSL_CID_SCRYPT = 11501,         /**< Identifieds Scrypt KDF algorithm */

@@ -30,10 +30,15 @@ int32_t AES_CTR_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    uint32_t offset = MODES_CTR_LastHandle(ctx, in, out, len);
-    uint32_t left = len - offset;
-    const uint8_t *tmpIn = in + offset;
-    uint8_t *tmpOut = out + offset;
+
+    uint32_t left = len;
+    const uint8_t *tmpIn = in;
+    uint8_t *tmpOut = out;
+    while ((ctx->offset != 0) && (left > 0)) {
+        *(tmpOut++) = ((*(tmpIn++)) ^ (ctx->buf[ctx->offset++]));
+        --left;
+        ctx->offset &= (uint8_t)(ctx->blockSize - 1);
+    }
 
     uint32_t blockSize = ctx->blockSize; // ctr supports only 16-byte block size
     uint32_t blocks, beCtr32;
@@ -56,16 +61,21 @@ int32_t AES_CTR_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint
             MODE_IncCounter(ctx->iv, blockSize - 4);
         }
     }
-    MODES_CTR_RemHandle(ctx, tmpIn, tmpOut, left);
+    if (left > 0) {
+        (void)ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->iv, ctx->buf, blockSize);
+        MODE_IncCounter(ctx->iv, ctx->blockSize);
+        ctx->offset = 0;
+        while ((left) > 0) {
+            tmpOut[ctx->offset] = (tmpIn[ctx->offset]) ^ (ctx->buf[ctx->offset]);
+            --left;
+            ++ctx->offset;
+        }
+    }
     return CRYPT_SUCCESS;
 }
 
 int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (modeCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     return MODES_CipherStreamProcess(AES_CTR_EncryptBlock, &modeCtx->commonCtx, in, inLen, out, outLen);
 }
 #endif

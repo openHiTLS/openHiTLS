@@ -14,11 +14,12 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE)
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "securec.h"
 #include "crypt_errno.h"
 #include "crypt_bn.h"
 #include "ecp_nistp256.h"
@@ -222,20 +223,19 @@ static void ECP256_EccPoint2P256Point(P256_Point *r, const ECC_Point *pt)
     ECP256_Mul(&(r->z), &(r->z), &g_rrModP);
 }
 
-int32_t ECP256_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
+int32_t ECP256_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
-    bool flag = (r == NULL || a == NULL || para == NULL);
-    if (flag) {
+    if (r == NULL || pt == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
-    if (para->id != CRYPT_ECC_NISTP256 || r->id != CRYPT_ECC_NISTP256 || a->id != CRYPT_ECC_NISTP256) {
+    if (para->id != CRYPT_ECC_NISTP256 || r->id != CRYPT_ECC_NISTP256 || pt->id != CRYPT_ECC_NISTP256) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
     P256_Point temp;
-    ECP256_EccPoint2P256Point(&temp, a);
+    ECP256_EccPoint2P256Point(&temp, pt);
     return ECP256_GetAffine(r, &temp);
 }
 
@@ -263,50 +263,40 @@ static uint32_t Recodew7(uint32_t in)
     return (data << 1) + (~sign & 1);
 }
 
-static void ECP256_CopyPoint(P256_Point *dst, const P256_Point *src)
-{
-    for (uint32_t i = 0; i < P256_SIZE; i++) {
-        dst->x.value[i] = src->x.value[i];
-        dst->y.value[i] = src->y.value[i];
-        dst->z.value[i] = src->z.value[i];
-    }
-}
-
 static void ECP256_PreCompWindow(P256_Point table[16], P256_Point *pt)
 {
-    P256_Point temp[5];
-    ECP256_CopyPoint(&temp[0], pt);
-    ECP256_Scatterw5(table, &temp[0], 1);             // Discretely save temp[0] to the 1st position in the table.
-    ECP256_PointDouble(&temp[1], &temp[0]);           // 2G
-    ECP256_Scatterw5(table, &temp[1], 2);             // Discretely save temp[1] to the 2nd position of the table.
-    ECP256_PointAdd(&temp[2], &temp[1], &temp[0]);    // temp[2] = 3G = 2G + G
-    ECP256_Scatterw5(table, &temp[2], 3);             // Discretely saves temp[2] to the 3rd position of the table.
-    ECP256_PointDouble(&temp[3], &temp[1]);           // temp[3] = 4G = 2G * 2
-    ECP256_Scatterw5(table, &temp[3], 4);             // Discretely save temp[3] to the 4th position in the table.
-    ECP256_PointAdd(&temp[4], &temp[3], &temp[0]);    // temp[4] = 5G = 4G + G = = temp[3] + temp[0]
-    ECP256_Scatterw5(table, &temp[4], 5);             // Discretely save temp[4] to the 5th position in the table.
-    ECP256_PointDouble(&temp[1], &temp[2]);           // temp[1] = 6G = 3G * 2
-    ECP256_Scatterw5(table, &temp[1], 6);             // Discretely save temp[1] to the 6th position in the table.
-    ECP256_PointAdd(&temp[2], &temp[1], &temp[0]);    // temp[2] = 7G = 6G + G
-    ECP256_Scatterw5(table, &temp[2], 7);             // Discretely save temp[2] to the 7th position in the table.
-    ECP256_PointDouble(&temp[3], &temp[3]);           // temp[3] = 8G = 4G * 2
-    ECP256_Scatterw5(table, &temp[3], 8);             // Discretely save temp[3] to the 8th position in the table.
-    ECP256_PointDouble(&temp[4], &temp[4]);           // temp[4] = 10G = 5G * 2
-    ECP256_Scatterw5(table, &temp[4], 10);            // Discretely save temp[4] to the 10th position in the table.
-    ECP256_PointAdd(&temp[4], &temp[4], &temp[0]);    // temp[4] = 11G = 10G + G
-    ECP256_Scatterw5(table, &temp[4], 11);            // Discretely save temp[4] to the 11th position in the table.
-    ECP256_PointDouble(&temp[1], &temp[1]);           // temp[1] = 12G = 6G * 2
-    ECP256_Scatterw5(table, &temp[1], 12);            // Discretely save temp[1] to the 12th position in the table.
-    ECP256_PointAdd(&temp[4], &temp[3], &temp[0]);    // temp[4] = 9G = 8G + G = temp[3] + temp[0]
-    ECP256_Scatterw5(table, &temp[4], 9);             // Discretely save temp[4] to the 9th position in the table.
-    ECP256_PointAdd(&temp[4], &temp[1], &temp[0]);    // temp[4] = 13G = 12G + G
-    ECP256_Scatterw5(table, &temp[4], 13);            // Discretely save temp[4] to the 13th position of the table.
-    ECP256_PointDouble(&temp[2], &temp[2]);           // temp[2] = 14G = 7G * 2
-    ECP256_Scatterw5(table, &temp[2], 14);            // Discretely saves temp[2] to the 14th position of the table.
-    ECP256_PointAdd(&temp[1], &temp[2], &temp[0]);    // temp[1] = 15G = 14G + G = temp[2] + temp[0]
-    ECP256_Scatterw5(table, &temp[1], 15);            // Discretely save temp[1] to the 15th position of the table.
-    ECP256_PointDouble(&temp[2], &temp[3]);           // temp[2] = 16G = 8G * 2 = temp[3] * 2
-    ECP256_Scatterw5(table, &temp[2], 16);            // Discretely saves temp[2] to the 16th position of the table.
+    P256_Point temp[4];
+    ECP256_Scatterw5(table, pt, 1);
+    ECP256_PointDouble(&temp[0], pt);                 // 2G
+    ECP256_Scatterw5(table, &temp[0], 2);             // Discretely save temp[0] to the 2nd position of the table.
+    ECP256_PointAdd(&temp[1], &temp[0], pt);          // temp[0] = 3G = 2G + G
+    ECP256_Scatterw5(table, &temp[1], 3);             // Discretely saves temp[1] to the 3rd position of the table.
+    ECP256_PointDouble(&temp[2], &temp[0]);           // temp[2] = 4G = 2G * 2
+    ECP256_Scatterw5(table, &temp[2], 4);             // Discretely save temp[2] to the 4th position in the table.
+    ECP256_PointAdd(&temp[3], &temp[2], pt);          // temp[3] = 5G = 4G + G = = temp[2] + pt
+    ECP256_Scatterw5(table, &temp[3], 5);             // Discretely save temp[3] to the 5th position in the table.
+    ECP256_PointDouble(&temp[0], &temp[1]);           // temp[0] = 6G = 3G * 2
+    ECP256_Scatterw5(table, &temp[0], 6);             // Discretely save temp[0] to the 6th position in the table.
+    ECP256_PointAdd(&temp[1], &temp[0], pt);          // temp[1] = 7G = 6G + G
+    ECP256_Scatterw5(table, &temp[1], 7);             // Discretely save temp[1] to the 7th position in the table.
+    ECP256_PointDouble(&temp[2], &temp[2]);           // temp[2] = 8G = 4G * 2
+    ECP256_Scatterw5(table, &temp[2], 8);             // Discretely save temp[2] to the 8th position in the table.
+    ECP256_PointDouble(&temp[3], &temp[3]);           // temp[3] = 10G = 5G * 2
+    ECP256_Scatterw5(table, &temp[3], 10);            // Discretely save temp[3] to the 10th position in the table.
+    ECP256_PointAdd(&temp[3], &temp[3], pt);          // temp[3] = 11G = 10G + G
+    ECP256_Scatterw5(table, &temp[3], 11);            // Discretely save temp[3] to the 11th position in the table.
+    ECP256_PointDouble(&temp[0], &temp[0]);           // temp[0] = 12G = 6G * 2
+    ECP256_Scatterw5(table, &temp[0], 12);            // Discretely save temp[0] to the 12th position in the table.
+    ECP256_PointAdd(&temp[3], &temp[2], pt);          // temp[3] = 9G = 8G + G = temp[2] + pt
+    ECP256_Scatterw5(table, &temp[3], 9);             // Discretely save temp[3] to the 9th position in the table.
+    ECP256_PointAdd(&temp[3], &temp[0], pt);          // temp[3] = 13G = 12G + G
+    ECP256_Scatterw5(table, &temp[3], 13);            // Discretely save temp[3] to the 13th position of the table.
+    ECP256_PointDouble(&temp[1], &temp[1]);           // temp[1] = 14G = 7G * 2
+    ECP256_Scatterw5(table, &temp[1], 14);            // Discretely saves temp[1] to the 14th position of the table.
+    ECP256_PointAdd(&temp[0], &temp[1], pt);          // temp[0] = 15G = 14G + G = temp[1] + pt
+    ECP256_Scatterw5(table, &temp[0], 15);            // Discretely save temp[0] to the 15th position of the table.
+    ECP256_PointDouble(&temp[1], &temp[2]);           // temp[1] = 16G = 8G * 2 = temp[2] * 2
+    ECP256_Scatterw5(table, &temp[1], 16);            // Discretely saves temp[1] to the 16th position of the table.
 }
 
 static void CRYPT_ECP256_PointDouble5Times(P256_Point *r)
@@ -341,18 +331,18 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
     // The first byte is the first two bits of kOctets[1].
     // The subscript starts from 0. Therefore, it is bit 0 + 8 and bit 1 + 8 = 9.
     uint32_t scans = 9;
-    uint32_t index = (scans / 8) + 1;   // position of the byte to be scanned.
+    uint32_t index;   // position of the byte to be scanned.
     // Number of bits to be shifted rightwards by the current byte.
     // Each byte needs to be moved backward by a maximum of 7 bits.
     uint32_t shift = 7 - (scans % 8);
     uint32_t w = 5;                     // Window size = 5
     // the recode mask, the window size is 5, thus the value is 6 bits, mask = 0b111111 = 0x3f
-    uint32_t mask = (1 << (w + 1)) - 1;
+    uint32_t mask = (1u << (w + 1)) - 1;
     uint32_t wCode = kOctets[1];
     wCode = (wCode >> shift) & mask;
     wCode = Recodew5(wCode);
     ECP256_Gatherw5(&temp, table, wCode >> 1);
-    ECP256_CopyPoint(r, &temp);
+    (void)memcpy_s(r, sizeof(P256_Point), &temp, sizeof(P256_Point));
 
     // 5 bits is obtained each time. The total number of bits is 256 + 8 (1 byte reserved) = 264 bits.
     // Therefore, the last time can be scanned to 264-5 = 259 bits.
@@ -408,7 +398,7 @@ static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
     uint32_t w = 7; // Window size = 7
     // the recode mask, the window size is 7, thus 8 bits are used (one extra bit is the sign bit).
     // mask = 0b11111111 = 0xff
-    uint32_t mask = (1 << (w + 1)) - 1;
+    uint32_t mask = (1u << (w + 1)) - 1;
     uint32_t wCode = (kOctets[32] << 1) & mask; // Last byte kOctets[32] is the least significant 7 bits.
     wCode = Recodew7(wCode);
     ECP256_Gatherw7(&k1GAffine, preCompTable[0], wCode >> 1);

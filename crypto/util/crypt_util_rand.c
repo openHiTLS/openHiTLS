@@ -22,10 +22,10 @@
 #include "bsl_err_internal.h"
 #include "crypt_util_rand.h"
 
-static CRYPT_RandFunc g_randFunc = NULL;
-static CRYPT_RandFuncEx g_randFuncEx = NULL;
+static CRYPT_EAL_RandFunc g_randFunc = NULL;
+static CRYPT_EAL_RandFuncEx g_randFuncEx = NULL;
 
-void CRYPT_RandRegist(CRYPT_RandFunc func)
+void CRYPT_RandRegist(CRYPT_EAL_RandFunc func)
 {
     g_randFunc = func;
 }
@@ -43,7 +43,7 @@ int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen)
     return ret;
 }
 
-void CRYPT_RandRegistEx(CRYPT_RandFuncEx func)
+void CRYPT_RandRegistEx(CRYPT_EAL_RandFuncEx func)
 {
     g_randFuncEx = func;
 }

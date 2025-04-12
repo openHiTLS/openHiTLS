@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
 
-#include "crypt_sm4_macro_x86_64.s"
+#include "crypt_sm4_modes_macro_x86_64.s"
 
 .file   "crypt_sm4_xts_x86_64.S"
 .text

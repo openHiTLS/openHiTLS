@@ -54,6 +54,7 @@ export_env()
     DEBUG=${DEBUG:=ON}
     if [ -f ${HITLS_ROOT_DIR}/build/macro.txt ];then
         CUSTOM_CFLAGS=$(cat ${HITLS_ROOT_DIR}/build/macro.txt)
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -D__FILENAME__=__FILE__"
     fi
     if [[ ! -e "${HITLS_ROOT_DIR}/testcode/output/log" ]]; then
         mkdir ${HITLS_ROOT_DIR}/testcode/output/log

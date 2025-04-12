@@ -21,12 +21,12 @@
 /* AES_ENC_1_BLK */
 .macro    AES_ENC_1_BLK    key round rdk blk
 .align 16
-.aesenc_loop:
+.Laesenc_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk
     decl \round
-    jnz .aesenc_loop
+    jnz .Laesenc_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk
@@ -35,13 +35,13 @@
 /* AES_ENC_2_BLKS */
 .macro    AES_ENC_2_BLKS    key round rdk blk0 blk1
 .align 16
-.aesenc_2_blks_loop:
+.Laesenc_2_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
     aesenc  \rdk, \blk1
     decl \round
-    jnz .aesenc_2_blks_loop
+    jnz .Laesenc_2_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -51,14 +51,14 @@
 /* AES_ENC_3_BLKS */
 .macro    AES_ENC_3_BLKS    key round rdk blk0 blk1 blk2
 .align 16
-.aesenc_3_blks_loop:
+.Laesenc_3_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
     aesenc  \rdk, \blk1
     aesenc  \rdk, \blk2
     decl \round
-    jnz .aesenc_3_blks_loop
+    jnz .Laesenc_3_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -69,7 +69,7 @@
 /* AES_ENC_4_BLKS */
 .macro    AES_ENC_4_BLKS    key round rdk blk0 blk1 blk2 blk3
 .align 16
-.aesenc_4_blks_loop:
+.Laesenc_4_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
@@ -77,7 +77,7 @@
     aesenc  \rdk, \blk2
     aesenc  \rdk, \blk3
     decl \round
-    jnz .aesenc_4_blks_loop
+    jnz .Laesenc_4_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -89,7 +89,7 @@
 /* AES_ENC_5_BLKS */
 .macro    AES_ENC_5_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4
 .align 16
-.aesenc_5_blks_loop:
+.Laesenc_5_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
@@ -98,7 +98,7 @@
     aesenc  \rdk, \blk3
     aesenc  \rdk, \blk4
     decl \round
-    jnz .aesenc_5_blks_loop
+    jnz .Laesenc_5_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -111,7 +111,7 @@
 /* AES_ENC_6_BLKS */
 .macro    AES_ENC_6_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5
 .align 16
-.aesenc_6_blks_loop:
+.Laesenc_6_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
@@ -121,7 +121,7 @@
     aesenc  \rdk, \blk4
     aesenc  \rdk, \blk5
     decl \round
-    jnz .aesenc_6_blks_loop
+    jnz .Laesenc_6_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -135,7 +135,7 @@
 /* AES_ENC_7_BLKS */
 .macro    AES_ENC_7_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5 blk6
 .align 16
-.aesenc_7_blks_loop:
+.Laesenc_7_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
@@ -146,7 +146,7 @@
     aesenc  \rdk, \blk5
     aesenc  \rdk, \blk6
     decl \round
-    jnz .aesenc_7_blks_loop
+    jnz .Laesenc_7_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -161,7 +161,7 @@
 /* AES_ENC_8_BLKS */
 .macro    AES_ENC_8_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5 blk6 blk7
 .align 16
-.aesenc_8_blks_loop:
+.Laesenc_8_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
@@ -173,7 +173,7 @@
     aesenc  \rdk, \blk6
     aesenc  \rdk, \blk7
     decl \round
-    jnz .aesenc_8_blks_loop
+    jnz .Laesenc_8_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -189,7 +189,7 @@
 /* AES_ENC_14_BLKS */
 .macro AES_ENC_14_BLKS    ARG2 key round rdk blk0 blk1 blk2 blk3 blk4 blk5 blk6 blk7 blk8 blk9 blk10 blk11 blk12 blk13
 .align 16
-.aesenc_14_blks_loop:
+.Laesenc_14_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenc  \rdk, \blk0
@@ -207,7 +207,7 @@
     aesenc  \rdk, \blk12
     aesenc  \rdk, \blk13
     decl \round
-    jnz .aesenc_14_blks_loop
+    jnz .Laesenc_14_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesenclast \rdk, \blk0
@@ -229,12 +229,12 @@
 /* AES_DEC_1_BLK */
 .macro    AES_DEC_1_BLK    key round rdk blk
 .align 16
-.aesdec_loop:
+.Laesdec_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk
     decl \round
-    jnz .aesdec_loop
+    jnz .Laesdec_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk
@@ -243,13 +243,13 @@
 /* AES_DEC_2_BLKS */
 .macro    AES_DEC_2_BLKS    key round rdk blk0 blk1
 .align 32
-.aesdec_2_blks_loop:
+.Laesdec_2_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
     aesdec  \rdk, \blk1
     decl \round
-    jnz .aesdec_2_blks_loop
+    jnz .Laesdec_2_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -259,14 +259,14 @@
 /* AES_DEC_3_BLKS */
 .macro    AES_DEC_3_BLKS    key round rdk blk0 blk1 blk2
 .align 16
-.aesdec_3_blks_loop:
+.Laesdec_3_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
     aesdec  \rdk, \blk1
     aesdec  \rdk, \blk2
     decl \round
-    jnz .aesdec_3_blks_loop
+    jnz .Laesdec_3_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -277,7 +277,7 @@
 /* AES_DEC_4_BLKS */
 .macro    AES_DEC_4_BLKS    key round rdk blk0 blk1 blk2 blk3
 .align 16
-.aesdec_4_blks_loop:
+.Laesdec_4_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
@@ -285,7 +285,7 @@
     aesdec  \rdk, \blk2
     aesdec  \rdk, \blk3
     decl \round
-    jnz .aesdec_4_blks_loop
+    jnz .Laesdec_4_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -297,7 +297,7 @@
 /* AES_DEC_5_BLKS */
 .macro    AES_DEC_5_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4
 .align 16
-.aesdec_5_blks_loop:
+.Laesdec_5_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
@@ -306,7 +306,7 @@
     aesdec  \rdk, \blk3
     aesdec  \rdk, \blk4
     decl \round
-    jnz .aesdec_5_blks_loop
+    jnz .Laesdec_5_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -319,7 +319,7 @@
 /* AES_DEC_6_BLKS */
 .macro    AES_DEC_6_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5
 .align 16
-.aesdec_6_blks_loop:
+.Laesdec_6_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
@@ -329,7 +329,7 @@
     aesdec  \rdk, \blk4
     aesdec  \rdk, \blk5
     decl \round
-    jnz .aesdec_6_blks_loop
+    jnz .Laesdec_6_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -343,7 +343,7 @@
 /* AES_DEC_7_BLKS */
 .macro    AES_DEC_7_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5 blk6
 .align 16
-.aesdec_7_blks_loop:
+.Laesdec_7_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
@@ -354,7 +354,7 @@
     aesdec  \rdk, \blk5
     aesdec  \rdk, \blk6
     decl \round
-    jnz .aesdec_7_blks_loop
+    jnz .Laesdec_7_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -370,7 +370,7 @@
 .macro    AES_DEC_8_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5 blk6 blk7
 
 .align 16
-.aesdec_8_blks_loop:
+.Laesdec_8_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
@@ -382,7 +382,7 @@
     aesdec  \rdk, \blk6
     aesdec  \rdk, \blk7
     decl \round
-    jnz .aesdec_8_blks_loop
+    jnz .Laesdec_8_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0
@@ -398,7 +398,7 @@
 /* AES_DEC_14_BLKS */
 .macro    AES_DEC_14_BLKS    key round rdk blk0 blk1 blk2 blk3 blk4 blk5 blk6 blk7 blk8 blk9 blk10 blk11 blk12 blk13
 .align 16
-.aesdec_14_blks_loop:
+.Laesdec_14_blks_loop:
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdec  \rdk, \blk0
@@ -416,7 +416,7 @@
     aesdec  \rdk, \blk12
     aesdec  \rdk, \blk13
     decl \round
-    jnz .aesdec_14_blks_loop
+    jnz .Laesdec_14_blks_loop
     leaq 16(\key), \key
     movdqu (\key), \rdk
     aesdeclast \rdk, \blk0

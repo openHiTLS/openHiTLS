@@ -21,26 +21,17 @@
 
 #include <stdint.h>
 
-void SM4_SetKey(uint32_t *rk, const uint8_t *key);
+void SM4_SetEncKey(const uint8_t *key, uint32_t *rk);
 
-void SM4_SetDecKey(uint32_t *rk, const uint8_t *key);
+void SM4_SetDecKey(const uint8_t *key, uint32_t *rk);
 
-void SM4_Encrypt(uint8_t *cipher, const uint8_t *plain, const uint32_t *rk);
+void SM4_Encrypt(const uint8_t *in, uint8_t *out, const uint32_t *key);
 
-void SM4_Decrypt(uint8_t *plain, const uint8_t *cipher, const uint32_t *rk);
+#define SM4_Decrypt SM4_Encrypt
 
 // SM4 XTS
-void SM4_XTS_16_EncryptBlock1st(uint8_t* cipher, const uint8_t* plain, const uint32_t* ecb_rk,
-                                uint8_t* t);
-
-void SM4_XTS_16_EncryptBlock(uint8_t* cipher, const uint8_t* plain, const uint32_t* ecb_rk,
-                             uint8_t* t);
-
-void SM4_XTS_16_DecryptBlock1st(uint8_t* plain, const uint8_t* cipher, const uint32_t* ecb_rk,
-                                uint8_t* t);
-
-void SM4_XTS_16_DecryptBlock(uint8_t* plain, const uint8_t* cipher, const uint32_t* ecb_rk,
-                             uint8_t* t);
+void SM4_XTS_Encrypt_Blocks(const uint8_t *in, uint8_t *out, uint32_t len,
+                            const uint32_t *key, uint8_t *t);
 
 void SM4_ECB_Encrypt(const uint8_t *in, uint8_t *out, uint64_t len, const uint32_t *key);
 void SM4_CBC_Encrypt(const uint8_t *in, uint8_t *out, uint64_t len, const uint32_t *key, uint8_t *iv, const int enc);

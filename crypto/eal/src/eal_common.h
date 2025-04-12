@@ -17,7 +17,7 @@
 #define EAL_COMMON_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_EAL)
+#ifdef HITLS_CRYPTO_EAL
 
 #include <stdint.h>
 #include "crypt_types.h"

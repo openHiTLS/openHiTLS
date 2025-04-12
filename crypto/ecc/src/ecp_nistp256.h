@@ -17,7 +17,8 @@
 #define ECP_NISTP256_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
+
+#if defined(HITLS_CRYPTO_CURVE_NISTP256)
 
 #include "ecc_local.h"
 
@@ -81,6 +82,6 @@ int32_t ECP256_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *
 }
 #endif
 
-#endif /* defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL) */
+#endif /* defined(HITLS_CRYPTO_CURVE_NISTP256) */
 
 #endif

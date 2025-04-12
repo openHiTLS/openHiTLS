@@ -508,7 +508,7 @@ void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), sign, &signLen), CRYPT_CURVE25519_NO_PRVKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, &signLen), CRYPT_EAL_ERR_ALGID);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, &signLen), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, NULL, sizeof(data), sign, &signLen), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), NULL, &signLen), CRYPT_NULL_INPUT);

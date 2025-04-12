@@ -61,8 +61,11 @@ build_hitls_code()
 {
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
-
+    add_options="${add_options} -DHITLS_CRYPTO_RAND_CB" # HITLS_CRYPTO_RAND_CB: add rand callback
     add_options="${add_options} -DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK" # Get CPU capability
+    add_options="${add_options} -DHITLS_CRYPTO_ENTROPY -DHITLS_CRYPTO_ENTROPY_DEVRANDOM -DHITLS_CRYPTO_ENTROPY_GETENTROPY -DHITLS_CRYPTO_ENTROPY_SYS -DHITLS_CRYPTO_ENTROPY_HARDWARE" # add default entropy
+    add_options="${add_options} -DHITLS_CRYPTO_DRBG_GM" # enable GM DRBG
+    add_options="${add_options} ${test_options}"
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
@@ -100,6 +103,9 @@ parse_option()
             "asan")
                 add_options="${add_options} -fsanitize=address -fsanitize-address-use-after-scope -O0 -g3 -fno-stack-protector -fno-omit-frame-pointer -fgnu89-inline"
                 del_options="${del_options} -fstack-protector-strong -fomit-frame-pointer -O2 -D_FORTIFY_SOURCE=2"
+                ;;
+            "x86_64")
+                get_arch="x86_64"
                 ;;
             "armv8_be")
                 get_arch="armv8_be"

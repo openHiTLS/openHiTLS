@@ -21,6 +21,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
 #include "crypt_utils.h"
+#include "crypt_util_rand.h"
 #include "asmcap_local.h"
 #include "crypt_ealinit.h"
 #include "crypt_eal_provider.h"
@@ -33,6 +34,8 @@ static bool g_trigger = false;
 #define CRYPT_INIT_ABILITY_RAND                4
 #define CRYPT_INIT_ABILITY_PROVIDER            8
 #define CRYPT_INIT_ABILITY_PROVIDER_RAND       16
+#define CRYPT_INIT_ABILITY_LOCK                32
+
 
 
 #if defined(HITLS_CRYPTO_PROVIDER)
@@ -140,6 +143,33 @@ static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 }
 #endif
 
+static int32_t GlobalLockInit(uint64_t initOpt, int32_t alg)
+{
+	(void) alg;
+    if ((initOpt & CRYPT_INIT_ABILITY_LOCK) == 0) {
+        return CRYPT_SUCCESS;
+    }
+#ifdef HITLS_CRYPTO_ENTROPY
+    int32_t ret = EAL_SeedDrbgLockInit();
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+#endif
+    return CRYPT_SUCCESS;
+}
+
+static void GlobalLockFree(uint64_t initOpt)
+{
+    if ((initOpt & CRYPT_INIT_ABILITY_LOCK) == 0) {
+        return;
+    }
+#ifdef HITLS_CRYPTO_ENTROPY
+    EAL_SeedDrbgLockDeInit();
+#endif
+    return;
+}
+
+
 #if defined(HITLS_EAL_INIT_OPTS)
 __attribute__((constructor(102))) int32_t CRYPT_EAL_Init(uint64_t opts)
 #else
@@ -182,7 +212,13 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
         BslModuleFree(initOpt);
         return ret;
     }
-
+    ret = GlobalLockInit(initOpt, alg);
+    if (ret != CRYPT_SUCCESS) {
+        RandModuleFree(initOpt);
+        BslModuleFree(initOpt);
+        ProviderModuleFree(initOpt);
+        return ret;
+    }
     g_trigger = true;
     return ret;
 }
@@ -201,6 +237,7 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
     ProviderModuleFree(initOpt);
     RandModuleFree(initOpt);
     BslModuleFree(initOpt);
+    GlobalLockFree(initOpt);
     g_trigger = false;
 }
 
@@ -246,6 +283,8 @@ static const EAL_CheckAsm HITLS_ASM_SYM_ALG_CHECK[] = {
     {.id = CRYPT_CIPHER_AES128_OFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES192_OFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES256_OFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_CIPHER_AES128_XTS, .callback = {CRYPT_AES_AsmCheck, NULL}},
+    {.id = CRYPT_CIPHER_AES256_XTS, .callback = {CRYPT_AES_AsmCheck, NULL}},
 #if defined(HITLS_CRYPTO_GCM_ASM)
     {.id = CRYPT_CIPHER_AES128_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
     {.id = CRYPT_CIPHER_AES192_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
@@ -299,9 +338,16 @@ int32_t CRYPT_ASMCAP_Md(CRYPT_MD_AlgId id)
 #if defined(HITLS_CRYPTO_PKEY)
 static const EAL_CheckAsm HITLS_ASM_PKEY_ALG_CHECK[] = {
     /* Asymmetric algorithm ID */
+#if defined(HITLS_CRYPTO_BN_ASM)
+    {.id = CRYPT_PKEY_DSA, .callback = {CRYPT_BN_AsmCheck, NULL}},
+    {.id = CRYPT_PKEY_RSA, .callback = {CRYPT_BN_AsmCheck, NULL}},
+    {.id = CRYPT_PKEY_DH, .callback = {CRYPT_BN_AsmCheck, NULL}},
 #if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM)
-    {.id = CRYPT_PKEY_ECDSA, .callback = {NULL, CRYPT_ECP256_AsmCheck}},
-    {.id = CRYPT_PKEY_ECDH, .callback = {NULL, CRYPT_ECP256_AsmCheck}},
+    {.id = CRYPT_PKEY_ECDSA, .callback = {CRYPT_BN_AsmCheck, CRYPT_ECP256_AsmCheck}},
+    {.id = CRYPT_PKEY_ECDH, .callback = {CRYPT_BN_AsmCheck, CRYPT_ECP256_AsmCheck}},
+#endif
+    {.id = CRYPT_PKEY_SM2, .callback = {CRYPT_BN_AsmCheck, NULL}},
+    {.id = CRYPT_PKEY_SM9, .callback = {CRYPT_BN_AsmCheck, NULL}},
 #endif
     {.id = CRYPT_PKEY_MAX, .callback = {NULL, NULL}},
 };

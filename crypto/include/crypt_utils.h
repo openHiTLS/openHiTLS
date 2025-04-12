@@ -17,7 +17,10 @@
 #define CRYPT_UTILS_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdbool.h>
+#include "bsl_err_internal.h"
+#include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
 
@@ -84,24 +87,24 @@ do {                                         \
     ((uint64_t)(p)[(i) + 1] <<  8) | ((uint64_t)(p)[(i) + 0] <<  0)    \
 )
 
+
+/**
+ * Check whether conditions are met. If conditions are met, go to the label EXIT.
+ */
+#define GOTO_EXIT_IF(condition, ret) \
+    do {                        \
+        if (condition) {        \
+            BSL_ERR_PUSH_ERROR((ret));   \
+            goto EXIT;          \
+        }                       \
+    } while (0)
+
 /**
  * Check whether conditions are met. If yes, an error code is returned.
  */
 #define RETURN_RET_IF(condition, ret) \
     do {                              \
         if (condition) {              \
-            BSL_ERR_PUSH_ERROR(ret);  \
-            return ret;               \
-        }                             \
-    } while (0)
-
-/**
- * Check whether conditions are met. If yes, an error code is returned.
- */
-#define RETURN_RET_IF_ERR(func, ret) \
-    do {                              \
-        (ret) = (func);               \
-        if ((ret) != CRYPT_SUCCESS) {              \
             BSL_ERR_PUSH_ERROR(ret);  \
             return ret;               \
         }                             \
@@ -125,6 +128,17 @@ do {                                         \
         } \
     } while (0)
 
+/**
+ * Check whether conditions are met. If yes, an error code is returned.
+ */
+#define RETURN_RET_IF_ERR(func, ret)   \
+    do {                               \
+        (ret) = (func);                \
+        if ((ret) != CRYPT_SUCCESS) {  \
+            BSL_ERR_PUSH_ERROR((ret)); \
+            return ret;                \
+        }                              \
+    } while (0)
 
 #define BREAK_IF(condition) \
     do {                    \
@@ -243,9 +257,6 @@ int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData
 int32_t CRYPT_Mgf1(const EAL_MdMethod *hashMethod, const uint8_t *seed, const uint32_t seedLen,
     uint8_t *mask, uint32_t maskLen);
 
-
-
-
 /* Assumes that x is uint32_t and 0 < n < 32 */
 #define ROTL32(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
 
@@ -352,7 +363,7 @@ static inline void Uint64ToBeBytes(uint64_t v, uint8_t *bytes)
 }
 
 #ifdef HITLS_CRYPTO_RSA
-uint32_t CRYPT_MD_GetSizeById(CRYPT_MD_AlgId id);
+uint32_t CRYPT_GetMdSizeById(CRYPT_MD_AlgId id);
 #endif
 
 static inline bool ParamIdIsValid(uint32_t id, const uint32_t *list, uint32_t num)
@@ -363,6 +374,21 @@ static inline bool ParamIdIsValid(uint32_t id, const uint32_t *list, uint32_t nu
         }
     }
     return false;
+}
+
+typedef uint32_t (*GetUintCallBack)(const void *key);
+static inline int32_t GetUintCtrl(const void *ctx, void *val, uint32_t len, GetUintCallBack getUint)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *(uint32_t *)val = getUint(ctx);
+    return CRYPT_SUCCESS;
 }
 
 void GetCpuInstrSupportState(void);
@@ -391,6 +417,7 @@ typedef struct {
 bool IsSupportAES(void);
 bool IsSupportBMI1(void);
 bool IsSupportBMI2(void);
+bool IsSupportADX(void);
 bool IsSupportAVX(void);
 bool IsSupportAVX2(void);
 bool IsSupportSSE(void);

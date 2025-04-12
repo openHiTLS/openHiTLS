@@ -53,8 +53,7 @@ static int32_t BnGcdDiv(BN_BigNum *r, BN_BigNum *max, BN_BigNum *min, BN_Optimiz
     return CRYPT_SUCCESS;
 }
 
-int32_t BnGcdCheckInput(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_Optimizer *opt)
+int32_t BnGcdCheckInput(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_Optimizer *opt)
 {
     bool invalidInput = (a == NULL || b == NULL || r == NULL || opt == NULL);
     if (invalidInput) {
@@ -63,9 +62,9 @@ int32_t BnGcdCheckInput(
     }
     /* The GCD may be the minimum value between a and b. Ensure the r space before calculation. */
     uint32_t needSize = (a->size < b->size) ? a->size : b->size;
-    if (BnExtend(r, needSize) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+    int32_t ret = BnExtend(r, needSize);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     // a and b cannot be 0
     if (BN_IsZero(a) || BN_IsZero(b)) {
@@ -88,12 +87,12 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        BN_CLRNEG(r->flag); // the greatest common divisor is a positive integer
+        r->sign = false; // the greatest common divisor is a positive integer
         return CRYPT_SUCCESS;
     }
     const BN_BigNum *bigNum = (ret > 0) ? a : b;
     const BN_BigNum *smallNum = (ret > 0) ? b : a;
-    ret = OptimizerStart(opt);
+    ret = OptimizerStart(opt); // use the optimizer
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -121,21 +120,20 @@ int32_t BN_Gcd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
     // obtain the GCD, ensure that input parameter max > min
     ret = BnGcdDiv(r, max, min, opt);
     if (ret == CRYPT_SUCCESS) {
-        BN_CLRNEG(r->flag); // The GCD is a positive integer
+        r->sign = false; // The GCD is a positive integer
     }
     OptimizerEnd(opt); // release occupation from the optimizer
     return ret;
 }
 
-static int32_t InverseReady(BN_BigNum *a, BN_BigNum *b, const BN_BigNum *x,
-    const BN_BigNum *m, BN_Optimizer *opt)
+static int32_t InverseReady(BN_BigNum *a, BN_BigNum *b, const BN_BigNum *x, const BN_BigNum *m, BN_Optimizer *opt)
 {
     int32_t ret = BN_Copy(a, m);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BN_CLRNEG(a->flag);
+    a->sign = false;
     ret = BN_Mod(b, x, m, opt); // b must be a positive number and do not need to convert symbols.
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -173,7 +171,7 @@ static int32_t InverseCore(BN_BigNum *r, BN_BigNum *x, BN_BigNum *y, uint32_t mS
             }
             break;  // Failed to obtain the inverse modulus value.
         }
-        t->flag ^= CRYPT_BN_FLAG_ISNEGTIVE;
+        t->sign = !t->sign;
         ret = BN_Mul(e, t, d, opt);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -212,11 +210,7 @@ int32_t InverseInputCheck(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, 
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_DIVISOR_ZERO);
         return CRYPT_BN_ERR_DIVISOR_ZERO;
     }
-    if (BnExtend(r, m->size) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
+    return BnExtend(r, m->size);
 }
 
 int32_t BN_ModInv(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, BN_Optimizer *opt)
@@ -238,26 +232,27 @@ int32_t BN_ModInv(BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *m, BN_Optim
     if (invalidInput) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
-        goto EXIT;
+        goto ERR;
     }
     /* Take positive numbers a and b first. */
     ret = InverseReady(a, b, x, m, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
     /* Extended Euclidean algorithm */
     ret = InverseCore(t, a, b, m->size, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
     // Prevent the negative number.
     ret = BN_Mod(r, t, m, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
     }
-EXIT:
+ERR:
     OptimizerEnd(opt); // Release occupation from the optimizer.
     return ret;
 }

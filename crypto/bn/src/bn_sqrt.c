@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
+#ifdef HITLS_CRYPTO_ECC
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -47,7 +47,7 @@ static int32_t CheckParam(const BN_BigNum *a, const BN_BigNum *p)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_SQRT_PARA);
         return CRYPT_BN_ERR_SQRT_PARA;
     }
-    if (BN_ISNEG(p->flag | a->flag)) { // p, a must be positive
+    if (p->sign || a->sign) { // p、a must be positive
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_SQRT_PARA);
         return CRYPT_BN_ERR_SQRT_PARA;
     }
@@ -59,8 +59,7 @@ static int32_t CheckParam(const BN_BigNum *a, const BN_BigNum *p)
 }
 
 // r = +- a^((p + 1)/4)
-static int32_t CalculationRoot(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p,
-    BN_Mont *mont, BN_Optimizer *opt)
+static int32_t CalculationRoot(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Mont *mont, BN_Optimizer *opt)
 {
     int32_t ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
@@ -191,8 +190,7 @@ ERR:
     return ret;
 }
 
-static int32_t SetParaR(
-    BN_BigNum *r, BN_BigNum *q, const BN_BigNum *a, BN_Mont *mont, BN_Optimizer *opt)
+static int32_t SetParaR(BN_BigNum *r, BN_BigNum *q, const BN_BigNum *a, BN_Mont *mont, BN_Optimizer *opt)
 {
     int32_t ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
@@ -300,7 +298,7 @@ static int32_t BN_ModSqrtTempDataCheck(const BN_BigNum *pSubOne, const BN_BigNum
 
 /* 1. Input parameters a and p. p is an odd prime number, and a is an integer (0 <= a <= p-1)
 2. For P-1 processing, let p-1 = q * 2^s
-3. If s=1, r = a^((p + 1)/4)
+3. If s=1，r = a^((p + 1)/4)
 4. Randomly select z (1<= z <= p-1) so that the Legendre symbol of z to p equals -1. (z, p) = 1, (z/p) = a^((p-1)/2)
 5. Setting c = z^q, r = a^((q+1)/2), t = a^q, m = s
 6. Circulation
@@ -347,7 +345,7 @@ int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Opti
     s = GetExp(pSubOne);               // Obtains the power s of factor 2 in p-1.
     GOTO_ERR_IF_EX(BN_Rshift(q, pSubOne, s), ret); // p - 1 = q * 2^s
     if (s == 1) {
-        // s==1, r = +- n^((p + 1)/4)
+        // s==1，r = +- n^((p + 1)/4)
         GOTO_ERR_IF_EX(CalculationRoot(r, a, p, mont, opt), ret);
         goto VERIFY;
     }
@@ -372,4 +370,4 @@ ERR:
     BN_MontDestroy(mont);
     return ret;
 }
-#endif /* HITLS_CRYPTO_BN */
+#endif /* HITLS_CRYPTO_ECC */

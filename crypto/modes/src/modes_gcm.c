@@ -26,23 +26,6 @@
 #include "modes_local.h"
 #include "crypt_modes.h"
 
-/**
- * NIST_800-38D-5.2
- * len(P) ≤ 2^39-256 (bit)
- * Equivalent to len(P) ≤ 2^36 - 32 (byte)
- */
-#define GCM_MAX_COMBINED_LENGTH     (((uint64_t)1 << 36) - 32)
-/**
- * NIST_800-38D-8.3
- * The total number of invocations of the authenticated encryption function shall not exceed
- * 2^32, including all IV lengths and all instances of the authenticated encryption function with
- * the given ciphCtx
- */
-#define GCM_MAX_INVOCATIONS_TIMES   ((uint32_t)(-1))
-
-#define GCM_BLOCK_MASK (0xfffffff0)
-
-
 int32_t MODES_GCM_SetKey(MODES_CipherGCMCtx *ctx, const uint8_t *key, uint32_t len)
 {
     if (ctx == NULL) {
@@ -70,7 +53,7 @@ int32_t MODES_GCM_InitHashTable(MODES_CipherGCMCtx *ctx)
         return ret;
     }
     GcmTableGen4bit(gcmKey, ctx->hTable);
-    ctx->tagLen = 16;
+    ctx->tagLen = GCM_BLOCKSIZE;
     BSL_SAL_CleanseData(gcmKey, sizeof(gcmKey));
     return CRYPT_SUCCESS;
 }
@@ -287,7 +270,11 @@ static void GcmMultiBlockCrypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8
 // enc: true: the encryption operation, false: the decryption operation
 static int32_t MODES_GCM_Crypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
-    if (ctx == NULL || in == NULL || out == NULL || len == 0) {
+    if (ctx == NULL || out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (len != 0 && in == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -417,6 +404,8 @@ int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
+        case CRYPT_CTRL_SET_IV:
+            return MODES_GCM_SetIv(&modeCtx->gcmCtx, val, len);
         case CRYPT_CTRL_REINIT_STATUS:
             return MODES_GCM_SetIv(&modeCtx->gcmCtx, val, len);
         case CRYPT_CTRL_SET_TAGLEN:
@@ -432,14 +421,14 @@ int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
             *(int32_t *)val = 1;
             return CRYPT_SUCCESS;
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_MODES_METHODS_NOT_SUPPORT);
-            return CRYPT_MODES_METHODS_NOT_SUPPORT;
+            BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
+            return CRYPT_MODES_CTRL_TYPE_ERROR;
     }
 }
 
 MODES_GCM_Ctx *MODES_GCM_NewCtx(int32_t algId)
 {
-    const EAL_SymMethod *method = MODES_GetSymMethod(algId);
+    const EAL_SymMethod *method = EAL_GetSymMethod(algId);
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
@@ -454,7 +443,7 @@ MODES_GCM_Ctx *MODES_GCM_NewCtx(int32_t algId)
     ctx->gcmCtx.ciphCtx = BSL_SAL_Calloc(1, method->ctxSize);
     if (ctx->gcmCtx.ciphCtx  == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(ctx);
+        BSL_SAL_Free(ctx);
         return NULL;
     }
 
@@ -493,8 +482,8 @@ int32_t MODES_GCM_Final(MODES_GCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
     (void) modeCtx;
     (void) out;
-    *outLen = 0;
-    return CRYPT_SUCCESS;
+    (void) outLen;
+    return CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR;
 }
 
 int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
@@ -503,13 +492,14 @@ int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
+    int32_t algId = modeCtx->algId;
     void *ciphCtx = modeCtx->gcmCtx.ciphCtx;
     const EAL_SymMethod *ciphMeth = modeCtx->gcmCtx.ciphMeth;
-    ciphMeth->cipherDeInitCtx(ciphCtx);
+    modeCtx->gcmCtx.ciphMeth->cipherDeInitCtx(ciphCtx);
     BSL_SAL_CleanseData((void *)(&(modeCtx->gcmCtx)), sizeof(MODES_CipherGCMCtx));
     modeCtx->gcmCtx.ciphCtx = ciphCtx;
     modeCtx->gcmCtx.ciphMeth = ciphMeth;
+    modeCtx->algId = algId;
     return CRYPT_SUCCESS;
 }
 
@@ -525,7 +515,7 @@ void MODES_GCM_FreeCtx(MODES_GCM_Ctx *modeCtx)
 
 
 int32_t MODES_GCM_InitCtxEx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {
@@ -534,7 +524,11 @@ int32_t MODES_GCM_InitCtxEx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_GCM:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_GCM_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_GCM_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -550,9 +544,17 @@ int32_t MODES_GCM_UpdateEx(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t i
         case CRYPT_CIPHER_AES128_GCM:
         case CRYPT_CIPHER_AES192_GCM:
         case CRYPT_CIPHER_AES256_GCM:
+#ifdef HITLS_CRYPTO_AES
             return AES_GCM_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_GCM:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_GCM_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_GCM_Update(modeCtx, in, inLen, out, outLen);
     }

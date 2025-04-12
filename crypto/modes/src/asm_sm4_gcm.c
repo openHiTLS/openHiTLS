@@ -18,9 +18,9 @@
 
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "crypt_sm4.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
-#include "crypt_sm4.h"
 #include "modes_local.h"
 #include "crypt_modes_gcm.h"
 
@@ -42,7 +42,7 @@ int32_t MODES_SM4_GCM_SetKey(MODES_CipherGCMCtx *ctx, const uint8_t *key, uint32
         return ret;
     }
     GcmTableGen4bit(gcmKey, ctx->hTable);
-    ctx->tagLen = 16;
+    ctx->tagLen = 16; // The default tag length is 128 bits, that is, 16 bytes.
     BSL_SAL_CleanseData(gcmKey, sizeof(gcmKey));
     return CRYPT_SUCCESS;
 }
@@ -63,9 +63,9 @@ static void GcmRemHandle(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *ou
         }
     }
 
-    uint32_t ctr = GET_UINT32_BE(ctx->iv, 12);
+    uint32_t ctr = GET_UINT32_BE(ctx->iv, 12); // offset 12 bytes and obtain the last four bytes
     ctr++;
-    PUT_UINT32_BE(ctr, ctx->iv, 12);
+    PUT_UINT32_BE(ctr, ctx->iv, 12); // offset 12 bytes and obtain the last four bytes
     ctx->lastLen = GCM_BLOCKSIZE - len;
 }
 
@@ -106,7 +106,7 @@ int32_t MODES_SM4_GCM_DecryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, u
     uint8_t *tmpOut = out + lastLen;
     uint32_t clen = len - lastLen;
     if (clen >= GCM_BLOCKSIZE) {
-        uint32_t calLen = clen & 0xfffffff0;
+        uint32_t calLen = clen & 0xfffffff0; // Obtains the length that is an integer multiple of 16 bytes.
         GcmHashMultiBlock(ctx->ghash, ctx->hTable, tmpIn, calLen);
         (void)CRYPT_SM4_CTR_Encrypt(ctx->ciphCtx, tmpIn, tmpOut, calLen / GCM_BLOCKSIZE, ctx->iv);
         tmpIn += calLen;

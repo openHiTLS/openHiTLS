@@ -21,8 +21,36 @@
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "modes_local.h"
-#include "crypt_modes_gcm.h"
+#ifdef HITLS_CRYPTO_CTR
+#include "crypt_modes_ctr.h"
+#endif
+#ifdef HITLS_CRYPTO_CBC
 #include "crypt_modes_cbc.h"
+#endif
+#ifdef HITLS_CRYPTO_ECB
+#include "crypt_modes_ecb.h"
+#endif
+#ifdef HITLS_CRYPTO_GCM
+#include "crypt_modes_gcm.h"
+#endif
+#ifdef HITLS_CRYPTO_CCM
+#include "crypt_modes_ccm.h"
+#endif
+#ifdef HITLS_CRYPTO_XTS
+#include "crypt_modes_xts.h"
+#endif
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
+#include "crypt_modes_chacha20poly1305.h"
+#endif
+#ifdef HITLS_CRYPTO_CFB
+#include "crypt_modes_cfb.h"
+#endif
+#ifdef HITLS_CRYPTO_OFB
+#include "crypt_modes_ofb.h"
+#endif
+#ifdef HITLS_CRYPTO_WRAP
+#include "crypt_modes_aes_wrap.h"
+#endif
 
 int32_t MODE_NewCtxInternal(MODES_CipherCtx *ctx, const EAL_SymMethod *method)
 {
@@ -41,7 +69,7 @@ int32_t MODE_NewCtxInternal(MODES_CipherCtx *ctx, const EAL_SymMethod *method)
 
 MODES_CipherCtx *MODES_CipherNewCtx(int32_t algId)
 {
-    const EAL_SymMethod *method = MODES_GetSymMethod(algId);
+    const EAL_SymMethod *method = EAL_GetSymMethod(algId);
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
@@ -61,19 +89,17 @@ MODES_CipherCtx *MODES_CipherNewCtx(int32_t algId)
     return ctx;
 }
 
-int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *iv, uint32_t ivLen, bool enc)
+int32_t MODES_CipherInitCommonCtx(MODES_CipherCommonCtx *modeCtx, void *setSymKey, void *keyCtx,
+    const uint8_t *key, uint32_t keyLen, const uint8_t *iv, uint32_t ivLen)
 {
     int32_t ret;
-    MODES_CipherCtx *modeCtx = ctx;
-    if (iv == NULL) {
+    if (modeCtx->ciphMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    
-    if (ivLen != modeCtx->commonCtx.blockSize) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
-        return CRYPT_MODES_IVLEN_ERROR;
+    if (iv == NULL && ivLen > 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
     }
 
     ret = ((SetKey)setSymKey)(keyCtx, key, keyLen);
@@ -81,12 +107,19 @@ int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx,
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (ivLen > 0) {
-        (void)memcpy_s(modeCtx->commonCtx.iv, MODES_MAX_IV_LENGTH, iv, ivLen);
+    ret = MODES_SetIv(modeCtx, iv, ivLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
+    return CRYPT_SUCCESS;
+}
 
-    modeCtx->enc = enc;
-    return ret;
+int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx, const uint8_t *key, uint32_t keyLen,
+    const uint8_t *iv, uint32_t ivLen, bool enc)
+{
+    ctx->enc = enc;
+    return MODES_CipherInitCommonCtx(&ctx->commonCtx, setSymKey, keyCtx, key, keyLen, iv, ivLen);
 }
 
 int32_t MODE_CheckUpdateParam(uint8_t blockSize, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
@@ -105,7 +138,7 @@ int32_t MODE_CheckUpdateParam(uint8_t blockSize, uint32_t cacheLen, uint32_t inL
 static bool IfXts(CRYPT_CIPHER_AlgId id)
 {
     CRYPT_CIPHER_AlgId XTS_list[] = {
-        CRYPT_CIPHER_SM4_XTS,
+        CRYPT_CIPHER_AES128_XTS, CRYPT_CIPHER_AES256_XTS, CRYPT_CIPHER_SM4_XTS,
     };
     for (uint32_t i = 0; i < sizeof(XTS_list) / sizeof(XTS_list[0]); i++) {
         if (id == XTS_list[i]) {
@@ -115,7 +148,7 @@ static bool IfXts(CRYPT_CIPHER_AlgId id)
     return false;
 }
 
-int32_t UnPaddingISO7816(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
+static int32_t UnPaddingISO7816(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
 {
     uint32_t len;
     const uint8_t *p = pad;
@@ -133,7 +166,7 @@ int32_t UnPaddingISO7816(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t UnPaddingX923(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
+static int32_t UnPaddingX923(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
 {
     uint32_t len, pos, i;
     uint32_t check = 0;
@@ -155,7 +188,7 @@ int32_t UnPaddingX923(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t UnPaddingPkcs(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
+static int32_t UnPaddingPkcs(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
 {
     uint32_t len, pos, i;
     uint32_t check = 0;
@@ -177,7 +210,7 @@ int32_t UnPaddingPkcs(const uint8_t *pad, uint32_t padLen, uint32_t *finLen)
     return CRYPT_SUCCESS;
 }
 
-int32_t Mode_BlockUnPadding(int32_t padding, const uint8_t *pad, uint32_t padLen, uint32_t *dataLen)
+int32_t MODES_BlockUnPadding(int32_t padding, const uint8_t *pad, uint32_t padLen, uint32_t *dataLen)
 {
     int32_t ret = 0;
     uint32_t len = *dataLen;
@@ -292,6 +325,7 @@ int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const 
 int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *out, uint32_t *outLen)
 {
     int32_t ret;
+    uint32_t outLenTemp;
     if (out == NULL || outLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -329,12 +363,15 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        ret = Mode_BlockUnPadding(modeCtx->pad, out, modeCtx->dataLen, outLen);
+        outLenTemp = modeCtx->dataLen;
+        ret = MODES_BlockUnPadding(modeCtx->pad, out, modeCtx->commonCtx.blockSize, &outLenTemp);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+        *outLen = outLenTemp;
     }
+    modeCtx->dataLen = 0;
     return ret;
 }
 
@@ -402,6 +439,7 @@ void MODES_Clean(MODES_CipherCommonCtx *ctx)
     BSL_SAL_CleanseData((void *)(ctx->iv), MODES_MAX_IV_LENGTH);
     ctx->ciphMeth->cipherDeInitCtx(ctx->ciphCtx);
     ctx->offset = 0;
+    ctx->ivIndex = 0;
 }
 
 int32_t MODES_CipherDeInitCtx(MODES_CipherCtx *modeCtx)
@@ -421,7 +459,7 @@ void MODES_CipherFreeCtx(MODES_CipherCtx *modeCtx)
 }
 
 
-int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len)
+int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, const uint8_t *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -433,11 +471,12 @@ int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len)
         return CRYPT_MODES_IVLEN_ERROR;
     }
 
-    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, (uint8_t*)val, len) != EOK) {
+    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, val, len) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         return CRYPT_SECUREC_FAIL;
     }
     ctx->offset = 0;    // If the IV value is changed, the original offset is useless.
+    ctx->ivIndex = 0;
     return CRYPT_SUCCESS;
 }
 
@@ -471,8 +510,12 @@ int32_t MODES_CipherCtrl(MODES_CipherCtx *ctx, int32_t opt, void *val, uint32_t 
         case CRYPT_CTRL_GET_IV:
             return MODES_GetIv(&ctx->commonCtx, (uint8_t *)val, len);
         default:
+            if (ctx->commonCtx.ciphMeth == NULL ||
+                ctx->commonCtx.ciphMeth->cipherCtrl == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
             return CRYPT_MODES_CTRL_TYPE_ERROR;
+            }
+            return ctx->commonCtx.ciphMeth->cipherCtrl(ctx->commonCtx.ciphCtx, opt, val, len);
     }
 }
 
@@ -507,6 +550,28 @@ int32_t MODES_SetPaddingCheck(int32_t pad)
         return CRYPT_MODES_PADDING_NOT_SUPPORT;
     }
     return CRYPT_SUCCESS;
+}
+
+int32_t MODES_SetEncryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    // The ctx and key have been checked at the EAL layer and will not be checked again here.
+    // The keyMethod will support registration in the future. Therefore, this check is added.
+    if (ctx == NULL || ctx->ciphMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->ciphMeth->setEncryptKey(ctx->ciphCtx, key, len);
+}
+
+int32_t MODES_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    // The ctx and key have been checked at the EAL layer and will not be checked again here.
+    // The keyMethod will support registration in the future. Therefore, this check is added.
+    if (ctx == NULL || ctx->ciphMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->ciphMeth->setDecryptKey(ctx->ciphCtx, key, len);
 }
 
 #endif // HITLS_CRYPTO_MODES

@@ -18,9 +18,9 @@
 
 #include "bsl_err_internal.h"
 #include "crypt_aes.h"
+#include "modes_local.h"
 #include "crypt_errno.h"
 #include "crypt_modes_cbc.h"
-#include "modes_local.h"
 
 int32_t AES_CBC_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
