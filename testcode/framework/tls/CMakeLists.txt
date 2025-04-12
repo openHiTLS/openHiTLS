@@ -104,5 +104,5 @@ target_link_libraries(${WRAPPER_LIBNAME} PRIVATE TLS_TEST_INTF)
 
 set_target_properties(${HLT_LIBNAME} ${DT_LIBNAME} ${WRAPPER_LIBNAME}
     PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"	
+    ARCHIVE_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"
 )
