@@ -953,15 +953,21 @@ int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b)
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_DSA_GetLen(const CRYPT_DSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+static uint32_t CRYPT_DSA_GetPrvKeyLen(const CRYPT_DSA_Ctx *ctx)
 {
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
+    return BN_Bytes(ctx->x);
+}
 
-    *(int32_t *)val = func(ctx);
-    return CRYPT_SUCCESS;
+static uint32_t CRYPT_DSA_GetPubKeyLen(const CRYPT_DSA_Ctx *ctx)
+{
+    if (ctx->para != NULL) {
+        return BN_Bytes(ctx->para->p);
+    }
+    if (ctx->y != NULL) {
+        return BN_Bytes(ctx->y);
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+    return 0;
 }
 
 int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
@@ -972,11 +978,15 @@ int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     }
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_DSA_GetLen(ctx, (GetLenFunc)CRYPT_DSA_GetBits, val, len);
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DSA_GetBits);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_DSA_GetLen(ctx, (GetLenFunc)CRYPT_DSA_GetSignLen, val, len);
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DSA_GetSignLen);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_DSA_GetLen(ctx, (GetLenFunc)CRYPT_DSA_GetSecBits, val, len);
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DSA_GetSecBits);
+        case CRYPT_CTRL_GET_PUBKEY_LEN:
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DSA_GetPubKeyLen);
+        case CRYPT_CTRL_GET_PRVKEY_LEN:
+            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DSA_GetPrvKeyLen);
         case CRYPT_CTRL_UP_REFERENCES:
             if (val == NULL || len != (uint32_t)sizeof(int)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -996,6 +1006,6 @@ int32_t CRYPT_DSA_GetSecBits(const CRYPT_DSA_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return 0;
     }
-    return BN_SecBit(BN_Bits(ctx->para->p), BN_Bits(ctx->para->q));
+    return BN_SecBits(BN_Bits(ctx->para->p), BN_Bits(ctx->para->q));
 }
 #endif /* HITLS_CRYPTO_DSA */

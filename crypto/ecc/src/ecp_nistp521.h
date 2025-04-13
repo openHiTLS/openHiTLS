@@ -69,6 +69,6 @@ int32_t ECP521_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
 }
 #endif
 
-#endif /* defined(HITLS_CRYPTO_CURVE_NISTP521) && defined(HITLS_CRYPTO_NIST_USE_ACCEL) */
+#endif
 
 #endif

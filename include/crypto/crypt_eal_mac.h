@@ -180,6 +180,28 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx);
  */
 uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx);
 
+/**
+ * @ingroup crypt_eal_mac
+ * @brief   Set algorithm parameters. This API must be called after the CRYPT_EAL_MacInit API is called.
+ *          This API supports only the GMAC algorithm.
+ *
+ *        Parameter            Data Type        len stands for length, and in represents the number of bytes
+ * CRYPT_CTRL_SET_IV           uint8_t array    Length of IV
+ * CRYPT_CTRL_SET_TAGLEN       uint32_t         4 bytes, sizeof(uint32_t)
+ * CRYPT_CTRL_GET_MACLEN
+ *
+ * @param   ctx [IN] MAC context
+ * @param   type [IN] Set parameter type.
+ * @param   in [IN] Input data
+ * @param   len [IN] Input data length
+ * @retval #CRYPT_SUCCESS, parameters are set successfully.
+ * @retval #CRYPT_EAL_ERR_STATE, status incorrect.
+ * @retval #CRYPT_EAL_MAC_CTRL_TYPE_ERROR, the parameter type is set incorrect.
+ * @retval #CRYPT_EAL_ERR_ALGID, algorithm ID exclude GMAC.
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t type, void *in, uint32_t len);
+
 #ifdef __cplusplus
 }   // end extern "C"
 #endif

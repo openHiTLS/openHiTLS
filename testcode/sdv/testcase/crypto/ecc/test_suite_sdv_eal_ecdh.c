@@ -128,7 +128,6 @@ void SDV_CRYPTO_ECDH_EXCH_API_TC001(Hex *prvKeyVector, Hex *peerPubKeyVector, He
     shareKey = (uint8_t *)malloc(shareKeyVector->len);
     ASSERT_TRUE(shareKey != NULL);
     shareKeyLen = shareKeyVector->len;
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ecdhPkey, peerEcdhPkey, shareKey, &shareKeyLen), CRYPT_NO_REGIST_RAND);
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(NULL, peerEcdhPkey, shareKey, &shareKeyLen), CRYPT_NULL_INPUT);

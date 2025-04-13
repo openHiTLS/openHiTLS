@@ -199,7 +199,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     ret = memset_s(overpath, PATH_EXCEED, 'a', PATH_EXCEED - 1);
     ASSERT_EQ(ret, 0);
     ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, overpath);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
     BSL_SAL_Free(overpath);
 
 EXIT:

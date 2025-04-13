@@ -27,9 +27,11 @@ set(GEN_SOURCE_SRC
 include_directories(${SECURTE_INCLUDE}
     ${HITLS_SRC}/testcode/framework/include
     ${HITLS_SRC}/testcode/framework/crypto
+    ${HITLS_SRC}/config/macro_config
     ${HITLS_SRC}/crypto/include
     ${HITLS_SRC}/include/crypto
     ${HITLS_SRC}/include/bsl
+    ${HITLS_SRC}/bsl/err/include
 )
 
 add_executable(${GEN_TESTCASE} ${GEN_SOURCE_SRC})

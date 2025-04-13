@@ -26,21 +26,18 @@ extern "C" {
 #endif
 
 /* unsigned BigNum subtraction, caution: The input parameter validity must be ensured during external invoking. */
-void USub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b);
-
-/* unsigned BigNum sub fraction, caution: The input parameter validity must be ensured during external invoking. */
-void UInc(BN_BigNum *r, const BN_BigNum *a, BN_UINT w);
+int32_t USub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b);
 
 /* unsigned BigNum add fraction, caution: The input parameter validity must be ensured during external invoking. */
 void UDec(BN_BigNum *r, const BN_BigNum *a, BN_UINT w);
 
 /* unsigned BigNum addition, caution: The input parameter validity must be ensured during external invoking. */
-void UAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b);
+int32_t UAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_BN
+#endif /* HITLS_CRYPTO_BN */
 
-#endif // BN_UCAL_H
+#endif

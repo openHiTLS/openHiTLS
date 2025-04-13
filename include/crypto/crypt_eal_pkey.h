@@ -48,6 +48,7 @@ typedef struct {
         CRYPT_PaillierPub paillierPub; /**< Paillier public key structure */
         CRYPT_KemEncapsKey kemEk; /**< kem encaps key structure */
         CRYPT_ElGamalPub elgamalPub; /**< Elgamal public key structure */
+		CRYPT_MlDsaPub mldsaPub;  /**< MLDSA public key structure */
         CRYPT_SlhDsaPub slhDsaPub; /**< SLH-DSA public key structure */
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
@@ -74,6 +75,7 @@ typedef struct {
         CRYPT_PaillierPrv paillierPrv; /**< Paillier private key structure */
         CRYPT_KemDecapsKey kemDk; /**< kem decaps key structure */
         CRYPT_ElGamalPrv elgamalPrv; /**< ElGamal private key structure */
+		CRYPT_MlDsaPrv mldsaPrv;  /**< MLDSA private key structure */
         CRYPT_SlhDsaPrv slhDsaPrv; /**< SLH-DSA private key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
@@ -582,18 +584,6 @@ int32_t CRYPT_EAL_PkeySetExtData(CRYPT_EAL_PkeyCtx *pkey, void *data);
  *          NULL, which indicates failed.
  */
 void *CRYPT_EAL_PkeyGetExtData(const CRYPT_EAL_PkeyCtx *pkey);
-
-/**
- * @ingroup crypt_eal_pkey
- * @brief   Key pairing consistency test
- *
- * @param   pkey     [IN] Key pair structure
- *
- * @retval   true, consistent.
- *           false, non-consistent.
- */
-typedef bool (*CRYPT_EAL_Pct)(CRYPT_EAL_PkeyCtx *pkey);
-
 
 /**
  * @ingroup crypt_eal_pkey

@@ -24,9 +24,11 @@
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "ecc_utils.h"
+#include "bsl_util_internal.h"
 
-typedef __uint128_t uint128_t;
-
+#ifndef __SIZEOF_INT128__
+#error "This nistp256 implementation require the compiler support 128-bits integer."
+#endif
 
 /* field element definition */
 #define FELEM_BITS      256
@@ -940,7 +942,7 @@ static inline void FelemSqrReduceToBase(Felem *out, const Felem *in)
 
 /*
  * Field element inversion
- * From Fermat's small theorem, in^(p - 2) = in^(-1) (mod p)
+ * From Fermat's little theorem, in^(p - 2) = in^(-1) (mod p)
  * in^(-1) = in^(2^256 - 2^224 + 2^192 + 2^96 - 1 - 2) (mod p)
  * Input:
  *      in[] < 2^64

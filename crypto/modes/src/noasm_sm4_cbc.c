@@ -17,6 +17,7 @@
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_CBC)
 
 #include "crypt_modes_cbc.h"
+#include "modes_local.h"
 
 
 int32_t SM4_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)

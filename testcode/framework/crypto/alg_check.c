@@ -116,6 +116,16 @@ static bool IsDrbgCtrDisabled(void)
 #endif
 }
 
+static bool IsDrbgCtrSm4Disabled()
+{
+#if defined(HITLS_CRYPTO_DRBG_CTR) && defined(HITLS_CRYPTO_DRBG_GM) && defined(HITLS_CRYPTO_SM4)
+    return false;
+#else
+    return true;
+#endif
+}
+
+
 static int GetDrbgHashAlgId(void)
 {
     InitMdTable();
@@ -212,6 +222,12 @@ bool IsMacAlgDisabled(int id)
         case CRYPT_MAC_HMAC_SHA512:
         case CRYPT_MAC_HMAC_SM3:
             return IsHmacAlgDisabled(id);
+        case CRYPT_MAC_CBC_MAC_SM4:
+#ifdef HITLS_CRYPTO_CBC_MAC
+            return false;
+#else
+            return true;
+#endif
         default:
             return false;
     }
@@ -234,6 +250,12 @@ bool IsDrbgHashAlgDisabled(int id)
             return g_mdDisableTable[4] == 1;
         case CRYPT_RAND_SHA512:
             return g_mdDisableTable[5] == 1;
+        case CRYPT_RAND_SM3:
+#ifdef HITLS_CRYPTO_DRBG_GM
+            return g_mdDisableTable[12] == 1;
+#else
+            return true;
+#endif
         default:
             return false;
     }
@@ -298,6 +320,7 @@ bool IsRandAlgDisabled(int id)
         case CRYPT_RAND_SHA256:
         case CRYPT_RAND_SHA384:
         case CRYPT_RAND_SHA512:
+        case CRYPT_RAND_SM3:
             return IsDrbgHashAlgDisabled(id);
         case CRYPT_RAND_HMAC_SHA1:
         case CRYPT_RAND_HMAC_SHA224:
@@ -312,6 +335,8 @@ bool IsRandAlgDisabled(int id)
         case CRYPT_RAND_AES192_CTR_DF:
         case CRYPT_RAND_AES256_CTR_DF:
             return IsDrbgCtrDisabled();
+        case CRYPT_RAND_SM4_CTR_DF:
+            return IsDrbgCtrSm4Disabled();
         default:
             return false;
     }
@@ -326,6 +351,12 @@ bool IsAesAlgDisabled(int id)
         case CRYPT_CIPHER_AES128_CBC:
         case CRYPT_CIPHER_AES192_CBC:
         case CRYPT_CIPHER_AES256_CBC:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_ECB
+        case CRYPT_CIPHER_AES128_ECB:
+        case CRYPT_CIPHER_AES192_ECB:
+        case CRYPT_CIPHER_AES256_ECB:
             return true;
 #endif
 #ifndef HITLS_CRYPTO_CTR
@@ -358,6 +389,11 @@ bool IsAesAlgDisabled(int id)
         case CRYPT_CIPHER_AES256_OFB:
             return true;
 #endif
+#ifndef HITLS_CRYPTO_XTS
+        case CRYPT_CIPHER_AES128_XTS:
+        case CRYPT_CIPHER_AES256_XTS:
+            return true;
+#endif
         default:
             return false;  // Unsupported algorithm ID
     }
@@ -377,6 +413,10 @@ bool IsSm4AlgDisabled(int id)
 #endif
 #ifndef HITLS_CRYPTO_CBC
         case CRYPT_CIPHER_SM4_CBC:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_ECB
+        case CRYPT_CIPHER_SM4_ECB:
             return true;
 #endif
 #ifndef HITLS_CRYPTO_CTR
@@ -442,4 +482,27 @@ bool IsCipherAlgDisabled(int id)
         default:
             return false;
     }
+}
+
+bool IsCmacAlgDisabled(int id)
+{
+#ifdef HITLS_CRYPTO_CMAC
+    switch (id) {
+#ifndef HITLS_CRYPTO_CMAC_AES
+        case CRYPT_MAC_CMAC_AES128:
+        case CRYPT_MAC_CMAC_AES192:
+        case CRYPT_MAC_CMAC_AES256:
+            return true;
+#endif
+#ifndef HITLS_CRYPTO_CMAC_SM4
+        case CRYPT_MAC_CMAC_SM4:
+            return true;
+#endif
+        default:
+            return false;  // Unsupported algorithm ID
+    }
+#else
+    (void)id;
+    return true;
+#endif
 }

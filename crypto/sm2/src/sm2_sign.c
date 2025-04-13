@@ -817,7 +817,7 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_SET_SM2_USER_ID:
             ret = CtrlUserId(ctx, val, len);
             break;
-        case CRYPT_CTRL_SM2_GENE_R:
+        case CRYPT_CTRL_GENE_SM2_R:
             ret = Sm2GenerateR(ctx, val, len);
             break;
         case CRYPT_CTRL_SET_SM2_R:

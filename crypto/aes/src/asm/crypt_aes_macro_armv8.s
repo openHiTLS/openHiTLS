@@ -244,31 +244,32 @@ BLK0     .req    v0
 .Loop_enc_5_blks:
     aese \blk0,\rdk0
     aesmc \blk0,\blk0
+    aese \blk1,\rdk0
+    aesmc \blk1,\blk1
+    aese \blk2,\rdk0
+    aesmc \blk2,\blk2
+    aese \blk3,\rdk0
+    aesmc \blk3,\blk3
+    aese \blk4,\rdk0
+    aesmc \blk4,\blk4
+    ld1 {\rdk0s},[\key],#16
+    subs \rounds,\rounds,#2
     aese \blk0,\rdk1
     aesmc \blk0,\blk0
 
-    aese \blk1,\rdk0
-    aesmc \blk1,\blk1
     aese \blk1,\rdk1
     aesmc \blk1,\blk1
 
-    aese \blk2,\rdk0
-    aesmc \blk2,\blk2
     aese \blk2,\rdk1
     aesmc \blk2,\blk2
 
-    aese \blk3,\rdk0
-    aesmc \blk3,\blk3
     aese \blk3,\rdk1
     aesmc \blk3,\blk3
 
-    aese \blk4,\rdk0
-    aesmc \blk4,\blk4
     aese \blk4,\rdk1
     aesmc \blk4,\blk4
 
-    ld1 {\rdk0s,\rdk1s},[\key],#32
-    subs \rounds,\rounds,#2
+    ld1 {\rdk1s},[\key],#16
     b.gt .Loop_enc_5_blks
 
     aese \blk0,\rdk0

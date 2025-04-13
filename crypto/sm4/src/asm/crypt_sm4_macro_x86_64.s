@@ -49,57 +49,6 @@
 	vpxor		%ymm12,\A0,\A0
 .endm
 
-# need to load aes_mask and andmask prewards
-.macro	SM4_AVX2_AES_2_ROUND	A0 A1 A2 A3 B0 B1 B2 B3 RKey No
-	vpbroadcastd	\No(\RKey),%ymm4
-	vmovdqa		%ymm4,%ymm11
-
-	vpxor		\A1,%ymm4,%ymm4
-	vpxor		\A2,%ymm4,%ymm4
-	vpxor		\A3,%ymm4,%ymm4
-	vpxor		\B1,%ymm11,%ymm11
-	vpxor		\B2,%ymm11,%ymm11
-	vpxor		\B3,%ymm11,%ymm11
-
-	vpshufb		%ymm15,%ymm4,%ymm4
-	vpshufb		%ymm15,%ymm11,%ymm11
-
-	vmovdqa		160+4096(%rax), %ymm12
-	vmovdqa		224+4096(%rax), %ymm13
-
-	MUL_MATRIX	%ymm4 %ymm12 %ymm13
-	MUL_MATRIX	%ymm11 %ymm12 %ymm13
-
-	vmovdqa		320+4096(%rax), %ymm12
-	vpxor		%ymm12,%ymm4,%ymm4
-	vpxor		%ymm12,%ymm11,%ymm11
-
-	SM4_MM256_AESENCLAST	%ymm4
-	SM4_MM256_AESENCLAST	%ymm11
-
-	vmovdqa		192+4096(%rax), %ymm12
-	vmovdqa		256+4096(%rax), %ymm13
-	MUL_MATRIX	%ymm4 %ymm12 %ymm13
-	MUL_MATRIX	%ymm11 %ymm12 %ymm13
-
-	vmovdqa		352+4096(%rax), %ymm12
-	vpxor			%ymm12,%ymm4,%ymm4
-	vpxor			%ymm12,%ymm11,%ymm11
-
-	vpxor			\A0,%ymm4,\A0
-	SM4_MM256_ROL	\A0 %ymm4 $2 $30
-	SM4_MM256_ROL	\A0 %ymm4 $10 $22
-	SM4_MM256_ROL	\A0 %ymm4 $18 $14
-	SM4_MM256_ROL	\A0 %ymm4 $24 $8
-
-	vpxor			\B0,%ymm11,\B0
-	SM4_MM256_ROL	\B0 %ymm11 $2 $30
-	SM4_MM256_ROL	\B0 %ymm11 $10 $22
-	SM4_MM256_ROL	\B0 %ymm11 $18 $14
-	SM4_MM256_ROL	\B0 %ymm11 $24 $8
-
-.endm
-
 ##### SBOX Extend Tables (1 Table, 256*4 bytes): SBOX_0, SBOX_1, SBOX_2, SBOX_3 #####
 ##### MASK: XOR SHUFFLE LOAD STORE #####
 

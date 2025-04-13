@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_BN
+#ifdef HITLS_CRYPTO_BN_RAND
 
 #include <stdint.h>
 #include "securec.h"
@@ -30,32 +30,33 @@ static int32_t RandGenerate(void *libCtx, BN_BigNum *r, uint32_t bits)
     int32_t ret;
     uint32_t room = BITS_TO_BN_UNIT(bits);
     BN_UINT mask;
-    uint32_t bufSize = BITS_TO_BYTES(bits); // bits < (1u << 29), hence bits + 7 will not exceed the upper limit.
-    uint8_t *buf = BSL_SAL_Malloc(bufSize);
+    // Maxbits = (1 << 29) --> MaxBytes = (1 << 26), hence BN_BITS_TO_BYTES(bits) will not exceed the upper limit.
+    uint32_t byteSize = BN_BITS_TO_BYTES(bits);
+    uint8_t *buf = BSL_SAL_Malloc(byteSize);
     if (buf == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = CRYPT_RandEx(libCtx, buf, bufSize);
+    ret = CRYPT_RandEx(libCtx, buf, byteSize);
     if (ret == CRYPT_NO_REGIST_RAND) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
     if (ret != CRYPT_SUCCESS) {
-        ret = CRYPT_BN_RAND_GEN_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_BN_RAND_GEN_FAIL);
-        goto EXIT;
+        ret = CRYPT_BN_RAND_GEN_FAIL;
+        goto ERR;
     }
-    ret = BN_Bin2Bn(r, buf, bufSize);
-    BSL_SAL_CleanseData((void *)buf, bufSize);
+    ret = BN_Bin2Bn(r, buf, byteSize);
+    BSL_SAL_CleanseData(buf, byteSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        goto ERR;
     }
     mask = (BN_UINT)(-1) >> ((BN_UINT_BITS - bits % BN_UINT_BITS) % BN_UINT_BITS);
     r->data[room - 1] &= mask;
     r->size = BinFixSize(r->data, room);
-EXIT:
+ERR:
     BSL_SAL_FREE(buf);
     return ret;
 }
@@ -102,9 +103,9 @@ int32_t BN_RandEx(void *libCtx, BN_BigNum *r, uint32_t bits, uint32_t top, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_BN_BITS_TOO_MAX);
         return CRYPT_BN_BITS_TOO_MAX;
     }
-    if (BnExtend(r, BITS_TO_BN_UNIT(bits)) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+    ret = BnExtend(r, BITS_TO_BN_UNIT(bits));
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     ret = RandGenerate(libCtx, r, bits);
     if (ret != CRYPT_SUCCESS) {
@@ -113,10 +114,10 @@ int32_t BN_RandEx(void *libCtx, BN_BigNum *r, uint32_t bits, uint32_t top, uint3
     }
     r->data[0] |= (bottom == BN_RAND_BOTTOM_TWOBIT) ? 0x3 : (BN_UINT)bottom;  // CheckTopAndBottom ensure that bottom>0
     if (top == BN_RAND_TOP_ONEBIT) {
-        BN_SetBit(r, bits - 1);
+        (void)BN_SetBit(r, bits - 1);
     } else if (top == BN_RAND_TOP_TWOBIT) {
-        BN_SetBit(r, bits - 1);
-        BN_SetBit(r, bits - 2); /* the most significant 2 bits are 1 */
+        (void)BN_SetBit(r, bits - 1);
+        (void)BN_SetBit(r, bits - 2); /* the most significant 2 bits are 1 */
     }
     r->size = BinFixSize(r->data, r->room);
     return ret;
@@ -133,15 +134,11 @@ static int32_t InputCheck(BN_BigNum *r, const BN_BigNum *p)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_RAND_ZERO);
         return CRYPT_BN_ERR_RAND_ZERO;
     }
-    if (BN_ISNEG(p->flag)) {
+    if (p->sign == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_RAND_NEGATIVE);
         return CRYPT_BN_ERR_RAND_NEGATIVE;
     }
-    if (BnExtend(r, p->size) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
+    return BnExtend(r, p->size);
 }
 
 int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p)
@@ -167,7 +164,6 @@ int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
     if (BN_IsOne(p)) {
         return CRYPT_SUCCESS;
     }
-
     uint32_t bits = BN_Bits(p);
     do {
         tryCnt++;
@@ -186,5 +182,4 @@ int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
 
     return ret;
 }
-
-#endif /* HITLS_CRYPTO_BN */
+#endif /* HITLS_CRYPTO_BN_RAND */

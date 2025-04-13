@@ -83,7 +83,7 @@ void CRYPT_ECDSA_FreeCtx(CRYPT_ECDSA_Ctx *ctx);
  * @retval (CRYPT_EcdsaPara *) Pointer to the memory space of the allocated context
  * @retval NULL                Invalid null pointer
  */
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(CRYPT_PKEY_ParaId id);
+CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(int32_t id);
 
 /**
  * @ingroup ecdsa

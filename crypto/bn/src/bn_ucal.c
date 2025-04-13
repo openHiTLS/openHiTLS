@@ -18,13 +18,19 @@
 
 #include "securec.h"
 #include "bn_bincal.h"
+#include "crypt_errno.h"
+#include "bsl_err_internal.h"
 
 /* the user should guaranteed a.size >= b.size */
-void USub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
+int32_t USub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
 {
     uint32_t maxSize = a->size;
     uint32_t minSize = b->size;
-
+    // Ensure that r is sufficient.
+    int32_t ret = BnExtend(r, maxSize);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     BN_UINT *rr = r->data;
     const BN_UINT *aa = a->data;
     const BN_UINT *bb = b->data;
@@ -50,17 +56,7 @@ void USub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
         maxSize--;
     }
     r->size = maxSize;
-}
-
-void UInc(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
-{
-    uint32_t size = a->size;
-
-    BN_UINT carry = BinInc(r->data, a->data, size, w);
-    if (carry != 0) {
-        r->data[size++] = carry;
-    }
-    r->size = size;
+    return CRYPT_SUCCESS;
 }
 
 void UDec(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
@@ -72,13 +68,17 @@ void UDec(BN_BigNum *r, const BN_BigNum *a, BN_UINT w)
     r->size = BinFixSize(r->data, size);
 }
 
-void UAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
+int32_t UAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
 {
     const BN_BigNum *max = (a->size < b->size) ? b : a;
     const BN_BigNum *min = (a->size < b->size) ? a : b;
     uint32_t maxSize = max->size;
     uint32_t minSize = min->size;
-
+    // Ensure that r is sufficient to carry the sum.
+    int32_t ret = BnExtend(r, maxSize + 1);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     r->size = maxSize;
     BN_UINT *rr = r->data;
     const BN_UINT *aa = max->data;
@@ -97,7 +97,7 @@ void UAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b)
         *rr = carry;
         r->size += 1;
     }
-    (void)memset_s(r->data + r->size, (r->room - r->size) *  sizeof(BN_UINT), 0,
-        (r->room - r->size) *  sizeof(BN_UINT));
+    return CRYPT_SUCCESS;
 }
+
 #endif /* HITLS_CRYPTO_BN */

@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_RSA
+#if defined(HITLS_CRYPTO_RSA_BLINDING) || defined(HITLS_CRYPTO_RSA_BSSA)
 
 #include "crypt_utils.h"
 #include "crypt_rsa.h"
@@ -89,6 +89,7 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
 
 int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
 {
+    // create a BigNum
     b->r = BN_Create(bits);
     if (b->r == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -97,8 +98,6 @@ int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
 
     b->rInv = BN_Create(bits);
     if (b->rInv == NULL) {
-        BN_Destroy(b->r);
-        b->r = NULL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -114,7 +113,7 @@ int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits)
  * 2. Computes r^(-1) mod n (modular inverse)
  * 3. Computes r^e mod n (where e is the public exponent)
  */
-int32_t RSA_BlindCreateParam(void *libCtx, RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, BN_Optimizer *opt)
+int32_t RSA_BlindCreateParam(void *libCtx, RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, uint32_t bits, BN_Optimizer *opt)
 {
     int32_t ret;
     if (b == NULL || e == NULL || n == NULL) {
@@ -127,38 +126,38 @@ int32_t RSA_BlindCreateParam(void *libCtx, RSA_Blind *b, BN_BigNum *e, BN_BigNum
     b->r = NULL;
     b->rInv = NULL;
 
-    ret = RSA_CreateBlind(b, BN_Bits(n));
+    ret = RSA_CreateBlind(b, bits);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto END;
     }
 
     // b->r = random_integer_uniform(1, n)
     ret = BN_RandRangeEx(libCtx, b->r, n);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto END;
     }
 
     // b->rInv = inverse_mod(r, n)
     ret = BN_ModInv(b->rInv, b->r, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto END;
     }
 
     // b->r = RSAVP1(pk, r)
     ret = BN_ModExp(b->r, b->r, e, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        goto END;
     }
     return ret;
-ERR:
+END:
     BN_Destroy(b->r);
     BN_Destroy(b->rInv);
     b->r = NULL;
     b->rInv = NULL;
     return ret;
 }
-#endif // HITLS_CRYPTO_RSA
+#endif /* HITLS_CRYPTO_RSA_BLINDING */

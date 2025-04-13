@@ -72,7 +72,13 @@ enum CRYPT_ERROR {
     CRYPT_BN_ERR_MASKCOPY_LEN,          /**< Data lengths are inconsistent when data is copied with masks. */
     CRYPT_BN_ERR_QUICK_MODDATA,         /**< Uses the BN_ModNistEccMul and BN_ModNistEccSqr interfaces,
                                              the module data is not supported. */
+
+    CRYPT_BN_FLAG_INVALID,              /**< Invalid big number flag. */
+    CRYPT_BN_CONVERT_INPUT_INVALID,     /**< Invalid input parameter of big number strings. */
+    CRYPT_BN_NOT_SUPPORT_EXTENSION,     /**< The big number does not support dynamic extension. */
+    CRYPT_BN_INPUT_INVALID,             /**< Invalid external big number input. */
     CRYPT_BN_BITS_INVALID,              /**< The bits of the big number exceeds the limit. */
+    CRYPT_BN_ERR_SWAP_LEN,              /**< Data lengths are inconsistent when data is swapped with masks. */
 
     CRYPT_RSA_BUFF_LEN_NOT_ENOUGH = 0x01030001, /**< The buffer length is insufficient. */
     CRYPT_RSA_NO_KEY_INFO,              /**< Lacks valid key information. */
@@ -85,6 +91,8 @@ enum CRYPT_ERROR {
     CRYPT_RSA_ERR_PSS_SALT_LEN,         /**< Incorrect salt length of the PSS operation. */
     CRYPT_RSA_ERR_PSS_SALT_DATA,        /**< PSS operation salt data error, failed to compare the salt extracted
                                              during signature verification with the user's input. */
+    CRYPT_RSA_ERR_PKCSV15_SALT_LEN,     /**< Incorrect salt length of the PKCSV15 operation. */
+    CRYPT_RSA_ERR_PKCSV15_SALT_DATA,    /**< PKCSV15 salt data error. */
     CRYPT_RSA_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
     CRYPT_RSA_ERR_MD_ALGID,             /**< The hash ID of the input parameter is incorrect when
                                              the pkcs1.5 padding mode is set. */
@@ -108,16 +116,19 @@ enum CRYPT_ERROR {
     CRYPT_RSA_ERR_GEN_SALT,             /**< An error is returned when salt information fails to be generated
                                              during PSS signature. */
     CRYPT_RSA_ERR_ENC_INPUT_NOT_ENOUGH, /**< The plaintext length is too short for RSA NO PAD encryption. */
+    CRYPT_RSA_ERR_DATA_LEN,             /**< Incorrect encryption length. */
+    CRYPT_RSA_ERR_PAD_NUM,              /**< Incorrect padding length. */
     CRYPT_RSA_PUBKEY_NOT_EQUAL,         /**< RSA public keys are not equal. */
+    CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE,   /**< RSA pair-wise consistency failure. */
     CRYPT_RSA_ERR_BLIND_TYPE,           /**< Invalid RSA blinding type. Only RSA-BSSA is currently supported. */
     CRYPT_RSA_ERR_NO_BLIND_INFO,        /**< RSA blinding information is missing.
                                             The blind/unblind operation requires previous blinding parameters. */
     CRYPT_RSA_ERR_NO_PUBKEY_INFO,       /**< The rsa pub key is missing. */
     CRYPT_RSA_PADDING_NOT_SUPPORTED,    /**< The specified RSA padding mode is not supported in blinding. */
+    CRYPT_RSA_ERR_BSSA_PARAM,           /**< The param of bssa is not invalid. */
     CRYPT_RSA_GET_SALT_LEN_ERROR,       /**< The input length of getting salt-len is incorrect. */
     CRYPT_RSA_GET_SALT_NOT_PSS_ERROR,   /**< When the padding type of the key is not pss, and get the salt len. */
     CRYPT_RSA_ERR_PSS_PARAMS,            /**< The parameter is error when the padding type of the key is pss. */
-    CRYPT_RSA_ERR_BSSA_PARAM,          /**< The parameter of bssa is invalid. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
     CRYPT_EAL_BUFF_LEN_TOO_LONG,        /**< Insufficient buffer length. */
@@ -141,15 +152,20 @@ enum CRYPT_ERROR {
                                              if this requirement is not met,an error will be reported.
                                              For ISO7816, the first bit of padding data is 0x80, and the other bits
                                              are 0, if this requirement is not met, an error will be reported. */
+    CRYPT_EAL_PADDING_NOT_SUPPORT,      /**< Unsupported padding. */
     CRYPT_EAL_CIPHER_CTRL_ERROR,        /**< CRYPT_EAL_CipherCtrl interface unsupported CTRL type. */
     CRYPT_EAL_CIPHER_ERR_NEWCTX,
     CRYPT_EAL_PKEY_CTRL_ERROR,          /**< When the CRYPT_EAL_PkeyCtrl interface performs CTRL,
+                                             the function is not supported or the input length is incorrect. */
+    CRYPT_EAL_MAC_CTRL_TYPE_ERROR,      /**< When the CRYPT_EAL_PkeyCtrl interface performs CTRL,
                                              the function is not supported or the input length is incorrect. */
     CRYPT_EAL_PKEY_DUP_ERROR,           /**< Pkey context duplicate failure. */
     CRYPT_EAL_PKEY_CMP_DIFF_KEY_TYPE,   /**< Pkey comparison failure: different algorithm types. */
     CRYPT_EAL_ERR_PART_OVERLAP,         /**< Some memory overlap. */
     CRYPT_EAL_INTO_TYPE_NOT_SUPPORT,    /**< The info type is not supported. */
     CRYPT_EAL_ALG_ASM_NOT_SUPPORT,      /**< Algorithm assembly is not supported. */
+    CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR,  /**< An error occurs when the final operation is performed on the
+                                                  AEAD algorithm. */
 
     CRYPT_SHA2_INPUT_OVERFLOW = 0x01050001, /**< The length of the input data exceeds the maximum
                                                      processing range of SHA2. */
@@ -183,6 +199,23 @@ enum CRYPT_ERROR {
     CRYPT_ENTROPY_CONDITION_FAILURE = 0x01090001,    /**< Processing method error after invoking. */
     CRYPT_ENTROPY_RANGE_ERROR,                       /**< Entropy source generation range error */
     CRYPT_ENTROPY_ECF_ALG_ERROR,                     /**< Entropy source conditioning algorithm is incorrect. */
+    CRYPT_ENTROPY_RCT_FAILURE,                       /**< RCT detection fails, restart the entropy source. */
+    CRYPT_ENTROPY_APT_FAILURE,                       /**< APT detection fails, restart the entropy source. */
+    CRYPT_ENTROPY_ECF_IS_ERROR,                      /**< Entropy source conditioning is incorrect. */
+    CRYPT_ENTROPY_ES_CREATE_ERROR,                   /**< Entropy pool creation error. */
+    CRYPT_ENTROPY_ES_STATE_ERROR,                    /**< Incorrect entropy pool status. */
+    CRYPT_ENTROPY_ES_CTRL_ERROR,                     /**< Incorrect entropy pool settings. */
+    CRYPT_ENTROPY_ES_NO_NS,                          /**< No available noise source in the entropy pool. */
+    CRYPT_ENTROPY_ES_NS_NOT_FOUND,                   /**< Noise source not found. */
+    CRYPT_ENTROPY_ES_DUP_NS,                         /**< Noise source Repetition. */
+    CRYPT_ENTROPY_ES_NS_NOT_AVA,                     /**< Noise source not available. */
+    CRYPT_ENTROPY_ES_NS_FULL,                        /**< Noise source list is full. */
+    CRYPT_ENTROPY_ES_CF_NOT_SUPPORT,                 /**< Nonditioning function not supported. */
+    CRYPT_ENTROPY_ES_CF_ERROR,                       /**< Nonditioning function error. */
+    CRYPT_ENTROPY_ES_ENTROPY_NOT_ENOUGH,             /**< Not getting enough entropy. */
+    CRYPT_ENTROPY_ES_POOL_ERROR,                     /**< Entropy pool error. */
+    CRYPT_ENTROPY_ES_POOL_INSUFFICIENT,              /**< Entropy pool capacity is insufficient. */
+    CRYPT_ENTROPY_CTRL_INVALID_PARAM,                /**< Entropy invalid parameter. */
 
     CRYPT_DSA_BUFF_LEN_NOT_ENOUGH = 0x010A0001, /**< Insufficient buffer length. */
     CRYPT_DSA_ERR_KEY_PARA,                     /**< Incorrect key parameter data. */
@@ -318,6 +351,7 @@ enum CRYPT_ERROR {
     CRYPT_SHA3_INVALID_STATE,                       /**< Invalid state. */
     CRYPT_ECDH_ERR_EMPTY_KEY = 0x01150001,            /**< Key is null. */
     CRYPT_ECDH_ERR_INVALID_COFACTOR,                  /**< Invalid cofactor value. */
+    CRYPT_ECDH_ERR_UNSUPPORT_CURVE_TYPE,              /**< Unsupported curve type. */
 
     CRYPT_ECDSA_ERR_EMPTY_KEY = 0x01160001,           /**< Key is NULL. */
     CRYPT_ECDSA_ERR_TRY_CNT,                          /**< Key generation and generate signature fail
@@ -331,8 +365,8 @@ enum CRYPT_ERROR {
     CRYPT_SM3_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the output
                                                            result is insufficient. */
 
-    CRYPT_SM4_KEYLEN_ERROR = 0x01180001,              /**< Wrong key length set. */
-    CRYPT_SM4_DATALEN_ERROR,                          /**< Wrong data length is set. */
+    CRYPT_SM4_ERR_IV_LEN = 0x01180001,              /**< Wrong key length set. */
+    CRYPT_SM4_ERR_MSG_LEN,                          /**< Wrong data length is set. */
     CRYPT_SM4_ERR_KEY_LEN,                            /**< Wrong key length is set. */
     CRYPT_SM4_UNSAFE_KEY,                             /**< DataKey is the same as tweakKey. */
 
@@ -437,6 +471,55 @@ enum CRYPT_ERROR {
     CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
     CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
     CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
+	
+    CRYPT_MLKEM_KEYLEN_ERROR = 0x01240001,              /**< Incorrect input data length. */
+    CRYPT_MLKEM_LEN_NOT_ENOUGH,                         /**<The buffer size of output is insufficient. */
+    CRYPT_MLKEM_KEY_NOT_SET,                            /**<The encaps or decaps key not set. */
+    CRYPT_MLKEM_KEYINFO_NOT_SET,                        /**<The algorithm not set. */
+    CRYPT_MLKEM_KEY_NOT_EQUAL,                          /**< The MLKEM keys are not equal. */
+    CRYPT_MLKEM_CTRL_NOT_SUPPORT,                       /**< The Ctrl type is not supported.*/
+    CRYPT_MLKEM_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
+
+    CRYPT_MLDSA_KEYINFO_NOT_SET = 0x01250001,           /**< The algorithm not set. */
+    CRYPT_MLDSA_CTRL_NOT_SUPPORT,                       /**< The Ctrl type is not supported. */
+    CRYPT_MLDSA_PAD_TOO_LONG,                           /**< The pad is too long. */
+    CRYPT_MLDSA_KEYLEN_ERROR,                           /**< Incorrect input data length. */
+    CRYPT_MLDSA_SIGN_DATA_ERROR,                        /**< Invalid signature value. */
+    CRYPT_MLDSA_VERIFY_FAIL,                            /**< Failed to verify the signature. */
+    CRYPT_MLDSA_KEY_NOT_SET,                            /**< The public key or private not set. */
+    CRYPT_MLDSA_LEN_NOT_ENOUGH,                         /**< The buffer size of output is insufficient. */
+    CRYPT_MLDSA_KEY_NOT_EQUAL,                          /**< The MLDSA keys are not equal. */
+    CRYPT_MLDSA_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
+    CRYPT_MLDSA_SET_KEY_FAILED,                         /**< Failed to set the key. */
+
+    CRYPT_SEED_POOL_NEW_ERROR = 0x01260001,             /**< The length of the key input is
+                                                             incorrect when setting the key. */
+    CRYPT_SEED_POOL_STATE_ERROR,                        /**< Incorrect seed pool status. */
+    CRYPT_SEED_POOL_ES_LIST_FULL,                       /**< The number of entropy sources exceeds the upper limit. */
+    CRYPT_SEED_POOL_NO_SUFFICIENT_ENTROPY,              /**< The seed pool cannot provide sufficient entropy. */
+    CRYPT_SEED_POOL_NO_ENTROPY_SOURCE,                  /**< The seed pool has no entropy source. */
+    CRYPT_SEED_POOL_NO_ENTROPY_OBTAINED,                /**< No entropy data is obtained from the seed pool. */
+    CRYPT_SEED_POOL_NOT_MEET_REQUIREMENT,               /**< The entropy data does not meet the requirements. */
+    CRYPT_ENTROPY_CTX_CREATE_FAILED,                    /**< Failed to create the handle for obtaining the entropy. */
+
+	CRYPT_CMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x01270001, /**< The length of the buffer that storing the output
+                                                          result is insufficient. */
+    CRYPT_CMAC_INPUT_OVERFLOW,                       /**< The input length exceeds the limit. As a result,
+                                                          the integer type is reversed. */
+    CRYPT_CMAC_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+    CRYPT_GMAC_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+
+	CRYPT_CBC_MAC_ERR_CTRL_LEN = 0x01280001,
+    CRYPT_CBC_MAC_ERR_UNSUPPORTED_CTRL_OPTION,
+    CRYPT_CBC_MAC_PADDING_NOT_SET,
+    CRYPT_CBC_MAC_PADDING_NOT_SUPPORT,
+    CRYPT_CBC_MAC_OUT_BUFF_LEN_NOT_ENOUGH,
+
+    CRYPT_SIPHASH_OUT_BUFF_LEN_NOT_ENOUGH = 0x01290001, /**< The buffer size for storing the output
+                                                             result is insufficient. */
+    CRYPT_SIPHASH_INPUT_OVERFLOW,
+    CRYPT_SIPHASH_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+
 };
 #ifdef __cplusplus
 }

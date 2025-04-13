@@ -31,10 +31,14 @@ extern "C" {
 #define BN_UINT uint64_t
 #define BN_MASK (0xffffffffffffffffL)
 #define BN_DEC_VAL (10000000000000000000ULL)
+#define BN_DEC_LEN 19
+#define BN_UNIT_BITS 64
 #elif defined(HITLS_THIRTY_TWO_BITS)
 #define BN_UINT uint32_t
 #define BN_MASK (0xffffffffL)
 #define BN_DEC_VAL (1000000000L)
+#define BN_DEC_LEN 9
+#define BN_UNIT_BITS 32
 #else
 #error BN_UINT MUST be defined first.
 #endif
@@ -42,22 +46,29 @@ extern "C" {
 #define BN_MAX_BITS         (1u << 29) /* @note: BN_BigNum bits limitation 2^29 bits */
 #define BN_BITS_TO_BYTES(n) (((n) + 7) >> 3) /* @note: Calcute bytes form bits, bytes = (bits + 7) >> 3 */
 #define BN_BYTES_TO_BITS(n) ((n) << 3) /* bits = bytes * 8 = bytes << 3 */
-
+#define BN_UINT_BITS ((uint32_t)sizeof(BN_UINT) << 3)
+#define BITS_TO_BN_UNIT(bits) (((bits) + BN_UINT_BITS - 1) / BN_UINT_BITS)
 /* Flag of BigNum. If a new number is added, the value increases by 0x01 0x02 0x04... */
 typedef enum {
     CRYPT_BN_FLAG_OPTIMIZER = 0x01,      /**< Flag of BigNum, indicating the BigNum obtained from the optimizer */
-    CRYPT_BN_FLAG_CONSTTIME = 0x02,      /**< Flag of BigNum, indicating the constant time execution. */
-    CRYPT_BN_FLAG_ISNEGTIVE = 0x80000000,  /**< Flag of BigNum, indicating the bignum is negtive. */
+    CRYPT_BN_FLAG_STATIC = 0x02,      /**< Flag of BigNum, indicating the BN memory management belongs to the user. */
+    CRYPT_BN_FLAG_CONSTTIME = 0x04,      /**< Flag of BigNum, indicating the constant time execution. */
 } CRYPT_BN_FLAG;
 
-typedef struct BnMont BN_Mont;
+typedef struct BigNum {
+    bool sign; /* *< bignum sign: negtive(true) or not(false) */
+    uint32_t size; /* *< bignum size (count of BN_UINT) */
+    uint32_t room; /* *< bignum max size (count of BN_UINT) */
+    uint32_t flag; /* *< bignum flag */
+    BN_UINT *data; /* *< bignum data chunk(most significant limb at the largest) */
+} BN_BigNum;
 
-typedef struct BigNum BN_BigNum;
+typedef struct BnMont BN_Mont;
 
 typedef struct BnOptimizer BN_Optimizer;
 
 typedef struct BnCbCtx BN_CbCtx;
-
+ 
 typedef int32_t (*BN_CallBack)(BN_CbCtx *, int32_t, int32_t);
 
 /* If a is 0, all Fs are returned. If a is not 0, 0 is returned. */
@@ -67,6 +78,11 @@ static inline BN_UINT BN_IsZeroUintConsttime(BN_UINT a)
     // Shifting 3 bits to the left is equivalent to multiplying 8, convert the number of bytes into the number of bits.
     return (BN_UINT)0 - (t >> (((uint32_t)sizeof(BN_UINT) << 3) - 1));
 }
+
+#ifdef HITLS_CRYPTO_EAL_BN
+/* Check whether the BN entered externally is valid. */
+bool BnVaild(const BN_BigNum *a);
+#endif
 
 /**
  * @ingroup bn
@@ -88,6 +104,23 @@ BN_BigNum *BN_Create(uint32_t bits);
  * @retval none
  */
 void BN_Destroy(BN_BigNum *a);
+
+/**
+ * @ingroup bn
+ * @brief   BN initialization
+ * @attention This interface is used to create the BN structure between modules. The BN does not manage the memory of
+              the external BN structure and internal data space. the interface only the fixed attributes such as data,
+              room, and flag. The size attribute is defined by the caller.
+ *
+ * @param   bn [IN/OUT] BN, which is created by users and is not managed by the BN.
+ * @param   data [IN] BN data, the memory is allocated by the user and is not managed by the BN.
+ * @param   number [IN] number of BN that need to be initialized.
+ *
+ * @retval void
+ */
+void BN_Init(BN_BigNum *bn, BN_UINT *data, uint32_t room, int32_t number);
+
+#ifdef HITLS_CRYPTO_BN_CB
 
 /**
  * @ingroup bn
@@ -143,6 +176,7 @@ void *BN_CbCtxGetArg(BN_CbCtx *callBack);
  * @retval none
  */
 void BN_CbCtxDestroy(BN_CbCtx *cb);
+#endif
 
 /**
  * @ingroup bn
@@ -159,10 +193,23 @@ int32_t BN_SetSign(BN_BigNum *a, bool sign);
 
 /**
  * @ingroup bn
+ * @brief Set the flag.
+ *
+ * @param a    [IN] BigNum
+ * @param flag [IN] flag, for example, BN_MARK_CONSTTIME indicates that the constant interface is used.
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT         Invalid null pointer
+ * @retval CRYPT_BN_FLAG_INVALID    Invalid BigNum flag.
+ */
+int32_t BN_SetFlag(BN_BigNum *a, uint32_t flag);
+
+/**
+ * @ingroup bn
  * @brief BigNum copy
  *
  * @param r [OUT] BigNum
- * @param a [IN] BigNum, a != r.
+ * @param a [IN] BigNum
  *
  * @retval CRYPT_SUCCESS            succeeded.
  * @retval CRYPT_NULL_INPUT         Invalid null pointer
@@ -290,6 +337,18 @@ int32_t BN_SetLimb(BN_BigNum *r, BN_UINT w);
 
 /**
  * @ingroup bn
+ * @brief Obtain the limb from the BigNum.
+ *
+ * @param a [IN] BigNum
+ *
+ * @retval 0        Get 0
+ * @retval BN_MASK  Obtain the mask.
+ * @retval others   The limb is obtained successfully.
+ */
+BN_UINT BN_GetLimb(const BN_BigNum *a);
+
+/**
+ * @ingroup bn
  * @brief Obtain the value of the bit corresponding to a BigNum. The value is 1 or 0.
  *
  * @attention The input parameter of a BigNum cannot be null.
@@ -327,6 +386,19 @@ int32_t BN_SetBit(BN_BigNum *a, uint32_t n);
  * @retval CRYPT_BN_SPACE_NOT_ENOUGH    The space is insufficient.
  */
 int32_t BN_ClrBit(BN_BigNum *a, uint32_t n);
+
+/**
+ * @ingroup bn
+ * @brief Truncate a BigNum from the corresponding bit.
+ *
+ * @param a [IN] BigNum
+ * @param n [IN] Number of bits
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_BN_SPACE_NOT_ENOUGH    The space is insufficient.
+ */
+int32_t BN_MaskBit(BN_BigNum *a, uint32_t n);
 
 /**
  * @ingroup bn
@@ -472,7 +544,21 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
 
 /**
  * @ingroup bn
- * @brief BigNum square
+ * @brief Multiplication of BigNum by Limb
+ *
+ * @param   r [OUT] product
+ * @param   a [IN] multiplicand
+ * @param   w [IN] multiplier (limb)
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ */
+int32_t BN_MulLimb(BN_BigNum *r, const BN_BigNum *a, const BN_UINT w);
+
+/**
+ * @ingroup bn
+ * @brief BigNum square. r must not be a.
  *
  * @param r   [OUT] product
  * @param a   [IN] multiplier
@@ -480,7 +566,6 @@ int32_t BN_Mul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimize
  *
  * @retval CRYPT_SUCCESS
  * @retval CRYPT_NULL_INPUT             Invalid null pointer
- * @retval CRYPT_INVALID_ARG            The addresses of q, r are identical, or both of them are null. 
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  */
@@ -498,11 +583,28 @@ int32_t BN_Sqr(BN_BigNum *r, const BN_BigNum *a, BN_Optimizer *opt);
  *
  * @retval CRYPT_SUCCESS
  * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_INVALID_ARG            The addresses of q, r are identical, or both of them are null.
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    divisor cannot be 0.
  */
 int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *y, BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief BigNum divided by limb
+ *
+ * @param q [OUT] quotient
+ * @param r [OUT] remainder
+ * @param x [IN] dividend
+ * @param y [IN] Divisor (limb)
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ * @retval CRYPT_BN_ERR_DIVISOR_ZERO    divisor cannot be 0.
+ */
+int32_t BN_DivLimb(BN_BigNum *q, BN_UINT *r, const BN_BigNum *x, const BN_UINT y);
 
 /**
  * @ingroup bn
@@ -521,7 +623,8 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
  */
-int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
+    const BN_BigNum *mod, BN_Optimizer *opt);
 /**
  * @ingroup bn
  * @brief BigNum Modular subtraction
@@ -539,7 +642,8 @@ int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
  */
-int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
+    const BN_BigNum *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -558,7 +662,8 @@ int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
  */
-int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
+    const BN_BigNum *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -576,7 +681,8 @@ int32_t BN_ModMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL  Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
  */
-int32_t BN_ModSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSqr(
+    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -595,7 +701,8 @@ int32_t BN_ModSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Opt
  * @retval CRYPT_BN_ERR_DIVISOR_ZERO      module cannot be 0.
  * @retval CRYPT_BN_ERR_EXP_NO_NEGATIVE   exponent cannot be a negative number
  */
-int32_t BN_ModExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, const BN_BigNum *m, BN_Optimizer *opt);
+int32_t BN_ModExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
+    const BN_BigNum *m, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -617,9 +724,27 @@ int32_t BN_Mod(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimize
 
 /**
  * @ingroup bn
+ * @brief BigNum modulo limb
+ * @par Description: r = a mod m
+ *
+ * @param r [OUT] Modulus result
+ * @param a [IN] BigNum
+ * @param m [IN] Modulus (limb)
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ * @retval CRYPT_BN_ERR_DIVISOR_ZERO    module cannot be 0.
+ */
+int32_t BN_ModLimb(BN_UINT *r, const BN_BigNum *a, const BN_UINT m);
+
+#ifdef HITLS_CRYPTO_BN_PRIME
+/**
+ * @ingroup bn
  * @brief generate BN prime
  *
  * @param r    [OUT] Generate a prime number.
+ * @param e    [OUT] A helper prime to reduce the number of Miller-Rabin primes check.
  * @param bits [IN] Length of the generated prime number
  * @param half [IN] Whether to generate a prime number greater than the maximum value of this prime number by 1/2:
  *                  Yes: True, No: false
@@ -631,15 +756,18 @@ int32_t BN_Mod(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimize
  * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
  * @retval CRYPT_BN_NOR_GEN_PRIME           Failed to generate prime numbers.
+ * @retval CRYPT_NO_REGIST_RAND             No random number is registered.
  * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
  */
-int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb);
+int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb);
 
 /**
  * @ingroup bn
  * @brief check prime number
  *
  * @param bn  [IN] Prime number to be checked
+ * @param checkTimes  [IN] the user can set the check times of miller-rabin testing.
+ *                         if checkTimes == 0, it will use the default detection times of miller-rabin.
  * @param opt [IN] Optimizer
  *
  * @retval CRYPT_SUCCESS                    The check result is a prime number.
@@ -647,27 +775,13 @@ int32_t BN_GenPrime(BN_BigNum *r, uint32_t bits, bool half, BN_Optimizer *opt, B
  * @retval CRYPT_NULL_INPUT                 Invalid null pointer
  * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
  * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
+ * @retval CRYPT_NO_REGIST_RAND             No random number is registered.
  * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
  */
-int32_t BN_PrimeCheck(const BN_BigNum *bn, BN_Optimizer *opt);
+int32_t BN_PrimeCheck(const BN_BigNum *bn, uint32_t checkTimes, BN_Optimizer *opt, BN_CbCtx *cb);
+#endif // HITLS_CRYPTO_BN_PRIME
 
-/**
- * @ingroup bn
- * @brief check prime number
- *
- * @param libCtx [IN] Library context
- * @param bn  [IN] Prime number to be checked
- * @param opt [IN] Optimizer
- *
- * @retval CRYPT_SUCCESS                    The check result is a prime number.
- * @retval CRYPT_BN_NOR_CHECK_PRIME         The check result is a non-prime number.
- * @retval CRYPT_NULL_INPUT                 Invalid null pointer
- * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
- * @retval CRYPT_BN_OPTIMIZER_GET_FAIL      Failed to apply for space from the optimizer.
- * @retval CRYPT_BN_RAND_GEN_FAIL           Failed to generate a random number.
- */
-int32_t BN_PrimeCheckEx(void *libCtx, const BN_BigNum *bn, BN_Optimizer *opt);
-
+#ifdef HITLS_CRYPTO_BN_RAND
 #define BN_RAND_TOP_NOBIT      0 /* Not set bits */
 #define BN_RAND_TOP_ONEBIT     1 /* Set the most significant bit to 1. */
 #define BN_RAND_TOP_TWOBIT     2 /* Set the highest two bits to 1 */
@@ -689,6 +803,7 @@ int32_t BN_PrimeCheckEx(void *libCtx, const BN_BigNum *bn, BN_Optimizer *opt);
  * @retval CRYPT_NULL_INPUT                     Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL                 Memory allocation failure
  * @retval CRYPT_BN_ERR_RAND_TOP_BOTTOM         The top or bottom is invalid during random number generation.
+ * @retval CRYPT_NO_REGIST_RAND                 No random number is registered.
  * @retval CRYPT_BN_RAND_GEN_FAIL               Failed to generate a random number.
  * @retval CRYPT_BN_ERR_RAND_BITS_NOT_ENOUGH    The bit is too small during random number generation.
  */
@@ -723,6 +838,7 @@ int32_t BN_RandEx(void *libCtx, BN_BigNum *r, uint32_t bits, uint32_t top, uint3
  * @retval CRYPT_SUCCESS            A random number is successfully generated.
  * @retval CRYPT_NULL_INPUT         Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
+ * @retval CRYPT_NO_REGIST_RAND     No random number is registered.
  * @retval CRYPT_BN_RAND_GEN_FAIL   Failed to generate a random number.
  * @retval CRYPT_BN_ERR_RAND_ZERO   Generate a random number smaller than 0.
  * @retval CRYPT_BN_ERR_RAND_NEGATE Generate a negative random number.
@@ -745,7 +861,7 @@ int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p);
  * @retval CRYPT_BN_ERR_RAND_NEGATE Generate a negative random number.
  */
 int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p);
-
+#endif
 /**
  * @ingroup bn
  * @brief Binary to BigNum
@@ -762,7 +878,7 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen);
 
 /**
  * @ingroup bn
- * @brief Convert BigNum to binary
+ * @brief Convert BigNum to a big-endian binary
  *
  * @param a      [IN] BigNum
  * @param bin    [IN/OUT] Data stream to be converted -- The input pointer cannot be null.
@@ -774,6 +890,28 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen);
  * @retval CRYPT_SECUREC_FAIL   An error occurred during the copy.
  */
 int32_t BN_Bn2Bin(const BN_BigNum *a, uint8_t *bin, uint32_t *binLen);
+
+/**
+ * @ingroup bn
+ * @brief fix size of BigNum
+ *
+ * @param a      [IN] BigNum
+ *
+ * @retval void
+ */
+void BN_FixSize(BN_BigNum *a);
+
+/**
+ * @ingroup bn
+ * @brief
+ *
+ * @param a      [IN/OUT] BigNum
+ * @param words  [IN] the bn room that the caller wanted.
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval others, see crypt_errno.h
+ */
+int32_t BN_Extend(BN_BigNum *a, uint32_t words);
 
 /**
  * @ingroup bn
@@ -790,6 +928,62 @@ int32_t BN_Bn2Bin(const BN_BigNum *a, uint8_t *bin, uint32_t *binLen);
  */
 int32_t BN_Bn2BinFixZero(const BN_BigNum *a, uint8_t *bin, uint32_t binLen);
 
+#ifdef HITLS_CRYPTO_BN_STR_CONV
+/**
+ * @ingroup bn
+ * @brief Hexadecimal to a BigNum
+ *
+ * @param r [OUT] BigNum
+ * @param r [IN] Data stream to be converted
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT                 Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+ * @retval CRYPT_BN_CONVERT_INPUT_INVALID   Invalid string
+ */
+int32_t BN_Hex2Bn(BN_BigNum **r, const char *str);
+
+/**
+ * @ingroup bn
+ * @brief Convert BigNum to hexadecimal number
+ *
+ * @param a    [IN] BigNum
+ * @param char [OUT] Converts a hexadecimal string.
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT     Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
+ */
+char *BN_Bn2Hex(const BN_BigNum *a);
+
+/**
+ * @ingroup bn
+ * @brief Decimal to BigNum
+ *
+ * @param r   [OUT] BigNum
+ * @param str [IN] A decimal string to be converted
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT                 Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+ * @retval CRYPT_BN_CONVERT_INPUT_INVALID   Invalid string
+ */
+int32_t BN_Dec2Bn(BN_BigNum **r, const char *str);
+
+/**
+ * @ingroup bn
+ * @brief Convert BigNum to decimal number
+ *
+ * @param r   [IN] BigNum
+ *
+ * @retval A decimal string after conversion or push error.
+ */
+char *BN_Bn2Dec(const BN_BigNum *a);
+#endif
+
+#if defined(HITLS_CRYPTO_CURVE_SM2_ASM) ||                                             \
+    ((defined(HITLS_CRYPTO_CURVE_NISTP521) || defined(HITLS_CRYPTO_CURVE_NISTP384_ASM)) && \
+        defined(HITLS_CRYPTO_NIST_USE_ACCEL))
 /**
  * @ingroup bn
  * @brief Converting a 64-bit unsigned number array to a BigNum
@@ -818,6 +1012,7 @@ int32_t BN_U64Array2Bn(BN_BigNum *r, const uint64_t *array, uint32_t len);
  * @retval CRYPT_SECUREC_FAIL   A copy error occurs.
  */
 int32_t BN_Bn2U64Array(const BN_BigNum *a, uint64_t *array, uint32_t *len);
+#endif
 
 /**
  * @ingroup bn
@@ -881,7 +1076,8 @@ BN_Mont *BN_MontCreate(const BN_BigNum *m);
  * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
  * @retval CRYPT_BN_ERR_EXP_NO_NEGATE       exponent cannot be a negative number
  */
-int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt);
+int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont,
+    BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -901,7 +1097,8 @@ int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont
  * @retval CRYPT_BN_OPTIMIZER_STACK_FULL    The optimizer stack is full.
  * @retval CRYPT_BN_ERR_EXP_NO_NEGATE       exponent cannot be a negative number
  */
-int32_t BN_MontExpConsttime(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt);
+int32_t BN_MontExpConsttime(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e,
+    BN_Mont *mont, BN_Optimizer *opt);
 
 /**
  * @ingroup mont
@@ -928,14 +1125,32 @@ void BN_MontDestroy(BN_Mont *mont);
  */
 int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
 
-int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1, const BN_BigNum *a2, const BN_BigNum *e2,
-    BN_Mont *mont, BN_Optimizer *opt);
+/**
+ * @ingroup bn
+ * @brief shift a BigNum to the left
+ *
+ * @param r [OUT] Shift result
+ * @param a [IN] Source data
+ * @param n [IN] Shift bit num
+ *
+ * @retval CRYPT_SUCCESS            succeeded.
+ * @retval CRYPT_NULL_INPUT         Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
+ */
+int32_t BN_Lshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
 
+#ifdef HITLS_CRYPTO_DSA
+int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1,
+    const BN_BigNum *a2, const BN_BigNum *e2, BN_Mont *mont, BN_Optimizer *opt);
+#endif
+
+#ifdef HITLS_CRYPTO_ECC
 /**
  * @ingroup bn
  * @brief Mould opening root
  * @par Description: r^2 = a mod p; p-1=q*2^s.
  *      In the current implementation s=1 will take a special branch, and the calculation speed is faster.
+ *      The fast calculation branch with s=2 is not implemented currently.
  *      Currently, the s corresponding to the mod p of the EC nist224, 256, 384, and 521 is 96, 1, 1, and 1 respectively
  *      The branch with s=2 is not used.
  *      The root number is provided for the EC.
@@ -952,7 +1167,10 @@ int32_t BN_MontExpMul(BN_BigNum *r, const BN_BigNum *a1, const BN_BigNum *e1, co
  * @retval CRYPT_BN_ERR_NO_SQUARE_ROOT  The square root cannot be found.
  */
 int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt);
+#endif
 
+#if defined(HITLS_CRYPTO_CURVE_SM2_ASM) || (defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && \
+    defined(HITLS_CRYPTO_NIST_USE_ACCEL))
 /**
  * @ingroup bn
  * @brief BigNum to BN_UINT array
@@ -981,7 +1199,9 @@ int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size);
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
  */
 int32_t BN_Array2BN(BN_BigNum *dst, const BN_UINT *src, const uint32_t size);
+#endif
 
+#ifdef HITLS_CRYPTO_ECC
 /**
  * @ingroup bn
  * @brief Copy with the mask. When the mask is set to (0), r = a; when the mask is set to (-1), r = b.
@@ -998,7 +1218,6 @@ int32_t BN_Array2BN(BN_BigNum *dst, const BN_UINT *src, const uint32_t size);
  */
 int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_UINT mask);
 
-#ifdef HITLS_CRYPTO_ECC
 /**
  * @ingroup bn
  * @brief Calculate r = (a - b) % mod
@@ -1065,7 +1284,8 @@ int32_t BN_ModAddQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For other errors, see crypt_errno.h.
  */
-int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
+    void *mod, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -1073,7 +1293,7 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, c
  *
  * @attention This API is invoked in the area where ECC point computing is intensive and is performance sensitive.
  * The user must guarantee a < mod
- * In addition, a->room is not less than mod->size.
+ * In addition, a->room are not less than mod->size.
  * All data are non-negative
  * The mod information can only be the parameter p of the curve of nistP224, nistP256, nistP384, and nistP521.
  * Otherwise, the interface may not be functional.
@@ -1086,16 +1306,16 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, c
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *mod, BN_Optimizer *opt);
 #endif
 
-#ifdef HITLS_CRYPTO_SM2
+#ifdef HITLS_CRYPTO_CURVE_SM2
 /**
  * @ingroup ecc
- * @brief   sm2 curve: calculate r = (a*b) % mod
+ * @brief   sm2 curve: calculate r = (a*b)% mod
  *
  * @attention This API is invoked in the area where ECC point computing is intensive and is performance sensitive.
- * The user must guarantee a < mod, b < mod
+ * The user must guarantee a < mod、b < mod
  * In addition, a->room and b->room are not less than mod->size.
  * All data are non-negative
  * The mod information can only be the parameter p of the curve of sm2.
@@ -1110,8 +1330,7 @@ int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt);
 
 /**
  * @ingroup ecc
@@ -1132,19 +1351,105 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModSm2EccSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt);
+int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt);
+#endif
+
+#ifdef HITLS_CRYPTO_BN_PRIME_RFC3526
+/**
+ * @ingroup bn
+ * @brief Return the corresponding length of modulo exponent of the BigNum.
+ *
+ * @param r   [OUT] Output result
+ * @param len [IN] Length
+ *
+ * @retval Not NULL     Success
+ * @retval NULL         failure
+ */
+BN_BigNum *BN_GetRfc3526Prime(BN_BigNum *r, uint32_t len);
+#endif
 
 /**
  * @ingroup bn
- * @brief Return the number of security bits provided by a specific algorithm and specific key size
+ * @brief Return the number of security bits provided by a specific algorithm and specific key size.
  *
- * @param pubLen [IN] size of the public key
- * @param prvlen [IN] size of the private key
- * @retval [OUT] output the result
+ * @param [OUT] Output the result.
+ * @param pubLen [IN] Size of the public key
+ * @param prvLen [IN] Size of the private key.
+ *
+ * @retval Number of security bits
  */
-int32_t BN_SecBit(int32_t publen, int32_t prvlen);
-#endif
+int32_t BN_SecBits(int32_t pubLen, int32_t prvLen);
+
+#if defined(HITLS_CRYPTO_RSA)
+
+/**
+ * @ingroup bn
+ * @brief   Montgomery modulus calculation process, need a < m, b < m, All is positive numbers, The large number
+     optimizer must be enabled before this function is used.
+ *
+ * @param   r [OUT] Output results
+ * @param   a [IN] Input data
+ * @param   b [IN] Input data
+ * @param   mont [IN] Montgomery context
+ * @param   opt [IN] Large number optimizer
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  For details about other errors, see crypt_errno.h.
+ */
+int32_t MontMulCore(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Mont *mont, BN_Optimizer *opt);
+
+#endif // HITLS_CRYPTO_RSA
+
+#if defined(HITLS_CRYPTO_BN_PRIME)
+/**
+ * @ingroup bn
+ * @brief   Montgomery modulus calculation process, need a < m, unlimited symbols.
+ *
+ * @param   r [OUT] Output results
+ * @param   a [IN] Input data
+ * @param   mont [IN] Montgomery context
+ * @param   opt [IN] Large number optimizer
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  For details about other errors, see crypt_errno.h.
+ */
+int32_t MontSqrCore(BN_BigNum *r, const BN_BigNum *a, BN_Mont *mont, BN_Optimizer *opt);
+
+#endif // HITLS_CRYPTO_BN_PRIME
+
+/**
+ * @ingroup bn
+ * @brief   Enabling the big data optimizer
+ *
+ * @param   opt [IN] Large number optimizer
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  For details about other errors, see crypt_errno.h.
+ */
+int32_t OptimizerStart(BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief   Disabling the Large Number Optimizer
+ *
+ * @param   opt [IN] Large number optimizer
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  For details about other errors, see crypt_errno.h.
+ */
+void OptimizerEnd(BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief   Get Bn from the large number optimizer.
+ *
+ * @param   opt [IN] Large number optimizer
+ * @param   room [IN] Length of the big number.
+ *
+ * @retval  BN_BigNum if success
+ * @retval  NULL if failed
+ */
+BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room);
 
 #ifdef HITLS_CRYPTO_PAILLIER
 /**
@@ -1164,10 +1469,77 @@ int32_t BN_SecBit(int32_t publen, int32_t prvlen);
 int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
 #endif
 
+/**
+ * @ingroup bn
+ * @brief   Enabling the big data optimizer
+ *
+ * @param   opt [IN] Large number optimizer
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  For details about other errors, see crypt_errno.h.
+ */
+int32_t OptimizerStart(BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief   Disabling the Large Number Optimizer
+ *
+ * @param   opt [IN] Large number optimizer
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  For details about other errors, see crypt_errno.h.
+ */
+void OptimizerEnd(BN_Optimizer *opt);
+
+/**
+ * @ingroup bn
+ * @brief   Get Bn from the large number optimizer.
+ *
+ * @param   opt [IN] Large number optimizer
+ * @param   room [IN] Length of the big number.
+ *
+ * @retval  BN_BigNum if success
+ * @retval  NULL if failed
+ */
+BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room);
+
+#ifdef HITLS_CRYPTO_CURVE_MONT
+
+/**
+ * a, b is mont form.
+ * r = a * b
+ */
+int32_t BN_EcPrimeMontMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt);
+
+/**
+ * a is mont form.
+ * r = a ^ 2
+ */
+int32_t BN_EcPrimeMontSqr(BN_BigNum *r, const BN_BigNum *a, void *mont, BN_Optimizer *opt);
+
+/**
+ * r = Reduce(r * RR)
+ */
+int32_t BnMontEnc(BN_BigNum *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime);
+
+/**
+ * r = Reduce(r)
+ */
+void BnMontDec(BN_BigNum *r, BN_Mont *mont);
+
+/**
+ * This interface is a constant time.
+ * if mask = BN_MASK. swap a and b.
+ * if mask = 0, a and b remain as they are.
+ */
+int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask);
+
+#endif // HITLS_CRYPTO_CURVE_MONT
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_BN
+#endif /* HITLS_CRYPTO_BN */
 
-#endif // CRYPT_BN_H
+#endif

@@ -366,7 +366,7 @@ int32_t CRYPT_SM2_KapComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ct
     /* Fifth: Caculate V or U */
     GOTO_ERR_IF(ECC_PointMul(peerCtx->pkey->para, uorv, xp, peerCtx->pointR), ret);
     /* P + [x]R */
-    GOTO_ERR_IF(ECC_PointAdd(selfCtx->pkey->para, uorv, uorv, peerCtx->pkey->pubkey), ret);
+    GOTO_ERR_IF(ECC_PointAddAffine(selfCtx->pkey->para, uorv, uorv, peerCtx->pkey->pubkey), ret);
     GOTO_ERR_IF(ECC_PointMul(selfCtx->pkey->para, uorv, t, uorv), ret);
     /* Detect uorv is in */
     GOTO_ERR_IF(ECC_PointCheck(uorv), ret);

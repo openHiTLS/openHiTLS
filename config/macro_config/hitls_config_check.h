@@ -624,4 +624,10 @@ chacha20poly1305, chacha20, rsa"
 #endif
 #endif /* HITLS_CRYPTO_HPKE */
 
+#if defined(HITLS_CRYPTO_HYBRIDKEM)
+    #if !defined(HITLS_CRYPTO_X25519) && !defined(HITLS_CRYPTO_ECDH)
+        #error "[HiTLS] The hybrid must work with x25519 or ecdh."
+    #endif
+#endif
+
 #endif /* HITLS_CONFIG_CHECK_H */

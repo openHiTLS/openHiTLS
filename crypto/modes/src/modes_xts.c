@@ -86,8 +86,42 @@ int32_t MODES_XTS_SetDecryptKey(MODES_CipherXTSCtx *ctx, const uint8_t *key, uin
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-    return ret;
+	return ret;
 }
+
+#ifdef HITLS_BIG_ENDIAN
+// AES XTS IEEE P1619/D16 Annex C
+// Pseudocode for XTS-AES-128 and XTS-AES-256 Encryption
+void GF128Mul(uint8_t *a, uint32_t len)
+{
+    uint8_t in;
+    uint8_t out = 0;
+    in = 0;
+    // xts blocksize MODES_XTS_BLOCKSIZE
+    for (uint32_t j = 0; j < len; j++) {
+        out = (a[j] >> 7) & 1;  // >> 7
+        a[j] = (uint8_t)((a[j] << 1) + in) & 0xFFu;  // << 1
+        in = out;
+    }
+    if (out > 0) {
+        a[0] ^= 0x87;  // 0x87 gf 128
+    }
+}
+#else
+// AES XTS IEEE P1619/D16 5.2
+// Multiplication by a primitive element |ив
+void GF128Mul(uint8_t *a, uint32_t len)
+{
+    (void)len;
+    uint64_t *t = (uint64_t *)a;
+    uint8_t c = (t[1] >> 63) & 0xff; // 63 is the last bit of the last eight bytes.
+    t[1] = t[1] << 1 | t[0] >> 63; // 63 is the last bit of the first eight bytes
+    t[0] = t[0] << 1;
+    if (c != 0) {
+        t[0] ^= 0x87;
+    }
+}
+#endif
 
 void GF128Mul_GM(uint8_t *a, uint32_t len)
 {
@@ -141,7 +175,7 @@ int32_t BlocksCrypt(MODES_CipherXTSCtx *ctx, const uint8_t **in, uint8_t **out, 
         if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
             GF128Mul_GM(ctx->tweak, blockSize);
         } else {
-            return CRYPT_NOT_SUPPORT;
+            GF128Mul(ctx->tweak, blockSize);
         }
     }
     *in = tmpIn;
@@ -173,12 +207,13 @@ int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     XTS_UPDATE_VALUES(tmpLen, tmpIn, tmpOut, blockSize);
 
-        if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
+    if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
         GF128Mul_GM(ctx->tweak, blockSize);
-        } else {
-            return CRYPT_NOT_SUPPORT;
-        }
+    } else {
+        GF128Mul(ctx->tweak, blockSize);
+    }
     if (tmpLen == 0) {
+        // If len is an integer multiple of blockSize, the subsequent calculations is not required.
         return CRYPT_SUCCESS;
     }
 
@@ -234,7 +269,7 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
         if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
             GF128Mul_GM(ctx->tweak, blockSize);
         } else {
-            return CRYPT_NOT_SUPPORT;
+            GF128Mul(ctx->tweak, blockSize);
         }
         return CRYPT_SUCCESS;
     }
@@ -244,7 +279,7 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
         GF128Mul_GM(ctx->tweak, blockSize);
     } else {
-        return CRYPT_NOT_SUPPORT;
+        GF128Mul(ctx->tweak, blockSize);
     }
     ret = BlockCrypt(ctx, tmpIn, ctx->tweak, pp, false);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
@@ -330,6 +365,8 @@ int32_t MODES_XTS_Ctrl(MODES_XTS_Ctx *modeCtx, int32_t cmd, void *val, uint32_t 
     }
     switch (cmd) {
         case CRYPT_CTRL_REINIT_STATUS:
+            (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            modeCtx->dataLen = 0;
             return MODES_XTS_SetIv(&modeCtx->xtsCtx, val, len);
         case CRYPT_CTRL_GET_IV:
             return GetIv(&modeCtx->xtsCtx, (uint8_t *)val, len);
@@ -347,7 +384,7 @@ int32_t MODES_XTS_Ctrl(MODES_XTS_Ctx *modeCtx, int32_t cmd, void *val, uint32_t 
 
 MODES_XTS_Ctx *MODES_XTS_NewCtx(int32_t algId)
 {
-    const EAL_SymMethod *method = MODES_GetSymMethod(algId);
+    const EAL_SymMethod *method = EAL_GetSymMethod(algId);
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
@@ -362,7 +399,7 @@ MODES_XTS_Ctx *MODES_XTS_NewCtx(int32_t algId)
     ctx->xtsCtx.ciphCtx = BSL_SAL_Calloc(2, method->ctxSize);
     if (ctx->xtsCtx.ciphCtx  == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(ctx);
+        BSL_SAL_Free(ctx);
         return NULL;
     }
 
@@ -408,8 +445,8 @@ int32_t MODES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
     (void) modeCtx;
     (void) out;
-    (void) outLen;
-    return CRYPT_NOT_SUPPORT;
+    *outLen = 0;
+    return CRYPT_SUCCESS;
 }
 
 int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx)
@@ -419,6 +456,9 @@ int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx)
         return CRYPT_NULL_INPUT;
     }
     MODES_XTS_Clean(&modeCtx->xtsCtx);
+    (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+    modeCtx->dataLen = 0;
+    modeCtx->pad = CRYPT_PADDING_NONE;
     return CRYPT_SUCCESS;
 }
 
@@ -435,16 +475,20 @@ void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx)
 
 
 int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
-    (void) param;
+    (void)param;
     if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_XTS:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_XTS_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_XTS_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -452,13 +496,29 @@ int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t
 
 int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (modeCtx == NULL) {
+    if (modeCtx == NULL || modeCtx->xtsCtx.ciphMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    int32_t ret = MODE_CheckUpdateParam(modeCtx->xtsCtx.blockSize, modeCtx->dataLen, inLen, outLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     switch (modeCtx->algId) {
+        case CRYPT_CIPHER_AES128_XTS:
+        case CRYPT_CIPHER_AES256_XTS:
+#ifdef HITLS_CRYPTO_AES
+            return AES_XTS_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_XTS:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_XTS_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_XTS_Update(modeCtx, in, inLen, out, outLen);
     }

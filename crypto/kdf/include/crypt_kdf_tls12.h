@@ -56,7 +56,7 @@ int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const BSL_Param *param)
  *
  * @param ctx   [in, out] Pointer to the KDFTLS12 context.
  * @param out   [out] Derived key buffer.
- * @param out   [out] Derived key buffer size.
+ * @param len   [out] Derived key buffer size.
  *
  * @retval Success: CRYPT_SUCCESS
  *         For other error codes, see crypt_errno.h.

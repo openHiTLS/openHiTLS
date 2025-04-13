@@ -34,6 +34,7 @@ typedef enum {
     DRBG_SHA256MDSIZE = 32,
     DRBG_SHA384MDSIZE = 48,
     DRBG_SHA512MDSIZE = 64,
+    DRBG_SM3MDSIZE = 32,
 } DRBG_MdSize;
 
 typedef struct {
@@ -105,7 +106,6 @@ static int32_t DRBG_UpdateDataInHashDf(DRBG_HashCtx *ctx,
         ret = meth->update(mdCtx, in4->data, in4->len);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
         }
     }
 
@@ -397,7 +397,11 @@ int32_t DRBG_HashReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropy, const CRYPT_D
     C = Hash_Df(0x00 || V)
     */
     c = 0x1;
-    ret = DRBG_HashDf(ctx, ctx->c, ctx->seedLen, &temp, &v, entropy, adin);
+    if (drbg->isGm) {
+        ret = DRBG_HashDf(ctx, ctx->c, ctx->seedLen, &temp, entropy, &v, adin);
+    } else {
+        ret = DRBG_HashDf(ctx, ctx->c, ctx->seedLen, &temp, &v, entropy, adin);
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -427,16 +431,13 @@ void DRBG_HashUnInstantiate(DRBG_Ctx *drbg)
 DRBG_Ctx *DRBG_HashDup(DRBG_Ctx *drbg)
 {
     DRBG_HashCtx *ctx = NULL;
-    DRBG_Ctx *newDrbg = NULL;
 
     if (drbg == NULL) {
         return NULL;
     }
 
     ctx = (DRBG_HashCtx*)drbg->ctx;
-    newDrbg = DRBG_NewHashCtx(ctx->md, &(drbg->seedMeth), drbg->seedCtx);
-
-    return newDrbg;
+    return DRBG_NewHashCtx(ctx->md, drbg->isGm, &(drbg->seedMeth), drbg->seedCtx);
 }
 
 void DRBG_HashFree(DRBG_Ctx *drbg)
@@ -478,7 +479,7 @@ static int32_t DRBG_NewHashCtxBase(uint32_t mdSize, DRBG_Ctx *drbg, DRBG_HashCtx
     }
 }
 
-DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
+DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
 {
     DRBG_Ctx *drbg = NULL;
     DRBG_HashCtx *ctx = NULL;
@@ -516,7 +517,11 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *se
     }
 
     drbg->state = DRBG_STATE_UNINITIALISED;
-    drbg->reseedInterval = DRBG_MAX_RESEED_INTERVAL;
+    drbg->isGm = isGm;
+    drbg->reseedInterval = (drbg->isGm) ? HITLS_CRYPTO_RESEED_INTERVAL_GM : DRBG_MAX_RESEED_INTERVAL;
+#if defined(HITLS_CRYPTO_DRBG_GM)
+    drbg->reseedIntervalTime = (drbg->isGm) ? HITLS_CRYPTO_DRBG_RESEED_TIME_GM : 0;
+#endif
 
     drbg->meth = &meth;
     drbg->ctx = ctx;
@@ -532,7 +537,7 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, const CRYPT_RandSeedMethod *se
 
     drbg->maxPersLen = DRBG_MAX_LEN;
     drbg->maxAdinLen = DRBG_MAX_LEN;
-    drbg->maxRequest = DRBG_MAX_REQUEST;
+    drbg->maxRequest = (drbg->isGm) ? DRBG_MAX_REQUEST_SM3 : DRBG_MAX_REQUEST;
 
     return drbg;
 }

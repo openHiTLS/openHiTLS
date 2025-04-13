@@ -72,6 +72,12 @@ typedef struct {
 } EAL_MdUnitaryMethod;
 
 typedef struct {
+    uint16_t hashSize;              // Output length of the Siphash algorithm
+    uint16_t compressionRounds;     // the number of compression rounds
+    uint16_t finalizationRounds;    // the number of finalization rounds
+} EAL_SiphashMethod;
+
+typedef struct {
     uint32_t id;
     EAL_MdMethod *mdMeth;
 } EAL_CidToMdMeth;
@@ -103,12 +109,15 @@ typedef int32_t (*PkeyVerify)(const void *key, int32_t mdAlgId, const uint8_t *d
     const uint8_t *sign, uint32_t signLen);
 typedef int32_t (*PkeyVerifyData)(const void *key, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
+typedef int32_t (*PkeyRecover)(const void *key, const uint8_t *sign, uint32_t signLen,
+    uint8_t *data, uint32_t *dataLen);
 typedef int32_t (*PkeyComputeShareKey)(const void *key, const void *pub,
     uint8_t *share, uint32_t *shareLen);
 typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
+typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
 typedef int32_t (*PkeyGetSecBits)(const void *key);
 typedef int32_t (*PkeyEncapsulate)(const void *key, uint8_t *cipher, uint32_t *cipherLen,
     uint8_t *share, uint32_t *shareLen);
@@ -145,11 +154,15 @@ typedef struct EAL_PkeyMethod {
     PkeySignData signData;                  // sign the raw data
     PkeyVerify verify;                      // Verify the signature.
     PkeyVerifyData verifyData;              // Verify the raw data
+    PkeyRecover recover;                    // Signature recovery.
     PkeyComputeShareKey computeShareKey;    // Calculate the shared key.
     PkeyCrypt encrypt;                      // Encrypt.
     PkeyCrypt decrypt;                      // Decrypt.
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
+    PkeyCopyParam copyPara;                 // Copy parameter from source to destination
+    PkeyEncapsulate encaps;                // Key encapsulation.
+    PkeyDecapsulate decaps;                // Key decapsulation.
     PkeyBlind blind;                        // msg blind
     PkeyUnBlind unBlind;                    // sig unBlind.
 } EAL_PkeyMethod;
@@ -171,6 +184,7 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeySignData signData;                  // sign the raw data
     PkeyVerify verify;                      // Verify the signature.
     PkeyVerifyData verifyData;              // Verify the raw data
+    PkeyRecover recover;                    // Signature recovery.
     PkeyComputeShareKey computeShareKey;    // Calculate the shared key.
     PkeyCrypt encrypt;                      // Encrypt.
     PkeyCrypt decrypt;                      // Decrypt.
@@ -289,7 +303,12 @@ typedef struct {
 
 typedef struct {
     const EAL_MacMethod *macMethod;
-    const EAL_MdMethod *md;        // MD algorithm which HMAC depends on
+    union {
+        const EAL_MdMethod *md;        // MD algorithm which HMAC depends on
+        const EAL_SymMethod *ciph;  // AES function wihch CMAC depends on
+        const EAL_SiphashMethod *sip;  // siphash method
+        const void *depMeth;           // Pointer to the dependent algorithm, which is reserved for extension.
+    };
 } EAL_MacMethLookup;
 
 /**
@@ -382,6 +401,18 @@ typedef struct {
     int32_t methodId;
     const void *method;
 } EAL_RandMethLookup;
+
+/**
+ * @ingroup crypt_ctrl_param
+ *
+ * Set and obtain internal parameters of Pbkdf2.
+ */
+typedef enum {
+    CRYPT_CTRL_GET_MACID = 0,       /* kdf get macId . */
+    CRYPT_CTRL_GET_SALTLEN,         /* kdf get saltlen . */
+    CRYPT_CTRL_GET_ITER,            /* kdf get iter . */
+    CRYPT_CTRL_GET_KEYLEN           /* kdf get keyLen . */
+} CRYPT_KdfCtrl;
 
 #ifdef __cplusplus
 }

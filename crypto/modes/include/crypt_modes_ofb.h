@@ -19,15 +19,12 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_OFB
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "crypt_types.h"
-#include "bsl_params.h"
+#include "crypt_modes.h"
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-typedef struct ModesCipherCtx MODES_CipherCtx;
 
 // OFB mode universal implementation
 MODES_CipherCtx *MODES_OFB_NewCtx(int32_t algId);
@@ -46,7 +43,7 @@ int32_t SM4_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t k
 int32_t SM4_OFB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 int32_t MODES_OFB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc);
+    uint32_t ivLen, void *param, bool enc);
 
 int32_t MODES_OFB_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 

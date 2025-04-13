@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
 #ifdef HITLS_CRYPTO_PROVIDER
 
 #include <stdint.h>
@@ -74,6 +75,9 @@ static const CRYPT_EAL_AlgInfo g_defKeyMgmt[] = {
     {CRYPT_PKEY_PAILLIER, g_defKeyMgmtPaillier, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_ELGAMAL, g_defKeyMgmtElGamal, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SLH_DSA, g_defKeyMgmtSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
+	{CRYPT_PKEY_ML_KEM, g_defKeyMgmtMlKem, CRYPT_EAL_DEFAULT_ATTR},
+	{CRYPT_PKEY_ML_DSA, g_defKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_HYBRID_KEM, g_defKeyMgmtHybridKem, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -100,6 +104,7 @@ static const CRYPT_EAL_AlgInfo g_defSigns[] = {
     {CRYPT_PKEY_ECDSA, g_defSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SM2, g_defSignSm2, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_PKEY_SLH_DSA, g_defSignSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
+	{CRYPT_PKEY_ML_DSA, g_defSignMlDsa, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -115,6 +120,16 @@ static const CRYPT_EAL_AlgInfo g_defMacs[] = {
     {CRYPT_MAC_HMAC_SHA3_384, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_HMAC_SHA3_512, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_HMAC_SM3, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_AES128, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_AES192, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_AES256, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_SM4, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CBC_MAC_SM4, g_defMacCbcMac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_SIPHASH64, g_defMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_SIPHASH128, g_defMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_GMAC_AES128, g_defMacGmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_GMAC_AES192, g_defMacGmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_GMAC_AES256, g_defMacGmac, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -124,6 +139,7 @@ static const CRYPT_EAL_AlgInfo g_defRands[] = {
     {CRYPT_RAND_SHA256, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_SHA384, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_SHA512, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SM3, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_HMAC_SHA1, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_HMAC_SHA224, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_HMAC_SHA256, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
@@ -135,6 +151,7 @@ static const CRYPT_EAL_AlgInfo g_defRands[] = {
     {CRYPT_RAND_AES128_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_AES192_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_RAND_AES256_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SM4_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -154,6 +171,8 @@ static const CRYPT_EAL_AlgInfo g_defCiphers[] = {
     {CRYPT_CIPHER_AES128_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_AES192_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_AES256_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_XTS, g_defXts, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_XTS, g_defXts, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_CHACHA20_POLY1305, g_defChaCha, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_SM4_XTS, g_defXts, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_SM4_CBC, g_defCbc, CRYPT_EAL_DEFAULT_ATTR},
@@ -168,6 +187,12 @@ static const CRYPT_EAL_AlgInfo g_defCiphers[] = {
     {CRYPT_CIPHER_AES128_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_AES192_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_CIPHER_AES256_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
+    CRYPT_EAL_ALGINFO_END
+};
+
+static const CRYPT_EAL_AlgInfo g_defKems[] = {
+    {CRYPT_PKEY_ML_KEM, g_defMlKem, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_HYBRID_KEM, g_defHybridKeyKem, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -192,7 +217,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             *algInfos = g_defKeyExch;
             break;
         case CRYPT_EAL_OPERAID_KEM:
-            ret = CRYPT_NOT_SUPPORT;
+            *algInfos = g_defKems;
             break;
         case CRYPT_EAL_OPERAID_HASH:
             *algInfos = g_defMds;
@@ -824,6 +849,22 @@ static CRYPT_EAL_Func g_defProvOutFuncs[] = {
     CRYPT_EAL_FUNC_END
 };
 
+#ifdef HITLS_CRYPTO_ENTROPY
+static void *g_providerSeedCtx = NULL;
+static CRYPT_RandSeedMethod g_providerSeedMethod = {0};
+
+int32_t CRYPT_EAL_ProviderGetSeed(CRYPT_RandSeedMethod **method, void **seedCtx)
+{
+    if (method == NULL || seedCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    *method = &g_providerSeedMethod;
+    *seedCtx = g_providerSeedCtx;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param,
     CRYPT_EAL_Func *capFuncs, CRYPT_EAL_Func **outFuncs, void **provCtx)
 {
@@ -831,14 +872,41 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
     void *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtrlCb mgrCtrl = NULL;
     int32_t index = 0;
+    int32_t ret;
     while (capFuncs[index].id != 0) {
-        if (capFuncs[index].id == CRYPT_EAL_CAP_MGRCTXCTRL) {
+        switch (capFuncs[index].id) {
+#ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
+            case CRYPT_EAL_CAP_GETENTROPY:
+                g_providerSeedMethod.getEntropy = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_CLEANENTROPY:
+                g_providerSeedMethod.cleanEntropy = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_GETNONCE:
+                g_providerSeedMethod.getNonce = capFuncs[index].func;
+                break;
+            case CRYPT_EAL_CAP_CLEANNONCE:
+                g_providerSeedMethod.cleanNonce = capFuncs[index].func;
+                break;
+#endif
+            case CRYPT_EAL_CAP_MGRCTXCTRL:
             mgrCtrl = capFuncs[index].func;
-            break;
+                break;
+            default:
+                break;
         }
         index++;
     }
-    int32_t ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0);
+    if (mgrCtrl == NULL) {
+        return CRYPT_PROVIDER_NOT_SUPPORT;
+    }
+#ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
+	ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETSEEDCTX, &g_providerSeedCtx, 0);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+#endif
+    ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

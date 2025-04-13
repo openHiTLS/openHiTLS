@@ -16,8 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CHACHA20
 
-#include "bsl_err_internal.h"
 #include "securec.h"
+#include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_chacha20.h"
@@ -151,28 +151,12 @@ void CHACHA20_Block(CRYPT_CHACHA20_Ctx *ctx)
      */
     for (i = 0; i < CHACHA20_STATESIZE; i++) {
         ctx->last.c[i] += ctx->state[i];
+        ctx->last.c[i] = CRYPT_HTOLE32(ctx->last.c[i]);
     }
-    ctx->last.c[0] = CRYPT_HTOLE32(ctx->last.c[0]);
-    ctx->last.c[1] = CRYPT_HTOLE32(ctx->last.c[1]);
-    ctx->last.c[2] = CRYPT_HTOLE32(ctx->last.c[2]);
-    ctx->last.c[3] = CRYPT_HTOLE32(ctx->last.c[3]);
-    ctx->last.c[4] = CRYPT_HTOLE32(ctx->last.c[4]);
-    ctx->last.c[5] = CRYPT_HTOLE32(ctx->last.c[5]);
-    ctx->last.c[6] = CRYPT_HTOLE32(ctx->last.c[6]);
-    ctx->last.c[7] = CRYPT_HTOLE32(ctx->last.c[7]);
-    ctx->last.c[8] = CRYPT_HTOLE32(ctx->last.c[8]);
-    ctx->last.c[9] = CRYPT_HTOLE32(ctx->last.c[9]);
-    ctx->last.c[10] = CRYPT_HTOLE32(ctx->last.c[10]);
-    ctx->last.c[11] = CRYPT_HTOLE32(ctx->last.c[11]);
-    ctx->last.c[12] = CRYPT_HTOLE32(ctx->last.c[12]);
-    ctx->last.c[13] = CRYPT_HTOLE32(ctx->last.c[13]);
-    ctx->last.c[14] = CRYPT_HTOLE32(ctx->last.c[14]);
-    ctx->last.c[15] = CRYPT_HTOLE32(ctx->last.c[15]);
     ctx->state[12]++;
 }
 
-int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in,
-    uint8_t *out, uint32_t len)
+int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || out == NULL || in == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -223,8 +207,7 @@ int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in,
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CHACHA20_Ctrl(CRYPT_CHACHA20_Ctx *ctx, int32_t opt,
-    void *val, uint32_t len)
+int32_t CRYPT_CHACHA20_Ctrl(CRYPT_CHACHA20_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     switch (opt) {
         case CRYPT_CTRL_SET_IV: // in chacha20_poly1305 mode, the configured IV is the nonce of chacha20.
@@ -248,7 +231,6 @@ void CRYPT_CHACHA20_Clean(CRYPT_CHACHA20_Ctx *ctx)
         return;
     }
     
-    memset_s(ctx, sizeof(CRYPT_CHACHA20_Ctx), 0, sizeof(CRYPT_CHACHA20_Ctx));
-    return;
+    (void)memset_s(ctx, sizeof(CRYPT_CHACHA20_Ctx), 0, sizeof(CRYPT_CHACHA20_Ctx));
 }
 #endif // HITLS_CRYPTO_CHACHA20

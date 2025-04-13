@@ -30,6 +30,7 @@
 #define DRBG_CTR_MAX_KEYLEN (32)
 #define AES_BLOCK_LEN (16)
 #define DRBG_CTR_MAX_SEEDLEN (48)
+#define DRBG_CTR_MIN_ENTROPYLEN (32)
 
 typedef struct {
     uint8_t k[DRBG_CTR_MAX_KEYLEN];   // DRBG_CTR_MAX_KEYLEN 32
@@ -361,7 +362,6 @@ static int32_t DRBG_CtrSetDfKey(DRBG_Ctx *drbg)
         /* Set key schedule for dfKey */
         if ((ret = ctx->ciphMeth->setEncryptKey(ctx->dfCtx, dfKey, ctx->keyLen)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
         }
     }
 
@@ -559,7 +559,7 @@ DRBG_Ctx *DRBG_CtrDup(DRBG_Ctx *drbg)
     }
 
     ctx = (DRBG_CtrCtx*)drbg->ctx;
-    return DRBG_NewCtrCtx(ctx->ciphMeth, ctx->keyLen, ctx->isUsedDf, &(drbg->seedMeth), drbg->seedCtx);
+    return DRBG_NewCtrCtx(ctx->ciphMeth, ctx->keyLen,  drbg->isGm, ctx->isUsedDf, &(drbg->seedMeth), drbg->seedCtx);
 }
 
 void DRBG_CtrFree(DRBG_Ctx *drbg)
@@ -575,7 +575,7 @@ void DRBG_CtrFree(DRBG_Ctx *drbg)
     return;
 }
 
-DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, const bool isUsedDf,
+DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, bool isGm, const bool isUsedDf,
     const CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
 {
     static DRBG_Method meth = {
@@ -608,7 +608,11 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, c
     ctx->ciphMeth = ciphMeth;
 
     drbg->state = DRBG_STATE_UNINITIALISED;
-    drbg->reseedInterval = DRBG_MAX_RESEED_INTERVAL;
+     drbg->isGm = isGm;
+    drbg->reseedInterval = (drbg->isGm) ? HITLS_CRYPTO_RESEED_INTERVAL_GM : DRBG_MAX_RESEED_INTERVAL;
+#if defined(HITLS_CRYPTO_DRBG_GM)
+    drbg->reseedIntervalTime = (drbg->isGm) ? HITLS_CRYPTO_DRBG_RESEED_TIME_GM : 0;
+#endif
 
     ctx->keyLen = keyLen;
     ctx->seedLen = AES_BLOCK_LEN + keyLen;
@@ -619,10 +623,11 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, c
     drbg->seedCtx = seedCtx;
 
     drbg->strength = keyLen * 8;
-    drbg->maxRequest = DRBG_MAX_REQUEST;
+    drbg->maxRequest = (drbg->isGm) ? DRBG_MAX_REQUEST_SM4 : DRBG_MAX_REQUEST;
     // NIST.SP.800-90Ar1, Section 10.3.1 Table 3 defined those initial value.
     if (isUsedDf) {
-        drbg->entropyRange.min = keyLen;
+        // shift rightwards by 3, converting from bit length to byte length
+        drbg->entropyRange.min = (drbg->isGm) ? DRBG_CTR_MIN_ENTROPYLEN : keyLen;
         drbg->entropyRange.max = DRBG_MAX_LEN;
         drbg->maxPersLen = DRBG_MAX_LEN;
         drbg->maxAdinLen = DRBG_MAX_LEN;

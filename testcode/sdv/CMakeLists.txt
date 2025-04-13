@@ -119,6 +119,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/crypto/kdf/include
         ${openHiTLS_SRC}/crypto/scrypt/include
         ${openHiTLS_SRC}/crypto/hmac/include
+        ${openHiTLS_SRC}/crypto/siphash/include
         ${openHiTLS_SRC}/crypto/aes/include
         ${openHiTLS_SRC}/crypto/sm4/include
         ${openHiTLS_SRC}/crypto/drbg/include
@@ -229,6 +230,5 @@ foreach(test_suite ${TEST_FILES})
     set_target_properties(${sdv_exe} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output"
     )
-    target_compile_options(${sdv_exe} PRIVATE -D__FILENAME__="${sdv_exe}.c")
     target_link_libraries(${sdv_exe} PRIVATE TEST_INTF TESTCASE_PRE)
 endforeach()

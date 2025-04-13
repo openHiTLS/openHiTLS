@@ -40,7 +40,77 @@ typedef struct DrbgCtx DRBG_Ctx;
 #define DRBG_MAX_RESEED_INTERVAL    (10000)
 #endif
 
+/* Default reseed intervals */
+# define DRBG_RESEED_INTERVAL       (1 << 8)
+# define DRBG_TIME_INTERVAL         (60 * 60)   /* 1 hour */
+
+#ifndef DRBG_MAX_REQUEST_SM3
+#define DRBG_MAX_REQUEST_SM3   (1 << 5)
+#endif
+
+#ifndef DRBG_MAX_REQUEST_SM4
+#define DRBG_MAX_REQUEST_SM4 (1 << 4)
+#endif
+
+#ifndef DRBG_RESEED_INTERVAL_GM1
+#define DRBG_RESEED_INTERVAL_GM1    (1 << 20)
+#endif
+
+#ifndef DRBG_RESEED_TIME_GM1
+#define DRBG_RESEED_TIME_GM1    (600)
+#endif
+
+#ifndef DRBG_RESEED_INTERVAL_GM2
+#define DRBG_RESEED_INTERVAL_GM2    (1 << 10)
+#endif
+
+#ifndef DRBG_RESEED_TIME_GM2
+#define DRBG_RESEED_TIME_GM2    (60)
+#endif
+
+#ifndef HITLS_CRYPTO_DRBG_GM_LEVEL
+#define HITLS_CRYPTO_DRBG_GM_LEVEL 2
+#endif
+
+#ifndef HITLS_CRYPTO_RESEED_INTERVAL_GM
+#if HITLS_CRYPTO_DRBG_GM_LEVEL == 1
+#define  HITLS_CRYPTO_RESEED_INTERVAL_GM   DRBG_RESEED_INTERVAL_GM1
+#else
+#define  HITLS_CRYPTO_RESEED_INTERVAL_GM   DRBG_RESEED_INTERVAL_GM2
+#endif
+#endif
+
+#ifdef HITLS_CRYPTO_ENTROPY
+    #ifndef HITLS_SEED_DRBG_INIT_RAND_ALG
+        #ifdef HITLS_CRYPTO_AES
+            #define  HITLS_SEED_DRBG_INIT_RAND_ALG   CRYPT_RAND_AES256_CTR
+        #else
+            #error "HITLS_SEED_DRBG_INIT_RAND_ALG configuration error."
+        #endif
+    #endif
+#endif
+
+#ifndef HITLS_CRYPTO_DRBG_RESEED_TIME_GM
+#if HITLS_CRYPTO_DRBG_GM_LEVEL == 1
+#define  HITLS_CRYPTO_DRBG_RESEED_TIME_GM  DRBG_RESEED_TIME_GM1
+#else
+#define  HITLS_CRYPTO_DRBG_RESEED_TIME_GM  DRBG_RESEED_TIME_GM2
+#endif
+#endif
+
 #define DRBG_HASH_MAX_MDSIZE  (64)
+
+#define RAND_TYPE_MD 1
+#define RAND_TYPE_MAC 2
+#define RAND_TYPE_AES 3
+#define RAND_TYPE_AES_DF 4
+#define RAND_TYPE_SM4_DF 5
+
+typedef struct {
+    CRYPT_RAND_AlgId  drbgId;
+    int32_t depId;
+    uint32_t type;
+} DrbgIdMap;
 
 /**
  * @ingroup drbg
@@ -123,7 +193,7 @@ int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Pa
  * @retval CRYPT_DRBG_ERR_STATE The DRBG status is incorrect.
  * @retval Hash function error code: Failed to invoke the hash function.
  */
-int32_t DRBG_Generate(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
+int32_t DRBG_GenerateBytes(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
     const uint8_t *adin, uint32_t adinLen, BSL_Param *param);
 
 /**
@@ -150,7 +220,18 @@ int32_t DRBG_Uninstantiate(DRBG_Ctx *ctx);
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t DRBG_Ctrl(void *ctx, int32_t cmd, void *val, uint32_t valLen);
+int32_t DRBG_Ctrl(DRBG_Ctx *ctx, int32_t cmd, void *val, uint32_t valLen);
+
+/**
+ * @ingroup drbg
+ * @brief Get the map corresponding to the algid.
+ *
+ * @param id enum of CRYPT_RAND_AlgId
+ *
+ * @retval DrbgIdMap
+ * @retval NULL Invalid arguments
+ */
+const DrbgIdMap *DRBG_GetIdMap(CRYPT_RAND_AlgId id);
 
 #ifdef __cplusplus
 }

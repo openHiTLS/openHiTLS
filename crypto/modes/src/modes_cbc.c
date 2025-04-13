@@ -199,15 +199,23 @@ int32_t MODES_CBC_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t
         case CRYPT_CIPHER_AES128_CBC:
         case CRYPT_CIPHER_AES192_CBC:
         case CRYPT_CIPHER_AES256_CBC:
+#ifdef HITLS_CRYPTO_AES
             return AES_CBC_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_CBC:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CBC_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CBC_Update(modeCtx, in, inLen, out, outLen);
     }
 }
 int32_t MODES_CBC_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {
@@ -216,7 +224,11 @@ int32_t MODES_CBC_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32
     }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_CBC:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CBC_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CBC_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -232,9 +244,17 @@ int32_t MODES_CBC_FinalEx(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outL
         case CRYPT_CIPHER_AES128_CBC:
         case CRYPT_CIPHER_AES192_CBC:
         case CRYPT_CIPHER_AES256_CBC:
+#ifdef HITLS_CRYPTO_AES
             return AES_CBC_Final(modeCtx, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_CBC:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CBC_Final(modeCtx, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CBC_Final(modeCtx, out, outLen);
     }

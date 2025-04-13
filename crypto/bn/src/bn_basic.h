@@ -19,32 +19,17 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_BN
 
-#include <stdbool.h>
 #include "crypt_bn.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define BN_UINT_BITS ((uint32_t)sizeof(BN_UINT) << 3)
-#define BITS_TO_BN_UNIT(bits) (((bits) + BN_UINT_BITS - 1) / BN_UINT_BITS)
-#define BITS_TO_BYTES(bits) (((bits) + 7) / 8)
-#define BN_CLRNEG(n)        ((n) &= 0x7FFFFFFF)
-#define BN_SETNEG(n)        ((n) |= CRYPT_BN_FLAG_ISNEGTIVE)
-#define BN_ISNEG(n)         (((n) & CRYPT_BN_FLAG_ISNEGTIVE) != 0)
-#define BN_GETNEG(n)        ((n) & CRYPT_BN_FLAG_ISNEGTIVE)
-
-struct BigNum {
-    uint32_t size; /* *< BigNum size (count of BN_UINT) */
-    uint32_t room; /* *< BigNum max size (count of BN_UINT) */
-    uint32_t flag; /* *< BigNum flag */
-    BN_UINT *data; /* *< BigNum data chunk(most significant limb at the largest) */
-};
-
 struct BnMont {
     uint32_t mSize;   /* *< size of mod in BN_UINT */
     BN_UINT k0;         /* *< low word of (1/(r - mod[0])) mod r */
     BN_UINT *mod;       /* *< mod */
+    BN_UINT *one;       /* *< store one */
     BN_UINT *montRR;    /* *< mont_enc(1) */
     BN_UINT *b;         /* *< tmpb(1) */
     BN_UINT *t;         /* *< tmpt(1) ^ 2 */
@@ -63,12 +48,12 @@ static inline BN_UINT *AlignedPointer(const void *ptr, uintptr_t alignment)
     return (BN_UINT *)((uintptr_t)p - (uintptr_t)p % alignment);
 }
 
-uint32_t BnExtend(BN_BigNum *a, uint32_t words);
+int32_t BnExtend(BN_BigNum *a, uint32_t words);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_BN
+#endif /* HITLS_CRYPTO_BN */
 
-#endif // BN_BASIC_H
+#endif
