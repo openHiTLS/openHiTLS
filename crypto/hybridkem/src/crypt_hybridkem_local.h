@@ -24,6 +24,7 @@ struct HybridKemCtx {
     const EAL_PkeyMethod *pKeyMethod;
     const EAL_PkeyMethod *kemMethod;
     BSL_SAL_RefCount references;
+    void *libCtx;
 };
 
 #endif
