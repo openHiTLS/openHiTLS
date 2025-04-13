@@ -30,7 +30,7 @@
 #include "crypt_eal_implprovider.h"
 #include "drbg_local.h"
 #include "eal_md_local.h"
-#include "eal_drbg_local.h"
+#include "crypt_drbg_local.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
 #include "bsl_params.h"
@@ -897,7 +897,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_DRBG_RAND_BYTES_ADIN_ERR_PARA_API_TC001(int algId)
 {
-    uint8_t *output = malloc(sizeof(uint8_t) * DRBG_MAX_OUTPUT_SIZE);
+    uint8_t *output = malloc(sizeof(uint8_t) * (DRBG_MAX_OUTPUT_SIZE + 1));
     ASSERT_TRUE(output != NULL);
     uint8_t *addin = malloc(sizeof(uint8_t) * DRBG_MAX_ADIN_SIZE);
     ASSERT_TRUE(addin != NULL);
@@ -957,7 +957,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_DRBG_RAND_BYTES_ERR_PARA_API_TC001(void)
 {
-    uint8_t *output = malloc(DRBG_MAX_OUTPUT_SIZE);
+    uint8_t *output = malloc(DRBG_MAX_OUTPUT_SIZE + 1);
     ASSERT_TRUE(output != NULL);
 
     CRYPT_RandSeedMethod seedMeth = { 0 };

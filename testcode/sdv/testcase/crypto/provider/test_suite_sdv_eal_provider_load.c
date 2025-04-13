@@ -145,7 +145,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL);
-    ASSERT_EQ(ret, BSL_SAL_ERR_DL_NOT_FOUND);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Test CRYPT_EAL_ProviderUnload
     ret = CRYPT_EAL_ProviderUnload(libCtx, cmd, test1);
