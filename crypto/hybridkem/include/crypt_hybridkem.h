@@ -25,6 +25,8 @@ typedef struct HybridKemCtx CRYPT_HybridKemCtx;
 
 CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtx(void);
 
+CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtxEx(void *libCtx);
+
 void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *ctx);
 
 int32_t CRYPT_HYBRID_KEM_KeyCtrl(CRYPT_HybridKemCtx *ctx, int32_t opt, void *val, uint32_t len);

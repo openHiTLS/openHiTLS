@@ -1065,7 +1065,15 @@
                 ".features": ["hybridkem"],
                 ".srcs": "crypto/hybridkem/src/*.c",
                 ".deps": ["crypto::mlkem", "bsl::sal"],
-                ".include": ["crypto/hybridkem/include", "crypto/eal/src"]
+                ".include": [
+                    "crypto/hybridkem/include",
+                    "crypto/ecdh/include",
+                    "crypto/curve25519/include",
+                    "crypto/mlkem/include",
+                    "crypto/ecc/include",
+                    "crypto/bn/include",
+                    "crypto/eal/src"
+                    ]
             },
             "slh_dsa": {
                 ".features": ["slh_dsa"],

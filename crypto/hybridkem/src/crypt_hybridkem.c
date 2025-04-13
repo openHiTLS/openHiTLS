@@ -24,6 +24,9 @@
 #include "crypt_utils.h"
 #include "crypt_hybridkem_local.h"
 #include "crypt_hybridkem.h"
+#include "crypt_ecdh.h"
+#include "crypt_curve25519.h"
+#include "crypt_mlkem.h"
 
 typedef struct {
     int32_t hybrId;
@@ -80,6 +83,17 @@ CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtx(void)
     return hybridKey;
 }
 
+CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtxEx(void *libCtx)
+{
+    CRYPT_HybridKemCtx *hybridKey = CRYPT_HYBRID_KEM_NewCtx();
+    if (hybridKey == NULL) {
+        return NULL;
+   
+    }
+    hybridKey->libCtx = libCtx;
+    return hybridKey;
+}
+
 void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
 {
     if (hybridKey == NULL || hybridKey->pKeyMethod == NULL || hybridKey->kemMethod == NULL) {
@@ -96,6 +110,39 @@ void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
     BSL_SAL_FREE(hybridKey);
 }
 
+static void *CRYPT_HybridNewPkeyCtx(CRYPT_HybridKemCtx *ctx, int32_t algId)
+{
+    void *pkeyCtx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (algId == CRYPT_PKEY_X25519) {
+        pkeyCtx = CRYPT_X25519_NewCtxEx(ctx->libCtx);
+    } else {
+        pkeyCtx = CRYPT_ECDH_NewCtxEx(ctx->libCtx);
+    }
+#else
+    (void) ctx;
+    if (algId == CRYPT_PKEY_X25519) {
+        pkeyCtx = CRYPT_X25519_NewCtx();
+    } else {
+        pkeyCtx = CRYPT_ECDH_NewCtx();
+    }
+#endif
+    return pkeyCtx;
+}
+
+static void *CRYPT_HybridNewKemCtx(CRYPT_HybridKemCtx *ctx, int32_t algId)
+{
+    (void) algId;
+    void *kemCtx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    kemCtx = CRYPT_ML_KEM_NewCtxEx(ctx->libCtx);
+#else
+    (void) ctx;
+    kemCtx = CRYPT_ML_KEM_NewCtxEx(ctx->libCtx);
+#endif
+    return kemCtx;
+}
+
 static int32_t CRYPT_HybridSetKeyType(CRYPT_HybridKemCtx *ctx, int32_t val)
 {
     int32_t ret;
@@ -107,9 +154,9 @@ static int32_t CRYPT_HybridSetKeyType(CRYPT_HybridKemCtx *ctx, int32_t val)
     const EAL_PkeyMethod *kemMethod = CRYPT_EAL_PkeyFindMethod(algInfo->kemAlg);
     RETURN_RET_IF((pKeyMethod == NULL || kemMethod == NULL), CRYPT_NOT_SUPPORT);
 
-    ctx->pkeyCtx = pKeyMethod->newCtx();
+    ctx->pkeyCtx = CRYPT_HybridNewPkeyCtx(ctx, algInfo->pkeyAlg);
     RETURN_RET_IF(ctx->pkeyCtx == NULL, CRYPT_MEM_ALLOC_FAIL);
-    ctx->kemCtx = kemMethod->newCtx();
+    ctx->kemCtx = CRYPT_HybridNewKemCtx(ctx, algInfo->kemAlg);
     if (ctx->kemCtx == NULL) {
         pKeyMethod->freeCtx(ctx->pkeyCtx);
         ctx->pkeyCtx = NULL;
