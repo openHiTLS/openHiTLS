@@ -432,9 +432,9 @@ EXIT:
 
 /** @
 * @test UT_TLS_CFG_SET_COOKIEGENERATECB_API_TC001
-* @title Test the HITLS_CFG_SetCookieGenerateCb interface.
+* @title Test the HITLS_CFG_SetCookieGenCb interface.
 * @precon nan
-* @brief HITLS_CFG_SetCookieGenerateCb
+* @brief HITLS_CFG_SetCookieGenCb
 * 1. Import empty configuration information. Expected result 1 is obtained.
 * 2. Transfer non-empty configuration information and leave callback empty. Expected result 1 is obtained.
 * 3. Transfer non-empty configuration information and set callback to a non-empty value. Expected result 2 is obtained.
@@ -448,13 +448,13 @@ void UT_TLS_CFG_SET_COOKIEGENERATECB_API_TC001(void)
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
-    ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, UT_CookieGenerateCb) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenCb(config, UT_CookieGenerateCb) == HITLS_NULL_INPUT);
 
     config = HITLS_CFG_NewDTLS12Config();
 
-    ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenCb(config, NULL) == HITLS_NULL_INPUT);
 
-    ASSERT_TRUE(HITLS_CFG_SetCookieGenerateCb(config, UT_CookieGenerateCb) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenCb(config, UT_CookieGenerateCb) == HITLS_SUCCESS);
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -951,21 +951,21 @@ EXIT:
 
 /** @
 * @test  UT_TLS_CFG_SET_GET_HELLO_VERIFY_REQ_API_TC001
-* @title Test the HITLS_CFG_SetHelloVerifyReqEnable and HITLS_CFG_GetHelloVerifyReqEnable interfaces.
+* @title Test the HITLS_CFG_SetDtlsCookieExchangeSupport and HITLS_CFG_GetDtlsCookieExchangeSupport interfaces.
 * @precon nan
-* @brief HITLS_CFG_SetHelloVerifyReqEnable
+* @brief HITLS_CFG_SetDtlsCookieExchangeSupport
 * 1. Import empty configuration information. Expected result 1 is obtained.
 * 2. Transfer non-empty configuration information and set isSupport to an invalid value. Expected result 2 is obtained.
 * 3. Transfer a non-empty configuration information and set isSupport to a valid value. Expected result 3 is obtained.
-* HITLS_CFG_GetHelloVerifyReqEnable
+* HITLS_CFG_GetDtlsCookieExchangeSupport
 * 1. Import empty configuration information. Expected result 1 is obtained.
 * 2. Transfer an empty isSupport pointer. Expected result 1 is obtained.
 * 3. Transfer the non-null configuration information and the isSupport pointer is not null. Expected result 3 is
 *    obtained.
 * @expect
 * 1. Returns HITLS_NULL_INPUT
-* 2. HITLS_SUCCES is returned and config->isHelloVerifyReqEnable is set to true.
-* 3. Returns HITLS_SUCCES, and config->isHelloVerifyReqEnable is true or false.
+* 2. HITLS_SUCCES is returned and config->isSupportDtlsCookieExchange is set to true.
+* 3. Returns HITLS_SUCCES, and config->isSupportDtlsCookieExchange is true or false.
 @ */
 
 /* BEGIN_CASE */
@@ -975,20 +975,20 @@ void UT_TLS_CFG_SET_GET_HELLO_VERIFY_REQ_API_TC001(void)
     HITLS_Config *config = NULL;
     bool isSupport = false;
     bool getIsSupport = false;
-    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, &getIsSupport) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetDtlsCookieExchangeSupport(config, isSupport) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetDtlsCookieExchangeSupport(config, &getIsSupport) == HITLS_NULL_INPUT);
 
     config = HITLS_CFG_NewDTLS12Config();
 
-    ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetDtlsCookieExchangeSupport(config, NULL) == HITLS_NULL_INPUT);
     isSupport = true;
-    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetDtlsCookieExchangeSupport(config, isSupport) == HITLS_SUCCESS);
 
-    ASSERT_TRUE(config->isHelloVerifyReqEnable = true);
+    ASSERT_TRUE(config->isSupportDtlsCookieExchange = true);
     isSupport = false;
-    ASSERT_TRUE(HITLS_CFG_SetHelloVerifyReqEnable(config, isSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetDtlsCookieExchangeSupport(config, isSupport) == HITLS_SUCCESS);
 
-    ASSERT_TRUE(HITLS_CFG_GetHelloVerifyReqEnable(config, &getIsSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_GetDtlsCookieExchangeSupport(config, &getIsSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(getIsSupport == false);
 EXIT:
     HITLS_CFG_FreeConfig(config);

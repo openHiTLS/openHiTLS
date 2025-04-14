@@ -25,6 +25,11 @@ int32_t ClientRecvServerHelloDoneProcess(TLS_Ctx *ctx)
     /** get client infomation */
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
+#if defined(HITLS_BSL_UIO_UDP)
+    /* clear the retransmission queue */
+    REC_RetransmitListClean(ctx->recCtx);
+#endif
+
     /** Certificate messages are sent whenever a server certificate request is received,
         regardless of whether the client has a proper certificate. */
     if (hsCtx->isNeedClientCert) {

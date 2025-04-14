@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+#include "hs_cookie.h"
 /* INCLUDE_BASE test_suite_sdv_frame_dtls12_consistency */
 /* END_HEADER */
 
@@ -2277,7 +2278,12 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC004(int uioType)
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
     (void)HITLS_Connect(testInfo.client->ssl);
     FRAME_RegCryptMethod();
-    ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_SUCCESS);
+    if (uioType == BSL_UIO_UDP) {
+        // anti-replay
+        ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    } else {
+        ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_SUCCESS);
+    }
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
     (void)HITLS_Connect(testInfo.client->ssl);
     uint8_t writeData[] = {"abcd1234"};
@@ -2421,7 +2427,12 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC001(int uioType)
     ASSERT_TRUE(ioUserData->recMsg.len == 0);
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, data, len) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len), HITLS_SUCCESS);
+    if (uioType == BSL_UIO_UDP) {
+        // anti-replay
+        ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    } else {
+        ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_SUCCESS);
+    }
     uint8_t writeData[] = {"abcd1234"};
     uint32_t writeLen = strlen("abcd1234");
     uint8_t readData[MAX_RECORD_LENTH] = {0};
@@ -2475,7 +2486,11 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC002(int uioType)
     ASSERT_TRUE(ioUserData->recMsg.len == 0);
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, data, len) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Read(testInfo.client->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_Read(testInfo.client->ssl, data, MAX_RECORD_LENTH, &len), HITLS_SUCCESS);
+    if (uioType == BSL_UIO_SCTP) {
+        ASSERT_EQ(HITLS_Read(testInfo.client->ssl, data, MAX_RECORD_LENTH, &len), HITLS_SUCCESS);
+    } else {
+        ASSERT_EQ(HITLS_Read(testInfo.client->ssl, data, MAX_RECORD_LENTH, &len), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    }
     uint8_t writeData[] = {"abcd1234"};
     uint32_t writeLen = strlen("abcd1234");
     uint8_t readData[MAX_RECORD_LENTH] = {0};
@@ -2580,12 +2595,45 @@ static int32_t UT_CookieVerifyCb(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t 
     return cookie_valid;
 }
 
+int32_t HS_CheckCookie_Stub(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
+{
+    *isCookieValid = false;
+
+    /* If the client does not send the cookie, the verification is not required */
+    if (clientHello->cookie == NULL) {
+        return HITLS_SUCCESS;
+    }
+    if (ctx->globalConfig->appVerifyCookieCb == NULL) {
+        return HITLS_UNREGISTERED_CALLBACK;
+    }
+
+    HITLS_AppVerifyCookieCb cookieCb = ctx->globalConfig->appVerifyCookieCb;
+    int32_t isValid = cookieCb(ctx, clientHello->cookie, clientHello->cookieLen);
+    if (isValid != HITLS_COOKIE_VERIFY_ERROR) {
+        *isCookieValid = true;
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t HS_CalcCookie_Stub(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
+{
+    (void)clientHello;
+    if (ctx->globalConfig->appGenCookieCb == NULL) {
+        return HITLS_UNREGISTERED_CALLBACK;
+    }
+    int32_t returnVal = ctx->globalConfig->appGenCookieCb(ctx, cookie, cookieLen);
+    if (returnVal == HITLS_COOKIE_GENERATE_ERROR) {
+        return HITLS_MSG_HANDLE_COOKIE_ERR;
+    }
+    return HITLS_SUCCESS;
+}
+
 /* @
 * @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC001
 * @spec -
-* @title The server doesn't set cookieGenerateCb or cookieVerifyCb.
+* @title The server doesn't set appGenCookieCb or appVerifyCookieCb.
 * @precon nan
-* @brief 1. Configure option isHelloVerifyReqEnable is on. Leave cookieGenerateCb or cookieVerifyCb blank.
+* @brief 1. Configure option isSupportDtlsCookieExchange is on. Leave appGenCookieCb or appVerifyCookieCb blank.
             Check whether server and client can handshake successfully. Expected result 1.
 * @expect 1. The link fails to be set up.
 * @prior Level 1
@@ -2601,19 +2649,24 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC001(int setGenerateCb, i
     FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+    STUB_Init();
+    FuncStubInfo stubInfo = {0};
 
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
+    serverTlsCtx->config.tlsConfig.isSupportDtlsCookieExchange = true;
     if (setGenerateCb) {
-        serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
+        serverTlsCtx->globalConfig->appGenCookieCb = UT_CookieGenerateCb;
+        STUB_Replace(&stubInfo, HS_CheckCookie, HS_CheckCookie_Stub);
     }
     if (setVerifyCb) {
-        serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+        serverTlsCtx->globalConfig->appVerifyCookieCb = UT_CookieVerifyCb;
+        STUB_Replace(&stubInfo, HS_CalcCookie, HS_CalcCookie_Stub);
     }
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_UNREGISTERED_CALLBACK);
 
 EXIT:
+    STUB_Reset(&stubInfo);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2625,8 +2678,8 @@ EXIT:
 * @spec -
 * @title The server fails to generate cookie.
 * @precon nan
-* @brief 1. Configure option isHelloVerifyReqEnable is on. Configure cookieGenerateCb and cookieVerifyCb.
-            cookieGenerateCb always return false.
+* @brief 1. Configure option isSupportDtlsCookieExchange is on. Configure appGenCookieCb and appVerifyCookieCb.
+            appGenCookieCb always return false.
             Check whether server and client can handshake successfully. Expected result 1.
 * @expect 1. The link fails to be set up.
 * @prior Level 1
@@ -2644,12 +2697,12 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC002(void)
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
-    serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
-    serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    serverTlsCtx->config.tlsConfig.isSupportDtlsCookieExchange = true;
+    serverTlsCtx->globalConfig->appGenCookieCb = UT_CookieGenerateCb;
+    serverTlsCtx->globalConfig->appVerifyCookieCb = UT_CookieVerifyCb;
     cookie_generate_success = false;
 
-    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_INTERNAL_EXCEPTION);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_MSG_HANDLE_COOKIE_ERR);
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -2661,10 +2714,10 @@ EXIT:
 /* @
 * @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003
 * @spec -
-* @title The server receives a Client Hello packet with invalid cookie when isHelloVerifyReqEnable is on.
+* @title The server receives a Client Hello packet with invalid cookie when isSupportDtlsCookieExchange is on.
 * @precon nan
-* @brief 1. Configure option isHelloVerifyReqEnable is on. Configure cookieGenerateCb and cookieVerifyCb.
-            cookieGenerateCb always return true and cookieVerifyCb always return false.
+* @brief 1. Configure option isSupportDtlsCookieExchange is on. Configure appGenCookieCb and appVerifyCookieCb.
+            appGenCookieCb always return true and appVerifyCookieCb always return false.
             Check whether server and client can handshake successfully. Expected result 1.
 * @expect 1: The link fails to be set up.
 * @prior Level 1
@@ -2682,9 +2735,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003(void)
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
-    serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
-    serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    serverTlsCtx->config.tlsConfig.isSupportDtlsCookieExchange = true;
+    serverTlsCtx->globalConfig->appGenCookieCb = UT_CookieGenerateCb;
+    serverTlsCtx->globalConfig->appVerifyCookieCb = UT_CookieVerifyCb;
     cookie_generate_success = true;
     cookie_valid = false;
 
@@ -2700,10 +2753,10 @@ EXIT:
 /* @
 * @test UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC003
 * @spec -
-* @title The server receives a Client Hello packet with valid cookie when isHelloVerifyReqEnable is on.
+* @title The server receives a Client Hello packet with valid cookie when isSupportDtlsCookieExchange is on.
 * @precon nan
-* @brief 1. Configure option isHelloVerifyReqEnable is on. Configure cookieGenerateCb and cookieVerifyCb.
-            cookieGenerateCb always return true and cookieVerifyCb always return true.
+* @brief 1. Configure option isSupportDtlsCookieExchange is on. Configure appGenCookieCb and appVerifyCookieCb.
+            appGenCookieCb always return true and appVerifyCookieCb always return true.
             Check whether server and client can handshake successfully. Expected result 1.
 * @expect 1: The link is set up successfully.
 * @prior Level 1
@@ -2721,9 +2774,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC004(void)
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
 
-    serverTlsCtx->config.tlsConfig.isHelloVerifyReqEnable = true;
-    serverTlsCtx->globalConfig->cookieGenerateCb = UT_CookieGenerateCb;
-    serverTlsCtx->globalConfig->cookieVerifyCb = UT_CookieVerifyCb;
+    serverTlsCtx->config.tlsConfig.isSupportDtlsCookieExchange = true;
+    serverTlsCtx->globalConfig->appGenCookieCb = UT_CookieGenerateCb;
+    serverTlsCtx->globalConfig->appVerifyCookieCb = UT_CookieVerifyCb;
     cookie_generate_success = true;
     cookie_valid = true;
 
