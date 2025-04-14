@@ -2277,6 +2277,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC004(int uioType)
     ASSERT_EQ(testInfo.server->ssl->state, CM_STATE_HANDSHAKING);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
     (void)HITLS_Connect(testInfo.client->ssl);
+    FRAME_RegCryptMethod();
     if (uioType == BSL_UIO_UDP) {
         // anti-replay
         ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);

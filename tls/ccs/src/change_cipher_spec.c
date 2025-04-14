@@ -81,7 +81,8 @@ int32_t CCS_Send(TLS_Ctx *ctx)
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16276, "Write fail");
     }
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+        BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
         ret = REC_RetransmitListAppend(ctx->recCtx, REC_TYPE_CHANGE_CIPHER_SPEC, buf, len);
         if (ret != HITLS_SUCCESS) {
             return ret;

@@ -61,7 +61,6 @@ int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
         return ret;
     }
 
-
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17334, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "server send hello verify request msg success.", 0, 0, 0, 0);
     /* The reason for clearing the retransmission queue is that

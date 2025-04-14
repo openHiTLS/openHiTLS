@@ -26,7 +26,7 @@
 #include "uio_base.h"
 #include "uio_local.h"
 #include "hitls.h"
-#include "hitls_error.h" 
+#include "hitls_error.h"
 #include "hitls_cookie.h"
 #include "hitls_crypt_type.h"
 #include "tls.h"
@@ -36,11 +36,11 @@
 
 #define MAX_IP_ADDR_SIZE 256u
 
-static int32_t UpdateMacKey(CookieInfo *cookieInfo)
+static int32_t UpdateMacKey(TLS_Ctx *ctx, CookieInfo *cookieInfo)
 {
     int32_t ret = HITLS_SUCCESS;
     (void)memcpy_s(cookieInfo->preMacKey, MAC_KEY_LEN, cookieInfo->macKey, MAC_KEY_LEN); /* Save the old key */
-    ret = SAL_CRYPT_Rand(cookieInfo->macKey, MAC_KEY_LEN); /* Create a new key */
+    ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), cookieInfo->macKey, MAC_KEY_LEN); /* Create a new key */
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15691, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "generate macKey fail when calc cookie.", 0, 0, 0, 0);
@@ -171,7 +171,8 @@ static int32_t AddCookieCalcMaterial(
         return ret;
     }
 
-    ret = SAL_CRYPT_Hmac(HITLS_HASH_SHA_256, cookieInfo->macKey, MAC_KEY_LEN, material, usedLen, cookie, cookieLen);
+    ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        HITLS_HASH_SHA_256, cookieInfo->macKey, MAC_KEY_LEN, material, usedLen, cookie, cookieLen);
     (void)memset_s(material, materialSize, 0, materialSize);
     BSL_SAL_FREE(material);
     if (ret != HITLS_SUCCESS) {
@@ -203,7 +204,7 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
 
     /* If the number of remaining usage times of the current algorithm is 0, update the algorithm */
     if (cookieInfo->algRemainTime == 0) {
-        ret = UpdateMacKey(cookieInfo);
+        ret = UpdateMacKey(ctx, cookieInfo);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
