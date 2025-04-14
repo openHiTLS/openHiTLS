@@ -598,7 +598,11 @@ static const uint32_t TD3[256] = {
     0xcb84617bU, 0x32b670d5U, 0x6c5c7448U, 0xb85742d0U,
 };
 
+<<<<<<< HEAD
 static void AesSetDecryptKey(CRYPT_AES_Key *ctx)
+=======
+static void SetDecryptKeyTbox(CRYPT_AES_Key *ctx)
+>>>>>>> f0eff2f (Fixed the conflict between function naming and struct variable naming)
 {
     uint32_t i, j;
     uint32_t *dkey = ctx->key;
@@ -729,7 +733,11 @@ void SetAesKeyExpansionTbox(CRYPT_AES_Key *ctx, uint32_t keyLenBits, const uint8
     }
 
     if (!isEncrypt) {
+<<<<<<< HEAD
         AesSetDecryptKey(ctx);
+=======
+        SetDecryptKeyTbox(ctx);
+>>>>>>> f0eff2f (Fixed the conflict between function naming and struct variable naming)
     }
 }
 
