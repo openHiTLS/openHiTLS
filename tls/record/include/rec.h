@@ -229,6 +229,33 @@ int32_t REC_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len);
  */
 int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param, bool isOut);
 
+/**
+ * @ingroup record
+ * @brief   Retransmit a record
+ *
+ * @param   recCtx [IN] Record context
+ * @param   recordType [IN] record type
+ * @param   data [IN] data
+ * @param   dataLen [IN] data length
+ */
+int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type recordType, const uint8_t *data, uint32_t dataLen);
+
+/**
+ * @ingroup record
+ * @brief   Clean the retransmit list
+ *
+ * @param   recCtx [IN] Record context
+ */
+void REC_RetransmitListClean(REC_Ctx *recCtx);
+
+
+/**
+ * @ingroup record
+ * @brief   Flush the retransmit list
+ *
+ * @param   ctx [IN] TLS object
+ */
+void REC_RetransmitListFlush(TLS_Ctx *ctx);
 
 REC_Type REC_GetUnexpectedMsgType(TLS_Ctx *ctx);
 
