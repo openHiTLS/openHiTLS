@@ -53,6 +53,13 @@ typedef struct {
 typedef void (*BSL_UIO_USERDATA_FREE_FUNC)(void *);
 
 /**
+ * @ingroup bsl
+ *
+ * @brief   UIO_Addr structure
+ */
+typedef union UIO_Address BSL_UIO_Addr;
+
+/**
  * @ingroup bsl_uio
  * @brief   Transmission protocol enumeration
  */
@@ -104,6 +111,7 @@ typedef enum {
 
     /* UDP uses 0x2XX */
     BSL_UIO_DGRAM_SET_CONNECTED,
+    BSL_UIO_SET_BUFFER_SIZE,
 
     /* SCTP uses 0x3XX */
     BSL_UIO_SCTP_CHECK_PEER_AUTH = 0x300,

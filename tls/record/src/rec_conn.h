@@ -19,6 +19,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "rec.h"
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#include "rec_anti_replay.h"
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,6 +69,10 @@ typedef struct {
     uint64_t seq;                           /* tls: 8 byte sequence number or dtls: 6 byte seq */
 
     uint16_t epoch;                         /* dtls: 2 byte epoch */
+#if defined(HITLS_BSL_UIO_UDP)
+    uint16_t reserve;                       /* Four-byte alignment is reserved */
+    RecSlidWindow window;                   /* dtls record sliding window (for anti-replay) */
+#endif
 } RecConnState;
 
 /* see TLSPlaintext structure definition in rfc */

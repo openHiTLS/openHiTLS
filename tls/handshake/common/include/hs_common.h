@@ -185,18 +185,6 @@ int32_t HS_ReSizeMsgBuf(TLS_Ctx *ctx, uint32_t msgSize);
 int32_t HS_GrowMsgBuf(TLS_Ctx *ctx, uint32_t msgSize, bool keepOldData);
 
 /**
- * @brief Calculate the length based on the type of the packet to be sent to expand the capacity of
- * the msgBuf in the hsCtx.
- *
- * @param ctx [IN] TLS context
- * @param state[IN] Handshake status
- *
- * @retval HITLS_SUCCESS Operation succeeded.
- * @retval  For details about other error codes, see hitls_error.
- */
-int32_t HS_AllocMsgBufferFromType(TLS_Ctx *ctx, HITLS_HandshakeState state);
-
-/**
  * @brief Return the maximum packet length allowed by the handshake status.
  *
  * @param ctx [IN] TLS context

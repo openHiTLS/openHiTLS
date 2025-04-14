@@ -153,6 +153,26 @@ int32_t REC_Read(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *rea
  */
 int32_t REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
 
+/**
+ * @ingroup record
+ * @brief   Activate the expired write state. This API is invoked in the retransmission scenario
+ *
+ * @attention Reservation Interface
+ * @param   ctx [IN] TLS object
+ *
+ */
+void REC_ActiveOutdatedWriteState(TLS_Ctx *ctx);
+
+/**
+ * @ingroup record
+ * @brief   Disable the expired write status. This API is invoked in the retransmission scenario
+ *
+ * @attention Reservation Interface
+ * @param   ctx [IN] TLS object
+ *
+ */
+void REC_DeActiveOutdatedWriteState(TLS_Ctx *ctx);
+
 
 /**
  * @ingroup record
@@ -209,6 +229,33 @@ int32_t REC_GetMaxWriteSize(const TLS_Ctx *ctx, uint32_t *len);
  */
 int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param, bool isOut);
 
+/**
+ * @ingroup record
+ * @brief   Retransmit a record
+ *
+ * @param   recCtx [IN] Record context
+ * @param   recordType [IN] record type
+ * @param   data [IN] data
+ * @param   dataLen [IN] data length
+ */
+int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type recordType, const uint8_t *data, uint32_t dataLen);
+
+/**
+ * @ingroup record
+ * @brief   Clean the retransmit list
+ *
+ * @param   recCtx [IN] Record context
+ */
+void REC_RetransmitListClean(REC_Ctx *recCtx);
+
+
+/**
+ * @ingroup record
+ * @brief   Flush the retransmit list
+ *
+ * @param   ctx [IN] TLS object
+ */
+void REC_RetransmitListFlush(TLS_Ctx *ctx);
 
 REC_Type REC_GetUnexpectedMsgType(TLS_Ctx *ctx);
 
@@ -222,6 +269,8 @@ bool REC_HaveReadSuiteInfo(const TLS_Ctx *ctx);
  * @return Length of the remaining readable app message
  */
 uint32_t APP_GetReadPendingBytes(const TLS_Ctx *ctx);
+
+int32_t REC_RecBufReSet(TLS_Ctx *ctx);
 #ifdef __cplusplus
 }
 #endif

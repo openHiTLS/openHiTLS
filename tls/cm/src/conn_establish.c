@@ -697,6 +697,10 @@ int32_t HITLS_Renegotiate(HITLS_Ctx *ctx)
     ctx->negotiatedInfo.isRenegotiation = true; /* Start renegotiation */
 
     if (ctx->hsCtx != NULL) {
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        /* The retransmission queue needs to be cleared in the dtls over UDP scenario. */
+        REC_RetransmitListClean(ctx->recCtx);
+#endif
         HS_DeInit(ctx);
     }
 

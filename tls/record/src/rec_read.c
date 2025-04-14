@@ -450,6 +450,42 @@ static inline void GenerateCryptMsg(const TLS_Ctx *ctx,
     BSL_Uint64ToByte(hdr->epochSeq, cryptMsg->seq);
 }
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+/**
+ * @brief Check whether there are unprocessed handshake messages in the cache.
+ *
+ * @param unprocessedHsMsg [IN] Unprocessed handshake message handle
+ * @param curEpoch [IN] Current epoch
+ *
+ * @retval true: cached
+ * @retval false No cache
+ */
+static bool IsExistUnprocessedHsMsg(RecCtx *recCtx)
+{
+    uint16_t curEpoch = recCtx->readEpoch;
+    UnprocessedHsMsg *unprocessedHsMsg = &recCtx->unprocessedHsMsg;
+
+    /* Check whether there are cached handshake messages. */
+    if (unprocessedHsMsg->recordBody == NULL) {
+        return false;
+    }
+
+    uint16_t epoch = REC_EPOCH_GET(unprocessedHsMsg->hdr.epochSeq);
+    if (curEpoch == epoch) {
+        /* The handshake message of the current epoch needs to be processed */
+        return true;
+    }
+
+    if (curEpoch > epoch) {
+        /* Expired messages need to be cleaned up */
+        (void)memset_s(&unprocessedHsMsg->hdr, sizeof(unprocessedHsMsg->hdr), 0, sizeof(unprocessedHsMsg->hdr));
+        BSL_SAL_FREE(unprocessedHsMsg->recordBody);
+    }
+
+    return false;
+}
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+
 static bool IsExistUnprocessedAppMsg(RecCtx *recCtx)
 {
     UnprocessedAppMsg *unprocessedAppMsgList = &recCtx->unprocessedAppMsgList;
@@ -475,7 +511,11 @@ static bool IsExistUnprocessedAppMsg(RecCtx *recCtx)
 
 int32_t RecordBufferUnprocessedMsg(RecCtx *recordCtx, RecHdr *hdr, uint8_t *recordBody)
 {
-    if (hdr->type != REC_TYPE_HANDSHAKE) {
+    if (hdr->type == REC_TYPE_HANDSHAKE) {
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        CacheNextEpochHsMsg(&recordCtx->unprocessedHsMsg, hdr, recordBody);
+#endif
+    } else {
         int32_t ret = UnprocessedAppMsgListAppend(&recordCtx->unprocessedAppMsgList, hdr, recordBody);
         if (ret != HITLS_SUCCESS) {
             return ret;
@@ -501,6 +541,14 @@ static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr
         if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
             return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         }
+#if defined(HITLS_BSL_UIO_UDP)
+        /* Only the messages of the next epoch are cached */
+        if ((recordCtx->readEpoch + 1) == epoch) {
+            return RecordBufferUnprocessedMsg(recordCtx, hdr, recordBody);
+        }
+        /* After receiving the message of the previous epoch, the system discards the message. */
+        return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+#endif
     }
 
     bool isCcsRecv = ctx->method.isRecvCCS(ctx);
@@ -515,6 +563,13 @@ static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr
 static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr *hdr)
 {
     uint8_t *recordBody = NULL;
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    if ((recordType == REC_TYPE_HANDSHAKE) && IsExistUnprocessedHsMsg(recordCtx)) {
+        (void)memcpy_s(hdr, sizeof(RecHdr), &recordCtx->unprocessedHsMsg.hdr, sizeof(RecHdr));
+        recordBody = recordCtx->unprocessedHsMsg.recordBody;
+        recordCtx->unprocessedHsMsg.recordBody = NULL;
+    }
+#endif
 
     uint16_t curEpoch = recordCtx->readEpoch;
     if ((recordType == REC_TYPE_APP) && IsExistUnprocessedAppMsg(recordCtx)) {
@@ -529,6 +584,30 @@ static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr
     }
     return recordBody;
 }
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+static int32_t AntiReplay(TLS_Ctx *ctx, RecHdr *hdr)
+{
+    /* In non-UDP scenarios, anti-replay check is not required */
+    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        return HITLS_SUCCESS;
+    }
+
+    RecConnState *state = GetReadConnState(ctx);
+    uint16_t epoch = REC_EPOCH_GET(hdr->epochSeq);
+    uint64_t secquence = REC_SEQ_GET(hdr->epochSeq);
+    if (RecAntiReplayCheck(&state->window, secquence) == true) {
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
+
+    if (ctx->isDtlsListen && epoch != 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17264, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "epoch err", 0, 0, 0, 0);
+        return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
+    }
+
+    return HITLS_SUCCESS;
+}
+#endif
 
 static int32_t RecInBufInit(RecCtx *recordCtx, uint32_t bufSize)
 {
@@ -573,6 +652,12 @@ static int32_t DtlsGetRecord(TLS_Ctx *ctx, REC_Type recordType, RecHdr *hdr, uin
             return ret;
         }
     }
+#if defined(HITLS_BSL_UIO_UDP)
+    ret = AntiReplay(ctx, hdr);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(*cachRecord);
+    }
+#endif
     return ret;
 }
 
@@ -633,7 +718,12 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
+#if defined(HITLS_BSL_UIO_UDP)
+    /* In UDP scenarios, update the sliding window flag */
+    if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        RecAntiReplayUpdate(&GetReadConnState(ctx)->window, REC_SEQ_GET(hdr.epochSeq));
+    }
+#endif
     RecClearAlertCount(ctx, cryptMsg.type);
     /* An unexpected packet is received */
     // decryptBuf.isHoldBuffer == false
