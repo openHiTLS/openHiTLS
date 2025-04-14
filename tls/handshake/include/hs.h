@@ -119,6 +119,17 @@ int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType);
  */
 const char *HS_GetServerName(const TLS_Ctx *ctx);
 
+/**
+ * @brief   Determine and handle the 2MSL timeout
+ *
+ * @param ctx [IN] TLS context
+ *
+ * @return string of server_name in the TLS context during the handshake
+ */
+#ifdef HITLS_TLS_PROTO_DTLS12
+int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx);
+#endif
+
 int32_t HS_CheckPostHandshakeAuth(TLS_Ctx *ctx);
 
 #ifdef __cplusplus

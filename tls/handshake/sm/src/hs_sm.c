@@ -36,6 +36,7 @@
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 #include "transcript_hash.h"
 #include "recv_process.h"
+#include "hs_dtls_timer.h"
 
 static int32_t HandshakeDone(TLS_Ctx *ctx)
 {
@@ -202,6 +203,32 @@ int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 }
 
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
+{
+    /* In non-UDP scenarios, the 2MSL timer timeout does not need to be checked */
+    if ((ctx->hsCtx == NULL) || !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        return HITLS_SUCCESS;
+    }
+
+    int32_t ret = HITLS_SUCCESS;
+    bool isTimeout = false;
+    ret = HS_IsTimeout(ctx, &isTimeout);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17189, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HS_IsTimeout fail", 0, 0, 0, 0);
+        return ret;
+    }
+
+    /* If the retransmission queue times out, the retransmission queue is cleared and the hsCtx memory is released */
+    if (isTimeout) {
+        REC_RetransmitListClean(ctx->recCtx);
+        HS_DeInit(ctx);
+    }
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t HS_CheckPostHandshakeAuth(TLS_Ctx *ctx)

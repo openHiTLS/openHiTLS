@@ -46,6 +46,10 @@ int32_t DtlsClientRecvHelloVerifyRequestProcess(TLS_Ctx *ctx, HS_Msg *msg)
         }
     }
     negotiatedInfo->cookieSize = helloVerifyReq->cookieLen;
+#ifdef HITLS_BSL_UIO_UDP
+    /* clear the retransmission queue */
+    REC_RetransmitListClean(ctx->recCtx);
+#endif /* HITLS_BSL_UIO_UDP */
     return HS_ChangeState(ctx, TRY_SEND_CLIENT_HELLO);
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */

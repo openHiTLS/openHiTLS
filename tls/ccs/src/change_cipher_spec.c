@@ -80,6 +80,15 @@ int32_t CCS_Send(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16276, "Write fail");
     }
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+        BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+        ret = REC_RetransmitListAppend(ctx->recCtx, REC_TYPE_CHANGE_CIPHER_SPEC, buf, len);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, buf, 1,
     ctx, ctx->config.tlsConfig.msgArg);
@@ -161,6 +170,13 @@ void CCS_DeInit(TLS_Ctx *ctx)
 int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 {
     if (ctx->ccsCtx->isReady == false) {
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+            BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+            ctx->rwstate = HITLS_READING;
+            return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+        }
+#endif
         return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15612,
             "recv unexpected ccs msg", ALERT_UNEXPECTED_MESSAGE);
     }
@@ -177,7 +193,8 @@ int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
             "ccs msg err", ALERT_UNEXPECTED_MESSAGE);
     }
     /** Multiple generate ccs messages are received: If UDP transmission is used, ignore the ccs. */
-    if (ctx->ccsCtx->ccsRecvflag == true && HS_GetVersion(ctx) != HITLS_VERSION_TLS13) {
+    if (ctx->ccsCtx->ccsRecvflag == true && !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) &&
+        HS_GetVersion(ctx) != HITLS_VERSION_TLS13) {
         return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID16277,
             "Multiple generate ccs msg are received", ALERT_UNEXPECTED_MESSAGE);
     }

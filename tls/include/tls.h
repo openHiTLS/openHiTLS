@@ -220,6 +220,9 @@ typedef struct {
                                                       TLS13_CERT_AUTH_WITH_DHE */
 
     uint16_t negotiatedGroup;                      /* negotiated group */
+    uint16_t recordSizeLimit;                      /* read record size limit */
+    uint16_t renegoRecordSizeLimit;
+    uint16_t peerRecordSizeLimit;                  /* write record size limit */
     bool isResume;                                 /* whether to resume the session */
     bool isRenegotiation;                          /* whether to renegotiate */
 
@@ -291,6 +294,7 @@ struct TlsCtx {
     PHA_State phaState;                     /* tls1.3 pha state */
     uint8_t *certificateReqCtx;             /* tls1.3 pha certificate_request_context */
     uint32_t certificateReqCtxSize;         /* tls1.3 pha certificate_request_context */
+    bool isDtlsListen;
     bool plainAlertForbid;                  /* tls1.3 forbid to receive plain alert message */
     bool allowAppOut;                       /* whether user used HITLS_read to start renegotiation */
 };

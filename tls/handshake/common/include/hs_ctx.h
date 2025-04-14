@@ -186,6 +186,12 @@ struct HsCtx {
     uint16_t nextSendSeq;    /* message sending sequence number */
     uint16_t expectRecvSeq;  /* message receiving sequence number */
     HS_ReassQueue *reassMsg; /* reassembly message queue, used for reassembly of fragmented messages */
+
+    /* To reduce the calculation amount for determining timeout, use the end time instead of the start time. If the end
+     * time is exceeded, the receiving times out. */
+    BSL_TIME deadline;     /* End time */
+    uint32_t timeoutValue; /* Timeout interval, in us. */
+    uint32_t timeoutNum;   /* Timeout count */
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 };
 
