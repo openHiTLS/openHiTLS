@@ -598,7 +598,7 @@ static const uint32_t TD3[256] = {
     0xcb84617bU, 0x32b670d5U, 0x6c5c7448U, 0xb85742d0U,
 };
 
-static void SetDecryptKey(CRYPT_AES_Key *ctx)
+static void SetDecryptKeyTbox(CRYPT_AES_Key *ctx)
 {
     uint32_t i, j;
     uint32_t *dkey = ctx->key;
@@ -729,7 +729,7 @@ void SetAesKeyExpansionTbox(CRYPT_AES_Key *ctx, uint32_t keyLenBits, const uint8
     }
 
     if (!isEncrypt) {
-        SetDecryptKey(ctx);
+        SetDecryptKeyTbox(ctx);
     }
 }
 
