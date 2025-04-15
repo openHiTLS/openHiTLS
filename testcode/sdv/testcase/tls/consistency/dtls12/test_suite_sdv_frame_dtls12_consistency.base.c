@@ -108,6 +108,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo, int uioType)
         return HITLS_INTERNAL_EXCEPTION;
     }
     HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
+    HITLS_CFG_SetDtlsCookieExchangeSupport(testInfo->config, false);
     testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;

@@ -22,6 +22,7 @@
 #include "tls.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "hs_dtls_timer.h"
 #include "pack.h"
 #include "send_process.h"
 
@@ -52,7 +53,13 @@ int32_t ServerSendServerHelloDoneProcess(TLS_Ctx *ctx)
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15880, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "server send server hello done msg success.", 0, 0, 0, 0);
 
-    /* update the state machine */
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    ret = HS_StartTimer(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+
     if (hsCtx->isNeedClientCert) {
         return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
     }

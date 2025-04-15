@@ -13,7 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_HOST_SERVER
+#if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -26,7 +27,7 @@
 #include "pack.h"
 #include "send_process.h"
 
-int32_t ServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
+int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
     /** get the server infomation */
@@ -49,13 +50,22 @@ int32_t ServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
         return ret;
     }
 
-    /* The server does not enter the renegotiation state when sending a HelloVerifyRequest message.
-       The server enters the renegotiation state only when receiving a ClientHello message. */
-    ctx->negotiatedInfo.isRenegotiation = false;
+    /* If HelloVerifyRequest is used, the initial ClientHello and
+       HelloVerifyRequest are not included in the calculation of the
+       handshake_messages (for the CertificateVerify message) and
+       verify_data (for the Finished message). */
+    ret = VERIFY_Init(hsCtx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17152, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "VERIFY_Init fail", 0, 0, 0, 0);
+        return ret;
+    }
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17334, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "server send hello verify request msg success.", 0, 0, 0, 0);
-
+    /* The reason for clearing the retransmission queue is that
+       the HelloVerifyRequest message does not need to be retransmitted. */
+    REC_RetransmitListClean(ctx->recCtx);
     return HS_ChangeState(ctx, TRY_RECV_CLIENT_HELLO);
 }
-#endif /* HITLS_TLS_HOST_SERVER */
+#endif /* defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) */

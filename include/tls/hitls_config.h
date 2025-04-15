@@ -904,50 +904,6 @@ uint32_t HITLS_CFG_GetKeyExchMode(HITLS_Config *config);
 
 /**
  * @ingroup hitls_config
- * @brief   Cookie Generation callback prototype for the server to process the callback.
- *
- * @param   ctx  [IN] Ctx context
- * @param   cookie  [OUT] Generated cookie
- * @param   cookie_len  [OUT] Length of Generated cookie
- * @retval  COOKIE_GEN_SUCCESS: successful. Other values are considered as failure.
- */
-typedef int32_t (*HITLS_CookieGenerateCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len);
-
-/**
- * @ingroup hitls_config
- * @brief   Set the cookie generation callback on the server.
- *
- * @param   config [OUT] Config context
- * @param   callback  [IN] CookieGenerate callback
- * @retval  HITLS_SUCCESS, if successful.
- *          For details about other error codes, see hitls_error.h.
- */
-int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerateCb callback);
-
-/**
- * @ingroup hitls_config
- * @brief   Cookie Verification callback prototype for the server to process the callback.
- *
- * @param   ctx  [IN] Ctx context
- * @param   cookie  [IN] Cookie to be verified
- * @param   cookie_len  [IN] Length of Cookie to be verified
- * @retval  COOKIE_VERIFY_SUCCESS: successful. Other values are considered as failure.
- */
-typedef int32_t (*HITLS_CookieVerifyCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len);
-
-/**
- * @ingroup hitls_config
- * @brief   Set the cookie verification callback on the server.
- *
- * @param   config [OUT] Config context
- * @param   callback  [IN] CookieVerify callback
- * @retval  HITLS_SUCCESS, if successful.
- *          For details about other error codes, see hitls_error.h.
- */
-int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_CookieVerifyCb callback);
-
-/**
- * @ingroup hitls_config
  * @brief   ClientHello callback prototype for the server to process the callback.
  *
  * @param   ctx  [IN] Ctx context
@@ -968,6 +924,25 @@ typedef int32_t (*HITLS_ClientHelloCb)(HITLS_Ctx *ctx, int32_t *alert, void *arg
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetClientHelloCb(HITLS_Config *config, HITLS_ClientHelloCb callback, void *arg);
+
+/**
+ * @ingroup hitls_config
+ * @brief   DTLS callback prototype for obtaining the timeout interval
+ * @param   ctx  [IN] Ctx context
+ * @param   us   [IN] Current timeout interval, Unit: microsecond
+ * @return  Obtained timeout interval
+ */
+typedef uint32_t (*HITLS_DtlsTimerCb)(HITLS_Ctx *ctx, uint32_t us);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the DTLS obtaining timeout interval callback.
+ * @param   config [OUT] Config context
+ * @param   callback [IN] DTLS callback for obtaining the timeout interval
+ * @return  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetDtlsTimerCb(HITLS_Config *config, HITLS_DtlsTimerCb callback);
 
 /**
  * @ingroup hitls_config
@@ -1200,6 +1175,19 @@ int32_t HITLS_CFG_GetQuietShutdown(const HITLS_Config *config, int32_t *mode);
 
 /**
  * @ingroup hitls_config
+ * @brief   Set the timeout period after the DTLS over UDP connection is complete.
+ * If the timer expires, the system does not receive the finished message resent by the peer end.
+ * If this parameter is set to 0, the default value 240 seconds is used.
+ *
+ * @param   config [IN] TLS link configuration
+ * @param   timeoutVal [IN] Timeout time
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_SetDtlsPostHsTimeoutVal(HITLS_Config *config, uint32_t timeoutVal);
+
+/**
+ * @ingroup hitls_config
  * @brief   Set the Encrypt-Then-Mac mode.
  *
  * @param   config [IN] TLS link configuration
@@ -1333,7 +1321,7 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, bool isEnable);
+int32_t HITLS_CFG_SetDtlsCookieExchangeSupport(HITLS_Config *config, bool isEnable);
 
 /**
  * @ingroup hitls_config
@@ -1344,7 +1332,7 @@ int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, bool isEnable);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, bool *isEnable);
+int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool *isEnable);
 
 /**
  * @ingroup hitls_config

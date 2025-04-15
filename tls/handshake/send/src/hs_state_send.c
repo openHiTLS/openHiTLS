@@ -100,8 +100,10 @@ static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
         case TRY_SEND_HELLO_REQUEST:
             return ServerSendHelloRequestProcess(ctx);
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
         case TRY_SEND_HELLO_VERIFY_REQUEST:
-            return ServerSendHelloVerifyRequestProcess(ctx);
+            return DtlsServerSendHelloVerifyRequestProcess(ctx);
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
         case TRY_SEND_SERVER_HELLO:
             return ServerSendServerHelloProcess(ctx);
         case TRY_SEND_SERVER_KEY_EXCHANGE:

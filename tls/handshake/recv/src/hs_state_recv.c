@@ -34,6 +34,7 @@
 #include "recv_process.h"
 #include "bsl_uio.h"
 #include "hs_kx.h"
+#include "hs_dtls_timer.h"
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
@@ -332,6 +333,26 @@ static int32_t Tls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
 static int32_t DtlsCheckTimeoutAndProcess(TLS_Ctx *ctx, int32_t retValue)
 {
     (void)ctx;
+#ifdef HITLS_BSL_UIO_UDP
+    int32_t ret = HITLS_SUCCESS;
+    bool isTimeout = false;
+    ret = HS_IsTimeout(ctx, &isTimeout);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17032, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HS_IsTimeout fail", 0, 0, 0, 0);
+        return ret;
+    }
+
+    if (isTimeout) {
+        /* Receive the message of the last flight when the receiving times out */
+        REC_RetransmitListFlush(ctx);
+
+        ret = HS_TimeoutProcess(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif /* HITLS_BSL_UIO_UDP */
     /* HITLS_REC_NORMAL_RECV_BUF_EMPTY is returned here, and the choice is given to the user instead of the next read,
      * Prevents users from waiting for a long time due to long timeout. */
     return retValue;
@@ -349,10 +370,25 @@ int32_t DtlsDisorderMsgProcess(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return HITLS_MSG_HANDLE_UNMATCHED_SEQUENCE;
     }
+#ifdef HITLS_BSL_UIO_UDP
+    /* In the renegotiation state, the FINISHED message of the previous handshake should be discarded. */
+    if (ctx->hsCtx->expectRecvSeq == 0 && hsMsgInfo->type == FINISHED) {
+        return HITLS_SUCCESS;
+    }
+    /* If the sequence number of the received message is greater than expected, the message is cached in the reassembly
+     * queue. */
+    if (hsMsgInfo->sequence > ctx->hsCtx->expectRecvSeq) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17033, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "the message is need to cache in the reassembly queue", 0, 0, 0, 0);
+        return HS_ReassAppend(ctx, hsMsgInfo);
+    }
 
+    return HITLS_SUCCESS;
+#else
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17034, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "internal exception occurs", 0, 0, 0, 0);
     return HITLS_INTERNAL_EXCEPTION;
+#endif /* HITLS_BSL_UIO_UDP */
 }
 static int32_t DtlsCheckAndParseMsg(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg)
 {
@@ -455,15 +491,6 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     ret = DtlsCheckAndParseMsg(ctx, &hsMsgInfo, &hsMsg);
     if (ret != HITLS_SUCCESS) {
         return ret;
-    }
-
-    if (hsMsgInfo.type == CLIENT_HELLO) {
-        ret = VERIFY_Init(ctx->hsCtx);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17332, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "VERIFY_Init fail", 0, 0, 0, 0);
-            return ret;
-        }
     }
 
     /* The HelloRequest message is not included. */

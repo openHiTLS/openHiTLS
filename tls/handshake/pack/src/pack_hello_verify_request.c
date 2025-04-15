@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_HOST_SERVER
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_HOST_SERVER)
 #include <stdint.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -31,37 +31,12 @@
 #include "pack_common.h"
 #include "pack_extensions.h"
 
-static int32_t PackCookie(const uint8_t *cookie, uint8_t cookieLen,
-    uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
-{
-    uint32_t offset = 0u;
-
-    if (bufLen < (sizeof(uint8_t) + cookieLen)) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_COOKIE_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17328, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the buffer length of cookie is not enough.", 0, 0, 0, 0);
-        return HITLS_PACK_COOKIE_ERR;
-    }
-
-    buf[offset] = cookieLen;
-    offset += sizeof(uint8_t);
-    if (cookieLen == 0u) {
-        *usedLen = offset;
-        return HITLS_SUCCESS;
-    }
-
-    (void)memcpy_s(&buf[offset], bufLen - offset, cookie, cookieLen);
-    offset += cookieLen;
-
-    *usedLen = offset;
-    return HITLS_SUCCESS;
-}
-
 // Pack the mandatory content of the HelloVerifyRequest message
 static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
+    const TLS_NegotiatedInfo *negotiatedInfo = &ctx->negotiatedInfo;
     /* The bufLen must be able to pack at least the version number (2 bytes) + cookiesize (1 byte) + cookie (xx bytes) */
-    if (bufLen < (sizeof(uint16_t) + sizeof(uint8_t) + ctx->negotiatedInfo.cookieSize)) {
+    if (bufLen < (sizeof(uint16_t) + sizeof(uint8_t) + negotiatedInfo->cookieSize)) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17329, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack hello verify request mandatory field error, the bufLen(%u) is not enough.", bufLen, NULL, NULL, NULL);
@@ -69,9 +44,6 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
     }
 
     uint32_t offset = 0u;
-    uint32_t len = 0u;
-    int32_t ret = 0;
-
     uint16_t version = HITLS_VERSION_DTLS10;
     if (IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
         version = HITLS_VERSION_TLCP_DTLCP11;
@@ -79,14 +51,21 @@ static int32_t PackHelloVerifyReqMandatoryField(const TLS_Ctx *ctx, uint8_t *buf
 
     BSL_Uint16ToByte(version, &buf[offset]); // version number
     offset += sizeof(uint16_t);
-    ret = PackCookie(ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize,
-            &buf[offset], bufLen - offset, &len);
-    if (ret != HITLS_SUCCESS) {
-        (void)memset_s(ctx->negotiatedInfo.cookie, ctx->negotiatedInfo.cookieSize,
-                        0, ctx->negotiatedInfo.cookieSize);
-        return ret;
+
+    buf[offset] = (uint8_t)negotiatedInfo->cookieSize;
+    offset++;
+        /* According to rfc6347 4.2.1, message with the cookie length of 0 can be sent,
+       but it is meaningless and will be trapped in an infinite loop.
+       Therefore, cannot sent cookies with the length of 0 here. */
+    if (negotiatedInfo->cookieSize == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_PACK_COOKIE_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15828, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "cookieSize is 0.", 0, 0, 0, 0);
+        return HITLS_PACK_COOKIE_ERR;
     }
-    offset += len;
+    /* assemble the cookie */
+    (void)memcpy_s(&buf[offset], bufLen - offset, negotiatedInfo->cookie, negotiatedInfo->cookieSize);
+    offset += negotiatedInfo->cookieSize;
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
@@ -109,4 +88,4 @@ int32_t PackHelloVerifyRequest(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint
     *usedLen = offset;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_HOST_SERVER */
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP && HITLS_TLS_HOST_SERVER */
