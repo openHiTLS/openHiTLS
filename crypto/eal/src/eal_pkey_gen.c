@@ -586,7 +586,7 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
             break;
         }
         case CRYPT_PKEY_ML_KEM: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_KEM_ENCAPSKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data,
+            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data,
                 key->key.kemEk.len, 0},
                 BSL_PARAM_END};
             ret = pkey->method->setPub(pkey->key, &paParam);
@@ -715,7 +715,7 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
             break;
         }
         case CRYPT_PKEY_ELGAMAL: {
-            BSL_Param paParam[5] = {
+            BSL_Param paParam[4] = {
                 {CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.p, key->key.elgamalPrv.pLen, 0},
                 {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.g, key->key.elgamalPrv.gLen, 0},
                 {CRYPT_PARAM_ELGAMAL_X, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.x, key->key.elgamalPrv.xLen, 0},
@@ -724,7 +724,7 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
             break;
         }
 		case CRYPT_PKEY_ML_KEM: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_KEM_DECAPSKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data,
+            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data,
                 key->key.kemDk.len, 0},
                 BSL_PARAM_END};
             ret = pkey->method->setPrv(pkey->key, &paParam);
@@ -854,7 +854,7 @@ int32_t CRYPT_EAL_PkeySetPubEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param)
 
 static int32_t GetMlkemPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *kemEk)
 {
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_KEM_ENCAPSKEY, BSL_PARAM_TYPE_OCTETS, kemEk->data,
+    BSL_Param param[2] = {{CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, kemEk->data,
         kemEk->len, 0},
         BSL_PARAM_END};
     int32_t ret = pkey->method->getPub(pkey->key, &param);
@@ -1044,7 +1044,7 @@ static int32_t GetElGamalPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_ElGamalPrv *pr
 
 static int32_t GetMlkemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *kemDk)
 {
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_KEM_DECAPSKEY, BSL_PARAM_TYPE_OCTETS, kemDk->data,
+    BSL_Param param[2] = {{CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, kemDk->data,
         kemDk->len, 0},
         BSL_PARAM_END};
     int32_t ret = pkey->method->getPrv(pkey->key, &param);
