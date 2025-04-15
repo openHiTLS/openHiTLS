@@ -150,7 +150,6 @@ int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pke
  *
  * @param ctx [IN] HPKE context for the sender
  * @param pkey [IN] Private key context for the sender, if set to NULL, will generate a keypair randomly
- * @param pkeyS [IN] Private key context for the sender
  * @param info [IN] Additional information for the key setup
  * @param infoLen [IN] Length of the additional information
  * @param pkR [IN] Recipient's public key. For ec key, the format is 04 || X || Y, for X25519 key, the format is X.
@@ -161,7 +160,7 @@ int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pke
  * @retval #CRYPT_SUCCESS if the setup is successful
  *         Other error codes defined in crypt_errno.h if an error occurs
  */
-int32_t CRYPT_EAL_HpkeSetupAuthSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyCtx *pkeyS, uint8_t *info, 
+int32_t CRYPT_EAL_HpkeSetupAuthSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info,
     uint32_t infoLen, uint8_t *pkR, uint32_t pkRLen, uint8_t *encapKey, uint32_t *encapKeyLen);
 
 /**
@@ -212,7 +211,6 @@ int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *
  *
  * @param ctx [IN] HPKE context for the recipient
  * @param pkey [IN] Private key context for the recipient
- * @param pkeyS [IN] Public key context for the sender
  * @param info [IN] Additional information for the key setup
  * @param infoLen [IN] Length of the additional information
  * @param encapKey [IN] Encapsulated key input buffer
@@ -221,7 +219,7 @@ int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *
  * @retval #CRYPT_SUCCESS if the setup is successful
  *         Other error codes defined in crypt_errno.h if an error occurs
  */
-int32_t CRYPT_EAL_HpkeSetupAuthRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyCtx *pkeyS, uint8_t *info, 
+int32_t CRYPT_EAL_HpkeSetupAuthRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info,
     uint32_t infoLen, uint8_t *encapKey, uint32_t encapKeyLen);
 
 /**
@@ -335,6 +333,31 @@ void CRYPT_EAL_HpkeFreeCtx(CRYPT_EAL_HpkeCtx *ctx);
  *         Other error codes defined in crypt_errno.h if an error occurs
  */
 int32_t CRYPT_EAL_HpkeSetPsk(CRYPT_EAL_HpkeCtx *ctx,uint8_t* psk,uint32_t pskLen,uint8_t* pskId,uint32_t pskIdLen);
+
+/**
+ * @ingroup crypt_eal_hpke
+ * @brief Set the authentication private key in the HPKE context
+ *
+ * @param ctx [IN] HPKE context
+ * @param pkey [IN] Private key context for authentication
+ *
+ * @retval #CRYPT_SUCCESS if successful
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_HpkeSetAuthPriKey(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey);
+
+/**
+ * @ingroup crypt_eal_hpke
+ * @brief Set the authentication public key in the HPKE context
+ *
+ * @param ctx [IN] HPKE context
+ * @param pub [IN] Public key buffer
+ * @param pubLen [IN] Length of the public key buffer
+ *
+ * @retval #CRYPT_SUCCESS if successful
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_HpkeSetAuthPubKey(CRYPT_EAL_HpkeCtx *ctx, uint8_t *pub, uint32_t pubLen);
 
 #ifdef __cplusplus
 }

@@ -35,7 +35,7 @@
 #define HPKE_ERR -1
 
 static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSuite, Hex *info, Hex *psk, Hex *pskId,
-    Hex *ikmE, Hex *ikmR, Hex *ikmS, CRYPT_EAL_HpkeCtx **ctxS, CRYPT_EAL_HpkeCtx **ctxR, 
+    Hex *ikmE, Hex *ikmR, Hex *ikmS, CRYPT_EAL_HpkeCtx **ctxS, CRYPT_EAL_HpkeCtx **ctxR,
     CRYPT_EAL_PkeyCtx **pkeyE, CRYPT_EAL_PkeyCtx **pkeyR, CRYPT_EAL_PkeyCtx **pkeyS,
     uint8_t *encapsulatedKey, uint32_t *encapsulatedKeyLen)
 {
@@ -49,7 +49,7 @@ static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSu
 
     ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, ikmR->x, ikmR->len, &pkeyR1), CRYPT_SUCCESS);
     
-    if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
+    if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK) {
         ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, ikmS->x, ikmS->len, &pkeyS1), CRYPT_SUCCESS);
     }
 
@@ -63,17 +63,18 @@ static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSu
     ctxS1 = CRYPT_EAL_HpkeNewCtx(NULL, NULL, CRYPT_HPKE_SENDER, mode, cipherSuite);
     ASSERT_TRUE(ctxS1 != NULL);
 
-    if(mode == CRYPT_HPKE_MODE_PSK || mode == CRYPT_HPKE_MODE_AUTH_PSK){
+    if(mode == CRYPT_HPKE_MODE_PSK || mode == CRYPT_HPKE_MODE_AUTH_PSK) {
         ASSERT_EQ(CRYPT_EAL_HpkeSetPsk(ctxS1, psk->x, psk->len , pskId->x, pskId->len), CRYPT_SUCCESS);
     }
    
-    if(mode == CRYPT_HPKE_MODE_BASE || mode ==CRYPT_HPKE_MODE_PSK){
+    if(mode == CRYPT_HPKE_MODE_BASE || mode ==CRYPT_HPKE_MODE_PSK) {
         ASSERT_EQ(CRYPT_EAL_HpkeSetupSender(ctxS1, pkeyE1, info->x, info->len, pubR1.key.eccPub.data, 
             pubR1.key.eccPub.len, encapsulatedKey, encapsulatedKeyLen), CRYPT_SUCCESS);
     }
-    else if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
-    ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthSender(ctxS1, pkeyE1, pkeyS1, info->x, info->len, pubR1.key.eccPub.data, 
-        pubR1.key.eccPub.len, encapsulatedKey, encapsulatedKeyLen), CRYPT_SUCCESS);
+    else if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK) {
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS1, pkeyS1),CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthSender(ctxS1, pkeyE1, info->x, info->len, pubR1.key.eccPub.data, 
+            pubR1.key.eccPub.len, encapsulatedKey, encapsulatedKeyLen), CRYPT_SUCCESS);
     }
 
     ctxR1 = CRYPT_EAL_HpkeNewCtx(NULL, NULL, CRYPT_HPKE_RECIPIENT, mode, cipherSuite);
@@ -88,10 +89,18 @@ static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSu
             *encapsulatedKeyLen), CRYPT_SUCCESS);
     }
     else if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
-        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthRecipient(ctxR1, pkeyR1, pkeyS1, info->x, info->len, encapsulatedKey, 
+        CRYPT_EAL_PkeyPub pubS1;
+        pubS1.id = CRYPT_EAL_PkeyGetId(pkeyS1);
+        pubS1.key.eccPub.len = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+        uint8_t pubSKeyBuf[HPKE_KEM_MAX_PUBLIC_KEY_LEN];
+        pubS1.key.eccPub.data = pubSKeyBuf;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkeyS1, &pubS1), CRYPT_SUCCESS);
+
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPubKey(ctxR1, pubS1.key.eccPub.data, pubS1.key.eccPub.len),CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthRecipient(ctxR1, pkeyR1, info->x, info->len, encapsulatedKey, 
             *encapsulatedKeyLen), CRYPT_SUCCESS);
     }
-    
+  
     *ctxS = ctxS1; 
     *ctxR = ctxR1;
     *pkeyS = pkeyS1;
@@ -166,7 +175,7 @@ void SDV_CRYPT_EAL_HPKE_KEM_TC001(int mode, int kemId, int kdfId, int aeadId, He
     pubR.key.eccPub.data = pubRKeyBuf;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkeyR, &pubR), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke pubR cmp", pubR.key.eccPub.data, pubR.key.eccPub.len, pkRm->x, pkRm->len);
-    
+  
    if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){ 
     CRYPT_EAL_PkeyPrv priS;
     priS.id = CRYPT_EAL_PkeyGetId(pkeyS);
@@ -184,7 +193,7 @@ void SDV_CRYPT_EAL_HPKE_KEM_TC001(int mode, int kemId, int kdfId, int aeadId, He
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkeyS, &pubS), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke pubS cmp", pubS.key.eccPub.data, pubS.key.eccPub.len, pkSm->x, pkSm->len);
  }    
-
+ 
     // check enc
     ASSERT_COMPARE("hpke enc cmp", encapsulatedKey, encapsulatedKeyLen, enc->x, enc->len);
 
@@ -277,8 +286,8 @@ void SDV_CRYPT_EAL_HPKE_EXPORT_SECRET_TC001(int mode, int kemId, int kdfId, int 
     uint8_t encapsulatedKey[HPKE_KEM_MAX_ENCAPSULATED_KEY_LEN];
     uint32_t encapsulatedKeyLen = HPKE_KEM_MAX_ENCAPSULATED_KEY_LEN;
 
-    ASSERT_EQ(GenerateHpkeCtxSAndCtxR(mode, cipherSuite, info, psk, pskId, ikmE, ikmR, ikmS, &ctxS, &ctxR, &pkeyE, &pkeyR, &pkeyS,
-        encapsulatedKey, &encapsulatedKeyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(GenerateHpkeCtxSAndCtxR(mode, cipherSuite, info, psk, pskId, ikmE, ikmR, ikmS, &ctxS, &ctxR,
+        &pkeyE, &pkeyR, &pkeyS, encapsulatedKey, &encapsulatedKeyLen), CRYPT_SUCCESS);
 
     uint8_t exportedValueBuf[HPKE_HKDF_MAX_EXTRACT_KEY_LEN] = {0};
     ASSERT_EQ(CRYPT_EAL_HpkeExportSecret(ctxS, exporterContext->x, exporterContext->len, exportedValueBuf, L), CRYPT_SUCCESS);
@@ -397,7 +406,8 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
             encapsulatedKey, &encapsulatedKeyLen), CRYPT_SUCCESS);
     }
     else if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
-        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthSender(ctxS, NULL, pkeyS, info.x, info.len, pubR.key.eccPub.data, pubR.key.eccPub.len,
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS, pkeyS), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthSender(ctxS, NULL, info.x, info.len, pubR.key.eccPub.data, pubR.key.eccPub.len,
             encapsulatedKey, &encapsulatedKeyLen), CRYPT_SUCCESS);
     }
     CRYPT_EAL_HpkeFreeCtx(ctxS);
@@ -414,7 +424,8 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
             encapsulatedKey, &encapsulatedKeyLen), CRYPT_SUCCESS);
     }
     else if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
-        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthSender(ctxS, pkeyE, pkeyS, info.x, info.len, pubR.key.eccPub.data, pubR.key.eccPub.len,
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS, pkeyS),CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthSender(ctxS, pkeyE, info.x, info.len, pubR.key.eccPub.data, pubR.key.eccPub.len,
             encapsulatedKey, &encapsulatedKeyLen), CRYPT_SUCCESS);
     }
 
@@ -431,7 +442,15 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
             encapsulatedKeyLen), CRYPT_SUCCESS);
     }
     else if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
-        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthRecipient(ctxR, pkeyR, pkeyS, info.x, info.len, encapsulatedKey, 
+        CRYPT_EAL_PkeyPub pubS;
+        pubS.id = CRYPT_EAL_PkeyGetId(pkeyS);
+        pubS.key.eccPub.len = HPKE_KEM_MAX_PUBLIC_KEY_LEN;
+        uint8_t pubSKeyBuf[HPKE_KEM_MAX_PUBLIC_KEY_LEN];
+        pubS.key.eccPub.data = pubSKeyBuf;
+        ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkeyS, &pubS), CRYPT_SUCCESS);
+
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPubKey(ctxR,pubS.key.eccPub.data, pubS.key.eccPub.len),CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_HpkeSetupAuthRecipient(ctxR, pkeyR, info.x, info.len, encapsulatedKey, 
             encapsulatedKeyLen), CRYPT_SUCCESS);
     }
 
