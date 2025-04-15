@@ -184,58 +184,46 @@ static int32_t GetCipherKeyLen(int32_t id, uint32_t *keyLen)
 }
 #endif
 
-static int32_t DrbgParaIsValid(CRYPT_RAND_AlgId id, const CRYPT_RandSeedMethod *seedMeth, const void *seedCtx,
-    const uint8_t *pers, const uint32_t persLen)
+static int32_t DrbgParaIsValid(CRYPT_RAND_AlgId id, bool hasEntropyCb, const void *seedCtx)
 {
     if (DRBG_GetIdMap(id) == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
 
-    if (seedMeth == NULL && seedCtx != NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (pers == NULL && persLen != 0) {
+    if (hasEntropyCb == false && seedCtx != NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     return CRYPT_SUCCESS;
 }
 
-static int32_t RandInitCheck(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod **seedMethPoint,
-    void **seedCtxPoint, CRYPT_RandSeedMethod *seedMethTmp)
+static int32_t RandCheckAndGetDefaultEntropy(CRYPT_RAND_AlgId id, bool hasEntropyCb,
+    CRYPT_RandSeedMethod *seedMethPoint, void **seedCtxPoint)
 {
-    CRYPT_RandSeedMethod *seedMeth = *seedMethPoint;
-    void *seedCtx = *seedCtxPoint;
-
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Drbg(id) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
 #endif
-    CRYPT_RandSeedMethod *seedMethond = seedMeth;
-    int32_t ret = DrbgParaIsValid(id, seedMeth, seedCtx, NULL, 0);
+    int32_t ret = DrbgParaIsValid(id, hasEntropyCb, *seedCtxPoint);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    if (seedMeth == NULL) {
+    if (hasEntropyCb == false) {
 #ifdef HITLS_CRYPTO_ENTROPY
-        ret = EAL_SetDefaultEntropyMeth(seedMethTmp);
+        ret = EAL_SetDefaultEntropyMeth(seedMethPoint);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        seedMethond = seedMethTmp;
 #else
-        (void) seedMethTmp;
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(CRYPT_DRBG_PARAM_ERROR);
+        return CRYPT_DRBG_PARAM_ERROR;
 #endif
     }
-    *seedMethPoint = seedMethond;
+
     return CRYPT_SUCCESS;
 }
 
@@ -248,31 +236,33 @@ DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
     void *seedCtx = NULL;
 
     const BSL_Param *temp = NULL;
-    bool seedMethFlag = false;
+    bool hasEntropyCb = false;
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.getEntropy), NULL), ret);
-        seedMethFlag = true;
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+            (void **)&(seedMethArray.getEntropy), NULL), ret);
+        hasEntropyCb = true;
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.cleanEntropy), NULL), ret);
-        seedMethFlag = true;
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+            (void **)&(seedMethArray.cleanEntropy), NULL), ret);
+        hasEntropyCb = true;
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.getNonce), NULL), ret);
-        seedMethFlag = true;
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+            (void **)&(seedMethArray.getNonce), NULL), ret);
+        hasEntropyCb = true;
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, (void **)&(seedMethArray.cleanNonce), NULL), ret);
-        seedMethFlag = true;
+        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+            (void **)&(seedMethArray.cleanNonce), NULL), ret);
+        hasEntropyCb  = true;
     }
-    if (!seedMethFlag) {
-        seedMeth = NULL;
-    }
+
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
     }
-    CRYPT_RandSeedMethod seedMethTmp = {0};
-    ret = RandInitCheck(algId, &seedMeth, &seedCtx, &seedMethTmp);
+
+    ret = RandCheckAndGetDefaultEntropy(algId, hasEntropyCb, seedMeth, &seedCtx);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
     }
