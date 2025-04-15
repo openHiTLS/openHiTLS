@@ -138,7 +138,7 @@ static void *CRYPT_HybridNewKemCtx(CRYPT_HybridKemCtx *ctx, int32_t algId)
     kemCtx = CRYPT_ML_KEM_NewCtxEx(ctx->libCtx);
 #else
     (void) ctx;
-    kemCtx = CRYPT_ML_KEM_NewCtxEx(ctx->libCtx);
+    kemCtx = CRYPT_ML_KEM_NewCtx();
 #endif
     return kemCtx;
 }
