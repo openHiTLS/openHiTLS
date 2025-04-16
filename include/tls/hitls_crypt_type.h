@@ -279,7 +279,6 @@ typedef struct {
     uint32_t infoLen;           /* Extend the data length. */
 } HITLS_CRYPT_HkdfExpandInput;
 
-
 #ifdef __cplusplus
 }
 #endif
