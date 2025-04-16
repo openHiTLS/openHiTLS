@@ -1178,29 +1178,28 @@ EXIT:
  *    6. The two public keys are the same.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_DH_GET_PUB_API_TC001(Hex *pubKey, int isProvider)
+void SDV_CRYPTO_DH_GET_PUB_API_TC001(Hex *p, Hex *g, Hex *q, Hex *pubKey, int isProvider)
 {
     uint8_t output[1030];
     uint32_t outLen = sizeof(output);
     CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPara para = {0};
     Set_DH_Pub(&pub, output, outLen);
-
+    Set_DH_Para(&para, p->x, q->x, g->x, p->len, q->len, g->len);
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DH,
             CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
+    } else {
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
     }
     ASSERT_TRUE(pkey != NULL);
 
-    ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(pkey, &pub) == CRYPT_DH_KEYINFO_ERROR);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(pkey, &pub) == CRYPT_DH_PARA_ERROR);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
 
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(pkey, &pub) == CRYPT_DH_KEYINFO_ERROR);
     pub.key.dhPub.data = pubKey->x;
     pub.key.dhPub.len = pubKey->len;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pub) == CRYPT_SUCCESS);

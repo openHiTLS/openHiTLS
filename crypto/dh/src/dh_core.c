@@ -848,8 +848,6 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 
 int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
 {
-    int32_t ret;
-    bool tlsType = false;
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -858,32 +856,33 @@ int32_t CRYPT_DH_GetPubKey(const CRYPT_DH_Ctx *ctx, BSL_Param *para)
     BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_DH_PUBKEY);
     if (pub == NULL) {
         pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
-        tlsType = true;
     }
 
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (ctx->para == NULL || ctx->para->p == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
+        return CRYPT_DH_PARA_ERROR;
+    }
     if (ctx->y == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
         return CRYPT_DH_KEYINFO_ERROR;
     }
-    if (BN_Bytes(ctx->y) > pub->valueLen) {
+    uint32_t pubLen = BN_Bytes(ctx->para->p);
+    if (pubLen > pub->valueLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
     }
-    uint32_t useLen = pub->valueLen;
-    if (tlsType) {
-        ret = BN_Bn2BinFixZero(ctx->y, pub->value, useLen);
-    } else {
-        ret = BN_Bn2Bin(ctx->y, pub->value, &(useLen));
-    }
+    // RFC 8446 requires the dh public value should be encoded as a big-endian integer and padded to
+    // the left with zeros to the size of p in bytes.
+    int32_t ret = BN_Bn2BinFixZero(ctx->y, pub->value, pubLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    pub->useLen = useLen;
+    pub->useLen = pubLen;
     return CRYPT_SUCCESS;
 }
 
