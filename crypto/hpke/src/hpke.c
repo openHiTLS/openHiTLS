@@ -975,11 +975,6 @@ static int32_t HpkeCheckSenderParams(CRYPT_EAL_HpkeCtx *ctx, uint8_t *info, uint
 int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
     uint8_t *pkR, uint32_t pkRLen, uint8_t *encapKey, uint32_t *encapKeyLen)
 {
-    if(ctx->mode != CRYPT_HPKE_MODE_BASE && ctx->mode != CRYPT_HPKE_MODE_PSK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    
     int32_t ret = HpkeCheckSenderParams(ctx, info, infoLen, pkR, pkRLen, encapKey, encapKeyLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -992,47 +987,15 @@ int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pke
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = HpkeEncap(ctx, pkey, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    if(ctx->mode==CRYPT_HPKE_MODE_BASE||ctx->mode==CRYPT_HPKE_MODE_PSK) {
+        ret = HpkeEncap(ctx, pkey, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+    }
+    else if(ctx->mode==CRYPT_HPKE_MODE_AUTH||ctx->mode==CRYPT_HPKE_MODE_AUTH_PSK) {
+        ret = HpkeAuthEncap(ctx, pkey, ctx->pkeyCtx, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen); 
+    }
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
-    }
-
-    ret = HpkeKeySchedule(ctx, sharedSecret, sharedSecretLen, info, infoLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
-    }
-
-    ctx->sharedSecret = sharedSecret;
-    ctx->sharedSecretLen = sharedSecretLen;
-    return ret;
-}
-
-int32_t CRYPT_EAL_HpkeSetupAuthSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, 
-    uint8_t *info, uint32_t infoLen, uint8_t *pkR, uint32_t pkRLen, uint8_t *encapKey, uint32_t *encapKeyLen)
-{
-    if(ctx->mode != CRYPT_HPKE_MODE_AUTH && ctx->mode != CRYPT_HPKE_MODE_AUTH_PSK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    
-    int32_t ret = HpkeCheckSenderParams(ctx, info, infoLen, pkR, pkRLen, encapKey, encapKeyLen);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
-    uint32_t sharedSecretLen = g_hpkeKemAlgInfo[ctx->kemIndex].sharedKeyLen;
-    uint8_t *sharedSecret = BSL_SAL_Malloc(sharedSecretLen);
-    if (sharedSecret == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    ret = HpkeAuthEncap(ctx, pkey, ctx->pkeyCtx, pkR, pkRLen, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
+            BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
+            return ret;
     }
 
     ret = HpkeKeySchedule(ctx, sharedSecret, sharedSecretLen, info, infoLen);
@@ -1307,12 +1270,7 @@ static int32_t HpkeCheckRecipientParams(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCt
 
 int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
     uint8_t *encapKey, uint32_t encapKeyLen)
-{
-    if(ctx->mode != CRYPT_HPKE_MODE_BASE && ctx->mode != CRYPT_HPKE_MODE_PSK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    
+{    
     int32_t ret = HpkeCheckRecipientParams(ctx, pkey, info, infoLen, encapKey, encapKeyLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -1325,10 +1283,27 @@ int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = HpkeDecap(ctx, pkey, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
+    if(ctx->mode==CRYPT_HPKE_MODE_BASE||ctx->mode==CRYPT_HPKE_MODE_PSK){
+        ret = HpkeDecap(ctx, pkey, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
+            return ret;
+        }
+    }
+    else if(ctx->mode==CRYPT_HPKE_MODE_AUTH||ctx->mode==CRYPT_HPKE_MODE_AUTH_PSK){
+        CRYPT_EAL_PkeyCtx *pkeyS = NULL;
+        ret = HpkeCreatePubKey(ctx->kemIndex, ctx->pubKey, ctx->pubKeyLen, &pkeyS, ctx->libCtx, ctx->attrName);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
+            return ret;
+        }
+
+        ret = HpkeAuthDecap(ctx, pkey, pkeyS, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
+        CRYPT_EAL_PkeyFreeCtx(pkeyS);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
+            return ret;
+        }
     }
 
     ret = HpkeKeySchedule(ctx, sharedSecret, sharedSecretLen, info, infoLen);
@@ -1339,51 +1314,6 @@ int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *
 
     ctx->sharedSecret = sharedSecret;
     ctx->sharedSecretLen = sharedSecretLen;
-    return ret;
-}
-
-int32_t CRYPT_EAL_HpkeSetupAuthRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info,
-    uint32_t infoLen, uint8_t *encapKey, uint32_t encapKeyLen)
-{
-    if(ctx->mode != CRYPT_HPKE_MODE_AUTH && ctx->mode != CRYPT_HPKE_MODE_AUTH_PSK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    
-    int32_t ret = HpkeCheckRecipientParams(ctx, pkey, info, infoLen, encapKey, encapKeyLen);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-
-    uint32_t sharedSecretLen = g_hpkeKemAlgInfo[ctx->kemIndex].sharedKeyLen;
-    uint8_t *sharedSecret = BSL_SAL_Malloc(sharedSecretLen);
-    if (sharedSecret == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    CRYPT_EAL_PkeyCtx *pkeyS = NULL;
-    ret = HpkeCreatePubKey(ctx->kemIndex, ctx->pubKey, ctx->pubKeyLen, &pkeyS, ctx->libCtx, ctx->attrName);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
-    }
-
-    ret = HpkeAuthDecap(ctx, pkey, pkeyS, encapKey, encapKeyLen, sharedSecret, sharedSecretLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
-    }
-
-    ret = HpkeKeySchedule(ctx, sharedSecret, sharedSecretLen, info, infoLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_ClearFree(sharedSecret, sharedSecretLen);
-        return ret;
-    }
-
-    ctx->sharedSecret = sharedSecret;
-    ctx->sharedSecretLen = sharedSecretLen;
-    CRYPT_EAL_PkeyFreeCtx(pkeyS);
     return ret;
 }
 

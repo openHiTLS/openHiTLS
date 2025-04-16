@@ -142,29 +142,6 @@ int32_t CRYPT_EAL_HpkeSetupSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pke
 
 /**
  * @ingroup crypt_eal_hpke
- * @brief Setup HPKE base mode for sender
- *
- * This function sets up the HPKE context for the sender only in the auth mode and auth psk mode.
- * It takes the sender's private key, the recipient's public key, and additional
- * information to generate an encapsulated key.
- *
- * @param ctx [IN] HPKE context for the sender
- * @param pkey [IN] Private key context for the sender, if set to NULL, will generate a keypair randomly
- * @param info [IN] Additional information for the key setup
- * @param infoLen [IN] Length of the additional information
- * @param pkR [IN] Recipient's public key. For ec key, the format is 04 || X || Y, for X25519 key, the format is X.
- * @param pkRLen [IN] Length of the recipient's public key
- * @param encapKey [OUT] Buffer to store the encapsulated key
- * @param encapKeyLen [IN/OUT] On input, the length of the buffer; on output, the length of the encapsulated key
- *
- * @retval #CRYPT_SUCCESS if the setup is successful
- *         Other error codes defined in crypt_errno.h if an error occurs
- */
-int32_t CRYPT_EAL_HpkeSetupAuthSender(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info,
-    uint32_t infoLen, uint8_t *pkR, uint32_t pkRLen, uint8_t *encapKey, uint32_t *encapKeyLen);
-
-/**
- * @ingroup crypt_eal_hpke
  * @brief Seal (encrypt) data using HPKE context
  *
  * @param ctx [IN] HPKE context
@@ -200,27 +177,6 @@ int32_t CRYPT_EAL_HpkeSeal(CRYPT_EAL_HpkeCtx *ctx, uint8_t *aad, uint32_t aadLen
  */
 int32_t CRYPT_EAL_HpkeSetupRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info, uint32_t infoLen,
     uint8_t *encapKey, uint32_t encapKeyLen);
-
-/**
- * @ingroup crypt_eal_hpke
- * @brief Setup HPKE for the recipient
- *
- * This function sets up the HPKE context for the recipient only in the auth mode and auth psk mode.
- * It takes the recipient's private key, the sender's public key,additional information, and the encapsulated key  
- * to generate theshared secret.
- *
- * @param ctx [IN] HPKE context for the recipient
- * @param pkey [IN] Private key context for the recipient
- * @param info [IN] Additional information for the key setup
- * @param infoLen [IN] Length of the additional information
- * @param encapKey [IN] Encapsulated key input buffer
- * @param encapKeyLen [IN] Length of the encapsulated key
- *
- * @retval #CRYPT_SUCCESS if the setup is successful
- *         Other error codes defined in crypt_errno.h if an error occurs
- */
-int32_t CRYPT_EAL_HpkeSetupAuthRecipient(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_t *info,
-    uint32_t infoLen, uint8_t *encapKey, uint32_t encapKeyLen);
 
 /**
  * @ingroup crypt_eal_hpke
