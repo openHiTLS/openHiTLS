@@ -35,8 +35,15 @@
         }                                                                                                \
         clock_gettime(CLOCK_REALTIME, &end);                                                             \
         uint64_t elapsedTime = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec); \
-        printf("%-25s, %15ld, %20d, %20.2f\n", header, elapsedTime / 1000000000, times,                  \
+        printf("%-25s, %15.2f, %20d, %20.2f\n", header, (double)elapsedTime / 1000000000, times,         \
                ((double)times * 1000000000) / elapsedTime);                                              \
+    }
+
+#define BENCH_TIMES_VA(func, rc, ok, times, headerFmt, ...) \
+    {                                                       \
+        char header[256] = {0};                             \
+        sprintf(header, headerFmt, __VA_ARGS__);            \
+        BENCH_TIMES(func, rc, ok, times, header);           \
     }
 
 #define BENCH_SECONDS(func, rc, ok, secs, header)                                                    \
@@ -61,16 +68,14 @@
     }
 
 #define BENCH_SETUP(ctx, ops)                     \
-    do                                            \
-    {                                             \
+    do {                                          \
         int32_t ret;                              \
-        ret = ops->newCtx(&ctx);                  \
+        ret = ops->newCtx(&ctx, ops);             \
         if (ret != CRYPT_SUCCESS) {               \
             printf("Failed to create context\n"); \
             return ret;                           \
         }                                         \
-    }                                             \
-    while (0)
+    } while (0)
 
 #define BENCH_TEARDOWN(ctx, ops) \
     do {                         \
@@ -86,8 +91,9 @@ static inline void Hex2Bin(const char *hex, uint8_t *bin, uint32_t *len)
 }
 
 typedef struct BenchCtx_ BenchCtx;
+typedef struct CtxOps_ CtxOps;
 // every benchmark testcase should define "NewCtx" and "FreeCtx"
-typedef int32_t (*NewCtx)(void **ctx);
+typedef int32_t (*NewCtx)(void **ctx, const CtxOps *ops);
 typedef void (*FreeCtx)(void *ctx);
 typedef int32_t (*KeyGen)(void *ctx, BenchCtx *bench);
 typedef int32_t (*KeyDerive)(void *ctx, BenchCtx *bench);
@@ -102,52 +108,92 @@ typedef struct {
     void *oper;
 } Operation;
 
-typedef struct {
+struct CtxOps_ {
+    int32_t algId;
+    int32_t subAlgId;
     NewCtx newCtx;
     FreeCtx freeCtx;
     Operation ops[];
-} CtxOps;
+};
 
 #define DEFINE_OPER(id, oper) {id, #oper, oper}
-#define DEFINE_OPS(alg) \
-    static const CtxOps alg##CtxOps = { \
-        .newCtx = alg##NewCtx, \
-        .freeCtx = alg##FreeCtx, \
-        .ops = {\
-            DEFINE_OPER(1, alg##KeyGen), \
-            DEFINE_OPER(2, alg##KeyDerive), \
-            DEFINE_OPER(4, alg##Enc), \
-            DEFINE_OPER(8, alg##Dec), \
-            DEFINE_OPER(16, alg##Sign), \
-            DEFINE_OPER(32, alg##Verify), \
-        }, \
+#define DEFINE_OPS(alg, id)                     \
+    static const CtxOps alg##CtxOps = {         \
+        .algId = id,                            \
+        .subAlgId = id,                         \
+        .newCtx = alg##NewCtx,                  \
+        .freeCtx = alg##FreeCtx,                \
+        .ops =                                  \
+            {                                   \
+                DEFINE_OPER(1, alg##KeyGen),    \
+                DEFINE_OPER(2, alg##KeyDerive), \
+                DEFINE_OPER(4, alg##Enc),       \
+                DEFINE_OPER(8, alg##Dec),       \
+                DEFINE_OPER(16, alg##Sign),     \
+                DEFINE_OPER(32, alg##Verify),   \
+            },                                  \
     }
 
-#define KEY_GEN_ID 1U
+#define DEFINE_OPS_SIGN_ALG(alg, id1, id2)    \
+    static const CtxOps alg##CtxOps = {       \
+        .algId = id1,                         \
+        .subAlgId = id2,                      \
+        .newCtx = alg##NewCtx,                \
+        .freeCtx = alg##FreeCtx,              \
+        .ops =                                \
+            {                                 \
+                DEFINE_OPER(1, alg##KeyGen),  \
+                DEFINE_OPER(16, alg##Sign),   \
+                DEFINE_OPER(32, alg##Verify), \
+            },                                \
+    }
+#define DEFINE_OPS_SIGN(alg, id) DEFINE_OPS_SIGN_ALG(alg, id, id)
+
+#define DEFINE_OPS_CIPHER(alg, id)        \
+    static const CtxOps alg##CtxOps = {   \
+        .algId = id,                      \
+        .subAlgId = id,                   \
+        .newCtx = alg##NewCtx,            \
+        .freeCtx = alg##FreeCtx,          \
+        .ops =                            \
+            {                             \
+                DEFINE_OPER(4, alg##Enc), \
+                DEFINE_OPER(8, alg##Dec), \
+            },                            \
+    }
+
+#define KEY_GEN_ID    1U
 #define KEY_DERIVE_ID 2U
-#define ENC_ID 4U
-#define DEC_ID 8U
-#define SIGN_ID 16U
-#define VERIFY_ID 32U
+#define ENC_ID        4U
+#define DEC_ID        8U
+#define SIGN_ID       16U
+#define VERIFY_ID     32U
 
 typedef struct BenchCtx_ {
     const char *name;
     const char *desc;
     const CtxOps *ctxOps;
-    int32_t filteredOpsNum;
+    int32_t opsNum;
+    uint32_t filteredOps;
     int32_t times;
     int32_t seconds;
     int32_t len;
 } BenchCtx;
 
-#define DEFINE_BENCH_CTX(alg) \
-    BenchCtx alg##BenchCtx = { \
-        .name = #alg, \
-        .desc = #alg " benchmark", \
-        .ctxOps = &alg##CtxOps, \
-        .filteredOpsNum = sizeof(alg##CtxOps.ops) / sizeof(alg##CtxOps.ops[0]), \
-        .times = 10000, \
-        .seconds = -1, \
+#define DEFINE_BENCH_CTX_TIMES(alg, ts)                                 \
+    BenchCtx alg##BenchCtx = {                                          \
+        .name = #alg,                                                   \
+        .desc = #alg " benchmark",                                      \
+        .ctxOps = &alg##CtxOps,                                         \
+        .opsNum = sizeof(alg##CtxOps.ops) / sizeof(alg##CtxOps.ops[0]), \
+        .filteredOps = 0,                                               \
+        .times = ts,                                                    \
+        .seconds = -1,                                                  \
     }
+
+// default to run 10000 times
+#define DEFINE_BENCH_CTX(alg) DEFINE_BENCH_CTX_TIMES(alg, 10000)
+
+BenchCtx *DupBenchCtx(BenchCtx *bench);
 
 #endif /* BENCHMARK_H */
