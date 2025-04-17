@@ -198,8 +198,7 @@ static int32_t DrbgParaIsValid(CRYPT_RAND_AlgId id, bool hasEntropyCb, const voi
     return CRYPT_SUCCESS;
 }
 
-static int32_t RandCheckAndGetDefaultEntropy(CRYPT_RAND_AlgId id, bool hasEntropyCb,
-    CRYPT_RandSeedMethod *seedMethPoint, void **seedCtxPoint)
+static int32_t RandCheck(CRYPT_RAND_AlgId id, bool hasEntropyCb, void **seedCtxPoint)
 {
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Drbg(id) != CRYPT_SUCCESS) {
@@ -210,18 +209,6 @@ static int32_t RandCheckAndGetDefaultEntropy(CRYPT_RAND_AlgId id, bool hasEntrop
     int32_t ret = DrbgParaIsValid(id, hasEntropyCb, *seedCtxPoint);
     if (ret != CRYPT_SUCCESS) {
         return ret;
-    }
-    if (hasEntropyCb == false) {
-#ifdef HITLS_CRYPTO_ENTROPY
-        ret = EAL_SetDefaultEntropyMeth(seedMethPoint);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-#else
-        BSL_ERR_PUSH_ERROR(CRYPT_DRBG_PARAM_ERROR);
-        return CRYPT_DRBG_PARAM_ERROR;
-#endif
     }
 
     return CRYPT_SUCCESS;
@@ -262,7 +249,7 @@ DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param)
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
     }
 
-    ret = RandCheckAndGetDefaultEntropy(algId, hasEntropyCb, seedMeth, &seedCtx);
+    ret = RandCheck(algId, hasEntropyCb, &seedCtx);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
     }

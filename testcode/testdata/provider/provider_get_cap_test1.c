@@ -77,6 +77,7 @@ typedef struct {
 void *TestPkeyMgmtEcNewCtx(void *provCtx, int32_t algId)
 {
     (void)provCtx;
+    (void)algId;
     TestEccKeyCtx *pkeyCtx = malloc(sizeof(TestEccKeyCtx));
     if (pkeyCtx == NULL) {
         return NULL;

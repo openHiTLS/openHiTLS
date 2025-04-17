@@ -29,7 +29,6 @@ if(CUSTOM_CFLAGS)
 endif()
 
 if(ENABLE_GCOV)
-
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
 endif()
 

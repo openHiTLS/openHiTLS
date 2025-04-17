@@ -474,7 +474,7 @@ static CRYPT_EAL_RndCtx *EAL_RandNewDrbg(CRYPT_RAND_AlgId id, CRYPT_RandSeedMeth
     }
     randCtx->isDefaultSeed = false;
 
-    if (seedMeth == NULL) {
+    if (seedMeth == NULL || (seedMeth->getEntropy == NULL && seedMeth->getNonce == NULL)) {
 #ifdef HITLS_CRYPTO_ENTROPY
         ret = EAL_GetDefaultSeed(&seedMethTmp, &seedTmp);
         if (ret != CRYPT_SUCCESS) {
@@ -844,7 +844,7 @@ int32_t CRYPT_EAL_NoProviderRandInitCtxInner(int32_t algId,
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
     }
-    ret = CRYPT_EAL_RandInit(algId, &seedMeth, &seedCtx, pers, persLen);
+    ret = CRYPT_EAL_RandInit(algId, &seedMeth, seedCtx, pers, persLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
