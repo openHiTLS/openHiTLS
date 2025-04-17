@@ -2,10 +2,13 @@
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
-
+#include <stdlib.h>
+#include <pthread.h>
+#define DATA_SIZE (10 * 1024 * 1024) 
 
 #define BLOCK_SIZE 16
 #define ROUNDS 32
+
 
 static const uint8_t SBOX[256] = {
     0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
@@ -26,42 +29,53 @@ static const uint8_t SBOX[256] = {
     0x18, 0xf0, 0x7d, 0xec, 0x3a, 0xdc, 0x4d, 0x20, 0x79, 0xee, 0x5f, 0x3e, 0xd7, 0xcb, 0x39, 0x48
 };
 
-static const uint32_t FK[4] = {
-    0xA3B1BAC6, 0x56AA3350, 0x677D9197, 0xB27022DC
-};
 
-static const uint32_t CK[32] = {
-    0x00070e15, 0x1c232a31, 0x383f464d, 0x545b6269,
-    0x70777e85, 0x8c939aa1, 0xa8afb6bd, 0xc4cbd2d9,
-    0xe0e7eef5, 0xfc030a11, 0x181f262d, 0x343b4249,
-    0x50575e65, 0x6c737a81, 0x888f969d, 0xa4abb2b9,
-    0xc0c7ced5, 0xdce3eaf1, 0xf8ff060d, 0x141b2229,
-    0x30373e45, 0x4c535a61, 0x686f767d, 0x848b9299,
-    0xa0a7aeb5, 0xbcc3cad1, 0xd8dfe6ed, 0xf4fb0209,
-    0x10171e25, 0x2c333a41, 0x484f565d, 0x646b7279
-};
+static uint32_t SM4_T[4][256];
+static int tables_initialized = 0;
 
-static uint32_t rotl(uint32_t x, int n) {
-    return (x << n) | (x >> (32 - n));
+
+#define rol(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
+
+
+void init_sm4_table() {
+    if (tables_initialized) return;
+
+    for (int i = 0; i < 256; i++) {
+        const uint8_t b = SBOX[i];
+
+
+        const uint32_t t0 = (uint32_t)b << 24;
+        SM4_T[0][i] = t0 ^ rol(t0, 2) ^ rol(t0, 10) ^ rol(t0, 18) ^ rol(t0, 24);
+
+        const uint32_t t1 = (uint32_t)b << 16;
+        SM4_T[1][i] = t1 ^ rol(t1, 2) ^ rol(t1, 10) ^ rol(t1, 18) ^ rol(t1, 24);
+
+        const uint32_t t2 = (uint32_t)b << 8;
+        SM4_T[2][i] = t2 ^ rol(t2, 2) ^ rol(t2, 10) ^ rol(t2, 18) ^ rol(t2, 24);
+
+        const uint32_t t3 = (uint32_t)b;
+        SM4_T[3][i] = t3 ^ rol(t3, 2) ^ rol(t3, 10) ^ rol(t3, 18) ^ rol(t3, 24);
+    }
+    tables_initialized = 1;
 }
 
-static uint8_t sm4_sbox(uint8_t x) {
-    return SBOX[x];
-}
 
-static uint32_t sm4_t(uint32_t x) {
-    uint8_t b[4];
-    b[0] = sm4_sbox((x >> 24) & 0xFF);
-    b[1] = sm4_sbox((x >> 16) & 0xFF);
-    b[2] = sm4_sbox((x >> 8) & 0xFF);
-    b[3] = sm4_sbox(x & 0xFF);
+void sm4_key_expansion(const uint8_t key[16], uint32_t rk[ROUNDS]) {
+    const uint32_t FK[4] = { 0xA3B1BAC6, 0x56AA3350, 0x677D9197, 0xB27022DC };
+    const uint32_t CK[32] = {
+        0x00070E15, 0x1C232A31, 0x383F464D, 0x545B6269,
+        0x70777E85, 0x8C939AA1, 0xA8AFB6BD, 0xC4CBD2D9,
+        0xE0E7EEF5, 0xFC030A11, 0x181F262D, 0x343B4249,
+        0x50575E65, 0x6C737A81, 0x888F969D, 0xA4ABB2B9,
+        0xC0C7CED5, 0xDCE3EAF1, 0xF8FF060D, 0x141B2229,
+        0x30373E45, 0x4C535A61, 0x686F767D, 0x848B9299,
+        0xA0A7AEB5, 0xBCC3CAD1, 0xD8DFE6ED, 0xF4FB0209,
+        0x10171E25, 0x2C333A41, 0x484F565D, 0x646B7279
+    };
 
-    uint32_t y = ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) | ((uint32_t)b[2] << 8) | b[3];
-    return y ^ rotl(y, 2) ^ rotl(y, 10) ^ rotl(y, 18) ^ rotl(y, 24);
-}
-
-void sm4_key_schedule(const uint8_t key[16], uint32_t rk[ROUNDS]) {
     uint32_t K[36];
+
+
     for (int i = 0; i < 4; i++) {
         K[i] = ((uint32_t)key[4 * i] << 24) |
             ((uint32_t)key[4 * i + 1] << 16) |
@@ -69,105 +83,210 @@ void sm4_key_schedule(const uint8_t key[16], uint32_t rk[ROUNDS]) {
             key[4 * i + 3];
         K[i] ^= FK[i];
     }
+
+
     for (int i = 0; i < ROUNDS; i++) {
-        uint32_t tmp = K[i + 1] ^ K[i + 2] ^ K[i + 3] ^ CK[i];
-        K[i + 4] = K[i] ^ sm4_t(tmp);
+        const uint32_t tmp = K[i + 1] ^ K[i + 2] ^ K[i + 3] ^ CK[i];
+        K[i + 4] = K[i] ^ (SM4_T[0][(tmp >> 24) & 0xFF] ^
+            SM4_T[1][(tmp >> 16) & 0xFF] ^
+            SM4_T[2][(tmp >> 8) & 0xFF] ^
+            SM4_T[3][tmp & 0xFF]);
         rk[i] = K[i + 4];
     }
 }
 
-static uint32_t sm4_f(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t rk) {
-    return x0 ^ sm4_t(x1 ^ x2 ^ x3 ^ rk);
+
+void sm4_encrypt_block(const uint32_t rk[ROUNDS], const uint8_t plain[16], uint8_t cipher[16]) {
+    uint32_t X[36];
+
+
+    for (int i = 0; i < 4; i++) {
+        X[i] = ((uint32_t)plain[4 * i] << 24) |
+            ((uint32_t)plain[4 * i + 1] << 16) |
+            ((uint32_t)plain[4 * i + 2] << 8) |
+            plain[4 * i + 3];
+    }
+
+
+    for (int i = 0; i < ROUNDS; i++) {
+        const uint32_t tmp = X[i + 1] ^ X[i + 2] ^ X[i + 3] ^ rk[i];
+        X[i + 4] = X[i] ^ (SM4_T[0][(tmp >> 24) & 0xFF] ^
+            SM4_T[1][(tmp >> 16) & 0xFF] ^
+            SM4_T[2][(tmp >> 8) & 0xFF] ^
+            SM4_T[3][tmp & 0xFF]);
+    }
+
+
+    const uint32_t result[4] = { X[35], X[34], X[33], X[32] };
+    for (int i = 0; i < 4; i++) {
+        cipher[4 * i] = (result[i] >> 24) & 0xFF;
+        cipher[4 * i + 1] = (result[i] >> 16) & 0xFF;
+        cipher[4 * i + 2] = (result[i] >> 8) & 0xFF;
+        cipher[4 * i + 3] = result[i] & 0xFF;
+    }
 }
 
-void sm4_crypt_block(const uint32_t rk[ROUNDS], const uint8_t in[BLOCK_SIZE], uint8_t out[BLOCK_SIZE], int decrypt) {
+
+void sm4_decrypt_block(const uint32_t rk[ROUNDS], const uint8_t cipher[16], uint8_t plain[16]) {
     uint32_t X[36];
+
+
     for (int i = 0; i < 4; i++) {
-        X[i] = ((uint32_t)in[4 * i] << 24) |
-            ((uint32_t)in[4 * i + 1] << 16) |
-            ((uint32_t)in[4 * i + 2] << 8) |
-            in[4 * i + 3];
+        X[i] = ((uint32_t)cipher[4 * i] << 24) |
+            ((uint32_t)cipher[4 * i + 1] << 16) |
+            ((uint32_t)cipher[4 * i + 2] << 8) |
+            cipher[4 * i + 3];
     }
+
+
     for (int i = 0; i < ROUNDS; i++) {
-        int rk_idx = decrypt ? (ROUNDS - 1 - i) : i;
-        X[i + 4] = sm4_f(X[i], X[i + 1], X[i + 2], X[i + 3], rk[rk_idx]);
+        const uint32_t tmp = X[i + 1] ^ X[i + 2] ^ X[i + 3] ^ rk[ROUNDS - 1 - i];
+        X[i + 4] = X[i] ^ (SM4_T[0][(tmp >> 24) & 0xFF] ^
+            SM4_T[1][(tmp >> 16) & 0xFF] ^
+            SM4_T[2][(tmp >> 8) & 0xFF] ^
+            SM4_T[3][tmp & 0xFF]);
     }
-    uint32_t tmp[4] = { X[35], X[34], X[33], X[32] };
+
+
+    const uint32_t result[4] = { X[35], X[34], X[33], X[32] };
     for (int i = 0; i < 4; i++) {
-        out[4 * i] = (tmp[i] >> 24) & 0xFF;
-        out[4 * i + 1] = (tmp[i] >> 16) & 0xFF;
-        out[4 * i + 2] = (tmp[i] >> 8) & 0xFF;
-        out[4 * i + 3] = tmp[i] & 0xFF;
+        plain[4 * i] = (result[i] >> 24) & 0xFF;
+        plain[4 * i + 1] = (result[i] >> 16) & 0xFF;
+        plain[4 * i + 2] = (result[i] >> 8) & 0xFF;
+        plain[4 * i + 3] = result[i] & 0xFF;
     }
 }
+
 
 void sm4_cbc_encrypt(const uint32_t rk[ROUNDS], const uint8_t iv[BLOCK_SIZE],
-    const uint8_t* in, size_t len, uint8_t* out) {
+    const uint8_t* plain, size_t len, uint8_t* cipher) {
     uint8_t block[BLOCK_SIZE];
     memcpy(block, iv, BLOCK_SIZE);
+
     for (size_t i = 0; i < len; i += BLOCK_SIZE) {
+
         for (int j = 0; j < BLOCK_SIZE; j++) {
-            block[j] ^= in[i + j];
+            block[j] ^= plain[i + j];
         }
-        sm4_crypt_block(rk, block, out + i, 0);
-        memcpy(block, out + i, BLOCK_SIZE);
+
+
+        sm4_encrypt_block(rk, block, cipher + i);
+
+
+        memcpy(block, cipher + i, BLOCK_SIZE);
     }
 }
 
-void sm4_cbc_decrypt(const uint32_t rk[ROUNDS], const uint8_t iv[BLOCK_SIZE],
-    const uint8_t* in, size_t len, uint8_t* out) {
-    uint8_t prev[BLOCK_SIZE], curr[BLOCK_SIZE];
-    memcpy(prev, iv, BLOCK_SIZE);
-    for (size_t i = 0; i < len; i += BLOCK_SIZE) {
-        memcpy(curr, in + i, BLOCK_SIZE);
-        sm4_crypt_block(rk, in + i, out + i, 1);
+
+typedef struct {
+    const uint32_t* rk;
+    const uint8_t* ciphertext;
+    uint8_t* plaintext;
+    const uint8_t* iv;
+    size_t start_block;
+    size_t num_blocks;
+} thread_args_t;
+
+
+void* thread_cbc_decrypt_worker(void* arg) {
+    thread_args_t* args = (thread_args_t*)arg;
+    uint8_t prev[BLOCK_SIZE], curr[BLOCK_SIZE], temp[BLOCK_SIZE];
+
+    for (size_t i = 0; i < args->num_blocks; i++) {
+        size_t block_offset = (args->start_block + i) * BLOCK_SIZE;
+
+        memcpy(curr, args->ciphertext + block_offset, BLOCK_SIZE);
+        sm4_decrypt_block(args->rk, curr, temp);
+
+
+        const uint8_t* prev_block = (args->start_block + i == 0)
+            ? args->iv
+            : args->ciphertext + block_offset - BLOCK_SIZE;
+
         for (int j = 0; j < BLOCK_SIZE; j++) {
-            out[i + j] ^= prev[j];
+            args->plaintext[block_offset + j] = temp[j] ^ prev_block[j];
         }
-        memcpy(prev, curr, BLOCK_SIZE);
+    }
+    return NULL;
+}
+
+
+void sm4_cbc_decrypt_parallel(const uint32_t rk[ROUNDS], const uint8_t iv[BLOCK_SIZE],
+    const uint8_t* in, size_t len, uint8_t* out, size_t threads) {
+
+    size_t num_blocks = len / BLOCK_SIZE;
+    size_t blocks_per_thread = num_blocks / threads;
+    size_t remaining_blocks = num_blocks % threads;
+
+    pthread_t thread_ids[threads];
+    thread_args_t thread_args[threads];
+
+    size_t block_index = 0;
+
+    for (size_t i = 0; i < threads; i++) {
+        size_t blocks = blocks_per_thread + (i < remaining_blocks ? 1 : 0);
+        thread_args[i].rk = rk;
+        thread_args[i].ciphertext = in;
+        thread_args[i].plaintext = out;
+        thread_args[i].iv = iv;
+        thread_args[i].start_block = block_index;
+        thread_args[i].num_blocks = blocks;
+        pthread_create(&thread_ids[i], NULL, thread_cbc_decrypt_worker, &thread_args[i]);
+        block_index += blocks;
+    }
+
+    for (size_t i = 0; i < threads; i++) {
+        pthread_join(thread_ids[i], NULL);
     }
 }
+
 
 static inline uint64_t get_cycles() {
     uint64_t cycles;
     asm volatile ("rdcycle %0" : "=r" (cycles));
     return cycles;
 }
-
-
 int main() {
-    uint8_t key[16] = { 0 };
-    uint8_t iv[16] = { 0 };
-    uint8_t plaintext[32] = {
-        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-        0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
-    };
-    uint8_t ciphertext[32];
-    uint8_t decrypted[32];
+    init_sm4_table();
+    uint8_t key[16];
+    uint8_t iv[16];
+
+    for (int i = 0; i < 16; i++) {
+        key[i] = rand() % 256;
+        iv[i] = rand() % 256;
+    }
+
+    uint8_t* plaintext = (uint8_t*)malloc(DATA_SIZE);
+    uint8_t* ciphertext = (uint8_t*)malloc(DATA_SIZE);
+    uint8_t* decrypted = (uint8_t*)malloc(DATA_SIZE);
+
+    if (plaintext == NULL || ciphertext == NULL || decrypted == NULL) {
+        printf("Memory allocation failed!\n");
+        return -1;
+    }
+
+
+    for (size_t i = 0; i < DATA_SIZE; i++) {
+        plaintext[i] = rand() % 256;
+    }
 
     uint32_t rk[ROUNDS];
-    sm4_key_schedule(key, rk);
-
-
     uint64_t start_cycles = get_cycles();
+    sm4_key_expansion(key, rk);
 
-    sm4_cbc_encrypt(rk, iv, plaintext, 32, ciphertext);
+    sm4_cbc_encrypt(rk, iv, plaintext, DATA_SIZE, ciphertext);
+    sm4_cbc_decrypt_parallel(rk, iv, ciphertext, DATA_SIZE, decrypted, 4);
 
-
-
-    sm4_cbc_decrypt(rk, iv, ciphertext, 32, decrypted);
     uint64_t end_cycles = get_cycles();
-    printf("enc_time：%lu ns\n", end_cycles - start_cycles);
-
+    double total_time_sec = (double)(end_cycles - start_cycles) / (3.187199 * 1000000000.0);
+    printf("Total time: %.3f seconds\n", total_time_sec);
 
     printf("Ciphertext: ");
-    for (int i = 0; i < 32; i++) printf("%02X", ciphertext[i]);
+    for (int i = 0; i < 64; i++) printf("%02X", ciphertext[i]);
     printf("\n");
 
     printf("Decrypted : ");
-    for (int i = 0; i < 32; i++) printf("%02X", decrypted[i]);
+    for (int i = 0; i < 64; i++) printf("%02X", decrypted[i]);
     printf("\n");
 
     return 0;
