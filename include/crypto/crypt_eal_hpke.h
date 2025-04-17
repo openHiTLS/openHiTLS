@@ -31,7 +31,10 @@ extern "C" {
 #endif // __cplusplus
 
 typedef enum {
-    CRYPT_HPKE_MODE_BASE = 0x00
+    CRYPT_HPKE_MODE_BASE = 0x00,
+    CRYPT_HPKE_MODE_PSK = 0x01,
+    CRYPT_HPKE_MODE_AUTH = 0x02,
+    CRYPT_HPKE_MODE_AUTH_PSK = 0x03
 } CRYPT_HPKE_Mode;
 
 typedef enum {
@@ -50,7 +53,8 @@ typedef enum {
 typedef enum {
     CRYPT_AEAD_AES_128_GCM = 0x0001,
     CRYPT_AEAD_AES_256_GCM = 0x0002,
-    CRYPT_AEAD_CHACHA20_POLY1305 = 0x0003
+    CRYPT_AEAD_CHACHA20_POLY1305 = 0x0003,
+    CRYPT_AEAD_EXPORT_ONLY = 0xffff
 } CRYPT_HPKE_AEAD_AlgId;
 
 typedef struct {
@@ -117,7 +121,7 @@ int32_t CRYPT_EAL_HpkeGetEncapKeyLen(CRYPT_HPKE_CipherSuite cipherSuite, uint32_
  * @ingroup crypt_eal_hpke
  * @brief Setup HPKE base mode for sender
  *
- * This function sets up the HPKE context for the sender in the base mode.
+ * This function only sets up the HPKE context for the sender in the base mode and psk mode.
  * It takes the sender's private key, the recipient's public key, and additional
  * information to generate an encapsulated key.
  *
@@ -158,7 +162,7 @@ int32_t CRYPT_EAL_HpkeSeal(CRYPT_EAL_HpkeCtx *ctx, uint8_t *aad, uint32_t aadLen
  * @ingroup crypt_eal_hpke
  * @brief Setup HPKE for the recipient
  *
- * This function sets up the HPKE context for the recipient.
+ * This function sets up the HPKE context for the recipient only in the base mode and psk mode.
  * It takes the recipient's private key, additional information, and the encapsulated key to generate the shared secret.
  *
  * @param ctx [IN] HPKE context for the recipient
@@ -270,6 +274,46 @@ int32_t CRYPT_EAL_HpkeSetSharedSecret(CRYPT_EAL_HpkeCtx *ctx, uint8_t *info, uin
  * @param ctx [IN] HPKE context to free
  */
 void CRYPT_EAL_HpkeFreeCtx(CRYPT_EAL_HpkeCtx *ctx);
+
+/**
+ * @ingroup crypt_eal_hpke
+ * @brief Setup psk and pskId for mode_psk and mode_auth_psk
+ *
+ * @param ctx [IN] HPKE context 
+ * @param psk [IN] Pre-shared key (PSK) used for the key exchange
+ * @param pskLen [IN] Length of the pre-shared key (PSK) in bytes
+ * @param pskId [IN] Identifier for the pre-shared key (PSK)
+ * @param pskIdLen [IN] Length of the PSK identifier in bytes
+ *
+ * @retval #CRYPT_SUCCESS if the setup is successful
+ *         Other error codes defined in crypt_errno.h if an error occurs
+ */
+int32_t CRYPT_EAL_HpkeSetPsk(CRYPT_EAL_HpkeCtx *ctx,uint8_t* psk,uint32_t pskLen,uint8_t* pskId,uint32_t pskIdLen);
+
+/**
+ * @ingroup crypt_eal_hpke
+ * @brief Set the authentication private key in the HPKE context
+ *
+ * @param ctx [IN] HPKE context
+ * @param pkey [IN] Private key context for authentication
+ *
+ * @retval #CRYPT_SUCCESS if successful
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_HpkeSetAuthPriKey(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey);
+
+/**
+ * @ingroup crypt_eal_hpke
+ * @brief Set the authentication public key in the HPKE context
+ *
+ * @param ctx [IN] HPKE context
+ * @param pub [IN] Public key buffer
+ * @param pubLen [IN] Length of the public key buffer
+ *
+ * @retval #CRYPT_SUCCESS if successful
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_HpkeSetAuthPubKey(CRYPT_EAL_HpkeCtx *ctx, uint8_t *pub, uint32_t pubLen);
 
 #ifdef __cplusplus
 }
