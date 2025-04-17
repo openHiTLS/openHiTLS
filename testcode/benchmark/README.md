@@ -12,7 +12,7 @@ openhtils_benchmark -a sm2* // run all sm2 benchmark testcases
 
 openhitls_benchmark -a sm2-KeyGen  // just run sm2 KeyGen
 
-openhitls_benchmark -a *KeyGen  // run all KeyGen benchmark testcases
+openhitls_benchmark -a *-KeyGen  // run all KeyGen benchmark testcases, the '-' is needed when match operations.
 
 openhitls_benchmark -a sm2-KeyGen -t 10000 // run 'sm2 KeyGen' 10000 times
 

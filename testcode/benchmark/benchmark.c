@@ -23,9 +23,11 @@
 #include "benchmark.h"
 
 extern BenchCtx Sm2BenchCtx;
+extern BenchCtx SlhDsaBenchCtx;
 
 BenchCtx *g_benchs[] = {
     &Sm2BenchCtx,
+    &SlhDsaBenchCtx,
 };
 
 // 定义命令行选项结构
@@ -84,31 +86,65 @@ static bool MatchAlgorithm(const char *pattern, const char *name)
     size_t patternLen = strlen(pattern);
     size_t nameLen = strlen(name);
 
-    // process wildcard "*"
-    if (pattern[0] == '*') {
-        return (nameLen >= patternLen - 1) && 
-               (strcmp(name + nameLen - (patternLen - 1), pattern + 1) == 0);
-    }
-    
-    // process suffix wildcard (xxx*)
-    if (pattern[patternLen - 1] == '*') {
-        return strncmp(name, pattern, patternLen - 1) == 0;
+    const char *asterisk = strchr(pattern, '*');
+    if (asterisk != NULL) {
+        // Process prefix wildcard "*XXX"
+        if (pattern[0] == '*') {
+            // Check if pattern is "*XXX"
+            return (nameLen >= patternLen - 1) && 
+                (strcasecmp(name + nameLen - (patternLen - 1), pattern + 1) == 0);
+        }
+        
+        // Process suffix wildcard "XXX*"
+        if (pattern[patternLen - 1] == '*') {
+            return strncasecmp(name, pattern, patternLen - 1) == 0;
+        }
+        return false;
     }
 
-    return strcmp(pattern, name) == 0;
+    return strncasecmp(pattern, name, strlen(name)) == 0;
+}
+
+static uint32_t MatchOperation(const char *pattern, BenchCtx *bench)
+{
+    uint32_t re = 0;
+
+    for (uint32_t i = 0; i < bench->opsNum; i++) {
+        const Operation *op = &bench->ctxOps->ops[i];
+        const char *hyphen = strchr(pattern, '-');
+        if (hyphen != NULL) {
+            size_t algoLen = strlen(bench->name);
+            const char *operation = hyphen + 1;
+
+            // Match algorithm part before hyphen
+            if (strncasecmp(operation, op->name + algoLen, strlen(operation)) == 0) {
+                re |= op->id;
+            }
+        } else {
+            // not match a operation, config default supported operation
+            re |= op->id;
+        }
+    }
+
+    return re;
 }
 
 static void FilterBenchs(BenchOptions *opts, BenchCtx *benchs[], uint32_t *num)
 {
+    const char *hyphen = strchr(opts->algorithm, '*');
     for (int i = 0; i < sizeof(g_benchs) / sizeof(g_benchs[0]); i++) {
-        if (!MatchAlgorithm(opts->algorithm, g_benchs[i]->name)) {
+        if (!MatchAlgorithm(opts->algorithm, g_benchs[i]->name) && hyphen == NULL) {
             continue;
         }
-        benchs[*num] = g_benchs[i];
-        benchs[*num]->times = opts->times;
-        benchs[*num]->seconds = opts->seconds;
-        benchs[*num]->len = opts->len;
-        (*num)++;
+        uint32_t ops = MatchOperation(opts->algorithm, g_benchs[i]);
+        if (ops != 0) {
+            uint32_t n = *num;
+            benchs[n] = DupBenchCtx(g_benchs[i]);
+            benchs[n]->seconds = opts->seconds;
+            benchs[n]->len = opts->len;
+            benchs[n]->filteredOps = ops;
+            (*num)++;
+        }
     }
 }
 
@@ -134,6 +170,18 @@ static int32_t InstantOperation(const Operation *op, void *ctx, BenchCtx *bench)
     }
 }
 
+BenchCtx *DupBenchCtx(BenchCtx *bench)
+{
+    BenchCtx *re = malloc(sizeof(BenchCtx));
+    if (re == NULL) {
+        printf("malloc failed\n");
+        return NULL;
+    }
+    *re = *bench;
+
+    return re;
+}
+
 int main(int argc, char **argv)
 {
     int32_t ret;
@@ -145,8 +193,9 @@ int main(int argc, char **argv)
     opts.seconds = 3;
     opts.len = 1024;
     ParseOptions(argc, argv, &opts);
-    
-    if (CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) != CRYPT_SUCCESS) {
+
+    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+    if (ret != CRYPT_SUCCESS) {
         printf("Failed to initialize random number generator\n");
         return -1;
     }
@@ -156,7 +205,7 @@ int main(int argc, char **argv)
     FilterBenchs(&opts, benchs, &num);
 
     if (num > 0) {
-        printf("%-25s, %15s, %20s, %20s\n", "algorithm operation", "time elapsed(s)", "run times", "ops");
+        printf("%-25s, %15s, %20s, %20s\n", "algorithm operation", "time elapsed(s)", "run times", "ops/s");
     }
 
     for (int i = 0; i < num; i++) {
@@ -165,8 +214,11 @@ int main(int argc, char **argv)
 
         BENCH_SETUP(ctx, ctxOps);
 
-        for (int j = 0; j < benchs[i]->filteredOpsNum; j++) {
+        for (int j = 0; j < benchs[i]->opsNum; j++) {
             const Operation *op = &ctxOps->ops[j];
+            if ((uint32_t)(op->id & benchs[i]->filteredOps) == 0U) {
+                continue;
+            }
             ret = InstantOperation(op, ctx, benchs[i]);
             if (ret != CRYPT_SUCCESS) {
                 printf("Failed to %s, ret = %08x\n", op->name, ret);
@@ -174,6 +226,10 @@ int main(int argc, char **argv)
         }
 
         BENCH_TEARDOWN(ctx, ctxOps);
+    }
+
+    for (int i = 0; i < num; i++) {
+        free(benchs[i]);
     }
 
     return 0;

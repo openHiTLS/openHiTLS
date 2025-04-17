@@ -20,9 +20,10 @@
 #include "crypt_eal_pkey.h"
 #include "benchmark.h"
 
-static int32_t Sm2NewCtx(void **ctx)
+
+static int32_t Sm2NewCtx(void **ctx, const CtxOps *ops)
 {
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
@@ -152,5 +153,5 @@ static int32_t Sm2Verify(void *ctx, BenchCtx *bench)
     return rc;
 }
 
-DEFINE_OPS(Sm2);
+DEFINE_OPS(Sm2, CRYPT_PKEY_SM2);
 DEFINE_BENCH_CTX(Sm2);
