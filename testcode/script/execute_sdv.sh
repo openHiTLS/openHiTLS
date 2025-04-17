@@ -291,5 +291,5 @@ if [ ${need_run_all} -eq 1 ]; then
 else
     run_test
 fi
-#run_demos
+run_demos
 gen_test_report
