@@ -452,7 +452,7 @@ void SDV_CRYPTO_CURVE25519_KEY_GEN_API_TC002(int id, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -508,7 +508,7 @@ void SDV_CRYPTO_CURVE25519_SIGN_API_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), sign, &signLen), CRYPT_CURVE25519_NO_PRVKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, &signLen), CRYPT_EAL_ERR_ALGID);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, sizeof(data), sign, &signLen), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, NULL, sizeof(data), sign, &signLen), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA512, data, sizeof(data), NULL, &signLen), CRYPT_NULL_INPUT);
@@ -640,7 +640,7 @@ void SDV_CRYPTO_CURVE25519_DUP_CTX_API_TC001(int id)
     ASSERT_COMPARE("curve25519 copy ctx", key1, CRYPT_CURVE25519_KEYLEN, key2, CRYPT_CURVE25519_KEYLEN);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(newPkey);
 }
@@ -871,7 +871,7 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC001(int isProvider)
     ASSERT_EQ(memcmp(share1, share2, share1Len), 0);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
 }

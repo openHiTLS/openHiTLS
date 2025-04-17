@@ -15,6 +15,9 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_GCM
+
+#include "crypt_arm.h"
+
 .arch    armv8-a+crypto
 .text
 
@@ -132,6 +135,7 @@ OUT_X    .req v23
 .type GcmTableGen4bit, %function
 .align 4
 GcmTableGen4bit:
+AARCH64_PACIASP
     movi MULL_C2.16b, #0xe1                     // set 0xc2
     ld1 {MULL_H.16b}, [INPUT_H]                 // load input H
     shl MULL_C2.2d, MULL_C2.2d, #57             // 0xc20000000000000
@@ -139,7 +143,8 @@ GcmTableGen4bit:
     GEN_H
     GEN_H2
     GEN_H3_4
-ret
+AARCH64_AUTIASP
+    ret
 .size GcmTableGen4bit,.-GcmTableGen4bit
 
 // void GcmHashMultiBlock(uint8_t t[GCM_BLOCKSIZE], const MODES_GCM_GF128 hTable[16], const uint8_t *in, uint32_t inLen)
@@ -147,6 +152,7 @@ ret
 .type  GcmHashMultiBlock, %function
 .align 4
 GcmHashMultiBlock:
+AARCH64_PACIASP
     lsr x3, x3, #4                              // Divided by 64 16*2*2
     ld1 {INPUT_X.16b}, [INPUT_H]                // load Xi
     movi MULL_C2.16b, #0xe1                     // set 0xc2
@@ -186,6 +192,7 @@ GcmHashMultiBlock:
     b.gt .LGcmLoop                                  // > 0
     st1 {INPUT_X.16b}, [INPUT_H]                       // write out Xi
 .LhashEnd:
+AARCH64_AUTIASP
     ret
 .size GcmHashMultiBlock,.-GcmHashMultiBlock
 

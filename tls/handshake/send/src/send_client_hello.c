@@ -28,6 +28,7 @@
 #include "hitls.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "hs_dtls_timer.h"
 #include "hs_verify.h"
 #include "pack.h"
 #include "send_process.h"
@@ -89,6 +90,12 @@ static int32_t ClientPrepareSession(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_SESSION */
 static int32_t ClientChangeStateAfterSendClientHello(TLS_Ctx *ctx)
 {
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    int32_t ret = HS_StartTimer(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (ctx->session != NULL && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         /* In the DTLS scenario, enable the receiving of CCS messages to prevent CCS message disorder during session

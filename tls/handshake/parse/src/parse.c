@@ -37,10 +37,23 @@ typedef struct {
     CheckHsMsgTypeFunc checkCb;
 } HsMsgTypeCheck;
 
+#ifdef HITLS_TLS_PROTO_DTLS12
+static int32_t CheckHelloVerifyRequestType(TLS_Ctx *ctx, const HS_MsgType msgType)
+{
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) && msgType == SERVER_HELLO) {
+        (void)HS_ChangeState(ctx, TRY_RECV_SERVER_HELLO);
+        return HITLS_SUCCESS;
+    }
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17022, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "Check hvr Type fail", 0, 0, 0, 0);
+    return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+}
+#endif
+
 static int32_t CheckServerHelloType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
     /* In DTLS, When client try to receive ServerHello message, it doesn't know if server enables 
-     * isHelloVerifyReqEnable. If client receives HelloVerifyRequest message, also valid */
+     * isSupportDtlsCookieExchange. If client receives HelloVerifyRequest message, also valid */
     if (BSL_UIO_GetTransportType(ctx->rUio) == BSL_UIO_UDP) {
         if (msgType == HELLO_VERIFY_REQUEST) {
             (void)HS_ChangeState(ctx, TRY_RECV_HELLO_VERIFY_REQUEST);
@@ -94,7 +107,7 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CLIENT_HELLO] = {.msgType = CLIENT_HELLO,
                                .checkCb = NULL},
     [TRY_RECV_SERVER_HELLO] = {.msgType = SERVER_HELLO, .checkCb = CheckServerHelloType},
-    [TRY_RECV_HELLO_VERIFY_REQUEST] = {.msgType = HELLO_VERIFY_REQUEST, .checkCb = NULL},
+    [TRY_RECV_HELLO_VERIFY_REQUEST] = {.msgType = HELLO_VERIFY_REQUEST, .checkCb = CheckHelloVerifyRequestType},
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = {.msgType = ENCRYPTED_EXTENSIONS, .checkCb = NULL},
     [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = NULL},
     [TRY_RECV_SERVER_KEY_EXCHANGE] = {.msgType = SERVER_KEY_EXCHANGE, .checkCb = CheckServerKeyExchangeType},

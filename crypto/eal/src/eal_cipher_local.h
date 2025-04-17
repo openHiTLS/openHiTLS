@@ -65,14 +65,16 @@ typedef struct {
  * @ingroup  crypt_eal_cipherctx
  * Asymmetric algorithm data type */
 struct CryptEalCipherCtx {
+#ifdef HITLS_CRYPTO_PROVIDER
     bool isProvider;
+#endif
     CRYPT_CIPHER_AlgId id;
     EAL_CipherStates states;                        /**< record status */
     void *ctx;                                      /**< handle of the mode */
     EAL_CipherUnitaryMethod *method;          /**< method corresponding to the encryption/decryption mode */
 };
 
-const EAL_SymMethod *MODES_GetSymMethod(int32_t algId);
+const EAL_SymMethod *EAL_GetSymMethod(int32_t algId);
 
 /**
  * @brief Obtain the EAL_CipherMethod based on the algorithm ID.

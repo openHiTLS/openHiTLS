@@ -161,6 +161,17 @@ int32_t HITLS_GetVerifyResult(const HITLS_Ctx *ctx, HITLS_ERROR *verifyResult)
     return HITLS_SUCCESS;
 }
 
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+int32_t HITLS_SetDtlsTimerCb(HITLS_Ctx *ctx, HITLS_DtlsTimerCb cb)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetDtlsTimerCb(&(ctx->config.tlsConfig), cb);
+}
+#endif
+
 #if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
 HITLS_CERT_X509 *HITLS_GetPeerCertificate(const HITLS_Ctx *ctx)
 {
@@ -476,23 +487,23 @@ int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, uint8_t *isEnable)
 }
 #endif
 
-#ifdef HITLS_TLS_PROTO_DTLS12
-int32_t HITLS_SetHelloVerifyReqEnable(HITLS_Ctx *ctx, bool isEnable)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isEnable)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_SetHelloVerifyReqEnable(&(ctx->config.tlsConfig), isEnable);
+    return HITLS_CFG_SetDtlsCookieExchangeSupport(&(ctx->config.tlsConfig), isEnable);
 }
 
-int32_t HITLS_GetHelloVerifyReqEnable(const HITLS_Ctx *ctx, bool *isEnable)
+int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isEnable)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_GetHelloVerifyReqEnable(&(ctx->config.tlsConfig), isEnable);
+    return HITLS_CFG_GetDtlsCookieExchangeSupport(&(ctx->config.tlsConfig), isEnable);
 }
 #endif
 

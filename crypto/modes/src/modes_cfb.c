@@ -33,7 +33,7 @@ static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
     uint8_t *output = out;
     uint8_t *tmp = ctx->modeCtx.buf;
     uint32_t blockSize = ctx->modeCtx.blockSize;
-    uint32_t feedbackBytes = ctx->feedbackBits >> 3;
+    uint32_t feedbackBytes = ctx->feedbackBits >> 3;    // right shifting by 3 to obtain the number of bytes.
     uint32_t left = len;
     uint32_t i, k;
 
@@ -84,6 +84,56 @@ static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
             ctx->modeCtx.offset = (uint8_t)(blockSize - feedbackBytes + left);
             left = 0;
         }
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MODES_CFB128_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    const uint8_t *inp = in;
+    uint8_t *outp = out;
+    uint32_t blockSize = ctx->modeCtx.blockSize;
+    uint8_t *iv = ctx->modeCtx.iv;
+    uint32_t left = len;
+    int32_t ret;
+    while (left > 0 && ctx->modeCtx.offset > 0) {
+        iv[ctx->modeCtx.offset] ^= *(inp++);
+        *(outp++) = iv[ctx->modeCtx.offset];
+        left--;
+        ctx->modeCtx.offset = (ctx->modeCtx.offset + 1) % blockSize;
+    }
+    while (left >= blockSize) {
+        ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, iv, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+#ifdef FORCE_ADDR_ALIGN
+        for (uint32_t i = 0; i < blockSize; i++) {
+            iv[i] ^= inp[i];
+            out[i] = iv[i];
+        }
+#else
+        for (uint32_t i = 0; i < blockSize; i += sizeof(uint64_t)) {
+            *((uint64_t *)(iv + i)) ^= *((const uint64_t *)(inp + i));
+            *((uint64_t *)(outp + i)) = *((uint64_t *)(iv + i));
+        }
+#endif
+        UPDATE_VALUES(left, inp, outp, blockSize);
+    }
+    if (left > 0) {
+        ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, iv, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        uint32_t i = 0;
+        for (; i < left; i++) {
+            iv[i] ^= inp[i];
+            outp[i] = iv[i];
+        }
+        ctx->modeCtx.offset = (uint8_t)left;
     }
 
     return CRYPT_SUCCESS;
@@ -153,6 +203,59 @@ static int32_t MODES_CFB_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
     return CRYPT_SUCCESS;
 }
 
+static int32_t MODES_CFB128_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
+{
+    const uint8_t *inp = in;
+    uint8_t *outp = out;
+    uint8_t *iv = ctx->modeCtx.iv;
+    uint32_t blockSize = ctx->modeCtx.blockSize;
+    uint32_t left = len;
+    int32_t ret;
+    while (left > 0 && ctx->modeCtx.offset > 0) {
+        uint8_t tmpInput = *inp;      // To support the same address in and out
+        *(outp++) = iv[ctx->modeCtx.offset] ^ *(inp++);
+        iv[ctx->modeCtx.offset] = tmpInput;
+        left--;
+        ctx->modeCtx.offset = (ctx->modeCtx.offset + 1) % blockSize;
+    }
+    while (left >= blockSize) {
+        ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, iv, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+#ifdef FORCE_ADDR_ALIGN
+        for (uint32_t i = 0; i < blockSize; i++) {
+            uint8_t c = inp[i];
+            outp[i] = iv[i] ^ c;
+            iv[i] = c;
+        }
+#else
+        for (uint32_t i = 0; i < blockSize; i += sizeof(uint64_t)) {
+            uint64_t ti = *((const uint64_t *)(inp + i));
+            *((uint64_t *)(outp + i)) = *((uint64_t *)(iv + i)) ^ ti;
+            *((uint64_t *)(iv + i)) = ti;
+        }
+#endif
+        UPDATE_VALUES(left, inp, outp, blockSize);
+    }
+    if (left > 0) {
+        ret = ctx->modeCtx.ciphMeth->encryptBlock(ctx->modeCtx.ciphCtx, iv, iv, blockSize);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        uint32_t i = 0;
+        for (; i < left; i++) {
+            uint8_t b = inp[i];
+            outp[i] = iv[i] ^ b;
+            iv[i] = b;
+        }
+        ctx->modeCtx.offset = (uint8_t)left;
+    }
+    return CRYPT_SUCCESS;
+}
+
 static int32_t Cfb1Crypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, bool enc)
 {
     int32_t ret;
@@ -201,6 +304,7 @@ int32_t MODES_CFB_BitCrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *
         tmp[0] = ((in[i / 8] & (1 << pos)) > 0) ? 0x80 : 0;
         ret = Cfb1Crypt(ctx, &tmp[0], &tmp[1], enc);
         if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         // Divide by 8 to obtain the current byte position. Assign the out encryption bit to 0.
@@ -212,7 +316,7 @@ int32_t MODES_CFB_BitCrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *
     return CRYPT_SUCCESS;
 }
 
-static int32_t CFB_Crypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || in == NULL || out == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -221,26 +325,36 @@ static int32_t CFB_Crypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *ou
 
     switch (ctx->feedbackBits) {
         case 1:
-            return MODES_CFB_BitCrypt(ctx, in, out, len * 8, enc);
+            return MODES_CFB_BitCrypt(ctx, in, out, len * 8, true); // Each byte occupies 8 bits.
         case 8:
         case 64:
+            return MODES_CFB_BytesEncrypt(ctx, in, out, len);
         case 128:
-            return enc ? MODES_CFB_BytesEncrypt(ctx, in, out, len) : MODES_CFB_BytesDecrypt(ctx, in, out, len);
-
+            return MODES_CFB128_BytesEncrypt(ctx, in, out, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_MODES_ERR_FEEDBACKSIZE);
             return CRYPT_MODES_ERR_FEEDBACKSIZE;
     }
 }
 
-int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
-{
-    return CFB_Crypt(ctx, in, out, len, true);
-}
-
 int32_t MODES_CFB_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    return CFB_Crypt(ctx, in, out, len, false);
+    if (ctx == NULL || in == NULL || out == NULL || len == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    switch (ctx->feedbackBits) {
+        case 1:     // 1-bit cfb. Convert the length of bytes to the length of bits.
+            return MODES_CFB_BitCrypt(ctx, in, out, len * 8, false); // Each byte occupies 8 bits.
+        case 8:     // 8-bit cfb
+        case 64:    // 64-bit cfb
+            return MODES_CFB_BytesDecrypt(ctx, in, out, len);
+        case 128:   // 128-bit cfb
+            return MODES_CFB128_BytesDecrypt(ctx, in, out, len);
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_MODES_ERR_FEEDBACKSIZE);
+            return CRYPT_MODES_ERR_FEEDBACKSIZE;
+    }
 }
 
 static int32_t SetFeedbackSize(MODES_CipherCFBCtx *ctx, const uint32_t *val, uint32_t len)
@@ -253,11 +367,7 @@ static int32_t SetFeedbackSize(MODES_CipherCFBCtx *ctx, const uint32_t *val, uin
         BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
         return CRYPT_MODE_ERR_INPUT_LEN;
     }
-    if (ctx->modeCtx.ciphMeth->algId == CRYPT_SYM_SM4 && *val != 128) { // sm4 set 128 feedbackbits only
-        BSL_ERR_PUSH_ERROR(CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT);
-        return CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT;
-    }
-    if (*val != 1 && *val != 8 && *val != 128) {
+    if (*val != 1 && *val != 8 && *val != 64 && *val != 128) { // set 1|8|64|128 feedbackbits only
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_ERR_FEEDBACKSIZE);
         return CRYPT_MODES_ERR_FEEDBACKSIZE;
     }
@@ -293,6 +403,7 @@ int32_t MODES_CFB_Ctrl(MODES_CFB_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
 
     switch (opt) {
         case CRYPT_CTRL_REINIT_STATUS:
+            modeCtx->cfbCtx.cacheIndex = 0;
             return MODES_SetIv(&modeCtx->cfbCtx.modeCtx, val, len);
         case CRYPT_CTRL_GET_IV:
             return MODES_GetIv(&modeCtx->cfbCtx.modeCtx, (uint8_t *)val, len);
@@ -307,14 +418,18 @@ int32_t MODES_CFB_Ctrl(MODES_CFB_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
             *(int32_t *)val = 1;
             return CRYPT_SUCCESS;
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_MODES_METHODS_NOT_SUPPORT);
-            return CRYPT_MODES_METHODS_NOT_SUPPORT;
+            if (modeCtx->cfbCtx.modeCtx.ciphMeth == NULL ||
+                modeCtx->cfbCtx.modeCtx.ciphMeth->cipherCtrl == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
+                return CRYPT_MODES_CTRL_TYPE_ERROR;
+            }
+            return modeCtx->cfbCtx.modeCtx.ciphMeth->cipherCtrl(modeCtx->cfbCtx.modeCtx.ciphCtx, opt, val, len);
     }
 }
 
 MODES_CFB_Ctx *MODES_CFB_NewCtx(int32_t algId)
 {
-    const EAL_SymMethod *method = MODES_GetSymMethod(algId);
+    const EAL_SymMethod *method = EAL_GetSymMethod(algId);
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
@@ -329,9 +444,10 @@ MODES_CFB_Ctx *MODES_CFB_NewCtx(int32_t algId)
     ctx->cfbCtx.modeCtx.ciphCtx = BSL_SAL_Calloc(1, method->ctxSize);
     if (ctx->cfbCtx.modeCtx.ciphCtx  == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(ctx);
+        BSL_SAL_Free(ctx);
         return NULL;
     }
+    ctx->cfbCtx.cacheIndex = 0;
     uint8_t blockBits = method->blockSize * 8;
     if (blockBits <= 128) {
         ctx->cfbCtx.feedbackBits = blockBits;
@@ -347,20 +463,10 @@ MODES_CFB_Ctx *MODES_CFB_NewCtx(int32_t algId)
 int32_t MODES_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {
-    int32_t ret;
-    if (ivLen != modeCtx->cfbCtx.modeCtx.blockSize) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
-        return CRYPT_MODES_IVLEN_ERROR;
-    }
-
-    ret = modeCtx->cfbCtx.modeCtx.ciphMeth->setEncryptKey(modeCtx->cfbCtx.modeCtx.ciphCtx, key, keyLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    (void)memcpy_s(modeCtx->cfbCtx.modeCtx.iv, MODES_MAX_IV_LENGTH, iv, ivLen);
+    modeCtx->cfbCtx.cacheIndex = 0;
     modeCtx->enc = enc;
-    return ret;
+    return MODES_CipherInitCommonCtx(&modeCtx->cfbCtx.modeCtx, modeCtx->cfbCtx.modeCtx.ciphMeth->setEncryptKey,
+        modeCtx->cfbCtx.modeCtx.ciphCtx, key, keyLen, iv, ivLen);
 }
 
 int32_t MODES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
@@ -384,12 +490,7 @@ int32_t MODES_CFB_DeInitCtx(MODES_CFB_Ctx *modeCtx)
         return CRYPT_NULL_INPUT;
     }
     MODES_Clean(&modeCtx->cfbCtx.modeCtx);
-    uint8_t blockBits = modeCtx->cfbCtx.modeCtx.blockSize * 8;
-    if (blockBits <= 128) {
-        modeCtx->cfbCtx.feedbackBits = blockBits;
-    } else {
-        modeCtx->cfbCtx.feedbackBits = 128;
-    }
+    BSL_SAL_CleanseData((void *)(modeCtx->cfbCtx.cipherCache[0]), DES_BLOCK_BYTE_NUM * 3); // 3 ciphertext caches
     return CRYPT_SUCCESS;
 }
 
@@ -404,16 +505,24 @@ void MODES_CFB_FreeCtx(MODES_CFB_Ctx *modeCtx)
 }
 
 int32_t MODES_CFB_InitCtxEx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc)
+    uint32_t ivLen, void *param, bool enc)
 {
     (void) param;
     if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (ivLen != modeCtx->cfbCtx.modeCtx.blockSize) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
+        return CRYPT_MODES_IVLEN_ERROR;
+    }
     switch (modeCtx->algId) {
         case CRYPT_CIPHER_SM4_CFB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CFB_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
     }
@@ -429,9 +538,17 @@ int32_t MODES_CFB_UpdateEx(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t i
         case CRYPT_CIPHER_AES128_CFB:
         case CRYPT_CIPHER_AES192_CFB:
         case CRYPT_CIPHER_AES256_CFB:
+#ifdef HITLS_CRYPTO_AES
             return AES_CFB_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         case CRYPT_CIPHER_SM4_CFB:
+#ifdef HITLS_CRYPTO_SM4
             return SM4_CFB_Update(modeCtx, in, inLen, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
         default:
             return MODES_CFB_Update(modeCtx, in, inLen, out, outLen);
     }

@@ -175,7 +175,7 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
             BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
         }
-        ret = RSA_CalcPrvKey(newCtx, optimizer);
+        ret = RSA_CalcPrvKey(newCtx->para, newCtx, optimizer);
         BN_OptimizerDestroy(optimizer);
         if (ret != CRYPT_SUCCESS) {
             goto ERR;
@@ -420,6 +420,6 @@ int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx)
         return 0;
     }
     int32_t bits = (int32_t)CRYPT_RSA_GetBits(ctx);
-    return BN_SecBit(bits, -1);
+    return BN_SecBits(bits, -1);
 }
 #endif // HITLS_CRYPTO_RSA

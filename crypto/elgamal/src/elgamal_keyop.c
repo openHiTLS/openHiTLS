@@ -297,7 +297,7 @@ int32_t CRYPT_ELGAMAL_GetSecBits(const CRYPT_ELGAMAL_Ctx *ctx)
         return 0;
     }
     int32_t bits = (int32_t)CRYPT_ELGAMAL_GetBits(ctx);
-    return BN_SecBit(bits, -1);
+    return BN_SecBits(bits, -1);
 }
 
 #endif /* HITLS_CRYPTO_ELGAMAL */

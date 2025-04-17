@@ -53,6 +53,46 @@ static int32_t UpdateGroupsArray(TLS_Config *config, const TLS_GroupInfo *groups
 #ifndef HITLS_TLS_FEATURE_PROVIDER
 static const TLS_GroupInfo GROUP_INFO[] = {
     {
+        "x25519",
+        CRYPT_PKEY_PARAID_MAX,
+        CRYPT_PKEY_X25519,
+        128,                          // secBits
+        HITLS_EC_GROUP_CURVE25519,    // groupId
+        32, 32, 0,                    // pubkeyLen=32, sharedkeyLen=32 (256 bits)
+        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        false,
+    },
+    {
+        "X25519MLKEM768",
+        CRYPT_HYBRID_X25519_MLKEM768,
+        CRYPT_PKEY_HYBRID_KEM,
+        192,                          // secBits
+        4588,                         // groupId
+        1184 + 32, 32 + 32, 1088 + 32, // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
+        TLS13_VERSION_BIT,            // versionBits
+        true,
+    },
+    {
+        "SecP256r1MLKEM768",
+        CRYPT_HYBRID_ECDH_NISTP256_MLKEM768,
+        CRYPT_PKEY_HYBRID_KEM,
+        192,                          // secBits
+        4587,                         // groupId
+        1184 + 65, 32 + 32, 1088 + 65, // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
+        TLS13_VERSION_BIT,            // versionBits
+        true,
+    },
+    {
+        "SecP384r1MLKEM1024",
+        CRYPT_HYBRID_ECDH_NISTP384_MLKEM1024,
+        CRYPT_PKEY_HYBRID_KEM,
+        256,                          // secBits
+        4589,                         // groupId
+        1568 + 97, 32 + 48, 1568 + 97, // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
+        TLS13_VERSION_BIT,            // versionBits
+        true,
+    },
+    {
         "secp256r1",
         CRYPT_ECC_NISTP256, // CRYPT_ECC_NISTP256
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
@@ -110,16 +150,6 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
         129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
         TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
-        false,
-    },
-    {
-        "x25519",
-        CRYPT_PKEY_PARAID_MAX, // CRYPT_ECC_X25519
-        CRYPT_PKEY_X25519, // CRYPT_PKEY_ECDH
-        128, // secBits
-        HITLS_EC_GROUP_CURVE25519, // groupId
-        32, 32, 0, // pubkeyLen=32, sharedkeyLen=32 (256 bits)
-        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -250,7 +280,7 @@ static int32_t ProviderAddGroupInfo(const BSL_Param *params, void *args)
     PROCESS_PARAM_INT32(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, ciphertextLen);
 
     ret = HITLS_SUCCESS;
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), group->algId, CRYPT_EAL_PKEY_EXCH_OPERATE,
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), group->algId, group->isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE,
         ATTRIBUTE_FROM_CONFIG(config));
     if (pkey != NULL) {
         config->groupInfolen++;

@@ -37,6 +37,47 @@
 .set	TMP4x,%xmm12
 .set	TMP5x,%xmm13
 
+.set PreConst, 0x3e
+.set PostConst, 0xd3
+.set PreAffineTReg, %xmm10
+.set PostAffineTReg, %xmm11
+.set PreAffineTRegBLOCK16,%ymm14
+.set PostAffineTRegBLOCK16,%ymm15
+
+.macro SM4_SBOX A B PreReg PostReg TMP
+    vgf2p8affineqb $PreConst,\PreReg,\A,\TMP
+    vgf2p8affineinvqb $PostConst,\PostReg,\TMP,\B
+.endm
+
+.macro KeyExpandLTrans A B
+    movl \A,\B
+    movl \A,%r14d
+    roll $13,%r14d
+    xorl %r14d,\B
+    movl \A,%r14d
+    roll $23,%r14d
+    xorl %r14d,\B
+.endm
+
+.macro LTrans A B
+     movl \A,\B
+     movl \A,%r14d
+     roll $2,%r14d
+     xorl %r14d,\B
+
+     movl \A,%r14d
+     roll $10,%r14d
+     xorl %r14d,\B
+
+     movl \A,%r14d
+     roll $18,%r14d
+     xorl %r14d,\B
+
+     movl \A,%r14d
+     roll $24,%r14d
+     xorl %r14d,\B
+.endm
+
 /*
  * x4 = x1 ^ x2 ^ x3 ^ *(rk + i);
  * x4 = SBOX(x4);
@@ -141,6 +182,28 @@
 	# outer affine transform : A2(x) = M2*x + C2
 	MATRIX_MUL	TMP0 TMP2 TMP3
 	MATRIX_MUL	TMP1 TMP2 TMP3
+
+	# linear transform : 4 parallel left rotations
+	SM4_LT		\A0 TMP0
+	SM4_LT		\B0 TMP1
+.endm
+
+# gfni implementation
+.macro	SM4_AVX2_GFNI_2_ROUND	A0 A1 A2 A3 B0 B1 B2 B3 RKey No
+	# load round key
+	vpbroadcastd	\No(\RKey),TMP0
+	# S-BOX inputs
+	vpxor		\B1,TMP0,TMP1
+	vpxor		\B2,TMP1,TMP1
+	vpxor		\B3,TMP1,TMP1
+	vpxor		\A1,TMP0,TMP0
+	vpxor		\A2,TMP0,TMP0
+	vpxor		\A3,TMP0,TMP0
+
+	# sbox
+	SM4_SBOX TMP1 TMP1 PreAffineTRegBLOCK16 PostAffineTRegBLOCK16 %ymm10
+    SM4_SBOX TMP0 TMP0 PreAffineTRegBLOCK16 PostAffineTRegBLOCK16 %ymm10
+
 	# linear transform : 4 parallel left rotations
 	SM4_LT		\A0 TMP0
 	SM4_LT		\B0 TMP1
@@ -218,9 +281,51 @@
 	SM4_AVX2_AES_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 124
 .endm
 
+.macro	SM4_AVX2_GFNI_2_ROUNDS
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 0
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 4
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 8
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 12
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 16
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 20
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 24
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 28
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 32
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 36
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 40
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 44
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 48
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 52
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 56
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 60
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 64
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 68
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 72
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 76
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 80
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 84
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 88
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 92
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 96
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 100
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 104
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 108
+	SM4_AVX2_GFNI_2_ROUND	X0 X1 X2 X3 Y0 Y1 Y2 Y3 RK 112
+	SM4_AVX2_GFNI_2_ROUND	X1 X2 X3 X0 Y1 Y2 Y3 Y0 RK 116
+	SM4_AVX2_GFNI_2_ROUND	X2 X3 X0 X1 Y2 Y3 Y0 Y1 RK 120
+	SM4_AVX2_GFNI_2_ROUND	X3 X0 X1 X2 Y3 Y0 Y1 Y2 RK 124
+.endm
+
 ##### SBOX Extend Tables (1 Table, 256*4 bytes): SBOX_0, SBOX_1, SBOX_2, SBOX_3 #####
 
 .section	.rodata
+
+.balign 64
+.PreAffinT:
+.quad 0x4c287db91a22505d
+.PostAffinT:
+.quad 0xf3ab34a974a6b589
+
 .align	64
 
 SBOX4X_MASK:

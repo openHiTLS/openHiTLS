@@ -36,6 +36,7 @@
 #include "bsl_errno.h"
 #include "bsl_uio.h"
 #include "uio_base.h"
+#include "uio_local.h"
 #include "uio_sctp.h"
 #include "uio_udp.h"
 #include "sal_atomic.h"
@@ -1046,9 +1047,10 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
 {
     BSL_UIO *uio = NULL;
     int ret;
-    uint8_t ipAddr[256] = {0};
-    BSL_UIO_CtrlGetPeerIpAddrParam param = {ipAddr, sizeof(ipAddr)};
-    uint8_t data[SOCK_ADDR_V4_LEN] = {0};
+    BSL_UIO_Addr peerAddr = { 0 };
+    uint8_t ipv4[IP_V4_LEN] = {0x11, 0x22, 0x33, 0x44};
+    peerAddr.addr.sa_family = AF_INET;
+    ASSERT_TRUE(memcpy_s(peerAddr.addr.sa_data, sizeof(BSL_UIO_Addr), ipv4, IP_V4_LEN) == EOK);
 
     const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
     BSL_UIO_Method method = {0};
@@ -1059,13 +1061,16 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
     uio = BSL_UIO_New(&method);
     ASSERT_TRUE(uio != NULL);
 
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_PEER_IP_ADDR, sizeof(data), data);
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_PEER_IP_ADDR, sizeof(peerAddr.addr), &peerAddr);
     ASSERT_TRUE(ret == BSL_SUCCESS);
 
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_GET_PEER_IP_ADDR, sizeof(param), &param);
+    BSL_UIO_Addr getAddr = { 0 };
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_GET_PEER_IP_ADDR, sizeof(getAddr), &getAddr);
     ASSERT_TRUE(ret == BSL_SUCCESS);
 
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, sizeof(param), &param);
+    ASSERT_TRUE(memcmp(getAddr.addr.sa_data, peerAddr.addr.sa_data, IP_V4_LEN) == 0);
+
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, sizeof(peerAddr.addr), &peerAddr);
     ASSERT_TRUE(ret == BSL_SUCCESS);
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_DGRAM_SET_CONNECTED, 0, NULL);

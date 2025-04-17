@@ -19,8 +19,8 @@
 #include "bsl_err_internal.h"
 #include "crypt_aes.h"
 #include "crypt_errno.h"
-#include "modes_local.h"
 #include "crypt_modes_cfb.h"
+#include "modes_local.h"
 
 /* Decrypt the 128-bit CFB. Here, len indicates the number of bytes to be processed. */
 static int32_t CRYPT_AES_CFB16_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)

@@ -42,6 +42,17 @@ typedef struct CryptCurve25519Ctx CRYPT_CURVE25519_Ctx;
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
 
 /**
+ * @ingroup curve25519
+ * @brief curve25519 Create a key pair structure and allocate memory space.
+ * 
+ * @param libCtx [IN] Library context
+ * 
+ * @retval (CRYPT_CURVE25519_Ctx *) Pointer to the key pair structure
+ * @retval NULL                     Invalid null pointer
+ */
+CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx);
+
+/**
  * @ingroup ed25519
  * @brief curve25519 Create a key pair structure for ED25519 algorithm and allocate memory space.
  *
@@ -49,6 +60,17 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
  * @retval NULL                     Invalid null pointer
  */
 CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void);
+
+/**
+ * @ingroup ed25519
+ * @brief curve25519 Create a key pair structure for ED25519 algorithm and allocate memory space.
+ *
+ * @param libCtx [IN] Library context
+ * 
+ * @retval (CRYPT_CURVE25519_Ctx *) Pointer to the key pair structure
+ * @retval NULL                     Invalid null pointer
+ */
+CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtxEx(void *libCtx);
 
 /**
  * @ingroup curve25519
@@ -170,7 +192,7 @@ int32_t CRYPT_CURVE25519_GetBits(const CRYPT_CURVE25519_Ctx *pkey);
  * @retval CRYPT_CURVE25519_NO_HASH_METHOD      No hash method is set.
  * @retval CRYPT_CURVE25519_SIGNLEN_ERROR       signLen is less than the signature length of curve25519.
  */
-int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algId, const uint8_t *msg,
     uint32_t msgLen, uint8_t *sign, uint32_t *signLen);
 
 /**
@@ -203,7 +225,7 @@ int32_t CRYPT_CURVE25519_GetSignLen(const CRYPT_CURVE25519_Ctx *pkey);
  * @retval CRYPT_CURVE25519_SIGNLEN_ERROR   signLen is not equal to curve25519 signature length
  * @retval CRYPT_CURVE25519_NO_HASH_METHOD  No hash method is set.
  */
-int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algid, const uint8_t *msg,
+int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algId, const uint8_t *msg,
     uint32_t msgLen, const uint8_t *sign, uint32_t signLen);
 
 /**

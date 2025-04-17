@@ -39,9 +39,11 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32
         case SERVER_HELLO:
             ret = PackServerHello(ctx, buf, bufLen, usedLen);
             break;
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
         case HELLO_VERIFY_REQUEST:
             ret = PackHelloVerifyRequest(ctx, buf, bufLen, usedLen);
             break;
+#endif
         case SERVER_KEY_EXCHANGE:
             ret = PackServerKeyExchange(ctx, buf, bufLen, usedLen);
             break;

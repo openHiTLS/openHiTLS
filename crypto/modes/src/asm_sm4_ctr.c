@@ -17,9 +17,9 @@
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_CTR)
 
 #include "bsl_err_internal.h"
+#include "crypt_sm4.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
-#include "crypt_sm4.h"
 #include "crypt_modes_ctr.h"
 #include "modes_local.h"
 
@@ -29,7 +29,7 @@ int32_t MODE_SM4_CTR_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
+    // ctx, in, and out pointers have been determined at the EAL layer and will not be determined again
     if (len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -39,17 +39,17 @@ int32_t MODE_SM4_CTR_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint
     const uint8_t *tmpIn = in + offset;
     uint8_t *tmpOut = out + offset;
 
-    uint32_t blockSize = ctx->blockSize;
+    uint32_t blockSize = ctx->blockSize; // ctr supports only 16-byte block size
     uint32_t blocks, beCtr32;
     while (left >= blockSize) {
-        blocks = left >> 4;
-        beCtr32 = GET_UINT32_BE(ctx->iv, 12);
+        blocks = left >> 4; // Shift rightwards by 4 bytes to obtain the number of blocks.
+        beCtr32 = GET_UINT32_BE(ctx->iv, 12); // offset of 12 bytes to obtain the IV in lower 32 bits
         beCtr32 += blocks;
         if (beCtr32 < blocks) {
             blocks -= beCtr32;
             beCtr32 = 0;
         }
-
+        // Shift leftwards by 4 bytes to obtain the length of the data involved in the calculation.
         uint32_t calLen = blocks << 4;
         (void)CRYPT_SM4_CTR_Encrypt(ctx->ciphCtx, tmpIn, tmpOut, calLen / ctx->blockSize, ctx->iv);
         left -= calLen;
@@ -72,10 +72,6 @@ int32_t SM4_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t k
 
 int32_t SM4_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (modeCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     return MODES_CipherStreamProcess(MODE_SM4_CTR_Encrypt, &modeCtx->commonCtx, in, inLen, out, outLen);
 }
 

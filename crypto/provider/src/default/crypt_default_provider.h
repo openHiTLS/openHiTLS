@@ -32,8 +32,10 @@ extern "C" {
 #endif // __cplusplus
 
 typedef struct EalDefProvCtx {
-    void *mgrCtxHandle; // default provider may need libCtx
+    void *libCtx;
 } CRYPT_EAL_DefProvCtx;
+
+int32_t CRYPT_EAL_ProviderGetSeed(CRYPT_RandSeedMethod **method, void **seedCtx);
 
 #ifdef __cplusplus
 }

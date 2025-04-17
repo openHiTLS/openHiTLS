@@ -45,6 +45,7 @@
 #include "config_default.h"
 #include "bsl_list.h"
 #include "rec.h"
+#include "hitls_cookie.h"
 
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
 /* Define the upper limit of the group type */
@@ -193,6 +194,11 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->msgCb = srcConfig->msgCb;
     destConfig->msgArg = srcConfig->msgArg;
 #endif
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    destConfig->dtlsTimerCb = srcConfig->dtlsTimerCb;
+    destConfig->dtlsPostHsTimeoutVal = srcConfig->dtlsPostHsTimeoutVal;
+    destConfig->isSupportDtlsCookieExchange = srcConfig->isSupportDtlsCookieExchange;
+#endif
 #ifdef HITLS_TLS_FEATURE_SECURITY
     destConfig->securityCb = srcConfig->securityCb;
     destConfig->securityExData = srcConfig->securityExData;
@@ -210,9 +216,6 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #endif
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     destConfig->isFlightTransmitEnable = srcConfig->isFlightTransmitEnable;
-#endif
-#ifdef HITLS_TLS_PROTO_DTLS12
-    destConfig->isHelloVerifyReqEnable = srcConfig->isHelloVerifyReqEnable;
 #endif
 }
 
@@ -1065,24 +1068,34 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
-int32_t HITLS_CFG_SetCookieGenerateCb(HITLS_Config *config, HITLS_CookieGenerateCb callback)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb callback)
 {
     if (config == NULL || callback == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    config->cookieGenerateCb = callback;
+    config->appGenCookieCb = callback;
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_CookieVerifyCb callback)
+int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_AppVerifyCookieCb callback)
 {
     if (config == NULL || callback == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    config->cookieVerifyCb = callback;
+    config->appVerifyCookieCb = callback;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetDtlsTimerCb(HITLS_Config *config, HITLS_DtlsTimerCb callback)
+{
+    if (config == NULL || callback == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->dtlsTimerCb = callback;
     return HITLS_SUCCESS;
 }
 #endif
@@ -1847,6 +1860,19 @@ int32_t HITLS_CFG_GetQuietShutdown(const HITLS_Config *config, int32_t *mode)
     *mode = (int32_t)config->isQuietShutdown;
     return HITLS_SUCCESS;
 }
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+int32_t HITLS_CFG_SetDtlsPostHsTimeoutVal(HITLS_Config *config, uint32_t timeoutVal)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->dtlsPostHsTimeoutVal = timeoutVal;
+    return HITLS_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
 int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, uint32_t encryptThenMacType)
 {
@@ -1949,28 +1975,28 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
 }
 #endif
 
-#ifdef HITLS_TLS_PROTO_DTLS12
-int32_t HITLS_CFG_SetHelloVerifyReqEnable(HITLS_Config *config, bool isEnable)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+int32_t HITLS_CFG_SetDtlsCookieExchangeSupport(HITLS_Config *config, bool isEnable)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     if (isEnable == 0) {
-        config->isHelloVerifyReqEnable = false;
+        config->isSupportDtlsCookieExchange = false;
     } else {
-        config->isHelloVerifyReqEnable = true;
+        config->isSupportDtlsCookieExchange = true;
     }
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetHelloVerifyReqEnable(const HITLS_Config *config, bool *isEnable)
+int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool *isEnable)
 {
     if (config == NULL || isEnable == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isEnable = config->isHelloVerifyReqEnable;
+    *isEnable = config->isSupportDtlsCookieExchange;
     return HITLS_SUCCESS;
 }
 #endif

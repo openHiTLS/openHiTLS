@@ -154,6 +154,7 @@ CRYPT_AES_CTR_Encrypt:
     pushq   %r12
     pushq   %r13
     pushq   %r14
+    pushq   %r15
     mov     %rsp, %r12
     subq    $128, %rsp                      // Declare for 128-byte stack space.
     andq    $-16, %rsp
@@ -194,14 +195,40 @@ CRYPT_AES_CTR_Encrypt:
 .Lctr_enc_proc_8_blk:
     cmp $0, LEN
     je .Lctr_aesenc_finish
-    XOR_KEY %r11d, 0, %r10d, %r9d, 0, %rsp
-    XOR_KEY %r11d, 1, %r10d, %r9d, 16, %rsp
-    XOR_KEY %r11d, 2, %r10d, %r9d, 32, %rsp
-    XOR_KEY %r11d, 3, %r10d, %r9d, 48, %rsp
-    XOR_KEY %r11d, 4, %r10d, %r9d, 64, %rsp
-    XOR_KEY %r11d, 5, %r10d, %r9d, 80, %rsp
-    XOR_KEY %r11d, 6, %r10d, %r9d, 96, %rsp
-    XOR_KEY %r11d, 7, %r10d, %r9d, 112, %rsp
+
+    leal 0(%r11d), %r15d
+    leal 1(%r11d), %r10d
+    bswapl %r15d
+    bswapl %r10d
+    xorl %r9d, %r15d
+    xorl %r9d, %r10d
+    leal 2(%r11d), %r14d
+    movl %r15d, 12(%rsp)
+    bswapl %r14d
+    movl %r10d, 16+12(%rsp)
+    xorl %r9d, %r14d
+    leal 3(%r11d), %r15d
+    leal 4(%r11d), %r10d
+    bswapl %r15d
+    bswapl %r10d
+    movl %r14d, 32+12(%rsp)
+    xorl %r9d, %r15d
+    xorl %r9d, %r10d
+    movl %r15d, 48+12(%rsp)
+    leal 5(%r11d), %r14d
+    bswapl %r14d
+    movl %r10d, 64+12(%rsp)
+    xorl %r9d, %r14d
+    leal 6(%r11d), %r15d
+    leal 7(%r11d), %r10d
+    movl %r14d, 80+12(%rsp)
+    bswapl %r15d
+    bswapl %r10d
+    xorl %r9d, %r15d
+    xorl %r9d, %r10d
+    movl %r15d, 96+12(%rsp)
+    movl %r10d, 112+12(%rsp)
+
     vmovdqa (%rsp), IV0
     vmovdqa 16(%rsp), IV1
     vmovdqa 32(%rsp), IV2
@@ -576,6 +603,7 @@ CRYPT_AES_CTR_Encrypt:
     vmovdqa IV0, 112(%rsp)
 
     movq    %r12, %rsp
+    popq    %r15
     popq    %r14
     popq    %r13
     popq    %r12

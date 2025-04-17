@@ -27,7 +27,9 @@
 #include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 
+#define UINT32_SIZE 4
 
+#ifdef HITLS_CRYPTO_RSA_SIGN_PSS
 // maskedDB: [in] maskDB from MGF
 //           [out] maskedDB = DB xor maskDB
 // DB: PS || 0x01 || salt;
@@ -83,7 +85,7 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
     return CRYPT_SUCCESS;
 }
 
-int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
+int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
 {
     uint32_t hashLen = mdMethod->mdSize;
     if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
@@ -101,7 +103,7 @@ int32_t GenPssSalt(CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltL
         return CRYPT_MEM_ALLOC_FAIL;
     }
     // Obtain the salt through the public random number.
-    int32_t ret = CRYPT_Rand(salt->data, salt->len);
+    int32_t ret = CRYPT_RandEx(libCtx, salt->data, salt->len);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(salt->data);
         BSL_ERR_PUSH_ERROR(ret);
@@ -342,6 +344,9 @@ int32_t CRYPT_RSA_VerifyPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *
     BSL_SAL_FREE(tmpBuff);
     return ret;
 }
+#endif
+
+#ifdef HITLS_CRYPTO_RSA_SIGN_PKCSV15
 
 static int32_t PkcsSetLengthCheck(uint32_t emLen, uint32_t hashLen, uint32_t algIdentLen)
 {
@@ -499,7 +504,53 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, 
     BSL_SAL_FREE(padBuff);
     return CRYPT_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_CRYPTO_RSA_SIGN_PKCSV15
+int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
+{
+    uint8_t *index = data;
+    uint32_t tmpLen = dataLen;
+    // Format of the data to be decrypted is EB = 00 || 01 || PS || 00 || T.
+    // The PS padding is at least 8. Therefore, the length of the data to be decrypted is at least 11.
+    if (dataLen < 11) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
+    }
+    if (*index != 0x0 || *(index + 1) != 0x01) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+
+    index += 2; // Skip first 2 bytes.
+    tmpLen -= 2; // Skip first 2 bytes.
+    uint32_t padNum = 0;
+    while (*index == 0xff) {
+        index++;
+        tmpLen--;
+        padNum++;
+    }
+    if (padNum < 8) { // The PS padding is at least 8.
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_PAD_NUM);
+        return CRYPT_RSA_ERR_PAD_NUM;
+    }
+    if (tmpLen == 0 || *index != 0x0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+    index++;
+    tmpLen--;
+
+    if (memcpy_s(out, *outLen, index, tmpLen) != EOK) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+        return CRYPT_SECUREC_FAIL;
+    }
+    *outLen = tmpLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_RSA_CRYPT
 static int32_t OaepSetLengthCheck(uint32_t outLen, uint32_t inLen, uint32_t hashLen)
 {
     if (outLen > RSA_MAX_MODULUS_LEN || inLen > RSA_MAX_MODULUS_LEN || hashLen > HASH_MAX_MDSIZE) {
@@ -612,10 +663,11 @@ EXIT:
 *
 *                   Figure 1: EME-OAEP Encoding Operation <rfc8017>
 */
-int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, const uint8_t *in,
-    uint32_t inLen, const uint8_t *param, uint32_t paramLen, uint8_t *pad, uint32_t padLen)
+int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *pad, uint32_t padLen)
 {
     int32_t ret;
+    const EAL_MdMethod *hashMethod = ctx->pad.para.oaep.mdMeth;
+    const EAL_MdMethod *mgfMethod = ctx->pad.para.oaep.mgfMeth;
 
     if (hashMethod == NULL || mgfMethod == NULL || (in == NULL && inLen != 0) || pad == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -636,7 +688,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMetho
     *pad = 0x00;
     uint8_t *seed = pad + 1;
     // Generate a random octet string seed of length hLen<rfc8017>
-    ret = CRYPT_Rand(seed, hashLen);
+    ret = CRYPT_RandEx(ctx->libCtx, seed, hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -644,7 +696,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMetho
     uint8_t *db = seed + hashLen;
 
     // Calculate hash
-    CRYPT_ConstData data = {param, paramLen};
+    const CRYPT_ConstData data = {ctx->label.data, ctx->label.len};
     ret = CalcHash(hashMethod, &data, 1, db, &hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -816,7 +868,7 @@ ERR:
 }
 
 // Pad output format: EM = 00 || 02 || PS || 00 || M; where M indicates message.
-int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
+int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t outLen)
 {
     // If mLen > k - 11, output "message too long" and stop.<rfc8017>
@@ -841,7 +893,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
     }
 
     // cal ps
-    ret = CRYPT_Rand(ps, psLen);
+    ret = CRYPT_RandEx(libCtx, ps, psLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -852,7 +904,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
         }
         do {
             // no zero
-            ret = CRYPT_Rand(ps + i, 1);
+            ret = CRYPT_RandEx(libCtx, ps + i, 1);
             if (ret != CRYPT_SUCCESS) {
                 return ret;
             }
@@ -862,8 +914,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(const uint8_t *in, uint32_t inLen,
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t *outLen)
+int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     uint32_t zeroIndex = 0;
     uint32_t index = ~(0);
@@ -929,4 +980,5 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
     // so return 0 for success, else return 0xffffffff
     return ~valid;
 }
+#endif
 #endif /* HITLS_CRYPTO_RSA */

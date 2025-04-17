@@ -565,7 +565,8 @@ static int32_t ParamCheckAndInit(HITLS_PKCS12_MacData *macData, BSL_Buffer *pwd,
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             return BSL_MALLOC_FAIL;
         }
-        int32_t ret = CRYPT_EAL_Randbytes(salt, macData->macSalt->dataLen);
+        int32_t ret;
+        ret = CRYPT_EAL_RandbytesEx(NULL, salt, macData->macSalt->dataLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(salt);
             BSL_ERR_PUSH_ERROR(ret);

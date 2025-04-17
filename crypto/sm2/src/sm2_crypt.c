@@ -30,6 +30,9 @@
 #include "crypt_sm2.h"
 #include "crypt_encode.h"
 
+#define SM2_POINT_SINGLE_COORDINATE_LEN 32
+#define SM2_POINT_COORDINATE_LEN 65
+
 static void EncryptMemFree(ECC_Point *c1, ECC_Point *tmp, BN_BigNum *k,
     BN_BigNum *order, uint8_t *c2)
 {
@@ -162,7 +165,7 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     };
     GOTO_ERR_IF(MemAllocCheck(k, order, c1, tmp, c2), ret);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
-        GOTO_ERR_IF(BN_RandRange(k, order), ret);
+        GOTO_ERR_IF(BN_RandRangeEx(ctx->pkey->libCtx, k, order), ret);
         if (BN_IsZero(k)) {
             continue;
         }

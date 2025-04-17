@@ -41,6 +41,16 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtx(void)
     return ctx;
 }
 
+CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtxEx(void *libCtx)
+{
+    CRYPT_PAILLIER_Ctx *ctx = CRYPT_PAILLIER_NewCtx();
+    if (ctx == NULL) {
+        return NULL;
+    }
+    ctx->libCtx = libCtx;
+    return ctx;
+}
+
 static CRYPT_PAILLIER_PubKey *PaillierPubKeyDupCtx(CRYPT_PAILLIER_PubKey *pubKey)
 {
     CRYPT_PAILLIER_PubKey *newPubKey = (CRYPT_PAILLIER_PubKey *)BSL_SAL_Malloc(sizeof(CRYPT_PAILLIER_PubKey));
@@ -379,12 +389,12 @@ CRYPT_PAILLIER_PubKey *Paillier_NewPubKey(uint32_t bits)
 static int32_t Paillier_GenPQ(CRYPT_PAILLIER_Para *para, BN_Optimizer *optimizer)
 {
     uint32_t bits = para->bits;
-    int32_t ret = BN_GenPrime(para->p, bits, true, optimizer, NULL);
+    int32_t ret = BN_GenPrime(para->p, NULL, bits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_GenPrime(para->q, bits, true, optimizer, NULL);
+    ret = BN_GenPrime(para->q, NULL, bits, true, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -528,6 +538,7 @@ int32_t CRYPT_PAILLIER_Gen(CRYPT_PAILLIER_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+    BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
     ret = Paillier_GenPQ(newCtx->para, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

@@ -114,7 +114,7 @@ int32_t CRYPT_ELGAMAL_PubEnc(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *input,
     }
 
     while (true) {
-        ret = BN_RandRange(r, top);
+        ret = BN_RandRangeEx(ctx->libCtx, r, top);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;

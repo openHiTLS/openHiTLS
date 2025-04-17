@@ -17,7 +17,6 @@
 #include "securec.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_hpke.h"
-#include <stdio.h>
 /* END_HEADER */
 
 #define HPKE_KEM_MAX_ENCAPSULATED_KEY_LEN 133
@@ -207,7 +206,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
     CRYPT_EAL_PkeyFreeCtx(pkeyR);
     CRYPT_EAL_PkeyFreeCtx(pkeyE);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -256,7 +255,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyE);
     CRYPT_EAL_PkeyFreeCtx(pkeyR);
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -295,7 +294,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyE);
     CRYPT_EAL_PkeyFreeCtx(pkeyR);
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -309,7 +308,11 @@ static int32_t HpkeTestSealAndOpen(CRYPT_EAL_HpkeCtx *ctxS, CRYPT_EAL_HpkeCtx *c
     uint32_t cipherTextLen = 116;
     int count = 100;
     while (count--) {
+#ifdef HITLS_CRYPTO_PROVIDER
+        ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, massage, massageLen), CRYPT_SUCCESS);
+#else
         ASSERT_EQ(CRYPT_EAL_Randbytes(massage, massageLen), CRYPT_SUCCESS);
+#endif
         ASSERT_EQ(CRYPT_EAL_HpkeSeal(ctxS, NULL, 0, massage, massageLen, cipherText, &cipherTextLen), CRYPT_SUCCESS);
         ASSERT_EQ(CRYPT_EAL_HpkeOpen(ctxR, NULL, 0, cipherText, cipherTextLen, plain, &plainLen), CRYPT_SUCCESS);
         ASSERT_COMPARE("hpke Seal Open cmp", massage, massageLen, plain, plainLen);
@@ -325,7 +328,11 @@ static int32_t HpkeTestSealAndOpen(CRYPT_EAL_HpkeCtx *ctxS, CRYPT_EAL_HpkeCtx *c
     ASSERT_EQ(CRYPT_EAL_HpkeSetSeq(ctxS, 10000000), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_HpkeSetSeq(ctxR, 10000000), CRYPT_SUCCESS);
     while (count--) {
+#ifdef HITLS_CRYPTO_PROVIDER
+        ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, massage, massageLen), CRYPT_SUCCESS);
+#else
         ASSERT_EQ(CRYPT_EAL_Randbytes(massage, massageLen), CRYPT_SUCCESS);
+#endif
         ASSERT_EQ(CRYPT_EAL_HpkeSeal(ctxS, NULL, 0, massage, massageLen, NULL, &cipherTextLen), CRYPT_SUCCESS);
         ASSERT_EQ(CRYPT_EAL_HpkeSeal(ctxS, NULL, 0, massage, massageLen, cipherText, &cipherTextLen), CRYPT_SUCCESS);
         ASSERT_EQ(CRYPT_EAL_HpkeOpen(ctxR, NULL, 0, cipherText, cipherTextLen, NULL, &plainLen), CRYPT_SUCCESS);
@@ -356,7 +363,7 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     uint8_t infoData[16] = { 0 };
     info.x = infoData;
     int32_t ret = HPKE_ERR;
-    
+
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_EAL_RandbytesEx(NULL, info.x, info.len);
 #else
@@ -483,7 +490,7 @@ void SDV_CRYPT_EAL_HPKE_TEST_RANDOMLY_TC001(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();//
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -517,7 +524,7 @@ void SDV_CRYPT_EAL_HPKE_TEST_RANDOMLY_TC002(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -551,7 +558,7 @@ void SDV_CRYPT_EAL_HPKE_TEST_RANDOMLY_TC003(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -585,7 +592,7 @@ void SDV_CRYPT_EAL_HPKE_TEST_RANDOMLY_TC004(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -663,7 +670,7 @@ void SDV_CRYPT_EAL_HPKE_ABNORMAL_TC001(int role)
     ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, ikm, 10, &pkey), CRYPT_INVALID_ARG);
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(hpkeCtx);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -750,7 +757,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_RANDOMLY_TC001(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -782,7 +789,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_RANDOMLY_TC002(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -814,7 +821,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_RANDOMLY_TC003(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -846,7 +853,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_RANDOMLY_TC004(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 /**
@@ -891,7 +898,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_TC001(int mode, int kemId, int kdfId, int 
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -927,7 +934,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_TC002(int mode, int kemId, int kdfId, int 
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -968,6 +975,6 @@ void SDV_CRYPT_EAL_HPKE_GENERATE_KEY_PAIR_TC001(void)
         }
     }
 EXIT:
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
 }
 /* END_CASE */

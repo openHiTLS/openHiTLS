@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_SHA1
+#if defined(HITLS_CRYPTO_SHA1) && !defined(HITLS_CRYPTO_SHA1_SMALL_MEM)
 
 #include <stdlib.h>
 #include "securec.h"
@@ -41,17 +41,17 @@ this error */
 #define F2(b, c, d) (((b) & (c)) | ((b) & (d)) | ((c) & (d)))
 #define F3(b, c, d) (((b) ^ (c)) ^ (d))
 
-#define ROUND00_16(s, a, b, c, d, e, temp, w, Kt)   \
+#define ROUND00_15(s, a, b, c, d, e, temp, w, Kt)   \
     do { \
         (temp) = ROTL32(a, 5) + F##Kt(b, c, d) + (e) + (w)[s] + K##Kt; \
         (b) = ROTL32(b, 30); \
     } while (0)
 
-#define ROUND16_80(t, a, b, c, d, e, temp, w, Kt)   \
+#define ROUND16_79(t, a, b, c, d, e, temp, w, Kt)   \
     do { \
         (w)[(t) & 0xF] = ROTL32( \
             (w)[((t) + 13) & 0xF] ^ (w)[((t) + 8) & 0xF] ^ (w)[((t) + 2) & 0xF] ^ (w)[(t) & 0xF], 1); \
-        ROUND00_16((t) & 0xF, a, b, c, d, e, temp, w, Kt); \
+        ROUND00_15((t) & 0xF, a, b, c, d, e, temp, w, Kt); \
     } while (0)
 
 const uint8_t *SHA1_Step(const uint8_t *input, uint32_t len, uint32_t *h)
@@ -88,90 +88,90 @@ const uint8_t *SHA1_Step(const uint8_t *input, uint32_t len, uint32_t *h)
 
         // Required by referring to section 6.2 in rfc3174. To ensure performance,
         // the variables A\b\c\d\e\TEMP are reused cyclically.
-        ROUND00_16(0, a, b, c, d, e, temp, w, 0);
-        ROUND00_16(1, temp, a, b, c, d, e, w, 0);
-        ROUND00_16(2, e, temp, a, b, c, d, w, 0);
-        ROUND00_16(3, d, e, temp, a, b, c, w, 0);
-        ROUND00_16(4, c, d, e, temp, a, b, w, 0);
-        ROUND00_16(5, b, c, d, e, temp, a, w, 0);
-        ROUND00_16(6, a, b, c, d, e, temp, w, 0);
-        ROUND00_16(7, temp, a, b, c, d, e, w, 0);
-        ROUND00_16(8, e, temp, a, b, c, d, w, 0);
-        ROUND00_16(9, d, e, temp, a, b, c, w, 0);
-        ROUND00_16(10, c, d, e, temp, a, b, w, 0);
-        ROUND00_16(11, b, c, d, e, temp, a, w, 0);
-        ROUND00_16(12, a, b, c, d, e, temp, w, 0);
-        ROUND00_16(13, temp, a, b, c, d, e, w, 0);
-        ROUND00_16(14, e, temp, a, b, c, d, w, 0);
-        ROUND00_16(15, d, e, temp, a, b, c, w, 0);
+        ROUND00_15(0, a, b, c, d, e, temp, w, 0);
+        ROUND00_15(1, temp, a, b, c, d, e, w, 0);
+        ROUND00_15(2, e, temp, a, b, c, d, w, 0);
+        ROUND00_15(3, d, e, temp, a, b, c, w, 0);
+        ROUND00_15(4, c, d, e, temp, a, b, w, 0);
+        ROUND00_15(5, b, c, d, e, temp, a, w, 0);
+        ROUND00_15(6, a, b, c, d, e, temp, w, 0);
+        ROUND00_15(7, temp, a, b, c, d, e, w, 0);
+        ROUND00_15(8, e, temp, a, b, c, d, w, 0);
+        ROUND00_15(9, d, e, temp, a, b, c, w, 0);
+        ROUND00_15(10, c, d, e, temp, a, b, w, 0);
+        ROUND00_15(11, b, c, d, e, temp, a, w, 0);
+        ROUND00_15(12, a, b, c, d, e, temp, w, 0);
+        ROUND00_15(13, temp, a, b, c, d, e, w, 0);
+        ROUND00_15(14, e, temp, a, b, c, d, w, 0);
+        ROUND00_15(15, d, e, temp, a, b, c, w, 0);
 
-        ROUND16_80(16, c, d, e, temp, a, b, w, 0);
-        ROUND16_80(17, b, c, d, e, temp, a, w, 0);
-        ROUND16_80(18, a, b, c, d, e, temp, w, 0);
-        ROUND16_80(19, temp, a, b, c, d, e, w, 0);
+        ROUND16_79(16, c, d, e, temp, a, b, w, 0);
+        ROUND16_79(17, b, c, d, e, temp, a, w, 0);
+        ROUND16_79(18, a, b, c, d, e, temp, w, 0);
+        ROUND16_79(19, temp, a, b, c, d, e, w, 0);
 
-        ROUND16_80(20, e, temp, a, b, c, d, w, 1);
-        ROUND16_80(21, d, e, temp, a, b, c, w, 1);
-        ROUND16_80(22, c, d, e, temp, a, b, w, 1);
-        ROUND16_80(23, b, c, d, e, temp, a, w, 1);
-        ROUND16_80(24, a, b, c, d, e, temp, w, 1);
-        ROUND16_80(25, temp, a, b, c, d, e, w, 1);
-        ROUND16_80(26, e, temp, a, b, c, d, w, 1);
-        ROUND16_80(27, d, e, temp, a, b, c, w, 1);
-        ROUND16_80(28, c, d, e, temp, a, b, w, 1);
-        ROUND16_80(29, b, c, d, e, temp, a, w, 1);
-        ROUND16_80(30, a, b, c, d, e, temp, w, 1);
-        ROUND16_80(31, temp, a, b, c, d, e, w, 1);
-        ROUND16_80(32, e, temp, a, b, c, d, w, 1);
-        ROUND16_80(33, d, e, temp, a, b, c, w, 1);
-        ROUND16_80(34, c, d, e, temp, a, b, w, 1);
-        ROUND16_80(35, b, c, d, e, temp, a, w, 1);
-        ROUND16_80(36, a, b, c, d, e, temp, w, 1);
-        ROUND16_80(37, temp, a, b, c, d, e, w, 1);
-        ROUND16_80(38, e, temp, a, b, c, d, w, 1);
-        ROUND16_80(39, d, e, temp, a, b, c, w, 1);
+        ROUND16_79(20, e, temp, a, b, c, d, w, 1);
+        ROUND16_79(21, d, e, temp, a, b, c, w, 1);
+        ROUND16_79(22, c, d, e, temp, a, b, w, 1);
+        ROUND16_79(23, b, c, d, e, temp, a, w, 1);
+        ROUND16_79(24, a, b, c, d, e, temp, w, 1);
+        ROUND16_79(25, temp, a, b, c, d, e, w, 1);
+        ROUND16_79(26, e, temp, a, b, c, d, w, 1);
+        ROUND16_79(27, d, e, temp, a, b, c, w, 1);
+        ROUND16_79(28, c, d, e, temp, a, b, w, 1);
+        ROUND16_79(29, b, c, d, e, temp, a, w, 1);
+        ROUND16_79(30, a, b, c, d, e, temp, w, 1);
+        ROUND16_79(31, temp, a, b, c, d, e, w, 1);
+        ROUND16_79(32, e, temp, a, b, c, d, w, 1);
+        ROUND16_79(33, d, e, temp, a, b, c, w, 1);
+        ROUND16_79(34, c, d, e, temp, a, b, w, 1);
+        ROUND16_79(35, b, c, d, e, temp, a, w, 1);
+        ROUND16_79(36, a, b, c, d, e, temp, w, 1);
+        ROUND16_79(37, temp, a, b, c, d, e, w, 1);
+        ROUND16_79(38, e, temp, a, b, c, d, w, 1);
+        ROUND16_79(39, d, e, temp, a, b, c, w, 1);
 
-        ROUND16_80(40, c, d, e, temp, a, b, w, 2);
-        ROUND16_80(41, b, c, d, e, temp, a, w, 2);
-        ROUND16_80(42, a, b, c, d, e, temp, w, 2);
-        ROUND16_80(43, temp, a, b, c, d, e, w, 2);
-        ROUND16_80(44, e, temp, a, b, c, d, w, 2);
-        ROUND16_80(45, d, e, temp, a, b, c, w, 2);
-        ROUND16_80(46, c, d, e, temp, a, b, w, 2);
-        ROUND16_80(47, b, c, d, e, temp, a, w, 2);
-        ROUND16_80(48, a, b, c, d, e, temp, w, 2);
-        ROUND16_80(49, temp, a, b, c, d, e, w, 2);
-        ROUND16_80(50, e, temp, a, b, c, d, w, 2);
-        ROUND16_80(51, d, e, temp, a, b, c, w, 2);
-        ROUND16_80(52, c, d, e, temp, a, b, w, 2);
-        ROUND16_80(53, b, c, d, e, temp, a, w, 2);
-        ROUND16_80(54, a, b, c, d, e, temp, w, 2);
-        ROUND16_80(55, temp, a, b, c, d, e, w, 2);
-        ROUND16_80(56, e, temp, a, b, c, d, w, 2);
-        ROUND16_80(57, d, e, temp, a, b, c, w, 2);
-        ROUND16_80(58, c, d, e, temp, a, b, w, 2);
-        ROUND16_80(59, b, c, d, e, temp, a, w, 2);
+        ROUND16_79(40, c, d, e, temp, a, b, w, 2);
+        ROUND16_79(41, b, c, d, e, temp, a, w, 2);
+        ROUND16_79(42, a, b, c, d, e, temp, w, 2);
+        ROUND16_79(43, temp, a, b, c, d, e, w, 2);
+        ROUND16_79(44, e, temp, a, b, c, d, w, 2);
+        ROUND16_79(45, d, e, temp, a, b, c, w, 2);
+        ROUND16_79(46, c, d, e, temp, a, b, w, 2);
+        ROUND16_79(47, b, c, d, e, temp, a, w, 2);
+        ROUND16_79(48, a, b, c, d, e, temp, w, 2);
+        ROUND16_79(49, temp, a, b, c, d, e, w, 2);
+        ROUND16_79(50, e, temp, a, b, c, d, w, 2);
+        ROUND16_79(51, d, e, temp, a, b, c, w, 2);
+        ROUND16_79(52, c, d, e, temp, a, b, w, 2);
+        ROUND16_79(53, b, c, d, e, temp, a, w, 2);
+        ROUND16_79(54, a, b, c, d, e, temp, w, 2);
+        ROUND16_79(55, temp, a, b, c, d, e, w, 2);
+        ROUND16_79(56, e, temp, a, b, c, d, w, 2);
+        ROUND16_79(57, d, e, temp, a, b, c, w, 2);
+        ROUND16_79(58, c, d, e, temp, a, b, w, 2);
+        ROUND16_79(59, b, c, d, e, temp, a, w, 2);
 
-        ROUND16_80(60, a, b, c, d, e, temp, w, 3);
-        ROUND16_80(61, temp, a, b, c, d, e, w, 3);
-        ROUND16_80(62, e, temp, a, b, c, d, w, 3);
-        ROUND16_80(63, d, e, temp, a, b, c, w, 3);
-        ROUND16_80(64, c, d, e, temp, a, b, w, 3);
-        ROUND16_80(65, b, c, d, e, temp, a, w, 3);
-        ROUND16_80(66, a, b, c, d, e, temp, w, 3);
-        ROUND16_80(67, temp, a, b, c, d, e, w, 3);
-        ROUND16_80(68, e, temp, a, b, c, d, w, 3);
-        ROUND16_80(69, d, e, temp, a, b, c, w, 3);
-        ROUND16_80(70, c, d, e, temp, a, b, w, 3);
-        ROUND16_80(71, b, c, d, e, temp, a, w, 3);
-        ROUND16_80(72, a, b, c, d, e, temp, w, 3);
-        ROUND16_80(73, temp, a, b, c, d, e, w, 3);
-        ROUND16_80(74, e, temp, a, b, c, d, w, 3);
-        ROUND16_80(75, d, e, temp, a, b, c, w, 3);
-        ROUND16_80(76, c, d, e, temp, a, b, w, 3);
-        ROUND16_80(77, b, c, d, e, temp, a, w, 3);
-        ROUND16_80(78, a, b, c, d, e, temp, w, 3);
-        ROUND16_80(79, temp, a, b, c, d, e, w, 3);
+        ROUND16_79(60, a, b, c, d, e, temp, w, 3);
+        ROUND16_79(61, temp, a, b, c, d, e, w, 3);
+        ROUND16_79(62, e, temp, a, b, c, d, w, 3);
+        ROUND16_79(63, d, e, temp, a, b, c, w, 3);
+        ROUND16_79(64, c, d, e, temp, a, b, w, 3);
+        ROUND16_79(65, b, c, d, e, temp, a, w, 3);
+        ROUND16_79(66, a, b, c, d, e, temp, w, 3);
+        ROUND16_79(67, temp, a, b, c, d, e, w, 3);
+        ROUND16_79(68, e, temp, a, b, c, d, w, 3);
+        ROUND16_79(69, d, e, temp, a, b, c, w, 3);
+        ROUND16_79(70, c, d, e, temp, a, b, w, 3);
+        ROUND16_79(71, b, c, d, e, temp, a, w, 3);
+        ROUND16_79(72, a, b, c, d, e, temp, w, 3);
+        ROUND16_79(73, temp, a, b, c, d, e, w, 3);
+        ROUND16_79(74, e, temp, a, b, c, d, w, 3);
+        ROUND16_79(75, d, e, temp, a, b, c, w, 3);
+        ROUND16_79(76, c, d, e, temp, a, b, w, 3);
+        ROUND16_79(77, b, c, d, e, temp, a, w, 3);
+        ROUND16_79(78, a, b, c, d, e, temp, w, 3);
+        ROUND16_79(79, temp, a, b, c, d, e, w, 3);
 
         // Let H0 = H0 + a, H1 = H1 + b, H2 = H2 + c, H3 = H3 + d, H4 = H4 + e.
         // Because A, B, C, D and E are reused, after the last round of conversion, A = e, b = temp, c = a, d = b, e = c
@@ -192,4 +192,4 @@ const uint8_t *SHA1_Step(const uint8_t *input, uint32_t len, uint32_t *h)
 }
 #endif
 
-#endif // HITLS_CRYPTO_SHA1
+#endif // HITLS_CRYPTO_SHA1 && !HITLS_CRYPTO_SHA1_SMALL_MEM

@@ -17,6 +17,7 @@
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CTR)
 
 #include "crypt_modes_ctr.h"
+#include "modes_local.h"
 
 int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {

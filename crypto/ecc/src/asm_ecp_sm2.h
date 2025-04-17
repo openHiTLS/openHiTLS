@@ -25,7 +25,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define P256_BYTES      32
+#define P256_BITS      256
+#define P256_BYTES     32
 #define P256_SIZE       (P256_BYTES / sizeof(BN_UINT))
 
 typedef struct {

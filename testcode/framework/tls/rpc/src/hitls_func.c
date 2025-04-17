@@ -187,7 +187,11 @@ static const HitlsConfig g_groupList[] = {
     {"HITLS_FF_DHE_4096", HITLS_FF_DHE_4096},
     {"HITLS_FF_DHE_6144", HITLS_FF_DHE_6144},
     {"HITLS_FF_DHE_8192", HITLS_FF_DHE_8192},
+    {"SecP256r1MLKEM768", 4587}, // for new kem group
+    {"X25519MLKEM768", 4588}, // for new kem group
+    {"SecP384r1MLKEM1024", 4589}, // for new kem group
     {"test_new_group", 477}, // for new group
+    {"test_new_group_kem",  478}, // NEW_KEM_ALGID
 };
 
 static const HitlsConfig g_signatureList[] = {
@@ -264,6 +268,11 @@ static HITLS_Lib_Ctx *InitProviderLibCtx(char *providerPath, char (*providerName
             LOG_ERROR("CRYPT_EAL_ProviderLoad Error");
             return NULL;
         }
+        char attrName[512] = {0};
+        memcpy_s(attrName, sizeof(attrName), "provider=", strlen("provider="));
+        memcpy_s(attrName + strlen("provider="), sizeof(attrName) - strlen("provider="), providerNames[i],
+            strlen(providerNames[i]));
+        CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, attrName, NULL, 0, NULL);
     }
     return libCtx;
 }

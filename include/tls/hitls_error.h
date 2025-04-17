@@ -129,6 +129,8 @@ typedef enum {
     HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE,        /**< Unsupported ECDH elliptic curves. */
     HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE,     /**< Unsupported the extended type. */
     HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE,       /**< Unsupported cipher suites. */
+    HITLS_MSG_HANDLE_COOKIE_ERR,                   /**< Incorrect cookie. */
+    HITLS_MSG_VERIFY_COOKIE_ERR,                   /**< Failed to verify the cookie. */
     HITLS_MSG_HANDLE_ERR_ENCODE_ECDH_KEY,          /**< Failed to obtain the ECDH public key. */
     HITLS_MSG_HANDLE_ERR_ENCODE_DH_KEY,            /**< Failed to obtain the DH public key. */
     HITLS_MSG_HANDLE_ERR_GET_DH_PARAMETERS,        /**< Failed to obtain the DH parameter. */
@@ -151,6 +153,8 @@ typedef enum {
     HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME,         /**< Not accept the extended value of server_name */
     HITLS_MSG_HANDLE_ALPN_UNRECOGNIZED,             /**< Not accept the extended ALPN value */
     HITLS_MSG_HANDLE_ILLEGAL_KEY_UPDATE_TYPE,       /**< Receives an incorrect key update type */
+    HITLS_MSG_HANDLE_SYS_TIME_FAIL,                 /**< System time function returns a failure */
+    HITLS_MSG_HANDLE_DTLS_CONNECT_TIMEOUT,           /**< DTLS connection timeout */
     HITLS_MSG_HANDLE_UNSECURE_VERSION,              /**< Insecure version. */
     HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE,         /**< Insecure cipher suites. */
     HITLS_MSG_HANDLE_RENEGOTIATION_FAIL,            /**< Renegotiation failure */
@@ -311,6 +315,8 @@ typedef enum {
     HITLS_CRYPT_ERR_ENCODE_DH_KEY,                 /**< Failed to obtain the DH public key. */
     HITLS_CRYPT_ERR_HKDF_EXTRACT,                  /**< HKDF-Extract calculation error. */
     HITLS_CRYPT_ERR_HKDF_EXPAND,                   /**< HKDF-Expand calculation error. */
+    HITLS_CRYPT_ERR_KEM_ENCAPSULATE,               /**< KEM-Encapsulate calculation error. */
+    HITLS_CRYPT_ERR_KEM_DECAPSULATE,               /**< KEM-Decapsulate calculation error. */
 
     HITLS_APP_FAIL_START = 0x020E0001,             /**< APP module error code start bit. */
     HITLS_APP_ERR_TOO_LONG_TO_WRITE,               /**< APP Data written is too long. */

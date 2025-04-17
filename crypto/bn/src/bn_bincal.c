@@ -20,56 +20,6 @@
 #include "securec.h"
 #include "bn_bincal.h"
 
-/* r = a + b, the length of r, a and b array is n. The return value is the carry. */
-BN_UINT BinAdd(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint32_t n)
-{
-    BN_UINT carry = 0;
-    uint32_t nn = n;
-    const BN_UINT *aa = a;
-    const BN_UINT *bb = b;
-    BN_UINT *rr = r;
-    while (nn >= 4) {
-        ADD_ABC(carry, rr[0], aa[0], bb[0], carry);
-        ADD_ABC(carry, rr[1], aa[1], bb[1], carry);
-        ADD_ABC(carry, rr[2], aa[2], bb[2], carry);
-        ADD_ABC(carry, rr[3], aa[3], bb[3], carry);
-        rr += 4;
-        aa += 4;
-        bb += 4;
-        nn -= 4;
-    }
-    uint32_t i = 0;
-    for (; i < nn; i++) {
-        ADD_ABC(carry, rr[i], aa[i], bb[i], carry);
-    }
-    return carry;
-}
-
-/* r = a - b, the length of r, a and b array is n. The return value is the borrow-digit. */
-BN_UINT BinSub(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint32_t n)
-{
-    BN_UINT borrow = 0;
-    uint32_t nn = n;
-    const BN_UINT *aa = a;
-    const BN_UINT *bb = b;
-    BN_UINT *rr = r;
-    while (nn >= 4) {
-        SUB_ABC(borrow, rr[0], aa[0], bb[0], borrow);
-        SUB_ABC(borrow, rr[1], aa[1], bb[1], borrow);
-        SUB_ABC(borrow, rr[2], aa[2], bb[2], borrow);
-        SUB_ABC(borrow, rr[3], aa[3], bb[3], borrow);
-        rr += 4;
-        aa += 4;
-        bb += 4;
-        nn -= 4;
-    }
-    uint32_t i = 0;
-    for (; i < nn; i++) {
-        SUB_ABC(borrow, rr[i], aa[i], bb[i], borrow);
-    }
-    return borrow;
-}
-
 /* r = a + w, the length of r and a array is 'size'. The return value is the carry. */
 BN_UINT BinInc(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT w)
 {
@@ -86,7 +36,6 @@ BN_UINT BinInc(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT w)
 
     return carry;
 }
-
 /* r = a - w, the length of r and a array is 'size'. The return value is the borrow-digit. */
 BN_UINT BinDec(BN_UINT *r, const BN_UINT *a, uint32_t n, BN_UINT w)
 {
@@ -102,7 +51,6 @@ BN_UINT BinDec(BN_UINT *r, const BN_UINT *a, uint32_t n, BN_UINT w)
     }
     return borrow;
 }
-
 /* r = a >> bits, the return value is the valid length of r after the shift.
  * The array length of a is n. The length of the r array must meet the requirements of the accepted calculation result,
  * which is guaranteed by the input parameter.
@@ -136,7 +84,6 @@ uint32_t BinRshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
     }
     return rsize;
 }
-
 /* r = a << bits. The return value is the valid length of r after the shift.
  * The array length of a is n. The length of the r array must meet the requirements of the accepted calculation result,
  * which is guaranteed by the input parameter.
@@ -175,7 +122,6 @@ uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
 
     return rsize;
 }
-
 /* r = a * b + r. The return value is a carry. */
 BN_UINT BinMulAcc(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT b)
 {
@@ -183,15 +129,17 @@ BN_UINT BinMulAcc(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT b)
     BN_UINT *rr = r;
     const BN_UINT *aa = a;
     uint32_t size = aSize;
-    while (size >= 4) {
-        MULADD_ABC(c, rr[0], aa[0], b);
-        MULADD_ABC(c, rr[1], aa[1], b);
-        MULADD_ABC(c, rr[2], aa[2], b);
-        MULADD_ABC(c, rr[3], aa[3], b);
-        aa += 4;
-        rr += 4;
-        size -= 4;
+#ifndef HITLS_CRYPTO_BN_SMALL_MEM
+    while (size >= 4) { /* a group of 4 */
+        MULADD_ABC(c, rr[0], aa[0], b);  /* offset 0 */
+        MULADD_ABC(c, rr[1], aa[1], b);  /* offset 1 */
+        MULADD_ABC(c, rr[2], aa[2], b);  /* offset 2 */
+        MULADD_ABC(c, rr[3], aa[3], b);  /* offset 3 */
+        aa += 4;        /* a group of 4 */
+        rr += 4;        /* a group of 4 */
+        size -= 4;      /* a group of 4 */
     }
+#endif
     while (size > 0) {
         MULADD_ABC(c, rr[0], aa[0], b);
         aa++;
@@ -200,22 +148,19 @@ BN_UINT BinMulAcc(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT b)
     }
     return c;
 }
-
 /* r = a * b rRoom >= aSize + bSize. The length is guaranteed by the input parameter. r != a, r != b.
  * The return value is the valid length of the result. */
 uint32_t BinMul(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize, const BN_UINT *b, uint32_t bSize)
 {
     BN_UINT carry = 0;
-    uint32_t i, j;
     (void)memset_s(r, rRoom * sizeof(BN_UINT), 0, rRoom * sizeof(BN_UINT));
     /* Result combination of cyclic calculation data units. */
-    for (i = 0; i < bSize; i++) {
+    for (uint32_t i = 0; i < bSize; i++) {
+        carry = 0;
+        uint32_t j = 0;
         BN_UINT t = b[i];
-        for (j = 0, carry = 0; j < aSize; j++) {
-            BN_UINT rh, rl;
-            MUL_AB(rh, rl, a[j], t);
-            ADD_ABC(carry, r[i + j], r[i + j], rl, carry);
-            carry += rh;
+        for (; j < aSize; j++) {
+            MULADC_AB(r[i + j], a[j], t, carry);
         }
         if (carry != 0) {
             r[i + j] = carry;
@@ -230,21 +175,14 @@ uint32_t BinSqr(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize)
 {
     uint32_t i;
     BN_UINT carry;
-    BN_UINT rh, rl;
 
     (void)memset_s(r, rRoom * sizeof(BN_UINT), 0, rRoom * sizeof(BN_UINT));
-    if (aSize < 1) {
-        return 0;
-    }
-
     /* Calculate unequal data units, similar to trapezoid. */
     for (i = 0; i < aSize - 1; i++) {
         BN_UINT t = a[i];
         uint32_t j;
         for (j = i + 1, carry = 0; j < aSize; j++) {
-            MUL_AB(rh, rl, a[j], t);
-            ADD_ABC(carry, r[i + j], rl, r[i + j], carry);
-            carry += rh;
+            MULADC_AB(r[i + j], a[j], t, carry);
         }
         r[i + j] = carry;
     }
@@ -252,6 +190,7 @@ uint32_t BinSqr(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize)
     BinLshift(r, r, 2 * aSize - 1, 1);
     /* Calculate the direct squared data unit and add it to the result. */
     for (i = 0, carry = 0; i < aSize; i++) {
+        BN_UINT rh, rl;
         SQR_A(rh, rl, a[i]);
         ADD_ABC(carry, r[i << 1], r[i << 1], rl, carry);
         ADD_ABC(carry, r[(i << 1) + 1], r[(i << 1) + 1], rh, carry);
@@ -259,44 +198,25 @@ uint32_t BinSqr(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize)
     return aSize + aSize - (r[(aSize << 1) - 1] == 0);
 }
 
-/* Obtains the number of 0s in the first x most significant bits of data. */
-uint32_t GetZeroBitsUint(BN_UINT x)
-{
-    BN_UINT t = x;
-    BN_UINT mask;
-    uint32_t bits = 0;
-    uint32_t base = BN_UINT_BITS >> 1;
-    BN_UINT m = (BN_UINT)(-1);
-    uint32_t shift = BN_UINT_BITS >> 1;
-    /* dichotomy */
-    do {
-        m <<= shift;
-        mask = BN_IsZeroUintConsttime(t & m);   /* Check whether the upper half part is valid. */
-        bits += base & (uint32_t)mask;
-        t = ((t << shift) & mask) | (t & ~mask); /* Select the all upper or lower part of t based on the mask value. */
-        shift >>= 1;
-        base >>= 1; /* dichotomy, reduce the scope to 1/2 of each inspection */
-    } while (shift > 0);
-
-    mask = BN_IsZeroUintConsttime(t & m);
-    bits += 1 & mask;
-    return bits;
-}
-
 /* refresh the size */
 uint32_t BinFixSize(const BN_UINT *data, uint32_t size)
 {
     uint32_t fix = size;
     uint32_t i = size;
-    BN_UINT m = (BN_UINT)(-1);
     for (; i > 0; i--) {
-        m &= BN_IsZeroUintConsttime(data[i - 1]);
-        fix -= 1 & m;
+        if (data[i - 1] != 0) {
+            return fix;
+        };
+        fix--;
     }
     return fix;
 }
 
-/* compare */
+/* compare BN array. Maybe aSize != bSize;
+ * return 0, if a == b
+ * return 1, if a > b
+ * return -1, if a < b
+ */
 int32_t BinCmp(const BN_UINT *a, uint32_t aSize, const BN_UINT *b, uint32_t bSize)
 {
     if (aSize == bSize) {
@@ -320,21 +240,6 @@ uint32_t BinBits(const BN_UINT *data, uint32_t size)
         return 0;
     }
     return (size * BN_UINT_BITS - GetZeroBitsUint(data[size - 1]));
-}
-
-/* Multiply and then subtract. The return value is borrow digit. */
-static BN_UINT BinSubMul(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT m)
-{
-    BN_UINT borrow = 0;
-    uint32_t i;
-    for (i = 0; i < aSize; i++) {
-        BN_UINT ah, al;
-        MUL_AB(ah, al, a[i], m);
-        SUB_ABC(borrow, r[i], r[i], al, borrow);
-        borrow += ah;
-    }
-
-    return borrow;
 }
 
 /**
@@ -369,7 +274,6 @@ static BN_UINT TryDiv(BN_UINT q, BN_UINT h, BN_UINT l, BN_UINT yh, BN_UINT yl)
     nq--;
     return nq;
 }
-
 /* Divide core operation */
 static void BinDivCore(BN_UINT *q, uint32_t *qSize, BN_UINT *x, uint32_t xSize, const BN_UINT *y, uint32_t ySize)
 {
@@ -406,36 +310,40 @@ static void BinDivCore(BN_UINT *q, uint32_t *qSize, BN_UINT *x, uint32_t xSize, 
     }
 }
 
+// The L-shift of the divisor does not exceed the highest BN_UINT.
+static void BnLshiftSimple(BN_UINT *a, uint32_t aSize, uint32_t bits)
+{
+    uint32_t rem = BN_UNIT_BITS - bits;
+    BN_UINT nextBits = 0;
+    for (uint32_t i = 0; i < aSize; i++) {
+        BN_UINT n = a[i];
+        a[i] = (n << bits) | nextBits;
+        nextBits = (n >> rem);
+    }
+    return;
+}
+
 /**
  * x / y = q...x, the return value is the updated xSize.
  * q and asize are both NULL or not NULL. Other input parameters must be valid.
- * q, x and y cannot be the same pointer.
+ * q, x and y cannot be the same pointer, the data in q must be 0.
  * Ensure that x->room >= xSize + 2, and the extra two spaces need to be cleared. Extra space is used during try divide.
+ * this interface does not ensure that the y is consistent after running.
  */
 uint32_t BinDiv(BN_UINT *q, uint32_t *qSize, BN_UINT *x, uint32_t xSize, BN_UINT *y, uint32_t ySize)
 {
-    if (q != NULL) {
-        (void)memset_s(q, *qSize * sizeof(BN_UINT), 0, *qSize * sizeof(BN_UINT));
-        *qSize = 0;
-    }
-    if (xSize < ySize) {
-        return xSize;
-    }
     uint32_t shifts = GetZeroBitsUint(y[ySize - 1]);
-    BN_UINT xNewSize = xSize;
-    BN_UINT yNewSize = ySize;
+    uint32_t xNewSize = xSize;
     /* Left shift until the maximum displacement of the divisor is full. */
     if (shifts != 0) {
+        BnLshiftSimple(y, ySize, shifts);
         xNewSize = BinLshift(x, x, xSize, shifts);
-        yNewSize = BinLshift(y, y, ySize, shifts);
     }
     BinDivCore(q, qSize, x, xSize, y, ySize);
     /* shift compensation */
     if (shifts != 0) {
-        xNewSize = (BN_UINT)BinRshift(x, x, (uint32_t)xNewSize, shifts);
-        yNewSize = (BN_UINT)BinRshift(y, y, (uint32_t)yNewSize, shifts);
-        (void)yNewSize;
+        xNewSize = BinRshift(x, x, xNewSize, shifts);
     }
-    return BinFixSize(x, (uint32_t)xNewSize);
+    return BinFixSize(x, xNewSize);
 }
 #endif /* HITLS_CRYPTO_BN */

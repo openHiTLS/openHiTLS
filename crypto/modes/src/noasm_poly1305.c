@@ -14,11 +14,20 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CHACHA20POLY1305
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 
 #include "bsl_sal.h"
 #include "crypt_utils.h"
 #include "poly1305_core.h"
+
+// Information required by initializing the assembly,
+// for example, ctx->table. However, the C language does not calculate the table.
+void Poly1305InitForAsm(Poly1305Ctx *ctx)
+{
+    (void)ctx;
+    return;
+}
+
 
 // Operation for blocks. The return value is the length of the remaining unprocessed data.
 uint32_t Poly1305Block(Poly1305Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t padbit)
@@ -138,27 +147,17 @@ void Poly1305Last(Poly1305Ctx *ctx, uint8_t mac[POLY1305_TAGSIZE])
     b[3] = a[3] + (b[2] >> 32);
     b[4] = a[4] + (b[3] >> 32);
     /* Obtain the mask. If there is a carry, the number is greater than p. */
-    // Whether a value exists in the upper bits of b[4], 128bit + 2bit = 130bit
-    uint32_t mask = 0 - (uint32_t)((b[4] >> 2) & 0x1);
-    b[0] = (uint32_t)b[0] & mask;
-    b[1] = (uint32_t)b[1] & mask;
-    b[2] = (uint32_t)b[2] & mask;
-    b[3] = (uint32_t)b[3] & mask;
-    mask = ~mask;
-    b[0] = (a[0] & mask) | (uint32_t)b[0];
-    b[1] = (a[1] & mask) | (uint32_t)b[1];
-    b[2] = (a[2] & mask) | (uint32_t)b[2];
-    b[3] = (a[3] & mask) | (uint32_t)b[3];
-    /**
-     * Finally, the value of the secret key "s" is added to the accumulator,
-     * and the 128 least significant bits are serialized in little-endian
-     * order to form the tag
-     */
+    if ((b[4] & 0x4) == 0) {    // b[4] & 0x4 is bit131.
+        b[0] = a[0];
+        b[1] = a[1];
+        b[2] = a[2];
+        b[3] = a[3];
+    }
     // Adding s at the end does not require modulo processing.
-    b[0] += ctx->s[0];
-    b[1] += ctx->s[1] + (b[0] >> 32);
-    b[2] += ctx->s[2] + (b[1] >> 32);
-    b[3] += ctx->s[3] + (b[2] >> 32);
+    b[0] = ctx->s[0] + (b[0] & 0xffffffff);
+    b[1] = ctx->s[1] + (b[1] & 0xffffffff) + (b[0] >> 32);
+    b[2] = ctx->s[2] + (b[2] & 0xffffffff) + (b[1] >> 32);
+    b[3] = ctx->s[3] + (b[3] & 0xffffffff) + (b[2] >> 32);
     PUT_UINT32_LE(b[0], mac, 0);
     PUT_UINT32_LE(b[1], mac, 4);
     PUT_UINT32_LE(b[2], mac, 8);

@@ -157,6 +157,8 @@ char *HITLS_PSK_Ciphersuite[] = {
 char *HITLS_GM_Ciphersuite[] = {
     "HITLS_ECDHE_SM4_CBC_SM3",
     "HITLS_ECC_SM4_CBC_SM3",
+    "HITLS_ECDHE_SM4_GCM_SM3",
+    "HITLS_ECC_SM4_GCM_SM3",
 };
 
 static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, char *cert)

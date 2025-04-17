@@ -199,7 +199,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     ret = memset_s(overpath, PATH_EXCEED, 'a', PATH_EXCEED - 1);
     ASSERT_EQ(ret, 0);
     ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, overpath);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
     BSL_SAL_Free(overpath);
 
 EXIT:
@@ -761,7 +761,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     // Test getting group capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback,
         &groupCount), CRYPT_SUCCESS);
-    ASSERT_EQ(groupCount, 13);
+    ASSERT_EQ(groupCount, 16);
 
     // Test getting signature algorithm capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback,
@@ -1027,20 +1027,20 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int
     int sigAlgCount = 0;
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP,
         (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
-    ASSERT_EQ(groupCount, 1);
+    ASSERT_EQ(groupCount, 2);
 
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP,
         (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback, &sigAlgCount), CRYPT_SUCCESS);
     ASSERT_EQ(sigAlgCount, 1);
 
     keyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
-        "provider=test_getcap");
+        "provider=provider_get_cap_test1");
     ASSERT_TRUE(keyCtx1 != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx1, NEW_PARA_ALGID), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx1), CRYPT_SUCCESS);
 
     keyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
-        "provider=test_getcap");
+        "provider=provider_get_cap_test1");
     ASSERT_TRUE(keyCtx2 != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx2, NEW_PARA_ALGID), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx2), CRYPT_SUCCESS);
@@ -1098,7 +1098,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002(char *path, char *get_cap_test1, int
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, get_cap_test1, NULL, &providerMgr), CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
     
-    keyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDSA, 0, "provider=test_getcap");
+    keyCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDSA, 0, "provider=provider_get_cap_test1");
     ASSERT_TRUE(keyCtx != NULL);
     
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(keyCtx, NEW_PARA_ALGID), CRYPT_SUCCESS);

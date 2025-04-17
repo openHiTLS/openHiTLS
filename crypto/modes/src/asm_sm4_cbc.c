@@ -17,8 +17,8 @@
 #if defined(HITLS_CRYPTO_SM4) && defined(HITLS_CRYPTO_CBC)
 
 #include "bsl_err_internal.h"
-#include "crypt_errno.h"
 #include "crypt_sm4.h"
+#include "crypt_errno.h"
 #include "crypt_modes_cbc.h"
 #include "modes_local.h"
 
@@ -54,7 +54,7 @@ int32_t SM4_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
 int32_t SM4_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {
-    void *setKey = enc ? MODES_SM4_SetEncryptKey: MODES_SM4_SetDecryptKey;
+    void *setKey = enc ? MODES_SM4_SetEncryptKey : MODES_SM4_SetDecryptKey;
     return MODES_CipherInitCtx(modeCtx, setKey, &modeCtx->commonCtx, key, keyLen, iv, ivLen, enc);
 }
 

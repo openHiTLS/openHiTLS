@@ -30,62 +30,52 @@
 // process Fp multiplication carry
 #define FP_PROCESS_CARRY(h)                           \
 do {                                                  \
-    uint64_t carry;                                   \
-    uint64_t mask;                                    \
-    PROCESS_CARRY_INT64(h##0, h##1, mask, carry, 25); \
-    PROCESS_CARRY_INT64(h##5, h##6, mask, carry, 24); \
-                                                      \
-    PROCESS_CARRY_INT64(h##1, h##2, mask, carry, 24); \
-    PROCESS_CARRY_INT64(h##6, h##7, mask, carry, 25); \
-                                                      \
-    PROCESS_CARRY_INT64(h##2, h##3, mask, carry, 25); \
-    PROCESS_CARRY_INT64(h##7, h##8, mask, carry, 24); \
-                                                      \
-    PROCESS_CARRY_INT64(h##3, h##4, mask, carry, 24); \
-    PROCESS_CARRY_INT64(h##8, h##9, mask, carry, 25); \
-                                                      \
-    PROCESS_CARRY_INT64(h##4, h##5, mask, carry, 25); \
-                                                      \
-    carry = (uint64_t)h##9 + (1 << 24);               \
-    mask = MASK_HIGH64(25) & (-(carry >> 63));        \
-    h##0 += (int64_t)(19 * ((carry >> 25) | mask));   \
-    h##9 -= (int64_t)(MASK_HIGH64(39) & carry);       \
-                                                      \
-    PROCESS_CARRY_INT64(h##5, h##6, mask, carry, 24); \
-    PROCESS_CARRY_INT64(h##0, h##1, mask, carry, 25); \
+    int64_t carry0, carry1, carry2, carry3, carry4, carry5, carry6, carry7, carry8, carry9;            \
+    carry0 = h##0 + (1 << 25); h##1 += carry0 >> 26; h##0 -= carry0 & CURVE25519_MASK_HIGH_38;         \
+    carry4 = h##4 + (1 << 25); h##5 += carry4 >> 26; h##4 -= carry4 & CURVE25519_MASK_HIGH_38;         \
+    carry1 = h##1 + (1 << 24); h##2 += carry1 >> 25; h##1 -= carry1 & CURVE25519_MASK_HIGH_39;         \
+    carry5 = h##5 + (1 << 24); h##6 += carry5 >> 25; h##5 -= carry5 & CURVE25519_MASK_HIGH_39;         \
+    carry2 = h##2 + (1 << 25); h##3 += carry2 >> 26; h##2 -= carry2 & CURVE25519_MASK_HIGH_38;         \
+    carry6 = h##6 + (1 << 25); h##7 += carry6 >> 26; h##6 -= carry6 & CURVE25519_MASK_HIGH_38;         \
+    carry3 = h##3 + (1 << 24); h##4 += carry3 >> 25; h##3 -= carry3 & CURVE25519_MASK_HIGH_39;         \
+    carry7 = h##7 + (1 << 24); h##8 += carry7 >> 25; h##7 -= carry7 & CURVE25519_MASK_HIGH_39;         \
+    carry4 = h##4 + (1 << 25); h##5 += carry4 >> 26; h##4 -= carry4 & CURVE25519_MASK_HIGH_38;         \
+    carry8 = h##8 + (1 << 25); h##9 += carry8 >> 26; h##8 -= carry8 & CURVE25519_MASK_HIGH_38;         \
+    carry9 = h##9 + (1 << 24); h##0 += (carry9 >> 25) * 19; h##9 -= carry9 & CURVE25519_MASK_HIGH_39;  \
+    carry0 = h##0 + (1 << 25); h##1 += carry0 >> 26; h##0 -= carry0 & CURVE25519_MASK_HIGH_38;         \
 } while (0)
 
 // h0...h9 to Fp25
 #define INT64_2_FP25(h, out)                  \
 do {                                    \
-    (out)->data[0] = (int32_t)h##0;     \
-    (out)->data[1] = (int32_t)h##1;     \
-    (out)->data[2] = (int32_t)h##2;     \
-    (out)->data[3] = (int32_t)h##3;     \
-    (out)->data[4] = (int32_t)h##4;     \
-    (out)->data[5] = (int32_t)h##5;     \
-    (out)->data[6] = (int32_t)h##6;     \
-    (out)->data[7] = (int32_t)h##7;     \
-    (out)->data[8] = (int32_t)h##8;     \
-    (out)->data[9] = (int32_t)h##9;     \
+    (out)[0] = (int32_t)h##0;     \
+    (out)[1] = (int32_t)h##1;     \
+    (out)[2] = (int32_t)h##2;     \
+    (out)[3] = (int32_t)h##3;     \
+    (out)[4] = (int32_t)h##4;     \
+    (out)[5] = (int32_t)h##5;     \
+    (out)[6] = (int32_t)h##6;     \
+    (out)[7] = (int32_t)h##7;     \
+    (out)[8] = (int32_t)h##8;     \
+    (out)[9] = (int32_t)h##9;     \
 } while (0)
 
 #define FP25_2_INT32(in, out)    \
 do {                        \
-    out##0 = (in)->data[0];  \
-    out##1 = (in)->data[1];  \
-    out##2 = (in)->data[2];  \
-    out##3 = (in)->data[3];  \
-    out##4 = (in)->data[4];  \
-    out##5 = (in)->data[5];  \
-    out##6 = (in)->data[6];  \
-    out##7 = (in)->data[7];  \
-    out##8 = (in)->data[8];  \
-    out##9 = (in)->data[9];  \
+    out##0 = (in)[0];  \
+    out##1 = (in)[1];  \
+    out##2 = (in)[2];  \
+    out##3 = (in)[3];  \
+    out##4 = (in)[4];  \
+    out##5 = (in)[5];  \
+    out##6 = (in)[6];  \
+    out##7 = (in)[7];  \
+    out##8 = (in)[8];  \
+    out##9 = (in)[9];  \
 } while (0)
 
 /* out = f * g */
-void FpMul(Fp25 *out, const Fp25 *f, const Fp25 *g)
+void FpMul(Fp25 out, const Fp25 f, const Fp25 g)
 {
     int32_t f0, f1, f2, f3, f4, f5, f6, f7, f8, f9;
     int32_t g0, g1, g2, g3, g4, g5, g6, g7, g8, g9;
@@ -237,7 +227,7 @@ void FpMul(Fp25 *out, const Fp25 *f, const Fp25 *g)
     INT64_2_FP25(h, out);
 }
 
-static void FpSquareDoubleCore(Fp25 *out, const Fp25 *in, bool doDouble)
+void FpSquareDoubleCore(Fp25 out, const Fp25 in, bool doDouble)
 {
     int64_t h0, h1, h2, h3, h4, h5, h6, h7, h8, h9;
     int32_t f0, f1, f2, f3, f4, f5, f6, f7, f8, f9;
@@ -338,34 +328,22 @@ static void FpSquareDoubleCore(Fp25 *out, const Fp25 *in, bool doDouble)
     INT64_2_FP25(h, out);
 }
 
-/* out = in ^ 2 * 2 */
-static void FpSquareDouble(Fp25 *out, const Fp25 *in)
-{
-    FpSquareDoubleCore(out, in, true);
-}
-
-/* out = in ^ 2 */
-void FpSquare(Fp25 *out, const Fp25 *in)
-{
-    FpSquareDoubleCore(out, in, false);
-}
-
 /* out = in1 ^ (4 * 2 ^ (2 * times)) * in2 */
-static void FpMultiSquare(Fp25 *in1, Fp25 *in2, Fp25 *out, int32_t times)
+static void FpMultiSquare(Fp25 in1, Fp25 in2, Fp25 out, int32_t times)
 {
     int32_t i;
     Fp25 temp1, temp2;
-    FpSquare(&temp1, in1);
-    FpSquare(&temp2, &temp1);
+    FpSquareDoubleCore(temp1, in1, false);
+    FpSquareDoubleCore(temp2, temp1, false);
     for (i = 0; i < times; i++) {
-        FpSquare(&temp1, &temp2);
-        FpSquare(&temp2, &temp1);
+        FpSquareDoubleCore(temp1, temp2, false);
+        FpSquareDoubleCore(temp2, temp1, false);
     }
-    FpMul(out, in2, &temp2);
+    FpMul(out, in2, temp2);
 }
 
 /* out = a ^ -1 */
-void FpInvert(Fp25 *out, const Fp25 *a)
+void FpInvert(Fp25 out, const Fp25 a)
 {
     int32_t i;
     Fp25 a0;    /* save a^1         */
@@ -388,134 +366,134 @@ void FpInvert(Fp25 *out, const Fp25 *a)
      */
 
     /* a^1 */
-    CURVE25519_FP_COPY(a0.data, a->data);
+    CURVE25519_FP_COPY(a0, a);
 
     /* a^2 */
-    FpSquare(&a1, &a0);
+    FpSquareDoubleCore(a1, a0, false);
 
     /* a^4 */
-    FpSquare(&temp1, &a1);
+    FpSquareDoubleCore(temp1, a1, false);
 
     /* a^8 */
-    FpSquare(&temp2, &temp1);
+    FpSquareDoubleCore(temp2, temp1, false);
 
     /* a^9 */
-    FpMul(&temp1, &a0, &temp2);
+    FpMul(temp1, a0, temp2);
 
     /* a^11 */
-    FpMul(&a2, &a1, &temp1);
+    FpMul(a2, a1, temp1);
 
     /* a^22 */
-    FpSquare(&temp2, &a2);
+    FpSquareDoubleCore(temp2, a2, false);
 
     /* a^(2^5-1) = a^(9+22) */
-    FpMul(&a3, &temp1, &temp2);
+    FpMul(a3, temp1, temp2);
 
     /* a^(2^10-1) = a^(2^10-2^5) * a^(2^5-1) */
-    FpSquare(&temp1, &a3);
+    FpSquareDoubleCore(temp1, a3, false);
     for (i = 0; i < 2; i++) { // (2 * 2)^2
-        FpSquare(&temp2, &temp1);
-        FpSquare(&temp1, &temp2);
+        FpSquareDoubleCore(temp2, temp1, false);
+        FpSquareDoubleCore(temp1, temp2, false);
     }
-    FpMul(&a4, &a3, &temp1);
+    FpMul(a4, a3, temp1);
 
     /* a^(2^20-1) = a^(2^20-2^10) * a^(2^10-1) */
-    FpMultiSquare(&a4, &a4, &a5, 4); // (2 * 2) ^ 4
+    FpMultiSquare(a4, a4, a5, 4); // (2 * 2) ^ 4
 
     /* a^(2^40-1) = a^(2^40-2^20) * a^(2^20-1) */
-    FpMultiSquare(&a5, &a5, &a6, 9); // (2 * 2) ^ 9
+    FpMultiSquare(a5, a5, a6, 9); // (2 * 2) ^ 9
 
     /* a^(2^50-1) = a^(2^50-2^10) * a^(2^10-1) */
-    FpMultiSquare(&a6, &a4, &a7, 4); // (2 * 2) ^ 4
+    FpMultiSquare(a6, a4, a7, 4); // (2 * 2) ^ 4
 
     /* a^(2^100-1) = a^(2^100-2^50) * a^(2^50-1) */
-    FpMultiSquare(&a7, &a7, &a8, 24); // (2 * 2) ^ 24
+    FpMultiSquare(a7, a7, a8, 24); // (2 * 2) ^ 24
 
     /* a^(2^200-1) = a^(2^200-2^100) * a^(2^100-1) */
-    FpMultiSquare(&a8, &a8, &a9, 49); // (2 * 2) ^ 49
+    FpMultiSquare(a8, a8, a9, 49); // (2 * 2) ^ 49
 
     /* a^(2^250-1) = a^(2^250-2^50) * a^(2^50-1) */
-    FpMultiSquare(&a9, &a7, &a10, 24); // (2 * 2) ^ 24
+    FpMultiSquare(a9, a7, a10, 24); // (2 * 2) ^ 24
 
     /* a^(2^5*(2^250-1)) = (a^(2^250-1))^5 */
-    FpSquare(&temp1, &a10);
-    FpSquare(&temp2, &temp1);
-    FpSquare(&temp1, &temp2);
-    FpSquare(&temp2, &temp1);
-    FpSquare(&temp1, &temp2);
+    FpSquareDoubleCore(temp1, a10, false);
+    FpSquareDoubleCore(temp2, temp1, false);
+    FpSquareDoubleCore(temp1, temp2, false);
+    FpSquareDoubleCore(temp2, temp1, false);
+    FpSquareDoubleCore(temp1, temp2, false);
 
-    /* The output: a^(2^255-21) = a(2^5*(2^250-1)+11) = a^(2^5*(2^250-1)) * a^11 */
-    FpMul(out, &a2, &temp1);
+    /* The output：a^(2^255-21) = a(2^5*(2^250-1)+11) = a^(2^5*(2^250-1)) * a^11 */
+    FpMul(out, a2, temp1);
 }
 
 #ifdef HITLS_CRYPTO_ED25519
 /* out = in ^ ((q - 5) / 8) */
-static void FpPowq58(Fp25 *out, Fp25 *in)
+static void FpPowq58(Fp25 out, Fp25 in)
 {
     Fp25 a, b, c;
     int32_t i;
-    FpSquare(&a, in);
-    FpSquare(&b, &a);
-    FpSquare(&b, &b);
-    FpMul(&b, in, &b);
-    FpMul(&a, &a, &b);
-    FpSquare(&a, &a);
-    FpMul(&a, &b, &a);
-    FpSquare(&b, &a);
+    FpSquareDoubleCore(a, in, false);
+    FpSquareDoubleCore(b, a, false);
+    FpSquareDoubleCore(b, b, false);
+    FpMul(b, in, b);
+    FpMul(a, a, b);
+    FpSquareDoubleCore(a, a, false);
+    FpMul(a, b, a);
+    FpSquareDoubleCore(b, a, false);
     // b = a ^ (2^5)
     for (i = 1; i < 5; i++) {
-        FpSquare(&b, &b);
+        FpSquareDoubleCore(b, b, false);
     }
-    FpMul(&a, &b, &a);
-    FpSquare(&b, &a);
+    FpMul(a, b, a);
+    FpSquareDoubleCore(b, a, false);
     // b = a ^ (2^10)
     for (i = 1; i < 10; i++) {
-        FpSquare(&b, &b);
+        FpSquareDoubleCore(b, b, false);
     }
-    FpMul(&b, &b, &a);
-    FpSquare(&c, &b);
+    FpMul(b, b, a);
+    FpSquareDoubleCore(c, b, false);
 
     // c = b ^ (2^20)
     for (i = 1; i < 20; i++) {
-        FpSquare(&c, &c);
+        FpSquareDoubleCore(c, c, false);
     }
-    FpMul(&b, &c, &b);
+    FpMul(b, c, b);
 
     // b = b ^ (2^10)
     for (i = 0; i < 10; i++) {
-        FpSquare(&b, &b);
+        FpSquareDoubleCore(b, b, false);
     }
 
-    FpMul(&a, &b, &a);
-    FpSquare(&b, &a);
+    FpMul(a, b, a);
+    FpSquareDoubleCore(b, a, false);
 
     // b = a ^ (2^50)
     for (i = 1; i < 50; i++) {
-        FpSquare(&b, &b);
+        FpSquareDoubleCore(b, b, false);
     }
-    FpMul(&b, &b, &a);
-    FpSquare(&c, &b);
+    FpMul(b, b, a);
+    FpSquareDoubleCore(c, b, false);
 
     // c = b ^ (2 ^ 100)
     for (i = 1; i < 100; i++) {
-        FpSquare(&c, &c);
+        FpSquareDoubleCore(c, c, false);
     }
-    FpMul(&b, &c, &b);
+    FpMul(b, c, b);
 
     // b = b ^ (2^50)
     for (i = 0; i < 50; i++) {
-        FpSquare(&b, &b);
+        FpSquareDoubleCore(b, b, false);
     }
-    FpMul(&a, &b, &a);
-    FpSquare(&a, &a);
-    FpSquare(&a, &a);
-    FpMul(out, &a, in);
+    FpMul(a, b, a);
+    FpSquareDoubleCore(a, a, false);
+    FpSquareDoubleCore(a, a, false);
+    FpMul(out, a, in);
 }
 #endif
 
-static void PaddingUnload(uint8_t out[32], Fp25 *pFp25)
+static void PaddingUnload(uint8_t out[32], Fp25 pFp25)
 {
-    int32_t *p = pFp25->data;
+    int32_t *p = (int32_t *)pFp25;
 
     /* Take a polynomial form number into a 32-byte array */
     CURVE25519_BYTES4_PADDING_UNLOAD(out, 2, p);                /* p0 unload 4 bytes on out[0] expand 2 */
@@ -531,39 +509,38 @@ static void PaddingUnload(uint8_t out[32], Fp25 *pFp25)
     CURVE25519_BYTES3_UNLOAD(out + 29, 6, p + 9);               /* p9 unload 3 bytes on out[29] shift 6 */
 }
 
-void PolynomialToData(uint8_t out[32], const Fp25 *polynomial)
+void PolynomialToData(uint8_t out[32], const Fp25 polynomial)
 {
     Fp25 pFp25;
-    int32_t *p = pFp25.data;
     uint32_t pos;
     uint32_t over;
     uint32_t mul19;
     uint32_t signMask;
 
-    CURVE25519_FP_COPY(p, polynomial->data);
+    CURVE25519_FP_COPY(pFp25, polynomial);
 
-    /* First process, all the carry transport to p[0] */
-    mul19 = (uint32_t)p[9] * 19; // mul 19 for mod
+    /* First process, all the carry transport to pFp25[0] */
+    mul19 = (uint32_t)pFp25[9] * 19; // mul 19 for mod
     over = mul19 + (1 << 24); // plus 1 << 24 for carry
     // restricted to 25 bits, shift 31 for sign
     signMask = (-(over >> 31)) & MASK_HIGH32(25);
     over = (over >> 25) | signMask; // 25 bits
     pos = 0;
     do {
-        over = (uint32_t)p[pos] + over;
+        over = (uint32_t)pFp25[pos] + over;
         // first carry is restricted to 25 bits, shift 31 for sign
         signMask = (-(over >> 31)) & MASK_HIGH32(25);
         over = (over >> 25) | signMask; // 25 bits
         pos++;
 
-        over = (uint32_t)p[pos] + over;
+        over = (uint32_t)pFp25[pos] + over;
         // second carry is restricted to 26 bits, shift 31 for sign
         signMask = (-(over >> 31)) & MASK_HIGH32(26);
         over = (over >> 26) | signMask; // 26 bits
         pos++;
     } while (pos < 10); // process from 0 to 9, pos < 10
     mul19 = over * 19; // mul 19 for mod
-    p[0] += (int32_t)mul19;
+    pFp25[0] += (int32_t)mul19;
 
     /* We subtracted 2^255-19 and get the result
      * all polynomial[i] is restricted to 25 bits or 26 bits
@@ -571,30 +548,30 @@ void PolynomialToData(uint8_t out[32], const Fp25 *polynomial)
     pos = 0;
     do {
         // first polynomial is restricted to 26 bits, shift 31 for sign
-        signMask = (-((uint32_t)p[pos] >> 31)) & MASK_HIGH32(26);
-        over = ((uint32_t)p[pos] >> 26) | signMask; // 26 bits
-        p[pos] = (int32_t)((uint32_t)p[pos] & MASK_LOW32(26)); // 26 bits
+        signMask = (-((uint32_t)pFp25[pos] >> 31)) & MASK_HIGH32(26);
+        over = ((uint32_t)pFp25[pos] >> 26) | signMask; // 26 bits
+        pFp25[pos] = (int32_t)((uint32_t)pFp25[pos] & MASK_LOW32(26)); // 26 bits
         pos++;
-        p[pos] += (int32_t)over;
+        pFp25[pos] += (int32_t)over;
 
         // second polynomial is restricted to 25 bits, shift 31 for sign
-        signMask = (-((uint32_t)p[pos] >> 31)) & MASK_HIGH32(25);
-        over = ((uint32_t)p[pos] >> 25) | signMask; // 25 bits
-        p[pos] = (int32_t)((uint32_t)p[pos] & MASK_LOW32(25));
+        signMask = (-((uint32_t)pFp25[pos] >> 31)) & MASK_HIGH32(25);
+        over = ((uint32_t)pFp25[pos] >> 25) | signMask; // 25 bits
+        pFp25[pos] = (int32_t)((uint32_t)pFp25[pos] & MASK_LOW32(25));
         pos++;
-        p[pos] += (int32_t)over;
+        pFp25[pos] += (int32_t)over;
     } while (pos < 8); // process form 0 to 7, pos < 8
 
-    // process p[8], restricted to 26 bits, shift 31 for sign
-    signMask = (-((uint32_t)p[pos] >> 31)) & MASK_HIGH32(26);
-    over = ((uint32_t)p[pos] >> 26) | signMask; // 26 bits
-    p[pos] = (int32_t)((uint32_t)p[pos] & MASK_LOW32(26)); // 26 bits
+    // process pFp25[8], restricted to 26 bits, shift 31 for sign
+    signMask = (-((uint32_t)pFp25[pos] >> 31)) & MASK_HIGH32(26);
+    over = ((uint32_t)pFp25[pos] >> 26) | signMask; // 26 bits
+    pFp25[pos] = (int32_t)((uint32_t)pFp25[pos] & MASK_LOW32(26)); // 26 bits
     pos++;
-    // process p[9]
-    p[pos] += (int32_t)over;
-    p[pos] = (int32_t)((uint32_t)p[pos] & MASK_LOW32(25)); // p[9] is restricted to 25 bits
+    // process pFp25[9]
+    pFp25[pos] += (int32_t)over;
+    pFp25[pos] = (int32_t)((uint32_t)pFp25[pos] & MASK_LOW32(25)); // pFp25[9] is restricted to 25 bits
 
-    PaddingUnload(out, &pFp25);
+    PaddingUnload(out, pFp25);
 }
 
 /* unified addition in Extended twist Edwards Coordinate */
@@ -614,20 +591,20 @@ static void GeAdd(GeE *out, const GePre *tableElement)
      * e = b − a, f = d − c, g = d + c, h = b + a
      * X3 = e * f, Y3 = g * h, T3 = e * h, Z3 = f * g
      */
-    CURVE25519_FP_ADD(e.data, out->y.data, out->x.data);
-    CURVE25519_FP_SUB(f.data, out->y.data, out->x.data);
-    FpMul(&b, &e, &(tableElement->yplusx));
-    FpMul(&a, &f, &(tableElement->yminusx));
-    FpMul(&c, &(out->t), &(tableElement->xy2d));
-    CURVE25519_FP_ADD(d.data, out->z.data, out->z.data);
-    CURVE25519_FP_SUB(e.data, b.data, a.data);
-    CURVE25519_FP_SUB(f.data, d.data, c.data);
-    CURVE25519_FP_ADD(g.data, d.data, c.data);
-    CURVE25519_FP_ADD(h.data, b.data, a.data);
-    FpMul(&(out->x), &e, &f);
-    FpMul(&(out->y), &h, &g);
-    FpMul(&(out->z), &g, &f);
-    FpMul(&(out->t), &e, &h);
+    CURVE25519_FP_ADD(e, out->y, out->x);
+    CURVE25519_FP_SUB(f, out->y, out->x);
+    FpMul(b, e, tableElement->yplusx);
+    FpMul(a, f, tableElement->yminusx);
+    FpMul(c, out->t, tableElement->xy2d);
+    CURVE25519_FP_ADD(d, out->z, out->z);
+    CURVE25519_FP_SUB(e, b, a);
+    CURVE25519_FP_SUB(f, d, c);
+    CURVE25519_FP_ADD(g, d, c);
+    CURVE25519_FP_ADD(h, b, a);
+    FpMul(out->x, e, f);
+    FpMul(out->y, h, g);
+    FpMul(out->z, g, f);
+    FpMul(out->t, e, h);
 }
 
 #ifdef HITLS_CRYPTO_ED25519
@@ -643,20 +620,20 @@ static void GeSub(GeE *out, const GePre *tableElement)
     Fp25 g;
     Fp25 h;
 
-    CURVE25519_FP_ADD(e.data, out->y.data, out->x.data);
-    CURVE25519_FP_SUB(f.data, out->y.data, out->x.data);
-    FpMul(&b, &e, &(tableElement->yminusx));
-    FpMul(&a, &f, &(tableElement->yplusx));
-    FpMul(&c, &(out->t), &(tableElement->xy2d));
-    CURVE25519_FP_ADD(d.data, out->z.data, out->z.data);
-    CURVE25519_FP_SUB(e.data, b.data, a.data);
-    CURVE25519_FP_ADD(f.data, d.data, c.data);
-    CURVE25519_FP_SUB(g.data, d.data, c.data);
-    CURVE25519_FP_ADD(h.data, b.data, a.data);
-    FpMul(&(out->x), &e, &f);
-    FpMul(&(out->y), &h, &g);
-    FpMul(&(out->z), &g, &f);
-    FpMul(&(out->t), &e, &h);
+    CURVE25519_FP_ADD(e, out->y, out->x);
+    CURVE25519_FP_SUB(f, out->y, out->x);
+    FpMul(b, e, tableElement->yminusx);
+    FpMul(a, f, tableElement->yplusx);
+    FpMul(c, out->t, tableElement->xy2d);
+    CURVE25519_FP_ADD(d, out->z, out->z);
+    CURVE25519_FP_SUB(e, b, a);
+    CURVE25519_FP_ADD(f, d, c);
+    CURVE25519_FP_SUB(g, d, c);
+    CURVE25519_FP_ADD(h, b, a);
+    FpMul(out->x, e, f);
+    FpMul(out->y, h, g);
+    FpMul(out->z, g, f);
+    FpMul(out->t, e, h);
 }
 #endif
 
@@ -664,25 +641,25 @@ static void GeSub(GeE *out, const GePre *tableElement)
 static void ProjectiveDouble(GeC *complete, const GeP *projective)
 {
     Fp25 tmp;
-    FpSquare(&(complete->x), &(projective->x));
-    FpSquare(&(complete->z), &(projective->y));
+    FpSquareDoubleCore((complete->x), (projective->x), false);
+    FpSquareDoubleCore((complete->z), (projective->y), false);
     // T = 2 * Z^2
-    FpSquareDouble(&(complete->t), &(projective->z));
-    CURVE25519_FP_ADD(complete->y.data, projective->x.data, projective->y.data);
-    FpSquare(&tmp, &(complete->y));
+    FpSquareDoubleCore(complete->t, projective->z, true);
+    CURVE25519_FP_ADD(complete->y, projective->x, projective->y);
+    FpSquareDoubleCore(tmp, complete->y, false);
     // tmp = (X1 + Y1) ^ 2, T = 2 * Z^2, X = X1 ^ 2, Y = Z1 ^ 2, Z = Y1 ^ 2
-    CURVE25519_FP_ADD(complete->y.data, complete->z.data, complete->x.data);
-    CURVE25519_FP_SUB(complete->z.data, complete->z.data, complete->x.data);
-    CURVE25519_FP_SUB(complete->x.data, tmp.data, complete->y.data);
-    CURVE25519_FP_SUB(complete->t.data, complete->t.data, complete->z.data);
+    CURVE25519_FP_ADD(complete->y, complete->z, complete->x);
+    CURVE25519_FP_SUB(complete->z, complete->z, complete->x);
+    CURVE25519_FP_SUB(complete->x, tmp, complete->y);
+    CURVE25519_FP_SUB(complete->t, complete->t, complete->z);
 }
 
 /* Convert complete coordinate to projective coordinate */
 static void GeCompleteToProjective(GeP *out, const GeC *complete)
 {
-    FpMul(&out->x, &complete->t, &complete->x);
-    FpMul(&out->y, &complete->z, &complete->y);
-    FpMul(&out->z, &complete->t, &complete->z);
+    FpMul(out->x, complete->t, complete->x);
+    FpMul(out->y, complete->z, complete->y);
+    FpMul(out->z, complete->t, complete->z);
 }
 
 /* p1 = 16 * p1 */
@@ -691,9 +668,9 @@ static void P1DoubleFourTimes(GeE *p1)
     GeP p;
     GeC c;
     // From extended coordinate to projective coordinate, just ignore T
-    CURVE25519_FP_COPY(p.x.data, p1->x.data);
-    CURVE25519_FP_COPY(p.y.data, p1->y.data);
-    CURVE25519_FP_COPY(p.z.data, p1->z.data);
+    CURVE25519_FP_COPY(p.x, p1->x);
+    CURVE25519_FP_COPY(p.y, p1->y);
+    CURVE25519_FP_COPY(p.z, p1->z);
     // double 4 times to get 16p1
     ProjectiveDouble(&c, &p);
     GeCompleteToProjective(&p, &c);
@@ -702,18 +679,18 @@ static void P1DoubleFourTimes(GeE *p1)
     ProjectiveDouble(&c, &p);
     GeCompleteToProjective(&p, &c);
     ProjectiveDouble(&c, &p);
-    FpMul(&p1->x, &c.x, &c.t);
-    FpMul(&p1->y, &c.y, &c.z);
-    FpMul(&p1->z, &c.z, &c.t);
-    FpMul(&p1->t, &c.x, &c.y);
+    FpMul(p1->x, c.x, c.t);
+    FpMul(p1->y, c.y, c.z);
+    FpMul(p1->z, c.z, c.t);
+    FpMul(p1->t, c.x, c.y);
 }
 
 static void SetExtendedBasePoint(GeE *out)
 {
-    CURVE25519_FP_SET(out->x.data, 0);
-    CURVE25519_FP_SET(out->y.data, 1);
-    CURVE25519_FP_SET(out->t.data, 0);
-    CURVE25519_FP_SET(out->z.data, 1);
+    CURVE25519_FP_SET(out->x, 0);
+    CURVE25519_FP_SET(out->y, 1);
+    CURVE25519_FP_SET(out->t, 0);
+    CURVE25519_FP_SET(out->z, 1);
 }
 
 /* Multiple with Base point, see paper: High-speed high-security signatures */
@@ -769,42 +746,42 @@ void PointEncoding(const GeE *point, uint8_t *output, uint32_t outputLen)
     uint8_t xData[CRYPT_CURVE25519_KEYLEN];
     /* x = X / Z, y = Y / Z */
     (void)outputLen;
-    FpInvert(&zInvert, &point->z);
-    FpMul(&x, &point->x, &zInvert);
-    FpMul(&y, &point->y, &zInvert);
-    PolynomialToData(output, &y);
-    PolynomialToData(xData, &x);
+    FpInvert(zInvert, point->z);
+    FpMul(x, point->x, zInvert);
+    FpMul(y, point->y, zInvert);
+    PolynomialToData(output, y);
+    PolynomialToData(xData, x);
     // PointEcoding writes only 32 bytes data, therefore output[31] is the last one
     output[31] ^= (xData[0] & 0x1) << 7; // last one is output[31], get only last bit then shift 7
 }
 #endif
 
-static void FeCmove(Fp25 *dst, const Fp25 *src, const uint32_t indicator)
+static void FeCmove(Fp25 dst, const Fp25 src, const uint32_t indicator)
 {
     // if indicator = 1, now it will be 111111111111b....
     const uint32_t indicate = 0 - indicator;
     /* des become source if dst->data[i] ^ src->data[i] is in 1111....b, or it does not change if
     (dst->data[i] ^ src->data[i]) & indicate is all 0 */
-    dst->data[0] = CONDITION_COPY(dst->data[0], src->data[0], indicate);
-    dst->data[1] = CONDITION_COPY(dst->data[1], src->data[1], indicate);
-    dst->data[2] = CONDITION_COPY(dst->data[2], src->data[2], indicate);
-    dst->data[3] = CONDITION_COPY(dst->data[3], src->data[3], indicate);
-    dst->data[4] = CONDITION_COPY(dst->data[4], src->data[4], indicate);
-    dst->data[5] = CONDITION_COPY(dst->data[5], src->data[5], indicate);
-    dst->data[6] = CONDITION_COPY(dst->data[6], src->data[6], indicate);
-    dst->data[7] = CONDITION_COPY(dst->data[7], src->data[7], indicate);
-    dst->data[8] = CONDITION_COPY(dst->data[8], src->data[8], indicate);
-    dst->data[9] = CONDITION_COPY(dst->data[9], src->data[9], indicate);
+    dst[0] = CONDITION_COPY(dst[0], src[0], indicate); // 0
+    dst[1] = CONDITION_COPY(dst[1], src[1], indicate); // 1
+    dst[2] = CONDITION_COPY(dst[2], src[2], indicate); // 2
+    dst[3] = CONDITION_COPY(dst[3], src[3], indicate); // 3
+    dst[4] = CONDITION_COPY(dst[4], src[4], indicate); // 4
+    dst[5] = CONDITION_COPY(dst[5], src[5], indicate); // 5
+    dst[6] = CONDITION_COPY(dst[6], src[6], indicate); // 6
+    dst[7] = CONDITION_COPY(dst[7], src[7], indicate); // 7
+    dst[8] = CONDITION_COPY(dst[8], src[8], indicate); // 8
+    dst[9] = CONDITION_COPY(dst[9], src[9], indicate); // 9
 }
 
 void ConditionalMove(GePre *preCompute, const GePre *tableElement, uint32_t indicator)
 {
-    FeCmove(&(preCompute->yplusx), &(tableElement->yplusx), indicator);
-    FeCmove(&(preCompute->yminusx), &(tableElement->yminusx), indicator);
-    FeCmove(&(preCompute->xy2d), &(tableElement->xy2d), indicator);
+    FeCmove(preCompute->yplusx, tableElement->yplusx, indicator);
+    FeCmove(preCompute->yminusx, tableElement->yminusx, indicator);
+    FeCmove(preCompute->xy2d, tableElement->xy2d, indicator);
 }
 
-void DataToPolynomial(Fp25 *out, const uint8_t data[32])
+void DataToPolynomial(Fp25 out, const uint8_t data[32])
 {
     const uint8_t *t = data;
     uint64_t p[10];
@@ -863,12 +840,12 @@ void DataToPolynomial(Fp25 *out, const uint8_t data[32])
 
     /* After process carry, polynomial every term would not exceed 32 bits, convert form 0 to 9, i < 10 */
     for (i = 0; i < 10; i++) {
-        out->data[i] = (int32_t)p[i];
+        out[i] = (int32_t)p[i];
     }
 }
 
 #ifdef HITLS_CRYPTO_ED25519
-static bool CheckZero(Fp25 *x)
+static bool CheckZero(Fp25 x)
 {
     uint8_t tmp[32];
     const uint8_t zero[32] = {0};
@@ -880,7 +857,7 @@ static bool CheckZero(Fp25 *x)
     }
 }
 
-static uint8_t GetXBit(Fp25 *in)
+static uint8_t GetXBit(Fp25 in)
 {
     uint8_t tmp[32];
     PolynomialToData(tmp, in);
@@ -888,51 +865,51 @@ static uint8_t GetXBit(Fp25 *in)
     return tmp[0] & 0x1;
 }
 
-static const Fp25 SQRTM1 = {{-32595792, -7943725, 9377950, 3500415, 12389472, -272473,
-    -25146209, -2005654, 326686, 11406482}};
-static const Fp25 D = {{-10913610, 13857413, -15372611, 6949391, 114729, -8787816,
-    -6275908, -3247719, -18696448, -12055116}};
+static const Fp25 SQRTM1 = {-32595792, -7943725, 9377950, 3500415, 12389472, -272473,
+    -25146209, -2005654, 326686, 11406482};
+static const Fp25 D = {-10913610, 13857413, -15372611, 6949391, 114729, -8787816,
+    -6275908, -3247719, -18696448, -12055116};
 
 int32_t PointDecoding(GeE *point, const uint8_t in[CRYPT_CURVE25519_KEYLEN])
 {
     Fp25 u, v, v3, x2, result;
     // get the last block (31), shift 7 for first bit
     uint8_t x0 = in[31] >> 7;
-    DataToPolynomial(&(point->y), in);
+    DataToPolynomial(point->y, in);
+    
+    CURVE25519_FP_SET(point->z, 1);
+    FpSquareDoubleCore(u, point->y, false);
+    FpMul(v, u, D);
+    CURVE25519_FP_SUB(u, u, point->z);
+    CURVE25519_FP_ADD(v, v, point->z);
 
-    CURVE25519_FP_SET(point->z.data, 1);
-    FpSquare(&u, &(point->y));
-    FpMul(&v, &u, &D);
-    CURVE25519_FP_SUB(u.data, u.data, point->z.data);
-    CURVE25519_FP_ADD(v.data, v.data, point->z.data);
-
-    FpSquare(&v3, &v);
-    FpMul(&v3, &v3, &v);
-    FpSquare(&(point->x), &v3);
-    FpMul(&(point->x), &(point->x), &v);
-    FpMul(&(point->x), &(point->x), &u);
+    FpSquareDoubleCore(v3, v, false);
+    FpMul(v3, v3, v);
+    FpSquareDoubleCore(point->x, v3, false);
+    FpMul(point->x, point->x, v);
+    FpMul(point->x, point->x, u);
 
     /* x = x ^ ((q - 5) / 8) */
-    FpPowq58(&(point->x), &(point->x));
+    FpPowq58(point->x, point->x);
 
-    FpMul(&(point->x), &(point->x), &v3);
-    FpMul(&(point->x), &(point->x), &u);
-    FpSquare(&x2, &(point->x));
-    FpMul(&x2, &x2, &v);
-    CURVE25519_FP_SUB(result.data, x2.data, u.data);
-
-    if (CheckZero(&result) == false) {
-        CURVE25519_FP_ADD(result.data, x2.data, u.data);
-        if (CheckZero(&result) == false) {
+    FpMul(point->x, point->x, v3);
+    FpMul(point->x, point->x, u);
+    FpSquareDoubleCore(x2, point->x, false);
+    FpMul(x2, x2, v);
+    CURVE25519_FP_SUB(result, x2, u);
+    
+    if (CheckZero(result) == false) {
+        CURVE25519_FP_ADD(result, x2, u);
+        if (CheckZero(result) == false) {
             return 1;
         }
-        FpMul(&(point->x), &(point->x), &SQRTM1);
+        FpMul(point->x, point->x, SQRTM1);
     }
-    uint8_t bit = GetXBit(&(point->x));
+    uint8_t bit = GetXBit(point->x);
     if (bit != x0) {
-        CURVE25519_FP_NEGATE(point->x.data, point->x.data);
+        CURVE25519_FP_NEGATE(point->x, point->x);
     }
-    FpMul(&(point->t), &(point->x), &(point->y));
+    FpMul(point->t, point->x, point->y);
 
     return 0;
 }
@@ -1371,67 +1348,67 @@ void ScalarMulAdd(uint8_t s[CRYPT_CURVE25519_KEYLEN], const uint8_t a[CRYPT_CURV
 /* RFC8032, out = a + b */
 static void PointAdd(GeE *out, GeE *greA, GeE *greB)
 {
-    const Fp25 d2 = {{-21827239, -5839606, -30745221, 13898782, 229458,
-        15978800, -12551817, -6495438, 29715968, 9444199}};
+    const Fp25 d2 = {-21827239, -5839606, -30745221, 13898782, 229458,
+        15978800, -12551817, -6495438, 29715968, 9444199};
     Fp25 a, b, c, d, e, f, g, h;
-    CURVE25519_FP_SUB(e.data, greA->y.data, greA->x.data);
-    CURVE25519_FP_SUB(f.data, greB->y.data, greB->x.data);
-    CURVE25519_FP_ADD(g.data, greA->y.data, greA->x.data);
-    CURVE25519_FP_ADD(h.data, greB->y.data, greB->x.data);
-    FpMul(&a, &e, &f);
-    FpMul(&b, &g, &h);
-    FpMul(&c, &(greA->t), &(greB->t));
-    FpMul(&c, &c, &d2);
-    FpMul(&d, &(greA->z), &(greB->z));
-    CURVE25519_FP_ADD(d.data, d.data, d.data);
-    CURVE25519_FP_SUB(e.data, b.data, a.data);
-    CURVE25519_FP_SUB(f.data, d.data, c.data);
-    CURVE25519_FP_ADD(g.data, d.data, c.data);
-    CURVE25519_FP_ADD(h.data, b.data, a.data);
-    FpMul(&(out->x), &e, &f);
-    FpMul(&(out->y), &g, &h);
-    FpMul(&(out->z), &f, &g);
-    FpMul(&(out->t), &e, &h);
+    CURVE25519_FP_SUB(e, greA->y, greA->x);
+    CURVE25519_FP_SUB(f, greB->y, greB->x);
+    CURVE25519_FP_ADD(g, greA->y, greA->x);
+    CURVE25519_FP_ADD(h, greB->y, greB->x);
+    FpMul(a, e, f);
+    FpMul(b, g, h);
+    FpMul(c, greA->t, greB->t);
+    FpMul(c, c, d2);
+    FpMul(d, greA->z, greB->z);
+    CURVE25519_FP_ADD(d, d, d);
+    CURVE25519_FP_SUB(e, b, a);
+    CURVE25519_FP_SUB(f, d, c);
+    CURVE25519_FP_ADD(g, d, c);
+    CURVE25519_FP_ADD(h, b, a);
+    FpMul(out->x, e, f);
+    FpMul(out->y, g, h);
+    FpMul(out->z, f, g);
+    FpMul(out->t, e, h);
 }
 
 static void PointAddPrecompute(GeE *out, GeE *greA, GeEPre *greB)
 {
     Fp25 a, b, c, d, e, f, g, h;
-    CURVE25519_FP_SUB(e.data, greA->y.data, greA->x.data);
-    CURVE25519_FP_ADD(g.data, greA->y.data, greA->x.data);
-    FpMul(&a, &e, &(greB->yminusx));
-    FpMul(&b, &g, &(greB->yplusx));
-    FpMul(&c, &(greA->t), &(greB->t2z));
-    FpMul(&d, &(greA->z), &(greB->z));
-    CURVE25519_FP_ADD(d.data, d.data, d.data);
-    CURVE25519_FP_SUB(e.data, b.data, a.data);
-    CURVE25519_FP_SUB(f.data, d.data, c.data);
-    CURVE25519_FP_ADD(g.data, d.data, c.data);
-    CURVE25519_FP_ADD(h.data, b.data, a.data);
-    FpMul(&(out->x), &e, &f);
-    FpMul(&(out->y), &g, &h);
-    FpMul(&(out->z), &f, &g);
-    FpMul(&(out->t), &e, &h);
+    CURVE25519_FP_SUB(e, greA->y, greA->x);
+    CURVE25519_FP_ADD(g, greA->y, greA->x);
+    FpMul(a, e, greB->yminusx);
+    FpMul(b, g, greB->yplusx);
+    FpMul(c, greA->t, greB->t2z);
+    FpMul(d, greA->z, greB->z);
+    CURVE25519_FP_ADD(d, d, d);
+    CURVE25519_FP_SUB(e, b, a);
+    CURVE25519_FP_SUB(f, d, c);
+    CURVE25519_FP_ADD(g, d, c);
+    CURVE25519_FP_ADD(h, b, a);
+    FpMul(out->x, e, f);
+    FpMul(out->y, g, h);
+    FpMul(out->z, f, g);
+    FpMul(out->t, e, h);
 }
 
 static void PointSubPrecompute(GeE *out, GeE *greA, GeEPre *greB)
 {
     Fp25 a, b, c, d, e, f, g, h;
-    CURVE25519_FP_SUB(e.data, greA->y.data, greA->x.data);
-    CURVE25519_FP_ADD(g.data, greA->y.data, greA->x.data);
-    FpMul(&a, &e, &(greB->yplusx));
-    FpMul(&b, &g, &(greB->yminusx));
-    FpMul(&c, &(greA->t), &(greB->t2z));
-    FpMul(&d, &(greA->z), &(greB->z));
-    CURVE25519_FP_ADD(d.data, d.data, d.data);
-    CURVE25519_FP_SUB(e.data, b.data, a.data);
-    CURVE25519_FP_ADD(f.data, d.data, c.data);
-    CURVE25519_FP_SUB(g.data, d.data, c.data);
-    CURVE25519_FP_ADD(h.data, b.data, a.data);
-    FpMul(&(out->x), &e, &f);
-    FpMul(&(out->y), &g, &h);
-    FpMul(&(out->z), &f, &g);
-    FpMul(&(out->t), &e, &h);
+    CURVE25519_FP_SUB(e, greA->y, greA->x);
+    CURVE25519_FP_ADD(g, greA->y, greA->x);
+    FpMul(a, e, greB->yplusx);
+    FpMul(b, g, greB->yminusx);
+    FpMul(c, greA->t, greB->t2z);
+    FpMul(d, greA->z, greB->z);
+    CURVE25519_FP_ADD(d, d, d);
+    CURVE25519_FP_SUB(e, b, a);
+    CURVE25519_FP_ADD(f, d, c);
+    CURVE25519_FP_SUB(g, d, c);
+    CURVE25519_FP_ADD(h, b, a);
+    FpMul(out->x, e, f);
+    FpMul(out->y, g, h);
+    FpMul(out->z, f, g);
+    FpMul(out->t, e, h);
 }
 
 static void P1DoubleN(GeE *p1, int32_t n)
@@ -1440,9 +1417,9 @@ static void P1DoubleN(GeE *p1, int32_t n)
     GeC c;
     int32_t i;
     // From extended coordinate to projective coordinate, just ignore T
-    CURVE25519_FP_COPY(p.x.data, p1->x.data);
-    CURVE25519_FP_COPY(p.y.data, p1->y.data);
-    CURVE25519_FP_COPY(p.z.data, p1->z.data);
+    CURVE25519_FP_COPY(p.x, p1->x);
+    CURVE25519_FP_COPY(p.y, p1->y);
+    CURVE25519_FP_COPY(p.z, p1->z);
 
     ProjectiveDouble(&c, &p);
     for (i = 1; i < n; i++) {
@@ -1450,21 +1427,21 @@ static void P1DoubleN(GeE *p1, int32_t n)
         ProjectiveDouble(&c, &p);
     }
 
-    FpMul(&p1->x, &c.t, &c.x);
-    FpMul(&p1->y, &c.z, &c.y);
-    FpMul(&p1->z, &c.t, &c.z);
-    FpMul(&p1->t, &c.y, &c.x);
+    FpMul(p1->x, c.t, c.x);
+    FpMul(p1->y, c.z, c.y);
+    FpMul(p1->z, c.t, c.z);
+    FpMul(p1->t, c.y, c.x);
 }
 
 static void PointToPrecompute(GeEPre *out, GeE *in)
 {
-    const Fp25 d2 = {{-21827239, -5839606, -30745221, 13898782, 229458,
-        15978800, -12551817, -6495438, 29715968, 9444199}};
+    const Fp25 d2 = {-21827239, -5839606, -30745221, 13898782, 229458,
+        15978800, -12551817, -6495438, 29715968, 9444199};
 
-    CURVE25519_FP_ADD(out->yplusx.data, in->y.data, in->x.data);
-    CURVE25519_FP_SUB(out->yminusx.data, in->y.data, in->x.data);
-    CURVE25519_FP_COPY(out->z.data, in->z.data);
-    FpMul(&(out->t2z), &(in->t), &d2);
+    CURVE25519_FP_ADD(out->yplusx, in->y, in->x);
+    CURVE25519_FP_SUB(out->yminusx, in->y, in->x);
+    CURVE25519_FP_COPY(out->z, in->z);
+    FpMul(out->t2z, in->t, d2);
 }
 
 static void FlipK(int8_t slide[256], uint32_t start)
@@ -1519,68 +1496,68 @@ static void SlideReduce(int8_t *out, uint32_t outLen, const uint8_t *in, uint32_
 // stores B, 3B, 5B, 7B, 9B, 11B, 13B, 15B, with B as ed25519 base point
 static const GePre g_precomputedB[8] = {
     {
-        {{25967493, -14356035, 29566456, 3660896, -12694345, 4014787, 27544626,
-            -11754271, -6079156, 2047605}},
-        {{-12545711, 934262, -2722910, 3049990, -727428, 9406986, 12720692,
-            5043384, 19500929, -15469378}},
-        {{-8738181, 4489570, 9688441, -14785194, 10184609, -12363380, 29287919,
-            11864899, -24514362, -4438546}},
+        {25967493, -14356035, 29566456, 3660896, -12694345, 4014787, 27544626,
+            -11754271, -6079156, 2047605},
+        {-12545711, 934262, -2722910, 3049990, -727428, 9406986, 12720692,
+            5043384, 19500929, -15469378},
+        {-8738181, 4489570, 9688441, -14785194, 10184609, -12363380, 29287919,
+            11864899, -24514362, -4438546},
     },
     {
-        {{15636291, -9688557, 24204773, -7912398, 616977, -16685262, 27787600,
-            -14772189, 28944400, -1550024}},
-        {{16568933, 4717097, -11556148, -1102322, 15682896, -11807043, 16354577,
-            -11775962, 7689662, 11199574}},
-        {{30464156, -5976125, -11779434, -15670865, 23220365, 15915852, 7512774,
-            10017326, -17749093, -9920357}},
+        {15636291, -9688557, 24204773, -7912398, 616977, -16685262, 27787600,
+            -14772189, 28944400, -1550024},
+        {16568933, 4717097, -11556148, -1102322, 15682896, -11807043, 16354577,
+            -11775962, 7689662, 11199574},
+        {30464156, -5976125, -11779434, -15670865, 23220365, 15915852, 7512774,
+            10017326, -17749093, -9920357},
     },
     {
-        {{10861363, 11473154, 27284546, 1981175, -30064349, 12577861, 32867885,
-            14515107, -15438304, 10819380}},
-        {{4708026, 6336745, 20377586, 9066809, -11272109, 6594696, -25653668,
-            12483688, -12668491, 5581306}},
-        {{19563160, 16186464, -29386857, 4097519, 10237984, -4348115, 28542350,
-            13850243, -23678021, -15815942}},
+        {10861363, 11473154, 27284546, 1981175, -30064349, 12577861, 32867885,
+            14515107, -15438304, 10819380},
+        {4708026, 6336745, 20377586, 9066809, -11272109, 6594696, -25653668,
+            12483688, -12668491, 5581306},
+        {19563160, 16186464, -29386857, 4097519, 10237984, -4348115, 28542350,
+            13850243, -23678021, -15815942},
     },
     {
-        {{5153746, 9909285, 1723747, -2777874, 30523605, 5516873, 19480852,
-            5230134, -23952439, -15175766}},
-        {{-30269007, -3463509, 7665486, 10083793, 28475525, 1649722, 20654025,
-            16520125, 30598449, 7715701}},
-        {{28881845, 14381568, 9657904, 3680757, -20181635, 7843316, -31400660,
-            1370708, 29794553, -1409300}},
+        {5153746, 9909285, 1723747, -2777874, 30523605, 5516873, 19480852,
+            5230134, -23952439, -15175766},
+        {-30269007, -3463509, 7665486, 10083793, 28475525, 1649722, 20654025,
+            16520125, 30598449, 7715701},
+        {28881845, 14381568, 9657904, 3680757, -20181635, 7843316, -31400660,
+            1370708, 29794553, -1409300},
     },
     {
-        {{-22518993, -6692182, 14201702, -8745502, -23510406, 8844726, 18474211,
-            -1361450, -13062696, 13821877}},
-        {{-6455177, -7839871, 3374702, -4740862, -27098617, -10571707, 31655028,
-            -7212327, 18853322, -14220951}},
-        {{4566830, -12963868, -28974889, -12240689, -7602672, -2830569, -8514358,
-            -10431137, 2207753, -3209784}},
+        {-22518993, -6692182, 14201702, -8745502, -23510406, 8844726, 18474211,
+            -1361450, -13062696, 13821877},
+        {-6455177, -7839871, 3374702, -4740862, -27098617, -10571707, 31655028,
+            -7212327, 18853322, -14220951},
+        {4566830, -12963868, -28974889, -12240689, -7602672, -2830569, -8514358,
+            -10431137, 2207753, -3209784},
     },
     {
-        {{-25154831, -4185821, 29681144, 7868801, -6854661, -9423865, -12437364,
-            -663000, -31111463, -16132436}},
-        {{25576264, -2703214, 7349804, -11814844, 16472782, 9300885, 3844789,
-            15725684, 171356, 6466918}},
-        {{23103977, 13316479, 9739013, -16149481, 817875, -15038942, 8965339,
-            -14088058, -30714912, 16193877}},
+        {-25154831, -4185821, 29681144, 7868801, -6854661, -9423865, -12437364,
+            -663000, -31111463, -16132436},
+        {25576264, -2703214, 7349804, -11814844, 16472782, 9300885, 3844789,
+            15725684, 171356, 6466918},
+        {23103977, 13316479, 9739013, -16149481, 817875, -15038942, 8965339,
+            -14088058, -30714912, 16193877},
     },
     {
-        {{-33521811, 3180713, -2394130, 14003687, -16903474, -16270840, 17238398,
-            4729455, -18074513, 9256800}},
-        {{-25182317, -4174131, 32336398, 5036987, -21236817, 11360617, 22616405,
-            9761698, -19827198, 630305}},
-        {{-13720693, 2639453, -24237460, -7406481, 9494427, -5774029, -6554551,
-            -15960994, -2449256, -14291300}},
+        {-33521811, 3180713, -2394130, 14003687, -16903474, -16270840, 17238398,
+            4729455, -18074513, 9256800},
+        {-25182317, -4174131, 32336398, 5036987, -21236817, 11360617, 22616405,
+            9761698, -19827198, 630305},
+        {-13720693, 2639453, -24237460, -7406481, 9494427, -5774029, -6554551,
+            -15960994, -2449256, -14291300},
     },
     {
-        {{-3151181, -5046075, 9282714, 6866145, -31907062, -863023, -18940575,
-            15033784, 25105118, -7894876}},
-        {{-24326370, 15950226, -31801215, -14592823, -11662737, -5090925,
-            1573892, -2625887, 2198790, -15804619}},
-        {{-3099351, 10324967, -2241613, 7453183, -5446979, -2735503, -13812022,
-            -16236442, -32461234, -12290683}},
+        {-3151181, -5046075, 9282714, 6866145, -31907062, -863023, -18940575,
+            15033784, 25105118, -7894876},
+        {-24326370, 15950226, -31801215, -14592823, -11662737, -5090925,
+            1573892, -2625887, 2198790, -15804619},
+        {-3099351, 10324967, -2241613, 7453183, -5446979, -2735503, -13812022,
+            -16236442, -32461234, -12290683},
     },
 };
 

@@ -19,6 +19,8 @@
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "eal_cipher_local.h"
+#include "crypt_modes.h"
+#include "crypt_local_types.h"
 
 #ifdef HITLS_CRYPTO_CTR
 #include "crypt_modes_ctr.h"
@@ -38,31 +40,28 @@
 #ifdef HITLS_CRYPTO_XTS
 #include "crypt_modes_xts.h"
 #endif
-
-#ifdef HITLS_CRYPTO_CHACHA20POLY1305
+#ifdef HITLS_CRYPTO_AES
+#include "crypt_aes.h"
+#endif
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 #include "crypt_modes_chacha20poly1305.h"
 #endif
-
+#ifdef HITLS_CRYPTO_CHACHA20
+#include "crypt_chacha20.h"
+#endif
+#ifdef HITLS_CRYPTO_SM4
+#include "crypt_sm4.h"
+#endif
 #ifdef HITLS_CRYPTO_CFB
 #include "crypt_modes_cfb.h"
 #endif
 #ifdef HITLS_CRYPTO_OFB
 #include "crypt_modes_ofb.h"
 #endif
-#ifdef HITLS_CRYPTO_AES
-#include "crypt_aes.h"
-#endif
-#ifdef HITLS_CRYPTO_SM4
-#include "crypt_sm4.h"
-#endif
-#ifdef HITLS_CRYPTO_CHACHA20
-#include "crypt_chacha20.h"
-#endif
 #include "eal_common.h"
 #include "bsl_sal.h"
 
-
-#ifdef HITLS_CRYPTO_CHACHA20POLY1305
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
     (CipherNewCtx)MODES_CHACHA20POLY1305_NewCtx,
     (CipherInitCtx)MODES_CHACHA20POLY1305_InitCtx,
@@ -206,7 +205,7 @@ static const EAL_CipherMethod *g_modeMethod[CRYPT_MODE_MAX] = {
 #else
     NULL,
 #endif // gcm
-#ifdef HITLS_CRYPTO_CHACHA20POLY1305
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
     &CHACHA20_POLY1305_METHOD,
 #else
     NULL,
@@ -256,6 +255,8 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
     {.id = CRYPT_CIPHER_AES128_OFB, .modeId = CRYPT_MODE_OFB },
     {.id = CRYPT_CIPHER_AES192_OFB, .modeId = CRYPT_MODE_OFB },
     {.id = CRYPT_CIPHER_AES256_OFB, .modeId = CRYPT_MODE_OFB },
+	{.id = CRYPT_CIPHER_AES128_XTS, .modeId = CRYPT_MODE_XTS },
+    {.id = CRYPT_CIPHER_AES256_XTS, .modeId = CRYPT_MODE_XTS },
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .modeId = CRYPT_MODE_CHACHA20_POLY1305},
@@ -362,11 +363,13 @@ static const EAL_SymMethod SM4_METHOD = {
 };
 #endif
 
-const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
+const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
 {
     switch (algId) {
+#ifdef HITLS_CRYPTO_AES
         case CRYPT_CIPHER_AES128_CBC:
         case CRYPT_CIPHER_AES128_ECB:
+        case CRYPT_CIPHER_AES128_XTS:
         case CRYPT_CIPHER_AES128_CTR:
         case CRYPT_CIPHER_AES128_CCM:
         case CRYPT_CIPHER_AES128_GCM:
@@ -384,11 +387,14 @@ const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_AES256_CBC:
         case CRYPT_CIPHER_AES256_ECB:
         case CRYPT_CIPHER_AES256_CTR:
+        case CRYPT_CIPHER_AES256_XTS:
         case CRYPT_CIPHER_AES256_CCM:
         case CRYPT_CIPHER_AES256_GCM:
         case CRYPT_CIPHER_AES256_CFB:
         case CRYPT_CIPHER_AES256_OFB:
             return &AES256_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_SM4
         case CRYPT_CIPHER_SM4_XTS:
         case CRYPT_CIPHER_SM4_CBC:
         case CRYPT_CIPHER_SM4_ECB:
@@ -397,8 +403,11 @@ const EAL_SymMethod *MODES_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_SM4_CFB:
         case CRYPT_CIPHER_SM4_OFB:
             return &SM4_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_CHACHA20
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return &CHACHA20_METHOD;
+#endif
         default:
             return NULL;
     }
@@ -427,6 +436,8 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
     {.id = CRYPT_CIPHER_AES128_OFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES192_OFB, .blockSize = 1, .keyLen = 24, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_OFB, .blockSize = 1, .keyLen = 32, .ivLen = 16},
+	{.id = CRYPT_CIPHER_AES128_XTS, .blockSize = 1, .keyLen = 32, .ivLen = 16},
+    {.id = CRYPT_CIPHER_AES256_XTS, .blockSize = 1, .keyLen = 64, .ivLen = 16},
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .blockSize = 1, .keyLen = 32, .ivLen = 12},

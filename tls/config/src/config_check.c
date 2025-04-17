@@ -232,6 +232,24 @@ int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion)
 #endif
     return HITLS_SUCCESS;
 }
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+static int32_t CheckCallbackFunc(const TLS_Config *config)
+{
+    /* Check the cookie callback. The user must register the cookie callback at the same time or
+        not register the cookie callback */
+    if ((config->appGenCookieCb != NULL && config->appVerifyCookieCb == NULL) ||
+        (config->appGenCookieCb == NULL && config->appVerifyCookieCb != NULL)) {
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15784, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "cannot register only one cookie callback, either appGenCookieCb or appVerifyCookieCb is NULL.",
+            0, 0, 0, 0);
+        return HITLS_CONFIG_INVALID_SET;
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
 int32_t CheckConfig(const TLS_Config *config)
 {
     int32_t ret;
@@ -261,6 +279,12 @@ int32_t CheckConfig(const TLS_Config *config)
             return ret;
         }
     }
-
-    return CheckSign(config);
+    ret = CheckSign(config);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    ret = CheckCallbackFunc(config);
+#endif
+    return ret;
 }

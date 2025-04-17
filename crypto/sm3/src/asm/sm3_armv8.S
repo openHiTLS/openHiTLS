@@ -12,6 +12,12 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
+
+#include "hitls_build.h"
+#ifdef HITLS_CRYPTO_SM3
+
+#include "crypt_arm.h"
 .arch    armv8-a+crypto
 
 // The first 16 of the compression function, w13 is Tj.
@@ -74,6 +80,7 @@
 .type  SM3_CompressAsm, %function
 .align 4
 SM3_CompressAsm:
+AARCH64_PACIASP
     sub sp, sp, 128
     stp x19, x20, [sp]
     stp x21, x22, [sp, #16]
@@ -677,5 +684,8 @@ SM3_CompressAsm:
     ldp d14, d15, [sp, #112]
     add sp, sp, 128
 
+AARCH64_AUTIASP
     ret
 .size SM3_CompressAsm,.-SM3_CompressAsm
+
+#endif

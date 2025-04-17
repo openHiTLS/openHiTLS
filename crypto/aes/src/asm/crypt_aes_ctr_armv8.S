@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CTR)
 
+#include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
 .file    "crypt_aes_ctr_armv8.S"
@@ -86,7 +87,7 @@ ROUNDS  .req    w6
 .globl CRYPT_AES_CTR_Encrypt
 .type CRYPT_AES_CTR_Encrypt, %function
 CRYPT_AES_CTR_Encrypt:
-    .inst 0xd503233f                  // Paciasp.
+AARCH64_PACIASP
     ld1	{CTR0.16b}, [IV]              // Reads the IV.
     mov	CTMP.16b, CTR0.16b
     mov	w11, CTR0.s[3]
@@ -346,7 +347,7 @@ CRYPT_AES_CTR_Encrypt:
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
 
-.inst 0xd50323bf                    // Autiasp.
+AARCH64_AUTIASP
     ret
 .size CRYPT_AES_CTR_Encrypt, .-CRYPT_AES_CTR_Encrypt
 

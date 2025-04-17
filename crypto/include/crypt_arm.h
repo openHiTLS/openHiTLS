@@ -41,10 +41,21 @@
 #define CRYPT_ARM_SM3           (1 << 18)
 #define CRYPT_ARM_SM4           (1 << 19)
 #define CRYPT_ARM_SHA512        (1 << 21)
+
+#define CRYPT_CAP2              CRYPT_VAL2
+#define CRYPT_ARM_CAP2_RNG      (1 << 16)
 #endif
 
 #ifndef __ASSEMBLER__
 extern uint32_t g_cryptArmCpuInfo;
+#else
+#  ifdef HITLS_AARCH64_PACIASP
+#   define AARCH64_PACIASP hint #25
+#   define AARCH64_AUTIASP hint #29
+#  else
+#   define AARCH64_PACIASP
+#   define AARCH64_AUTIASP
+#  endif
 #endif
 
 #endif

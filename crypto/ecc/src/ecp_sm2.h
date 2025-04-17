@@ -51,7 +51,7 @@ int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, c
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h
  */
-int32_t ECP_Sm2PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+int32_t ECP_Sm2PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
 
 /**
  * @ingroup sm2
@@ -79,10 +79,29 @@ int32_t ECP_Sm2PointDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *
  */
 int32_t ECP_Sm2Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
 
+/**
+ * @ingroup sm2
+ * @brief   Calculate r = k * pt,
+ *          Non-consttime calculation
+ *
+ * @param   para [IN] Curve parameter information
+ * @param   r [OUT] Output point information
+ * @param   k [IN] Scalar
+ * @param   pt [IN] Point data, which can be set to NULL.
+ *
+ * @retval CRYPT_SUCCESS    succeeded.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECP_Sm2PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
+
+int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
+
+int32_t ECP_Sm2PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2,
+    const ECC_Point *pt);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HITLS_CRYPTO_SM2
-
-#endif // ECP_SM2_H
+#endif
+#endif

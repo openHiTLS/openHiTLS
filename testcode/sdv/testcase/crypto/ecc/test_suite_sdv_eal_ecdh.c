@@ -128,7 +128,6 @@ void SDV_CRYPTO_ECDH_EXCH_API_TC001(Hex *prvKeyVector, Hex *peerPubKeyVector, He
     shareKey = (uint8_t *)malloc(shareKeyVector->len);
     ASSERT_TRUE(shareKey != NULL);
     shareKeyLen = shareKeyVector->len;
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ecdhPkey, peerEcdhPkey, shareKey, &shareKeyLen), CRYPT_NO_REGIST_RAND);
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(NULL, peerEcdhPkey, shareKey, &shareKeyLen), CRYPT_NULL_INPUT);
@@ -151,7 +150,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey);
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey2);
     CRYPT_EAL_PkeyFreeCtx(peerEcdhPkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -624,7 +623,7 @@ void SDV_CRYPTO_ECDH_EXCH_FUNC_TC001(
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey);
     CRYPT_EAL_PkeyFreeCtx(peerEcdhPubPkey);
-    CRYPT_EAL_RandDeinit();
+    TestRandDeInit();
     free(shareKey);
 }
 /* END_CASE */

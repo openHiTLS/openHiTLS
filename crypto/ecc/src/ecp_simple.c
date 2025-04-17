@@ -65,10 +65,16 @@ int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
     BN_Optimizer *opt = BN_OptimizerCreate();
     BN_BigNum *y = BN_Create(bits);
     BN_BigNum *x = BN_Create(bits);
-    if (opt == NULL || x == NULL || y == NULL) {
+    BN_BigNum *dupA = BN_Dup(para->a);
+    BN_BigNum *dupB = BN_Dup(para->b);
+    if (opt == NULL || x == NULL || y == NULL || dupA == NULL || dupB == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
+    }
+    if (para->method->bnMontDec != NULL) {
+        para->method->bnMontDec(dupA, para->montP);
+        para->method->bnMontDec(dupB, para->montP);
     }
     GOTO_ERR_IF(BN_ModSqr(x, pt->x, para->p, opt), ret); // x^2
     GOTO_ERR_IF(BN_ModMul(x, x, pt->x, para->p, opt), ret); // x^3
@@ -80,11 +86,11 @@ int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
         GOTO_ERR_IF(BN_ModSub(x, x, pt->x, para->p, opt), ret); //  x^3 - 3x
     } else {
         // General implementation
-        GOTO_ERR_IF(BN_ModMul(y, para->a, pt->x, para->p, opt), ret);
+        GOTO_ERR_IF(BN_ModMul(y, dupA, pt->x, para->p, opt), ret);
         GOTO_ERR_IF(BN_ModAdd(x, x, y, para->p, opt), ret); //  x^3 + ax
     }
 
-    GOTO_ERR_IF(BN_ModAdd(x, x, para->b, para->p, opt), ret); //  x^3 - 3x + b
+    GOTO_ERR_IF(BN_ModAdd(x, x, dupB, para->p, opt), ret); //  x^3 - 3x + b
     GOTO_ERR_IF(BN_ModSqr(y, pt->y, para->p, opt), ret); // y^2
     if (BN_Cmp(x, y) != 0) {
         ret = CRYPT_ECC_POINT_NOT_ON_CURVE;
@@ -93,6 +99,8 @@ int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
 ERR:
     BN_Destroy(x);
     BN_Destroy(y);
+    BN_Destroy(dupA);
+    BN_Destroy(dupB);
     BN_OptimizerDestroy(opt);
     return ret;
 }
@@ -124,7 +132,7 @@ int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(para->method->modInv(inv, pt->z, para->p, opt), ret);
+    GOTO_ERR_IF(BN_ModInv(inv, pt->z, para->p, opt), ret);
     GOTO_ERR_IF(BN_ModSqr(zz, inv, para->p, opt), ret);
 
     GOTO_ERR_IF(BN_ModMul(r->x, pt->x, zz, para->p, opt), ret);
@@ -191,8 +199,7 @@ static int32_t Points2AffineCreatTmpData(BN_BigNum *pt[PRE_COMPUTE_MAX_TABLELEN]
 static void Points2AffineDestroyTmpData(BN_BigNum *pt[PRE_COMPUTE_MAX_TABLELEN], uint32_t ptNums,
     BN_BigNum *inv, BN_Optimizer *opt)
 {
-    uint32_t i;
-    for (i = 0; i < ptNums; i++) {
+    for (uint32_t i = 0; i < ptNums; i++) {
         BN_Destroy(pt[i]);
     }
     BN_Destroy(inv);
@@ -222,7 +229,7 @@ int32_t ECP_Points2Affine(const ECC_Para *para, ECC_Point *pt[], uint32_t ptNums
     }
 
     // inv = 1 / (z[0] * z[1] * .... * z[ptNums - 1])
-    GOTO_ERR_IF(para->method->modInv(inv, t[ptNums - 1], para->p, opt), ret);
+    GOTO_ERR_IF(BN_ModInv(inv, t[ptNums - 1], para->p, opt), ret);
 
     // t[i] = 1/z[i]
     for (i = ptNums - 1; i > 0; i--) {
@@ -241,7 +248,7 @@ int32_t ECP_Points2Affine(const ECC_Para *para, ECC_Point *pt[], uint32_t ptNums
         if (BN_IsZeroOrOne(pt[i]->z)) {
             continue;
         }
-        GOTO_ERR_IF(para->method->point2AffineWithInv(para, pt[i], pt[i], t[i]), ret);
+        GOTO_ERR_IF(ECP_Point2AffineWithInv(para, pt[i], pt[i], t[i]), ret);
     }
 ERR:
     Points2AffineDestroyTmpData(t, ptNums, inv, opt);
@@ -251,20 +258,11 @@ ERR:
 // consttime
 static int32_t ECP_PointCopyWithMask(ECC_Point *r, const ECC_Point *a, const ECC_Point *b, BN_UINT mask)
 {
-    int32_t ret = BN_CopyWithMask(r->x, a->x, b->x, mask);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = BN_CopyWithMask(r->y, a->y, b->y, mask);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = BN_CopyWithMask(r->z, a->z, b->z, mask);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
+    int32_t ret;
+    GOTO_ERR_IF(BN_CopyWithMask(r->x, a->x, b->x, mask), ret);
+    GOTO_ERR_IF(BN_CopyWithMask(r->y, a->y, b->y, mask), ret);
+    GOTO_ERR_IF(BN_CopyWithMask(r->z, a->z, b->z, mask), ret);
+ERR:
     return ret;
 }
 
@@ -297,27 +295,31 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
     uint32_t bits;
     ECC_Point *base = (pt != NULL) ? ECC_DupPoint(pt) : ECC_GetGFromPara(para);
     ECC_Point *t = ECC_NewPoint(para);
-    if (base == NULL || t == NULL) {
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    if (base == NULL || t == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
     // Convert base to affine.
     GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
     // Add salt to prevent side channels.
-    GOTO_ERR_IF(ECP_PointBlind(para, r), ret);
+    GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
+    GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
+    GOTO_ERR_IF(ECC_PointBlind(para, r), ret);
     bits = BN_Bits(k);
     for (i = bits - 1; i > 0; i--) {
         GOTO_ERR_IF(para->method->pointDouble(para, r, r), ret);
-        GOTO_ERR_IF(para->method->pointAdd(para, t, r, base), ret);
-        mask = BN_GetBit(k, i - 1) ? 0 : (-1);
+        GOTO_ERR_IF(para->method->pointAddAffine(para, t, r, base), ret);
+        mask = BN_GetBit(k, i - 1) ? 0 : BN_MASK;
         // The last bit must be 1, and r must be updated to the latest data.
         GOTO_ERR_IF(ECP_PointCopyWithMask(r, t, r, mask), ret);
     }
+    ECC_PointFromMont(para, r);
 ERR:
     ECC_FreePoint(t);
     ECC_FreePoint(base);
+    BN_OptimizerDestroy(opt);
     return ret;
 }
 
@@ -337,247 +339,6 @@ BN_BigNum *ECP_HalfPGet(const BN_BigNum *p)
 ERR:
     BN_Destroy(halfP);
     return NULL;
-}
-
-inline static int32_t CheckPointerNotNull(const void *p1, const void *p2, const void *p3,
-    int32_t err)
-{
-    if (p1 == NULL || p2 == NULL || p3 == NULL) {
-        return err;
-    }
-    return CRYPT_SUCCESS;
-}
-
-static void DestroyTempBn(
-    BN_BigNum *ta, BN_BigNum *tb, BN_BigNum *tc, BN_BigNum *td)
-{
-    BN_Destroy(ta);
-    BN_Destroy(tb);
-    BN_Destroy(tc);
-    BN_Destroy(td);
-}
-// Assign a value to *ta *tb *tc *td. The original value is ignored.
-// The pointers of the input parameters must be different.
-static int32_t CreateTempBn(BN_BigNum **ta, BN_BigNum **tb, BN_BigNum **tc,
-    BN_BigNum **td, uint32_t bits)
-{
-    *ta = BN_Create(bits);
-    *tb = BN_Create(bits);
-    *tc = BN_Create(bits);
-    *td = BN_Create(bits);
-    if (*ta == NULL || *tb == NULL || *tc == NULL || *td == NULL) {
-        DestroyTempBn(*ta, *tb, *tc, *td);
-        *ta = NULL;
-        *tb = NULL;
-        *tc = NULL;
-        *td = NULL;
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
-}
-
-/**
- prime curve point addition r = a + b, , depending on the method->pointDouble point operation.
- Calculation formula:
-    X3 = (Y2*Z1^3-Y1)^2 - (X2*Z1^2-X1)^2 * (X1+X2*Z1^2)
-    Y3 = (Y2*Z1^3-Y1) * (X1*(X2*Z1^2-X1)^2-X3) - Y1 * (X2*Z1^2-X1)^3
-    Z3 = (X2*Z1^2-X1) * Z1
-*/
-int32_t ECP_PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
-{
-    int32_t ret;
-    if (para == NULL || r == NULL || a == NULL || b == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (BN_IsZero(a->z)) { // if point a is an infinity point, r = b,
-        return ECC_CopyPoint(r, b);
-    }
-    uint32_t bits = BN_Bits(para->p);
-    BN_BigNum *t1 = NULL, *t2 = NULL, *t3 = NULL, *t4 = NULL;
-    BN_Optimizer *opt = BN_OptimizerCreate();
-    CreateTempBn(&t1, &t2, &t3, &t4, bits);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || t4 == NULL || opt == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-
-    GOTO_ERR_IF(BN_ModSqr(t1, a->z, para->p, opt), ret); // Z1^2
-    GOTO_ERR_IF(BN_ModMul(t2, t1, a->z, para->p, opt), ret); // Z1^3
-    GOTO_ERR_IF(BN_ModMul(t1, t1, b->x, para->p, opt), ret); // X2*Z1^2
-    GOTO_ERR_IF(BN_ModMul(t2, t2, b->y, para->p, opt), ret); // Y2*Z1^3
-    GOTO_ERR_IF(BN_ModSubQuick(t1, t1, a->x, para->p, opt), ret); // X2*Z1^2 - X1
-    GOTO_ERR_IF(BN_ModSubQuick(t2, t2, a->y, para->p, opt), ret); // Y2*Z1^3 - Y1
-
-    if (BN_IsZero(t1)) {
-        if (BN_IsZero(t2)) {
-            // If two points are equal, use double for calculation.
-            GOTO_ERR_IF(para->method->pointDouble(para, r, b), ret);
-        } else {
-            // Obtain the infinite point.
-            GOTO_ERR_IF(BN_SetLimb(r->z, 0), ret);
-        }
-        goto ERR;
-    }
-    GOTO_ERR_IF(BN_ModMul(r->z, a->z, t1, para->p, opt), ret); // Z3 = (X2*Z1^2 - X1)*Z1
-
-    GOTO_ERR_IF(BN_ModSqr(t3, t1, para->p, opt), ret); // (X2*Z1^2 - X1)^2
-    GOTO_ERR_IF(BN_ModMul(t4, t1, t3, para->p, opt), ret); // (X2*Z1^2 - X1)^3
-    GOTO_ERR_IF(BN_ModMul(t3, t3, a->x, para->p, opt), ret); // X1*(X2*Z1^2 - X1)^2
-    GOTO_ERR_IF(BN_ModAddQuick(t1, t3, t3, para->p, opt), ret); // 2*X1*(X2*Z1^2 - X1)^2
-    GOTO_ERR_IF(BN_ModSqr(r->x, t2, para->p, opt), ret); // (Y2*Z1^3 - Y1)^2
-    GOTO_ERR_IF(BN_ModSubQuick(r->x, r->x, t1, para->p, opt), ret); // (Y2*Z1^3-Y1)^2 - 2*X1*(X2*Z1^2-X1)^2
-    GOTO_ERR_IF(BN_ModSubQuick(r->x, r->x, t4, para->p, opt), ret); // X3
-    GOTO_ERR_IF(BN_ModSubQuick(t3, t3, r->x, para->p, opt), ret); // X1*(X2*Z1^2-X1)^2 - X3
-    GOTO_ERR_IF(BN_ModMul(t3, t3, t2, para->p, opt), ret); // (Y2*Z1^3 - Y1)*(X1*(X2*Z1^2-X1)^2 - X3)
-    GOTO_ERR_IF(BN_ModMul(t4, t4, a->y, para->p, opt), ret); // Y1*(X2*Z1^2 - X1)^3
-    GOTO_ERR_IF(BN_ModSubQuick(r->y, t3, t4, para->p, opt), ret); // Y3
-ERR:
-    DestroyTempBn(t1, t2, t3, t4);
-    BN_OptimizerDestroy(opt);
-    return ret;
-}
-
-/**
- prime curves point double r = a + a
- Calculation formula:
-    X3 = (3*X1^2+a*Z1^4)^2 - 8*X1*Y1^2
-    Y3 = (3*X1^2+a*Z1^4) * (4*X1*Y1^2-X3) - 8*Y1^4
-    Z3 = 2 * Y1 * Z1
-*/
-int32_t ECP_PointDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
-{
-    int32_t ret;
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    uint32_t bits = BN_Bits(para->p);
-    BN_Optimizer *opt = BN_OptimizerCreate();
-    BN_BigNum *t1 = BN_Create(bits);
-    BN_BigNum *t2 = BN_Create(bits);
-    BN_BigNum *t3 = BN_Create(bits);
-    BN_BigNum *halfP = ECP_HalfPGet(para->p);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || halfP == NULL || opt == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto ERR;
-    }
-    GOTO_ERR_IF(BN_ModSqr(t1, a->z, para->p, opt), ret); // Z1^2
-    GOTO_ERR_IF(BN_ModSqr(t2, t1, para->p, opt), ret); // Z1^4
-    GOTO_ERR_IF(BN_ModMul(t1, t2, para->a, para->p, opt), ret); // a*Z1^4
-    GOTO_ERR_IF(BN_ModSqr(t2, a->x, para->p, opt), ret); // X1^2
-    GOTO_ERR_IF(BN_ModAddQuick(t3, t2, t2, para->p, opt), ret); // 2*X1^2
-    GOTO_ERR_IF(BN_ModAddQuick(t2, t3, t2, para->p, opt), ret); // 3*X1^2
-    GOTO_ERR_IF(BN_ModAddQuick(t2, t1, t2, para->p, opt), ret); // t2 = 3*X1^2 + a*Z1^4
-
-    GOTO_ERR_IF(BN_ModAddQuick(r->y, a->y, a->y, para->p, opt), ret); // 2*Y1
-    GOTO_ERR_IF(BN_ModMul(r->z, r->y, a->z, para->p, opt), ret); // Z3 = 2*Y1*Z1
-
-    GOTO_ERR_IF(BN_ModSqr(r->y, r->y, para->p, opt), ret); // 4*Y1^2
-    GOTO_ERR_IF(BN_ModMul(t3, r->y, a->x, para->p, opt), ret); // t3 = 4*X1*Y1^2
-
-    GOTO_ERR_IF(BN_ModSqr(r->y, r->y, para->p, opt), ret); // 16*Y1^4
-    GOTO_ERR_IF(BN_ModMul(r->y, r->y, halfP, para->p, opt), ret); // y3 = 8*Y1^4
-
-    GOTO_ERR_IF(BN_ModSqr(r->x, t2, para->p, opt), ret); // (3*X1^2 + a*Z1^4)^2
-    GOTO_ERR_IF(BN_ModAddQuick(t1, t3, t3, para->p, opt), ret); // 8*X1*Y1^2
-    GOTO_ERR_IF(BN_ModSubQuick(r->x, r->x, t1, para->p, opt), ret); // X3 = (3*X1^2 + a*Z1^4)^2 - 8*X1*Y1^2
-
-    GOTO_ERR_IF(BN_ModSubQuick(t1, t3, r->x, para->p, opt), ret); // 4*X1*Y1^2 - X3
-    GOTO_ERR_IF(BN_ModMul(t1, t1, t2, para->p, opt), ret); // (3*X1^2 + a*Z1^4)*(4*X1*Y1^2 - X3)
-    GOTO_ERR_IF(BN_ModSubQuick(r->y, t1, r->y, para->p, opt), ret); // Y3 = (3*X1^2 + a*Z1^4)*(4*X1*Y1^2 - X3) - 8*Y1^4
-
-ERR:
-    BN_Destroy(t1);
-    BN_Destroy(t2);
-    BN_Destroy(t3);
-    BN_Destroy(halfP);
-    BN_OptimizerDestroy(opt);
-    return ret;
-}
-
-/**
- prime curves point multi-double r = (2^m)*a
- Calculation procedure:
-    1. If the point is an infinity point, return the infinity point.
-    2. Y = 2*Y, W = Z^4
-    3. If m > 0, repeat the following steps:
-            A = 3*X^2 + a*W
-            B = X*Y^2
-            X = A^2 - 2*B
-            Z = Z*Y
-            m = m - 1
-            if m > 0 then W = W*Y^4
-            Y = 2*A*(B-X)-Y^4
-    4. Return (X, Y/2, Z)
-*/
-int32_t ECP_PointMultDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m)
-{
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    uint32_t tm = m;
-    int32_t ret;
-    uint32_t bits = BN_Bits(para->p);
-    BN_BigNum *t1 = NULL, *t2 = NULL, *ta = NULL, *tb = NULL;
-    BN_BigNum *tw = BN_Create(bits);
-    BN_BigNum *halfP = ECP_HalfPGet(para->p);
-    BN_Optimizer *opt = BN_OptimizerCreate();
-    GOTO_ERR_IF(CreateTempBn(&t1, &t2, &ta, &tb, bits), ret);
-    GOTO_ERR_IF(CheckPointerNotNull(tw, halfP, opt, CRYPT_MEM_ALLOC_FAIL), ret); // Check pointer not null
-
-    GOTO_ERR_IF(BN_Copy(r->x, a->x), ret);
-    GOTO_ERR_IF(BN_ModAddQuick(r->y, a->y, a->y, para->p, opt), ret);
-    GOTO_ERR_IF(BN_Copy(r->z, a->z), ret);
-
-    GOTO_ERR_IF(BN_ModSqr(tw, a->z, para->p, opt), ret);
-    GOTO_ERR_IF(BN_ModSqr(tw, tw, para->p, opt), ret); // Z^4
-
-    while (tm > 0) {
-        // A = 3*X^2 + a*W
-        GOTO_ERR_IF(BN_ModSqr(t1, r->x, para->p, opt), ret); // X^2
-        GOTO_ERR_IF(BN_ModAddQuick(ta, t1, t1, para->p, opt), ret);
-        GOTO_ERR_IF(BN_ModAddQuick(ta, ta, t1, para->p, opt), ret); // 3*X^2
-        GOTO_ERR_IF(BN_ModMul(t2, para->a, tw, para->p, opt), ret); // a*W
-        GOTO_ERR_IF(BN_ModAddQuick(ta, ta, t2, para->p, opt), ret); // A = 3*X^2 + a*W
-
-        // B = X*Y^2
-        GOTO_ERR_IF(BN_ModSqr(t1, r->y, para->p, opt), ret); // t1 = Y^2
-        GOTO_ERR_IF(BN_ModMul(tb, t1, r->x, para->p, opt), ret); // B = X*Y^2
-
-        GOTO_ERR_IF(BN_ModSqr(t1, t1, para->p, opt), ret); // t1 = Y^4
-
-        // X = A^2 - 2*B
-        GOTO_ERR_IF(BN_ModSqr(r->x, ta, para->p, opt), ret); // A^2
-        GOTO_ERR_IF(BN_ModAddQuick(t2, tb, tb, para->p, opt), ret); // 2*B
-        GOTO_ERR_IF(BN_ModSubQuick(r->x, r->x, t2, para->p, opt), ret); // X = A^2 - 2*B
-
-        // Z = Z*Y
-        GOTO_ERR_IF(BN_ModMul(r->z, r->z, r->y, para->p, opt), ret);
-
-        // m = m - 1
-        tm--;
-        if (tm > 0) {
-            GOTO_ERR_IF(BN_ModMul(tw, tw, t1, para->p, opt), ret); // W = W*Y^4
-        }
-        // Y = 2*A*(B-X)-Y^4
-        GOTO_ERR_IF(BN_ModSubQuick(r->y, tb, r->x, para->p, opt), ret); // (B-X)
-        GOTO_ERR_IF(BN_ModMul(r->y, r->y, ta, para->p, opt), ret); // A*(B-X)
-        GOTO_ERR_IF(BN_ModAddQuick(r->y, r->y, r->y, para->p, opt), ret); // 2*A*(B-X)
-        GOTO_ERR_IF(BN_ModSubQuick(r->y, r->y, t1, para->p, opt), ret); // Y = 2*A*(B-X)-Y^4
-    }
-    // return (X, Y/2, Z)
-    GOTO_ERR_IF(BN_ModMul(r->y, r->y, halfP, para->p, opt), ret);
-ERR:
-    BN_Destroy(tw);
-    BN_Destroy(halfP);
-    DestroyTempBn(t1, t2, ta, tb);
-    BN_OptimizerDestroy(opt);
-    return ret;
 }
 
 // The z coordinate of point pt multiplied by z.
@@ -637,7 +398,12 @@ ERR:
     return ret;
 }
 
-int32_t ECP_PointBlind(const ECC_Para *para, ECC_Point *pt)
+/*
+ * relate to the paper "Resistance against Differential Power Analysis for Elliptic Curve Cryptosystems"
+ * chapter 5.3 Third Countermeasure: Randomized Projective Coordinates
+ * reference: http://www.crypto-uni.lu/jscoron/publications/dpaecc.pdf
+ */
+int32_t ECC_PointBlind(const ECC_Para *para, ECC_Point *pt)
 {
     if (para == NULL || pt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -656,7 +422,7 @@ int32_t ECP_PointBlind(const ECC_Para *para, ECC_Point *pt)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    // Generate random numbers as salt information.
+    // Generate random numbers to randomize z.
     GOTO_ERR_IF(BN_RandRange(blind, para->p), ret);
     if (BN_IsZero(blind)) {
         ret = CRYPT_ECC_POINT_BLIND_WITH_ZERO;
@@ -712,6 +478,19 @@ ERR:
     return ret;
 }
 
+int32_t ECP_PointCopy(const ECC_Para *para, ECC_Point *a, const ECC_Point *b)
+{
+    (void)para;
+    int32_t ret;
+
+    a->id = b->id;
+    GOTO_ERR_IF(BN_Copy(a->x, b->x), ret);
+    GOTO_ERR_IF(BN_Copy(a->y, b->y), ret);
+    GOTO_ERR_IF(BN_Copy(a->z, b->z), ret);
+ERR:
+    return ret;
+}
+
 // Cartesian coordinate point inversion.
 int32_t ECP_PointInvertAtAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
 {
@@ -727,19 +506,10 @@ int32_t ECP_PointInvertAtAffine(const ECC_Para *para, ECC_Point *r, const ECC_Po
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
-    if (!BN_IsOne(a->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_NOT_AFFINE);
-        return CRYPT_ECC_POINT_NOT_AFFINE;
-    }
-    int32_t ret = ECC_CopyPoint(r, a);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = BN_Sub(r->y, para->p, r->y);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
+    int32_t ret;
+    GOTO_ERR_IF(ECC_CopyPoint(r, a), ret);
+    GOTO_ERR_IF(BN_Sub(r->y, para->p, r->y), ret);
+ERR:
     return ret;
 }
 
@@ -751,6 +521,7 @@ static int32_t ECP_PointPreCompute(const ECC_Para *para, ECC_Point *windows[], c
     int32_t ret;
     ECC_Point *doubleP = ECC_NewPoint(para);
     windows[0] = ECC_DupPoint(pt);
+    BN_Optimizer *opt = NULL;
     uint32_t i;
     for (i = 1; i < WINDOW_TABLE_SIZE; i++) {
         windows[i] = ECC_NewPoint(para);
@@ -767,15 +538,21 @@ static int32_t ECP_PointPreCompute(const ECC_Para *para, ECC_Point *windows[], c
             goto ERR;
         }
     }
+    opt = BN_OptimizerCreate();
+    if (opt == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    GOTO_ERR_IF(ECC_PointToMont(para, windows[0], opt), ret);
     GOTO_ERR_IF(para->method->pointDouble(para, doubleP, windows[0]), ret);
-    GOTO_ERR_IF(para->method->point2Affine(para, doubleP, doubleP), ret);
     for (i = 1; i < (WINDOW_TABLE_SIZE >> 1); i++) {
         GOTO_ERR_IF(para->method->pointAdd(para, windows[i], windows[i - 1], doubleP), ret);
     }
-    GOTO_ERR_IF(ECP_Points2Affine(para, windows, WINDOW_TABLE_SIZE >> 1), ret);
     for (i = WINDOW_TABLE_SIZE >> 1; i < WINDOW_TABLE_SIZE; i++) {
         GOTO_ERR_IF(ECP_PointInvertAtAffine(para, windows[i], windows[i - (WINDOW_TABLE_SIZE >> 1)]), ret);
     }
+    BN_OptimizerDestroy(opt);
     ECC_FreePoint(doubleP);
     return ret;
 ERR:
@@ -783,6 +560,7 @@ ERR:
         ECC_FreePoint(windows[i]);
         windows[i] = NULL;
     }
+    BN_OptimizerDestroy(opt);
     ECC_FreePoint(doubleP);
     return ret;
 }
@@ -793,15 +571,14 @@ static int32_t ECP_ParaPrecompute(ECC_Para *para)
         // The pre-computation table already exists.
         return CRYPT_SUCCESS;
     }
+    int32_t ret;
     ECC_Point *pt = ECC_GetGFromPara(para);
     if (pt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = ECP_PointPreCompute(para, para->tableG, pt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
+    GOTO_ERR_IF(ECP_PointPreCompute(para, para->tableG, pt), ret);
+ERR:
     ECC_FreePoint(pt);
     return ret;
 }
@@ -936,36 +713,25 @@ static int32_t GetFirstData(const ECC_Para *para, ECC_Point *t, MulAddOffData *o
     if (offData->codeK1->baseBits == offData->codeK2->baseBits) {
         int8_t offset1 = NUMTOOFFSET(offData->codeK1->num[offData->offsetK1]);
         int8_t offset2 = NUMTOOFFSET(offData->codeK2->num[offData->offsetK2]);
-        ret = para->method->pointAdd(para, t, windowsG[offset1], windowsP[offset2]);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        GOTO_ERR_IF(para->method->pointAdd(para, t, windowsG[offset1], windowsP[offset2]), ret);
         offData->offsetK1++;
         offData->offsetK2++;
         offData->bit1 = offData->codeK1->wide[offData->offsetK1 - 1];
         offData->bit2 = offData->codeK2->wide[offData->offsetK2 - 1];
     } else if (offData->codeK1->baseBits > offData->codeK2->baseBits) {
         int8_t offset = NUMTOOFFSET(offData->codeK1->num[offData->offsetK1]);
-        ret = ECC_CopyPoint(t, windowsG[offset]);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        GOTO_ERR_IF(ECC_CopyPoint(t, windowsG[offset]), ret);
         offData->offsetK1++;
         offData->bit1 = offData->codeK1->wide[offData->offsetK1 - 1];
         offData->bit2 = offData->baseBits - offData->codeK2->baseBits;
     } else {
         int8_t offset = NUMTOOFFSET(offData->codeK2->num[offData->offsetK2]);
-        ret = ECC_CopyPoint(t, windowsP[offset]);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
+        GOTO_ERR_IF(ECC_CopyPoint(t, windowsP[offset]), ret);
         offData->offsetK2++;
         offData->bit1 = offData->baseBits - offData->codeK1->baseBits;
         offData->bit2 = offData->codeK2->wide[offData->offsetK2 - 1];
     }
+ERR:
     return ret;
 }
 
@@ -1065,7 +831,6 @@ int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
     if (BN_IsZero(k1) || BN_IsZero(k2)) {
         return KZeroHandle(para, r, k1, k2, pt);
     }
-    uint32_t i;
     MulAddOffData offData = { 0 };
     ECC_Point *windowsP[WINDOW_TABLE_SIZE] = { 0 };
     ECC_Point **windowsG = NULL;
@@ -1102,8 +867,9 @@ int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
         offData.bit2 -= offData.bit;
         offData.baseBits -= offData.bit;
     }
+    ECC_PointFromMont(para, r);
 ERR:
-    for (i = 0; i < WINDOW_TABLE_SIZE; i++) {
+    for (uint32_t i = 0; i < WINDOW_TABLE_SIZE; i++) {
         // Clear the pre-computation table.
         ECC_FreePoint(windowsP[i]);
     }
@@ -1112,7 +878,7 @@ ERR:
     return ret;
 }
 
-static int32_t PointParaCheck(const ECC_Para *para, const ECC_Point *pt, CRYPT_PKEY_PointFormat format)
+static int32_t PointParaCheck(const ECC_Para *para, const ECC_Point *pt, int32_t format)
 {
     int32_t ret = ECP_PointAtInfinity(para, pt);
     if (ret != CRYPT_SUCCESS) {
@@ -1204,19 +970,24 @@ static int32_t GetYData(const ECC_Para *para, ECC_Point *pt, bool pcBit)
     uint32_t bits = BN_Bits(para->p);
     BN_BigNum *t1 = BN_Create(bits);
     BN_BigNum *t2 = BN_Create(bits);
+    BN_BigNum *dupA = BN_Dup(para->a);
+    BN_BigNum *dupB = BN_Dup(para->b);
     BN_Optimizer *opt = BN_OptimizerCreate();
     int32_t ret;
-    if (t1 == NULL || t2 == NULL || opt == NULL) {
+    if (t1 == NULL || t2 == NULL || opt == NULL || dupA == NULL || dupB == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-
+    if (para->method->bnMontDec != NULL) {
+        para->method->bnMontDec(dupA, para->montP);
+        para->method->bnMontDec(dupB, para->montP);
+    }
     GOTO_ERR_IF(BN_ModSqr(t1, pt->x, para->p, opt), ret);
     GOTO_ERR_IF(BN_ModMul(t1, t1, pt->x, para->p, opt), ret);
-    GOTO_ERR_IF(BN_ModMul(t2, para->a, pt->x, para->p, opt), ret);
+    GOTO_ERR_IF(BN_ModMul(t2, dupA, pt->x, para->p, opt), ret);
     GOTO_ERR_IF(BN_ModAdd(t1, t1, t2, para->p, opt), ret);
-    GOTO_ERR_IF(BN_ModAdd(t1, t1, para->b, para->p, opt), ret);
+    GOTO_ERR_IF(BN_ModAdd(t1, t1, dupB, para->p, opt), ret);
     GOTO_ERR_IF(BN_ModSqrt(pt->y, t1, para->p, opt), ret);
 
     if (BN_GetBit(pt->y, 0) != pcBit) { // if parity is inconsistent, y = -y
@@ -1225,6 +996,8 @@ static int32_t GetYData(const ECC_Para *para, ECC_Point *pt, bool pcBit)
 ERR:
     BN_Destroy(t1);
     BN_Destroy(t2);
+    BN_Destroy(dupA);
+    BN_Destroy(dupB);
     BN_OptimizerDestroy(opt);
     return ret;
 }

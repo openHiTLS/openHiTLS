@@ -22,6 +22,14 @@
 #include <stdint.h>
 #include "bn_basic.h"
 
+#if defined(HITLS_CRYPTO_BN_X8664)
+    #include "bn_bincal_x8664.h"
+#elif defined(HITLS_CRYPTO_BN_ARMV8)
+    #include "bn_bincal_armv8.h"
+#else
+    #include "bn_bincal_noasm.h"
+#endif
+
 #ifdef __cplusplus
 extern "c" {
 #endif
@@ -32,15 +40,6 @@ extern "c" {
         BN_UINT macroTmpT = (a) + (b);     \
         (carry) = macroTmpT < (a) ? 1 : 0; \
         (r) = macroTmpT;                   \
-    } while (0)
-
-/* r = a + b + c, input 'carry' means carry. Note that a and carry cannot be the same variable. */
-#define ADD_ABC(carry, r, a, b, c)      \
-    do {                                \
-        BN_UINT macroTmpS = (b) + (c);        \
-        carry = (macroTmpS < (c)) ? 1 : 0;    \
-        (r) = macroTmpS + (a);                \
-        carry += ((r) < macroTmpS) ? 1 : 0;   \
     } while (0)
 
 /* r = a - b, input 'borrow' means borrow digit */
@@ -61,99 +60,22 @@ extern "c" {
         borrow = macroTmpB;                       \
     } while (0)
 
-/* Takes the low bit and assigns it to the high bit. */
-#define BN_UINT_LO_TO_HI(t) ((t) << (BN_UINT_BITS >> 1))
-
-/* Takes the high bit and assigns it to the high bit. */
-#define BN_UINT_HI_TO_HI(t) ((t) & ((BN_UINT)0 - ((BN_UINT)1 << (BN_UINT_BITS >> 1))))
-
-/* Takes the low bit and assigns it to the low bit. */
-#define BN_UINT_LO(t) ((t) & (((BN_UINT)1 << (BN_UINT_BITS >> 1)) - 1))
-
-/* Takes the high bit and assigns it to the low bit. */
-#define BN_UINT_HI(t) ((t) >> (BN_UINT_BITS >> 1))
+#define BN_UINT_HALF_BITS (BN_UINT_BITS >> 1)
 
 /* carry value of the upper part */
-#define BN_UINT_HC ((BN_UINT)1 << (BN_UINT_BITS >> 1))
+#define BN_UINT_HC ((BN_UINT)1 << BN_UINT_HALF_BITS)
 
-#define MUL_AB(wh, wl, u, v)                                \
-    do {                                                    \
-        BN_UINT macroTmpUl = BN_UINT_LO(u);                       \
-        BN_UINT macroTmpUh = BN_UINT_HI(u);                       \
-        BN_UINT macroTmpVl = BN_UINT_LO(v);                       \
-        BN_UINT macroTmpVh = BN_UINT_HI(v);                       \
-                                                            \
-        BN_UINT macroTmpX0 = macroTmpUl * macroTmpVl;            \
-        BN_UINT macroTmpX1 = macroTmpUl * macroTmpVh;            \
-        BN_UINT macroTmpX2 = macroTmpUh * macroTmpVl;            \
-        BN_UINT macroTmpX3 = macroTmpUh * macroTmpVh;            \
-                                                              \
-        macroTmpX1 += BN_UINT_HI(macroTmpX0);                             \
-        macroTmpX1 += macroTmpX2;                                         \
-        if (macroTmpX1 < macroTmpX2) { macroTmpX3 += BN_UINT_HC; }              \
-                                                              \
-        (wh) = macroTmpX3 + BN_UINT_HI(macroTmpX1);                       \
-        (wl) = (macroTmpX1 << (BN_UINT_BITS >> 1)) | BN_UINT_LO(macroTmpX0); \
-    } while (0)
+/* Takes the low bit and assigns it to the high bit. */
+#define BN_UINT_LO_TO_HI(t) ((t) << BN_UINT_HALF_BITS)
 
-#define SQR_A(wh, wl, u)                       \
-    do {                                       \
-        BN_UINT macroTmpUl = BN_UINT_LO(u);          \
-        BN_UINT macroTmpUh = BN_UINT_HI(u);          \
-                                               \
-        BN_UINT macroTmpX0 = macroTmpUl * macroTmpUl;            \
-        BN_UINT macroTmpX1 = macroTmpUl * macroTmpUh;            \
-        BN_UINT macroTmpX2 = macroTmpUh * macroTmpUh;            \
-                                               \
-        BN_UINT macroTmpT = macroTmpX1 << 1;               \
-        macroTmpT += BN_UINT_HI(macroTmpX0);                                \
-        if (macroTmpT < macroTmpX1) { macroTmpX2 += BN_UINT_HC; }                 \
-                                                                \
-        (wh) = macroTmpX2 + BN_UINT_HI(macroTmpT);                          \
-        (wl) = (macroTmpT << (BN_UINT_BITS >> 1)) | BN_UINT_LO(macroTmpX0); \
-    } while (0)
+/* Takes the high bit and assigns it to the high bit. */
+#define BN_UINT_HI_TO_HI(t) ((t) & ((BN_UINT)0 - BN_UINT_HC))
 
-/* nh|nl / d = q...r */
-#define DIV_ND(q, r, nh, nl, d)                                 \
-    do {                                                        \
-        BN_UINT macroTmpD1, macroTmpD0, macroTmpQ1, macroTmpQ0, macroTmpR1, macroTmpR0, macroTmpM;        \
-                                                                \
-        macroTmpD1 = BN_UINT_HI(d);                                   \
-        macroTmpD0 = BN_UINT_LO(d);                                   \
-                                                                \
-        macroTmpQ1 = (nh) / macroTmpD1;                                     \
-        macroTmpR1 = (nh) - macroTmpQ1 * macroTmpD1;                              \
-        macroTmpM = macroTmpQ1 * macroTmpD0;                                      \
-        macroTmpR1 = (macroTmpR1 << (BN_UINT_BITS >> 1)) | BN_UINT_HI(nl);  \
-        if (macroTmpR1 < macroTmpM) {                                       \
-            macroTmpQ1--, macroTmpR1 += (d);                                \
-            if (macroTmpR1 >= (d)) {                                  \
-                if (macroTmpR1 < macroTmpM) {                               \
-                    macroTmpQ1--;                                     \
-                    macroTmpR1 += (d);                                \
-                }                                               \
-            }                                                   \
-        }                                                       \
-        macroTmpR1 -= macroTmpM;                                            \
-                                                                \
-        macroTmpQ0 = macroTmpR1 / macroTmpD1;                                     \
-        macroTmpR0 = macroTmpR1 - macroTmpQ0 * macroTmpD1;                              \
-        macroTmpM = macroTmpQ0 * macroTmpD0;                                      \
-        macroTmpR0 = (macroTmpR0 << (BN_UINT_BITS >> 1)) | BN_UINT_LO(nl);  \
-        if (macroTmpR0 < macroTmpM) {                                       \
-            macroTmpQ0--, macroTmpR0 += (d);                                \
-            if (macroTmpR0 >= (d)) {                                  \
-                if (macroTmpR0 < macroTmpM) {                               \
-                    macroTmpQ0--;                                     \
-                    macroTmpR0 += (d);                                \
-                }                                               \
-            }                                                   \
-        }                                                       \
-        macroTmpR0 -= macroTmpM;                                            \
-                                                                \
-        (q) = (macroTmpQ1 << (BN_UINT_BITS >> 1)) | macroTmpQ0;             \
-        (r) = macroTmpR0;                                             \
-    } while (0)
+/* Takes the low bit and assigns it to the low bit. */
+#define BN_UINT_LO(t) ((t) & (BN_UINT_HC - 1))
+
+/* Takes the high bit and assigns it to the low bit. */
+#define BN_UINT_HI(t) ((t) >> BN_UINT_HALF_BITS)
 
 /* copy bytes, ensure that dstLen >= srcLen */
 #define BN_COPY_BYTES(dst, dstlen, src, srclen)                             \
@@ -163,14 +85,14 @@ extern "c" {
         for (; macroTmpI < (dstlen); macroTmpI++) { (dst)[macroTmpI] = 0; }                   \
     } while (0)
 
-// Modular operation, satisfy d < (1 << (BN_UINT_BITS >> 1)) r = nh | nl % d
+// Modular operation, satisfy d < (1 << BN_UINT_HALF_BITS) r = nh | nl % d
 #define MOD_HALF(r, nh, nl, d)                                  \
     do {                                                        \
         BN_UINT macroTmpD = (d);                                      \
         (r) = (nh) % macroTmpD;                                       \
-        (r) = ((r) << (BN_UINT_BITS >> 1)) | BN_UINT_HI((nl));  \
+        (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_HI((nl));  \
         (r) = (r) % macroTmpD;                                        \
-        (r) = ((r) << (BN_UINT_BITS >> 1)) | BN_UINT_LO((nl));  \
+        (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_LO((nl));  \
         (r) = (r) % macroTmpD;                                        \
     } while (0)
 
@@ -190,7 +112,7 @@ do {                                            \
     macroTmpX1 += macroTmpX2;                               \
     (c) += (macroTmpX1 < macroTmpX2) ? BN_UINT_HC : 0;      \
     macroTmpX2 = macroTmpX0;                                \
-    macroTmpX0 += macroTmpX1 << (BN_UINT_BITS >> 1);        \
+    macroTmpX0 += macroTmpX1 << BN_UINT_HALF_BITS;        \
     (c) += (macroTmpX0 < macroTmpX2) ? 1 : 0;               \
     (c) += BN_UINT_HI(macroTmpX1);                    \
     (c) += macroTmpX3;                                \
@@ -198,60 +120,14 @@ do {                                            \
     (c) += ((r) < macroTmpX0) ? 1 : 0;                \
 } while (0)
 
-/* h|m|l = h|m|l + u * v. Ensure that the value of h is not too large to avoid carry. */
-#define MULADD_AB(h, m, l, u, v)                            \
-    do {                                                    \
-        BN_UINT macroTmpUl = BN_UINT_LO(u);                       \
-        BN_UINT macroTmpUh = BN_UINT_HI(u);                       \
-        BN_UINT macroTmpVl = BN_UINT_LO(v);                       \
-        BN_UINT macroTmpVh = BN_UINT_HI(v);                       \
-                                                            \
-        BN_UINT macroTmpX3 = macroTmpUh * macroTmpVh;            \
-        BN_UINT macroTmpX2 = macroTmpUh * macroTmpVl;            \
-        BN_UINT macroTmpX1 = macroTmpUl * macroTmpVh;            \
-        BN_UINT macroTmpX0 = macroTmpUl * macroTmpVl;            \
-        macroTmpX1 += BN_UINT_HI(macroTmpX0);              \
-        macroTmpX0 = (u) * (v); \
-        macroTmpX1 += macroTmpX2;                          \
-        macroTmpX3 = macroTmpX3 + BN_UINT_HI(macroTmpX1); \
-            \
-        (l) += macroTmpX0; \
-        \
-        if (macroTmpX1 < macroTmpX2) { macroTmpX3 += BN_UINT_HC; }              \
-        if ((l) < macroTmpX0) { macroTmpX3 += 1; } \
-        (m) += macroTmpX3; \
-        if ((m) < macroTmpX3) { (h)++; } \
+/* r = a + b + c, input 'carry' means carry. Note that a and carry cannot be the same variable. */
+#define ADD_ABC(carry, r, a, b, c)      \
+    do {                                \
+        BN_UINT macroTmpS = (b) + (c);        \
+        carry = (macroTmpS < (c)) ? 1 : 0;    \
+        (r) = macroTmpS + (a);                \
+        carry += ((r) < macroTmpS) ? 1 : 0;   \
     } while (0)
-
-/* h|m|l = h|m|l + 2 * u * v. Ensure that the value of h is not too large to avoid carry. */
-#define MULADD_AB2(h, m, l, u, v)                            \
-    do {                                     \
-        MULADD_AB((h), (m), (l), (u), (v));   \
-        MULADD_AB((h), (m), (l), (u), (v));   \
-    } while (0)
-
-/* h|m|l = h|m|l + v * v. Ensure that the value of h is not too large to avoid carry. */
-#define SQRADD_A(h, m, l, v)  \
-do { \
-    BN_UINT macroTmpVl = BN_UINT_LO(v);                       \
-    BN_UINT macroTmpVh = BN_UINT_HI(v);                       \
-                                                        \
-    BN_UINT macroTmpX3 = macroTmpVh * macroTmpVh;            \
-    BN_UINT macroTmpX2 = macroTmpVh * macroTmpVl;            \
-    BN_UINT macroTmpX1 = macroTmpX2;            \
-    BN_UINT macroTmpX0 = macroTmpVl * macroTmpVl;            \
-    macroTmpX1 += BN_UINT_HI(macroTmpX0);              \
-    macroTmpX0 = (v) * (v); \
-    macroTmpX1 += macroTmpX2;                          \
-    macroTmpX3 = macroTmpX3 + BN_UINT_HI(macroTmpX1); \
-        \
-    (l) += macroTmpX0; \
-    \
-    if (macroTmpX1 < macroTmpX2) { macroTmpX3 += BN_UINT_HC; }              \
-    if ((l) < macroTmpX0) { macroTmpX3 += 1; } \
-    (m) += macroTmpX3; \
-    if ((m) < macroTmpX3) { (h)++; } \
-} while (0)
 
 BN_UINT BinAdd(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint32_t n);
 
@@ -262,6 +138,8 @@ BN_UINT BinInc(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT w);
 BN_UINT BinDec(BN_UINT *r, const BN_UINT *a, uint32_t n, BN_UINT w);
 
 uint32_t BinRshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits);
+
+BN_UINT BinSubMul(BN_UINT *r, const BN_UINT *a, BN_UINT aSize, BN_UINT m);
 
 uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits);
 
@@ -281,6 +159,7 @@ uint32_t BinBits(const BN_UINT *data, uint32_t size);
 
 uint32_t BinDiv(BN_UINT *q, uint32_t *qSize, BN_UINT *x, uint32_t xSize, BN_UINT *y, uint32_t ySize);
 
+#ifdef HITLS_CRYPTO_BN_COMBA
 uint32_t SpaceSize(uint32_t size);
 
 // Perform a multiplication calculation of 4 blocks of data, r = a^2,
@@ -300,6 +179,7 @@ void SqrComba6(BN_UINT *r, const BN_UINT *a);
 void MulConquer(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint32_t size, BN_UINT *space, bool consttime);
 
 void SqrConquer(BN_UINT *r, const BN_UINT *a, uint32_t size, BN_UINT *space, bool consttime);
+#endif
 
 int32_t MontSqrBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime);
 
@@ -314,6 +194,6 @@ void ReduceCore(BN_UINT *r, BN_UINT *x, const BN_UINT *m, uint32_t mSize, BN_UIN
 }
 #endif
 
-#endif // HITLS_CRYPTO_BN
+#endif /* HITLS_CRYPTO_BN */
 
-#endif // BN_BINCAL_H
+#endif

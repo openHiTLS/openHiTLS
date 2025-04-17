@@ -34,6 +34,15 @@ typedef union Adrs SlhDsaAdrs;
 CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtx(void);
 
 /**
+ * @brief Create a new SLH-DSA context
+ * 
+ * @param libCtx Pointer to the library context
+ * 
+ * @return CryptSlhDsaCtx* Pointer to the new SLH-DSA context
+ */
+CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx);
+
+/**
  * @brief Free a SLH-DSA context
  * 
  * @param ctx Pointer to the SLH-DSA context

@@ -14,7 +14,8 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_SHA512
+#if defined(HITLS_CRYPTO_SHA256) && !defined(HITLS_CRYPTO_SHA512_SMALL_MEM)
+
 #include "crypt_sha2.h"
 #include "crypt_utils.h"
 #include "sha2_core.h"
@@ -47,8 +48,8 @@ static const uint64_t K512[80] = {
     U64(0x4cc5d4becb3e42b6), U64(0x597f299cfc657e2a), U64(0x5fcb6fab3ad6faec), U64(0x6c44198c4a475817),
 };
 
-#undef ROUND00_16
-#undef ROUND16_80
+#undef ROUND00_15
+#undef ROUND16_79
 
 #define SHA512_CH(x, y, z) (((x) & (y)) ^ ((~(x)) & (z)))
 #define SHA512_MAJ(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
@@ -64,13 +65,13 @@ do { \
     (h) += SHA512_BSIG0(a) + SHA512_MAJ(a, b, c); \
 } while (0)
 
-#define ROUND00_16(w, a, b, c, d, e, f, g, h, t, M) \
+#define ROUND00_15(w, a, b, c, d, e, f, g, h, t, M) \
 do { \
     (w)[t] = Uint64FromBeBytes((M) + (t) * 8); \
     SHA512_ROUND(a, b, c, d, e, f, g, h, t, t, w); \
 } while (0)
 
-#define ROUND16_80(w, a, b, c, d, e, f, g, h, t, s) \
+#define ROUND16_79(w, a, b, c, d, e, f, g, h, t, s) \
 do { \
     (w)[s] += SHA512_SSIG1((w)[((s) + 14) & 0xF]) + (w)[((s) + 9) & 0xF] + SHA512_SSIG0((w)[((s) + 1) & 0xF]); \
     SHA512_ROUND(a, b, c, d, e, f, g, h, (t) + (s), s, w); \
@@ -93,41 +94,41 @@ void SHA512CompressMultiBlocks(uint64_t hash[8], const uint8_t *bl, uint32_t bcn
         uint64_t g = hash[6];
         uint64_t h = hash[7];
 
-        ROUND00_16(w, a, b, c, d, e, f, g, h, 0, block);
-        ROUND00_16(w, h, a, b, c, d, e, f, g, 1, block);
-        ROUND00_16(w, g, h, a, b, c, d, e, f, 2, block);
-        ROUND00_16(w, f, g, h, a, b, c, d, e, 3, block);
-        ROUND00_16(w, e, f, g, h, a, b, c, d, 4, block);
-        ROUND00_16(w, d, e, f, g, h, a, b, c, 5, block);
-        ROUND00_16(w, c, d, e, f, g, h, a, b, 6, block);
-        ROUND00_16(w, b, c, d, e, f, g, h, a, 7, block);
-        ROUND00_16(w, a, b, c, d, e, f, g, h, 8, block);
-        ROUND00_16(w, h, a, b, c, d, e, f, g, 9, block);
-        ROUND00_16(w, g, h, a, b, c, d, e, f, 10, block);
-        ROUND00_16(w, f, g, h, a, b, c, d, e, 11, block);
-        ROUND00_16(w, e, f, g, h, a, b, c, d, 12, block);
-        ROUND00_16(w, d, e, f, g, h, a, b, c, 13, block);
-        ROUND00_16(w, c, d, e, f, g, h, a, b, 14, block);
-        ROUND00_16(w, b, c, d, e, f, g, h, a, 15, block);
+        ROUND00_15(w, a, b, c, d, e, f, g, h, 0, block);
+        ROUND00_15(w, h, a, b, c, d, e, f, g, 1, block);
+        ROUND00_15(w, g, h, a, b, c, d, e, f, 2, block);
+        ROUND00_15(w, f, g, h, a, b, c, d, e, 3, block);
+        ROUND00_15(w, e, f, g, h, a, b, c, d, 4, block);
+        ROUND00_15(w, d, e, f, g, h, a, b, c, 5, block);
+        ROUND00_15(w, c, d, e, f, g, h, a, b, 6, block);
+        ROUND00_15(w, b, c, d, e, f, g, h, a, 7, block);
+        ROUND00_15(w, a, b, c, d, e, f, g, h, 8, block);
+        ROUND00_15(w, h, a, b, c, d, e, f, g, 9, block);
+        ROUND00_15(w, g, h, a, b, c, d, e, f, 10, block);
+        ROUND00_15(w, f, g, h, a, b, c, d, e, 11, block);
+        ROUND00_15(w, e, f, g, h, a, b, c, d, 12, block);
+        ROUND00_15(w, d, e, f, g, h, a, b, c, 13, block);
+        ROUND00_15(w, c, d, e, f, g, h, a, b, 14, block);
+        ROUND00_15(w, b, c, d, e, f, g, h, a, 15, block);
 
-        // 16th - 80th round of operation, corresponding to steps 1 and 3 in rfc6234 6.4
+        // 16th - 79th round of operation, corresponding to steps 1 and 3 in rfc6234 6.4
         for (t = 16; t < 80; t += 16) {
-            ROUND16_80(w, a, b, c, d, e, f, g, h, t, 0);
-            ROUND16_80(w, h, a, b, c, d, e, f, g, t, 1);
-            ROUND16_80(w, g, h, a, b, c, d, e, f, t, 2);
-            ROUND16_80(w, f, g, h, a, b, c, d, e, t, 3);
-            ROUND16_80(w, e, f, g, h, a, b, c, d, t, 4);
-            ROUND16_80(w, d, e, f, g, h, a, b, c, t, 5);
-            ROUND16_80(w, c, d, e, f, g, h, a, b, t, 6);
-            ROUND16_80(w, b, c, d, e, f, g, h, a, t, 7);
-            ROUND16_80(w, a, b, c, d, e, f, g, h, t, 8);
-            ROUND16_80(w, h, a, b, c, d, e, f, g, t, 9);
-            ROUND16_80(w, g, h, a, b, c, d, e, f, t, 10);
-            ROUND16_80(w, f, g, h, a, b, c, d, e, t, 11);
-            ROUND16_80(w, e, f, g, h, a, b, c, d, t, 12);
-            ROUND16_80(w, d, e, f, g, h, a, b, c, t, 13);
-            ROUND16_80(w, c, d, e, f, g, h, a, b, t, 14);
-            ROUND16_80(w, b, c, d, e, f, g, h, a, t, 15);
+            ROUND16_79(w, a, b, c, d, e, f, g, h, t, 0);
+            ROUND16_79(w, h, a, b, c, d, e, f, g, t, 1);
+            ROUND16_79(w, g, h, a, b, c, d, e, f, t, 2);
+            ROUND16_79(w, f, g, h, a, b, c, d, e, t, 3);
+            ROUND16_79(w, e, f, g, h, a, b, c, d, t, 4);
+            ROUND16_79(w, d, e, f, g, h, a, b, c, t, 5);
+            ROUND16_79(w, c, d, e, f, g, h, a, b, t, 6);
+            ROUND16_79(w, b, c, d, e, f, g, h, a, t, 7);
+            ROUND16_79(w, a, b, c, d, e, f, g, h, t, 8);
+            ROUND16_79(w, h, a, b, c, d, e, f, g, t, 9);
+            ROUND16_79(w, g, h, a, b, c, d, e, f, t, 10);
+            ROUND16_79(w, f, g, h, a, b, c, d, e, t, 11);
+            ROUND16_79(w, e, f, g, h, a, b, c, d, t, 12);
+            ROUND16_79(w, d, e, f, g, h, a, b, c, t, 13);
+            ROUND16_79(w, c, d, e, f, g, h, a, b, t, 14);
+            ROUND16_79(w, b, c, d, e, f, g, h, a, t, 15);
         }
 
         // RFC6234 STEP 4: Compute the intermediate hash value H(i)

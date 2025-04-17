@@ -17,6 +17,7 @@
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_ECB)
 
 #include "crypt_modes_ecb.h"
+#include "modes_local.h"
 
 
 int32_t AES_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)

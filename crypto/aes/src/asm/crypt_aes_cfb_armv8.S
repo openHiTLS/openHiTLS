@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CFB)
 
+#include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
 .file    "crypt_aes_cfb_armv8.S"
@@ -66,7 +67,7 @@ ROUNDS  .req    w6
 .globl CRYPT_AES_CFB_Decrypt
 .type CRYPT_AES_CFB_Decrypt, %function
 CRYPT_AES_CFB_Decrypt:
-    .inst 0xd503233f              // Paciasp
+AARCH64_PACIASP
     ld1	{IVC.16b}, [IV]              // Load the IV
     mov LTMP, LEN
 
@@ -290,7 +291,7 @@ CRYPT_AES_CFB_Decrypt:
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
 
-.inst 0xd50323bf                    // autiasp
+AARCH64_AUTIASP
     ret
 .size CRYPT_AES_CFB_Decrypt, .-CRYPT_AES_CFB_Decrypt
 

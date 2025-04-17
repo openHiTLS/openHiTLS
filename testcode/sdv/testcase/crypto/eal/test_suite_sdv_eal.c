@@ -41,6 +41,14 @@ static bool IsMacAlgIdValid(int id)
         CRYPT_MAC_HMAC_SHA3_384,
         CRYPT_MAC_HMAC_SHA3_512,
         CRYPT_MAC_HMAC_SM3,
+        CRYPT_MAC_CMAC_AES128,
+        CRYPT_MAC_CMAC_AES192,
+        CRYPT_MAC_CMAC_AES256,
+        CRYPT_MAC_GMAC_AES128,
+        CRYPT_MAC_GMAC_AES192,
+        CRYPT_MAC_GMAC_AES256,
+        CRYPT_MAC_SIPHASH64,
+        CRYPT_MAC_SIPHASH128
     };
     int algIdCnt = sizeof(algList) / sizeof(int);
     for (int i = 0; i < algIdCnt; i++) {
@@ -60,25 +68,31 @@ static bool IsCipherAlgIdValid(int id)
         CRYPT_CIPHER_AES128_CTR,
         CRYPT_CIPHER_AES192_CTR,
         CRYPT_CIPHER_AES256_CTR,
+        CRYPT_CIPHER_AES128_ECB,
+        CRYPT_CIPHER_AES192_ECB,
+        CRYPT_CIPHER_AES256_ECB,
+        CRYPT_CIPHER_AES128_XTS,
+        CRYPT_CIPHER_AES256_XTS,
         CRYPT_CIPHER_AES128_CCM,
         CRYPT_CIPHER_AES192_CCM,
         CRYPT_CIPHER_AES256_CCM,
         CRYPT_CIPHER_AES128_GCM,
         CRYPT_CIPHER_AES192_GCM,
         CRYPT_CIPHER_AES256_GCM,
-        CRYPT_CIPHER_CHACHA20_POLY1305,
-        CRYPT_CIPHER_SM4_XTS,
-        CRYPT_CIPHER_SM4_CBC,
-        CRYPT_CIPHER_SM4_CTR,
-        CRYPT_CIPHER_SM4_GCM,
-        CRYPT_CIPHER_SM4_CFB,
-        CRYPT_CIPHER_SM4_OFB,
         CRYPT_CIPHER_AES128_CFB,
         CRYPT_CIPHER_AES192_CFB,
         CRYPT_CIPHER_AES256_CFB,
         CRYPT_CIPHER_AES128_OFB,
         CRYPT_CIPHER_AES192_OFB,
         CRYPT_CIPHER_AES256_OFB,
+        CRYPT_CIPHER_CHACHA20_POLY1305,
+        CRYPT_CIPHER_SM4_XTS,
+        CRYPT_CIPHER_SM4_CBC,
+        CRYPT_CIPHER_SM4_ECB,
+        CRYPT_CIPHER_SM4_CTR,
+        CRYPT_CIPHER_SM4_GCM,
+        CRYPT_CIPHER_SM4_CFB,
+        CRYPT_CIPHER_SM4_OFB,
     };
     int algIdCnt = sizeof(algList) / sizeof(int);
     for (int i = 0; i < algIdCnt; i++) {
@@ -510,8 +524,6 @@ void SDV_CRYPTO_EAL_REINIT_TC001(int id)
     for (uint32_t i = 0; i < EAL_MAX_BLOCK_LENGTH; i++) {
         ASSERT_EQ(ciphCtx->data[i], 0);
     }
-    // Check paddingType
-    ASSERT_EQ(ciphCtx->pad, CRYPT_PADDING_NONE);
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -583,11 +595,115 @@ void SDV_CRYPTO_EAL_REINIT_TC003(int id)
     ASSERT_EQ(ciphCtx->gcmCtx.plaintextLen, 0);
     for (uint32_t i = 0; i < GCM_BLOCKSIZE; i++) {
         ASSERT_EQ(ciphCtx->gcmCtx.ghash[i], 0);
-        ASSERT_EQ(ciphCtx->gcmCtx.last[i], 0);
-        ASSERT_EQ(ciphCtx->gcmCtx.remCt[i], 0);
     }
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_GET_KEY_LEN_TC001
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_GET_KEY_LEN_TC001(int algid, int paramId, int pubLen, int prvLen, int sharedLen)
+{
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(algid);
+    ASSERT_TRUE(ctx != NULL);
+    int32_t ret;
+    if (paramId != 0) {
+        ret = CRYPT_EAL_PkeySetParaById(ctx, paramId);
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+    }
+
+    uint32_t val = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, pubLen);
+
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, prvLen);
+
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, sharedLen);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_GET_KEY_LEN_TC002
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_GET_KEY_LEN_TC002(int algid, int paramId, int pubLen, int prvLen)
+{
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(algid);
+    ASSERT_TRUE(ctx != NULL);
+    int32_t ret;
+    if (paramId != 0) {
+        ret = CRYPT_EAL_PkeySetParaById(ctx, paramId);
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+    }
+
+    uint32_t val = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, pubLen);
+
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, prvLen);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_GET_KEY_LEN_TC003
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_GET_KEY_LEN_TC003(int algid, int rsaBits, Hex *p, Hex *q, Hex *g, int pubLen, int prvLen, int sharedLen)
+{
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(algid);
+    ASSERT_TRUE(ctx != NULL);
+    int32_t ret;
+    CRYPT_EAL_PkeyPara para = {0};
+    uint8_t e[3] = {1, 0, 1};
+    if (algid == CRYPT_PKEY_RSA) {
+        para.id = CRYPT_PKEY_RSA;
+        para.para.rsaPara.e = e;
+        para.para.rsaPara.eLen = 3;
+        para.para.rsaPara.bits = rsaBits;
+    } else {
+        para.id = algid;  // DH or DSA
+        para.para.dhPara.p = p->x;
+        para.para.dhPara.q = q->x;
+        para.para.dhPara.g = g->x;
+        para.para.dhPara.pLen = p->len;
+        para.para.dhPara.qLen = q->len;
+        para.para.dhPara.gLen = g->len;
+    }
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(ctx, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    uint32_t val = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, pubLen);
+
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(val, prvLen);
+
+    if (algid == CRYPT_PKEY_DH) {
+        ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &val, sizeof(val));
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+        ASSERT_EQ(val, sharedLen);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */

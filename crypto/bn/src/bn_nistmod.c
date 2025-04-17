@@ -40,7 +40,7 @@ static void UpdateSize(BN_BigNum *r, uint32_t modSize)
         }
     }
     r->size = size;
-    BN_CLRNEG(r->flag);
+    r->sign = false;
 }
 
 #define P521SIZE SIZE_OF_BNUINT(521)
@@ -85,7 +85,7 @@ BN_UINT g_modDataP256[][P256SIZE] = {
         0x0000000000000000UL, 0xfffffffb00000005UL
     },
 };
-#ifdef HITLS_CRYPTO_SM2
+#ifdef HITLS_CRYPTO_CURVE_SM2
 const BN_UINT MODDATASM2P256[][P256SIZE] = {
     {   // p
         0xffffffffffffffffUL, 0xffffffff00000000UL,
@@ -175,12 +175,12 @@ static BN_UINT NistP384Add(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint3
 {
     (void)n;
     BN_UINT carry = 0;
-    ADD_ABC(carry, r[0], a[0], b[0], carry);
-    ADD_ABC(carry, r[1], a[1], b[1], carry);
-    ADD_ABC(carry, r[2], a[2], b[2], carry);
-    ADD_ABC(carry, r[3], a[3], b[3], carry);
-    ADD_ABC(carry, r[4], a[4], b[4], carry);
-    ADD_ABC(carry, r[5], a[5], b[5], carry);
+    ADD_ABC(carry, r[0], a[0], b[0], carry); /* offset 0 */
+    ADD_ABC(carry, r[1], a[1], b[1], carry); /* offset 1 */
+    ADD_ABC(carry, r[2], a[2], b[2], carry); /* offset 2 */
+    ADD_ABC(carry, r[3], a[3], b[3], carry); /* offset 3 */
+    ADD_ABC(carry, r[4], a[4], b[4], carry); /* offset 4 */
+    ADD_ABC(carry, r[5], a[5], b[5], carry); /* offset 5 */
     return carry;
 }
 
@@ -188,12 +188,12 @@ static BN_UINT NistP384Sub(BN_UINT *r, const BN_UINT *a, const BN_UINT *b, uint3
 {
     (void)n;
     BN_UINT borrow = 0;
-    SUB_ABC(borrow, r[0], a[0], b[0], borrow);
-    SUB_ABC(borrow, r[1], a[1], b[1], borrow);
-    SUB_ABC(borrow, r[2], a[2], b[2], borrow);
-    SUB_ABC(borrow, r[3], a[3], b[3], borrow);
-    SUB_ABC(borrow, r[4], a[4], b[4], borrow);
-    SUB_ABC(borrow, r[5], a[5], b[5], borrow);
+    SUB_ABC(borrow, r[0], a[0], b[0], borrow); /* offset 0 */
+    SUB_ABC(borrow, r[1], a[1], b[1], borrow); /* offset 1 */
+    SUB_ABC(borrow, r[2], a[2], b[2], borrow); /* offset 2 */
+    SUB_ABC(borrow, r[3], a[3], b[3], borrow); /* offset 3 */
+    SUB_ABC(borrow, r[4], a[4], b[4], borrow); /* offset 4 */
+    SUB_ABC(borrow, r[5], a[5], b[5], borrow); /* offset 5 */
     return borrow;
 }
 
@@ -311,8 +311,7 @@ int8_t ReduceNistP384(BN_UINT *r, const BN_UINT *a)
 }
 
 // The size of a is 2*P384SIZE, and the size of r is P384SIZE
-int32_t ModNistP384(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+int32_t ModNistP384(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
 {
     (void)opt;
     (void)m;
@@ -353,8 +352,7 @@ int8_t ReduceNistP521(BN_UINT *r, const BN_UINT *a)
 }
 
 // The size of a is 2*P521SIZE-1, and the size of r is P521SIZE
-int32_t ModNistP521(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+int32_t ModNistP521(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
 {
     (void)opt;
     (void)m;
@@ -373,26 +371,26 @@ static inline int8_t P256SUB(BN_UINT *rr, const BN_UINT *aa, const BN_UINT *bb)
 {
     BN_UINT borrow;
     SUB_AB(borrow, rr[0], aa[0], bb[0]);
-    SUB_ABC(borrow, rr[1], aa[1], bb[1], borrow);
-    SUB_ABC(borrow, rr[2], aa[2], bb[2], borrow);
-    SUB_ABC(borrow, rr[3], aa[3], bb[3], borrow);
+    SUB_ABC(borrow, rr[1], aa[1], bb[1], borrow); /* offset 1 */
+    SUB_ABC(borrow, rr[2], aa[2], bb[2], borrow); /* offset 2 */
+    SUB_ABC(borrow, rr[3], aa[3], bb[3], borrow); /* offset 3 */
     return (int8_t)borrow;
 }
 
 static inline int8_t P256ADD(BN_UINT *rr, const BN_UINT *aa, const BN_UINT *bb)
 {
     BN_UINT carry;
-    ADD_AB(carry, rr[0], aa[0], bb[0]);
-    ADD_ABC(carry, rr[1], aa[1], bb[1], carry);
-    ADD_ABC(carry, rr[2], aa[2], bb[2], carry);
-    ADD_ABC(carry, rr[3], aa[3], bb[3], carry);
+    ADD_AB(carry, rr[0], aa[0], bb[0]); /* offset 0 */
+    ADD_ABC(carry, rr[1], aa[1], bb[1], carry); /* offset 1 */
+    ADD_ABC(carry, rr[2], aa[2], bb[2], carry); /* offset 2 */
+    ADD_ABC(carry, rr[3], aa[3], bb[3], carry); /* offset 3 */
     return (int8_t)carry;
 }
 
 /**
  *  NIST_P256 curve reduction calculation for parameter P
  *  Reduction item: 2^224 - 2^192 - 2^96 + 2^0
- *  ref: <Efficient and Secure Elliptic Curve Cryptography Implementation of Curve P-256>
+ *  ref. https://csrc.nist.gov/csrc/media/events/workshop-on-elliptic-curve-cryptography-standards/documents/papers/session6-adalier-mehmet.pdf
  *
  *  Reduction list:
  *   	 7   6   5   4   3   2   1   0
@@ -406,8 +404,8 @@ static inline int8_t P256ADD(BN_UINT *rr, const BN_UINT *aa, const BN_UINT *bb)
  *  a15	03, 02, 01, 00, -1, -1, -1, 00
  *
  *  Reduction chain
- *  Compared with the reduce flow of the paper, we have made proper transformation, which can reduce the splicing of
- *  upper 32 bits and lower 32 bits.
+ *  Compared with the reduce flow of the paper, we have made proper transformation,
+ *  which can reduce the splicing of upper 32 bits and lower 32 bits.
  *  Coefficient  7   6   5   4   3   2  1   0
  *           2	a15	a14	a13	a12	a12	 0	0	0
  *           2		a15	a14	a13	a11
@@ -481,8 +479,7 @@ static int8_t ReduceNistP256(BN_UINT *r, const BN_UINT *a)
 
 // For the NIST_P256 curve, perform modulo operation on parameter P.
 // The size of a is 2*P256SIZE, and the size of r is P256SIZE
-int32_t ModNistP256(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+int32_t ModNistP256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
 {
     (void)opt;
     (void)m;
@@ -491,22 +488,22 @@ int32_t ModNistP256(
     if (carry > 0) {
         carry = (int8_t)1 - (int8_t)P256SUB(r->data, r->data, g_modDataP256[carry - 1]);
     } else if (carry < 0) {
-        /**
+        /*
          * Here, we take carry < 0 as an example.
          * If carry = -3, it indicates that ReduceNistP256 needs to be borrowed three times. In this case,
-         * we need to add 3 * p. It is worth that we have estimated (3 * p) in g_modDataP256, but the carry of 3 * p
-         * is not saved, which could be expressed by the following formula:
-         *      g_modDataP256[2] = (3 * p) mod (2 ^ 256), we denoted as 2 + (3 * p)_remain.
+         * we need to add 3 * p. It is worth noting that we have estimated 3 * p in g_modDataP256,
+         * but the carry of 3 * p is not save, which is expressed by the following formula:
+         *           g_modDataP256[2] = 3 * p mod 2^256, we denoted as 2 + (3 * p)_remain.
          * Actually, we need to calculate the following formula:
-         *      -3 + r_data + 2 + (3 * p)_remain = -1 + r_data + (3 * p)_remain
-         * Obviously, -1 is a mathmatical borrowing, only r_data + (3 * p)_remain is calculated in actual P256ADD.
+         *           -3 + r_data + 2 + (3 * p)_remain = -1 + r_data + (3 * p)_remain
+         * Obviously, -1 is a mathematical borrowing, only r_data + (3 * p)_remain is calculated in actual P256ADD.
          * Therefore, we still need to consider the carry case of P256ADD.
-         *    1. r_data + (3 * p)_remain has a carry. -1 has been eliminated. We only need to consider
+         *   1. r_data + (3 * p)_remain has a carry. -1 has been eliminated. We only need to consider
          *       whether r_data + (3 * p)_remain belongs to [0, p).
-         *    2. r_data + (3 * p)_remain has a carry. It indicates that -1 is not eliminated. We need to add another p
-         *       to eliminate -1. Considering the value of 3 * p in g_modDataP256, r_date + (3 * p)_remain + p must
-         *       generate a carry, and the final value < p.
-         */
+         *   2. r_data + (3*p)_remain does not carry. It indicates that –1 is not eliminated. We need to add another P
+         *       to eliminate –1. Considering the value of 3 * p in g_modDataP256, r_data + (3 * p)_remain + P must
+         *       generate a carry, and the final result value < P.
+        */
         carry = (int8_t)1 - (int8_t)P256ADD(r->data, r->data, g_modDataP256[-carry - 1]);
         carry = -carry;
     }
@@ -588,9 +585,9 @@ int32_t ModNistP224(
     // Obtain the high-order data of r[3] as carry information
     int8_t carry = (int8_t)((uint8_t)(BN_UINT_HI(r->data[3]) & 0xFF));
     if (carry > 0) {
-        P256SUB(r->data, r->data, g_modDataP224[carry - 1]);
+        (void)P256SUB(r->data, r->data, g_modDataP224[carry - 1]);
     } else if (carry < 0) {
-        P256ADD(r->data, r->data, g_modDataP224[-carry - 1]);
+        (void)P256ADD(r->data, r->data, g_modDataP224[-carry - 1]);
     }
     // Obtain the high-order data of r[3] as carry information
     carry = (int8_t)((uint8_t)(BN_UINT_HI(r->data[3]) & 0xFF));
@@ -633,7 +630,7 @@ int32_t ModNistP224(
  *        -1                              a8
  *        -1                              a9
  */
-#ifdef HITLS_CRYPTO_SM2
+#ifdef HITLS_CRYPTO_CURVE_SM2
 static int8_t ReduceSm2P256(BN_UINT *r, const BN_UINT *a)
 {
     BN_UINT list[P256SIZE];
@@ -728,18 +725,17 @@ static int8_t ReduceSm2P256(BN_UINT *r, const BN_UINT *a)
 }
 
 // SM2_P256 curve modulo parameter P. The size of a is 2*P256SIZE, and the size of r is P256SIZE
-int32_t ModSm2P256(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+int32_t ModSm2P256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
 {
     (void)opt;
     (void)m;
     const BN_UINT *mod = MODDATASM2P256[0];
     int8_t carry = ReduceSm2P256(r->data, a->data);
     if (carry < 0) {
-        // For details could ref p256.
         carry = (int8_t)1 - (int8_t)P256ADD(r->data, r->data, MODDATASM2P256[-carry - 1]);
         carry = -carry;
     } else if (carry > 0) {
+        // For details could ref p256.
         carry = (int8_t)1 - (int8_t)P256SUB(r->data, r->data, MODDATASM2P256[carry - 1]);
     }
     if (carry < 0) {
@@ -752,6 +748,38 @@ int32_t ModSm2P256(
 }
 #endif
 
+#elif defined(HITLS_THIRTY_TWO_BITS)
+
+int32_t ModNistP224(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+{
+    return BN_Mod(r, a, m, opt);
+}
+
+int32_t ModNistP256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+{
+    return BN_Mod(r, a, m, opt);
+}
+
+#ifdef HITLS_CRYPTO_CURVE_SM2
+int32_t ModSm2P256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+{
+    return BN_Mod(r, a, m, opt);
+}
+#endif
+
+int32_t ModNistP384(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+{
+    return BN_Mod(r, a, m, opt);
+}
+
+int32_t ModNistP521(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
+{
+    return BN_Mod(r, a, m, opt);
+}
+
+#endif
+
+#if defined(HITLS_CRYPTO_BN_COMBA) && defined(HITLS_SIXTY_FOUR_BITS)
 static uint32_t MulNistP256P224(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32_t aSize,
     const BN_UINT *b, uint32_t bSize)
 {
@@ -765,7 +793,7 @@ static uint32_t MulNistP256P224(BN_UINT *r, uint32_t rSize, const BN_UINT *a, ui
         if (r[size - 1] != 0) {
             break;
         }
-        size--;
+        --size;
     }
     return size;
 }
@@ -781,7 +809,7 @@ static uint32_t SqrNistP256P224(BN_UINT *r, uint32_t rSize, const BN_UINT *a, ui
         if (r[size - 1] != 0) {
             break;
         }
-        size--;
+        --size;
     }
     return size;
 }
@@ -819,41 +847,7 @@ static uint32_t SqrNistP384(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32
     }
     return size;
 }
-
-#elif defined(HITLS_THIRTY_TWO_BITS)
-
-int32_t ModNistP224(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-
-int32_t ModNistP256(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-
-#ifdef HITLS_CRYPTO_SM2
-int32_t ModSm2P256(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-#endif
-
-int32_t ModNistP384(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-
-int32_t ModNistP521(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-
+#else
 static uint32_t MulNistP256P224(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32_t aSize,
     const BN_UINT *b, uint32_t bSize)
 {
@@ -876,21 +870,18 @@ static uint32_t SqrNistP384(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32
     return BinSqr(r, rSize, a, aSize);
 }
 
-#endif // HITLS_THIRTY_TWO_BITS
+#endif
 
-static inline int32_t ModCalParaCheck(BN_BigNum *r, const BN_BigNum *a,
-    const BN_BigNum *b, const BN_BigNum *mod)
+static inline int32_t ModCalParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod)
 {
     if (r == NULL || a == NULL || b == NULL || mod == NULL) {
         return CRYPT_NULL_INPUT;
     }
+    // 保证不越界访问
     if ((mod->size > a->room) || (mod->size > b->room)) {
         return CRYPT_BN_SPACE_NOT_ENOUGH;
     }
-    if (BnExtend(r, mod->size) != CRYPT_SUCCESS) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
+    return BnExtend(r, mod->size);
 }
 
 // The user must ensure that a < m, and a->room & b->room are not less than mod->size.
@@ -936,7 +927,7 @@ int32_t BN_ModSubQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
 }
 
 static inline int32_t ModEccMulParaCheck(BN_BigNum *r, const BN_BigNum *a,
-    const BN_BigNum *b, const BN_BigNum *mod, const BN_Optimizer *opt)
+    const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
 {
     if (r == NULL || a == NULL || b == NULL || mod == NULL || opt == NULL) {
         return CRYPT_NULL_INPUT;
@@ -945,20 +936,16 @@ static inline int32_t ModEccMulParaCheck(BN_BigNum *r, const BN_BigNum *a,
     if ((mod->size > b->room) || (mod->size > a->room)) {
         return CRYPT_BN_SPACE_NOT_ENOUGH;
     }
-    if (BnExtend(r, mod->size) != CRYPT_SUCCESS) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    return CRYPT_SUCCESS;
+    return BnExtend(r, mod->size);
 }
-
 // The user must ensure that a < m, and a->room & b->room are not less than mod->size.
 // All the data must be not negative number, otherwise the API may be not functional.
-int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt)
 {
+    BN_BigNum *mod = (BN_BigNum *)data;
     int32_t ret = ModEccMulParaCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (b->size == 0 || a->size == 0) {
@@ -968,20 +955,21 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     BN_BigNum rMul = {
         .data = tData,
         .size = 0,
+        .sign = false,
         .room = P521SIZE << 1
     };
     uint32_t size = mod->size << 1;
     uint32_t bits = BN_Bits(mod);
-    if (bits == 224) {
+    if (bits == 224) { // 224bit
         rMul.size = MulNistP256P224(rMul.data, size, a->data, mod->size, b->data, mod->size);
         ModNistP224(r, &rMul, mod, opt);
-    } else if (bits == 256) {
+    } else if (bits == 256) { // 256bit
         rMul.size = MulNistP256P224(rMul.data, size, a->data, mod->size, b->data, mod->size);
         ModNistP256(r, &rMul, mod, opt);
-    } else if (bits == 384) {
+    } else if (bits == 384) { // 384bit
         rMul.size = MulNistP384(rMul.data, size, a->data, mod->size, b->data, mod->size);
         ModNistP384(r, &rMul, mod, opt);
-    } else if (bits == 521) {
+    } else if (bits == 521) { // 521bit
         rMul.size = BinMul(rMul.data, size, a->data, mod->size, b->data, mod->size);
         ModNistP521(r, &rMul, mod, opt);
     } else {
@@ -991,8 +979,7 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     return CRYPT_SUCCESS;
 }
 
-static int32_t ModEccSqrParaCheck(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, const BN_Optimizer *opt)
+static int32_t ModEccSqrParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt)
 {
     if (r == NULL || a == NULL || mod == NULL || opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -1003,18 +990,14 @@ static int32_t ModEccSqrParaCheck(
         BSL_ERR_PUSH_ERROR(CRYPT_BN_SPACE_NOT_ENOUGH);
         return CRYPT_BN_SPACE_NOT_ENOUGH;
     }
-    if (BnExtend(r, mod->size) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
+    return BnExtend(r, mod->size);
 }
 
 // The user must ensure that a < m, and a->room & b->room are not less than mod->size.
 // All the data must be not negative number, otherwise the API may be not functional.
-int32_t BN_ModNistEccSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt)
 {
+    BN_BigNum *mod = (BN_BigNum *)data;
     int32_t ret = ModEccSqrParaCheck(r, a, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -1026,20 +1009,21 @@ int32_t BN_ModNistEccSqr(
     BN_BigNum rSqr = {
         .data = tData,
         .size = 0,
+        .sign = false,
         .room = P521SIZE << 1
     };
     uint32_t size = mod->size << 1;
     uint32_t bits = BN_Bits(mod);
-    if (bits == 224) {
+    if (bits == 224) { // 224bit
         rSqr.size = SqrNistP256P224(rSqr.data, size, a->data, mod->size);
         ModNistP224(r, &rSqr, mod, opt);
-    } else if (bits == 256) {
+    } else if (bits == 256) { // 256bit
         rSqr.size = SqrNistP256P224(rSqr.data, size, a->data, mod->size);
         ModNistP256(r, &rSqr, mod, opt);
-    } else if (bits == 384) {
+    } else if (bits == 384) { // 384bit
         rSqr.size = SqrNistP384(rSqr.data, size, a->data, mod->size);
         ModNistP384(r, &rSqr, mod, opt);
-    } else if (bits == 521) {
+    } else if (bits == 521) { // 521bit
         rSqr.size = BinSqr(rSqr.data, size, a->data, mod->size);
         ModNistP521(r, &rSqr, mod, opt);
     } else {
@@ -1049,14 +1033,15 @@ int32_t BN_ModNistEccSqr(
     return CRYPT_SUCCESS;
 }
 
-#ifdef HITLS_CRYPTO_SM2
+#ifdef HITLS_CRYPTO_CURVE_SM2
 // The user must ensure that a < m, and a->room & b->room are not less than mod->size.
 // All the data must be not negative number, otherwise the API may be not functional.
-int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt)
 {
+    BN_BigNum *mod = (BN_BigNum *)data;
     int32_t ret = ModEccMulParaCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (a->size == 0 || b->size == 0) {
@@ -1066,6 +1051,7 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     BN_BigNum rMul = {
         .data = tData,
         .size = 0,
+        .sign = false,
         .room = P256SIZE << 1
     };
     uint32_t size = mod->size << 1;
@@ -1077,9 +1063,9 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
 
 // The user must ensure that a < m, and a->room & b->room are not less than mod->size.
 // All the data must be not negative number, otherwise the API may be not functional.
-int32_t BN_ModSm2EccSqr(
-    BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt)
+int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt)
 {
+    BN_BigNum *mod = (BN_BigNum *)data;
     int32_t ret = ModEccSqrParaCheck(r, a, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -1091,6 +1077,7 @@ int32_t BN_ModSm2EccSqr(
     BN_BigNum rSqr = {
         .data = tData,
         .size = 0,
+        .sign = false,
         .room = P256SIZE << 1
     };
     uint32_t size = mod->size << 1;
