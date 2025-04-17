@@ -356,8 +356,13 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     uint8_t infoData[16] = { 0 };
     info.x = infoData;
     int32_t ret = HPKE_ERR;
-    CRYPT_EAL_Randbytes(info.x, info.len);
     
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_EAL_RandbytesEx(NULL, info.x, info.len);
+#else
+    CRYPT_EAL_Randbytes(info.x, info.len);
+#endif    
+
     Hex psk = { 0 };
     psk.len = 32;
     uint8_t pskData[32] = { 0 };
