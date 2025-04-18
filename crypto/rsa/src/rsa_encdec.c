@@ -1397,7 +1397,7 @@ static int32_t GetSaltLen(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 }
 #endif
 
-static int32_t RSAGetKeyLen(CRYPT_RSA_Ctx *ctx)
+static uint32_t RSAGetKeyLen(CRYPT_RSA_Ctx *ctx)
 {
     return BN_BITS_TO_BYTES(CRYPT_RSA_GetBits(ctx));
 }
