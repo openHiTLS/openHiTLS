@@ -680,11 +680,16 @@ static int32_t MontLadderRecoverYAndToMont(ECC_Para *para, ECC_Point *r1, ECC_Po
 {
     int32_t ret;
     if (BN_IsZero(r1->z)) {
+        para->method->bnMontDec(r1->x, para->montP);
+        para->method->bnMontDec(r1->y, para->montP);
         return CRYPT_SUCCESS;
     }
     if (BN_IsZero(r2->z)) {
         GOTO_ERR_IF(ECC_CopyPoint(r1, p), ret); // r2 = r1 + p = 0 -> r1 = -p
         GOTO_ERR_IF(BN_Sub(r1->y, para->p, r1->y), ret);
+        para->method->bnMontDec(r1->x, para->montP);
+        para->method->bnMontDec(r1->y, para->montP);
+        GOTO_ERR_IF(BN_SetLimb(r1->z, 1), ret);
         return CRYPT_SUCCESS;
     }
     (void)OptimizerStart(opt);

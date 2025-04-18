@@ -187,7 +187,7 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *
     // assume that the two scenarios will not coexist.
     const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
     if (pub == NULL) {
-        pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+        pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
     }
     
     if (pub == NULL || pub->value == NULL) {
@@ -242,7 +242,7 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
     // assume that the two scenarios will not coexist.
     BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
     if (pub == NULL) {
-        pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+        pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
     }
     if (pub == NULL || pub->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
