@@ -548,4 +548,52 @@ EXIT:
     return ret;
 }
 
+int32_t CRYPT_EAL_EncodeEccPubkey(CRYPT_Data *pubKeyX, CRYPT_Data *pubKeyY, CRYPT_PKEY_PointFormat pointFormat, CRYPT_Data *pubKey)
+{
+    uint8_t value;
+    value = *(uint8_t *)(pubKeyY->data + pubKeyY->len - 1);
+    int sign = 0; /* The value 0 indicates an odd number.*/
+    if (value % 2 == 0) {
+        sign = 1;
+    }
+    switch (pointFormat) {
+        case CRYPT_POINT_COMPRESSED: {
+            pubKey->data[0] = (sign == 1) ? 0x02 : 0x03;
+            if (memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->data, pubKeyX->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                return CRYPT_MEM_ALLOC_FAIL;
+            }
+            pubKey->len = pubKeyX->len + 1;
+        } break;
+        case CRYPT_POINT_UNCOMPRESSED: {
+            pubKey->data[0] = 0x04;
+            if (memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->data, pubKeyX->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                return CRYPT_MEM_ALLOC_FAIL;
+            }
+            if (memcpy_s(pubKey->data + 1 + pubKeyX->len, pubKey->len - 1 - pubKeyX->len, pubKeyY->data, pubKeyY->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                return CRYPT_MEM_ALLOC_FAIL;
+            }
+            pubKey->len = pubKeyX->len + pubKeyY->len + 1;
+        } break;
+        case CRYPT_POINT_HYBRID: {
+            pubKey->data[0] = (sign == 1) ? 0x06 : 0x07;
+            if (memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->data, pubKeyX->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                return CRYPT_MEM_ALLOC_FAIL;
+            }
+            if (memcpy_s(pubKey->data + 1 + pubKeyX->len, pubKey->len - 1 - pubKeyX->len, pubKeyY->data, pubKeyY->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                return CRYPT_MEM_ALLOC_FAIL;
+            }
+            pubKey->len = pubKeyX->len + pubKeyY->len + 1;
+        } break;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+    return CRYPT_SUCCESS;
+}
+
 #endif // HITLS_CRYPTO_ENCODE
