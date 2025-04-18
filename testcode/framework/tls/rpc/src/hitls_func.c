@@ -187,7 +187,11 @@ static const HitlsConfig g_groupList[] = {
     {"HITLS_FF_DHE_4096", HITLS_FF_DHE_4096},
     {"HITLS_FF_DHE_6144", HITLS_FF_DHE_6144},
     {"HITLS_FF_DHE_8192", HITLS_FF_DHE_8192},
+    {"SecP256r1MLKEM768", 4587}, // for new kem group
+    {"X25519MLKEM768", 4588}, // for new kem group
+    {"SecP384r1MLKEM1024", 4589}, // for new kem group
     {"test_new_group", 477}, // for new group
+    {"test_new_group_kem",  478}, // NEW_KEM_ALGID
 };
 
 static const HitlsConfig g_signatureList[] = {

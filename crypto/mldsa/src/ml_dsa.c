@@ -229,8 +229,8 @@ static int32_t MLDSAGetPubKeyLen(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_
 {
     RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
     RETURN_RET_IF((ctx->info == NULL), CRYPT_MLDSA_KEYINFO_NOT_SET);
-    RETURN_RET_IF((len != sizeof(int32_t)), CRYPT_INVALID_ARG);
-    *(int32_t *)val = ctx->info->publicKeyLen;
+    RETURN_RET_IF((len != sizeof(uint32_t)), CRYPT_INVALID_ARG);
+    *(uint32_t *)val = ctx->info->publicKeyLen;
     return CRYPT_SUCCESS;
 }
 
@@ -238,8 +238,8 @@ static int32_t MLDSAGetPrvKeyLen(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_
 {
     RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
     RETURN_RET_IF((ctx->info == NULL), CRYPT_MLDSA_KEYINFO_NOT_SET);
-    RETURN_RET_IF((len != sizeof(int32_t)), CRYPT_INVALID_ARG);
-    *(int32_t *)val = ctx->info->privateKeyLen;
+    RETURN_RET_IF((len != sizeof(uint32_t)), CRYPT_INVALID_ARG);
+    *(uint32_t *)val = ctx->info->privateKeyLen;
     return CRYPT_SUCCESS;
 }
 

@@ -315,6 +315,8 @@ typedef enum {
     HITLS_CRYPT_ERR_ENCODE_DH_KEY,                 /**< Failed to obtain the DH public key. */
     HITLS_CRYPT_ERR_HKDF_EXTRACT,                  /**< HKDF-Extract calculation error. */
     HITLS_CRYPT_ERR_HKDF_EXPAND,                   /**< HKDF-Expand calculation error. */
+    HITLS_CRYPT_ERR_KEM_ENCAPSULATE,               /**< KEM-Encapsulate calculation error. */
+    HITLS_CRYPT_ERR_KEM_DECAPSULATE,               /**< KEM-Decapsulate calculation error. */
 
     HITLS_APP_FAIL_START = 0x020E0001,             /**< APP module error code start bit. */
     HITLS_APP_ERR_TOO_LONG_TO_WRITE,               /**< APP Data written is too long. */
