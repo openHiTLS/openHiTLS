@@ -165,7 +165,7 @@ static int32_t TestEccSetPubKey(TestEccKeyCtx *ctx, const BSL_Param *para)
     }
     const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
     if (pub == NULL) {
-        pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+        pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
     }
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         return CRYPT_NULL_INPUT;
@@ -194,7 +194,7 @@ static int32_t TestEccGetPubKey(TestEccKeyCtx *ctx, BSL_Param *para)
     }
     const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
     if (pub == NULL) {
-        pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY); 
+        pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
     }
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         return CRYPT_NULL_INPUT;
@@ -360,7 +360,7 @@ static int32_t TestKemSetPubKey(TestKemKeyCtx *ctx, const BSL_Param *para)
     if (ctx == NULL || para == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    const BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         return CRYPT_NULL_INPUT;
     }
@@ -375,7 +375,7 @@ static int32_t TestKemGetPubKey(const TestKemKeyCtx *ctx, BSL_Param *para)
     if (ctx == NULL || para == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_TLS_ENCODE_PUBKEY);
+    BSL_Param *pub = TestFindConstParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
     if (pub == NULL || pub->value == NULL || pub->valueLen == 0) {
         return CRYPT_NULL_INPUT;
     }
