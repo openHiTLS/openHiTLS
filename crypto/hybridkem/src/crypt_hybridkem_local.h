@@ -17,6 +17,7 @@
 #define CRYPT_HYBRID_KEM_LOCAL_H
 
 #include "crypt_local_types.h"
+#include "sal_atomic.h"
 
 struct HybridKemCtx {
     void *pkeyCtx;     // CRYPT_CURVE25519_Ctx or CRYPT_ECDH_Ctx

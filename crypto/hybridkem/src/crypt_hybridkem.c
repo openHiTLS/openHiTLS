@@ -96,7 +96,7 @@ CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtxEx(void *libCtx)
 
 void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
 {
-    if (hybridKey == NULL || hybridKey->pKeyMethod == NULL || hybridKey->kemMethod == NULL) {
+    if (hybridKey == NULL) {
         return;
     }
     int ref = 0;
@@ -105,8 +105,12 @@ void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
         return;
     }
     BSL_SAL_ReferencesFree(&(hybridKey->references));
-    hybridKey->pKeyMethod->freeCtx(hybridKey->pkeyCtx);
-    hybridKey->kemMethod->freeCtx(hybridKey->kemCtx);
+    if (hybridKey->pKeyMethod != NULL && hybridKey->pKeyMethod->freeCtx != NULL) {
+        hybridKey->pKeyMethod->freeCtx(hybridKey->pkeyCtx);
+    }
+    if (hybridKey->kemMethod != NULL && hybridKey->kemMethod->freeCtx != NULL) {
+        hybridKey->pKeyMethod->freeCtx(hybridKey->pkeyCtx);
+    }
     BSL_SAL_FREE(hybridKey);
 }
 
