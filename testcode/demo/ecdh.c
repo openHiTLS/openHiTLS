@@ -123,11 +123,7 @@ int main(void)
         goto EXIT;
     }
     // Initialize the random number.
-#ifdef HITLS_CRYPTO_PROVIDER
     ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
-#else
-    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
-#endif
     if (ret != CRYPT_SUCCESS) {
         printf("RandInit: error code is %x\n", ret);
         PrintLastError();

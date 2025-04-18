@@ -45,11 +45,7 @@ int main(int32_t argc, char *argv[])
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
     BSL_ERR_Init();
 
-#ifdef HITLS_CRYPTO_PROVIDER
     ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
-#else
-    ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
-#endif
     if (ret != CRYPT_SUCCESS) {
         printf("Init rand failed.\n");
         goto EXIT;
