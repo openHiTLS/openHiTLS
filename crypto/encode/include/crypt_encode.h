@@ -134,6 +134,10 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const ch
 int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *data,
     const void *encodeParam, BSL_Buffer *encode);
 
+// encode x and y into the ecc public key
+int32_t CRYPT_EAL_EncodeEccPubkey(CRYPT_Data *xData, CRYPT_Data *yData,
+    CRYPT_PKEY_PointFormat pointFormat, CRYPT_PKEY_ParaId ecc, CRYPT_Data *pubKey);
+
 #ifdef __cplusplus
 }
 #endif
