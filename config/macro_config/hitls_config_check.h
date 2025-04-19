@@ -21,28 +21,9 @@
 #ifndef HITLS_CONFIG_CHECK_H
 #define HITLS_CONFIG_CHECK_H
 
+#ifdef HITLS_TLS
 #if defined(HITLS_TLS_FEATURE_PROVIDER) && !defined(HITLS_CRYPTO_PROVIDER)
 #error "[HiTLS] The tls-provider must work with crypto-provider"
-#endif
-
-#if defined(HITLS_CRYPTO_HMAC) && !defined(HITLS_CRYPTO_MD)
-#error "[HiTLS] The hmac must work with hash."
-#endif
-
-#if defined(HITLS_CRYPTO_DRBG_HASH) && !defined(HITLS_CRYPTO_MD)
-#error "[HiTLS] The drbg_hash must work with hash."
-#endif
-
-#if defined(HITLS_CRYPTO_ENTROPY) && !defined(HITLS_CRYPTO_DRBG)
-#error "[HiTLS] The entropy must work with at leaset one drbg algorithm."
-#endif
-
-#if defined(HITLS_CRYPTO_PKEY) && !defined(HITLS_CRYPTO_MD)
-#error "[HiTLS] The pkey must work with hash."
-#endif
-
-#if defined(HITLS_CRYPTO_BN) && !(defined(HITLS_THIRTY_TWO_BITS) || defined(HITLS_SIXTY_FOUR_BITS))
-#error "[HiTLS] To use bn, the number of system bits must be specified first."
 #endif
 
 #if (defined(HITLS_TLS_FEATURE_PHA) || defined(HITLS_TLS_FEATURE_KEY_UPDATE)) && !defined(HITLS_TLS_PROTO_TLS13)
@@ -608,26 +589,187 @@ chacha20poly1305, chacha20, rsa"
     #error "[HiTLS] tls13 ciphersuite must work with suite_auth_rsa or suite_auth_ecdsa or suite_auth_psk"
     #endif
 #endif
+#endif /* HITLS_TLS */
+
+#ifdef HITLS_CRYPTO
+#if defined(HITLS_CRYPTO_HMAC) && !defined(HITLS_CRYPTO_MD)
+    #error "[HiTLS] The hmac must work with hash"
+#endif
+
+#if defined(HITLS_CRYPTO_DRBG_HASH) && !defined(HITLS_CRYPTO_MD)
+    #error "[HiTLS] The drbg_hash must work with hash"
+#endif
+
+#if defined(HITLS_CRYPTO_DRBG_CTR) && !defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_SM4)
+    #error "[HiTLS] AES or SM4 must be enabled for DRBG-CTR"
+#endif
+
+#if defined(HITLS_CRYPTO_ENTROPY) && !defined(HITLS_CRYPTO_DRBG)
+#error "[HiTLS] The entropy must work with at leaset one drbg algorithm."
+#endif
+
+#if defined(HITLS_CRYPTO_DRBG_GM) && !defined(HITLS_CRYPTO_DRBG_CTR) && !defined(HITLS_CRYPTO_DRBG_HASH)
+    #error "[HiTLS]DRBG-HASH or DRBG-CTR must be enabled for DRBG-GM"
+#endif
+
+#if defined(HITLS_CRYPTO_ENTROPY_HARDWARE) && !defined(HITLS_CRYPTO_EALINIT)
+    #error "[HiTLS] ealinit must be enabled when the hardware entropy source is enabled."
+#endif
+
+#if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_DRBG_CTR) && !defined(HITLS_CRYPTO_DRBG_GM)
+    #if !defined(HITLS_CRYPTO_HMAC) || !defined(HITLS_CRYPTO_SHA256)
+        #error "[HiTLS] Configure the conditioning function. Currently, CRYPT_MAC_HMAC_SHA256 is supported. \
+            others may be supported in the future."
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_BN) && !(defined(HITLS_THIRTY_TWO_BITS) || defined(HITLS_SIXTY_FOUR_BITS))
+#error "[HiTLS] To use bn, the number of system bits must be specified first."
+#endif
 
 #if defined(HITLS_CRYPTO_HPKE)
-#if !defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_CHACHA20POLY1305)
-#error "[HiTLS] The hpke must work with aes or chacha20poly1305."
-#endif
+    #if !defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_CHACHA20POLY1305)
+    #error "[HiTLS] The hpke must work with aes or chacha20poly1305."
+    #endif
 
-#if !defined(HITLS_CRYPTO_CHACHA20POLY1305) && defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_GCM)
-#error "[HiTLS] The hpke must work with aes-gcm."
-#endif
+    #if !defined(HITLS_CRYPTO_CHACHA20POLY1305) && defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_GCM)
+    #error "[HiTLS] The hpke must work with aes-gcm."
+    #endif
 
-#if !defined(HITLS_CRYPTO_CURVE_NISTP256) && !defined(HITLS_CRYPTO_CURVE_NISTP384) && \
-    !defined(HITLS_CRYPTO_CURVE_NISTP521) && !defined(HITLS_CRYPTO_X25519)
-#error "[HiTLS] The hpke must work with p256 or p384 or p521 or x25519."
-#endif
+    #if !defined(HITLS_CRYPTO_CURVE_NISTP256) && !defined(HITLS_CRYPTO_CURVE_NISTP384) && \
+        !defined(HITLS_CRYPTO_CURVE_NISTP521) && !defined(HITLS_CRYPTO_X25519)
+    #error "[HiTLS] The hpke must work with p256 or p384 or p521 or x25519."
+    #endif
 #endif /* HITLS_CRYPTO_HPKE */
+
+#if defined(HITLS_CRYPTO_RSA_BLINDING) && !(defined(HITLS_CRYPTO_BN_RAND))
+    #error "[HiTLS] The blind must work with bn_rand"
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
+    #if !defined(HITLS_CRYPTO_RSA_EMSA_PSS) && !defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15)
+    #error "[HiTLS] The rsa_sign/rsa_verify must work with rsa_emsa_pss/rsa_emsa_pkcsv15"
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT)
+    #if !defined(HITLS_CRYPTO_RSAES_OAEP) && !defined(HITLS_CRYPTO_RSAES_PKCSV15) && \
+        !defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) && !defined(HITLS_CRYPTO_RSA_NO_PAD)
+    #error "[HiTLS] The rsa_encrypt/rsa_decrypt must work with rsaes_oaep/rsaes_pkcsv15/rsaes_pkcsv15_tls/rsa_no_pad"
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_NO_PAD) || defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_RSAES_PKCSV15) || \
+    defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS)
+    #if !defined(HITLS_CRYPTO_RSA_ENCRYPT) && !defined(HITLS_CRYPTO_RSA_DECRYPT)
+    #error "[HiTLS] The rsaes_oaep/rsaes_pkcsv15/rsaes_pkcsv15_tls/rsa_no_pad must work with rsa_encrypt/rsa_decrypt"
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_EMSA_PSS) || defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15)
+    #if !defined(HITLS_CRYPTO_RSA_SIGN) && !defined(HITLS_CRYPTO_RSA_VERIFY)
+    #error "[HiTLS] The rsa_emsa_pss/rsa_emsa_pkcsv15 must work with rsa_sign/rsa_verify"
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_BLINDING) && !defined(HITLS_CRYPTO_RSA_SIGN) && !defined(HITLS_CRYPTO_RSA_DECRYPT)
+    #error "[HiTLS] The rsa_blinding must work with rsa_sign or rsa_decrypt"
+#endif
+
+#if defined(HTILS_CRYPTO_RSA_ENCRYPT) && (defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_RSAES_PKCSV15))
+    #ifndef HITLS_CRYPTO_DRBG
+    #error "[HiTLS] The rsa_encrypt+rsaes_oaep/rsa_pkcsv15 must work with a drbg algorithm."
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_SIGN) && defined(HITLS_CRYPTO_RSA_EMSA_PSS) && !defined(HITLS_CRYPTO_DRBG)
+    #error "[HiTLS] The rsa_sign+rsa_emsa_pss must work with a drbg algorithm."
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_GEN) && !(defined(HITLS_CRYPTO_BN_RAND) && defined(HITLS_CRYPTO_BN_PRIME))
+    #error "[HiTLS] The rsa_gen must work with bn_rand and bn_prime"
+#endif
+
+#if defined(HITLS_CRYPTO_ECDSA)
+    #if !defined(HITLS_CRYPTO_CURVE_NISTP224) && !defined(HITLS_CRYPTO_CURVE_NISTP256) && \
+        !defined(HITLS_CRYPTO_CURVE_NISTP384) && !defined(HITLS_CRYPTO_CURVE_NISTP521) && \
+        !defined(HITLS_CRYPTO_CURVE_BP256R1) && !defined(HITLS_CRYPTO_CURVE_BP384R1) && \
+        !defined(HITLS_CRYPTO_CURVE_BP512R1) && !defined(HITLS_CRYPTO_CURVE_192WAPI)
+    #error "[HiTLS] Nist curves or brainpool curves or 192Wapi curve must be enabled for ECDSA."
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_ECDH)
+    #if !defined(HITLS_CRYPTO_CURVE_NISTP224) && !defined(HITLS_CRYPTO_CURVE_NISTP256) && \
+        !defined(HITLS_CRYPTO_CURVE_NISTP384) && !defined(HITLS_CRYPTO_CURVE_NISTP521) && \
+        !defined(HITLS_CRYPTO_CURVE_BP256R1) && !defined(HITLS_CRYPTO_CURVE_BP384R1) && \
+        !defined(HITLS_CRYPTO_CURVE_BP512R1) && !defined(HITLS_CRYPTO_CURVE_192WAPI)
+    #error "[HiTLS] Nist curves or brainpool curves must be enabled for ECDH."
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_CMVP_INTEGRITY) && !defined(HITLS_CRYPTO_CMVP)
+    #error "[HiTLS] Integrity check must work with CMVP"
+#endif
+
+#if (defined(HITLS_CRYPTO_SHA1_ARMV8) || \
+     defined(HITLS_CRYPTO_SHA256_ARMV8) || defined(HITLS_CRYPTO_SHA224_ARMV8) || defined(HITLS_CRYPTO_SHA2_ARMV8) || \
+     defined(HITLS_CRYPTO_SM4_X8664)) && !defined(HITLS_CRYPTO_EALINIT)
+    #error "[HiTLS] ealinit must be enabled for sha1_armv8 or sha256_armv8 or sha224_armv8 or sm4_x8664."
+#endif
 
 #if defined(HITLS_CRYPTO_HYBRIDKEM)
     #if !defined(HITLS_CRYPTO_X25519) && !defined(HITLS_CRYPTO_ECDH)
         #error "[HiTLS] The hybrid must work with x25519 or ecdh."
     #endif
 #endif
+
+#if defined(HITLS_CRYPTO_HMAC) && !defined(HITLS_CRYPTO_MD)
+#error "[HiTLS] The hmac must work with hash."
+#endif
+
+#if defined(HITLS_CRYPTO_DRBG_HASH) && !defined(HITLS_CRYPTO_MD)
+#error "[HiTLS] The drbg_hash must work with hash."
+#endif
+
+#if defined(HITLS_CRYPTO_ENTROPY) && !defined(HITLS_CRYPTO_DRBG)
+#error "[HiTLS] The entropy must work with at leaset one drbg algorithm."
+#endif
+
+#if defined(HITLS_CRYPTO_PKEY) && !defined(HITLS_CRYPTO_MD)
+#error "[HiTLS] The pkey must work with hash."
+#endif
+
+#if defined(HITLS_CRYPTO_BN) && !(defined(HITLS_THIRTY_TWO_BITS) || defined(HITLS_SIXTY_FOUR_BITS))
+#error "[HiTLS] To use bn, the number of system bits must be specified first."
+#endif
+
+#ifdef HITLS_CRYPTO_KEY_EPKI
+    #if !defined(HITLS_CRYPTO_KEY_ENCODE) && !defined(HITLS_CRYPTO_KEY_DECODE)
+        #error "[HiTLS] The key encrypt must work with key gen or key parse."
+    #endif
+    #if !defined(HITLS_CRYPTO_DRBG)
+        #error "[HiTLS] The key encrypt must work with a drbg algorithm."
+    #endif
+    #if !defined(HITLS_CRYPTO_CIPHER)
+        #error "[HiTLS] The key encrypt must work with a symmetric algorithm."
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_ENCODE_DECODE) && (!defined(HITLS_CRYPTO_ECDSA) && !defined(HITLS_CRYPTO_SM2_SIGN) && \
+    !defined(HITLS_CRYPTO_SM2_CRYPT) && !defined(HITLS_CRYPTO_ED25519) && !defined(HITLS_CRYPTO_RSA_SIGN)) && \
+    !defined(HITLS_CRYPTO_RSA_VERIFY)
+    #error "[HiTLS] The encode must work with ecdsa or sm2_sign or sm2_crypt or ed25519 or rsa_sign or rsa_verify."
+#endif
+
+#endif /* HITLS_CRYPTO */
+
+#ifdef HITLS_PKI
+
+#if defined(HITLS_PKI_INFO) && !defined(HITLS_PKI_X509_CRT)
+#error "[HiTLS] The info must work with x509_crt_gen or x509_crt_parse."
+#endif
+
+#endif /* HITLS_PKI */
 
 #endif /* HITLS_CONFIG_CHECK_H */

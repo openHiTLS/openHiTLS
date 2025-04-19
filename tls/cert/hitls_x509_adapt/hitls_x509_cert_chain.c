@@ -108,7 +108,7 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_VEY_SM2_USERID,
+    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_VFY_SM2_USERID,
         sm2DefaultUserid, strlen(sm2DefaultUserid));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

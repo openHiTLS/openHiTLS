@@ -21,7 +21,7 @@
 #include "bsl_log.h"
 #include "sal_file.h"
 #include "bsl_init.h"
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
 #include "crypt_eal_encode.h"
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"

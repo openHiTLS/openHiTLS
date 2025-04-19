@@ -191,21 +191,28 @@ static const EAL_PkeyMethod METHODS[] = {
 #ifdef HITLS_CRYPTO_RSA_SIGN
         CRYPT_RSA_Sign,
         CRYPT_RSA_SignData,
-        CRYPT_RSA_Verify,
-        CRYPT_RSA_VerifyData,
 #else
         NULL, // sign
         NULL, // signData
+#endif
+#ifdef HITLS_CRYPTO_RSA_VERIFY
+        CRYPT_RSA_Verify,
+        CRYPT_RSA_VerifyData,
+        CRYPT_RSA_Recover,
+#else
         NULL, // verify
         NULL, // verifyData
+        NULL, // recover
 #endif
-        CRYPT_RSA_Recover,
         NULL, // computeShareKey
-#ifdef HITLS_CRYPTO_RSA_CRYPT
+#ifdef HITLS_CRYPTO_RSA_ENCRYPT
         CRYPT_RSA_Encrypt,
-        CRYPT_RSA_Decrypt,
 #else
         NULL, // encrypt
+#endif
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
+        CRYPT_RSA_Decrypt,
+#else
         NULL, // decrypt
 #endif
         NULL, // check
@@ -214,8 +221,16 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // pkeyEncaps
         NULL, // pkeyDecaps
 #ifdef HITLS_CRYPTO_RSA_BSSA
+#ifdef HITLS_CRYPTO_RSA_SIGN
         CRYPT_RSA_Blind, // blind
+#else
+        NULL, // blind
+#endif
+#ifdef HITLS_CRYPTO_RSA_VERIFY
         CRYPT_RSA_UnBlind  // unBlind
+#else
+        NULL  // unBlind
+#endif
 #else
         NULL, // blind
         NULL  // unBlind

@@ -64,12 +64,16 @@ EXIT:
  * @expect success
  */
 /* BEGIN_CASE */
-void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001()
+void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
 {
+#ifndef HITLS_BSL_HASH
+    SKIP_TEST();
+#else
     BslCid signId = BSL_CID_MAX - 1;
     BslCid asymId = BSL_CID_RSA;
     BslCid hashId = BSL_CID_MAX - 2;
 
+    TestMemInit();
     ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
 
     BslCid retrievedAsymId = BSL_OBJ_GetAsymIdFromSignId(signId);
@@ -94,6 +98,7 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001()
     BSL_OBJ_FreeSignHashTable();
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -105,6 +110,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_OBJ_CREATE_TC001()
 {
+#ifndef HITLS_BSL_HASH
+    SKIP_TEST();
+#else
     char *testOidName = "TEST-OID";
     BslCid testCid = BSL_CID_MAX + 1;
     char testOidData[] = "\52\206\110\206\367\15\1\11\30";
@@ -115,6 +123,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     char aesOidData[] = "\140\206\110\1\145\3\4\1\2";
     BslOidString aesOid = {9, aesOidData, BSL_OID_GLOBAL};
 
+    TestMemInit();
     ASSERT_EQ(BSL_OBJ_Create(&aesOid, aesOidName, aesCid), BSL_SUCCESS);
 
     ASSERT_EQ(BSL_OBJ_Create(&testOid, testOidName, testCid), BSL_SUCCESS);
@@ -142,6 +151,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     BSL_OBJ_FreeHashTable();
 EXIT:
     return;
+#endif
 }
 /* END_CASE */
 
@@ -153,6 +163,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
 {
+#ifndef HITLS_BSL_HASH
+    SKIP_TEST();
+#else
     int32_t ret;
     BslOidString testOid1, testOid2;
     const char *testOidName1 = "TEST-OID-1";
@@ -171,6 +184,7 @@ void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
     testOid2.octs = testOidData2;
     testOid2.flags = BSL_OID_GLOBAL;
 
+    TestMemInit();
     ret = BSL_OBJ_Create(&testOid1, testOidName1, testCid1);
     ASSERT_EQ(BSL_SUCCESS, ret);
 
@@ -204,5 +218,6 @@ void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
     BSL_OBJ_FreeHashTable();
 EXIT:
     return;
+#endif
 }
 /* END_CASE */

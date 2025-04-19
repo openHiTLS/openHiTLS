@@ -476,7 +476,7 @@ uint32_t CRYPT_RSA_GetBits(const CRYPT_RSA_Ctx *ctx)
     return 0;
 }
 
-#ifdef HITLS_CRYPTO_RSA_SIGN
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
 uint32_t CRYPT_RSA_GetSignLen(const CRYPT_RSA_Ctx *ctx)
 {
     return BN_BITS_TO_BYTES(CRYPT_RSA_GetBits(ctx));
@@ -984,7 +984,9 @@ void ShallowCopyCtx(CRYPT_RSA_Ctx *ctx, CRYPT_RSA_Ctx *newCtx)
 
     ctx->prvKey = newCtx->prvKey;
     ctx->pubKey = newCtx->pubKey;
+#ifdef HITLS_CRYPTO_RSA_BLINDING
     ctx->scBlind = newCtx->scBlind;
+#endif
     ctx->pad = newCtx->pad;
     ctx->flags = newCtx->flags;
 }

@@ -35,7 +35,6 @@ RSA_Blind *RSA_BlindNewCtx(void)
     return ret;
 }
 
-
 void RSA_BlindFreeCtx(RSA_Blind *b)
 {
     if (b == NULL) {
@@ -160,4 +159,4 @@ END:
     b->rInv = NULL;
     return ret;
 }
-#endif /* HITLS_CRYPTO_RSA_BLINDING */
+#endif /* HITLS_CRYPTO_RSA_BLINDING || HITLS_CRYPTO_RSA_BSSA */

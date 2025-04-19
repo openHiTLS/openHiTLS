@@ -16,6 +16,8 @@
 #ifndef HITLS_PKCS12_LOCAL_H
 #define HITLS_PKCS12_LOCAL_H
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_PKCS12
 #include <stdint.h>
 #include "bsl_asn1.h"
 #include "bsl_obj.h"
@@ -109,6 +111,7 @@ int32_t HITLS_PKCS12_KDF(BSL_Buffer *output, const uint8_t *pwd, uint32_t pwdLen
 */
 int32_t HITLS_PKCS12_CalMac(BSL_Buffer *output, BSL_Buffer *pwd, BSL_Buffer *initData, HITLS_PKCS12_MacData *macData);
 
+#ifdef HITLS_PKI_PKCS12_PARSE
 /*
  * Parse the outermost layer of contentInfo, provide two functions
  *    1. AuthSafe -> pkcs7 package format
@@ -146,7 +149,9 @@ int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *passwo
  * Parse MacData of a p12, and convert decode data to the real data.
 */
 int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HITLS_PKCS12_MacData *macData);
+#endif
 
+#ifdef HITLS_PKI_PKCS12_GEN
 /*
  * Encode MacData of a p12.
 */
@@ -164,9 +169,12 @@ int32_t HITLS_PKCS12_EncodeContentInfo(HITLS_PKI_LibCtx *libCtx, const char *att
 */
 int32_t HITLS_PKCS12_EncodeAsn1List(BSL_ASN1_List *list, uint32_t encodeType, const CRYPT_EncodeParam *encryptParam,
     BSL_Buffer *encode);
+#endif
 
 #ifdef __cplusplus
 }
 #endif
+
+#endif // HITLS_PKI_PKCS12
 
 #endif // HITLS_CRL_LOCAL_H

@@ -26,6 +26,7 @@ usage()
     printf "%-50s %-30s\n" "* no-tls       : Custom tls testcase."             "bash ${BASH_SOURCE[0]} no-tls"
     printf "%-50s %-30s\n" "* no-pki       : Custom pki testcase."             "bash ${BASH_SOURCE[0]} no-pki"
     printf "%-50s %-30s\n" "* no-auth      : Custom auth testcase."            "bash ${BASH_SOURCE[0]} no-auth"
+    printf "%-50s %-30s\n" "* no-demos     : Not build demos."                 "bash ${BASH_SOURCE[0]} no-auth"
     printf "%-50s %-30s\n" "* verbose      : Show detailse."                   "bash ${BASH_SOURCE[0]} verbose"
     printf "%-50s %-30s\n" "* gcov         : Enable the coverage capability."  "bash ${BASH_SOURCE[0]} gcov"
     printf "%-50s %-30s\n" "* asan         : Enabling the ASAN capability."    "bash ${BASH_SOURCE[0]} asan"
@@ -48,6 +49,8 @@ export_env()
     ENABLE_BSL=${ENABLE_BSL:=ON}
     ENABLE_PKI=${ENABLE_PKI:=ON}
     ENABLE_AUTH=${ENABLE_AUTH:=ON}
+    ENABLE_CMVP=${ENABLE_CMVP:=OFF}
+    ENABLE_DEMOS=${ENABLE_DEMOS:=ON}
     ENABLE_UIO_SCTP=${ENABLE_UIO_SCTP:=ON}
     ENABLE_VERBOSE=${ENABLE_VERBOSE:=''}
     RUN_TESTS=${RUN_TESTS:=''}
@@ -86,7 +89,10 @@ find_test_suite()
     if [[ ${ENABLE_AUTH} == "ON" ]]; then
         auth_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/auth -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
     fi
-    RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}${auth_testsuite}"
+    if [[ ${ENABLE_CMVP} == "ON" ]]; then
+        cmvp_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/cmvp -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
+    fi
+    RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}${auth_testsuite}${cmvp_testsuite}"
 }
 
 build_test_suite()
@@ -128,6 +134,9 @@ process_custom_cases()
 
 build_demos()
 {
+    if [[ ${ENABLE_DEMOS} == "OFF" ]]; then
+        return
+    fi
     pushd ${HITLS_ROOT_DIR}/testcode/demo/
     rm -rf build && mkdir build 
     pushd build
@@ -191,9 +200,15 @@ options()
             no-tls)
                 ENABLE_TLS=OFF
                 ;;
+            no-demos)
+                ENABLE_DEMOS=OFF
+                ;;
             no-sctp)
                 ENABLE_UIO_SCTP=OFF
                 ENABLE_TLS=OFF
+                ;;
+            no-demos)
+                ENABLE_DEMOS=OFF
                 ;;
             verbose)
                 ENABLE_VERBOSE='VERBOSE=1'
@@ -227,4 +242,6 @@ down_depend_code
 find_test_suite
 process_custom_cases
 build_test_suite
-build_demos
+if [[ ${ENABLE_DEMOS} == "ON" ]]; then
+    build_demos
+fi

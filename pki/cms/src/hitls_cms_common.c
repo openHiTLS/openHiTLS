@@ -13,15 +13,18 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_PKCS12
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_asn1.h"
 #include "bsl_obj_internal.h"
 #include "crypt_eal_encode.h"
 #include "crypt_eal_md.h"
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
 #include "hitls_pki_errno.h"
 
+#ifdef HITLS_PKI_PKCS12_PARSE
 /**
  * Data Content Type
  * Data ::= OCTET STRING
@@ -56,6 +59,7 @@ int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
     dataValue->dataLen = decodeLen;
     return HITLS_PKI_SUCCESS;
 }
+#endif
 
 /**
  * DigestInfo ::= SEQUENCE {
@@ -66,7 +70,7 @@ int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue)
  * https://datatracker.ietf.org/doc/html/rfc2315#section-9.4
  */
 
-static BSL_ASN1_TemplateItem digestInfoTempl[] = {
+static BSL_ASN1_TemplateItem g_digestInfoTempl[] = {
     /* digestAlgorithm */
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
         {BSL_ASN1_TAG_OBJECT_ID, 0, 1},
@@ -95,7 +99,7 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
     uint8_t *temp = encode->data;
     uint32_t  tempLen = encode->dataLen;
     BSL_ASN1_Buffer asn1[HITLS_P7_DIGESTINFO_MAX_IDX] = {0};
-    BSL_ASN1_Template templ = {digestInfoTempl, sizeof(digestInfoTempl) / sizeof(digestInfoTempl[0])};
+    BSL_ASN1_Template templ = {g_digestInfoTempl, sizeof(g_digestInfoTempl) / sizeof(g_digestInfoTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, asn1, HITLS_P7_DIGESTINFO_MAX_IDX);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -123,6 +127,7 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
     return HITLS_PKI_SUCCESS;
 }
 
+#ifdef HITLS_PKI_PKCS12_GEN
 int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode)
 {
     if (in == NULL || encode == NULL || encode->data != NULL || (in->data == NULL && in->dataLen != 0)) {
@@ -141,7 +146,7 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
         {BSL_ASN1_TAG_OCTETSTRING, in->dataLen, in->data},
     };
     BSL_Buffer tmp = {0};
-    BSL_ASN1_Template templ = {digestInfoTempl, sizeof(digestInfoTempl) / sizeof(digestInfoTempl[0])};
+    BSL_ASN1_Template templ = {g_digestInfoTempl, sizeof(g_digestInfoTempl) / sizeof(g_digestInfoTempl[0])};
     int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asn1, HITLS_P7_DIGESTINFO_MAX_IDX, &tmp.data, &tmp.dataLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -151,3 +156,5 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
     encode->dataLen = tmp.dataLen;
     return HITLS_PKI_SUCCESS;
 }
+#endif
+#endif // HITLS_PKI_PKCS12

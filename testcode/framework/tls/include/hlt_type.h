@@ -69,6 +69,12 @@ extern "C" {
 #define RSA_SHA384_PRIV_PATH    "rsa_sha/end-sha384.key.der"
 #define RSA_SHA512_EE_PATH      "rsa_sha/end-sha512.der"
 #define RSA_SHA512_PRIV_PATH    "rsa_sha/end-sha512.key.der"
+
+#define ED25519_SHA512_CA_PATH        "ed25519/ed25519.ca.der:ed25519/ed25519.intca.der"
+#define ED25519_SHA512_CHAIN_PATH     "ed25519/ed25519.intca.der"
+#define ED25519_SHA512_EE_PATH        "ed25519/ed25519.end.der"
+#define ED25519_SHA512_PRIV_PATH      "ed25519/ed25519.end.key.der"
+
 #define ECDSA_SHA_CA_PATH       "ecdsa/ca-nist521.der:ecdsa/inter-nist521.der"
 #define ECDSA_SHA_CHAIN_PATH    "ecdsa/inter-nist521.der"
 #define ECDSA_SHA256_EE_PATH    "ecdsa/end256-sha256.der"

@@ -13,6 +13,9 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_X509
+
 #include <stdint.h>
 #include "securec.h"
 #include "sal_atomic.h"
@@ -22,7 +25,7 @@
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
 #include "hitls_pki_errno.h"
 #include "hitls_x509_local.h"
 
@@ -30,6 +33,20 @@
 
 #define SM2_MAX_ID_BITS 65535
 #define SM2_MAX_ID_LENGTH (SM2_MAX_ID_BITS / 8)
+
+void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node)
+{
+    if (node == NULL) {
+        return;
+    }
+    BSL_SAL_FREE(node->nameType.buff);
+    node->nameType.len = 0;
+    node->nameType.tag = 0;
+    BSL_SAL_FREE(node->nameValue.buff);
+    node->nameValue.len = 0;
+    node->nameValue.tag = 0;
+    BSL_SAL_Free(node);
+}
 
 int32_t HITLS_X509_RefUp(BSL_SAL_RefCount *references, int32_t *val, uint32_t valLen)
 {
@@ -111,6 +128,8 @@ bool X509_IsValidHashAlg(CRYPT_MD_AlgId id)
     return id == CRYPT_MD_MD5 || id == CRYPT_MD_SHA1 || id == CRYPT_MD_SHA224 || id == CRYPT_MD_SHA256 ||
         id == CRYPT_MD_SHA384 || id == CRYPT_MD_SHA512 || id == CRYPT_MD_SM3;
 }
+
+#if defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_X509_CRL_GEN)
 
 int32_t HITLS_X509_SetPkey(void **pkey, void *val)
 {
@@ -206,7 +225,7 @@ typedef struct {
  *  https://www.itu.int/rec/T-REC-X.690-202102-I/en
  * The encodings of the component values of a set-of value shall appear in ascending order, the encodings
  * being compared as octet strings with the shorter components being padded at their trailing end with 0-octets.
- * NOTE – The padding octets are for comparison purposes only and do not appear in the encodings.
+ * NOTE - The padding octets are for comparison purposes only and do not appear in the encodings.
 */
 static int32_t CmpDnNameByEncode(const void *pDnName1, const void *pDnName2)
 {
@@ -245,29 +264,15 @@ static int32_t CmpDnNameByEncode(const void *pDnName1, const void *pDnName2)
 static uint8_t GetAsn1TypeByCid(BslCid cid)
 {
     switch (cid) {
-        case BSL_CID_SERIALNUMBER:
-        case BSL_CID_COUNTRYNAME:
-        case BSL_CID_DNQUALIFIER:
+        case BSL_CID_AT_SERIALNUMBER:
+        case BSL_CID_AT_COUNTRYNAME:
+        case BSL_CID_AT_DNQUALIFIER:
             return BSL_ASN1_TAG_PRINTABLESTRING;
         case BSL_CID_DOMAINCOMPONENT:
             return BSL_ASN1_TAG_IA5STRING;
         default:
             return BSL_ASN1_TAG_UTF8STRING;
     }
-}
-
-void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node)
-{
-    if (node == NULL) {
-        return;
-    }
-    BSL_SAL_FREE(node->nameType.buff);
-    node->nameType.len = 0;
-    node->nameType.tag = 0;
-    BSL_SAL_FREE(node->nameValue.buff);
-    node->nameValue.len = 0;
-    node->nameValue.tag = 0;
-    BSL_SAL_Free(node);
 }
 
 static void FreeNodePack(NameNodePack *node)
@@ -304,8 +309,8 @@ static int32_t FillNameNodes(HITLS_X509_NameNode *layer2, BslCid cid, uint8_t *d
 {
     BslOidString *oid = BSL_OBJ_GetOidFromCID(cid);
     if (oid == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
-        return HITLS_X509_ERR_SET_DNNAME_UNKKOWN;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
+        return HITLS_X509_ERR_SET_DNNAME_UNKNOWN;
     }
     layer2->layer = 2; // 2: The layer of sequence
     layer2->nameType.tag = BSL_ASN1_TAG_OBJECT_ID;
@@ -329,17 +334,16 @@ static int32_t X509AddDnNameItemToList(BslList *dnNameList, BslCid cid, uint8_t 
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    const BslAsn1StrInfo *asn1StrInfo = BSL_OBJ_GetAsn1StrFromCid(cid);
+    const BslAsn1DnInfo *asn1StrInfo = BSL_OBJ_GetDnInfoFromCid(cid);
     if (asn1StrInfo == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
-        return HITLS_X509_ERR_SET_DNNAME_UNKKOWN;
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
+        return HITLS_X509_ERR_SET_DNNAME_UNKNOWN;
     }
     if (asn1StrInfo->max != -1 && ((int32_t)dataLen < asn1StrInfo->min || (int32_t)dataLen > asn1StrInfo->max)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_INVALID_LEN);
         return HITLS_X509_ERR_SET_DNNAME_INVALID_LEN;
     }
 
-    NameNodePack pack;
     BSL_ASN1_Buffer *encode = BSL_SAL_Calloc(1u, sizeof(HITLS_X509_NameNode));
     if (encode == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -363,8 +367,7 @@ static int32_t X509AddDnNameItemToList(BslList *dnNameList, BslCid cid, uint8_t 
         HITLS_X509_FreeNameNode(layer2);
         return ret;
     }
-    pack.node = layer2;
-    pack.encode = encode;
+    NameNodePack pack = {layer2, encode};
     ret = HITLS_X509_AddListItemDefault(&pack, sizeof(NameNodePack), dnNameList);
     if (ret != BSL_SUCCESS) {
         HITLS_X509_FreeNameNode(layer2);
@@ -446,7 +449,9 @@ EXIT:
     BSL_LIST_FREE(dnNameList, (BSL_LIST_PFUNC_FREE)FreeNodePack);
     return ret;
 }
+#endif
 
+#if defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN)
 int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t valLen)
 {
     if (valLen <= 0) {
@@ -463,7 +468,9 @@ int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t 
     serial->tag = BSL_ASN1_TAG_INTEGER;
     return HITLS_PKI_SUCCESS;
 }
+#endif
 
+#if defined(HITLS_PKI_X509_CRT) || defined(HITLS_PKI_X509_CRL)
 int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, uint32_t valLen)
 {
     if (valLen != sizeof(BSL_Buffer)) {
@@ -479,7 +486,9 @@ int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, uint32_t valLen
     buff->dataLen = serial->len;
     return HITLS_PKI_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_CRYPTO_SM2
 int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, uint32_t valLen)
 {
     if (valLen == 0 || valLen > SM2_MAX_ID_LENGTH) {
@@ -497,3 +506,5 @@ int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, uint32_t valLe
     sm2UserId->dataLen = (uint32_t)valLen;
     return HITLS_PKI_SUCCESS;
 }
+#endif // HITLS_CRYPTO_SM2
+#endif // HITLS_PKI_X509

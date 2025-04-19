@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#if defined(HITLS_PKI_X509_CSR) || defined(HITLS_PKI_PKCS12)
 #include <stdint.h>
 #include "securec.h"
 #include "hitls_x509_local.h"
@@ -25,6 +27,7 @@
 #include "hitls_pki_errno.h"
 #include "hitls_pki_utils.h"
 
+#if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE)
 /**
  * RFC 2985: section-5.4.2
  *  extensionRequest ATTRIBUTE ::= {
@@ -44,6 +47,7 @@ typedef enum {
     HITLS_X509_ATTR_SET_IDX,
     HITLS_X509_ATTR_INDEX_MAX
 } HITLS_X509_ATTR_IDX;
+#endif
 
 #define HITLS_X509_ATTR_MAX_NUM  20
 #define HITLS_X509_ATTRS_PARSE_FLAG  0x01
@@ -88,6 +92,7 @@ void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb fre
     BSL_SAL_Free(attrs);
 }
 
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
 int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 {
     BslOidString *oidStr = BSL_OBJ_GetOidFromCID(cid);
@@ -101,7 +106,9 @@ int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 
     return HITLS_PKI_SUCCESS;
 }
+#endif
 
+#ifdef HITLS_PKI_PKCS12_GEN
 HITLS_X509_Attrs *HITLS_X509_AttrsDup(const HITLS_X509_Attrs *src, HITLS_X509_DupAttrItemCb dupCb,
     HITLS_X509_FreeAttrItemCb freeCb)
 {
@@ -130,6 +137,7 @@ HITLS_X509_Attrs *HITLS_X509_AttrsDup(const HITLS_X509_Attrs *src, HITLS_X509_Du
     dst->flag = src->flag;
     return dst;
 }
+#endif
 
 void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr)
 {
@@ -140,6 +148,7 @@ void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr)
     BSL_SAL_Free(attr);
 }
 
+#if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE)
 int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *attrEntry)
 {
     uint8_t *temp = attrItem->buff;
@@ -221,6 +230,7 @@ int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *at
     attrs->flag = HITLS_X509_ATTRS_PARSE_FLAG;
     return ret;
 }
+#endif
 
 static int32_t CmpAttrEntryByCid(const void *attrEntry, const void *cid)
 {
@@ -228,10 +238,12 @@ static int32_t CmpAttrEntryByCid(const void *attrEntry, const void *cid)
     return node->cid == *(const BslCid *)cid ? 0 : 1;
 }
 
-typedef int32_t (*EncodeAttrCb)(HITLS_X509_Attrs *attributes, void *val, uint32_t valLen, BSL_ASN1_Buffer *attrValue);
-
 typedef int32_t (*DecodeAttrCb)(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
     uint32_t valLen);
+
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
+
+typedef int32_t (*EncodeAttrCb)(HITLS_X509_Attrs *attributes, void *val, uint32_t valLen, BSL_ASN1_Buffer *attrValue);
 
 static int32_t EncodeReqExtAttr(HITLS_X509_Attrs *attributes, void *val, uint32_t valLen, BSL_ASN1_Buffer *attrValue)
 {
@@ -283,6 +295,7 @@ ERR:
     HITLS_X509_AttrEntryFree(attrEntry);
     return ret;
 }
+#endif // HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN
 
 static int32_t DecodeReqExtAttr(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
     uint32_t valLen)
@@ -330,15 +343,19 @@ int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     switch (cmd) {
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
         case HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS:
-            return SetAttr(attributes, BSL_CID_REQ_EXTENSION, val, valLen, EncodeReqExtAttr);
+            return SetAttr(attributes, BSL_CID_EXTENSIONREQUEST, val, valLen, EncodeReqExtAttr);
+#endif
         case HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS:
-            return GetAttr(attributes, BSL_CID_REQ_EXTENSION, val, valLen, DecodeReqExtAttr);
+            return GetAttr(attributes, BSL_CID_EXTENSIONREQUEST, val, valLen, DecodeReqExtAttr);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
     }
 }
+
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
 
 #define X509_CSR_ATTR_ELEM_NUMBER 2
 static BSL_ASN1_TemplateItem g_x509AttrEntryTempl[] = {
@@ -420,3 +437,6 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     attrAsn1->tag = tag;
     return ret;
 }
+#endif // HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN
+
+#endif // HITLS_PKI_X509_CSR || HITLS_PKI_PKCS12
