@@ -29,7 +29,7 @@
 
 #define UINT32_SIZE 4
 
-#ifdef HITLS_CRYPTO_RSA_SIGN_PSS
+#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
 // maskedDB: [in] maskDB from MGF
 //           [out] maskedDB = DB xor maskDB
 // DB: PS || 0x01 || salt;
@@ -85,6 +85,7 @@ static int32_t PssEncodeLengthCheck(uint32_t modBits, uint32_t hLen,
     return CRYPT_SUCCESS;
 }
 
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_BSSA)
 int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
 {
     uint32_t hashLen = mdMethod->mdSize;
@@ -200,7 +201,9 @@ int32_t CRYPT_RSA_SetPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgf
     MaskDB(em, maskedDBLen, salt, saltLen, msBit);
     return CRYPT_SUCCESS;
 }
+#endif // HITLS_CRYPTO_RSA_SIGN || HITLS_CRYPTO_RSA_BSSA
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 static int32_t GetVerifySaltLen(const uint8_t *emData, const uint8_t *dbBuff, uint32_t maskedDBLen, uint32_t msBit,
     uint32_t *saltLen)
 {
@@ -344,10 +347,10 @@ int32_t CRYPT_RSA_VerifyPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *
     BSL_SAL_FREE(tmpBuff);
     return ret;
 }
-#endif
+#endif // HITLS_CRYPTO_RSA_VERIFY
+#endif // HITLS_CRYPTO_RSA_EMSA_PSS
 
-#ifdef HITLS_CRYPTO_RSA_SIGN_PKCSV15
-
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
 static int32_t PkcsSetLengthCheck(uint32_t emLen, uint32_t hashLen, uint32_t algIdentLen)
 {
     if (emLen > RSA_MAX_MODULUS_LEN || hashLen > RSA_MAX_MODULUS_LEN) {
@@ -470,6 +473,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *data, ui
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, uint32_t padLen,
     const uint8_t *data, uint32_t dataLen)
 {
@@ -504,9 +508,8 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, 
     BSL_SAL_FREE(padBuff);
     return CRYPT_SUCCESS;
 }
-#endif
+#endif // HITLS_CRYPTO_RSA_VERIFY
 
-#ifdef HITLS_CRYPTO_RSA_SIGN_PKCSV15
 int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
 {
     uint8_t *index = data;
@@ -548,9 +551,10 @@ int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *o
     *outLen = tmpLen;
     return CRYPT_SUCCESS;
 }
-#endif
+#endif // HITLS_CRYPTO_RSA_EMSA_PKCSV15
 
-#ifdef HITLS_CRYPTO_RSA_CRYPT
+#ifdef HITLS_CRYPTO_RSAES_OAEP
+#ifdef HITLS_CRYPTO_RSA_ENCRYPT
 static int32_t OaepSetLengthCheck(uint32_t outLen, uint32_t inLen, uint32_t hashLen)
 {
     if (outLen > RSA_MAX_MODULUS_LEN || inLen > RSA_MAX_MODULUS_LEN || hashLen > HASH_MAX_MDSIZE) {
@@ -724,7 +728,9 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t i
 
     return ret;
 }
+#endif // HITLS_CRYPTO_RSA_ENCRYPT
 
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
 static int32_t OaepVerifyLengthCheck(uint32_t outLen, uint32_t inLen, uint32_t hashLen)
 {
     if (outLen > RSA_MAX_MODULUS_LEN || inLen > RSA_MAX_MODULUS_LEN || hashLen > HASH_MAX_MDSIZE) {
@@ -866,7 +872,11 @@ ERR:
     BSL_SAL_FREE(maskDB);
     return ret;
 }
+#endif // HITLS_CRYPTO_RSA_DECRYPT
+#endif // HITLS_CRYPTO_RSAES_OAEP
 
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) && \
+    (defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) || defined(HITLS_CRYPTO_RSAES_PKCSV15))
 // Pad output format: EM = 00 || 02 || PS || 00 || M; where M indicates message.
 int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t outLen)
@@ -913,7 +923,10 @@ int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLe
 
     return CRYPT_SUCCESS;
 }
+#endif // HITLS_CRYPTO_RSA_ENCRYPT && (EC_PKCSV15_TLS || EC_PKCSV15)
 
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
+#ifdef HITLS_CRYPTO_RSAES_PKCSV15
 int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     uint32_t zeroIndex = 0;
@@ -948,7 +961,9 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t 
 
     return CRYPT_SUCCESS;
 }
+#endif // HITLS_CRYPTO_RSAES_PKCSV15
 
+#ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
 int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     uint32_t masterSecretLen = *outLen;
@@ -980,5 +995,7 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
     // so return 0 for success, else return 0xffffffff
     return ~valid;
 }
-#endif
+#endif // HITLS_CRYPTO_RSAES_PKCSV15_TLS
+#endif // HITLS_CRYPTO_RSA_DECRYPT
+
 #endif /* HITLS_CRYPTO_RSA */

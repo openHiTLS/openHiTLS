@@ -17,9 +17,6 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 
-#ifdef HITLS_BSL_SAL_MEM
-#include "sal_memimpl.h"
-#endif
 #ifdef HITLS_BSL_SAL_NET
 #include "sal_netimpl.h"
 #endif
@@ -34,6 +31,7 @@
 #endif
 
 #include "sal_lockimpl.h"
+#include "sal_memimpl.h"
 
 /* The prefix of BSL_SAL_CB_FUNC_TYPE */
 #define BSL_SAL_MEM_CB      0x0100

@@ -381,6 +381,7 @@ static const int g_drbgMethodMap[] = {
     CRYPT_MD_SHA256,
     CRYPT_MD_SHA384,
     CRYPT_MD_SHA512,
+    CRYPT_MD_SM3,
     CRYPT_MAC_HMAC_SHA1,
     CRYPT_MAC_HMAC_SHA224,
     CRYPT_MAC_HMAC_SHA256,

@@ -29,8 +29,10 @@
 #include "crypt_ealinit.h"
 #include "eal_mac_local.h"
 #include "eal_common.h"
+#ifdef HITLS_CRYPTO_PROVIDER
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
+#endif
 
 #define MAC_TYPE_INVALID 0
 
@@ -134,6 +136,7 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t 
     return macCtx;
 }
 #endif
+
 CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
 {
     EAL_MacMethLookup method;

@@ -118,11 +118,11 @@ void SkipTest(const char *filename)
         Print("failure log failed: filename too long\n");
     }
 }
-void PrintResult(bool showDetail, char *vectorName)
+void PrintResult(bool showDetail, char *vectorName, time_t useTime)
 {
     if (showDetail) {
         if (g_testResult.result == TEST_RESULT_SUCCEED) {
-            Print("pass\n");
+            Print("pass. use sec:%d\n", useTime);
         } else if (g_testResult.result == TEST_RESULT_SKIPPED) {
             Print("skip\n");
         } else {
@@ -165,11 +165,11 @@ void PrintDiff(const uint8_t *str1, uint32_t size1, const uint8_t *str2, uint32_
     Print("\nCompare different:\nstr1: ");
     uint32_t i;
     for (i = 0; i < size1; i++) {
-        Print("%X ", str1[i]);
+        Print("%02X ", str1[i]);
     }
     Print("\nstr2: ");
     for (i = 0; i < size2; i++) {
-        Print("%X ", str2[i]);
+        Print("%02X ", str2[i]);
     }
     Print("\n");
 }

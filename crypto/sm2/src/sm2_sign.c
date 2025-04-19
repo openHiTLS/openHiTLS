@@ -24,7 +24,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
-#include "crypt_encode.h"
+#include "crypt_encode_internal.h"
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "crypt_local_types.h"
@@ -807,8 +807,10 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetBits, val, len);
+#ifdef HITLS_CRYPTO_SM2_SIGN
         case CRYPT_CTRL_GET_SIGNLEN:
             return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSignLen, val, len);
+#endif
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSecBits, val, len);
         case CRYPT_CTRL_SET_SM2_SERVER:

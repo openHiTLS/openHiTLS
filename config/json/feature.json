@@ -8,7 +8,7 @@
                     "init": {"deps": ["err"]},
                     "base64": null,
                     "buffer": null,
-                    "pem": null,
+                    "pem": {"deps": ["base64"]},
                     "list": null,
                     "log": null,
                     "obj":null,
@@ -22,19 +22,18 @@
                     "sal_str": null,
                     "sal_dl": null,
                     "tlv": null,
-                    "uio_plt": null,
                     "uio": {
                         "uio_plt": null,
                         "uio_addr" : {"deps": ["uio_plt"]},
                         "uio_buffer": {"deps": ["uio_plt"]},
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
-                        "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
-                        "uio_udp": {"deps": ["uio_plt", "sal_net"]},
+                        "uio_tcp": {"deps": ["uio_plt", "sal_net", "uio_addr"]},
+                        "uio_udp": {"deps": ["uio_plt", "sal_net", "uio_addr"]},
                         "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]}
                     },
                     "usrdata": null,
                     "params": null,
-                    "asn1":null
+                    "asn1": {"deps": ["sal_time"]}
                 }
             }
         },
@@ -71,7 +70,7 @@
                         "siphash": null
                     },
                     "hpke": {
-                        "deps": ["hkdf"],
+                        "deps": ["hkdf", "params"],
                         "opts": [["aes", "chacha20"], ["ecc", "x25519"]]
                     },
                     "kdf": {
@@ -79,18 +78,20 @@
                         "hkdf": null,
                         "pbkdf2": null,
                         "kdftls12": null,
-                        "deps": ["hmac"]
+                        "deps": ["hmac", "params"]
                     },
                     "drbg": {
                         "drbg_hash": null,
                         "drbg_hmac": {"deps": ["hmac"]},
-                        "drbg_ctr": {"deps": ["aes"]}
+                        "drbg_ctr": {"opts": ["aes", "sm4"]},
+                        "deps": ["params"]
                     },
                     "entropy": {
                         "deps": ["list"], "opts": ["drbg_hash", "drbg_hmac", "drbg_ctr"]
                     },
                     "modes": {
                         "cbc": null,
+                        "ecb": null,
                         "xts": null,
                         "ctr": null,
                         "ofb": null,
@@ -104,35 +105,91 @@
                         "sm4": null,
                         "chacha20": {"deps": ["chacha20poly1305"]}
                     },
-                    "ecc": {"deps": ["bn"]},
                     "pkey": {
-                        "ecc": {"deps": ["bn"]},
-                        "rsa": {"deps": ["bn"]},
-                        "dsa": {"deps": ["bn"]},
-                        "dh": {"deps": ["bn"]},
-                        "paillier": {"deps":["bn"]},
-                        "elgamal": {"deps":["bn"]},
-                        "ecdh": {"deps": ["ecc"]},
-                        "ecdsa": {"deps": ["ecc"]},
+                        "ecc": {
+                            "curve_nistp224": null,
+                            "curve_nistp256": null,
+                            "curve_nistp384": null,
+                            "curve_nistp521": null,
+                            "curve_bp256r1":  null,
+                            "curve_bp384r1":  null,
+                            "curve_bp512r1":  null,
+                            "curve_sm2":      null,
+                            "deps": ["bn_rand"]
+                        },
+                        "rsa": {
+                            "rsa_gen": {"deps": ["bn_rand", "bn_prime"]},
+                            "rsa_sign": {"opts": ["rsa_emsa_pss", "rsa_emsa_pkcsv15"]},
+                            "rsa_verify": {"opts": ["rsa_emsa_pss", "rsa_emsa_pkcsv15"]},
+                            "rsa_encrypt": {"opts": ["rsa_no_pad", "rsaes_oaep", "rsaes_pkcsv15", "rsaes_pkcsv15_tls"]},
+                            "rsa_decrypt": {"opts": ["rsa_no_pad", "rsaes_oaep", "rsaes_pkcsv15", "rsaes_pkcsv15_tls"]},
+                            "rsa_pad": {
+                                "rsa_no_pad": {"opts": ["rsa_encrypt", "rsa_decrypt"]},
+                                "rsaes_oaep": {"opts": ["rsa_encrypt", "rsa_decrypt"]},
+                                "rsaes_pkcsv15": {"opts": ["rsa_encrypt", "rsa_decrypt"]},
+                                "rsaes_pkcsv15_tls": {"opts": ["rsa_encrypt", "rsa_decrypt"]},
+                                "rsa_emsa_pss": {"opts": ["rsa_sign", "rsa_verify"]},
+                                "rsa_emsa_pkcsv15": {"opts": ["rsa_sign", "rsa_verify"]}
+                            },
+                            "rsa_blinding": {
+                                "deps": ["bn_rand"],
+                                "opts": ["rsa_decrypt", "rsa_sign"]
+                            },
+                            "rsa_bssa": {"deps": ["rsa_emsa_pss", "rsa_blinding"]},
+                            "deps": ["bn_basic", "params"]
+                        },
+                        "dsa": {"deps": ["bn_rand", "asn1", "obj"]},
+                        "dh": {"deps": ["bn_rand"]},
+                        "ecdh": {"opts": ["curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]},
+                        "ecdsa": {
+                            "deps": ["asn1", "obj"],
+                            "opts": ["curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]
+                        },
                         "curve25519": {
                             "ed25519": {"deps": ["sha512"]},
-                            "x25519": null
+                            "x25519": null,
+                            "deps": ["params"]
                         },
                         "sm2": {
-                            "sm2_crypt": null,
-                            "sm2_sign": null,
+                            "sm2_crypt": {"deps": ["asn1", "obj"]},
+                            "sm2_sign": {"deps": ["asn1", "obj"]},
                             "sm2_exch": null,
-                            "deps": ["ecc", "sm3"]
+                            "deps": ["curve_sm2", "sm3"]
                         },
                         "kem": {
                             "mlkem": {"deps": ["sha3"]}
                         },
-                        "mldsa": {"deps": ["sha3"]},
+                        "mldsa": {"deps": ["sha3", "obj"]},
                         "hybridkem": {"deps": ["mlkem"], "opts": ["ecdh", "x25519"]},
-                        "slh_dsa": { "deps": ["sha3", "sha2"]}
+                        "paillier": {"deps":["bn_rand", "bn_prime"]},
+                        "elgamal": {"deps":["bn_rand", "bn_prime"]},
+                        "slh_dsa": { "deps": ["sha3", "sha2", "obj", "eal", "hmac", "sha256", "sha512"]},
+                        "deps": ["params"]
                     },
-                    "provider": null,
-                    "bn": null
+                    "provider": {"deps": ["params"]},
+                    "bn": {
+                        "bn_basic": null,
+                        "bn_rand": null,
+                        "eal_bn": null,
+                        "bn_prime": {"deps": ["bn_rand"]},
+                        "bn_str_conv": null,
+                        "bn_cb": null,
+                        "bn_prime_rfc3526": null
+                    },
+                    "encode_decode": {
+                        "key_epki" : {
+                            "deps": ["pbkdf2"],
+                            "opts": [
+                                ["key_encode", "key_decode"],
+                                ["drbg_hash", "drbg_hmac", "drbg_ctr"],
+                                ["aes", "chacha20", "sm4"]
+                            ]
+                        },
+                        "key_encode" : null,
+                        "key_decode" : null,
+                        "deps": ["asn1", "obj"],
+                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify"]
+                    }
                 },
                 "x8664": {
                     "sha1": {"ins_set":["x8664", "avx512"]},
@@ -143,16 +200,19 @@
                     "aes": {"ins_set":["x8664", "avx512"]},
                     "chacha20": {"ins_set":["x8664", "avx512"]},
                     "sm4": {"ins_set":["x8664", "avx512"]},
+                    "bn": {"ins_set":["x8664", "avx512"]},
                     "x25519": null,
                     "ecc": {"ins_set":["x8664", "avx512"]}
                 },
                 "armv8": {
                     "sha1": null,
                     "sha2": null,
+                    "sha3": null,
                     "sm3": null,
                     "aes": null,
                     "modes": null,
                     "chacha20": null,
+                    "bn": null,
                     "sm4": null,
                     "x25519": null,
                     "ecc": null
@@ -525,7 +585,35 @@
             "lang" : "C",
             "features" : {
                 "c": {
-                    "all_pki" : null
+                    "x509": {
+                        "x509_crt" : {
+                            "x509_crt_gen" : {"deps": ["key_encode"]},
+                            "x509_crt_parse" : {"deps": ["key_decode"]},
+                            "deps": ["list", "obj", "asn1"]
+                        },
+                        "x509_csr" : {
+                            "x509_csr_gen" : {"deps": ["key_encode"]},
+                            "x509_csr_parse" : {"deps": ["key_decode"]},
+                            "deps": ["list", "obj", "asn1"]
+                        },
+                        "x509_crl" : {
+                            "x509_crl_gen" : {"deps": ["key_encode"]},
+                            "x509_crl_parse" : {"deps": ["key_decode"]},
+                            "deps": ["list", "obj", "asn1"]
+                        },
+                        "x509_vfy" : {
+                            "deps": ["x509_crt_parse", "x509_crl_parse"]
+                        }
+                    },
+                    "pkcs12" : {
+                        "pkcs12_gen" : {"deps": ["x509_crt_gen", "x509_crt_parse", "key_encode"]},
+                        "pkcs12_parse" : {"deps": ["x509_crt_parse", "key_decode"]},
+                        "deps": ["key_epki"]
+                    },
+                    "info": {
+                        "deps": ["uio_plt", "list", "obj", "asn1"],
+                        "opts": ["x509_crt", "x509_crt_gen", "x509_crt_parse"]
+                    }
                 }
             }
         },
@@ -716,7 +804,7 @@
                 ]
             },
             "modes": {
-                ".features": ["cbc", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "chacha20poly1305"],
+                ".features": ["cbc", "ecb", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "chacha20poly1305"],
                 ".srcs": {
                     "public": "crypto/modes/src/modes*.c",
                     "no_asm": "crypto/modes/src/noasm_*.c",
@@ -941,17 +1029,23 @@
                 ]
             },
             "bn": {
-                ".features": ["bn"],
+                ".features": ["bn", "bn_basic", "bn_rand", "eal_bn",  "bn_prime", "bn_str_conv", "bn_cb", "bn_prime_rfc3526"],
                 ".srcs": {
-                    "public": [
-                        "crypto/bn/src/bn_*.c"
-                    ],
-                    "no_asm": "crypto/bn/src/noasm_*.c"
+                    "public": ["crypto/bn/src/bn_*.c"],
+                    "no_asm": "crypto/bn/src/noasm_*.c",
+                    "armv8": ["crypto/bn/src/armv8_*.c","crypto/bn/src/asm_*.c", "crypto/bn/src/asm/*_armv8.S"],
+                    "x8664": {
+                        "x8664": ["crypto/bn/src/x8664_*.c", "crypto/bn/src/asm_*.c", "crypto/bn/src/asm/*_x86_64.S"],
+                        "avx512": ["crypto/bn/src/x8664_*.c", "crypto/bn/src/asm_*.c", "crypto/bn/src/asm/*_x86_64.S"]
+                    }
                 },
                 ".deps": ["bsl::sal"]
             },
             "rsa": {
-                ".features": ["rsa"],
+                ".features": [
+                    "rsa", "rsa_gen", "rsa_sign", "rsa_verify", "rsa_encrypt", "rsa_decrypt",
+                    "rsa_pad", "rsa_no_pad", "rsaes_oaep", "rsaes_pkcsv15", "rsaes_pkcsv15_tls", "rsa_emsa_pss", "rsa_emsa_pkcsv15", "rsa_blinding"
+                ],
                 ".srcs": "crypto/rsa/src/*.c",
                 ".deps" : ["crypto::bn"],
                 ".include": ["crypto/eal/src"]
@@ -986,9 +1080,18 @@
                 ".include": ["crypto/eal/src"]
             },
             "encode": {
-                ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign", "sm2_exch"],
+                ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign"],
                 ".srcs": "crypto/encode/src/*.c",
-                ".deps": ["crypto::bn", "bsl::asn1", "bsl::pem", "crypto::ecc", "bsl::obj"]
+                ".deps": ["crypto::bn", "bsl::asn1", "bsl::obj"]
+            },
+            "encode_decode": {
+                ".features": ["encode_decode", "key_epki", "key_encode", "key_decode"],
+                ".srcs": ["crypto/encode_decode/src/*.c"],
+                ".deps": ["bsl::asn1", "bsl::obj"],
+                ".include": [
+                    "bsl/pem/include",
+                    "crypto/bn/include"
+                ]
             },
             "util": {
                 ".features": [
@@ -1001,7 +1104,12 @@
                 ".deps": ["platform::Secure_C"]
             },
             "ecc": {
-                ".features": ["ecc"],
+                ".features": [
+                    "ecc",
+                    "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521",
+                    "curve_bp256r1", "curve_bp384r1", "curve_bp512r1",
+                    "curve_sm2"
+                ],
                 ".srcs": {
                     "public": "crypto/ecc/src/ec*.c",
                     "no_asm": "crypto/ecc/src/noasm_*.c",
@@ -1029,8 +1137,13 @@
             "sm2": {
                 ".features": ["sm2_crypt", "sm2_sign", "sm2_exch"],
                 ".srcs": "crypto/sm2/src/*.c",
-                ".deps": ["crypto::bn", "bsl::sal", "crypto::encode", "crypto::ecc"],
-                ".include": ["crypto/eal/src"]
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::ecc"],
+                ".include": [
+                    "crypto/eal/src",
+                    "bsl/asn1/include",
+                    "bsl/obj/include",
+                    "crypto/encode/include"
+                ]
             },
             "paillier": {
                 ".features": ["paillier"],
@@ -1079,8 +1192,8 @@
             "slh_dsa": {
                 ".features": ["slh_dsa"],
                 ".srcs": "crypto/slh_dsa/src/*.c",
-                ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj", "bsl::asn1"],
-                ".include": ["crypto/eal/src"]
+                ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj"],
+                ".include": ["crypto/eal/src", "bsl/asn1/include"]
             }
         },
         "bsl":{
@@ -1115,7 +1228,8 @@
             "obj": {
                 ".features":["obj"],
                 ".srcs":"bsl/obj/src/*.c",
-                ".deps": ["platform::Secure_C", "bsl::sal", "bsl::hash"]
+                ".deps": ["platform::Secure_C", "bsl::sal"],
+                ".include": ["bsl/hash/include"]
             },
             "base64": {
                 ".features": ["base64"],
@@ -1164,7 +1278,7 @@
             "init": {
                 ".features": ["init"],
                 ".srcs": "bsl/init/*.c",
-                ".deps": ["bsl::obj"]
+                ".include": ["bsl/obj/include"]
             }
         },
         "platform": {
@@ -1304,46 +1418,58 @@
         },
         "pki" : {
             "x509_cert": {
-                ".features" : ["all_pki"],
+                ".features" : ["x509", "x509_crt", "x509_crt_gen", "x509_crt_parse"],
                 ".srcs" : "pki/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "pki::print", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
-                ".include": ["pki/x509_csr/include"]
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode_decode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".include": [
+                    "bsl/pem/include",
+                    "pki/x509_csr/include",
+                    "pki/print/include"
+                ]
             },
             "x509_crl" : {
-                ".features" : ["all_pki"],
+                ".features" : ["x509", "x509_crl_gen", "x509_crl_parse"],
                 ".srcs" : "pki/x509_crl/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".include": ["bsl/pem/include"]
             },
             "x509_common" : {
-                ".features" : ["all_pki"],
+                ".features" : [
+                    "x509", "x509_crt", "x509_crt_gen", "x509_crt_parse",
+                    "x509_crl", "x509_crl_gen", "x509_crl_parse",
+                    "x509_csr", "x509_csr_gen", "x509_csr_parse",
+                    "pkcs12", "pkcs12_gen", "pkcs12_parse"
+                ],
                 ".srcs" : "pki/x509_common/src/*",
-                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::pem", "crypto::encode"]
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "crypto::encode_decode"],
+                ".include": ["bsl/pem/include"]
             },
             "print" : {
-                ".features" : ["all_pki"],
+                ".features" : ["info"],
                 ".srcs" : "pki/print/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::uio"],
                 ".include": ["pki/x509_common/include"]
             },
             "x509_verify" : {
-                ".features" : ["all_pki"],
+                ".features" : ["x509_vfy"],
                 ".srcs" : "pki/x509_verify/src/*",
                 ".deps" : ["platform::Secure_C", "pki::x509_cert", "pki::x509_crl", "pki::x509_common"]
             },
             "x509_csr" : {
-                ".features" : ["all_pki"],
+                ".features" : ["x509", "x509_csr", "x509_csr_gen", "x509_csr_parse"],
                 ".srcs" : "pki/x509_csr/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"]
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".include": ["bsl/pem/include"]
             },
             "pkcs12" : {
-                ".features" : ["all_pki"],
+                ".features" : ["pkcs12", "pkcs12_gen", "pkcs12_parse"],
                 ".srcs" : "pki/pkcs12/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode_decode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
             },
             "cms" : {
-                ".features" : ["all_pki"],
+                ".features" : ["pkcs12_gen", "pkcs12_parse"],
                 ".srcs" : "pki/cms/src/*",
-                ".deps" : ["platform::Secure_C", "crypto::encode"]
+                ".deps" : ["platform::Secure_C", "crypto::encode_decode"]
             }
         },
         "auth" : {

@@ -46,6 +46,16 @@ typedef struct {
     size_t max;
 } BSL_UIO_BufMem;
 
+typedef int32_t (*BslUioWriteCb)(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen);
+typedef int32_t (*BslUioReadCb)(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen);
+typedef int32_t (*BslUioCtrlCb)(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg);
+typedef int32_t (*BslUioCreateCb)(BSL_UIO *uio);
+typedef int32_t (*BslUioDestroyCb)(BSL_UIO *uio);
+typedef int32_t (*BslUioPutsCb)(BSL_UIO *uio, const char *buf, uint32_t *writeLen);
+typedef int32_t (*BslUioGetsCb)(BSL_UIO *uio, char *buf, uint32_t *readLen);
+
+typedef struct BSL_UIO_MethodStruct BSL_UIO_Method;
+
 /**
  * @ingroup bsl_uio
  * @brief   userData release function
@@ -131,6 +141,16 @@ typedef enum {
     BSL_UIO_MEM_GET_INFO,
 } BSL_UIO_CtrlParameter;
 
+typedef enum {
+    BSL_UIO_CREATE_CB,
+    BSL_UIO_DESTROY_CB,
+    BSL_UIO_WRITE_CB,
+    BSL_UIO_READ_CB,
+    BSL_UIO_CTRL_CB,
+    BSL_UIO_PUTS_CB,
+    BSL_UIO_GETS_CB,
+} BSL_UIO_METHOD_TYPE;
+
 #define BSL_UIO_FILE_READ             0x02
 #define BSL_UIO_FILE_WRITE            0x04
 #define BSL_UIO_FILE_APPEND           0x08
@@ -152,26 +172,6 @@ typedef struct {
     uint8_t *addr;
     uint32_t size;
 } BSL_UIO_CtrlGetPeerIpAddrParam;
-
-typedef int32_t (*BslUioWriteCb)(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen);
-typedef int32_t (*BslUioReadCb)(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen);
-typedef int32_t (*BslUioCtrlCb)(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg);
-typedef int32_t (*BslUioCreateCb)(BSL_UIO *uio);
-typedef int32_t (*BslUioDestroyCb)(BSL_UIO *uio);
-typedef int32_t (*BslUioPutsCb)(BSL_UIO *uio, const char *buf, uint32_t *writeLen);
-typedef int32_t (*BslUioGetsCb)(BSL_UIO *uio, char *buf, uint32_t *readLen);
-
-typedef struct BSL_UIO_MethodStruct BSL_UIO_Method;
-
-typedef enum {
-    BSL_UIO_CREATE_CB,
-    BSL_UIO_DESTROY_CB,
-    BSL_UIO_WRITE_CB,
-    BSL_UIO_READ_CB,
-    BSL_UIO_CTRL_CB,
-    BSL_UIO_PUTS_CB,
-    BSL_UIO_GETS_CB,
-} BSL_UIO_METHOD_TYPE;
 
 /**
  * @ingroup bsl_uio
@@ -215,6 +215,22 @@ void BSL_UIO_FreeMethod(BSL_UIO_Method *meth);
 
 /**
  * @ingroup bsl_uio
+ * @brief   obtain the default MEM UIO
+ *
+ * @retval  pointer to the MEM UIO method
+ */
+const BSL_UIO_Method *BSL_UIO_MemMethod(void);
+
+/**
+ * @ingroup bsl_uio
+ * @brief   obtain the default SCTP UIO
+ *
+ * @retval  pointer to the SCTP UIO method
+ */
+const BSL_UIO_Method *BSL_UIO_SctpMethod(void);
+
+/**
+ * @ingroup bsl_uio
  * @brief   obtain the default TCP UIO method
  *
  * @retval  pointer to the TCP UIO method
@@ -231,27 +247,12 @@ const BSL_UIO_Method *BSL_UIO_UdpMethod(void);
 
 /**
  * @ingroup bsl_uio
- * @brief   obtain the default SCTP UIO
- *
- * @retval  pointer to the SCTP UIO method
- */
-const BSL_UIO_Method *BSL_UIO_SctpMethod(void);
-
-/**
- * @ingroup bsl_uio
  * @brief   obtain the default buffer UIO
  *
  * @retval  pointer to the Buffer UIO method
  */
 const BSL_UIO_Method *BSL_UIO_BufferMethod(void);
 
-/**
- * @ingroup bsl_uio
- * @brief   obtain the default MEM UIO
- *
- * @retval  pointer to the MEM UIO method
- */
-const BSL_UIO_Method *BSL_UIO_MemMethod(void);
 /**
  * @ingroup bsl_uio
  * @brief   Create a UIO object
@@ -389,6 +390,15 @@ int32_t BSL_UIO_Gets(BSL_UIO *uio, char *buf, uint32_t *readLen);
 
 /**
  * @ingroup bsl_uio
+ * @brief Set the UIO init.
+ *
+ * @param uio [IN] UIO object
+ * @param init [IN] init value
+ */
+void BSL_UIO_SetInit(BSL_UIO *uio, bool init);
+
+/**
+ * @ingroup bsl_uio
  * @brief   Obtain the UIO transmission protocol type
  *
  * @param   uio  [IN] UIO object.
@@ -503,7 +513,7 @@ void BSL_UIO_SetCtx(BSL_UIO *uio, void *ctx);
  * @param   uio [IN] UIO object
  * @param   fd [IN] File Descriptor fd
  */
-void BSL_UIO_SetFd(BSL_UIO *uio, int fd);
+void BSL_UIO_SetFD(BSL_UIO *uio, int fd);
 
 /**
  * @ingroup bsl_uio
@@ -591,15 +601,6 @@ void BSL_UIO_FreeChain(BSL_UIO *uio);
  * @retval Next UIO object in the chain.
  */
 BSL_UIO *BSL_UIO_Next(BSL_UIO *uio);
-
-/**
- * @ingroup bsl_uio
- * @brief Set the UIO init.
- *
- * @param uio [IN] UIO object
- * @param init [IN] init value
- */
-void BSL_UIO_SetInit(BSL_UIO *uio, bool init);
 
 #ifdef __cplusplus
 }

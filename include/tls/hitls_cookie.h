@@ -39,18 +39,7 @@ extern "C" {
  * @param   cookie_len  [OUT] Length of Generated cookie
  * @retval  COOKIE_GEN_SUCCESS: successful. Other values are considered as failure.
  */
-typedef int32_t (*HITLS_AppGenCookieCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len);
-
-/**
- * @ingroup hitls_config
- * @brief   Set the cookie generation callback on the server.
- *
- * @param   config [OUT] Config context
- * @param   callback  [IN] CookieGenerate callback
- * @retval  HITLS_SUCCESS, if successful.
- *          For details about other error codes, see hitls_error.h.
- */
-int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb callback);
+typedef int32_t (*HITLS_AppGenCookieCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookieLen);
 
 /**
  * @ingroup hitls_config
@@ -62,6 +51,17 @@ int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb call
  * @retval  COOKIE_VERIFY_SUCCESS: successful. Other values are considered as failure.
  */
 typedef int32_t (*HITLS_AppVerifyCookieCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the cookie generation callback on the server.
+ *
+ * @param   config [OUT] Config context
+ * @param   callback  [IN] CookieGenerate callback
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb callback);
 
 /**
  * @ingroup hitls_config

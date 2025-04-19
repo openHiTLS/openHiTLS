@@ -969,7 +969,7 @@ EXIT:
  * @precon  nan
  * @brief
  *    1. Call BSL_UIO_New to create a tcp uio. Expected result 1 is obtained.
- *    2. Call BSL_UIO_SetFd to set fd to uio. Call BSL_UIO_Ctrl and transfer the BSL_UIO_GET_FD parameter to obtain
+ *    2. Call BSL_UIO_SetFD to set fd to uio. Call BSL_UIO_Ctrl and transfer the BSL_UIO_GET_FD parameter to obtain
  *       the fd1 of uio. Compare the two fds. Expected result 2 is obtained.
  * @expect
  *    1. The TCP UIO is successfully created.
@@ -986,7 +986,7 @@ void SDV_BSL_UIO_SET_FD_TC001(void)
     ASSERT_TRUE(uio != NULL);
     BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
 
-    BSL_UIO_SetFd(uio, fd);
+    BSL_UIO_SetFD(uio, fd);
     int32_t fd1 = -1;
     ASSERT_TRUE(BSL_UIO_Ctrl(uio, BSL_UIO_GET_FD, (int32_t)sizeof(fd1), &fd1) == BSL_SUCCESS);
     ASSERT_TRUE(fd == fd1);

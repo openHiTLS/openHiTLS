@@ -33,10 +33,6 @@
         "CC_DEFINE_FLAGS": [
             "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE",
             "-DHITLS_CRYPTO_BN_COMBA",
-            "-DHITLS_CRYPTO_BN_RAND",
-            "-DHITLS_CRYPTO_BN_PRIME",
-            "-DHITLS_CRYPTO_BN_CB",
-            "-DHITLS_CRYPTO_RSA_BSSA",
             "-DHITLS_CRYPTO_AES_PRECALC_TABLES",
             "-DHITLS_AARCH64_PACIASP"
         ],

@@ -21,6 +21,7 @@
 #include "bsl_sal.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
+#ifdef HITLS_BSL_HASH
 #include "bsl_hash.h"
 
 // Hash table for signature algorithm mappings
@@ -31,6 +32,8 @@ static BSL_SAL_ThreadLockHandle g_signHashRwLock = NULL;
 static uint32_t g_signHashInitOnce = BSL_SAL_ONCE_INIT;
 
 #define BSL_OBJ_SIGN_HASH_BKT_SIZE 64u
+#endif // HITLS_BSL_HASH
+
 typedef struct BslSignIdMap {
     BslCid signId;
     BslCid asymId;
@@ -56,12 +59,13 @@ static BSL_SignIdMap g_signIdMap[] = {
     {BSL_CID_ECDSAWITHSHA256, BSL_CID_ECDSA, BSL_CID_SHA256},
     {BSL_CID_ECDSAWITHSHA384, BSL_CID_ECDSA, BSL_CID_SHA384},
     {BSL_CID_ECDSAWITHSHA512, BSL_CID_ECDSA, BSL_CID_SHA512},
-    {BSL_CID_SM2DSAWITHSM3, BSL_CID_SM2, BSL_CID_SM3},
-    {BSL_CID_SM2DSAWITHSHA1, BSL_CID_SM2, BSL_CID_SHA1},
-    {BSL_CID_SM2DSAWITHSHA256, BSL_CID_SM2, BSL_CID_SHA256},
+    {BSL_CID_SM2DSAWITHSM3, BSL_CID_SM2DSA, BSL_CID_SM3},
+    {BSL_CID_SM2DSAWITHSHA1, BSL_CID_SM2DSA, BSL_CID_SHA1},
+    {BSL_CID_SM2DSAWITHSHA256, BSL_CID_SM2DSA, BSL_CID_SHA256},
     {BSL_CID_ED25519, BSL_CID_ED25519, BSL_CID_SHA512},
 };
 
+#ifdef HITLS_BSL_HASH
 static void FreeBslSignIdMap(void *data)
 {
     BSL_SignIdMap *signIdMap = (BSL_SignIdMap *)data;
@@ -102,6 +106,7 @@ static void InitSignHashTableOnce(void)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
     }
 }
+#endif
 
 BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
 {
@@ -115,6 +120,9 @@ BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
             return g_signIdMap[iter].hashId;
         }
     }
+#ifndef HITLS_BSL_HASH
+    return BSL_CID_UNKNOWN;
+#else
     if (g_signHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return BSL_CID_UNKNOWN;
@@ -135,6 +143,7 @@ BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
     }
 
     return result;
+#endif
 }
 
 BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg)
@@ -142,13 +151,17 @@ BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg)
     if (signAlg == BSL_CID_UNKNOWN) {
         return BSL_CID_UNKNOWN;
     }
-    
+
     // First, search in the static g_signIdMap table
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
         if (signAlg == g_signIdMap[iter].signId) {
             return g_signIdMap[iter].asymId;
         }
     }
+
+#ifndef HITLS_BSL_HASH
+    return BSL_CID_UNKNOWN;
+#else
     if (g_signHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return BSL_CID_UNKNOWN;
@@ -167,8 +180,9 @@ BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg)
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
     }
-    
+
     return asymCid;
+#endif
 }
 
 BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg)
@@ -183,6 +197,9 @@ BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg)
             return g_signIdMap[i].signId;
         }
     }
+#ifndef HITLS_BSL_HASH
+    return BSL_CID_UNKNOWN;
+#else
     if (g_signHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return BSL_CID_UNKNOWN;
@@ -205,8 +222,10 @@ BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg)
     }
     
     return signCid;
+#endif
 }
 
+#ifdef HITLS_BSL_HASH
 static bool IsSignIdInStaticTable(int32_t signId)
 {
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
@@ -321,5 +340,6 @@ void BSL_OBJ_FreeSignHashTable(void)
         g_signHashInitOnce = BSL_SAL_ONCE_INIT;
     }
 }
+#endif // HITLS_BSL_HASH
 
 #endif

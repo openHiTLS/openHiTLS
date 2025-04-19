@@ -102,7 +102,7 @@ typedef enum {
 
     HITLS_X509_CSR_GET_ATTRIBUTES = 0x0700,     /** Get the attributes from the csr. */
 
-    HITLS_X509_SET_VEY_SM2_USER_ID = 0x800,             /** Set sm2 user Id when verify cert/csr/crl. */
+    HITLS_X509_SET_VFY_SM2_USER_ID = 0x800,             /** Set sm2 user Id when verify cert/csr/crl. */
 } HITLS_X509_Cmd;
 
 typedef enum {
@@ -227,17 +227,17 @@ typedef struct {
 } HITLS_X509_RevokeExtTime;
 
 typedef enum {
-    HITLS_X509_CRL_SET_REVOKED_SERIALNUM = 0,    /** Set the revoked serial number. */
-    HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME,      /** Set the revoke time. */
-    HITLS_X509_CRL_SET_REVOKED_INVAILD_TIME,     /** Set the invalid time extension. */
-    HITLS_X509_CRL_SET_REVOKED_REASON,           /** Set the revoke reason extension. */
-    HITLS_X509_CRL_SET_REVOKED_CERTISSUER,       /** Set the revoke cert issuer extension. */
+    HITLS_X509_CRL_SET_REVOKED_SERIALNUM = 0,       /** Set the revoked serial number. */
+    HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME,         /** Set the revoke time. */
+    HITLS_X509_CRL_SET_REVOKED_INVALID_TIME,        /** Set the invalid time extension. */
+    HITLS_X509_CRL_SET_REVOKED_REASON,              /** Set the revoke reason extension. */
+    HITLS_X509_CRL_SET_REVOKED_CERTISSUER,          /** Set the revoke cert issuer extension. */
 
-    HITLS_X509_CRL_GET_REVOKED_SERIALNUM,        /** Get the revoked serial number. */
-    HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME,      /** Get the revoke time. */
-    HITLS_X509_CRL_GET_REVOKED_INVAILD_TIME,     /** Get the invalid time extension. */
-    HITLS_X509_CRL_GET_REVOKED_REASON,           /** Get the revoke reason extension. */
-    HITLS_X509_CRL_GET_REVOKED_CERTISSUER,       /** Get the revoke cert issuer extension. */
+    HITLS_X509_CRL_GET_REVOKED_SERIALNUM = 0x0100,  /** Get the revoked serial number. */
+    HITLS_X509_CRL_GET_REVOKED_REVOKE_TIME,         /** Get the revoke time. */
+    HITLS_X509_CRL_GET_REVOKED_INVALID_TIME,        /** Get the invalid time extension. */
+    HITLS_X509_CRL_GET_REVOKED_REASON,              /** Get the revoke reason extension. */
+    HITLS_X509_CRL_GET_REVOKED_CERTISSUER,          /** Get the revoke cert issuer extension. */
 } HITLS_X509_RevokeCmd;
 
 typedef enum {
@@ -283,7 +283,7 @@ typedef enum {
     HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA,
     HITLS_X509_STORECTX_SET_CRL,
     HITLS_X509_STORECTX_REF_UP,
-    HITLS_X509_STORECTX_SET_VEY_SM2_USERID,
+    HITLS_X509_STORECTX_SET_VFY_SM2_USERID,
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
 

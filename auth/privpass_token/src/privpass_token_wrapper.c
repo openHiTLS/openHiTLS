@@ -131,7 +131,7 @@ int32_t PrivPassPubBlind(void *pkeyCtx, int32_t algId, const uint8_t *data, uint
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (padType != CRYPT_PKEY_EMSA_PSS) {
+    if (padType != CRYPT_EMSA_PSS) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_ALG);
         return HITLS_AUTH_PRIVPASS_INVALID_ALG;
     }
@@ -167,7 +167,7 @@ int32_t PrivPassPubSignData(void *pkeyCtx, const uint8_t *data, uint32_t dataLen
     }
     CRYPT_EAL_PkeyCtx *ctx = (CRYPT_EAL_PkeyCtx *)pkeyCtx;
     uint32_t flag = CRYPT_RSA_BSSA;
-    uint32_t padType = CRYPT_PKEY_EMSA_PSS;
+    uint32_t padType = CRYPT_EMSA_PSS;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -201,7 +201,7 @@ int32_t PrivPassPubVerify(void *pkeyCtx, int32_t algId, const uint8_t *data, uin
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (padType != CRYPT_PKEY_EMSA_PSS) {
+    if (padType != CRYPT_EMSA_PSS) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_ALG);
         return HITLS_AUTH_PRIVPASS_INVALID_ALG;
     }
@@ -229,7 +229,7 @@ static int32_t PubKeyCheck(CRYPT_EAL_PkeyCtx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (padType != CRYPT_PKEY_EMSA_PSS) {
+    if (padType != CRYPT_EMSA_PSS) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_INFO);
         return HITLS_AUTH_PRIVPASS_INVALID_PUBKEY_PADDING_INFO;
     }

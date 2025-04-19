@@ -142,7 +142,7 @@ static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
         if (CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType)) != CRYPT_SUCCESS) {
             return TLS_CERT_KEY_TYPE_UNKNOWN;
         }
-        if (padType == CRYPT_PKEY_EMSA_PSS) {
+        if (padType == CRYPT_EMSA_PSS) {
             return TLS_CERT_KEY_TYPE_RSA_PSS;
         }
     }
