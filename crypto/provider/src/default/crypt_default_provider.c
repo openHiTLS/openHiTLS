@@ -263,40 +263,40 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         "x25519",
         CRYPT_PKEY_PARAID_MAX,
         CRYPT_PKEY_X25519,
-        128,                          // secBits
-        HITLS_EC_GROUP_CURVE25519,    // groupId
-        32, 32, 0,                    // pubkeyLen=32, sharedkeyLen=32 (256 bits)
-        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        128,                                    // secBits
+        HITLS_EC_GROUP_CURVE25519,             // groupId
+        32, 32, 0,                             // pubkeyLen=32, sharedkeyLen=32 (256 bits)
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,  // versionBits
         false,
     },
     {
         "X25519MLKEM768",
         CRYPT_HYBRID_X25519_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
-        192,                          // secBits
-        4588,                         // groupId
-        1184 + 32, 32 + 32, 1088 + 32, // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
-        TLS13_VERSION_BIT,            // versionBits
+        192,                                    // secBits
+        HITLS_HYBRID_X25519_MLKEM768,          // groupId
+        1184 + 32, 32 + 32, 1088 + 32,         // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
+        TLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
         "SecP256r1MLKEM768",
         CRYPT_HYBRID_ECDH_NISTP256_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
-        192,                          // secBits
-        4587,                         // groupId
-        1184 + 65, 32 + 32, 1088 + 65, // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
-        TLS13_VERSION_BIT,            // versionBits
+        192,                                    // secBits
+        HITLS_HYBRID_ECDH_NISTP256_MLKEM768,   // groupId
+        1184 + 65, 32 + 32, 1088 + 65,         // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
+        TLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
         "SecP384r1MLKEM1024",
         CRYPT_HYBRID_ECDH_NISTP384_MLKEM1024,
         CRYPT_PKEY_HYBRID_KEM,
-        256,                          // secBits
-        4589,                         // groupId
-        1568 + 97, 32 + 48, 1568 + 97, // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
-        TLS13_VERSION_BIT,            // versionBits
+        256,                                    // secBits
+        HITLS_HYBRID_ECDH_NISTP384_MLKEM1024,  // groupId
+        1568 + 97, 32 + 48, 1568 + 97,         // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
+        TLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {

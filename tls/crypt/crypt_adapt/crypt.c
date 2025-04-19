@@ -140,6 +140,8 @@ int32_t HITLS_CRYPT_RegisterEcdhMethod(HITLS_CRYPT_EcdhMethod *userCryptCallBack
 #ifdef HITLS_TLS_PROTO_TLCP11
     g_cryptEcdhMethod.sm2CalEcdhSharedSecret = userCryptCallBack->sm2CalEcdhSharedSecret;
 #endif /* HITLS_TLS_PROTO_TLCP11 */
+    g_cryptEcdhMethod.kemEncapsulate = userCryptCallBack->kemEncapsulate;
+    g_cryptEcdhMethod.kemDecapsulate = userCryptCallBack->kemDecapsulate;
     return HITLS_SUCCESS;
 }
 
