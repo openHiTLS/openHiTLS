@@ -22,20 +22,14 @@ int *GetJmpAddress(void)
     return &isSubProc;
 }
 
-void handleSignal(int sigNum)
+void handleSignal()
 {
-    static int count = 0;
-    if (count != 0) {
-        printf("frame error occur\n");
-        exit(-1);
-    }
-    count++;
-    (void)sigNum;
     siglongjmp(env, 1);
 }
 
 static void PrintCaseName(FILE *logFile, bool showDetail, const char *name)
 {
+    // print a minimum of 4 dots
     int32_t dotCount = (OUTPUT_LINE_LENGTH - (int32_t)strlen(name) >= 4) ?
         (OUTPUT_LINE_LENGTH - (int32_t)strlen(name)) : 4;
     if (showDetail) {
@@ -55,7 +49,7 @@ static int ParseArgs(const TestArgs *arg, TestParam *info)
     info->hexParamCount = 0;
     info->intParamCount = 0;
     info->paramCount = 0;
-    for (uint32_t i = 1; i < arg->argLen; i += 2) {
+    for (uint32_t i = 1; i < arg->argLen; i += 2) { // 2
         if (strcmp(arg->arg[i], "int") == 0) {
             if (ConvertInt(arg->arg[i + 1], &(info->intParam[info->intParamCount])) == 0) {
                 info->param[info->paramCount] = &(info->intParam[info->intParamCount]);
@@ -91,31 +85,23 @@ static int ParseArgs(const TestArgs *arg, TestParam *info)
     return 0;
 }
 
-static void PrintCaseNameResult(FILE *logFile, int vectorCount, int skipCount, int passCount,
-    const char *suiteName, time_t beginTime)
+static int PrintCaseNameResult(FILE *logFile, int vectorCount, int skipCount, int passCount, time_t beginTime)
 {
-    static const char *outMem = "out of memory";
-    int32_t dotCount =
-        (OUTPUT_LINE_LENGTH - (int32_t)strlen(suiteName) >= 4) ? (OUTPUT_LINE_LENGTH - (int32_t)strlen(suiteName)) : 4;
-    size_t suiteNameLen = strlen(suiteName);
-    char *suiteNameBuf = calloc(suiteNameLen + dotCount + 1, 1);
-    if (suiteNameBuf == NULL) {
-        suiteNameBuf = (char *)outMem;
-    } else {
-        memcpy_s(suiteNameBuf, suiteNameLen, suiteName, suiteNameLen);
-        memset_s(suiteNameBuf + suiteNameLen, OUTPUT_LINE_LENGTH - suiteNameLen, '.', dotCount);
+    char suitePrefix[OUTPUT_LINE_LENGTH] = {0};
+    (void)snprintf_truncated_s(suitePrefix, sizeof(suitePrefix), "%s", suiteName);
+    size_t leftSize = sizeof(suitePrefix) - 1 - strlen(suitePrefix);
+    if (leftSize > 0) {
+        (void)memset_s(suitePrefix + strlen(suitePrefix), sizeof(suitePrefix) - strlen(suitePrefix), '.', leftSize);
     }
     int failCount = vectorCount - passCount - skipCount;
     if (failCount == 0) {
-        Print("%sPASS || Run %-6d testcases, passed: %-6d, skipped: %-6d, failed: %-6d useSec:%-5lu\n", suiteNameBuf,
+        Print("%sPASS || Run %-6d testcases, passed: %-6d, skipped: %-6d, failed: %-6d useSec:%-5lu\n", suitePrefix,
             vectorCount, passCount, skipCount, failCount, time(NULL) - beginTime);
     } else {
-        Print("%sFAIL || Run %-6d testcases, passed: %-6d, skipped: %-6d, failed: %-6d useSec:%-5lu\n", suiteNameBuf,
+        Print("%sFAIL || Run %-6d testcases, passed: %-6d, skipped: %-6d, failed: %-6d useSec:%-5lu\n", suitePrefix,
             vectorCount, passCount, skipCount, failCount, time(NULL) - beginTime);
     }
-    if (suiteNameBuf != outMem) {
-        free(suiteNameBuf);
-    }
+
     time_t rawtime;
     struct tm *timeinfo;
     (void)time(&rawtime);
@@ -123,6 +109,7 @@ static void PrintCaseNameResult(FILE *logFile, int vectorCount, int skipCount, i
     (void)fprintf(logFile, "End time: %s", asctime(timeinfo));
     (void)fprintf(logFile, "Result: Run %d tests, Passed: %d, Skipped: %d, Failed: %d\n", vectorCount, passCount,
         skipCount, failCount);
+    return failCount;
 }
 
 static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
@@ -151,6 +138,7 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
         TestWrapper fp = test_funcs[funcId];
         g_testResult.result = TEST_RESULT_SUCCEED;
         tryNum = 0;
+        time_t startTime = time(NULL);
         do {
             if (tryNum > 0) {
                 sleep(10);
@@ -174,14 +162,14 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
             break;
         }
 #endif
-        } while ((g_testResult.result == TEST_RESULT_FAILED) && (tryNum < FAIL_TRY_TWICE));
+        } while ((g_testResult.result == TEST_RESULT_FAILED) && (tryNum < FAIL_TRY_TIMES));
         if (g_testResult.result == TEST_RESULT_SUCCEED) {
             passCount++;
         } else if (g_testResult.result == TEST_RESULT_SKIPPED) {
             skipCount++;
         }
         vectorCount++;
-        PrintResult(showDetail, g_executeCases[i]->testVectorName);
+        PrintResult(showDetail, g_executeCases[i]->testVectorName, time(NULL) - startTime);
         PrintLog(logFile);
         for (int j = 0; j < io.hexParamCount; j++) {
             FreeHex(&io.hexParam[j]);
@@ -190,8 +178,8 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
             break;
         }
     }
-    PrintCaseNameResult(logFile, vectorCount, skipCount, passCount, suiteName, beginTime);
-    return 0;
+
+    return PrintCaseNameResult(logFile, vectorCount, skipCount, passCount, beginTime);
 }
 
 static int ExecuteTest(const char *fileName, bool showDetail, int targetFuncId)
@@ -226,9 +214,6 @@ static int ExecuteTest(const char *fileName, bool showDetail, int targetFuncId)
         }
     }
     int rt = ProcessCases(logFile, showDetail, targetFuncId);
-    for (int i = 0; i < g_executeCount; i++) {
-        free(g_executeCases[i]);
-    }
     if (logFile != NULL) {
         fclose(logFile);
     }
@@ -286,6 +271,8 @@ EXIT:
 
 int main(int argc, char **argv)
 {
+    signal(SIGTTOU, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
     int ret = 0;
 #ifndef PRINT_TO_TERMINAL
     char testOutputName[MAX_FILE_NAME] = {0};
@@ -298,7 +285,8 @@ int main(int argc, char **argv)
     }
     SetOutputFile(fp);
 #endif
-    char testName[MAX_FILE_PATH_LEN] = {0};
+
+    char testName[MAX_FILE_PATH_LEN];
     if (sprintf_s(testName, MAX_FILE_PATH_LEN, "%s.datax", suiteName) <= 0) {
         goto EXIT;
     }
@@ -310,9 +298,12 @@ int main(int argc, char **argv)
     if (ret != 0) {
         Print("execute test failed\n");
     }
+    for (int i = 0; i < g_executeCount; i++) {
+        free(g_executeCases[i]);
+    }
 EXIT:
 #ifndef PRINT_TO_TERMINAL
     (void)fclose(fp);
 #endif
-    return 0;
+    return ret;
 }

@@ -117,7 +117,7 @@ typedef struct _BSL_ASN1_BitString {
  * @param data [IN] The data to be processed.
  * @param expVal [OUT] Output value.
  */
-typedef int32_t(*BSL_ASN1_DecTemplCallBack) (int32_t type, uint32_t idx, void *data, void *expVal);
+typedef int32_t(*BSL_ASN1_DecTemplCallBack)(int32_t type, uint32_t idx, void *data, void *expVal);
 
 /**
  * @ingroup bsl_asn1

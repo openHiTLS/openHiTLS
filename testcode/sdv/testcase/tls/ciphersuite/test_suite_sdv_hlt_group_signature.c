@@ -55,6 +55,9 @@ void SetCert(HLT_Ctx_Config *ctxConfig, char *cert)
     } else if (strncmp(cert, "RSA", strlen("RSA")) == 0) {
         HLT_SetCertPath(ctxConfig, RSA_SHA_CA_PATH, RSA_SHA_CHAIN_PATH, RSA_SHA256_EE_PATH3, RSA_SHA256_PRIV_PATH3,
             "NULL", "NULL");
+    } else if (strncmp(cert, "ED25519", strlen("ED25519")) == 0) {
+        HLT_SetCertPath(ctxConfig, ED25519_SHA512_CA_PATH, ED25519_SHA512_CHAIN_PATH, ED25519_SHA512_EE_PATH,
+            ED25519_SHA512_PRIV_PATH, "NULL", "NULL");
     }  
 }
 
@@ -263,3 +266,13 @@ void SDV_TLS13_ECDSA_SIGNATURE(char *signature, char *cert)
 }
 /* END_CASE */
 
+/*
+tls13
+"CERT_SIG_SCHEME_ED25519"
+ */
+/* BEGIN_CASE */
+void SDV_TLS13_EDDSA_SIGNATURE(char *signature)
+{
+    CONNECT(TLS1_3, TCP, "HITLS_AES_256_GCM_SHA384", "HITLS_EC_GROUP_CURVE25519", signature, 0, "ED25519");
+}
+/* END_CASE */

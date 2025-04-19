@@ -142,6 +142,7 @@ uint32_t CRYPT_RSA_GetBits(const CRYPT_RSA_Ctx *ctx);
 int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx);
 #endif
 
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_RSA_SIGN)
 /**
  * @ingroup rsa
  * @brief RSA public key encryption
@@ -163,6 +164,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx);
  */
 int32_t  CRYPT_RSA_PubEnc(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
+#endif
 
 /**
  * @ingroup rsa
@@ -250,6 +252,7 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 
 #ifdef HITLS_CRYPTO_RSA_BSSA
 
+#ifdef HITLS_CRYPTO_RSA_SIGN
 /**
  * @ingroup RSA
  * @brief RSA blind operation for blind signature
@@ -266,7 +269,9 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
  */
 int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
+#endif
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 /**
  * @ingroup RSA
  * @brief RSA unblind operation for blind signature
@@ -282,10 +287,12 @@ int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input,
  */
 int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
+#endif
 
 #endif
-#ifdef HITLS_CRYPTO_RSA_SIGN
-#ifdef HITLS_CRYPTO_RSA_SIGN_PSS
+
+#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_BSSA)
 /**
  * @ingroup rsa
  * @brief Set the PSS for the original data.
@@ -310,7 +317,9 @@ int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
  */
 int32_t CRYPT_RSA_SetPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, uint32_t keyBits,
     const uint8_t *salt, uint32_t saltLen, const uint8_t *data, uint32_t dataLen, uint8_t *pad, uint32_t padLen);
+#endif // HITLS_CRYPTO_RSA_SIGN || HITLS_CRYPTO_RSA_BSSA
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 /**
  * @ingroup rsa
  * @brief Compare the original data from the PSS.
@@ -333,9 +342,10 @@ int32_t CRYPT_RSA_SetPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgf
  */
 int32_t CRYPT_RSA_VerifyPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, uint32_t keyBits,
     uint32_t saltLen, const uint8_t *data, uint32_t dataLen, const uint8_t *pad, uint32_t padLen);
-#endif
+#endif // HITLS_CRYPTO_RSA_VERIFY
+#endif // HITLS_CRYPTO_RSA_EMSA_PSS
 
-#ifdef HITLS_CRYPTO_RSA_SIGN_PKCSV15
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
 /**
  * @ingroup rsa
  * @brief Set pkcsv1.5 padding.
@@ -356,6 +366,7 @@ int32_t CRYPT_RSA_VerifyPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *
 int32_t CRYPT_RSA_SetPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *data, uint32_t dataLen,
     uint8_t *pad, uint32_t padLen);
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 /**
  * @ingroup rsa
  * @brief Verify pkcsv1.5 padding.
@@ -375,8 +386,10 @@ int32_t CRYPT_RSA_SetPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *data, ui
  */
 int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, uint32_t padLen,
     const uint8_t *data, uint32_t dataLen);
-#endif
+#endif // HITLS_CRYPTO_RSA_VERIFY
+#endif // HITLS_CRYPTO_RSA_EMSA_PKCSV15
 
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
 /**
  * @ingroup rsa
  * @brief Obtain the maximum length of RSA signature data.
@@ -387,23 +400,25 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, 
  * @retval uint32_t Maximum length of the signature data
  */
 uint32_t CRYPT_RSA_GetSignLen(const CRYPT_RSA_Ctx *ctx);
+#endif
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
 
 int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen);
+#endif
 
+#ifdef HITLS_CRYPTO_RSA_SIGN
 int32_t CRYPT_RSA_SignData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
 
 int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen);
+#endif
 
-
-#endif // HITLS_CRYPTO_RSA_SIGN
-
-#ifdef HITLS_CRYPTO_RSA_CRYPT
+#ifdef HITLS_CRYPTO_RSA_ENCRYPT
 /**
  * @ingroup rsa
  * @brief RSA public key encryption
@@ -426,7 +441,9 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, u
 */
 int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen);
+#endif
 
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
 /**
  * @ingroup rsa
  * @brief RSA private key decryption
@@ -451,6 +468,7 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     uint8_t *out, uint32_t *outLen);
 #endif
 
+#ifdef HITLS_CRYPTO_RSA_VERIFY
 /**
  * @ingroup rsa
  * @brief RSA public key decryption
@@ -472,6 +490,7 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
  * @retval CRYPT_SUCCESS                    Decrypted Successfully
  */
 int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
+#endif
 
 /**
  * @ingroup rsa
@@ -487,7 +506,8 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
  */
 int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b);
 
-#ifdef HITLS_CRYPTO_RSA_CRYPT
+#ifdef HITLS_CRYPTO_RSAES_OAEP
+#ifdef HITLS_CRYPTO_RSA_ENCRYPT
 /**
  * @ingroup rsa
  * @brief oaep padding
@@ -508,7 +528,9 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b);
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    Outbuf Insufficient
  * */
 int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *pad, uint32_t padLen);
+#endif // HITLS_CRYPTO_RSA_ENCRYPT
 
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
 /**
  * @ingroup rsa
  * @brief Verify the oaep padding.
@@ -530,14 +552,24 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t i
  * */
 int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, const uint8_t *in,
     uint32_t inLen, const uint8_t *param, uint32_t paramLen, uint8_t *msg, uint32_t *msgLen);
+#endif // HITLS_CRYPTO_RSA_DECRYPT
+#endif // HITLS_CRYPTO_RSAES_OAEP
 
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) && \
+    (defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) || defined(HITLS_CRYPTO_RSAES_PKCSV15))
 int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t outLen);
+#endif
 
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
+#ifdef HITLS_CRYPTO_RSAES_PKCSV15
 int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+#endif
 
+#ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
 int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 #endif
+#endif // HITLS_CRYPTO_RSA_DECRYPT
 
 /**
  * @ingroup rsa

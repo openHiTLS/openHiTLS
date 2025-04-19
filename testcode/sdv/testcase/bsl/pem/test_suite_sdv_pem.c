@@ -56,7 +56,8 @@ void SDV_BSL_PEM_PARSE_FUNC_TC001(char *encode, char *head, char *tail, int expR
     uint32_t len = strlen(encode);
     uint8_t *asn1Encode = NULL;
     uint32_t asn1Len;
-    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&pemdata, &len, &sym, &asn1Encode, &asn1Len) == expRes);
+    TestMemInit();
+    ASSERT_EQ(BSL_PEM_DecodePemToAsn1(&pemdata, &len, &sym, &asn1Encode, &asn1Len), expRes);
 EXIT:
     BSL_SAL_Free(asn1Encode);
     return;
@@ -82,9 +83,10 @@ void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
     uint32_t nextLen = len;
     uint8_t *asn1Encode = NULL;
     uint32_t asn1Len;
-    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
+    TestMemInit();
+    ASSERT_TRUE(BSL_PEM_DecodePemToAsn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
     BSL_SAL_Free(asn1Encode);
-    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_PEM_DecodePemToAsn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
 EXIT:
     BSL_SAL_Free(asn1Encode);
     return;
@@ -101,7 +103,7 @@ void SDV_BSL_PEM_PARSE_FUNC_TC003(void)
     uint32_t nextLen = len;
     uint8_t *asn1Encode = NULL;
     uint32_t asn1Len;
-    ASSERT_TRUE(BSL_PEM_ParsePem2Asn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_PEM_SYMBOL_NOT_FOUND);
+    ASSERT_TRUE(BSL_PEM_DecodePemToAsn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_PEM_SYMBOL_NOT_FOUND);
 EXIT:
     BSL_SAL_Free(asn1Encode);
     return;

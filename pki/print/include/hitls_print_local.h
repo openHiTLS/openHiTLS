@@ -16,6 +16,8 @@
 #ifndef HITLS_PRINT_LOCAL_H
 #define HITLS_PRINT_LOCAL_H
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_INFO
 #include <stdint.h>
 #include "bsl_uio.h"
 
@@ -40,4 +42,7 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif // HITLS_PKI_INFO
+
+#endif // HITLS_PRINT_LOCAL_H

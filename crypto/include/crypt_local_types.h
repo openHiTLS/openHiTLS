@@ -111,10 +111,8 @@ typedef int32_t (*PkeyVerifyData)(const void *key, const uint8_t *data, uint32_t
     const uint8_t *sign, uint32_t signLen);
 typedef int32_t (*PkeyRecover)(const void *key, const uint8_t *sign, uint32_t signLen,
     uint8_t *data, uint32_t *dataLen);
-typedef int32_t (*PkeyComputeShareKey)(const void *key, const void *pub,
-    uint8_t *share, uint32_t *shareLen);
-typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t dataLen,
-    uint8_t *out, uint32_t *outLen);
+typedef int32_t (*PkeyComputeShareKey)(const void *key, const void *pub, uint8_t *share, uint32_t *shareLen);
+typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);

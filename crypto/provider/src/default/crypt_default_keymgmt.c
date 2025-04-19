@@ -151,7 +151,6 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 };
 
 const CRYPT_EAL_Func g_defKeyMgmtDsa[] = {
-#ifdef HITLS_CRYPTO_DSA
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)CRYPT_DSA_SetPara},
     {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)CRYPT_DSA_GetPara},
@@ -164,7 +163,6 @@ const CRYPT_EAL_Func g_defKeyMgmtDsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_DSA_Cmp},
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_DSA_Ctrl},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_DSA_FreeCtx},
-#endif
     CRYPT_EAL_FUNC_END,
 };
 
@@ -318,7 +316,6 @@ const CRYPT_EAL_Func g_defKeyMgmtElGamal[] = {
 #endif
     CRYPT_EAL_FUNC_END,
 };
-
 
 const CRYPT_EAL_Func g_defKeyMgmtMlKem[] = {
 #ifdef HITLS_CRYPTO_MLKEM

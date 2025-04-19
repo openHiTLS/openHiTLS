@@ -17,6 +17,7 @@
 #define MODES_LOCAL_H
 
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_MODES
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -194,4 +195,5 @@ int32_t MODES_SM4_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_
 }
 #endif  // __cplusplus
 
+#endif
 #endif

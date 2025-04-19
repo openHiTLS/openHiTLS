@@ -43,7 +43,7 @@ int32_t CRYPT_EAL_PkeySignData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *has
     }
 
     if ((hash == NULL && hashLen != 0) || (hash != NULL && hashLen == 0)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_INVALID_ARG);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
     
@@ -107,7 +107,7 @@ int32_t CRYPT_EAL_PkeyVerifyData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *h
     }
 
     if ((hash == NULL && hashLen != 0) || (hash != NULL && hashLen == 0)) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_INVALID_ARG);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
     int32_t ret = pkey->method->verifyData(pkey->key, hash, hashLen, sign, signLen);

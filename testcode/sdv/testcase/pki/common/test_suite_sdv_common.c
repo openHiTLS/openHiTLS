@@ -150,7 +150,7 @@ void SDV_HITLS_X509_ParseBuffCert_TC001(void)
     ASSERT_EQ(HITLS_X509_CertParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
     ASSERT_EQ(HITLS_X509_CertParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertParseBuff(0xff, &buff, &cert), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CertParseBuff(0xff, &buff, &cert), HITLS_X509_ERR_FORMAT_UNSUPPORT);
 EXIT:
     BSL_GLOBAL_DeInit();
 }
@@ -258,7 +258,7 @@ void SDV_HITLS_X509_ParseBuffCrl_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
     ASSERT_EQ(HITLS_X509_CrlParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlParseBuff(0xff, &buff, &crl), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(0xff, &buff, &crl), HITLS_X509_ERR_FORMAT_UNSUPPORT);
 EXIT:
     BSL_GLOBAL_DeInit();
 }
@@ -435,7 +435,7 @@ void SDV_X509_EXT_SetBCons_TC001(void)
 
     HITLS_X509_ExtBCons bCons = {true, true, 1};
 
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_EXT_NOT_SUPPORT);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_EXT_UNSUPPORT);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_INVALID_PARAM);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
@@ -555,7 +555,7 @@ void SDV_X509_EXT_SetExtendKeyUsage_TC001(void)
     BSL_LIST_DeleteAll(oidList, FreeListData);
 
     // success: normal oid
-    BslOidString *oid = BSL_OBJ_GetOidFromCID(BSL_CID_CE_SERVERAUTH);
+    BslOidString *oid = BSL_OBJ_GetOidFromCID(BSL_CID_KP_SERVERAUTH);
     ASSERT_NE(oid, NULL);
     BSL_Buffer oidBuff = {(uint8_t *)oid->octs, oid->octetLen};
     ASSERT_EQ(BSL_LIST_AddElement(oidList, &oidBuff, BSL_LIST_POS_END), 0);
@@ -685,7 +685,7 @@ void SDV_X509_AddDnName_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
     HITLS_X509_DN dnName[1] = {{cid, value->x, value->len}};
     HITLS_X509_DN dnNullName[1] = {{cid, NULL, value->len}};
     HITLS_X509_DN dnZeroLenName[1] = {{cid, value->x, 0}};
-    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
 
     ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_AddDnName(list, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);

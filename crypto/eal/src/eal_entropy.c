@@ -65,9 +65,9 @@ EAL_EntropyCtx *EAL_EntropyNewCtx(CRYPT_EAL_SeedPoolCtx *seedPool, uint8_t isNpe
     uint32_t needLen;
     if (ctx->isNeedFe) {
 #ifdef HITLS_CRYPTO_DRBG_GM
-        ctx->ecfuncId = CRYPT_MAC_HMAC_SHA256;
-#else
         ctx->ecfuncId = CRYPT_MAC_HMAC_SM3;
+#else
+        ctx->ecfuncId = CRYPT_MAC_HMAC_SHA256;
 #endif
         ctx->ecfunc = EAL_EntropyGetECF(ctx->ecfuncId);
         needLen = minLen;

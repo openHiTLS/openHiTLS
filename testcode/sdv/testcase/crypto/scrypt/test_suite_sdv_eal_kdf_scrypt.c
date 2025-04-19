@@ -288,7 +288,7 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test   SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001
+ * @test   SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC001
  * @title  Scrypt vector test.
  * @precon nan
  * @brief

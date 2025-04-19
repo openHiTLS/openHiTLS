@@ -27,6 +27,7 @@
 #include "eal_md_local.h"
 #include "crypt_params_key.h"
 
+#ifdef HITLS_CRYPTO_X25519
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
 {
     CRYPT_CURVE25519_Ctx *ctx = NULL;
@@ -52,7 +53,9 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx)
     ctx->libCtx = libCtx;
     return ctx;
 }
+#endif
 
+#ifdef HITLS_CRYPTO_ED25519
 CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
 {
     CRYPT_CURVE25519_Ctx *ctx = NULL;
@@ -83,6 +86,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtxEx(void *libCtx)
     ctx->libCtx = libCtx;
     return ctx;
 }
+#endif
 
 CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
 {
@@ -129,8 +133,10 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetBits, val, len);
+#ifdef HITLS_CRYPTO_ED25519
         case CRYPT_CTRL_GET_SIGNLEN:
             return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSignLen, val, len);
+#endif
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSecBits, val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
