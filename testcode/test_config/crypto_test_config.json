@@ -1,0 +1,286 @@
+{
+    "testDir":"testcode/sdv/testcase/",
+    "testFeatures": {
+        "asn1": ["test_suite_sdv_asn1"],
+        "base64": ["test_suite_sdv_base64"],
+        "buffer": ["test_suite_sdv_buffer"],
+        "err": ["test_suite_sdv_err"],
+        "hash": ["test_suite_sdv_hash"],
+        "init": [],
+        "list": ["test_suite_sdv_list"],
+        "log": ["test_suite_sdv_log"],
+        "obj": ["test_suite_sdv_obj"],
+        "params": ["test_suite_sdv_params"],
+        "pem": ["test_suite_sdv_pem"],
+        "tlv": ["test_suite_sdv_tlv"],
+        "uio": ["test_suite_sdv_uio"],
+        "usrdata": ["test_suite_sdv_usr"],
+        "sal": ["test_suite_sdv_sal"],
+        "sal_mem": ["test_suite_sdv_sal"],
+        "sal_thread": ["test_suite_sdv_sal"],
+        "sal_lock": ["test_suite_sdv_sal"],
+        "sal_time": ["test_suite_sdv_sal_time"],
+        "sal_file": ["test_suite_sdv_sal_file"],
+        "sal_net": ["test_suite_sdv_sal_socket"],
+        "sal_str": ["test_suite_sdv_sal"],
+        "sal_dl": ["test_suite_sdv_sal_dl"],
+
+        "cmvp": ["test_suite_sdv_cmvp"],
+
+        "ealinit":["test_suite_sdv_ealinit"],
+        "sha1": ["test_suite_sdv_eal_md_sha1"],
+        "sha2": ["test_suite_sdv_eal_md_sha2"],
+        "sha224": ["test_suite_sdv_eal_md_sha2"],
+        "sha256": ["test_suite_sdv_eal_md_sha2"],
+        "sha384": ["test_suite_sdv_eal_md_sha2"],
+        "sha512": ["test_suite_sdv_eal_md_sha2"],
+        "sha3": ["test_suite_sdv_eal_md_sha3"],
+        "md5": ["test_suite_sdv_eal_md5"],
+        "sm3": ["test_suite_sdv_eal_sm3"],
+
+        "hmac": ["test_suite_sdv_eal_mac_hmac"],
+        "gmac": ["test_suite_sdv_eal_gmac"],
+        "cmac_aes": ["test_suite_sdv_eal_mac_cmac"],
+        "cmac_sm4": ["test_suite_sdv_eal_mac_cmac"],
+        "cbc_mac": ["test_suite_sdv_eal_mac_cbc_mac"],
+        "siphash": ["test_suite_sdv_eal_mac_siphash"],
+
+        "hpke": ["test_suite_sdv_eal_hpke"],
+        
+        "hkdf": ["test_suite_sdv_eal_kdf_hkdf"],
+        "kdftls12": ["test_suite_sdv_eal_kdf_tls12"],
+        "pbkdf2": ["test_suite_sdv_eal_kdf_pbkdf2"],
+        "scrypt": ["test_suite_sdv_eal_kdf_scrypt"],
+
+        "drbg": ["test_suite_sdv_drbg"],
+        "drbg_hash": [""],
+        "drbg_hmac": [""],
+        "drbg_ctr": [""],
+        "entropy": ["test_suite_sdv_entropy"],
+
+        "aes": [
+            "test_suite_sdv_eal_aes_ccm",
+            "test_suite_sdv_eal_aes",
+            "test_suite_sdv_eal_aes_gcm"
+        ],
+        "chacha20": ["test_suite_sdv_eal_chachapoly"],
+        "sm4": ["test_suite_sdv_eal_sm4"],
+
+        "bn": ["test_suite_sdv_bn"],
+
+        "ecc": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_nistp224": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_nistp256": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_nistp384": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_nistp521": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_bp256r1": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_bp384r1": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_bp512r1": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "ecdh": ["test_suite_sdv_eal_ecdh"],
+        "ecdsa": ["test_suite_sdv_eal_ecdsa"],
+
+        "sm2": ["test_suite_sdv_eal_sm2_exchange", "test_suite_sdv_eal_sm2_sign", "test_suite_sdv_eal_sm2_crypt"],
+        "sm2_exch": ["test_suite_sdv_eal_sm2_exchange"],
+        "sm2_sign": ["test_suite_sdv_eal_sm2_sign"],
+        "sm2_crypt": ["test_suite_sdv_eal_sm2_crypt"],
+
+        "rsa": ["test_suite_sdv_eal_rsa_api", "test_suite_sdv_eal_rsa_sign_verify", "test_suite_sdv_eal_rsa_encrypt_decrypt"],
+        "rsa_sign": ["test_suite_sdv_eal_rsa_sign_verify"],
+        "rsa_verify": ["test_suite_sdv_eal_rsa_sign_verify"],
+        "rsa_bssa": ["test_suite_sdv_eal_rsa_sign_verify"],
+        "rsa_blinding": ["test_suite_sdv_eal_rsa_sign_verify"],
+        "rsa_encrypt": ["test_suite_sdv_eal_rsa_encrypt_decrypt"],
+        "rsa_decrypt": ["test_suite_sdv_eal_rsa_encrypt_decrypt"],
+        "rsa_gen": ["test_suite_sdv_eal_rsa_api"],
+
+        "curve25519": ["test_suite_sdv_eal_curve25519"],
+        "ed25519": ["test_suite_sdv_eal_curve25519"],
+        "x25519": ["test_suite_sdv_eal_curve25519"],
+        "dh": ["test_suite_sdv_eal_dh"],
+        "dsa": ["test_suite_sdv_eal_dsa"],
+        "mldsa": ["test_suite_sdv_mldsa"],
+        "paillier": ["test_suite_sdv_eal_paillier"],
+        "elgamal": ["test_suite_sdv_eal_elgamal"],
+        "hybridkem": ["test_suite_sdv_hybridkem"],
+        "mlkem": ["test_suite_sdv_mlkem"],
+        "slh_dsa": ["test_suite_sdv_eal_slh_dsa"],
+
+        "encode": ["test_suite_sdv_encode"],
+        "provider": ["test_suite_sdv_eal_provider_load"],
+        "key_encode": ["test_suite_sdv_x509"],
+        "key_decode": ["test_suite_sdv_x509"],
+        "x509_crl_gen": ["test_suite_sdv_x509"],
+        "x509_crl_parse": ["test_suite_sdv_x509"],
+        "x509_csr_gen": ["test_suite_sdv_x509"],
+        "x509_csr_parse": ["test_suite_sdv_x509"],
+        "x509_crt_gen": ["test_suite_sdv_x509"],
+        "x509_crt_parse": ["test_suite_sdv_x509"],
+        "x509_vfy": ["test_suite_sdv_x509"],
+        "pkcs12_gen": ["test_suite_sdv_pkcs12"],
+        "pkcs12_parse": ["test_suite_sdv_pkcs12"]
+    },
+    "testSuiteCases": {
+        "test_suite_sdv_asn1": [],
+        "test_suite_sdv_base64": [],
+        "test_suite_sdv_buffer": [],
+        "test_suite_sdv_err": [],
+        "test_suite_sdv_hash": [],
+        "test_suite_sdv_list": [],
+        "test_suite_sdv_log": [],
+        "test_suite_sdv_obj": [],
+        "test_suite_sdv_params": [],
+        "test_suite_sdv_pem": [],
+        "test_suite_sdv_tlv": [],
+        "test_suite_sdv_uio": [],
+        "test_suite_sdv_usr": [],
+        "test_suite_sdv_sal": [],
+        "test_suite_sdv_sal_time": [],
+        "test_suite_sdv_sal_file": [],
+        "test_suite_sdv_sal_socket": [],
+        "test_suite_sdv_sal_dl": [],
+
+        "test_suite_sdv_cmvp": [],
+
+        "test_suite_sdv_ealinit": [],
+        "test_suite_sdv_eal_md_sha1": [
+            "SDV_CRYPT_EAL_SHA1_API_TC003",
+            "SDV_CRYPT_EAL_SHA1_FUN_TC001",
+            "SDV_CRYPTO_SHA1_COPY_CTX_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_md_sha2": [
+            "SDV_CRYPT_EAL_MD_SHA2_FUNC_TC001",
+            "SDV_CRYPT_EAL_MD_SHA2_FUNC_TC003",
+            "SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_md_sha3": [
+            "SDV_CRYPT_EAL_SHA3_FUNC_TC003",
+            "SDV_CRYPT_EAL_SHA3_FUNC_TC004",
+            "SDV_CRYPTO_SHA3_COPY_CTX_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_md5": [
+            "SDV_CRYPTO_MD5_FUNC_TC002",
+            "SDV_CRYPTO_MD5_COPY_CTX_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_sm3": [
+            "SDV_CRYPT_EAL_SM3_FUNC_TC002",
+            "SDV_CRYPTO_SM3_COPY_CTX_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_gmac":[
+            "SDV_CRYPTO_EAL_GMAC_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_mac_hmac":[
+            "SDV_CRYPT_EAL_HMAC_FUN_TC001"
+        ],
+        "test_suite_sdv_eal_mac_siphash":[
+            "SDV_CRYPT_EAL_SIPHASH_FUN_TC005"
+        ],
+        "test_suite_sdv_eal_mac_cmac":[
+            "SDV_CRYPT_EAL_CMAC_FUN_TC004"
+        ],
+        "test_suite_sdv_eal_mac_cbc_mac":[
+            "SDV_CRYPT_EAL_CBC_MAC_FUN_TC004"
+        ],
+        "test_suite_sdv_eal_hpke": [],
+        "test_suite_sdv_eal_kdf_pbkdf2":[
+            "SDV_CRYPT_EAL_KDF_PBKDF2_FUN_TC001"
+        ],
+        "test_suite_sdv_eal_kdf_hkdf":[
+            "SDV_CRYPT_EAL_KDF_HKDF_FUN_TC001"
+        ],
+        "test_suite_sdv_eal_kdf_scrypt":[
+            "SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC001"
+        ],
+        "test_suite_sdv_eal_kdf_tls12":[
+            "SDV_CRYPT_EAL_KDF_TLS12_FUN_TC001"
+        ],
+        "test_suite_sdv_drbg": [],
+        "test_suite_sdv_entropy": [],
+        "test_suite_sdv_eal_aes": [
+            "SDV_CRYPTO_AES_ENCRYPT_FUNC_TC001",
+            "SDV_CRYPTO_AES_ENCRYPT_FUNC_TC003",
+            "SDV_CRYPTO_EAL_AES_FUNC_TC005"
+        ],
+        "test_suite_sdv_eal_aes_ccm": [
+            "SDV_CRYPTO_AES_CCM_UPDATE_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_aes_gcm": [
+            "SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001",
+            "SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002"
+        ],
+        "test_suite_sdv_eal_chachapoly":[
+            "SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC002"
+        ],
+        "test_suite_sdv_eal_sm4":[
+            "SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC003",
+            "SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC004"
+        ],
+        "test_suite_sdv_bn": [],
+        "test_suite_sdv_eal_curve25519": [
+            "SDV_CRYPTO_CURVE25519_KEY_GEN_API_TC002",
+            "SDV_CRYPTO_X25519_EXCH_FUNC_TC001",
+            "SDV_CRYPTO_X25519_EXCH_FUNC_TC002",
+            "SDV_CRYPTO_ED25519_SIGN_VERIFY_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_dh": [
+            "SDV_CRYPTO_DH_FUNC_TC001",
+            "SDV_CRYPTO_DH_FUNC_TC003",
+            "SDV_CRYPTO_DH_GET_PARA_API_TC001"
+        ],
+        "test_suite_sdv_eal_dsa": [
+            "SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001",
+            "SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_ecdh": [
+            "SDV_CRYPTO_ECDH_CTRL_API_TC003",
+            "SDV_CRYPTO_ECDH_EXCH_FUNC_TC001",
+            "SDV_CRYPTO_ECDH_GEN_KEY_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_ecdsa": [
+            "SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001",
+            "SDV_CRYPTO_ECDSA_GEN_KEY_FUNC_TC001",
+            "SDV_CRYPTO_ECDSA_SET_PUB_FUNC_TC001",
+            "SDV_CRYPTO_ECDSA_KEY_PAIR_CHECK_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_rsa_api": [
+            "SDV_CRYPTO_RSA_SET_KEY_API_TC001",
+            "SDV_CRYPTO_RSA_DUP_CTX_API_TC001"
+        ],
+        "test_suite_sdv_eal_rsa_encrypt_decrypt": [
+            "SDV_CRYPTO_RSA_CRYPT_FUNC_TC001",
+            "SDV_CRYPTO_RSA_CRYPT_FUNC_TC003"
+        ],
+        "test_suite_sdv_eal_rsa_sign_verify": [
+            "SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC001",
+            "SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC002",
+            "SDV_CRYPTO_RSA_SIGN_PKCSV15_FUNC_TC002",
+            "SDV_CRYPTO_RSA_VERIFY_PKCSV15_FUNC_TC001",
+            "SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC001",
+            "SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001",
+            "SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002"
+        ],
+        "test_suite_sdv_eal_sm2_crypt": [
+            "SDV_CRYPTO_SM2_ENC_FUNC_TC001",
+            "SDV_CRYPTO_SM2_DEC_FUNC_TC001",
+            "SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC001"
+        ],
+        "test_suite_sdv_eal_sm2_exchange": [
+            "SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001",
+            "SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003",
+            "SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004",
+            "SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001"
+        ],
+        "test_suite_sdv_eal_sm2_sign": [
+            "SDV_CRYPTO_SM2_SIGN_FUNC_TC001",
+            "SDV_CRYPTO_SM2_VERIFY_FUNC_TC001",
+            "SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001"
+        ],
+        "test_suite_sdv_mldsa": [],
+        "test_suite_sdv_hybridkem": [],
+        "test_suite_sdv_eal_paillier": [],
+        "test_suite_sdv_mlkem": [],
+        "test_suite_sdv_eal_slh_dsa": [],
+        "test_suite_sdv_eal_elgamal": [],
+        "test_suite_sdv_x509": [],
+        "test_suite_sdv_pkcs12": []
+    }
+}

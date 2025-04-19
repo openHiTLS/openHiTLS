@@ -159,7 +159,7 @@ void UT_TLS_CERT_CFG_SetDefaultPasswordCb_FUNC_001(int version, char *keyFile, c
     ASSERT_TRUE(HITLS_CFG_SetDefaultPasswordCbUserdata(tlsConfig, userdata)== HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_GetDefaultPasswordCbUserdata(tlsConfig) == userdata);
 
-    ASSERT_EQ(HITLS_CFG_LoadKeyFile(tlsConfig, keyFile, TLS_PARSE_FORMAT_ASN1), HITLS_CONFIG_ERR_LOAD_KEY_FILE);
+    ASSERT_EQ(HITLS_CFG_LoadKeyFile(tlsConfig, keyFile, TLS_PARSE_FORMAT_ASN1), HITLS_CFG_ERR_LOAD_KEY_FILE);
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -226,7 +226,7 @@ void UT_TLS_CERT_CFG_LoadCertFile_API_TC001(int version, char *certFile1, char *
     ASSERT_TRUE(tlsConfig != NULL);
 
     ASSERT_EQ(
-        HITLS_CFG_LoadCertFile(tlsConfig, certFile1, TLS_PARSE_FORMAT_ASN1), HITLS_CONFIG_ERR_LOAD_CERT_FILE);
+        HITLS_CFG_LoadCertFile(tlsConfig, certFile1, TLS_PARSE_FORMAT_ASN1), HITLS_CFG_ERR_LOAD_CERT_FILE);
     ASSERT_TRUE(HITLS_CFG_SetDefaultPasswordCbUserdata(tlsConfig, userdata) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_GetDefaultPasswordCbUserdata(tlsConfig) == userdata);
     ASSERT_TRUE(HITLS_CFG_LoadCertFile(tlsConfig, certFile2, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
@@ -284,7 +284,7 @@ void UT_TLS_CERT_CFG_LoadCertBuffer_FUNC_001(int version, char *certPath)
     buf1[bufLen - 2] = 0;
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
     ASSERT_EQ(
-        HITLS_CFG_LoadCertBuffer(tlsConfig, buf1, bufLen - 1, TLS_PARSE_FORMAT_ASN1), HITLS_CONFIG_ERR_LOAD_CERT_BUFFER);
+        HITLS_CFG_LoadCertBuffer(tlsConfig, buf1, bufLen - 1, TLS_PARSE_FORMAT_ASN1), HITLS_CFG_ERR_LOAD_CERT_BUFFER);
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf2, bufLen + 1, TLS_PARSE_FORMAT_ASN1) != HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
 
@@ -400,7 +400,7 @@ void UT_TLS_CERT_CFG_LoadKeyBuffer_FUNC_TC001(int version, char *keyPath)
     buf1[bufLen - 2] = 0;
     ASSERT_TRUE(HITLS_CFG_LoadKeyBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
     ASSERT_EQ(
-        HITLS_CFG_LoadKeyBuffer(tlsConfig, buf1, bufLen - 1, TLS_PARSE_FORMAT_ASN1), HITLS_CONFIG_ERR_LOAD_KEY_BUFFER);
+        HITLS_CFG_LoadKeyBuffer(tlsConfig, buf1, bufLen - 1, TLS_PARSE_FORMAT_ASN1), HITLS_CFG_ERR_LOAD_KEY_BUFFER);
     ASSERT_EQ(
         HITLS_CFG_LoadKeyBuffer(tlsConfig, buf2, bufLen + 1, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_LoadKeyBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);

@@ -123,7 +123,6 @@ static const EAL_CidToMdMeth ID_TO_MD_METH_TABLE[] = {
 #ifdef HITLS_CRYPTO_SM3
     {CRYPT_MD_SM3,      &g_mdMethod_SM3},       // SM3
 #endif
-    {CRYPT_MD_MAX,      NULL}
 };
 
 const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id)

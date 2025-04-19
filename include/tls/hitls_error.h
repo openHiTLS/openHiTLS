@@ -100,10 +100,10 @@ typedef enum {
     HITLS_CONFIG_NO_PRIVATE_KEY,                   /**< Unset the certificate private key. */
     HITLS_CONFIG_DUP_DH_KEY_FAIL,                  /**< Duplicate DH key failure. */
     HITLS_CONFIG_DUP_ECDH_KEY_FAIL,                /**< Duplicate ecdh Key failure. */
-    HITLS_CONFIG_ERR_LOAD_CERT_FILE,               /**< Failed to load the certificate file. */
-    HITLS_CONFIG_ERR_LOAD_CERT_BUFFER,             /**< Failed to load the certificate buffer. */
-    HITLS_CONFIG_ERR_LOAD_KEY_FILE,                /**< Failed to load the key file. */
-    HITLS_CONFIG_ERR_LOAD_KEY_BUFFER,              /**< Failed to load the key buffer. */
+    HITLS_CFG_ERR_LOAD_CERT_FILE,               /**< Failed to load the certificate file. */
+    HITLS_CFG_ERR_LOAD_CERT_BUFFER,             /**< Failed to load the certificate buffer. */
+    HITLS_CFG_ERR_LOAD_KEY_FILE,                /**< Failed to load the key file. */
+    HITLS_CFG_ERR_LOAD_KEY_BUFFER,              /**< Failed to load the key buffer. */
     HITLS_CONFIG_ERR_LOAD_GROUP_INFO,              /**< Failed to load the group info. */
     HITLS_CONFIG_ERR_LOAD_SIGN_SCHEME_INFO,        /**< Failed to load the signature scheme info. */
     HITLS_CM_FAIL_START = 0x02030001,              /**< Error start bit of the conn module. */
@@ -325,7 +325,7 @@ typedef enum {
 
     HITLS_CLIENT_HELLO_CHECK_ERROR,                /**< ClientHello callback detection failure. */
 
-    HITLS_SESS_FAIL_START = 0x020F0001,            /**< Session feature error code start bit. */
+    HITLS_SESS_FAIL_START = 0x02100001,            /**< Session feature error code start bit. */
     HITLS_SESS_ERR_SESSION_ID_GENRATE,             /**< Session id output error. */
     HITLS_SESS_ERR_DECODE_TICKET,                  /**< Error decoding session ticket object. */
     HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT,  /**< Session ticket length is incorrect. */
@@ -357,7 +357,7 @@ typedef enum {
     HITLS_SESS_ERR_ENC_PEER_CERT_FAIL,             /**< Failed to encode the peercert. */
     HITLS_SESS_ERR_DEC_PEER_CERT_FAIL,             /**< Failed to decode the peercert. */
 
-    HITLS_X509_FAIL_START = 0x02100001,            /**< The X509 feature error code start bit of. */
+    HITLS_X509_FAIL_START = 0x02120001,            /**< The X509 feature error code start bit of. */
     HITLS_X509_V_ERR_UNSPECIFIED,
     HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
     HITLS_X509_V_ERR_UNABLE_TO_GET_CRL,
@@ -408,10 +408,10 @@ typedef enum {
     HITLS_X509_V_ERR_ERROR_IN_CMP_CERT_NOT_BEFORE_FIELD,
     HITLS_X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
 
-    HITLS_X509_ADAPT_ERR = 0x02200001,
-    HITLS_X509_ADAPT_BUILD_CERT_CHAIN_ERR,
-    HITLS_X509_ADAPT_INVALID_TIME,
-    HITLS_X509_ADAPT_UNSUPPORT_FORMAT,
+    HITLS_CERT_SELF_ADAPT_ERR = 0x02130001,
+    HITLS_CERT_SELF_ADAPT_INVALID_TIME,
+    HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT,
+    HITLS_CERT_SELF_ADAPT_BUILD_CERT_CHAIN_ERR,
 } HITLS_ERROR;
 
 /**

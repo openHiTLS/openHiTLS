@@ -27,7 +27,7 @@
 #include "crypt_eal_rand.h"
 #include "stub_replace.h"
 #include "crypt_util_rand.h"
-#include "crypt_encode.h"
+#include "crypt_encode_internal.h"
 #include "crypt_eal_md.h"
 #include "crypt_dsa.h"
 #include "crypt_ecdh.h"
@@ -188,15 +188,7 @@ static int Ecc_GenKey(
     TestMemInit();
 
     /* Create a key structure. */
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        pkey = CRYPT_EAL_PkeyNewCtx(algId);
-    }
+    pkey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, eccId), CRYPT_SUCCESS);
@@ -479,11 +471,7 @@ int EAL_PkeyGetPrv_Provider_Api_TC001(int algId, Hex *prvKey)
     TestMemInit();
 
     /* Create a key structure. */
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-#else
-    ctx = CRYPT_EAL_PkeyNewCtx(algId);
-#endif
+    ctx = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", true);
     ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
     ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
 
@@ -559,11 +547,7 @@ int EAL_PkeyGetPub_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     TestMemInit();
 
     /* Create a key structure. */
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-#else
-    ctx = CRYPT_EAL_PkeyNewCtx(algId);
-#endif
+    ctx = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", true);
     ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
     ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
 
@@ -739,15 +723,7 @@ int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey
 
     TestMemInit();
     /* Create a key structure. */
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        pkey = CRYPT_EAL_PkeyNewCtx(algId);
-    }
+    pkey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE_AND_LOG("NewCtx", pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pkey, eccId) == CRYPT_SUCCESS);
 
@@ -854,19 +830,13 @@ int EAL_PkeyCmp_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     int ret = ERROR;
     CRYPT_EAL_PkeyPub pub = {0};
     KeyData pubkey = {{0}, KEY_MAX_LEN};
-    CRYPT_EAL_PkeyCtx *ctx1 = NULL;
-    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-    ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE+CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
-#else
-    ctx1 = CRYPT_EAL_PkeyNewCtx(algId);
-    ctx2 = CRYPT_EAL_PkeyNewCtx(algId);
-#endif
+    CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, algId,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", true);
+    CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, algId,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", true);
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL);

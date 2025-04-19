@@ -56,7 +56,7 @@ int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 {
     (void)ctx;
     if (SetPkeySignParam(key, signAlgo, hashAlgo) != HITLS_SUCCESS) {
-        return HITLS_X509_ADAPT_ERR;
+        return HITLS_CERT_SELF_ADAPT_ERR;
     }
     return CRYPT_EAL_PkeySign(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
 }
@@ -66,7 +66,7 @@ int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 {
     (void)ctx;
     if (SetPkeySignParam(key, signAlgo, hashAlgo) != HITLS_SUCCESS) {
-        return HITLS_X509_ADAPT_ERR;
+        return HITLS_CERT_SELF_ADAPT_ERR;
     }
     return CRYPT_EAL_PkeyVerify(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
 }
@@ -84,7 +84,7 @@ int32_t HITLS_X509_Adapt_Encrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
 {
     (void)ctx;
     if (CRYPT_EAL_PkeyGetId(key) == CRYPT_PKEY_RSA && CertSetRsaEncryptionScheme(key) != HITLS_SUCCESS) {
-        return HITLS_X509_ADAPT_ERR;
+        return HITLS_CERT_SELF_ADAPT_ERR;
     }
 
     return CRYPT_EAL_PkeyEncrypt(key, in, inLen, out, outLen);
@@ -96,7 +96,7 @@ int32_t HITLS_X509_Adapt_Decrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
 {
     (void)ctx;
     if (CRYPT_EAL_PkeyGetId(key) == CRYPT_PKEY_RSA && CertSetRsaEncryptionScheme(key) != HITLS_SUCCESS) {
-        return HITLS_X509_ADAPT_ERR;
+        return HITLS_CERT_SELF_ADAPT_ERR;
     }
 
     return CRYPT_EAL_PkeyDecrypt(key, in, inLen, out, outLen);

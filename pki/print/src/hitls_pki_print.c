@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_INFO
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -27,9 +29,9 @@
 
 static uint32_t g_nameFlag = HITLS_PKI_PRINT_DN_RFC2253;
 
-static char g_rfc2253Ecsape[] = {',', '+', '"', '\\', '<', '>', ';'};
+static char g_rfc2253Escape[] = {',', '+', '"', '\\', '<', '>', ';'};
 
-#define RFC2253_ESCAPE_CHAR_CNT (sizeof(g_rfc2253Ecsape) / sizeof(g_rfc2253Ecsape[0]))
+#define RFC2253_ESCAPE_CHAR_CNT (sizeof(g_rfc2253Escape) / sizeof(g_rfc2253Escape[0]))
 
 static char *GetPrefixFmt(bool preLayerIs2, bool isFirst)
 {
@@ -103,7 +105,7 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         } else if (g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253) {
             if ((cur == value->buff && (c == ' ' || c == '#')) ||             // (1)
                 (cur + 1 == end && c == ' ') ||                               // (2)
-                CharInList(c, g_rfc2253Ecsape, RFC2253_ESCAPE_CHAR_CNT)) {    // (3)
+                CharInList(c, g_rfc2253Escape, RFC2253_ESCAPE_CHAR_CNT)) {    // (3)
                 fmt = "\\%c";
             }
         } else if (needQuote && c == '"') {
@@ -210,3 +212,4 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
             return HITLS_X509_ERR_INVALID_PARAM;
     }
 }
+#endif // HITLS_PKI_INFO

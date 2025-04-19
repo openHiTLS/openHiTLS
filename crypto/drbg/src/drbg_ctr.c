@@ -608,7 +608,7 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, b
     ctx->ciphMeth = ciphMeth;
 
     drbg->state = DRBG_STATE_UNINITIALISED;
-     drbg->isGm = isGm;
+    drbg->isGm = isGm;
     drbg->reseedInterval = (drbg->isGm) ? HITLS_CRYPTO_RESEED_INTERVAL_GM : DRBG_MAX_RESEED_INTERVAL;
 #if defined(HITLS_CRYPTO_DRBG_GM)
     drbg->reseedIntervalTime = (drbg->isGm) ? HITLS_CRYPTO_DRBG_RESEED_TIME_GM : 0;

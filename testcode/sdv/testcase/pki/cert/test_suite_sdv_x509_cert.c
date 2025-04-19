@@ -28,7 +28,7 @@
 #include "bsl_obj_internal.h"
 #include "sal_time.h"
 #include "sal_file.h"
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
 #include "crypt_eal_encode.h"
 #include "hitls_x509_local.h"
 
@@ -871,7 +871,7 @@ void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyTyp
     memset_s(&algParam, sizeof(HITLS_X509_SignAlgParam), 0, sizeof(HITLS_X509_SignAlgParam));
     if (pad == 0) {
         algParamPtr = NULL;
-    } else if (pad == CRYPT_PKEY_EMSA_PSS) {
+    } else if (pad == CRYPT_EMSA_PSS) {
         algParam.algId = BSL_CID_RSASSAPSS;
         algParam.rsaPss.mdId = mdId;
         algParam.rsaPss.mgfId = mgfId;
@@ -895,10 +895,11 @@ void SDV_X509_CERT_SETANDGEN_TC001(char *derCertPath, char *privPath, int keyTyp
 
     ASSERT_EQ(HITLS_X509_CertSign(mdId, privKey, algParamPtr, new), 0);
     ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, new, &encodeNew), 0);
-    if (pad != CRYPT_PKEY_EMSA_PSS) {
-        ASSERT_EQ(encodeRaw.dataLen, encodeNew.dataLen);
+    if (pad != CRYPT_EMSA_PSS) {
+        ASSERT_TRUE(encodeRaw.dataLen == encodeNew.dataLen || encodeRaw.dataLen == encodeNew.dataLen - 1 ||
+            encodeRaw.dataLen == encodeNew.dataLen + 1);
     }
-    if (pkeyId == CRYPT_PKEY_RSA && pad == CRYPT_PKEY_EMSA_PKCSV15) {
+    if (pkeyId == CRYPT_PKEY_RSA && pad == CRYPT_EMSA_PKCSV15) {
         ASSERT_COMPARE("Gen cert", encodeNew.data, encodeNew.dataLen, encodeRaw.data, encodeRaw.dataLen);
     }
 

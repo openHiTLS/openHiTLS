@@ -411,7 +411,7 @@ int32_t BSL_UIO_GetFd(BSL_UIO *uio)
     return fd;
 }
 
-void BSL_UIO_SetFd(BSL_UIO *uio, int fd)
+void BSL_UIO_SetFD(BSL_UIO *uio, int fd)
 {
     bool invalid = (uio == NULL) || (fd < 0);
     if (invalid) {

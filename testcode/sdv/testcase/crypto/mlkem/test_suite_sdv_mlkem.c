@@ -457,16 +457,8 @@ void SDV_CRYPTO_MLKEM_KEYCMP_FUNC_TC001(int bits, Hex *r0, Hex *r1, Hex *r2, int
     CRYPT_RandRegist(TEST_KyberRandom);
     CRYPT_RandRegistEx(TEST_KyberRandomEx);
 
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    }
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default", isProvider);
     ASSERT_NE(ctx, NULL);
     uint32_t val = (uint32_t)bits;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, val), CRYPT_SUCCESS);
@@ -475,17 +467,9 @@ void SDV_CRYPTO_MLKEM_KEYCMP_FUNC_TC001(int bits, Hex *r0, Hex *r1, Hex *r2, int
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, NULL), CRYPT_NULL_INPUT);
     gKyberRandNum = 0;
-    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    }
 
+    CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default", isProvider);
     ASSERT_NE(ctx2, NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_MLKEM_KEY_NOT_EQUAL);
     val = (uint32_t)bits;
@@ -497,16 +481,8 @@ void SDV_CRYPTO_MLKEM_KEYCMP_FUNC_TC001(int bits, Hex *r0, Hex *r1, Hex *r2, int
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_SUCCESS);
 
     gKyberRandNum = 1;
-    CRYPT_EAL_PkeyCtx *ctx3 = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctx3 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctx3 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    }
+    CRYPT_EAL_PkeyCtx *ctx3 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default", isProvider);
     ASSERT_NE(ctx3, NULL);
     val = (uint32_t)bits;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx3, val), CRYPT_SUCCESS);
@@ -559,16 +535,8 @@ void SDV_CRYPTO_MLKEM_KEYGEN_FUNC_TC001(int bits, Hex *z, Hex *d, Hex *testEK, H
     CRYPT_RandRegist(TEST_KyberRandom);
     CRYPT_RandRegistEx(TEST_KyberRandomEx);
 
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    }
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default", isProvider);
 
     ASSERT_NE(ctx, NULL);
     uint32_t val = (uint32_t)bits;
@@ -631,16 +599,8 @@ void SDV_CRYPTO_MLKEM_ENCAPS_DECAPS_FUNC_TC001(int bits, Hex *m, Hex *testEK, He
     CRYPT_RandRegist(TEST_KyberRandom);
     CRYPT_RandRegistEx(TEST_KyberRandomEx);
 
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    }
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default", isProvider);
 
     ASSERT_NE(ctx, NULL);
     uint32_t val = (uint32_t)bits;
@@ -713,16 +673,8 @@ EXIT:
 void SDV_CRYPTO_MLKEM_DECAPS_FUNC_TC001(int bits, Hex *testDK, Hex *testCT, Hex *testSK, int isProvider)
 {
     TestMemInit();
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == 1) {
-        ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
-    } else
-#endif
-    {
-        (void)isProvider;
-        ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    }
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
+        "provider=default", isProvider);
 
     ASSERT_NE(ctx, NULL);
     uint32_t val = (uint32_t)bits;

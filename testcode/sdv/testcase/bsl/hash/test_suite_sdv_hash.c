@@ -115,6 +115,7 @@ void SDV_BSL_HASH_LIST_FUNC_TC001(void)
                          {17, "bsl_cstl005"},
                          {16, "bsl_cstl001"}};
     ListDupFreeFuncPair valueFunc = {UserHashDataDupFunc, BSL_SAL_Free};
+    TestMemInit();
     hash = BSL_HASH_Create(BACKET_SIZE, NULL, NULL, NULL, &valueFunc);
     ASSERT_TRUE(hash != (BSL_HASH_Hash *)NULL);
 

@@ -135,7 +135,7 @@ int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
 */
-int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libctx, BSL_SAL_LibFmtCmd cmd, const char *providerName);
+int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName);
 
 
 /**

@@ -113,7 +113,9 @@ struct RSA_Ctx {
     CRYPT_RSA_PrvKey *prvKey;
     CRYPT_RSA_PubKey *pubKey;
     CRYPT_RSA_Para *para;
+#ifdef HITLS_CRYPTO_RSA_BLINDING
     RSA_Blind *scBlind; // Preventing side channel attacks
+#endif
     RSAPad pad;
     uint32_t flags;
     CRYPT_Data label; // Used for oaep padding
@@ -132,10 +134,11 @@ int32_t RSA_CalcPrvKey(const CRYPT_RSA_Para *para, CRYPT_RSA_Ctx *ctx, BN_Optimi
 int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt, const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen);
 void ShallowCopyCtx(CRYPT_RSA_Ctx *ctx, CRYPT_RSA_Ctx *newCtx);
 CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para);
-#ifdef HITLS_CRYPTO_RSA_SIGN_PKCSV15
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
 int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
 #endif
 
+#if defined(HITLS_CRYPTO_RSA_BLINDING) || defined(HITLS_CRYPTO_RSA_BSSA)
 /**
  * @ingroup rsa
  * @brief   Create a blinding handle.
@@ -183,15 +186,18 @@ int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
  * @brief Create a new Blind parameter with the parameters e and m,
  * e in the public key (n, e), n in the public key (n, e)
  *
+ * @param libCtx [IN] libctx
  * @param b [IN] Blinding Handle
  * @param e [IN] e in the public key (n, e)
  * @param n [IN] n in the public key (n, e)
+ * @param bits [IN] bits of n
  *
  * @retval Return the error code.
  */
 int32_t RSA_BlindCreateParam(void *libCtx, RSA_Blind *b, BN_BigNum *e, BN_BigNum *n, uint32_t bits, BN_Optimizer *opt);
 
 int32_t RSA_CreateBlind(RSA_Blind *b, uint32_t bits);
+#endif
 
 #define RSA_FREE_PRV_KEY(prvKey_)               \
 do {                                            \

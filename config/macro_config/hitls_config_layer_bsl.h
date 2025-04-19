@@ -63,7 +63,7 @@
 /* Derive the child-features of uio mem. */
 #if defined(HITLS_BSL_UIO_MEM)
     #ifndef HITLS_BSL_SAL_MEM
-        #define HITLS_BSL_UIO_MEM
+        #define HITLS_BSL_SAL_MEM
     #endif
     #ifndef HITLS_BSL_BUFFER
         #define HITLS_BSL_BUFFER
@@ -77,11 +77,29 @@
     #endif
 #endif
 
+#if defined(HITLS_BSL_UIO_TCP) || defined(HITLS_BSL_UIO_UDP)
+    #ifndef HITLS_BSL_UIO_ADDR
+        #define HITLS_BSL_UIO_ADDR
+    #endif
+#endif
+
 /* Derive parent feature from child features. */
 #if defined(HITLS_BSL_UIO_BUFFER) || defined(HITLS_BSL_UIO_SCTP) || defined(HITLS_BSL_UIO_TCP) || \
     defined(HITLS_BSL_UIO_MEM)
     #ifndef HITLS_BSL_UIO_PLT
         #define HITLS_BSL_UIO_PLT
+    #endif
+#endif
+
+#ifdef HITLS_BSL_PEM
+    #ifndef HITLS_BSL_BASE64
+        #define HITLS_BSL_BASE64
+    #endif
+#endif
+
+#ifdef HITLS_BSL_ASN1
+    #ifndef HITLS_BSL_SAL_TIME
+        #define HITLS_BSL_SAL_TIME
     #endif
 #endif
 

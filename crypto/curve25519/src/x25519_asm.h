@@ -147,6 +147,6 @@ void Fp64PolyToData(uint8_t *out, const Fp64 f);
 }
 #endif
 
-#endif // HITLS_CRYPTO_CURVE25519
+#endif /* HITLS_CRYPTO_X25519 */
 
 #endif // X25519_ASM_H

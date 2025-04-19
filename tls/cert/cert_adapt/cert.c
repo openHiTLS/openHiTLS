@@ -618,7 +618,7 @@ static int32_t CheckCertChainFromStore(HITLS_Config *config, HITLS_CERT_X509 *ce
     CERT_MgrCtx *mgrCtx = config->certMgrCtx;
     int32_t ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CONFIG_ERR_LOAD_CERT_FILE, BINLOG_ID16318, "GET_PUB_KEY fail");
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CFG_ERR_LOAD_CERT_FILE, BINLOG_ID16318, "GET_PUB_KEY fail");
     }
 
     int32_t secBits = 0;

@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_X509_VFY
 #include <string.h>
 #include "securec.h"
 #include "hitls_pki_x509.h"
@@ -75,7 +77,9 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
         return;
     }
 
+#ifdef HITLS_CRYPTO_SM2
     BSL_SAL_FREE(storeCtx->verifyParam.sm2UserId.data);
+#endif
     BSL_LIST_FREE(storeCtx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_LIST_FREE(storeCtx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
     BSL_SAL_ReferencesFree(&storeCtx->references);
@@ -272,7 +276,7 @@ static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val)
     return ret;
 }
 
-static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, int *val, uint32_t valLen)
+static int32_t X509_RefUp(HITLS_X509_StoreCtx *storeCtx, void *val, uint32_t valLen)
 {
     if (valLen != sizeof(int)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -307,8 +311,10 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
             return X509_SetCRL(storeCtx, val);
         case HITLS_X509_STORECTX_REF_UP:
             return X509_RefUp(storeCtx, val, valLen);
-        case HITLS_X509_STORECTX_SET_VEY_SM2_USERID:
+#ifdef HITLS_CRYPTO_SM2
+        case HITLS_X509_STORECTX_SET_VFY_SM2_USERID:
             return HITLS_X509_SetSm2UserId(&storeCtx->verifyParam.sm2UserId, val, valLen);
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -577,20 +583,26 @@ int32_t HITLS_X509_CheckCertRevoked(HITLS_X509_Cert *cert, HITLS_X509_CrlEntry *
 static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT_EAL_PkeyCtx *pubKey,
     uint8_t *rawData, uint32_t rawDataLen, HITLS_X509_Asn1AlgId *alg, BSL_ASN1_BitString *signature)
 {
+#ifdef HITLS_CRYPTO_SM2
     bool isHasUserId = true;
     if (alg->sm2UserId.data == NULL) {
         alg->sm2UserId = *sm2UserId;
         isHasUserId = false;
     }
+#else
+    (void)sm2UserId;
+#endif
     int32_t ret = HITLS_X509_CheckSignature(pubKey, rawData, rawDataLen, alg, signature);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+#ifdef HITLS_CRYPTO_SM2
     if (!isHasUserId) {
         alg->sm2UserId.data = NULL;
         alg->sm2UserId.dataLen = 0;
     }
+#endif
     return ret;
 }
 
@@ -600,7 +612,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
     HITLS_X509_Crl *crl = BSL_LIST_GET_FIRST(storeCtx->crl);
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)parent->tbs.ext.extData;
     if ((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) {
-        if (!(certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN)) {
+        if ((certExt->keyUsage & HITLS_X509_EXT_KU_CRL_SIGN) == 0) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_KU_NO_CRLSIGN);
             return HITLS_X509_ERR_VFY_KU_NO_CRLSIGN;
         }
@@ -611,8 +623,8 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             continue;
         }
         if (cert->tbs.version == HITLS_X509_VERSION_3 && crl->tbs.version == 1) {
-            if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName, &parent->tbs.serialNum)
-                != HITLS_PKI_SUCCESS) {
+            if (HITLS_X509_CheckAki(&parent->tbs.ext, &crl->tbs.crlExt, parent->tbs.subjectName,
+                &parent->tbs.serialNum) != HITLS_PKI_SUCCESS) {
                 crl = BSL_LIST_GET_NEXT(storeCtx->crl);
                 continue;
             }
@@ -628,8 +640,13 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             return ret;
         }
 
+#ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, parent->tbs.ealPubKey, crl->tbs.tbsRawData,
             crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
+#else
+        ret = X509_StoreCheckSignature(NULL, parent->tbs.ealPubKey, crl->tbs.tbsRawData,
+            crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
+#endif
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -679,8 +696,13 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
                 return ret;
             }
         }
+#ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
             cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
+#else
+        ret = X509_StoreCheckSignature(NULL, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
+            cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
+#endif
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
@@ -766,3 +788,4 @@ HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_PKI_LibCtx *libCtx, co
     storeCtx->attrName = attrName;
     return storeCtx;
 }
+#endif // HITLS_PKI_X509_VFY

@@ -14,7 +14,8 @@
  */
 
 /* BEGIN_HEADER */
-#include "crypt_encode.h"
+#include "crypt_encode_decode.h"
+#include "crypt_encode_internal.h"
 #include "crypt_sm2.h"
 #include "crypt_bn.h"
 #include "crypt_errno.h"
