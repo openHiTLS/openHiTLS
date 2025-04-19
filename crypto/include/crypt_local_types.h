@@ -111,10 +111,8 @@ typedef int32_t (*PkeyVerifyData)(const void *key, const uint8_t *data, uint32_t
     const uint8_t *sign, uint32_t signLen);
 typedef int32_t (*PkeyRecover)(const void *key, const uint8_t *sign, uint32_t signLen,
     uint8_t *data, uint32_t *dataLen);
-typedef int32_t (*PkeyComputeShareKey)(const void *key, const void *pub,
-    uint8_t *share, uint32_t *shareLen);
-typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t dataLen,
-    uint8_t *out, uint32_t *outLen);
+typedef int32_t (*PkeyComputeShareKey)(const void *key, const void *pub, uint8_t *share, uint32_t *shareLen);
+typedef int32_t (*PkeyCrypt)(const void *key, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyCheck)(const void *prv, const void *pub);
 typedef int32_t (*PkeyCmp)(const void *key1, const void *key2);
 typedef int32_t (*PkeyCopyParam)(const void *src, void *dest);
@@ -344,7 +342,7 @@ typedef struct {
 /* Prototype of the KDF algorithm operation functions */
 typedef void* (*KdfNewCtx)(void);
 typedef void* (*KdfProvNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*KdfSetParam)(void *ctx, BSL_Param *param);
+typedef int32_t (*KdfSetParam)(void *ctx, const BSL_Param *param);
 typedef int32_t (*KdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
 typedef int32_t (*KdfDeinit)(void *ctx);
 typedef int32_t (*KdfCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);

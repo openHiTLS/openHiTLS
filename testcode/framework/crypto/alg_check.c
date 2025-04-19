@@ -506,3 +506,62 @@ bool IsCmacAlgDisabled(int id)
     return true;
 #endif
 }
+
+bool IsCurveDisabled(int eccId)
+{
+    switch (eccId) {
+#ifdef HITLS_CRYPTO_CURVE_NISTP224
+        case CRYPT_ECC_NISTP224:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
+        case CRYPT_ECC_NISTP256:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
+        case CRYPT_ECC_NISTP384:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
+        case CRYPT_ECC_NISTP521:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
+        case CRYPT_ECC_BRAINPOOLP256R1:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
+        case CRYPT_ECC_BRAINPOOLP384R1:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_BP512R1
+        case CRYPT_ECC_BRAINPOOLP512R1:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_CURVE_192WAPI
+        case CRYPT_ECC_192WAPI:
+            return false;
+#endif
+        default:
+            return true;
+    }
+}
+
+bool IsCurve25519AlgDisabled(int id)
+{
+    if (id == CRYPT_PKEY_ED25519) {
+#ifndef HITLS_CRYPTO_ED25519
+        return true;
+#else
+        return false;
+#endif
+    }
+    if (id == CRYPT_PKEY_X25519) {
+#ifndef HITLS_CRYPTO_X25519
+        return true;
+#else
+        return false;
+#endif
+    }
+    return false;  // Unsupported algorithm ID
+}

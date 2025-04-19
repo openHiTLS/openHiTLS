@@ -152,6 +152,7 @@ void SDV_BSL_SAL_CONVERTER_NAME_TC001(char *name, int cmd, char *aimResult)
     char *convertedName = NULL;
     int32_t ret;
 
+    TestMemInit();
     ret = BSL_SAL_LibNameFormat(cmd, name, &convertedName);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(convertedName != NULL);

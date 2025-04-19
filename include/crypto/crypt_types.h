@@ -718,14 +718,14 @@ typedef enum {
 } CRYPT_PaddingType;
 
 typedef enum {
-    CRYPT_PKEY_EMSA_PKCSV15 = 1, /**< PKCS1-v1_5 according to RFC8017. */
-    CRYPT_PKEY_EMSA_PSS,         /**< PSS according to RFC8017. */
-    CRYPT_PKEY_RSAES_OAEP,       /**< OAEP according to RFC8017. */
-    CRYPT_PKEY_RSAES_PKCSV15,    /**< RSAES_PKCSV15 according to RFC8017. */
-    CRYPT_PKEY_RSA_NO_PAD,
+    CRYPT_EMSA_PKCSV15 = 1, /**< PKCS1-v1_5 according to RFC8017. */
+    CRYPT_EMSA_PSS,         /**< PSS according to RFC8017. */
+    CRYPT_RSAES_OAEP,       /**< OAEP according to RFC8017. */
+    CRYPT_RSAES_PKCSV15,    /**< RSAES_PKCSV15 according to RFC8017. */
+    CRYPT_RSA_NO_PAD,
     CRYPT_RSAES_PKCSV15_TLS, /* Specific RSA pkcs1.5 padding verification process to
                                 prevent possible Bleichenbacher attacks */
-    CRYPT_PKEY_RSA_PADDINGMAX,
+    CRYPT_RSA_PADDINGMAX,
 } CRYPT_RsaPadType;
 
 /**
@@ -824,9 +824,9 @@ typedef enum {
     CRYPT_PRIKEY_PKCS8_ENCRYPT,
     CRYPT_PRIKEY_RSA,
     CRYPT_PRIKEY_ECC,
-    CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
     CRYPT_PUBKEY_SUBKEY,
-    CRYPT_PUBKEY_RSA
+    CRYPT_PUBKEY_RSA,
+    CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
 } CRYPT_ENCODE_TYPE;
 
 typedef enum {

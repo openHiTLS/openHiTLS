@@ -26,9 +26,9 @@
 #define OUTPUT_LINE_LENGTH 60
 
 #ifdef FAIL_REPEAT_RUN
-#define FAIL_TRY_TWICE 2
+#define FAIL_TRY_TIMES 3
 #else
-#define FAIL_TRY_TWICE 0
+#define FAIL_TRY_TIMES 0
 #endif
 
 #define FUNCTION_LOG_FORMAT "./log/%s.%s.log"
@@ -118,6 +118,7 @@ EXIT:
         for (int i = 0; i < g_executeCount; i++) {
             free(g_executeCases[i]);
         }
+        g_executeCount = 0;
     }
     (void)fclose(fpDatax);
     return rt;

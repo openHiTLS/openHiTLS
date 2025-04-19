@@ -68,6 +68,10 @@ int32_t CRYPT_SM3_AsmCheck(void);
 
 #if defined(HITLS_CRYPTO_PKEY)
 
+#if defined(HITLS_CRYPTO_BN_ASM)
+int32_t CRYPT_BN_AsmCheck(void);
+#endif // HITLS_CRYPTO_BN_ASM
+
 #if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM)
 int32_t CRYPT_ECP256_AsmCheck(void);
 #endif // HITLS_CRYPTO_ECC

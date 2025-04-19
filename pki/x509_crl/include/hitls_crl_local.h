@@ -16,6 +16,8 @@
 #ifndef HITLS_CRL_LOCAL_H
 #define HITLS_CRL_LOCAL_H
 
+#include "hitls_build.h"
+#ifdef HITLS_PKI_X509_CRL
 #include <stdint.h>
 #include "bsl_asn1.h"
 #include "bsl_obj.h"
@@ -72,9 +74,10 @@ typedef struct _HITLS_X509_Crl {
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
-int32_t HITLS_X509_CrlParseBundleBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crllist);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // HITLS_PKI_X509_CRL
 
 #endif // HITLS_CRL_LOCAL_H

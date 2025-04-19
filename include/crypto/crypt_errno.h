@@ -154,7 +154,8 @@ enum CRYPT_ERROR {
                                              are 0, if this requirement is not met, an error will be reported. */
     CRYPT_EAL_PADDING_NOT_SUPPORT,      /**< Unsupported padding. */
     CRYPT_EAL_CIPHER_CTRL_ERROR,        /**< CRYPT_EAL_CipherCtrl interface unsupported CTRL type. */
-    CRYPT_EAL_CIPHER_ERR_NEWCTX,
+    CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR,  /**< An error occurs when the final operation is performed on the
+                                                  AEAD algorithm. */
     CRYPT_EAL_PKEY_CTRL_ERROR,          /**< When the CRYPT_EAL_PkeyCtrl interface performs CTRL,
                                              the function is not supported or the input length is incorrect. */
     CRYPT_EAL_MAC_CTRL_TYPE_ERROR,      /**< When the CRYPT_EAL_PkeyCtrl interface performs CTRL,
@@ -164,8 +165,7 @@ enum CRYPT_ERROR {
     CRYPT_EAL_ERR_PART_OVERLAP,         /**< Some memory overlap. */
     CRYPT_EAL_INTO_TYPE_NOT_SUPPORT,    /**< The info type is not supported. */
     CRYPT_EAL_ALG_ASM_NOT_SUPPORT,      /**< Algorithm assembly is not supported. */
-    CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR,  /**< An error occurs when the final operation is performed on the
-                                                  AEAD algorithm. */
+    CRYPT_EAL_CIPHER_ERR_NEWCTX,
 
     CRYPT_SHA2_INPUT_OVERFLOW = 0x01050001, /**< The length of the input data exceeds the maximum
                                                      processing range of SHA2. */
@@ -179,7 +179,7 @@ enum CRYPT_ERROR {
     CRYPT_DRBG_INVALID_LEN,             /**< Incorrect data length. */
     CRYPT_DRBG_PARAM_ERROR,             /**< Incorrect input parameter. */
 
-    CRYPT_CURVE25519_NO_PUBKEY = 0x01070001,    /**< No public key. */
+    CRYPT_CURVE25519_NO_PUBKEY = 0x01080001,    /**< No public key. */
     CRYPT_CURVE25519_NO_PRVKEY,                 /**< No private key. */
     CRYPT_CURVE25519_KEYLEN_ERROR,              /**< Incorrect key length. */
     CRYPT_CURVE25519_SIGNLEN_ERROR,             /**< Incorrect signature length. */
@@ -191,16 +191,16 @@ enum CRYPT_ERROR {
     CRYPT_CURVE25519_INVALID_PUBKEY,            /**< Invalid public key. */
     CRYPT_CURVE25519_PUBKEY_NOT_EQUAL,          /**< Public keys are not equal. */
 
-    CRYPT_SHA1_INPUT_OVERFLOW = 0x01080001,          /**< The length of the input data exceeds the
+    CRYPT_SHA1_INPUT_OVERFLOW = 0x01090001,          /**< The length of the input data exceeds the
                                                            maximum processing range of SHA1. */
     CRYPT_SHA1_OUT_BUFF_LEN_NOT_ENOUGH,              /**< The length of the buffer that storing
                                                           the output result is insufficient. */
 
-    CRYPT_ENTROPY_CONDITION_FAILURE = 0x01090001,    /**< Processing method error after invoking. */
+    CRYPT_ENTROPY_RCT_FAILURE = 0x010A0001,          /**< RCT detection fails, restart the entropy source. */
+    CRYPT_ENTROPY_APT_FAILURE,                       /**< APT detection fails, restart the entropy source. */
+    CRYPT_ENTROPY_CONDITION_FAILURE,                 /**< Processing method error after invoking. */
     CRYPT_ENTROPY_RANGE_ERROR,                       /**< Entropy source generation range error */
     CRYPT_ENTROPY_ECF_ALG_ERROR,                     /**< Entropy source conditioning algorithm is incorrect. */
-    CRYPT_ENTROPY_RCT_FAILURE,                       /**< RCT detection fails, restart the entropy source. */
-    CRYPT_ENTROPY_APT_FAILURE,                       /**< APT detection fails, restart the entropy source. */
     CRYPT_ENTROPY_ECF_IS_ERROR,                      /**< Entropy source conditioning is incorrect. */
     CRYPT_ENTROPY_ES_CREATE_ERROR,                   /**< Entropy pool creation error. */
     CRYPT_ENTROPY_ES_STATE_ERROR,                    /**< Incorrect entropy pool status. */
@@ -217,7 +217,7 @@ enum CRYPT_ERROR {
     CRYPT_ENTROPY_ES_POOL_INSUFFICIENT,              /**< Entropy pool capacity is insufficient. */
     CRYPT_ENTROPY_CTRL_INVALID_PARAM,                /**< Entropy invalid parameter. */
 
-    CRYPT_DSA_BUFF_LEN_NOT_ENOUGH = 0x010A0001, /**< Insufficient buffer length. */
+    CRYPT_DSA_BUFF_LEN_NOT_ENOUGH = 0x010B0001, /**< Insufficient buffer length. */
     CRYPT_DSA_ERR_KEY_PARA,                     /**< Incorrect key parameter data. */
     CRYPT_DSA_ERR_KEY_INFO,                     /**< Incorrect key information. */
     CRYPT_DSA_VERIFY_FAIL,                      /**< Verification failure. */
@@ -225,18 +225,18 @@ enum CRYPT_ERROR {
                                                      generated within the specified number of attempts. */
     CRYPT_DSA_DECODE_FAIL,                      /**< Data decoding fails, the data does not meet
                                                      the decoding requirements. */
+    CRYPT_DSA_UNSUPPORTED_CTRL_OPTION,          /**< Unsupported mode of operation. */
     CRYPT_DSA_PARA_ERROR,                       /**< The value of the key parameter does not meet
                                                      the requirements. The ctx command does not
                                                      contain necessary parameter information. */
     CRYPT_DSA_PUBKEY_NOT_EQUAL,                 /**< Public keys are not equal. */
     CRYPT_DSA_PARA_NOT_EQUAL,                   /**< Key parameters are not equal. */
-    CRYPT_DSA_UNSUPPORTED_CTRL_OPTION,          /**< Unsupported mode of operation. */
 
-    CRYPT_HMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x010B0001, /**< The length of the buffer that storing
+    CRYPT_HMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x010C0001, /**< The length of the buffer that storing
                                                           the output result is insufficient. */
-    CRYPT_ECC_HMAC_ERR_UNSUPPORTED_CTRL_OPTION,  /**< Unsupport the control type. */
+    CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION,  /**< Unsupport the control type. */
 
-    CRYPT_DH_BUFF_LEN_NOT_ENOUGH = 0x010C0001,   /**< The buffer length is insufficient. */
+    CRYPT_DH_BUFF_LEN_NOT_ENOUGH = 0x010D0001,   /**< The buffer length is insufficient. */
     CRYPT_DH_PARA_ERROR,                         /**< The value of the key parameter does not meet
                                                       the requirements, the ctx command does not
                                                       contain necessary parameter information. */
@@ -246,13 +246,13 @@ enum CRYPT_ERROR {
     CRYPT_DH_RAND_GENERATE_ERROR,                /**< Key generation fails within the specified
                                                       number of attempts. */
     CRYPT_DH_PAIRWISE_CHECK_FAIL,                /**< The public and private keys are inconsistent. */
+    CRYPT_DH_UNSUPPORTED_CTRL_OPTION,            /**< Unsupported mode of operation. */
     CRYPT_DH_CREATE_PARA_FAIL,                   /**< Failed to create the p, q, and g parameters
                                                       of the DH algorithm. */
     CRYPT_DH_PUBKEY_NOT_EQUAL,                   /**< Public keys are not equal. */
     CRYPT_DH_PARA_NOT_EQUAL,                     /**< DH key parameters are not equal. */
-    CRYPT_DH_UNSUPPORTED_CTRL_OPTION,            /**< Unsupported mode of operation. */
 
-    CRYPT_CHACHA20_KEYLEN_ERROR = 0x010D0001,        /**< The key length input is incorrect during key setting. */
+    CRYPT_CHACHA20_KEYLEN_ERROR = 0x010E0001,        /**< The key length input is incorrect during key setting. */
     CRYPT_CHACHA20_NONCELEN_ERROR,                   /**< The length of the input nounce is incorrect when you
                                                           set the nounce. */
     CRYPT_CHACHA20_COUNTLEN_ERROR,                   /**< The length of the input count is incorrect when you
@@ -264,9 +264,9 @@ enum CRYPT_ERROR {
     CRYPT_CHACHA20_CTRLTYPE_ERROR,                   /**< The input type is not supported when the
                                                           ctrl interface is used. */
 
-    CRYPT_AES_ERR_KEYLEN = 0x010E0001,               /**< Incorrect key length. */
+    CRYPT_AES_ERR_KEYLEN = 0x010F0001,               /**< Incorrect key length. */
 
-    CRYPT_MODES_TAGLEN_ERROR = 0x010F0001,           /**< In AEAD mode, the length of the TAG
+    CRYPT_MODES_TAGLEN_ERROR = 0x01100001,           /**< In AEAD mode, the length of the TAG
                                                           is incorrect when the tag is obtained and verified. */
     CRYPT_MODES_IVLEN_ERROR,                         /**< The length of the input IV is incorrect
                                                           when setting the IV. */
@@ -305,21 +305,29 @@ enum CRYPT_ERROR {
     CRYPT_MODES_ERR_FEEDBACKSIZE,                    /**< The operation are not support by the algorithm
                                                           on which the pattern depends on. */
     CRYPT_MODES_METHODS_NOT_SUPPORT,                 /**< Mode depends does not support the behavior. */
-	CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
+    CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
     CRYPT_MODES_ERR_STREAM_FINAL,                    /**< streaming encryption not support final */
     CRYPT_MODES_PADDING_NOT_SUPPORT,                 /**< Unsupported padding. */
-    CRYPT_HKDF_DKLEN_OVERFLOW = 0x01100001,          /**< The length of the derived key exceeds the maximum. */
+
+    CRYPT_HKDF_DKLEN_OVERFLOW = 0x01110001,          /**< The length of the derived key exceeds the maximum. */
     CRYPT_HKDF_NOT_SUPPORTED,                        /**< Unsupport HKDF algorithm. */
     CRYPT_HKDF_PARAM_ERROR,                          /**< Incorrect input parameter. */
 
-    CRYPT_SCRYPT_PARAM_ERROR = 0x01110001,           /**< Incorrect input parameter. */
+    CRYPT_CMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x01120001, /**< The length of the buffer that storing the output
+                                                          result is insufficient. */
+    CRYPT_CMAC_INPUT_OVERFLOW,                       /**< The input length exceeds the limit. As a result,
+                                                          the integer type is reversed. */
+    CRYPT_CMAC_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+    CRYPT_GMAC_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+
+    CRYPT_SCRYPT_PARAM_ERROR = 0x01130001,           /**< Incorrect input parameter. */
     CRYPT_SCRYPT_NOT_SUPPORTED,                      /**< Unsupport the SCRYPT algorithm. */
     CRYPT_SCRYPT_DATA_TOO_MAX,                       /**< The data calculated by the SCRYPT algorithm is too large. */
 
-    CRYPT_PBKDF2_PARAM_ERROR = 0x01120001,           /**< Incorrect input parameter. */
+    CRYPT_PBKDF2_PARAM_ERROR = 0x01150001,           /**< Incorrect input parameter. */
     CRYPT_PBKDF2_NOT_SUPPORTED,                      /**< Does not support the PBKDF2 algorithm. */
 
-    CRYPT_ECC_POINT_AT_INFINITY = 0x01130001,         /**< Point at infinity. */
+    CRYPT_ECC_POINT_AT_INFINITY = 0x01160001,         /**< Point at infinity. */
     CRYPT_ECC_POINT_NOT_ON_CURVE,                    /**< Point is not on the curve. */
     CRYPT_ECC_POINT_ERR_CURVE_ID,                    /**< Curve ID is inconsistent or incorrect. */
     CRYPT_ECC_POINT_WINDOW_TOO_MAX,                  /**< Window is too max. */
@@ -327,11 +335,12 @@ enum CRYPT_ERROR {
     CRYPT_ECC_POINT_BLIND_WITH_ZERO,                 /**< The random number generated during point salting is 0. */
     CRYPT_ECC_POINT_NOT_AFFINE,                      /**< Point is not affine coordinates. */
     CRYPT_ECC_NOT_SUPPORT,                           /**< This function is not supported. */
+    CRYPT_ECC_POINT_MUL_ERR_K_LEN,                    /** The scalar length exceeds the curve specification
+                                                          when using the dot multiplication function */
     CRYPT_ECC_BUFF_LEN_NOT_ENOUGH,                   /**< Insufficient buffer length. */
     CRYPT_ECC_ERR_POINT_FORMAT,                      /**< The encoding format input during point encoding
                                                           is incorrect. */
     CRYPT_ECC_ERR_POINT_CODE,                        /**< Incorrect point code information. */
-    CRYPT_ECC_ERR_PARA,                              /**< Incorrect curve parameter. */
     CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION,      /**< Unsupport the control type. */
     CRYPT_ECC_PKEY_ERR_EMPTY_KEY,                    /**< Key is null. */
     CRYPT_ECC_PKEY_ERR_INVALID_POINT_FORMAT,         /**< Invalid dot format. */
@@ -341,42 +350,42 @@ enum CRYPT_ERROR {
     CRYPT_ECC_PKEY_ERR_TRY_CNT,                      /**< Key generation or generater signature fail
                                                           within the specified number of attempts. */
     CRYPT_ECC_PKEY_ERR_SIGN_LEN,                     /**< Invalid sign length  */
+    CRYPT_ECC_ERR_PARA,                              /**< Incorrect curve parameter. */
 
-    CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL,                   /**< ECC public keys are not equal. */
     CRYPT_ECC_INVERSE_INPUT_ZERO,                     /** Modulo inverse input is 0. */
-    CRYPT_ECC_POINT_MUL_ERR_K_LEN,                    /** The scalar length exceeds the curve specification
-                                                          when using the dot multiplication function */
+    CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL,                   /**< ECC public keys are not equal. */
 
-    CRYPT_SHA3_OUT_BUFF_LEN_NOT_ENOUGH = 0x01140001,  /**< Insufficient buffer length for storing output results. */
+    CRYPT_SHA3_OUT_BUFF_LEN_NOT_ENOUGH = 0x01170001,  /**< Insufficient buffer length for storing output results. */
     CRYPT_SHA3_INVALID_STATE,                       /**< Invalid state. */
-    CRYPT_ECDH_ERR_EMPTY_KEY = 0x01150001,            /**< Key is null. */
-    CRYPT_ECDH_ERR_INVALID_COFACTOR,                  /**< Invalid cofactor value. */
-    CRYPT_ECDH_ERR_UNSUPPORT_CURVE_TYPE,              /**< Unsupported curve type. */
 
-    CRYPT_ECDSA_ERR_EMPTY_KEY = 0x01160001,           /**< Key is NULL. */
+    CRYPT_ECDH_ERR_UNSUPPORT_CURVE_TYPE = 0x01180001, /**< Unsupported curve type. */
+    CRYPT_ECDH_ERR_EMPTY_KEY,                         /**< Key is null. */
+    CRYPT_ECDH_ERR_INVALID_COFACTOR,                  /**< Invalid cofactor value. */
+
+    CRYPT_ECDSA_ERR_EMPTY_KEY = 0x01190001,           /**< Key is NULL. */
     CRYPT_ECDSA_ERR_TRY_CNT,                          /**< Key generation and generate signature fail
                                                            within the specified number of attempts. */
     CRYPT_ECDSA_VERIFY_FAIL,                          /**< Verification failure. */
     CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
     CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH,                  /**< BUFF insufficient length. */
 
-    CRYPT_SM3_INPUT_OVERFLOW = 0x01170001,             /**< The length of the input data exceeds the maximum
+    CRYPT_SM3_INPUT_OVERFLOW = 0x011A0001,             /**< The length of the input data exceeds the maximum
                                                            processing range of the SM3. */
     CRYPT_SM3_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the output
                                                            result is insufficient. */
 
-    CRYPT_SM4_ERR_IV_LEN = 0x01180001,              /**< Wrong key length set. */
+    CRYPT_SM4_ERR_IV_LEN = 0x011B0001,              /**< Wrong key length set. */
     CRYPT_SM4_ERR_MSG_LEN,                          /**< Wrong data length is set. */
     CRYPT_SM4_ERR_KEY_LEN,                            /**< Wrong key length is set. */
     CRYPT_SM4_UNSAFE_KEY,                             /**< DataKey is the same as tweakKey. */
 
-    CRYPT_MD5_INPUT_OVERFLOW = 0x01190001,             /**< The length of the input data exceeds the
+    CRYPT_MD5_INPUT_OVERFLOW = 0x011D0001,             /**< The length of the input data exceeds the
                                                            maximum processing range of the MD5. */
     CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
                                                            output result is insufficient. */
     CRYPT_MD_ERR_NEWCTX,                              /**< create md ctx failed. */
 
-    CRYPT_SM2_BUFF_LEN_NOT_ENOUGH = 0x011B0001,       /**< Insufficient buffer length. */
+    CRYPT_SM2_BUFF_LEN_NOT_ENOUGH = 0x01200001,       /**< Insufficient buffer length. */
     CRYPT_SM2_NO_PUBKEY,                              /**< SM2 the public key is not set. */
     CRYPT_SM2_NO_PRVKEY,                              /**< SM2 The private key is not set. */
     CRYPT_SM2_ERR_EMPTY_KEY,                          /**< SM2 key is null. */
@@ -397,10 +406,47 @@ enum CRYPT_ERROR {
     CRYPT_SM2_DECODE_FAIL,                            /**< Data decoding fails, the data does not meet
                                                             the decoding requirements. */
     CRYPT_SM2_ID_TOO_LARGE,                           /**< User id to large. */
-    CRYPT_KDFTLS12_NOT_SUPPORTED = 0x011C0001,        /**< Unsupport the KDFTLS12 algorithm. */
+
+    CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01210001,        /**< Unsupport the KDFTLS12 algorithm. */
     CRYPT_KDFTLS12_PARAM_ERROR,
 
-    CRYPT_DECODE_ASN1_BUFF_NUM_NOT_ENOUGH = 0x011D0001,  /**< The input number of BSL_ANS1_Buffer is not enough. */
+    CRYPT_SIPHASH_OUT_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer size for storing the output
+                                                             result is insufficient. */
+    CRYPT_SIPHASH_INPUT_OVERFLOW,
+    CRYPT_SIPHASH_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+
+    CRYPT_CBC_MAC_ERR_CTRL_LEN = 0x01240001,
+    CRYPT_CBC_MAC_ERR_UNSUPPORTED_CTRL_OPTION,
+    CRYPT_CBC_MAC_PADDING_NOT_SET,
+    CRYPT_CBC_MAC_PADDING_NOT_SUPPORT,
+    CRYPT_CBC_MAC_OUT_BUFF_LEN_NOT_ENOUGH,
+
+    CRYPT_SEED_POOL_NEW_ERROR = 0x01290001,             /**< The length of the key input is
+                                                             incorrect when setting the key. */
+    CRYPT_SEED_POOL_STATE_ERROR,                        /**< Incorrect seed pool status. */
+    CRYPT_SEED_POOL_ES_LIST_FULL,                       /**< The number of entropy sources exceeds the upper limit. */
+    CRYPT_SEED_POOL_NO_SUFFICIENT_ENTROPY,              /**< The seed pool cannot provide sufficient entropy. */
+    CRYPT_SEED_POOL_NO_ENTROPY_SOURCE,                  /**< The seed pool has no entropy source. */
+    CRYPT_SEED_POOL_NO_ENTROPY_OBTAINED,                /**< No entropy data is obtained from the seed pool. */
+    CRYPT_SEED_POOL_NOT_MEET_REQUIREMENT,               /**< The entropy data does not meet the requirements. */
+    CRYPT_ENTROPY_CTX_CREATE_FAILED,                    /**< Failed to create the handle for obtaining the entropy. */
+
+    CRYPT_MLKEM_KEYLEN_ERROR = 0x01300001,              /**< Incorrect input data length. */
+    CRYPT_MLKEM_LEN_NOT_ENOUGH,                         /**<The buffer size of output is insufficient. */
+    CRYPT_MLKEM_KEY_NOT_SET,                            /**<The encaps or decaps key not set. */
+    CRYPT_MLKEM_KEYINFO_NOT_SET,                        /**<The algorithm not set. */
+    CRYPT_MLKEM_KEY_NOT_EQUAL,                          /**< The MLKEM keys are not equal. */
+    CRYPT_MLKEM_CTRL_NOT_SUPPORT,                       /**< The Ctrl type is not supported.*/
+    CRYPT_MLKEM_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
+
+    CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01310001,            /**< HPKE Generate asymmetric key error. */
+    CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
+    CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
+    CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
+    CRYPT_HPKE_FAILED_FETCH_PKEY,                        /**< Failed to fetch pkey. */
+    CRYPT_HPKE_FAILED_FETCH_KDF,                         /**< Failed to fetch kdf. */
+
+    CRYPT_DECODE_ASN1_BUFF_NUM_NOT_ENOUGH = 0x01320001,  /**< The input number of BSL_ANS1_Buffer is not enough. */
     CRYPT_DECODE_UNSUPPORTED_PUBKEY_TYPE,                /**< Unsupported pubkey type */
     CRYPT_DECODE_UNSUPPORTED_PKCS8_TYPE,                 /**< Unsupported pkcs8 type */
     CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM,               /**< pkcs8 has no valid algorithm parameters */
@@ -421,22 +467,14 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_BUFF_NOT_ENOUGH,                        /**< The input buffer space is not enough */
     CRYPT_DECODE_ASN1_BUFF_LEN_ZERO,                     /**< The decoding length of asn1 buffer is zero. */
 
-    CRYPT_ENCODE_NO_SUPPORT_TYPE = 0x011E0001,           /**< encode no support key type. */
+    CRYPT_ENCODE_NO_SUPPORT_TYPE = 0x01330001,           /**< encode no support key type. */
     CRYPT_ENCODE_NO_SUPPORT_FORMAT,                      /**< encode no support key format. */
     CRYPT_ENCODE_ERR_RSA_PAD,                            /**< rsa pad err. */
     CRYPT_ENCODE_BUFF_NOT_ENOUGH,                        /**< The input buffer space is not enough */
     CRYPT_ENCODE_ERR_SIGN_LEN_OVERFLOW,                  /**< The r and s length is too large. */
     CRYPT_ENCODE_ERR_SM2_ENCRYPT_DATA_LEN_OVERFLOW,      /**< The sm2 encrypt data length is too large. */
 
-    CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x011F0001, /**< The buffer length is insufficient. */
-    CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
-    CRYPT_PAILLIER_ERR_KEY_BITS,             /**< Incorrect key length. */
-    CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
-    CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
-    CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
-    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When paillier is used for Ctrl. */
-
-    CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01200001,     /**< Unexpected impl */
+    CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01350001,     /**< Unexpected impl */
     CRYPT_PROVIDER_ERR_IMPL_NULL,
     CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */
     CRYPT_PROVIDER_ERR_NEWCTX,
@@ -444,43 +482,7 @@ enum CRYPT_ERROR {
     CRYPT_PROVIDER_ERR_ATTRIBUTE,
     CRYPT_PROVIDER_INVALID_LIB_CTX,
 
-    CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01210001,            /**< HPKE Generate asymmetric key error. */
-    CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
-    CRYPT_HPKE_ERR_CALL,                                 /**< It is not appropriate to call this function. */
-    CRYPT_HPKE_FAILED_FETCH_CIPHER,                      /**< Failed to fetch cipher. */
-    CRYPT_HPKE_FAILED_FETCH_PKEY,                        /**< Failed to fetch pkey. */
-    CRYPT_HPKE_FAILED_FETCH_KDF,                         /**< Failed to fetch kdf. */
-    
-    CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer length is insufficient. */
-    CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */
-    CRYPT_ELGAMAL_ERR_KEY_BITS,             /**< Incorrect key length. */
-    CRYPT_ELGAMAL_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
-    CRYPT_ELGAMAL_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
-    CRYPT_ELGAMAL_ERR_KEY_KBITS,             /**< Incorrect key length. */
-    CRYPT_ELGAMAL_ERR_KEY_BITS_KBITS,       /**< Incorrect key length. */
-    CRYPT_ELGAMAL_ERR_ENC_KBITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
-    CRYPT_ELGAMAL_ERR_DEC_KBITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
-    CRYPT_ELGAMAL_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
-    CRYPT_ELGAMAL_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When elgamal is used for Ctrl. */
-
-
-    CRYPT_SLHDSA_ERR_INVALID_ALGID = 0x01230001,         /**< The algorithm id is invalid. */
-    CRYPT_SLHDSA_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */
-    CRYPT_SLHDSA_ERR_INVALID_KEYLEN,                     /**< The key length is invalid. */
-    CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH,                 /**< The signature length is not enough. */
-    CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
-    CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
-    CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
-	
-    CRYPT_MLKEM_KEYLEN_ERROR = 0x01240001,              /**< Incorrect input data length. */
-    CRYPT_MLKEM_LEN_NOT_ENOUGH,                         /**<The buffer size of output is insufficient. */
-    CRYPT_MLKEM_KEY_NOT_SET,                            /**<The encaps or decaps key not set. */
-    CRYPT_MLKEM_KEYINFO_NOT_SET,                        /**<The algorithm not set. */
-    CRYPT_MLKEM_KEY_NOT_EQUAL,                          /**< The MLKEM keys are not equal. */
-    CRYPT_MLKEM_CTRL_NOT_SUPPORT,                       /**< The Ctrl type is not supported.*/
-    CRYPT_MLKEM_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
-
-    CRYPT_MLDSA_KEYINFO_NOT_SET = 0x01250001,           /**< The algorithm not set. */
+    CRYPT_MLDSA_KEYINFO_NOT_SET = 0x01360001,           /**< The algorithm not set. */
     CRYPT_MLDSA_CTRL_NOT_SUPPORT,                       /**< The Ctrl type is not supported. */
     CRYPT_MLDSA_PAD_TOO_LONG,                           /**< The pad is too long. */
     CRYPT_MLDSA_KEYLEN_ERROR,                           /**< Incorrect input data length. */
@@ -492,34 +494,33 @@ enum CRYPT_ERROR {
     CRYPT_MLDSA_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
     CRYPT_MLDSA_SET_KEY_FAILED,                         /**< Failed to set the key. */
 
-    CRYPT_SEED_POOL_NEW_ERROR = 0x01260001,             /**< The length of the key input is
-                                                             incorrect when setting the key. */
-    CRYPT_SEED_POOL_STATE_ERROR,                        /**< Incorrect seed pool status. */
-    CRYPT_SEED_POOL_ES_LIST_FULL,                       /**< The number of entropy sources exceeds the upper limit. */
-    CRYPT_SEED_POOL_NO_SUFFICIENT_ENTROPY,              /**< The seed pool cannot provide sufficient entropy. */
-    CRYPT_SEED_POOL_NO_ENTROPY_SOURCE,                  /**< The seed pool has no entropy source. */
-    CRYPT_SEED_POOL_NO_ENTROPY_OBTAINED,                /**< No entropy data is obtained from the seed pool. */
-    CRYPT_SEED_POOL_NOT_MEET_REQUIREMENT,               /**< The entropy data does not meet the requirements. */
-    CRYPT_ENTROPY_CTX_CREATE_FAILED,                    /**< Failed to create the handle for obtaining the entropy. */
+    CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01370001, /**< The buffer length is insufficient. */
+    CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */
+    CRYPT_ELGAMAL_ERR_KEY_BITS,             /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_ELGAMAL_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_ELGAMAL_ERR_KEY_KBITS,             /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_KEY_BITS_KBITS,       /**< Incorrect key length. */
+    CRYPT_ELGAMAL_ERR_ENC_KBITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_ELGAMAL_ERR_DEC_KBITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_ELGAMAL_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
+    CRYPT_ELGAMAL_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When elgamal is used for Ctrl. */
 
-	CRYPT_CMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x01270001, /**< The length of the buffer that storing the output
-                                                          result is insufficient. */
-    CRYPT_CMAC_INPUT_OVERFLOW,                       /**< The input length exceeds the limit. As a result,
-                                                          the integer type is reversed. */
-    CRYPT_CMAC_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
-    CRYPT_GMAC_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
+    CRYPT_SLHDSA_ERR_INVALID_ALGID = 0x01380001,         /**< The algorithm id is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */
+    CRYPT_SLHDSA_ERR_INVALID_KEYLEN,                     /**< The key length is invalid. */
+    CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH,                 /**< The signature length is not enough. */
+    CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
+    CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
+    CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
 
-	CRYPT_CBC_MAC_ERR_CTRL_LEN = 0x01280001,
-    CRYPT_CBC_MAC_ERR_UNSUPPORTED_CTRL_OPTION,
-    CRYPT_CBC_MAC_PADDING_NOT_SET,
-    CRYPT_CBC_MAC_PADDING_NOT_SUPPORT,
-    CRYPT_CBC_MAC_OUT_BUFF_LEN_NOT_ENOUGH,
-
-    CRYPT_SIPHASH_OUT_BUFF_LEN_NOT_ENOUGH = 0x01290001, /**< The buffer size for storing the output
-                                                             result is insufficient. */
-    CRYPT_SIPHASH_INPUT_OVERFLOW,
-    CRYPT_SIPHASH_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
-
+    CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x01390001, /**< The buffer length is insufficient. */
+    CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
+    CRYPT_PAILLIER_ERR_KEY_BITS,             /**< Incorrect key length. */
+    CRYPT_PAILLIER_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
+    CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
+    CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
+    CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When paillier is used for Ctrl. */
 };
 #ifdef __cplusplus
 }

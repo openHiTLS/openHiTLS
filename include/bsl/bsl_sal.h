@@ -432,7 +432,7 @@ typedef struct {
     uint8_t  minute;    /**< Minute, the value range is [0, 59]. */
     uint16_t millSec;   /**< Millisecond, the value range is [0, 999]. */
     uint8_t  second;    /**< Second, the value range is [0, 59]. */
-    uint32_t microSec;  /**< Microseconds, the value range is [0, 999]. */
+    uint16_t microSec;  /**< Microseconds, the value range is [0, 999]. */
 } BSL_TIME;
 
 /**

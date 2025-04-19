@@ -55,7 +55,6 @@ static const EAL_CidToKdfMeth ID_TO_KDF_METH_TABLE[] = {
 #ifdef HITLS_CRYPTO_SCRYPT
     {CRYPT_KDF_SCRYPT,    &g_kdfMethod_SCRYPT},
 #endif
-    {CRYPT_KDF_MAX,      NULL}
 };
 
 const EAL_KdfMethod *EAL_KdfFindMethod(CRYPT_KDF_AlgId id)

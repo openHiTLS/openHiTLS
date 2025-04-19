@@ -32,6 +32,7 @@ extern "C" {
 
 typedef struct CryptCurve25519Ctx CRYPT_CURVE25519_Ctx;
 
+#ifdef HITLS_CRYPTO_X25519
 /**
  * @ingroup curve25519
  * @brief curve25519 Create a key pair structure and allocate memory space.
@@ -51,7 +52,9 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
  * @retval NULL                     Invalid null pointer
  */
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx);
+#endif
 
+#ifdef HITLS_CRYPTO_ED25519
 /**
  * @ingroup ed25519
  * @brief curve25519 Create a key pair structure for ED25519 algorithm and allocate memory space.
@@ -71,6 +74,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void);
  * @retval NULL                     Invalid null pointer
  */
 CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtxEx(void *libCtx);
+#endif
 
 /**
  * @ingroup curve25519
@@ -242,7 +246,7 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algId,
  * @retval CRYPT_NULL_INPUT                     The input parameter is empty.
  */
 int32_t CRYPT_ED25519_GenKey(CRYPT_CURVE25519_Ctx *pkey);
-#endif
+#endif /* HITLS_CRYPTO_ED25519 */
 
 #ifdef HITLS_CRYPTO_X25519
 /**

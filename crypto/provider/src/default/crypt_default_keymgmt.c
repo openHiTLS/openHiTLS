@@ -319,7 +319,6 @@ const CRYPT_EAL_Func g_defKeyMgmtElGamal[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-
 const CRYPT_EAL_Func g_defKeyMgmtMlKem[] = {
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},

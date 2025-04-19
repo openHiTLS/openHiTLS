@@ -39,7 +39,7 @@ extern "C" {
  */
 enum BSL_ERROR {
     /* Common return value start from 0x03000001. */
-    BSL_NULL_INPUT = 0x03000001,            /**< NULL input. */
+    BSL_NULL_INPUT = 0x03000000,            /**< NULL input. */
     BSL_INTERNAL_EXCEPTION,                 /**< Error occurs when calling internal BSL functions */
     BSL_MALLOC_FAIL,                        /**< Error occurs when allocating memory */
     BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy_s. */
@@ -107,13 +107,32 @@ enum BSL_ERROR {
     BSL_UIO_MEM_NOT_NULL,
 
     /* The return value of the LIST submodule starts from 0x03070001. */
-    BSL_LIST_INVALID_LIST_CURRENT = 0x03060001, /**< Current node pointer is NULL */
+    BSL_LIST_INVALID_LIST_CURRENT = 0x03070001, /**< Current node pointer is NULL */
     BSL_LIST_DATA_NOT_AVAILABLE,                /**< Data of current node is NULL */
     BSL_LIST_FULL,                              /**< Number of nodes has reached its limit */
     BSL_LIST_ERR_CONCAT,
     BSL_LIST_MALLOC_FAIL,
 
-    BSL_ASN1_FAIL = 0x03070001,
+    /* The return value of the BASE64 submodule starts from 0x030a0001. */
+    BSL_BASE64_INVALID = 0x030a0001,
+    BSL_BASE64_BUF_NOT_ENOUGH,
+    BSL_BASE64_DATA_NOT_ENOUGH,
+    BSL_BASE64_WRITE_FAILED,
+    BSL_BASE64_READ_FAILED,
+    BSL_BASE64_DATA_AFTER_PADDING,
+    BSL_BASE64_ILLEGALLY_MODIFIED,
+    BSL_BASE64_ENCODE_FAILED,
+    BSL_BASE64_DECODE_FAILED,
+    BSL_BASE64_HEADER,
+    BSL_BASE64_INVALID_CHARACTER,
+    BSL_BASE64_INVALID_ENCODE,
+
+    BSL_PARAMS_INVALID_KEY = 0x030f0001,
+    BSL_PARAMS_INVALID_TYPE,
+    BSL_PARAMS_LEN_NOT_ENOUGH,
+    BSL_PARAMS_MISMATCH,
+
+    BSL_ASN1_FAIL = 0x03100001,
     BSL_ASN1_ERR_DECODE_BOOL,
     BSL_ASN1_ERR_NO_CALLBACK,
     BSL_ASN1_ERR_MAX_DEPTH,
@@ -142,30 +161,11 @@ enum BSL_ERROR {
     BSL_ASN1_ERR_PRINTF_IO_ERR,
     BSL_ASN1_ERR_LEN_OVERFLOW,
 
-    /* The return value of the BASE64 submodule starts from 0x030a0001. */
-    BSL_BASE64_INVALID = 0x03080001,
-    BSL_BASE64_BUF_NOT_ENOUGH,
-    BSL_BASE64_DATA_NOT_ENOUGH,
-    BSL_BASE64_WRITE_FAILED,
-    BSL_BASE64_READ_FAILED,
-    BSL_BASE64_DATA_AFTER_PADDING,
-    BSL_BASE64_ILLEGALLY_MODIFIED,
-    BSL_BASE64_ENCODE_FAILED,
-    BSL_BASE64_DECODE_FAILED,
-    BSL_BASE64_HEADER,
-    BSL_BASE64_INVALID_CHARACTER,
-    BSL_BASE64_INVALID_ENCODE,
-
-    BSL_PEM_INVALID = 0x03090001,
+    BSL_PEM_INVALID = 0x03110001,
     BSL_PEM_DATA_NOT_ENOUGH,
     BSL_PEM_SYMBOL_NOT_FOUND,
 
-    BSL_PARAMS_INVALID_KEY = 0x030A0001,
-    BSL_PARAMS_INVALID_TYPE,
-    BSL_PARAMS_LEN_NOT_ENOUGH,
-    BSL_PARAMS_MISMATCH,
-
-    BSL_OBJ_ERR_INSERT_HASH_TABLE = 0x030B0001,
+    BSL_OBJ_ERR_INSERT_HASH_TABLE = 0x03130001,
     BSL_OBJ_ERR_FIND_HASH_TABLE,
     BSL_OBJ_INVALID_HASH_TABLE,
 };

@@ -65,7 +65,7 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId);
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, BSL_Param *param);
+int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, const BSL_Param *param);
 
  /**
  * @ingroup crypt_eal_kdf

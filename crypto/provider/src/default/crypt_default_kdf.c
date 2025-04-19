@@ -30,27 +30,28 @@
 void *CRYPT_EAL_DefKdfNewCtx(void *provCtx, int32_t algId)
 {
     (void) provCtx;
-    void *kdfCtx = NULL;
 
     switch (algId) {
+#ifdef HITLS_CRYPTO_SCRYPT
         case CRYPT_KDF_SCRYPT:
-            kdfCtx = CRYPT_SCRYPT_NewCtx();
-            break;
+            return CRYPT_SCRYPT_NewCtx();
+#endif
+#ifdef HITLS_CRYPTO_PBKDF2
         case CRYPT_KDF_PBKDF2:
-            kdfCtx = CRYPT_PBKDF2_NewCtx();
-            break;
+            return CRYPT_PBKDF2_NewCtx();
+#endif
+#ifdef HITLS_CRYPTO_KDFTLS12
         case CRYPT_KDF_KDFTLS12:
-            kdfCtx = CRYPT_KDFTLS12_NewCtx();
-            break;
+            return CRYPT_KDFTLS12_NewCtx();
+#endif
+#ifdef HITLS_CRYPTO_HKDF
         case CRYPT_KDF_HKDF:
-            kdfCtx = CRYPT_HKDF_NewCtx();
-            break;
+            return CRYPT_HKDF_NewCtx();
+#endif
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
+            return NULL;
     }
-    if (kdfCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
-        return NULL;
-    }
-    return kdfCtx;
 }
 
 int32_t CRYPT_EAL_DefKdfCtrl(void *ctx, int32_t cmd, void *val, uint32_t valLen)

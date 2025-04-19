@@ -23,8 +23,10 @@
 #include "crypt_elgamal.h"
 
 const CRYPT_EAL_Func g_defAsymCipherRsa[] = {
-#ifdef HITLS_CRYPTO_RSA_CRYPT
+#ifdef HITLS_CRYPTO_RSA_ENCRYPT
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_RSA_Encrypt},
+#endif
+#ifdef HITLS_CRYPTO_RSA_DECRYPT
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, (CRYPT_EAL_ImplPkeyDecrypt)CRYPT_RSA_Decrypt},
 #endif
     CRYPT_EAL_FUNC_END

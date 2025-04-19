@@ -150,7 +150,7 @@ void SDV_HITLS_X509_ParseBuffCert_TC001(void)
     ASSERT_EQ(HITLS_X509_CertParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
     ASSERT_EQ(HITLS_X509_CertParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertParseBuff(0xff, &buff, &cert), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CertParseBuff(0xff, &buff, &cert), HITLS_X509_ERR_FORMAT_UNSUPPORT);
 EXIT:
     BSL_GLOBAL_DeInit();
 }
@@ -258,7 +258,7 @@ void SDV_HITLS_X509_ParseBuffCrl_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
     buff.dataLen = 1;
     ASSERT_EQ(HITLS_X509_CrlParseBuff(0, &buff, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlParseBuff(0xff, &buff, &crl), HITLS_X509_ERR_NOT_SUPPORT_FORMAT);
+    ASSERT_EQ(HITLS_X509_CrlParseBuff(0xff, &buff, &crl), HITLS_X509_ERR_FORMAT_UNSUPPORT);
 EXIT:
     BSL_GLOBAL_DeInit();
 }
@@ -435,7 +435,7 @@ void SDV_X509_EXT_SetBCons_TC001(void)
 
     HITLS_X509_ExtBCons bCons = {true, true, 1};
 
-    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_EXT_NOT_SUPPORT);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_EXT_UNSUPPORT);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bCons, 0), HITLS_X509_ERR_INVALID_PARAM);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
@@ -555,7 +555,7 @@ void SDV_X509_EXT_SetExtendKeyUsage_TC001(void)
     BSL_LIST_DeleteAll(oidList, FreeListData);
 
     // success: normal oid
-    BslOidString *oid = BSL_OBJ_GetOidFromCID(BSL_CID_CE_SERVERAUTH);
+    BslOidString *oid = BSL_OBJ_GetOidFromCID(BSL_CID_KP_SERVERAUTH);
     ASSERT_NE(oid, NULL);
     BSL_Buffer oidBuff = {(uint8_t *)oid->octs, oid->octetLen};
     ASSERT_EQ(BSL_LIST_AddElement(oidList, &oidBuff, BSL_LIST_POS_END), 0);
@@ -685,7 +685,7 @@ void SDV_X509_AddDnName_TC001(int unknownCid, int cid, Hex *oid, Hex *value)
     HITLS_X509_DN dnName[1] = {{cid, value->x, value->len}};
     HITLS_X509_DN dnNullName[1] = {{cid, NULL, value->len}};
     HITLS_X509_DN dnZeroLenName[1] = {{cid, value->x, 0}};
-    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKKOWN);
+    ASSERT_EQ(HITLS_X509_AddDnName(list, unknownName, 1), HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
 
     ASSERT_EQ(HITLS_X509_AddDnName(list, dnName, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_AddDnName(list, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
@@ -1043,7 +1043,7 @@ void SDV_X509_SIGN_Func_TC001(char *keyPath, int keyFormat, int keyType, int mdI
     uint8_t obj = 1;
     if (pad == 0) {
         algParamPtr = NULL;
-    } else if (pad == CRYPT_PKEY_EMSA_PSS) {
+    } else if (pad == CRYPT_EMSA_PSS) {
         algParam.algId = BSL_CID_RSASSAPSS;
         algParam.rsaPss.mdId = hashId;
         algParam.rsaPss.mgfId = mgfId;
@@ -1069,7 +1069,7 @@ void SDV_X509_SIGN_Func_TC002(void)
     CRYPT_EAL_PkeyCtx *prvKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
     uint8_t obj = 1;
-    CRYPT_RsaPadType pad = CRYPT_PKEY_EMSA_PKCSV15;
+    CRYPT_RsaPadType pad = CRYPT_EMSA_PKCSV15;
     CRYPT_EAL_PkeyPara para = {0};
     uint8_t e[] = {1, 0, 1};
     para.id = CRYPT_PKEY_RSA;
@@ -1089,7 +1089,7 @@ void SDV_X509_SIGN_Func_TC002(void)
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, &algParam, &obj, TestSignCb), HITLS_X509_ERR_SIGN_PARAM);
 
-    pad = CRYPT_PKEY_EMSA_PSS;
+    pad = CRYPT_EMSA_PSS;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), 0);
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
 

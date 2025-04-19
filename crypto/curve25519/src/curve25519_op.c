@@ -21,9 +21,9 @@
 #include "securec.h"
 #include "curve25519_local.h"
 #include "bsl_sal.h"
-
+#ifdef HITLS_CRYPTO_ED25519
 #define CRYPT_CURVE25519_OPTLEN 32
-
+#endif
 #define CONDITION_COPY(dst, src, indicate)     \
     (int32_t)((uint32_t)(dst) ^ (((uint32_t)(dst) ^ (uint32_t)(src)) & (indicate)))
 

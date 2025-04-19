@@ -16,10 +16,31 @@ import sys
 sys.dont_write_bytecode = True
 import json
 import os
-import glob
-import platform
+import re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from methods import trans2list, unique_list, save_json_file
+
+
+class Feature:
+    def __init__(self, name, target, parent, children, deps, opts, impl, ins_set):
+        self.name = name
+
+        self.target = target
+
+        self.parent = parent
+        self.children = children
+
+        self.deps = deps
+        self.opts = opts
+
+        self.impl = impl            # Implementation mode
+        self.ins_set = ins_set      # Instruction Set
+
+
+    @classmethod
+    def simple(cls, name, target, parent, impl):
+        return Feature(name, target, parent, [], [], [], impl, [])
+
 
 class FeatureParser:
     """ Parsing feature files """
@@ -67,40 +88,47 @@ class FeatureParser:
         if value:
             obj[key] = value
 
-    def _add_fea(self, feas_info, fea, lib, parent, children, opts, deps, impl, ins_set):
-        feas_info.setdefault(fea, {})
-        self._add_key_value(feas_info[fea], 'lib', lib)
-        self._add_key_value(feas_info[fea], 'parent', parent)
-        self._add_key_value(feas_info[fea], 'children', children)
-        self._add_key_value(feas_info[fea], 'opts', opts)
-        self._add_key_value(feas_info[fea], 'deps', deps)
+    def _add_fea(self, feas_info, feature: Feature):
+        fea_name = feature.name
+        feas_info.setdefault(fea_name, {})
+        self._add_key_value(feas_info[fea_name], 'lib', feature.target)
+        self._add_key_value(feas_info[fea_name], 'parent', feature.parent)
+        self._add_key_value(feas_info[fea_name], 'children', feature.children)
+        self._add_key_value(feas_info[fea_name], 'opts', feature.opts)
+        self._add_key_value(feas_info[fea_name], 'deps', feature.deps)
 
-        feas_info[fea].setdefault('impl', {})
-        feas_info[fea]['impl'][impl] = ins_set if ins_set else []
+        feas_info[fea_name].setdefault('impl', {})
+        feas_info[fea_name]['impl'][feature.impl] = feature.ins_set if feature.ins_set else []
 
-    def _parse_fea_obj(self, lib, impl, parent, fea, fea_obj, feas_info):
+    def _parse_fea_obj(self, name, target, parent, impl, fea_obj, feas_info):
+        feature = Feature.simple(name, target, parent, impl)
         if not fea_obj:
-            self._add_fea(feas_info, fea, lib, parent, None, None, None, impl, None)
+            self._add_fea(feas_info, feature)
             return
 
-        opts = None
-        deps = None
-        ins_set = None
-        children = []
-        for key, obj in fea_obj.items():
-            if key == 'deps':
-                deps = obj
-                continue
-            if key == 'opts':
-                opts = obj
-                continue
-            if key == 'ins_set':
-                ins_set = obj
-                continue
-            children.append(key)
-            self._parse_fea_obj(lib, impl, fea, key, obj, feas_info)
+        feature.deps = fea_obj.get('deps', None)
+        feature.opts = fea_obj.get('opts', None)
+        feature.ins_set = fea_obj.get('ins_set', None)
 
-        self._add_fea(feas_info, fea, lib, parent, children, opts, deps, impl, ins_set)
+        non_sub_keys = ['opts', 'deps', 'ins_set', 'help']
+        for key, obj in fea_obj.items():
+            if key not in non_sub_keys:
+                feature.children.append(key)
+                self._parse_fea_obj(key, target, name, impl, obj, feas_info)
+
+        self._add_fea(feas_info, feature)
+    def parse_fearuers(self, all_feas, tmp_feas_info, target, target_obj):
+        tmp_feas_info[target] = {}
+        for impl, impl_obj in target_obj['features'].items():
+            for fea, fea_obj in impl_obj.items():
+                self._parse_fea_obj(fea, target, None, impl, fea_obj, tmp_feas_info[target])
+
+        # Check that feature names in different target are unique.
+        tgt_feas = set(tmp_feas_info[target].keys())
+        repeat_feas = all_feas.intersection(tgt_feas)
+        if len(repeat_feas) != 0:
+            raise ValueError("Error: feature '%s' has been defined in other target." % (repeat_feas))
+        all_feas.update(tgt_feas)
 
     def _get_feas_info(self):
         """
@@ -114,25 +142,15 @@ class FeatureParser:
             }
         """
         all_feas = set()
-        lib_feas_info = {}
+        tmp_feas_info = {}
         for lib, lib_obj in self._cfg['libs'].items():
-            lib_feas_info[lib] = {}
-
-            for impl, impl_obj in lib_obj['features'].items():
-                for fea, fea_obj in impl_obj.items():
-                    self._parse_fea_obj(lib, impl, None, fea, fea_obj, lib_feas_info[lib])
-
-            # Check that feature names in different libraries are unique.
-            lib_feas = set(lib_feas_info[lib].keys())
-            repeat_feas = all_feas.intersection(lib_feas)
-            if len(repeat_feas) != 0:
-                raise ValueError("Error: feature '%s' has been defined in multiple libs." % (repeat_feas))
-            all_feas.update(lib_feas)
+            self.parse_fearuers(all_feas, tmp_feas_info, lib, lib_obj)
 
         feas_info = {}
-        for obj in lib_feas_info.values():
+        for obj in tmp_feas_info.values():
             feas_info.update(obj)
         self._fill_fea_modules(feas_info)
+        self._correct_impl(feas_info)
         return feas_info
 
     def _fill_fea_modules(self, feas_info):
@@ -146,6 +164,16 @@ class FeatureParser:
                         feas_info[fea]['modules'] = [formated_mod]
                     else:
                         feas_info[fea]['modules'].append(formated_mod)
+    
+    @staticmethod
+    def _correct_impl(feas_info):
+        """Updated the implementation modes of sub-features based on the parent feature."""
+        for fea in feas_info.keys():
+            parent = feas_info[fea].get('parent', '')
+            if not parent:
+                continue
+            if len(feas_info[fea]['impl'].keys()) == 1 and 'c' in feas_info[fea]['impl']:
+                feas_info[fea]['impl'] = feas_info[parent]['impl']
 
     def _get_asm_types(self):
         asm_type_set = set()
@@ -301,7 +329,7 @@ class FeatureConfigParser:
                     raise ValueError("Error feature_config file: unsupported fea '%s' in lib '%s'" % (fea, lib))
             asm_feas = []
             for asm_fea in lib_obj.get('asm', []):
-                fea, inc = self._asm_fea_check(asm_fea, self.asm_type, 'feature_config file')
+                fea, _ = self._asm_fea_check(asm_fea, self.asm_type, 'feature_config file')
                 if fea in asm_feas:
                     raise ValueError("Error feature_config file: duplicate assembly feature '%s'" % fea)
                 asm_feas.append(fea)
@@ -330,19 +358,6 @@ class FeatureConfigParser:
             for dep in feas_info[fea]['deps']:
                 self._get_related_feas(dep, feas_info, related)
 
-    def _get_json_feas(self, enable_feas, asm_feas):
-        for _, lib_obj in self._cfg['libs'].items():
-            for fea in lib_obj.get('c', []):
-                related_feas = set()
-                self._get_related_feas(fea, self._features.feas_info, related_feas)
-                enable_feas.update(related_feas)
-            for asm_fea in lib_obj.get('asm', []):
-                fea, inc = self._get_fea_and_inc(asm_fea)
-                enable_feas.add(fea)
-                asm_feas[fea] = inc
-                if 'children' in self._features.feas_info[fea]:
-                    enable_feas.update(self._features.feas_info[fea]['children'])
-
     def _get_parents(self, disables):
         parents = set()
         for d in disables:
@@ -351,32 +366,63 @@ class FeatureConfigParser:
                 parents.add(relation['parent'])
         return parents
 
-    def get_enable_feas(self, enables):
+    def _add_depend_feas(self, enable_feas, feas_info):
+        related = set()
+        for f in enable_feas:
+            fea, inc = self._get_fea_and_inc(f)
+            self._get_related_feas(fea, feas_info, related)
+
+        enable_feas.update(related)
+
+    def _check_asm_fea_enable(self, enable_feas, feas, feas_info):
+        not_in_enable = []
+        for f in feas:
+            fea, _ = self._get_fea_and_inc(f)
+            if fea in enable_feas: # This feature is already in the enable list.
+                continue
+
+            rel = feas_info[fea]
+            is_enable = False
+            while('parent' in rel):
+                parent = rel['parent']
+                if parent in enable_feas: # This feature is already in the enable list.
+                    is_enable = True
+                    break
+                rel = feas_info[parent]
+            if not is_enable:
+                not_in_enable.append(fea)
+        if not_in_enable:
+            raise ValueError("To add '%s' assembly requires add it to 'enable' list" % not_in_enable)
+
+    def get_enable_feas(self, arg_enable, arg_asm):
         """
-        Obtain the enabled features from the configuration file and input parameters.
-        enables: [IN] 'all': add full c features.
-                      Excluding 'all': Incremental addition of C features
+            Get the enabled features form:
+            1. build/feature_config.json
+            2. argument: enable list
+            3. argument: asm list
         """
         enable_feas = set()
-        enable_asm_feas = {}
-        self._get_json_feas(enable_feas, enable_asm_feas)
-        if not enables:
-            return enable_feas, enable_asm_feas
-        # Obtains the properties from the input parameters.
-        if 'all' in enables:
-            enable_feas = set(self._features.feas_info.keys())
-            return enable_feas, enable_asm_feas
-        for enable in enables:
-            if enable in self._features.libs:
-                # lib
-                for fea, info in self._features.feas_info.items():
-                    if enable == info['lib']:
-                        enable_feas.add(fea)
-            else:
-                # The feature is not lib and needs to be added separately.
-                related_feas = set()
-                self._get_related_feas(enable, self._features.feas_info, related_feas)
-                enable_feas.update(related_feas)
+        enable_asm_feas = set()
+        # 1. Exist feas in build/feature_config.json
+        for _, lib_obj in self._cfg['libs'].items():
+            enable_feas.update(lib_obj.get('c', []))
+            enable_asm_feas.update(lib_obj.get('asm', []))
+
+        # 2. Obtains the properties from the input parameter: enable list.
+        feas_info = self._features.feas_info
+        if 'all' in arg_enable:  # all features
+            enable_feas.update(set(x for x in feas_info.keys()))
+        else:
+            for enable in arg_enable:
+                if enable in self._features.libs: # features in a lib
+                    enable_feas.update(set(x for x, y in feas_info.items() if enable == y.get('lib', '')))
+                else: # The feature is not lib and needs to be added separately.
+                    enable_feas.add(enable)
+
+        enable_feas.update(enable_asm_feas)
+        self._add_depend_feas(enable_feas, feas_info)
+        self._check_asm_fea_enable(enable_feas, arg_asm, feas_info)
+        enable_asm_feas.update(arg_asm)
         return enable_feas, enable_asm_feas
 
     def _add_feature(self, fea, impl_type, inc=''):
@@ -395,28 +441,24 @@ class FeatureConfigParser:
         elif self._cfg['asmType'] != asm_type:
             raise ValueError('Error asmType: %s is different from feature_config file.' % (asm_type))
 
-    def set_asm_features(self, enable_feas, added_asm_feas, asm_type, arg_asm):
+    def set_asm_features(self, enable_feas, asm_feas, asm_type):
         feas_info = self._features.feas_info
         # Clear the assembly features first.
         for lib in self._cfg['libs']:
             if 'asm' in self._cfg['libs'][lib]:
                 self._cfg['libs'][lib]['asm'] = []
         # Add assembly features.
-        if arg_asm:
-            for asm_feature in arg_asm:
+        if asm_feas:
+            for asm_feature in asm_feas:
                 fea, inc = self._asm_fea_check(asm_feature, asm_type, 'input asm list')
-                if fea not in enable_feas:
-                    raise ValueError("To add '%s' assembly requires add it to 'enable' list" % fea)
-                if inc and inc != asm_type and inc not in self._features.feas_info[fea]['impl'][asm_type]:
-                    raise ValueError("Unsupported instruction set '%s' of fea '%s'" % (inc, fea))
+                if inc and inc != asm_type:
+                    raise ValueError("Input instruction '%s' is not the same as 'asm_type' '%s'" % (inc, asm_type))
                 self._add_feature(fea, 'asm', inc)
-                added_asm_feas[fea] = inc
         else:
             for fea in enable_feas:
                 if asm_type not in feas_info[fea]['impl']:
                     continue
                 self._add_feature(fea, 'asm')
-                added_asm_feas[fea] = ''
 
     def set_c_features(self, enable_feas):
         for fea in enable_feas:
@@ -432,7 +474,8 @@ class FeatureConfigParser:
         tmp_feas = features.copy()
         enable_set = set()
         feas_info = self._features.feas_info
-        for fea in tmp_feas:
+        for f in tmp_feas:
+            fea, _ = self._get_fea_and_inc(f)
             rel = feas_info[fea]
             if fea in disable_parents:
                 if 'children' in rel:
@@ -453,16 +496,21 @@ class FeatureConfigParser:
         enable_set.difference_update(set(disables))
         return list(enable_set)
 
-    def _check_bn_config(self):
+    def check_bn_config(self):
         lib = 'hitls_crypto'
         if lib not in self._cfg['libs']:
             return
 
         has_bn = False
+        bn_pattern = "bn_"
         for impl_type in self._cfg['libs'][lib]:
             if 'bn' in self._cfg['libs'][lib][impl_type]:
                 has_bn = True
                 break
+            for fea in self._cfg['libs'][lib][impl_type]:
+                if re.match(bn_pattern, fea) :
+                    has_bn = True
+                    break
 
         if has_bn and 'bits' not in self._cfg:
             raise ValueError("If 'bn' is used, the 'bits' of the system must be configured.")
@@ -477,7 +525,7 @@ class FeatureConfigParser:
             if lib in libs:
                 self._cfg['libs'][lib] = libs[lib].copy()
 
-    def update_feature(self, enables, disables):
+    def update_feature(self, enables, disables, gen_cmake):
         '''
         update feature:
         1. Add the default lib and features: hitls_bsl: sal
@@ -485,7 +533,10 @@ class FeatureConfigParser:
         '''
         libs = self._cfg['libs']
         if len(libs) == 0:
-            raise ValueError("No features are set, please check whether 'enable' and 'asm_type' need to be set")
+            if gen_cmake:
+                raise ValueError("No features are enabled.")
+            else:
+                return
 
         libs.setdefault('hitls_bsl', {'c':['sal']})
         if 'hitls_bsl' not in libs:
@@ -499,7 +550,7 @@ class FeatureConfigParser:
             if 'c' in libs[lib]:
                 libs[lib]['c'] = self._update_enable_feature(libs[lib]['c'], disables)
                 libs[lib]['c'].sort()
-            if self.asm_type != 'no_asm' and self.asm_type in libs[lib]:
+            if 'asm' in libs[lib]:
                 libs[lib]['asm'] = self._update_enable_feature(libs[lib]['asm'], disables)
                 libs[lib]['asm'].sort()
 
@@ -508,7 +559,6 @@ class FeatureConfigParser:
         if 'all' in enables:
             self.set_param('system', None)
             self.set_param('bits', None)
-            return
 
     def save(self, path):
         save_json_file(self._cfg, path)
@@ -522,8 +572,12 @@ class FeatureConfigParser:
             for fea in lib_value.get('asm', []):
                 fea = fea.split('::')[0]
                 macros.add("-D%s_%s" % (lib_upper, fea.upper()))
-                macros.add("-D%s_%s_ASM" % (lib_upper, fea.upper()))
-                macros.add("-D%s_%s_%s" % (lib_upper, fea.upper(), self.asm_type.upper()))
+                if 'bn' in fea:
+                    macros.add("-D%s_%s_%s" % (lib_upper, 'BN', self.asm_type.upper()))
+                else:
+                    macros.add("-D%s_%s_%s" % (lib_upper, fea.upper(), self.asm_type.upper()))
+            if lib_upper not in macros:
+                macros.add("-D%s" % lib_upper)
 
         if self._cfg['endian'] == 'big':
             macros.add("-DHITLS_BIG_ENDIAN")
@@ -549,18 +603,25 @@ class FeatureConfigParser:
         for child in feas_info[fea].get('children', []):
             self._re_get_fea_modules(child, feas_info, asm_type, inc, modules)
 
-    def _get_lib_modules(self, lib):
-        """Obtain the enabled modules and their instruction sets."""
-        lib_modules = {}
+    def _get_target_modules(self, target):
+        modules = {}
         feas_info = self._features.feas_info
-        for fea in self.libs[lib].get('c', []):
-            self._re_get_fea_modules(fea, feas_info, 'c', '', lib_modules)
+        obj = self.libs
+        for fea in obj[target].get('c', []):
+            self._re_get_fea_modules(fea, feas_info, 'c', '', modules)
 
-        for asm_fea in self.libs[lib].get('asm', []):
+        for asm_fea in obj[target].get('asm', []):
             fea, inc = self._get_fea_and_inc(asm_fea)
-            self._re_get_fea_modules(fea, feas_info, self.asm_type, inc, lib_modules)
+            self._re_get_fea_modules(fea, feas_info, self.asm_type, inc, modules)
 
-        return lib_modules
+        for mod in modules:
+            mod_dep_mods = set()
+            self._features.get_module_deps(mod, [], mod_dep_mods)
+            modules[mod]['deps'] = list(mod_dep_mods)
+        if len(modules.keys()) == 0:
+            raise ValueError("Error: no module is enabled in %s" % target)
+
+        return modules
 
     def get_enable_modules(self):
         """
@@ -574,13 +635,7 @@ class FeatureConfigParser:
         enable_libs_mods = {}
         enable_mods = set()
         for lib in self.libs.keys():
-            enable_libs_mods[lib] = self._get_lib_modules(lib)
-            for mod in enable_libs_mods[lib]:
-                mod_dep_mods = set()
-                self._features.get_module_deps(mod, [], mod_dep_mods)
-                enable_libs_mods[lib][mod]['deps'] = list(mod_dep_mods)
-            if len(enable_libs_mods[lib].keys()) == 0:
-                raise ValueError("Error: no module is enabled in lib%s" % lib)
+            enable_libs_mods[lib] = self._get_target_modules(lib)
             enable_mods.update(enable_libs_mods[lib])
 
         # Check whether the dependent module is enabled.
@@ -603,12 +658,19 @@ class FeatureConfigParser:
         for opt_arr in opts:
             has_opt = False
             for opt_fea in opt_arr:
-                parent = self._features.feas_info[opt_fea].get('parent', '')
-                if opt_fea in enable_feas or (parent and parent in enable_feas):
+                if opt_fea in enable_feas:
                     has_opt = True
-                    continue
+                    break
+                parent = self._features.feas_info[opt_fea].get('parent', '')
+                while parent:
+                    if parent in enable_feas:
+                        has_opt = True
+                        break
+                    parent = self._features.feas_info[parent].get('parent', '')
+                if has_opt:
+                    break
             if not has_opt:
-                raise ValueError("The fea '%s' must work with at leaset one fea in %s" % (fea, opt_arr))
+                raise ValueError("At leaset one fea in %s must be enabled for '%s*'" % (opt_arr, fea))
 
     def _check_opts(self, fea, enable_feas):
         if 'opts' not in self._features.feas_info[fea]:
@@ -782,6 +844,8 @@ class CompileParser:
         if 'compileFlag' not in self._cfg or 'linkFlag' not in self._cfg:
             raise FileNotFoundError("Error compile file: missing 'compileFlag' or 'linkFlag'")
         for option_type in self.options:
+            if option_type == 'CC_USER_DEFINE_FLAGS':
+                continue
             if option_type not in self._all_options.type_options_map:
                 raise ValueError("no '{}' option type in complete_options.json".format(option_type))
 
