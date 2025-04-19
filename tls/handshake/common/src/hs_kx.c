@@ -75,6 +75,7 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
     BSL_SAL_FREE(keyExchCtx->ciphertext);
 #endif /* HITLS_TLS_PROTO_TLS13 */
     BSL_SAL_FREE(keyExchCtx->peerPubkey);
+    SAL_CRYPT_FreeEcdhKey(keyExchCtx->secondKey);
     switch (keyExchCtx->keyExchAlgo) {
         case HITLS_KEY_EXCH_NULL:
         case HITLS_KEY_EXCH_ECDHE:

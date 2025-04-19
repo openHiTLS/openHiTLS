@@ -818,8 +818,9 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
     const uint16_t *groups = ctx->config.tlsConfig.groups;
     uint32_t numOfGroups = ctx->config.tlsConfig.groupsSize;
 
-    /* The selected group must not exist in the key share extension of the original client hello */
-    if (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.group) {
+    /* The selected group exist in the key share extension of the original client hello and no cookie exchange requested */
+    if (ctx->negotiatedInfo.cookie == NULL && (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.group ||
+            selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15283, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "the selected group extension is corresponded to a group in client hello key share.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -843,9 +844,14 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
         return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
     }
-
+    if (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup) {
+        SAL_CRYPT_FreeEcdhKey(ctx->hsCtx->kxCtx->key);
+        ctx->hsCtx->kxCtx->key = ctx->hsCtx->kxCtx->secondKey;
+        ctx->hsCtx->kxCtx->secondKey = NULL;
+        ctx->hsCtx->kxCtx->keyExchParam.share.group = selectedGroup;
+        ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup = HITLS_NAMED_GROUP_BUTT;
+    }
     // Save the selected group
-    ctx->hsCtx->kxCtx->keyExchParam.share.group = selectedGroup;
     ctx->negotiatedInfo.negotiatedGroup = selectedGroup;
     return HITLS_SUCCESS;
 }
@@ -906,13 +912,13 @@ static int32_t Tls13ClientCheckHrrExtension(TLS_Ctx *ctx, const ServerHelloMsg *
     }
 
     /* Check the key share extension */
-    ret = ClientCheckHrrKeyShareExtension(ctx, helloRetryRequest);
+    ret = ClientCheckHrrCookieExtension(ctx, helloRetryRequest);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
     /* Check the cookie extension */
-    return ClientCheckHrrCookieExtension(ctx, helloRetryRequest);
+    return ClientCheckHrrKeyShareExtension(ctx, helloRetryRequest);
 }
 
 int32_t Tls13ClientRecvHelloRetryRequestProcess(TLS_Ctx *ctx, const HS_Msg *msg)
@@ -1014,9 +1020,10 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     }
     uint32_t keyshareLen = 0u;
     /* The keyshare extension of the server must contain the keyExchange field */
-    if (serverHello->keyShare.keyExchangeSize == 0 ||
+    if (serverHello->keyShare.keyExchangeSize == 0 || serverHello->keyShare.group == HITLS_NAMED_GROUP_BUTT ||
         /* Check whether the sent support group is the same as the negotiated group */
-        serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.group) {
+        (serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.group &&
+            serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15289, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "the keyshare parameter is illegal.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -1025,6 +1032,13 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     }
 
     const KeyShare *keyShare = &serverHello->keyShare;
+    if (keyShare->group == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup) {
+        SAL_CRYPT_FreeEcdhKey(ctx->hsCtx->kxCtx->key);
+        ctx->hsCtx->kxCtx->key = ctx->hsCtx->kxCtx->secondKey;
+        ctx->hsCtx->kxCtx->secondKey = NULL;
+        ctx->hsCtx->kxCtx->keyExchParam.share.group = keyShare->group;
+        ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup = HITLS_NAMED_GROUP_BUTT;
+    }
     const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->group);
     if (groupInfo == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16247, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

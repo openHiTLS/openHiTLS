@@ -60,6 +60,7 @@ typedef struct {
 
 typedef struct {
     HITLS_NamedGroup group;
+    HITLS_NamedGroup secondGroup; /* second group for tls1.3 multi-key share */
 } KeyShareParam;
 
 /**
@@ -103,6 +104,7 @@ typedef struct {
         KeyShareParam share;
     } keyExchParam;
     HITLS_CRYPT_Key *key; /* Local key pair */
+    HITLS_CRYPT_Key *secondKey; /* second key pair for tls1.3 multi-key share */
     uint8_t *peerPubkey; /* peer public key or peer ciphertext */
     uint32_t pubKeyLen; /* peer public key length */
 #ifdef HITLS_TLS_FEATURE_PSK
