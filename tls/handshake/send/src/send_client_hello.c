@@ -34,6 +34,7 @@
 #include "send_process.h"
 #include "session_mgr.h"
 #include "bsl_bytes.h"
+#include "config_type.h"
 
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -167,26 +168,44 @@ int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 
 #ifdef HITLS_TLS_PROTO_TLS13
-static bool Tls13SelectGroup(TLS_Ctx *ctx, uint16_t *group)
+static bool Tls13SelectGroup(TLS_Ctx *ctx, uint16_t *firstGroup, uint16_t *secondGroup)
 {
     TLS_Config *tlsConfig = &ctx->config.tlsConfig;
     uint16_t version = (ctx->negotiatedInfo.version == 0) ?
         ctx->config.tlsConfig.maxVersion : ctx->negotiatedInfo.version;
+    bool isFirstGroupKem = false;
+    uint16_t group1 = HITLS_NAMED_GROUP_BUTT;
+    uint16_t group2 = HITLS_NAMED_GROUP_BUTT;
     for (uint32_t i = 0; i < tlsConfig->groupsSize; ++i) {
+        const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, tlsConfig->groups[i]);
+        if (groupInfo == NULL) {
+            continue;
+        }
         if (GroupConformToVersion(ctx, version, tlsConfig->groups[i])) {
-            *group = tlsConfig->groups[i];
-            return true;
+            if (group1 == HITLS_NAMED_GROUP_BUTT) {
+                group1 = tlsConfig->groups[i];
+                isFirstGroupKem = groupInfo->isKem;
+                continue;
+            /* Prepare one KEM and one KEX keyshare */
+            } else if (isFirstGroupKem != groupInfo->isKem) {
+                group2 = tlsConfig->groups[i];
+                break;
+            }
         }
     }
-    return false;
+    if (group1 == HITLS_NAMED_GROUP_BUTT) {
+        return false;
+    }
+    *firstGroup = group1;
+    *secondGroup = group2;
+    return true;
 }
 
-static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx, KeyExchCtx *kxCtx, uint16_t selectGroup)
+static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx, KeyExchCtx *kxCtx, uint16_t firstGroup, uint16_t secondGroup)
 {
-    uint16_t curveGroup = selectGroup;
     HITLS_ECParameters curveParams = {
         .type = HITLS_EC_CURVE_TYPE_NAMED_CURVE,
-        .param.namedcurve = curveGroup,
+        .param.namedcurve = firstGroup,
     };
 
     // ecdhe and dhe groups can invoke the same interface to generate keys.
@@ -201,6 +220,21 @@ static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx, KeyExchCtx *kxCtx, uint16_t s
         SAL_CRYPT_FreeEcdhKey(kxCtx->key);
     }
     kxCtx->key = key;
+    if (kxCtx->secondKey != NULL) {
+        SAL_CRYPT_FreeEcdhKey(kxCtx->secondKey);
+        kxCtx->secondKey = NULL;
+    }
+    if (secondGroup != HITLS_NAMED_GROUP_BUTT) {
+        curveParams.param.namedcurve = secondGroup;
+        HITLS_CRYPT_Key *secondKey = SAL_CRYPT_GenEcdhKeyPair(ctx, &curveParams);
+        if (secondKey == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15629, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "server generate key share key pair error.", 0, 0, 0, 0);
+            return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+        }
+        kxCtx->secondKey = secondKey;
+    }
     return HITLS_SUCCESS;
 }
 
@@ -220,27 +254,31 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    uint16_t selectGroup = tlsConfig->groups[0];
+    uint16_t firstGroup = HITLS_NAMED_GROUP_BUTT;
+    uint16_t secondGroup = HITLS_NAMED_GROUP_BUTT;
     /* The keyShare has passed the verification when receiving the HRR */
-    KeyShareParam *keyShare = &ctx->hsCtx->kxCtx->keyExchParam.share;
+    KeyShareParam *share = &ctx->hsCtx->kxCtx->keyExchParam.share;
     if (ctx->hsCtx->haveHrr) {
         /* If the value of group is not updated in the hello retry request, the system directly returns */
-        if (selectGroup == keyShare->group) {
+        if (share->group == ctx->negotiatedInfo.negotiatedGroup || 
+            share->secondGroup == ctx->negotiatedInfo.negotiatedGroup) {
             return HITLS_SUCCESS;
         }
 
         /* If the value of group is updated, use the updated group */
-        selectGroup = keyShare->group;
+        firstGroup = ctx->negotiatedInfo.negotiatedGroup;
+        secondGroup = HITLS_NAMED_GROUP_BUTT;
     } else {
-        if (!Tls13SelectGroup(ctx, &selectGroup)) {
+        if (!Tls13SelectGroup(ctx, &firstGroup, &secondGroup)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17109, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "SelectGroup fail", 0, 0, 0, 0);
             return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
         }
         /* Send the client hello message for the first time and fill in the group in the key share extension */
-        keyShare->group = selectGroup;
     }
-    return Tls13ClientGenKeyPair(ctx, ctx->hsCtx->kxCtx, selectGroup);
+    share->group = firstGroup;
+    share->secondGroup = secondGroup;
+    return Tls13ClientGenKeyPair(ctx, ctx->hsCtx->kxCtx, firstGroup, secondGroup);
 }
 
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)

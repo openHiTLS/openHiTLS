@@ -71,6 +71,7 @@ void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, 
         "new_signAlg/client.key.der", "NULL", "NULL");
 
     HLT_SetGroups(serverCtxConfig, group); // For kex or kem group
+    HLT_SetGroups(clientCtxConfig, group); // For kex or kem group
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
 
@@ -100,6 +101,7 @@ void SDV_TLS13_PROVIDER_KEM_TC001(char *group)
     (void)group;
     SKIP_TEST();
 #else
+(void)group;
     HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
     HLT_Process *remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
     ASSERT_TRUE(localProcess != NULL);
@@ -111,6 +113,7 @@ void SDV_TLS13_PROVIDER_KEM_TC001(char *group)
     ASSERT_TRUE(clientCtxConfig != NULL);
 
     HLT_SetGroups(clientCtxConfig, group); // For kex or kem group
+    HLT_SetGroups(serverCtxConfig, group); // For kex or kem group
 
     HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);

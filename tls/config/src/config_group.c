@@ -29,26 +29,19 @@
 #include "crypt_eal_pkey.h"
 #endif
 
-static uint32_t GetGroupVersionBits(const void *array, uint32_t index)
-{
-    const TLS_GroupInfo *groups = (const TLS_GroupInfo *)array;
-    return groups[index].versionBits;
-}
-
-static uint16_t GetGroupId(const void *array, uint32_t index)
-{
-    const TLS_GroupInfo *groups = (const TLS_GroupInfo *)array;
-    return groups[index].groupId;
-}
-
-static int32_t UpdateGroupsArray(TLS_Config *config, const TLS_GroupInfo *groups, uint32_t groupInfolen)
-{
-    if (config == NULL) {
-        return HITLS_INVALID_INPUT;
-    }
-    return ConfigUpdateTlsConfigArray(&config->groups, &config->groupsSize, groups, groupInfolen, config->version,
-        GetGroupVersionBits, GetGroupId);
-}
+static const uint16_t DEFAULT_GROUP_ID[] = {
+    HITLS_HYBRID_X25519_MLKEM768,
+    HITLS_EC_GROUP_CURVE25519,
+    HITLS_EC_GROUP_SECP256R1,
+    HITLS_EC_GROUP_SECP384R1,
+    HITLS_EC_GROUP_SECP521R1,
+    HITLS_EC_GROUP_SM2,
+    HITLS_FF_DHE_2048,
+    HITLS_FF_DHE_3072,
+    HITLS_FF_DHE_4096,
+    HITLS_FF_DHE_6144,
+    HITLS_FF_DHE_8192,
+};
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER
 static const TLS_GroupInfo GROUP_INFO[] = {
@@ -56,40 +49,40 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         "x25519",
         CRYPT_PKEY_PARAID_MAX,
         CRYPT_PKEY_X25519,
-        128,                          // secBits
-        HITLS_EC_GROUP_CURVE25519,    // groupId
-        32, 32, 0,                    // pubkeyLen=32, sharedkeyLen=32 (256 bits)
-        TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
+        128,                                    // secBits
+        HITLS_EC_GROUP_CURVE25519,             // groupId
+        32, 32, 0,                             // pubkeyLen=32, sharedkeyLen=32 (256 bits)
+        TLS_VERSION_MASK | DTLS_VERSION_MASK,  // versionBits
         false,
     },
     {
         "X25519MLKEM768",
         CRYPT_HYBRID_X25519_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
-        192,                          // secBits
-        4588,                         // groupId
-        1184 + 32, 32 + 32, 1088 + 32, // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
-        TLS13_VERSION_BIT,            // versionBits
+        192,                                    // secBits
+        HITLS_HYBRID_X25519_MLKEM768,          // groupId
+        1184 + 32, 32 + 32, 1088 + 32,         // pubkeyLen=1216, sharedkeyLen=64, ciphertextLen=1120
+        TLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
         "SecP256r1MLKEM768",
         CRYPT_HYBRID_ECDH_NISTP256_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
-        192,                          // secBits
-        4587,                         // groupId
-        1184 + 65, 32 + 32, 1088 + 65, // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
-        TLS13_VERSION_BIT,            // versionBits
+        192,                                    // secBits
+        HITLS_HYBRID_ECDH_NISTP256_MLKEM768,   // groupId
+        1184 + 65, 32 + 32, 1088 + 65,         // pubkeyLen=1249, sharedkeyLen=64, ciphertextLen=1153
+        TLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
         "SecP384r1MLKEM1024",
         CRYPT_HYBRID_ECDH_NISTP384_MLKEM1024,
         CRYPT_PKEY_HYBRID_KEM,
-        256,                          // secBits
-        4589,                         // groupId
-        1568 + 97, 32 + 48, 1568 + 97, // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
-        TLS13_VERSION_BIT,            // versionBits
+        256,                                    // secBits
+        HITLS_HYBRID_ECDH_NISTP384_MLKEM1024,  // groupId
+        1568 + 97, 32 + 48, 1568 + 97,         // pubkeyLen=1665, sharedkeyLen=80, ciphertextLen=1665
+        TLS13_VERSION_BIT,                     // versionBits
         true,
     },
     {
@@ -219,7 +212,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     if (config == NULL) {
         return HITLS_INVALID_INPUT;
     }
-    return UpdateGroupsArray(config, GROUP_INFO, sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo));
+    return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
 }
 
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
@@ -315,7 +308,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    return UpdateGroupsArray(config, config->groupInfo, config->groupInfolen);
+    return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
 }
 
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
