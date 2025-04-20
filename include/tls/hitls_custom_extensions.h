@@ -100,7 +100,7 @@ extern "C" {
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
-    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *addArg);
+    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, void *addArg);
 
 
 /**
@@ -116,7 +116,7 @@ typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extTyp
  * @param   add_arg  [IN] Additional argument provided when registering the callback
  */
 typedef void (*HITLS_FreeCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
-    uint8_t *out, uint8_t *addArg);
+    uint8_t *out, void *addArg);
 
 /**
  * @ingroup hitls_custom_extensions
@@ -137,7 +137,7 @@ typedef void (*HITLS_FreeCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extT
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_ParseCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
-    const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *parseArg);
+    const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, void *parseArg);
 
 
 /**
@@ -149,9 +149,9 @@ typedef struct {
     uint32_t context;                           /**< Context where the extension applies */
     HITLS_AddCustomExtCallback addCb;           /**< Callback function to add the extension */
     HITLS_FreeCustomExtCallback freeCb;         /**< Callback function to free the extension */
-    uint8_t *addArg;                            /**< Additional argument for add and free callbacks */
+    void *addArg;                            /**< Additional argument for add and free callbacks */
     HITLS_ParseCustomExtCallback parseCb;       /**< Callback function to parse the extension */
-    uint8_t *parseArg;                          /**< Additional argument for parse callback */
+    void *parseArg;                          /**< Additional argument for parse callback */
 } HITLS_CustomExtParams;
 
 /**

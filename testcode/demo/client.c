@@ -28,7 +28,7 @@
 #define CUSTOM_EXT_TYPE 0x003F
 
 int32_t AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
-    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *addArg)
+    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, void *addArg)
 {
     (void)ctx;
     (void)extType;
@@ -52,7 +52,7 @@ int32_t AddCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t
     return HITLS_SUCCESS;
 }
 
-static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t *out, uint8_t *addArg)
+static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t *out, void *addArg)
 {
     (void)ctx;
     (void)extType;
@@ -62,7 +62,7 @@ static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t conte
 }
 
 static int ParseCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, const uint8_t **in,
-    uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, uint8_t *parseArg)
+    uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, void *parseArg)
 {
     (void)ctx;
     (void)extType;

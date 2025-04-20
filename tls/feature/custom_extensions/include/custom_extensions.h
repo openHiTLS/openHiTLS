@@ -25,9 +25,9 @@ typedef struct {
     uint32_t context;
     HITLS_AddCustomExtCallback addCb;
     HITLS_FreeCustomExtCallback freeCb;
-    uint8_t *addArg;
+    void *addArg;
     HITLS_ParseCustomExtCallback parseCb;
-    uint8_t *parseArg;
+    void *parseArg;
 } CustomExt_Method;
 
 // Define CustomExt_Methods structure
