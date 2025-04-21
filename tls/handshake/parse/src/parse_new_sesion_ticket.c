@@ -76,6 +76,72 @@ static int32_t ParseTicket(ParsePacket *pkt, NewSessionTicketMsg *msg)
     return HITLS_SUCCESS;
 }
 
+int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, NewSessionTicketMsg *msg)
+{
+    uint32_t bufOffset = 0u;
+    int32_t ret = HITLS_SUCCESS;
+
+    while (bufOffset < bufLen) {
+        uint32_t extMsgLen = 0u;
+        uint16_t extMsgType = HS_EX_TYPE_END;
+        ret = ParseExHeader(ctx, &buf[bufOffset], bufLen - bufOffset, &extMsgType, &extMsgLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        bufOffset += HS_EX_HEADER_LEN;
+
+        if (bufLen - bufOffset >= extMsgLen) {
+            uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
+                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+                msg->extensionTypeMask |= 1ULL << hsExTypeId;
+                }
+
+            if (IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+                ret = ParseCustomExtensions(ctx, buf + bufOffset, extMsgType, extMsgLen,
+                    HITLS_EX_TYPE_NEW_SESSION_TICKET);
+                if (ret != HITLS_SUCCESS) {
+                    return ret;
+                }
+            }
+            bufOffset += extMsgLen;
+        } else {
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
+    }
+
+    if (bufOffset != bufLen) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15206,
+            BINGLOG_STR("parse extension failed."), ALERT_DECODE_ERROR);
+    }
+
+    return HITLS_SUCCESS;
+}
+
+static int32_t ParseNewSessionTicketExtensions(ParsePacket *pkt, NewSessionTicketMsg *msg)
+{
+    if (pkt->bufLen == *pkt->bufOffset) {
+        return HITLS_SUCCESS;
+    }
+    uint16_t exMsgLen = 0;
+    const char *logStr = BINGLOG_STR("parse extension length failed.");
+    int32_t ret = ParseBytesToUint16(pkt, &exMsgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15788,
+            logStr, ALERT_DECODE_ERROR);
+    }
+
+    if (exMsgLen != (pkt->bufLen - *pkt->bufOffset)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15789,
+            logStr, ALERT_DECODE_ERROR);
+    }
+
+    if (exMsgLen == 0u) {
+        return HITLS_SUCCESS;
+    }
+    return ParseNewSessionTicketExtension(pkt->ctx, &pkt->buf[*pkt->bufOffset], exMsgLen, msg);
+}
+
 int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
 {
     uint32_t bufOffset = 0u;
@@ -109,32 +175,7 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         return ret;
     }
 
-    while (*(pkt.bufOffset) < pkt.bufLen) {
-        uint32_t extMsgLen = 0u;
-        uint16_t extMsgType = HS_EX_TYPE_END;
-        ret = ParseExHeader(pkt.ctx, &pkt.buf[*pkt.bufOffset], pkt.bufLen - *pkt.bufOffset, &extMsgType, &extMsgLen);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        *pkt.bufOffset += HS_EX_HEADER_LEN;
-
-        if (pkt.bufLen - *(pkt.bufOffset) >= extMsgLen) {
-            uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
-            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
-                    !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
-                msg->extensionTypeMask |= 1ULL << hsExTypeId;
-            }
-
-            if (IsParseNeedCustomExtensions(pkt.ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
-                ret = ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
-                    HITLS_EX_TYPE_NEW_SESSION_TICKET);
-            }
-            pkt.bufOffset += extMsgLen;
-        } else {
-            return HITLS_PARSE_INVALID_MSG_LEN;
-        }
-    }
-    return ret;
+    return ParseNewSessionTicketExtensions(&pkt, msg);
 }
 
 void CleanNewSessionTicket(NewSessionTicketMsg *msg)
