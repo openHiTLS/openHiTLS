@@ -859,14 +859,14 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
 #endif /* HITLS_TLS_PROTO_TLS13 */
     };
 
-    uint32_t len = 0;
+    uint32_t exLen = 0;
     uint32_t offset = 0;
     if (IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_CLIENT_HELLO)) {
-        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, HITLS_EX_TYPE_CLIENT_HELLO);
+        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &exLen, HITLS_EX_TYPE_CLIENT_HELLO);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-        offset += len;
+        offset += exLen;
     }
 
     uint32_t tmpBufLen = bufLen - offset;
@@ -874,7 +874,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    *usedLen = tmpBufLen + len;
+    *usedLen = tmpBufLen + exLen;
 #ifdef HITLS_TLS_FEATURE_PHA
     ctx->hsCtx->extFlag.havePostHsAuth = isNeedPha;
 #endif /* HITLS_TLS_FEATURE_PHA */
@@ -1192,7 +1192,6 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
     uint32_t offset = 0u;
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = HS_GetVersion(ctx);
-    uint32_t len = 0;
     uint32_t context = 0;
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
     bool isTls13 = Tls13NeedPack(ctx, version);
@@ -1249,12 +1248,13 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t b
         context = HITLS_EX_TYPE_TLS1_2_SERVER_HELLO;
     }
 
+    exLen = 0u;
     if (IsPackNeedCustomExtensions(ctx->customExts, context)) {
-        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &len, context);
+        ret = PackCustomExtensions(ctx, &buf[offset], bufLen - offset, &exLen, context);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-        offset += len;
+        offset += exLen;
     }
 
     /* Calculate the number of extended types */
