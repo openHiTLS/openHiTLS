@@ -24,6 +24,10 @@
 #include <sys/mman.h>
 #include "stub_replace.h"
 
+#ifdef HITLS_BIG_ENDIAN
+#include "crypt_utils.h"
+#endif
+
 /* The LSB of the function pointer indicates the thumb function. The LSB of the actual address needs to be cleared. */
 #define REAL_ADDR(ptr) (void *)(((uintptr_t)(ptr)) & (~(uintptr_t)1))
 /*
@@ -216,11 +220,17 @@ int STUB_Replace(FuncStubInfo *stubInfo, void *srcFn, const void *stubFn)
     tmpBuf[idx++] = ((((uintptr_t)stubFn) >> 48) & 0xff); // Obtain the address by little-endian shift by 48 bits
     tmpBuf[idx++] = ((((uintptr_t)stubFn) >> 56) & 0xff); // Obtain the address by little-endian shift by 56 bits
 #elif defined(__aarch64__) || defined(_M_ARM64)
-    /* ldr x9, +8
+    /* ldr x9, PC+8
        br x9
        addr  */
-    ((uint32_t *)srcFn)[0] = 0x58000040 | 9;        // 9 = 1001
-    ((uint32_t *)srcFn)[1] = 0xd61f0120 | (9 << 5); // 9 << 5
+    uint32_t ldrIns = 0x58000040 | 9;        // 9 = 1001
+    uint32_t brIns = 0xd61f0120 | (9 << 5); // 9 << 5
+#ifdef HITLS_BIG_ENDIAN
+    ldrIns = CRYPT_SWAP32(ldrIns);
+    brIns = CRYPT_SWAP32(brIns);
+#endif
+    ((uint32_t *)srcFn)[0] = ldrIns;
+    ((uint32_t *)srcFn)[1] = brIns;
     /* ldr x9, + 8 */
     *(long long *)((char *)srcFn + 8) = (long long)stubFn;
 #elif defined(__arm__) || defined(__thumb__)

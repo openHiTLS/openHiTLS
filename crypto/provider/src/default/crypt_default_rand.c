@@ -23,6 +23,31 @@
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
+#include "bsl_params.h"
+#include "crypt_default_provider.h"
+
+#ifdef HITLS_CRYPTO_ENTROPY
+static int32_t GetDefaultSeed(BSL_Param *param)
+{
+    void *defaultSeedCtx = NULL;
+    CRYPT_RandSeedMethod *defaultSeedMethod = NULL;
+    int32_t ret = CRYPT_EAL_ProviderGetSeed(&defaultSeedMethod, &defaultSeedCtx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, defaultSeedCtx, 0);
+    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        defaultSeedMethod->getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        defaultSeedMethod->cleanEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+        defaultSeedMethod->getNonce, 0);
+    (void)BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+        defaultSeedMethod->cleanNonce, 0);
+    return CRYPT_SUCCESS;
+}
+#endif
 
 void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
 {
@@ -34,6 +59,20 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
         return NULL;
     }
 #endif
+    BSL_Param *getEnt = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY);
+    if (param == NULL || getEnt == NULL) {
+#ifdef HITLS_CRYPTO_ENTROPY
+        BSL_Param defaultParam[6] = {BSL_PARAM_END};
+        if (GetDefaultSeed(defaultParam) != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return NULL;
+        }
+        return DRBG_New(algId, defaultParam);
+#else
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return NULL;
+#endif
+    }
     randCtx = DRBG_New(algId, param);
     if (randCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
@@ -43,13 +82,15 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
 }
 
 const CRYPT_EAL_Func g_defRand[] = {
+#if defined(HITLS_CRYPTO_DRBG)
     {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, (CRYPT_EAL_ImplRandDrbgNewCtx)CRYPT_EAL_DefRandNewCtx},
     {CRYPT_EAL_IMPLRAND_DRBGINST, (CRYPT_EAL_ImplRandDrbgInst)DRBG_Instantiate},
     {CRYPT_EAL_IMPLRAND_DRBGUNINST, (CRYPT_EAL_ImplRandDrbgUnInst)DRBG_Uninstantiate},
-    {CRYPT_EAL_IMPLRAND_DRBGGEN, (CRYPT_EAL_ImplRandDrbgGen)DRBG_Generate},
+    {CRYPT_EAL_IMPLRAND_DRBGGEN, (CRYPT_EAL_ImplRandDrbgGen)DRBG_GenerateBytes},
     {CRYPT_EAL_IMPLRAND_DRBGRESEED, (CRYPT_EAL_ImplRandDrbgReSeed)DRBG_Reseed},
     {CRYPT_EAL_IMPLRAND_DRBGCTRL, (CRYPT_EAL_ImplRandDrbgCtrl)DRBG_Ctrl},
     {CRYPT_EAL_IMPLRAND_DRBGFREECTX, (CRYPT_EAL_ImplRandDrbgFreeCtx)DRBG_Free},
+#endif
     CRYPT_EAL_FUNC_END,
 };
 

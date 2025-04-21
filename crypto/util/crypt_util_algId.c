@@ -23,7 +23,7 @@ typedef struct {
     uint32_t mdSize;
 } CRYPT_MdInfo;
 
-uint32_t CRYPT_MD_GetSizeById(CRYPT_MD_AlgId id)
+uint32_t CRYPT_GetMdSizeById(CRYPT_MD_AlgId id)
 {
     // need synchronize with enum CRYPT_MD_AlgId
     static CRYPT_MdInfo mdInfo[] = {

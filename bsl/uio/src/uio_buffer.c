@@ -25,6 +25,8 @@
 
 // The write behavior must be the same.
 #define UIO_BUFFER_DEFAULT_SIZE     4096
+#define DTLS_MIN_MTU 256    /* Minimum MTU setting size */
+#define DTLS_MAX_MTU_OVERHEAD 48 /* Highest MTU overhead, IPv6 40 + UDP 8 */
 
 typedef struct {
     uint32_t outSize;
@@ -139,6 +141,29 @@ static int32_t BufferReset(BSL_UIO *uio)
     return BSL_UIO_Ctrl(uio->next, BSL_UIO_RESET, 0, NULL);
 }
 
+static int32_t BufferSetBufferSize(BSL_UIO *uio, int32_t larg, void *parg)
+{
+    if (larg != (int32_t)sizeof(uint32_t) || parg == NULL || *(uint32_t *)parg < DTLS_MIN_MTU - DTLS_MAX_MTU_OVERHEAD) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    bool invalid = (uio == NULL) || (uio->ctx == NULL);
+    if (invalid) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
+    uint32_t len = *(uint32_t *)parg;
+    BSL_SAL_FREE(ctx->outBuf);
+    ctx->outBuf = (uint8_t *)BSL_SAL_Malloc(len);
+    if (ctx->outBuf == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    ctx->outSize = len;
+    return BSL_SUCCESS;
+}
+
 static int32_t BufferCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {
     switch (cmd) {
@@ -146,6 +171,8 @@ static int32_t BufferCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return BufferFlush(uio, larg, parg);
         case BSL_UIO_RESET:
             return BufferReset(uio);
+        case BSL_UIO_SET_BUFFER_SIZE:
+            return BufferSetBufferSize(uio, larg, parg);
         default:
             break;
     }

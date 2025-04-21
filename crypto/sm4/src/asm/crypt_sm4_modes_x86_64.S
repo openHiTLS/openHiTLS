@@ -20,6 +20,8 @@
 
 .file	"crypt_sm4_modes_x86_64.S"
 .text
+.extern g_cpuState
+.hidden g_cpuState
 
 .set	X0,%ymm0
 .set	X1,%ymm1
@@ -79,7 +81,63 @@
 	vpxor	128+96(IN),Y3,Y3
 .endm
 
-.macro	SM4_CRYPT_BLOCK16
+.macro CHECK_GFNI re tmp
+	xorl	\re, \re
+
+	movl    $0x100, \tmp
+	andl	g_cpuState+24(%rip), \tmp  # get gfni flag
+	orl		\tmp, \re
+
+	movl	$0x20, \tmp
+	andl	g_cpuState+20(%rip), \tmp  # check avx2 flag
+	orl		\tmp, \re
+
+	cmpl	$0x120, \re   # code7Out[EAX] & (1<<5)) | code7Out[ECX_OUT_IDX] & (1<<8))
+.endm
+
+.macro	SM4_CRYPT_GFNI_BLOCK16
+	# load affine matric
+    vpbroadcastq .PreAffinT(%rip),PreAffineTRegBLOCK16
+    vpbroadcastq .PostAffinT(%rip),PostAffineTRegBLOCK16
+
+	vmovdqa		32+4096(ADDR),TMP0
+	# vmovdqa		64+4096(ADDR),AES_MASK
+	# vmovdqa		96+4096(ADDR),AES_AND_MASK
+
+	vpshufb		TMP0,X0,X0
+	vpshufb		TMP0,X1,X1
+	vpshufb		TMP0,X2,X2
+	vpshufb		TMP0,X3,X3
+	vpshufb		TMP0,Y0,Y0
+	vpshufb		TMP0,Y1,Y1
+	vpshufb		TMP0,Y2,Y2
+	vpshufb		TMP0,Y3,Y3
+
+	# Pack SIMD Vectors
+	MATRIX_TRANSPOSE	X0 X1 X2 X3
+	MATRIX_TRANSPOSE	Y0 Y1 Y2 Y3
+
+	# AVX2 Rounds
+	SM4_AVX2_GFNI_2_ROUNDS
+
+	# Restore SIMD Vectors
+	MATRIX_TRANSPOSE	X0 X1 X2 X3
+	MATRIX_TRANSPOSE	Y0 Y1 Y2 Y3
+
+	# Reverse Transformation
+	vmovdqa		4096(ADDR),TMP0
+	vpshufb		TMP0,X0,X0
+	vpshufb		TMP0,X1,X1
+	vpshufb		TMP0,X2,X2
+	vpshufb		TMP0,X3,X3
+	vpshufb		TMP0,Y0,Y0
+	vpshufb		TMP0,Y1,Y1
+	vpshufb		TMP0,Y2,Y2
+	vpshufb		TMP0,Y3,Y3
+.endm
+
+.macro	SM4_CRYPT_AESNI_BLOCK16
+
 	vmovdqa		32+4096(ADDR),TMP0
 	vmovdqa		64+4096(ADDR),AES_MASK
 	vmovdqa		96+4096(ADDR),AES_AND_MASK
@@ -223,7 +281,14 @@ SM4_CBC_Encrypt:
 .Lcbc_dec16:
 
 	LOAD_DATA
-	SM4_CRYPT_BLOCK16
+	CHECK_GFNI %r9d %r10d
+	jl .Lcbc_dec_aesni
+.Lcbc_dec_gfni:
+	SM4_CRYPT_GFNI_BLOCK16
+	jmp .Lafter_cbc_dec
+.Lcbc_dec_aesni:
+	SM4_CRYPT_AESNI_BLOCK16
+.Lafter_cbc_dec:
 
 	vmovdqu		(IV),TMP0x
 	vmovdqu		(IN),TMP1x
@@ -348,7 +413,15 @@ SM4_ECB_Encrypt:
 .Lecb_enc16:
 
 	LOAD_DATA
-	SM4_CRYPT_BLOCK16
+
+	CHECK_GFNI %r12d %r13d
+	jl .Lecb_enc_aesni
+.Lecb_enc_gfni:
+	SM4_CRYPT_GFNI_BLOCK16
+	jmp .Lafter_ecb_enc
+.Lecb_enc_aesni:
+	SM4_CRYPT_AESNI_BLOCK16
+.Lafter_ecb_enc:
 	STORE_RESULTS
 
 	leaq	256(IN),IN
@@ -639,7 +712,14 @@ SM4_CFB128_Decrypt:
 	vmovdqu		160+16(IN),Y2
 	vmovdqu		192+16(IN),Y3
 
-	SM4_CRYPT_BLOCK16
+	CHECK_GFNI %r10d %r11d
+	jl .Lcfb128_dec_aesni
+.Lcfb128_dec_gfni:
+	SM4_CRYPT_GFNI_BLOCK16
+	jmp .Lafter_cfb128_dec
+.Lcfb128_dec_aesni:
+	SM4_CRYPT_AESNI_BLOCK16
+.Lafter_cfb128_dec:
 	XOR_DATA
 	STORE_RESULTS
 
@@ -964,7 +1044,15 @@ SM4_CTR_EncryptBlocks:
 .Lctr32_enc16:
 
 	LOAD_ECOUNT_BUF_ALL
-	SM4_CRYPT_BLOCK16
+	CHECK_GFNI %r9d %r10d
+	jl .Lctr32_enc_aesni
+.Lctr32_enc_gfni:
+	SM4_CRYPT_GFNI_BLOCK16
+	jmp .Lafter_ctr32_enc
+.Lctr32_enc_aesni:
+	SM4_CRYPT_AESNI_BLOCK16
+.Lafter_ctr32_enc:
+
 	XOR_DATA
 	STORE_RESULTS
 
@@ -1042,5 +1130,156 @@ SM4_CTR_EncryptBlocks:
 
 	ret
 	.size	SM4_CTR_EncryptBlocks, .-SM4_CTR_EncryptBlocks
+
+##### SM4-XTS #####
+
+.align	16
+.Lxts_tweak_mask:
+.long	0,0xe1000000
+
+.macro GALOIS_FIELD_MUL	Idx
+	xorq	LO_TMP,LO_TMP
+
+	testq	$1,LO
+	cmovnzq	TWEAK_MASK,LO_TMP
+	shrd	$1,HI,LO
+	shrq	$1,HI
+	xorq	LO_TMP,HI
+
+	movbe	HI,\Idx(TWEAK)
+	movbe	LO,\Idx+8(TWEAK)
+.endm
+
+.macro GALOIS_FIELD_MUL_16_INNER
+	GALOIS_FIELD_MUL 16
+	# T2:T1->T2
+	GALOIS_FIELD_MUL 32
+	# T3:T2->T3
+	GALOIS_FIELD_MUL 48
+	# T4:T3->T4
+	GALOIS_FIELD_MUL 64
+	# T5:T4->T5
+	GALOIS_FIELD_MUL 80
+	# T6:T5->T6
+	GALOIS_FIELD_MUL 96
+	# T7:T6->T7
+	GALOIS_FIELD_MUL 112
+	# T8:T7->T8
+	GALOIS_FIELD_MUL 128
+	# T9:T8->T9
+	GALOIS_FIELD_MUL 144
+	# T10:T9->T10
+	GALOIS_FIELD_MUL 160
+	# T11:T10->T11
+	GALOIS_FIELD_MUL 176
+	# T12:T11->T12
+	GALOIS_FIELD_MUL 192
+	# T13:T12->T13
+	GALOIS_FIELD_MUL 208
+	# T14:T13->T14
+	GALOIS_FIELD_MUL 224
+	# T15:T14->T15
+	GALOIS_FIELD_MUL 240
+.endm
+
+.macro XOR_TWEAK
+	vpxor	(TWEAK),X0,X0
+	vpxor	32(TWEAK),X1,X1
+	vpxor	64(TWEAK),X2,X2
+	vpxor	96(TWEAK),X3,X3
+	vpxor	128(TWEAK),Y0,Y0
+	vpxor	128+32(TWEAK),Y1,Y1
+	vpxor	128+64(TWEAK),Y2,Y2
+	vpxor	128+96(TWEAK),Y3,Y3
+.endm
+
+.macro SM4_XTS_16_EN_INNER
+	LOAD_DATA
+	XOR_TWEAK
+	CHECK_GFNI %r15d %r14d
+	jl .Lxts_enc_aesni
+.Lxts_enc_gfni:
+	SM4_CRYPT_GFNI_BLOCK16
+	jmp .Lafter_xts_enc
+.Lxts_enc_aesni:
+	SM4_CRYPT_AESNI_BLOCK16
+.Lafter_xts_enc:
+	XOR_TWEAK
+	STORE_RESULTS
+.endm
+
+	# void SM4_XTS_Encrypt_Blocks(const unsigned char *in, unsigned char *out, size_t len, const SM4_KEY *key, unsigned char *t)
+	# in		%rdi
+	# out		%rsi
+	# len		%rdx
+	# key		%rcx
+	# t			%r8
+	.globl	SM4_XTS_Encrypt_Blocks
+	.type	SM4_XTS_Encrypt_Blocks, @function
+	.align	64
+
+SM4_XTS_Encrypt_Blocks:
+
+	cmpq	$256,LEN
+	jl		.Lxts_ret
+
+	# Store Registers
+	subq	$56,%rsp
+	movq	%r9,(%rsp)
+	movq	%r10,8(%rsp)
+	movq	%r11,16(%rsp)
+	movq	%r12,24(%rsp)
+	movq	%r13,32(%rsp)
+	movq	%r14,40(%rsp)
+	movq	%r15,48(%rsp)
+
+	# Get Address
+	leaq	SBOX4X_MASK(%rip),ADDR
+
+	# Load tweak mask
+	movq	.Lxts_tweak_mask(%rip),TWEAK_MASK
+
+	# T0: Initial
+	movbe	(TWEAK),HI
+	movbe	8(TWEAK),LO
+
+.Lxts_update:
+
+	GALOIS_FIELD_MUL_16_INNER
+	SM4_XTS_16_EN_INNER
+
+	leaq	256(IN),IN
+	leaq	256(OUT),OUT
+	subq	$256,LEN
+	cmpq	$256,LEN
+	jl		.Lxts_final
+
+	# T15: Initial
+	movbe	240(TWEAK),HI
+	movbe	248(TWEAK),LO
+	# T0:T15->T0
+	GALOIS_FIELD_MUL 0
+
+	jmp		.Lxts_update
+
+.Lxts_final:
+
+	# Clear Context
+	vzeroall
+
+	# Restore Registers
+	movq	(%rsp),%r9
+	movq	8(%rsp),%r10
+	movq	16(%rsp),%r11
+	movq	24(%rsp),%r12
+	movq	32(%rsp),%r13
+	movq	40(%rsp),%r14
+	movq	48(%rsp),%r15
+	addq	$56,%rsp
+
+.Lxts_ret:
+
+	ret
+	.size	SM4_XTS_Encrypt_Blocks, .-SM4_XTS_Encrypt_Blocks
 
 #endif

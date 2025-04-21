@@ -17,31 +17,21 @@
 #ifdef HITLS_CRYPTO_BN
 
 #include <stdint.h>
+#include <string.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "bn_optimizer.h"
 
-static Chunk *NewChunk(void)
-{
-    Chunk *chunk = BSL_SAL_Malloc(sizeof(Chunk));
-    if (chunk == NULL) {
-        return NULL;
-    }
-    memset_s(chunk, sizeof(Chunk), 0, sizeof(Chunk));
-    return chunk;
-}
-
 BN_Optimizer *BN_OptimizerCreate(void)
 {
-    BN_Optimizer *opt = BSL_SAL_Malloc(sizeof(BN_Optimizer));
+    BN_Optimizer *opt = BSL_SAL_Calloc(1u, sizeof(BN_Optimizer));
     if (opt == NULL) {
         return NULL;
     }
-    memset_s(opt, sizeof(BN_Optimizer), 0, sizeof(BN_Optimizer));
-    opt->chunk = NewChunk();
-    if (opt->chunk == NULL) {
+    opt->curChunk = BSL_SAL_Calloc(1u, sizeof(Chunk));
+    if (opt->curChunk == NULL) {
         BSL_SAL_FREE(opt);
         return NULL;
     }
@@ -58,17 +48,36 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
     if (opt == NULL) {
         return;
     }
-    Chunk *head = opt->chunk;
-    while (head != NULL) {
-        for (uint32_t i = 0; i < CRYPT_OPTIMIZER_BN_NUM; i++) {
-            BSL_SAL_CleanseData((void *)(head->bigNums[i].data), head->bigNums[i].size * sizeof(BN_UINT));
-            BSL_SAL_FREE(head->bigNums[i].data);
+    Chunk *curChunk = opt->curChunk;
+    Chunk *nextChunk = curChunk->next;
+    Chunk *prevChunk = curChunk->prev;
+
+    while (nextChunk != NULL) {
+        for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
+            BSL_SAL_CleanseData((void *)(nextChunk->bigNums[i].data), nextChunk->bigNums[i].size * sizeof(BN_UINT));
+            BSL_SAL_FREE(nextChunk->bigNums[i].data);
         }
-        opt->chunk = opt->chunk->prev;
-        BSL_SAL_FREE(head);
-        head = opt->chunk;
+        Chunk *tmp = nextChunk->next;
+        BSL_SAL_Free(nextChunk);
+        nextChunk = tmp;
     }
-    BSL_SAL_FREE(opt);
+
+    while (prevChunk != NULL) {
+        for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
+            BSL_SAL_CleanseData((void *)(prevChunk->bigNums[i].data), prevChunk->bigNums[i].size * sizeof(BN_UINT));
+            BSL_SAL_FREE(prevChunk->bigNums[i].data);
+        }
+        Chunk *tmp = prevChunk->prev;
+        BSL_SAL_Free(prevChunk);
+        prevChunk = tmp;
+    }
+    // curChunk != NULL
+    for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
+        BSL_SAL_CleanseData((void *)(curChunk->bigNums[i].data), curChunk->bigNums[i].size * sizeof(BN_UINT));
+        BSL_SAL_FREE(curChunk->bigNums[i].data);
+    }
+    BSL_SAL_Free(curChunk);
+    BSL_SAL_Free(opt);
 }
 
 int32_t OptimizerStart(BN_Optimizer *opt)
@@ -80,54 +89,75 @@ int32_t OptimizerStart(BN_Optimizer *opt)
     BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_STACK_FULL);
     return CRYPT_BN_OPTIMIZER_STACK_FULL;
 }
-
 /* create a new room that has not been initialized */
-BN_BigNum *GetPresetBn(BN_Optimizer *opt)
+static BN_BigNum *GetPresetBn(BN_Optimizer *opt, Chunk *curChunk)
+{
+    if (curChunk->occupied != HITLS_CRYPT_OPTIMIZER_BN_NUM) {
+        curChunk->occupied++;
+        return &curChunk->bigNums[curChunk->occupied - 1];
+    }
+    if (curChunk->prev != NULL) {
+        opt->curChunk = curChunk->prev;
+        opt->curChunk->occupied++; // new chunk and occupied = 0;
+        return &opt->curChunk->bigNums[opt->curChunk->occupied - 1];
+    }
+    // We has used all chunks.
+    Chunk *newChunk = BSL_SAL_Calloc(1u, sizeof(Chunk));
+    if (newChunk == NULL) {
+        return NULL;
+    }
+    newChunk->next = curChunk;
+    curChunk->prev = newChunk;
+    opt->curChunk = newChunk;
+    newChunk->occupied++;
+    return &newChunk->bigNums[newChunk->occupied - 1];
+}
+
+static int32_t BnMake(BN_BigNum *r, uint32_t room)
+{
+    if (r->room < room) {
+        if (room > BITS_TO_BN_UNIT(BN_MAX_BITS)) {
+            BSL_ERR_PUSH_ERROR(CRYPT_BN_BITS_TOO_MAX);
+            return CRYPT_BN_BITS_TOO_MAX;
+        }
+        BN_UINT *tmp = (BN_UINT *)BSL_SAL_Calloc(1u, room * sizeof(BN_UINT));
+        if (tmp == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        if (r->size > 0) {
+            BSL_SAL_CleanseData(r->data, r->size * sizeof(BN_UINT));
+        }
+        BSL_SAL_FREE(r->data);
+        r->data = tmp;
+        r->room = room;
+    } else {
+        (void)memset_s(r->data, r->room * sizeof(BN_UINT), 0, r->room * sizeof(BN_UINT));
+    }
+    r->size = 0;
+    r->sign = false;
+    r->flag |= CRYPT_BN_FLAG_OPTIMIZER;
+    return CRYPT_SUCCESS;
+}
+/* create a BigNum and initialize to 0 */
+BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room)
 {
     if (opt->deep == 0) {
         return NULL;
     }
     if ((opt->used[opt->deep - 1] + 1) < opt->used[opt->deep - 1]) {
-        // reverse
+        // Avoid overflow
         return NULL;
     }
-    Chunk *chunk = opt->chunk;
-    if (chunk->size >= CRYPT_OPTIMIZER_BN_NUM) { /* expand it if it's not enough */
-        Chunk *newChunk = NewChunk(); /* create a chunk and use this chunk as the header of opt->chunk linked list */
-        if (newChunk == NULL) {
-            return NULL;
-        }
-        newChunk->prev = chunk;
-        chunk = newChunk;
-        opt->chunk = chunk;
-    }
-    chunk->size++;
-    opt->used[opt->deep - 1]++;
-
-    return &chunk->bigNums[chunk->size - 1];
-}
-
-static BN_BigNum *BnMake(BN_BigNum *r, uint32_t room)
-{
-    if (BnExtend(r, room) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    memset_s(r->data, r->room * sizeof(BN_UINT), 0, r->room * sizeof(BN_UINT));
-    r->size = 0;
-    BN_CLRNEG(r->flag);
-    r->flag |= CRYPT_BN_FLAG_OPTIMIZER;
-    return r;
-}
-
-/* create a BigNum and initialize to 0 */
-BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room)
-{
-    BN_BigNum *tmp = GetPresetBn(opt);
+    BN_BigNum *tmp = GetPresetBn(opt, opt->curChunk);
     if (tmp == NULL) {
         return NULL;
     }
-    return BnMake(tmp, room);
+    if (BnMake(tmp, room) != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    opt->used[opt->deep - 1]++;
+    return tmp;
 }
 
 void OptimizerEnd(BN_Optimizer *opt)
@@ -136,15 +166,25 @@ void OptimizerEnd(BN_Optimizer *opt)
         return;
     }
     opt->deep--;
-    uint32_t used = opt->used[opt->deep];
+    uint32_t usedNum = opt->used[opt->deep];
     opt->used[opt->deep] = 0;
-    Chunk *chunk = opt->chunk;
-
-    if (chunk->size >= used) {
-        opt->chunk->size -= used;
+    Chunk *curChunk = opt->curChunk;
+    if (usedNum <= curChunk->occupied) {
+        curChunk->occupied -= usedNum;
         return;
     }
-    opt->chunk->size = 0;
+    usedNum -= curChunk->occupied;
+    curChunk->occupied = 0;
+    while (usedNum >= HITLS_CRYPT_OPTIMIZER_BN_NUM) {
+        curChunk = curChunk->next;
+        curChunk->occupied = 0;
+        usedNum -= HITLS_CRYPT_OPTIMIZER_BN_NUM;
+    }
+    if (usedNum != 0) {
+        curChunk = curChunk->next;
+        curChunk->occupied = HITLS_CRYPT_OPTIMIZER_BN_NUM - usedNum;
+    }
+    opt->curChunk = curChunk;
     return;
 }
 #endif /* HITLS_CRYPTO_BN */

@@ -173,7 +173,22 @@
             "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE",
             "-DHITLS_CRYPTO_SHA1_SMALL_MEM",
             "-DHITLS_CRYPTO_SHA256_SMALL_MEM",
-            "-DHITLS_CRYPTO_SHA512_SMALL_MEM"
+            "-DHITLS_CRYPTO_SHA512_SMALL_MEM",
+            "-DHITLS_CRYPTO_ENTROPY_DEVRANDOM",
+            "-DHITLS_CRYPTO_ENTROPY_GETENTROPY",
+            "-DHITLS_CRYPTO_ENTROPY_SYS",
+            "-DHITLS_CRYPTO_ENTROPY_HARDWARE",
+            "-DHITLS_CRYPTO_ASM_CHECK",
+            "-DHITLS_CRYPTO_BN_COMBA",
+            "-DHITLS_CRYPTO_BN_SMALL_MEM",
+            "-DHITLS_CRYPTO_AES_PRECALC_TABLES",
+            "-DHITLS_CRYPTO_BN_RAND",
+            "-DHITLS_CRYPTO_BN_PRIME",
+            "-DHITLS_CRYPTO_DRBG_GM",
+            "-DHITLS_CRYPTO_RAND_CB",
+            "-DHITLS_CRYPTO_BN_CB",
+            "-DHITLS_CRYPTO_RSA_BSSA",
+            "-DHITLS_AARCH64_PACIASP"
         ],
         "CC_DEBUG_FLAGS": [
             "-g",
@@ -181,7 +196,9 @@
             "-gdwarf-2"
         ],
         "CC_USER_DEFINE_FLAGS": [
-            "-DHITLS_EAL_INIT_OPTS=n"
+            "-DHITLS_EAL_INIT_OPTS=n",
+            "-DHITLS_CRYPTO_DRBG_GM_LEVEL=n",
+            "-DHITLS_SEED_DRBG_INIT_RAND_ALG=n"
         ]
     },
     "linkFlag": {

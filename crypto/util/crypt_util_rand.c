@@ -15,17 +15,17 @@
 
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_DRBG) || defined(HITLS_CRYPTO_CURVE25519) || \
-    defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_BN)
+    defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_BN_RAND)
 
 #include <stdlib.h>
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "crypt_util_rand.h"
 
-static CRYPT_RandFunc g_randFunc = NULL;
-static CRYPT_RandFuncEx g_randFuncEx = NULL;
+static CRYPT_EAL_RandFunc g_randFunc = NULL;
+static CRYPT_EAL_RandFuncEx g_randFuncEx = NULL;
 
-void CRYPT_RandRegist(CRYPT_RandFunc func)
+void CRYPT_RandRegist(CRYPT_EAL_RandFunc func)
 {
     g_randFunc = func;
 }
@@ -43,7 +43,7 @@ int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen)
     return ret;
 }
 
-void CRYPT_RandRegistEx(CRYPT_RandFuncEx func)
+void CRYPT_RandRegistEx(CRYPT_EAL_RandFuncEx func)
 {
     g_randFuncEx = func;
 }
@@ -51,11 +51,14 @@ void CRYPT_RandRegistEx(CRYPT_RandFuncEx func)
 int32_t CRYPT_RandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
 {
 #if defined(HITLS_CRYPTO_PROVIDER)
-    if (g_randFuncEx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NO_REGIST_RAND);
-        return CRYPT_NO_REGIST_RAND;
+    int32_t ret = 0;
+    if (g_randFuncEx != NULL) {
+        ret = g_randFuncEx(libCtx, rand, randLen);
+    } else if (g_randFunc != NULL) {
+        ret = g_randFunc(rand, randLen);
+    } else {
+        ret = CRYPT_NO_REGIST_RAND;
     }
-    int32_t ret = g_randFuncEx(libCtx, rand, randLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

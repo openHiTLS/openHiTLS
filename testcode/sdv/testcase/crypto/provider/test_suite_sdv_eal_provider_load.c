@@ -199,7 +199,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC002(void)
     ret = memset_s(overpath, PATH_EXCEED, 'a', PATH_EXCEED - 1);
     ASSERT_EQ(ret, 0);
     ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, overpath);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
     BSL_SAL_Free(overpath);
 
 EXIT:
@@ -761,7 +761,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     // Test getting group capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback,
         &groupCount), CRYPT_SUCCESS);
-    ASSERT_EQ(groupCount, 13);
+    ASSERT_EQ(groupCount, 16);
 
     // Test getting signature algorithm capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback,
@@ -1027,7 +1027,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int
     int sigAlgCount = 0;
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP,
         (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
-    ASSERT_EQ(groupCount, 1);
+    ASSERT_EQ(groupCount, 2);
 
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP,
         (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback, &sigAlgCount), CRYPT_SUCCESS);

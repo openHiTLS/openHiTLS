@@ -175,44 +175,64 @@ static const uint32_t XBOX_3[] = {
     0x9d78e5e5, 0x56edbbbb, 0x235e7d7d, 0xc63ef8f8, 0x8bd45f5f, 0xe7c82f2f, 0xdd39e4e4, 0x68492121,
 };
 
+
+/**
+ * TE(a,b,c,d) = LE(SBOX[a],SBOX[b],SBOX[c],SBOX[d])
+ *             = LE(SBOX[a],0,0,0)⊕LE(0,SBOX[b],0,0)⊕LE(0,0,SBOX[c],0)⊕LE(0,0,0,SBOX[d])
+ *             = LE(SBOX[a] << 24)⊕LE(SBOX[b] << 16)⊕LE(SBOX[c] << 8)⊕LE(SBOX[d])
+ *             = LE(SBOX[a] <<< 24)⊕LE(SBOX[b] <<< 16)⊕LE(SBOX[c] <<< 8)⊕LE(SBOX[d])
+ *             = (LE(SBOX[a]) <<< 24)⊕(LE(SBOX[b]) <<< 16)⊕(LE(SBOX[c]) <<< 8)⊕LE(SBOX[d])
+ *             = (XBOX_0[a] <<< 24)⊕(XBOX_0[b] <<< 16)⊕(XBOX_0[c] <<< 8)⊕XBOX_0[d]
+ *             = XBOX_3[a]⊕XBOX_2[b]⊕XBOX_1[c]⊕XBOX_0[d]
+ * F(Xi,Xi+1,Xi+2,Xi+3,rki) = Xi⊕TE(Xi+1⊕Xi+2⊕Xi+3⊕rki)
+ */
+#define CRYPT_SM4_ROUND(t, x0, x1, x2, x3, rk, sbox)   \
+    do {                                     \
+        (t) = (x1) ^ (x2) ^ (x3) ^ (rk);     \
+        (x0) ^= (sbox##_3)[((t) >> 24) & 0xff]; \
+        (x0) ^= (sbox##_2)[((t) >> 16) & 0xff]; \
+        (x0) ^= (sbox##_1)[((t) >> 8) & 0xff];  \
+        (x0) ^= (sbox##_0)[(t) & 0xff];       \
+    } while (0)
+
 /* X(i+4) = F(Xi Xi+1 Xi+2 Xi+3 rk[i]),i = 0,1,...,31; */
 #define ENC_ROUND_FUNCTION(t, x0, x1, x2, x3, roundKey, sbox)           \
     for (int i = 0; i < 32; i += 4) {                                   \
-        ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) + 0], sbox);  \
-        ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) + 1], sbox);  \
-        ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) + 2], sbox);  \
-        ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 3], sbox);  \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) + 0], sbox);  \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) + 1], sbox);  \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) + 2], sbox);  \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 3], sbox);  \
     }
 
 /* X(i+4) = F(Xi Xi+1 Xi+2 Xi+3 rk[31 - i]),i = 0,1,...,31; */
 #define DEC_ROUND_FUNCTION(t, x0, x1, x2, x3, roundKey, sbox)           \
     for (int i = 28; i >= 0; i -= 4) {                                  \
-        ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) + 3], sbox);  \
-        ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) + 2], sbox);  \
-        ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) + 1], sbox);  \
-        ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 0], sbox);  \
+        CRYPT_SM4_ROUND((t), (x0), (x1), (x2), (x3), (roundKey)[(i) + 3], sbox);  \
+        CRYPT_SM4_ROUND((t), (x1), (x2), (x3), (x0), (roundKey)[(i) + 2], sbox);  \
+        CRYPT_SM4_ROUND((t), (x2), (x3), (x0), (x1), (roundKey)[(i) + 1], sbox);  \
+        CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 0], sbox);  \
     }
 
 /* enc is true: encrypt, enc is false: decrypt */
 static void SM4_Crypt(uint8_t *out, const uint8_t *in, const uint32_t *rk, uint32_t x[5], bool enc)
 {
-    x[0] = GET_UINT32_BE(in, 0);
-    x[1] = GET_UINT32_BE(in, 4);
-    x[2] = GET_UINT32_BE(in, 8);
-    x[3] = GET_UINT32_BE(in, 12);
+    x[0] = GET_UINT32_BE(in, 0);  // x[0]: 4 bytes starting from index 0 of the in
+    x[1] = GET_UINT32_BE(in, 4);  // x[1]: 4 bytes starting from index 4 of the in
+    x[2] = GET_UINT32_BE(in, 8);  // x[2]: 4 bytes starting from index 8 of the in
+    x[3] = GET_UINT32_BE(in, 12); // x[3]: 4 bytes starting from index 12 of the in
 
     /* Round function */
     if (enc) {
-        ENC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);
+        ENC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Encryption
     } else {
-        DEC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);
+        DEC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Decryption
     }
 
     /* Reverse R(X32 X33 X34 X35) = (X35 X34 X33 X32) */
-    PUT_UINT32_BE(x[3], out, 0);
-    PUT_UINT32_BE(x[2], out, 4);
-    PUT_UINT32_BE(x[1], out, 8);
-    PUT_UINT32_BE(x[0], out, 12);
+    PUT_UINT32_BE(x[3], out, 0);  // x[3] put into the 4 bytes starting from index 0 of the out
+    PUT_UINT32_BE(x[2], out, 4);  // x[2] put into the 4 bytes starting from index 4 of the out
+    PUT_UINT32_BE(x[1], out, 8);  // x[1] put into the 4 bytes starting from index 8 of the out
+    PUT_UINT32_BE(x[0], out, 12); // x[0] put into the 4 bytes starting from index 12 of the out
 }
 
 static int32_t CRYPT_SM4_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t length, bool enc)
@@ -223,11 +243,11 @@ static int32_t CRYPT_SM4_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *o
     }
 
     if (length % CRYPT_SM4_BLOCKSIZE != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_DATALEN_ERROR);
-        return CRYPT_SM4_DATALEN_ERROR;
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_MSG_LEN);
+        return CRYPT_SM4_ERR_MSG_LEN;
     }
 
-    uint32_t x[5];
+    uint32_t x[5];          // Used as a temporary variable.
     uint32_t blocks = length / CRYPT_SM4_BLOCKSIZE;
     for (uint32_t i = 0; i < blocks; i++) {
         SM4_Crypt(out + i * CRYPT_SM4_BLOCKSIZE, in + i * CRYPT_SM4_BLOCKSIZE, ctx->rk, x, enc);

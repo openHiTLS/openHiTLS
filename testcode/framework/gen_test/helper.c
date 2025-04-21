@@ -973,20 +973,12 @@ static bool IsSuite(char *buf, uint32_t bufLen)
     return true;
 }
 
-static void FileClose(FILE *file)
-{
-    if (file != NULL) {
-        (void)fclose(file);
-    }
-}
-
 static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, TestSuiteResult *result, int resultLen)
 {
     struct dirent *dir = NULL;
     int suiteCount = 0;
     int cur;
     DIR *localLogDir = logDir;
-    int err = 1;
 
     // Stores the execution results of all test cases.
     FILE *fpAllLog = OpenFile("result.log", "w+", "%s");
@@ -1003,25 +995,32 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
         }
         // len of ".log" is 4
         if (strlen(dir->d_name) <= 4 || strlen(dir->d_name) > MAX_FILE_PATH_LEN - 1) {
-            goto EXIT;
+            (void)fclose(fpAllLog);
+            return 1;
         }
         fpLog = OpenFile(dir->d_name, "r", LOG_FILE_FORMAT);
         if (fpLog == NULL) {
-            goto EXIT;
+            (void)fclose(fpAllLog);
+            return 1;
         }
         if (suiteCount >= resultLen) {
             Print("Reached maximum suite count\n");
-            goto EXIT;
+            (void)fclose(fpLog);
+            (void)fclose(fpAllLog);
+            return 1;
         }
 
         if (strcpy_s(result[suiteCount].name, MAX_TEST_FUNCTION_NAME - 1, dir->d_name) != EOK) {
             Print("Dir's Name is too long\n");
-            goto EXIT;
+            (void)fclose(fpLog);
+            (void)fclose(fpAllLog);
+            return 1;
         }
         // len of ".log" is 4
         result[suiteCount].name[strlen(dir->d_name) - 4] = '\0';
         result[suiteCount].total = 0;
         result[suiteCount].pass = 0;
+        result[suiteCount].skip = 0;
         result[suiteCount].line = 0;
 
         while (ReadLine(fpLog, buf, bufLen, 0, 0) == 0) {
@@ -1037,11 +1036,15 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
             }
             if (buf[cur] == '\0') {
                 Print("Read log file %s failed\n", dir->d_name);
-                goto EXIT;
+                (void)fclose(fpLog);
+                (void)fclose(fpAllLog);
+                return 1;
             }
             if (strncpy_s(testCaseName, sizeof(testCaseName) - 1, buf, cur) != EOK) {
                 Print("TestCaseName is too long\n");
-                goto EXIT;
+                (void)fclose(fpLog);
+                (void)fclose(fpAllLog);
+                return 1;
             }
             testCaseName[cur] = '\0';
             while (buf[cur] == '.') {
@@ -1068,22 +1071,18 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
         }
         suiteCount++;
         cur = 0;
-        FileClose(fpLog);
-        fpLog = NULL;
+        (void)fclose(fpLog);
     }
     *totalSuiteCount = suiteCount;
-    err = 0;
-
-EXIT:
-    FileClose(fpLog);
-    FileClose(fpAllLog);
-    return err;
+    (void)fclose(fpAllLog);
+    return 0;
 }
 
 static int GenResultFile(FILE *in, FILE *out, TestSuiteResult result[MAX_SUITE_COUNT], int testSuiteCount)
 {
     int totalTests = 0;
     int totalPass = 0;
+    int totalSkip = 0;
 
     if (testSuiteCount >= MAX_SUITE_COUNT) {
         Print("suites count too great\n");
@@ -1093,15 +1092,18 @@ static int GenResultFile(FILE *in, FILE *out, TestSuiteResult result[MAX_SUITE_C
     for (int i = 0; i < testSuiteCount; i++) {
         totalTests += result[i].total;
         totalPass += result[i].pass;
+        totalSkip += result[i].skip;
     }
     (void)fprintf(out, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    (void)fprintf(out, "<testsuites tests=\"%d\" failures=\"%d\" disabled=\"0\" errors=\"0\" ", totalTests,
-        totalTests - totalPass);
+    (void)fprintf(out, "<testsuites tests=\"%d\" failures=\"%d\" disabled=\"%d\" errors=\"0\" ", totalTests,
+        totalTests - totalPass - totalSkip, totalSkip);
     (void)fprintf(out, "timestamp=\"0000-00-00T00:00:00\" time=\"0\" name=\"AllTests\">\n");
 
     for (int i = 0; i < testSuiteCount; i++) {
-        (void)fprintf(out, "  <testsuite name=\"%s\" tests=\"%d\" failures=\"%d\" ", result[i].name, result[i].total,
-            result[i].total - result[i].pass);
+        (void)fprintf(out,
+            "  <testsuite name=\"%s\" tests=\"%d\" skips = \"%d\" failures=\"%d\" ",
+            result[i].name, result[i].total, result[i].skip,
+            result[i].total - result[i].pass - result[i].skip);
         (void)fprintf(out, "disabled=\"0\" errors=\"0\" time=\"0\">\n");
 
         for (int j = 0; j < result[i].line; j++) {

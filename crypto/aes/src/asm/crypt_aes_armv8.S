@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_AES
 
+#include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 .file    "crypt_aes_armv8.S"
 .text
@@ -63,7 +64,7 @@ RDK1    .req    v18
 .align  5
 CRYPT_AES_Encrypt:
 .ecb_aesenc_start:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-16]!
     add x29, sp, #0
 
@@ -75,7 +76,7 @@ CRYPT_AES_Encrypt:
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
     ldp x29, x30, [sp], #16
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   CRYPT_AES_Encrypt, .-CRYPT_AES_Encrypt
 
@@ -90,7 +91,7 @@ CRYPT_AES_Encrypt:
 .align  5
 CRYPT_AES_Decrypt:
 .ecb_aesdec_start:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-16]!
     add x29, sp, #0
 
@@ -102,7 +103,7 @@ CRYPT_AES_Decrypt:
     eor RDK0.16b, RDK0.16b, RDK0.16b
     eor RDK1.16b, RDK1.16b, RDK1.16b
     ldp x29, x30, [sp], #16
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   CRYPT_AES_Decrypt, .-CRYPT_AES_Decrypt
 
@@ -116,7 +117,7 @@ CRYPT_AES_Decrypt:
 .align  5
 SetEncryptKey128:
 .Lenc_key_128:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-64]!
     add x29, sp, #0
     stp x25, x26, [sp, #16]
@@ -158,7 +159,7 @@ SetEncryptKey128:
     ldp x23, x24, [sp, #32]
     ldp x25, x26, [sp, #16]
     ldp x29, x30, [sp], #64             // Pop stack completed.
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   SetEncryptKey128, .-SetEncryptKey128
 
@@ -172,7 +173,7 @@ SetEncryptKey128:
 .type   SetDecryptKey128, %function
 .align 5
 SetDecryptKey128:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-32]!
     add x29, sp, #0
     stp x25, x28, [sp, #16]             // Register push stack completed.
@@ -191,7 +192,7 @@ SetDecryptKey128:
     eor x0, x0, x0
     ldp x25, x28, [sp, #16]
     ldp x29, x30, [sp], #32             // Stacking completed.
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   SetDecryptKey128, .-SetDecryptKey128
 
@@ -206,7 +207,7 @@ SetDecryptKey128:
 .align 5
 SetEncryptKey192:
 .Lenc_key_192:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-64]!
     add x29, sp, #0
     stp x25, x26, [sp, #16]
@@ -254,7 +255,7 @@ SetEncryptKey192:
     ldp x23, x24, [sp, #32]
     ldp x25, x26, [sp, #16]
     ldp x29, x30, [sp], #64             // Stacking completed.
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   SetEncryptKey192, .-SetEncryptKey192
 
@@ -268,7 +269,7 @@ SetEncryptKey192:
 .type   SetDecryptKey192, %function
 .align 5
 SetDecryptKey192:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-32]!
     add x29, sp, #0
     stp x25, x28, [sp, #16]             // Register is stacked.
@@ -293,7 +294,7 @@ SetDecryptKey192:
     eor x0, x0, x0
     ldp x25, x28, [sp, #16]
     ldp x29, x30, [sp], #32             // Stacking completed.
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   SetDecryptKey192, .-SetDecryptKey192
 
@@ -307,7 +308,7 @@ SetDecryptKey192:
 .align 5
 SetEncryptKey256:
 .Lenc_key_256:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-64]!
     add x29, sp, #0
     stp x25, x26, [sp, #16]
@@ -377,7 +378,7 @@ SetEncryptKey256:
     ldp x23, x24, [sp, #32]
     ldp x25, x26, [sp, #16]
     ldp x29, x30, [sp], #64             // Stacking completed.
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   SetEncryptKey256, .-SetEncryptKey256
 
@@ -390,7 +391,7 @@ SetEncryptKey256:
 .type   SetDecryptKey256, %function
 .align 5
 SetDecryptKey256:
-.inst 0xd503233f  // paciasp
+AARCH64_PACIASP
     stp x29, x30, [sp, #-32]!
     add x29, sp, #0
     stp x25, x28, [sp, #16]
@@ -421,7 +422,7 @@ SetDecryptKey256:
     eor x0, x0, x0
     ldp x25, x28, [sp, #16]
     ldp x29, x30, [sp], #32             // Stack has been popped.
-.inst 0xd50323bf  // autiasp
+AARCH64_AUTIASP
     ret
 .size   SetDecryptKey256, .-SetDecryptKey256
 

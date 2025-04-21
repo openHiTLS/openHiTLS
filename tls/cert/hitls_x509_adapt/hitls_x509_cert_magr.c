@@ -70,8 +70,8 @@ HITLS_CERT_X509 *HITLS_CERT_ProviderCertParse(HITLS_Lib_Ctx *libCtx, const char 
             ret = HITLS_X509_ProviderCertParseBuff(libCtx, attrName, format, &encodedCert, &cert);
             break;
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
-            ret = HITLS_X509_ADAPT_UNSUPPORT_FORMAT;
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT);
+            ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
             break;
     }
     if (ret != HITLS_SUCCESS) {
@@ -185,8 +185,8 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
             break;
 #endif
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
-            return HITLS_X509_ADAPT_ERR;
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);
+            return HITLS_CERT_SELF_ADAPT_ERR;
     }
     int32_t ret = HITLS_X509_CertCtrl(cert, x509Cmd, output, valLen);
     if (ret != HITLS_SUCCESS) {

@@ -588,7 +588,7 @@ static void ECP_Sm2PointAddJacob(P256_Point *r, const P256_Point *a, const P256_
     ECP_Sm2Sub(r->y.value, T3, T1);                  /* Y3 = T3 - T1 */
 }
 
-void ECP_Sm2PointAddAffine(P256_Point *r, const P256_Point *a, const P256_AffinePoint *b)
+void Sm2PointAddAffine(P256_Point *r, const P256_Point *a, const P256_AffinePoint *b)
 {
     unsigned int i;
     BN_UINT T1[P256_SIZE] __attribute__((aligned(32))) = {0};
@@ -649,7 +649,7 @@ void ECP_Sm2PointAddAffine(P256_Point *r, const P256_Point *a, const P256_Affine
 }
 
 // Jacobian add affine
-int32_t ECP_Sm2PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
+int32_t ECP_Sm2PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
     if (para == NULL || r == NULL || a == NULL || b == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -664,7 +664,7 @@ int32_t ECP_Sm2PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, 
     GOTO_ERR_IF_EX(ECP_Sm2Point2Array(&ina, a), ret);
     GOTO_ERR_IF_EX(ECP_Sm2Point2Array(&inb, b), ret);
     GOTO_ERR_IF_EX(ECP_Sm2GetAffine(&affb, &inb), ret);
-    ECP_Sm2PointAddAffine(&re, &ina, &affb);
+    Sm2PointAddAffine(&re, &ina, &affb);
     GOTO_ERR_IF_EX(ECP_Sm2Array2Point(r, &re), ret);
 ERR:
     return ret;
@@ -696,7 +696,7 @@ void ECP_Sm2ScalarMulG(P256_Point *r, const BN_UINT *k)
 #else
             index = index * 16; // 1 point has 64 bytes, which is 8*8 bytes
 #endif
-            ECP_Sm2PointAddAffine(r, r, (const P256_AffinePoint *)&precompute[index]);
+            Sm2PointAddAffine(r, r, (const P256_AffinePoint *)&precompute[index]);
         }
     }
 }
@@ -709,21 +709,21 @@ int32_t ECP_Sm2WindowedMul(P256_Point *r, const BN_UINT *k, P256_AffinePoint *a)
 
     BSL_SAL_CleanseData(r, sizeof(P256_Point));
 
-    ECP_Sm2PointAddAffine(&precomputed[1], r, a);
+    Sm2PointAddAffine(&precomputed[1], r, a);
     ECP_Sm2PointDbl(&precomputed[2], &precomputed[1]);
-    ECP_Sm2PointAddAffine(&precomputed[3], &precomputed[2], a);
+    Sm2PointAddAffine(&precomputed[3], &precomputed[2], a);
     ECP_Sm2PointDbl(&precomputed[4], &precomputed[2]);
-    ECP_Sm2PointAddAffine(&precomputed[5], &precomputed[4], a);
+    Sm2PointAddAffine(&precomputed[5], &precomputed[4], a);
     ECP_Sm2PointDbl(&precomputed[6], &precomputed[3]);
-    ECP_Sm2PointAddAffine(&precomputed[7], &precomputed[6], a);
+    Sm2PointAddAffine(&precomputed[7], &precomputed[6], a);
     ECP_Sm2PointDbl(&precomputed[8], &precomputed[4]);
-    ECP_Sm2PointAddAffine(&precomputed[9], &precomputed[8], a);
+    Sm2PointAddAffine(&precomputed[9], &precomputed[8], a);
     ECP_Sm2PointDbl(&precomputed[10], &precomputed[5]);
-    ECP_Sm2PointAddAffine(&precomputed[11], &precomputed[10], a);
+    Sm2PointAddAffine(&precomputed[11], &precomputed[10], a);
     ECP_Sm2PointDbl(&precomputed[12], &precomputed[6]);
-    ECP_Sm2PointAddAffine(&precomputed[13], &precomputed[12], a);
+    Sm2PointAddAffine(&precomputed[13], &precomputed[12], a);
     ECP_Sm2PointDbl(&precomputed[14], &precomputed[7]);
-    ECP_Sm2PointAddAffine(&precomputed[15], &precomputed[14], a);
+    Sm2PointAddAffine(&precomputed[15], &precomputed[14], a);
 
     for (i = 63; i >= 0; --i) {
 #if defined(HITLS_SIXTY_FOUR_BITS)
@@ -784,6 +784,74 @@ int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, c
         GOTO_ERR_IF_EX(ECP_Sm2Array2Point(r, &re), ret);
     }
 
+ERR:
+    return ret;
+}
+
+int32_t ECP_Sm2PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
+{
+    return ECP_Sm2PointMul(para, r, k, pt);
+}
+
+int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
+{
+    return ECP_ModOrderInv(para, r, a);
+}
+
+static int32_t ECP_Sm2PointMulAddCheck(
+    ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
+{
+    if (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (para->id != CRYPT_ECC_SM2 || r->id != CRYPT_ECC_SM2 || pt->id != CRYPT_ECC_SM2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
+    }
+    // Special processing of the infinite point.
+    if (BN_IsZero(pt->z)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
+        return CRYPT_ECC_POINT_AT_INFINITY;
+    }
+    if (BN_Bits(k1) > P256_BITS || BN_Bits(k2) > P256_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t ECP_Sm2PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
+{
+    int32_t ret = ECP_Sm2PointMulAddCheck(para, r, k1, k2, pt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    BN_UINT k1Uint[P256_SIZE] = {0};
+    BN_UINT k2Uint[P256_SIZE] = {0};
+    uint32_t k1Len = P256_SIZE;
+    uint32_t k2Len = P256_SIZE;
+    P256_Point k1G = {0};
+    P256_Point k2Pt = {0};
+    P256_Point sm2Pt = {0};
+    P256_AffinePoint affinePoint = {0};
+#if defined(HITLS_SIXTY_FOUR_BITS)
+    GOTO_ERR_IF_EX(BN_Bn2U64Array(k1, k1Uint, &k1Len), ret);
+    GOTO_ERR_IF_EX(BN_Bn2U64Array(k2, k2Uint, &k2Len), ret);
+#else
+    GOTO_ERR_IF_EX(BN_BN2Array(k1, k1Uint, k1Len), ret);
+    GOTO_ERR_IF_EX(BN_BN2Array(k2, k2Uint, k2Len), ret);
+#endif
+    GOTO_ERR_IF_EX(ECP_Sm2Point2Array(&sm2Pt, pt), ret);
+    GOTO_ERR_IF_EX(ECP_Sm2GetAffine(&affinePoint, &sm2Pt), ret);
+
+    // k1 * G
+    ECP_Sm2ScalarMulG(&k1G, k1Uint);
+    // k2 * pt
+    ECP_Sm2WindowedMul(&k2Pt, k2Uint, &affinePoint);
+    ECP_Sm2PointAddJacob(&k2Pt, &k1G, &k2Pt);
+    GOTO_ERR_IF_EX(ECP_Sm2Array2Point(r, &k2Pt), ret);
 ERR:
     return ret;
 }

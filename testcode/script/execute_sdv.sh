@@ -246,6 +246,7 @@ parse_option()
 
 run_demos()
 {
+    exit_code=$?
     pushd ${HITLS_ROOT_DIR}/testcode/demo/build
     executales=$(find ./ -maxdepth 1 -type f -perm -a=x )
     for e in $executales
@@ -253,13 +254,25 @@ run_demos()
         if [[ ! "$e" == *"client"* ]] && [[ ! "$e" == *"server"* ]]; then
             echo "${e} start"
             eval "${e}"
+            if [ $exit_code -ne 0 ]; then
+                echo "Demo ${e} failed"
+                exit 1
+            fi
         fi
     done
 
     # run server and client in order.
     ./server &
+    if [ $exit_code -ne 0 ]; then
+        echo "Demo ${e} failed"
+        exit 1
+    fi
     sleep 1
     ./client
+    if [ $exit_code -ne 0 ]; then
+        echo "Demo ${e} failed"
+        exit 1
+    fi
     popd
 }
 

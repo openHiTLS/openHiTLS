@@ -105,7 +105,7 @@ int32_t HITLS_X509_CrlParseFile(int32_t format, const char *path, HITLS_X509_Crl
  * @param crllist       [OUT] CRL list after parse.
  * @return Error code
  */
-int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X509_List **crllist);
+int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X509_List **crlList);
 
 /**
  * @ingroup pki

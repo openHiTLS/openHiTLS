@@ -75,6 +75,14 @@ void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
 
 /**
  * @ingroup pki
+ * @brief Free a general name.
+ *
+ * @param data [IN] The general name.
+ */
+void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data);
+
+/**
+ * @ingroup pki
  * @brief New a list of distinguish name, the item is HITLS_X509_NameNode.
  * @attention You need to HITLS_X509_DnListFree to free list, after the end of use
  *
@@ -102,7 +110,7 @@ void HITLS_X509_DnListFree(BslList *dnList);
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, int32_t size);
+int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t size);
 
 /**
  * @ingroup pki

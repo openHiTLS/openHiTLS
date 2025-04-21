@@ -16,13 +16,13 @@
 #define CRYPT_EALINIT_H
  
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_ASM_CHECK
 #include <stdint.h>
  
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
  
-#ifdef HITLS_CRYPTO_ASM_CHECK
 /**
  * @ingroup crypt_asmcap
  * @brief Check cpu capability for assembly implementation
@@ -73,9 +73,9 @@ int32_t CRYPT_ASMCAP_Mac(CRYPT_MAC_AlgId id);
 */
 int32_t CRYPT_ASMCAP_Drbg(CRYPT_RAND_AlgId id);
  
-#endif // HITLS_CRYPTO_ASM_CHECK
  
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+#endif // HITLS_CRYPTO_ASM_CHECK
 #endif // CRYPT_EALINIT_H

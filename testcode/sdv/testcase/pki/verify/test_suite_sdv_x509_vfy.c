@@ -255,35 +255,29 @@ static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, H
 /* BEGIN_CASE */
 void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *cert, char *crlPath)
 {
+    TestMemInit();
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *root = NULL;
-    int32_t ret = HITLS_AddCertToStoreTest(rootPath, store, &root);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_AddCertToStoreTest(rootPath, store, &root), HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *ca = NULL;
-    ret = HITLS_AddCertToStoreTest(caPath, store, &ca);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_AddCertToStoreTest(caPath, store, &ca), HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *entity = NULL;
-    ret = HITLS_AddCertToStoreTest(cert, store, &entity);
-    ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
+
+    ASSERT_TRUE(HITLS_AddCertToStoreTest(cert, store, &entity) != HITLS_PKI_SUCCESS);
     HITLS_X509_Crl *crl = NULL;
-    ret = HITLS_AddCrlToStoreTest(crlPath, store, &crl);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_AddCrlToStoreTest(crlPath, store, &crl), HITLS_PKI_SUCCESS);
     
     ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
     HITLS_X509_List *chain = NULL;
-    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
-    ASSERT_TRUE(ret == HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(HITLS_X509_CertChainBuild(store, false, entity, &chain) == HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
     int64_t timeval = time(NULL);
-    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval)), 0);
     int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
-    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag));
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -508,6 +502,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008(char *rootPath, char *caPath, char *cert, char *rootcrlpath, char *cacrlpath, int flag, int except)
 {
+    TestMemInit();
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *root = NULL;
@@ -577,7 +572,6 @@ void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC009(void)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = BSL_LIST_AddElementInt(chain, NULL, BSL_LIST_POS_BEGIN);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
 EXIT:
@@ -641,7 +635,7 @@ void SDV_X509_SM2_CERT_USERID_FUNC_TC001(char *caCertPath, char *interCertPath, 
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entityCert), 0);
     ASSERT_EQ(BSL_LIST_COUNT(storeCtx->store), 2);
     if (isUseDefaultUserId != 0) {
-        ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VEY_SM2_USERID, sm2DefaultUserid,
+        ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VFY_SM2_USERID, sm2DefaultUserid,
             strlen(sm2DefaultUserid)), 0);
     }
     ASSERT_EQ(HITLS_X509_CertChainBuild(storeCtx, false, entityCert, &chain), 0);

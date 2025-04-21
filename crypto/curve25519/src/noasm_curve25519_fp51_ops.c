@@ -399,7 +399,7 @@ void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
 
 #else
 
-void FpMulScalar(Fp25 *out, const Fp25 *p, const int32_t scalar)
+void FpMulScalar(Fp25 out, const Fp25 p, const int32_t scalar)
 {
     int64_t s = (int64_t)scalar;
     uint64_t over;
@@ -410,7 +410,7 @@ void FpMulScalar(Fp25 *out, const Fp25 *p, const int32_t scalar)
     uint64_t signMask2;
 
     /* Could be more than 32 bits but not be more than 64 bits */
-    CURVE25519_FP_MUL_SCALAR(result, p->data, s);
+    CURVE25519_FP_MUL_SCALAR(result, p, s);
 
     /* Process Carry */
     /* the radix 2^25.5 representation:
@@ -459,16 +459,16 @@ void FpMulScalar(Fp25 *out, const Fp25 *p, const int32_t scalar)
     PROCESS_CARRY(result[8], result[9], signMask2, over, 25);
 
     /* The result would not be more than 32 bits */
-    out->data[0] = (int32_t)result[0];
-    out->data[1] = (int32_t)result[1];
-    out->data[2] = (int32_t)result[2];
-    out->data[3] = (int32_t)result[3];
-    out->data[4] = (int32_t)result[4];
-    out->data[5] = (int32_t)result[5];
-    out->data[6] = (int32_t)result[6];
-    out->data[7] = (int32_t)result[7];
-    out->data[8] = (int32_t)result[8];
-    out->data[9] = (int32_t)result[9];
+    out[0] = (int32_t)result[0]; // 0
+    out[1] = (int32_t)result[1]; // 1
+    out[2] = (int32_t)result[2]; // 2
+    out[3] = (int32_t)result[3]; // 3
+    out[4] = (int32_t)result[4]; // 4
+    out[5] = (int32_t)result[5]; // 5
+    out[6] = (int32_t)result[6]; // 6
+    out[7] = (int32_t)result[7]; // 7
+    out[8] = (int32_t)result[8]; // 8
+    out[9] = (int32_t)result[9]; // 9
 
     (void)memset_s(result, sizeof(result), 0, sizeof(result));
 }
@@ -485,12 +485,12 @@ void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
     /* Decord the scalar into k */
     CURVE25519_DECODE_LITTLE_ENDIAN(k, scalar);
 
-    /* Reference RFC 7748 section 5: The constant a24 is (486662 - 2) / 4 = 121665 for curve25519/X25519 */
-    DataToPolynomial(&x1, u);
-    CURVE25519_FP_SET(x2.data, 1);
-    CURVE25519_FP_SET(z2.data, 0);
-    CURVE25519_FP_COPY(x3.data, x1.data);
-    CURVE25519_FP_SET(z3.data, 1);
+    /* Reference RFC 7748 section 5：The constant a24 is (486662 - 2) / 4 = 121665 for curve25519/X25519 */
+    DataToPolynomial(x1, u);
+    CURVE25519_FP_SET(x2, 1);
+    CURVE25519_FP_SET(z2, 0);
+    CURVE25519_FP_COPY(x3, x1);
+    CURVE25519_FP_SET(z3, 1);
     swap = 0;
 
     /* "bits" parameter set to 255 for x25519  */ /* For t = bits-1(254) down to 0: */
@@ -498,37 +498,37 @@ void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
         /* t >> 3: calculation the index of bit; t & 7: Obtains the corresponding bit in the byte */
         kTemp = (k[(uint32_t)t >> 3] >> ((uint32_t)t & 7)) & 1;           /* kTemp = (k >> t) & 1 */
         swap ^= kTemp;                                /* swap ^= kTemp */
-        CURVE25519_FP_CSWAP(swap, x2.data, x3.data);  /* (x_2, x_3) = cswap(swap, x_2, x_3) */
-        CURVE25519_FP_CSWAP(swap, z2.data, z3.data);  /* (z_2, z_3) = cswap(swap, z_2, z_3) */
+        CURVE25519_FP_CSWAP(swap, x2, x3);  /* (x_2, x_3) = cswap(swap, x_2, x_3) */
+        CURVE25519_FP_CSWAP(swap, z2, z3);  /* (z_2, z_3) = cswap(swap, z_2, z_3) */
         swap = kTemp;                                 /* swap = kTemp */
-        CURVE25519_FP_ADD(t1.data, x2.data, z2.data);                /* t1 = A */
-        CURVE25519_FP_SUB(t2.data, x2.data, z2.data);                /* t2 = B */
-        CURVE25519_FP_ADD(x2.data, x3.data, z3.data);                /* x2 = C */
-        CURVE25519_FP_SUB(x3.data, x3.data, z3.data);                /* x3 = D */
-        FpMul(&z2, &x3, &t1);             /* z2 = DA */
-        FpMul(&z3, &x2, &t2);             /* z3 = CB */
-        FpSquare(&t1, &t1);               /* t1 = AA */
-        FpSquare(&t2, &t2);               /* t2 = BB */
-        CURVE25519_FP_SUB(t3.data, t1.data, t2.data);                /* t3 = E = AA - BB */
-        CURVE25519_FP_ADD(x3.data, z2.data, z3.data);                /* x3 = DA + CB */
-        FpSquare(&x3, &x3);             /* x3 = (DA + CB)^2 */
-        CURVE25519_FP_SUB(z3.data, z2.data, z3.data);                /* z3 = DA - CB */
-        FpSquare(&z3, &z3);             /* z3 = (DA - CB)^2 */
-        FpMul(&z3, &x1, &z3);            /* z3 = x1 * (DA - CB)^2 */
-        FpMul(&x2, &t1, &t2);            /* x2 = AA * BB */
-        FpMul(&t1, &t3, &t1);            /* t1 = E * AA */
-        FpSquare(&z2, &t3);             /* z2 = E^2 */
-        /* Reference RFC 7748 section 5: The constant a24 is (486662 - 2) / 4 = 121665 for curve25519/X25519 */
-        FpMulScalar(&z2, &z2, 121665);  /* z2 = a24 * E^2 */
-        CURVE25519_FP_ADD(z2.data, t1.data, z2.data);                /* z2 = E * (AA + a24 * E) */
+        CURVE25519_FP_ADD(t1, x2, z2);                /* t1 = A */
+        CURVE25519_FP_SUB(t2, x2, z2);                /* t2 = B */
+        CURVE25519_FP_ADD(x2, x3, z3);                /* x2 = C */
+        CURVE25519_FP_SUB(x3, x3, z3);                /* x3 = D */
+        FpMul(z2, x3, t1);             /* z2 = DA */
+        FpMul(z3, x2, t2);             /* z3 = CB */
+        FpSquareDoubleCore(t1, t1, false);               /* t1 = AA */
+        FpSquareDoubleCore(t2, t2, false);               /* t2 = BB */
+        CURVE25519_FP_SUB(t3, t1, t2);                /* t3 = E = AA - BB */
+        CURVE25519_FP_ADD(x3, z2, z3);                /* x3 = DA + CB */
+        FpSquareDoubleCore(x3, x3, false);             /* x3 = (DA + CB)^2 */
+        CURVE25519_FP_SUB(z3, z2, z3);                /* z3 = DA - CB */
+        FpSquareDoubleCore(z3, z3, false);             /* z3 = (DA - CB)^2 */
+        FpMul(z3, x1, z3);            /* z3 = x1 * (DA - CB)^2 */
+        FpMul(x2, t1, t2);            /* x2 = AA * BB */
+        FpMul(t1, t3, t1);            /* t1 = E * AA */
+        FpSquareDoubleCore(z2, t3, false);             /* z2 = E^2 */
+        /* Reference RFC 7748 section 5：The constant a24 is (486662 - 2) / 4 = 121665 for curve25519/X25519 */
+        FpMulScalar(z2, z2, 121665);  /* z2 = a24 * E^2 */
+        CURVE25519_FP_ADD(z2, t1, z2);                /* z2 = E * (AA + a24 * E) */
     }
 
-    CURVE25519_FP_CSWAP(swap, x2.data, x3.data);
-    CURVE25519_FP_CSWAP(swap, z2.data, z3.data);
+    CURVE25519_FP_CSWAP(swap, x2, x3);
+    CURVE25519_FP_CSWAP(swap, z2, z3);
     /* Return x2 * (z2 ^ (p - 2)) */
-    FpInvert(&t1, &z2);
-    FpMul(&t2, &x2, &t1);
-    PolynomialToData(out, &t2);
+    FpInvert(t1, z2);
+    FpMul(t2, x2, t1);
+    PolynomialToData(out, t2);
 }
 #endif // uint128
 #endif /* HITLS_CRYPTO_X25519 */

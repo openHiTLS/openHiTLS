@@ -16,9 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CFB)
 
-#include "bsl_err_internal.h"
-#include "crypt_errno.h"
-#include "modes_local.h"
 #include "crypt_modes_cfb.h"
 
 int32_t AES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)

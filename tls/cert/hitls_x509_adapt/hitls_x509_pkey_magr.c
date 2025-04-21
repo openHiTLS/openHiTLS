@@ -42,15 +42,15 @@ static int32_t GetPassByCb(HITLS_PasswordCb passWordCb, void *passWordCbUserData
     if (passWordCb != NULL) {
         len = passWordCb(pass, *passLen, 0, passWordCbUserData);
         if (len < 0) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
-            return HITLS_X509_ADAPT_ERR;
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);
+            return HITLS_CERT_SELF_ADAPT_ERR;
         }
     } else {
         if (passWordCbUserData != NULL) {
             uint32_t userDataLen = BSL_SAL_Strnlen((const char *)passWordCbUserData, *passLen);
             if (userDataLen == 0 || userDataLen == (uint32_t)*passLen) {
-                BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
-                return HITLS_X509_ADAPT_ERR;
+                BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);
+                return HITLS_CERT_SELF_ADAPT_ERR;
             }
             (void)memcpy_s(pass, *passLen, (char *)passWordCbUserData, userDataLen + 1);
             len = userDataLen;
@@ -97,7 +97,7 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
                 (CRYPT_EAL_PkeyCtx **)&ealPriKey);
             break;
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_UNSUPPORT_FORMAT);
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT);
             (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
             return NULL;
     }
@@ -142,7 +142,7 @@ static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
         if (CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType)) != CRYPT_SUCCESS) {
             return TLS_CERT_KEY_TYPE_UNKNOWN;
         }
-        if (padType == CRYPT_PKEY_EMSA_PSS) {
+        if (padType == CRYPT_EMSA_PSS) {
             return TLS_CERT_KEY_TYPE_RSA_PSS;
         }
     }
@@ -175,8 +175,8 @@ int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITL
             *(int32_t *)output = CRYPT_EAL_PkeyGetParaId(key);
             break;
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ADAPT_ERR);
-            ret = HITLS_X509_ADAPT_ERR;
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);
+            ret = HITLS_CERT_SELF_ADAPT_ERR;
             break;
     }
 

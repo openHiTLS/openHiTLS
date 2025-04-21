@@ -165,7 +165,7 @@ typedef enum {
     HITLS_SIGN_ECDSA = BSL_CID_ECDSA,
     HITLS_SIGN_RSA_PSS = BSL_CID_RSASSAPSS,
     HITLS_SIGN_ED25519 = BSL_CID_ED25519,
-    HITLS_SIGN_SM2 = BSL_CID_SM2,
+    HITLS_SIGN_SM2 = BSL_CID_SM2DSA,
     HITLS_SIGN_BUTT = 255
 } HITLS_SignAlgo;
 
@@ -278,7 +278,6 @@ typedef struct {
     const uint8_t *info;        /* Extended data. */
     uint32_t infoLen;           /* Extend the data length. */
 } HITLS_CRYPT_HkdfExpandInput;
-
 
 #ifdef __cplusplus
 }

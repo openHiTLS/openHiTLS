@@ -127,6 +127,12 @@
     #endif
 #endif
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    #ifndef HITLS_BSL_HASH
+        #define HITLS_BSL_HASH
+    #endif
+#endif
+
 #if !defined(HITLS_TLS_FEATURE_PROVIDER) && !defined(HITLS_TLS_CALLBACK_SAL)
     #define HITLS_TLS_FEATURE_PROVIDER
 #endif
@@ -165,6 +171,9 @@
     #endif
     #ifndef HITLS_TLS_FEATURE_CERT_MODE
         #define HITLS_TLS_FEATURE_CERT_MODE
+    #endif
+    #ifndef HITLS_TLS_FEATURE_KEM
+        #define HITLS_TLS_FEATURE_KEM
     #endif
 #endif /* HITLS_TLS_FEATURE */
 

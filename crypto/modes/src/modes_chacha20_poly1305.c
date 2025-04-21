@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CHACHA20POLY1305
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 
 #include <stdint.h>
 #include "securec.h"
@@ -58,6 +58,7 @@ void Poly1305SetKey(Poly1305Ctx *ctx, const uint8_t key[POLY1305_KEYSIZE])
 
     (void)memset_s(ctx->last, sizeof(ctx->last), 0, sizeof(ctx->last));
     ctx->lastLen = 0;
+    Poly1305InitForAsm(ctx); // Information such as tables required for initializing the assembly
 }
 
 void Poly1305Update(Poly1305Ctx *ctx, const uint8_t *data, uint32_t dataLen)
@@ -222,8 +223,8 @@ static int32_t SetIv(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *iv, uint32_t
     uint8_t block[POLY1305_KEYSIZE] = { 0 };
     if (ivLen == 8) { // If the length of the IV is 8, 0 data must be padded before.
         uint8_t tmpBuff[12] = { 0 };
-        (void)memcpy_s(tmpBuff + 4, 12 - 4, iv, ivLen);
-        ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, tmpBuff, 12);
+        (void)memcpy_s(tmpBuff + 4, sizeof(tmpBuff) - 4, iv, ivLen); // // 4 bytes 0 data must be padded before.
+        ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, tmpBuff, sizeof(tmpBuff));
         // Clear sensitive data.
         (void)BSL_SAL_CleanseData(tmpBuff, sizeof(tmpBuff));
     } else {
@@ -296,6 +297,22 @@ static int32_t SetAad(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *aad, uint32
     return CRYPT_SUCCESS;
 }
 
+int32_t MODES_CHACHA20POLY1305_SetEncryptKey(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->method->setEncryptKey(ctx->key, key, len);
+}
+int32_t MODES_CHACHA20POLY1305_SetDecryptKey(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *key, uint32_t len)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->method->setDecryptKey(ctx->key, key, len);
+}
 int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t opt, void *val, uint32_t len)
 {
     if (modeCtx == NULL) {
@@ -317,13 +334,18 @@ int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t opt, 
             *(int32_t *)val = 1;
             return CRYPT_SUCCESS;
         default:
-            return CRYPT_INVALID_ARG;
+            if (modeCtx->chachaCtx.method == NULL ||
+                modeCtx->chachaCtx.method->cipherCtrl == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
+                return CRYPT_MODES_CTRL_TYPE_ERROR;
+            }
+            return modeCtx->chachaCtx.method->cipherCtrl(modeCtx->chachaCtx.key, opt, val, len);
     }
 }
 
 MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtx(int32_t algId)
 {
-    const EAL_SymMethod *method = MODES_GetSymMethod(algId);
+    const EAL_SymMethod *method = EAL_GetSymMethod(algId);
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
@@ -338,7 +360,7 @@ MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtx(int32_t algId)
     ctx->chachaCtx.key = BSL_SAL_Calloc(1, method->ctxSize);
     if (ctx->chachaCtx.key  == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(ctx);
+        BSL_SAL_Free(ctx);
         return NULL;
     }
 
@@ -347,7 +369,7 @@ MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtx(int32_t algId)
 }
 
 int32_t MODES_CHACHA20POLY1305_InitCtx(MODES_CHACHAPOLY_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen,
-    const uint8_t *iv, uint32_t ivLen, const BSL_Param *param, bool enc)
+    const uint8_t *iv, uint32_t ivLen, void *param, bool enc)
 {
     (void)param;
     if (modeCtx == NULL) {
@@ -385,8 +407,8 @@ int32_t MODES_CHACHA20POLY1305_Final(MODES_CHACHAPOLY_Ctx *modeCtx, uint8_t *out
 {
     (void) modeCtx;
     (void) out;
-    *outLen = 0;
-    return CRYPT_SUCCESS;
+    (void) outLen;
+    return CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR;
 }
 
 int32_t MODES_CHACHA20POLY1305_DeInitCtx(MODES_CHACHAPOLY_Ctx *modeCtx)

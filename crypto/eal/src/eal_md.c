@@ -28,8 +28,10 @@
 #include "eal_md_local.h"
 #include "eal_common.h"
 #include "crypt_ealinit.h"
+#ifdef HITLS_CRYPTO_PROVIDER
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
+#endif
 
 static CRYPT_EAL_MdCTX *MdAllocCtx(CRYPT_MD_AlgId id, const EAL_MdUnitaryMethod *method)
 {
@@ -77,6 +79,7 @@ static CRYPT_EAL_MdCTX *MdNewDefaultCtx(CRYPT_MD_AlgId id)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return NULL;
     }
+
     EAL_MdUnitaryMethod *temp = BSL_SAL_Calloc(1, sizeof(EAL_MdUnitaryMethod));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -184,7 +187,8 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t al
     ctx->isProvider = true;
     return ctx;
 }
-#endif
+#endif // HITLS_CRYPTO_PROVIDER
+
 CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id)
 {
 #ifdef HITLS_CRYPTO_ASM_CHECK
@@ -291,7 +295,7 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx)
         BSL_SAL_FREE(ctx);
         return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
+    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
     ctx->method->freeCtx(ctx->data);
     BSL_SAL_FREE(ctx->method);
     BSL_SAL_FREE(ctx);
@@ -354,8 +358,9 @@ int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL)
-        || (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
+
+    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL) ||
+        (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }

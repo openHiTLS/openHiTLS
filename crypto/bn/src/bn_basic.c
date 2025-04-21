@@ -30,20 +30,18 @@ BN_BigNum *BN_Create(uint32_t bits)
         return NULL;
     }
     uint32_t room = BITS_TO_BN_UNIT(bits);
-    BN_BigNum *r = (BN_BigNum *)BSL_SAL_Malloc(sizeof(BN_BigNum));
+    BN_BigNum *r = (BN_BigNum *)BSL_SAL_Calloc(1u, sizeof(BN_BigNum));
     if (r == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(r, sizeof(BN_BigNum), 0, sizeof(BN_BigNum));
     if (room != 0) {
         r->room = room;
-        r->data = (BN_UINT *)BSL_SAL_Malloc(room * sizeof(BN_UINT));
+        r->data = (BN_UINT *)BSL_SAL_Calloc(1u, room * sizeof(BN_UINT));
         if (r->data == NULL) {
             BSL_SAL_FREE(r);
             return NULL;
         }
-        (void)memset_s(r->data, room * sizeof(BN_UINT), 0, room * sizeof(BN_UINT));
     }
 
     return r;
@@ -56,20 +54,50 @@ void BN_Destroy(BN_BigNum *a)
     }
     // clear sensitive information
     BSL_SAL_CleanseData((void *)(a->data), a->size * sizeof(BN_UINT));
+    if (a->flag == CRYPT_BN_FLAG_STATIC) {
+        return;
+    }
     BSL_SAL_FREE(a->data);
     if (!BN_IsFlag(a, CRYPT_BN_FLAG_OPTIMIZER)) {
         BSL_SAL_FREE(a);
     }
 }
 
+inline void BN_Init(BN_BigNum *bn, BN_UINT *data, uint32_t room, int32_t number)
+{
+    for (uint32_t i = 0; i < (uint32_t)number; i++) {
+        bn[i].data = &data[room * i];
+        bn[i].room = room;
+        bn[i].flag = CRYPT_BN_FLAG_STATIC;
+    }
+}
+#ifdef HITLS_CRYPTO_EAL_BN
+bool BnVaild(const BN_BigNum *a)
+{
+    if (a == NULL) {
+        return false;
+    }
+    if (a->size == 0) {
+        return !a->sign;
+    }
+    if (a->data == NULL || a->size > a->room) {
+        return false;
+    }
+    if ((a->size <= a->room) && (a->data[a->size - 1] != 0)) {
+        return true;
+    }
+    return false;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_BN_CB
 BN_CbCtx *BN_CbCtxCreate(void)
 {
-    BN_CbCtx *r = (BN_CbCtx *)BSL_SAL_Malloc(sizeof(BN_CbCtx));
+    BN_CbCtx *r = (BN_CbCtx *)BSL_SAL_Calloc(1u, sizeof(BN_CbCtx));
     if (r == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(r, sizeof(BN_CbCtx), 0, sizeof(BN_CbCtx));
     return r;
 }
 
@@ -110,6 +138,7 @@ void BN_CbCtxDestroy(BN_CbCtx *cb)
     }
     BSL_SAL_FREE(cb);
 }
+#endif
 
 int32_t BN_SetSign(BN_BigNum *a, bool sign)
 {
@@ -122,11 +151,33 @@ int32_t BN_SetSign(BN_BigNum *a, bool sign)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_NO_NEGATIVE_ZERO);
         return CRYPT_BN_NO_NEGATIVE_ZERO;
     }
-    if (sign) {
-        BN_SETNEG(a->flag);
-    } else {
-        BN_CLRNEG(a->flag);
+    a->sign = sign;
+    return CRYPT_SUCCESS;
+}
+
+static bool IsLegalFlag(uint32_t flag)
+{
+    switch (flag) {
+        case CRYPT_BN_FLAG_CONSTTIME:
+        case CRYPT_BN_FLAG_OPTIMIZER:
+        case CRYPT_BN_FLAG_STATIC:
+            return true;
+        default:
+            return false;
     }
+}
+
+int32_t BN_SetFlag(BN_BigNum *a, uint32_t flag)
+{
+    if (a == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (!IsLegalFlag(flag)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_FLAG_INVALID);
+        return CRYPT_BN_FLAG_INVALID;
+    }
+    a->flag |= flag;
     return CRYPT_SUCCESS;
 }
 
@@ -137,12 +188,11 @@ int32_t BN_Copy(BN_BigNum *r, const BN_BigNum *a)
         return CRYPT_NULL_INPUT;
     }
     if (r != a) {
-        if (BnExtend(r, a->size) != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
+        int32_t ret = BnExtend(r, a->size);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
         }
-        BN_CLRNEG(r->flag);
-        r->flag |= BN_GETNEG(a->flag);
+        r->sign = a->sign;
         BN_COPY_BYTES(r->data, r->size, a->data, a->size);
         r->size = a->size;
     }
@@ -156,8 +206,8 @@ BN_BigNum *BN_Dup(const BN_BigNum *a)
     }
     BN_BigNum *r = BN_Create(a->room * BN_UINT_BITS);
     if (r != NULL) {
-        r->flag |= BN_GETNEG(a->flag);
-        BN_COPY_BYTES(r->data, r->size, a->data, a->size);
+        r->sign = a->sign;
+        (void)memcpy_s(r->data, a->size * sizeof(BN_UINT), a->data, a->size * sizeof(BN_UINT));
         r->size = a->size;
     }
     return r;
@@ -178,7 +228,7 @@ bool BN_IsOne(const BN_BigNum *a)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return false;
     }
-    return (a->size == 1 && a->data[0] == 1 && !BN_ISNEG(a->flag));
+    return (a->size == 1 && a->data[0] == 1 && a->sign == false);
 }
 
 bool BN_IsNegative(const BN_BigNum *a)
@@ -187,7 +237,7 @@ bool BN_IsNegative(const BN_BigNum *a)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return false;
     }
-    return BN_ISNEG(a->flag);
+    return a->sign;
 }
 
 bool BN_IsOdd(const BN_BigNum *a)
@@ -216,7 +266,7 @@ int32_t BN_Zeroize(BN_BigNum *a)
     }
     // clear sensitive information
     BSL_SAL_CleanseData(a->data, a->size * sizeof(BN_UINT));
-    BN_CLRNEG(a->flag);
+    a->sign = false;
     a->size = 0;
     return CRYPT_SUCCESS;
 }
@@ -227,7 +277,7 @@ bool BN_IsLimb(const BN_BigNum *a, const BN_UINT w)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return (w == 0);
     }
-    return ((a->size == 1) && (a->data[0] == w)) || ((w == 0) && (a->size == 0));
+    return !a->sign && (((a->size == 1) && (a->data[0] == w)) || ((w == 0) && (a->size == 0)));
 }
 
 int32_t BN_SetLimb(BN_BigNum *r, BN_UINT w)
@@ -236,9 +286,9 @@ int32_t BN_SetLimb(BN_BigNum *r, BN_UINT w)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (BnExtend(r, 1) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+    int32_t ret = BnExtend(r, 1);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     BN_Zeroize(r);
     if (w != 0) {
@@ -246,6 +296,19 @@ int32_t BN_SetLimb(BN_BigNum *r, BN_UINT w)
         r->size++;
     }
     return CRYPT_SUCCESS;
+}
+
+BN_UINT BN_GetLimb(const BN_BigNum *a)
+{
+    if (a == NULL) {
+        return 0;
+    }
+    if (a->size > 1) {
+        return BN_MASK;
+    } else if (a->size == 1) {
+        return a->data[0];
+    }
+    return 0;
 }
 
 bool BN_GetBit(const BN_BigNum *a, uint32_t n)
@@ -297,7 +360,32 @@ int32_t BN_ClrBit(BN_BigNum *a, uint32_t n)
     // check whether the size changes
     a->size = BinFixSize(a->data, a->size);
     if (a->size == 0) {
-        BN_CLRNEG(a->flag);
+        a->sign = false;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t BN_MaskBit(BN_BigNum *a, uint32_t n)
+{
+    if (a == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    uint32_t nw = n / BN_UINT_BITS;
+    uint32_t nb = n % BN_UINT_BITS;
+    if (a->size <= nw) {
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_SPACE_NOT_ENOUGH);
+        return CRYPT_BN_SPACE_NOT_ENOUGH;
+    }
+    if (nb == 0) {
+        a->size = nw;
+    } else {
+        a->size = nw + 1;
+        a->data[nw] &= ~(BN_MASK << nb);
+    }
+    a->size = BinFixSize(a->data, a->size);
+    if (a->size == 0) {
+        a->sign = false;
     }
     return CRYPT_SUCCESS;
 }
@@ -308,9 +396,6 @@ uint32_t BN_Bits(const BN_BigNum *a)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return 0;
     }
-    if (a->size == 0) {
-        return 0;
-    }
     return BinBits(a->data, a->size);
 }
 
@@ -319,52 +404,54 @@ uint32_t BN_Bytes(const BN_BigNum *a)
     return BN_BITS_TO_BYTES(BN_Bits(a));
 }
 
-uint32_t BnExtend(BN_BigNum *a, uint32_t words)
+int32_t BnExtend(BN_BigNum *a, uint32_t words)
 {
     if (a->room >= words) {
         return CRYPT_SUCCESS;
+    }
+    if (a->flag == CRYPT_BN_FLAG_STATIC) {
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_NOT_SUPPORT_EXTENSION);
+        return CRYPT_BN_NOT_SUPPORT_EXTENSION;
     }
     if (words > BITS_TO_BN_UNIT(BN_MAX_BITS)) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_BITS_TOO_MAX);
         return CRYPT_BN_BITS_TOO_MAX;
     }
 
-    BN_UINT *tmp = (BN_UINT *)BSL_SAL_Malloc(words * sizeof(BN_UINT));
+    BN_UINT *tmp = (BN_UINT *)BSL_SAL_Calloc(1u, words * sizeof(BN_UINT));
     if (tmp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memset_s(tmp, words * sizeof(BN_UINT), 0, words * sizeof(BN_UINT));
-    if (a->data != NULL) {
+    if (a->size > 0) {
         (void)memcpy_s(tmp, a->size * sizeof(BN_UINT), a->data, a->size * sizeof(BN_UINT));
         BSL_SAL_CleanseData(a->data, a->size * sizeof(BN_UINT));
-        BSL_SAL_FREE(a->data);
     }
+    BSL_SAL_FREE(a->data);
     a->data = tmp;
     a->room = words;
     return CRYPT_SUCCESS;
 }
 
-/* See the standard document
- * https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
- * Table 2: Comparable strengths
- * */
-int32_t BN_SecBit(int32_t publen, int32_t prvlen)
+// ref. NIST.SP.800-57 Section 5.6.1.1
+int32_t BN_SecBits(int32_t pubLen, int32_t prvLen)
 {
-    int32_t bits = 256;
+    int32_t bits = 256; // the secure length is initialized to a maximum of 256
     int32_t level[] = {1024, 2048, 3072, 7680, 15360, INT32_MAX};
     int32_t secbits[] = {0, 80, 112, 128, 192, 256};
-
-    for (size_t i = 0; i < (sizeof(level) / sizeof(level[0])); i++) {
-        if (publen < level[i]) {
-            bits = secbits[i];
+    for (int32_t loc = 0; loc < (int32_t)(sizeof(level) / sizeof(level[0])); loc++) {
+        if (pubLen < level[loc]) {
+            bits = secbits[loc];
             break;
         }
     }
-    if (prvlen == -1) {
+
+    if (prvLen == -1) { // In IFC algorithm, the security length only needs to consider the modulus number.
         return bits;
     }
-    bits = ((prvlen / 2) >= bits) ? bits : (prvlen / 2);
+    bits = ((prvLen / 2) >= bits) ? bits : (prvLen / 2); // The security length of FFC algorithm is considering prvLen/2
+    // Encryption does not use the algorithm/key combination which security strength is less than 112 bits
+    // such as less than 80 bits
     return (bits < 80) ? 0 : bits;
 }
 #endif /* HITLS_CRYPTO_BN */

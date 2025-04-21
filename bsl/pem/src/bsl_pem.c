@@ -142,7 +142,7 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
     return ret;
 }
 
-int32_t BSL_PEM_ParsePem2Asn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
+int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
     uint32_t *asn1Len)
 {
     char *nextEncode = *encode;

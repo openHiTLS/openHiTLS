@@ -137,7 +137,7 @@ void SDV_CRYPTO_AES_INIT_API_TC001(Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherInit(ctx, key->x, 0, iv->x, iv->len, true);
     ASSERT_EQ_LOG("3", ret, CRYPT_AES_ERR_KEYLEN);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, NULL, iv->len, true);
-    ASSERT_EQ_LOG("4", ret, CRYPT_NULL_INPUT);
+    ASSERT_EQ_LOG("4", ret, CRYPT_INVALID_ARG);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, 0, true);
     ASSERT_EQ_LOG("5", ret, CRYPT_MODES_IVLEN_ERROR);
 
@@ -494,14 +494,8 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC001(int isProvider, int algId, Hex *key, Hex 
     uint8_t outTmp[MAX_OUTPUT] = {0};
     uint32_t len = MAX_OUTPUT;
     uint32_t totalLen = 0;
-    CRYPT_EAL_CipherCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
-        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
-#else
-    (void)isProvider;
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
-#endif
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -598,19 +592,16 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC003(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
 {
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     int32_t ret;
     uint8_t outTmp[MAX_OUTPUT] = {0};
     uint32_t len = MAX_OUTPUT;
     uint32_t finLen;
-    CRYPT_EAL_CipherCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
-        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
-#else
-    (void)isProvider;
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
-#endif
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -852,14 +843,8 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC005(int isProvider, int algId, Hex *key, Hex 
     uint8_t outTmp[MAX_OUTPUT] = {0};
     uint32_t len = MAX_OUTPUT;
     uint32_t totalLen = 0;
-    CRYPT_EAL_CipherCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
-        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
-#else
-    (void)isProvider;
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
-#endif
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -921,14 +906,8 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC006(int isProvider, int algId, int feed, Hex 
     uint8_t outTmp[MAX_OUTPUT] = {0};
     uint32_t len = MAX_OUTPUT;
     uint32_t totalLen = 0;
-    CRYPT_EAL_CipherCtx *ctx = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctx = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
-        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
-#else
-    (void)isProvider;
-    ctx = CRYPT_EAL_CipherNewCtx(algId);
-#endif
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1141,14 +1120,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
     uint32_t totalLen = 0;
     uint32_t leftLen = MAX_OUTPUT;
     uint32_t len = MAX_OUTPUT;
-    CRYPT_EAL_CipherCtx *ctxEnc = NULL;
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctxEnc = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
-        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
-#else
-    (void)isProvider;
-    ctxEnc = CRYPT_EAL_CipherNewCtx(algId);
-#endif
+    CRYPT_EAL_CipherCtx *ctxEnc = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
     ASSERT_TRUE(ctxEnc != NULL);
     ret = CRYPT_EAL_CipherInit(ctxEnc, key->x, key->len, iv->x, iv->len, true);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1206,13 +1178,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex 
 
     len = MAX_OUTPUT;
     leftLen = MAX_OUTPUT;
-#ifdef HITLS_CRYPTO_PROVIDER
-    ctxDec = (isProvider == 0) ? CRYPT_EAL_CipherNewCtx(algId) :
-        CRYPT_EAL_ProviderCipherNewCtx(NULL, algId, "provider=default");
-#else
-    (void)isProvider;
-    ctxDec = CRYPT_EAL_CipherNewCtx(algId);
-#endif
+    ctxDec = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
     ASSERT_TRUE(ctxDec != NULL);
     ret = CRYPT_EAL_CipherInit(ctxDec, key->x, key->len, iv->x, iv->len, false);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1233,5 +1199,136 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctxDec);
     CRYPT_EAL_CipherFreeCtx(ctxDec);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_EAL_AES_XTS_GET_IV_TC001
+ * @title  AES-XTS: obtaining IV in different states.
+ * @brief
+ *    1. Get iv after init iv, and compare the getted iv with original iv, expected result 1
+ *    2. Get iv after update, and compare the getted iv with original iv, expected result 2
+ *    3. Get iv after final, expected result 3
+ * @expect
+ *    1. The IV is obtained successfully and the two IVs are the same.
+ *    2. The IV is obtained successfully and the two IVs are the same.
+ *    3. CRYPT_EAL_ERR_STATE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_XTS_GET_IV_TC001(int id, Hex *key, Hex *iv, Hex *plainText, Hex *cipherText)
+{
+    uint8_t outIv[AES_BLOCKSIZE] = {0};
+    uint8_t out[MAX_OUTPUT] = {0};
+    uint32_t totalOutLen = 0;
+    uint32_t outLen = MAX_OUTPUT;
+
+    TestMemInit();
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, iv->len), CRYPT_SUCCESS);
+    ASSERT_COMPARE("Get iv after init", outIv, iv->len, iv->x, iv->len);
+
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plainText->x, plainText->len, out, &outLen), CRYPT_SUCCESS);
+    (void)memset_s(outIv, AES_BLOCKSIZE, 0, AES_BLOCKSIZE);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, iv->len), CRYPT_SUCCESS);
+    ASSERT_COMPARE("Get iv after encrypt", outIv, iv->len, iv->x, iv->len);
+
+    totalOutLen += outLen;
+    outLen = MAX_OUTPUT - totalOutLen;
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out + totalOutLen, &outLen), CRYPT_SUCCESS);
+    totalOutLen += outLen;
+    ASSERT_COMPARE("Check encrypt result", out, totalOutLen, cipherText->x, cipherText->len);
+
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, iv->len), CRYPT_EAL_ERR_STATE);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_EAL_AES_FUNC_TC001
+* @spec  -
+* @title  CBC,ECB,CTR,XTS: the influence of All-zero and All-F Data Keys on AES Calculation_KAT
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_FUNC_TC001(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
+{
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    int32_t ret;
+    uint8_t outTmp[MAX_OUTPUT] = {0};
+    uint32_t len = MAX_OUTPUT;
+    uint32_t totalLen = 0;
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    totalLen += len;
+    len = MAX_OUTPUT - len;
+    ret = CRYPT_EAL_CipherFinal(ctx, outTmp + totalLen, &len);
+    totalLen += len;
+    ASSERT_TRUE(totalLen == out->len);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_EAL_AES_FUNC_TC005
+* @spec  -
+* @title  CBC,ECB,CTR,XTS: after reinit, re-encrypt and decrypt data_reinit function test
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_FUNC_TC005(int isProvider, int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
+{
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    int32_t ret;
+    uint8_t outTmp[MAX_OUTPUT] = {0};
+    uint32_t len = MAX_OUTPUT;
+    uint32_t finLen;
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    finLen = MAX_OUTPUT - len;
+    ret = CRYPT_EAL_CipherFinal(ctx, outTmp + len, &finLen);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+
+    (void)memset_s(outTmp, MAX_OUTPUT, 0, MAX_OUTPUT);
+    len = MAX_OUTPUT;
+    ret = CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ret = CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, outTmp, &len);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    finLen = MAX_OUTPUT - len;
+    ret = CRYPT_EAL_CipherFinal(ctx, outTmp + len, &finLen);
+    ASSERT_TRUE(ret == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */

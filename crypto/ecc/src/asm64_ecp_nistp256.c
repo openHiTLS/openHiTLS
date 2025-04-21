@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE)
 
 #include <stdint.h>
 #include "crypt_errno.h"

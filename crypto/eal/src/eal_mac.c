@@ -29,10 +29,11 @@
 #include "crypt_ealinit.h"
 #include "eal_mac_local.h"
 #include "eal_common.h"
+#ifdef HITLS_CRYPTO_PROVIDER
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
+#endif
 
-#define NOT_CHECK_PARAM 0xff
 #define MAC_TYPE_INVALID 0
 
 static void EalMacCopyMethod(const EAL_MacMethod *src, EAL_MacUnitaryMethod *dst)
@@ -135,11 +136,11 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t 
     return macCtx;
 }
 #endif
+
 CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
 {
-    int32_t ret;
     EAL_MacMethLookup method;
-    ret = EAL_MacFindMethod(id, &method);
+    int32_t ret = EAL_MacFindMethod(id, &method);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, ret);
         return NULL;
@@ -203,7 +204,7 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
         BSL_SAL_FREE(ctx);
         return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
+    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
     ctx->macMeth->freeCtx(ctx->ctx);
     BSL_SAL_FREE(ctx->macMeth);
     BSL_SAL_FREE(ctx);
@@ -346,6 +347,7 @@ int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+
     if (cmd == CRYPT_CTRL_GET_MACLEN) {
         return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
     }

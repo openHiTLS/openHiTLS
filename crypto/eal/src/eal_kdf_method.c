@@ -19,11 +19,11 @@
 #include "eal_common.h"
 #include "bsl_sal.h"
 
-#define CRYPT_KDF_IMPL_METHOD_DECLARE(name)     \
+#define CRYPT_KDF_IMPL_METHOD_DECLARE(name)      \
     EAL_KdfMethod g_kdfMethod_##name = {         \
         (KdfNewCtx)CRYPT_##name##_NewCtx,  (KdfSetParam)CRYPT_##name##_SetParam,      \
         (KdfDerive)CRYPT_##name##_Derive,  (KdfDeinit)CRYPT_##name##_Deinit,          \
-        (KdfFreeCtx)CRYPT_##name##_FreeCtx, NULL                                      \
+        (KdfFreeCtx)CRYPT_##name##_FreeCtx, NULL \
     }
 
 #ifdef HITLS_CRYPTO_PBKDF2
@@ -55,7 +55,6 @@ static const EAL_CidToKdfMeth ID_TO_KDF_METH_TABLE[] = {
 #ifdef HITLS_CRYPTO_SCRYPT
     {CRYPT_KDF_SCRYPT,    &g_kdfMethod_SCRYPT},
 #endif
-    {CRYPT_KDF_MAX,      NULL}
 };
 
 const EAL_KdfMethod *EAL_KdfFindMethod(CRYPT_KDF_AlgId id)

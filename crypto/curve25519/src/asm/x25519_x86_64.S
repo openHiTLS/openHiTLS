@@ -447,4 +447,427 @@ Fp51MulScalar:
 .cfi_endproc
 .size   Fp51MulScalar,.-Fp51MulScalar
 
+/**
+ * Fp64 reduce:
+ *     +------+-----+-----+-----+------+
+ *     |      | r15 | r14 | r13 | r12  |
+ *     |      |     |     |     |  38  |
+ *     +-------------------------------+
+ *     |      |     |     | r12'| r12' |
+ *     |      |     | r13'| r13'|      |
+ *     |      | r14'| r14'|     |      |
+ *     | r15' | r15'|     |     |      |
+ *     +-------------------------------+
+ *     |      | r11'| r10'| r9' | r8'  |
+ *     |      |     |     |     |19r15'|
+ *     +-------------------------------+
+ *     |      | r11 | r10 | r9  | r8   |
+ *     +------+-----+-----+-----+------+
+ */
+.macro Fp64Reduce
+    xorq     %rsi, %rsi
+    movq     $38, %rdx
+    mulx    %r12, %rax, %rbx
+    adcx    %rax, %r8
+    adox    %rbx, %r9
+    mulx    %r13, %rax, %rbx
+    adcx    %rax, %r9
+    adox    %rbx, %r10
+    mulx    %r14, %rax, %rbx
+    adcx    %rax, %r10
+    adox    %rbx, %r11
+    mulx    %r15, %rax, %r12
+    adcx    %rax, %r11
+    adcx    %rsi, %r12
+    adox    %rsi, %r12
+
+    shld     $1, %r11, %r12
+    movq     $0x7FFFFFFFFFFFFFFF, %rbp
+    andq     %rbp, %r11
+    imulq    $19, %r12, %r12
+    addq     %r12, %r8
+    adcx     %rsi, %r9
+    adcx     %rsi, %r10
+    adcx     %rsi, %r11
+
+    movq    0(%rsp), %rdi
+    movq    %r9, 8(%rdi)
+    movq    %r10, 16(%rdi)
+    movq    %r11, 24(%rdi)
+    movq    %r8, 0(%rdi)
+.endm
+
+.globl    Fp64Mul
+.type    Fp64Mul,@function
+.align    32
+Fp64Mul:
+.cfi_startproc
+    pushq    %rbp
+    pushq    %rbx
+    pushq    %r12
+    pushq    %r13
+    pushq    %r14
+    pushq    %r15
+    pushq    %rdi
+
+/**
+ * (f3, f2, f1, f0) * (g3, g2, g1, g0) :
+ *         +    +    +    +    +    +    +    +    +
+ *         |    |    |    |    | A3 | A2 | A1 | A0 |
+ *         |    |    |    |    | B3 | B2 | B1 | B0 |
+ *       +------------------------------------------+
+ *         |    |    |    |    |    |    |A0B0|A0B0|
+ *         |    |    |    |    |    |A1B0|A1B0|    |
+ *         |    |    |    |    |A2B0|A2B0|    |    |
+ *         |    |    |    |A3B0|A3B0|    |    |    |
+ *         |    |    |    |    |    |A0B1|A0B1|    |
+ *         |    |    |    |    |A1B1|A1B1|    |    |
+ *         |    |    |    |A2B1|A2B1|    |    |    |
+ *         |    |    |A3B1|A3B1|    |    |    |    |
+ *         |    |    |    |    |A2B0|A2B0|    |    |
+ *         |    |    |    |A2B1|A2B1|    |    |    |
+ *         |    |    |A2B2|A2B2|    |    |    |    |
+ *         |    |A2B3|A2B3|    |    |    |    |    |
+ *         |    |    |    |A3B0|A3B0|    |    |    |
+ *         |    |    |A3B1|A3B1|    |    |    |    |
+ *         |    |A3B2|A3B2|    |    |    |    |    |
+ *         |A3B3|A3B3|    |    |    |    |    |    |
+ *       +------------------------------------------+
+ *         |r15 |r14 |r13 |r12 |r11 |r10 |r9  |r8  |
+ *         +    +    +    +    +    +    +    +    +
+ */
+    movq    0(%rdx), %rcx
+    movq    8(%rdx), %rbp
+    movq    16(%rdx), %rdi
+    movq    24(%rdx), %r15
+    movq    0(%rsi), %rdx
+    xorq    %r14, %r14
+
+    // (f3, f2, f1, f0) * g0
+    mulx     %rcx, %r8, %rax
+    mulx     %rbp, %r9, %rbx
+    adcx     %rax, %r9
+    mulx     %rdi, %r10, %rax
+    adcx     %rbx, %r10
+    mulx     %r15, %r11, %r12
+    movq     8(%rsi), %rdx
+    adcx     %rax, %r11
+    adcx     %r14, %r12
+
+    // (f3, f2, f1, f0) * g1
+    mulx     %rcx, %rax, %rbx
+    adcx     %rax, %r9
+    adox     %rbx, %r10
+    mulx     %rbp, %rax, %rbx
+    adcx     %rax, %r10
+    adox     %rbx, %r11
+    mulx     %rdi, %rax, %rbx
+    adcx     %rax, %r11
+    adox     %rbx, %r12
+    mulx     %r15, %rax, %r13
+    movq     16(%rsi), %rdx
+    adcx     %rax, %r12
+    adox     %r14, %r13
+    adcx     %r14, %r13
+
+    // (f3, f2, f1, f0) * g2
+    mulx     %rcx, %rax, %rbx
+    adcx     %rax, %r10
+    adox     %rbx, %r11
+    mulx     %rbp, %rax, %rbx
+    adcx     %rax, %r11
+    adox     %rbx, %r12
+    mulx     %rdi, %rax, %rbx
+    adcx     %rax, %r12
+    adox     %rbx, %r13
+    mulx     %r15, %rax, %r14
+    movq     24(%rsi), %rdx
+    adcx     %rax, %r13
+    movq     $0, %rsi
+    adox     %rsi, %r14
+    adcx     %rsi, %r14
+
+    // (f3, f2, f1, f0) * g3
+    mulx    %rcx, %rax, %rbx
+    adcx    %rax, %r11
+    adox    %rbx, %r12
+    mulx    %rbp, %rax, %rbx
+    adcx    %rax, %r12
+    adox    %rbx, %r13
+    mulx    %rdi, %rax, %rbx
+    adcx    %rax, %r13
+    adox    %rbx, %r14
+    mulx    %r15, %rax, %r15
+    adcx    %rax, %r14
+    adox    %rsi, %r15
+    adcx    %rsi, %r15
+
+    // reduce
+    Fp64Reduce
+
+    movq    8(%rsp), %r15
+    movq    16(%rsp), %r14
+    movq    24(%rsp), %r13
+    movq    32(%rsp), %r12
+    movq    40(%rsp), %rbx
+    movq    48(%rsp), %rbp
+    leaq    56(%rsp), %rsp
+
+    ret
+.cfi_endproc
+.size    Fp64Mul,.-Fp64Mul
+
+.globl    Fp64Sqr
+.type    Fp64Sqr,@function
+.align    32
+Fp64Sqr:
+.cfi_startproc    
+    pushq    %rbp
+    pushq    %rbx
+    pushq    %r12
+    pushq    %r13
+    pushq    %r14
+    pushq    %r15
+    pushq    %rdi
+/**
+ * (f3, f2, f1, f0) ^ 2 :
+ *      +----+----+----+----+----+----+----+----+----+
+ *      |    |    |    |    |    | A3 | A2 | A1 | A0 |
+ *      | *  |    |    |    |    | A3 | A2 | A1 | A0 |
+ *      +--------------------------------------------+
+ *      |    |    |    |    |    |    |A0A1|A0A1|    |
+ *      |    |    |    |    |    |A0A2|A0A2|    |    |
+ *      | +  |    |    |    |A0A3|A0A3|    |    |    |
+ *      |    |    |    |    |A1A2|A1A2|    |    |    |
+ *      |    |    |    |A1A3|A1A3|    |    |    |    |
+ *      |    |    |A2A3|A2A3|    |    |    |    |    |
+ *      +--------------------------------------------+
+ *      | *2 |    |r14`|r13`|r12`|r11`|r10`|r9` |    |
+ *      +--------------------------------------------+
+ *      |    |r15'|r14'|r13'|r12'|r11'|r10'|r9' |    |
+ *      +--------------------------------------------+
+ *      |    |    |    |    |    |    |    |A0A0|A0A0|
+ *      |    |    |    |    |    |A1A1|A1A1|    |    |
+ *      | +  |    |    |A2A2|A2A2|    |    |    |    |
+ *      |    |A3A3|A3A3|    |    |    |    |    |    |
+ *      +--------------------------------------------+
+ *      |    |r15 |r14 |r13 |r12 |r11 |r10 |r9  |r8  |
+ *      +--------------------------------------------+
+ */
+    movq   0(%rsi), %rbx  // a0
+    movq   8(%rsi), %rcx  // a1
+    movq   16(%rsi), %rbp // a2
+    movq   24(%rsi), %rdi // a3
+    xorq   %r15, %r15
+
+    // (a1, a2, a3) * a0
+    movq   %rbx, %rdx
+    mulx   %rcx, %r9, %rsi
+    mulx   %rbp, %r10, %rax
+    adcx   %rsi, %r10
+    mulx   %rdi, %r11, %r12
+    movq   %rcx, %rdx
+    adcx   %rax, %r11
+    adcx   %r15, %r12
+
+    // (a2, a3) * a1
+    mulx   %rbp, %rsi, %rax
+    adcx   %rsi, %r11
+    adox   %rax, %r12
+    mulx   %rdi, %rsi, %r13
+    movq   %rbp, %rdx
+    adcx   %rsi, %r12
+    adcx   %r15, %r13
+    adox   %r15, %r13
+
+    // a3 * a2
+    mulx   %rdi, %rsi, %r14
+    movq   %rbx, %rdx
+    adcx   %rsi, %r13
+    adcx   %r15, %r14
+
+    // (r9 --- r14) *2
+    shld   $1, %r14, %r15
+    shld   $1, %r13, %r14
+    shld   $1, %r12, %r13
+    shld   $1, %r11, %r12
+    shld   $1, %r10, %r11
+    shld   $1, %r9, %r10
+    shlq   $1, %r9
+    xorq   %r8, %r8   // clear cf flag
+    // a0 * a0
+    mulx   %rdx, %r8, %rax
+    movq   %rcx, %rdx
+    adcx   %rax, %r9
+
+    // a1 * a1
+    mulx    %rdx, %rsi, %rax
+    movq    %rbp, %rdx
+    adcx    %rsi, %r10
+    adcx    %rax, %r11
+
+    // a2 * a2
+    mulx   %rdx, %rsi, %rax
+    movq   %rdi, %rdx
+    adcx   %rsi, %r12
+    adcx   %rax, %r13
+
+    // a3 * a3
+    mulx   %rdx, %rsi, %rax
+    adcx   %rsi, %r14
+    adcx   %rax, %r15
+
+    // reduce
+    Fp64Reduce
+
+    movq    8(%rsp), %r15
+    movq    16(%rsp), %r14
+    movq    24(%rsp), %r13
+    movq    32(%rsp), %r12
+    movq    40(%rsp), %rbx
+    movq    48(%rsp), %rbp
+    leaq    56(%rsp), %rsp
+    ret
+.cfi_endproc
+.size   Fp64Sqr, .-Fp64Sqr
+
+.globl  Fp64MulScalar
+.type   Fp64MulScalar, @function
+.align  32
+Fp64MulScalar:
+.cfi_startproc
+    movl    $121666, %edx
+    mulx   0(%rsi), %r8, %rax
+    mulx   8(%rsi), %r9, %rcx  
+    addq    %rax, %r9
+    mulx   16(%rsi), %r10, %rax
+    adcx    %rcx, %r10
+    mulx   24(%rsi), %r11, %rcx
+    adcx    %rax, %r11
+    movl    $0, %edx
+    adcx    %rdx, %rcx
+    movq    $0x7FFFFFFFFFFFFFFF, %rax
+    shld    $1, %r11, %rcx
+    andq    %rax, %r11
+    imulq   $19, %rcx, %rcx
+    
+    addq    %rcx, %r8
+    adcx    %rdx, %r9
+    movq    %r8, 0(%rdi)
+    adcx    %rdx, %r10
+    movq    %r9, 8(%rdi)
+    adcx    %rdx, %r11
+    movq    %r10, 16(%rdi)
+    movq    %r11, 24(%rdi)
+    ret
+.cfi_endproc    
+.size   Fp64MulScalar, .-Fp64MulScalar
+
+.globl   Fp64Add
+.type    Fp64Add, @function
+.align   32
+Fp64Add:
+.cfi_startproc    
+    movq    0(%rsi),%r8
+    movq    8(%rsi),%r9
+    addq    0(%rdx),%r8
+    adcx    8(%rdx),%r9
+    movq    16(%rsi),%r10
+    movq    24(%rsi),%r11
+    adcx    16(%rdx),%r10
+    adcx    24(%rdx),%r11
+
+    movq    $0,   %rax
+    movq    $38,  %rcx
+    cmovae  %rax, %rcx
+    addq    %rcx, %r8
+    adcx    %rax, %r9
+    adcx    %rax, %r10
+    movq    %r9,  8(%rdi)
+    adcx    %rax, %r11
+    movq    %r10, 16(%rdi)
+    movq    %r11, 24(%rdi)
+
+    cmovc   %rcx, %rax
+    addq    %rax, %r8
+    movq    %r8,  0(%rdi)
+    ret
+.cfi_endproc
+.size   Fp64Add, .-Fp64Add
+
+.globl   Fp64Sub
+.type    Fp64Sub,@function
+.align   32
+Fp64Sub:
+.cfi_startproc
+    movq    0(%rsi),%r8
+    movq    8(%rsi),%r9
+    subq    0(%rdx),%r8
+    sbbq    8(%rdx),%r9
+    movq    16(%rsi),%r10
+    movq    24(%rsi),%r11
+    sbbq    16(%rdx),%r10
+    sbbq    24(%rdx),%r11
+
+    movq    $0,   %rax
+    movq    $38,  %rcx
+    cmovae  %rax, %rcx
+
+    subq    %rcx, %r8
+    sbbq    %rax, %r9
+    sbbq    %rax, %r10
+    movq    %r9,8(%rdi)
+    sbbq    %rax, %r11
+    movq    %r10,16(%rdi)
+    cmovc   %rcx, %rax
+    movq    %r11,24(%rdi)
+    subq    %rax, %r8
+    movq    %r8,0(%rdi)
+
+    ret
+.cfi_endproc
+.size    Fp64Sub,.-Fp64Sub
+
+.globl    Fp64PolyToData
+.type    Fp64PolyToData,@function
+.align    32
+Fp64PolyToData:
+.cfi_startproc    
+    movq    24(%rsi), %r11
+    movq    16(%rsi), %r10
+    xorq    %rax, %rax
+
+    leaq    (%r11, %r11, 1), %rcx
+    sarq    $63, %r11
+    shrq    $1, %rcx
+    andq    $19, %r11
+    addq    $19, %r11
+
+    movq    0(%rsi), %r8
+    movq    8(%rsi), %r9
+
+    addq    %r11, %r8
+    adcx    %rax, %r9
+    adcx    %rax, %r10
+    adcx    %rax, %rcx
+
+    leaq    (%rcx, %rcx, 1), %r11
+    sarq    $63, %rcx
+    shrq    $1, %r11
+    notq    %rcx
+    andq    $19, %rcx
+
+    subq    %rcx, %r8
+    sbbq    $0, %r9
+    movq    %r8, 0(%rdi)
+    movq    %r9, 8(%rdi)
+    sbbq    $0, %r10
+    sbbq    $0, %r11
+    movq    %r10, 16(%rdi)
+    movq    %r11, 24(%rdi)
+
+    ret
+.cfi_endproc    
+.size    Fp64PolyToData,.-Fp64PolyToData
+
 #endif

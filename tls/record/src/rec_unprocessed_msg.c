@@ -26,6 +26,31 @@
 #include "rec.h"
 #include "rec_unprocessed_msg.h"
 
+#ifdef HITLS_BSL_UIO_UDP
+void CacheNextEpochHsMsg(UnprocessedHsMsg *unprocessedHsMsg, const RecHdr *hdr, const uint8_t *recordBody)
+{
+    /* only out-of-order finished messages need to be cached */
+    if (hdr->type != REC_TYPE_HANDSHAKE) {
+        return;
+    }
+
+    /* only cache one */
+    if (unprocessedHsMsg->recordBody != NULL) {
+        return;
+    }
+
+    unprocessedHsMsg->recordBody = (uint8_t *)BSL_SAL_Dump(recordBody, hdr->bodyLen);
+    if (unprocessedHsMsg->recordBody == NULL) {
+        return;
+    }
+
+    (void)memcpy_s(&unprocessedHsMsg->hdr, sizeof(RecHdr), hdr, sizeof(RecHdr));
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15446, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
+        "cache next epoch hs msg", 0, 0, 0, 0);
+    return;
+}
+#endif /* HITLS_BSL_UIO_UDP */
+
 UnprocessedAppMsg *UnprocessedAppMsgNew(void)
 {
     UnprocessedAppMsg *msg = (UnprocessedAppMsg *)BSL_SAL_Calloc(1, sizeof(UnprocessedAppMsg));

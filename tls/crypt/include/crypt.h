@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "hitls_crypt_type.h"
 #include "tls.h"
+#include "hitls_crypt_reg.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,6 +82,8 @@ enum HITLS_CryptoCallBack {
 
     HITLS_CRYPT_CALLBACK_HKDF_EXTRACT,
     HITLS_CRYPT_CALLBACK_HKDF_EXPAND,
+    HITLS_CRYPT_CALLBACK_KEM_ENCAPSULATE,
+    HITLS_CRYPT_CALLBACK_KEM_DECAPSULATE,
 };
 
 /**
@@ -575,6 +578,33 @@ int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo,
  * @return Returns key length and other info, returns 0 on failure
  */
 uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param);
+
+/**
+ * @brief Encapsulate a shared secret using KEM
+ *
+ * @param ctx [IN] TLS context
+ * @param params [IN/OUT] KEM encapsulation parameters
+ *
+ * @retval HITLS_SUCCESS succeeded.
+ */
+int32_t SAL_CRYPT_KemEncapsulate(TLS_Ctx *ctx, HITLS_KemEncapsulateParams *params);
+
+/**
+ * @brief   KEM: Decapsulate the ciphertext to recover shared secret
+ *
+ * @param   key [IN] Key handle
+ * @param   ciphertext [IN] Ciphertext buffer
+ * @param   ciphertextLen [IN] Ciphertext length
+ * @param   sharedSecret [OUT] Shared secret buffer
+ * @param   sharedSecretLen [IN/OUT] IN: Maximum shared secret buffer length OUT: Actual shared secret length
+ *
+ * @retval HITLS_SUCCESS                succeeded.
+ * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
+ * @retval HITLS_CRYPT_ERR_KEM_DECAP    Failed to decapsulate ciphertext
+ */
+int32_t SAL_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
+    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+
 
 #ifdef __cplusplus
 }

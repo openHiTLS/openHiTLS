@@ -24,6 +24,7 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #include "helper.h"
 #include "crypto_test_util.h"
@@ -147,7 +148,7 @@ void RecordFailure(const char *test, const char *filename);
 
 void SkipTest(const char *filename);
 
-void PrintResult(bool showDetail, char *vectorName);
+void PrintResult(bool showDetail, char *vectorName, time_t useTime);
 
 void PrintLog(FILE *logFile);
 

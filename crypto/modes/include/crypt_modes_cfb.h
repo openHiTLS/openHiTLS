@@ -19,14 +19,24 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CFB
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "crypt_types.h"
-#include "bsl_params.h"
+#include "crypt_modes.h"
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
+#define DES_BLOCK_BYTE_NUM 8
+typedef struct {
+    MODES_CipherCommonCtx modeCtx;
+    uint8_t feedbackBits;  /* Save the FeedBack length. */
+    uint8_t cipherCache[3][DES_BLOCK_BYTE_NUM];
+    uint8_t cacheIndex;   /* Used by the TDES that has 3IV. Indicate which cache is being used. */
+} MODES_CipherCFBCtx;
+struct ModesCFBCtx {
+    int32_t algId;
+    MODES_CipherCFBCtx cfbCtx;
+    bool enc;
+};
 typedef struct ModesCFBCtx MODES_CFB_Ctx;
 
 // CFB mode universal implementation
@@ -50,7 +60,7 @@ int32_t SM4_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen
 
 
 int32_t MODES_CFB_InitCtxEx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc);
+    uint32_t ivLen, void *param, bool enc);
 int32_t MODES_CFB_UpdateEx(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 #ifdef __cplusplus

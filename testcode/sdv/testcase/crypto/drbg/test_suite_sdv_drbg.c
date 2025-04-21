@@ -381,6 +381,7 @@ static const int g_drbgMethodMap[] = {
     CRYPT_MD_SHA256,
     CRYPT_MD_SHA384,
     CRYPT_MD_SHA512,
+    CRYPT_MD_SM3,
     CRYPT_MAC_HMAC_SHA1,
     CRYPT_MAC_HMAC_SHA224,
     CRYPT_MAC_HMAC_SHA256,
@@ -897,7 +898,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_DRBG_RAND_BYTES_ADIN_ERR_PARA_API_TC001(int algId)
 {
-    uint8_t *output = malloc(sizeof(uint8_t) * DRBG_MAX_OUTPUT_SIZE);
+    uint8_t *output = malloc(sizeof(uint8_t) * (DRBG_MAX_OUTPUT_SIZE + 1));
     ASSERT_TRUE(output != NULL);
     uint8_t *addin = malloc(sizeof(uint8_t) * DRBG_MAX_ADIN_SIZE);
     ASSERT_TRUE(addin != NULL);
@@ -928,7 +929,7 @@ void SDV_CRYPT_DRBG_RAND_BYTES_ADIN_ERR_PARA_API_TC001(int algId)
 
     memset_s(addin, DRBG_MAX_ADIN_SIZE, 0, DRBG_MAX_ADIN_SIZE);
     ASSERT_NE(CRYPT_EAL_DrbgbytesWithAdin(drbgCtx, output, 0, addin, DRBG_MAX_ADIN_SIZE), CRYPT_SUCCESS);
-    ASSERT_NE(CRYPT_EAL_DrbgbytesWithAdin(drbgCtx, output, DRBG_MAX_OUTPUT_SIZE + 1, addin, DRBG_MAX_ADIN_SIZE),
+    ASSERT_EQ(CRYPT_EAL_DrbgbytesWithAdin(drbgCtx, output, DRBG_MAX_OUTPUT_SIZE + 1, addin, DRBG_MAX_ADIN_SIZE),
         CRYPT_SUCCESS);
     ASSERT_NE(CRYPT_EAL_DrbgbytesWithAdin(drbgCtx, NULL, 0, addin, DRBG_MAX_ADIN_SIZE), CRYPT_SUCCESS);
 
@@ -957,7 +958,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_DRBG_RAND_BYTES_ERR_PARA_API_TC001(void)
 {
-    uint8_t *output = malloc(DRBG_MAX_OUTPUT_SIZE);
+    uint8_t *output = malloc(DRBG_MAX_OUTPUT_SIZE + 1);
     ASSERT_TRUE(output != NULL);
 
     CRYPT_RandSeedMethod seedMeth = { 0 };
@@ -976,7 +977,7 @@ void SDV_CRYPT_DRBG_RAND_BYTES_ERR_PARA_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 
     ASSERT_NE(CRYPT_EAL_Randbytes(output, 0), CRYPT_SUCCESS);
-    ASSERT_NE(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE + 1), CRYPT_SUCCESS); // MAX SIZE + 1
+    ASSERT_EQ(CRYPT_EAL_Randbytes(output, DRBG_MAX_OUTPUT_SIZE + 1), CRYPT_SUCCESS); // MAX SIZE + 1
     ASSERT_EQ(CRYPT_EAL_Randbytes(NULL, 0), CRYPT_NULL_INPUT);
 EXIT:
     CRYPT_EAL_RandDeinit();
@@ -1023,7 +1024,7 @@ void SDV_CRYPT_DRBG_BYTES_ERR_PARA_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
 
     ASSERT_NE(CRYPT_EAL_Drbgbytes(drbg, output, 0), CRYPT_SUCCESS);
-    ASSERT_NE(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_MAX_OUTPUT_SIZE + 1), CRYPT_SUCCESS); // MAX SIZE + 1
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_MAX_OUTPUT_SIZE + 1), CRYPT_SUCCESS); // MAX SIZE + 1
     ASSERT_NE(CRYPT_EAL_Drbgbytes(drbg, NULL, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(NULL, output, DRBG_OUTPUT_SIZE), CRYPT_NULL_INPUT);
 

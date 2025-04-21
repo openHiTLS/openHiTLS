@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA3
 
+#include "crypt_arm.h"
 .arch    armv8-a+crypto
 
 /*
@@ -302,6 +303,71 @@ T4  .req x29
     CHIOTA \offset
 .endm
 
+.macro Keccak
+    /* The length of the digest after extrusion is greater than r. Then, the digest is mapped and then extruded. */
+    stp x25, x26, [sp, #-32]!
+    stp x27, x28, [sp, #8*2]
+    /* Load states: x0~x24 */
+    ldp A00, A01, [x25]
+    ldp A02, A03, [x25, #16]
+    ldp A04, A10, [x25, #16*2]
+    ldp A11, A12, [x25, #16*3]
+    ldp A13, A14, [x25, #16*4]
+    ldp A20, A21, [x25, #16*5]
+    ldp A22, A23, [x25, #16*6]
+    ldp A24, A30, [x25, #16*7]
+    ldp A31, A32, [x25, #16*8]
+    ldp A33, A34, [x25, #16*9]
+    ldp A40, A41, [x25, #16*10]
+    ldp A42, A43, [x25, #16*11]
+    ldr A44, [x25, #16*12]
+    /* Mapping */
+    ROUND #0
+    ROUND #1
+    ROUND #2
+    ROUND #3
+    ROUND #4
+    ROUND #5
+    ROUND #6
+    ROUND #7
+    ROUND #8
+    ROUND #9
+    ROUND #10
+    ROUND #11
+    ROUND #12
+    ROUND #13
+    ROUND #14
+    ROUND #15
+    ROUND #16
+    ROUND #17
+    ROUND #18
+    ROUND #19
+    ROUND #20
+    ROUND #21
+    ROUND #22
+    ROUND #23
+
+    ldp x25, x26, [sp], #8*2
+    ldp x27, x28, [sp], #8*2
+    /* Store states: x0~x24 */
+    stp A00, A01, [x25]
+    stp A02, A03, [x25, #8*2]
+    stp A04, A10, [x25, #8*4]
+    stp A11, A12, [x25, #8*6]
+    stp A13, A14, [x25, #8*8]
+    stp A20, A21, [x25, #8*10]
+    stp A22, A23, [x25, #8*12]
+    stp A24, A30, [x25, #8*14]
+    stp A31, A32, [x25, #8*16]
+    stp A33, A34, [x25, #8*18]
+    stp A40, A41, [x25, #8*20]
+    stp A42, A43, [x25, #8*22]
+    str A44, [x25, #8*24]
+
+    mov     x0, x25
+    mov     x3, x28
+.endm
+
 .section .rodata
 .balign    64
 .type    g_roundConstant, %object
@@ -351,6 +417,7 @@ g_roundConstant:
 .global SHA3_Absorb
 .type   SHA3_Absorb, %function
 SHA3_Absorb:
+AARCH64_PACIASP
     /* push stack protection */
     stp x29, x30, [sp, #-96]!
     stp x19, x20, [sp, #8*2]
@@ -613,14 +680,14 @@ SHA3_Absorb:
     ldp x23, x24, [sp], #8*2
     ldp x25, x26, [sp], #8*2
     ldp x27, x28, [sp], #8*2
-
+AARCH64_AUTIASP
     ret
 .size SHA3_Absorb, .-SHA3_Absorb
 
 .balign 16
 /**
  *  Function description: Perform SHA3 squeezing to obtain the digest message.
- *  Function prototyp: void SHA3_Squeeze(uint8_t *state, uint8_t *out, uinT32_t outLen, uinT32_t r)
+ *  Function prototyp: void SHA3_Squeeze(uint8_t *state, uint8_t *out, uinT32_t outLen, uinT32_t r, bool isNeedKeccak)
  *  Input register:
  *         x0: Pointer to the address of the State Matrix
  *         x1: Pointer to the output summary address
@@ -634,6 +701,7 @@ SHA3_Absorb:
 .global SHA3_Squeeze
 .type   SHA3_Squeeze, %function
 SHA3_Squeeze:
+AARCH64_PACIASP
     /* push stack protection */
     stp x29, x30, [sp, #-96]!
     stp x19, x20, [sp, #8*2]
@@ -646,6 +714,7 @@ SHA3_Squeeze:
     mov x26, x1
     mov x27, x2
     mov x28, x3
+    mov x30, x4
 
     /* Cyclically squeezing message summaries from the State Matrix */
 .Loop_squeeze:
@@ -663,69 +732,7 @@ SHA3_Squeeze:
 
     subs    x3, x3, #8
     bhi     .Loop_squeeze
-
-    /* The length of the digest after extrusion is greater than r. Then, the digest is mapped and then extruded. */
-    stp x25, x26, [sp, #-32]!
-    stp x27, x28, [sp, #8*2]
-    /* Load states: x0~x24 */
-    ldp A00, A01, [x25]
-    ldp A02, A03, [x25, #16]
-    ldp A04, A10, [x25, #16*2]
-    ldp A11, A12, [x25, #16*3]
-    ldp A13, A14, [x25, #16*4]
-    ldp A20, A21, [x25, #16*5]
-    ldp A22, A23, [x25, #16*6]
-    ldp A24, A30, [x25, #16*7]
-    ldp A31, A32, [x25, #16*8]
-    ldp A33, A34, [x25, #16*9]
-    ldp A40, A41, [x25, #16*10]
-    ldp A42, A43, [x25, #16*11]
-    ldr A44, [x25, #16*12]
-    /* Mapping */
-    ROUND #0
-    ROUND #1
-    ROUND #2
-    ROUND #3
-    ROUND #4
-    ROUND #5
-    ROUND #6
-    ROUND #7
-    ROUND #8
-    ROUND #9
-    ROUND #10
-    ROUND #11
-    ROUND #12
-    ROUND #13
-    ROUND #14
-    ROUND #15
-    ROUND #16
-    ROUND #17
-    ROUND #18
-    ROUND #19
-    ROUND #20
-    ROUND #21
-    ROUND #22
-    ROUND #23
-
-    ldp x25, x26, [sp], #8*2
-    ldp x27, x28, [sp], #8*2
-    /* Store states: x0~x24 */
-    stp A00, A01, [x25]
-    stp A02, A03, [x25, #8*2]
-    stp A04, A10, [x25, #8*4]
-    stp A11, A12, [x25, #8*6]
-    stp A13, A14, [x25, #8*8]
-    stp A20, A21, [x25, #8*10]
-    stp A22, A23, [x25, #8*12]
-    stp A24, A30, [x25, #8*14]
-    stp A31, A32, [x25, #8*16]
-    stp A33, A34, [x25, #8*18]
-    stp A40, A41, [x25, #8*20]
-    stp A42, A43, [x25, #8*22]
-    str A44, [x25, #8*24]
-
-    mov     x0, x25
-    mov     x3, x28
+    Keccak
     b       .Loop_squeeze
 
     /* Single Byte Squeezing */
@@ -758,6 +765,10 @@ SHA3_Squeeze:
 
 .Lsqueeze_done:
     /* End popping */
+    cmp x30, 0
+    beq .Lsqueeze_end
+    Keccak
+.Lsqueeze_end:
     ldp x29, x30, [sp], #8*2
     ldp x19, x20, [sp], #8*2
     ldp x21, x22, [sp], #8*2
@@ -765,6 +776,7 @@ SHA3_Squeeze:
     ldp x25, x26, [sp], #8*2
     ldp x27, x28, [sp], #8*2
     eor x0, x0, x0
+AARCH64_AUTIASP
     ret
 .size SHA3_Squeeze, .-SHA3_Squeeze
 

@@ -59,7 +59,7 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA, input,
                 sizeof(HITLS_X509_Cert));
         default:
-            return HITLS_X509_ADAPT_ERR;
+            return HITLS_CERT_SELF_ADAPT_ERR;
     }
 }
 #endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */

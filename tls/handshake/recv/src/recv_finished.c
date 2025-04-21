@@ -291,10 +291,22 @@ int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
+#ifdef HITLS_BSL_UIO_UDP
+    if (ctx->preState == CM_STATE_TRANSPORTING && ctx->state == CM_STATE_HANDSHAKING) {
+        REC_RetransmitListFlush(ctx);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15888, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
+            "recv post hs finished, send retransmit msg.", 0, 0, 0, 0);
+        return HS_ChangeState(ctx, TLS_CONNECTED);
+    }
+#endif /* HITLS_BSL_UIO_UDP */
     int32_t ret = ClientRecvFinishedProcess(ctx, msg);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#ifdef HITLS_BSL_UIO_UDP
+    /* Clear the retransmission queue */
+    REC_RetransmitListClean(ctx->recCtx);
+#endif /* HITLS_BSL_UIO_UDP */
     if (ctx->negotiatedInfo.isResume == true) {
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);
         return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
@@ -401,10 +413,22 @@ int32_t Tls12ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #ifdef HITLS_TLS_PROTO_DTLS12
 int32_t DtlsServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
+#ifdef HITLS_BSL_UIO_UDP
+    if (ctx->preState == CM_STATE_TRANSPORTING && ctx->state == CM_STATE_HANDSHAKING) {
+        REC_RetransmitListFlush(ctx);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15885, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
+            "recv post hs finished, send retransmit msg.", 0, 0, 0, 0);
+        return HS_ChangeState(ctx, TLS_CONNECTED);
+    }
+#endif /* HITLS_BSL_UIO_UDP */
     int32_t ret = ServerRecvFinishedProcess(ctx, msg);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#ifdef HITLS_BSL_UIO_UDP
+    /* Clear the retransmission queue */
+    REC_RetransmitListClean(ctx->recCtx);
+#endif /* HITLS_BSL_UIO_UDP */
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (ctx->negotiatedInfo.isResume == true) {
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_EXIT_READY);

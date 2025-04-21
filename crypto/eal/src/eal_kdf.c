@@ -20,11 +20,12 @@
 #include "crypt_eal_kdf.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
-#include "bsl_sal.h"
 #include "crypt_local_types.h"
 #include "crypt_eal_mac.h"
+#ifdef HITLS_CRYPTO_PROVIDER
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
+#endif
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "eal_mac_local.h"
@@ -46,7 +47,7 @@
 #endif
 #include "eal_common.h"
 #include "crypt_utils.h"
-#include "crypt_ealinit.h"
+#include "bsl_sal.h"
 
 static CRYPT_EAL_KdfCTX *KdfAllocCtx(CRYPT_KDF_AlgId id, EAL_KdfUnitaryMethod *method)
 {
@@ -180,10 +181,9 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId)
     return ctx;
 }
 
-int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, BSL_Param *param)
+int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, const BSL_Param *param)
 {
     int32_t ret;
-
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -210,6 +210,7 @@ int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
+
     int32_t ret = ctx->method->derive(ctx->data, key, keyLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, ret);

@@ -415,6 +415,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_SHA2_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
+    if (IsMdAlgDisabled(id)) {
+        SKIP_TEST();
+    }
     TestMemInit();
     CRYPT_EAL_MdCTX *cpyCtx = NULL;
     CRYPT_EAL_MdCTX *dupCtx = NULL;
