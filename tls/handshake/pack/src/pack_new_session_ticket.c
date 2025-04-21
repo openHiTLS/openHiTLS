@@ -99,7 +99,7 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     /* extension is not supported currently, set the total extension length to 0 */
     /* total extension length */
     if (IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
-        ret = PackCustomExtensions(ctx, &buf[offset + sizeof(uint16_t)], bufLen - offset, &len,
+        ret = PackCustomExtensions(ctx, &buf[offset + sizeof(uint16_t)], bufLen - offset - sizeof(uint16_t), &len,
             HITLS_EX_TYPE_NEW_SESSION_TICKET);
         if (ret != HITLS_SUCCESS) {
             return ret;
