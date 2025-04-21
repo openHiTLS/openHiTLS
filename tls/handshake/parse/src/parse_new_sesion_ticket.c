@@ -120,9 +120,6 @@ int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_
 
 static int32_t ParseNewSessionTicketExtensions(ParsePacket *pkt, NewSessionTicketMsg *msg)
 {
-    if (pkt->bufLen == *pkt->bufOffset) {
-        return HITLS_SUCCESS;
-    }
     uint16_t exMsgLen = 0;
     const char *logStr = BINGLOG_STR("parse extension length failed.");
     int32_t ret = ParseBytesToUint16(pkt, &exMsgLen);
@@ -175,7 +172,17 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         return ret;
     }
 
-    return ParseNewSessionTicketExtensions(&pkt, msg);
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        ret = ParseNewSessionTicketExtensions(&pkt, msg);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17352, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "parse ticket extensions failed.", 0, 0, 0, 0);
+            return ret;
+        }
+    }
+#endif /* HITLS_TLS_PROTO_TLS13 */
+    return HITLS_SUCCESS;
 }
 
 void CleanNewSessionTicket(NewSessionTicketMsg *msg)
