@@ -23,8 +23,11 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_msg.h"
+#include "hs_common.h"
+#include "hs_extensions.h"
 #include "parse_msg.h"
 #include "parse_common.h"
+#include "parse_extensions.h"
 #ifdef HITLS_TLS_PROTO_TLS13
 static int32_t ParseTicketNonce(ParsePacket *pkt, NewSessionTicketMsg *msg)
 {
@@ -101,7 +104,37 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         }
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-    return ParseTicket(&pkt, msg);
+    ret = ParseTicket(&pkt, msg);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    while (*(pkt.bufOffset) < pkt.bufLen) {
+        uint32_t extMsgLen = 0u;
+        uint16_t extMsgType = HS_EX_TYPE_END;
+        ret = ParseExHeader(pkt.ctx, &pkt.buf[*pkt.bufOffset], pkt.bufLen - *pkt.bufOffset, &extMsgType, &extMsgLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        *pkt.bufOffset += HS_EX_HEADER_LEN;
+
+        if (pkt.bufLen - *(pkt.bufOffset) >= extMsgLen) {
+            uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
+                    !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+                msg->extensionTypeMask |= 1ULL << hsExTypeId;
+            }
+
+            if (IsParseNeedCustomExtensions(pkt.ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+                ret = ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
+                    HITLS_EX_TYPE_NEW_SESSION_TICKET);
+            }
+            pkt.bufOffset += extMsgLen;
+        } else {
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
+    }
+    return ret;
 }
 
 void CleanNewSessionTicket(NewSessionTicketMsg *msg)
