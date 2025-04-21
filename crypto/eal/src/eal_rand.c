@@ -539,6 +539,10 @@ static int32_t DrbgParaIsValid(CRYPT_RAND_AlgId id, const CRYPT_RandSeedMethod *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (seedMeth != NULL && seedMeth->getEntropy == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     return CRYPT_SUCCESS;
 }
 
@@ -823,28 +827,36 @@ int32_t CRYPT_EAL_NoProviderRandInitCtxInner(int32_t algId,
     CRYPT_RandSeedMethod seedMeth = {0};
     void *seedCtx = NULL;
     const BSL_Param *temp = NULL;
-    int32_t ret = CRYPT_SUCCESS;
+    int32_t ret;
+    bool hasEnt = false;
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
             (void **)&(seedMeth.getEntropy), NULL), ret);
+        hasEnt = true;
     }
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
             (void **)&(seedMeth.cleanEntropy), NULL), ret);
+        hasEnt = true;
     }
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
             (void **)&(seedMeth.getNonce), NULL), ret);
+        hasEnt = true;
     }
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
             (void **)&(seedMeth.cleanNonce), NULL), ret);
+        hasEnt = true;
     }
-
     if ((temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
         GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
     }
-    ret = CRYPT_EAL_RandInit(algId, &seedMeth, seedCtx, pers, persLen);
+    if (hasEnt) {
+        ret = CRYPT_EAL_RandInit(algId, &seedMeth, seedCtx, pers, persLen);
+    } else {
+        ret = CRYPT_EAL_RandInit(algId, NULL, seedCtx, pers, persLen);
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
