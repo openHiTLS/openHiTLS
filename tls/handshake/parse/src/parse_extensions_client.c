@@ -32,6 +32,7 @@
 #include "rec.h"
 #include "parse_common.h"
 #include "parse_extensions.h"
+#include "custom_extensions.h"
 //  Parses the point format message sent by the server
 static int32_t ParseServerPointFormats(ParsePacket *pkt, ServerHelloMsg *msg)
 {
@@ -343,6 +344,12 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
             break;
     }
 
+    if (IsParseNeedCustomExtensions(ctx->customExts, extMsgType,
+        HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST)) {
+        return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
+            HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST);
+    }
+
     // You need to send an alert when an unknown extended field is encountered
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15205, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "unknown extension message type:%d len:%lu in server hello message.", extMsgType, extMsgLen, 0, 0);
@@ -364,7 +371,14 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
             return ret;
         }
         bufOffset += HS_EX_HEADER_LEN;
-        msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
+
+        uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+        if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED || !IsParseNeedCustomExtensions(ctx->customExts, extMsgType,
+            HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO |
+            HITLS_EX_TYPE_HELLO_RETRY_REQUEST)) {
+            msg->extensionTypeMask |= 1ULL << hsExTypeId;
+        }
+
         ret = ParseServerExBody(ctx, extMsgType, &buf[bufOffset], extMsgLen, msg);
         if (ret != HITLS_SUCCESS) {
             return ret;
