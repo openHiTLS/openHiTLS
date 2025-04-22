@@ -71,6 +71,7 @@ target_include_directories(TLS_TEST_INTF INTERFACE
     ${openHiTLS_SRC}/testcode/framework/tls/io/src
     ${openHiTLS_SRC}/testcode/framework/tls/func_wrapper/include
     ${openHiTLS_SRC}/testcode/framework/tls/callback/include
+    ${openHiTLS_SRC}/tls/feature/custom_extensions/include
 )
 
 aux_source_directory(${openHiTLS_SRC}/testcode/framework/tls/crypt/src CRYPT_SRC)

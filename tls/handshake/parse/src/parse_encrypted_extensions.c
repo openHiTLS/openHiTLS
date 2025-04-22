@@ -29,6 +29,7 @@
 #include "hs_common.h"
 #include "parse_extensions.h"
 #include "parse_common.h"
+#include "custom_extensions.h"
 
 /**
  * @brief   Release the memory in the message structure.
@@ -121,6 +122,11 @@ static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uin
             break;
     }
 
+    if (IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
+        return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
+            HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS);
+    }
+
     return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, BINLOG_ID16982,
         "unknow extension received", ALERT_UNSUPPORTED_EXTENSION);
 }
@@ -139,7 +145,13 @@ int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *
             return ret;
         }
         bufOffset += HS_EX_HEADER_LEN;
-        msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
+
+        uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+        if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
+                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
+            msg->extensionTypeMask |= 1ULL << hsExTypeId;
+        }
+
         ret = ParseEncryptedExBody(ctx, extMsgType, &buf[bufOffset], extMsgLen, msg);
         if (ret != HITLS_SUCCESS) {
             return ret;

@@ -31,6 +31,7 @@
 #include "hs_ctx.h"
 #include "alert.h"
 #include "parse_extensions.h"
+#include "custom_extensions.h"
 
 
 static int32_t StorePeerSupportGroup(TLS_Ctx *ctx, ClientHelloMsg *msg)
@@ -759,6 +760,7 @@ static int32_t ParseClientEncryptThenMac(ParsePacket *pkt, ClientHelloMsg *msg)
         &msg->extension.flag.haveEncryptThenMac);
 }
 #endif /* HITLS_TLS_FEATURE_ETM */
+
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 static int32_t ParseClientTicket(ParsePacket *pkt, ClientHelloMsg *msg)
 {
@@ -830,6 +832,11 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         }
     }
 
+    if (IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)) {
+        return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
+            HITLS_EX_TYPE_CLIENT_HELLO);
+    }
+
     // Ignore unknown extensions
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15188, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "unknown extension message type:%d len:%lu in client hello message.", extMsgType, extMsgLen, 0, 0);
@@ -850,7 +857,13 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
             return ret;
         }
         bufOffset += HS_EX_HEADER_LEN;
-        msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
+
+        uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+        if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
+                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)) {
+            msg->extensionTypeMask |= 1ULL << hsExTypeId;
+        }
+
         ret = ParseClientExBody(ctx, extMsgType, &buf[bufOffset], extMsgLen, msg);
         if (ret != HITLS_SUCCESS) {
             return ret;
