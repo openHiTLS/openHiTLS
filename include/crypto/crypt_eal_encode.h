@@ -54,6 +54,7 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
  *
  * @param   libCtx [IN] the library context of provider.
  * @param   attrName [IN] provider attribute name, maybe NULL.
+ * @param   keyType [IN] the type of pkey.
  * @param   format [IN] the buffer format.
  * @param   type [IN] the type of pkey.
  * @param   encode [IN] the encoded asn1 buffer.
@@ -63,8 +64,8 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
-    BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
+int32_t CRYPT_EAL_ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t keyType,
+    const char *format, const char *type, BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_encode
@@ -98,8 +99,8 @@ int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, int32_t type,
-    const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
+int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t keyType,
+    const char *format, const char *type, const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey);
 
 /**
  * @ingroup crypt_eal_encode

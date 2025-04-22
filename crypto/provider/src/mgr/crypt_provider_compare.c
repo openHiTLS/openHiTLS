@@ -400,7 +400,7 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
 }
 
 static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, int32_t algId,
-    InputAttributeStrInfo attrInfo, const CRYPT_EAL_Func **implFunc, void **ctx)
+    InputAttributeStrInfo attrInfo, const CRYPT_EAL_Func **implFunc, CRYPT_EAL_ProvMgrCtx **mgrCtx)
 {
     int32_t ret;
     int32_t totalScore = -1;
@@ -424,7 +424,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
             }
             if (attribute == NULL) {
                 *implFunc = algInfos[index].implFunc;
-                *ctx = node->provCtx;
+                *mgrCtx = node;
                 return;
             }
             int32_t tempScore;
@@ -434,7 +434,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
             }
             totalScore = tempScore;
             *implFunc = algInfos[index].implFunc;
-            *ctx = node->provCtx;
+            *mgrCtx = node;
             if (repeatFlag) {
                 continue;
             }
@@ -444,11 +444,11 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
 }
 
 int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
-    int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx)
+    int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx)
 {
     int32_t ret;
     const CRYPT_EAL_Func *implFunc = NULL;
-    void *ctx = NULL;
+    CRYPT_EAL_ProvMgrCtx *ctx = NULL;
     InputAttributeStrInfo attrInfo = {0};
 
     if (attribute != NULL) {
@@ -475,8 +475,8 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
         return CRYPT_NOT_SUPPORT;
     }
     *funcs = implFunc;
-    if (provCtx != NULL) {
-        *provCtx = ctx;
+    if (mgrCtx != NULL) {
+        *mgrCtx = ctx;
     }
     return CRYPT_SUCCESS;
 }

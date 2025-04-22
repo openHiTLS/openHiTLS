@@ -212,6 +212,18 @@ ECC_Pkey *ECC_PkeyNewCtx(CRYPT_PKEY_ParaId id);
  */
 int32_t ECC_PkeyCmp(const ECC_Pkey *a, const ECC_Pkey *b);
 
+/**
+ * @ingroup ecc
+ * @brief Set the parameter of the ECC context
+ *
+ * @param ctx [IN] ECC context
+ * @param para [IN] ECC parameter
+ *
+ * @retval CRYPT_SUCCESS succeeded.
+ * @retval For details about other errors, see crypt_errno.h.
+ */
+int32_t ECC_SetPara(ECC_Pkey *ctx, ECC_Para *para);
+
 #ifdef __cplusplus
 }
 #endif

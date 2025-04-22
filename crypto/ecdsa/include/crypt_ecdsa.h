@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include "crypt_types.h"
+#include "crypt_local_types.h"
 #include "crypt_ecc_pkey.h"
 #include "crypt_ecc.h"
 
@@ -361,6 +362,31 @@ int32_t CRYPT_ECDSA_Cmp(const CRYPT_ECDSA_Ctx *a, const CRYPT_ECDSA_Ctx *b);
  */
 int32_t CRYPT_ECDSA_GetSecBits(const CRYPT_ECDSA_Ctx *ctx);
 
+#ifdef HITLS_CRYPTO_PROVIDER
+/**
+ * @ingroup ecdsa
+ * @brief ecdsa import key
+ *
+ * @param ctx [IN/OUT] ecdsa context structure
+ * @param type [IN] type
+ * @param params [IN] parameters
+ */
+int32_t CRYPT_ECDSA_Import(CRYPT_ECDSA_Ctx *ctx, int32_t type, const BSL_Param *params);
+
+/**
+ * @ingroup ecdsa
+ * @brief ecdsa export key
+ *
+ * @param ctx [IN/OUT] ecdsa context structure
+ * @param flag [IN] flag
+ * @param type [IN] type
+ * @param cb [IN] callback function
+ * @param args [IN] callback function arguments
+ */
+int32_t CRYPT_ECDSA_Export(CRYPT_ECDSA_Ctx *ctx, int32_t flag, int32_t type,
+    CRYPT_EAL_ProcessFuncCb cb, void *args);
+
+#endif // HITLS_CRYPTO_PROVIDER
 #ifdef __cplusplus
 }
 #endif
