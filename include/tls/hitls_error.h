@@ -106,6 +106,7 @@ typedef enum {
     HITLS_CFG_ERR_LOAD_KEY_BUFFER,              /**< Failed to load the key buffer. */
     HITLS_CONFIG_ERR_LOAD_GROUP_INFO,              /**< Failed to load the group info. */
     HITLS_CONFIG_ERR_LOAD_SIGN_SCHEME_INFO,        /**< Failed to load the signature scheme info. */
+    HITLS_CONFIG_DUP_CUSTOM_EXT,                   /**< Duplicate custom extension type detected. */
     HITLS_CM_FAIL_START = 0x02030001,              /**< Error start bit of the conn module. */
     HITLS_CM_LINK_FATAL_ALERTED,                   /**< link sent fatal alert. */
     HITLS_CM_LINK_CLOSED,                          /**< Link has been closed. */

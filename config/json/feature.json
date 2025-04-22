@@ -1296,7 +1296,8 @@
                     "tls/handshake/common/include",
                     "tls/handshake/recv/include",
                     "tls/handshake/send/include",
-                    "tls/record/src"
+                    "tls/record/src",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "crypt": {
@@ -1305,7 +1306,8 @@
                 ".deps": ["platform::Secure_C", "bsl::sal"],
                 ".include": [
                     "tls/config/include",
-                    "tls/crypt/crypt_self"
+                    "tls/crypt/crypt_self",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "crypt_self": {
@@ -1331,7 +1333,8 @@
                     "pki/x509_common/include",
                     "tls/config/include",
                     "tls/cert/include",
-                    "tls/cert/cert_adapt"
+                    "tls/cert/cert_adapt",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "config": {
@@ -1339,7 +1342,8 @@
                 ".srcs": "tls/config/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "tls::cert", "tls::crypt"],
                 ".include": [
-                    "tls/record/include"
+                    "tls/record/include",
+                    "tls/feature/custom_extensions/include"
                 ]
 
             },
@@ -1351,7 +1355,8 @@
                     "tls/handshake/include",
                     "tls/handshake/common/include",
                     "tls/alert/include",
-                    "bsl/async/include"
+                    "bsl/async/include",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "ccs": {
@@ -1360,7 +1365,8 @@
                 ".deps": ["platform::Secure_C", "bsl::sal", "tls::record", "bsl::uio"],
                 ".include": [
                     "tls/handshake/include",
-                    "tls/alert/include"
+                    "tls/alert/include",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "alert": {
@@ -1369,7 +1375,8 @@
                 ".deps": ["platform::Secure_C", "bsl::sal", "tls::record"],
                 ".include": [
 
-                    "tls/record/src"
+                    "tls/record/src",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "handshake": {
@@ -1389,7 +1396,8 @@
                     "tls/handshake/reass/include",
                     "tls/handshake/cookie/include",
                     "tls/record/src",
-                    "tls/alert/include"
+                    "tls/alert/include",
+                    "tls/feature/custom_extensions/include"
                 ],
                 ".deps": ["platform::Secure_C", "bsl::hash", "bsl::sal", "bsl::tlv", "tls::cert", "tls::crypt", "tls::record", "tls::config"]
             },
@@ -1399,7 +1407,8 @@
                 ".deps": ["platform::Secure_C", "bsl::sal", "tls::record"],
                 ".include": [
 
-                    "tls/record/src"
+                    "tls/record/src",
+                    "tls/feature/custom_extensions/include"
                 ]
             },
             "feature": {
@@ -1412,7 +1421,8 @@
                     "bsl/uio/src",
                     "tls/cert/cert_adapt",
                     "tls/handshake/parse/src",
-                    "tls/handshake/common/include"
+                    "tls/handshake/common/include",
+                    "tls/feature/custom_extensions/include"
                 ]
             }
         },

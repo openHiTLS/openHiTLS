@@ -25,6 +25,7 @@
 #include "pack_common.h"
 #include "tls.h"
 #include "hs_ctx.h"
+#include "custom_extensions.h"
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
@@ -60,6 +61,8 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
 {
     uint32_t ticketAgeAdd = 0u;
     uint32_t offset = 0u;
+    uint32_t exLen = 0;
+    int32_t ret = HITLS_SUCCESS;
 
     HS_Ctx *hsCtx = ctx->hsCtx;
 
@@ -98,9 +101,21 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
     if (bufLen < (offset + sizeof(uint16_t))) {
         return PackBufLenError(BINLOG_ID16049, BINGLOG_STR("NewSessionTicket"));
     }
-    BSL_Uint16ToByte(0, &buf[offset]);
+    if (IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+        ret = PackCustomExtensions(ctx, &buf[offset + sizeof(uint16_t)], bufLen - offset - sizeof(uint16_t), &exLen,
+            HITLS_EX_TYPE_NEW_SESSION_TICKET);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
 
-    *usedLen = offset + sizeof(uint16_t);
+    if (bufLen < (offset + sizeof(uint16_t) + exLen)) {
+        return PackBufLenError(BINLOG_ID16049, BINGLOG_STR("NewSessionTicket"));
+    }
+    BSL_Uint16ToByte(exLen, &buf[offset]);
+    offset += exLen + sizeof(uint16_t);
+
+    *usedLen = offset;
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */

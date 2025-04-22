@@ -23,8 +23,11 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_msg.h"
+#include "hs_common.h"
+#include "hs_extensions.h"
 #include "parse_msg.h"
 #include "parse_common.h"
+#include "parse_extensions.h"
 #ifdef HITLS_TLS_PROTO_TLS13
 static int32_t ParseTicketNonce(ParsePacket *pkt, NewSessionTicketMsg *msg)
 {
@@ -73,6 +76,69 @@ static int32_t ParseTicket(ParsePacket *pkt, NewSessionTicketMsg *msg)
     return HITLS_SUCCESS;
 }
 
+int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, NewSessionTicketMsg *msg)
+{
+    uint32_t bufOffset = 0u;
+    int32_t ret = HITLS_SUCCESS;
+
+    while (bufOffset < bufLen) {
+        uint32_t extMsgLen = 0u;
+        uint16_t extMsgType = HS_EX_TYPE_END;
+        ret = ParseExHeader(ctx, &buf[bufOffset], bufLen - bufOffset, &extMsgType, &extMsgLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        bufOffset += HS_EX_HEADER_LEN;
+
+        if (bufLen - bufOffset >= extMsgLen) {
+            uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
+                !IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+                msg->extensionTypeMask |= 1ULL << hsExTypeId;
+                }
+
+            if (IsParseNeedCustomExtensions(ctx->customExts, extMsgType, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
+                ret = ParseCustomExtensions(ctx, buf + bufOffset, extMsgType, extMsgLen,
+                    HITLS_EX_TYPE_NEW_SESSION_TICKET);
+                if (ret != HITLS_SUCCESS) {
+                    return ret;
+                }
+            }
+            bufOffset += extMsgLen;
+        } else {
+            return HITLS_PARSE_INVALID_MSG_LEN;
+        }
+    }
+
+    if (bufOffset != bufLen) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15206,
+            BINGLOG_STR("parse extension failed."), ALERT_DECODE_ERROR);
+    }
+
+    return HITLS_SUCCESS;
+}
+
+static int32_t ParseNewSessionTicketExtensions(ParsePacket *pkt, NewSessionTicketMsg *msg)
+{
+    uint16_t exMsgLen = 0;
+    const char *logStr = BINGLOG_STR("parse extension length failed.");
+    int32_t ret = ParseBytesToUint16(pkt, &exMsgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15788,
+            logStr, ALERT_DECODE_ERROR);
+    }
+
+    if (exMsgLen != (pkt->bufLen - *pkt->bufOffset)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15789,
+            logStr, ALERT_DECODE_ERROR);
+    }
+
+    if (exMsgLen == 0u) {
+        return HITLS_SUCCESS;
+    }
+    return ParseNewSessionTicketExtension(pkt->ctx, &pkt->buf[*pkt->bufOffset], exMsgLen, msg);
+}
+
 int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
 {
     uint32_t bufOffset = 0u;
@@ -101,7 +167,22 @@ int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         }
     }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-    return ParseTicket(&pkt, msg);
+    ret = ParseTicket(&pkt, msg);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        ret = ParseNewSessionTicketExtensions(&pkt, msg);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17352, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "parse ticket extensions failed.", 0, 0, 0, 0);
+            return ret;
+        }
+    }
+#endif /* HITLS_TLS_PROTO_TLS13 */
+    return HITLS_SUCCESS;
 }
 
 void CleanNewSessionTicket(NewSessionTicketMsg *msg)
