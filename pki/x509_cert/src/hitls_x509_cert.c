@@ -28,8 +28,7 @@
 #include "hitls_pki_errno.h"
 #include "hitls_x509_local.h"
 #include "crypt_eal_encode.h"
-#include "crypt_encode_decode.h"
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "crypt_errno.h"
 #include "crypt_eal_md.h"
 
@@ -287,8 +286,13 @@ int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
     // subject public key info
     BSL_Buffer subPubKeyBuff = {asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].buff,
         asnArr[HITLS_X509_CERT_SUBKEYINFO_IDX].len};
-    ret = CRYPT_EAL_ProviderDecodeBuffKey(cert->libCtx, cert->attrName, BSL_FORMAT_ASN1,
-        CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ, &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderDecodeBuffKey(cert->libCtx, cert->attrName, BSL_CID_UNKNOWN, "ASN1",
+        "PUBKEY_SUBKEY_WITHOUT_SEQ", &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
+#else
+    ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ, &subPubKeyBuff, NULL, 0,
+        (CRYPT_EAL_PkeyCtx **)&cert->tbs.ealPubKey);
+#endif
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

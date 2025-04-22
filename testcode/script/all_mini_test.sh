@@ -337,7 +337,7 @@ test_pki()
     if [ "$ASM_TYPE" != "" ]; then
         return
     fi
-    bash mini_build_test.sh no-tls enable=eal,encode_decode,rsa,drbg_hash,cipher,modes,sha256,hmac
+    bash mini_build_test.sh no-tls enable=eal,encode_decode_key,rsa,drbg_hash,cipher,modes,sha256,hmac
     bash mini_build_test.sh no-tls enable=eal,key_epki,key_encode,rsa,drbg_hash,cipher,modes,sha256,hmac
     bash mini_build_test.sh no-tls enable=eal,key_encode,rsa,sha256,drbg_hash
     bash mini_build_test.sh no-tls enable=eal,key_decode,rsa,sha256,drbg_hash
