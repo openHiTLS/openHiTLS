@@ -176,7 +176,7 @@
                         "bn_cb": null,
                         "bn_prime_rfc3526": null
                     },
-                    "encode_decode": {
+                    "encode_decode_key": {
                         "key_epki" : {
                             "deps": ["pbkdf2"],
                             "opts": [
@@ -189,7 +189,8 @@
                         "key_decode" : null,
                         "deps": ["asn1", "obj"],
                         "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify"]
-                    }
+                    },
+                    "encode_decode": null
                 },
                 "x8664": {
                     "sha1": {"ins_set":["x8664", "avx512"]},
@@ -1020,12 +1021,12 @@
                     "crypto/mldsa/include",
                     "crypto/slh_dsa/include",
                     "crypto/drbg/include",
-                    "crypto/entropy/include",
                     "crypto/modes/include",
                     "crypto/entropy/include",
                     "crypto/hybridkem/include",
                     "crypto/eal/src",
-                    "crypto/include"
+                    "crypto/include",
+                    "crypto/encode_decode_key/include"
                 ]
             },
             "bn": {
@@ -1079,18 +1080,33 @@
                 ".deps": ["crypto::bn"],
                 ".include": ["crypto/eal/src"]
             },
+            "encode_decode": {
+                ".features": ["encode_decode"],
+                ".srcs": "encode_decode/src/*.c",
+                ".deps": ["crypto::provider", "bsl::params", "bsl::list"],
+                ".include": ["encode_decode/include"]
+
+            },
             "encode": {
                 ".features": ["dsa", "ecdsa", "sm2", "sm2_crypt", "sm2_sign"],
                 ".srcs": "crypto/encode/src/*.c",
                 ".deps": ["crypto::bn", "bsl::asn1", "bsl::obj"]
             },
-            "encode_decode": {
-                ".features": ["encode_decode", "key_epki", "key_encode", "key_decode"],
-                ".srcs": ["crypto/encode_decode/src/*.c"],
+            "encode_decode_key": {
+                ".features": ["encode_decode_key", "key_epki", "key_encode", "key_decode"],
+                ".srcs": ["crypto/encode_decode_key/src/*.c"],
                 ".deps": ["bsl::asn1", "bsl::obj"],
                 ".include": [
+                    "crypto/encode_decode_key/include",
                     "bsl/pem/include",
-                    "crypto/bn/include"
+                    "crypto/bn/include",
+                    "crypto/eal/include",
+                    "crypto/ecc/include",
+                    "crypto/rsa/include",
+                    "crypto/ecdsa/include",
+                    "crypto/sm2/include",
+                    "crypto/curve25519/include",
+                    "crypto/provider/include"
                 ]
             },
             "util": {
@@ -1430,7 +1446,7 @@
             "x509_cert": {
                 ".features" : ["x509", "x509_crt", "x509_crt_gen", "x509_crt_parse"],
                 ".srcs" : "pki/x509_cert/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode_decode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode_decode_key", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list"],
                 ".include": [
                     "bsl/pem/include",
                     "pki/x509_csr/include",
@@ -1451,7 +1467,7 @@
                     "pkcs12", "pkcs12_gen", "pkcs12_parse"
                 ],
                 ".srcs" : "pki/x509_common/src/*",
-                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "crypto::encode_decode"],
+                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "crypto::encode_decode_key"],
                 ".include": ["bsl/pem/include"]
             },
             "print" : {
@@ -1474,12 +1490,12 @@
             "pkcs12" : {
                 ".features" : ["pkcs12", "pkcs12_gen", "pkcs12_parse"],
                 ".srcs" : "pki/pkcs12/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode_decode", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::encode_decode_key", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
             },
             "cms" : {
                 ".features" : ["pkcs12_gen", "pkcs12_parse"],
                 ".srcs" : "pki/cms/src/*",
-                ".deps" : ["platform::Secure_C", "crypto::encode_decode"]
+                ".deps" : ["platform::Secure_C", "crypto::encode_decode_key"]
             }
         },
         "auth" : {
