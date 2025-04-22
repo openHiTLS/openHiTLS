@@ -106,22 +106,7 @@ int32_t CRYPT_ECDH_GetPara(const CRYPT_ECDH_Ctx *ctx, BSL_Param *param)
 
 int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, CRYPT_EcdhPara *para)
 {
-    if (ctx == NULL || para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    // updating public and private keys
-    BN_Destroy(ctx->prvkey);
-    ECC_FreePoint(ctx->pubkey);
-    ctx->prvkey = NULL;
-    ctx->pubkey = NULL;
-
-    ECC_FreePara(ctx->para);
-    ctx->para = para;
-    ECC_SetLibCtx(ctx->libCtx, ctx->para);
-
-    return CRYPT_SUCCESS;
+    return ECC_SetPara(ctx, para);
 }
 
 int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
