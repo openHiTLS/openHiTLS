@@ -413,16 +413,33 @@ int32_t CRYPT_EAL_ProviderSetLoadPath(CRYPT_EAL_LibCtx *libCtx, const char *sear
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
+static int32_t GetProviderUserCtx(CRYPT_EAL_ProvMgrCtx *ctx, void **val)
 {
-    if (ctx == NULL || ctx->provCtrlCb == NULL) {
+    if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    *val = ctx->provCtx;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (cmd == CRYPT_PROVIDER_GET_USER_CTX) {
+        return GetProviderUserCtx(ctx, val);
+    }
+    if (ctx->provCtrlCb == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
+        return CRYPT_PROVIDER_NOT_SUPPORT;
     }
     return ctx->provCtrlCb(ctx->provCtx, cmd, val, valLen);
 }
 
-int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args)
+int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -461,4 +478,16 @@ int32_t CRYPT_EAL_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_EAL_ProviderPr
     return CRYPT_SUCCESS;
 }
 
+int32_t CRYPT_EAL_ProviderQuery(CRYPT_EAL_ProvMgrCtx *ctx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos)
+{
+    if (ctx == NULL || algInfos == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->provQueryCb == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
+        return CRYPT_PROVIDER_NOT_SUPPORT;
+    }
+    return ctx->provQueryCb(ctx->provCtx, operaId, algInfos);
+}
 #endif // HITLS_CRYPTO_PROVIDER
