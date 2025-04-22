@@ -21,7 +21,7 @@
 #include "bsl_obj_internal.h"
 #include "crypt_eal_encode.h"
 #include "crypt_eal_md.h"
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "hitls_pki_errno.h"
 
 #ifdef HITLS_PKI_PKCS12_PARSE
