@@ -196,6 +196,29 @@ static const CRYPT_EAL_AlgInfo g_defKems[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
+static const CRYPT_EAL_AlgInfo g_defDecoders[] = {
+    {BSL_CID_MAX, g_defPem2Der, "provider=default, inFormat=PEM, outFormat=ASN1"},
+    {BSL_CID_MAX, g_defPrvP8Enc2P8, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_ENCRYPT, outFormat=ASN1, outType=PRIKEY_PKCS8_UNENCRYPT"},
+    {CRYPT_PKEY_RSA, g_defRsaPrvDer2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_RSA, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defRsaPubDer2Key, "provider=default, inFormat=ASN1, inType=PUBKEY_RSA, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defEcdsaPrvDer2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_ECC, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defSm2PrvDer2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_ECC, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defP8Der2RsaKey, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defP8Der2EcdsaKey, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defP8Der2Sm2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ED25519, g_defP8Der2Ed25519Key, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defSubPubKeyDer2RsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defSubPubKeyDer2EcdsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defSubPubKeyDer2Sm2Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ED25519, g_defSubPubKeyDer2Ed25519Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defSubPubKeyWithoutSeqDer2RsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defSubPubKeyWithoutSeqDer2EcdsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defSubPubKeyWithoutSeqDer2Sm2Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ED25519, g_defSubPubKeyWithoutSeqDer2Ed25519Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {BSL_CID_MAX, g_defLowKeyObject2PkeyObject, "provider=default, inFormat=OBJECT, inType=LOW_KEY, outFormat=OBJECT, outType=HIGH_KEY"},
+    CRYPT_EAL_ALGINFO_END
+};
+
 static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
     (void)provCtx;
@@ -230,6 +253,9 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             break;
         case CRYPT_EAL_OPERAID_RAND:
             *algInfos = g_defRands;
+            break;
+        case CRYPT_EAL_OPERAID_DECODER:
+            *algInfos = g_defDecoders;
             break;
         default:
             ret = CRYPT_NOT_SUPPORT;
@@ -477,7 +503,7 @@ static int32_t BuildTlsGroupParam(const TLS_GroupInfo *groupInfo, BSL_Param *par
     return BSL_SUCCESS;
 }
 
-static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     for (size_t i = 0; i < sizeof(g_tlsGroupInfo) / sizeof(g_tlsGroupInfo[0]); i++) {
         BSL_Param param[TLS_GROUP_PARAM_COUNT] = {0};
@@ -838,7 +864,7 @@ static int32_t BuildTlsSigAlgParam(const TLS_SigSchemeInfo *sigSchemeInfo, BSL_P
         sizeof(sigSchemeInfo->chainVersionBits));
 }
 
-static int32_t CryptGetSignAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+static int32_t CryptGetSignAlgCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     for (size_t i = 0; i < sizeof(g_signSchemeInfo) / sizeof(g_signSchemeInfo[0]); i++) {
         BSL_Param param[TLS_SIGN_SCHEME_PARAM_COUNT] = {0};
@@ -854,7 +880,7 @@ static int32_t CryptGetSignAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_EAL_DefaultProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args)
+static int32_t CRYPT_EAL_DefaultProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     (void)provCtx;
     if (cb == NULL) {

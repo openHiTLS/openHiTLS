@@ -351,8 +351,13 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
         eeCert3 = HiTLS_X509_LoadCertFile(serverConfig, eeFilePath2);
         ASSERT_TRUE(eeCert3 != NULL);
         ASSERT_EQ(HITLS_CFG_SetCertificate(serverConfig, eeCert3, SHALLOW_COPY), SUCCESS);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+        HITLS_CERT_Key *prvKey2 = HITLS_X509_Adapt_ProviderKeyParse(serverConfig, (const uint8_t *)eeKeyPath2,
+            strlen(eeKeyPath2), TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+#else
         HITLS_CERT_Key *prvKey2 = HITLS_X509_Adapt_KeyParse(serverConfig, (const uint8_t *)eeKeyPath2,
             strlen(eeKeyPath2), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+#endif
         ASSERT_TRUE(prvKey2 != NULL);
         ASSERT_EQ(HITLS_CFG_SetPrivateKey(serverConfig, prvKey2, SHALLOW_COPY), SUCCESS);
         ASSERT_TRUE(HITLS_CFG_GetPrivateKey(serverConfig) == prvKey2);
@@ -368,8 +373,13 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
         eeCert3 = HiTLS_X509_LoadCertFile(serverConfig, eeFilePath2);
         ASSERT_TRUE(eeCert3 != NULL);
         ASSERT_EQ(HITLS_SetCertificate(serverCtx, eeCert3, SHALLOW_COPY), SUCCESS);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+        HITLS_CERT_Key *prvKey2 = HITLS_X509_Adapt_ProviderKeyParse(serverConfig, (const uint8_t *)eeKeyPath2,
+            strlen(eeKeyPath2), TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+#else
         HITLS_CERT_Key *prvKey2 = HITLS_X509_Adapt_KeyParse(serverConfig, (const uint8_t *)eeKeyPath2,
             strlen(eeKeyPath2), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+#endif
         ASSERT_TRUE(prvKey2 != NULL);
         ASSERT_EQ(HITLS_SetPrivateKey(serverCtx, prvKey2, SHALLOW_COPY), SUCCESS);
         ASSERT_TRUE(HITLS_GetCertificate(serverCtx) == eeCert3);

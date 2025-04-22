@@ -92,7 +92,7 @@ parse_option()
         value=${i#*=}
         case "${key}" in
             "no-provider")
-                dis_options="--disable feature_provider provider"
+                dis_options="--disable feature_provider provider encode_decode"
                 ;;
             "gcov")
                 add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage -fdump-rtl-expand"
