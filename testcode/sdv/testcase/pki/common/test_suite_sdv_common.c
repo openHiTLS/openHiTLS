@@ -1217,6 +1217,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_DecodeBuffKey_Ex_TC001(void)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
     TestMemInit();
     BSL_GLOBAL_Init();
     
@@ -1227,47 +1230,51 @@ void SDV_CRYPT_EAL_DecodeBuffKey_Ex_TC001(void)
     uint8_t pwdData[10] = {0};
 
     // Test NULL parameters
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA, NULL, NULL, NULL),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", NULL, NULL, NULL),
         CRYPT_INVALID_ARG);
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA, &encode, NULL, NULL),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", &encode, NULL, NULL),
         CRYPT_INVALID_ARG);
     
     // Test invalid encode buffer
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA, &encode, &pwd, &key),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", &encode, &pwd, &key),
         CRYPT_INVALID_ARG);
     encode.data = data;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA, &encode, &pwd, &key),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", &encode, &pwd, &key),
         CRYPT_INVALID_ARG);
     
     // Test invalid format
     encode.dataLen = sizeof(data);
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, 0xff, CRYPT_PUBKEY_RSA, &encode, &pwd, &key),
-        CRYPT_DECODE_NO_SUPPORT_FORMAT);
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "UNKNOWN_FORMAT", "PUBKEY_RSA", &encode, &pwd, &key),
+        CRYPT_DECODE_ERR_NO_USABLE_DECODER);
 
     // Test invalid type
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, 0xff, &encode, &pwd, &key),
-        CRYPT_DECODE_NO_SUPPORT_TYPE);
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "UNKNOWN_TYPE", &encode, &pwd, &key),
+        CRYPT_DECODE_ERR_NO_USABLE_DECODER);
 
     // Test invalid password buffer for encrypted private key
     pwd.data = pwdData;
     pwd.dataLen = PWD_MAX_LEN + 1;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_ENCRYPT",
         &encode, &pwd, &key), CRYPT_INVALID_ARG);
 
     // Test NULL password data with non-zero length
     pwd.data = NULL;
     pwd.dataLen = 10;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PRIKEY_PKCS8_ENCRYPT",
         &encode, &pwd, &key), CRYPT_INVALID_ARG);
 
 EXIT:
     BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_DecodeFileKey_Ex_TC001(void)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
     TestMemInit();
     BSL_GLOBAL_Init();
     
@@ -1276,36 +1283,37 @@ void SDV_CRYPT_EAL_DecodeFileKey_Ex_TC001(void)
     uint8_t pwdData[10] = {0};
 
     // Test NULL parameters
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA, NULL, NULL, NULL),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_RSA, "ASN1", "PUBKEY_RSA", NULL, NULL, NULL),
         CRYPT_INVALID_ARG);
 
     // Test invalid path
     char longPath[PATH_MAX_LEN + 2] = {0};
     memset(longPath, 'a', PATH_MAX_LEN + 1);
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA, longPath, &pwd, &key),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_RSA, "ASN1", "PUBKEY_RSA", longPath, &pwd, &key),
         CRYPT_INVALID_ARG);
 
     // Test invalid format
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, 0xff, CRYPT_PUBKEY_RSA, 
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_RSA, "UNKNOWN_FORMAT", "PUBKEY_RSA",
         "../testdata/cert/asn1/rsa2048pub_pkcs1.der", &pwd, &key), CRYPT_DECODE_NO_SUPPORT_FORMAT);
 
     // Test invalid type
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, 0xff, 
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_RSA, "ASN1", "UNKNOWN_TYPE",
         "../testdata/cert/asn1/rsa2048pub_pkcs1.der", &pwd, &key), CRYPT_DECODE_NO_SUPPORT_TYPE);
 
     // Test invalid password buffer for encrypted private key
     pwd.data = pwdData;
     pwd.dataLen = PWD_MAX_LEN + 1;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_RSA, "ASN1", "PRIKEY_PKCS8_ENCRYPT",
         "../testdata/cert/asn1/prime256v1_pkcs8_enc.der", &pwd, &key), CRYPT_INVALID_ARG);
 
     // Test NULL password data with non-zero length
     pwd.data = NULL;
     pwd.dataLen = 10;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_ECDSA, "ASN1", "PRIKEY_PKCS8_ENCRYPT",
         "../testdata/cert/asn1/prime256v1_pkcs8_enc.der", &pwd, &key), CRYPT_INVALID_ARG);
 
 EXIT:
     BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
