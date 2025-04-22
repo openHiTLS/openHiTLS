@@ -25,7 +25,6 @@
 #include "crypt_eal_encode.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
-#include "crypt_eal_pkey.h"
 #include "eal_md_local.h"
 #include "securec.h"
 

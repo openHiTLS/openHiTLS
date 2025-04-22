@@ -32,6 +32,11 @@ extern "C" {
 // Maximum length of provider name
 #define DEFAULT_PROVIDER_NAME_LEN_MAX 255
 
+typedef enum {
+    CRYPT_PROVIDER_GET_USER_CTX = 1,
+    CRYPT_PROVIDER_CTRL_MAX,
+} CRYPT_ProviderCtrlCmd;
+
 struct EAL_LibCtx {
     BslList *providers; // managing providers
     BSL_SAL_ThreadLockHandle lock;
@@ -54,9 +59,12 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
 int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* providerName,
     CRYPT_EAL_ProvMgrCtx **ctx);
 
+int32_t CRYPT_EAL_ProviderGetFuncsAndMgrCtx(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+    const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
 CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void);
 
+int32_t CRYPT_EAL_ProviderQuery(CRYPT_EAL_ProvMgrCtx *ctx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos);
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */

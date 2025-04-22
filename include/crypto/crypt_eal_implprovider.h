@@ -77,6 +77,7 @@ typedef void (*CRYPT_EAL_ProvFreeCb)(void *provCtx);
 #define CRYPT_EAL_OPERAID_MAC         8
 #define CRYPT_EAL_OPERAID_KDF         9
 #define CRYPT_EAL_OPERAID_RAND        10
+#define CRYPT_EAL_OPERAID_DECODER     11
 
 typedef int32_t (*CRYPT_EAL_ProvQueryCb)(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos);
 /* Used for obtaining provider information through the eal layer interface */
@@ -86,7 +87,7 @@ typedef int32_t (*CRYPT_EAL_ProvCtrlCb)(void *provCtx, int32_t cmd, void *val, u
 #define CRYPT_EAL_GET_SIGALG_CAP 2
 
 /* Used for obtaining the capabilities of provider through the eal layer interface */
-typedef int32_t (*CRYPT_EAL_ProvGetCapsCb)(void *provCtx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args);
+typedef int32_t (*CRYPT_EAL_ProvGetCapsCb)(void *provCtx, int32_t cmd, CRYPT_EAL_ProcessFuncCb cb, void *args);
 
 /**
  * @ingroup crypt_eal_provider
@@ -138,7 +139,8 @@ typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLPKEYMGMT_COMPARE   11
 #define CRYPT_EAL_IMPLPKEYMGMT_CTRL      12
 #define CRYPT_EAL_IMPLPKEYMGMT_FREECTX   13
-
+#define CRYPT_EAL_IMPLPKEYMGMT_IMPORT    14
+#define CRYPT_EAL_IMPLPKEYMGMT_EXPORT    15
 
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, const BSL_Param *param);
@@ -153,6 +155,9 @@ typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCheck)(const void *prv, const void *pub)
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCompare)(const void *ctx1, const void *ctx2);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplPkeyMgmtFreeCtx)(void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtImport)(void *ctx, int32_t type, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtExport)(void *ctx, int32_t flag, int32_t type, CRYPT_EAL_ProcessFuncCb cb,
+    void *args);
 
 // CRYPT_EAL_OPERAID_SIGN
 #define CRYPT_EAL_IMPLPKEYSIGN_SIGN       1
@@ -276,6 +281,22 @@ typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *out, uint32_t o
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplRandDrbgFreeCtx)(void *ctx);
+
+// CRYPT_EAL_OPERAID_DECODER
+#define CRYPT_DECODER_IMPL_NEWCTX           1
+#define CRYPT_DECODER_IMPL_SETPARAM         2
+#define CRYPT_DECODER_IMPL_GETPARAM         3
+#define CRYPT_DECODER_IMPL_DECODE           4
+#define CRYPT_DECODER_IMPL_FREEOUTDATA      5
+#define CRYPT_DECODER_IMPL_FREECTX          6
+
+typedef void *(*CRYPT_DECODER_IMPL_NewCtx)(void *provCtx);
+typedef int32_t (*CRYPT_DECODER_IMPL_SetParam)(void *ctx, const BSL_Param *param);
+typedef int32_t (*CRYPT_DECODER_IMPL_GetParam)(void *ctx, BSL_Param *param);
+typedef int32_t (*CRYPT_DECODER_IMPL_Decode)(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+typedef void (*CRYPT_DECODER_IMPL_FreeOutData)(void *ctx, BSL_Param *outData);
+typedef void (*CRYPT_DECODER_IMPL_FreeCtx)(void *ctx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
