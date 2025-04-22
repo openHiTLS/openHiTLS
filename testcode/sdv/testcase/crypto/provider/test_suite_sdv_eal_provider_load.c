@@ -759,30 +759,30 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     ASSERT_TRUE(providerMgr != NULL);
 
     // Test getting group capabilities
-    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback,
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback,
         &groupCount), CRYPT_SUCCESS);
     ASSERT_EQ(groupCount, 16);
 
     // Test getting signature algorithm capabilities
-    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback,
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcessFuncCb)SigAlgCapsCallback,
         &sigAlgCount), CRYPT_SUCCESS);
     ASSERT_EQ(sigAlgCount, 23);
 
     // Test invalid mgrCtx
-    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(NULL, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback,
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(NULL, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback,
         &groupCount), CRYPT_NULL_INPUT);
 
-    // Test invalid CRYPT_EAL_ProcCapsCb
+    // Test invalid CRYPT_EAL_ProcessFuncCb
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, NULL, &groupCount), CRYPT_NULL_INPUT);
 
     // Test invalid mgrCtx
     provMgrWithGetCapCb.provCtx = NULL;
     provMgrWithGetCapCb.provGetCap = NULL;
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(&provMgrWithGetCapCb, CRYPT_EAL_GET_GROUP_CAP,
-        (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
+        (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
 
     // Test invalid command
-    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, -1, (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount),
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, -1, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback, &groupCount),
         CRYPT_NOT_SUPPORT);
 
     // Cleanup
@@ -1026,11 +1026,11 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int
     int groupCount = 0;
     int sigAlgCount = 0;
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP,
-        (CRYPT_EAL_ProcCapsCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
+        (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
     ASSERT_EQ(groupCount, 2);
 
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP,
-        (CRYPT_EAL_ProcCapsCb)SigAlgCapsCallback, &sigAlgCount), CRYPT_SUCCESS);
+        (CRYPT_EAL_ProcessFuncCb)SigAlgCapsCallback, &sigAlgCount), CRYPT_SUCCESS);
     ASSERT_EQ(sigAlgCount, 1);
 
     keyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, NEW_PKEY_ALGID, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,

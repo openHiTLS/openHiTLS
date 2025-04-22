@@ -25,7 +25,7 @@
 #include "hitls_cms_local.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "crypt_eal_encode.h"
 #include "bsl_bytes.h"
 #include "crypt_eal_md.h"
@@ -329,8 +329,14 @@ static int32_t ParsePKCS8ShroudedKeyBags(HITLS_PKCS12 *p12, const uint8_t *pwd, 
     HITLS_PKCS12_SafeBag *safeBag)
 {
     CRYPT_EAL_PkeyCtx *prikey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    const BSL_Buffer pwdBuff = {(uint8_t *)(uintptr_t)pwd, pwdlen};
+    int32_t ret = CRYPT_EAL_ProviderDecodeBuffKey(p12->libCtx, p12->attrName, BSL_CID_UNKNOWN, "ASN1",
+        "PRIKEY_PKCS8_ENCRYPT", safeBag->bag, &pwdBuff, &prikey);
+#else
     int32_t ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
         safeBag->bag, pwd, pwdlen, &prikey);
+#endif
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
