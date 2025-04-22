@@ -50,10 +50,8 @@ int main(int32_t argc, char *argv[])
         printf("Init rand failed.\n");
         goto EXIT;
     }
-#ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
-#endif
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) {

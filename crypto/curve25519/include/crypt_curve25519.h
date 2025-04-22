@@ -301,6 +301,27 @@ int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE255
  */
 int32_t CRYPT_CURVE25519_GetSecBits(const CRYPT_CURVE25519_Ctx *ctx);
 
+#ifdef HITLS_CRYPTO_PROVIDER
+/**
+ * @ingroup curve25519
+ * @brief curve25519 import key
+ *
+ * @param ctx [IN/OUT] curve25519 context structure
+ * @param params [IN] parameters
+ */
+int32_t CRYPT_CURVE25519_Import(CRYPT_CURVE25519_Ctx *ctx, const BSL_Param *params);
+
+/**
+ * @ingroup curve25519
+ * @brief curve25519 export key
+ *
+ * @param ctx [IN/OUT] curve25519 context structure
+ * @param cb [IN] callback function
+ * @param args [IN] callback function arguments
+ */
+int32_t CRYPT_CURVE25519_Export(CRYPT_CURVE25519_Ctx *ctx, CRYPT_EAL_ProcessFuncCb cb, void *args);
+#endif // HITLS_CRYPTO_PROVIDER
+
 #ifdef __cplusplus
 }
 #endif

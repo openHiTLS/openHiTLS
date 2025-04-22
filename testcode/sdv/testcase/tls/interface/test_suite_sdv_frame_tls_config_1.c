@@ -1333,7 +1333,11 @@ void UT_HITLS_CFG_REMOVE_CERTANDKEY_API_TC001(int version, char *certFile, char 
     ASSERT_EQ(HITLS_CFG_RemoveCertAndKey(tlsConfig), HITLS_SUCCESS);
 
     ASSERT_EQ(HITLS_CFG_SetCertificate(tlsConfig, cert, true), HITLS_SUCCESS);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ASSERT_EQ(HITLS_CFG_ProviderLoadKeyFile(tlsConfig, keyFile, "ASN1", NULL), HITLS_SUCCESS);
+#else
     ASSERT_EQ(HITLS_CFG_LoadKeyFile(tlsConfig, keyFile, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+#endif
     ASSERT_TRUE(HITLS_CFG_GetCertificate(tlsConfig) != NULL);
     ASSERT_TRUE(HITLS_CFG_GetPrivateKey(tlsConfig) != NULL);
     ASSERT_EQ(HITLS_CFG_CheckPrivateKey(tlsConfig), HITLS_SUCCESS);

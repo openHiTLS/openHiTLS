@@ -34,6 +34,7 @@ typedef enum {
     BSL_FORMAT_ASN1,
     BSL_FORMAT_PFX_COM,
     BSL_FORMAT_PKCS12,
+    BSL_FORMAT_OBJECT,
 } BSL_ParseFormat;
 
 typedef struct {

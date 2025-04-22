@@ -756,7 +756,7 @@ chacha20poly1305, chacha20, rsa"
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_ENCODE_DECODE) && (!defined(HITLS_CRYPTO_ECDSA) && !defined(HITLS_CRYPTO_SM2_SIGN) && \
+#if defined(HITLS_CRYPTO_ENCODE_DECODE_KEY) && (!defined(HITLS_CRYPTO_ECDSA) && !defined(HITLS_CRYPTO_SM2_SIGN) && \
     !defined(HITLS_CRYPTO_SM2_CRYPT) && !defined(HITLS_CRYPTO_ED25519) && !defined(HITLS_CRYPTO_RSA_SIGN)) && \
     !defined(HITLS_CRYPTO_RSA_VERIFY)
     #error "[HiTLS] The encode must work with ecdsa or sm2_sign or sm2_crypt or ed25519 or rsa_sign or rsa_verify."
