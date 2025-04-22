@@ -28,6 +28,8 @@ extern "C" {
 /* length function */
 typedef int32_t (*GetLenFunc)(const void *ctx);
 
+typedef int32_t (*CRYPT_EAL_ProcessFuncCb)(const BSL_Param *param, void *args);
+
 /* Prototype of the MD algorithm operation functions */
 typedef void* (*MdNewCtx)(void);
 typedef void* (*MdProvNewCtx)(void *provCtx, int32_t algId);
@@ -129,6 +131,10 @@ typedef int32_t (*PkeyBlind)(void *pkey, int32_t mdAlgId, const uint8_t *input, 
 typedef int32_t (*PkeyUnBlind)(const void *pkey, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 
+typedef int32_t (*PkeyImport)(void *key, const BSL_Param *params);
+
+typedef int32_t (*PkeyExport)(void *key, CRYPT_EAL_ProcessFuncCb cb, void *args);
+
 /**
 * @ingroup  EAL
 *
@@ -194,6 +200,8 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyDecapsulate decaps;                // Key decapsulation.
     PkeyBlind blind;                        // msg blind
     PkeyUnBlind unBlind;                    // sig unBlind.
+    PkeyImport import;                      // import key
+    PkeyExport export;                      // export key
 } EAL_PkeyUnitaryMethod;
 /**
  * @ingroup  sym_algid
