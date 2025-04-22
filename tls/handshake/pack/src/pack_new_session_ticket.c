@@ -98,6 +98,9 @@ int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t buf
 
     /* extension is not supported currently, set the total extension length to 0 */
     /* total extension length */
+    if (bufLen < (offset + sizeof(uint16_t))) {
+        return PackBufLenError(BINLOG_ID16049, BINGLOG_STR("NewSessionTicket"));
+    }
     if (IsPackNeedCustomExtensions(ctx->customExts, HITLS_EX_TYPE_NEW_SESSION_TICKET)) {
         ret = PackCustomExtensions(ctx, &buf[offset + sizeof(uint16_t)], bufLen - offset - sizeof(uint16_t), &exLen,
             HITLS_EX_TYPE_NEW_SESSION_TICKET);

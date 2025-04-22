@@ -22,62 +22,9 @@
 #include "hitls_crypt_init.h"
 #include "hitls_pki_cert.h"
 #include "crypt_errno.h"
-#include "hitls_custom_extensions.h"
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
-#define CUSTOM_EXT_TYPE 0x003F
-
-int32_t AddCustomExtServerHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
-    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, void *addArg)
-{
-    (void)ctx;
-    (void)extType;
-    (void)context;
-    (void)cert;
-    (void)certId;
-    (void)alert;
-    (void)addArg;
-    uint8_t *data = "test Tls1.2 custom_extension_server_hello";
-    uint16_t dataLen = strlen(data);
-    if (dataLen < 0) {
-        return HITLS_MEMALLOC_FAIL;
-    }
-    uint8_t *buf = malloc(dataLen);
-    if (buf == NULL) {
-        return HITLS_MEMALLOC_FAIL;
-    }
-    memcpy_s(buf, dataLen, data, dataLen);
-    *out = buf;
-    *outLen = dataLen;
-    return HITLS_SUCCESS;
-}
-
-static void FreeCustomExt(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t *out, void *addArg)
-{
-    (void)ctx;
-    (void)extType;
-    (void)context;
-    (void)addArg;
-    free(out);
-}
-
-static int ParseCustomExtClientHello(const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, const uint8_t **in,
-    uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certId, uint32_t *alert, void *parseArg)
-{
-    (void)ctx;
-    (void)extType;
-    (void)context;
-    (void)cert;
-    (void)certId;
-    (void)alert;
-    (void)parseArg;
-    if (in == NULL || inLen == NULL) {
-        return HITLS_CONFIG_INVALID_LENGTH;
-    }
-    printf("Received custom extension data from clent: %.*s\n", *inLen, (*in));
-    return HITLS_SUCCESS;
-}
 
 int main(int32_t argc, char *argv[])
 {
@@ -171,22 +118,6 @@ int main(int32_t argc, char *argv[])
     ctx = HITLS_New(config);
     if (ctx == NULL) {
         printf("HITLS_New failed.\n");
-        goto EXIT;
-    }
-
-    HITLS_CustomExtParams customParams = {
-        .extType = CUSTOM_EXT_TYPE,
-        .context = HITLS_EX_TYPE_CLIENT_HELLO | HITLS_EX_TYPE_TLS1_2_SERVER_HELLO,
-        .addCb = AddCustomExtServerHello,
-        .freeCb = FreeCustomExt,
-        .addArg = NULL,
-        .parseCb = ParseCustomExtClientHello,
-        .parseArg = NULL
-    };
-
-    ret = HITLS_AddCustomExtension(ctx, &customParams);
-    if (ret != HITLS_SUCCESS) {
-        printf("HITLS_AddCustomExtension failed.\n");
         goto EXIT;
     }
 
