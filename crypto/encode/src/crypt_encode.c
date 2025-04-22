@@ -401,4 +401,126 @@ int32_t CRYPT_EAL_DecodeSm2EncryptData(const uint8_t *encode, uint32_t encodeLen
 }
 #endif // HITLS_CRYPTO_SM2_CRYPT
 
+static int32_t GetEccPointLen(CRYPT_PKEY_ParaId ecc, uint32_t *pointLen)
+{
+    switch (ecc) {
+        case CRYPT_ECC_NISTP224:
+            *pointLen = 28;
+            break;
+        case CRYPT_ECC_NISTP256:
+            *pointLen = 32;
+            break;
+        case CRYPT_ECC_NISTP384:
+            *pointLen = 48;
+            break;
+        case CRYPT_ECC_NISTP521:
+            *pointLen = 66;
+            break;
+        case CRYPT_ECC_SM2:
+            *pointLen = 32;
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
+            return CRYPT_ERR_ALGID;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_EncodeEccPubkey(CRYPT_Data *xData, CRYPT_Data *yData,
+    CRYPT_PKEY_PointFormat pointFormat, CRYPT_PKEY_ParaId ecc, CRYPT_Data *pubKey)
+{
+    uint8_t value;
+    uint32_t coordLen;
+    CRYPT_Data x = {0};
+    CRYPT_Data y = {0};
+    CRYPT_Data *pubKeyX, *pubKeyY;
+    value = *(uint8_t *)(yData->data + yData->len - 1);
+    int sign = 0; /* The value 0 indicates an odd number.*/
+    if (value % 2 == 0) {
+        sign = 1;
+    }
+    coordLen = 0;
+    int32_t ret = GetEccPointLen(ecc, &coordLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (xData->len > coordLen || yData->len > coordLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    if (xData->len < coordLen) {
+        x.data = BSL_SAL_Calloc(coordLen, sizeof(uint8_t));
+        if (x.data == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        (void)memcpy_s(x.data+(coordLen-xData->len), xData->len, xData->data, xData->len);
+        x.len = coordLen;
+        pubKeyX = &x;
+    } else {
+        pubKeyX = xData;
+    }
+    if (yData->len < coordLen) {
+        y.data = BSL_SAL_Calloc(coordLen, sizeof(uint8_t));
+        if (y.data == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            ret = CRYPT_MEM_ALLOC_FAIL;
+            goto ERR;
+        }
+        (void)memcpy_s(y.data+(coordLen-yData->len), yData->len, yData->data, yData->len);
+        y.len = coordLen;
+        pubKeyY = &y;
+    } else {
+        pubKeyY = yData;
+    }
+
+    switch (pointFormat) {
+        case CRYPT_POINT_COMPRESSED: {
+            pubKey->data[0] = (sign == 1) ? 0x02 : 0x03;
+            if (memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->data, pubKeyX->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                ret = CRYPT_MEM_ALLOC_FAIL;
+                goto ERR;
+            }
+            pubKey->len = pubKeyX->len + 1;
+        } break;
+        case CRYPT_POINT_UNCOMPRESSED: {
+            pubKey->data[0] = 0x04;
+            if (memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->data, pubKeyX->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                ret = CRYPT_MEM_ALLOC_FAIL;
+                goto ERR;
+            }
+            if (memcpy_s(pubKey->data + 1 + pubKeyX->len, pubKey->len - 1 - pubKeyX->len, pubKeyY->data, pubKeyY->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                ret = CRYPT_MEM_ALLOC_FAIL;
+                goto ERR;
+            }
+            pubKey->len = pubKeyX->len + pubKeyY->len + 1;
+        } break;
+        case CRYPT_POINT_HYBRID: {
+            pubKey->data[0] = (sign == 1) ? 0x06 : 0x07;
+            if (memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->data, pubKeyX->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                ret = CRYPT_MEM_ALLOC_FAIL;
+                goto ERR;
+            }
+            if (memcpy_s(pubKey->data + 1 + pubKeyX->len, pubKey->len - 1 - pubKeyX->len, pubKeyY->data, pubKeyY->len) != EOK) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+                ret = CRYPT_MEM_ALLOC_FAIL;
+                goto ERR;
+            }
+            pubKey->len = pubKeyX->len + pubKeyY->len + 1;
+        } break;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            ret = CRYPT_INVALID_ARG;
+            goto ERR;
+    }
+ERR:
+    BSL_SAL_FREE(x.data);
+    BSL_SAL_FREE(y.data);
+    return ret;
+}
+
 #endif
