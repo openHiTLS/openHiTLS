@@ -30,7 +30,7 @@
 #include "bsl_pem_internal.h"
 #endif // HITLS_BSL_PEM
 
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "hitls_pki_utils.h"

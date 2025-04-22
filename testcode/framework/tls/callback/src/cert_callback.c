@@ -104,8 +104,15 @@ int32_t RegMemCallback(MemCallbackType type)
 
 HITLS_CERT_X509 *HiTLS_X509_LoadCertFile(HITLS_Config *tlsCfg, const char *file)
 {
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(tlsCfg);
+    const char *attrName = ATTRIBUTE_FROM_CONFIG(tlsCfg);
+    return HITLS_CERT_ProviderCertParse(libCtx, attrName, (const uint8_t *)file, strlen(file) + 1,
+        TLS_PARSE_TYPE_FILE, "ASN1");
+#else
     return HITLS_X509_Adapt_CertParse(tlsCfg, (const uint8_t *)file, strlen(file) + 1, TLS_PARSE_TYPE_FILE,
         TLS_PARSE_FORMAT_ASN1);
+#endif
 }
 
 void *HiTLS_X509_LoadCertListToStore(HITLS_Config *tlsCfg, const char *fileList)
@@ -223,8 +230,13 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
         }
         LOG_DEBUG("Load Cert Path is %s", filePath);
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+        key = HITLS_X509_Adapt_ProviderKeyParse(tlsCfg, (const uint8_t *)filePath, strlen(filePath),
+            TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+#else
         key = HITLS_X509_Adapt_KeyParse(tlsCfg, (const uint8_t *)filePath, strlen(filePath),
             TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+#endif
         if (key == NULL) {
             LOG_ERROR("LoadCert Error: path = %s.", filePath);
             return ERROR;
@@ -235,7 +247,7 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
             ret = HITLS_CFG_SetPrivateKey(tlsCfg, key, 0);
         }
         if (ret != SUCCESS) {
-            LOG_ERROR("HITLS_CFG_SetCertificate Error: path = %s.", filePath);
+            LOG_ERROR("HITLS_CFG_SetPrivateKey Error: path = %s.", filePath);
             CRYPT_EAL_PkeyFreeCtx(key);
             return ERROR;
         }

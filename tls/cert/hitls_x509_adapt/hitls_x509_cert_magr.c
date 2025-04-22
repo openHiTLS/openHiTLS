@@ -54,8 +54,9 @@ int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8
     return ret;
 }
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
 HITLS_CERT_X509 *HITLS_CERT_ProviderCertParse(HITLS_Lib_Ctx *libCtx, const char *attrName, const uint8_t *buf,
-    uint32_t len, HITLS_ParseType type, HITLS_ParseFormat format)
+    uint32_t len, HITLS_ParseType type, const char *format)
 {
     BSL_Buffer encodedCert = { NULL, 0 };
     int ret;
@@ -81,20 +82,36 @@ HITLS_CERT_X509 *HITLS_CERT_ProviderCertParse(HITLS_Lib_Ctx *libCtx, const char 
 
     return cert;
 }
-
+#else
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
-    HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(config);
-    const char *attrName = ATTRIBUTE_FROM_CONFIG(config);
-
-    HITLS_CERT_X509 *cert = HITLS_CERT_ProviderCertParse(libCtx, attrName, buf, len, type, format);
-    if (cert == NULL) {
+    (void)config;
+    BSL_Buffer encodedCert = { NULL, 0 };
+    int ret;
+    HITLS_X509_Cert *cert = NULL;
+    switch (type) {
+        case TLS_PARSE_TYPE_FILE:
+            ret = HITLS_X509_CertParseFile(format, (const char *)buf, &cert);
+            break;
+        case TLS_PARSE_TYPE_BUFF:
+            encodedCert.data = (uint8_t *)(uintptr_t)buf;
+            encodedCert.dataLen = len;
+            ret = HITLS_X509_CertParseBuff(format, &encodedCert, &cert);
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT);
+            ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
+            break;
+    }
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return NULL;
     }
 
     return cert;
 }
+#endif
 
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertDup(HITLS_CERT_X509 *cert)
 {

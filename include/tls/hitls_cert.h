@@ -472,6 +472,18 @@ int32_t HITLS_CFG_LoadKeyFile(HITLS_Config *config, const char *file, HITLS_Pars
 
 /**
  * @ingroup hitls_cert
+ * @brief   Load the private key of the device certificate from the file, when the provider is used.
+ *
+ * @param   config  [OUT] TLS link configuration
+ * @param   file   [IN] File name
+ * @param   format  [IN] Data format. e.g. "PEM", "ASN1", etc.
+ * @param   type   [IN] Data type. e.g. "PRIKEY_RSA", "PRIKEY_ECC", "PRIKEY_PKCS8_UNENCRYPT",
+ *                "PRIKEY_PKCS8_ENCRYPT", etc.
+ */
+int32_t HITLS_CFG_ProviderLoadKeyFile(HITLS_Config *config, const char *file, const char *format, const char *type);
+
+/**
+ * @ingroup hitls_cert
  * @brief   Read the private key of the device certificate from the buffer.
  *
  * @param   config [OUT] TLS link configuration
@@ -483,6 +495,18 @@ int32_t HITLS_CFG_LoadKeyFile(HITLS_Config *config, const char *file, HITLS_Pars
  */
 int32_t HITLS_CFG_LoadKeyBuffer(HITLS_Config *config, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format);
 
+/**
+ * @ingroup hitls_cert
+ * @brief   Load the private key of the device certificate from the buffer, when the provider is used.
+ *
+ * @param   config [OUT] TLS link configuration
+ * @param   buf    [IN] Private key data
+ * @param   bufLen [IN] Data length
+ * @param   format [IN] Data format
+ * @param   type   [IN] Data type
+ */
+int32_t HITLS_CFG_ProviderLoadKeyBuffer(HITLS_Config *config, const uint8_t *buf, uint32_t bufLen, const char *format,
+    const char *type);
 /**
  * @ingroup hitls_cert
  * @brief   Obtain the private key of the certificate in use.
@@ -531,6 +555,16 @@ int32_t HITLS_LoadKeyFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat fo
 
 /**
  * @ingroup hitls_cert
+ * @brief   Load the private key of the device certificate from the file, when the provider is used.
+ *
+ * @param   ctx  [IN/OUT] TLS connection handle
+ * @param   file  [IN] File name.
+ * @param   format  [IN] Data format.
+ * @param   type  [IN] Data type.
+ */
+int32_t HITLS_ProviderLoadKeyFile(HITLS_Ctx *ctx, const char *file, const char *format, const char *type);
+/**
+ * @ingroup hitls_cert
  * @brief   Read the private key of the device certificate from the buffer.
  *
  * @param   ctx   [OUT] TLS link object.
@@ -542,6 +576,18 @@ int32_t HITLS_LoadKeyFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat fo
  */
 int32_t HITLS_LoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format);
 
+/**
+ * @ingroup hitls_cert
+ * @brief   Load the private key of the device certificate from the buffer, when the provider is used.
+ *
+ * @param   ctx  [IN/OUT] TLS connection handle
+ * @param   buf    [IN] Private key data.
+ * @param   bufLen [IN] Data length.
+ * @param   format [IN] Data format.
+ * @param   type  [IN] Data type.
+ */
+int32_t HITLS_ProviderLoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, const char *format,
+    const char *type);
 /**
  * @ingroup hitls_cert
  * @brief   Obtain the private key of the certificate in use.
@@ -618,6 +664,22 @@ HITLS_CERT_X509 *HITLS_CFG_ParseCert(HITLS_Config *config, const uint8_t *buf, u
  */
 HITLS_CERT_Key *HITLS_CFG_ParseKey(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format);
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Parse Certificate file or buffer to X509.
+ *
+ * @param   config [IN] TLS link configuration
+ * @param   buf [IN] Certificate file or buffer
+ * @param   len [IN] bufLen
+ * @param   type [IN] buf type: file or buffer
+ * @param   format [IN] cert type
+ * @param   encodeType [IN] cert encode type
+ *
+ * @retval  HITLS_CERT_X509
+ */
+HITLS_CERT_Key *HITLS_CFG_ProviderParseKey(HITLS_Config *config, const uint8_t *buf, uint32_t len,
+    HITLS_ParseType type, const char *format, const char *encodeType);
 
 /**
  * @ingroup hitls_cert
