@@ -60,6 +60,20 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
     }
 #endif
     BSL_Param *getEnt = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY);
+    BSL_Param *cleanEnt = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY);
+    BSL_Param *getNonce = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE);
+    BSL_Param *cleanNonce = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE);
+    BSL_Param *ctx = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEEDCTX);
+    /**
+     * If you use a registered entropy source, the getEntropy callback cannot be NULL,
+     * and if getEntropy is NULL, cleanEntropy, getNonce, cleanNonce, etc. must be NULL
+     */
+    if (getEnt == NULL && ((cleanEnt != NULL && cleanEnt->value != NULL) ||
+        (getNonce != NULL && getNonce->value != NULL) || (cleanNonce != NULL && cleanNonce->value != NULL) ||
+        (ctx != NULL && ctx->value != NULL))) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return NULL;
+    }
     if (param == NULL || getEnt == NULL) {
 #ifdef HITLS_CRYPTO_ENTROPY
         BSL_Param defaultParam[6] = {BSL_PARAM_END};

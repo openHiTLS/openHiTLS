@@ -2073,3 +2073,49 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_RAND_DEFAULT_PROVIDER_BYTES_FUNC_TC003(int id)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)id;
+    SKIP_TEST();
+#else
+    if (IsRandAlgDisabled(id)) {
+        SKIP_TEST();
+    }
+    uint8_t output[DRBG_MAX_OUTPUT_SIZE];
+    CRYPT_RandSeedMethod seedMeth = {
+        .getEntropy = getEntropyWithoutSeedCtx,
+        .cleanEntropy = cleanEntropyError,
+        .getNonce = getNonceWithoutSeedCtx,
+        .cleanNonce = cleanNonceError,
+    };
+    TestMemInit();
+
+    BSL_Param param[6] = {0};
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0],
+        CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getNonce, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1],
+        CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2],
+        CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, NULL, 0), BSL_SUCCESS);
+        
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, NULL),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandSeedEx(NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, DRBG_MAX_OUTPUT_SIZE), CRYPT_SUCCESS);
+    CRYPT_EAL_DrbgDeinit(CRYPT_EAL_GetGlobalLibCtx()->drbg);
+    CRYPT_EAL_GetGlobalLibCtx()->drbg = NULL;
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param),
+        CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+    param[2] = (BSL_Param){0, 0, NULL, 0, 0};
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)id, "provider=default", NULL, 0, param),
+        CRYPT_EAL_ERR_DRBG_INIT_FAIL);
+EXIT:
+    CRYPT_EAL_RandDeinitEx(NULL);
+    return;
+#endif
+}
+/* END_CASE */
+

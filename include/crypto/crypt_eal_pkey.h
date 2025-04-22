@@ -243,7 +243,7 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
  * to meet more complex public key setting requirements.
  *
  * @param   pkey [OUT] Key pair structure for receiving key data
- * @param   key  [IN] Public key data
+ * @param   param  [IN] Public key data
  *
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes, see crypt_errno.h.
@@ -261,6 +261,21 @@ int32_t CRYPT_EAL_PkeySetPubEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param);
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Extended interface to set the private key.
+ *
+ * This function is an extended version of CRYPT_EAL_PkeySetPrv, which allows passing additional parameters
+ * to meet more complex public key setting requirements.
+ *
+ * @param   pkey [OUT] Key pair structure for receiving key data
+ * @param   param  [IN] Private key data
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeySetPrvEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -287,7 +302,7 @@ int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_PkeyGetPubEx(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
+int32_t CRYPT_EAL_PkeyGetPubEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -300,6 +315,21 @@ int32_t CRYPT_EAL_PkeyGetPubEx(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Extended interface to obtain the private key.
+ *
+ * This function is an extended version of CRYPT_EAL_PkeyGetPrv, which allows passing parameters
+ * through the BSL_Param structure to meet more complex public key acquisition requirements.
+ *
+ * @param   pkey [IN] Key session
+ * @param   param  [OUT] Private key data
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyGetPrvEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param);
 
 /**
  * @ingroup crypt_eal_pkey
