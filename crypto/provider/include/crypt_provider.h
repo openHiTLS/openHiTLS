@@ -53,6 +53,8 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
 int32_t CRYPT_EAL_LoadPreDefinedProvider(CRYPT_EAL_LibCtx *libCtx, const char* providerName,
     CRYPT_EAL_ProvMgrCtx **ctx);
 
+int32_t CRYPT_EAL_ProviderGetFuncsAndMgrCtx(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+    const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
 CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void);
 

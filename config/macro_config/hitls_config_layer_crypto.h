@@ -25,7 +25,19 @@
 #ifndef HITLS_CONFIG_LAYER_CRYPTO_H
 #define HITLS_CONFIG_LAYER_CRYPTO_H
 
+#if defined(HITLS_CRYPTO_ENCODE_DECODE_KEY) && defined(HITLS_CRYPTO_PROVIDER)
+    #ifndef HITLS_CRYPTO_ENCODE_DECODE
+        #define HITLS_CRYPTO_ENCODE_DECODE
+    #endif
+#endif
+
 #ifdef HITLS_CRYPTO_ENCODE_DECODE
+    #ifndef HITLS_CRYPTO_PROVIDER
+        #define HITLS_CRYPTO_PROVIDER
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_ENCODE_DECODE_KEY
     #ifndef HITLS_CRYPTO_KEY_ENCODE
         #define HITLS_CRYPTO_KEY_ENCODE
     #endif
@@ -44,8 +56,8 @@
 #endif
 
 #if defined(HITLS_CRYPTO_KEY_ENCODE) || defined(HITLS_CRYPTO_KEY_DECODE) || defined(HITLS_CRYPTO_KEY_EPKI)
-    #ifndef HITLS_CRYPTO_ENCODE_DECODE
-        #define HITLS_CRYPTO_ENCODE_DECODE
+    #ifndef HITLS_CRYPTO_ENCODE_DECODE_KEY
+        #define HITLS_CRYPTO_ENCODE_DECODE_KEY
     #endif
     #ifndef HITLS_BSL_ASN1
         #define HITLS_BSL_ASN1
