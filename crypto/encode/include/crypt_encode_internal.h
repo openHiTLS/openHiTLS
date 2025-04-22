@@ -107,6 +107,10 @@ int32_t CRYPT_EAL_EncodeSm2EncryptData(const CRYPT_SM2_EncryptData *data, uint8_
 int32_t CRYPT_EAL_DecodeSm2EncryptData(const uint8_t *encode, uint32_t encodeLen, CRYPT_SM2_EncryptData *data);
 #endif
 
+// encode x and y into the ecc public key
+int32_t CRYPT_EAL_EncodeEccPubkey(CRYPT_Data *xData, CRYPT_Data *yData,
+    CRYPT_PKEY_PointFormat pointFormat, CRYPT_PKEY_ParaId ecc, CRYPT_Data *pubKey);
+
 #ifdef __cplusplus
 }
 #endif
