@@ -52,6 +52,8 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
 
 HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format);
+HITLS_CERT_Key *HITLS_X509_Adapt_ProviderKeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
+    HITLS_ParseType type, const char *format, const char *encodeType);
 HITLS_CERT_Key *HITLS_X509_Adapt_KeyDup(HITLS_CERT_Key *key);
 void HITLS_X509_Adapt_KeyFree(HITLS_CERT_Key *key);
 int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_CtrlCmd cmd,
