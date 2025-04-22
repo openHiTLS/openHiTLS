@@ -60,6 +60,12 @@ struct RSA_Para {
     uint32_t bits;   // length in bits of modulus
     BN_BigNum *p;     // prime factor p
     BN_BigNum *q;     // prime factor q
+    BN_BigNum *xp;  // main seed for prime p
+    BN_BigNum *xp1; // auxiliary seed1 for prime p
+    BN_BigNum *xp2; // auxiliary seed2 for prime p
+    BN_BigNum *xq;  // main seed for prime q
+    BN_BigNum *xq1; // auxiliary seed1 for prime q
+    BN_BigNum *xq2; // auxiliary seed2 for prime q
 };
 
 #ifdef HITLS_CRYPTO_RSA_BSSA
