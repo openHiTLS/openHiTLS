@@ -68,6 +68,8 @@ int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symb
 /* encode must end in '\0' */
 bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen);
 
+int32_t BSL_PEM_GetSymbolAndType(char *encode, uint32_t encodeLen, BSL_PEM_Symbol *symbol, char **type);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

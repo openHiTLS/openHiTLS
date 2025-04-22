@@ -103,6 +103,26 @@ extern const CRYPT_EAL_Func g_defXts[];
 extern const CRYPT_EAL_Func g_defMlKem[];
 extern const CRYPT_EAL_Func g_defHybridKeyKem[];
 
+extern const CRYPT_EAL_Func g_defPrvP8Enc2P8[];
+extern const CRYPT_EAL_Func g_defPem2Der[];
+extern const CRYPT_EAL_Func g_defRsaPrvDer2Key[];
+extern const CRYPT_EAL_Func g_defEcdsaPrvDer2Key[];
+extern const CRYPT_EAL_Func g_defSm2PrvDer2Key[];
+extern const CRYPT_EAL_Func g_defP8Der2RsaKey[];
+extern const CRYPT_EAL_Func g_defP8Der2EcdsaKey[];
+extern const CRYPT_EAL_Func g_defP8Der2Sm2Key[];
+extern const CRYPT_EAL_Func g_defP8Der2Ed25519Key[];
+extern const CRYPT_EAL_Func g_defSubPubKeyDer2RsaKey[];
+extern const CRYPT_EAL_Func g_defSubPubKeyDer2EcdsaKey[];
+extern const CRYPT_EAL_Func g_defSubPubKeyDer2Sm2Key[];
+extern const CRYPT_EAL_Func g_defSubPubKeyDer2Ed25519Key[];
+extern const CRYPT_EAL_Func g_defSubPubKeyWithoutSeqDer2RsaKey[];
+extern const CRYPT_EAL_Func g_defSubPubKeyWithoutSeqDer2EcdsaKey[];
+extern const CRYPT_EAL_Func g_defSubPubKeyWithoutSeqDer2Sm2Key[];
+extern const CRYPT_EAL_Func g_defSubPubKeyWithoutSeqDer2Ed25519Key[];
+extern const CRYPT_EAL_Func g_defLowKeyObject2PkeyObject[];
+extern const CRYPT_EAL_Func g_defRsaPubDer2Key[];
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
