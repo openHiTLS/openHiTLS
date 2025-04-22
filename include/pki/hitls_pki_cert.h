@@ -137,7 +137,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ProviderCertParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
     const BSL_Buffer *encode, HITLS_X509_Cert **cert);
 
 /**
@@ -164,13 +164,13 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
- * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
+ * @param format [IN] Encoding format: PEM/ASN1/NULL
  * @param path [IN] Certificate file path
  * @param cert [OUT] Parsed certificate object
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ProviderCertParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
     const char *path, HITLS_X509_Cert **cert);
 
 /**
@@ -197,13 +197,13 @@ int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
- * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
+ * @param format [IN] Encoding format: PEM/ASN1/NULL
  * @param path [IN] Certificate bundle file path
  * @param certlist [OUT] List of parsed certificate objects
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_X509_ProviderCertParseBundleFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_X509_ProviderCertParseBundleFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
     const char *path, HITLS_X509_List **certlist);
 
 /**

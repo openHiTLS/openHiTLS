@@ -20,7 +20,7 @@
 #include <string.h>
 #include "bsl_obj.h"
 #include "bsl_err.h"
-// #include "bsl_params.h"
+#include "bsl_params.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"
@@ -85,10 +85,38 @@ void *TestPkeyMgmtEcNewCtx(void *provCtx, int32_t algId)
     return (void *)pkeyCtx;
 }
 
-static int32_t TestEccSetParaPara(TestEccKeyCtx *ctx, const BSL_Param *param)
+static const BSL_Param *TestFindConstParam(const BSL_Param *param, int32_t key)
 {
-    (void)ctx;
-    (void)param;
+    if (key == 0) {
+        return NULL;
+    }
+    if (param == NULL) {
+        return NULL;
+    }
+    int32_t index = 0;
+    while (param[index].key != 0 && index < BSL_PARAM_MAX_NUMBER) {
+        if (param[index].key == key) {
+            return &param[index];
+        }
+        index++;
+    }
+    return NULL;
+}
+
+static int32_t TestEccSetPara(TestEccKeyCtx *ctx, const BSL_Param *param)
+{
+    if (ctx == NULL || param == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    const BSL_Param *para = TestFindConstParam(param, CRYPT_PARAM_EC_CURVE_ID);
+    if (para != NULL) {
+        if (para->value == NULL || para->valueType != BSL_PARAM_TYPE_INT32 ||
+            para->valueLen != sizeof(int32_t)) {
+            return CRYPT_INVALID_ARG;
+        }
+        ctx->paraId = *((int32_t *)para->value);
+    }
+
     return CRYPT_SUCCESS;
 }
 
@@ -124,24 +152,6 @@ static int32_t TestEccGenKey(TestEccKeyCtx *ctx)
     RandFunc(ctx->pubkey, ctx->pubkeyLen);
     
     return CRYPT_SUCCESS;
-}
-
-static const BSL_Param *TestFindConstParam(const BSL_Param *param, int32_t key)
-{
-    if (key == 0) {
-        return NULL;
-    }
-    if (param == NULL) {
-        return NULL;
-    }
-    int32_t index = 0;
-    while (param[index].key != 0 && index < BSL_PARAM_MAX_NUMBER) {
-        if (param[index].key == key) {
-            return &param[index];
-        }
-        index++;
-    }
-    return NULL;
 }
 
 static int32_t TestEccSetPrvKey(TestEccKeyCtx *ctx, const BSL_Param *para)
@@ -321,6 +331,58 @@ static int32_t TestEccPkeyExch(const TestEccKeyCtx *ctx, const TestEccKeyCtx *pu
     return CRYPT_SUCCESS;
 }
 
+int32_t TestEccImport(void *ctx, int32_t type, const BSL_Param *params)
+{
+    if (ctx == NULL || params == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret;
+    if (type == CRYPT_KEYMGMT_SELECT_UNKNOWN) {
+        BSL_Param *curve = TestFindConstParam(params, CRYPT_PARAM_EC_CURVE_ID);
+        BSL_Param *pub = TestFindConstParam(params, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+        BSL_Param *prv = TestFindConstParam(params, CRYPT_PARAM_EC_PRVKEY);
+        if (curve != NULL) {
+            ret = TestEccSetPara(ctx, params);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+        }
+        if (pub != NULL) {
+            ret = TestEccSetPubKey(ctx, params);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+        }
+        if (prv != NULL) {
+            ret = TestEccSetPrvKey(ctx, params);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
+        }
+    } else if ((type & CRYPT_KEYMGMT_SELECT_PUBLIC_KEY) != 0) {
+        ret = TestEccSetPubKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    } else if ((type & CRYPT_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
+        ret = TestEccSetPrvKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t TestEccExport(void *ctx, int32_t flag, int32_t type, CRYPT_EAL_ProcessFuncCb cb, void *args)
+{
+    (void)ctx;
+    (void)flag;
+    (void)type;
+    (void)cb;
+    (void)args;
+    return CRYPT_SUCCESS;
+}
 
 void *TestPkeyMgmtKemNewCtx(void *provCtx, int32_t algId)
 {
@@ -418,7 +480,7 @@ static void TestKemFreeCtx(TestKemKeyCtx *ctx)
 
 const CRYPT_EAL_Func g_testKeyMgmtEcdsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtEcNewCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetParaPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetPara},
     {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)TestEccGetParaPara},
     {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)TestEccGenKey},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)TestEccSetPrvKey},
@@ -428,12 +490,14 @@ const CRYPT_EAL_Func g_testKeyMgmtEcdsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)TestEccDupCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)TestEccCtrl},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)TestEccFreeCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_IMPORT, (CRYPT_EAL_ImplPkeyMgmtImport)TestEccImport},
+    {CRYPT_EAL_IMPLPKEYMGMT_EXPORT, (CRYPT_EAL_ImplPkeyMgmtExport)TestEccExport},
     CRYPT_EAL_FUNC_END,
 };
 
 const CRYPT_EAL_Func g_testKeyMgmtEcdh[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtEcNewCtx},
-    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetParaPara},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetPara},
     {CRYPT_EAL_IMPLPKEYMGMT_GETPARAM, (CRYPT_EAL_ImplPkeyMgmtGetParam)TestEccGetParaPara},
     {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)TestEccGenKey},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)TestEccSetPrvKey},
@@ -664,7 +728,7 @@ static int32_t TestProvFree(void *provCtx)
     return CRYPT_SUCCESS;
 }
 
-static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     if (cb == NULL) {
         return CRYPT_NULL_INPUT;
@@ -890,7 +954,7 @@ static int32_t BuildTlsGroupParam(const Provider_Group *groupInfo, BSL_Param *pa
     return BSL_SUCCESS;
 }
 
-static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
+static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     for (size_t i = 0; i < sizeof(g_tlsGroupInfo) / sizeof(g_tlsGroupInfo[0]); i++) {
         BSL_Param param[TLS_GROUP_PARAM_COUNT] = {0};
@@ -906,7 +970,7 @@ static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcCapsCb cb, void *args)
     return CRYPT_SUCCESS;
 }
 
-static int32_t TestProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args)
+static int32_t TestProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EAL_ProcessFuncCb cb, void *args)
 {
     switch (cmd) {
         case CRYPT_EAL_GET_GROUP_CAP:

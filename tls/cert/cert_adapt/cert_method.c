@@ -193,7 +193,7 @@ HITLS_CERT_X509 *SAL_CERT_X509Parse(HITLS_Lib_Ctx *libCtx, const char *attrName,
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     (void)config;
-    return HITLS_CERT_ProviderCertParse(libCtx, attrName, buf, len, type, format);
+    return HITLS_CERT_ProviderCertParse(libCtx, attrName, buf, len, type, SAL_CERT_GetParseFormatStr(format));
 #else
     (void)libCtx;
     (void)attrName;
@@ -233,13 +233,51 @@ HITLS_CERT_X509 *SAL_CERT_X509Ref(const CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *ce
 #endif
 }
 
+typedef struct {
+    const char *name;
+    HITLS_ParseFormat format;
+} ParseFormatMap;
+
+static const ParseFormatMap g_parseFormatMap[] = {
+    {"PEM", TLS_PARSE_FORMAT_PEM},
+    {"ASN1", TLS_PARSE_FORMAT_ASN1},
+    {"PFX_COM", TLS_PARSE_FORMAT_PFX_COM},
+    {"PKCS12", TLS_PARSE_FORMAT_PKCS12}
+};
+
+const char *SAL_CERT_GetParseFormatStr(HITLS_ParseFormat format)
+{
+    for (size_t i = 0; i < sizeof(g_parseFormatMap) / sizeof(g_parseFormatMap[0]); i++) {
+        if (g_parseFormatMap[i].format == format) {
+            return g_parseFormatMap[i].name;
+        }
+    }
+    return NULL;
+}
+
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+static HITLS_ParseFormat GetTlsParseFormat(const char *format)
+{
+    if (format == NULL) {
+        return TLS_PARSE_FORMAT_BUTT;
+    }
+    for (size_t i = 0; i < sizeof(g_parseFormatMap) / sizeof(g_parseFormatMap[0]); i++) {
+        if (BSL_SAL_StrcaseCmp(format, g_parseFormatMap[i].name) == 0) {
+            return g_parseFormatMap[i].format;
+        }
+    }
+    return TLS_PARSE_FORMAT_BUTT;
+}
+#endif
+
 HITLS_CERT_Key *SAL_CERT_KeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
-    HITLS_ParseType type, HITLS_ParseFormat format)
+    HITLS_ParseType type, const char *format, const char *encodeType)
 {
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    return HITLS_X509_Adapt_KeyParse(config, buf, len, type, format);
+    return HITLS_X509_Adapt_ProviderKeyParse(config, buf, len, type, format, encodeType);
 #else
-    return config->certMgrCtx->method.keyParse(config, buf, len, type, format);
+    (void)encodeType;
+    return config->certMgrCtx->method.keyParse(config, buf, len, type, GetTlsParseFormat(format));
 #endif
 }
 

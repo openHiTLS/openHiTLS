@@ -31,13 +31,13 @@
 extern "C" {
 #endif // __cplusplus
 
-/* The hitls framework generates context for each provider */
-typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
-
 typedef struct {
     int32_t id;
     void *func;
 } CRYPT_EAL_Func;
+
+/* The hitls framework generates context for each provider */
+typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 
 /**
  * @ingroup crypt_eal_provider
@@ -101,7 +101,7 @@ int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val
  * @retval #CRYPT_SUCCESS if processing succeeds
  *         Other error codes see the crypt_errno.h
  */
-typedef int32_t (*CRYPT_EAL_ProcCapsCb)(const BSL_Param *params, void *args);
+typedef int32_t (*CRYPT_EAL_ProcessFuncCb)(const BSL_Param *params, void *args);
 
 /**
  * @ingroup crypt_eal_provider
@@ -115,7 +115,7 @@ typedef int32_t (*CRYPT_EAL_ProcCapsCb)(const BSL_Param *params, void *args);
  * @retval #CRYPT_SUCCESS if capability retrieval and processing succeeds
  *         Other error codes see the crypt_errno.h
  */
-int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_EAL_ProcCapsCb cb, void *args);
+int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_EAL_ProcessFuncCb cb, void *args);
 
 /**
  * @ingroup crypt_eal_provider

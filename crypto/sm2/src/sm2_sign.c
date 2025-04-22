@@ -867,4 +867,5 @@ int32_t CRYPT_SM2_GetSecBits(const CRYPT_SM2_Ctx *ctx)
     }
     return ECC_GetSecBits(ctx->pkey->para);
 }
+
 #endif // HITLS_CRYPTO_SM2_SIGN
