@@ -170,11 +170,21 @@ void SAL_CERT_X509Free(HITLS_CERT_X509 *cert);
  * @param len    [IN] Data length
  * @param type   [IN] Data type
  * @param format [IN] Data format
+ * @param encodeType [IN] Data encode type
  *
  * @return Key
  */
 HITLS_CERT_Key *SAL_CERT_KeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
-    HITLS_ParseType type, HITLS_ParseFormat format);
+    HITLS_ParseType type, const char *format, const char *encodeType);
+
+/**
+ * @brief Get the parse format string.
+ *
+ * @param format [IN] Data format
+ *
+ * @return Parse format string
+ */
+const char *SAL_CERT_GetParseFormatStr(HITLS_ParseFormat format);
 
 /**
  * @brief   Copy the key.
