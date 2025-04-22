@@ -245,6 +245,9 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para)
 {
     const uint8_t *e = NULL;
     uint32_t eLen = 0;
+    const BSL_Param *sp;
+    const uint8_t *data;
+    uint32_t len;
     int32_t ret = GetRsaParam(para, CRYPT_PARAM_RSA_E, &e, &eLen);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
@@ -263,6 +266,7 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    (void)memset_s(retPara, sizeof(CRYPT_RSA_Para), 0, sizeof(CRYPT_RSA_Para));
     retPara->bits = bits;
     retPara->e = BN_Create(bits);
     retPara->p = BN_Create(bits);
@@ -280,6 +284,49 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         goto ERR;
     }
+
+    sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_SEED_XP);
+    if (sp != NULL && sp->valueLen > 0) {
+        data = sp->value;
+        len = sp->valueLen;
+        retPara->xp = BN_Create(bits);
+        if (retPara->xp == NULL || (ret = BN_Bin2Bn(retPara->xp, data, len)) != CRYPT_SUCCESS) goto ERR;
+    }
+    sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_SEED_P_R1);
+    if (sp != NULL && sp->valueLen > 0) {
+        data = sp->value;
+        len = sp->valueLen;
+        retPara->xp1 = BN_Create(bits);
+        if (retPara->xp1 == NULL || (ret = BN_Bin2Bn(retPara->xp1, data, len)) != CRYPT_SUCCESS) goto ERR;
+    }
+    sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_SEED_P_R2);
+    if (sp != NULL && sp->valueLen > 0) {
+        data = sp->value;
+        len = sp->valueLen;
+        retPara->xp2 = BN_Create(bits);
+        if (retPara->xp2 == NULL || (ret = BN_Bin2Bn(retPara->xp2, data, len)) != CRYPT_SUCCESS) goto ERR;
+    }
+    sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_SEED_XQ);
+    if (sp != NULL && sp->valueLen > 0) {
+        data = sp->value;
+        len = sp->valueLen;
+        retPara->xq = BN_Create(bits);
+        if (retPara->xq == NULL || (ret = BN_Bin2Bn(retPara->xq, data, len)) != CRYPT_SUCCESS) goto ERR;
+    }
+    sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_SEED_Q_R1);
+    if (sp != NULL && sp->valueLen > 0) {
+        data = sp->value;
+        len = sp->valueLen;
+        retPara->xq1 = BN_Create(bits);
+        if (retPara->xq1 == NULL || (ret = BN_Bin2Bn(retPara->xq1, data, len)) != CRYPT_SUCCESS) goto ERR;
+    }
+    sp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_SEED_Q_R2);
+    if (sp != NULL && sp->valueLen > 0) {
+        data = sp->value;
+        len = sp->valueLen;
+        retPara->xq2 = BN_Create(bits);
+        if (retPara->xq2 == NULL || (ret = BN_Bin2Bn(retPara->xq2, data, len)) != CRYPT_SUCCESS) goto ERR;
+    }
     return retPara;
 ERR:
     CRYPT_RSA_FreePara(retPara);
@@ -291,6 +338,12 @@ void CRYPT_RSA_FreePara(CRYPT_RSA_Para *para)
     if (para == NULL) {
         return;
     }
+    BN_Destroy(para->xp);
+    BN_Destroy(para->xp1);
+    BN_Destroy(para->xp2);
+    BN_Destroy(para->xq);
+    BN_Destroy(para->xq1);
+    BN_Destroy(para->xq2);
     BN_Destroy(para->e);
     BN_Destroy(para->p);
     BN_Destroy(para->q);
@@ -381,6 +434,7 @@ CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    (void)memset_s(paraCopy, sizeof(CRYPT_RSA_Para), 0, sizeof(CRYPT_RSA_Para));
     paraCopy->bits = para->bits;
     paraCopy->e = BN_Dup(para->e);
     paraCopy->p = BN_Dup(para->p);
@@ -390,8 +444,35 @@ CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para)
         RSA_FREE_PARA(paraCopy);
         return NULL;
     }
-
+    if (para->xp != NULL) {
+        paraCopy->xp = BN_Dup(para->xp);
+        if (paraCopy->xp == NULL) goto ERR;
+    }
+    if (para->xp1 != NULL) {
+        paraCopy->xp1 = BN_Dup(para->xp1);
+        if (paraCopy->xp1 == NULL) goto ERR;
+    }
+    if (para->xp2 != NULL) {
+        paraCopy->xp2 = BN_Dup(para->xp2);
+        if (paraCopy->xp2 == NULL) goto ERR;
+    }
+    if (para->xq != NULL) {
+        paraCopy->xq = BN_Dup(para->xq);
+        if (paraCopy->xq == NULL) goto ERR;
+    }
+    if (para->xq1 != NULL) {
+        paraCopy->xq1 = BN_Dup(para->xq1);
+        if (paraCopy->xq1 == NULL) goto ERR;
+    }
+    if (para->xq2 != NULL) {
+        paraCopy->xq2 = BN_Dup(para->xq2);
+        if (paraCopy->xq2 == NULL) goto ERR;
+    }
     return paraCopy;
+ERR:
+    BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+    RSA_FREE_PARA(paraCopy);
+    return NULL;
 }
 
 int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
@@ -484,8 +565,13 @@ uint32_t CRYPT_RSA_GetSignLen(const CRYPT_RSA_Ctx *ctx)
 #endif
 
 #ifdef HITLS_CRYPTO_RSA_GEN
-static int32_t GetRandomX(BN_BigNum *X, uint32_t nlen, bool isP)
+static int32_t GetRandomX(BN_BigNum *X, uint32_t nlen, bool isP, BN_BigNum *seed)
 {
+    // Use seed if provided
+    if (seed != NULL) {
+        return BN_Copy(X, seed);
+    }
+
     /*
      *  The FIPS 185-5 Appendix B.9 required √2(2 ^(nlen/2 - 1)) <= x <= ((2 ^(nlen/2) - 1))
      *  hence we can limit it as follows:
@@ -580,9 +666,17 @@ static uint32_t GetProbPrimeMillerCheckTimes(uint32_t proBits)
     return 4;
 }
 
-static int32_t GenAuxPrime(BN_BigNum *Xp, uint32_t auxBits, BN_Optimizer *opt)
+static int32_t GenAuxPrime(BN_BigNum *Xp, uint32_t auxBits, BN_Optimizer *opt, BN_BigNum *seed)
 {
-    int32_t ret = BN_Rand(Xp, auxBits, BN_RAND_TOP_ONEBIT, BN_RAND_BOTTOM_ONEBIT);
+    int32_t ret;
+    
+    // Use seed if provided, otherwise generate random
+    if (seed != NULL) {
+        ret = BN_Copy(Xp, seed);
+    } else {
+        ret = BN_Rand(Xp, auxBits, BN_RAND_TOP_ONEBIT, BN_RAND_BOTTOM_ONEBIT);
+    }
+    
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -639,13 +733,25 @@ static int32_t GenPrimeWithAuxiliaryPrime(uint32_t auxBits, uint32_t proBits, BN
         return ret;
     }
 
-    ret = GenAuxPrime(r1, auxBits, opt);
+    // Choose auxiliary prime r1, either from seed or generate randomly
+    if (isP) {
+        ret = GenAuxPrime(r1, auxBits, opt, para->xp1);
+    } else {
+        ret = GenAuxPrime(r1, auxBits, opt, para->xq1);
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         OptimizerEnd(opt);
         return ret;
     }
-    GOTO_ERR_IF(GenAuxPrime(r2, auxBits, opt), ret);
+    
+    // Choose auxiliary prime r2, either from seed or generate randomly
+    if (isP) {
+        GOTO_ERR_IF(GenAuxPrime(r2, auxBits, opt, para->xp2), ret);
+    } else {
+        GOTO_ERR_IF(GenAuxPrime(r2, auxBits, opt, para->xq2), ret);
+    }
+    
     GOTO_ERR_IF(BN_Lshift(r1Double, r1, 1), ret);
     // Step 1: check 2r1, r2 are coprime.
     GOTO_ERR_IF(BN_Gcd(primeCheck, r1Double, r2, opt), ret);
@@ -662,8 +768,13 @@ static int32_t GenPrimeWithAuxiliaryPrime(uint32_t auxBits, uint32_t proBits, BN
     // get R.
     GOTO_ERR_IF(BN_Sub(R, r2Inv, r1DoubleInv), ret);
     do {
-        // Step 3: get x, √2(2 ^(nlen/2 - 1)) <= x <= ((2 ^(nlen/2) - 1))
-        GOTO_ERR_IF(GetRandomX(Xp, para->bits, isP), ret);
+        // Step 3: get x via seed xp/xq or random
+        if (isP) {
+            GOTO_ERR_IF(GetRandomX(Xp, para->bits, isP, para->xp), ret);
+        } else {
+            GOTO_ERR_IF(GetRandomX(Xp, para->bits, isP, para->xq), ret);
+        }
+        
         // Step 4: Y = X + ((R – X) mod 2r1r2
         GOTO_ERR_IF(BN_Mul(r1, r1Double, r2, opt), ret); // 2r1r2
         GOTO_ERR_IF(BN_ModSub(R, R, Xp, r1, opt), ret);

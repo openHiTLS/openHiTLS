@@ -235,9 +235,15 @@ static int32_t SetDsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DsaPara *dsaPar
 static int32_t SetRsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_RsaPara *rsaPara)
 {
     uint32_t bits = rsaPara->bits;
-    BSL_Param param[3] = {
+    BSL_Param param[9] = {
         {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, rsaPara->e, rsaPara->eLen, 0},
         {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        {CRYPT_PARAM_RSA_SEED_XP, BSL_PARAM_TYPE_OCTETS, rsaPara->xp, rsaPara->xpLen, 0},
+        {CRYPT_PARAM_RSA_SEED_P_R1, BSL_PARAM_TYPE_OCTETS, rsaPara->xp1, rsaPara->xp1Len, 0},
+        {CRYPT_PARAM_RSA_SEED_P_R2, BSL_PARAM_TYPE_OCTETS, rsaPara->xp2, rsaPara->xp2Len, 0},
+        {CRYPT_PARAM_RSA_SEED_XQ, BSL_PARAM_TYPE_OCTETS, rsaPara->xq, rsaPara->xqLen, 0},
+        {CRYPT_PARAM_RSA_SEED_Q_R1, BSL_PARAM_TYPE_OCTETS, rsaPara->xq1, rsaPara->xq1Len, 0},
+        {CRYPT_PARAM_RSA_SEED_Q_R2, BSL_PARAM_TYPE_OCTETS, rsaPara->xq2, rsaPara->xq2Len, 0},
         BSL_PARAM_END
     };
     return pkey->method->setPara(pkey->key, param);
