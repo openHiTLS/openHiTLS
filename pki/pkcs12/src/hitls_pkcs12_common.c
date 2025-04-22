@@ -25,7 +25,7 @@
 #include "hitls_cms_local.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "crypt_eal_encode.h"
 #include "bsl_bytes.h"
 #include "crypt_eal_md.h"
@@ -329,8 +329,14 @@ static int32_t ParsePKCS8ShroudedKeyBags(HITLS_PKCS12 *p12, const uint8_t *pwd, 
     HITLS_PKCS12_SafeBag *safeBag)
 {
     CRYPT_EAL_PkeyCtx *prikey = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    const BSL_Buffer pwdBuff = {(uint8_t *)(uintptr_t)pwd, pwdlen};
+    int32_t ret = CRYPT_EAL_ProviderDecodeBuffKey(p12->libCtx, p12->attrName, BSL_CID_UNKNOWN, "ASN1",
+        "PRIKEY_PKCS8_ENCRYPT", safeBag->bag, &pwdBuff, &prikey);
+#else
     int32_t ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_ENCRYPT,
         safeBag->bag, pwd, pwdlen, &prikey);
+#endif
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -767,7 +773,7 @@ static int32_t ParseAsn1PKCS12(const BSL_Buffer *encode, const HITLS_PKCS12_PwdP
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_PKCS12_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+static int32_t ProviderParseBuffInternal(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
     const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 **p12, bool needMacVerify)
 {
     if (encode == NULL || encode->data == NULL || encode->dataLen == 0 ||
@@ -802,8 +808,15 @@ int32_t HITLS_PKCS12_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *att
     return HITLS_PKI_SUCCESS;
 }
 
+int32_t HITLS_PKCS12_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
+    const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 **p12, bool needMacVerify)
+{
+    int32_t encodeFormat = CRYPT_EAL_GetEncodeFormat(format);
+    return ProviderParseBuffInternal(libCtx, attrName, encodeFormat, encode, pwdParam, p12, needMacVerify);
+}
+
 #ifdef HITLS_BSL_SAL_FILE
-int32_t HITLS_PKCS12_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_PKCS12_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
     const char *path, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 **p12, bool needMacVerify)
 {
     if (path == NULL) {
@@ -826,14 +839,28 @@ int32_t HITLS_PKCS12_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *att
 int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKCS12_PwdParam *pwdParam,
     HITLS_PKCS12 **p12, bool needMacVerify)
 {
-    return HITLS_PKCS12_ProviderParseFile(NULL, NULL, format, path, pwdParam, p12, needMacVerify);
+    if (path == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
+        return HITLS_PKCS12_ERR_NULL_POINTER;
+    }
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = BSL_SAL_ReadFile(path, &data, &dataLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BSL_Buffer encode = {data, dataLen};
+    ret = HITLS_PKCS12_ParseBuff(format, &encode, pwdParam, p12, needMacVerify);
+    BSL_SAL_Free(data);
+    return ret;
 }
 #endif // HITLS_BSL_SAL_FILE
 
 int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam,
     HITLS_PKCS12 **p12, bool needMacVerify)
 {
-    return HITLS_PKCS12_ProviderParseBuff(NULL, NULL, format, encode, pwdParam, p12, needMacVerify);
+    return ProviderParseBuffInternal(NULL, NULL, format, encode, pwdParam, p12, needMacVerify);
 }
 
 #endif // HITLS_PKI_PKCS12_PARSE

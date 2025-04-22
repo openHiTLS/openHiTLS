@@ -240,8 +240,13 @@ void UT_TLS_CERT_SetGetAndCheckPrivateKey_API_TC001(int version, char *keyFile)
     HitlsInit();
     HITLS_Config *tlsConfig = NULL;
     HITLS_Ctx *ctx = NULL;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    HITLS_CERT_Key *privatekey = HITLS_X509_Adapt_ProviderKeyParse(tlsConfig, (const uint8_t *)keyFile, sizeof(keyFile),
+        TLS_PARSE_TYPE_FILE, "ASN1", NULL);
+#else
     HITLS_CERT_Key *privatekey = HITLS_X509_Adapt_KeyParse(tlsConfig, (const uint8_t *)keyFile, sizeof(keyFile),
         TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+#endif
 
     tlsConfig = HitlsNewCtx(version);
     ASSERT_TRUE(tlsConfig != NULL);

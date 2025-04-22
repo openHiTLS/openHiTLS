@@ -720,4 +720,24 @@ CRYPT_PKEY_ParaId ECC_GetParaId(const ECC_Para *para)
     }
     return para->id;
 }
+
+int32_t ECC_SetPara(ECC_Pkey *ctx, ECC_Para *para)
+{
+    if (ctx == NULL || para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    // Refresh the public and private keys.
+    BN_Destroy(ctx->prvkey);
+    ctx->prvkey = NULL;
+    ECC_FreePoint(ctx->pubkey);
+    ctx->pubkey = NULL;
+
+    ECC_FreePara(ctx->para);
+    ctx->para = para;
+
+    return CRYPT_SUCCESS;
+}
+
 #endif /* HITLS_CRYPTO_ECC */

@@ -132,7 +132,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const H
  * @attention Only support to parse p12 buffer in key-integrity and key-privacy protection mode.
  * @param libCtx         [IN] lib context
  * @param attrName       [IN] attribute name
- * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
+ * @param format         [IN] Encoding format: PEM/ASN1/NULL
  * @param encode         [IN] encode data
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
@@ -140,7 +140,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const H
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_PKCS12_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_PKCS12_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
     const BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 **p12, bool needMacVerify);
 /**
  * @ingroup pkcs12
@@ -166,7 +166,7 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKC
  * @attention Only support to parse p12 files in key-integrity and key-privacy protection mode.
  * @param libCtx         [IN] lib context
  * @param attrName       [IN] attribute name
- * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
+ * @param format         [IN] Encoding format: PEM/ASN1/NULL
  * @param path           [IN] p12 file path.
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
@@ -174,7 +174,7 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKC
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */
-int32_t HITLS_PKCS12_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t format,
+int32_t HITLS_PKCS12_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrName, const char *format,
     const char *path, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 **p12, bool needMacVerify);
 /**
  * @ingroup pkcs12
