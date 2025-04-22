@@ -13,11 +13,11 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef CRYPT_ENCODE_H
-#define CRYPT_ENCODE_H
+#ifndef CRYPT_ENCODE_DECODE_KEY_H
+#define CRYPT_ENCODE_DECODE_KEY_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_ENCODE_DECODE
+#ifdef HITLS_CRYPTO_ENCODE_DECODE_KEY
 
 #include "bsl_types.h"
 #include "bsl_asn1.h"
@@ -27,11 +27,10 @@
 extern "C" {
 #endif /* __cpluscplus */
 
-
 #ifdef HITLS_CRYPTO_KEY_DECODE
 int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara *para);
 
-int32_t CRYPT_EAL_PriKeyParseFile(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_ParseFormat format, int32_t type,
+int32_t CRYPT_EAL_PriKeyParseFile(BSL_ParseFormat format, int32_t type,
     const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPriKey);
 #endif
 
@@ -63,6 +62,6 @@ int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const cha
 }
 #endif
 
-#endif // HITLS_CRYPTO_ENCODE_DECODE
+#endif // HITLS_CRYPTO_ENCODE_DECODE_KEY
 
-#endif // CRYPT_ENCODE_H
+#endif // CRYPT_ENCODE_DECODE_KEY_H

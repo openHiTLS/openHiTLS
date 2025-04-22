@@ -824,9 +824,14 @@ typedef enum {
     CRYPT_PRIKEY_PKCS8_ENCRYPT,
     CRYPT_PRIKEY_RSA,
     CRYPT_PRIKEY_ECC,
+    CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
     CRYPT_PUBKEY_SUBKEY,
     CRYPT_PUBKEY_RSA,
-    CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
+    CRYPT_OBJECT_TYPE_LOW_KEY,
+    CRYPT_OBJECT_TYPE_HIGH_KEY,
+    CRYPT_OBJECT_TYPE_CERT,
+    CRYPT_OBJECT_TYPE_CRL,
+    CRYPT_OBJECT_TYPE_CSR,
 } CRYPT_ENCODE_TYPE;
 
 typedef enum {
@@ -867,6 +872,16 @@ typedef enum {
     CRYPT_KEM_TYPE_INVALID = 0x7fffffff        // invalid value
 } CRYPT_MLKEM_KeyType;
 
+typedef struct {
+    int32_t id;
+    void *func;
+} CRYPT_EAL_Func;
+
+typedef struct {
+    int32_t algId; // implemented algorithm id, such as aes128cbc, rsa sign
+    const CRYPT_EAL_Func *implFunc; // implemented algorithm callback
+    const char *attr; // implemented algorithm attribute
+} CRYPT_EAL_AlgInfo;
 #ifdef __cplusplus
 }
 #endif // __cplusplus

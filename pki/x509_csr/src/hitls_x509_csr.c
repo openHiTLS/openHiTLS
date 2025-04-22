@@ -25,7 +25,7 @@
 #endif // HITLS_BSL_PEM
 #include "bsl_log_internal.h"
 #include "hitls_pki_errno.h"
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "crypt_errno.h"
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
@@ -184,8 +184,13 @@ static int32_t ParseCertRequestInfo(BSL_ASN1_Buffer *asnArr, HITLS_X509_Csr *csr
     /* public key info */
     BSL_Buffer subPubKeyBuff = {asnArr[HITLS_X509_CSR_REQINFO_PUBKEY_INFO_IDX].buff,
         asnArr[HITLS_X509_CSR_REQINFO_PUBKEY_INFO_IDX].len};
-    ret = CRYPT_EAL_ProviderDecodeBuffKey(csr->libCtx, csr->attrName, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
-        &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&csr->reqInfo.ealPubKey);
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = CRYPT_EAL_ProviderDecodeBuffKey(csr->libCtx, csr->attrName, BSL_CID_UNKNOWN, "ASN1",
+        "PUBKEY_SUBKEY_WITHOUT_SEQ", &subPubKeyBuff, NULL, (CRYPT_EAL_PkeyCtx **)&csr->reqInfo.ealPubKey);
+#else
+    ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ, &subPubKeyBuff, NULL,
+        (CRYPT_EAL_PkeyCtx **)&csr->reqInfo.ealPubKey);
+#endif
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
