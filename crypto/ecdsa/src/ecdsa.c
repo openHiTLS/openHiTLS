@@ -105,21 +105,7 @@ int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *param)
 
 int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPara *para)
 {
-    if (para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    // Refresh the public and private keys.
-    BN_Destroy(ctx->prvkey);
-    ctx->prvkey = NULL;
-    ECC_FreePoint(ctx->pubkey);
-    ctx->pubkey = NULL;
-
-    ECC_FreePara(ctx->para);
-    ctx->para = para;
-    ECC_SetLibCtx(ctx->libCtx, ctx->para);
-    return CRYPT_SUCCESS;
+    return ECC_SetPara(ctx, para);
 }
 
 int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
@@ -565,4 +551,207 @@ int32_t CRYPT_ECDSA_GetSecBits(const CRYPT_ECDSA_Ctx *ctx)
     }
     return ECC_GetSecBits(ctx->para);
 }
+
+#ifdef HITLS_CRYPTO_PROVIDER
+
+static int32_t SetCurveInfo(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *curve)
+{
+    if (curve->value == NULL || curve->valueType != BSL_PARAM_TYPE_INT32 ||
+        curve->valueLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret = CRYPT_ECDSA_SetParaEx(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)curve->value));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+static int32_t ImportUnknownKeyType(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *params)
+{
+    int32_t ret;
+    const BSL_Param *prv = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_EC_PRVKEY);
+    const BSL_Param *pub = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_EC_POINT_UNCOMPRESSED);
+    const BSL_Param *curve = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_EC_CURVE_ID);
+    if (curve != NULL) {
+        ret = SetCurveInfo(ctx, curve);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    if (prv != NULL) {
+        ret = CRYPT_ECDSA_SetPrvKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    if (pub != NULL) {
+        ret = CRYPT_ECDSA_SetPubKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_ECDSA_Import(CRYPT_ECDSA_Ctx *ctx, int32_t type, const BSL_Param *params)
+{
+    if (ctx == NULL || params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret;
+    if (type == CRYPT_KEYMGMT_SELECT_UNKNOWN) {
+        return ImportUnknownKeyType(ctx, params);
+    }
+    if ((type & CRYPT_KEYMGMT_SELECT_KEY_PAIR) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    if ((type & CRYPT_KEYMGMT_SELECT_PUBLIC_KEY) != 0) {
+        ret = CRYPT_ECDSA_SetPubKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    if ((type & CRYPT_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
+        ret = CRYPT_ECDSA_SetPrvKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    
+    return CRYPT_SUCCESS;
+}
+
+static BSL_Param *CallocEcdsaParams(CRYPT_ECDSA_Ctx *ctx, CRYPT_PKEY_ParaId *curveId, int32_t type)
+{
+    BSL_Param *params = BSL_SAL_Calloc(4, sizeof(BSL_Param));
+    if (params == NULL) {
+        return NULL;
+    }
+    
+    uint32_t index = 0;
+    uint32_t keyBytes = (CRYPT_ECDSA_GetBits(ctx) + 7) / 8;
+    uint8_t *buffer = BSL_SAL_Calloc(1, keyBytes * 2); // For public + private key
+    if (buffer == NULL) {
+        goto ERR;
+    }
+
+    if (type == CRYPT_KEYMGMT_SELECT_UNKNOWN) {
+        if (ctx->pubkey != NULL) {
+            (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_EC_POINT_UNCOMPRESSED, 
+                BSL_PARAM_TYPE_OCTETS, buffer, keyBytes);
+        }
+        if (ctx->prvkey != NULL) {
+            (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_EC_PRVKEY, 
+                BSL_PARAM_TYPE_OCTETS, buffer + keyBytes, keyBytes);
+        }
+        if (curveId != CRYPT_PKEY_PARAID_MAX) {
+            (void)BSL_PARAM_InitValue(&params[index], CRYPT_PARAM_EC_CURVE_ID, BSL_PARAM_TYPE_INT32, curveId,
+                sizeof(int32_t));
+            params[index].useLen = sizeof(int32_t);
+            index++;
+        }
+        return params;
+    }
+
+    if ((type & CRYPT_KEYMGMT_SELECT_KEY_PAIR) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        goto ERR;
+    }
+    if ((type & CRYPT_KEYMGMT_SELECT_PUBLIC_KEY) != 0) {
+        (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_EC_POINT_UNCOMPRESSED, 
+            BSL_PARAM_TYPE_OCTETS, buffer, keyBytes);
+    } else if ((type & CRYPT_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
+        (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_EC_PRVKEY, 
+            BSL_PARAM_TYPE_OCTETS, buffer + keyBytes, keyBytes);
+    }
+
+    return params;
+ERR:
+    BSL_SAL_Free(buffer);
+    BSL_SAL_Free(params);
+    return NULL;
+}
+
+static int32_t ExportUnknownKeyType(CRYPT_ECDSA_Ctx *ctx, BSL_Param *params)
+{
+    int32_t ret;
+    if (ctx->pubkey != NULL) {
+        ret = CRYPT_ECDSA_GetPubKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    if (ctx->prvkey != NULL) {
+        ret = CRYPT_ECDSA_GetPrvKey(ctx, params);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_ECDSA_Export(CRYPT_ECDSA_Ctx *ctx, int32_t flag, int32_t type, CRYPT_EAL_ProcessFuncCb cb, void *args)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if ((flag & CRYPT_PKEY_FLAG_NEED_EXPORT_CB) != 0 && cb == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret = CRYPT_SUCCESS;
+    uint32_t i = 0;
+    BSL_Param *params = NULL;
+    CRYPT_PKEY_ParaId curveId = CRYPT_ECDSA_GetParaId(ctx);
+    if ((flag & CRYPT_PKEY_FLAG_DUP) != 0) {
+        params = CallocEcdsaParams(ctx, &curveId, type);
+        if (params == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+    } else {
+        params = (BSL_Param *)args;
+    }
+    if (type == CRYPT_KEYMGMT_SELECT_UNKNOWN) {
+        ret = ExportUnknownKeyType(ctx, params);
+    } else if ((type & CRYPT_KEYMGMT_SELECT_PUBLIC_KEY) != 0) {
+        ret = CRYPT_ECDSA_GetPubKey(ctx, params);
+    } else if ((type & CRYPT_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
+        ret = CRYPT_ECDSA_GetPrvKey(ctx, params);
+    }
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    while (params[i].key != 0) {
+        params[i].valueLen = params[i].useLen;
+        i++;
+    }
+    if (cb != NULL) {
+        ret = cb(params, args);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
+    }
+
+EXIT:
+    if ((flag & CRYPT_PKEY_FLAG_DUP) != 0) {
+        BSL_SAL_Free(params[0].value);
+        BSL_SAL_Free(params);
+    }
+    return ret;
+}
+#endif // HITLS_CRYPTO_PROVIDER
+
 #endif /* HITLS_CRYPTO_ECDSA */

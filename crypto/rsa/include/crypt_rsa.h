@@ -581,6 +581,29 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
  */
 int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx);
 
+#ifdef HITLS_CRYPTO_PROVIDER
+/**
+ * @ingroup RSA
+ * @brief RSA import key
+ *
+ * @param ctx [IN/OUT] RSA context structure
+ * @param params [IN] parameters
+ */
+int32_t CRYPT_RSA_Import(CRYPT_RSA_Ctx *ctx, int32_t type, const BSL_Param *params);
+
+/**
+ * @ingroup RSA
+ * @brief RSA export key
+ *
+ * @param ctx [IN/OUT] RSA context structure
+ * @param flag [IN] flag
+ * @param type [IN] type
+ * @param cb [IN] callback function
+ * @param args [IN] callback function arguments
+ */
+int32_t CRYPT_RSA_Export(CRYPT_RSA_Ctx *ctx, int32_t flag, int32_t type, CRYPT_EAL_ProcessFuncCb cb, void *args);
+#endif // HITLS_CRYPTO_PROVIDER
+
 #ifdef __cplusplus
 }
 #endif

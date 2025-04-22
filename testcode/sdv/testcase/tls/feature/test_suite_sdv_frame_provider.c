@@ -40,6 +40,8 @@ void UT_TLS13_LOADPROVIDER_GROUP_TC001(char *path, char *get_cap_test1, int cmd)
     SKIP_TEST();
 #else
     FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     HITLS_Config *config = NULL;
@@ -62,9 +64,9 @@ void UT_TLS13_LOADPROVIDER_GROUP_TC001(char *path, char *get_cap_test1, int cmd)
     uint16_t group = 477;
     HITLS_CFG_SetGroups(config, &group, 1);
 
-    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
-    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -90,6 +92,8 @@ void UT_TLS13_LOADPROVIDER_SIGNSCHEME_TC001(char *path, char *get_cap_test1, int
     SKIP_TEST();
 #else
     FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_ProvMgrCtx *providerMgr = NULL;
     HITLS_Config *config = NULL;
@@ -119,9 +123,9 @@ void UT_TLS13_LOADPROVIDER_SIGNSCHEME_TC001(char *path, char *get_cap_test1, int
         NULL);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
-    FRAME_LinkObj *client = FRAME_CreateLinkEx(config, BSL_UIO_TCP);
+    client = FRAME_CreateLinkEx(config, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);
-    FRAME_LinkObj *server = FRAME_CreateLinkEx(config, BSL_UIO_TCP);
+    server = FRAME_CreateLinkEx(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
