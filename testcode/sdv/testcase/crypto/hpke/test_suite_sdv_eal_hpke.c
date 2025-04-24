@@ -388,9 +388,7 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     // prepare Recipient key
     ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, NULL, 0, &pkeyR), CRYPT_SUCCESS);
     
-    if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
-        ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, NULL, 0, &pkeyS), CRYPT_SUCCESS);
-    }
+    ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, NULL, 0, &pkeyS), CRYPT_SUCCESS);
 
     CRYPT_EAL_PkeyPub pubR;
     pubR.id = CRYPT_EAL_PkeyGetId(pkeyR);
@@ -408,6 +406,18 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     
     if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
         ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS, pkeyS), CRYPT_SUCCESS);
+    }
+
+    if (mode != CRYPT_HPKE_MODE_PSK && mode != CRYPT_HPKE_MODE_AUTH_PSK) {
+        ASSERT_EQ(CRYPT_EAL_HpkeSetPsk(ctxS, psk.x, psk.len, pskId.x, pskId.len), CRYPT_HPKE_ERR_CALL);
+    }
+
+    if(mode != CRYPT_HPKE_MODE_AUTH && mode != CRYPT_HPKE_MODE_AUTH_PSK){
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS, pkeyS), CRYPT_HPKE_ERR_CALL);
+    }
+
+    if(mode == CRYPT_HPKE_MODE_PSK || mode == CRYPT_HPKE_MODE_AUTH_PSK){
+        ASSERT_EQ(CRYPT_EAL_HpkeSetPsk(ctxS, psk.x, psk.len, pskId.x, pskId.len), CRYPT_SUCCESS);
     }
 
     ASSERT_EQ(CRYPT_EAL_HpkeSetupSender(ctxS, NULL, info.x, info.len, pubR.key.eccPub.data, pubR.key.eccPub.len,
