@@ -5,6 +5,7 @@
 #include "auth_params.h"
 #include "bsl_sal.h"
 #include "bsl_err.h"
+#include "crypt_eal_init.h"
 #include "crypt_eal_rand.h"
 #include "auth_errno.h"
 #include "crypt_errno.h"
@@ -200,6 +201,12 @@ int main(void) {
             sizeof(originInfo)},
         BSL_PARAM_END
     };
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        PrintLastError();
+        goto EXIT;
+    }
     // Initialize random number generator. NULL means using default entropy source, 
     // users can choose to use their own entropy source
     ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);

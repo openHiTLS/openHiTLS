@@ -795,6 +795,10 @@ int32_t CRYPT_EAL_ProviderRandInitCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t alg
     if (localLibCtx == NULL) {
         localLibCtx = CRYPT_EAL_GetGlobalLibCtx();
     }
+    if (localLibCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
     if (localLibCtx->drbg != NULL) { // Prevent DRBG repeated Init
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, algId, CRYPT_EAL_ERR_DRBG_REPEAT_INIT);
         return CRYPT_EAL_ERR_DRBG_REPEAT_INIT;
@@ -883,6 +887,9 @@ void CRYPT_EAL_RandDeinitEx(CRYPT_EAL_LibCtx *libCtx)
     if (localLibCtx == NULL) {
         localLibCtx = CRYPT_EAL_GetGlobalLibCtx();
     }
+    if (localLibCtx == NULL) {
+        return;
+    }
     EAL_RandDeinit(localLibCtx->drbg);
     localLibCtx->drbg = NULL;
     return;
@@ -910,8 +917,8 @@ int32_t CRYPT_EAL_RandbytesWithAdinEx(CRYPT_EAL_LibCtx *libCtx,
     }
 
     if (localCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
     return CRYPT_EAL_DrbgbytesWithAdin(localCtx->drbg, byte, len, addin, addinLen);
 }
@@ -925,8 +932,8 @@ int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t 
         localCtx = CRYPT_EAL_GetGlobalLibCtx();
     }
     if (localCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
     return CRYPT_EAL_DrbgbytesWithAdin(localCtx->drbg, byte, len, NULL, 0);
 #else
@@ -944,8 +951,8 @@ int32_t CRYPT_EAL_RandSeedEx(CRYPT_EAL_LibCtx *libCtx)
     }
 
     if (localCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
     return CRYPT_EAL_DrbgSeedWithAdin(localCtx->drbg, NULL, 0);
 #else

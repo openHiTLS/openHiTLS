@@ -31,10 +31,12 @@
 extern "C" {
 #endif // __cplusplus
 
-#define CRYPT_EAL_INIT_CPU       0x01
-#define CRYPT_EAL_INIT_BSL       0x02
-#define CRYPT_EAL_INIT_RAND      0x04
-#define CRYPT_EAL_INIT_PROVIDER  0x08
+#define CRYPT_EAL_INIT_CPU              0x01
+#define CRYPT_EAL_INIT_BSL              0x02
+#define CRYPT_EAL_INIT_RAND             0x04
+#define CRYPT_EAL_INIT_PROVIDER         0x08
+#define CRYPT_EAL_INIT_PROVIDER_RAND    0x10
+#define CRYPT_EAL_INIT_LOCK             0x20
 
 /**
  * @ingroup crypt_method
