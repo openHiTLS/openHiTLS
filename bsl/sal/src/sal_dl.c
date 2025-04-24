@@ -133,10 +133,10 @@ int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func)
 
 int32_t SAL_DlCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if (type > BSL_SAL_DL_GETFUNC_CB_FUNC || type < BSL_SAL_DL_LOADLIB_CB_FUNC) {
+    if (type > BSL_SAL_DL_SYM_CB_FUNC || type < BSL_SAL_DL_OPEN_CB_FUNC) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    uint32_t offset = (uint32_t)(type - BSL_SAL_DL_LOADLIB_CB_FUNC);
+    uint32_t offset = (uint32_t)(type - BSL_SAL_DL_OPEN_CB_FUNC);
     ((void **)&g_dlCallback)[offset] = funcCb;
     return BSL_SUCCESS;
 }
