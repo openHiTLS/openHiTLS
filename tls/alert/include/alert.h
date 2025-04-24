@@ -169,4 +169,3 @@ int32_t ReturnAlertProcess(TLS_Ctx *ctx, int32_t err, uint32_t logId, const void
 }
 #endif
 
-#endif /* ALTER_H */
