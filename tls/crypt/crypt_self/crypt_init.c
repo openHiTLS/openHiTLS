@@ -13,12 +13,12 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_CALLBACK_CRYPT
 #include "hitls_crypt_reg.h"
 #include "crypt_default.h"
 
 void HITLS_CryptMethodInit(void)
 {
+#ifdef HITLS_TLS_CALLBACK_CRYPT
     HITLS_CRYPT_BaseMethod baseMethod = {0};
     baseMethod.randBytes = CRYPT_DEFAULT_RandomBytes;
     baseMethod.hmacSize = CRYPT_DEFAULT_HMAC_Size;
@@ -76,5 +76,5 @@ void HITLS_CryptMethodInit(void)
     hkdfMethod.hkdfExpand = CRYPT_DEFAULT_HkdfExpand;
     HITLS_CRYPT_RegisterHkdfMethod(&hkdfMethod);
 #endif
-}
 #endif /* HITLS_TLS_CALLBACK_CRYPT */
+}
