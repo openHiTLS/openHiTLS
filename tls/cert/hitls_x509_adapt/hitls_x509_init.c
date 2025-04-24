@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_CALLBACK_CERT
 #include <stdint.h>
 #include <stddef.h>
 #include "hitls_error.h"
@@ -22,6 +21,7 @@
 
 int32_t HITLS_CertMethodInit(void)
 {
+#ifdef HITLS_TLS_CALLBACK_CERT
     HITLS_CERT_MgrMethod mgr = {
         .certStoreNew = HITLS_X509_Adapt_StoreNew,
         .certStoreDup = HITLS_X509_Adapt_StoreDup,
@@ -53,11 +53,14 @@ int32_t HITLS_CertMethodInit(void)
     };
 
     return HITLS_CERT_RegisterMgrMethod(&mgr);
+#else
+    return HITLS_SUCCESS;
+#endif
 }
 
 void HITLS_CertMethodDeinit(void)
 {
+#ifdef HITLS_TLS_CALLBACK_CERT
     HITLS_CERT_DeinitMgrMethod();
+#endif
 }
-
-#endif /* HITLS_TLS_CALLBACK_CERT */

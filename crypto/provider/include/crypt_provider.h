@@ -16,6 +16,7 @@
 #ifndef CRYPT_PROVIDER_H
 #define CRYPT_PROVIDER_H
 
+#include "hitls_build.h"
 #ifdef HITLS_CRYPTO_PROVIDER
 
 #include "crypt_eal_provider.h"

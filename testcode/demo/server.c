@@ -5,12 +5,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "hitls_build.h"
 #include "securec.h"
 
 #include "bsl_sal.h"
 #include "bsl_err.h"
 #include "crypt_algid.h"
+#include "crypt_eal_init.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_encode.h"
@@ -45,15 +45,19 @@ int main(int32_t argc, char *argv[])
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
     BSL_ERR_Init();
 
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("CRYPT_EAL_Init: error code is %x\n", ret);
+        return -1;
+    }
     ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("Init rand failed.\n");
         goto EXIT;
     }
-#ifndef HITLS_TLS_FEATURE_PROVIDER
+
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
-#endif
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) {
