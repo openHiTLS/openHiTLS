@@ -22,6 +22,8 @@
 #include "bsl_err.h"
 #include "crypt_algid.h"
 #include "crypt_eal_kdf.h"
+#include "crypt_eal_init.h"
+#include "crypt_eal_rand.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 
