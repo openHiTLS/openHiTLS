@@ -21,6 +21,7 @@
 #include "bsl_sal.h"
 #include "bsl_err.h"
 #include "crypt_algid.h"
+#include "crypt_eal_init.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
 
@@ -40,7 +41,11 @@ int main(void)
     int ret;
     uint8_t output[100] = {0};
     uint32_t len = 100;
-
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("CRYPT_EAL_Init: error code is %x\n", ret);
+        return ret;
+    }
     /**
      * Before calling the algorithm APIs,
      * call the BSL_SAL_CallBack_Ctrl function to register the malloc and free functions.

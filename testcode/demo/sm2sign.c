@@ -23,6 +23,7 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
+#include "crypt_eal_init.h"
 
 void *StdMalloc(uint32_t len) {
     return malloc((size_t)len);
@@ -56,6 +57,11 @@ int main(void)
     */
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
 
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (ctx == NULL) {

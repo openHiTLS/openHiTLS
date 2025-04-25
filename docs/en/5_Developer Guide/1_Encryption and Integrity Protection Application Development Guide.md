@@ -194,6 +194,7 @@ This function provides encryption and decryption capabilities based on asymmetri
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
+#include "crypt_eal_init.h"
 #include "crypt_types.h"
 
 void *StdMalloc(uint32_t len) {
@@ -213,6 +214,12 @@ int main(void) {
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        PrintLastError();
+        goto EXIT;
+    }
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (pkey == NULL) {
@@ -291,6 +298,7 @@ This function provides the signature verification capability based on asymmetric
 #include "bsl_err.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
+#include "crypt_eal_init.h"
 #include "crypt_eal_rand.h"
 
 void *StdMalloc(uint32_t len) {
@@ -321,7 +329,10 @@ int main(void)
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
-
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     if (ctx == NULL) {
         goto EXIT;
@@ -398,6 +409,7 @@ This function provides the key exchange capability based on asymmetric algorithm
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
+#include "crypt_eal_init.h"
 
 void *StdMalloc(uint32_t len) {
     return malloc((size_t)len);
@@ -439,7 +451,11 @@ int main(void)
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
-
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     if (prvCtx == NULL || pubCtx == NULL) {
@@ -673,6 +689,7 @@ The following uses the DRBG-SHA algorithm as an example to describe the sample c
 #include "bsl_err.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
+#include "crypt_eal_init.h"
 #include "crypt_eal_rand.h"
 
 void *StdMalloc(uint32_t len) {
@@ -698,7 +715,11 @@ int main(void)
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
 
     BSL_ERR_Init();// Initialize the error module.
-
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
     // Initialize the global random number by using the default entropy source from **/dev/random** of Linux.
     ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {

@@ -178,6 +178,10 @@ static int32_t MlKemGetCipherTextLen(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t 
 
 static int32_t MlKemGetSharedLen(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
 {
+    if (ctx->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
