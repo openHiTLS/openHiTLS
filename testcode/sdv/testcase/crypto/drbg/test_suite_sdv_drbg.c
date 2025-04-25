@@ -147,9 +147,9 @@ static void RegThreadFunc(void)
 {
     BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_NEW_CB_FUNC, PthreadRWLockNew);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_FREE_CB_FUNC, PthreadRWLockFree);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_READ_LOCK_CB_FUNC, PthreadRWLockReadLock);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_WRITE_LOCK_CB_FUNC, PthreadRWLockWriteLock);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_UNLOCK_CB_FUNC, PthreadRWLockUnlock);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC, PthreadRWLockReadLock);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC, PthreadRWLockWriteLock);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC, PthreadRWLockUnlock);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetId);
 }
 

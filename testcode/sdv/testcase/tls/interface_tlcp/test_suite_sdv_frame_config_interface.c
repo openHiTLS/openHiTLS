@@ -136,7 +136,7 @@ static int32_t UT_CookieGenerateCb(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *co
     return 0;
 }
 
-static int32_t UT_CookieVerifyCb(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len)
+static int32_t UT_CookieVerifyCb(HITLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookie_len)
 {
     (void)ctx;
     (void)cookie;
