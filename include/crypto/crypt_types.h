@@ -587,7 +587,7 @@ typedef enum {
     CRYPT_CTRL_SET_NO_PADDING,           /**< RSA Set the padding mode to NO_PADDING. */
 
     CRYPT_CTRL_GET_PARA,                 /* Asymmetric cipher get para. */
-    CRYPT_CTRL_GET_PARA_ID,             /* Asymmetric cipher get id of para. */
+    CRYPT_CTRL_GET_PARAID,             /* Asymmetric cipher get id of para. */
     CRYPT_CTRL_GET_BITS,                 /* Asymmetric cipher get bits . */
     CRYPT_CTRL_GET_SIGNLEN,              /* Asymmetric cipher get signlen . */
     CRYPT_CTRL_GET_SECBITS,              /* Asymmetric cipher get secure bits . */
