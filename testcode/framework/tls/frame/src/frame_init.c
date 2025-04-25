@@ -50,8 +50,8 @@ void BinLogFixLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
 void BinLogVarLenFunc(uint32_t logId, uint32_t logLevel, uint32_t logType, void *format, void *para);
 void FRAME_Init(void)
 {
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, StdFree);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, StdFree);
     BSL_ERR_Init();
 #ifdef TLS_DEBUG
     BSL_LOG_SetBinLogLevel(BSL_LOG_LEVEL_DEBUG);
@@ -70,8 +70,8 @@ void FRAME_Init(void)
 
 void FRAME_DeInit(void)
 {
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMallocFail);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, StdFree);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMallocFail);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, StdFree);
 
     BSL_ERR_DeInit();
     return;
