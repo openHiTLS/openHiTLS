@@ -41,8 +41,8 @@ int main(int32_t argc, char *argv[])
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
     /* 注册BSL内存能力、仅供参考 */
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, malloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, malloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
     BSL_ERR_Init();
 
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
