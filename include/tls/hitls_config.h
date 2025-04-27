@@ -1317,22 +1317,22 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
  * @brief   Set whether to send hello verify request message.
  *
  * @param   config [IN] TLS link configuration.
- * @param   isEnable [OUT] Indicates whether to send hello verify request message.
+ * @param   isSupport [IN] Indicates whether to send hello verify request message.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_SetDtlsCookieExchangeSupport(HITLS_Config *config, bool isEnable);
+int32_t HITLS_CFG_SetDtlsCookieExchangeSupport(HITLS_Config *config, bool isSupport);
 
 /**
  * @ingroup hitls_config
  * @brief   Obtains the status of whether to send hello verify request message.
  *
  * @param   config [IN] TLS link configuration.
- * @param   isEnable [OUT] Indicates whether to send hello verify request message.
+ * @param   isSupport [OUT] Indicates whether to send hello verify request message.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool *isEnable);
+int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config

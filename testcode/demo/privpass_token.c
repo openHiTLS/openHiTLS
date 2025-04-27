@@ -165,8 +165,8 @@ void PrintHex(const uint8_t* data, uint32_t len) {
 
 int main(void) {
     BSL_ERR_Init(); // Initialize error code module
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc); // Register memory allocation function
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free); // Register memory free function
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc); // Register memory allocation function
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free); // Register memory free function
 
     int32_t ret = 1;
 
