@@ -1976,27 +1976,23 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *i
 #endif
 
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-int32_t HITLS_CFG_SetDtlsCookieExchangeSupport(HITLS_Config *config, bool isEnable)
+int32_t HITLS_CFG_SetDtlsCookieExchangeSupport(HITLS_Config *config, bool isSupport)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    if (isEnable == 0) {
-        config->isSupportDtlsCookieExchange = false;
-    } else {
-        config->isSupportDtlsCookieExchange = true;
-    }
+    config->isSupportDtlsCookieExchange = isSupport;
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool *isEnable)
+int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool *isSupport)
 {
-    if (config == NULL || isEnable == NULL) {
+    if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isEnable = config->isSupportDtlsCookieExchange;
+    *isSupport = config->isSupportDtlsCookieExchange;
     return HITLS_SUCCESS;
 }
 #endif

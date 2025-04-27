@@ -168,7 +168,7 @@ int32_t UdpSocketCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return UdpSetPeerIpAddr(parameters, parg, (uint32_t)larg);
         case BSL_UIO_GET_PEER_IP_ADDR:
             return UdpGetPeerIpAddr(parameters, larg, parg);
-        case BSL_UIO_DGRAM_SET_CONNECTED:
+        case BSL_UIO_UDP_SET_CONNECTED:
             if (parg != NULL) {
                 parameters->connected = 1;
                 return UdpSetPeerIpAddr(parameters, parg, (uint32_t)larg);

@@ -19,13 +19,10 @@
  * @brief methods of crypto
  */
 
-#ifndef CRYPT_METHOD_H
-#define CRYPT_METHOD_H
+#ifndef CRYPT_EAL_INIT_H
+#define CRYPT_EAL_INIT_H
 
 #include <stdint.h>
-#include <stdbool.h>
-#include "crypt_types.h"
-#include "crypt_algid.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,4 +60,4 @@ void CRYPT_EAL_Cleanup(uint64_t opts);
 }
 #endif // __cplusplus
 
-#endif // CRYPT_METHOD_H
+#endif // CRYPT_EAL_INIT_H

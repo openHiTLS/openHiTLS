@@ -236,7 +236,7 @@ typedef int32_t (*CRYPT_EAL_ImplMdSqueeze)(void *ctx, uint8_t *out, uint32_t len
 #define CRYPT_EAL_IMPLMAC_FREECTX     8
 
 typedef void *(*CRYPT_EAL_ImplMacNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len, const BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplMacUpdate)(void *ctx, const uint8_t *input, uint32_t len);
 typedef int32_t (*CRYPT_EAL_ImplMacFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CRYPT_EAL_ImplMacDeInitCtx)(void *ctx);
@@ -271,8 +271,8 @@ typedef void (*CRYPT_EAL_ImplKdfFreeCtx)(void *ctx);
 typedef void *(*CRYPT_EAL_ImplRandDrbgNewCtx)(void *provCtx, int32_t algId, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgUnInst)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *bytes, uint32_t len,
-    const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
+typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *out, uint32_t outLen, const uint8_t *addin,
+    uint32_t adinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplRandDrbgFreeCtx)(void *ctx);
