@@ -124,10 +124,10 @@ void *BSL_SAL_Dump(const void *src, uint32_t size)
 
 int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if (type > BSL_SAL_MEM_FREE_CB_FUNC || type < BSL_SAL_MEM_MALLOC_CB_FUNC) {
+    if (type > BSL_SAL_MEM_FREE || type < BSL_SAL_MEM_MALLOC) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    uint32_t offset = (uint32_t)(type - BSL_SAL_MEM_MALLOC_CB_FUNC);
+    uint32_t offset = (uint32_t)(type - BSL_SAL_MEM_MALLOC);
     ((void **)&g_memCallback)[offset] = funcCb;
     return BSL_SUCCESS;
 }

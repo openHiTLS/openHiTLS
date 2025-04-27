@@ -28,10 +28,11 @@ static BSL_SAL_TimeCallback g_timeCallback = {0};
 
 int32_t SAL_TimeCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if (type > BSL_SAL_TIME_TICKS_PER_SEC_CB_FUNC || type < BSL_SAL_TIME_GET_SYS_TIME_CB_FUNC) {
+
+    if (type > BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC || type < BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC) {
         return BSL_SAL_TIME_NO_REG_FUNC;
     }
-    uint32_t offset = (uint32_t)(type - BSL_SAL_TIME_GET_SYS_TIME_CB_FUNC);
+    uint32_t offset = (uint32_t)(type - BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC);
     ((void **)&g_timeCallback)[offset] = funcCb;
     return BSL_SUCCESS;
 }

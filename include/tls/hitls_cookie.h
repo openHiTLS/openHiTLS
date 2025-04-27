@@ -50,7 +50,7 @@ typedef int32_t (*HITLS_AppGenCookieCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_
  * @param   cookie_len  [IN] Length of Cookie to be verified
  * @retval  COOKIE_VERIFY_SUCCESS: successful. Other values are considered as failure.
  */
-typedef int32_t (*HITLS_AppVerifyCookieCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint8_t cookie_len);
+typedef int32_t (*HITLS_AppVerifyCookieCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookieLen);
 
 /**
  * @ingroup hitls_config

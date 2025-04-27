@@ -40,10 +40,6 @@ int32_t BSL_SAL_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err);
 
 int32_t BSL_SAL_Read(int32_t fd, void *buf, uint32_t len, int32_t *err);
 
-int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, uint32_t len);
-
-int32_t BSL_SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, uint32_t *len);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

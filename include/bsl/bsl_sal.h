@@ -633,7 +633,23 @@ int32_t BSL_SAL_SockClose(int32_t sockId);
  * @retval If the operation succeeds, BSL_SUCCESS is returned
  * @retval If the operation fails, BSL_SAL_ERR_NET_SETSOCKOPT is returned.
  */
-int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, uint32_t len);
+int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief   Get the socket
+ *
+ * Get the socket
+ *
+ * @attention none
+ * @param sockId [IN] Socket file descriptor ID
+ * @param level [IN] Level of the option to be set.
+ * @param name [IN] Options to be set
+ * @param val [OUT] Value of the option.
+ * @param len [OUT] val Length
+ * @retval If the operation succeeds, BSL_SUCCESS is returned
+ */
+int32_t BSL_SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len);
 
 /**
  * @ingroup bsl_sal
@@ -816,48 +832,48 @@ int32_t BSL_SAL_Atoi(const char *str);
 uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count);
 
 typedef enum {
-    BSL_SAL_MEM_MALLOC_CB_FUNC = 0X0100,
-    BSL_SAL_MEM_FREE_CB_FUNC,
+    BSL_SAL_MEM_MALLOC = 0X0100,
+    BSL_SAL_MEM_FREE,
 
     BSL_SAL_THREAD_LOCK_NEW_CB_FUNC = 0X0200,
     BSL_SAL_THREAD_LOCK_FREE_CB_FUNC,
-    BSL_SAL_THREAD_READ_LOCK_CB_FUNC,
-    BSL_SAL_THREAD_WRITE_LOCK_CB_FUNC,
-    BSL_SAL_THREAD_UNLOCK_CB_FUNC,
+    BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC,
+    BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC,
+    BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC,
     BSL_SAL_THREAD_GET_ID_CB_FUNC,
 
     BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,
     BSL_SAL_NET_READ_CB_FUNC,
-    BSL_SAL_NET_SOCKET_CB_FUNC,
-    BSL_SAL_NET_SOCKCLOSE_CB_FUNC,
-    BSL_SAL_NET_SETSOCKOPT_CB_FUNC,
-    BSL_SAL_NET_GETSOCKOPT_CB_FUNC,
-    BSL_SAL_NET_SOCKLISTEN_CB_FUNC,
-    BSL_SAL_NET_SOCKBIND_CB_FUNC,
-    BSL_SAL_NET_SOCKCONNECT_CB_FUNC,
-    BSL_SAL_NET_SOCKSEND_CB_FUNC,
-    BSL_SAL_NET_SOCKRECV_CB_FUNC,
+    BSL_SAL_NET_SOCK_CB_FUNC,
+    BSL_SAL_NET_SOCK_CLOSE_CB_FUNC,
+    BSL_SAL_NET_SET_SOCK_OPT_CB_FUNC,
+    BSL_SAL_NET_GET_SOCK_OPT_CB_FUNC,
+    BSL_SAL_NET_SOCK_LISTEN_CB_FUNC,
+    BSL_SAL_NET_SOCK_BIND_CB_FUNC,
+    BSL_SAL_NET_SOCK_CONNECT_CB_FUNC,
+    BSL_SAL_NET_SOCK_SEND_CB_FUNC,
+    BSL_SAL_NET_SOCK_RECV_CB_FUNC,
     BSL_SAL_NET_SELECT_CB_FUNC,
-    BSL_SAL_NET_IOCTLSOCKET_CB_FUNC,
+    BSL_SAL_NET_IOCTL_CB_FUNC,
     BSL_SAL_NET_SOCKGETLASTSOCKETERROR_CB_FUNC,
 
-    BSL_SAL_TIME_GET_SYS_TIME_CB_FUNC = 0x0400,
+    BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC = 0x0400,
     BSL_SAL_TIME_DATE_TO_STR_CONVERT_CB_FUNC,
     BSL_SAL_TIME_SYS_TIME_GET_CB_FUNC,
     BSL_SAL_TIME_UTC_TIME_TO_DATE_CONVERT_CB_FUNC,
     BSL_SAL_TIME_SLEEP_CB_FUNC,
     BSL_SAL_TIME_TICK_CB_FUNC,
-    BSL_SAL_TIME_TICKS_PER_SEC_CB_FUNC,
+    BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC,
 
     BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,
-    BSL_SAL_FILE_CLOSE_CB_FUNC,
     BSL_SAL_FILE_READ_CB_FUNC,
     BSL_SAL_FILE_WRITE_CB_FUNC,
+    BSL_SAL_FILE_CLOSE_CB_FUNC,
     BSL_SAL_FILE_LENGTH_CB_FUNC,
 
-    BSL_SAL_DL_LOADLIB_CB_FUNC = 0x0700,
-    BSL_SAL_DL_UNLOADLIB_CB_FUNC,
-    BSL_SAL_DL_GETFUNC_CB_FUNC,
+    BSL_SAL_DL_OPEN_CB_FUNC = 0x0700,
+    BSL_SAL_DL_CLOSE_CB_FUNC,
+    BSL_SAL_DL_SYM_CB_FUNC,
 
     BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;
@@ -1104,7 +1120,7 @@ typedef int32_t (*BslSalSockClose)(int32_t sockId);
  * @retval #BSL_SUCCESS: succeeded.
  * @retval #BSL_SAL_ERR_NET_SETSOCKOPT: set socket option fails.
  */
-typedef int32_t (*BslSalSetSockopt)(int32_t sockId, int32_t level, int32_t name, const void *val, uint32_t len);
+typedef int32_t (*BslSalSetSockopt)(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len);
 
 /**
  * @ingroup bsl_sal
@@ -1113,7 +1129,7 @@ typedef int32_t (*BslSalSetSockopt)(int32_t sockId, int32_t level, int32_t name,
  * @retval #BSL_SUCCESS: succeeded.
  * @retval #BSL_SAL_ERR_NET_GETSOCKOPT: get socket option fails.
  */
-typedef int32_t (*BslSalGetSockopt)(int32_t sockId, int32_t level, int32_t name, void *val, uint32_t *len);
+typedef int32_t (*BslSalGetSockopt)(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len);
 
 /**
  * @ingroup bsl_sal

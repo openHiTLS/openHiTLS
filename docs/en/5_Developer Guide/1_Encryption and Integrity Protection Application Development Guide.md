@@ -66,8 +66,8 @@ int main(void)
 
     // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
 
     // Create a context.
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_CBC);
@@ -212,8 +212,8 @@ int main(void) {
     BSL_ERR_Init();  // Initialize the error code module.
     // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
@@ -327,8 +327,8 @@ int main(void)
     BSL_ERR_Init(); // Initialize the error code module.
     // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
@@ -449,8 +449,8 @@ int main(void)
     BSL_ERR_Init(); // Initialize the error code module.
     // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
@@ -607,8 +607,8 @@ int main(void)
      * Execute this step only once. If the memory allocation ability of Linux is available,
      * the two functions can be registered using Linux by default.
     */
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
 
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     if (ctx == NULL) {
@@ -711,8 +711,8 @@ int main(void)
 
     // Before calling the algorithm APIs, call the **BSL_SAL_CallBack_Ctrl** function to register the **malloc** and **free** functions. Execute this step only once.
     // If the memory allocation ability of Linux is available, the two functions can be registered using Linux by default.
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
 
     BSL_ERR_Init();// Initialize the error module.
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
