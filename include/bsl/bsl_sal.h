@@ -637,6 +637,22 @@ int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const vo
 
 /**
  * @ingroup bsl_sal
+ * @brief   Get the socket
+ *
+ * Get the socket
+ *
+ * @attention none
+ * @param sockId [IN] Socket file descriptor ID
+ * @param level [IN] Level of the option to be set.
+ * @param name [IN] Options to be set
+ * @param val [OUT] Value of the option.
+ * @param len [OUT] val Length
+ * @retval If the operation succeeds, BSL_SUCCESS is returned
+ */
+int32_t BSL_SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, uint32_t *len);
+
+/**
+ * @ingroup bsl_sal
  * @brief Listening socket
  *
  * Listen socket
@@ -838,18 +854,16 @@ typedef enum {
     BSL_SAL_NET_SOCK_SEND_CB_FUNC,
     BSL_SAL_NET_SOCK_RECV_CB_FUNC,
     BSL_SAL_NET_SELECT_CB_FUNC,
-    BSL_SAL_NET_IOCTLSOCKET_CB_FUNC,
+    BSL_SAL_NET_IOCTL_CB_FUNC,
     BSL_SAL_NET_SOCKGETLASTSOCKETERROR_CB_FUNC,
 
     BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC = 0x0400,
-    BSL_SAL_TIME_GET_BSL_TIME_CB_FUNC,
-    BSL_SAL_TIME_UTC_TO_BSL_TIME_CB_FUNC,
     BSL_SAL_TIME_DATE_TO_STR_CONVERT_CB_FUNC,
     BSL_SAL_TIME_SYS_TIME_GET_CB_FUNC,
     BSL_SAL_TIME_UTC_TIME_TO_DATE_CONVERT_CB_FUNC,
     BSL_SAL_TIME_SLEEP_CB_FUNC,
     BSL_SAL_TIME_TICK_CB_FUNC,
-    BSL_SAL_TIME_TICKS_PER_SEC_CB_FUNC,
+    BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC,
 
     BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,
     BSL_SAL_FILE_READ_CB_FUNC,
