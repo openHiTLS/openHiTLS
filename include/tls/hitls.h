@@ -1285,7 +1285,7 @@ int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isSupport);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls

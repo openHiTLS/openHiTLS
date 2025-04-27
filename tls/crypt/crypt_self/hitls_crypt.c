@@ -384,7 +384,7 @@ static int32_t GetCipherInitCtx(HITLS_Lib_Ctx *libCtx, const char *attrName,
     const HITLS_CipherParameters *cipher, CRYPT_EAL_CipherCtx **ctx, bool enc)
 {
     if (*ctx != NULL) {
-        return CRYPT_EAL_CipherReinit(*ctx, cipher->iv, cipher->ivLen);
+        return CRYPT_EAL_CipherReinit(*ctx, (uint8_t *)(uintptr_t)cipher->iv, cipher->ivLen);
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     *ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, GetCipherAlgId(cipher->algo), attrName);

@@ -55,7 +55,7 @@ static bool  HaveMatchSignAlg(const TLS_Config *config, HITLS_AuthAlgo authAlg, 
             continue;
         }
         signAlg = info->signAlgId;
-        if (((signAlg == HITLS_SIGN_RSA_PKCS1_V15) || (signAlg == HITLS_SIGN_RSA_PSS)) &&
+        if (((signAlg == HITLS_SIGN_RSA_PKCS1_V15) || (signAlg == HITLS_SIGN_RSA_PSS_PSS)) &&
             (authAlg == HITLS_AUTH_RSA)) {
             return true;
         }

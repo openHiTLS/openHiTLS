@@ -43,9 +43,9 @@ enum BSL_ERROR {
     BSL_INTERNAL_EXCEPTION,                 /**< Error occurs when calling internal BSL functions */
     BSL_MALLOC_FAIL,                        /**< Error occurs when allocating memory */
     BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy_s. */
+    BSL_MEMMOVE_FAIL,                       /**< Error occurs when calling memmove. */
     BSL_INVALID_ARG,                        /**< Invalid arguments. */
     BSL_DUMP_FAIL,                          /**< Error occurs when duplicating memory */
-    BSL_MEMMOVE_FAIL,
 
     /* The return value of the SAL submodule starts from 0x03010001. */
     BSL_SAL_ERR_UNKNOWN = 0x03010001,        /**< Unknown error. */
@@ -60,17 +60,6 @@ enum BSL_ERROR {
     BSL_SAL_ERR_FILE_SET_ATTR,               /**< Setting file attribute failed. */
     BSL_SAL_ERR_FILE_GET_ATTR,               /**< Error in obtaining file attributes. */
     BSL_SAL_FILE_NO_REG_FUNC,
-
-    BSL_SAL_ERR_NET_SOCKCLOSE,               /**< Error occured when closing a socket. */
-    BSL_SAL_ERR_NET_SETSOCKOPT,              /**< Error occured when setting a socket option. */
-    BSL_SAL_ERR_NET_GETSOCKOPT,              /**< Error occured when getting a socket option. */
-    BSL_SAL_ERR_NET_LISTEN,                  /**< Error occured when listening a socket. */
-    BSL_SAL_ERR_NET_BIND,                    /**< Error occured when binding a socket */
-    BSL_SAL_ERR_NET_CONNECT,                 /**< Error occured when building a connection. */
-    BSL_SAL_ERR_NET_IOCTL,                   /**< Error occured when calling ioctl. */
-    BSL_SAL_NET_NO_REG_FUNC,
-
-    BSL_SAL_TIME_NO_REG_FUNC,
 
     BSL_SAL_ERR_DL_NOT_FOUND,                /**< dl not found. */
     BSL_SAL_ERR_DL_LOAD_FAIL,                /**< Error occured when loading dynamic library. */
@@ -94,24 +83,25 @@ enum BSL_ERROR {
     BSL_ERR_ERR_NO_ERROR,                             /**< Error stack is NULL.  */
     BSL_ERR_ERR_NO_MARK,                              /**< Error stack has no mark. */
 
+    BSL_SAL_TIME_NO_REG_FUNC = 0x03050001,
+
     /* The return value of the UIO submodule starts from 0x03060001. */
-    BSL_UIO_FAIL = 0x03050001,              /**< Invalid parameters. */
+    BSL_UIO_FAIL = 0x03060001,              /**< Invalid parameters. */
     BSL_UIO_IO_EXCEPTION,                   /**< I/O is abnormal. */
     BSL_UIO_IO_BUSY,                        /**< I/O is busy. */
+    BSL_UIO_MEM_GROW_FAIL,
     BSL_UIO_REF_MAX,                        /**< The number of UIO objects has reached the maximum. */
     BSL_UIO_MEM_ALLOC_FAIL,
     BSL_UIO_IO_EOF,                         /**< I/O object has reached EOF */
-    BSL_UIO_UNINITIALIZED,                  /**< UIO object is uninitialized */
     BSL_UIO_WRITE_NOT_ALLOWED,
-    BSL_UIO_MEM_GROW_FAIL,
+    BSL_UIO_UNINITIALIZED,                  /**< UIO object is uninitialized */
     BSL_UIO_MEM_NOT_NULL,
 
     /* The return value of the LIST submodule starts from 0x03070001. */
     BSL_LIST_INVALID_LIST_CURRENT = 0x03070001, /**< Current node pointer is NULL */
+    BSL_LIST_MALLOC_FAIL,
     BSL_LIST_DATA_NOT_AVAILABLE,                /**< Data of current node is NULL */
     BSL_LIST_FULL,                              /**< Number of nodes has reached its limit */
-    BSL_LIST_ERR_CONCAT,
-    BSL_LIST_MALLOC_FAIL,
 
     /* The return value of the BASE64 submodule starts from 0x030a0001. */
     BSL_BASE64_INVALID = 0x030a0001,
@@ -126,6 +116,16 @@ enum BSL_ERROR {
     BSL_BASE64_HEADER,
     BSL_BASE64_INVALID_CHARACTER,
     BSL_BASE64_INVALID_ENCODE,
+
+    BSL_SAL_ERR_NET_NOBLOCK = 0x030b0001,
+    BSL_SAL_ERR_NET_SOCKCLOSE,               /**< Error occured when closing a socket. */
+    BSL_SAL_ERR_NET_SETSOCKOPT,              /**< Error occured when setting a socket option. */
+    BSL_SAL_ERR_NET_GETSOCKOPT,              /**< Error occured when getting a socket option. */
+    BSL_SAL_ERR_NET_LISTEN,                  /**< Error occured when listening a socket. */
+    BSL_SAL_ERR_NET_BIND,                    /**< Error occured when binding a socket */
+    BSL_SAL_ERR_NET_CONNECT,                 /**< Error occured when building a connection. */
+    BSL_SAL_ERR_NET_IOCTL,                   /**< Error occured when calling ioctl. */
+    BSL_SAL_NET_NO_REG_FUNC,
 
     BSL_PARAMS_INVALID_KEY = 0x030f0001,
     BSL_PARAMS_INVALID_TYPE,

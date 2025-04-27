@@ -47,7 +47,7 @@ CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtx(CRYPT_MAC_AlgId id)
     return ctx;
 }
 
-int32_t CRYPT_CBC_MAC_Init(CRYPT_CBC_MAC_Ctx *ctx, const uint8_t *key, uint32_t len, const void *param)
+int32_t CRYPT_CBC_MAC_Init(CRYPT_CBC_MAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
 {
     (void)param;
     if (ctx == NULL) {

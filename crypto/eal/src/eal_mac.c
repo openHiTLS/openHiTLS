@@ -304,20 +304,20 @@ int32_t CRYPT_EAL_MacFinal(CRYPT_EAL_MacCtx *ctx, uint8_t *out, uint32_t *len)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_MacDeinit(CRYPT_EAL_MacCtx *ctx)
+void CRYPT_EAL_MacDeinit(CRYPT_EAL_MacCtx *ctx)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        return;
     }
     if (ctx->macMeth == NULL || ctx->macMeth->deinit == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
+        return;
     }
     ctx->macMeth->deinit(ctx->ctx);
 
     ctx->state = CRYPT_MAC_STATE_NEW;
-    return CRYPT_SUCCESS;
+    return;
 }
 
 int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx)

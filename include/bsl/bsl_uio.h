@@ -77,8 +77,8 @@ typedef enum {
     BSL_UIO_TCP,
     BSL_UIO_UDP,
     BSL_UIO_SCTP,
-    BSL_UIO_BUFFER,
     BSL_UIO_MEM,
+    BSL_UIO_BUFFER,
     BSL_UIO_UNKNOWN, /* Unknown protocol should not appear */
 
     BSL_UIO_EXTEND = 10000, /* extension value */
@@ -118,10 +118,10 @@ typedef enum {
     BSL_UIO_RESET,
     BSL_UIO_PENDING,
     BSL_UIO_WPENDING,
+    BSL_UIO_SET_BUFFER_SIZE,
 
     /* UDP uses 0x2XX */
-    BSL_UIO_DGRAM_SET_CONNECTED,
-    BSL_UIO_SET_BUFFER_SIZE,
+    BSL_UIO_UDP_SET_CONNECTED = 0x200,
 
     /* SCTP uses 0x3XX */
     BSL_UIO_SCTP_CHECK_PEER_AUTH = 0x300,

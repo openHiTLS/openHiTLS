@@ -68,13 +68,14 @@ int main(void)
      * Execute this step only once. If the memory allocation ability of Linux is available,
      * the two functions can be registered using Linux by default.
     */
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC_CB_FUNC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE_CB_FUNC, free);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Init: error code is %x\n", ret);
         goto EXIT;
     }
+
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     if (prvCtx == NULL || pubCtx == NULL) {

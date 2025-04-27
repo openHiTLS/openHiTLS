@@ -162,7 +162,7 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtx(CRYPT_MAC_AlgId id)
     return ctx;
 }
 
-int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, const void *param)
+int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param)
 {
     (void)param;
     if (ctx == NULL || (key == NULL && keyLen != 0)) {
