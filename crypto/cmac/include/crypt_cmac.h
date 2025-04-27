@@ -45,7 +45,7 @@ CRYPT_CMAC_Ctx *CRYPT_CMAC_NewCtx(CRYPT_MAC_AlgId id);
  * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_CMAC_Init(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len, const void *param);
+int32_t CRYPT_CMAC_Init(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param);
 /**
  * @brief Enter the data to be calculated and update the context.
  * @param ctx [IN] CMAC context

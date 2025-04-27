@@ -94,7 +94,7 @@ void CRYPT_SHA2_224_FreeCtx(CRYPT_SHA2_224_Ctx *ctx);
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, const BSL_Param *param);
+int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, BSL_Param *param);
 
 /**
  * @defgroup CRYPT_SHA2_224_Update
@@ -196,7 +196,7 @@ void CRYPT_SHA2_256_FreeCtx(CRYPT_SHA2_256_Ctx *ctx);
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, const BSL_Param *param);
+int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, BSL_Param *param);
 
 /**
  * @defgroup CRYPT_SHA2_256_Update
@@ -299,7 +299,7 @@ void CRYPT_SHA2_384_FreeCtx(CRYPT_SHA2_384_Ctx *ctx);
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, const BSL_Param *param);
+int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param);
 
 /**
  * @ingroup LLF Low Level Functions
@@ -397,7 +397,7 @@ void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx);
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, const BSL_Param *param);
+int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param);
 
 /**
  * @ingroup LLF Low Level Functions

@@ -84,8 +84,8 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
     char quote = '"';
     bool needQuote = NeedQuote(value);
     if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
-        return HITLS_PRINT_ERR_DN_VALUE;
+        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME_VALUE);
+        return HITLS_PRINT_ERR_DNNAME_VALUE;
     }
     char c;
     char *fmt;
@@ -113,14 +113,14 @@ static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
         }
         ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &c, 1) : BSL_ASN1_Printf(0, uio, fmt, c);
         if (ret != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
-            return HITLS_PRINT_ERR_DN_VALUE;
+            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME_VALUE);
+            return HITLS_PRINT_ERR_DNNAME_VALUE;
         }
         cur++;
     }
     if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
-        return HITLS_PRINT_ERR_DN_VALUE;
+        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME_VALUE);
+        return HITLS_PRINT_ERR_DNNAME_VALUE;
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -155,14 +155,14 @@ static int32_t PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine, BS
                 ret = BSL_ASN1_PrintfBuff(0, uio, "\n", strlen("\n")) || BSL_ASN1_PrintfBuff(layer, uio, NULL, 0);
             }
             if (ret != BSL_SUCCESS) {
-                BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
-                return HITLS_PRINT_ERR_DN;
+                BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME);
+                return HITLS_PRINT_ERR_DNNAME;
             }
         }
         /* print type */
         if (BSL_ASN1_Printf(0, uio, GetPrefixFmt(preLayerIs2, namePosFlag == 0), oidName) != BSL_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DN);
-            return HITLS_PRINT_ERR_DN;
+            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME);
+            return HITLS_PRINT_ERR_DNNAME;
         }
         /* print value */
         if (name->nameValue.buff != NULL && name->nameValue.len != 0) {
@@ -176,7 +176,7 @@ static int32_t PrintDn(uint32_t layer, BSL_ASN1_List *nameList, bool newLine, BS
             BSL_LIST_GET_NEXT(nameList);
     }
     if (newLine) {
-        return BSL_ASN1_PrintfBuff(0, uio, "\n", strlen("\n")) != 0 ? HITLS_PRINT_ERR_DN : HITLS_PKI_SUCCESS;
+        return BSL_ASN1_PrintfBuff(0, uio, "\n", strlen("\n")) != 0 ? HITLS_PRINT_ERR_DNNAME : HITLS_PKI_SUCCESS;
     }
     return HITLS_PKI_SUCCESS;
 }

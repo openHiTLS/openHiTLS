@@ -87,7 +87,7 @@ int32_t BSL_SAL_SockClose(int32_t sockId)
 #endif
 }
 
-int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, uint32_t len)
+int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len)
 {
     if (g_netCallback.pfSetSockopt != NULL && g_netCallback.pfSetSockopt != BSL_SAL_SetSockopt) {
         return g_netCallback.pfSetSockopt(sockId, level, name, val, len);
@@ -99,7 +99,7 @@ int32_t BSL_SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const vo
 #endif
 }
 
-int32_t BSL_SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, uint32_t *len)
+int32_t BSL_SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len)
 {
     if (g_netCallback.pfGetSockopt != NULL && g_netCallback.pfGetSockopt != BSL_SAL_GetSockopt) {
         return g_netCallback.pfGetSockopt(sockId, level, name, val, len);

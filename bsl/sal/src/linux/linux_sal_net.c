@@ -62,7 +62,7 @@ int32_t SAL_SockClose(int32_t sockId)
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, uint32_t len)
+int32_t SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len)
 {
     if (setsockopt((int32_t)sockId, level, name, (char *)(uintptr_t)val, (socklen_t)len) != 0) {
         return BSL_SAL_ERR_NET_SETSOCKOPT;
@@ -70,7 +70,7 @@ int32_t SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *
     return BSL_SUCCESS;
 }
 
-int32_t SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, uint32_t *len)
+int32_t SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len)
 {
     if (getsockopt((int32_t)sockId, level, name, val, (socklen_t *)len) != 0) {
         return BSL_SAL_ERR_NET_GETSOCKOPT;

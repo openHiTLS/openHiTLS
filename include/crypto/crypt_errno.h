@@ -306,7 +306,6 @@ enum CRYPT_ERROR {
                                                           on which the pattern depends on. */
     CRYPT_MODES_METHODS_NOT_SUPPORT,                 /**< Mode depends does not support the behavior. */
     CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
-    CRYPT_MODES_ERR_STREAM_FINAL,                    /**< streaming encryption not support final */
     CRYPT_MODES_PADDING_NOT_SUPPORT,                 /**< Unsupported padding. */
 
     CRYPT_HKDF_DKLEN_OVERFLOW = 0x01110001,          /**< The length of the derived key exceeds the maximum. */
@@ -477,7 +476,6 @@ enum CRYPT_ERROR {
     CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01350001,     /**< Unexpected impl */
     CRYPT_PROVIDER_ERR_IMPL_NULL,
     CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */
-    CRYPT_PROVIDER_ERR_NEWCTX,
     CRYPT_PROVIDER_NOT_SUPPORT,
     CRYPT_PROVIDER_ERR_ATTRIBUTE,
     CRYPT_PROVIDER_INVALID_LIB_CTX,

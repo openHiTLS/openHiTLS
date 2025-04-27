@@ -28,7 +28,7 @@ extern "C" {
 
 MODES_GCM_Ctx *CRYPT_GMAC_NewCtx(CRYPT_MAC_AlgId id);
 
-int32_t CRYPT_GMAC_Init(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len, const void *param);
+int32_t CRYPT_GMAC_Init(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len, void *param);
 
 int32_t CRYPT_GMAC_Update(MODES_GCM_Ctx *ctx, const uint8_t *in, uint32_t len);
 

@@ -636,7 +636,7 @@ int32_t CRYPT_EAL_PkeyUpRef(CRYPT_EAL_PkeyCtx *pkey);
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes see crypt_errno.h.
  */
-int32_t CRYPT_EAL_PkeyEncapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *params);
+int32_t CRYPT_EAL_PkeyEncapsInit(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *params);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -648,7 +648,7 @@ int32_t CRYPT_EAL_PkeyEncapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes see crypt_errno.h.
  */
-int32_t CRYPT_EAL_PkeyDecapsInit(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *params);
+int32_t CRYPT_EAL_PkeyDecapsInit(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *params);
 
 /**
  * @ingroup crypt_eal_pkey

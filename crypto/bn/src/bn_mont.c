@@ -395,8 +395,7 @@ int32_t MontSqrBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool constt
     uint32_t mSize = mont->mSize;
     BN_UINT *x = mont->t;
 #ifdef HITLS_CRYPTO_BN_COMBA
-    uint32_t size = SpaceSize(mSize);
-    BN_BigNum *bnSpace = OptimizerGetBn(opt, size);
+    BN_BigNum *bnSpace = OptimizerGetBn(opt, SpaceSize(mSize));
     if (bnSpace == NULL) {
         OptimizerEnd(opt);
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
@@ -448,8 +447,7 @@ int32_t MontEncBinCore(BN_UINT *r, BN_Mont *mont, BN_Optimizer *opt, bool constt
     uint32_t mSize = mont->mSize;
     BN_UINT *x = mont->t;
 #ifdef HITLS_CRYPTO_BN_COMBA
-    uint32_t size = SpaceSize(mSize);
-    BN_BigNum *bnSpace = OptimizerGetBn(opt, size);
+    BN_BigNum *bnSpace = OptimizerGetBn(opt, SpaceSize(mSize));
     if (bnSpace == NULL) {
         OptimizerEnd(opt);
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);

@@ -52,7 +52,7 @@ extern "C" {
     *
     * @return  void.
     */
-  void CRYPT_EAL_SetRandCallback(CRYPT_EAL_RandFunc func);
+  void CRYPT_EAL_SetRandCallBack(CRYPT_EAL_RandFunc func);
 
 /**
   * @ingroup crypt_eal_rand
@@ -74,7 +74,7 @@ typedef int32_t (*CRYPT_EAL_RandFuncEx)(void *ctx, uint8_t *rand, uint32_t randL
   *
   * @return  void.
   */
-void CRYPT_EAL_SetRandCallbackEx(CRYPT_EAL_RandFuncEx func);
+void CRYPT_EAL_SetRandCallBackEx(CRYPT_EAL_RandFuncEx func);
 
 /**
  * @ingroup crypt_eal_rand
