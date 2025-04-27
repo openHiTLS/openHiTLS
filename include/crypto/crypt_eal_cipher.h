@@ -123,7 +123,7 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx);
  * @param iv [IN] Vector
  * @param ivlen [IN] Vector length
  */
-int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *iv, uint32_t ivLen);
+int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t ivLen);
 
 /**
  * @ingroup crypt_eal_cipher
@@ -205,7 +205,6 @@ int32_t CRYPT_EAL_CipherFinal(CRYPT_EAL_CipherCtx *ctx, uint8_t *out, uint32_t *
  * CRYPT_CTRL_SET_FEEDBACKSIZE     uint32_t            length(len) 4
  * CRYPT_CTRL_GET_FEEDBACKSIZE     uint32_t pointer    sizeof(*uint32_t)
  * CRYPT_CTRL_GET_BLOCKSIZE        uint32_t            length(len) 4
- * CRYPT_CTRL_SET_SM4_CONSTTIME    NULL                0
  *
  * @attention If the function is called by an external user and the error stack is concerned,
  * it is recommended that BSL_ERR_ClearError() be called before this function is called.

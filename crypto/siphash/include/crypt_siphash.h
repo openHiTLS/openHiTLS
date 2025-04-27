@@ -55,7 +55,7 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtx(CRYPT_MAC_AlgId id);
  * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
  *         #CRYPT_INVALID_ARG   invalid input parameter. For example, the input key length is not 128 bits.
  */
-int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, const void *param);
+int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param);
 
 /**
  * @brief siphash update, supporting streaming update

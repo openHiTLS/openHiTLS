@@ -566,8 +566,6 @@ typedef enum {
     CRYPT_CTRL_SET_FEEDBACKSIZE,  /**< Setting the ciphertext feedback length in CFB mode. */
     CRYPT_CTRL_GET_FEEDBACKSIZE,  /**< Obtaining the ciphertext feedback length in CFB mode. */
     CRYPT_CTRL_DES_NOKEYCHECK,    /**< DES does not verify the key. */
-    CRYPT_CTRL_SET_SM4_CONSTTIME, /**< SM4 selects the side channel security implementation, which reduces
-                                       the performance. Valid only when ARM assembly implementation is enabled. */
     CRYPT_CTRL_SET_PADDING,       /**< Set the padding mode of the algorithm. */
     CRYPT_CTRL_GET_PADDING,       /**< Obtain the padding mode of thealgorithm. */
     CRYPT_CTRL_REINIT_STATUS,     /**< Reinitialize the status of the algorithm. */
