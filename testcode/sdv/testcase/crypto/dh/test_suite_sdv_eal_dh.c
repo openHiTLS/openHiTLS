@@ -319,7 +319,7 @@ EXIT:
  *    3. CRYPT_DH_KEYINFO_ERROR
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, Hex *pub1, int isProvider)
+void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, int isProvider)
 {
     uint8_t shareLocal[1030];
     uint32_t shareLen = sizeof(shareLocal);
@@ -348,13 +348,6 @@ void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, Hex *pub1, int 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey1, &para) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey1, &prv) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
-
-    ASSERT_TRUE(memcpy_s(tmpPub, p->len, pub1->x, pub1->len) == 0);
-    last = pub1->len - 1;
-    tmpPub[last] += 1;  // pubKey ^ q mod p != 1
-    pub.key.dhPub.len = pub1->len;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
 

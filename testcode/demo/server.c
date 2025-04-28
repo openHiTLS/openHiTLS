@@ -55,7 +55,6 @@ int main(int32_t argc, char *argv[])
         printf("Init rand failed.\n");
         goto EXIT;
     }
-
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
 

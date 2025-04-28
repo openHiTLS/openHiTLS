@@ -36,7 +36,26 @@ CRYPT_EAL_LibCtx *CRYPT_EAL_GetGlobalLibCtx(void)
 int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
     const char *attribute, const CRYPT_EAL_Func **funcs, void **provCtx)
 {
-    if (funcs == NULL) {
+    CRYPT_EAL_ProvMgrCtx *mgrCtx = NULL;
+    int32_t ret = CRYPT_EAL_ProviderGetFuncsAndMgrCtx(libCtx, operaId, algId, attribute, funcs, &mgrCtx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (mgrCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_FOUND);
+        return CRYPT_PROVIDER_NOT_FOUND;
+    }
+    if (provCtx != NULL) {
+        *provCtx = mgrCtx->provCtx;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_ProviderGetFuncsAndMgrCtx(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, int32_t algId,
+    const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx)
+{
+    if (funcs == NULL || mgrCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -54,7 +73,7 @@ int32_t CRYPT_EAL_ProviderGetFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t operaId, in
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
 
-    return CRYPT_EAL_CompareAlgAndAttr(localCtx, operaId, algId, attribute, funcs, provCtx);
+    return CRYPT_EAL_CompareAlgAndAttr(localCtx, operaId, algId, attribute, funcs, mgrCtx);
 }
 
 int32_t CRYPT_EAL_ProvMgrCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen)

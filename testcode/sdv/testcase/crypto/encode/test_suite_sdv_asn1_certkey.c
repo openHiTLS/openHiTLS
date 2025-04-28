@@ -32,7 +32,7 @@
 #include "crypt_eal_encode.h"
 #include "crypt_eal_init.h"
 #include "crypt_encode_decode_local.h"
-#include "crypt_encode_decode.h"
+#include "crypt_encode_decode_key.h"
 #include "crypt_util_rand.h"
 #include "bsl_obj_internal.h"
 #include "crypt_eal_rand.h"
@@ -368,7 +368,7 @@ void SDV_BSL_ASN1_PARSE_SUBPUBKEY_TC001(int encodeType, Hex *subKeyInfo)
     RegisterLogFunc();
     (void)encodeType;
     CRYPT_EAL_PkeyCtx *pctx = NULL;
-    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(NULL, NULL, subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), 0);
+    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), 0);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pctx);
@@ -376,23 +376,61 @@ EXIT:
 }
 /* END_CASE */
 
+static int32_t DecodeKeyFile(int isProvider, const char *path, int format, const char *formatStr, int fileType,
+    const char *fileTypeStr, uint8_t *pwd, uint32_t pwdLen, CRYPT_EAL_PkeyCtx **pkeyCtx)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    (void)format;
+    (void)fileType;
+    if (isProvider) {
+        BSL_Buffer pwdBuff = {pwd, pwdLen};
+        return CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, fileTypeStr, path,
+            &pwdBuff, pkeyCtx);
+    }
+    else
+#endif
+    {
+        (void)isProvider;
+        (void)formatStr;
+        (void)fileTypeStr;
+        return CRYPT_EAL_DecodeFileKey(format, fileType, path, pwd, pwdLen, pkeyCtx);
+    }
+}
+
+static int32_t DecodeKeyBuff(int isProvider, BSL_Buffer *encode, int format, const char *formatStr, int fileType,
+    const char *fileTypeStr, uint8_t *pwd, uint32_t pwdLen, CRYPT_EAL_PkeyCtx **pkeyCtx)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    (void)format;
+    (void)fileType;
+    if (isProvider) {
+        BSL_Buffer pwdBuff = {pwd, pwdLen};
+        return CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, fileTypeStr, encode,
+            &pwdBuff, pkeyCtx);
+    } else
+#endif
+    {
+        (void)isProvider;
+        (void)formatStr;
+        (void)fileTypeStr;
+        return CRYPT_EAL_DecodeBuffKey(format, fileType, encode, pwd, pwdLen, pkeyCtx);
+    }
+}
+
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_PRIKEY_FILE_TC001(int isProvider, char *path, int fileType, int mdId, Hex *msg, Hex *sign)
+void SDV_BSL_ASN1_PARSE_PRIKEY_FILE_TC001(int isProvider, char *path, int fileType, char *fileTypeStr, int mdId,
+    Hex *msg, Hex *sign)
 {
     RegisterLogFunc();
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
     uint8_t *signdata = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    if (isProvider) {
-        ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, fileType, path, NULL, &pkeyCtx), 0);
-    } else {
-        ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
-    }
-    if (fileType == CRYPT_PRIKEY_RSA || CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
+    ASSERT_EQ(DecodeKeyFile(isProvider, path, BSL_FORMAT_ASN1, "ASN1", fileType, fileTypeStr, NULL, 0, &pkeyCtx), 0);
+    if (fileType == CRYPT_PRIKEY_RSA || strcmp(fileTypeStr, "PRIKEY_RSA") == 0 ||
+        CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
         int32_t pkcsv15 = mdId;
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
-                  0);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), 0);
     }
 
     /* Malloc signature buffer */
@@ -413,8 +451,8 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC001(int isProvider, char *path, int fileType, int mdId, Hex *msg, int alg,
-    Hex *rawKey, int paraId)
+void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC001(int isProvider, char *path, int fileType, char *fileTypeStr,
+    int mdId, Hex *msg, int alg, Hex *rawKey, int paraId)
 {
     RegisterLogFunc();
     CRYPT_RandRegist(RandFunc);
@@ -423,11 +461,7 @@ void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC001(int isProvider, char *path, int fil
     uint32_t rawPriKeyLen = 100;
     uint8_t *signdata = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    if (isProvider) {
-        ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, fileType, path, NULL, &pkeyCtx), 0);
-    } else {
-        ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
-    }
+    ASSERT_EQ(DecodeKeyFile(isProvider, path, BSL_FORMAT_ASN1, "ASN1", fileType, fileTypeStr, NULL, 0, &pkeyCtx), 0);
     CRYPT_EAL_PkeyPrv pkeyPrv = {0};
     pkeyPrv.id = alg;
     pkeyPrv.key.eccPrv.data = rawPriKey;
@@ -484,20 +518,16 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_ENCPK8_TC001(int isProvider, char *path, int fileType, Hex *pass, int mdId, Hex *msg, Hex *sign)
+void SDV_BSL_ASN1_PARSE_ENCPK8_TC001(int isProvider, char *path, int fileType, char *fileTypeStr, Hex *pass,
+    int mdId, Hex *msg, Hex *sign)
 {
     RegisterLogFunc();
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
-    BSL_Buffer pwdBuffer = { pass->x, pass->len };
     uint8_t *signdata = NULL;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    if (isProvider) {
-        ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_FORMAT_ASN1, fileType, path,
-            &pwdBuffer, &pkeyCtx), 0);
-    } else {
-        ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, fileType, path, pass->x, pass->len, &pkeyCtx), 0);
-    }
+    ASSERT_EQ(DecodeKeyFile(isProvider, path, BSL_FORMAT_ASN1, "ASN1", fileType, fileTypeStr,
+        pass->x, pass->len, &pkeyCtx), 0);
     if (fileType == CRYPT_PRIKEY_RSA || CRYPT_EAL_PkeyGetId(pkeyCtx) == CRYPT_PKEY_RSA) {
         int32_t pkcsv15 = mdId;
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
@@ -522,20 +552,21 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_BUFF_TC001(int isProvider, int type, Hex *pass, Hex *data)
+void SDV_BSL_ASN1_PARSE_BUFF_TC001(int isProvider, char *typeStr, int type, Hex *pass, Hex *data)
 {
     RegisterLogFunc();
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
-    BSL_Buffer passBuffer = {pass->x, pass->len};
+    BSL_Buffer encode = {data->x, data->len};
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    if (isProvider) {
-        ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_ASN1, type, (BSL_Buffer *)data,
-            &passBuffer, &pkeyCtx), CRYPT_NULL_INPUT);
-    } else {
-        ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, type, (BSL_Buffer *)data,
-            pass->x, pass->len, &pkeyCtx), CRYPT_NULL_INPUT);
-    }
+    int32_t ret;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ret = isProvider ? CRYPT_DECODE_ERR_NO_USABLE_DECODER : CRYPT_NULL_INPUT;
+#else
+    ret = CRYPT_NULL_INPUT;
+#endif
+    ASSERT_EQ(DecodeKeyBuff(isProvider, &encode, BSL_FORMAT_ASN1, "ASN1", type, typeStr, pass->x, pass->len, &pkeyCtx),
+        ret);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
@@ -754,8 +785,15 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_BUFF_PROVIDER_TC001(int format, int type, char *path, Hex *password)
+void SDV_BSL_ASN1_PARSE_BUFF_PROVIDER_TC001(char *formatStr, char *typeStr, char *path, Hex *password)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)formatStr;
+    (void)typeStr;
+    (void)path;
+    (void)password;
+    SKIP_TEST();
+#else
     RegisterLogFunc();
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
@@ -765,13 +803,14 @@ void SDV_BSL_ASN1_PARSE_BUFF_PROVIDER_TC001(int format, int type, char *path, He
     BSL_Buffer encode = {data, dataLen};
     BSL_Buffer pass = {password->x, password->len};
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_UNKNOWN, CRYPT_ENCODE_UNKNOW, &encode,
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, NULL, NULL, &encode,
         &pass, &pkeyCtx), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     pkeyCtx = NULL;
     encode.data = data;
     encode.dataLen = dataLen;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, format, type, &encode, &pass, &pkeyCtx), 0);
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode, &pass,
+        &pkeyCtx), 0);
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     pkeyCtx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -779,21 +818,22 @@ void SDV_BSL_ASN1_PARSE_BUFF_PROVIDER_TC001(int format, int type, char *path, He
     CRYPT_EAL_Cleanup(9); // 9 denotes to deinit CRYPT_EAL_INIT_CPU and CRYPT_EAL_INIT_PROVIDER
     encode.data = data;
     encode.dataLen = dataLen;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_FORMAT_UNKNOWN, CRYPT_ENCODE_UNKNOW, &encode,
-        &pass, &pkeyCtx), CRYPT_DECODE_NO_SUPPORT_TYPE);
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, NULL, NULL, &encode,
+        &pass, &pkeyCtx), CRYPT_PROVIDER_INVALID_LIB_CTX);
     encode.data = data;
     encode.dataLen = dataLen;
-    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, format, type, &encode, &pass, &pkeyCtx), 0);
+    ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode, &pass, &pkeyCtx), 0);
     CRYPT_EAL_Init(9);  // 9 denotes to deinit CRYPT_EAL_INIT_CPU and CRYPT_EAL_INIT_PROVIDER
     encode.data = data;
     encode.dataLen = dataLen;
-    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, format, type, &encode, &pass, &pkeyCtx),
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode, &pass, &pkeyCtx),
         CRYPT_SUCCESS);
 #endif
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(data);
     BSL_GLOBAL_DeInit();
+#endif
 }
 /* END_CASE */
 
