@@ -188,7 +188,8 @@
             "-DHITLS_CRYPTO_RAND_CB",
             "-DHITLS_CRYPTO_BN_CB",
             "-DHITLS_CRYPTO_RSA_BSSA",
-            "-DHITLS_AARCH64_PACIASP"
+            "-DHITLS_AARCH64_PACIASP",
+            "-DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL"
         ],
         "CC_DEBUG_FLAGS": [
             "-g",

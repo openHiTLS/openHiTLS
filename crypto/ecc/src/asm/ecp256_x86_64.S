@@ -1772,6 +1772,15 @@ ECP256_OrdMul:
  *        rsi: address pointing to input data a
  *  Change register: rax, rbx, rcx, rdx, rbp, rsi, r8, r9, r10, r11, r12, r13, r14, r15
  *  Function/Macro Call: ECP256_MulBy2Core, ECP256_SqrCore_q, ECP256_AddCore, ECP256_MulCore_q, ECP256_SubCore
+ * ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2001-b
+ * Deal process:
+ *     delta = Z12
+ *     gamma = Y12
+ *     beta = X1*gamma
+ *     alpha = 3*(X1-delta)*(X1+delta)
+ *     X3 = alpha2-8*beta
+ *     Z3 = (Y1+Z1)2-gamma-delta
+ *     Y3 = alpha*(4*beta-X3)-8*gamma2
  */
 .globl ECP256_PointDouble
 .type  ECP256_PointDouble,@function
@@ -1945,6 +1954,17 @@ ECP256_PointDouble:
  *        rdx: Address pointing to input data b
  *  Change register: rax, rbx, rcx, rdx, rbp, rsi, r8, r9, r10, r11, r12, r13, r14, r15
  *  Function/Macro Call: ECP256_PointDouble, ECP256_SqrCore_q, ECP256_MulCore_q, ECP256_SubCore, ECP256_MulBy2Core
+ * ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo
+ * Deal process:
+ *     U1 = X1*Z22
+ *     U2 = X2*Z12
+ *     S1 = Y1*Z23
+ *     S2 = Y2*Z13
+ *     H = U2-U1
+ *     r = S2-S1
+ *     X3 = r2-H3-2*U1*H2
+ *     Y3 = r*(U1*H2-X3)-S1*H3
+ *     Z3 = Z1*Z2*H
  */
 .globl ECP256_PointAdd
 .type  ECP256_PointAdd,@function
@@ -2306,6 +2326,20 @@ ECP256_PointAdd:
  *  Change register: rax, rbx, rcx, rdx, rsi, rdi, rbp, r8, r9, r10, r11, r12, r13, r14, r15
  *  Output register: None
  *  Function/Macro Call: ECP256_MulBy2Core, ECP256_SqrCore_q, ECP256_AddCore, ECP256_MulCore_q, ECP256_SubCore
+ *  ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2007-bl
+ *  Deal process:
+ *     Z1Z1 = Z12
+ *     U2 = X2*Z1Z1
+ *     S2 = Y2*Z1*Z1Z1
+ *     H = U2-X1
+ *     HH = H2
+ *     I = 4*HH
+ *     J = H*I
+ *     r = 2*(S2-Y1)
+ *     V = X1*I
+ *     X3 = r2-J-2*V
+ *     Y3 = r*(V-X3)-2*Y1*J
+ *     Z3 = (Z1+H)2-Z1Z1-HH
  */
 .globl  ECP256_AddAffine
 .type   ECP256_AddAffine,@function
