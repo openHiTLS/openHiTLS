@@ -561,7 +561,6 @@ EXIT:
 /**
  * @test   SDV_CRYPTO_MLDSA_FUNC_PROVIDER_TC001
  * @title  To test the provisioner function.
- * @precon Registering memory-related functions.
  * @brief
  *    Invoke the signature and signature verification functions to test the function correctness.
  * @expect
