@@ -657,6 +657,14 @@ typedef enum {
     CRYPT_CTRL_SET_CTX_INFO,                 /* context string. */
 } CRYPT_PkeyCtrl;
 
+
+#define CRYPT_KEYMGMT_SELECT_PRIVATE_KEY 0x01
+#define CRYPT_KEYMGMT_SELECT_PUBLIC_KEY  0x02
+#define CRYPT_KEYMGMT_SELECT_PARAMETER   0x04
+#define CRYPT_KEYMGMT_SELECT_UNKNOWN     0x08
+#define CRYPT_KEYMGMT_SELECT_KEY_PAIR    (CRYPT_KEYMGMT_SELECT_PRIVATE_KEY | CRYPT_KEYMGMT_SELECT_PUBLIC_KEY)
+#define CRYPT_KEYMGMT_SELECT_ALL         (CRYPT_KEYMGMT_SELECT_PRIVATE_KEY | CRYPT_KEYMGMT_SELECT_PUBLIC_KEY | \
+                                          CRYPT_KEYMGMT_SELECT_PARAMETER)
 typedef enum {
     CRYPT_CTRL_SET_GM_LEVEL,    /**<  Set the authentication level of gm drbg */
     CRYPT_CTRL_SET_RESEED_INTERVAL,
@@ -822,9 +830,9 @@ typedef enum {
     CRYPT_PRIKEY_PKCS8_ENCRYPT,
     CRYPT_PRIKEY_RSA,
     CRYPT_PRIKEY_ECC,
-    CRYPT_PUBKEY_SUBKEY,
-    CRYPT_PUBKEY_RSA,
     CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
+    CRYPT_PUBKEY_SUBKEY,
+    CRYPT_PUBKEY_RSA
 } CRYPT_ENCODE_TYPE;
 
 typedef enum {
@@ -865,6 +873,16 @@ typedef enum {
     CRYPT_KEM_TYPE_INVALID = 0x7fffffff        // invalid value
 } CRYPT_MLKEM_KeyType;
 
+typedef struct {
+    int32_t id;
+    void *func;
+} CRYPT_EAL_Func;
+
+typedef struct {
+    int32_t algId; // implemented algorithm id, such as aes128cbc, rsa sign
+    const CRYPT_EAL_Func *implFunc; // implemented algorithm callback
+    const char *attr; // implemented algorithm attribute
+} CRYPT_EAL_AlgInfo;
 #ifdef __cplusplus
 }
 #endif // __cplusplus

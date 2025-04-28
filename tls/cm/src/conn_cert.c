@@ -178,6 +178,15 @@ int32_t HITLS_SetPrivateKey(HITLS_Ctx *ctx, HITLS_CERT_Key *key, bool isClone)
 }
 
 #ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
+int32_t HITLS_ProviderLoadKeyFile(HITLS_Ctx *ctx, const char *file, const char *format, const char *type)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_ProviderLoadKeyFile(&(ctx->config.tlsConfig), file, format, type);
+}
+
 int32_t HITLS_LoadKeyFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {
@@ -186,7 +195,19 @@ int32_t HITLS_LoadKeyFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat fo
 
     return HITLS_CFG_LoadKeyFile(&(ctx->config.tlsConfig), file, format);
 }
-#endif
+#endif /* HITLS_TLS_CONFIG_CERT_LOAD_FILE */
+
+int32_t HITLS_ProviderLoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, const char *format,
+    const char *type)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_ProviderLoadKeyBuffer(&(ctx->config.tlsConfig), buf, bufLen, format, type);
+
+}
+
 int32_t HITLS_LoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {

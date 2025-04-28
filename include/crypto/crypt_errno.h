@@ -465,6 +465,12 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_UNSUPPORTED_ENCRYPT_TYPE,               /**< Unsupported encrypt type */
     CRYPT_DECODE_BUFF_NOT_ENOUGH,                        /**< The input buffer space is not enough */
     CRYPT_DECODE_ASN1_BUFF_LEN_ZERO,                     /**< The decoding length of asn1 buffer is zero. */
+    CRYPT_DECODE_ERR_NO_DECODER,                         /**< No decoder found. */
+    CRYPT_DECODE_ERR_NO_USABLE_DECODER,                  /**< No decoder found. */
+    CRYPT_DECODE_RETRY,                                  /**< Retry decode. */
+    CRYPT_DECODE_ERR_CURR_NODE_NOT_FOUND,                /**< Current node not found. */
+    CRYPT_DECODE_ERR_NO_KEY_TYPE,                        /**< No key type found. */
+    CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH,                 /**< Key type not match. */
 
     CRYPT_ENCODE_NO_SUPPORT_TYPE = 0x01330001,           /**< encode no support key type. */
     CRYPT_ENCODE_NO_SUPPORT_FORMAT,                      /**< encode no support key format. */
