@@ -617,8 +617,8 @@ chacha20poly1305, chacha20, rsa"
 #endif
 
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_DRBG_CTR) && !defined(HITLS_CRYPTO_DRBG_GM)
-    #if !defined(HITLS_CRYPTO_HMAC) || !defined(HITLS_CRYPTO_SHA256)
-        #error "[HiTLS] Configure the conditioning function. Currently, CRYPT_MAC_HMAC_SHA256 is supported. \
+    #if !defined(HITLS_CRYPTO_CMAC_AES)
+        #error "[HiTLS] Configure the conditioning function. Currently, CRYPT_MAC_CMAC_AES is supported. \
             others may be supported in the future."
     #endif
 #endif
