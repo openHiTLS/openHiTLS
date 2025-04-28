@@ -29,7 +29,6 @@
 #include "hs.h"
 #include "securec.h"
 #include "bsl_errno.h"
-#include "auth_errno.h"
 #include "bsl_sal.h"
 #include "custom_extensions.h"
 

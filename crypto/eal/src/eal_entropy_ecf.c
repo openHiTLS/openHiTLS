@@ -26,7 +26,7 @@
 #include "crypt_eal_md.h"
 
 #ifdef HITLS_CRYPTO_MAC
-#define ECF_ALG_KEY_LEN 32
+#define ECF_ALG_KEY_LEN 16
 
 static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
