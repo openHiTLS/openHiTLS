@@ -585,7 +585,7 @@ typedef enum {
     CRYPT_CTRL_SET_NO_PADDING,           /**< RSA Set the padding mode to NO_PADDING. */
 
     CRYPT_CTRL_GET_PARA,                 /* Asymmetric cipher get para. */
-    CRYPT_CTRL_GET_PARAID,             /* Asymmetric cipher get id of para. */
+    CRYPT_CTRL_GET_PARAID,               /* Asymmetric cipher get id of para. */
     CRYPT_CTRL_GET_BITS,                 /* Asymmetric cipher get bits . */
     CRYPT_CTRL_GET_SIGNLEN,              /* Asymmetric cipher get signlen . */
     CRYPT_CTRL_GET_SECBITS,              /* Asymmetric cipher get secure bits . */
@@ -593,6 +593,8 @@ typedef enum {
     CRYPT_CTRL_GET_PUBKEY_LEN,           /**< Get the encapsulation key length */
     CRYPT_CTRL_GET_PRVKEY_LEN,           /**< Get the decapsulation key length */
     CRYPT_CTRL_GET_CIPHERTEXT_LEN,       /**< Get the ciphertext length */
+    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures */
+    CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
 
     // rsa
     CRYPT_CTRL_SET_RSA_EMSA_PKCSV15 = 200, /**< RSA set the signature padding mode to EMSA_PKCSV15. */
@@ -644,17 +646,12 @@ typedef enum {
     CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
 
     // slh-dsa
-    CRYPT_CTRL_SET_SLH_DSA_ALG_ID = 600,      /**< Set the SLH-DSA algorithm id. */
-    CRYPT_CTRL_SET_SLH_DSA_CONTEXT,     /**< Set the SLH-DSA context. */
-    CRYPT_CTRL_SET_SLH_DSA_PREHASH_ID,  /**< Set the SLH-DSA prehash id. */
+    CRYPT_CTRL_SET_SLH_DSA_PREHASH_ID = 600,  /**< Set the SLH-DSA prehash id. */
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN,     /**< Get the SLH-DSA key length. */
-    CRYPT_CTRL_SET_SLH_DSA_DETERMINISTIC, /**< Set the SLH-DSA deterministic. */
     CRYPT_CTRL_SET_SLH_DSA_ADDRAND, /**< Set the SLH-DSA additional random bytes. */
 
 	CRYPT_CTRL_SET_MLDSA_ENCODE_FLAG = 700,  /**< Set the flag for encode messages. */
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG,         /**< Whether to calculate message representative */
-    CRYPT_CTRL_SET_MLDSA_DETERMINISTIC_FLAG, /**< Whether to use deterministic signatures */
-    CRYPT_CTRL_SET_CTX_INFO,                 /* context string. */
 } CRYPT_PkeyCtrl;
 
 typedef enum {
@@ -864,6 +861,23 @@ typedef enum {
     CRYPT_KEM_TYPE_MLKEM_1024 = 0x03,            // MLKEM1024
     CRYPT_KEM_TYPE_INVALID = 0x7fffffff        // invalid value
 } CRYPT_MLKEM_KeyType;
+
+/* Optional parameter set for SLHDSA */
+typedef enum {
+    CRYPT_SLH_DSA_SHA2_128S,
+    CRYPT_SLH_DSA_SHAKE_128S,
+    CRYPT_SLH_DSA_SHA2_128F,
+    CRYPT_SLH_DSA_SHAKE_128F,
+    CRYPT_SLH_DSA_SHA2_192S,
+    CRYPT_SLH_DSA_SHAKE_192S,
+    CRYPT_SLH_DSA_SHA2_192F,
+    CRYPT_SLH_DSA_SHAKE_192F,
+    CRYPT_SLH_DSA_SHA2_256S,
+    CRYPT_SLH_DSA_SHAKE_256S,
+    CRYPT_SLH_DSA_SHA2_256F,
+    CRYPT_SLH_DSA_SHAKE_256F,
+    CRYPT_SLH_DSA_ALG_ID_MAX,
+} CRYPT_SLH_DSA_AlgId;
 
 #ifdef __cplusplus
 }

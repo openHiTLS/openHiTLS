@@ -262,7 +262,7 @@ int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, 
             return MlDSASetEncodeFlag(ctx, val, len);
         case CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG:
             return MlDSASetMsgFlag(ctx, val, len);
-        case CRYPT_CTRL_SET_MLDSA_DETERMINISTIC_FLAG:
+        case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
             return MlDSASetDeterministicSignFlag(ctx, val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
             return MLDSAGetPubKeyLen(ctx, val, len);

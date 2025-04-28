@@ -80,9 +80,9 @@ void SDV_CRYPTO_SLH_DSA_API_CTRL_TC001(void)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_CONTEXT, NULL, 0) == CRYPT_INVALID_ARG);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0) == CRYPT_INVALID_ARG);
     uint8_t context[128] = {0};
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_CONTEXT, context, sizeof(context)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_PREHASH_ID, NULL, 0) == CRYPT_INVALID_ARG);
     CRYPT_MD_AlgId preHashId = CRYPT_MD_SHA256;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_PREHASH_ID, &preHashId, sizeof(preHashId)) ==
@@ -112,10 +112,10 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_TC001(int isProvider)
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     }
     ASSERT_TRUE(pkey != NULL);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, NULL, 0) == CRYPT_INVALID_ARG);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, NULL, 0) == CRYPT_INVALID_ARG);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SLHDSA_ERR_INVALID_ALGID);
     CRYPT_SLH_DSA_AlgId algId = CRYPT_SLH_DSA_SHA2_128S;
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, (void *)&algId, sizeof(algId)) ==
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&algId, sizeof(algId)) ==
                 CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
 EXIT:
@@ -132,8 +132,8 @@ void SDV_CRYPTO_SLH_DSA_GETSET_KEY_TC001(void)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    CRYPT_SLH_DSA_AlgId algId = CRYPT_SLH_DSA_SHA2_128S;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+    int32_t algId = CRYPT_SLH_DSA_SHA2_128S;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
 
     CRYPT_EAL_PkeyPub pub;
     uint8_t pubSeed[32] = {0};
@@ -176,8 +176,8 @@ void SDV_CRYPTO_SLH_DSA_GETSET_KEY_TC002(void)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    CRYPT_SLH_DSA_AlgId algId = CRYPT_SLH_DSA_SHA2_128S;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+    int32_t algId = CRYPT_SLH_DSA_SHA2_128S;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
 
     CRYPT_EAL_PkeyPub pub;
@@ -217,8 +217,8 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_KAT_TC001(int id, Hex *key, Hex *root)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    CRYPT_SLH_DSA_AlgId algId = id;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+    int32_t algId = id;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
     RandInjectionInit();
@@ -262,13 +262,13 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *msg,
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    CRYPT_SLH_DSA_AlgId algId = id;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+    int32_t algId = id;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
     if (addrand->len == 0) {
         bool isDeterministic = true;
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_DETERMINISTIC, (void *)&isDeterministic,
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
                                      sizeof(isDeterministic)),
                   CRYPT_SUCCESS);
     } else {
@@ -286,7 +286,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *msg,
     prv.key.slhDsaPrv.pub.len = keyLen;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
     if (context->len != 0) {
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_CONTEXT, context->x, context->len), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context->x, context->len), CRYPT_SUCCESS);
     }
     uint8_t sigOut[50000] = {0};
     uint32_t sigOutLen = sizeof(sigOut);
@@ -308,12 +308,12 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *msg, Hex *context,
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
     ASSERT_TRUE(pkey != NULL);
-    CRYPT_SLH_DSA_AlgId algId = id;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_ALG_ID, (void *)&algId, sizeof(algId)), CRYPT_SUCCESS);
+    int32_t algId = id;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SLH_DSA_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
     bool isDeterministic = true;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_DETERMINISTIC, (void *)&isDeterministic,
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, (void *)&isDeterministic,
                                  sizeof(isDeterministic)),
               CRYPT_SUCCESS);
     CRYPT_MD_AlgId prehash = preHashId;
@@ -329,7 +329,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *msg, Hex *context,
     prv.key.slhDsaPrv.pub.len = keyLen;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
     if (context->len != 0) {
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SLH_DSA_CONTEXT, context->x, context->len), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context->x, context->len), CRYPT_SUCCESS);
     }
     uint8_t sigOut[50000] = {0};
     uint32_t sigOutLen = sizeof(sigOut);
