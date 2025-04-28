@@ -178,6 +178,16 @@ uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
 }
 
 #endif
+
+#else
+uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
+{
+    (void)ctx;
+    (void)buf;
+    (void)bufLen;
+    return 0;
+}
+
 #endif
 #else
 uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
