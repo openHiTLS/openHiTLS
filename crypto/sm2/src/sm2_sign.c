@@ -332,7 +332,7 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
         GOTO_ERR_IF(BN_ModSub(s, k, s, paraN, opt), ret);
         // 1/(1 + d) mod n, tmp stores 1/(1 + d)
         GOTO_ERR_IF(BN_AddLimb(t, ctx->pkey->prvkey, 1), ret);
-        GOTO_ERR_IF(BN_ModInv(tmp, t, paraN, opt), ret);
+        GOTO_ERR_IF(ECC_ModOrderInv(ctx->pkey->para, tmp, t), ret);
         // s = (1/(1+d)) * (k - prvkey * r) mod n
         GOTO_ERR_IF(BN_ModMul(s, tmp, s, paraN, opt), ret);
         // if s == 0, then restart
@@ -470,7 +470,7 @@ static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const BN_Bi
         goto ERR;
     }
      // B5: calculate t = (r' + s') modn, verification failed if t=0
-    GOTO_ERR_IF_EX(BN_ModAdd(t, r, s, paraN, opt), ret);
+    GOTO_ERR_IF_EX(BN_ModAddQuick(t, r, s, paraN, opt), ret);
     if (BN_IsZero(t)) {
         ret = CRYPT_SM2_VERIFY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);

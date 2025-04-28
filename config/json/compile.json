@@ -34,7 +34,8 @@
             "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE",
             "-DHITLS_CRYPTO_BN_COMBA",
             "-DHITLS_CRYPTO_AES_PRECALC_TABLES",
-            "-DHITLS_AARCH64_PACIASP"
+            "-DHITLS_AARCH64_PACIASP",
+            "-DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL"
         ],
         "CC_DEBUG_FLAGS": [],
         "CC_USER_DEFINE_FLAGS": []

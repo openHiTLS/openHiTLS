@@ -28,6 +28,18 @@
 extern "C" {
 #endif // __cplusplus
 
+#if defined(__GNUC__) || defined(__clang__)
+    #define LIKELY(x) __builtin_expect(!!(x), 1)
+    #define UNLIKELY(x) __builtin_expect(!!(x), 0)
+    #define ALIGN32     __attribute__((aligned(32)))
+    #define ALIGN64     __attribute__((aligned(64)))
+#else
+    #define LIKELY(x) x
+    #define UNLIKELY(x) x
+    #define ALIGN32
+    #define ALIGN64
+#endif
+
 #define BITS_PER_BYTE   8
 #define SHIFTS_PER_BYTE 3
 #define BITSIZE(t)      (sizeof(t) * BITS_PER_BYTE)
