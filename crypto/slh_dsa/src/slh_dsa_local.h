@@ -25,6 +25,7 @@
 #include "crypt_types.h"
 #include "crypt_utils.h"
 #include "slh_dsa_hash.h"
+#include "crypt_types.h"
 
 #define SLH_DSA_ADRS_LEN            32
 #define SLH_DSA_ADRS_COMPRESSED_LEN 22

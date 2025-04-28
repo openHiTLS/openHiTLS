@@ -342,7 +342,7 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGNDATA_TC002(int type, Hex *seed, Hex *testPrvKey, 
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     val = (uint32_t)deterministic;
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &val, sizeof(val));
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_CTX_INFO, ctxText->x, ctxText->len);
@@ -466,7 +466,7 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGN_TC001(int type, int hashId, Hex *seed, Hex *test
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     val = (uint32_t)deterministic;
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG, &val, sizeof(val));
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_CTX_INFO, ctxText->x, ctxText->len);
@@ -589,7 +589,7 @@ void SDV_CRYPTO_MLDSA_FUNC_PROVIDER_TC001(int type, Hex *testPubKey, Hex *testPr
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     val = 1;
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_MLDSA_DETERMINISTIC_FLAG, &val, sizeof(val));
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     uint32_t outLen = CRYPT_EAL_PkeyGetSignLen(ctx);

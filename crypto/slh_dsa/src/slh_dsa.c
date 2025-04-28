@@ -657,7 +657,7 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
-        case CRYPT_CTRL_SET_SLH_DSA_ALG_ID:
+        case CRYPT_CTRL_SET_PARA_BY_ID:
             if (val == NULL || len != sizeof(CRYPT_SLH_DSA_AlgId)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
@@ -681,7 +681,7 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             }
             ctx->preHashId = preHashId;
             return CRYPT_SUCCESS;
-        case CRYPT_CTRL_SET_SLH_DSA_CONTEXT:
+        case CRYPT_CTRL_SET_CTX_INFO:
             if (val == NULL) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
@@ -706,7 +706,7 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             }
             *(uint32_t *)val = ctx->para.n;
             return CRYPT_SUCCESS;
-        case CRYPT_CTRL_SET_SLH_DSA_DETERMINISTIC:
+        case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
             if (val == NULL || len != sizeof(bool)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
