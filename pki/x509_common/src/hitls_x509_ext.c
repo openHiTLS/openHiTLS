@@ -61,9 +61,10 @@ typedef enum {
  *   authorityCertIssuer       [1] GeneralNames            OPTIONAL,
  *   authorityCertSerialNumber [2] CertificateSerialNumber OPTIONAL  }
  */
-#define HITLS_X509_CTX_SPECIFIC_TAG_AKID_KID    0
-#define HITLS_X509_CTX_SPECIFIC_TAG_AKID_ISSUER 1
-#define HITLS_X509_CTX_SPECIFIC_TAG_AKID_SERIAL 2
+#define HITLS_X509_CTX_SPECIFIC_TAG_AKID_KID       0
+#define HITLS_X509_CTX_SPECIFIC_TAG_AKID_ISSUER    1
+#define HITLS_X509_CTX_SPECIFIC_TAG_AKID_SERIAL    2
+#define HITLS_X509_CTX_SPECIFIC_TAG_ISSUER_DIRNAME 4
 
 static BSL_ASN1_TemplateItem g_akidTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
@@ -71,7 +72,9 @@ static BSL_ASN1_TemplateItem g_akidTempl[] = {
         {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_AKID_KID, BSL_ASN1_FLAG_OPTIONAL, 1},
         /* authorityCertIssuer */
         {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_X509_CTX_SPECIFIC_TAG_AKID_ISSUER,
-        BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
+        BSL_ASN1_FLAG_OPTIONAL, 1},
+            {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_X509_CTX_SPECIFIC_TAG_ISSUER_DIRNAME, 0, 2},
+                {BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED, BSL_ASN1_FLAG_HEADERONLY, 3},
         /* authorityCertSerialNumber */
         {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_AKID_SERIAL, BSL_ASN1_FLAG_OPTIONAL, 1},
 };
@@ -431,6 +434,11 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
         aki->kid.data = asnArr[HITLS_X509_EXT_AKI_KID_IDX].buff;
         aki->kid.dataLen = asnArr[HITLS_X509_EXT_AKI_KID_IDX].len;
     }
+    if ((asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff != NULL && asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff == NULL) ||
+        (asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff == NULL && asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff != NULL)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_ILLEGAL_AKI);
+        return HITLS_X509_ERR_EXT_ILLEGAL_AKI;
+    }
     if (asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].tag != 0) {
         aki->serialNum.data = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff;
         aki->serialNum.dataLen = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].len;
@@ -441,8 +449,7 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_AKI);
             return HITLS_X509_ERR_PARSE_AKI;
         }
-        ret = HITLS_X509_ParseGeneralNames(
-            asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff, asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].len, list);
+        ret = HITLS_X509_ParseNameList(&asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX], list);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_SAL_Free(list);
             BSL_ERR_PUSH_ERROR(ret);
