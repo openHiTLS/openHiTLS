@@ -1783,17 +1783,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC004(int version, 
 
     clientRes = HLT_ProcessTlsInit(localProcess, version, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
-
-    HLT_FrameHandle handle = {0};
-    handle.ctx = clientRes->ssl;
-    handle.userData = (void*)&handle;
-    handle.pointType = POINT_RECV;
-    handle.expectReType = REC_TYPE_HANDSHAKE;
-    handle.expectHsType = SERVER_HELLO;
-    handle.frameCallBack = MalformedServerHellocallback001;
-    ASSERT_TRUE(HLT_SetFrameHandle(&handle) == HITLS_SUCCESS);
     ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), HITLS_SUCCESS);
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
+    ASSERT_EQ(((HITLS_Ctx *)clientRes->ssl)->negotiatedInfo.cipherSuiteInfo.cipherSuite, HITLS_DH_ANON_WITH_AES_256_CBC_SHA256);
 
 EXIT:
     HLT_CleanFrameHandle();
