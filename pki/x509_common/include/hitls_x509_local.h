@@ -275,7 +275,7 @@ int32_t HITLS_X509_GetExt(BslList *ext, BslCid cid, BSL_Buffer *val, uint32_t ex
 bool X509_IsValidHashAlg(CRYPT_MD_AlgId id);
 
 #ifdef HITLS_PKI_X509_VFY
-int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName,
+int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *issueName,
     BSL_ASN1_Buffer *serialNum);
 
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name);

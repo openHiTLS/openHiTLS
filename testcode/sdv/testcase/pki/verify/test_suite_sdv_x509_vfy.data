@@ -37,6 +37,8 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/ecdsa-v3/ca.der":".
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 sm2-nocrl
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/sm2-v3/ca.der":"../testdata/cert/chain/sm2-v3/inter.der":"../testdata/cert/chain/sm2-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-sha256-nocrl-aki-authorityCertIssuer
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3-aki-certissuer/rootca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/ca.der":"../testdata/cert/chain/rsa-v3-aki-certissuer/cert.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002 imcomplete certificate chain
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC002:
