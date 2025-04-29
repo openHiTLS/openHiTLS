@@ -401,7 +401,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
     },
     {
         "ffdhe3072",
-        CRYPT_DH_RFC3526_3072, // Fixed constant name
+        CRYPT_DH_RFC7919_3072, // Fixed constant name
         CRYPT_PKEY_DH,
         128,
         HITLS_FF_DHE_3072,
@@ -411,7 +411,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
     },
     {
         "ffdhe2048",
-        CRYPT_DH_RFC3526_2048, // CRYPT_DH_2048
+        CRYPT_DH_RFC7919_2048, // CRYPT_DH_2048
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         112, // secBits
         HITLS_FF_DHE_2048, // groupId
