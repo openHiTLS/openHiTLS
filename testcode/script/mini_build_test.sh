@@ -297,7 +297,7 @@ parse_option
 
 # build securec
 if [ ! -d "${HITLS_ROOT_DIR}/platform/Secure_C/lib" ]; then
-    cd ${HITLS_ROOT_DIR}/platform/Secure_C/src
+    cd ${HITLS_ROOT_DIR}/platform/Secure_C
     make -j
 fi
 
