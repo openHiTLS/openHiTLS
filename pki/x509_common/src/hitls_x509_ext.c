@@ -71,7 +71,7 @@ static BSL_ASN1_TemplateItem g_akidTempl[] = {
         {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_AKID_KID, BSL_ASN1_FLAG_OPTIONAL, 1},
         /* authorityCertIssuer */
         {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_X509_CTX_SPECIFIC_TAG_AKID_ISSUER,
-        BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
+            BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
         /* authorityCertSerialNumber */
         {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_AKID_SERIAL, BSL_ASN1_FLAG_OPTIONAL, 1},
 };
@@ -430,6 +430,16 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
     if (asnArr[HITLS_X509_EXT_AKI_KID_IDX].tag != 0) {
         aki->kid.data = asnArr[HITLS_X509_EXT_AKI_KID_IDX].buff;
         aki->kid.dataLen = asnArr[HITLS_X509_EXT_AKI_KID_IDX].len;
+    }
+    /**
+     * ITU-T x509: 8.2.2.1 Authority key identifier extension
+     * authorityCertIssuer PRESENT, authorityCertSerialNumber PRESENT
+     * authorityCertIssuer ABSENT, authorityCertSerialNumber ABSENT
+     */
+    if ((asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff != NULL && asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff == NULL) ||
+        (asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff == NULL && asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff != NULL)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_ILLEGAL_AKI);
+        return HITLS_X509_ERR_EXT_ILLEGAL_AKI;
     }
     if (asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].tag != 0) {
         aki->serialNum.data = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].buff;

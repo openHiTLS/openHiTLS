@@ -43,17 +43,6 @@
 #error "Missing definition of HITLS_CRYPTO_EAL"
 #endif
 
-#ifdef HITLS_TLS_SUITE_KX_DHE
-#define MIN_DH8192_SECBITS 192
-#define MIN_DH4096_SECBITS 152
-#define MIN_DH3072_SECBITS 128
-#define MIN_DH2048_SECBITS 112
-#ifdef HITLS_CRYPTO_PKEY
-#define MAX_PKEY_PARA_LEN 1024
-#endif
-#endif // HITLS_TLS_SUITE_KX_DHE
-
-
 int32_t CRYPT_DEFAULT_RandomBytes(uint8_t *buf, uint32_t len)
 {
 #ifdef HITLS_CRYPTO_DRBG

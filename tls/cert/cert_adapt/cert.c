@@ -34,8 +34,6 @@
 #include "cert.h"
 #include "config_type.h"
 
-static volatile int g_hitlsX509StoreCtxIdx = -1;
-
 #ifdef HITLS_TLS_FEATURE_SECURITY
 static int32_t CheckKeySecbits(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key)
 {
