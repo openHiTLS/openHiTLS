@@ -162,7 +162,7 @@ static void InitConfig(HITLS_Config *config)
         config->isSupportExtendMasterSecret = false;
     }
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    config->isFlightTransmitEnable = false;
+    config->isFlightTransmitEnable = true;
 #endif
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     config->isSupportDtlsCookieExchange = false;
