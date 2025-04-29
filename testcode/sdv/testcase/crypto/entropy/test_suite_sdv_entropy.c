@@ -1164,7 +1164,7 @@ void SDV_CRYPTO_SEEDPOOL_DrbgTest(int isNull, int algId)
     CRYPT_EAL_EsPara para2 = {false, 7, NULL, (CRYPT_EAL_EntropyGet)EntropyGetNormal};
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &para1) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &para2) == CRYPT_SUCCESS);
-    CRYPT_RandSeedMethod meth = {NULL};
+    CRYPT_RandSeedMethod meth = {0};
     ASSERT_TRUE(EAL_SetDefaultEntropyMeth(&meth) == CRYPT_SUCCESS);
     CRYPT_EAL_RandDeinit();
     ASSERT_TRUE(CRYPT_EAL_RandInit((CRYPT_RAND_AlgId)algId, &meth, (void *)pool, NULL, 0) == CRYPT_SUCCESS);
@@ -1238,7 +1238,7 @@ void SDV_CRYPTO_SEEDPOOL_MutiTest(void)
     CRYPT_EAL_EsPara para2 = {false, 7, NULL, (CRYPT_EAL_EntropyGet)EntropyGetNormal};
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &para1) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_SeedPoolAddEs(pool, &para2) == CRYPT_SUCCESS);
-    CRYPT_RandSeedMethod meth = {NULL};
+    CRYPT_RandSeedMethod meth = {0};
     ASSERT_TRUE(EAL_SetDefaultEntropyMeth(&meth) == CRYPT_SUCCESS);
     for (int32_t index = 0; index < 3; index++) {
         BSL_SAL_ThreadId thrd;
