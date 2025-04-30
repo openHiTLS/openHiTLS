@@ -873,14 +873,16 @@ EXIT:
 HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyBySecbits(HITLS_Lib_Ctx *libCtx,
     const char *attrName, const HITLS_Config *tlsConfig, int32_t secBits)
 {
-    uint32_t size = 0;
-    int32_t paraId = CRYPT_DH_RFC2409_1024;
-    const TLS_GroupInfo *groupInfoList = ConfigGetGroupInfoList(tlsConfig, &size);
-    for (size_t i = 0; i < size; i++) {
-        if (groupInfoList[i].algId == (int32_t)CRYPT_PKEY_DH && secBits >= groupInfoList[i].secBits) {
-            paraId = groupInfoList[i].paraId;
-            break;
-        }
+    (void)tlsConfig;
+    CRYPT_PKEY_ParaId paraId = CRYPT_DH_RFC2409_1024;
+    if (secBits >= MIN_DH8192_SECBITS) {
+        paraId = CRYPT_DH_RFC3526_8192;
+    } else if (secBits >= MIN_DH4096_SECBITS) {
+        paraId = CRYPT_DH_RFC3526_4096;
+    } else if (secBits >= MIN_DH3072_SECBITS) {
+        paraId = CRYPT_DH_RFC3526_3072;
+    } else if (secBits >= MIN_DH2048_SECBITS) {
+        paraId = CRYPT_DH_RFC3526_2048;
     }
     return GeneratePkeyByParaId(libCtx, attrName, CRYPT_PKEY_DH, paraId, false);
 }
