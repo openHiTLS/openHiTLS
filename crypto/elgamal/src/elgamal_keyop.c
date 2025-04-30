@@ -145,7 +145,7 @@ static int32_t SetPubBasicCheck(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para, C
 
 int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para)
 {
-    CRYPT_ElGamalPubParam pub = {NULL};
+    CRYPT_ElGamalPubParam pub = {0};
     int32_t ret = SetPubBasicCheck(ctx, (BSL_Param *)(uintptr_t)para, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -251,7 +251,7 @@ static int32_t GetPubBasicCheck(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para, C
 
 int32_t CRYPT_ELGAMAL_GetPubKey(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para)
 {
-    CRYPT_ElGamalPubParam pub = {NULL};
+    CRYPT_ElGamalPubParam pub = {0};
     int32_t ret = GetPubBasicCheck(ctx, para, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

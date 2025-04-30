@@ -168,7 +168,7 @@ int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list)
     uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET,
         BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
     BSL_ASN1_DecodeListParam listParam = {2, expTag};
-    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, name, &HITLS_X509_ParseListAsnItem, NULL, list);
+    int32_t ret = BSL_ASN1_DecodeListItem(&listParam, name, HITLS_X509_ParseListAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
     }
@@ -759,7 +759,7 @@ int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawD
 }
 
 #ifdef HITLS_PKI_X509_VFY
-int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *subName,
+int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *issueName,
     BSL_ASN1_Buffer *serialNum)
 {
     HITLS_X509_ExtAki aki = {0};
@@ -782,18 +782,33 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
     }
     if (ski.kid.dataLen != aki.kid.dataLen || memcmp(ski.kid.data, aki.kid.data, ski.kid.dataLen) != 0) {
         HITLS_X509_ClearAuthorityKeyId(&aki);
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
         return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
     }
     if (aki.issuerName != NULL) {
-        ret = HITLS_X509_CmpNameNode(aki.issuerName, subName);
+        HITLS_X509_GeneralName *name = NULL;
+        for (HITLS_X509_GeneralName *tmp = BSL_LIST_GET_FIRST(aki.issuerName); tmp != NULL;
+            tmp = BSL_LIST_GET_NEXT(aki.issuerName)) {
+            if (tmp->type == HITLS_X509_GN_DNNAME) {
+                name = tmp;
+                break;
+            }
+        }
+        if (name == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
+            return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
+        }
+        ret = HITLS_X509_CmpNameNode((BslList *)name->value.data, issueName);
         HITLS_X509_ClearAuthorityKeyId(&aki);
         if (ret != 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }
     }
     if (aki.serialNum.dataLen != 0 && aki.serialNum.data != NULL) {
         if (aki.serialNum.dataLen != serialNum->len ||
             memcmp(aki.serialNum.data, serialNum->buff, aki.serialNum.dataLen) != 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }
     }

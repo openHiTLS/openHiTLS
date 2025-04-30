@@ -101,6 +101,7 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
         return NULL;
     }
     HITLS_CFG_SetReadAhead(config, 1);
+    HITLS_CFG_SetFlightTransmitSwitch(config, false);
     HITLS_Ctx *sslObj = HITLS_New(config);
     if (sslObj == NULL) {
         goto ERR;
