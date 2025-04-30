@@ -118,11 +118,11 @@ void SkipTest(const char *filename)
         Print("failure log failed: filename too long\n");
     }
 }
-void PrintResult(bool showDetail, char *vectorName, time_t useTime)
+void PrintResult(bool showDetail, char *vectorName, uint64_t useTime)
 {
     if (showDetail) {
         if (g_testResult.result == TEST_RESULT_SUCCEED) {
-            Print("pass. use sec:%d\n", useTime);
+            Print("pass. use ms: %ld\n", useTime);
         } else if (g_testResult.result == TEST_RESULT_SKIPPED) {
             Print("skip\n");
         } else {

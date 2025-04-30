@@ -148,7 +148,7 @@ void RecordFailure(const char *test, const char *filename);
 
 void SkipTest(const char *filename);
 
-void PrintResult(bool showDetail, char *vectorName, time_t useTime);
+void PrintResult(bool showDetail, char *vectorName, uint64_t useTime);
 
 void PrintLog(FILE *logFile);
 

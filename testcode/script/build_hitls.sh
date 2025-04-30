@@ -80,8 +80,8 @@ build_hitls_code()
         echo "Compile: env=$get_arch, c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --enable all --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
     fi
-    cmake ..
-    make -j
+    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
+    make -j 4
 }
 
 parse_option()
