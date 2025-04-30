@@ -142,6 +142,11 @@ ERR:
     return ret;
 }
 
+/**
+ * In NIST.SP.800-56 Ar3, the FFC Full Public-Key Validation Routine needs to check nQ = Ø.
+ * For performance considerations, we perform Partial public-key Validation (Section 5.6.2.3.4) when
+ * setting the Public Key.
+*/
 int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
 {
     if (ctx == NULL || ctx->para == NULL || para == NULL) {
@@ -157,9 +162,6 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BN_BigNum *paraN = NULL;
-    ECC_Point *pointQ = NULL;
-
     ECC_Point *newPubKey = ECC_NewPoint(ctx->para);
     if (newPubKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -167,38 +169,12 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
     }
 
     int32_t ret = ECC_DecodePoint(ctx->para, newPubKey, pub->value, pub->valueLen);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
+    if (ret == CRYPT_SUCCESS) {
+        ECC_FreePoint(ctx->pubkey);
+        ctx->pubkey = newPubKey;
+        return ret;
     }
-
-    // Check whether n * pubKey is equal to infinity.
-    paraN = ECC_GetParaN(ctx->para);
-    pointQ = ECC_NewPoint(ctx->para);
-    if ((paraN == NULL) || (pointQ == NULL)) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        goto EXIT;
-    }
-
-    ret = ECC_PointMul(ctx->para, pointQ, paraN, newPubKey);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    if (BN_IsZero(pointQ->z) == false) {
-        ret = CRYPT_ECC_PKEY_ERR_INVALID_PUBLIC_KEY;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ECC_FreePoint(ctx->pubkey);
-    ctx->pubkey = newPubKey;
-    newPubKey = NULL;
-
-EXIT:
     ECC_FreePoint(newPubKey);
-    BN_Destroy(paraN);
-    ECC_FreePoint(pointQ);
     return ret;
 }
 
