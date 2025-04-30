@@ -167,11 +167,18 @@ int32_t ECC_PkeySetPubKey(ECC_Pkey *ctx, const BSL_Param *para)
     }
 
     int32_t ret = ECC_DecodePoint(ctx->para, newPubKey, pub->value, pub->valueLen);
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
+    if (ret == CRYPT_SUCCESS) {
+        ECC_FreePoint(ctx->pubkey);
+        ctx->pubkey = newPubKey;
+        return ret;
     }
-
-    // Check whether n * pubKey is equal to infinity.
+    ECC_FreePoint(newPubKey);
+    return ret;
+    /* In NIST.SP.800-56 Ar3, the FFC Full Public-Key Validation Routine needs to check nQ = Ø.
+     * For performance considerations, we perform Partial public-key Validation (Section 5.6.2.3.4) when
+     * setting the Public Key. The Full public-key validation is temporarily retained.
+     */
+#if 0
     paraN = ECC_GetParaN(ctx->para);
     pointQ = ECC_NewPoint(ctx->para);
     if ((paraN == NULL) || (pointQ == NULL)) {
@@ -200,6 +207,7 @@ EXIT:
     BN_Destroy(paraN);
     ECC_FreePoint(pointQ);
     return ret;
+#endif
 }
 
 int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, BSL_Param *para)
