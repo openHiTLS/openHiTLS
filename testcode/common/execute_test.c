@@ -14,6 +14,8 @@
  */
 
 #include <setjmp.h>
+#include <time.h>
+#include <sys/time.h>
 
 static jmp_buf env;
 static int isSubProc = 0;
@@ -120,6 +122,8 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
     volatile int skipCount = 0;
     volatile int tryNum;
     time_t beginTime = time(NULL);
+    struct timespec start, end;
+      
     for (volatile int i = 0; i < g_executeCount; i++) {
         int funcId = strtoul(g_executeCases[i]->arg[0], NULL, 10); // 10
         if (funcId < 0 || funcId > ((int)(sizeof(test_funcs)/sizeof(TestWrapper)))) {
@@ -138,7 +142,7 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
         TestWrapper fp = test_funcs[funcId];
         g_testResult.result = TEST_RESULT_SUCCEED;
         tryNum = 0;
-        time_t startTime = time(NULL);
+        clock_gettime(CLOCK_REALTIME, &start);
         do {
             if (tryNum > 0) {
                 sleep(10);
@@ -169,7 +173,9 @@ static int ProcessCases(FILE *logFile, bool showDetail, int targetFuncId)
             skipCount++;
         }
         vectorCount++;
-        PrintResult(showDetail, g_executeCases[i]->testVectorName, time(NULL) - startTime);
+        clock_gettime(CLOCK_REALTIME, &end);
+        uint64_t elapsedms = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
+        PrintResult(showDetail, g_executeCases[i]->testVectorName, elapsedms);
         PrintLog(logFile);
         for (int j = 0; j < io.hexParamCount; j++) {
             FreeHex(&io.hexParam[j]);
