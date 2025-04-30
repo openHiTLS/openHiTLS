@@ -459,7 +459,7 @@ static int32_t GetEccName(ECC_Pkey *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static int32_t GetEccPointFormat(ECC_Pkey *ctx, void *val, uint32_t len)
+static int32_t SetEccPointFormat(ECC_Pkey *ctx, void *val, uint32_t len)
 {
     uint32_t pointFormat = *(uint32_t *)val;
     if (len != sizeof(uint32_t)) {
@@ -497,7 +497,7 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_GET_ECC_PUB_Y_BIN:
             return ECC_GetPubXYBnBin(ctx, opt, val, len);
         case CRYPT_CTRL_SET_ECC_POINT_FORMAT:
-            return GetEccPointFormat(ctx, val, len);
+            return SetEccPointFormat(ctx, val, len);
         case CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE:
             return SetEccUseCofactorMode(ctx, val, len);
         case CRYPT_CTRL_GEN_ECC_PUBLICKEY:
