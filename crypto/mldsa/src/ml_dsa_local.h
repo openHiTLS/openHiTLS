@@ -70,6 +70,7 @@ struct CryptMlDsaCtx {
     uint32_t prvLen;
     uint8_t *ctxInfo;
     uint32_t ctxLen;
+    CRYPT_MD_AlgId preHashId;
     bool isMuMsg;
     bool needEncodeCtx;
     bool deterministicSignFlag;

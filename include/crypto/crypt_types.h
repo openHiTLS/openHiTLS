@@ -652,6 +652,7 @@ typedef enum {
 
 	CRYPT_CTRL_SET_MLDSA_ENCODE_FLAG = 700,  /**< Set the flag for encode messages. */
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG,         /**< Whether to calculate message representative */
+    CRYPT_CTRL_SET_MLDSA_PREHASH_ID          /**< Set the MLDSA prehash id. */
 } CRYPT_PkeyCtrl;
 
 typedef enum {
