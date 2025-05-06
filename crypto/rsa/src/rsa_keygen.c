@@ -866,6 +866,10 @@ static int32_t GenPQBasedOnProbPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvK
         }
         // |Xp – Xq| ≤ 2 ^ (2nlen/2 – 100) -> BN_Bits(Xp) <= secBits + 1 -> BN_Bits(Xp) < secBits
         if (BN_Bits(Xq) < secBits) {
+            if (para->xq != NULL && para->xq1 != NULL && para->xq2 != NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_KEYGEN_FAIL);
+                goto ERR;
+            }
             continue;
         }
         ret = BN_Sub(Xq, priKey->p, priKey->q);
@@ -875,6 +879,10 @@ static int32_t GenPQBasedOnProbPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvK
         }
         // |p – q| ≤ 2 ^ (2nlen/2 – 100)
         if (BN_Bits(Xq) < secBits) {
+            if (para->xq != NULL && para->xq1 != NULL && para->xq2 != NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_KEYGEN_FAIL);
+                goto ERR;
+            }
             continue;
         }
         break;
