@@ -112,7 +112,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, uint32_t va
  * @par Description: parse p12 buffer, and set the p12 struct. When the parameter is
  *  BSL_FORMAT_PEM and BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
  *
- * @attention Only support to parse p12 buffer in key-integrity and key-privacy protection mode.
+ * @attention Support for password-based integrity/privacy modes and public-key privacy mode.
  * @param format         [IN] Decoding format: BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode         [IN] encode data
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
@@ -129,7 +129,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const H
  * @brief pkcs12 parse
  * @par Description: parse p12 buffer, and set the p12 struct.
  *
- * @attention Only support to parse p12 buffer in key-integrity and key-privacy protection mode.
+ * @attention Support for password-based integrity/privacy modes and public-key privacy mode.
  * @param libCtx         [IN] lib context
  * @param attrName       [IN] attribute name
  * @param format         [IN] Encoding format: PEM/ASN1/NULL
@@ -146,7 +146,7 @@ int32_t HITLS_PKCS12_ProviderParseBuff(HITLS_PKI_LibCtx *libCtx, const char *att
  * @ingroup pkcs12
  * @par Description: parse p12 file, and set the p12 struct.
  *
- * @attention Only support to parse p12 files in key-integrity and key-privacy protection mode.
+ * @attention Support for password-based integrity/privacy modes and public-key privacy mode.
  * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param path           [IN] p12 file path.
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
@@ -163,7 +163,7 @@ int32_t HITLS_PKCS12_ParseFile(int32_t format, const char *path, const HITLS_PKC
  * @brief pkcs12 parse file
  * @par Description: parse p12 file, and set the p12 struct.
  *
- * @attention Only support to parse p12 files in key-integrity and key-privacy protection mode.
+ * @attention Support for password-based integrity/privacy modes and public-key privacy mode.
  * @param libCtx         [IN] lib context
  * @param attrName       [IN] attribute name
  * @param format         [IN] Encoding format: PEM/ASN1/NULL

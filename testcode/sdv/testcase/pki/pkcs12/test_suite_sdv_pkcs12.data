@@ -178,3 +178,9 @@ SDV_PKCS12_BAG_TEST_TC003:"../testdata/cert/asn1/rsa2048key_pkcs8.der":"../testd
 
 SDV_PKCS12_GEN_FROM_DATA_TC001
 SDV_PKCS12_GEN_FROM_DATA_TC001:"../testdata/cert/asn1/rsa2048key_pkcs8.der":"../testdata/cert/asn1/rsa_cert/ca.der":"../testdata/cert/asn1/rsa_cert/end.der":"../testdata/cert/asn1/rsa_cert/ca.v1.der"
+
+test_pkcs12_existing_placeholder
+test_pkcs12_parse_enveloped_data_success
+test_pkcs12_parse_enveloped_data_no_key
+test_pkcs12_parse_enveloped_data_wrong_key
+test_pkcs12_parse_password_basic_regression

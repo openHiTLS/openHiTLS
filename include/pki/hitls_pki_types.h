@@ -290,6 +290,7 @@ typedef enum {
 typedef struct {
     BSL_Buffer *macPwd;
     BSL_Buffer *encPwd;
+    CRYPT_EAL_PkeyCtx *recipientPkeyCtx; // New field
 } HITLS_PKCS12_PwdParam;
 
 /**

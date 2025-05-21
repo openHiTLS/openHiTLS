@@ -64,6 +64,7 @@ typedef struct _HITLS_PKCS12 {
     HITLS_PKCS12_MacData *macData;
     HITLS_PKI_LibCtx *libCtx;
     const char *attrName;
+    CRYPT_EAL_PkeyCtx *recipientPkeyCtx; // For EnvelopedData parsing
 } HITLS_PKCS12;
 
 /* A common bag, could store a crl-bag, or a cert-bag, or a secret-bag... */
@@ -117,8 +118,9 @@ int32_t HITLS_PKCS12_CalMac(BSL_Buffer *output, BSL_Buffer *pwd, BSL_Buffer *ini
  *    1. AuthSafe -> pkcs7 package format
  *    2. contentInfo_i  -> safeContents
 */
-int32_t HITLS_PKCS12_ParseContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attrName, BSL_Buffer *encode,
-    const uint8_t *password, uint32_t passLen, BSL_Buffer *data);
+int32_t HITLS_PKCS12_ParseContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attrName,
+    CRYPT_EAL_PkeyCtx *recipientPkeyCtx, BSL_Buffer *encode, const uint8_t *password, uint32_t passLen,
+    BSL_Buffer *data);
 
 /*
  * Parse the 'sequences of' of p12, provide two functions
@@ -142,8 +144,7 @@ int32_t HITLS_PKCS12_ParseSafeBagAttr(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attr
 /*
  * Parse AuthSafeData of a p12, and convert decode data to the real data.
 */
-int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *password, uint32_t passLen,
-    HITLS_PKCS12 *p12);
+int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 *p12);
 
 /*
  * Parse MacData of a p12, and convert decode data to the real data.

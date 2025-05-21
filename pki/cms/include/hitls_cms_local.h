@@ -38,6 +38,11 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
 int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode);
 #endif
 
+// parse and decrypt CMS EnvelopedData
+int32_t HITLS_CMS_ParseEnvelopedData(HITLS_PKI_LibCtx *libCtx, const char *attrName,
+                                     CRYPT_EAL_PkeyCtx *recipientPkeyCtx, BSL_Buffer *envelopedDataAsn1,
+                                     BSL_Buffer *decryptedContent);
+
 #ifdef __cplusplus
 }
 #endif

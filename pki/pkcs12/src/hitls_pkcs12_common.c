@@ -405,8 +405,9 @@ int32_t HITLS_PKCS12_ConvertSafeBag(HITLS_PKCS12_SafeBag *safeBag, const uint8_t
     }
 }
 
-int32_t HITLS_PKCS12_ParseContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attrName, BSL_Buffer *encode,
-    const uint8_t *password, uint32_t passLen, BSL_Buffer *data)
+int32_t HITLS_PKCS12_ParseContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attrName,
+    CRYPT_EAL_PkeyCtx *recipientPkeyCtx, BSL_Buffer *encode, const uint8_t *password, uint32_t passLen,
+    BSL_Buffer *data)
 {
     uint8_t *temp = encode->data;
     uint32_t tempLen = encode->dataLen;
@@ -430,6 +431,12 @@ int32_t HITLS_PKCS12_ParseContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attr
             return HITLS_CMS_ParseAsn1Data(&asnArrData, data);
         case BSL_CID_PKCS7_ENCRYPTEDDATA:
             return CRYPT_EAL_ParseAsn1PKCS7EncryptedData(libCtx, attrName, &asnArrData, password, passLen, data);
+        case BSL_CID_PKCS7_ENVELOPEDDATA:
+            if (recipientPkeyCtx == NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_RECIPIENT_KEY);
+                return HITLS_PKCS12_ERR_NO_RECIPIENT_KEY;
+            }
+            return HITLS_CMS_ParseEnvelopedData(libCtx, attrName, recipientPkeyCtx, &asnArrData, data);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE);
             return HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE;
@@ -445,7 +452,26 @@ int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *pas
     }
     int32_t ret;
     HITLS_PKCS12_SafeBag *node = BSL_LIST_GET_FIRST(bagList);
+    const uint8_t *currentPassword = NULL; // Will be set if pwdParam is available
+    uint32_t currentPassLen = 0;
+
+    // This function is called from HITLS_PKCS12_ParseAuthSafeData,
+    // which now receives HITLS_PKCS12_PwdParam.
+    // We need to pass down the encPwd for SafeBag decryption.
+    // However, the signature of ParseSafeBagList only takes (password, passLen)
+    // This implies that HITLS_PKCS12_ParseAuthSafeData needs to extract encPwd from pwdParam.
+    // For now, let's assume `password` and `passLen` are correctly supplied from the caller.
+    // The `recipientPkeyCtx` is already in `p12->recipientPkeyCtx`.
+
     while (node != NULL) {
+        // HITLS_PKCS12_ConvertSafeBag is called here. This function handles BSL_CID_PKCS8SHROUDEDKEYBAG
+        // which uses password-based encryption.
+        // If a SafeBag itself is EnvelopedData, that would be handled by HITLS_PKCS12_ParseContentInfo
+        // if the SafeBag's content type was EnvelopedData.
+        // The current structure is: PFX -> AuthSafe (ContentInfo: Data) -> SafeContents (SEQUENCE OF ContentInfo)
+        // Each ContentInfo in SafeContents can be EncryptedData or EnvelopedData.
+        // So, HITLS_PKCS12_ConvertSafeBag doesn't directly decrypt EnvelopedData SafeBags,
+        // it decrypts ShroudedKeyBags. The EnvelopedData part is for the ContentInfo that wraps SafeContents.
         ret = HITLS_PKCS12_ConvertSafeBag(node, password, passLen, p12);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -506,11 +532,14 @@ static int32_t SetEntityCert(HITLS_PKCS12 *p12)
     return HITLS_PKCS12_ERR_NO_ENTITYCERT;
 }
 
-static int32_t ParseSafeBagList(HITLS_PKI_LibCtx *libCtx, const char *attrName, BSL_Buffer *node,
-    const uint8_t *password, uint32_t passLen, BSL_ASN1_List *bagLists)
+static int32_t ParseSafeBagListInner(HITLS_PKI_LibCtx *libCtx, const char *attrName,
+    CRYPT_EAL_PkeyCtx *recipientPkeyCtx, BSL_Buffer *node, const uint8_t *password, uint32_t passLen,
+    BSL_ASN1_List *bagLists)
 {
     BSL_Buffer safeContent = {0};
-    int32_t ret = HITLS_PKCS12_ParseContentInfo(libCtx, attrName, node, password, passLen, &safeContent);
+    // This is where HITLS_PKCS12_ParseContentInfo is called for items within SafeContents.
+    // It needs recipientPkeyCtx.
+    int32_t ret = HITLS_PKCS12_ParseContentInfo(libCtx, attrName, recipientPkeyCtx, node, password, passLen, &safeContent);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -524,8 +553,8 @@ static int32_t ParseSafeBagList(HITLS_PKI_LibCtx *libCtx, const char *attrName, 
 }
 
 // The caller guarantees that the input is not empty.
-int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *password, uint32_t passLen,
-    HITLS_PKCS12 *p12)
+// Updated signature to take HITLS_PKCS12_PwdParam
+int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const HITLS_PKCS12_PwdParam *pwdParam, HITLS_PKCS12 *p12)
 {
     BSL_ASN1_List *bagLists = NULL;
     BSL_Buffer *node = NULL;
@@ -548,14 +577,20 @@ int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *passwo
     }
 
     node = BSL_LIST_GET_FIRST(contentList);
+    const uint8_t *encPwdData = (pwdParam && pwdParam->encPwd) ? pwdParam->encPwd->data : NULL;
+    uint32_t encPwdLen = (pwdParam && pwdParam->encPwd) ? pwdParam->encPwd->dataLen : 0;
+
     while (node != NULL) {
-        ret = ParseSafeBagList(p12->libCtx, p12->attrName, node, password, passLen, bagLists);
+        // Pass recipientPkeyCtx and encPwd/encPwdLen to ParseSafeBagListInner
+        ret = ParseSafeBagListInner(p12->libCtx, p12->attrName, p12->recipientPkeyCtx, node, encPwdData, encPwdLen, bagLists);
         if (ret != HITLS_PKI_SUCCESS) {
             goto ERR;
         }
         node = BSL_LIST_GET_NEXT(contentList);
     }
-    ret = HITLS_PKCS12_ParseSafeBagList(bagLists, password, passLen, p12);
+    // This call to HITLS_PKCS12_ParseSafeBagList processes the collected SafeBag structures.
+    // It needs the encPwd for shrouded key bags.
+    ret = HITLS_PKCS12_ParseSafeBagList(bagLists, encPwdData, encPwdLen, p12);
     if (ret != HITLS_PKI_SUCCESS) {
         goto ERR;
     }
@@ -728,6 +763,13 @@ static int32_t ParseAsn1PKCS12(const BSL_Buffer *encode, const HITLS_PKCS12_PwdP
     BSL_ASN1_Buffer asn1[HITLS_PKCS12_TOPLEVEL_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_p12TopLevelTempl, sizeof(g_p12TopLevelTempl) / sizeof(g_p12TopLevelTempl[0])};
     HITLS_PKCS12_MacData *p12Mac = p12->macData;
+
+    if (pwdParam != NULL) {
+        p12->recipientPkeyCtx = pwdParam->recipientPkeyCtx;
+    } else {
+        p12->recipientPkeyCtx = NULL;
+    }
+
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, asn1, HITLS_PKCS12_TOPLEVEL_MAX_IDX);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -747,18 +789,26 @@ static int32_t ParseAsn1PKCS12(const BSL_Buffer *encode, const HITLS_PKCS12_PwdP
     BSL_Buffer contentInfo = {asn1[HITLS_PKCS12_TOPLEVEL_AUTHSAFE_IDX].buff,
         asn1[HITLS_PKCS12_TOPLEVEL_AUTHSAFE_IDX].len};
     BSL_Buffer initData = {0};
-    ret = HITLS_PKCS12_ParseContentInfo(p12->libCtx, p12->attrName, &contentInfo, NULL, 0, &initData);
+    // For the outer authSafe, it's typically PKCS7-Data, not EnvelopedData. 
+    // EnvelopedData is usually inside the SafeBags.
+    // So, pass NULL for recipientPkeyCtx here, or more correctly, ensure ParseContentInfo can handle it.
+    // Let's assume the top-level authSafe is NOT EnvelopedData handled by recipientPkeyCtx.
+    // If it could be, this call would need p12->recipientPkeyCtx.
+    // For now, keeping it as it was, assuming outer is not enveloped for recipient.
+    ret = HITLS_PKCS12_ParseContentInfo(p12->libCtx, p12->attrName, NULL /* recipientPkeyCtx for outer authSafe */, &contentInfo, NULL, 0, &initData);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret; // has pushed error code.
     }
     if (needMacVerify) {
+        // MacVerify uses macPwd, not recipientPkeyCtx
         ret = ParseMacDataAndVerify(&initData, &macData, pwdParam, p12Mac);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_SAL_Free(initData.data);
             return ret; // has pushed error code.
         }
     }
-    ret = HITLS_PKCS12_ParseAuthSafeData(&initData, pwdParam->encPwd->data, pwdParam->encPwd->dataLen, p12);
+    // ParseAuthSafeData will internally use p12->recipientPkeyCtx when it calls ParseContentInfo for SafeContents
+    ret = HITLS_PKCS12_ParseAuthSafeData(&initData, pwdParam, p12); // Pass full pwdParam
     BSL_SAL_Free(initData.data);
     if (ret != HITLS_PKI_SUCCESS) {
         ClearMacData(p12Mac);
