@@ -39,6 +39,10 @@
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 
+#if defined(HITLS_TLS_PKEY_SPAKE2P) // For both client and server PAKE functions
+#include "hs_recv_pake.h" 
+#endif
+
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
 static int32_t Tls13RecvKeyUpdateProcess(TLS_Ctx *ctx, const HS_Msg *hsMsg)
@@ -101,6 +105,10 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
             return ServerRecvClientKxProcess(ctx, hsMsg);
         case TRY_RECV_CERTIFICATE_VERIFY:
             return ServerRecvClientCertVerifyProcess(ctx);
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+        case TLS_HS_SERVER_STATE_RECV_PAKE_MESSAGE: // Server receives client's PAKE message
+            return HITLS_HS_ServerRecvPakeClientMessage(ctx);
+#endif /* HITLS_TLS_PKEY_SPAKE2P */
 #endif /* HITLS_TLS_HOST_SERVER */
 #ifdef HITLS_TLS_HOST_CLIENT
         case TRY_RECV_HELLO_VERIFY_REQUEST:
@@ -115,6 +123,10 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
         case TRY_RECV_NEW_SESSION_TICKET:
             return Tls12ClientRecvNewSeesionTicketProcess(ctx, hsMsg);
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+        case TLS_HS_CLIENT_STATE_RECV_PAKE_MESSAGE:
+            return HITLS_HS_ClientRecvPakeServerMessage(ctx);
+#endif /* HITLS_TLS_PKEY_SPAKE2P */
 #endif /* HITLS_TLS_HOST_CLIENT */
         case TRY_RECV_CERTIFICATE:
             return RecvCertificateProcess(ctx, hsMsg);
@@ -526,6 +538,14 @@ static int32_t FlightTransmit(TLS_Ctx *ctx)
         return HITLS_REC_ERR_IO_EXCEPTION;
     }
 
+/* Helper to check if a PAKE cipher suite was negotiated */
+static bool IsPakeCipherSuiteNegotiated(const TLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_NULL) {
+        return false;
+    }
+    return (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_SPAKE2P);
+}
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */

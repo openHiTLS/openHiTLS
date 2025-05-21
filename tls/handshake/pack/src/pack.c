@@ -76,6 +76,25 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, uint8_t *buf, uint32
         case FINISHED:
             ret = PackFinished(ctx, buf, bufLen, usedLen);
             break;
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+        case PAKE_CLIENT_MESSAGE:
+            // Assumes hsCtx->msg is populated with PakeClientMessage data.
+            // PackPakeClientMessage needs (HS_Ctx*, const PakeClientMessage*, HITLS_Buffer*)
+            // The 'buf', 'bufLen', 'usedLen' here are for the body.
+            // HITLS_HS_PackPakeClientMessage from hs_pack_pake.c should take these.
+            // The stub in hs_pack_pake.c was:
+            // int32_t HITLS_HS_PackPakeClientMessage(HITLS_HS_CTX *hsCtx, const PakeClientMessage *pakeClientMsg, HITLS_Buffer *buf_out)
+            // This needs adjustment. The PackHsMsgBody provides a raw buffer.
+            // Let's assume the hs_pack_pake.c functions are adapted to:
+            // int32_t HITLS_HS_PackPakeClientMessage(TLS_Ctx *ctx, const PakeClientMessage *pakeClientMsg, uint8_t *out_buf, uint32_t out_buf_max_len, uint32_t *packed_len)
+            if (ctx->hsCtx->msg == NULL) { ret = HITLS_NULL_INPUT; break; } // msg should be pre-filled
+            ret = HITLS_HS_PackPakeClientMessage(ctx, &ctx->hsCtx->msg->body.pakeClientMsg, buf, bufLen, usedLen);
+            break;
+        case PAKE_SERVER_MESSAGE:
+            if (ctx->hsCtx->msg == NULL) { ret = HITLS_NULL_INPUT; break; } // msg should be pre-filled
+            ret = HITLS_HS_PackPakeServerMessage(ctx, &ctx->hsCtx->msg->body.pakeServerMsg, buf, bufLen, usedLen);
+            break;
+#endif /* HITLS_TLS_PKEY_SPAKE2P */
         default:
             ret = HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
             break;

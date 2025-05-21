@@ -1431,6 +1431,39 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 256},
 #endif
+
+#ifdef HITLS_CRYPTO_SPAKE2P /* Define PAKE Cipher Suites */
+    {.enable = true,
+        .name = CIPHER_NAME("TLS_SPAKE2P_ED25519_WITH_AES_128_GCM_SHA256"), // Example Name
+        .stdName = CIPHER_NAME("TLS_SPAKE2P_ED25519_WITH_AES_128_GCM_SHA256"), // Standard Name (if available)
+        .cipherSuite = 0xFEA0, // Placeholder IANA Value
+        .cipherAlg = HITLS_CIPHER_AES_128_GCM,
+        .kxAlg = HITLS_KEY_EXCH_SPAKE2P,
+        .authAlg = HITLS_AUTH_SPAKE2P,
+        .macAlg = HITLS_MAC_AEAD,
+        .hashAlg = HITLS_HASH_SHA_256,
+        .signScheme = CERT_SIG_SCHEME_UNKNOWN, // SPAKE2P doesn't use traditional cert signatures for kex
+        KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 16u), // Typical for AES-GCM
+        VERSION_SCOPE(HITLS_VERSION_TLS12, HITLS_VERSION_TLS12, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12), // Assuming TLS 1.2 for now
+        .cipherType = HITLS_AEAD_CIPHER,
+        .strengthBits = 128},
+
+    {.enable = true,
+        .name = CIPHER_NAME("TLS_SPAKE2P_ED25519_WITH_AES_256_GCM_SHA384"), // Example Name
+        .stdName = CIPHER_NAME("TLS_SPAKE2P_ED25519_WITH_AES_256_GCM_SHA384"), // Standard Name (if available)
+        .cipherSuite = 0xFEA1, // Placeholder IANA Value
+        .cipherAlg = HITLS_CIPHER_AES_256_GCM,
+        .kxAlg = HITLS_KEY_EXCH_SPAKE2P,
+        .authAlg = HITLS_AUTH_SPAKE2P,
+        .macAlg = HITLS_MAC_AEAD,
+        .hashAlg = HITLS_HASH_SHA_384,
+        .signScheme = CERT_SIG_SCHEME_UNKNOWN, // SPAKE2P doesn't use traditional cert signatures for kex
+        KEY_BLOCK_PARTITON_LENGTH(4u, 32u, 0u, 0u, 8u, 16u), // Typical for AES-GCM
+        VERSION_SCOPE(HITLS_VERSION_TLS12, HITLS_VERSION_TLS12, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12), // Assuming TLS 1.2 for now
+        .cipherType = HITLS_AEAD_CIPHER,
+        .strengthBits = 256},
+#endif /* HITLS_CRYPTO_SPAKE2P */
+
 #ifdef HITLS_TLS_PROTO_TLCP11
 #ifdef HITLS_TLS_SUITE_ECDHE_SM4_CBC_SM3
     {.enable = true,

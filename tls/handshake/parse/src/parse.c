@@ -279,6 +279,29 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
                         BINGLOG_STR("length is not zero"), ALERT_ILLEGAL_PARAMETER);
                 }
             return HITLS_SUCCESS;
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+        case PAKE_CLIENT_MESSAGE:
+            // Assumes HITLS_HS_ParsePakeClientMessage is declared (e.g. in parse_msg.h or hs_parse_pake.h)
+            // and implemented in hs_parse_pake.c to parse into hsMsg->body.pakeClientMsg
+            return HITLS_HS_ParsePakeClientMessage(ctx->hsCtx, (HITLS_Buffer*)data, &hsMsg->body.pakeClientMsg); // Cast to HITLS_Buffer* if needed, or adjust signature
+                                                                                                              // Or more likely: HITLS_HS_ParsePakeClientMessage(ctx->hsCtx, data, len, &hsMsg->body.pakeClientMsg)
+                                                                                                              // The stub in hs_parse_pake.c expects (HITLS_HS_CTX *hsCtx, HITLS_Buffer *buf, PakeClientMessage *pakeClientMsg)
+                                                                                                              // Here, 'data' is const uint8_t* and 'len' is uint32_t.
+                                                                                                              // This requires a HITLS_Buffer to be constructed from data/len if the parser needs it.
+                                                                                                              // For now, assuming the parser can handle data/len directly or buffer is managed by caller.
+                                                                                                              // Let's assume the parser takes (hsCtx, data_ptr, data_len, out_struct)
+            {
+                HITLS_Buffer pakeBuffer;
+                HITLS_BufferInitWithData(&pakeBuffer, (uint8_t*)data, len); // Initialize buffer with received data
+                return HITLS_HS_ParsePakeClientMessage(ctx->hsCtx, &pakeBuffer, &hsMsg->body.pakeClientMsg);
+            }
+        case PAKE_SERVER_MESSAGE:
+            {
+                HITLS_Buffer pakeBuffer;
+                HITLS_BufferInitWithData(&pakeBuffer, (uint8_t*)data, len); // Initialize buffer with received data
+                return HITLS_HS_ParsePakeServerMessage(ctx->hsCtx, &pakeBuffer, &hsMsg->body.pakeServerMsg);
+            }
+#endif /* HITLS_TLS_PKEY_SPAKE2P */
         default:
             break;
     }

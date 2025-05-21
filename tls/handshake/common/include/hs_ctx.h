@@ -200,6 +200,15 @@ struct HsCtx {
     uint32_t timeoutValue; /* Timeout interval, in us. */
     uint32_t timeoutNum;   /* Timeout count */
 #endif /* HITLS_TLS_PROTO_DTLS12 */
+
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+    CRYPT_EAL_PkeyCtx *pake_ctx; /* Context for PAKE operations (e.g., SPAKE2+) */
+    uint8_t pake_client_confirmation_mac[MAX_DIGEST_SIZE]; /* Stores client's computed PAKE MAC */
+    uint32_t pake_client_confirmation_mac_len;
+    uint8_t pake_server_confirmation_mac[MAX_DIGEST_SIZE]; /* Stores server's computed PAKE MAC */
+    uint32_t pake_server_confirmation_mac_len;
+    uint32_t pake_ke_len; /* Stores the actual length of the derived PAKE shared secret Ke */
+#endif
 };
 
 #ifdef __cplusplus

@@ -67,6 +67,10 @@ typedef enum {
     CERTIFICATION_STATUS = 22,
     SUPPLEMENTAL_DATA = 23,
     KEY_UPDATE = 24,
+    /* PAKE specific messages, if they are new top-level handshake messages */
+    /* Values chosen to be distinct from existing standard messages. */
+    PAKE_CLIENT_MESSAGE = 60, /* draft-bmw-tls-pake13 ClientPakeMessage */
+    PAKE_SERVER_MESSAGE = 61, /* draft-bmw-tls-pake13 ServerPakeMessage */
     MESSAGE_HASH = 254,
     HS_MSG_TYPE_END = 255
 } HS_MsgType;
@@ -377,6 +381,10 @@ typedef struct {
         NewSessionTicketMsg newSessionTicket;
         FinishedMsg finished;
         KeyUpdateMsg keyUpdate;
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+        PakeClientMessage pakeClientMsg;
+        PakeServerMessage pakeServerMsg;
+#endif
     } body;
 } HS_Msg;
 

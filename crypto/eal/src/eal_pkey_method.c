@@ -59,6 +59,9 @@
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 #include "crypt_hybridkem.h"
 #endif
+#ifdef HITLS_CRYPTO_SPAKE2P
+#include "crypt_spake2p.h" /* For SPAKE2P context, functions, and control commands */
+#endif
 #include "bsl_err_internal.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
@@ -563,7 +566,231 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL  // unBlind
     ),
 #endif
+
+#ifdef HITLS_CRYPTO_SPAKE2P
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_SPAKE2P,                         // id
+        EAL_SPAKE2P_NewCtx_Internal,                // newCtx
+        NULL,                                       // dupCtx (SPAKE2+ context is complex, dup not straightforward)
+        EAL_SPAKE2P_FreeCtx_Internal,               // freeCtx
+        NULL,                                       // setPara (parameters are set via Ctrl)
+        NULL,                                       // getPara (parameters are retrieved via Ctrl if needed)
+        NULL,                                       // gen (SPAKE2+ is a key exchange, not key generation in this sense)
+        EAL_SPAKE2P_Ctrl_Internal,                  // ctrl (main interface for SPAKE2+ operations)
+        NULL,                                       // setPub (not applicable)
+        NULL,                                       // setPrv (not applicable)
+        NULL,                                       // getPub (not applicable)
+        NULL,                                       // getPrv (not applicable)
+        NULL,                                       // sign (not applicable)
+        NULL,                                       // signData (not applicable)
+        NULL,                                       // verify (not applicable)
+        NULL,                                       // verifyData (not applicable)
+        NULL,                                       // recover (not applicable)
+        EAL_SPAKE2P_ComputeShareKey_Internal,       // computeShareKey (retrieves Ke after successful Ctrl flow)
+        NULL,                                       // encrypt (not applicable directly, Ke can be used for encryption)
+        NULL,                                       // decrypt (not applicable directly, Ke can be used for decryption)
+        NULL,                                       // check (specific checks can be part of Ctrl if needed)
+        NULL,                                       // cmp (can be NULL if context comparison is not standard)
+        NULL,                                       // copyParam
+        NULL,                                       // pkeyEncaps (not applicable)
+        NULL,                                       // pkeyDecaps (not applicable)
+        NULL,                                       // blind (not applicable)
+        NULL                                        // unBlind (not applicable)
+    ),
+#endif // HITLS_CRYPTO_SPAKE2P
 };
+
+#ifdef HITLS_CRYPTO_SPAKE2P
+/*
+ * SPAKE2+ EAL Wrapper Functions Implementation
+ */
+static CRYPT_SPAKE2P_Ctx *EAL_SPAKE2P_NewCtx_Internal(void)
+{
+    /* This directly calls the CRYPT_SPAKE2P_NewCtx defined in spake2p.c */
+    return CRYPT_SPAKE2P_NewCtx();
+}
+
+static void EAL_SPAKE2P_FreeCtx_Internal(void *vctx)
+{
+    /* This directly calls the CRYPT_SPAKE2P_FreeCtx defined in spake2p.c */
+    CRYPT_SPAKE2P_FreeCtx((CRYPT_SPAKE2P_Ctx *)vctx);
+}
+
+static int32_t EAL_SPAKE2P_Ctrl_Internal(void *vctx, int32_t opt, void *val, uint32_t len)
+{
+    CRYPT_SPAKE2P_Ctx *ctx = (CRYPT_SPAKE2P_Ctx *)vctx;
+    if (ctx == NULL && opt != CRYPT_CTRL_SPAKE2P_INIT_GROUP) { /* Allow NULL ctx only for specific ops if needed, but generally bad practice. For now, require ctx for all. */
+        BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "SPAKE2P context is NULL in Ctrl");
+        return CRYPT_ERR_NULL_PARAM;
+    }
+    /* Note: CRYPT_SPAKE2P_INIT_GROUP typically doesn't need a pre-existing ctx->key,
+       but EAL_PkeyCtx itself (which wraps CRYPT_SPAKE2P_Ctx) would be allocated by CRYPT_EAL_PkeyNewCtx.
+       The CRYPT_SPAKE2P_Ctx (ctx->key in EAL_PkeyCtx) is then allocated by EAL_SPAKE2P_NewCtx_Internal. */
+
+
+    switch (opt) {
+        case CRYPT_CTRL_SPAKE2P_INIT_GROUP:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for INIT_GROUP");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_INIT_GROUP_PARAM *params = (CRYPT_SPAKE2P_INIT_GROUP_PARAM *)val;
+            return CRYPT_SPAKE2P_InitGroup(ctx, params->curveId, params->hashId, params->macId);
+        }
+        case CRYPT_CTRL_SPAKE2P_SET_PASSWORD:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for SET_PASSWORD");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_DATA_PARAM *params = (CRYPT_SPAKE2P_DATA_PARAM *)val;
+            return CRYPT_SPAKE2P_SetPassword(ctx, params->data, params->dataLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_SET_OUR_ID:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for SET_OUR_ID");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_DATA_PARAM *params = (CRYPT_SPAKE2P_DATA_PARAM *)val;
+            return CRYPT_SPAKE2P_SetOurIdentity(ctx, params->data, params->dataLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_SET_PEER_ID:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for SET_PEER_ID");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_DATA_PARAM *params = (CRYPT_SPAKE2P_DATA_PARAM *)val;
+            return CRYPT_SPAKE2P_SetPeerIdentity(ctx, params->data, params->dataLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_SET_ROLE:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for SET_ROLE");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            if (len != sizeof(CRYPT_SPAKE2P_Role)) {
+                 BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_INVALID_PARAM_LEN, "Invalid length for SET_ROLE");
+                return CRYPT_ERR_INVALID_PARAM_LEN;
+            }
+            return CRYPT_SPAKE2P_SetRole(ctx, *(CRYPT_SPAKE2P_Role *)val);
+        }
+        case CRYPT_CTRL_SPAKE2P_GENERATE_EXCHANGE_MSG:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for GENERATE_EXCHANGE_MSG");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_BUFFER_PARAM *params = (CRYPT_SPAKE2P_BUFFER_PARAM *)val;
+            return CRYPT_SPAKE2P_GenerateExchangeMessage(ctx, params->buffer, params->bufferLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_PROCESS_PEER_MSG_AND_CONFIRM: /* Combines ComputeSecret and MAC gen */
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for PROCESS_PEER_MSG");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_DATA_PARAM *params = (CRYPT_SPAKE2P_DATA_PARAM *)val;
+            return CRYPT_SPAKE2P_ComputeSharedSecretAndConfirmationMacs(ctx, params->data, params->dataLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_GET_OUR_CONFIRMATION_MAC:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for GET_OUR_MAC");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_BUFFER_PARAM *params = (CRYPT_SPAKE2P_BUFFER_PARAM *)val;
+            return CRYPT_SPAKE2P_GetOurConfirmationMac(ctx, params->buffer, params->bufferLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_VERIFY_PEER_CONFIRMATION_MAC:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for VERIFY_PEER_MAC");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_DATA_PARAM *params = (CRYPT_SPAKE2P_DATA_PARAM *)val;
+            return CRYPT_SPAKE2P_VerifyPeerConfirmationMac(ctx, params->data, params->dataLen);
+        }
+        case CRYPT_CTRL_SPAKE2P_GET_DERIVED_SECRET_KE:
+        {
+            if (val == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for GET_DERIVED_SECRET_KE");
+                return CRYPT_ERR_NULL_PARAM;
+            }
+            CRYPT_SPAKE2P_BUFFER_PARAM *params = (CRYPT_SPAKE2P_BUFFER_PARAM *)val;
+            // Underlying function CRYPT_SPAKE2P_Ctrl will handle checks for Ke_derived availability
+            return CRYPT_SPAKE2P_Ctrl(ctx, opt, val, len); // Pass through to the new CRYPT_SPAKE2P_Ctrl
+        }
+        /* New Test Vector related Ctrl Commands */
+        case CRYPT_CTRL_SPAKE2P_SET_EPHEMERAL_PRIVATE_KEY:
+        case CRYPT_CTRL_SPAKE2P_GET_COMPUTED_W0:
+        case CRYPT_CTRL_SPAKE2P_GET_COMPUTED_W1:
+        case CRYPT_CTRL_SPAKE2P_GET_PW_SCALAR:
+        case CRYPT_CTRL_SPAKE2P_GET_EXCHANGE_MESSAGE_RAW:
+        case CRYPT_CTRL_SPAKE2P_GET_SHARED_POINT_K:
+        case CRYPT_CTRL_SPAKE2P_GET_TRANSCRIPT_TT:
+        case CRYPT_CTRL_SPAKE2P_GET_DERIVED_SECRET_KCA:
+        case CRYPT_CTRL_SPAKE2P_GET_DERIVED_SECRET_KCB:
+        {
+            // These new commands are handled by the internal CRYPT_SPAKE2P_Ctrl
+            if (val == NULL && (opt == CRYPT_CTRL_SPAKE2P_SET_EPHEMERAL_PRIVATE_KEY)) { // SET needs val
+                 BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for SPAKE2P test vector ctrl");
+                 return CRYPT_ERR_NULL_PARAM;
+            }
+             if (val == NULL && (opt >= CRYPT_CTRL_SPAKE2P_GET_COMPUTED_W0 && opt <= CRYPT_CTRL_SPAKE2P_GET_DERIVED_SECRET_KCB) ) { // GET needs val (buffer_param)
+                 BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Value is NULL for SPAKE2P test vector GET ctrl");
+                 return CRYPT_ERR_NULL_PARAM;
+            }
+            return CRYPT_SPAKE2P_Ctrl(ctx, opt, val, len);
+        }
+        default:
+            BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NOT_SUPPORTED_OPT, "Unsupported SPAKE2P Ctrl option");
+            return CRYPT_ERR_NOT_SUPPORTED_OPT;
+    }
+}
+
+/*
+ * EAL_SPAKE2P_ComputeShareKey_Internal:
+ * This function retrieves the derived symmetric key Ke if the protocol
+ * has completed successfully and Ke is available.
+ * The peerKeyCtx is not used in SPAKE2+.
+ */
+static int32_t EAL_SPAKE2P_ComputeShareKey_Internal(void *vctx, const void *peerKeyCtx_unused,
+                                                   uint8_t *secret, uint32_t *secretLen)
+{
+    CRYPT_SPAKE2P_Ctx *ctx = (CRYPT_SPAKE2P_Ctx *)vctx;
+    (void)peerKeyCtx_unused; // Mark as unused as SPAKE2+ peer info is handled via Ctrl
+
+    if (ctx == NULL || secret == NULL || secretLen == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_NULL_PARAM, "Null param for SPAKE2P ComputeShareKey");
+        return CRYPT_ERR_NULL_PARAM;
+    }
+
+    // Check if Ke has been derived (e.g., after successful PROCESS_PEER_MSG_AND_CONFIRM)
+    if (ctx->Ke_derived == NULL || ctx->Ke_derived_len == 0) {
+        BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_INVALID_STATE, "SPAKE2+ Ke not derived or protocol incomplete.");
+        return CRYPT_ERR_INVALID_STATE;
+    }
+    // It's also implied that MAC verification should have passed, but that state isn't explicitly tracked here.
+    // The caller is responsible for ensuring the protocol flow.
+
+    if (*secretLen < ctx->Ke_derived_len) {
+        *secretLen = (uint32_t)ctx->Ke_derived_len;
+        BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_BUF_TOO_SMALL, "Buffer too small for shared secret Ke");
+        return CRYPT_ERR_BUF_TOO_SMALL;
+    }
+
+    if (BSL_SRE_MEMCPY_S(secret, *secretLen, ctx->Ke_derived, ctx->Ke_derived_len) != EOK) {
+        BSL_ERR_PUSH_ERROR(BSL_MODULE_CRYPTO_EAL, CRYPT_ERR_MEMCPY_FAIL, "Memcpy failed for shared secret Ke");
+        return CRYPT_ERR_MEMCPY_FAIL;
+    }
+    *secretLen = (uint32_t)ctx->Ke_derived_len;
+    return CRYPT_SUCCESS;
+}
+#endif // HITLS_CRYPTO_SPAKE2P
+
 
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id)
 {

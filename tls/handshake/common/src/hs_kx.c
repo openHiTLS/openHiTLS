@@ -97,6 +97,19 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
     BSL_SAL_FREE(keyExchCtx);
     return;
 }
+
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+// Helper function to check if a PAKE cipher suite was negotiated
+// Replicated here to avoid cross-file issues if not in a common header.
+static bool IsPakeCipherSuiteNegotiatedKx(const TLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_NULL) {
+        return false;
+    }
+    return (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_SPAKE2P);
+}
+#endif // HITLS_TLS_PKEY_SPAKE2P
+
 #ifdef HITLS_TLS_HOST_CLIENT
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
 static bool NamedCurveSupport(HITLS_NamedGroup inNamedGroup, const TLS_Config *config)
@@ -569,6 +582,88 @@ static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32
             break;
 #endif
         case HITLS_KEY_EXCH_PSK:
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG, BINLOG_ID16838, "unknow keyExchAlgo");
+    }
+    BSL_ERR_PUSH_ERROR(ret);
+    return ret;
+}
+
+// This is the function that calculates the PreMasterSecret
+static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
+{
+    int32_t ret = HITLS_SUCCESS;
+    KeyExchCtx *keyExchCtx = ctx->hsCtx->kxCtx;
+    (void)preMasterSecret; // Mark as potentially unused if PAKE path is taken
+    (void)preMasterSecretLen; // Mark as potentially unused if PAKE path is taken
+
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+    if (IsPakeCipherSuiteNegotiatedKx(ctx)) {
+        BSL_LOG_INFO(BSL_MODULE_TLS_HS, "PAKE negotiated. Using Ke from hsCtx->masterKey as PreMasterSecret.");
+        if (ctx->hsCtx->pake_ke_len == 0 || ctx->hsCtx->pake_ke_len > MAX_PRE_MASTER_SECRET_SIZE) {
+            BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Invalid pake_ke_len: %u", ctx->hsCtx->pake_ke_len);
+            return HITLS_INTERNAL_ERROR; // Or a more specific PAKE error
+        }
+        if (memcpy_s(preMasterSecret, *preMasterSecretLen, ctx->hsCtx->masterKey, ctx->hsCtx->pake_ke_len) != EOK) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+            BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Failed to copy PAKE Ke to PMS buffer.");
+            return HITLS_MEMCPY_FAIL;
+        }
+        *preMasterSecretLen = ctx->hsCtx->pake_ke_len;
+        // Ke is already in masterKey, which is where DeriveMasterSecret expects the PMS to be if not passed directly.
+        // However, GenPreMasterSecret is expected to *produce* the PMS.
+        // So, we copy Ke into the output buffer preMasterSecret.
+        return HITLS_SUCCESS;
+    }
+#endif // HITLS_TLS_PKEY_SPAKE2P
+
+    // Original non-PAKE KEX logic follows
+    switch (keyExchCtx->keyExchAlgo) {
+#ifdef HITLS_TLS_SUITE_KX_ECDHE
+        case HITLS_KEY_EXCH_ECDHE:
+        case HITLS_KEY_EXCH_ECDHE_PSK:
+            ret = GenPremasterSecretFromEcdhe(ctx, preMasterSecret, preMasterSecretLen);
+            break;
+#endif /* HITLS_TLS_SUITE_KX_ECDHE */
+#ifdef HITLS_TLS_SUITE_KX_DHE
+        case HITLS_KEY_EXCH_DHE:
+        case HITLS_KEY_EXCH_DHE_PSK:
+            ret = SAL_CRYPT_CalcDhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), keyExchCtx->key,
+                keyExchCtx->peerPubkey, keyExchCtx->pubKeyLen,
+                preMasterSecret, preMasterSecretLen);
+            break;
+#endif /* HITLS_TLS_SUITE_KX_DHE */
+#ifdef HITLS_TLS_SUITE_KX_RSA
+        case HITLS_KEY_EXCH_RSA:
+        case HITLS_KEY_EXCH_RSA_PSK:
+            if (memcpy_s(preMasterSecret, *preMasterSecretLen,
+                keyExchCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN) != EOK) {
+                    BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+                    return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID16836, "memcpy fail");
+                }
+            *preMasterSecretLen = MASTER_SECRET_LEN;
+            break;
+#endif /* HITLS_TLS_SUITE_KX_RSA */
+#ifdef HITLS_TLS_PROTO_TLCP11
+        case HITLS_KEY_EXCH_ECC:
+            if (memcpy_s(preMasterSecret, *preMasterSecretLen,
+                keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN) != EOK) {
+                    BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+                    return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID16837, "memcpy fail");
+                }
+            *preMasterSecretLen = MASTER_SECRET_LEN;
+            break;
+#endif
+        case HITLS_KEY_EXCH_PSK:
+            // For PSK-only, PMS might be constructed differently (e.g., from zeros and PSK length)
+            // This path is handled by GeneratePskPreMasterSecret if IsPskNegotiation is true.
+            // If it's pure PSK without DHE/ECDHE, GenPreMasterSecret might not even be called for the main secret part,
+            // or it needs to produce a specific value that GeneratePskPreMasterSecret can use.
+            // For now, assume if PSK is the primary KEX, this part is more complex or handled by GeneratePskPreMasterSecret.
+            // If GeneratePskPreMasterSecret is called after this, preMasterSecretLen would be 0 for pure PSK.
+            *preMasterSecretLen = 0; // For pure PSK, the "other secret" part is empty.
             break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);

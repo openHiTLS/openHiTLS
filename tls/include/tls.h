@@ -172,6 +172,19 @@ typedef enum {
     TRY_RECV_FINISH,                /* attempts to receive finished message */
     TRY_RECV_KEY_UPDATE,            /* attempts to receive keyupdate message */
     TRY_RECV_HELLO_REQUEST,         /* attempts to receive hello request message */
+
+    /* Client-side PAKE states */
+    TLS_HS_CLIENT_STATE_SEND_PAKE_MESSAGE = 70,       /* Client sends its PAKE message */
+    TLS_HS_CLIENT_STATE_RECV_PAKE_MESSAGE = 71,       /* Client expects server's PAKE message */
+    TLS_HS_CLIENT_STATE_PROCESS_SERVER_PAKE = 72,   /* Client processes server PAKE data and verifies MAC */
+    TLS_HS_CLIENT_STATE_PAKE_COMPLETE = 73,         /* PAKE successfully completed, ready for key derivation */
+
+    /* Server-side PAKE states */
+    TLS_HS_SERVER_STATE_RECV_PAKE_MESSAGE = 80,       /* Server expects client's PAKE message */
+    TLS_HS_SERVER_STATE_SEND_PAKE_MESSAGE = 81,       /* Server sends its PAKE message (and potentially MAC) */
+    TLS_HS_SERVER_STATE_VERIFY_CLIENT_PAKE_MAC = 82,  /* Server verifies client's PAKE MAC (e.g., from Finished msg) */
+    TLS_HS_SERVER_STATE_PAKE_COMPLETE = 83,         /* PAKE successfully completed on server, ready for key derivation */
+
     HS_STATE_BUTT = 255             /* enumerated Maximum Value */
 } HITLS_HandshakeState;
 

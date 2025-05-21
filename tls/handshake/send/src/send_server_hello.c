@@ -118,6 +118,76 @@ static int32_t ServerChangeStateAfterSendHello(TLS_Ctx *ctx)
     }
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
+
+
+#if defined(HITLS_TLS_PKEY_SPAKE2P) && defined(HITLS_TLS_HOST_SERVER)
+// Helper function (can be shared or made static here if not already globally available)
+// Ensure IsPakeCipherSuiteNegotiatedServer, MapHitlsHashToCryptMdServer, MapHitlsHashToCryptMacForHkdfServer are available
+// For this diff, assume they are available (e.g. defined in this file or an included header as from Objective 6, Turn 3)
+
+static int32_t ServerInitializePakeContextAndSetNextState(TLS_Ctx *ctx)
+{
+    HITLS_HS_CTX *hsCtx = TLS_GET_HS_CTX(ctx);
+    int32_t ret;
+
+    BSL_LOG_INFO(BSL_MODULE_TLS_HS, "PAKE ciphersuite selected by server. Initializing server PAKE context.");
+
+    if (hsCtx->pake_ctx != NULL) { // Clear if somehow already initialized
+        CRYPT_EAL_PkeyFreeCtx(hsCtx->pake_ctx);
+        hsCtx->pake_ctx = NULL;
+    }
+    hsCtx->pake_ctx = CRYPT_EAL_PkeyNewCtxById(CRYPT_PKEY_SPAKE2P);
+    if (hsCtx->pake_ctx == NULL) {
+        BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Failed to create PAKE context for server.");
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    CRYPT_SPAKE2P_INIT_GROUP_PARAM group_params;
+    // Derive from negotiated ciphersuite (ctx->negotiatedInfo.cipherSuiteInfo)
+    if (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_TLS_SPAKE2P_ED25519_WITH_AES_128_GCM_SHA256) {
+         group_params.curveId = CRYPT_PKEY_PARAID_SPAKE2P_EDWARDS25519_SHA256_HKDF_HMAC_SHA256;
+         group_params.hashId = CRYPT_MD_SHA256;
+         group_params.macId = CRYPT_MAC_HMAC_SHA256;
+    } else if (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_TLS_SPAKE2P_ED25519_WITH_AES_256_GCM_SHA384) {
+         group_params.curveId = CRYPT_PKEY_PARAID_SPAKE2P_EDWARDS25519_SHA256_HKDF_HMAC_SHA256; // Assuming same group
+         group_params.hashId = CRYPT_MD_SHA384;
+         group_params.macId = CRYPT_MAC_HMAC_SHA384;
+    } else {
+        // This case should ideally not be hit if ciphersuite selection was correct
+        BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Server: Unknown PAKE ciphersuite for parameter mapping: %x", ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        return HITLS_ILLEGAL_PARAMETER;
+    }
+
+    ret = CRYPT_EAL_PkeyCtrl(hsCtx->pake_ctx, CRYPT_CTRL_SPAKE2P_INIT_GROUP, &group_params, sizeof(group_params));
+    if (ret != HITLS_SUCCESS) { BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Server: PAKE_INIT_GROUP failed: %x", ret); ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE); return ret; }
+
+    CRYPT_SPAKE2P_Role role = CRYPT_SPAKE2P_ROLE_SERVER;
+    ret = CRYPT_EAL_PkeyCtrl(hsCtx->pake_ctx, CRYPT_CTRL_SPAKE2P_SET_ROLE, &role, sizeof(role));
+    if (ret != HITLS_SUCCESS) { BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Server: PAKE_SET_ROLE failed: %x", ret); ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE); return ret; }
+
+    const char *pwd = "testpassword"; // Placeholder: Server needs its verifier/password equivalent
+    CRYPT_SPAKE2P_DATA_PARAM pwd_param = { .data = (const uint8_t *)pwd, .dataLen = (uint32_t)strlen(pwd) };
+    ret = CRYPT_EAL_PkeyCtrl(hsCtx->pake_ctx, CRYPT_CTRL_SPAKE2P_SET_PASSWORD, &pwd_param, sizeof(pwd_param));
+    if (ret != HITLS_SUCCESS) { BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Server: PAKE_SET_PASSWORD failed: %x", ret); ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE); return ret; }
+
+    const char *server_id_str = "server"; // Placeholder
+    CRYPT_SPAKE2P_DATA_PARAM sid_param = { .data = (const uint8_t *)server_id_str, .dataLen = (uint32_t)strlen(server_id_str) };
+    ret = CRYPT_EAL_PkeyCtrl(hsCtx->pake_ctx, CRYPT_CTRL_SPAKE2P_SET_OUR_ID, &sid_param, sizeof(sid_param));
+    if (ret != HITLS_SUCCESS) { BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Server: PAKE_SET_OUR_ID failed: %x", ret); ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE); return ret; }
+    
+    const char *client_id_str = "client"; // Placeholder
+    CRYPT_SPAKE2P_DATA_PARAM cid_param = { .data = (const uint8_t *)client_id_str, .dataLen = (uint32_t)strlen(client_id_str) };
+    ret = CRYPT_EAL_PkeyCtrl(hsCtx->pake_ctx, CRYPT_CTRL_SPAKE2P_SET_PEER_ID, &cid_param, sizeof(cid_param));
+    if (ret != HITLS_SUCCESS) { BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Server: PAKE_SET_PEER_ID failed: %x", ret); ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE); return ret; }
+    
+    BSL_LOG_INFO(BSL_MODULE_TLS_HS, "Server PAKE context initialized. Transitioning to RECV_PAKE_CLIENT_MESSAGE.");
+    return HS_ChangeState(ctx, TLS_HS_SERVER_STATE_RECV_PAKE_MESSAGE);
+}
+#endif // HITLS_TLS_PKEY_SPAKE2P && HITLS_TLS_HOST_SERVER
+
+
 #if defined(HITLS_TLS_PROTO_TLS13) && defined(HITLS_TLS_PROTO_TLS_BASIC)
 static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
 {
@@ -196,6 +266,11 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15551, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "send server hello msg success.",
         0, 0, 0, 0);
 
+#if defined(HITLS_TLS_PKEY_SPAKE2P) && defined(HITLS_TLS_HOST_SERVER)
+    if (IsPakeCipherSuiteNegotiatedServer(ctx)) { // IsPakeCipherSuiteNegotiatedServer needs to be defined/available
+        return ServerInitializePakeContextAndTransition(ctx);
+    }
+#endif
     return ServerChangeStateAfterSendHello(ctx);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */

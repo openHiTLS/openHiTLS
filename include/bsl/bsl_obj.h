@@ -550,6 +550,8 @@ typedef enum {
     BSL_CID_PAILLIER = 5203,
     BSL_CID_ELGAMAL = 5204,
     BSL_CID_SLH_DSA = 5205,         /**< Identifies SLH-DSA algorithm */
+    BSL_CID_SPAKE2P = 5206,         /**< Identifies SPAKE2+ algorithm */
+    BSL_CID_SPAKE2P_PARAMS = 5207,  /**< Identifies SPAKE2+ parameters */
 
     BSL_CID_MAC_AEAD = 5300,
 

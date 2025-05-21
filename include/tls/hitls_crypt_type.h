@@ -133,6 +133,7 @@ typedef enum {
     HITLS_AUTH_PSK,
     HITLS_AUTH_SM2,
     HITLS_AUTH_ANY,
+    HITLS_AUTH_SPAKE2P, /* For SPAKE2+ PAKE authentication */
     HITLS_AUTH_BUTT = 255
 } HITLS_AuthAlgo;
 
@@ -152,6 +153,7 @@ typedef enum {
     HITLS_KEY_EXCH_ECDHE_PSK,
     HITLS_KEY_EXCH_RSA_PSK,
     HITLS_KEY_EXCH_ECC, /* sm2 encrypt */
+    HITLS_KEY_EXCH_SPAKE2P, /* SPAKE2+ PAKE */
     HITLS_KEY_EXCH_BUTT = 255
 } HITLS_KeyExchAlgo;
 
@@ -285,4 +287,12 @@ typedef struct {
 #ifdef __cplusplus
 }
 #endif
+
+/* Placeholder IANA values for new PAKE Cipher Suites */
+/* These values are used in the CipherSuiteInfo definitions in tls/config/src/cipher_suite.c */
+#ifdef HITLS_CRYPTO_SPAKE2P /* Guard for PAKE feature */
+#define HITLS_TLS_SPAKE2P_ED25519_WITH_AES_128_GCM_SHA256 (0xFEA0U)
+#define HITLS_TLS_SPAKE2P_ED25519_WITH_AES_256_GCM_SHA384 (0xFEA1U)
+#endif /* HITLS_CRYPTO_SPAKE2P */
+
 #endif

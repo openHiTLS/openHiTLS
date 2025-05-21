@@ -28,6 +28,24 @@
 #include "hs_common.h"
 #include "transcript_hash.h"
 #include "config_type.h"
+#include "hs_ctx.h" // For HITLS_HS_CTX, masterKey, pake_ke_len
+#include "hitls_crypt_type.h" // For HITLS_KEY_EXCH_SPAKE2P
+
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+// Helper function to check if a PAKE cipher suite was negotiated for TLS 1.3
+static bool IsPakeCipherSuiteNegotiatedKxTls13(const TLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_NULL) {
+        return false;
+    }
+    // Ensure this check is appropriate for TLS 1.3 PAKE suites.
+    // TLS 1.3 suites don't explicitly name KEX in the same way.
+    // This relies on cipherSuiteInfo.kxAlg being set to HITLS_KEY_EXCH_SPAKE2P
+    // for PAKE-based TLS 1.3 cipher suites.
+    return (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_SPAKE2P);
+}
+#endif // HITLS_TLS_PKEY_SPAKE2P
+
 
 int32_t HS_TLS13DeriveSecret(CRYPT_KeyDeriveParameters *deriveInfo, bool isHashed, uint8_t *outSecret, uint32_t outLen)
 {
@@ -261,15 +279,98 @@ int32_t TLS13DeriveHandshakeSecret(TLS_Ctx *ctx)
     return ret;
 }
 
+// This function calculates the shared secret for (EC)DHE or KEM,
+// or for PAKE, it provides the PAKE-derived Ke.
+int32_t TLS13DeriveDheSecret(TLS_Ctx *ctx, uint8_t *sharedSecretOut, uint32_t *sharedSecretOutLen, uint32_t hashLen)
+{
+    HITLS_HS_CTX *hsCtx = TLS_GET_HS_CTX(ctx); // Added to access hsCtx for PAKE
+
+#if defined(HITLS_TLS_PKEY_SPAKE2P)
+    if (IsPakeCipherSuiteNegotiatedKxTls13(ctx)) {
+        BSL_LOG_INFO(BSL_MODULE_TLS_HS, "TLS 1.3 PAKE negotiated. Using Ke from hsCtx->masterKey as shared secret.");
+        if (hsCtx->pake_ke_len == 0 || hsCtx->pake_ke_len > MAX_PRE_MASTER_SECRET_SIZE) {
+            BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Invalid pake_ke_len for TLS 1.3: %u", hsCtx->pake_ke_len);
+            return HITLS_INTERNAL_ERROR;
+        }
+        if (*sharedSecretOutLen < hsCtx->pake_ke_len) {
+            BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Output buffer too small for PAKE Ke. Need %u, have %u.", hsCtx->pake_ke_len, *sharedSecretOutLen);
+            *sharedSecretOutLen = hsCtx->pake_ke_len; // Report needed size
+            return HITLS_BUFFER_TOO_SMALL;
+        }
+        if (memcpy_s(sharedSecretOut, *sharedSecretOutLen, hsCtx->masterKey, hsCtx->pake_ke_len) != EOK) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
+            BSL_LOG_ERROR(BSL_MODULE_TLS_HS, "Failed to copy PAKE Ke to sharedSecretOut buffer for TLS 1.3.");
+            return HITLS_MEMCPY_FAIL;
+        }
+        *sharedSecretOutLen = hsCtx->pake_ke_len;
+        return HITLS_SUCCESS;
+    }
+#endif // HITLS_TLS_PKEY_SPAKE2P
+
+    // Original (EC)DHE / KEM logic
+    KeyExchCtx *keyCtx = ctx->hsCtx->kxCtx;
+    if (keyCtx->peerPubkey == NULL) { // This case implies no (EC)DHE, e.g. PSK-only
+        // For PSK-only (no DHE/ECDHE), the "IKM" for HandshakeSecret is effectively a string of zeros
+        // if EarlySecret is used as salt, or EarlySecret itself if salt is zero.
+        // The HKDF-Extract in TLS13DeriveHandshakeSecret handles this:
+        // inputKeyMaterial = givenSecret (which is preMasterSecret here, i.e. (EC)DHE output)
+        // If peerPubkey is NULL, it means no DHE, so preMasterSecret should be appropriately zeroed or sized.
+        if (memset_s(sharedSecretOut, *sharedSecretOutLen, 0, hashLen) != EOK) { // Fill with zeros of hashLen
+             BSL_ERR_PUSH_ERROR(HITLS_MEMSET_FAIL);
+             return HITLS_MEMSET_FAIL;
+        }
+        *sharedSecretOutLen = hashLen;
+        return HITLS_SUCCESS;
+    }
+
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, ctx->negotiatedInfo.negotiatedGroup);
+    if (groupInfo == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16244, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "group info not found", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    if (!groupInfo->isKem) {
+        return SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+                keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
+                sharedSecretOut, sharedSecretOutLen);
+    }
+#ifdef HITLS_TLS_FEATURE_KEM
+    if (ctx->isClient) {
+        return SAL_CRYPT_KemDecapsulate(keyCtx->key, keyCtx->peerPubkey, keyCtx->pubKeyLen,
+            sharedSecretOut, sharedSecretOutLen);
+    }
+    BSL_SAL_Free(keyCtx->ciphertext);
+    keyCtx->ciphertext = BSL_SAL_Calloc(1, groupInfo->ciphertextLen);
+    if (keyCtx->ciphertext == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16245, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "ciphertext malloc fail", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    keyCtx->ciphertextLen = groupInfo->ciphertextLen;
+    return SAL_CRYPT_KemEncapsulate(ctx,
+        &(HITLS_KemEncapsulateParams){
+            .groupId = ctx->negotiatedInfo.negotiatedGroup,
+            .peerPubkey = keyCtx->peerPubkey,
+            .pubKeyLen = keyCtx->pubKeyLen,
+            .ciphertext = keyCtx->ciphertext,
+            .ciphertextLen = &keyCtx->ciphertextLen,
+            .sharedSecret = sharedSecretOut,
+            .sharedSecretLen = sharedSecretOutLen,
+        });
+#else
+    return HITLS_INTERNAL_EXCEPTION; // KEM not supported but KEM group selected
+#endif
+}
+
 /*
-   (EC)DHE -> HKDF-Extract = Handshake Secret
+        Early Secret
              |
              v
        Derive-Secret(., "derived", "")
              |
              v
-   0 -> HKDF-Extract = Master Secret
-*/
+   (EC)DHE -> HKDF-Extract = Handshake Secret
+ */
 int32_t TLS13DeriveMasterSecret(TLS_Ctx *ctx)
 {
     uint16_t hashAlg = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;

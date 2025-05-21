@@ -112,6 +112,10 @@ static bool IsHsSendState(HITLS_HandshakeState state)
         case TRY_SEND_END_OF_EARLY_DATA:
         case TRY_SEND_FINISH:
         case TRY_SEND_KEY_UPDATE:
+        /* PAKE Client States */
+        case TLS_HS_CLIENT_STATE_SEND_PAKE_MESSAGE:
+        /* PAKE Server States */
+        case TLS_HS_SERVER_STATE_SEND_PAKE_MESSAGE:
             return true;
         default:
             break;
@@ -138,6 +142,10 @@ static bool IsHsRecvState(HITLS_HandshakeState state)
         case TRY_RECV_FINISH:
         case TRY_RECV_KEY_UPDATE:
         case TRY_RECV_HELLO_REQUEST:
+        /* PAKE Client States */
+        case TLS_HS_CLIENT_STATE_RECV_PAKE_MESSAGE:
+        /* PAKE Server States */
+        case TLS_HS_SERVER_STATE_RECV_PAKE_MESSAGE:
             return true;
         default:
             break;
@@ -145,6 +153,20 @@ static bool IsHsRecvState(HITLS_HandshakeState state)
 
     return false;
 }
+
+/*
+ * Helper function to determine if the negotiated ciphersuite is PAKE-based.
+ * This function needs to be implemented based on how CipherSuiteInfo is structured
+ * and how PAKE kxAlg is identified.
+ */
+static bool IsPakeCipherSuiteNegotiated(const TLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_NULL) {
+        return false; // Or some other default if not yet negotiated
+    }
+    return (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_SPAKE2P);
+}
+
 
 int32_t HS_DoHandshake(TLS_Ctx *ctx)
 {
@@ -155,9 +177,45 @@ int32_t HS_DoHandshake(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     while (hsCtx->state != TLS_CONNECTED) {
         if (IsHsSendState(hsCtx->state)) {
+            // Add PAKE server send state to IsHsSendState if not already there
+            // Example: case TLS_HS_SERVER_STATE_SEND_PAKE_MESSAGE: return true;
+            if (hsCtx->state == TLS_HS_SERVER_STATE_SEND_PAKE_MESSAGE && !ctx->isClient) {
+                 // This case should be handled by HS_SendMsgProcess
+            }
             ret = HS_SendMsgProcess(ctx);
         } else if (IsHsRecvState(hsCtx->state)) {
+            // Add PAKE server recv state to IsHsRecvState if not already there
+            // Example: case TLS_HS_SERVER_STATE_RECV_PAKE_MESSAGE: return true;
+             if (hsCtx->state == TLS_HS_SERVER_STATE_RECV_PAKE_MESSAGE && !ctx->isClient) {
+                 // This case should be handled by HS_RecvMsgProcess
+            }
             ret = HS_RecvMsgProcess(ctx);
+        } else if (hsCtx->state == TLS_HS_CLIENT_STATE_PROCESS_SERVER_PAKE ||
+                   hsCtx->state == TLS_HS_CLIENT_STATE_PAKE_COMPLETE ||
+                   hsCtx->state == TLS_HS_SERVER_STATE_VERIFY_CLIENT_PAKE_MAC || // May be part of RecvFinished
+                   hsCtx->state == TLS_HS_SERVER_STATE_PAKE_COMPLETE) {
+            
+            if (hsCtx->state == TLS_HS_CLIENT_STATE_PAKE_COMPLETE && ctx->isClient) {
+                BSL_LOG_INFO(BSL_MODULE_TLS_HS, "Client PAKE exchange complete. Transitioning to send CCS.");
+                ret = HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC); 
+            } else if (hsCtx->state == TLS_HS_SERVER_STATE_PAKE_COMPLETE && !ctx->isClient) {
+                // Server PAKE is complete after sending its PAKE message and deriving keys.
+                // It then waits for Client CCS/Finished. Client's PAKE MAC is verified in Finished.
+                // So, this state implies server is ready for client's CCS.
+                BSL_LOG_INFO(BSL_MODULE_TLS_HS, "Server PAKE exchange complete. Transitioning to recv Client CCS.");
+                ret = HS_ChangeState(ctx, TRY_RECV_CHANGE_CIPHER_SPEC);
+            } else if (hsCtx->state == TLS_HS_CLIENT_STATE_PROCESS_SERVER_PAKE && ctx->isClient) {
+                // This state is handled by HITLS_HS_ClientRecvPakeServerMessage, which transitions out.
+                // If HS_DoHandshake sees it, it's likely an incomplete transition or error.
+                BSL_LOG_WARN(BSL_MODULE_TLS_HS, "State PROCESS_SERVER_PAKE reached in HS_DoHandshake loop.");
+                // Fall through to error or handle as intermediate step if Recv function doesn't transition.
+            } else if (hsCtx->state == TLS_HS_SERVER_STATE_VERIFY_CLIENT_PAKE_MAC && !ctx->isClient) {
+                // This state would be set after receiving Client Finished.
+                // The actual verification logic is in ServerRecvFinishedProcess.
+                // If successful, ServerRecvFinishedProcess transitions to SEND_CCS or CONNECTED.
+                // So HS_DoHandshake should not typically see this state.
+                BSL_LOG_WARN(BSL_MODULE_TLS_HS, "State VERIFY_CLIENT_PAKE_MAC reached in HS_DoHandshake loop.");
+            }
         } else {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_STATE_ILLEGAL);
             BSL_LOG_BINLOG_VARLEN(BINLOG_ID15884, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
