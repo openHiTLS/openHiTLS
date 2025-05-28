@@ -189,6 +189,7 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
     ctx->prvKey = newCtx->prvKey;
     ctx->pad = newCtx->pad;
 
+    BSL_SAL_ReferencesFree(&(newCtx->references));
     BSL_SAL_FREE(newCtx);
     return ret;
 ERR:

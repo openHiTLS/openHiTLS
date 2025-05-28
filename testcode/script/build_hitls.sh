@@ -29,6 +29,25 @@ LIB_TYPE="static"
 enable_sctp="--enable-sctp"
 BITS=64
 
+usage()
+{
+    printf "%-50s %-30s\n" "Build openHiTLS Code"                      "sh build_hitls.sh"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Gcov"            "sh build_hitls.sh gcov"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Debug"           "sh build_hitls.sh debug"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Asan"            "sh build_hitls.sh asan"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Pure C"           "sh build_hitls.sh pure_c"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With X86_64"            "sh build_hitls.sh x86_64"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Armv8_be"          "sh build_hitls.sh armv8_be"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Armv8_le"          "sh build_hitls.sh armv8_le"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Add Options"     "sh build_hitls.sh add-options=xxx"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With No Provider"     "sh build_hitls.sh no-provider"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With No Sctp"         "sh build_hitls.sh no_sctp"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Bits"            "sh build_hitls.sh bits=xxx"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Lib Type"        "sh build_hitls.sh shared"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Lib Fuzzer"      "sh build_hitls.sh libfuzzer"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Help"            "sh build_hitls.sh help"
+}
+
 clean()
 {
     rm -rf ${HITLS_ROOT_DIR}/build
@@ -92,6 +111,9 @@ parse_option()
         key=${i%%=*}
         value=${i#*=}
         case "${key}" in
+            "add-options")
+                add_options="${add_options} ${value}"
+                ;;
             "no-provider")
                 dis_options="--disable feature_provider provider codecs"
                 ;;
@@ -134,15 +156,13 @@ parse_option()
                 export CC=clang
                 ;;
             "help")
-                printf "%-50s %-30s\n" "Build openHiTLS Code"                      "sh build_hitls.sh"
-                printf "%-50s %-30s\n" "Build openHiTLS Code With Gcov"            "sh build_hitls.sh gcov"
-                printf "%-50s %-30s\n" "Build openHiTLS Code With Debug"           "sh build_hitls.sh debug"
-                printf "%-50s %-30s\n" "Build openHiTLS Code With Asan"            "sh build_hitls.sh asan"
+                usage
                 exit 0
                 ;;
             *)
-                echo "${i} option is not recognized, Please run <sh build_hitls.sh> get supported options."
-                exit -1
+                echo "${i} option is not recognized, Please run <sh build_hitls.sh help> get supported options."
+                usage
+                exit 0
                 ;;
         esac
     done

@@ -157,7 +157,7 @@ int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *fr
         to->method->freeCtx(to->key);
         to->key = NULL;
     }
-
+    BSL_SAL_ReferencesFree(&(to->references));
     return PkeyCopyCtx(to, from);
 }
 

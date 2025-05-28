@@ -156,6 +156,7 @@ int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const BSL_Param *para)
     PAILLIER_FREE_PRV_KEY(ctx->prvKey);
     ctx->prvKey = newCtx->prvKey;
 
+    BSL_SAL_ReferencesFree(&(newCtx->references));
     BSL_SAL_FREE(newCtx);
     return ret;
 ERR:

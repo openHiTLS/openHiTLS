@@ -66,12 +66,17 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cd testcode/script && bash build_hitls.sh pure_c no_sctp
+      run: cd testcode/script && bash build_hitls.sh no_sctp asan gcov pure_c add-options="-DATOMIC_THREAD_LOCK"
+
+    - name: Build
+      # Build your program with the given configuration
+      working-directory: ${{github.workspace}}/build
+      run: make -j
 
     - name: Test
       working-directory: ${{github.workspace}}/testcode/script
       # Execute tests defined by the CMake configuration.
-      run: bash build_sdv.sh no-sctp asan gcov && bash execute_sdv.sh
+      run: bash build_sdv.sh no-sctp asan gcov add-options="-DATOMIC_THREAD_LOCK" && bash execute_sdv.sh
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

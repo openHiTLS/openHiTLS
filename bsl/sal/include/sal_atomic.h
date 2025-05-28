@@ -39,7 +39,7 @@ int BSL_SAL_AtomicAdd(int *val, int amount, int *ref, BSL_SAL_ThreadLockHandle l
  * memory_order_relaxed only ensures the atomicity of the current operation
  * and does not consider the synchronization between threads.
  */
-#if defined(SAL_HAVE_C11_ATOMICS) && defined(ATOMIC_INT_LOCK_FREE) && ATOMIC_INT_LOCK_FREE > 0
+#if defined(SAL_HAVE_C11_ATOMICS) && defined(ATOMIC_INT_LOCK_FREE) && ATOMIC_INT_LOCK_FREE > 0 && !defined(ATOMIC_THREAD_LOCK)
 #define SAL_USE_ATOMICS_LIB_FUNC
 typedef struct {
     atomic_int count;
@@ -61,7 +61,7 @@ static inline int BSL_SAL_AtomicDownReferences(BSL_SAL_RefCount *references, int
 }
 
 /* Atom operation mode 2, using the function provided by the GCC. */
-#elif defined(__GNUC__) && defined(__ATOMIC_RELAXED) && __GCC_ATOMIC_INT_LOCK_FREE > 0
+#elif defined(__GNUC__) && defined(__ATOMIC_RELAXED) && __GCC_ATOMIC_INT_LOCK_FREE > 0 && !defined(ATOMIC_THREAD_LOCK)
 #define SAL_USE_ATOMICS_LIB_FUNC
 typedef struct {
     int count;
@@ -84,7 +84,7 @@ static inline int BSL_SAL_AtomicDownReferences(BSL_SAL_RefCount *references, int
 }
 
 // Atom operation mode 3, using read/write locks.
-#else
+#elif defined(ATOMIC_THREAD_LOCK)
 typedef struct {
     int count;
     BSL_SAL_ThreadLockHandle lock;

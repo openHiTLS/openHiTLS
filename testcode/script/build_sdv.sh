@@ -20,6 +20,8 @@ usage()
     printf "%-05s %-30s\n" "* Script :"                                        "${BASH_SOURCE[0]}"
     printf "%-50s %-30s\n" "* Usage Option :"                                  ""
     printf "%-50s %-30s\n" "* --help|-h    : Help information."                ""
+    printf "%-50s %-30s\n" "* add-options  : Add options."                    "bash ${BASH_SOURCE[0]} add-options=xxx"
+    printf "%-50s %-30s\n" "* no-provider  : Disable provider."                "bash ${BASH_SOURCE[0]} no-provider"
     printf "%-50s %-30s\n" "* tls-debug    : Enable the debug mode."           "bash ${BASH_SOURCE[0]} tls-debug"
     printf "%-50s %-30s\n" "* no-crypto    : Custom crypto testcase."          "bash ${BASH_SOURCE[0]} no-crypto"
     printf "%-50s %-30s\n" "* no-bsl       : Custom bsl testcase."             "bash ${BASH_SOURCE[0]} no-bsl"
@@ -174,6 +176,12 @@ options()
         key=${1%%=*}
         value=${1#*=}
         case ${key} in
+            add-options)
+                CUSTOM_CFLAGS="${CUSTOM_CFLAGS} ${value}"
+                ;;
+            no-provider)
+                dis_options="--disable feature_provider provider codecs"
+                ;;
             tls-debug)
                 TLS_DEBUG=ON
                 ;;

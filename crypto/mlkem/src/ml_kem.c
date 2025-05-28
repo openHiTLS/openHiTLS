@@ -67,6 +67,11 @@ void CRYPT_ML_KEM_FreeCtx(CRYPT_ML_KEM_Ctx *ctx)
     if (ctx == NULL) {
         return;
     }
+    int ret = 0;
+    BSL_SAL_AtomicDownReferences(&(ctx->references), &ret);
+    if (ret > 0) {
+        return;
+    }
     BSL_SAL_CleanseData(ctx->dk, ctx->dkLen);
     BSL_SAL_FREE(ctx->dk);
     BSL_SAL_FREE(ctx->ek);

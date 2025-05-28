@@ -134,6 +134,7 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
     if (ret > 0) {
         return;
     }
+    BSL_SAL_ReferencesFree(&(csr->references));
     if (csr->flag == HITLS_X509_CSR_GEN_FLAG) {
         BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
         BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
