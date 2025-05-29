@@ -188,6 +188,19 @@ void CRYPT_EAL_PkeyFreeCtx(CRYPT_EAL_PkeyCtx *pkey);
  */
 int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para);
 
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Set the key parameters.
+ *
+ * @param   pkey [IN/OUT] Structure of the key pair to be set
+ * @param   param [IN] Parameter
+ *
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeySetParaEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param);
+
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Obtain the key parameter, the key parameter marked as "para" is applied for and released by the caller.

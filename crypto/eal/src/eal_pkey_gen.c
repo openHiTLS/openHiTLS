@@ -244,14 +244,6 @@ static int32_t SetRsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_RsaPara *rsaPar
     BSL_Param param[] = {
         {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, rsaPara->e, rsaPara->eLen, 0},
         {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
-#ifdef HITLS_CRYPTO_ACVP_TESTS
-        {CRYPT_PARAM_RSA_XP, BSL_PARAM_TYPE_OCTETS, rsaPara->xp, rsaPara->xpLen, 0},
-        {CRYPT_PARAM_RSA_XP1, BSL_PARAM_TYPE_OCTETS, rsaPara->xp1, rsaPara->xp1Len, 0},
-        {CRYPT_PARAM_RSA_XP2, BSL_PARAM_TYPE_OCTETS, rsaPara->xp2, rsaPara->xp2Len, 0},
-        {CRYPT_PARAM_RSA_XQ, BSL_PARAM_TYPE_OCTETS, rsaPara->xq, rsaPara->xqLen, 0},
-        {CRYPT_PARAM_RSA_XQ1, BSL_PARAM_TYPE_OCTETS, rsaPara->xq1, rsaPara->xq1Len, 0},
-        {CRYPT_PARAM_RSA_XQ2, BSL_PARAM_TYPE_OCTETS, rsaPara->xq2, rsaPara->xq2Len, 0},
-#endif
         BSL_PARAM_END
     };
     return pkey->method->setPara(pkey->key, param);
@@ -445,6 +437,25 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     ret = CvtBslParamAndSetParams(pkey, para);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    }
+    return ret;
+}
+
+int32_t CRYPT_EAL_PkeySetParaEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param)
+{
+    if (pkey == NULL || param == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (pkey->method == NULL || pkey->method->setPara == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+
+    int32_t ret = pkey->method->setPara(pkey->key, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }

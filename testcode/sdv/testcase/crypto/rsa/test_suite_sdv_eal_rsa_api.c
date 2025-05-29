@@ -1512,6 +1512,7 @@ void SDV_CRYPTO_RSA_SEED_KEYGEN_TC001(Hex *xp, Hex *xp1, Hex *xp2, Hex *xq, Hex 
 #ifdef HITLS_CRYPTO_ACVP_TESTS
     TestMemInit();
     uint8_t e[] = {1, 0, 1};
+    uint32_t bits = 1024;
     
     uint8_t prvD1[600];
     uint8_t prvN1[600];
@@ -1527,40 +1528,28 @@ void SDV_CRYPTO_RSA_SEED_KEYGEN_TC001(Hex *xp, Hex *xp1, Hex *xp2, Hex *xq, Hex 
     CRYPT_EAL_PkeyCtx *pkey2 = NULL;
     
     // Initialize two identical parameter structures
-    CRYPT_EAL_PkeyPara para1 = {0};
-    CRYPT_EAL_PkeyPara para2 = {0};
-    
-    para1.id = para2.id = CRYPT_PKEY_RSA;
-    
-    // Set RSA parameters
-    para1.para.rsaPara.e = para2.para.rsaPara.e = e;
-    para1.para.rsaPara.eLen = para2.para.rsaPara.eLen = 3;
-    para1.para.rsaPara.bits = para2.para.rsaPara.bits = 1024;
-    
-    // Set seed parameters using the passed Hex parameters
-    para1.para.rsaPara.xp = para2.para.rsaPara.xp = xp->x;
-    para1.para.rsaPara.xpLen = para2.para.rsaPara.xpLen = xp->len;
-    para1.para.rsaPara.xp1 = para2.para.rsaPara.xp1 = xp1->x;
-    para1.para.rsaPara.xp1Len = para2.para.rsaPara.xp1Len = xp1->len;
-    para1.para.rsaPara.xp2 = para2.para.rsaPara.xp2 = xp2->x;
-    para1.para.rsaPara.xp2Len = para2.para.rsaPara.xp2Len = xp2->len;
-    para1.para.rsaPara.xq = para2.para.rsaPara.xq = xq->x;
-    para1.para.rsaPara.xqLen = para2.para.rsaPara.xqLen = xq->len;
-    para1.para.rsaPara.xq1 = para2.para.rsaPara.xq1 = xq1->x;
-    para1.para.rsaPara.xq1Len = para2.para.rsaPara.xq1Len = xq1->len;
-    para1.para.rsaPara.xq2 = para2.para.rsaPara.xq2 = xq2->x;
-    para1.para.rsaPara.xq2Len = para2.para.rsaPara.xq2Len = xq2->len;
+    BSL_Param param[] = {
+        {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, e, 3, 0},
+        {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        {CRYPT_PARAM_RSA_XP, BSL_PARAM_TYPE_OCTETS, xp->x, xp->len, 0},
+        {CRYPT_PARAM_RSA_XP1, BSL_PARAM_TYPE_OCTETS, xp1->x, xp1->len, 0},
+        {CRYPT_PARAM_RSA_XP2, BSL_PARAM_TYPE_OCTETS, xp2->x, xp2->len, 0},
+        {CRYPT_PARAM_RSA_XQ, BSL_PARAM_TYPE_OCTETS, xq->x, xq->len, 0},
+        {CRYPT_PARAM_RSA_XQ1, BSL_PARAM_TYPE_OCTETS, xq1->x, xq1->len, 0},
+        {CRYPT_PARAM_RSA_XQ2, BSL_PARAM_TYPE_OCTETS, xq2->x, xq2->len, 0},
+        BSL_PARAM_END
+    };
     
     // Create the first context and generate the key
     pkey1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey1 != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey1, &para1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(pkey1, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey1), CRYPT_SUCCESS);
     
     // Create the second context and generate the key
     pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey2 != NULL);
-    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey2, &para2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(pkey2, param), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey2), CRYPT_SUCCESS);
     
     // Get private keys

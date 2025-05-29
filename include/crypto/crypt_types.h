@@ -431,20 +431,6 @@ typedef struct {   /**< This parameter cannot be NULL and is determined by the u
     uint8_t *e;    /**< Para Parameter e */
     uint32_t eLen; /**< Length of para e*/
     uint32_t bits; /**< Bits of para, FIPS 186-5 dose not support generation and use of keys with odd bits. */
-#ifdef HITLS_CRYPTO_ACVP_TESTS
-    uint8_t *xp;    /**< Main seed for prime p */
-    uint32_t xpLen; /**< Length of seed xp */
-    uint8_t *xp1;   /**< Auxiliary seed 1 for prime p */
-    uint32_t xp1Len; /**< Length of seed xp1 */
-    uint8_t *xp2;   /**< Auxiliary seed 2 for prime p */
-    uint32_t xp2Len; /**< Length of seed xp2 */
-    uint8_t *xq;    /**< Main seed for prime q */
-    uint32_t xqLen; /**< Length of seed xq */
-    uint8_t *xq1;   /**< Auxiliary seed 1 for prime q */
-    uint32_t xq1Len; /**< Length of seed xq1 */
-    uint8_t *xq2;   /**< Auxiliary seed 2 for prime q */
-    uint32_t xq2Len; /**< Length of seed xq2 */
-#endif
 } CRYPT_RsaPara;
 
 /**
