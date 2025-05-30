@@ -133,6 +133,9 @@ void CRYPT_SM2_FreeCtx(CRYPT_SM2_Ctx *ctx)
     BSL_SAL_FREE(ctx->userId);
     BN_Destroy(ctx->r);
     ECC_FreePoint(ctx->pointR);
+#ifdef HITLS_CRYPTO_ACVP_TESTS
+    BN_Destroy(ctx->paraEx.k);
+#endif
     BSL_SAL_FREE(ctx);
     return;
 }
@@ -905,6 +908,11 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_SET_SM2_R:
             ret = Sm2SetR(ctx, val, len);
             break;
+#ifdef HITLS_CRYPTO_ACVP_TESTS
+        case CRYPT_CTRL_SET_SM2_K:
+            ret = CRYPT_SM2_SetK(ctx, val, len);
+            break;
+#endif
         case CRYPT_CTRL_SET_SM2_RANDOM:
             ret = Sm2SetRandom(ctx, val, len);
             break;

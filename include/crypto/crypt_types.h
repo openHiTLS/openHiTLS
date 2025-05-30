@@ -638,6 +638,7 @@ typedef enum {
     CRYPT_CTRL_SET_SM2_R,               /* SM2 set the R value. */
     CRYPT_CTRL_SET_SM2_RANDOM,          /* SM2 set the r value. */
     CRYPT_CTRL_SET_SM2_PKG,             /* SM2 uses the PKG process. */
+    CRYPT_CTRL_SET_SM2_K,               /* SM2 set the K value. */
 
     CRYPT_CTRL_SET_ECC_POINT_FORMAT,      /**< ECC PKEY set the point format. For the point format,
                                              see CRYPT_PKEY_PointFormat. */

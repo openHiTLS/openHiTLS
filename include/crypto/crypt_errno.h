@@ -408,6 +408,7 @@ enum CRYPT_ERROR {
     CRYPT_SM2_DECODE_FAIL,                            /**< Data decoding fails, the data does not meet
                                                             the decoding requirements. */
     CRYPT_SM2_ID_TOO_LARGE,                           /**< User id to large. */
+    CRYPT_SM2_K_REPEAT_SET_ERROR,                     /**< the random k is set repeatedly*/
 
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01210001,        /**< Unsupport the KDFTLS12 algorithm. */
     CRYPT_KDFTLS12_PARAM_ERROR,

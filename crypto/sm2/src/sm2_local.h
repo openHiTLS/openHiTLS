@@ -39,6 +39,12 @@ extern "C" {
 #define SM2_TWO_POINT_COORDINATE_LEN 128
 #define SM2_X_LEN 32
 
+#ifdef HITLS_CRYPTO_ACVP_TESTS
+typedef struct {
+    BN_BigNum *k; // random k
+} SM2_ParaEx;
+#endif
+
 /* SM2 key context */
 struct SM2_Ctx {
     ECC_Pkey *pkey;
@@ -53,6 +59,10 @@ struct SM2_Ctx {
     uint8_t sumSend[SM3_MD_SIZE]; // Hash value sent to the peer end
     uint8_t isSumValid; // Indicates whether the checksum is valid. 1: valid; 0: invalid.
     BSL_SAL_RefCount references;
+
+#ifdef HITLS_CRYPTO_ACVP_TESTS
+    SM2_ParaEx paraEx;
+#endif
 };
 
 /**
@@ -84,6 +94,18 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
  */
 int32_t KdfGmt0032012(uint8_t *out, const uint32_t *outlen, const uint8_t *z, uint32_t zlen,
     const EAL_MdMethod *hashMethod);
+
+#ifdef HITLS_CRYPTO_ACVP_TESTS
+/**
+ * @ingroup sm2
+ * @brief set random k for the sm2 context
+ *
+ * @param ctx [IN] Source SM2 context
+ * @param para [IN] random k
+ */
+int32_t CRYPT_SM2_SetK(CRYPT_SM2_Ctx *ctx, uint8_t *val, uint32_t len);
+#endif
+
 #endif
 
 #ifdef __cplusplus

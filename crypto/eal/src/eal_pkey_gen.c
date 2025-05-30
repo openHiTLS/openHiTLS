@@ -379,7 +379,7 @@ static int32_t CvtBslParamAndSetParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_
         case CRYPT_PKEY_PAILLIER:
             ret = SetPaillierParams(pkey, &para->para.paillierPara);
             break;
-         case CRYPT_PKEY_ELGAMAL:
+        case CRYPT_PKEY_ELGAMAL:
             ret = SetElGamalParams(pkey, &para->para.elgamalPara);
             break;
         case CRYPT_PKEY_ED25519:
