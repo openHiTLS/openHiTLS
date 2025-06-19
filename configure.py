@@ -92,6 +92,8 @@ def get_cfg_args():
                             help='compile temp directory')
         parser.add_argument('--output_dir', metavar='dir', type=str, default=os.path.join(srcdir, 'output'),
                             help='compile output directory')
+        parser.add_argument('--hkey', metavar='hkey', type=str, default="b8fc4931453af3285f0f",
+                            help='Key used by the HMAC.')
         # Configuration file
         parser.add_argument('--feature_config', metavar='file_path', type=str, default='',
                             help='Configuration file of the compilation features.')
@@ -273,6 +275,7 @@ class CMakeGenerator:
         self._asm_type = self._cfg_custom_feature.asm_type
 
         self._platform = 'linux'
+        self._hmac = False
 
     @staticmethod
     def _get_common_include(modules: list):
@@ -421,8 +424,13 @@ class CMakeGenerator:
         return cmake
 
     def _get_definitions(self):
-        return '"${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_S=\'\\"%s\\"\' -DOPENHITLS_VERSION_I=%lu %s"' % (
-            self._args.hitls_version, self._args.hitls_version_num, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'')
+        ret = '"${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_S=\'\\"%s\\"\' -DOPENHITLS_VERSION_I=%lu %s' % (
+                self._args.hitls_version, self._args.hitls_version_num, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'')
+        if self._hmac:
+            icv_key = '-DCMVP_INTEGRITYKEY=\'\\"%s\\"\'' % self._args.hkey
+            ret += ' %s' % icv_key
+        ret += '"'
+        return ret
 
     def _gen_lib_cmake(self, lib_name, inc_dirs, lib_obj, macros):
         lang = self._cfg_feature.libs[lib_name].get('lang', 'C')

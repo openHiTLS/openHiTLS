@@ -52,17 +52,19 @@ static const CMVP_EcdhVector ECDH_VECTOR = {
     .mdId = CRYPT_MD_SHA224
 };
 
-static bool GetPkey(bool isBob, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub, CRYPT_EAL_PkeyPub *pub,
-    CRYPT_EAL_PkeyPrv *prv)
+static bool GetPkey(void *libCtx, const char *attrName, bool isBob, CRYPT_EAL_PkeyCtx **pkeyPrv,
+    CRYPT_EAL_PkeyCtx **pkeyPub, CRYPT_EAL_PkeyPub *pub, CRYPT_EAL_PkeyPrv *prv)
 {
     bool ret = false;
     uint8_t *x = NULL;
     uint8_t *y = NULL;
     uint32_t xLen, yLen;
 
-    *pkeyPrv = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    *pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDH, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    *pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDH, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     prv->id = CRYPT_PKEY_ECDH;
@@ -104,7 +106,7 @@ EXIT:
     return ret;
 }
 
-bool CRYPT_CMVP_SelftestEcdh(void)
+static bool CRYPT_CMVP_SelftestEcdhInternal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     CRYPT_EAL_PkeyCtx *bobPrvPkey = NULL;
@@ -122,8 +124,8 @@ bool CRYPT_CMVP_SelftestEcdh(void)
 
     expShareKey = CMVP_StringsToBins(ECDH_VECTOR.shareKey, &expShareKeyLen);
     GOTO_EXIT_IF(expShareKey == NULL, CRYPT_CMVP_COMMON_ERR);
-    GOTO_EXIT_IF(GetPkey(true, &bobPrvPkey, &bobPubPkey, &bobPub, &bobPrv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(GetPkey(false, &alicePrvPkey, &alicePubPkey, &alicePub, &alicePrv) != true,
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, true, &bobPrvPkey, &bobPubPkey, &bobPub, &bobPrv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, false, &alicePrvPkey, &alicePubPkey, &alicePub, &alicePrv) != true,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
     shareKeyLen = CRYPT_EAL_PkeyGetKeyLen(bobPrvPkey);
     shareKey = BSL_SAL_Malloc(shareKeyLen);
@@ -151,6 +153,16 @@ EXIT:
     BSL_SAL_Free(shareKey);
     BSL_SAL_Free(expShareKey);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestEcdh(void)
+{
+    return CRYPT_CMVP_SelftestEcdhInternal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderEcdh(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestEcdhInternal(libCtx, attrName);
 }
 
 #endif // HITLS_CRYPTO_CMVP

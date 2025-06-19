@@ -228,7 +228,6 @@ int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, ctx->id, ret);
         return ret;
     }
-    EAL_EventReport(CRYPT_EVENT_KDF, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
 
@@ -269,7 +268,6 @@ void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
         BSL_SAL_FREE(ctx);
         return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->id, CRYPT_SUCCESS);
     ctx->method->freeCtx(ctx->data);
     BSL_SAL_FREE(ctx->method);
     BSL_SAL_FREE(ctx);

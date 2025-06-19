@@ -222,7 +222,7 @@ const CMVP_MAC_VECTOR *FindMacVectorById(CRYPT_MAC_AlgId id)
     return NULL;
 }
 
-bool CRYPT_CMVP_SelftestMac(CRYPT_MAC_AlgId id)
+static bool CRYPT_CMVP_SelftestMacInternal(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id)
 {
     bool ret = false;
     CRYPT_EAL_MacCtx *ctx = NULL;
@@ -240,7 +240,7 @@ bool CRYPT_CMVP_SelftestMac(CRYPT_MAC_AlgId id)
     }
 
     GOTO_EXIT_IF(!GetData(macVec, &key, &msg, &expectMac, &iv), CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    ctx = CRYPT_EAL_MacNewCtx(id);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName) : CRYPT_EAL_MacNewCtx(id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     if (macVec->type == MAC_TYPE_GMAC) {
         macLen = expectMac.len;
@@ -266,6 +266,16 @@ EXIT:
     CRYPT_EAL_MacDeinit(ctx);
     CRYPT_EAL_MacFreeCtx(ctx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestMac(CRYPT_MAC_AlgId id)
+{
+    return CRYPT_CMVP_SelftestMacInternal(NULL, NULL, id);
+}
+
+bool CRYPT_CMVP_SelftestProviderMac(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id)
+{
+    return CRYPT_CMVP_SelftestMacInternal(libCtx, attrName, id);
 }
 
 #endif

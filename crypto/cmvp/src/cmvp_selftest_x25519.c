@@ -81,7 +81,7 @@ EXIT:
     return false;
 }
 
-bool CRYPT_CMVP_SelftestX25519(void)
+static bool CRYPT_CMVP_SelftestX25519Internal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     CRYPT_Data expShare = { NULL, 0 };
@@ -98,9 +98,11 @@ bool CRYPT_CMVP_SelftestX25519(void)
     CRYPT_EAL_PkeyPub bobPub;
     bobPub.key.curve25519Pub.data = NULL;
 
-    alice = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    alice = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_X25519, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
     GOTO_EXIT_IF(alice == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    bob = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    bob = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_X25519, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
     GOTO_EXIT_IF(bob == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetKey(&alicePri, &alicePub, &bobPri, &bobPub) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetData(&expShare, &share1, &share2) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -131,6 +133,16 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(alice);
     CRYPT_EAL_PkeyFreeCtx(bob);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestX25519(void)
+{
+    return CRYPT_CMVP_SelftestX25519Internal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderX25519(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestX25519Internal(libCtx, attrName);
 }
 
 #endif

@@ -65,6 +65,12 @@ int32_t CRYPT_EAL_ProviderGetFuncsAndMgrCtx(CRYPT_EAL_LibCtx *libCtx, int32_t op
 CRYPT_EAL_LibCtx* CRYPT_EAL_GetGlobalLibCtx(void);
 
 int32_t CRYPT_EAL_ProviderQuery(CRYPT_EAL_ProvMgrCtx *ctx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos);
+
+typedef int32_t (*SelftestCb)(void *provCtx, BSL_Param *params);
+
+int32_t CRYPT_EAL_SelftestOperation(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param);
+
+int32_t CRYPT_EAL_SelftestSetCb(CRYPT_EAL_ProvMgrCtx *mgrCtx, SelftestCb callback);
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */

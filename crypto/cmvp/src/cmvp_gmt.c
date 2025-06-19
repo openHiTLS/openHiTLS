@@ -40,7 +40,7 @@ static const uint32_t CIPHER_SM4[] = {
 
 int32_t CMVP_GmtDep(void)
 {
-    return CMVP_CheckIntegrity(CRYPT_MAC_HMAC_SM3);
+    return CMVP_CheckIntegrity(NULL, NULL, CRYPT_MAC_HMAC_SM3);
 }
 
 int32_t CMVP_GmtModeSet(CRYPT_CMVP_MODE mode)

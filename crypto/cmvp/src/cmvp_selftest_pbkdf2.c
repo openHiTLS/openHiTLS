@@ -67,7 +67,7 @@ static const CMVP_PBKDF2_VECTOR *FindVectorById(CRYPT_MAC_AlgId id)
     return NULL;
 }
 
-bool CRYPT_CMVP_SelftestPbkdf2(CRYPT_MAC_AlgId id)
+static bool CRYPT_CMVP_SelftestPbkdf2Internal(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id)
 {
     (void)id;
     bool ret = false;
@@ -90,7 +90,8 @@ bool CRYPT_CMVP_SelftestPbkdf2(CRYPT_MAC_AlgId id)
     GOTO_EXIT_IF(expOut == NULL, CRYPT_CMVP_ERR_CSP_EXIST);
     out = BSL_SAL_Malloc(expOutLen);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
-    ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_PBKDF2, attrName) :
+        CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     BSL_Param param[5] = {
         {CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id), 0},
@@ -108,6 +109,16 @@ EXIT:
     BSL_SAL_Free(out);
     CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestPbkdf2(CRYPT_MAC_AlgId id)
+{
+    return CRYPT_CMVP_SelftestPbkdf2Internal(NULL, NULL, id);
+}
+
+bool CRYPT_CMVP_SelftestProviderPbkdf2(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id)
+{
+    return CRYPT_CMVP_SelftestPbkdf2Internal(libCtx, attrName, id);
 }
 
 #endif

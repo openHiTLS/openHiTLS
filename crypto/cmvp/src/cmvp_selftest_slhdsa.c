@@ -54,16 +54,19 @@ static const CMVP_SlhdsaSignVector SLHDSA_VECTOR[] = {
     }
 };
 
-static int32_t GetPkey(const CMVP_SlhdsaSignVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
+static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSignVector *vector,
+    CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
 {
     int32_t ret = CRYPT_CMVP_ERR_ALGO_SELFTEST;
     CRYPT_EAL_PkeyPrv prvKey = { 0 };
     uint8_t *rand = NULL;
     uint8_t *vectorKey = NULL;
     uint8_t *context = NULL;
-    *pkeyPrv = CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(vector->algId);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(vector->algId);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     ret = CRYPT_EAL_PkeySetParaById(*pkeyPrv, vector->type);
@@ -106,7 +109,7 @@ EXIT:
     return ret;
 }
 
-bool TestSlhdsaSignVerify(const CMVP_SlhdsaSignVector *vector)
+static bool TestSlhdsaSignVerify(void *libCtx, const char *attrName, const CMVP_SlhdsaSignVector *vector)
 {
     bool ret = false;
     uint8_t *sign = NULL;
@@ -118,7 +121,7 @@ bool TestSlhdsaSignVerify(const CMVP_SlhdsaSignVector *vector)
     CRYPT_EAL_PkeyCtx *pkeyPrv = NULL;
     CRYPT_EAL_PkeyCtx *pkeyPub = NULL;
 
-    GOTO_EXIT_IF(GetPkey(vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     msg = CMVP_StringsToBins(vector->msg, &msgLen);
     GOTO_EXIT_IF(msg == NULL, CRYPT_CMVP_COMMON_ERR);
     signVec = CMVP_StringsToBins(vector->sig, &signVecLen);
@@ -149,7 +152,12 @@ EXIT:
 
 bool CRYPT_CMVP_SelftestSlhdsaSignVerify(void)
 {
-    bool ret = TestSlhdsaSignVerify(&SLHDSA_VECTOR[0]);
+    bool ret = TestSlhdsaSignVerify(NULL, NULL, &SLHDSA_VECTOR[0]);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(void *libCtx, const char *attrName)
+{
+    return TestSlhdsaSignVerify(libCtx, attrName, &SLHDSA_VECTOR[0]);
 }
 #endif

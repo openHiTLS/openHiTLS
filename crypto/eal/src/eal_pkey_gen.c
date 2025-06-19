@@ -205,7 +205,6 @@ void CRYPT_EAL_PkeyFreeCtx(CRYPT_EAL_PkeyCtx *pkey)
     if (ref > 0) {
         return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_PKEY, pkey->id, CRYPT_SUCCESS);
     BSL_SAL_ReferencesFree(&(pkey->references));
     pkey->method->freeCtx(pkey->key);
     BSL_SAL_FREE(pkey->method);
@@ -514,7 +513,14 @@ int32_t CRYPT_EAL_PkeyGen(CRYPT_EAL_PkeyCtx *pkey)
         return ret;
     }
 
-    EAL_EventReport(CRYPT_EVENT_GEN, CRYPT_ALGO_PKEY, pkey->id, CRYPT_SUCCESS);
+    if (pkey->method->ctrl != NULL) {
+        ret = pkey->method->ctrl(pkey->key, CRYPT_CTRL_PCT_TEST, pkey, 0);
+        if (ret == CRYPT_CMVP_ERR_PAIRWISETEST) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+            return ret;
+        }
+        ret = CRYPT_SUCCESS;
+    }
     return CRYPT_SUCCESS;
 }
 
@@ -646,7 +652,6 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_SETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 
@@ -763,7 +768,6 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_SETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 
@@ -1015,7 +1019,6 @@ int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_GETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 
@@ -1206,7 +1209,6 @@ int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k
             ret = CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_GETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 

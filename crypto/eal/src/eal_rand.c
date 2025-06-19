@@ -229,7 +229,6 @@ void EAL_RandDeinit(CRYPT_EAL_RndCtx *ctx)
     }
 
     ctx->working = false;
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_RAND, ctx->id, CRYPT_SUCCESS);
     MethFreeCtx(ctx);
     (void)BSL_SAL_ThreadUnlock(lock);
     BSL_SAL_ThreadLockFree(lock); // free the lock resource
@@ -284,7 +283,6 @@ int32_t EAL_DrbgbytesWithAdin(CRYPT_EAL_RndCtx *ctx, uint8_t *byte, uint32_t len
     }
 
     ret = ctx->meth->gen(ctx->ctx, byte, len, addin, addinLen, NULL);
-    EAL_EventReport((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_RANDGEN : CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, ret);
     RAND_UNLOCK(ctx);
 
     return ret;

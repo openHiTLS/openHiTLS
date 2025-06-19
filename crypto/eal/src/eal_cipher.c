@@ -233,8 +233,7 @@ int32_t CRYPT_EAL_CipherInit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *key, uint3
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
     }
-    
-    EAL_EventReport(CRYPT_EVENT_SETSSP, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_SUCCESS);
+
     ctx->states = EAL_CIPHER_STATE_INIT;
     return CRYPT_SUCCESS;
 }
@@ -257,7 +256,6 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
     
     // Restore the state to the state after the new is successful.
     ctx->states = EAL_CIPHER_STATE_NEW;
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_SUCCESS);
 }
 
 // no need for IV, the value can be set to NULL
@@ -288,7 +286,6 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
     
     // Reset the states.
     ctx->states = EAL_CIPHER_STATE_INIT;
-    EAL_EventReport(CRYPT_EVENT_SETSSP, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
 

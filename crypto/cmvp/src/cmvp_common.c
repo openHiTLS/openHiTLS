@@ -145,13 +145,13 @@ EXIT:
     return NULL;
 }
 
-int32_t CMVP_CheckIntegrity(CRYPT_MAC_AlgId macId)
+int32_t CMVP_CheckIntegrity(void *libCtx, const char *attrName, CRYPT_MAC_AlgId macId)
 {
     int32_t ret = CRYPT_CMVP_ERR_INTEGRITY;
     char *libCryptoPath = NULL;
     char *libBslPath = NULL;
 
-    if (CRYPT_CMVP_SelftestMac(macId) != true) {
+    if (CRYPT_CMVP_SelftestProviderMac(libCtx, attrName, macId) != true) {
         return CRYPT_CMVP_ERR_ALGO_SELFTEST;
     }
     libCryptoPath = CMVP_GetLibPath(CMVP_IntegrityHmac);

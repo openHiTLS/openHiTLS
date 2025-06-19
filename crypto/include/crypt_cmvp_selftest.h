@@ -27,49 +27,84 @@
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
 
-
 bool CRYPT_CMVP_SelftestDrbg(CRYPT_RAND_AlgId id);
+
+bool CRYPT_CMVP_SelftestProviderDrbg(void *libCtx, const char *attrName, CRYPT_RAND_AlgId id);
 
 bool CRYPT_CMVP_SelftestMd(CRYPT_MD_AlgId id);
 
+bool CRYPT_CMVP_SelftestProviderMd(void *libCtx, const char *attrName, CRYPT_MD_AlgId id);
+
 bool CRYPT_CMVP_SelftestRsa(void);
+
+bool CRYPT_CMVP_SelftestProviderRsa(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AlgId id);
 
+bool CRYPT_CMVP_SelftestProviderCipher(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id);
+
 bool CRYPT_CMVP_SelftestChacha20poly1305(void);
+
+bool CRYPT_CMVP_SelftestProviderChacha20poly1305(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestDh(void);
 
+bool CRYPT_CMVP_SelftestProviderDh(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestDsa(void);
+
+bool CRYPT_CMVP_SelftestProviderDsa(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestEd25519(void);
 
+bool CRYPT_CMVP_SelftestProviderEd25519(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestHkdf(void);
+
+bool CRYPT_CMVP_SelftestProviderHkdf(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestMac(CRYPT_MAC_AlgId id);
 
+bool CRYPT_CMVP_SelftestProviderMac(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id);
+
 bool CRYPT_CMVP_SelftestPbkdf2(CRYPT_MAC_AlgId id);
+
+bool CRYPT_CMVP_SelftestProviderPbkdf2(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id);
 
 bool CRYPT_CMVP_SelftestScrypt(void);
 
+bool CRYPT_CMVP_SelftestProviderScrypt(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestKdfTls12(void);
+
+bool CRYPT_CMVP_SelftestProviderKdfTls12(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestX25519(void);
 
+bool CRYPT_CMVP_SelftestProviderX25519(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestEcdsa(void);
+
+bool CRYPT_CMVP_SelftestProviderEcdsa(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestEcdh(void);
 
+bool CRYPT_CMVP_SelftestProviderEcdh(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestSM2(void);
 
-int32_t CRYPT_CMVP_SelftestGM(void);
-
-bool CRYPT_CMVP_SelftestCipherKat(void);
+bool CRYPT_CMVP_SelftestProviderSM2(void *libCtx, const char *attrName);
 
 bool CRYPT_CMVP_SelftestMlkemEncapsDecaps(void);
 
+bool CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestMldsaSignVerify(void);
 
+bool CRYPT_CMVP_SelftestProviderMldsaSignVerify(void *libCtx, const char *attrName);
+
 bool CRYPT_CMVP_SelftestSlhdsaSignVerify(void);
+
+bool CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(void *libCtx, const char *attrName);
 
 #endif

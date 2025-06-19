@@ -363,6 +363,17 @@ static int32_t CRYPT_ML_KEM_GetLen(const CRYPT_ML_KEM_Ctx *ctx, GetLenFunc func,
     return CRYPT_SUCCESS;
 }
 
+static int32_t MlKemCleanPubKey(CRYPT_ML_KEM_Ctx *ctx)
+{
+    if (ctx->ek != NULL) {
+        BSL_SAL_CleanseData(ctx->ek, ctx->ekLen);
+        BSL_SAL_FREE(ctx->ek);
+        ctx->ek = NULL;
+        ctx->ekLen = 0;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -371,6 +382,9 @@ int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_
     }
     if (opt == CRYPT_CTRL_GET_SECBITS) {
         return CRYPT_ML_KEM_GetLen(ctx, (GetLenFunc)CRYPT_ML_KEM_GetSecBits, val, len);
+    }
+    if (opt == CRYPT_CTRL_CLEAN_PUB_KEY) {
+        return MlKemCleanPubKey(ctx);
     }
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

@@ -28,6 +28,7 @@
 #include "crypt_eal_implprovider.h"
 #include "bsl_list.h"
 #include "crypt_drbg_local.h"
+#include "crypt_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +49,8 @@ struct EAL_ProviderMgrCtx {
     CRYPT_EAL_ProvQueryCb provQueryCb;
     CRYPT_EAL_ProvCtrlCb provCtrlCb;
     CRYPT_EAL_ProvGetCapsCb provGetCap;
+
+    SelftestCb selftestCb;
 };
 
 int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param,

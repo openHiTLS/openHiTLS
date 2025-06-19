@@ -379,7 +379,8 @@ EXIT:
     return CRYPT_CMVP_ERR_ALGO_SELFTEST;
 }
 
-static CRYPT_EAL_RndCtx *CMVP_DrbgInit(const CMVP_DRBG_VECTOR *drbgVec, CMVP_DRBG_SEEDCTX *seedCtx)
+static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const CMVP_DRBG_VECTOR *drbgVec,
+    CMVP_DRBG_SEEDCTX *seedCtx)
 {
     CRYPT_EAL_RndCtx *ctx = NULL;
     uint8_t *pers = NULL;
@@ -394,7 +395,18 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(const CMVP_DRBG_VECTOR *drbgVec, CMVP_DRB
     method.cleanEntropy = CMVP_DrbgCleanData;
     method.getNonce = CMVP_DrbgGetNonce;
     method.cleanNonce = CMVP_DrbgCleanData;
-    ctx = CRYPT_EAL_DrbgNew(drbgVec->id, &method, seedCtx);
+
+    if (libCtx != NULL) {
+        BSL_Param param[6] = {0};
+        (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0);
+        (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.getEntropy, 0);
+        (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.cleanEntropy, 0);
+        (void)BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.getNonce, 0);
+        (void)BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.cleanNonce, 0);
+        ctx = CRYPT_EAL_ProviderDrbgNewCtx(libCtx, drbgVec->id, attrName, param);
+    } else {
+        ctx = CRYPT_EAL_DrbgNew(drbgVec->id, &method, seedCtx);
+    }
     GOTO_EXIT_IF(ctx == NULL,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_DrbgInstantiate(ctx, pers, persLen) != CRYPT_SUCCESS,  CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -462,7 +474,7 @@ const CMVP_DRBG_VECTOR *FindDrbgVectorById(CRYPT_RAND_AlgId id)
     return NULL;
 }
 
-bool CRYPT_CMVP_SelftestDrbg(CRYPT_RAND_AlgId id)
+static bool CRYPT_CMVP_SelftestDrbgInternal(void *libCtx, const char *attrName, CRYPT_RAND_AlgId id)
 {
     bool ret = false;
     CRYPT_EAL_RndCtx *ctx = NULL;
@@ -480,7 +492,7 @@ bool CRYPT_CMVP_SelftestDrbg(CRYPT_RAND_AlgId id)
     g_currentTestVector = drbgVec;
 
     GOTO_EXIT_IF(!GetData(drbgVec, &expectRand, &adinSeed, &adin1, &adin2), CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    ctx = CMVP_DrbgInit(drbgVec, &seedCtx);
+    ctx = CMVP_DrbgInit(libCtx, attrName, drbgVec, &seedCtx);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_DrbgSeedWithAdin(ctx, adinSeed.data, adinSeed.len) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -494,6 +506,16 @@ EXIT:
     CRYPT_EAL_DrbgDeinit(ctx);
     FreeData(rand, expectRand.data, adinSeed.data, adin1.data, adin2.data);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestDrbg(CRYPT_RAND_AlgId id)
+{
+    return CRYPT_CMVP_SelftestDrbgInternal(NULL, NULL, id);
+}
+
+bool CRYPT_CMVP_SelftestProviderDrbg(void *libCtx, const char *attrName, CRYPT_RAND_AlgId id)
+{
+    return CRYPT_CMVP_SelftestDrbgInternal(libCtx, attrName, id);
 }
 
 #endif

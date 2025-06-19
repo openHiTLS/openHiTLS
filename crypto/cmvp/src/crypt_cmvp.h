@@ -36,6 +36,25 @@
 #define CRYPT_CMVP_GM_MAC (1 << 4)
 #define CRYPT_CMVP_GM_PBKDF (1 << 5)
 
+typedef void* (*CmvpProvNewCtx)(void *provCtx);
+typedef const char* (*CmvpGetVersion)(void *ctx);
+typedef int32_t (*CmvpSelftest)(void *ctx, int32_t type);
+typedef void (*CmvpFreeCtx)(void *ctx);
+
+typedef struct {
+    CmvpProvNewCtx provNewCtx;
+    CmvpGetVersion getVersion;
+    CmvpSelftest selftest;
+    CmvpFreeCtx freeCtx;
+} EAL_CmvpSelftestMethod;
+
+struct EAL_SelftestCtx {
+    bool isProvider;
+    EAL_CmvpSelftestMethod *method;
+    void *data;
+    uint32_t state;
+    int32_t id;
+};
 
 typedef enum {
     CRYPT_CMVP_MODE_NONAPPROVED,

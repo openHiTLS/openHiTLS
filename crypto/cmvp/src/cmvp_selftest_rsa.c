@@ -176,7 +176,7 @@ EXIT:
     return false;
 }
 
-static bool RsaSelftestSign(int32_t id)
+static bool RsaSelftestSign(void *libCtx, const char *attrName, int32_t id)
 {
     bool ret = false;
     uint8_t *salt = NULL;
@@ -193,7 +193,8 @@ static bool RsaSelftestSign(int32_t id)
     expectSign = CMVP_StringsToBins(RSA_VECTOR[id].sign, &expectSignLen);
     GOTO_EXIT_IF(expectSign == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    pkey = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     GOTO_EXIT_IF(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetPrvKey(RSA_VECTOR[id], &prv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_PkeySetPrv(pkey, &prv) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -226,7 +227,7 @@ EXIT:
     return ret;
 }
 
-static bool RsaSelftestVerify(int32_t id)
+static bool RsaSelftestVerify(void *libCtx, const char *attrName, int32_t id)
 {
     bool ret = false;
     uint8_t *salt = NULL;
@@ -242,7 +243,8 @@ static bool RsaSelftestVerify(int32_t id)
     sign = CMVP_StringsToBins(RSA_VECTOR[id].sign, &signLen);
     GOTO_EXIT_IF(sign == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    pkey = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
     GOTO_EXIT_IF(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetPubKey(RSA_VECTOR[id], &pub) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_PkeySetPub(pkey, &pub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -323,12 +325,23 @@ EXIT:
     return ret;
 }
 
+bool CRYPT_CMVP_SelftestProviderRsa(void *libCtx, const char *attrName)
+{
+    GOTO_EXIT_IF(RsaSelftestSign(libCtx, attrName, PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestVerify(libCtx, attrName, PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestSign(libCtx, attrName, PSS_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestVerify(libCtx, attrName, PSS_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    return true;
+EXIT:
+    return false;
+}
+
 bool CRYPT_CMVP_SelftestRsa(void)
 {
-    GOTO_EXIT_IF(RsaSelftestSign(PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(RsaSelftestVerify(PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(RsaSelftestSign(PSS_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(RsaSelftestVerify(PSS_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestSign(NULL, NULL, PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestVerify(NULL, NULL, PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestSign(NULL, NULL, PSS_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(RsaSelftestVerify(NULL, NULL, PSS_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(RsaSelftestEncrypt(OAEP_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(RsaSelftestEncrypt(PKCSV15_PAD) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     return true;

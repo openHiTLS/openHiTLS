@@ -198,7 +198,7 @@ EXIT:
     return ret;
 }
 
-bool CRYPT_CMVP_SelftestSM2Crypt(void)
+bool CRYPT_CMVP_SelftestSM2Crypt(void *libCtx, const char *attrName)
 {
     bool ret = false;
     CRYPT_EAL_PkeyCtx *pubCtx = NULL;
@@ -217,11 +217,16 @@ bool CRYPT_CMVP_SelftestSM2Crypt(void)
     uint32_t plainTextLen = sizeof(plainText);
     uint8_t encodeText[MAX_PLAIN_TEXT_LEN + CIPHER_TEXT_EXTRA_LEN] = {0};
     uint32_t encodeTextLen = sizeof(encodeText);
+    CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
+    CRYPT_RandRegistEx(NULL);
 
-    pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    pubCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
+        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(pubCtx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    prvCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
+        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(prvCtx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     SetPrvPkey(&prvCtx, SM2_TEST_KEYS.d);
     SetPubPkey(&pubCtx, SM2_TEST_KEYS.qX, SM2_TEST_KEYS.qY);
@@ -264,7 +269,8 @@ bool CRYPT_CMVP_SelftestSM2Crypt(void)
 EXIT:
     BSL_SAL_FREE(plain);
     BSL_SAL_FREE(cipher);
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes);
+    CRYPT_RandRegist(func);
+    CRYPT_RandRegistEx(funcEx);
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
     return ret;
@@ -315,7 +321,7 @@ EXIT:
     return ret;
 }
 
-bool CRYPT_CMVP_SelftestSM2Sign(void)
+bool CRYPT_CMVP_SelftestSM2Sign(void *libCtx, const char *attrName)
 {
     bool ret = false;
     uint8_t *sign = NULL;
@@ -326,11 +332,16 @@ bool CRYPT_CMVP_SelftestSM2Sign(void)
     uint32_t msgLen;
     CRYPT_EAL_PkeyCtx *pkeyPrv = NULL;
     CRYPT_EAL_PkeyCtx *pkeyPub = NULL;
+    CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
+    CRYPT_RandRegistEx(NULL);
     msg = CMVP_StringsToBins(SM2DSA_VECTOR.msg, &msgLen);
     GOTO_EXIT_IF(msg == NULL, CRYPT_CMVP_COMMON_ERR);
-    pkeyPrv = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    pkeyPrv = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
+        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(pkeyPrv == NULL, CRYPT_CMVP_COMMON_ERR);
-    pkeyPub = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    pkeyPub = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
+        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(pkeyPub == NULL, CRYPT_CMVP_COMMON_ERR);
     GOTO_EXIT_IF(SetUserId(pkeyPub, SM2DSA_VECTOR.userid) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(SetUserId(pkeyPrv, SM2DSA_VECTOR.userid) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -363,7 +374,8 @@ EXIT:
     BSL_SAL_FREE(msg);
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes);
+    CRYPT_RandRegist(func);
+    CRYPT_RandRegistEx(funcEx);
     return ret;
 }
 
@@ -372,7 +384,7 @@ static int32_t TestExchangeVectorRandom(uint8_t *r, uint32_t rLen)
     return SetRandomVector(SM2Exchange_VECTOR.r, r, rLen);
 }
 
-bool CRYPT_CMVP_SelftestSM2Exchange(void)
+bool CRYPT_CMVP_SelftestSM2Exchange(void *libCtx, const char *attrName)
 {
     bool ret = false;
     uint8_t *R = NULL;
@@ -384,10 +396,15 @@ bool CRYPT_CMVP_SelftestSM2Exchange(void)
 
     CRYPT_EAL_PkeyCtx *selfCtx = NULL;
     CRYPT_EAL_PkeyCtx *peerCtx = NULL;
+    CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
+    CRYPT_RandRegistEx(NULL);
 
-    selfCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    selfCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
+        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(selfCtx == NULL, CRYPT_CMVP_COMMON_ERR);
-    peerCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    peerCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
+        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(peerCtx == NULL, CRYPT_CMVP_COMMON_ERR);
 
     uint32_t RLen;
@@ -427,7 +444,8 @@ EXIT:
     BSL_SAL_FREE(R);
     CRYPT_EAL_PkeyFreeCtx(peerCtx);
     CRYPT_EAL_PkeyFreeCtx(selfCtx);
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes);
+    CRYPT_RandRegist(func);
+    CRYPT_RandRegistEx(funcEx);
     return ret;
 }
 
@@ -524,7 +542,13 @@ bool CRYPT_CMVP_SelftestSM2Consistency(void)
 }
 
 bool CRYPT_CMVP_SelftestSM2(void) {
-    return CRYPT_CMVP_SelftestSM2Sign() && CRYPT_CMVP_SelftestSM2Crypt() && CRYPT_CMVP_SelftestSM2Exchange()
-        && CRYPT_CMVP_SelftestSM2Consistency();
+    return CRYPT_CMVP_SelftestSM2Sign(NULL, NULL) && CRYPT_CMVP_SelftestSM2Crypt(NULL, NULL) &&
+        CRYPT_CMVP_SelftestSM2Exchange(NULL, NULL) && CRYPT_CMVP_SelftestSM2Consistency();
+}
+
+bool CRYPT_CMVP_SelftestProviderSM2(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestSM2Sign(libCtx, attrName) && CRYPT_CMVP_SelftestSM2Crypt(libCtx, attrName) &&
+        CRYPT_CMVP_SelftestSM2Exchange(libCtx, attrName);
 }
 #endif

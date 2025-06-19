@@ -52,7 +52,7 @@ void CMVP_WriteSyslog(const char *ident, int32_t priority, const char *format, .
 char *CMVP_ReadFile(const char *path, const char *mode, uint32_t *bufLen); // Read file
 char *CMVP_GetLibPath(void *func); // Obtaining the Library Path
 
-int32_t CMVP_CheckIntegrity(CRYPT_MAC_AlgId macId);
+int32_t CMVP_CheckIntegrity(void *libCtx, const char *attrName, CRYPT_MAC_AlgId macId);
 
 #ifdef __cplusplus
 }

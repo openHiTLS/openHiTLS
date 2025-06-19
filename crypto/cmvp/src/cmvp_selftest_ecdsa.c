@@ -60,17 +60,19 @@ static const CMVP_EcdsaVector ECDSA_VECTOR = {
     .mdId = CRYPT_MD_SHA224
 };
 
-static bool GetPkey(CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub, CRYPT_EAL_PkeyPub *pub,
-    CRYPT_EAL_PkeyPrv *prv)
+static bool GetPkey(void *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub,
+    CRYPT_EAL_PkeyPub *pub, CRYPT_EAL_PkeyPrv *prv)
 {
     bool ret = false;
     uint8_t *x = NULL;
     uint8_t *y = NULL;
     uint32_t xLen, yLen;
 
-    *pkeyPrv = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    *pkeyPrv = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDSA, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
+    *pkeyPub = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDSA, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDSA);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     prv->id = CRYPT_PKEY_ECDSA;
@@ -154,7 +156,7 @@ EXIT:
     return ret;
 }
 
-bool CRYPT_CMVP_SelftestEcdsa(void)
+static bool CRYPT_CMVP_SelftestEcdsaInternal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     uint8_t *sign = NULL;
@@ -167,10 +169,13 @@ bool CRYPT_CMVP_SelftestEcdsa(void)
     CRYPT_EAL_PkeyCtx *pkeyPub = NULL;
     CRYPT_EAL_PkeyPub pub = { 0 };
     CRYPT_EAL_PkeyPrv prv = { 0 };
+    CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
+    CRYPT_RandRegistEx(NULL);
 
     msg = CMVP_StringsToBins(ECDSA_VECTOR.msg, &msgLen);
     GOTO_EXIT_IF(msg == NULL, CRYPT_CMVP_COMMON_ERR);
-    GOTO_EXIT_IF(GetPkey(&pkeyPrv, &pkeyPub, &pub, &prv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, &pkeyPrv, &pkeyPub, &pub, &prv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     signLen = CRYPT_EAL_PkeyGetSignLen(pkeyPrv);
     sign = BSL_SAL_Malloc(signLen);
     signVecLen = signLen;
@@ -201,8 +206,19 @@ EXIT:
     BSL_SAL_Free(msg);
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes);
+    CRYPT_RandRegist(func);
+    CRYPT_RandRegistEx(funcEx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestEcdsa(void)
+{
+    return CRYPT_CMVP_SelftestEcdsaInternal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderEcdsa(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestEcdsaInternal(libCtx, attrName);
 }
 
 #endif

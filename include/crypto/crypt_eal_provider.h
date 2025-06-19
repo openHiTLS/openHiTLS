@@ -78,6 +78,9 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
 int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
     const char *providerName, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
+int32_t CRYPT_EAL_ProviderIsLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName,
+    bool *isLoaded);
+
 /**
  * @ingroup crypt_eal_provider
  * @brief Control provider interface

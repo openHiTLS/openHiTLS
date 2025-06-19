@@ -54,14 +54,17 @@ static const CMVP_MldsaVector MLDSA_VECTOR[] = {
 
 static const char *MLDSA_SEED_VECTOR = NULL;
 
-static int32_t GetPkey(const CMVP_MldsaVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
+static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_MldsaVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv,
+    CRYPT_EAL_PkeyCtx **pkeyPub)
 {
     int32_t ret = CRYPT_CMVP_ERR_ALGO_SELFTEST;
     CRYPT_EAL_PkeyPrv prvKey = { 0 };
     CRYPT_EAL_PkeyPub pubKey = { 0 };
-    *pkeyPrv = CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(vector->algId);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(vector->algId);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     ret = CRYPT_EAL_PkeySetParaById(*pkeyPrv, vector->type);
@@ -110,7 +113,7 @@ static int32_t TestVectorRandom(uint8_t *r, uint32_t rLen)
     return 0;
 }
 
-bool TestMldsaSignVerify(const CMVP_MldsaVector *vector)
+static bool TestMldsaSignVerify(void *libCtx, const char *attrName, const CMVP_MldsaVector *vector)
 {
     bool ret = false;
     uint8_t *sign = NULL;
@@ -121,8 +124,11 @@ bool TestMldsaSignVerify(const CMVP_MldsaVector *vector)
     uint32_t msgLen;
     CRYPT_EAL_PkeyCtx *pkeyPrv = NULL;
     CRYPT_EAL_PkeyCtx *pkeyPub = NULL;
+    CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
+    CRYPT_RandRegistEx(NULL);
 
-    GOTO_EXIT_IF(GetPkey(vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     signLen = CRYPT_EAL_PkeyGetSignLen(pkeyPrv);
     sign = BSL_SAL_Malloc(signLen);
     GOTO_EXIT_IF(sign == NULL, CRYPT_MEM_ALLOC_FAIL);
@@ -152,14 +158,20 @@ EXIT:
     BSL_SAL_Free(msg);
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes);
+    CRYPT_RandRegist(func);
+    CRYPT_RandRegistEx(funcEx);
     return ret;
 }
 
 bool CRYPT_CMVP_SelftestMldsaSignVerify(void)
 {
-    bool ret = TestMldsaSignVerify(&MLDSA_VECTOR[0]);
+    bool ret = TestMldsaSignVerify(NULL, NULL, &MLDSA_VECTOR[0]);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestProviderMldsaSignVerify(void *libCtx, const char *attrName)
+{
+    return TestMldsaSignVerify(libCtx, attrName, &MLDSA_VECTOR[0]);
 }
 
 #endif

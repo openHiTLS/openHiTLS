@@ -154,7 +154,7 @@ const CMVP_HASH_VECTOR *FindVectorById(CRYPT_MD_AlgId id)
     return NULL;
 }
 
-bool CRYPT_CMVP_SelftestMd(CRYPT_MD_AlgId id)
+static bool CRYPT_CMVP_SelftestMdInternal(void *libCtx, const char *attrName, CRYPT_MD_AlgId id)
 {
     bool ret = false;
     uint8_t *msg = NULL;
@@ -173,7 +173,7 @@ bool CRYPT_CMVP_SelftestMd(CRYPT_MD_AlgId id)
     expectMd = CMVP_StringsToBins(hashVec->md, &expectMdLen);
     GOTO_EXIT_IF(expectMd == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    ctx = CRYPT_EAL_MdNewCtx(id);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderMdNewCtx(libCtx, id, attrName) : CRYPT_EAL_MdNewCtx(id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     if (id == CRYPT_MD_SHAKE128 || id == CRYPT_MD_SHAKE256) {
         mdLen = expectMdLen;
@@ -193,6 +193,16 @@ EXIT:
     FreeData(msg, md, expectMd);
     CRYPT_EAL_MdFreeCtx(ctx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestMd(CRYPT_MD_AlgId id)
+{
+    return CRYPT_CMVP_SelftestMdInternal(NULL, NULL, id);
+}
+
+bool CRYPT_CMVP_SelftestProviderMd(void *libCtx, const char *attrName, CRYPT_MD_AlgId id)
+{
+    return CRYPT_CMVP_SelftestMdInternal(libCtx, attrName, id);
 }
 
 #endif

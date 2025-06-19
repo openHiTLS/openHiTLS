@@ -994,6 +994,7 @@
                 ".deps": ["bsl::sal", "bsl::hash", "bsl::err", "bsl::params"],
                 ".include": [
                     "crypto/provider/include",
+                    "crypto/cmvp/src",
                     "crypto/ealinit/include",
                     "crypto/sha1/include",
                     "crypto/sha2/include",

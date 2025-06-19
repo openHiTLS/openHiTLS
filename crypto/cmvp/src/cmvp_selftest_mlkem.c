@@ -54,14 +54,16 @@ static const CMVP_MlkemVector MLKEM_VECTOR[] = {
 
 static const char *MLKEM_SEED_VECTOR = NULL; 
 
-static int32_t GetPkey(const CMVP_MlkemVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
+static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_MlkemVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
 {
     int32_t ret = CRYPT_CMVP_ERR_ALGO_SELFTEST;
     CRYPT_EAL_PkeyPrv prvKey = { 0 };
     CRYPT_EAL_PkeyPub pubKey = { 0 };
-    *pkeyPrv = CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPrv = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(vector->algId);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPub = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(vector->algId);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     ret = CRYPT_EAL_PkeySetParaById(*pkeyPrv, vector->type);
@@ -104,7 +106,7 @@ static int32_t TestVectorRandom(uint8_t *r, uint32_t rLen)
     return 0;
 }
 
-bool TestMlkemEncapsDecaps(const CMVP_MlkemVector *vector)
+static bool TestMlkemEncapsDecaps(void *libCtx, const char *attrName, const CMVP_MlkemVector *vector)
 {
     bool ret = false;
     uint8_t *cipher = NULL;
@@ -117,8 +119,11 @@ bool TestMlkemEncapsDecaps(const CMVP_MlkemVector *vector)
     uint32_t sharedLen = sizeof(sharedKey);
     uint8_t *sharedKeyVec = NULL;
     uint32_t sharedKeyVecLen = 0;
+    CRYPT_EAL_RandFunc func = CRYPT_RandRegistGet();
+    CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
+    CRYPT_RandRegistEx(NULL);
 
-    GOTO_EXIT_IF(GetPkey(vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, vector, &pkeyPrv, &pkeyPub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(pkeyPrv, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen)) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     cipher = BSL_SAL_Malloc(cipherLen);
@@ -152,13 +157,20 @@ EXIT:
     BSL_SAL_Free(sharedKeyVec);
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
-    CRYPT_RandRegist(CRYPT_EAL_Randbytes);
+    CRYPT_RandRegist(func);
+    CRYPT_RandRegistEx(funcEx);
     return ret;
 }
 
 bool CRYPT_CMVP_SelftestMlkemEncapsDecaps(void)
 {
-    bool ret = TestMlkemEncapsDecaps(&MLKEM_VECTOR[0]);
+    bool ret = TestMlkemEncapsDecaps(NULL, NULL, &MLKEM_VECTOR[0]);
     return ret;
 }
+
+bool CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(void *libCtx, const char *attrName)
+{
+    return TestMlkemEncapsDecaps(libCtx, attrName, &MLKEM_VECTOR[0]);
+}
+
 #endif

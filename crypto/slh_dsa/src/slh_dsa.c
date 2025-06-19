@@ -691,6 +691,10 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             ctx->addrand = rand;
             ctx->addrandLen = len;
             return CRYPT_SUCCESS;
+        case CRYPT_CTRL_CLEAN_PUB_KEY:
+            BSL_SAL_CleanseData(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed));
+            BSL_SAL_CleanseData(ctx->prvKey.pub.root, sizeof(ctx->prvKey.pub.root));
+            return CRYPT_SUCCESS;
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;

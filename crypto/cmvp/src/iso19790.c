@@ -30,7 +30,7 @@
 
 int32_t ISO19790_DefaultEntryPoint(void)
 {
-    return CMVP_CheckIntegrity(CRYPT_MAC_HMAC_SHA256);
+    return CMVP_CheckIntegrity(NULL, NULL, CRYPT_MAC_HMAC_SHA256);
 }
 
 int32_t ISO19790_ModeSet(CRYPT_CMVP_MODE mode)
@@ -77,25 +77,62 @@ void ISO19790_EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t 
 }
 
 typedef struct {
-    uint32_t id;
+    uint32_t algId;
+    uint32_t mdId;
     bool signValid;
     bool verifyValid;
 } ASYM_MD_MAP;
 
 static const ASYM_MD_MAP ASYM_MD_LIST[] = {
-    { CRYPT_MD_SHA1, false, true },
-    { CRYPT_MD_SHA224, true, true },
-    { CRYPT_MD_SHA256, true, true },
-    { CRYPT_MD_SHA384, true, true },
-    { CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_DSA, CRYPT_MD_SHA1, false, true },
+    { CRYPT_PKEY_DSA, CRYPT_MD_SHA224, true, true },
+    { CRYPT_PKEY_DSA, CRYPT_MD_SHA256, true, true },
+    { CRYPT_PKEY_DSA, CRYPT_MD_SHA384, true, true },
+    { CRYPT_PKEY_DSA, CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA1, false, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA224, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA256, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA384, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_RSA, CRYPT_MD_SHA1, false, true },
+    { CRYPT_PKEY_RSA, CRYPT_MD_SHA224, true, true },
+    { CRYPT_PKEY_RSA, CRYPT_MD_SHA256, true, true },
+    { CRYPT_PKEY_RSA, CRYPT_MD_SHA384, true, true },
+    { CRYPT_PKEY_RSA, CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_SM2, CRYPT_MD_SM3, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA224, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA256, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA384, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA3_224, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA3_256, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA3_384, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHA3_512, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHAKE128, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_SHAKE256, true, true },
+    { CRYPT_PKEY_SLH_DSA, CRYPT_MD_MAX, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA224, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA256, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA384, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA3_224, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA3_256, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA3_384, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHA3_512, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHAKE128, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_SHAKE256, true, true },
+    { CRYPT_PKEY_ML_DSA, CRYPT_MD_MAX, true, true },
 };
 
-static bool GetVaildFlag(uint32_t id, bool isSign)
+static bool GetVaildFlag(uint32_t algId, uint32_t mdId, bool isSign)
 {
+    if (algId == CRYPT_PKEY_ED25519) {
+        return true;
+    }
     for (uint32_t i = 0; i < sizeof(ASYM_MD_LIST) / sizeof(ASYM_MD_LIST[0]); i++) {
-        if (isSign == true && id == ASYM_MD_LIST[i].id) {
+        if (isSign == true && algId == ASYM_MD_LIST[i].algId && mdId == ASYM_MD_LIST[i].mdId) {
             return ASYM_MD_LIST[i].signValid;
-        } else if (isSign == false && id == ASYM_MD_LIST[i].id) {
+        } else if (isSign == false && algId == ASYM_MD_LIST[i].algId && mdId == ASYM_MD_LIST[i].mdId) {
             return ASYM_MD_LIST[i].verifyValid;
         }
     }
@@ -124,8 +161,8 @@ static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         GOTO_EXIT_IF(prv.nLen < (2048 / 8), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
-    if (data->pkcsv15 != CRYPT_MD_MAX) {
-        GOTO_EXIT_IF((GetVaildFlag(data->pkcsv15->mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+    if (data->pkcsv15 != NULL) {
+        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, data->pkcsv15->mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     if (data->pss != NULL) {
@@ -133,8 +170,10 @@ static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         GOTO_EXIT_IF(mdParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
         BSL_Param *mgfParam = BSL_PARAM_FindParam(data->pss, CRYPT_PARAM_RSA_MGF1_ID);
         GOTO_EXIT_IF(mgfParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_EXIT_IF((GetVaildFlag(*(uint32_t *)(mdParam->value), false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_EXIT_IF((GetVaildFlag(*(uint32_t *)(mgfParam->value), false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mdParam->value), false) == false),
+            CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mgfParam->value), false) == false),
+            CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     if (data->oaep != NULL) {
@@ -142,8 +181,10 @@ static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         GOTO_EXIT_IF(mdParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
         BSL_Param *mgfParam = BSL_PARAM_FindParam(data->oaep, CRYPT_PARAM_RSA_MGF1_ID);
         GOTO_EXIT_IF(mgfParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_EXIT_IF((GetVaildFlag(*(uint32_t *)(mdParam->value), false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_EXIT_IF((GetVaildFlag(*(uint32_t *)(mgfParam->value), false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mdParam->value), false) == false),
+            CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mgfParam->value), false) == false),
+            CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     return true;
@@ -198,7 +239,7 @@ EXIT:
     return false;
 }
 
-static bool EccParamCheck(const CRYPT_EAL_PkeyC2Data *data)
+static bool EcdhParamCheck(const CRYPT_EAL_PkeyC2Data *data)
 {
     // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf Chapters 3 and 5
     // Requires curve specified using SP 800-56A
@@ -207,6 +248,29 @@ static bool EccParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         CRYPT_ECC_NISTP256,
         CRYPT_ECC_NISTP384,
         CRYPT_ECC_NISTP521,
+        CRYPT_PKEY_PARAID_MAX,
+    };
+
+    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
+        if (data->paraId == list[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool EcdsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
+{
+    // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf Chapters 3 and 5
+    // Requires curve specified using SP 800-56A
+    static const uint32_t list[] = {
+        CRYPT_ECC_NISTP224,
+        CRYPT_ECC_NISTP256,
+        CRYPT_ECC_NISTP384,
+        CRYPT_ECC_NISTP521,
+        CRYPT_ECC_BRAINPOOLP256R1,
+        CRYPT_ECC_BRAINPOOLP384R1,
+        CRYPT_ECC_BRAINPOOLP512R1,
         CRYPT_PKEY_PARAID_MAX,
     };
 
@@ -237,18 +301,20 @@ bool ISO19790_AsymParamCheck(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *da
             GOTO_EXIT_IF(DhParamCheck(data) != true, CRYPT_CMVP_ERR_PARAM_CHECK);
             break;
         case CRYPT_PKEY_ECDH:
+            GOTO_EXIT_IF(EcdhParamCheck(data) != true, CRYPT_CMVP_ERR_PARAM_CHECK);
+            break;
         case CRYPT_PKEY_ECDSA:
-            GOTO_EXIT_IF(EccParamCheck(data) != true, CRYPT_CMVP_ERR_PARAM_CHECK);
+            GOTO_EXIT_IF(EcdsaParamCheck(data) != true, CRYPT_CMVP_ERR_PARAM_CHECK);
             break;
         default:
             break;
     }
     if (data->oper == CRYPT_EVENT_SIGN) {
-        GOTO_EXIT_IF((GetVaildFlag(data->mdId, true) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_EXIT_IF((GetVaildFlag(id, data->mdId, true) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     if (data->oper == CRYPT_EVENT_VERIFY) {
-        GOTO_EXIT_IF((GetVaildFlag(data->mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_EXIT_IF((GetVaildFlag(id, data->mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     return true;

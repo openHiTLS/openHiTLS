@@ -46,7 +46,7 @@ static const CMVP_SCRYPT_VECTOR SCRYPT_VECTOR = {
         "6ff109279d9830dac727afb94a83ee6d8360cbdfa2cc0640"
 };
 
-bool CRYPT_CMVP_SelftestScrypt(void)
+static bool CRYPT_CMVP_SelftestScryptInternal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     uint8_t *pw = NULL;
@@ -67,7 +67,8 @@ bool CRYPT_CMVP_SelftestScrypt(void)
     key = BSL_SAL_Malloc(expkeyLen);
     GOTO_EXIT_IF(key == NULL, CRYPT_MEM_ALLOC_FAIL);
 
-    ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, attrName) :
+        CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     BSL_Param param[6] = {
         {CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, pw, pwLen, 0},
@@ -88,6 +89,16 @@ EXIT:
     BSL_SAL_Free(key);
     CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestScrypt(void)
+{
+    return CRYPT_CMVP_SelftestScryptInternal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderScrypt(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestScryptInternal(libCtx, attrName);
 }
 
 #endif

@@ -44,7 +44,6 @@ int32_t CRYPT_EAL_PkeyComputeShareKey(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, ret);
     }
-    EAL_EventReport(CRYPT_EVENT_KEYAGGREMENT, CRYPT_ALGO_PKEY, pkey->id, CRYPT_SUCCESS);
     return ret;
 }
 #endif

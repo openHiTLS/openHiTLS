@@ -254,6 +254,17 @@ static int32_t MLDSAGetPrvKeyLen(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_
     return CRYPT_SUCCESS;
 }
 
+static int32_t MLDSACleanPubKey(CRYPT_ML_DSA_Ctx *ctx)
+{
+    if (ctx->pubKey != NULL) {
+        BSL_SAL_CleanseData(ctx->pubKey, ctx->pubLen);
+        BSL_SAL_FREE(ctx->pubKey);
+        ctx->pubKey = NULL;
+        ctx->pubLen = 0;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -281,6 +292,8 @@ int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, 
             return MLDSAGetPubKeyLen(ctx, val, len);
         case CRYPT_CTRL_GET_PRVKEY_LEN:
             return MLDSAGetPrvKeyLen(ctx, val, len);
+        case CRYPT_CTRL_CLEAN_PUB_KEY:
+            return MLDSACleanPubKey(ctx);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_CTRL_NOT_SUPPORT);
             return CRYPT_MLDSA_CTRL_NOT_SUPPORT;

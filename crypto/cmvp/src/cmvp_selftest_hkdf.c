@@ -43,7 +43,7 @@ static const CMVP_HKDF_VECTOR HKDF_VECTOR = {
     .id = CRYPT_MAC_HMAC_SHA256
 };
 
-bool CRYPT_CMVP_SelftestHkdf(void)
+static bool CRYPT_CMVP_SelftestHkdfInternal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     uint8_t *key = NULL;
@@ -68,7 +68,8 @@ bool CRYPT_CMVP_SelftestHkdf(void)
     out = BSL_SAL_Malloc(expOutLen);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
 
-    ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName) :
+        CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     BSL_Param param[6] = {
         {CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id), 0},
@@ -90,6 +91,16 @@ EXIT:
     BSL_SAL_Free(out);
     CRYPT_EAL_KdfFreeCtx(ctx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestHkdf(void)
+{
+    return CRYPT_CMVP_SelftestHkdfInternal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderHkdf(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestHkdfInternal(libCtx, attrName);
 }
 
 #endif

@@ -424,7 +424,7 @@ typedef struct {
     CRYPT_Data tag;
 } CIPHER_SELFTEST_DATA;
 
-bool CipherEnc(CRYPT_CIPHER_AlgId id, CIPHER_SELFTEST_DATA data)
+bool CipherEnc(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id, CIPHER_SELFTEST_DATA data)
 {
     bool ret = false;
     CRYPT_EAL_CipherCtx *ctx = NULL;
@@ -433,7 +433,7 @@ bool CipherEnc(CRYPT_CIPHER_AlgId id, CIPHER_SELFTEST_DATA data)
     uint8_t *out = BSL_SAL_Malloc(len);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
     memset_s(out, len, 0, len);
-    ctx = CRYPT_EAL_CipherNewCtx(id);
+    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName) : CRYPT_EAL_CipherNewCtx(id);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, true) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherUpdate(ctx, data.plainText.data, data.plainText.len, out, &len) != CRYPT_SUCCESS,
@@ -449,7 +449,7 @@ EXIT:
     return ret;
 }
 
-bool CipherDec(CRYPT_CIPHER_AlgId id, CIPHER_SELFTEST_DATA data)
+bool CipherDec(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id, CIPHER_SELFTEST_DATA data)
 {
     bool ret = false;
     CRYPT_EAL_CipherCtx *ctx = NULL;
@@ -457,7 +457,7 @@ bool CipherDec(CRYPT_CIPHER_AlgId id, CIPHER_SELFTEST_DATA data)
     uint32_t len = data.plainText.len;
     uint8_t *out = BSL_SAL_Malloc(len);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
-    ctx = CRYPT_EAL_CipherNewCtx(id);
+    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName) : CRYPT_EAL_CipherNewCtx(id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, false) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -474,7 +474,7 @@ EXIT:
     return ret;
 }
 
-bool AesAeadEnc(const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
+bool AesAeadEnc(void *libCtx, const char *attrName, const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
 {
     bool ret = false;
     uint64_t msgLen = data.plainText.len;
@@ -495,7 +495,8 @@ bool AesAeadEnc(const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
         tagLen = data.cipherText.len - data.plainText.len;
     }
 
-    ctx = CRYPT_EAL_CipherNewCtx(cipherVec->id);
+    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName) :
+        CRYPT_EAL_CipherNewCtx(cipherVec->id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, true) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -535,7 +536,7 @@ EXIT:
     return ret;
 }
 
-bool AesAeadDec(const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
+bool AesAeadDec(void *libCtx, const char *attrName, const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
 {
     bool ret = false;
     uint32_t tagLen = data.tag.len;
@@ -553,7 +554,8 @@ bool AesAeadDec(const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
         GOTO_EXIT_IF(tag == NULL, CRYPT_MEM_ALLOC_FAIL);
     }
 
-    ctx = CRYPT_EAL_CipherNewCtx(cipherVec->id);
+    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName) :
+        CRYPT_EAL_CipherNewCtx(cipherVec->id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, false) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -594,7 +596,7 @@ const CMVP_CIPHER_VECTOR *FindCipherVectorById(CRYPT_CIPHER_AlgId id)
 
     return NULL;
 }
-bool CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AlgId id)
+static bool CRYPT_CMVP_SelftestCipherInternal(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id)
 {
     const CMVP_CIPHER_VECTOR *cipherVec = FindCipherVectorById(id);
     if (cipherVec == NULL || cipherVec->key == NULL) {
@@ -625,11 +627,11 @@ bool CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AlgId id)
     }
 
     if (cipherVec->mode == CRYPT_MODE_CCM || cipherVec->mode == CRYPT_MODE_GCM) {
-        GOTO_EXIT_IF(AesAeadEnc(cipherVec, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-        GOTO_EXIT_IF(AesAeadDec(cipherVec, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+        GOTO_EXIT_IF(AesAeadEnc(libCtx, attrName, cipherVec, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+        GOTO_EXIT_IF(AesAeadDec(libCtx, attrName, cipherVec, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     } else {
-        GOTO_EXIT_IF(CipherEnc(id, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-        GOTO_EXIT_IF(CipherDec(id, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+        GOTO_EXIT_IF(CipherEnc(libCtx, attrName, id, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+        GOTO_EXIT_IF(CipherDec(libCtx, attrName, id, data) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     }
 
     ret = true;
@@ -641,6 +643,16 @@ EXIT:
     BSL_SAL_Free(data.aad.data);
     BSL_SAL_Free(data.tag.data);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AlgId id)
+{
+    return CRYPT_CMVP_SelftestCipherInternal(NULL, NULL, id);
+}
+
+bool CRYPT_CMVP_SelftestProviderCipher(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id)
+{
+    return CRYPT_CMVP_SelftestCipherInternal(libCtx, attrName, id);
 }
 
 #endif // HITLS_CRYPTO_CMVP

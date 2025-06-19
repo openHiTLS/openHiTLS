@@ -75,7 +75,7 @@ static void FreeData(CRYPT_Data key, CRYPT_Data iv, CRYPT_Data aad, CRYPT_Data d
     BSL_SAL_Free(cipher.data);
 }
 
-bool CRYPT_CMVP_SelftestChacha20poly1305(void)
+static bool CRYPT_CMVP_SelftestChacha20poly1305Internal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     CRYPT_Data key = { NULL, 0 };
@@ -100,7 +100,8 @@ bool CRYPT_CMVP_SelftestChacha20poly1305(void)
     GOTO_EXIT_IF(outTag == NULL || out == NULL, CRYPT_MEM_ALLOC_FAIL);
     first = data.len / 2;       // The length of the data in the first operation is 1/2 of the data.
 
-    ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, CRYPT_CIPHER_CHACHA20_POLY1305, attrName) :
+        CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
     GOTO_EXIT_IF(ctx == NULL, err);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, key.data, key.len, iv.data, iv.len, true) != CRYPT_SUCCESS, err);
     GOTO_EXIT_IF(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad.data, aad.len) != CRYPT_SUCCESS, err);
@@ -130,6 +131,16 @@ EXIT:
     BSL_SAL_Free(out);
     CRYPT_EAL_CipherFreeCtx(ctx);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestChacha20poly1305(void)
+{
+    return CRYPT_CMVP_SelftestChacha20poly1305Internal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderChacha20poly1305(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestChacha20poly1305Internal(libCtx, attrName);
 }
 
 #endif // HITLS_CRYPTO_CMVP

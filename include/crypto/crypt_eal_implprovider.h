@@ -78,6 +78,7 @@ typedef void (*CRYPT_EAL_ProvFreeCb)(void *provCtx);
 #define CRYPT_EAL_OPERAID_KDF         9
 #define CRYPT_EAL_OPERAID_RAND        10
 #define CRYPT_EAL_OPERAID_DECODER     11
+#define CRYPT_EAL_OPERAID_SELFTEST    12
 
 typedef int32_t (*CRYPT_EAL_ProvQueryCb)(void *provCtx, int32_t operaId, CRYPT_EAL_AlgInfo **algInfos);
 /* Used for obtaining provider information through the eal layer interface */
@@ -295,6 +296,17 @@ typedef int32_t (*CRYPT_DECODER_IMPL_GetParam)(void *ctx, BSL_Param *param);
 typedef int32_t (*CRYPT_DECODER_IMPL_Decode)(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
 typedef void (*CRYPT_DECODER_IMPL_FreeOutData)(void *ctx, BSL_Param *outData);
 typedef void (*CRYPT_DECODER_IMPL_FreeCtx)(void *ctx);
+
+// CRYPT_EAL_OPERAID_SELFTEST
+#define CRYPT_EAL_IMPLSELFTEST_NEWCTX           1
+#define CRYPT_EAL_IMPLSELFTEST_GETVERSION       2
+#define CRYPT_EAL_IMPLSELFTEST_SELFTEST         3
+#define CRYPT_EAL_IMPLSELFTEST_FREECTX          4
+
+typedef void *(*CRYPT_EAL_ImplSelftestNewCtx)(void *provCtx);
+typedef const char *(*CRYPT_EAL_ImplSelftestGetVersion)(void *ctx);
+typedef int32_t (*CRYPT_EAL_ImplSelftestSelftest)(void *ctx, int32_t type);
+typedef void (*CRYPT_EAL_ImplSelftestFreeCtx)(void *ctx);
 
 #ifdef __cplusplus
 }

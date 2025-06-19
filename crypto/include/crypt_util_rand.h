@@ -33,6 +33,8 @@ extern "C" {
  */
 void CRYPT_RandRegist(CRYPT_EAL_RandFunc func);
 
+CRYPT_EAL_RandFunc CRYPT_RandRegistGet(void);
+
 /**
  * @brief   Generate a random number
  *
@@ -52,6 +54,7 @@ int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen);
  */
 void CRYPT_RandRegistEx(CRYPT_EAL_RandFuncEx func);
 
+CRYPT_EAL_RandFuncEx CRYPT_RandRegistExGet(void);
 
 /**
  * @brief   Generate a random number

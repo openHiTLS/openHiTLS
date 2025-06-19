@@ -155,7 +155,7 @@ static void FreeData(CRYPT_EAL_PkeyPara para, CRYPT_EAL_PkeyPrv prv1, CRYPT_EAL_
     BSL_SAL_Free(pub2.key.dhPub.data);
 }
 
-bool CRYPT_CMVP_SelftestDh(void)
+static bool CRYPT_CMVP_SelftestDhInternal(void *libCtx, const char *attrName)
 {
     bool ret = false;
     CRYPT_EAL_PkeyPara para;
@@ -176,8 +176,10 @@ bool CRYPT_CMVP_SelftestDh(void)
     GOTO_EXIT_IF(GetPara(DH_VECTOR, &para) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetKey(DH_VECTOR, &prv1, &pub1, &prv2, &pub2) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    pkeyPrv = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
-    pkeyPub = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, 0, attrName) :
+        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
     GOTO_EXIT_IF(pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
@@ -195,6 +197,16 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyPrv);
     CRYPT_EAL_PkeyFreeCtx(pkeyPub);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestDh(void)
+{
+    return CRYPT_CMVP_SelftestDhInternal(NULL, NULL);
+}
+
+bool CRYPT_CMVP_SelftestProviderDh(void *libCtx, const char *attrName)
+{
+    return CRYPT_CMVP_SelftestDhInternal(libCtx, attrName);
 }
 
 #endif

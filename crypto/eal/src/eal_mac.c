@@ -215,7 +215,6 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
         BSL_SAL_FREE(ctx);
         return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
     ctx->macMeth->freeCtx(ctx->ctx);
     BSL_SAL_FREE(ctx->macMeth);
     BSL_SAL_FREE(ctx);
@@ -245,7 +244,6 @@ int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t le
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
         return ret;
     }
-    EAL_EventReport(CRYPT_EVENT_SETSSP, CRYPT_ALGO_MAC, ctx->id, ret);
     ctx->state = CRYPT_MAC_STATE_INIT;
     return CRYPT_SUCCESS;
 }
@@ -311,7 +309,6 @@ int32_t CRYPT_EAL_MacFinal(CRYPT_EAL_MacCtx *ctx, uint8_t *out, uint32_t *len)
         return ret;
     }
     ctx->state = CRYPT_MAC_STATE_FINAL;
-    EAL_EventReport(CRYPT_EVENT_MAC, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
 
