@@ -95,8 +95,6 @@ static bool KatTestMac(void *libCtx, const char *attrName)
         CRYPT_MAC_CMAC_AES128, CRYPT_MAC_CMAC_AES192, CRYPT_MAC_CMAC_AES256,
         CRYPT_MAC_GMAC_AES128, CRYPT_MAC_GMAC_AES192, CRYPT_MAC_GMAC_AES256,
         CRYPT_MAC_HMAC_SHA1, CRYPT_MAC_HMAC_SHA224, CRYPT_MAC_HMAC_SHA256, CRYPT_MAC_HMAC_SHA384, CRYPT_MAC_HMAC_SHA512,
-        // CRYPT_MAC_HMAC_SM3, // TODO: add kat test for sm3 hmac
-        // CRYPT_MAC_CMAC_SM4, // TODO: add kat test for sm4 cmac
     };
 
     for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
@@ -114,8 +112,8 @@ static bool KatTestDrbg(void *libCtx, const char *attrName)
         CRYPT_RAND_AES128_CTR_DF, CRYPT_RAND_AES192_CTR_DF, CRYPT_RAND_AES256_CTR_DF,
         CRYPT_RAND_HMAC_SHA1, CRYPT_RAND_HMAC_SHA224, CRYPT_RAND_HMAC_SHA256, CRYPT_RAND_HMAC_SHA384, CRYPT_RAND_HMAC_SHA512,
         CRYPT_RAND_SHA1, CRYPT_RAND_SHA224, CRYPT_RAND_SHA256, CRYPT_RAND_SHA384, CRYPT_RAND_SHA512,
-        // CRYPT_RAND_SM4_CTR_DF, // TODO: add kat test for sm4 ctr df
-        // CRYPT_RAND_SM3, // TODO: add kat test for sm3
+        CRYPT_RAND_SM4_CTR_DF,
+        CRYPT_RAND_SM3,
     };
 
     for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
@@ -151,11 +149,9 @@ static bool KatTestPkey(void *libCtx, const char *attrName)
     if (!CRYPT_CMVP_SelftestProviderDsa(libCtx, attrName)) {
         return false;
     }
-    // TODO: add brainpoolp256r1 kat test for ecdsa
     if (!CRYPT_CMVP_SelftestProviderEcdsa(libCtx, attrName)) {
         return false;
     }
-    // TODO: add rsa encrypt and decrypt kat test for rsa
     if (!CRYPT_CMVP_SelftestProviderRsa(libCtx, attrName)) {
         return false;
     }
@@ -168,7 +164,6 @@ static bool KatTestPkey(void *libCtx, const char *attrName)
     if (!CRYPT_CMVP_SelftestProviderEcdh(libCtx, attrName)) {
         return false;
     }
-    //TODO: add ffdhe2048 dh kat test
     if (!CRYPT_CMVP_SelftestProviderDh(libCtx, attrName)) {
         return false;
     }
