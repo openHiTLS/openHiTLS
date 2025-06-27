@@ -77,7 +77,9 @@ int32_t CRYPT_EAL_PkeyEncaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uin
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     int32_t ret = pkey->method->encaps(pkey->key, cipher, cipherLen, sharekey, shareKeyLen);
-    EAL_ERR_REPORT((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_ENCAPS : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    }
     return ret;
 }
 
@@ -93,7 +95,9 @@ int32_t CRYPT_EAL_PkeyDecaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uin
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     int32_t ret = pkey->method->decaps(pkey->key, cipher, cipherLen, sharekey, shareKeyLen);
-    EAL_ERR_REPORT((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_DECAPS : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    }
     return ret;
 }
 

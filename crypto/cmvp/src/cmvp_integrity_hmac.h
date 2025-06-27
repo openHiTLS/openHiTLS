@@ -28,7 +28,7 @@ extern "C" {
 
 // When the HMAC is used to perform integrity verification, a failure message is returned,
 // and the module does not enter the error state.
-bool CMVP_IntegrityHmac(const char *libPath, CRYPT_MAC_AlgId id);
+bool CMVP_IntegrityHmac(void *libCtx, const char *attrName, const char *libPath, CRYPT_MAC_AlgId id);
 
 #ifdef __cplusplus
 }

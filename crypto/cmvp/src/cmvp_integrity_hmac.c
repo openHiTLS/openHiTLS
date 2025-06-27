@@ -36,7 +36,7 @@ const char *GetIntegrityKey(void)
     return CMVP_INTEGRITYKEY;
 }
 
-static uint8_t *GetLibHmac(CRYPT_MAC_AlgId id, const char *libPath, uint32_t *hmacLen)
+static uint8_t *GetLibHmac(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id, const char *libPath, uint32_t *hmacLen)
 {
     char *buf = NULL;
     uint8_t *hmac = NULL;
@@ -45,7 +45,7 @@ static uint8_t *GetLibHmac(CRYPT_MAC_AlgId id, const char *libPath, uint32_t *hm
 
     buf = CMVP_ReadFile(libPath, "rb", &bufLen);
     GOTO_EXIT_IF(buf == NULL, CRYPT_CMVP_COMMON_ERR);
-    ctx = CRYPT_EAL_MacNewCtx(id);
+    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName) : CRYPT_EAL_MacNewCtx(id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     *hmacLen = CRYPT_EAL_GetMacLen(ctx);
     hmac = BSL_SAL_Malloc(*hmacLen);
@@ -94,7 +94,7 @@ EXIT:
     return NULL;
 }
 
-bool CMVP_IntegrityHmac(const char *libPath, CRYPT_MAC_AlgId id)
+bool CMVP_IntegrityHmac(void *libCtx, const char *attrName, const char *libPath, CRYPT_MAC_AlgId id)
 {
     bool ret = false;
     char *hmacPath = NULL;
@@ -107,7 +107,7 @@ bool CMVP_IntegrityHmac(const char *libPath, CRYPT_MAC_AlgId id)
     (void)sprintf_s(hmacPath, strlen(libPath) + strlen(".hmac") + 1, "%s%s", libPath, ".hmac");
     hmacPath[strlen(libPath) + strlen(".hmac")] = '\0';
 
-    hmac = GetLibHmac(id, libPath, &hmacLen);
+    hmac = GetLibHmac(libCtx, attrName, id, libPath, &hmacLen);
     GOTO_EXIT_IF(hmac == NULL, CRYPT_CMVP_ERR_INTEGRITY);
     expectHmac = GetExpectHmac(hmacPath, &expectHmacLen);
     GOTO_EXIT_IF(expectHmac == NULL, CRYPT_CMVP_ERR_INTEGRITY);

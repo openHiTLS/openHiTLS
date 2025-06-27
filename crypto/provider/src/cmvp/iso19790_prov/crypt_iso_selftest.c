@@ -95,6 +95,7 @@ static bool KatTestMac(void *libCtx, const char *attrName)
         CRYPT_MAC_CMAC_AES128, CRYPT_MAC_CMAC_AES192, CRYPT_MAC_CMAC_AES256,
         CRYPT_MAC_GMAC_AES128, CRYPT_MAC_GMAC_AES192, CRYPT_MAC_GMAC_AES256,
         CRYPT_MAC_HMAC_SHA1, CRYPT_MAC_HMAC_SHA224, CRYPT_MAC_HMAC_SHA256, CRYPT_MAC_HMAC_SHA384, CRYPT_MAC_HMAC_SHA512,
+        CRYPT_MAC_HMAC_SM3,
     };
 
     for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {

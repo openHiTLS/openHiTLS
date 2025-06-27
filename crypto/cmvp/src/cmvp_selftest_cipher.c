@@ -539,36 +539,42 @@ EXIT:
 bool AesAeadDec(void *libCtx, const char *attrName, const CMVP_CIPHER_VECTOR *cipherVec, CIPHER_SELFTEST_DATA data)
 {
     bool ret = false;
-    uint32_t tagLen = data.tag.len;
+    uint32_t tagLen;
     uint8_t *tag = NULL;
     uint64_t msgLen = data.plainText.len;
     uint32_t plainLen = data.plainText.len;
     uint8_t *plain = NULL;
-    uint32_t finLen;
     CRYPT_EAL_CipherCtx *ctx = NULL;
 
     plain = BSL_SAL_Malloc(plainLen);
     GOTO_EXIT_IF(plain == NULL, CRYPT_MEM_ALLOC_FAIL);
-    if (cipherVec->mode != CRYPT_MODE_CCM) {
-        tag = BSL_SAL_Malloc(tagLen);
-        GOTO_EXIT_IF(tag == NULL, CRYPT_MEM_ALLOC_FAIL);
+    if (cipherVec->mode == CRYPT_MODE_CCM) {
+        tagLen = data.cipherText.len - data.plainText.len;
+    } else {
+        tagLen = data.tag.len;
     }
+    tag = BSL_SAL_Malloc(tagLen);
+    GOTO_EXIT_IF(tag == NULL, CRYPT_MEM_ALLOC_FAIL);
 
     ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName) :
         CRYPT_EAL_CipherNewCtx(cipherVec->id);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, false) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen));
-    CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
-    CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, data.aad.data, data.aad.len);
+    GOTO_EXIT_IF(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    if (cipherVec->mode == CRYPT_MODE_CCM) {
+        GOTO_EXIT_IF(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen)) != CRYPT_SUCCESS,
+            CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    }
+    GOTO_EXIT_IF(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, data.aad.data, data.aad.len) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherUpdate(ctx, data.cipherText.data, data.plainText.len, plain, &plainLen) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(data.plainText.len < plainLen, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    finLen = data.plainText.len - plainLen;
-    CRYPT_EAL_CipherFinal(ctx, plain + plainLen, &finLen);
+    GOTO_EXIT_IF(data.plainText.len != plainLen, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(memcmp(plain, data.plainText.data, data.plainText.len) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen);
+    GOTO_EXIT_IF(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     if (cipherVec->mode == CRYPT_MODE_CCM) {
         GOTO_EXIT_IF(memcmp(tag, data.cipherText.data + msgLen, tagLen) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     } else {

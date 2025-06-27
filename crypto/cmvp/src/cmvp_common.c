@@ -156,11 +156,11 @@ int32_t CMVP_CheckIntegrity(void *libCtx, const char *attrName, CRYPT_MAC_AlgId 
     }
     libCryptoPath = CMVP_GetLibPath(CMVP_IntegrityHmac);
     GOTO_EXIT_IF(libCryptoPath == NULL, CRYPT_CMVP_COMMON_ERR);
-    GOTO_EXIT_IF(CMVP_IntegrityHmac(libCryptoPath, macId) == false, CRYPT_CMVP_ERR_INTEGRITY);
+    GOTO_EXIT_IF(CMVP_IntegrityHmac(libCtx, attrName, libCryptoPath, macId) == false, CRYPT_CMVP_ERR_INTEGRITY);
 
     libBslPath = CMVP_GetLibPath(BSL_SAL_Malloc);
     GOTO_EXIT_IF(libBslPath == NULL, CRYPT_CMVP_COMMON_ERR);
-    GOTO_EXIT_IF(CMVP_IntegrityHmac(libBslPath, macId) == false, CRYPT_CMVP_ERR_INTEGRITY);
+    GOTO_EXIT_IF(CMVP_IntegrityHmac(libCtx, attrName, libBslPath, macId) == false, CRYPT_CMVP_ERR_INTEGRITY);
 
     ret = CRYPT_SUCCESS;
 EXIT:

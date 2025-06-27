@@ -186,7 +186,7 @@ static int32_t SSPLog(IsoKdfCtx *ctx, const BSL_Param *param, const int32_t *ssp
 #ifdef HITLS_CRYPTO_SCRYPT
 static int32_t CheckSCRYPTParamAndLog(IsoKdfCtx *ctx, const BSL_Param *param)
 {
-    int32_t sspParam[] = {CRYPT_PARAM_KDF_KEY};
+    int32_t sspParam[] = {CRYPT_PARAM_KDF_PASSWORD};
     return SSPLog(ctx, param, sspParam, sizeof(sspParam)/sizeof(sspParam[0]));
 }
 #endif

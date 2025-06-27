@@ -104,9 +104,9 @@ static const CMVP_MAC_VECTOR MAC_VECTOR[] = {
     // CRYPT_MAC_HMAC_SM3
     {
         .id = CRYPT_MAC_HMAC_SM3,
-        .key = "4a656665",
-        .msg = "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
-        .mac = "2e87f1d16862e6d964b50a5200bf2b10b764faa9680a296a2405f24bec39f882",
+        .key = "00112233445566778899aabbccddeeff",
+        .msg = "6162636465666768696A6B6C6D6E6F707172737475767778797A", // abcdefghijklmnopqrstuvwxyz
+        .mac = "a51ce58c52ae29edd66a53e6aaf0745bf4fedbde899973b2d817290e646df87e",
         .iv = NULL,
         .type = MAC_TYPE_HMAC_CMAC
     },
