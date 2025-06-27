@@ -48,6 +48,7 @@
 #include <string.h>
 /* END_HEADER */
 
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
 #define ISO19790_LOG_FILE "iso19790_audit.log"
 
 static FILE* g_logFile = NULL;
@@ -71,8 +72,7 @@ static void CloseLogFile(void)
     }
 }
 
-
-const char *GetAlgoTypeStr(CRYPT_ALGO_TYPE type)
+static const char *GetAlgoTypeStr(CRYPT_ALGO_TYPE type)
 {
     switch (type) {
         case CRYPT_ALGO_CIPHER:
@@ -92,7 +92,7 @@ const char *GetAlgoTypeStr(CRYPT_ALGO_TYPE type)
     }
 }
 
-const char *GetEventStr(CRYPT_EVENT_TYPE oper)
+static const char *GetEventStr(CRYPT_EVENT_TYPE oper)
 {
     switch (oper) {
         case CRYPT_EVENT_ENC:          /**< Encryption. */
@@ -232,7 +232,7 @@ static void CleanNonce(void *ctx, CRYPT_Data *nonce)
     CleanEntropy(ctx, nonce);
 }
 
-void EntropyRunLogCb(int32_t ret)
+static void EntropyRunLogCb(int32_t ret)
 {
     char timeStr[72] = {0};
     time_t now = time(NULL);
@@ -256,8 +256,7 @@ void EntropyRunLogCb(int32_t ret)
     CloseLogFile();
 }
 
-
-void GetSeedPool(void **seedPool, void **es)
+static void GetSeedPool(void **seedPool, void **es)
 {
     CRYPT_EAL_Es *esTemp = NULL;
     CRYPT_EAL_SeedPoolCtx *poolTemp = NULL;
@@ -308,7 +307,6 @@ EXIT:
     return;
 }
 
-#ifdef HITLS_CRYPTO_PROVIDER
 typedef struct {
     CRYPT_EAL_LibCtx *libCtx;
     CRYPT_EAL_Es *es;
@@ -367,7 +365,7 @@ static void Iso19790_ProviderUnload(Iso19790_ProviderLoadCtx *ctx)
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC001()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
@@ -398,6 +396,7 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
 static void SetRsaPara(CRYPT_EAL_PkeyPara *para, uint8_t *e, uint32_t eLen, uint32_t bits)
 {
     para->id = CRYPT_PKEY_RSA;
@@ -405,11 +404,12 @@ static void SetRsaPara(CRYPT_EAL_PkeyPara *para, uint8_t *e, uint32_t eLen, uint
     para->para.rsaPara.eLen = eLen;
     para->para.rsaPara.bits = bits;
 }
+#endif
 
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC002()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
@@ -448,6 +448,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_DRBG_TEST_TC001()
 {
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
     CRYPT_EAL_Es *es = NULL;
     CRYPT_EAL_SeedPoolCtx *pool = NULL;
     CRYPT_EAL_RndCtx *randCtx = NULL;
@@ -521,13 +524,14 @@ EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
     CRYPT_EAL_EsFree(es);
     Iso19790_ProviderUnload(&ctx);
+#endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_MD_TEST_TC001(int algId)
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     (void)algId;
     SKIP_TEST();
 #else
@@ -561,7 +565,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_MAC_TEST_TC001(int algId, int keyLen)
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     (void)algId;
     (void)keyLen;
     SKIP_TEST();
@@ -612,7 +616,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int algId, int macId, int iter, int saltLen)
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     (void)algId;
     (void)macId;
     (void)iter;
@@ -657,6 +661,13 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_KDF_TEST_TC002(int algId, Hex *key, Hex *salt, Hex *info)
 {
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)algId;
+    (void)key;
+    (void)salt;
+    (void)info;
+    SKIP_TEST();
+#else
     if (IsHmacAlgDisabled(algId)) {
         SKIP_TEST();
     }
@@ -692,12 +703,20 @@ EXIT:
     }
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
     Iso19790_ProviderUnload(&ctx);
+#endif
 }
 /* END_CASE */
 
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_KDF_TEST_TC003(int algId, Hex *key, Hex *label, Hex *seed)
 {
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)algId;
+    (void)key;
+    (void)label;
+    (void)seed;
+    SKIP_TEST();
+#else
     if (IsHmacAlgDisabled(algId)) {
         SKIP_TEST();
     }
@@ -731,6 +750,7 @@ EXIT:
     }
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
     Iso19790_ProviderUnload(&ctx);
+#endif
 }
 /* END_CASE */
 
@@ -738,10 +758,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
-    (void)path;
-    (void)get_cap_test1;
-    (void)cmd;
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     CRYPT_EAL_LibCtx *libCtx = NULL;
@@ -795,7 +812,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_CMVP_SELFTEST_Test_TC001()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
@@ -828,7 +845,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_ML_DSA_TEST_TC001()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
@@ -870,7 +887,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_ML_KEM_TEST_TC001()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
@@ -918,7 +935,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_CIPHPER_TEST_TC001()
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
@@ -965,7 +982,7 @@ EXIT:
 /* END_CASE */
 
 
-
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
 static void SetDsaPara(CRYPT_EAL_PkeyPara *para, uint8_t *p, uint32_t pLen, uint8_t *q, uint32_t qLen, uint8_t *g, uint32_t gLen)
 {
     para->id = CRYPT_PKEY_DSA;
@@ -976,6 +993,7 @@ static void SetDsaPara(CRYPT_EAL_PkeyPara *para, uint8_t *p, uint32_t pLen, uint
     para->para.dsaPara.g = g;
     para->para.dsaPara.gLen = gLen;
 }
+#endif
 
 /*
     SDV_ISO19790_PROVIDER_PKEY_TEST_TC001
@@ -984,7 +1002,11 @@ static void SetDsaPara(CRYPT_EAL_PkeyPara *para, uint8_t *p, uint32_t pLen, uint
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_PKEY_TEST_TC001(int hashId, Hex *p, Hex *q, Hex *g)
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)hashId;
+    (void)p;
+    (void)q;
+    (void)g;
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
