@@ -26,6 +26,8 @@
 #include "crypt_utils.h"
 #include "bsl_sal.h"
 
+#define DRBG_PARAM_COUNT 6
+
 typedef enum {
     CMVP_DRBG_INSTANTIATE,
     CMVP_DRBG_SEED,
@@ -397,12 +399,13 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const
     method.cleanNonce = CMVP_DrbgCleanData;
 
     if (libCtx != NULL) {
-        BSL_Param param[6] = {0};
-        (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0);
-        (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.getEntropy, 0);
-        (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.cleanEntropy, 0);
-        (void)BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.getNonce, 0);
-        (void)BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.cleanNonce, 0);
+        int32_t index = 0;
+        BSL_Param param[DRBG_PARAM_COUNT] = {0};
+        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0);
+        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.getEntropy, 0);
+        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.cleanEntropy, 0);
+        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.getNonce, 0);
+        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.cleanNonce, 0);
         ctx = CRYPT_EAL_ProviderDrbgNewCtx(libCtx, drbgVec->id, attrName, param);
     } else {
         ctx = CRYPT_EAL_DrbgNew(drbgVec->id, &method, seedCtx);
@@ -496,7 +499,7 @@ static bool CRYPT_CMVP_SelftestDrbgInternal(void *libCtx, const char *attrName, 
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_DrbgSeedWithAdin(ctx, adinSeed.data, adinSeed.len) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    // One byte and two characters
+    // 2: One byte and two characters
     rand = ExecDrbg(ctx, (uint32_t)strlen(drbgVec->retBits) / 2, adin1.data, adin1.len, adin2.data, adin2.len);
     GOTO_EXIT_IF(rand == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(memcmp(rand, expectRand.data, expectRand.len) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);

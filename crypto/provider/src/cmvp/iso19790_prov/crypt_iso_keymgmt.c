@@ -68,6 +68,8 @@
 #include "crypt_iso_provderimpl.h"
 #include "cmvp_iso19790.h"
 
+#define PKEY_PCT_PARAM_COUNT 4
+
 static int32_t ParaCheckAndLog(const CRYPT_Iso_Pkey_Ctx *ctx, const CRYPT_EAL_PkeyPara *para)
 {
     CRYPT_EAL_PkeyC2Data data = {para, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, NULL, NULL,
@@ -224,13 +226,13 @@ static int32_t PkeyPctTest(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, uint
     (void)len;
     int32_t event = CRYPT_EVENT_PCT_TEST;
     int32_t algId = ctx->algId;
-    BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
-    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(algId));
-    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_PCT_CTX, BSL_PARAM_TYPE_CTX_PTR, val, 0);
+    int index = 0;
+    BSL_Param param[PKEY_PCT_PARAM_COUNT] = {{0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(algId));
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_PCT_CTX, BSL_PARAM_TYPE_CTX_PTR, val, 0);
     int32_t ret = CRYPT_EAL_SelftestOperation(ctx->mgrCtx, param);
     if (ret != CRYPT_SUCCESS) {
-        /* selftest callback will log error */
         BSL_ERR_PUSH_ERROR(ret);
         return CRYPT_CMVP_ERR_PAIRWISETEST;
     }
