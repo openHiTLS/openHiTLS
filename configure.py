@@ -378,6 +378,11 @@ class CMakeGenerator:
         cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(tgt_name), '${SHARED_LNK_FLAGS}')
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
         cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)\n' % tgt_name
+        if (self._hmac):
+            # Use OpenSSL to generate an HMAC file.
+            cmake += 'install(CODE "execute_process(COMMAND openssl dgst -hmac \\\"%s\\\" -sha256 -out lib%s.so.hmac lib%s.so)")\n' % (self._args.hkey, lib_name, lib_name)
+            # Install the hmac file to the output directory.
+            cmake += 'install(CODE "execute_process(COMMAND cp lib%s.so.hmac ${CMAKE_INSTALL_PREFIX}/lib%s.so.hmac)")\n' % (lib_name, lib_name)
 
         if lib_name == 'hitls_bsl':
             for item in macros:
