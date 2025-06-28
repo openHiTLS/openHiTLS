@@ -92,6 +92,122 @@ static const char *GetAlgoTypeStr(CRYPT_ALGO_TYPE type)
     }
 }
 
+typedef struct {
+    int32_t id;
+    const char *str;
+} AlgoIdPair;
+
+static AlgoIdPair g_algoIdPair[] = {
+    {CRYPT_CIPHER_AES128_ECB, "CRYPT_CIPHER_AES128_ECB"},
+    {CRYPT_CIPHER_AES192_ECB, "CRYPT_CIPHER_AES192_ECB"},
+    {CRYPT_CIPHER_AES256_ECB, "CRYPT_CIPHER_AES256_ECB"},
+    {CRYPT_CIPHER_AES128_CBC, "CRYPT_CIPHER_AES128_CBC"},
+    {CRYPT_CIPHER_AES192_CBC, "CRYPT_CIPHER_AES192_CBC"},
+    {CRYPT_CIPHER_AES256_CBC, "CRYPT_CIPHER_AES256_CBC"},
+    {CRYPT_CIPHER_AES128_CTR, "CRYPT_CIPHER_AES128_CTR"},
+    {CRYPT_CIPHER_AES192_CTR, "CRYPT_CIPHER_AES192_CTR"},
+    {CRYPT_CIPHER_AES256_CTR, "CRYPT_CIPHER_AES256_CTR"},
+    {CRYPT_CIPHER_AES128_CCM, "CRYPT_CIPHER_AES128_CCM"},
+    {CRYPT_CIPHER_AES192_CCM, "CRYPT_CIPHER_AES192_CCM"},
+    {CRYPT_CIPHER_AES256_CCM, "CRYPT_CIPHER_AES256_CCM"},
+    {CRYPT_CIPHER_AES128_GCM, "CRYPT_CIPHER_AES128_GCM"},
+    {CRYPT_CIPHER_AES192_GCM, "CRYPT_CIPHER_AES192_GCM"},
+    {CRYPT_CIPHER_AES256_GCM, "CRYPT_CIPHER_AES256_GCM"},
+    {CRYPT_CIPHER_AES128_XTS, "CRYPT_CIPHER_AES128_XTS"},
+    {CRYPT_CIPHER_AES256_XTS, "CRYPT_CIPHER_AES256_XTS"},
+    {CRYPT_CIPHER_AES128_OFB, "CRYPT_CIPHER_AES128_OFB"},
+    {CRYPT_CIPHER_AES192_OFB, "CRYPT_CIPHER_AES192_OFB"},
+    {CRYPT_CIPHER_AES256_OFB, "CRYPT_CIPHER_AES256_OFB"},
+    {CRYPT_CIPHER_AES128_CFB, "CRYPT_CIPHER_AES128_CFB"},
+    {CRYPT_CIPHER_AES192_CFB, "CRYPT_CIPHER_AES192_CFB"},
+    {CRYPT_CIPHER_AES256_CFB, "CRYPT_CIPHER_AES256_CFB"},
+    {CRYPT_CIPHER_CHACHA20_POLY1305, "CRYPT_CIPHER_CHACHA20_POLY1305"},
+    {CRYPT_CIPHER_SM4_XTS, "CRYPT_CIPHER_SM4_XTS"},
+    {CRYPT_CIPHER_SM4_CBC, "CRYPT_CIPHER_SM4_CBC"},
+    {CRYPT_CIPHER_SM4_ECB, "CRYPT_CIPHER_SM4_ECB"},
+    {CRYPT_CIPHER_SM4_CTR, "CRYPT_CIPHER_SM4_CTR"},
+    {CRYPT_CIPHER_SM4_GCM, "CRYPT_CIPHER_SM4_GCM"},
+    {CRYPT_CIPHER_SM4_CFB, "CRYPT_CIPHER_SM4_CFB"},
+    {CRYPT_CIPHER_SM4_OFB, "CRYPT_CIPHER_SM4_OFB"},
+
+    {CRYPT_MD_SHA1, "CRYPT_MD_SHA1"},
+    {CRYPT_MD_SHA224, "CRYPT_MD_SHA224"},
+    {CRYPT_MD_SHA256, "CRYPT_MD_SHA256"},
+    {CRYPT_MD_SHA384, "CRYPT_MD_SHA384"},
+    {CRYPT_MD_SHA512, "CRYPT_MD_SHA512"},
+    {CRYPT_MD_SHA3_224, "CRYPT_MD_SHA3_224"},
+    {CRYPT_MD_SHA3_256, "CRYPT_MD_SHA3_256"},
+    {CRYPT_MD_SHA3_384, "CRYPT_MD_SHA3_384"},
+    {CRYPT_MD_SHA3_512, "CRYPT_MD_SHA3_512"},
+    {CRYPT_MD_SHAKE128, "CRYPT_MD_SHAKE128"},
+    {CRYPT_MD_SHAKE256, "CRYPT_MD_SHAKE256"},
+    {CRYPT_MD_SM3, "CRYPT_MD_SM3"},
+
+    {CRYPT_MAC_CMAC_AES128, "CRYPT_MAC_CMAC_AES128"},
+    {CRYPT_MAC_CMAC_AES192, "CRYPT_MAC_CMAC_AES192"},
+    {CRYPT_MAC_CMAC_AES256, "CRYPT_MAC_CMAC_AES256"},
+    {CRYPT_MAC_GMAC_AES128, "CRYPT_MAC_GMAC_AES128"},
+    {CRYPT_MAC_GMAC_AES192, "CRYPT_MAC_GMAC_AES192"},
+    {CRYPT_MAC_GMAC_AES256, "CRYPT_MAC_GMAC_AES256"},
+    {CRYPT_MAC_HMAC_SHA1, "CRYPT_MAC_HMAC_SHA1"},
+    {CRYPT_MAC_HMAC_SHA224, "CRYPT_MAC_HMAC_SHA224"},
+    {CRYPT_MAC_HMAC_SHA256, "CRYPT_MAC_HMAC_SHA256"},
+    {CRYPT_MAC_HMAC_SHA384, "CRYPT_MAC_HMAC_SHA384"},
+    {CRYPT_MAC_HMAC_SHA512, "CRYPT_MAC_HMAC_SHA512"},
+    {CRYPT_MAC_HMAC_SHA3_224, "CRYPT_MAC_HMAC_SHA3_224"},
+    {CRYPT_MAC_HMAC_SHA3_256, "CRYPT_MAC_HMAC_SHA3_256"},
+    {CRYPT_MAC_HMAC_SHA3_384, "CRYPT_MAC_HMAC_SHA3_384"},
+    {CRYPT_MAC_HMAC_SHA3_512, "CRYPT_MAC_HMAC_SHA3_512"},
+    {CRYPT_MAC_HMAC_SM3, "CRYPT_MAC_HMAC_SM3"},
+    {CRYPT_MAC_CMAC_SM4, "CRYPT_MAC_CMAC_SM4"},
+
+    {CRYPT_RAND_AES128_CTR, "CRYPT_RAND_AES128_CTR"},
+    {CRYPT_RAND_AES192_CTR, "CRYPT_RAND_AES192_CTR"},
+    {CRYPT_RAND_AES256_CTR, "CRYPT_RAND_AES256_CTR"},
+    {CRYPT_RAND_AES128_CTR_DF, "CRYPT_RAND_AES128_CTR_DF"},
+    {CRYPT_RAND_AES192_CTR_DF, "CRYPT_RAND_AES192_CTR_DF"},
+    {CRYPT_RAND_AES256_CTR_DF, "CRYPT_RAND_AES256_CTR_DF"},
+    {CRYPT_RAND_HMAC_SHA1, "CRYPT_RAND_HMAC_SHA1"},
+    {CRYPT_RAND_HMAC_SHA224, "CRYPT_RAND_HMAC_SHA224"},
+    {CRYPT_RAND_HMAC_SHA256, "CRYPT_RAND_HMAC_SHA256"},
+    {CRYPT_RAND_HMAC_SHA384, "CRYPT_RAND_HMAC_SHA384"},
+    {CRYPT_RAND_HMAC_SHA512, "CRYPT_RAND_HMAC_SHA512"},
+    {CRYPT_RAND_SHA1, "CRYPT_RAND_SHA1"},
+    {CRYPT_RAND_SHA224, "CRYPT_RAND_SHA224"},
+    {CRYPT_RAND_SHA256, "CRYPT_RAND_SHA256"},
+    {CRYPT_RAND_SHA384, "CRYPT_RAND_SHA384"},
+    {CRYPT_RAND_SHA512, "CRYPT_RAND_SHA512"},
+    {CRYPT_RAND_SM4_CTR_DF, "CRYPT_RAND_SM4_CTR_DF"},
+    {CRYPT_RAND_SM3, "CRYPT_RAND_SM3"},
+
+    {CRYPT_KDF_KDFTLS12, "CRYPT_KDF_KDFTLS12"},
+    {CRYPT_KDF_HKDF, "CRYPT_KDF_HKDF"},
+    {CRYPT_KDF_SCRYPT, "CRYPT_KDF_SCRYPT"},
+    {CRYPT_KDF_PBKDF2, "CRYPT_KDF_PBKDF2"},
+
+    {CRYPT_PKEY_DSA, "CRYPT_PKEY_DSA"},
+    {CRYPT_PKEY_ECDSA, "CRYPT_PKEY_ECDSA"},
+    {CRYPT_PKEY_RSA, "CRYPT_PKEY_RSA"},
+    {CRYPT_PKEY_ED25519, "CRYPT_PKEY_ED25519"},
+    {CRYPT_PKEY_SM2, "CRYPT_PKEY_SM2"},
+    {CRYPT_PKEY_ECDH, "CRYPT_PKEY_ECDH"},
+    {CRYPT_PKEY_DH, "CRYPT_PKEY_DH"},
+    {CRYPT_PKEY_X25519, "CRYPT_PKEY_X25519"},
+    {CRYPT_PKEY_ML_KEM, "CRYPT_PKEY_ML_KEM"},
+    {CRYPT_PKEY_ML_DSA, "CRYPT_PKEY_ML_DSA"},
+    {CRYPT_PKEY_SLH_DSA, "CRYPT_PKEY_SLH_DSA"},
+};
+
+const char *GetAlgoIdStr(int32_t id)
+{
+    for (size_t i = 0; i < sizeof(g_algoIdPair) / sizeof(g_algoIdPair[0]); i++) {
+        if (g_algoIdPair[i].id == id) {
+            return g_algoIdPair[i].str;
+        }
+    }
+    return "UNKNOWN";
+}
+
 static const char *GetEventStr(CRYPT_EVENT_TYPE oper)
 {
     switch (oper) {
@@ -179,8 +295,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
     // ISO/IEC 19790:2012 AS09.33
     // The module shall provide an output status indication when zeroing is complete
     if (oper == CRYPT_EVENT_ZERO && err == CRYPT_SUCCESS) {
-        fprintf(g_logFile, "[%s] [open hitls] [INFO] SSP already zeroisation - algorithm type: %s, id: %d\n", 
-                timeStr, GetAlgoTypeStr(type), id);
+        fprintf(g_logFile, "[%s] [open hitls] [INFO] SSP already zeroisation - algorithm type: %s, id: %s\n", 
+                timeStr, GetAlgoTypeStr(type), GetAlgoIdStr(id));
         fflush(g_logFile);
     }
 
@@ -190,8 +306,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
         ● Attempted to provide invalid input for the cryptographic officer function;
     */
     if (err != CRYPT_SUCCESS) {
-        fprintf(g_logFile, "[%s] [open hitls] [ERR]  Occur error - algorithm type: %s, id: %d, operate: %s, errcode: 0x%x\n",
-                timeStr, GetAlgoTypeStr(type), id, GetEventStr(oper), err);
+        fprintf(g_logFile, "[%s] [open hitls] [ERR]  Occur error - algorithm type: %s, id: %s, operate: %s, errcode: 0x%x\n",
+                timeStr, GetAlgoTypeStr(type), GetAlgoIdStr(id), GetEventStr(oper), err);
         fflush(g_logFile);
     }
     /*
@@ -204,8 +320,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
         and specified services or processes in an approved manner,
         the service shall provide corresponding status indications.
     */
-    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute - algorithm type: %s, id: %d, operate: %s\n", 
-            timeStr, GetAlgoTypeStr(type), id, GetEventStr(oper));
+    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute - algorithm type: %s, id: %s, operate: %s\n", 
+            timeStr, GetAlgoTypeStr(type), GetAlgoIdStr(id), GetEventStr(oper));    
     fflush(g_logFile);
     CloseLogFile();
 }
@@ -614,10 +730,9 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int algId, int macId, int iter, int saltLen)
+void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int macId, int iter, int saltLen)
 {
 #ifndef HITLS_CRYPTO_CMVP_ISO19790
-    (void)algId;
     (void)macId;
     (void)iter;
     (void)saltLen;
@@ -634,10 +749,10 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int algId, int macId, int iter, int sa
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, algId, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso19790_provider");
     ASSERT_TRUE(kdfCtx != NULL);
 
-    BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
+    BSL_Param param[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
 
     (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &macId, sizeof(macId));
     (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, password, passwordLen);
@@ -1030,6 +1145,273 @@ void SDV_ISO19790_PROVIDER_PKEY_TEST_TC001(int hashId, Hex *p, Hex *q, Hex *g)
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, hashId, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
 
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_MAC_PARAM_CHECK_TC001(int algId, int keyLen)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)algId;
+    (void)keyLen;
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_MacCtx *macCtx = NULL;
+    uint8_t macKey[32] = {0};
+    uint32_t macKeyLen = 13;
+
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, "provider=iso19790_provider");
+    ASSERT_TRUE(macCtx != NULL);
+    
+    int32_t ret = CRYPT_EAL_MacInit(macCtx, macKey, macKeyLen);
+    ASSERT_EQ(ret, CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    macKeyLen = keyLen;
+    ret = CRYPT_EAL_MacInit(macCtx, macKey, macKeyLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_MacFreeCtx(macCtx);
+    Iso19790_ProviderUnload(&ctx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC001(Hex *key, Hex *label, Hex *seed)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)key;
+    (void)label;
+    (void)seed;
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_KDFTLS12, "provider=iso19790_provider");
+    ASSERT_TRUE(kdfCtx != NULL);
+
+    BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, 14), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_LABEL, BSL_PARAM_TYPE_OCTETS,
+        label->x, label->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_SEED, BSL_PARAM_TYPE_OCTETS,
+        seed->x, seed->len), CRYPT_SUCCESS);
+
+    int32_t macId = CRYPT_MAC_HMAC_SHA224;
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &macId, sizeof(macId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    macId = CRYPT_MAC_HMAC_SHA256;
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &macId, sizeof(macId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
+
+    // key len < 112 / 8
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, 13), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+EXIT:
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
+    Iso19790_ProviderUnload(&ctx);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC002(Hex *key, Hex *salt, Hex *info)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)key;
+    (void)salt;
+    (void)info;
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_HKDF, "provider=iso19790_provider");
+    ASSERT_TRUE(kdfCtx != NULL);
+
+    int32_t macId = CRYPT_MAC_HMAC_SHA256;
+    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &macId, sizeof(macId)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_MODE, BSL_PARAM_TYPE_UINT32,
+        &mode, sizeof(mode)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt->x, salt->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_INFO, BSL_PARAM_TYPE_OCTETS,
+        info->x, info->len), CRYPT_SUCCESS);
+
+    macId = CRYPT_MAC_HMAC_SM3;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    macId = CRYPT_MAC_HMAC_SHA256;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
+
+    // key len < 112 / 8
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, 13), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, 14), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
+    Iso19790_ProviderUnload(&ctx);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC003()
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    uint8_t password[32] = {0};
+    uint32_t passwordLen = sizeof(password);
+    uint8_t salt[32] = {0};
+    uint8_t derivedKey[32] = {0};
+
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso19790_provider");
+    ASSERT_TRUE(kdfCtx != NULL);
+
+
+    int32_t iter = 1024;
+    int32_t saltLen = 16;
+    int32_t macId = CRYPT_MAC_SIPHASH64;
+
+    BSL_Param param[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &macId, sizeof(macId));
+    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, password, passwordLen);
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, saltLen);
+    (void)BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, sizeof(iter));
+
+    int32_t ret = CRYPT_EAL_KdfSetParam(kdfCtx, param);
+    ASSERT_EQ(ret, CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    macId = CRYPT_MAC_HMAC_SHA1;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_SUCCESS);
+
+    iter = 999;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    iter = 1000;
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_SUCCESS);
+
+    saltLen = 15;
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, saltLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    saltLen = 16;
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, saltLen);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, param), CRYPT_SUCCESS);
+
+    uint32_t derivedKeyLen = 13;
+    ret = CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, derivedKeyLen);
+    ASSERT_EQ(ret, CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    derivedKeyLen = 14;
+    ret = CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, derivedKeyLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_KdfFreeCtx(kdfCtx);
+    Iso19790_ProviderUnload(&ctx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_DSA_PARAM_CHECK_TC001(Hex *p, Hex *q, Hex *g)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)p;
+    (void)q;
+    (void)g;
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    CRYPT_EAL_PkeyPara para = {0};
+
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_DSA, 0, "provider=iso19790_provider");
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+    SetDsaPara(&para, p->x, 256, q->x, 27, g->x, 256);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    SetDsaPara(&para, p->x, 256, q->x, 31, g->x, 256);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    SetDsaPara(&para, p->x, 384, q->x, 31, g->x, 384);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_CMVP_ERR_PARAM_CHECK);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_RSA_PARAM_CHECK_TC001()
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_RSA, 0, "provider=iso19790_provider");
+    ASSERT_TRUE(pkeyCtx != NULL);
+    SetRsaPara(&para, e, 3, 1024);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_CMVP_ERR_PARAM_CHECK);
+
+    SetRsaPara(&para, e, 3, 2048);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_SUCCESS);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     Iso19790_ProviderUnload(&ctx);

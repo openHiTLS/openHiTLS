@@ -140,6 +140,16 @@ static const CMVP_MAC_VECTOR MAC_VECTOR[] = {
         .iv = NULL,
         .type = MAC_TYPE_HMAC_CMAC
     },
+    // CRYPT_MAC_CMAC_SM4
+    // GB/T 15852.1-2020 B.6
+    {
+        .id = CRYPT_MAC_CMAC_SM4,
+        .key = "0123456789ABCDEFFEDCBA9876543210",
+        .msg = "54686973206973207468652074657374206d65737361676520666f72206d6163", // "This is the test message for mac"
+        .mac = "692c437100f3b5ee2b8abcef373d990c",
+        .iv = NULL,
+        .type = MAC_TYPE_HMAC_CMAC
+    },
     // CRYPT_MAC_GMAC_AES128
     // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/gcmtestvectors.zip
     {
