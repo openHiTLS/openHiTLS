@@ -1419,3 +1419,47 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_ECDH_SM2_TEST_TC001()
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx1 = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyCtx2 = NULL;
+
+    Iso19790_ProviderLoad(&ctx);
+    ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
+
+    pkeyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ECDH, 0, "provider=iso19790_provider");
+    pkeyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ECDH, 0, "provider=iso19790_provider");
+    ASSERT_TRUE(pkeyCtx1 != NULL && pkeyCtx2 != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkeyCtx1, CRYPT_ECC_SM2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkeyCtx2, CRYPT_ECC_SM2), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx2), CRYPT_SUCCESS);
+
+    uint8_t sharedKey1[32] = {0};
+    uint32_t sharedKeyLen1 = sizeof(sharedKey1);  
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkeyCtx1, pkeyCtx2, sharedKey1, &sharedKeyLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(sharedKeyLen1, 32);
+
+    uint8_t sharedKey2[32] = {0};
+    uint32_t sharedKeyLen2 = sizeof(sharedKey2);  
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkeyCtx2, pkeyCtx1, sharedKey2, &sharedKeyLen2), CRYPT_SUCCESS);
+    ASSERT_EQ(sharedKeyLen2, 32);
+
+    ASSERT_EQ(memcmp(sharedKey1, sharedKey2, sharedKeyLen1), 0);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx1);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx2);
+    Iso19790_ProviderUnload(&ctx);
+    return;
+#endif
+}
+/* END_CASE */
+

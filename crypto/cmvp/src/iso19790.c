@@ -248,6 +248,7 @@ static bool EcdhParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         CRYPT_ECC_NISTP256,
         CRYPT_ECC_NISTP384,
         CRYPT_ECC_NISTP521,
+        CRYPT_ECC_SM2,
         CRYPT_PKEY_PARAID_MAX,
     };
 
