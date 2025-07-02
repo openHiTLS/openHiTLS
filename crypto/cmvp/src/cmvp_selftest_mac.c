@@ -250,7 +250,7 @@ static bool CRYPT_CMVP_SelftestMacInternal(void *libCtx, const char *attrName, C
     }
 
     GOTO_EXIT_IF(!GetData(macVec, &key, &msg, &expectMac, &iv), CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName) : CRYPT_EAL_MacNewCtx(id);
+    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     if (macVec->type == MAC_TYPE_GMAC) {
         macLen = expectMac.len;

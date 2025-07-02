@@ -368,7 +368,6 @@ static int32_t MlKemCleanPubKey(CRYPT_ML_KEM_Ctx *ctx)
     if (ctx->ek != NULL) {
         BSL_SAL_CleanseData(ctx->ek, ctx->ekLen);
         BSL_SAL_FREE(ctx->ek);
-        ctx->ek = NULL;
         ctx->ekLen = 0;
     }
     return CRYPT_SUCCESS;

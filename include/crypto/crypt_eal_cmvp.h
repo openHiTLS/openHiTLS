@@ -14,21 +14,20 @@
  */
 
 /**
- * @defgroup crypt_iso_19790
+ * @defgroup crypt_eal_cmvp
  * @ingroup crypt
- * @brief ISO 19790 header
+ * @brief EAL CMVP header
  */
 
-#ifndef CRYPT_ISO_19790_H
-#define CRYPT_ISO_19790_H
+#ifndef CRYPT_EAL_CMVP_H
+#define CRYPT_EAL_CMVP_H
 
 #include <stdint.h>
+#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-#define CRYPT_PARAM_RUN_LOG_CB    0x1001
 
 typedef enum {
     CRYPT_CMVP_INTEGRITY_TEST = 0,
@@ -36,7 +35,7 @@ typedef enum {
     CRYPT_CMVP_MAX
 } CRYPT_CMVP_SELFTEST_TYPE;
 
-typedef void (*Iso19790_log_cb)(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
+typedef void (*CRYPT_EAL_CMVP_LogFunc)(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
 
 typedef struct EAL_SelftestCtx CRYPT_SelftestCtx;
 
@@ -51,4 +50,4 @@ void CRYPT_CMVP_SelftestFreeCtx(CRYPT_SelftestCtx *ctx);
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#endif // CRYPT_ISO_19790_H
+#endif // CRYPT_EAL_CMVP_H

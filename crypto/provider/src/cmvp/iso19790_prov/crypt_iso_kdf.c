@@ -35,9 +35,9 @@ typedef struct {
 } IsoKdfCtx;
 
 /* Constants for parameter validation */
-#define KDF_MIN_SALT_LEN_BYTES  16
-#define KDF_MIN_PBKDF2_ITER     1000
-#define KDF_MIN_KEY_LEN_BYTES   14
+#define KDF_MIN_SALT_LEN    16
+#define KDF_MIN_PBKDF2_ITER 1000
+#define KDF_MIN_KEY_LEN     14
 
 /* MAC algorithm support pairs: {algId, macId} */
 static const int32_t g_macIdPairs[][2] = {
@@ -108,7 +108,7 @@ static int32_t CheckKeyLen(const BSL_Param *param)
         return CRYPT_SUCCESS;
     }
 
-    if (temp->valueLen < KDF_MIN_KEY_LEN_BYTES) {
+    if (temp->valueLen < KDF_MIN_KEY_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
@@ -124,7 +124,7 @@ static int32_t CheckPbkdf2Params(const BSL_Param *param)
     int32_t ret = CRYPT_SUCCESS;
 
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
-        if (temp->valueLen < KDF_MIN_SALT_LEN_BYTES) {
+        if (temp->valueLen < KDF_MIN_SALT_LEN) {
             BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
             return CRYPT_CMVP_ERR_PARAM_CHECK;
         }
@@ -233,7 +233,7 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->algId == CRYPT_KDF_PBKDF2 && len < KDF_MIN_KEY_LEN_BYTES) {
+    if (ctx->algId == CRYPT_KDF_PBKDF2 && len < KDF_MIN_KEY_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;

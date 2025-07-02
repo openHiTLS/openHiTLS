@@ -398,18 +398,15 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const
     method.getNonce = CMVP_DrbgGetNonce;
     method.cleanNonce = CMVP_DrbgCleanData;
 
-    if (libCtx != NULL) {
-        int32_t index = 0;
-        BSL_Param param[DRBG_PARAM_COUNT] = {0};
-        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0);
-        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.getEntropy, 0);
-        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.cleanEntropy, 0);
-        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.getNonce, 0);
-        (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.cleanNonce, 0);
-        ctx = CRYPT_EAL_ProviderDrbgNewCtx(libCtx, drbgVec->id, attrName, param);
-    } else {
-        ctx = CRYPT_EAL_DrbgNew(drbgVec->id, &method, seedCtx);
-    }
+    int32_t index = 0;
+    BSL_Param param[DRBG_PARAM_COUNT] = {0};
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.cleanEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.getNonce, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.cleanNonce, 0);
+    ctx = CRYPT_EAL_ProviderDrbgNewCtx(libCtx, drbgVec->id, attrName, param);
+
     GOTO_EXIT_IF(ctx == NULL,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_DrbgInstantiate(ctx, pers, persLen) != CRYPT_SUCCESS,  CRYPT_CMVP_ERR_ALGO_SELFTEST);

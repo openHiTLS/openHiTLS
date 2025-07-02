@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 #include "crypt_cmvp.h"
 #include "cmvp_method.h"
 #include "cmvp_common.h"
@@ -37,7 +38,7 @@
 #include "crypt_entropy.h"
 #include "bsl_sal.h"
 #include "crypt_eal_implprovider.h"
-#include "crypt_iso_19790.h"
+#include "crypt_eal_cmvp.h"
 #include "crypt_cmvp.h"
 #include "bsl_errno.h"
 
@@ -289,6 +290,8 @@ bool CMVP_MlKemPct(CRYPT_EAL_PkeyCtx *pkey)
     uint8_t *ciphertext = NULL;
     uint8_t sharedKey[32] = {0};
     uint32_t sharedLen = sizeof(sharedKey);
+    uint8_t sharedKey2[32] = {0};
+    uint32_t sharedLen2 = sizeof(sharedKey2);
 
     int32_t ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
     if (ret != CRYPT_SUCCESS) {
@@ -301,8 +304,22 @@ bool CMVP_MlKemPct(CRYPT_EAL_PkeyCtx *pkey)
     }
 
     ret = CRYPT_EAL_PkeyEncaps(pkey, ciphertext, &cipherLen, sharedKey, &sharedLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(ciphertext);
+        return false;
+    }
+
+    ret = CRYPT_EAL_PkeyDecaps(pkey, ciphertext, cipherLen, sharedKey2, &sharedLen2);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(ciphertext);
+        return false;
+    }
+
     BSL_SAL_FREE(ciphertext);
-    return (ret == CRYPT_SUCCESS) ? true : false;
+    if (sharedLen != sharedLen2 || memcmp(sharedKey, sharedKey2, sharedLen) != 0) {
+        return false;
+    }
+    return true;
 }
 
 bool CMVP_Pct(CRYPT_EAL_PkeyCtx *pkey)
@@ -811,7 +828,7 @@ static CRYPT_SelftestCtx *CRYPT_CMVP_SelftestNewCtxInner(CRYPT_EAL_LibCtx *libCt
 {
     const CRYPT_EAL_Func *funcs = NULL;
     void *provCtx = NULL;
-    int32_t algId = CRYPT_CMVP_CTF_ISO19790;
+    int32_t algId = CRYPT_CMVP_PROVIDER_SELFTEST;
     int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_SELFTEST, algId, attrName,
         &funcs, &provCtx);
     if (ret != CRYPT_SUCCESS) {

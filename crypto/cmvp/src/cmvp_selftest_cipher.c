@@ -433,7 +433,7 @@ bool CipherEnc(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id, CIPHER
     uint8_t *out = BSL_SAL_Malloc(len);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
     memset_s(out, len, 0, len);
-    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName) : CRYPT_EAL_CipherNewCtx(id);
+    ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, true) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherUpdate(ctx, data.plainText.data, data.plainText.len, out, &len) != CRYPT_SUCCESS,
@@ -457,7 +457,7 @@ bool CipherDec(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id, CIPHER
     uint32_t len = data.plainText.len;
     uint8_t *out = BSL_SAL_Malloc(len);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
-    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName) : CRYPT_EAL_CipherNewCtx(id);
+    ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, false) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -495,8 +495,7 @@ bool AesAeadEnc(void *libCtx, const char *attrName, const CMVP_CIPHER_VECTOR *ci
         tagLen = data.cipherText.len - data.plainText.len;
     }
 
-    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName) :
-        CRYPT_EAL_CipherNewCtx(cipherVec->id);
+    ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, true) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -556,8 +555,7 @@ bool AesAeadDec(void *libCtx, const char *attrName, const CMVP_CIPHER_VECTOR *ci
     tag = BSL_SAL_Malloc(tagLen);
     GOTO_EXIT_IF(tag == NULL, CRYPT_MEM_ALLOC_FAIL);
 
-    ctx = libCtx != NULL ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName) :
-        CRYPT_EAL_CipherNewCtx(cipherVec->id);
+    ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, cipherVec->id, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, false) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);

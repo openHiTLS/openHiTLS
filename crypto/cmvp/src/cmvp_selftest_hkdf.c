@@ -68,8 +68,7 @@ static bool CRYPT_CMVP_SelftestHkdfInternal(void *libCtx, const char *attrName)
     out = BSL_SAL_Malloc(expOutLen);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
 
-    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName) :
-        CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     BSL_Param param[6] = {
         {CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, sizeof(id), 0},

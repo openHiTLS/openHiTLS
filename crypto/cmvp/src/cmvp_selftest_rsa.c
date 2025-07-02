@@ -193,8 +193,7 @@ static bool RsaSelftestSign(void *libCtx, const char *attrName, int32_t id)
     expectSign = CMVP_StringsToBins(RSA_VECTOR[id].sign, &expectSignLen);
     GOTO_EXIT_IF(expectSign == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    pkey = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName);
     GOTO_EXIT_IF(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetPrvKey(RSA_VECTOR[id], &prv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_PkeySetPrv(pkey, &prv) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -243,8 +242,7 @@ static bool RsaSelftestVerify(void *libCtx, const char *attrName, int32_t id)
     sign = CMVP_StringsToBins(RSA_VECTOR[id].sign, &signLen);
     GOTO_EXIT_IF(sign == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    pkey = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName);
     GOTO_EXIT_IF(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetPubKey(RSA_VECTOR[id], &pub) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_PkeySetPub(pkey, &pub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);

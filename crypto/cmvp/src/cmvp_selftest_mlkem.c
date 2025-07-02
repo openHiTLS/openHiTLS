@@ -59,11 +59,9 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_MlkemVecto
     int32_t ret = CRYPT_CMVP_ERR_ALGO_SELFTEST;
     CRYPT_EAL_PkeyPrv prvKey = { 0 };
     CRYPT_EAL_PkeyPub pubKey = { 0 };
-    *pkeyPrv = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = (libCtx != NULL) ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(vector->algId);
+    *pkeyPub = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, vector->algId, 0, attrName);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     ret = CRYPT_EAL_PkeySetParaById(*pkeyPrv, vector->type);

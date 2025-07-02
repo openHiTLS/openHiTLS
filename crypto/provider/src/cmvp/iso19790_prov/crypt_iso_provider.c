@@ -30,7 +30,7 @@
 #include "crypt_iso_provderimpl.h"
 #include "crypt_iso_provider.h"
 #include "crypt_iso_selftest.h"
-#include "crypt_iso_19790.h"
+#include "crypt_params_key.h"
 #include "crypt_provider.h"
 #include "crypt_params_key.h"
 #include "hitls_crypt_type.h"
@@ -187,7 +187,7 @@ static const CRYPT_EAL_AlgInfo g_isoKems[] = {
 };
 
 static const CRYPT_EAL_AlgInfo g_isoSelftests[] = {
-    {CRYPT_CMVP_CTF_ISO19790, g_isoSelftest, CRYPT_EAL_ISO_ATTR},
+    {CRYPT_CMVP_PROVIDER_SELFTEST, g_isoSelftest, CRYPT_EAL_ISO_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -256,8 +256,9 @@ static int32_t CreateIsoProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    BSL_Param *runLog = BSL_PARAM_FindParam(param, CRYPT_PARAM_RUN_LOG_CB);
-    int32_t ret = BSL_PARAM_GetPtrValue(runLog, CRYPT_PARAM_RUN_LOG_CB, BSL_PARAM_TYPE_FUNC_PTR, (void **)&temp->runLog, NULL);
+    BSL_Param *runLog = BSL_PARAM_FindParam(param, CRYPT_PARAM_CMVP_LOG_FUNC);
+    int32_t ret = BSL_PARAM_GetPtrValue(runLog, CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR,
+        (void **)&temp->runLog, NULL);
     if (ret != BSL_SUCCESS) {
         BSL_SAL_Free(temp);
         return ret;

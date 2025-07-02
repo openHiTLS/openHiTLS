@@ -187,6 +187,9 @@ extern "C" {
 #define CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS      (CRYPT_PARAM_CAP_TLS_SIGNALG_BASE + 17)
 #define CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS       (CRYPT_PARAM_CAP_TLS_SIGNALG_BASE + 18)
 
+#define CRYPT_PARAM_CMVP_BASE                               5200
+#define CRYPT_PARAM_CMVP_LOG_FUNC                           (CRYPT_PARAM_CMVP_BASE + 1)
+
 #ifdef __cplusplus
 }
 #endif

@@ -173,7 +173,7 @@ static bool CRYPT_CMVP_SelftestMdInternal(void *libCtx, const char *attrName, CR
     expectMd = CMVP_StringsToBins(hashVec->md, &expectMdLen);
     GOTO_EXIT_IF(expectMd == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderMdNewCtx(libCtx, id, attrName) : CRYPT_EAL_MdNewCtx(id);
+    ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, id, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     if (id == CRYPT_MD_SHAKE128 || id == CRYPT_MD_SHAKE256) {
         mdLen = expectMdLen;

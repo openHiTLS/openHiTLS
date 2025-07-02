@@ -176,10 +176,8 @@ static bool CRYPT_CMVP_SelftestDhInternal(void *libCtx, const char *attrName)
     GOTO_EXIT_IF(GetPara(DH_VECTOR, &para) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetKey(DH_VECTOR, &prv1, &pub1, &prv2, &pub2) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
-    pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
+    pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, 0, attrName);
+    pkeyPub = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DH, 0, attrName);
     GOTO_EXIT_IF(pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 

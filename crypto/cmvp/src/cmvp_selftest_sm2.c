@@ -221,12 +221,10 @@ bool CRYPT_CMVP_SelftestSM2Crypt(void *libCtx, const char *attrName)
     CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
     CRYPT_RandRegistEx(NULL);
 
-    pubCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
-        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
+    pubCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(pubCtx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    prvCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
-        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
+    prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(prvCtx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     SetPrvPkey(&prvCtx, SM2_TEST_KEYS.d);
     SetPubPkey(&pubCtx, SM2_TEST_KEYS.qX, SM2_TEST_KEYS.qY);
@@ -337,11 +335,9 @@ bool CRYPT_CMVP_SelftestSM2Sign(void *libCtx, const char *attrName)
     CRYPT_RandRegistEx(NULL);
     msg = CMVP_StringsToBins(SM2DSA_VECTOR.msg, &msgLen);
     GOTO_EXIT_IF(msg == NULL, CRYPT_CMVP_COMMON_ERR);
-    pkeyPrv = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
-        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
+    pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(pkeyPrv == NULL, CRYPT_CMVP_COMMON_ERR);
-    pkeyPub = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
-        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
+    pkeyPub = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(pkeyPub == NULL, CRYPT_CMVP_COMMON_ERR);
     GOTO_EXIT_IF(SetUserId(pkeyPub, SM2DSA_VECTOR.userid) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(SetUserId(pkeyPrv, SM2DSA_VECTOR.userid) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
@@ -400,11 +396,9 @@ bool CRYPT_CMVP_SelftestSM2Exchange(void *libCtx, const char *attrName)
     CRYPT_EAL_RandFuncEx funcEx = CRYPT_RandRegistExGet();
     CRYPT_RandRegistEx(NULL);
 
-    selfCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
-        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
+    selfCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(selfCtx == NULL, CRYPT_CMVP_COMMON_ERR);
-    peerCtx = (libCtx == NULL) ? CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2) :
-        CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
+    peerCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_SM2, 0, attrName);
     GOTO_EXIT_IF(peerCtx == NULL, CRYPT_CMVP_COMMON_ERR);
 
     uint32_t RLen;

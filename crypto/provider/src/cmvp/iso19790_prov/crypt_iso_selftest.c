@@ -24,6 +24,7 @@
 #include "bsl_err_internal.h"
 #include "cmvp_iso19790.h"
 #include "crypt_cmvp_selftest.h"
+#include "crypt_params_key.h"
 #include "crypt_provider.h"
 #include "cmvp_common.h"
 #include "crypt_iso_selftest.h"
@@ -385,7 +386,7 @@ static int32_t CreateInternalLibCtx(BSL_Param *param, CRYPT_EAL_LibCtx **libCtx)
         CRYPT_EAL_LibCtxFree(ctx);
     }
     BSL_SAL_Free(libPath);
-    BSL_SAL_FREE(newParam);
+    BSL_SAL_Free(newParam);
     return ret;
 }
 
@@ -415,9 +416,9 @@ int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
         return ret;
     }
 
-    Iso19790_log_cb runLog = NULL;
-    BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_RUN_LOG_CB);
-    ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RUN_LOG_CB, BSL_PARAM_TYPE_FUNC_PTR, (void **)&runLog, NULL);
+    CRYPT_EAL_CMVP_LogFunc runLog = NULL;
+    BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_CMVP_LOG_FUNC);
+    ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR, (void **)&runLog, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

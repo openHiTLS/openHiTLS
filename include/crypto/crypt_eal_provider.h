@@ -78,7 +78,19 @@ void CRYPT_EAL_LibCtxFree(CRYPT_EAL_LibCtx *libCtx);
 int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
     const char *providerName, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
 
-int32_t CRYPT_EAL_ProviderIsLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName,
+/**
+ * @ingroup crypt_eal_provider
+ * @brief Check if the provider is loaded
+ *
+ * @param libCtx [IN] Library context
+ * @param cmd [IN] Command specifying the conversion format for the provider library name.
+ * @param providerName [IN] provider name
+ * @param isLoaded [OUT] Whether the provider is loaded
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderIsLoaded(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName,
     bool *isLoaded);
 
 /**

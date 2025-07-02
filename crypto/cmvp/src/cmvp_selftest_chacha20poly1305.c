@@ -100,8 +100,7 @@ static bool CRYPT_CMVP_SelftestChacha20poly1305Internal(void *libCtx, const char
     GOTO_EXIT_IF(outTag == NULL || out == NULL, CRYPT_MEM_ALLOC_FAIL);
     first = data.len / 2;       // The length of the data in the first operation is 1/2 of the data.
 
-    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderCipherNewCtx(libCtx, CRYPT_CIPHER_CHACHA20_POLY1305, attrName) :
-        CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, CRYPT_CIPHER_CHACHA20_POLY1305, attrName);
     GOTO_EXIT_IF(ctx == NULL, err);
     GOTO_EXIT_IF(CRYPT_EAL_CipherInit(ctx, key.data, key.len, iv.data, iv.len, true) != CRYPT_SUCCESS, err);
     GOTO_EXIT_IF(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad.data, aad.len) != CRYPT_SUCCESS, err);

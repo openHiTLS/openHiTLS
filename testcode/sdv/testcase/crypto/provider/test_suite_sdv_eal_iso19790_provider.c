@@ -32,7 +32,7 @@
 #include "crypt_eal_pkey.h"
 #include "eal_pkey_local.h"
 #include "test.h"
-#include "crypt_iso_19790.h"
+#include "crypt_eal_cmvp.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"
@@ -441,7 +441,7 @@ static void Iso19790_ProviderLoad(Iso19790_ProviderLoadCtx *ctx)
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, "../script/build"), CRYPT_SUCCESS);
 
     BSL_Param param[2] = {{0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RUN_LOG_CB, BSL_PARAM_TYPE_FUNC_PTR, ISO19790_RunLogCb, 0);
+    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ISO19790_RunLogCb, 0);
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "libopenhitls.so", param, NULL), CRYPT_SUCCESS);
 
     GetSeedPool((void **)&pool, (void **)&es);
@@ -884,18 +884,19 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, "../script/build"), CRYPT_SUCCESS);
     
     bool isLoaded = false;
-    int32_t ret = CRYPT_EAL_ProviderIsLoad(libCtx, 0, "libopenhitls.so", &isLoaded);
+    int32_t ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, "libopenhitls.so", &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded == false);
 
     BSL_Param providerParam[2] = {{0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&providerParam[0], CRYPT_PARAM_RUN_LOG_CB, BSL_PARAM_TYPE_FUNC_PTR, ISO19790_RunLogCb, 0);
+    (void)BSL_PARAM_InitValue(&providerParam[0], CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR,
+        ISO19790_RunLogCb, 0);
 
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "libopenhitls.so", providerParam, &providerMgr), CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
 
 
-    ret = CRYPT_EAL_ProviderIsLoad(libCtx, 0, "libopenhitls.so", &isLoaded);
+    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, "libopenhitls.so", &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded);
 
@@ -905,14 +906,14 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     ret = CRYPT_EAL_ProviderUnload(libCtx, 0, "libopenhitls.so");
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_ProviderIsLoad(libCtx, 0, "libopenhitls.so", &isLoaded);
+    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, "libopenhitls.so", &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded);
 
     ret = CRYPT_EAL_ProviderUnload(libCtx, 0, "libopenhitls.so");
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_ProviderIsLoad(libCtx, 0, "libopenhitls.so", &isLoaded);
+    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, "libopenhitls.so", &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded == false);
 

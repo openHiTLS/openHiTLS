@@ -26,7 +26,7 @@
 
 #include <stdint.h>
 #include "crypt_eal_implprovider.h"
-#include "crypt_iso_19790.h"
+#include "crypt_eal_cmvp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,7 +47,7 @@ extern "C" {
 typedef struct EalIsoProvCtx {
     void *libCtx;
     void *mgrCtx;
-    Iso19790_log_cb runLog;
+    CRYPT_EAL_CMVP_LogFunc runLog;
 } CRYPT_EAL_IsoProvCtx;
 
 int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, CRYPT_EAL_Func *capFuncs,

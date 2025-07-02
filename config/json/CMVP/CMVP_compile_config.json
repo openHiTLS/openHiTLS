@@ -12,7 +12,7 @@
     },
     "linkFlag": {
         "LINK_FLAG_ADD":[
-            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/X8664/CMVP/libhitls_iso.ld"
+            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_iso.ld"
         ]
     }
 }

@@ -67,8 +67,7 @@ static bool CRYPT_CMVP_SelftestScryptInternal(void *libCtx, const char *attrName
     key = BSL_SAL_Malloc(expkeyLen);
     GOTO_EXIT_IF(key == NULL, CRYPT_MEM_ALLOC_FAIL);
 
-    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, attrName) :
-        CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
+    ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_SCRYPT, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     BSL_Param param[6] = {
         {CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, pw, pwLen, 0},

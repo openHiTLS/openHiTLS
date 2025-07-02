@@ -60,11 +60,9 @@ static bool GetPkey(void *libCtx, const char *attrName, bool isBob, CRYPT_EAL_Pk
     uint8_t *y = NULL;
     uint32_t xLen, yLen;
 
-    *pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDH, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    *pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDH, 0, attrName);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDH, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
+    *pkeyPub = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_ECDH, 0, attrName);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     prv->id = CRYPT_PKEY_ECDH;

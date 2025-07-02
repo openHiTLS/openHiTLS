@@ -45,7 +45,7 @@ static uint8_t *GetLibHmac(void *libCtx, const char *attrName, CRYPT_MAC_AlgId i
 
     buf = CMVP_ReadFile(libPath, "rb", &bufLen);
     GOTO_EXIT_IF(buf == NULL, CRYPT_CMVP_COMMON_ERR);
-    ctx = (libCtx != NULL) ? CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName) : CRYPT_EAL_MacNewCtx(id);
+    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     *hmacLen = CRYPT_EAL_GetMacLen(ctx);
     hmac = BSL_SAL_Malloc(*hmacLen);

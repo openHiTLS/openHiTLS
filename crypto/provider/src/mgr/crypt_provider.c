@@ -319,7 +319,7 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_ProviderIsLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName,
+int32_t CRYPT_EAL_ProviderIsLoaded(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName,
     bool *isLoaded)
 {
     if (providerName == NULL || isLoaded == NULL) {

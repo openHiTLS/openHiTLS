@@ -86,11 +86,9 @@ static const CMVP_DSA_VECTOR DSA_VECTOR = {
 static bool GetPkey(void *libCtx, const char *attrName, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub,
     CRYPT_EAL_PkeyPara *para, CRYPT_EAL_PkeyPub *pub, CRYPT_EAL_PkeyPrv *prv)
 {
-    *pkeyPrv = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DSA);
+    *pkeyPrv = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, attrName);
     GOTO_EXIT_IF(*pkeyPrv == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    *pkeyPub = libCtx != NULL ? CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, attrName) :
-        CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DSA);
+    *pkeyPub = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_DSA, 0, attrName);
     GOTO_EXIT_IF(*pkeyPub == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     para->para.dsaPara.p = CMVP_StringsToBins(DSA_VECTOR.p, &(para->para.dsaPara.pLen));
