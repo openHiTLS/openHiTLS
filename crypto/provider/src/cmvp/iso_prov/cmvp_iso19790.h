@@ -29,15 +29,23 @@
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 bool CMVP_Iso19790PkeyC2(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data);
 
 bool CMVP_Iso19790MacC2(CRYPT_MAC_AlgId id, uint32_t keyLen);
 
 bool CMVP_Iso19790KdfC2(CRYPT_KDF_AlgId id, const CRYPT_EAL_KdfC2Data *data);
 
-int32_t CMVP_Iso19790KatTest(void *libCtx, const char *attrName);
+int32_t CMVP_Iso19790Kat(void *libCtx, const char *attrName);
 
 int32_t CMVP_Iso19790CheckIntegrity(void *libCtx, const char *attrName);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* HITLS_CRYPTO_CMVP_ISO19790 */
 #endif /* CMVP_ISO19790_H */

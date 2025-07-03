@@ -112,8 +112,8 @@ static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         GOTO_EXIT_IF(prv.nLen < (2048 / 8), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
-    if (data->pkcsv15 != NULL) {
-        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, data->pkcsv15->mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+    if (data->pkcsv15 != CRYPT_MD_MAX) {
+        GOTO_EXIT_IF((GetVaildFlag(CRYPT_PKEY_RSA, data->pkcsv15, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     if (data->pss != NULL) {
@@ -531,7 +531,7 @@ bool CMVP_Iso19790KdfC2(CRYPT_KDF_AlgId id, const CRYPT_EAL_KdfC2Data *data)
     }
 }
 
-int32_t CMVP_Iso19790KatTest(void *libCtx, const char *attrName)
+int32_t CMVP_Iso19790Kat(void *libCtx, const char *attrName)
 {
     bool ret = false;
     ret = ISO19790_CipherKat(libCtx, attrName);

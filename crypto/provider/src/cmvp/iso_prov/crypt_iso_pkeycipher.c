@@ -38,10 +38,6 @@
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);                          \
-        if (ret != CRYPT_SUCCESS) {                                                                                 \
-            return ret;                                                                                             \
-        }                                                                                                           \
         return CRYPT_##name##_Encrypt(ctx->ctx, data, dataLen, out, outLen);                                        \
     }                                                                                                               \
                                                                                                                     \
@@ -53,10 +49,6 @@
             return CRYPT_NULL_INPUT;                                                                                \
         }                                                                                                           \
         int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_DEC, CRYPT_ALGO_PKEY, ctx->algId);                     \
-        if (ret != CRYPT_SUCCESS) {                                                                                 \
-            return ret;                                                                                             \
-        }                                                                                                           \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);                          \
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \

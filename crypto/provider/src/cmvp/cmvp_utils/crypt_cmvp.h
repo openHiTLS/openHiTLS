@@ -29,12 +29,9 @@
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
 
-#define CRYPT_CMVP_GM_SM2 (1)
-#define CRYPT_CMVP_GM_SM3 (1 << 1)
-#define CRYPT_CMVP_GM_SM4 (1 << 2)
-#define CRYPT_CMVP_GM_DRBG (1 << 3)
-#define CRYPT_CMVP_GM_MAC (1 << 4)
-#define CRYPT_CMVP_GM_PBKDF (1 << 5)
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 typedef void* (*CmvpProvNewCtx)(void *provCtx);
 typedef const char* (*CmvpGetVersion)(void *ctx);
@@ -55,15 +52,6 @@ struct EAL_SelftestCtx {
     uint32_t state;
     int32_t id;
 };
-
-typedef struct {
-    CRYPT_MD_AlgId mdId;
-} CRYPT_RSA_PkcsV15Para;
-
-typedef struct {
-    CRYPT_MD_AlgId mdId;
-    CRYPT_MD_AlgId mgfId;
-} CRYPT_RSA_OaepPara;
 
 typedef struct {
     CRYPT_MAC_AlgId macId; /**< MAC algorithm ID */
@@ -89,18 +77,15 @@ typedef struct {
     CRYPT_MD_AlgId mdId; /**< MD algorithm ID */
     CRYPT_PKEY_ParaId paraId; /**< PKEY parameter ID */
     CRYPT_EVENT_TYPE oper;
-    const CRYPT_RSA_PkcsV15Para *pkcsv15;
+    CRYPT_MD_AlgId pkcsv15;
     BSL_Param *pss;
     BSL_Param *oaep;
 } CRYPT_EAL_PkeyC2Data;
 
-typedef bool (*CRYPT_EAL_PkeyC2)(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data);
-typedef bool (*CRYPT_EAL_MdC2)(CRYPT_MD_AlgId id);
-typedef bool (*CRYPT_EAL_MacC2)(CRYPT_MAC_AlgId id, uint32_t keyLen);
-typedef bool (*CRYPT_EAL_CipherC2)(CRYPT_CIPHER_AlgId id);
-typedef bool (*CRYPT_EAL_KdfC2)(CRYPT_KDF_AlgId id, const CRYPT_EAL_KdfC2Data *data);
-typedef bool (*CRYPT_EAL_RandC2)(CRYPT_RAND_AlgId id);
-
 bool CMVP_Pct(CRYPT_EAL_PkeyCtx *pkey);
-#endif
-#endif
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* HITLS_CRYPTO_CMVP */
+#endif /* CRYPT_CMVP_H */

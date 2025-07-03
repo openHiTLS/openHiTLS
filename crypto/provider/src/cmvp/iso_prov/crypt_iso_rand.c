@@ -85,11 +85,7 @@ static int32_t DRBG_InstantiateWrapper(IsoRandCtx *ctx, const uint8_t *person, u
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_RANDGEN, CRYPT_ALGO_RAND, ctx->algId);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_RAND, ctx->algId);
+    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_RAND, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -116,7 +112,7 @@ static int32_t DRBG_GenerateBytesWrapper(IsoRandCtx *ctx, uint8_t *out, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_RAND, ctx->algId);
+    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_RANDGEN, CRYPT_ALGO_RAND, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

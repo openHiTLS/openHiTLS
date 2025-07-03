@@ -30,7 +30,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param);
 
@@ -38,7 +38,7 @@ int32_t CRYPT_Iso_Log(void *mgrCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 #endif /* HITLS_CRYPTO_CMVP_ISO19790 */
-#endif // CRYPT_EAL_ISO_SELFTEST_H
+#endif /* CRYPT_EAL_ISO_SELFTEST_H */

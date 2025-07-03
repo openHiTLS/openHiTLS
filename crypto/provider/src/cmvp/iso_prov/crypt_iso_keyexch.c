@@ -38,12 +38,8 @@
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
-        ret = CRYPT_Iso_Log(prvKey->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, prvKey->algId);               \
-        if (ret != CRYPT_SUCCESS) {                                                                            \
-            return ret;                                                                                        \
-        }                                                                                                      \
         return (name)(prvKey->ctx, pubKey->ctx, sharedKey, shareKeyLen);                                       \
-    } 
+    }
 
 #ifdef HITLS_CRYPTO_X25519
 KEY_EXCH_FUNC(CRYPT_CURVE25519_ComputeSharedKey)

@@ -496,7 +496,7 @@ static bool CRYPT_CMVP_SelftestDrbgInternal(void *libCtx, const char *attrName, 
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_DrbgSeedWithAdin(ctx, adinSeed.data, adinSeed.len) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    // 2: One byte and two characters
+    // One byte and two characters
     rand = ExecDrbg(ctx, (uint32_t)strlen(drbgVec->retBits) / 2, adin1.data, adin1.len, adin2.data, adin2.len);
     GOTO_EXIT_IF(rand == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(memcmp(rand, expectRand.data, expectRand.len) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);

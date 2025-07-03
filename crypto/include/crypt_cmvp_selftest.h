@@ -16,8 +16,10 @@
 #ifndef CRYPT_CMVP_SELFTEST_H
 #define CRYPT_CMVP_SELFTEST_H
 
-#include <stdint.h>
 #include "hitls_build.h"
+#ifdef HITLS_CRYPTO_CMVP
+
+#include <stdint.h>
 #include "crypt_cmvp.h"
 #include "crypt_types.h"
 #include "crypt_eal_pkey.h"
@@ -26,6 +28,10 @@
 #include "crypt_eal_mac.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 bool CRYPT_CMVP_SelftestDrbg(CRYPT_RAND_AlgId id);
 
@@ -107,4 +113,9 @@ bool CRYPT_CMVP_SelftestSlhdsaSignVerify(void);
 
 bool CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(void *libCtx, const char *attrName);
 
-#endif
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* HITLS_CRYPTO_CMVP */
+#endif /* CRYPT_CMVP_SELFTEST_H */

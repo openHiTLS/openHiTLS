@@ -191,7 +191,7 @@ static const CRYPT_EAL_AlgInfo g_isoSelftests[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
-static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
+static int32_t CRYPT_EAL_IsoProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
     (void)provCtx;
     int32_t ret = CRYPT_SUCCESS;
@@ -236,20 +236,20 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
     return ret;
 }
 
-static void CRYPT_EAL_DefaultProvFree(void *provCtx)
+static void CRYPT_EAL_IsoProvFree(void *provCtx)
 {
     BSL_SAL_Free(provCtx);
 }
 
 static CRYPT_EAL_Func g_isoProvOutFuncs[] = {
-    {CRYPT_EAL_PROVCB_QUERY, CRYPT_EAL_DefaultProvQuery},
-    {CRYPT_EAL_PROVCB_FREE, CRYPT_EAL_DefaultProvFree},
+    {CRYPT_EAL_PROVCB_QUERY, CRYPT_EAL_IsoProvQuery},
+    {CRYPT_EAL_PROVCB_FREE, CRYPT_EAL_IsoProvFree},
     {CRYPT_EAL_PROVCB_CTRL, NULL},
     {CRYPT_EAL_PROVCB_GETCAPS, NULL},
     CRYPT_EAL_FUNC_END
 };
 
-static int32_t CreateIsoProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, void **provCtx)
+static int32_t IsoCreateProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, void **provCtx)
 {
     CRYPT_EAL_IsoProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_IsoProvCtx));
     if (temp == NULL) {
@@ -304,7 +304,7 @@ int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, C
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CreateIsoProvCtx(libCtx, mgrCtx, param, provCtx);
+    ret = IsoCreateProvCtx(libCtx, mgrCtx, param, provCtx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

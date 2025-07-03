@@ -41,7 +41,7 @@
 #include "crypt_cmvp.h"
 #include "bsl_errno.h"
 
-bool CMVP_MlKemPct(CRYPT_EAL_PkeyCtx *pkey)
+static bool CMVP_MlKemPct(CRYPT_EAL_PkeyCtx *pkey)
 {
     uint32_t cipherLen = 0;
     uint8_t *ciphertext = NULL;

@@ -87,7 +87,7 @@ static bool CRYPT_CMVP_SelftestPbkdf2Internal(void *libCtx, const char *attrName
     salt = pbkdf2Vec->salt;
     saltLen = (uint32_t)strlen(pbkdf2Vec->salt);
     expOut = CMVP_StringsToBins(pbkdf2Vec->key, &expOutLen);
-    GOTO_EXIT_IF(expOut == NULL, CRYPT_CMVP_ERR_CSP_EXIST);
+    GOTO_EXIT_IF(expOut == NULL, CRYPT_CMVP_COMMON_ERR);
     out = BSL_SAL_Malloc(expOutLen);
     GOTO_EXIT_IF(out == NULL, CRYPT_MEM_ALLOC_FAIL);
     ctx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_PBKDF2, attrName);

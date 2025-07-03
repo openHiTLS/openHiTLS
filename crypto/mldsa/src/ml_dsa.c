@@ -259,7 +259,6 @@ static int32_t MLDSACleanPubKey(CRYPT_ML_DSA_Ctx *ctx)
     if (ctx->pubKey != NULL) {
         BSL_SAL_CleanseData(ctx->pubKey, ctx->pubLen);
         BSL_SAL_FREE(ctx->pubKey);
-        ctx->pubKey = NULL;
         ctx->pubLen = 0;
     }
     return CRYPT_SUCCESS;

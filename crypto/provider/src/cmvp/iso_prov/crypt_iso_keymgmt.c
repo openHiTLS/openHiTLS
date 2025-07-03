@@ -72,8 +72,8 @@
 
 static int32_t ParaCheckAndLog(const CRYPT_Iso_Pkey_Ctx *ctx, const CRYPT_EAL_PkeyPara *para)
 {
-    CRYPT_EAL_PkeyC2Data data = {para, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, NULL, NULL,
-        NULL};
+    CRYPT_EAL_PkeyC2Data data = {para, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
+        NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
@@ -179,8 +179,8 @@ static int32_t CheckSetRsaPrvKey(CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *param
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, &prv, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, NULL, NULL,
-        NULL};
+    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, &prv, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
+        NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
@@ -203,8 +203,8 @@ static int32_t CheckSetRsaPubKey(CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *param
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    CRYPT_EAL_PkeyC2Data data = {NULL, &pub, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, NULL, NULL,
-        NULL};
+    CRYPT_EAL_PkeyC2Data data = {NULL, &pub, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
+        NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
@@ -245,8 +245,8 @@ static int32_t CheckParaId(CRYPT_Iso_Pkey_Ctx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, *(CRYPT_PKEY_ParaId *)val, CRYPT_EVENT_MAX, NULL, NULL,
-        NULL};
+    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, *(CRYPT_PKEY_ParaId *)val, CRYPT_EVENT_MAX,
+        CRYPT_MD_MAX, NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
@@ -261,15 +261,17 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         return CRYPT_INVALID_ARG;
     }
     if (opt == CRYPT_CTRL_SET_PARA_BY_ID) {
-        int32_t ret = CheckParaId(ctx, val, len);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
+        return CheckParaId(ctx, val, len);
     }
-    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, NULL, NULL,
-        NULL};
+
+    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
+        NULL, NULL};
     if (opt == CRYPT_CTRL_SET_RSA_EMSA_PKCSV15 || opt == CRYPT_CTRL_SET_RSA_RSAES_PKCSV15) {
-        data.pkcsv15 = (const CRYPT_RSA_PkcsV15Para *)val;
+        if (val == NULL || len != sizeof(int32_t)) {
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+            return CRYPT_NULL_INPUT;
+        }
+        data.pkcsv15 = *(int32_t *)val;
     }
     if (opt == CRYPT_CTRL_SET_RSA_EMSA_PSS) {
         data.pss = (BSL_Param *)val;

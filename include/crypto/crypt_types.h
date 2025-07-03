@@ -727,7 +727,8 @@ typedef enum {
                                                obtained each time is the output length of the adjustment function.
                                                The caller can use this interface to implement the automatic collection
                                                function of the entropy pool. */
-    CRYPT_ENTROPY_SET_LOG_CALLBACK,
+    CRYPT_ENTROPY_SET_LOG_CALLBACK,       /**< Set the entropy log callback. This callback is used to log the noise
+                                               source collection result. */
     CRYPT_ENTROPY_MAX
 } CRYPT_ENTROPY_TYPE;
 
@@ -781,12 +782,12 @@ typedef enum {
     CRYPT_EVENT_DECAPS,       /**< Key decapsulation. */
     CRYPT_EVENT_BLIND,        /**< Message blinding. */
     CRYPT_EVENT_UNBLIND,      /**< Signature unblinding. */
-    CRYPT_EVENT_PARAM_CHECK,
-    CRYPT_EVENT_PCT_TEST,
-    CRYPT_EVENT_KAT_TEST,
-    CRYPT_EVENT_ES_HEALTH_TEST,
-    CRYPT_EVENT_INTEGRITY_TEST,
-    CRYPT_EVENT_GET_VERSION,
+    CRYPT_EVENT_PARAM_CHECK,  /**< Parameter check. */
+    CRYPT_EVENT_PCT_TEST,     /**< PCT test. */
+    CRYPT_EVENT_KAT_TEST,     /**< KAT test. */
+    CRYPT_EVENT_ES_HEALTH_TEST, /**< Entropy source health test. */
+    CRYPT_EVENT_INTEGRITY_TEST, /**< Integrity test. */
+    CRYPT_EVENT_GET_VERSION,    /**< Get the version of the provider. */
     CRYPT_EVENT_MAX
 } CRYPT_EVENT_TYPE;
 
@@ -919,7 +920,7 @@ typedef enum {
 } CRYPT_SLH_DSA_AlgId;
 
 typedef enum {
-    CRYPT_CMVP_PROVIDER_SELFTEST = 0x01,
+    CRYPT_CMVP_PROVIDER_SELFTEST = 0x01, /**< Self-test. */
 } CRYPT_CMVP_Selftest_AlgId;
 
 #ifdef __cplusplus

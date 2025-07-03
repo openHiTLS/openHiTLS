@@ -22,6 +22,7 @@
 #include "bsl_list.h"
 #include "crypt_errno.h"
 #include "crypt_entropy.h"
+#include "crypt_eal_entropy.h"
 #include "es_entropy_pool.h"
 #include "es_cf.h"
 #include "es_noise_source.h"
@@ -33,7 +34,7 @@ struct ES_Entropy {
     ES_EntropyPool *pool; // Entropy pool
     ES_CfMethod *cfMeth; // compression function handle
     BslList *nsList;
-    void (*runLog)(int32_t ret);
+    CRYPT_EAL_EsLogFunc runLog;
 };
 
 #define ENTROPY_POOL_SIZE_DEFAULT 4096
@@ -237,7 +238,7 @@ static int32_t EsSetLogCallback(ENTROPY_EntropySource *es, void *data, uint32_t 
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    es->runLog = (void (*)(int32_t))data;
+    es->runLog = (CRYPT_EAL_EsLogFunc)data;
     return CRYPT_SUCCESS;
 }
 

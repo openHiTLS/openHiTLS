@@ -76,4 +76,4 @@ int32_t CRYPT_EAL_SelftestSetCb(CRYPT_EAL_ProvMgrCtx *mgrCtx, SelftestCb callbac
 #endif /* __cpluscplus */
 
 #endif /* HITLS_CRYPTO_PROVIDER */
-#endif // CRYPT_SHA1_H
+#endif /* CRYPT_PROVIDER_H */

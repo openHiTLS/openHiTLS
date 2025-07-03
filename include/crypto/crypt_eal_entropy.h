@@ -29,6 +29,14 @@ typedef struct CryptEalEntropySource CRYPT_EAL_Es;
 
 /**
  * @ingroup crypt_eal_entropy
+ * @brief The log function for entropy source to log noise source collection result.
+ *
+ * @param ret [IN] The return value of the noise source collection.
+ */
+typedef void (*CRYPT_EAL_EsLogFunc)(int32_t ret);
+
+/**
+ * @ingroup crypt_eal_entropy
  * @brief Generate entropy source handle.
  * @attention If the function is called by an external user and the error stack is concerned,
  * it is recommended that BSL_ERR_ClearError() be called before this function is called.

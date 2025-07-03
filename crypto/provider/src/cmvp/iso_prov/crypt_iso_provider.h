@@ -30,7 +30,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 #define CRYPT_PARAM_EVENT          1
 #define CRYPT_PARAM_OPERAID        2
@@ -55,7 +55,7 @@ int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, C
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 #endif /* HITLS_CRYPTO_CMVP_ISO19790 */
-#endif // CRYPT_EAL_ISO_PROVIDER_H
+#endif /* CRYPT_EAL_ISO_PROVIDER_H */

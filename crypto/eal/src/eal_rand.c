@@ -283,6 +283,9 @@ int32_t EAL_DrbgbytesWithAdin(CRYPT_EAL_RndCtx *ctx, uint8_t *byte, uint32_t len
     }
 
     ret = ctx->meth->gen(ctx->ctx, byte, len, addin, addinLen, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, ctx->id, ret);
+    }
     RAND_UNLOCK(ctx);
 
     return ret;

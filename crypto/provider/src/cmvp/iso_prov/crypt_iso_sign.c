@@ -34,8 +34,7 @@
 static int32_t CheckSignVerifyMdAlgId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, bool isSign)
 {
     CRYPT_EVENT_TYPE event = isSign ? CRYPT_EVENT_SIGN : CRYPT_EVENT_VERIFY;
-    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, algId, CRYPT_PKEY_PARAID_MAX, event, NULL, NULL,
-        NULL};
+    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, algId, CRYPT_PKEY_PARAID_MAX, event, CRYPT_MD_MAX, NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
@@ -59,10 +58,6 @@ static int32_t CheckSignVerifyMdAlgId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, bo
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);                          \
-        if (ret != CRYPT_SUCCESS) {                                                                                 \
-            return ret;                                                                                             \
-        }                                                                                                           \
         return CRYPT_##name##_Sign(ctx->ctx, algId, data, dataLen, sign, signLen);                                  \
     }                                                                                                               \
                                                                                                                     \
@@ -81,10 +76,6 @@ static int32_t CheckSignVerifyMdAlgId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, bo
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);                          \
-        if (ret != CRYPT_SUCCESS) {                                                                                 \
-            return ret;                                                                                             \
-        }                                                                                                           \
         return CRYPT_##name##_Verify(ctx->ctx, algId, msg, msgLen, sign, signLen);                                  \
     }
 
@@ -100,10 +91,6 @@ static int32_t CheckSignVerifyMdAlgId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, bo
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);                          \
-        if (ret != CRYPT_SUCCESS) {                                                                                 \
-            return ret;                                                                                             \
-        }                                                                                                           \
         return CRYPT_##name##_SignData(ctx->ctx, data, dataLen, sign, signLen);                                     \
     }                                                                                                               \
                                                                                                                     \
@@ -115,10 +102,6 @@ static int32_t CheckSignVerifyMdAlgId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, bo
             return CRYPT_NULL_INPUT;                                                                                \
         }                                                                                                           \
         int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_VERIFY, CRYPT_ALGO_PKEY, ctx->algId);                  \
-        if (ret != CRYPT_SUCCESS) {                                                                                 \
-            return ret;                                                                                             \
-        }                                                                                                           \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);                          \
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \
@@ -146,10 +129,6 @@ static int32_t CRYPT_RSA_BlindWrapper(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, co
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
     return CRYPT_RSA_Blind(ctx->ctx, algId, input, inputLen, out, outLen);
 }
 
@@ -161,10 +140,6 @@ static int32_t CRYPT_RSA_UnBlindWrapper(CRYPT_Iso_Pkey_Ctx *ctx, const uint8_t *
         return CRYPT_NULL_INPUT;
     }
     int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_UNBLIND, CRYPT_ALGO_PKEY, ctx->algId);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

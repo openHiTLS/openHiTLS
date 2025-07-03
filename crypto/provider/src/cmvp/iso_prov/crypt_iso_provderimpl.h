@@ -28,7 +28,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 typedef struct {
     int32_t algId;
@@ -104,7 +104,7 @@ extern const CRYPT_EAL_Func g_isoSelftest[];
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 #endif /* HITLS_CRYPTO_CMVP_ISO19790 */
-#endif // CRYPT_EAL_ISO_PROVIDERIMPL_H
+#endif /* CRYPT_EAL_ISO_PROVIDERIMPL_H */

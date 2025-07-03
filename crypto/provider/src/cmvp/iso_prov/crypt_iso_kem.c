@@ -37,10 +37,6 @@ static int32_t CRYPT_ML_KEM_EncapsWrapper(const CRYPT_Iso_Pkey_Ctx *ctx, uint8_t
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
     return CRYPT_ML_KEM_Encaps(ctx->ctx, cipher, cipherLen, share, shareLen);
 }
 
@@ -52,10 +48,6 @@ static int32_t CRYPT_ML_KEM_DecapsWrapper(const CRYPT_Iso_Pkey_Ctx *ctx, uint8_t
         return CRYPT_NULL_INPUT;
     }
     int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_DECAPS, CRYPT_ALGO_PKEY, ctx->algId);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

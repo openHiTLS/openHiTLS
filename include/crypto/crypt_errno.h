@@ -529,19 +529,14 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
     CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When paillier is used for Ctrl. */
 
-    CRYPT_PROVIDER_ERR_SELFTEST = 0x013A0001,          /**< Selftest error. */
+    CRYPT_PROVIDER_ERR_SELFTEST = 0x013A0001,       /**< Selftest error. */
 
-    CRYPT_CMVP_COMMON_ERR = 0x013B0001,               /**< Common error in CMVP selftest. */
-    CRYPT_CMVP_ERR_INTEGRITY = 0x013B0002,               /**< Integrity error in CMVP selftest. */
-    CRYPT_CMVP_RANDOMNESS_ERR = 0x013B0003,              /**< Randomness error in CMVP selftest. */
-    CRYPT_CMVP_ERR_ALGO_SELFTEST = 0x013B0004,          /**< Algorithm selftest error in CMVP selftest. */
-    CRYPT_CMVP_ERR_CSP_EXIST = 0x013B0005,               /**< CSP already exists in CMVP selftest. */
-    CRYPT_CMVP_ERR_LOCK = 0x013B0006,                    /**< Lock error in CMVP selftest. */
-    CRYPT_CMVP_ERR_PAIRWISETEST = 0x013B0007,            /**< Pairwise test error in CMVP selftest. */
-    CRYPT_CMVP_ERR_STATUS = 0x013B0008,                   /**< Status error in CMVP selftest. */
-    CRYPT_CMVP_INVALID_INPUT = 0x013B0009,                 /**< Invalid input error in CMVP selftest. */
-    CRYPT_CMVP_ALREADY_IN_MODE = 0x013B000A,              /**< Already in mode error in CMVP selftest. */
-    CRYPT_CMVP_ERR_PARAM_CHECK = 0x013B000B,              /**< Parameter check error in CMVP selftest. */
+    CRYPT_CMVP_COMMON_ERR = 0x013B0001, /**< Common error in CMVP selftest. */
+    CRYPT_CMVP_ERR_INTEGRITY,           /**< Integrity error in CMVP selftest. */
+    CRYPT_CMVP_RANDOMNESS_ERR,          /**< Randomness error in CMVP selftest. */
+    CRYPT_CMVP_ERR_ALGO_SELFTEST,       /**< Algorithm selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_PAIRWISETEST,        /**< Pairwise test error in CMVP selftest. */
+    CRYPT_CMVP_ERR_PARAM_CHECK,         /**< Parameter check error in CMVP selftest. */
 };
 #ifdef __cplusplus
 }

@@ -42,6 +42,14 @@ int32_t CRYPT_Iso_Log(void *mgrCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type
     return CRYPT_EAL_SelftestOperation(mgrCtx, param);
 }
 
+static void IsoRunLog(void *provCtx, CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)
+{
+    if (provCtx == NULL || ((CRYPT_EAL_IsoProvCtx *)provCtx)->runLog == NULL) {
+        return;
+    }
+    ((CRYPT_EAL_IsoProvCtx *)provCtx)->runLog(oper, type, id, err);
+}
+
 static int32_t IsoPctTest(void *provCtx, BSL_Param *param)
 {
     void *pkeyCtx = NULL;
@@ -57,14 +65,12 @@ static int32_t IsoPctTest(void *provCtx, BSL_Param *param)
         return CRYPT_NULL_INPUT;
     }
     int32_t algId = *(int32_t *)(uintptr_t)temp->value;
-    CRYPT_EAL_IsoProvCtx *ctx = (CRYPT_EAL_IsoProvCtx *)provCtx;
-    ctx->runLog(CRYPT_EVENT_PCT_TEST, CRYPT_ALGO_PKEY, algId, CRYPT_SUCCESS);
+    IsoRunLog(provCtx, CRYPT_EVENT_PCT_TEST, CRYPT_ALGO_PKEY, algId, CRYPT_SUCCESS);
     return CMVP_Pct(pkeyCtx) ? CRYPT_SUCCESS : CRYPT_CMVP_ERR_ALGO_SELFTEST;
 }
 
-static int32_t IsoLog(CRYPT_EVENT_TYPE event, void *provCtx, BSL_Param *param, int32_t ret)
+static int32_t IsoLogEvent(CRYPT_EVENT_TYPE event, void *provCtx, BSL_Param *param, int32_t ret)
 {
-    CRYPT_EAL_IsoProvCtx *ctx = (CRYPT_EAL_IsoProvCtx *)provCtx;
     BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_ALGID);
     if (temp == NULL || temp->valueType != BSL_PARAM_TYPE_INT32) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -78,14 +84,13 @@ static int32_t IsoLog(CRYPT_EVENT_TYPE event, void *provCtx, BSL_Param *param, i
         return CRYPT_NULL_INPUT;
     }
     int32_t type = *(int32_t *)(uintptr_t)temp->value;
-    ctx->runLog(event, type, id, ret);
+    IsoRunLog(provCtx, event, type, id, ret);
     return CRYPT_SUCCESS;
 }
 
 static int32_t IsoIntegrityTest(void *provCtx, BSL_Param *param)
 {
     void *libCtx = NULL;
-    CRYPT_EAL_IsoProvCtx *ctx = (CRYPT_EAL_IsoProvCtx *)provCtx;
     BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_LIB_CTX);
     int32_t ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_LIB_CTX, BSL_PARAM_TYPE_CTX_PTR, &libCtx, NULL);
     if (ret != BSL_SUCCESS || libCtx == NULL) {
@@ -93,10 +98,10 @@ static int32_t IsoIntegrityTest(void *provCtx, BSL_Param *param)
         return CRYPT_NULL_INPUT;
     }
 
-    ctx->runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, CRYPT_SUCCESS);
+    IsoRunLog(provCtx, CRYPT_EVENT_INTEGRITY_TEST, 0, 0, CRYPT_SUCCESS);
     ret = CMVP_Iso19790CheckIntegrity(libCtx, CRYPT_EAL_ISO_ATTR);
     if (ret != CRYPT_SUCCESS) {
-        ctx->runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, ret);
+        IsoRunLog(provCtx, CRYPT_EVENT_INTEGRITY_TEST, 0, 0, ret);
         return ret;
     }
     return CRYPT_SUCCESS;
@@ -105,7 +110,6 @@ static int32_t IsoIntegrityTest(void *provCtx, BSL_Param *param)
 static int32_t IsoKatTest(void *provCtx, BSL_Param *param)
 {
     void *libCtx = NULL;
-    CRYPT_EAL_IsoProvCtx *ctx = (CRYPT_EAL_IsoProvCtx *)provCtx;
     BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_LIB_CTX);
     int32_t ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_LIB_CTX, BSL_PARAM_TYPE_CTX_PTR, &libCtx, NULL);
     if (ret != BSL_SUCCESS || libCtx == NULL) {
@@ -113,16 +117,16 @@ static int32_t IsoKatTest(void *provCtx, BSL_Param *param)
         return CRYPT_NULL_INPUT;
     }
 
-    ctx->runLog(CRYPT_EVENT_KAT_TEST, 0, 0, CRYPT_SUCCESS);
-    ret = CMVP_Iso19790KatTest(libCtx, CRYPT_EAL_ISO_ATTR);
+    IsoRunLog(provCtx, CRYPT_EVENT_KAT_TEST, 0, 0, CRYPT_SUCCESS);
+    ret = CMVP_Iso19790Kat(libCtx, CRYPT_EAL_ISO_ATTR);
     if (ret != CRYPT_SUCCESS) {
-        ctx->runLog(CRYPT_EVENT_KAT_TEST, 0, 0, ret);
+        IsoRunLog(provCtx, CRYPT_EVENT_KAT_TEST, 0, 0, ret);
         return ret;
     }
     return CRYPT_SUCCESS;
 }
 
-static int32_t Iso_selftest_cb(void *provCtx, BSL_Param *param)
+static int32_t IsoSelftestCb(void *provCtx, BSL_Param *param)
 {
     BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_EVENT);
     if (temp == NULL || temp->valueType != BSL_PARAM_TYPE_INT32) {
@@ -138,7 +142,7 @@ static int32_t Iso_selftest_cb(void *provCtx, BSL_Param *param)
         case CRYPT_EVENT_INTEGRITY_TEST:
             return IsoIntegrityTest(provCtx, param);
         case CRYPT_EVENT_PARAM_CHECK:
-            return IsoLog(event, provCtx, param, CRYPT_CMVP_ERR_PARAM_CHECK);
+            return IsoLogEvent(event, provCtx, param, CRYPT_CMVP_ERR_PARAM_CHECK);
         case CRYPT_EVENT_ENC:
         case CRYPT_EVENT_DEC:
         case CRYPT_EVENT_GEN:
@@ -157,14 +161,14 @@ static int32_t Iso_selftest_cb(void *provCtx, BSL_Param *param)
         case CRYPT_EVENT_BLIND:
         case CRYPT_EVENT_UNBLIND:
         case CRYPT_EVENT_GET_VERSION:
-            return IsoLog(event, provCtx, param, CRYPT_SUCCESS);
+            return IsoLogEvent(event, provCtx, param, CRYPT_SUCCESS);
         default:
             break;
     }
     return CRYPT_NOT_SUPPORT;
 }
 
-static int32_t CopyParam(BSL_Param *param, int32_t *selfTestFlag, BSL_Param **newParam)
+static int32_t IsoCopyParam(BSL_Param *param, int32_t *selfTestFlag, BSL_Param **newParam)
 {
     int32_t index = 0;
     if (param != NULL) {
@@ -177,24 +181,25 @@ static int32_t CopyParam(BSL_Param *param, int32_t *selfTestFlag, BSL_Param **ne
         }
     }
     int32_t count = index + 2;
-    *newParam = (BSL_Param *)BSL_SAL_Calloc(count, sizeof(BSL_Param));
-    if (*newParam == NULL) {
+    BSL_Param *tmpParam = (BSL_Param *)BSL_SAL_Calloc(count, sizeof(BSL_Param));
+    if (tmpParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (param != NULL) {
-        (void)memcpy_s(*newParam, count * sizeof(BSL_Param), param, index * sizeof(BSL_Param));
+        (void)memcpy_s(tmpParam, count * sizeof(BSL_Param), param, index * sizeof(BSL_Param));
     }
-    int32_t ret = BSL_PARAM_InitValue(&(*newParam)[index], CRYPT_PARAM_SELF_TEST_FLAG, BSL_PARAM_TYPE_INT32,
+    int32_t ret = BSL_PARAM_InitValue(&tmpParam[index], CRYPT_PARAM_SELF_TEST_FLAG, BSL_PARAM_TYPE_INT32,
         selfTestFlag, sizeof(int32_t));
     if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(*newParam);
+        BSL_SAL_FREE(tmpParam);
         return ret;
     }
+    *newParam = tmpParam;
     return CRYPT_SUCCESS;
 }
 
-static int32_t CreateInternalLibCtx(BSL_Param *param, CRYPT_EAL_LibCtx **libCtx)
+static int32_t IsoCreateInternalLibCtx(BSL_Param *param, CRYPT_EAL_LibCtx **libCtx)
 {
     int32_t selfTestFlag = 1;
     int32_t ret = CRYPT_SUCCESS;
@@ -203,7 +208,7 @@ static int32_t CreateInternalLibCtx(BSL_Param *param, CRYPT_EAL_LibCtx **libCtx)
     CRYPT_EAL_LibCtx *ctx = NULL;
 
     do {
-        ret = CopyParam(param, &selfTestFlag, &newParam);
+        ret = IsoCopyParam(param, &selfTestFlag, &newParam);
         if (ret != CRYPT_SUCCESS) {
             break;
         }
@@ -215,7 +220,7 @@ static int32_t CreateInternalLibCtx(BSL_Param *param, CRYPT_EAL_LibCtx **libCtx)
             break;
         }
 
-        libPath = CMVP_GetLibPath(CreateInternalLibCtx);
+        libPath = CMVP_GetLibPath(IsoCreateInternalLibCtx);
         if (libPath == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_SELFTEST);
             ret = CRYPT_PROVIDER_ERR_SELFTEST;
@@ -236,13 +241,14 @@ static int32_t CreateInternalLibCtx(BSL_Param *param, CRYPT_EAL_LibCtx **libCtx)
     return ret;
 }
 
-static bool CheckIsInternalLibCtx(BSL_Param *param)
+static bool IsoCheckIsInternalLibCtx(BSL_Param *param)
 {
-    if (param != NULL) {
-        BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_SELF_TEST_FLAG);
-        if (temp != NULL && temp->valueType == BSL_PARAM_TYPE_INT32) {
-            return true;
-        }
+    if (param == NULL) {
+        return false;
+    }
+    BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_SELF_TEST_FLAG);
+    if (temp != NULL && temp->valueType == BSL_PARAM_TYPE_INT32) {
+        return true;
     }
     return false;
 }
@@ -250,14 +256,14 @@ static bool CheckIsInternalLibCtx(BSL_Param *param)
 int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
 {
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    int32_t ret = CRYPT_EAL_SelftestSetCb(mgrCtx, Iso_selftest_cb);
+    int32_t ret = CRYPT_EAL_SelftestSetCb(mgrCtx, IsoSelftestCb);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    if (CheckIsInternalLibCtx(param)) {
+    if (IsoCheckIsInternalLibCtx(param)) {
         return CRYPT_SUCCESS;
     }
-    ret = CreateInternalLibCtx(param, &libCtx);
+    ret = IsoCreateInternalLibCtx(param, &libCtx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -283,7 +289,7 @@ int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
     }
 
     runLog(CRYPT_EVENT_KAT_TEST, 0, 0, CRYPT_SUCCESS);
-    ret = CMVP_Iso19790KatTest(libCtx, CRYPT_EAL_ISO_ATTR);
+    ret = CMVP_Iso19790Kat(libCtx, CRYPT_EAL_ISO_ATTR);
     CRYPT_EAL_LibCtxFree(libCtx);
     if (ret != CRYPT_SUCCESS) {
         runLog(CRYPT_EVENT_KAT_TEST, 0, 0, ret);

@@ -72,196 +72,6 @@ static void CloseLogFile(void)
     }
 }
 
-static const char *GetAlgoTypeStr(CRYPT_ALGO_TYPE type)
-{
-    switch (type) {
-        case CRYPT_ALGO_CIPHER:
-            return "CRYPT_ALGO_CIPHER";
-        case CRYPT_ALGO_PKEY:
-            return "CRYPT_ALGO_PKEY";
-        case CRYPT_ALGO_MD:
-            return "CRYPT_ALGO_MD";
-        case CRYPT_ALGO_MAC:
-            return "CRYPT_ALGO_MAC";
-        case CRYPT_ALGO_KDF:
-            return "CRYPT_ALGO_KDF";
-        case CRYPT_ALGO_RAND:
-            return "CRYPT_ALGO_RAND";
-        default:
-            return "UNKNOWN";
-    }
-}
-
-typedef struct {
-    int32_t id;
-    const char *str;
-} AlgoIdPair;
-
-static AlgoIdPair g_algoIdPair[] = {
-    {CRYPT_CIPHER_AES128_ECB, "CRYPT_CIPHER_AES128_ECB"},
-    {CRYPT_CIPHER_AES192_ECB, "CRYPT_CIPHER_AES192_ECB"},
-    {CRYPT_CIPHER_AES256_ECB, "CRYPT_CIPHER_AES256_ECB"},
-    {CRYPT_CIPHER_AES128_CBC, "CRYPT_CIPHER_AES128_CBC"},
-    {CRYPT_CIPHER_AES192_CBC, "CRYPT_CIPHER_AES192_CBC"},
-    {CRYPT_CIPHER_AES256_CBC, "CRYPT_CIPHER_AES256_CBC"},
-    {CRYPT_CIPHER_AES128_CTR, "CRYPT_CIPHER_AES128_CTR"},
-    {CRYPT_CIPHER_AES192_CTR, "CRYPT_CIPHER_AES192_CTR"},
-    {CRYPT_CIPHER_AES256_CTR, "CRYPT_CIPHER_AES256_CTR"},
-    {CRYPT_CIPHER_AES128_CCM, "CRYPT_CIPHER_AES128_CCM"},
-    {CRYPT_CIPHER_AES192_CCM, "CRYPT_CIPHER_AES192_CCM"},
-    {CRYPT_CIPHER_AES256_CCM, "CRYPT_CIPHER_AES256_CCM"},
-    {CRYPT_CIPHER_AES128_GCM, "CRYPT_CIPHER_AES128_GCM"},
-    {CRYPT_CIPHER_AES192_GCM, "CRYPT_CIPHER_AES192_GCM"},
-    {CRYPT_CIPHER_AES256_GCM, "CRYPT_CIPHER_AES256_GCM"},
-    {CRYPT_CIPHER_AES128_XTS, "CRYPT_CIPHER_AES128_XTS"},
-    {CRYPT_CIPHER_AES256_XTS, "CRYPT_CIPHER_AES256_XTS"},
-    {CRYPT_CIPHER_AES128_OFB, "CRYPT_CIPHER_AES128_OFB"},
-    {CRYPT_CIPHER_AES192_OFB, "CRYPT_CIPHER_AES192_OFB"},
-    {CRYPT_CIPHER_AES256_OFB, "CRYPT_CIPHER_AES256_OFB"},
-    {CRYPT_CIPHER_AES128_CFB, "CRYPT_CIPHER_AES128_CFB"},
-    {CRYPT_CIPHER_AES192_CFB, "CRYPT_CIPHER_AES192_CFB"},
-    {CRYPT_CIPHER_AES256_CFB, "CRYPT_CIPHER_AES256_CFB"},
-    {CRYPT_CIPHER_CHACHA20_POLY1305, "CRYPT_CIPHER_CHACHA20_POLY1305"},
-    {CRYPT_CIPHER_SM4_XTS, "CRYPT_CIPHER_SM4_XTS"},
-    {CRYPT_CIPHER_SM4_CBC, "CRYPT_CIPHER_SM4_CBC"},
-    {CRYPT_CIPHER_SM4_ECB, "CRYPT_CIPHER_SM4_ECB"},
-    {CRYPT_CIPHER_SM4_CTR, "CRYPT_CIPHER_SM4_CTR"},
-    {CRYPT_CIPHER_SM4_GCM, "CRYPT_CIPHER_SM4_GCM"},
-    {CRYPT_CIPHER_SM4_CFB, "CRYPT_CIPHER_SM4_CFB"},
-    {CRYPT_CIPHER_SM4_OFB, "CRYPT_CIPHER_SM4_OFB"},
-
-    {CRYPT_MD_SHA1, "CRYPT_MD_SHA1"},
-    {CRYPT_MD_SHA224, "CRYPT_MD_SHA224"},
-    {CRYPT_MD_SHA256, "CRYPT_MD_SHA256"},
-    {CRYPT_MD_SHA384, "CRYPT_MD_SHA384"},
-    {CRYPT_MD_SHA512, "CRYPT_MD_SHA512"},
-    {CRYPT_MD_SHA3_224, "CRYPT_MD_SHA3_224"},
-    {CRYPT_MD_SHA3_256, "CRYPT_MD_SHA3_256"},
-    {CRYPT_MD_SHA3_384, "CRYPT_MD_SHA3_384"},
-    {CRYPT_MD_SHA3_512, "CRYPT_MD_SHA3_512"},
-    {CRYPT_MD_SHAKE128, "CRYPT_MD_SHAKE128"},
-    {CRYPT_MD_SHAKE256, "CRYPT_MD_SHAKE256"},
-    {CRYPT_MD_SM3, "CRYPT_MD_SM3"},
-
-    {CRYPT_MAC_CMAC_AES128, "CRYPT_MAC_CMAC_AES128"},
-    {CRYPT_MAC_CMAC_AES192, "CRYPT_MAC_CMAC_AES192"},
-    {CRYPT_MAC_CMAC_AES256, "CRYPT_MAC_CMAC_AES256"},
-    {CRYPT_MAC_GMAC_AES128, "CRYPT_MAC_GMAC_AES128"},
-    {CRYPT_MAC_GMAC_AES192, "CRYPT_MAC_GMAC_AES192"},
-    {CRYPT_MAC_GMAC_AES256, "CRYPT_MAC_GMAC_AES256"},
-    {CRYPT_MAC_HMAC_SHA1, "CRYPT_MAC_HMAC_SHA1"},
-    {CRYPT_MAC_HMAC_SHA224, "CRYPT_MAC_HMAC_SHA224"},
-    {CRYPT_MAC_HMAC_SHA256, "CRYPT_MAC_HMAC_SHA256"},
-    {CRYPT_MAC_HMAC_SHA384, "CRYPT_MAC_HMAC_SHA384"},
-    {CRYPT_MAC_HMAC_SHA512, "CRYPT_MAC_HMAC_SHA512"},
-    {CRYPT_MAC_HMAC_SHA3_224, "CRYPT_MAC_HMAC_SHA3_224"},
-    {CRYPT_MAC_HMAC_SHA3_256, "CRYPT_MAC_HMAC_SHA3_256"},
-    {CRYPT_MAC_HMAC_SHA3_384, "CRYPT_MAC_HMAC_SHA3_384"},
-    {CRYPT_MAC_HMAC_SHA3_512, "CRYPT_MAC_HMAC_SHA3_512"},
-    {CRYPT_MAC_HMAC_SM3, "CRYPT_MAC_HMAC_SM3"},
-    {CRYPT_MAC_CMAC_SM4, "CRYPT_MAC_CMAC_SM4"},
-
-    {CRYPT_RAND_AES128_CTR, "CRYPT_RAND_AES128_CTR"},
-    {CRYPT_RAND_AES192_CTR, "CRYPT_RAND_AES192_CTR"},
-    {CRYPT_RAND_AES256_CTR, "CRYPT_RAND_AES256_CTR"},
-    {CRYPT_RAND_AES128_CTR_DF, "CRYPT_RAND_AES128_CTR_DF"},
-    {CRYPT_RAND_AES192_CTR_DF, "CRYPT_RAND_AES192_CTR_DF"},
-    {CRYPT_RAND_AES256_CTR_DF, "CRYPT_RAND_AES256_CTR_DF"},
-    {CRYPT_RAND_HMAC_SHA1, "CRYPT_RAND_HMAC_SHA1"},
-    {CRYPT_RAND_HMAC_SHA224, "CRYPT_RAND_HMAC_SHA224"},
-    {CRYPT_RAND_HMAC_SHA256, "CRYPT_RAND_HMAC_SHA256"},
-    {CRYPT_RAND_HMAC_SHA384, "CRYPT_RAND_HMAC_SHA384"},
-    {CRYPT_RAND_HMAC_SHA512, "CRYPT_RAND_HMAC_SHA512"},
-    {CRYPT_RAND_SHA1, "CRYPT_RAND_SHA1"},
-    {CRYPT_RAND_SHA224, "CRYPT_RAND_SHA224"},
-    {CRYPT_RAND_SHA256, "CRYPT_RAND_SHA256"},
-    {CRYPT_RAND_SHA384, "CRYPT_RAND_SHA384"},
-    {CRYPT_RAND_SHA512, "CRYPT_RAND_SHA512"},
-    {CRYPT_RAND_SM4_CTR_DF, "CRYPT_RAND_SM4_CTR_DF"},
-    {CRYPT_RAND_SM3, "CRYPT_RAND_SM3"},
-
-    {CRYPT_KDF_KDFTLS12, "CRYPT_KDF_KDFTLS12"},
-    {CRYPT_KDF_HKDF, "CRYPT_KDF_HKDF"},
-    {CRYPT_KDF_SCRYPT, "CRYPT_KDF_SCRYPT"},
-    {CRYPT_KDF_PBKDF2, "CRYPT_KDF_PBKDF2"},
-
-    {CRYPT_PKEY_DSA, "CRYPT_PKEY_DSA"},
-    {CRYPT_PKEY_ECDSA, "CRYPT_PKEY_ECDSA"},
-    {CRYPT_PKEY_RSA, "CRYPT_PKEY_RSA"},
-    {CRYPT_PKEY_ED25519, "CRYPT_PKEY_ED25519"},
-    {CRYPT_PKEY_SM2, "CRYPT_PKEY_SM2"},
-    {CRYPT_PKEY_ECDH, "CRYPT_PKEY_ECDH"},
-    {CRYPT_PKEY_DH, "CRYPT_PKEY_DH"},
-    {CRYPT_PKEY_X25519, "CRYPT_PKEY_X25519"},
-    {CRYPT_PKEY_ML_KEM, "CRYPT_PKEY_ML_KEM"},
-    {CRYPT_PKEY_ML_DSA, "CRYPT_PKEY_ML_DSA"},
-    {CRYPT_PKEY_SLH_DSA, "CRYPT_PKEY_SLH_DSA"},
-};
-
-const char *GetAlgoIdStr(int32_t id)
-{
-    for (size_t i = 0; i < sizeof(g_algoIdPair) / sizeof(g_algoIdPair[0]); i++) {
-        if (g_algoIdPair[i].id == id) {
-            return g_algoIdPair[i].str;
-        }
-    }
-    return "UNKNOWN";
-}
-
-static const char *GetEventStr(CRYPT_EVENT_TYPE oper)
-{
-    switch (oper) {
-        case CRYPT_EVENT_ENC:          /**< Encryption. */
-            return "CRYPT_EVENT_ENC";
-        case CRYPT_EVENT_DEC:          /**< Decryption. */
-            return "CRYPT_EVENT_DEC";
-        case CRYPT_EVENT_GEN:          /**< Generate the key. */
-            return "CRYPT_EVENT_GEN";
-        case CRYPT_EVENT_SIGN:         /**< Signature. */
-            return "CRYPT_EVENT_SIGN";
-        case CRYPT_EVENT_VERIFY:       /**< Verify the signature. */
-            return "CRYPT_EVENT_VERIFY";
-        case CRYPT_EVENT_MD:           /**< Hash. */
-            return "CRYPT_EVENT_MD";
-        case CRYPT_EVENT_MAC:          /**< MAC. */
-            return "CRYPT_EVENT_MAC";
-        case CRYPT_EVENT_KDF:          /**< KDF. */
-            return "CRYPT_EVENT_KDF";
-        case CRYPT_EVENT_KEYAGGREMENT: /**< Key negotiation. */
-            return "CRYPT_EVENT_KEYAGGREMENT";
-        case CRYPT_EVENT_RANDGEN:      /**< Generating a random number. */
-            return "CRYPT_EVENT_RANDGEN";
-        case CRYPT_EVENT_ZERO:         /**< sensitive information to zero. */
-            return "CRYPT_EVENT_ZERO";
-        case CRYPT_EVENT_ERR:          /**< An error occurred. */
-            return "CRYPT_EVENT_ERR";
-        case CRYPT_EVENT_SETSSP:       /**< Adding and Modifying Password Data and SSP. */
-            return "CRYPT_EVENT_SETSSP";
-        case CRYPT_EVENT_GETSSP:       /**< Access password data and SSP. */
-            return "CRYPT_EVENT_GETSSP";
-        case CRYPT_EVENT_ENCAPS:       /**< Key encapsulation. */
-            return "CRYPT_EVENT_ENCAPS";
-        case CRYPT_EVENT_DECAPS:       /**< Key decapsulation. */
-            return "CRYPT_EVENT_DECAPS";
-        case CRYPT_EVENT_BLIND:        /**< Message blinding. */
-            return "CRYPT_EVENT_BLIND";
-        case CRYPT_EVENT_UNBLIND:      /**< Signature unblinding. */
-            return "CRYPT_EVENT_UNBLIND";
-        case CRYPT_EVENT_PARAM_CHECK:
-            return "CRYPT_EVENT_PARAM_CHECK";
-        case CRYPT_EVENT_PCT_TEST:
-            return "CRYPT_EVENT_PCT_TEST";
-        case CRYPT_EVENT_KAT_TEST:
-            return "CRYPT_EVENT_KAT_TEST";
-        case CRYPT_EVENT_ES_HEALTH_TEST:
-            return "CRYPT_EVENT_ES_HEALTH_TEST";
-        case CRYPT_EVENT_INTEGRITY_TEST:
-            return "CRYPT_EVENT_INTEGRITY_TEST";
-        default:
-            return "UNKNOWN";
-    }
-}
-
 static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)
 {
     char timeStr[72] = {0};
@@ -295,8 +105,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
     // ISO/IEC 19790:2012 AS09.33
     // The module shall provide an output status indication when zeroing is complete
     if (oper == CRYPT_EVENT_ZERO && err == CRYPT_SUCCESS) {
-        fprintf(g_logFile, "[%s] [open hitls] [INFO] SSP already zeroisation - algorithm type: %s, id: %s\n", 
-                timeStr, GetAlgoTypeStr(type), GetAlgoIdStr(id));
+        fprintf(g_logFile, "[%s] [open hitls] [INFO] SSP already zeroisation - algorithm type: %d, id: %d\n", 
+                timeStr, type, id);
         fflush(g_logFile);
     }
 
@@ -306,8 +116,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
         ● Attempted to provide invalid input for the cryptographic officer function;
     */
     if (err != CRYPT_SUCCESS) {
-        fprintf(g_logFile, "[%s] [open hitls] [ERR]  Occur error - algorithm type: %s, id: %s, operate: %s, errcode: 0x%x\n",
-                timeStr, GetAlgoTypeStr(type), GetAlgoIdStr(id), GetEventStr(oper), err);
+        fprintf(g_logFile, "[%s] [open hitls] [ERR]  Occur error - algorithm type: %d, id: %d, operate: %d, errcode: 0x%x\n",
+                timeStr, type, id, oper, err);
         fflush(g_logFile);
     }
     /*
@@ -320,8 +130,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
         and specified services or processes in an approved manner,
         the service shall provide corresponding status indications.
     */
-    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute - algorithm type: %s, id: %s, operate: %s\n", 
-            timeStr, GetAlgoTypeStr(type), GetAlgoIdStr(id), GetEventStr(oper));    
+    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute - algorithm type: %d, id: %d, operate: %d\n", 
+            timeStr, type, id, oper);    
     fflush(g_logFile);
     CloseLogFile();
 }
