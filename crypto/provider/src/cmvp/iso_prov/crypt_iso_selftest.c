@@ -42,160 +42,6 @@ int32_t CRYPT_Iso_Log(void *mgrCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type
     return CRYPT_EAL_SelftestOperation(mgrCtx, param);
 }
 
-static bool KatTestCipher(void *libCtx, const char *attrName)
-{
-    static const uint32_t list[] = {
-        CRYPT_CIPHER_AES128_ECB, CRYPT_CIPHER_AES192_ECB, CRYPT_CIPHER_AES256_ECB,
-        CRYPT_CIPHER_AES128_CBC, CRYPT_CIPHER_AES192_CBC, CRYPT_CIPHER_AES256_CBC,
-        CRYPT_CIPHER_AES128_CTR, CRYPT_CIPHER_AES192_CTR, CRYPT_CIPHER_AES256_CTR,
-        CRYPT_CIPHER_AES128_CCM, CRYPT_CIPHER_AES192_CCM, CRYPT_CIPHER_AES256_CCM,
-        CRYPT_CIPHER_AES128_GCM, CRYPT_CIPHER_AES192_GCM, CRYPT_CIPHER_AES256_GCM,
-        CRYPT_CIPHER_AES128_XTS, CRYPT_CIPHER_AES256_XTS,
-        CRYPT_CIPHER_AES128_OFB, CRYPT_CIPHER_AES192_OFB, CRYPT_CIPHER_AES256_OFB,
-        CRYPT_CIPHER_AES128_CFB, CRYPT_CIPHER_AES192_CFB, CRYPT_CIPHER_AES256_CFB,
-        CRYPT_CIPHER_CHACHA20_POLY1305,
-        CRYPT_CIPHER_SM4_XTS, CRYPT_CIPHER_SM4_CBC, CRYPT_CIPHER_SM4_ECB,
-        CRYPT_CIPHER_SM4_CTR, CRYPT_CIPHER_SM4_GCM, CRYPT_CIPHER_SM4_CFB,
-        CRYPT_CIPHER_SM4_OFB,
-    };
-
-    bool ret = false;
-    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (list[i] == CRYPT_CIPHER_CHACHA20_POLY1305) {
-            ret = CRYPT_CMVP_SelftestProviderChacha20poly1305(libCtx, attrName);
-        } else {
-            ret = CRYPT_CMVP_SelftestProviderCipher(libCtx, attrName, list[i]);
-        }
-        if (!ret) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool KatTestMd(void *libCtx, const char *attrName)
-{
-    static const uint32_t list[] = {
-        CRYPT_MD_SHA1,
-        CRYPT_MD_SHA224, CRYPT_MD_SHA256, CRYPT_MD_SHA384, CRYPT_MD_SHA512,
-        CRYPT_MD_SHA3_224, CRYPT_MD_SHA3_256, CRYPT_MD_SHA3_384, CRYPT_MD_SHA3_512,
-        CRYPT_MD_SHAKE128, CRYPT_MD_SHAKE256, CRYPT_MD_SM3,
-    };
-
-    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (!CRYPT_CMVP_SelftestProviderMd(libCtx, attrName, list[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool KatTestMac(void *libCtx, const char *attrName)
-{
-    static const uint32_t list[] = {
-        CRYPT_MAC_CMAC_AES128, CRYPT_MAC_CMAC_AES192, CRYPT_MAC_CMAC_AES256,
-        CRYPT_MAC_GMAC_AES128, CRYPT_MAC_GMAC_AES192, CRYPT_MAC_GMAC_AES256,
-        CRYPT_MAC_HMAC_SHA1, CRYPT_MAC_HMAC_SHA224, CRYPT_MAC_HMAC_SHA256, CRYPT_MAC_HMAC_SHA384, CRYPT_MAC_HMAC_SHA512,
-        CRYPT_MAC_HMAC_SM3,
-        CRYPT_MAC_CMAC_SM4,
-    };
-
-    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (!CRYPT_CMVP_SelftestProviderMac(libCtx, attrName, list[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool KatTestDrbg(void *libCtx, const char *attrName)
-{
-    static const uint32_t list[] = {
-        CRYPT_RAND_AES128_CTR, CRYPT_RAND_AES192_CTR, CRYPT_RAND_AES256_CTR,
-        CRYPT_RAND_AES128_CTR_DF, CRYPT_RAND_AES192_CTR_DF, CRYPT_RAND_AES256_CTR_DF,
-        CRYPT_RAND_HMAC_SHA1, CRYPT_RAND_HMAC_SHA224, CRYPT_RAND_HMAC_SHA256, CRYPT_RAND_HMAC_SHA384, CRYPT_RAND_HMAC_SHA512,
-        CRYPT_RAND_SHA1, CRYPT_RAND_SHA224, CRYPT_RAND_SHA256, CRYPT_RAND_SHA384, CRYPT_RAND_SHA512,
-        CRYPT_RAND_SM4_CTR_DF,
-        CRYPT_RAND_SM3,
-    };
-
-    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (!CRYPT_CMVP_SelftestProviderDrbg(libCtx, attrName, list[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool KatTestKdf(void *libCtx, const char *attrName)
-{
-    if (!CRYPT_CMVP_SelftestProviderKdfTls12(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderHkdf(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderScrypt(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderPbkdf2(libCtx, attrName, CRYPT_MAC_HMAC_SHA1)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderPbkdf2(libCtx, attrName, CRYPT_MAC_HMAC_SM3)) {
-        return false;
-    }
-    return true;
-}
-
-static bool KatTestPkey(void *libCtx, const char *attrName)
-{
-    if (!CRYPT_CMVP_SelftestProviderDsa(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderEcdsa(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderRsa(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderEd25519(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderSM2(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderEcdh(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderDh(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderX25519(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderMldsaSignVerify(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(libCtx, attrName)) {
-        return false;
-    }
-    return true;
-}
-
-static int32_t KatTestInternal(void *libCtx, const char *attrName)
-{
-    bool ret = KatTestCipher(libCtx, attrName) &&
-        KatTestMd(libCtx, attrName) &&
-        KatTestMac(libCtx, attrName) &&
-        KatTestDrbg(libCtx, attrName) &&
-        KatTestKdf(libCtx, attrName) &&
-        KatTestPkey(libCtx, attrName);
-    return ret ? CRYPT_SUCCESS : CRYPT_CMVP_ERR_ALGO_SELFTEST;
-}
-
 static int32_t IsoPctTest(void *provCtx, BSL_Param *param)
 {
     void *pkeyCtx = NULL;
@@ -248,7 +94,7 @@ static int32_t IsoIntegrityTest(void *provCtx, BSL_Param *param)
     }
 
     ctx->runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, CRYPT_SUCCESS);
-    ret = CMVP_CheckIntegrity(libCtx, CRYPT_EAL_ISO_ATTR, CRYPT_MAC_HMAC_SHA256);
+    ret = CMVP_Iso19790CheckIntegrity(libCtx, CRYPT_EAL_ISO_ATTR);
     if (ret != CRYPT_SUCCESS) {
         ctx->runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, ret);
         return ret;
@@ -268,7 +114,7 @@ static int32_t IsoKatTest(void *provCtx, BSL_Param *param)
     }
 
     ctx->runLog(CRYPT_EVENT_KAT_TEST, 0, 0, CRYPT_SUCCESS);
-    ret = KatTestInternal(libCtx, CRYPT_EAL_ISO_ATTR);
+    ret = CMVP_Iso19790KatTest(libCtx, CRYPT_EAL_ISO_ATTR);
     if (ret != CRYPT_SUCCESS) {
         ctx->runLog(CRYPT_EVENT_KAT_TEST, 0, 0, ret);
         return ret;
@@ -429,7 +275,7 @@ int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
     }
 
     runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, CRYPT_SUCCESS);
-    ret = CMVP_CheckIntegrity(libCtx, CRYPT_EAL_ISO_ATTR, CRYPT_MAC_HMAC_SHA256);
+    ret = CMVP_Iso19790CheckIntegrity(libCtx, CRYPT_EAL_ISO_ATTR);
     if (ret != CRYPT_SUCCESS) {
         runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, ret);
         CRYPT_EAL_LibCtxFree(libCtx);
@@ -437,7 +283,7 @@ int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
     }
 
     runLog(CRYPT_EVENT_KAT_TEST, 0, 0, CRYPT_SUCCESS);
-    ret = KatTestInternal(libCtx, CRYPT_EAL_ISO_ATTR);
+    ret = CMVP_Iso19790KatTest(libCtx, CRYPT_EAL_ISO_ATTR);
     CRYPT_EAL_LibCtxFree(libCtx);
     if (ret != CRYPT_SUCCESS) {
         runLog(CRYPT_EVENT_KAT_TEST, 0, 0, ret);

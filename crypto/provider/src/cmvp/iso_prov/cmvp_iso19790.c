@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CMVP
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
 
 #include "securec.h"
 #include "iso19790.h"
@@ -25,34 +25,9 @@
 #include "cmvp_integrity_hmac.h"
 #include "cmvp_iso19790.h"
 
-int32_t CMVP_Iso19790Dep(void)
-{
-    return ISO19790_DefaultEntryPoint();
-}
-
-int32_t CMVP_Iso19790ModeSet(CRYPT_CMVP_MODE mode)
-{
-    return ISO19790_ModeSet(mode);
-}
-
-void CMVP_Iso19790EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)
-{
-    ISO19790_EventProcess(oper, type, id, err);
-}
-
 bool CMVP_Iso19790PkeyC2(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data)
 {
     return ISO19790_AsymParamCheck(id, data);
-}
-
-bool CMVP_Iso19790MdC2(CRYPT_MD_AlgId id)
-{
-    return ISO19790_MdParamCheck(id);
-}
-
-bool CMVP_Iso19790CipherC2(CRYPT_CIPHER_AlgId id)
-{
-    return ISO19790_CipherParamCheck(id);
 }
 
 bool CMVP_Iso19790MacC2(CRYPT_MAC_AlgId id, uint32_t keyLen)
@@ -76,9 +51,27 @@ bool CMVP_Iso19790KdfC2(CRYPT_KDF_AlgId id, const CRYPT_EAL_KdfC2Data *data)
     }
 }
 
-bool CMVP_Iso19790RandC2(CRYPT_RAND_AlgId id)
+int32_t CMVP_Iso19790KatTest(void *libCtx, const char *attrName)
 {
-    return ISO19790_RandParamCheck(id);
+    bool ret = false;
+    ret = ISO19790_CipherKat(libCtx, attrName);
+    RETURN_RET_IF(ret == false, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    ret = ISO19790_MdKat(libCtx, attrName);
+    RETURN_RET_IF(ret == false, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    ret = ISO19790_MacKat(libCtx, attrName);
+    RETURN_RET_IF(ret == false, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    ret = ISO19790_DrbgKat(libCtx, attrName);
+    RETURN_RET_IF(ret == false, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    ret = ISO19790_KdfKat(libCtx, attrName);
+    RETURN_RET_IF(ret == false, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    ret = ISO19790_PkeyKat(libCtx, attrName);
+    RETURN_RET_IF(ret == false, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    return CRYPT_SUCCESS;
 }
 
-#endif
+int32_t CMVP_Iso19790CheckIntegrity(void *libCtx, const char *attrName)
+{
+    return CMVP_CheckIntegrity(libCtx, attrName, CRYPT_MAC_HMAC_SHA256);
+}
+
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */

@@ -56,15 +56,6 @@ struct EAL_SelftestCtx {
     int32_t id;
 };
 
-typedef enum {
-    CRYPT_CMVP_MODE_NONAPPROVED,
-    CRYPT_CMVP_MODE_ISO19790,
-    CRYPT_CMVP_MODE_FIPS,
-    CRYPT_CMVP_MODE_NDCPP,
-    CRYPT_CMVP_MODE_GM,
-    CRYPT_CMVP_MODE_MAX
-} CRYPT_CMVP_MODE;
-
 typedef struct {
     CRYPT_MD_AlgId mdId;
 } CRYPT_RSA_PkcsV15Para;
@@ -110,13 +101,6 @@ typedef bool (*CRYPT_EAL_CipherC2)(CRYPT_CIPHER_AlgId id);
 typedef bool (*CRYPT_EAL_KdfC2)(CRYPT_KDF_AlgId id, const CRYPT_EAL_KdfC2Data *data);
 typedef bool (*CRYPT_EAL_RandC2)(CRYPT_RAND_AlgId id);
 
-int32_t CMVP_ModeSet(CRYPT_CMVP_MODE mode);
-CRYPT_CMVP_MODE CRYPT_CMVP_ModeGet(void);
-int32_t CRYPT_CMVP_StatusGet(void);
-int32_t CRYPT_CMVP_ModeSet(CRYPT_CMVP_MODE mode);
-int32_t CRYPT_CMVP_MultiThreadEnable(void);
-
 bool CMVP_Pct(CRYPT_EAL_PkeyCtx *pkey);
-bool CMVP_PkeyC2(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data);
 #endif
 #endif

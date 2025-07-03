@@ -33,33 +33,6 @@
 #include "cmvp_integrity_hmac.h"
 #include "cmvp_common.h"
 
-
-static CRYPT_CMVP_MODE g_cmvpMode = CRYPT_CMVP_MODE_NONAPPROVED;
-
-// Indicates whether the CSP exists in the memory.The options are as follows: true: yes; false: no.
-static bool g_cmvpCspFlag = false;
-
-CRYPT_CMVP_MODE CRYPT_CMVP_ModeGet(void)
-{
-    return g_cmvpMode;
-}
-
-int32_t CMVP_ModeSet(CRYPT_CMVP_MODE mode)
-{
-    g_cmvpMode = mode;
-    return CRYPT_SUCCESS;
-}
-
-bool CMVP_CspFlagGet(void)
-{
-    return g_cmvpCspFlag;
-}
-
-void CMVP_CspFlagSet(bool flag)
-{
-    g_cmvpCspFlag = flag;
-}
-
 uint8_t *CMVP_StringsToBins(const char *in, uint32_t *outLen)
 {
     if (in == NULL) {

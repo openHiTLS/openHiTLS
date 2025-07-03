@@ -17,7 +17,7 @@
 #define ISO19790_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CMVP
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
 
 #include <stdint.h>
 #include "crypt_cmvp.h"
@@ -29,23 +29,8 @@
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
 
-// default entry point
-int32_t ISO19790_DefaultEntryPoint(void);
-
-// set mode
-int32_t ISO19790_ModeSet(CRYPT_CMVP_MODE mode);
-
-// status indication
-void ISO19790_EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
-
 // asym alg param check
 bool ISO19790_AsymParamCheck(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data);
-
-// md alg param check
-bool ISO19790_MdParamCheck(CRYPT_MD_AlgId id);
-
-// cipher alg param check
-bool ISO19790_CipherParamCheck(CRYPT_CIPHER_AlgId id);
 
 // mac alg param check
 bool ISO19790_MacParamCheck(CRYPT_MAC_AlgId id, uint32_t keyLen);
@@ -59,8 +44,17 @@ bool ISO19790_PbkdfParamCheck(const CRYPT_EAL_Pbkdf2Param *param);
 // hkdf alg param check
 bool ISO19790_HkdfParamCheck(CRYPT_MAC_AlgId id, uint32_t keyLen);
 
-// rand alg param check
-bool ISO19790_RandParamCheck(CRYPT_RAND_AlgId id);
+bool ISO19790_CipherKat(void *libCtx, const char *attrName);
 
-#endif
-#endif
+bool ISO19790_MdKat(void *libCtx, const char *attrName);
+
+bool ISO19790_MacKat(void *libCtx, const char *attrName);
+
+bool ISO19790_DrbgKat(void *libCtx, const char *attrName);
+
+bool ISO19790_KdfKat(void *libCtx, const char *attrName);
+
+bool ISO19790_PkeyKat(void *libCtx, const char *attrName);
+
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */
+#endif /* ISO19790_H */

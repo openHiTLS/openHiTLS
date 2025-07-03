@@ -942,7 +942,6 @@ void SDV_ISO19790_PROVIDER_CMVP_SELFTEST_Test_TC001()
 
     const char *version = CRYPT_CMVP_GetVersion(selftestCtx);
     ASSERT_TRUE(version != NULL);
-    printf("Provider Version: %s\n", version);
 
     int32_t ret = CRYPT_CMVP_Selftest(selftestCtx, CRYPT_CMVP_KAT_TEST);
     ASSERT_EQ(ret, CRYPT_SUCCESS);

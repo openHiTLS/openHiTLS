@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CMVP
+#ifdef HITLS_CRYPTO_CMVP_ISO19790
 
 #include "cmvp_iso19790.h"
 #include "cmvp_common.h"
@@ -27,54 +27,6 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "iso19790.h"
-
-int32_t ISO19790_DefaultEntryPoint(void)
-{
-    return CMVP_CheckIntegrity(NULL, NULL, CRYPT_MAC_HMAC_SHA256);
-}
-
-int32_t ISO19790_ModeSet(CRYPT_CMVP_MODE mode)
-{
-    // ISO/IEC 19790:2012 AS02.22
-    // If the CSP already exists in the memory, the mode cannot be switched.
-    // The mode can be switched again only after the CSP is restarted.
-    if (CMVP_CspFlagGet() == true) {
-        return CRYPT_CMVP_ERR_CSP_EXIST;
-    }
-
-    CMVP_ModeSet(mode);
-    return CRYPT_SUCCESS;
-}
-
-void ISO19790_EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)
-{
-    // ISO/IEC 19790:2012 AS09.33
-    // The module shall provide an output status indication when zeroing is complete
-    if (oper == CRYPT_EVENT_ZERO && err == CRYPT_SUCCESS) {
-        CMVP_WriteSyslog("HiTLS", LOG_INFO, "SSP already zeroisation - algorithm type : %d, id : %d", type, id);
-    }
-
-    /*
-        ISO/IEC 19790:2012 AS06.26
-        The following events of the cryptographic module should be recorded by the OS audit mechanism:
-        ● Attempted to provide invalid input for the cryptographic officer function;
-    */
-    if (err != CRYPT_SUCCESS) {
-        CMVP_WriteSyslog("HiTLS", LOG_ERR, "Occur error - algorithm type : %d, id : %d, operate : %d, errcode : %x",
-            type, id, oper, err);
-    }
-    /*
-        ISO/IEC 19790:2012 AS06.26
-        The following events of the cryptographic module should be recorded by the OS audit mechanism:
-        ● Modify, access, delete, and add encrypted data and SSPs；
-        ● Use security-related encryption features
-        ISO/IEC 19790:2012 AS02.24
-        When a service uses approved encryption algorithms, security functions or processes,
-        and specified services or processes in an approved manner,
-        the service shall provide corresponding status indications.
-    */
-    CMVP_WriteSyslog("HiTLS", LOG_INFO, "Excute - algorithm type : %d, id : %d, operate : %d", type, id, oper);
-}
 
 typedef struct {
     uint32_t algId;
@@ -323,46 +275,6 @@ EXIT:
     return false;
 }
 
-bool ISO19790_MdParamCheck(CRYPT_MD_AlgId id)
-{
-    static const uint32_t list[] = {
-        CRYPT_MD_SHA1,
-        CRYPT_MD_SHA224,
-        CRYPT_MD_SHA256,
-        CRYPT_MD_SHA384,
-        CRYPT_MD_SHA512,
-    };
-
-    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (id == list[i]) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool ISO19790_CipherParamCheck(CRYPT_CIPHER_AlgId id)
-{
-    static const uint32_t list[] = {
-        CRYPT_CIPHER_AES128_CBC, CRYPT_CIPHER_AES192_CBC, CRYPT_CIPHER_AES256_CBC,
-        CRYPT_CIPHER_AES128_CTR, CRYPT_CIPHER_AES192_CTR, CRYPT_CIPHER_AES256_CTR,
-        CRYPT_CIPHER_AES128_ECB, CRYPT_CIPHER_AES192_ECB, CRYPT_CIPHER_AES256_ECB,
-        CRYPT_CIPHER_AES128_XTS, CRYPT_CIPHER_AES256_XTS,
-        CRYPT_CIPHER_AES128_CCM, CRYPT_CIPHER_AES192_CCM, CRYPT_CIPHER_AES256_CCM,
-        CRYPT_CIPHER_AES128_GCM, CRYPT_CIPHER_AES192_GCM, CRYPT_CIPHER_AES256_GCM,
-        CRYPT_CIPHER_AES128_CFB, CRYPT_CIPHER_AES192_CFB, CRYPT_CIPHER_AES256_CFB,
-        CRYPT_CIPHER_AES128_OFB, CRYPT_CIPHER_AES192_OFB, CRYPT_CIPHER_AES256_OFB,
-    };
-
-    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (id == list[i]) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool ISO19790_MacParamCheck(CRYPT_MAC_AlgId id, uint32_t keyLen)
 {
     static const uint32_t list[] = {
@@ -464,34 +376,147 @@ bool ISO19790_PbkdfParamCheck(const CRYPT_EAL_Pbkdf2Param *param)
     return true;
 }
 
-bool ISO19790_RandParamCheck(CRYPT_RAND_AlgId id)
+bool ISO19790_CipherKat(void *libCtx, const char *attrName)
 {
     static const uint32_t list[] = {
-        CRYPT_RAND_SHA1,
-        CRYPT_RAND_SHA224,
-        CRYPT_RAND_SHA256,
-        CRYPT_RAND_SHA384,
-        CRYPT_RAND_SHA512,
-        CRYPT_RAND_HMAC_SHA1,
-        CRYPT_RAND_HMAC_SHA224,
-        CRYPT_RAND_HMAC_SHA256,
-        CRYPT_RAND_HMAC_SHA384,
-        CRYPT_RAND_HMAC_SHA512,
-        CRYPT_RAND_AES128_CTR,
-        CRYPT_RAND_AES192_CTR,
-        CRYPT_RAND_AES256_CTR,
-        CRYPT_RAND_AES128_CTR_DF,
-        CRYPT_RAND_AES192_CTR_DF,
-        CRYPT_RAND_AES256_CTR_DF,
+        CRYPT_CIPHER_AES128_ECB, CRYPT_CIPHER_AES192_ECB, CRYPT_CIPHER_AES256_ECB,
+        CRYPT_CIPHER_AES128_CBC, CRYPT_CIPHER_AES192_CBC, CRYPT_CIPHER_AES256_CBC,
+        CRYPT_CIPHER_AES128_CTR, CRYPT_CIPHER_AES192_CTR, CRYPT_CIPHER_AES256_CTR,
+        CRYPT_CIPHER_AES128_CCM, CRYPT_CIPHER_AES192_CCM, CRYPT_CIPHER_AES256_CCM,
+        CRYPT_CIPHER_AES128_GCM, CRYPT_CIPHER_AES192_GCM, CRYPT_CIPHER_AES256_GCM,
+        CRYPT_CIPHER_AES128_XTS, CRYPT_CIPHER_AES256_XTS,
+        CRYPT_CIPHER_AES128_OFB, CRYPT_CIPHER_AES192_OFB, CRYPT_CIPHER_AES256_OFB,
+        CRYPT_CIPHER_AES128_CFB, CRYPT_CIPHER_AES192_CFB, CRYPT_CIPHER_AES256_CFB,
+        CRYPT_CIPHER_CHACHA20_POLY1305,
+        CRYPT_CIPHER_SM4_XTS, CRYPT_CIPHER_SM4_CBC, CRYPT_CIPHER_SM4_ECB,
+        CRYPT_CIPHER_SM4_CTR, CRYPT_CIPHER_SM4_GCM, CRYPT_CIPHER_SM4_CFB,
+        CRYPT_CIPHER_SM4_OFB,
+    };
+
+    bool ret = false;
+    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
+        if (list[i] == CRYPT_CIPHER_CHACHA20_POLY1305) {
+            ret = CRYPT_CMVP_SelftestProviderChacha20poly1305(libCtx, attrName);
+        } else {
+            ret = CRYPT_CMVP_SelftestProviderCipher(libCtx, attrName, list[i]);
+        }
+        if (!ret) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ISO19790_MdKat(void *libCtx, const char *attrName)
+{
+    static const uint32_t list[] = {
+        CRYPT_MD_SHA1,
+        CRYPT_MD_SHA224, CRYPT_MD_SHA256, CRYPT_MD_SHA384, CRYPT_MD_SHA512,
+        CRYPT_MD_SHA3_224, CRYPT_MD_SHA3_256, CRYPT_MD_SHA3_384, CRYPT_MD_SHA3_512,
+        CRYPT_MD_SHAKE128, CRYPT_MD_SHAKE256, CRYPT_MD_SM3,
     };
 
     for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
-        if (id == list[i]) {
-            return true;
+        if (!CRYPT_CMVP_SelftestProviderMd(libCtx, attrName, list[i])) {
+            return false;
         }
     }
-
-    return false;
+    return true;
 }
 
-#endif
+bool ISO19790_MacKat(void *libCtx, const char *attrName)
+{
+    static const uint32_t list[] = {
+        CRYPT_MAC_CMAC_AES128, CRYPT_MAC_CMAC_AES192, CRYPT_MAC_CMAC_AES256,
+        CRYPT_MAC_GMAC_AES128, CRYPT_MAC_GMAC_AES192, CRYPT_MAC_GMAC_AES256,
+        CRYPT_MAC_HMAC_SHA1, CRYPT_MAC_HMAC_SHA224, CRYPT_MAC_HMAC_SHA256, CRYPT_MAC_HMAC_SHA384, CRYPT_MAC_HMAC_SHA512,
+        CRYPT_MAC_HMAC_SM3,
+        CRYPT_MAC_CMAC_SM4,
+    };
+
+    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
+        if (!CRYPT_CMVP_SelftestProviderMac(libCtx, attrName, list[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ISO19790_DrbgKat(void *libCtx, const char *attrName)
+{
+    static const uint32_t list[] = {
+        CRYPT_RAND_AES128_CTR, CRYPT_RAND_AES192_CTR, CRYPT_RAND_AES256_CTR,
+        CRYPT_RAND_AES128_CTR_DF, CRYPT_RAND_AES192_CTR_DF, CRYPT_RAND_AES256_CTR_DF,
+        CRYPT_RAND_HMAC_SHA1, CRYPT_RAND_HMAC_SHA224, CRYPT_RAND_HMAC_SHA256, CRYPT_RAND_HMAC_SHA384, CRYPT_RAND_HMAC_SHA512,
+        CRYPT_RAND_SHA1, CRYPT_RAND_SHA224, CRYPT_RAND_SHA256, CRYPT_RAND_SHA384, CRYPT_RAND_SHA512,
+        CRYPT_RAND_SM4_CTR_DF,
+        CRYPT_RAND_SM3,
+    };
+
+    for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
+        if (!CRYPT_CMVP_SelftestProviderDrbg(libCtx, attrName, list[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ISO19790_KdfKat(void *libCtx, const char *attrName)
+{
+    if (!CRYPT_CMVP_SelftestProviderKdfTls12(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderHkdf(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderScrypt(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderPbkdf2(libCtx, attrName, CRYPT_MAC_HMAC_SHA1)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderPbkdf2(libCtx, attrName, CRYPT_MAC_HMAC_SM3)) {
+        return false;
+    }
+    return true;
+}
+
+bool ISO19790_PkeyKat(void *libCtx, const char *attrName)
+{
+    if (!CRYPT_CMVP_SelftestProviderDsa(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderEcdsa(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderRsa(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderEd25519(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderSM2(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderEcdh(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderDh(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderX25519(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderMldsaSignVerify(libCtx, attrName)) {
+        return false;
+    }
+    if (!CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(libCtx, attrName)) {
+        return false;
+    }
+    return true;
+}
+
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */
