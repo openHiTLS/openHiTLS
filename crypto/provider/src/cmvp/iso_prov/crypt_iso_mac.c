@@ -28,6 +28,7 @@
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_provider.h"
+#include "cmvp_iso19790.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provider.h"
 
@@ -52,7 +53,7 @@ typedef struct {
 
 static int32_t CheckMacKeyLen(IsoMacCtx *ctx, uint32_t keyLen)
 {
-    if (keyLen < MAC_KEY_LEN_MIN) {
+    if (!CMVP_Iso19790MacC2(ctx->algId, keyLen)) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_MAC, ctx->algId);
         BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
         return CRYPT_CMVP_ERR_PARAM_CHECK;

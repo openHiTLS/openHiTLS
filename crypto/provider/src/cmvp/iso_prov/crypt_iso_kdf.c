@@ -25,6 +25,8 @@
 #include "crypt_errno.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "crypt_cmvp.h"
+#include "cmvp_iso19790.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provider.h"
 
@@ -35,139 +37,87 @@ typedef struct {
 } IsoKdfCtx;
 
 /* Constants for parameter validation */
-#define KDF_MIN_SALT_LEN    16
-#define KDF_MIN_PBKDF2_ITER 1000
-#define KDF_MIN_KEY_LEN     14
+#define KDF_DEF_MAC_ALGID   CRYPT_MAC_HMAC_SHA256
+#define KDF_DEF_SALT_LEN    16
+#define KDF_DEF_PBKDF2_ITER 1024
+#define KDF_DEF_KEY_LEN     16
 
-/* MAC algorithm support pairs: {algId, macId} */
-static const int32_t g_macIdPairs[][2] = {
-    /* PBKDF2 supported MAC algorithms */
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA1},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA224},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA256},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA384},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA512},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SM3},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA3_224},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA3_256},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA3_384},
-    {CRYPT_KDF_PBKDF2, CRYPT_MAC_HMAC_SHA3_512},
-
-    /* HKDF supported MAC algorithms */
-    {CRYPT_KDF_HKDF, CRYPT_MAC_HMAC_SHA1},
-    {CRYPT_KDF_HKDF, CRYPT_MAC_HMAC_SHA224},
-    {CRYPT_KDF_HKDF, CRYPT_MAC_HMAC_SHA256},
-    {CRYPT_KDF_HKDF, CRYPT_MAC_HMAC_SHA384},
-    {CRYPT_KDF_HKDF, CRYPT_MAC_HMAC_SHA512},
-
-    /* KDFTLS12 supported MAC algorithms */
-    {CRYPT_KDF_KDFTLS12, CRYPT_MAC_HMAC_SHA256},
-    {CRYPT_KDF_KDFTLS12, CRYPT_MAC_HMAC_SHA384},
-    {CRYPT_KDF_KDFTLS12, CRYPT_MAC_HMAC_SHA512},
-};
-
-static bool IsMacIdSupported(int32_t algId, int32_t macId)
+static int32_t GetMacId(const BSL_Param *param, CRYPT_MAC_AlgId *macId)
 {
-    for (size_t i = 0; i < sizeof(g_macIdPairs) / sizeof(g_macIdPairs[0]); i++) {
-        if (g_macIdPairs[i][0] == algId && g_macIdPairs[i][1] == macId) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static int32_t CheckMacId(const BSL_Param *param, int32_t algId)
-{
-    int32_t macId = 0;
-    uint32_t len = sizeof(macId);
+    int32_t id;
+    uint32_t len = sizeof(id);
     const BSL_Param *temp = NULL;
-    int32_t ret = CRYPT_SUCCESS;
 
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_MAC_ID)) == NULL) {
         return CRYPT_SUCCESS;
     }
 
-    ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &macId, &len);
+    int32_t ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &id, &len);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
-    if (!IsMacIdSupported(algId, macId)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-        return CRYPT_CMVP_ERR_PARAM_CHECK;
-    }
-
+    *macId = (CRYPT_MAC_AlgId)id;
     return CRYPT_SUCCESS;
 }
 
-static int32_t CheckKeyLen(const BSL_Param *param)
-{
-    const BSL_Param *temp = NULL;
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_KEY)) == NULL) {
-        return CRYPT_SUCCESS;
-    }
-
-    if (temp->valueLen < KDF_MIN_KEY_LEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-        return CRYPT_CMVP_ERR_PARAM_CHECK;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
-static int32_t CheckPbkdf2Params(const BSL_Param *param)
+static int32_t GetPbkdf2Params(const BSL_Param *param, CRYPT_EAL_Pbkdf2Param *pbkdf2Param)
 {
     uint32_t iter = 0;
     uint32_t len = 0;
     const BSL_Param *temp = NULL;
-    int32_t ret = CRYPT_SUCCESS;
 
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
-        if (temp->valueLen < KDF_MIN_SALT_LEN) {
-            BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-            return CRYPT_CMVP_ERR_PARAM_CHECK;
-        }
+        pbkdf2Param->saltLen = temp->valueLen;
     }
 
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_ITER)) != NULL) {
         len = sizeof(iter);
-        ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, &len);
+        int32_t ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32, &iter, &len);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        if (iter < KDF_MIN_PBKDF2_ITER) {
-            BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-            return CRYPT_CMVP_ERR_PARAM_CHECK;
-        }
+        pbkdf2Param->iter = iter;
     }
+    return GetMacId(param, &pbkdf2Param->macId);
+}
 
-    return CRYPT_SUCCESS;
+static int32_t GetHkdfAndTlskdfParam(const BSL_Param *param, CRYPT_EAL_HkdfParam *hkdf)
+{
+    const BSL_Param *temp = NULL;
+    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
+        hkdf->keyLen = temp->valueLen;
+    }
+    return GetMacId(param, &hkdf->macId);
 }
 
 static int32_t CheckKdfParam(IsoKdfCtx *ctx, const BSL_Param *param) 
 {
-    int32_t ret = CheckMacId(param, ctx->algId);
-    if (ret != CRYPT_SUCCESS) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
-        return ret;
-    }
+    int32_t ret = CRYPT_SUCCESS;
+    CRYPT_EAL_Pbkdf2Param pbkdf2 = {KDF_DEF_MAC_ALGID, KDF_DEF_SALT_LEN, KDF_DEF_PBKDF2_ITER, KDF_DEF_KEY_LEN};
+    CRYPT_EAL_HkdfParam hkdf = {KDF_DEF_MAC_ALGID, KDF_DEF_KEY_LEN};
+    CRYPT_EAL_KdfC2Data data = {&pbkdf2, &hkdf};
     switch (ctx->algId) {
         case CRYPT_KDF_HKDF:
         case CRYPT_KDF_KDFTLS12:
-            ret = CheckKeyLen(param);
+            ret = GetHkdfAndTlskdfParam(param, &hkdf);
             break;
         case CRYPT_KDF_PBKDF2:
-            ret = CheckPbkdf2Params(param);
+            ret = GetPbkdf2Params(param, &pbkdf2);
             break;
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
     }
-
     if (ret != CRYPT_SUCCESS) {
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
+        return ret;
+    }
+    if (!CMVP_Iso19790KdfC2(ctx->algId, &data)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
+        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
+        return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return ret;
 }
@@ -233,7 +183,12 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->algId == CRYPT_KDF_PBKDF2 && len < KDF_MIN_KEY_LEN) {
+    if (ctx->algId != CRYPT_KDF_PBKDF2) {
+        return CRYPT_SUCCESS;
+    }
+    CRYPT_EAL_Pbkdf2Param pbkdf2Param = {KDF_DEF_MAC_ALGID, KDF_DEF_SALT_LEN, KDF_DEF_PBKDF2_ITER, len};
+    CRYPT_EAL_KdfC2Data data = {&pbkdf2Param, NULL};
+    if (!CMVP_Iso19790KdfC2(CRYPT_KDF_PBKDF2, &data)) {
         BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
         (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
