@@ -512,15 +512,6 @@ int32_t CRYPT_EAL_PkeyGen(CRYPT_EAL_PkeyCtx *pkey)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
         return ret;
     }
-
-    if (pkey->method->ctrl != NULL) {
-        ret = pkey->method->ctrl(pkey->key, CRYPT_CTRL_PCT_TEST, pkey, 0);
-        if (ret == CRYPT_CMVP_ERR_PAIRWISETEST) {
-            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-            return ret;
-        }
-        ret = CRYPT_SUCCESS;
-    }
     return CRYPT_SUCCESS;
 }
 

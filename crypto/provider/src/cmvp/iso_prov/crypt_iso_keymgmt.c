@@ -220,25 +220,6 @@ static int32_t CheckSetPubKey(CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *params)
     return CRYPT_SUCCESS;
 }
 
-static int32_t PkeyPctTest(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, uint32_t len)
-{
-    (void)opt;
-    (void)len;
-    int32_t event = CRYPT_EVENT_PCT_TEST;
-    int32_t algId = ctx->algId;
-    int index = 0;
-    BSL_Param param[PKEY_PCT_PARAM_COUNT] = {{0}, {0}, {0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(algId));
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_PCT_CTX, BSL_PARAM_TYPE_CTX_PTR, val, 0);
-    int32_t ret = CRYPT_EAL_SelftestOperation(ctx->mgrCtx, param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return CRYPT_CMVP_ERR_PAIRWISETEST;
-    }
-    return CRYPT_SUCCESS;
-}
-
 static int32_t CheckParaId(CRYPT_Iso_Pkey_Ctx *ctx, void *val, uint32_t len)
 {
     if (val == NULL || len != sizeof(CRYPT_PKEY_ParaId)) {
@@ -362,7 +343,18 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
-        return (name)(ctx->ctx);                                                                             \
+        ret = (name)(ctx->ctx);                                                                              \
+        if (ret != CRYPT_SUCCESS) {                                                                          \
+            return ret;                                                                                      \
+        }                                                                                                    \
+        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PCT_TEST, CRYPT_ALGO_PKEY, ctx->algId);                 \
+        if (ret != CRYPT_SUCCESS) {                                                                          \
+            return ret;                                                                                      \
+        }                                                                                                    \
+        if (!CMVP_Iso19790PkeyPct(ctx)) {                                                                    \
+            return CRYPT_CMVP_ERR_ALGO_SELFTEST;                                                             \
+        }                                                                                                    \
+        return CRYPT_SUCCESS;                                                                                \
     }
 
 #define PKEY_SET_KEY_FUNC(setPrvFunc, setPubFunc)                                                            \
@@ -467,9 +459,6 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         if (ctx == NULL) {                                                                                   \
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
-        }                                                                                                    \
-        if (opt == CRYPT_CTRL_PCT_TEST) {                                                                    \
-            return PkeyPctTest(ctx, opt, val, len);                                                          \
         }                                                                                                    \
         int32_t ret = PkeyCtrlCheck(ctx, opt, val, len);                                                     \
         if (ret != CRYPT_SUCCESS) {                                                                          \

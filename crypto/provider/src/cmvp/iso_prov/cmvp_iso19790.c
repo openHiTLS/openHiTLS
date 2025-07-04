@@ -26,6 +26,14 @@
 #include "crypt_params_key.h"
 #include "securec.h"
 #include "bsl_sal.h"
+#include "crypt_dsa.h"
+#include "crypt_ecdsa.h"
+#include "crypt_curve25519.h"
+#include "crypt_rsa.h"
+#include "crypt_sm2.h"
+#include "crypt_mldsa.h"
+#include "crypt_mlkem.h"
+#include "crypt_slh_dsa.h"
 
 typedef struct {
     uint32_t algId;
@@ -503,6 +511,112 @@ static bool ISO19790_PkeyKat(void *libCtx, const char *attrName)
         return false;
     }
     return true;
+}
+
+typedef struct {
+    int32_t id;
+    CRYPT_EAL_ImplPkeySign sign;
+    CRYPT_EAL_ImplPkeyVerify verify;
+    CRYPT_EAL_ImplPkeyMgmtCtrl ctrl;
+} PkeyMethodMap;
+
+static const PkeyMethodMap pkey_map[] = {
+    {CRYPT_PKEY_DSA,     (CRYPT_EAL_ImplPkeySign)CRYPT_DSA_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_DSA_Verify,        (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_DSA_Ctrl},
+    {CRYPT_PKEY_ED25519, (CRYPT_EAL_ImplPkeySign)CRYPT_CURVE25519_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_CURVE25519_Verify, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_CURVE25519_Ctrl},
+    {CRYPT_PKEY_RSA,     (CRYPT_EAL_ImplPkeySign)CRYPT_RSA_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_RSA_Verify,        (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_RSA_Ctrl},
+    {CRYPT_PKEY_ECDSA,   (CRYPT_EAL_ImplPkeySign)CRYPT_ECDSA_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_ECDSA_Verify,      (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ECDSA_Ctrl},
+    {CRYPT_PKEY_SM2,     (CRYPT_EAL_ImplPkeySign)CRYPT_SM2_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_SM2_Verify,        (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_SM2_Ctrl},
+    {CRYPT_PKEY_SLH_DSA, (CRYPT_EAL_ImplPkeySign)CRYPT_SLH_DSA_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_SLH_DSA_Verify,    (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_SLH_DSA_Ctrl},
+    {CRYPT_PKEY_ML_DSA,  (CRYPT_EAL_ImplPkeySign)CRYPT_ML_DSA_Sign,
+        (CRYPT_EAL_ImplPkeyVerify)CRYPT_ML_DSA_Verify,     (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ML_DSA_Ctrl},
+};
+
+static bool ISO19790_PkeySignVerifyPct(CRYPT_Iso_Pkey_Ctx *ctx)
+{
+    bool ret = false;
+    uint8_t *sign = NULL;
+    uint32_t signLen = 0;
+    const uint8_t msg[] = {0x01, 0x02, 0x03, 0x04};
+    uint32_t mdId = CRYPT_MD_SHA512;
+
+    const PkeyMethodMap *map = NULL;
+    for (uint32_t i = 0; i < sizeof(pkey_map) / sizeof(pkey_map[0]); i++) {
+        if (ctx->algId == pkey_map[i].id) {
+            map = &pkey_map[i];
+            break;
+        }
+    }
+    GOTO_EXIT_IF(map == NULL, CRYPT_EAL_ERR_ALGID);
+
+    GOTO_EXIT_IF(map->ctrl(ctx->ctx, CRYPT_CTRL_GET_SIGNLEN, &signLen, sizeof(signLen)) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    sign = BSL_SAL_Malloc(signLen);
+    GOTO_EXIT_IF(sign == NULL, CRYPT_MEM_ALLOC_FAIL);
+
+    if (ctx->algId == CRYPT_PKEY_RSA) {
+        GOTO_EXIT_IF(map->ctrl(ctx->ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &mdId, sizeof(mdId)) != CRYPT_SUCCESS,
+            CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    }
+
+    GOTO_EXIT_IF(map->sign(ctx->ctx, ctx->algId == CRYPT_PKEY_SM2 ? CRYPT_MD_SM3 : CRYPT_MD_SHA512, msg, sizeof(msg),
+        sign, &signLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    GOTO_EXIT_IF(map->verify(ctx->ctx, ctx->algId == CRYPT_PKEY_SM2 ? CRYPT_MD_SM3 : CRYPT_MD_SHA512, msg, sizeof(msg),
+        sign, signLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    ret = true;
+EXIT:
+    BSL_SAL_Free(sign);
+    return ret;
+}
+
+static bool ISO19790_MlkemPct(CRYPT_Iso_Pkey_Ctx *ctx)
+{
+    bool ret = false;
+    uint32_t cipherLen = 0;
+    uint8_t *ciphertext = NULL;
+    uint8_t sharedKey[32] = {0};
+    uint32_t sharedLen = sizeof(sharedKey);
+    uint8_t sharedKey2[32] = {0};
+    uint32_t sharedLen2 = sizeof(sharedKey2);
+
+    GOTO_EXIT_IF(CRYPT_ML_KEM_Ctrl(ctx->ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen,
+        sizeof(cipherLen)) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    ciphertext = BSL_SAL_Malloc(cipherLen);
+    GOTO_EXIT_IF(ciphertext == NULL, CRYPT_MEM_ALLOC_FAIL);
+
+    GOTO_EXIT_IF(CRYPT_ML_KEM_Encaps(ctx->ctx, ciphertext, &cipherLen, sharedKey, &sharedLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    GOTO_EXIT_IF(CRYPT_ML_KEM_Decaps(ctx->ctx, ciphertext, cipherLen, sharedKey2, &sharedLen2) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    GOTO_EXIT_IF(sharedLen != sharedLen2 || memcmp(sharedKey, sharedKey2, sharedLen) != 0,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    ret = true;
+
+EXIT:
+    BSL_SAL_Free(ciphertext);
+    return ret;
+}
+
+bool CMVP_Iso19790PkeyPct(CRYPT_Iso_Pkey_Ctx *ctx)
+{
+    if (ctx->algId == CRYPT_PKEY_DH || ctx->algId == CRYPT_PKEY_ECDH || ctx->algId == CRYPT_PKEY_X25519) {
+        return true;
+    }
+    if (ctx->algId == CRYPT_PKEY_ML_KEM) {
+        return ISO19790_MlkemPct(ctx);
+    }
+    return ISO19790_PkeySignVerifyPct(ctx);
 }
 
 bool CMVP_Iso19790PkeyC2(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data)

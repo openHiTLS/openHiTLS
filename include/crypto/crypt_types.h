@@ -616,7 +616,6 @@ typedef enum {
     CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures */
     CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
     CRYPT_CTRL_SET_PREHASH_FLAG,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
-    CRYPT_CTRL_PCT_TEST,                 /**< Verify the consistency of the asymmetric key pair. */
     CRYPT_CTRL_CLEAN_PUB_KEY,            /**< Clean the pubkey. */
 
     // dh

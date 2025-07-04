@@ -50,25 +50,6 @@ static void IsoRunLog(void *provCtx, CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type
     ((CRYPT_EAL_IsoProvCtx *)provCtx)->runLog(oper, type, id, err);
 }
 
-static int32_t IsoPctTest(void *provCtx, BSL_Param *param)
-{
-    void *pkeyCtx = NULL;
-    BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_PCT_CTX);
-    int32_t ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_PCT_CTX, BSL_PARAM_TYPE_CTX_PTR, &pkeyCtx, NULL);
-    if (ret != BSL_SUCCESS || pkeyCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_ALGID);
-    if (temp == NULL || temp->valueType != BSL_PARAM_TYPE_INT32) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    int32_t algId = *(int32_t *)(uintptr_t)temp->value;
-    IsoRunLog(provCtx, CRYPT_EVENT_PCT_TEST, CRYPT_ALGO_PKEY, algId, CRYPT_SUCCESS);
-    return CMVP_Pct(pkeyCtx) ? CRYPT_SUCCESS : CRYPT_CMVP_ERR_ALGO_SELFTEST;
-}
-
 static int32_t IsoLogEvent(CRYPT_EVENT_TYPE event, void *provCtx, BSL_Param *param, int32_t ret)
 {
     BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_ALGID);
@@ -135,8 +116,6 @@ static int32_t IsoSelftestCb(void *provCtx, BSL_Param *param)
     }
     int32_t event = *(int32_t *)(uintptr_t)temp->value;
     switch (event) {
-        case CRYPT_EVENT_PCT_TEST:
-            return IsoPctTest(provCtx, param);
         case CRYPT_EVENT_KAT_TEST:
             return IsoKatTest(provCtx, param);
         case CRYPT_EVENT_INTEGRITY_TEST:
@@ -160,6 +139,7 @@ static int32_t IsoSelftestCb(void *provCtx, BSL_Param *param)
         case CRYPT_EVENT_DECAPS:
         case CRYPT_EVENT_BLIND:
         case CRYPT_EVENT_UNBLIND:
+        case CRYPT_EVENT_PCT_TEST:
         case CRYPT_EVENT_GET_VERSION:
             return IsoLogEvent(event, provCtx, param, CRYPT_SUCCESS);
         default:

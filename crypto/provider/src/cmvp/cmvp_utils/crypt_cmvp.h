@@ -82,7 +82,6 @@ typedef struct {
     BSL_Param *oaep;
 } CRYPT_EAL_PkeyC2Data;
 
-bool CMVP_Pct(CRYPT_EAL_PkeyCtx *pkey);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

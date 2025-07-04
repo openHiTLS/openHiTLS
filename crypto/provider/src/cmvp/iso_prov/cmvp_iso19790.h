@@ -28,6 +28,7 @@
 #include "crypt_eal_mac.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
+#include "crypt_iso_provderimpl.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,8 @@ bool CMVP_Iso19790KdfC2(CRYPT_KDF_AlgId id, const CRYPT_EAL_KdfC2Data *data);
 int32_t CMVP_Iso19790Kat(void *libCtx, const char *attrName);
 
 int32_t CMVP_Iso19790CheckIntegrity(void *libCtx, const char *attrName);
+
+bool CMVP_Iso19790PkeyPct(CRYPT_Iso_Pkey_Ctx *ctx);
 
 #ifdef __cplusplus
 }
