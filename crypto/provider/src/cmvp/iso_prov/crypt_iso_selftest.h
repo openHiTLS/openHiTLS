@@ -32,9 +32,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param);
+int32_t CRYPT_Iso_Selftest(BSL_Param *param);
 
-int32_t CRYPT_Iso_Log(void *mgrCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type, int32_t id);
+int32_t CRYPT_Iso_Log(void *provCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type, int32_t id);
+
+int32_t CRYPT_Iso_EventOperation(void *provCtx, BSL_Param *param);
 
 #ifdef __cplusplus
 }

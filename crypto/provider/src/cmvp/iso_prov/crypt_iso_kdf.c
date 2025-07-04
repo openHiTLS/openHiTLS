@@ -23,7 +23,6 @@
 #include "crypt_scrypt.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
-#include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_cmvp.h"
 #include "cmvp_iso19790.h"
@@ -33,7 +32,7 @@
 typedef struct {
     int32_t algId;
     void *ctx;
-    void *mgrCtx;
+    void *provCtx;
 } IsoKdfCtx;
 
 /* Constants for parameter validation */
@@ -111,12 +110,12 @@ static int32_t CheckKdfParam(IsoKdfCtx *ctx, const BSL_Param *param)
             return CRYPT_INVALID_ARG;
     }
     if (ret != CRYPT_SUCCESS) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
         return ret;
     }
     if (!CMVP_Iso19790KdfC2(ctx->algId, &data)) {
         BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return ret;
@@ -127,7 +126,7 @@ static int32_t SSPLog(IsoKdfCtx *ctx, const BSL_Param *param, const int32_t *ssp
 {
     for (uint32_t i = 0; i < paramCount; i++) {
         if (BSL_PARAM_FindConstParam(param, sspParam[i]) != NULL) {
-            return CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_KDF, ctx->algId);
+            return CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_KDF, ctx->algId);
         }
     }
     return CRYPT_SUCCESS;
@@ -190,7 +189,7 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
     CRYPT_EAL_KdfC2Data data = {&pbkdf2Param, NULL};
     if (!CMVP_Iso19790KdfC2(CRYPT_KDF_PBKDF2, &data)) {
         BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return CRYPT_SUCCESS;
@@ -216,7 +215,7 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
         }                                                                                                      \
         ctx->algId = algId;                                                                                    \
         ctx->ctx = kdfCtx;                                                                                     \
-        ctx->mgrCtx = provCtx->mgrCtx;                                                                         \
+        ctx->provCtx = provCtx;                                                                                \
         return ctx;                                                                                            \
     }                                                                                                          \
                                                                                                                \
@@ -239,7 +238,7 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_KDF, CRYPT_ALGO_KDF, ctx->algId);                         \
+        ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_KDF, CRYPT_ALGO_KDF, ctx->algId);                        \
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
@@ -252,7 +251,7 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                              \
             return CRYPT_NULL_INPUT;                                                                           \
         }                                                                                                      \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->algId);                \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->algId);               \
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
@@ -274,7 +273,7 @@ static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
         if (ctx == NULL) {                                                                                     \
             return;                                                                                            \
         }                                                                                                      \
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->algId);                        \
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_KDF, ctx->algId);                       \
         if (ctx->ctx != NULL) {                                                                                \
             CRYPT_##name##_FreeCtx(ctx->ctx);                                                                  \
         }                                                                                                      \

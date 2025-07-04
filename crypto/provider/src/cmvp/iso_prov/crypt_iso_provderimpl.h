@@ -33,7 +33,7 @@ extern "C" {
 typedef struct {
     int32_t algId;
     void *ctx;
-    void *mgrCtx;
+    void *provCtx;
 } CRYPT_Iso_Pkey_Ctx;
 
 extern const CRYPT_EAL_Func g_isoMdSha1[];

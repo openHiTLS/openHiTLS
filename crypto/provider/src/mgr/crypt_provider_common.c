@@ -332,32 +332,4 @@ void CRYPT_EAL_FreePreDefinedProviders(void)
     g_libCtx = NULL;
 }
 
-int32_t CRYPT_EAL_SelftestOperation(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
-{
-    if (mgrCtx == NULL || param == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    SelftestCb cb = mgrCtx->selftestCb;
-    if (cb == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    int32_t ret = cb(mgrCtx->provCtx, param);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_EAL_SelftestSetCb(CRYPT_EAL_ProvMgrCtx *mgrCtx, SelftestCb callback)
-{
-    if (mgrCtx == NULL || callback == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    mgrCtx->selftestCb = callback;
-    return CRYPT_SUCCESS;
-}
-
 #endif /* HITLS_CRYPTO_PROVIDER */

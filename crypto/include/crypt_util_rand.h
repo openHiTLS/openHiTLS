@@ -33,6 +33,11 @@ extern "C" {
  */
 void CRYPT_RandRegist(CRYPT_EAL_RandFunc func);
 
+/**
+ * @brief   Get the registered random number function
+ *
+ * @return  The registered random number function
+ */
 CRYPT_EAL_RandFunc CRYPT_RandRegistGet(void);
 
 /**
@@ -54,6 +59,11 @@ int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen);
  */
 void CRYPT_RandRegistEx(CRYPT_EAL_RandFuncEx func);
 
+/**
+ * @brief   Get the registered random number function
+ *
+ * @return  The registered random number function
+ */
 CRYPT_EAL_RandFuncEx CRYPT_RandRegistExGet(void);
 
 /**

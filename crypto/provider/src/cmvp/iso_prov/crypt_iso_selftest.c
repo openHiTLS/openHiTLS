@@ -25,13 +25,12 @@
 #include "cmvp_iso19790.h"
 #include "crypt_cmvp_selftest.h"
 #include "crypt_params_key.h"
-#include "crypt_provider.h"
 #include "cmvp_common.h"
 #include "crypt_iso_selftest.h"
 
 #define BSL_PARAM_MAX_NUMBER 1000
 
-int32_t CRYPT_Iso_Log(void *mgrCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type, int32_t id)
+int32_t CRYPT_Iso_Log(void *provCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type, int32_t id)
 {
     int32_t algId = id;
     int32_t algType = type;
@@ -39,7 +38,7 @@ int32_t CRYPT_Iso_Log(void *mgrCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type
     (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
     (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(algId));
     (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_ALGO_TYPE, BSL_PARAM_TYPE_INT32, &algType, sizeof(algType));
-    return CRYPT_EAL_SelftestOperation(mgrCtx, param);
+    return CRYPT_Iso_EventOperation(provCtx, param);
 }
 
 static void IsoRunLog(void *provCtx, CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)
@@ -107,7 +106,7 @@ static int32_t IsoKatTest(void *provCtx, BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-static int32_t IsoSelftestCb(void *provCtx, BSL_Param *param)
+int32_t CRYPT_Iso_EventOperation(void *provCtx, BSL_Param *param)
 {
     BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_EVENT);
     if (temp == NULL || temp->valueType != BSL_PARAM_TYPE_INT32) {
@@ -233,17 +232,13 @@ static bool IsoCheckIsInternalLibCtx(BSL_Param *param)
     return false;
 }
 
-int32_t CRYPT_Iso_Selftest(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param)
+int32_t CRYPT_Iso_Selftest(BSL_Param *param)
 {
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    int32_t ret = CRYPT_EAL_SelftestSetCb(mgrCtx, IsoSelftestCb);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
     if (IsoCheckIsInternalLibCtx(param)) {
         return CRYPT_SUCCESS;
     }
-    ret = IsoCreateInternalLibCtx(param, &libCtx);
+    int32_t ret = IsoCreateInternalLibCtx(param, &libCtx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

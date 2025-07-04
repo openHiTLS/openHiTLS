@@ -36,7 +36,7 @@
 typedef struct {
     int32_t algId;
     void *ctx;
-    void *mgrCtx;
+    void *provCtx;
 } IsoCipherCtx;
 
 #ifdef HITLS_CRYPTO_ASM_CHECK
@@ -71,7 +71,7 @@ typedef struct {
         }                                                                                                      \
         ctx->algId = algId;                                                                                    \
         ctx->ctx = cipherCtx;                                                                                  \
-        ctx->mgrCtx = provCtx->mgrCtx;                                                                         \
+        ctx->provCtx = provCtx;                                                                                \
         return ctx;                                                                                            \
     }                                                                                                          \
                                                                                                                \
@@ -89,7 +89,7 @@ typedef struct {
         if (ctx == NULL) {                                                                                     \
             return;                                                                                            \
         }                                                                                                      \
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_CIPHER, ctx->algId);                     \
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_CIPHER, ctx->algId);                    \
         if (ctx->ctx != NULL) {                                                                                \
             MODES_##name##_FreeCtx(ctx->ctx);                                                                  \
         }                                                                                                      \
@@ -105,11 +105,11 @@ typedef struct {
             return CRYPT_NULL_INPUT;                                                                           \
         }                                                                                                      \
         int32_t event = enc ? CRYPT_EVENT_ENC : CRYPT_EVENT_DEC;                                               \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, event, CRYPT_ALGO_CIPHER, ctx->algId);                        \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, event, CRYPT_ALGO_CIPHER, ctx->algId);                       \
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_CIPHER, ctx->algId);                   \
+        ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_CIPHER, ctx->algId);                  \
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
@@ -141,7 +141,7 @@ typedef struct {
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                              \
             return CRYPT_NULL_INPUT;                                                                           \
         }                                                                                                      \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_CIPHER, ctx->algId);             \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_CIPHER, ctx->algId);            \
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \

@@ -24,17 +24,15 @@
 #include "crypt_sm3.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
-#include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
-#include "crypt_provider.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provider.h"
 
 typedef struct {
     int32_t algId;
     void *ctx;
-    void *mgrCtx;
+    void *provCtx;
 } IsoMdCtx;
 
 static uint32_t CRYPT_ASMCAP_Test(int32_t algId)
@@ -74,7 +72,7 @@ static uint32_t CRYPT_ASMCAP_Test(int32_t algId)
         }                                                                                               \
         ctx->algId = algId;                                                                             \
         ctx->ctx = mdCtx;                                                                               \
-        ctx->mgrCtx = provCtx->mgrCtx;                                                                  \
+        ctx->provCtx = provCtx;                                                                         \
         return ctx;                                                                                     \
     }                                                                                                   \
                                                                                                         \
@@ -84,7 +82,7 @@ static uint32_t CRYPT_ASMCAP_Test(int32_t algId)
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                       \
             return CRYPT_NULL_INPUT;                                                                    \
         }                                                                                               \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_MD, CRYPT_ALGO_MD, ctx->algId);            \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_MD, CRYPT_ALGO_MD, ctx->algId);           \
         if (ret != CRYPT_SUCCESS) {                                                                     \
             return ret;                                                                                 \
         }                                                                                               \
@@ -138,7 +136,7 @@ static uint32_t CRYPT_ASMCAP_Test(int32_t algId)
         }                                                                                               \
         dupCtx->algId = src->algId;                                                                     \
         dupCtx->ctx = mdCtx;                                                                            \
-        dupCtx->mgrCtx = src->mgrCtx;                                                                   \
+        dupCtx->provCtx = src->provCtx;                                                                 \
         return dupCtx;                                                                                  \
     }                                                                                                   \
                                                                                                         \

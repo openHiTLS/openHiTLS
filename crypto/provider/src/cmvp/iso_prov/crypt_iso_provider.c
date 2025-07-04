@@ -31,7 +31,6 @@
 #include "crypt_iso_provider.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_params_key.h"
-#include "crypt_provider.h"
 #include "crypt_params_key.h"
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
@@ -300,7 +299,7 @@ int32_t CRYPT_EAL_ProviderInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, C
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    ret = CRYPT_Iso_Selftest(mgrCtx, param);
+    ret = CRYPT_Iso_Selftest(param);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

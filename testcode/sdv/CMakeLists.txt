@@ -111,6 +111,7 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/crypto/pbkdf2/include
         ${openHiTLS_SRC}/crypto/provider/include
         ${openHiTLS_SRC}/crypto/provider/src/mgr
+        ${openHiTLS_SRC}/crypto/provider/src/cmvp/cmvp_utils
         ${openHiTLS_SRC}/crypto/hkdf/include
         ${openHiTLS_SRC}/crypto/kdf/include
         ${openHiTLS_SRC}/crypto/scrypt/include
@@ -152,7 +153,6 @@ target_include_directories(TEST_INTF
         ${openHiTLS_SRC}/crypto/encode/include
         ${openHiTLS_SRC}/crypto/codecskey/include
         ${openHiTLS_SRC}/crypto/codecskey/src
-        ${openHiTLS_SRC}/crypto/cmvp/src
         ${openHiTLS_SRC}/bsl/err/include
         ${openHiTLS_SRC}/bsl/err/src
         ${openHiTLS_SRC}/include/tls

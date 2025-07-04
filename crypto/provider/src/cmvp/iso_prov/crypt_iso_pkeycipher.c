@@ -34,7 +34,7 @@
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                                   \
             return CRYPT_NULL_INPUT;                                                                                \
         }                                                                                                           \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ENC, CRYPT_ALGO_PKEY, ctx->algId);                     \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ENC, CRYPT_ALGO_PKEY, ctx->algId);                    \
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \
@@ -48,7 +48,7 @@
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                                   \
             return CRYPT_NULL_INPUT;                                                                                \
         }                                                                                                           \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_DEC, CRYPT_ALGO_PKEY, ctx->algId);                     \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_DEC, CRYPT_ALGO_PKEY, ctx->algId);                    \
         if (ret != CRYPT_SUCCESS) {                                                                                 \
             return ret;                                                                                             \
         }                                                                                                           \

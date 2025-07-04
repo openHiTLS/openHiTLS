@@ -20,14 +20,9 @@
 #ifdef HITLS_CRYPTO_CMVP_ISO19790
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "crypt_cmvp.h"
-#include "crypt_types.h"
-#include "crypt_eal_pkey.h"
-#include "crypt_eal_rand.h"
-#include "crypt_eal_md.h"
-#include "crypt_eal_mac.h"
-#include "crypt_eal_cipher.h"
-#include "crypt_eal_kdf.h"
+#include "crypt_algid.h"
 #include "crypt_iso_provderimpl.h"
 
 #ifdef __cplusplus

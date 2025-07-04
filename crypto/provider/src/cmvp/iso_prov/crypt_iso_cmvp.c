@@ -21,14 +21,13 @@
 #include "crypt_errno.h"
 #include "crypt_cmvp_selftest.h"
 #include "crypt_iso_selftest.h"
-#include "crypt_provider.h"
 #include "crypt_iso_provider.h"
 
 #define ISO_19790_PROVIDER_VERSION "openHiTLS ISO 19790 Provider Version : V0.2.0"
 
 typedef struct {
     void *ctx;
-    void *mgrCtx;
+    void *provCtx;
     void *libCtx;
 } IsoSelftestCtx;
 
@@ -43,7 +42,7 @@ static IsoSelftestCtx *CRYPT_Selftest_NewCtx(CRYPT_EAL_IsoProvCtx *provCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    ctx->mgrCtx = provCtx->mgrCtx;
+    ctx->provCtx = provCtx;
     ctx->libCtx = provCtx->libCtx;
     return ctx;
 }
@@ -54,7 +53,7 @@ static const char *CRYPT_Selftest_GetVersion(IsoSelftestCtx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GET_VERSION, 0, 0);
+    int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_GET_VERSION, 0, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -84,7 +83,7 @@ static int32_t CRYPT_Selftest_Selftest(IsoSelftestCtx *ctx, int32_t type)
     BSL_Param param[3] = {{0}, {0}, BSL_PARAM_END};
     (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
     (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_LIB_CTX, BSL_PARAM_TYPE_CTX_PTR, ctx->libCtx, 0);
-    return CRYPT_EAL_SelftestOperation(ctx->mgrCtx, param);
+    return CRYPT_Iso_EventOperation(ctx->provCtx, param);
 }
 
 static void CRYPT_Selftest_FreeCtx(IsoSelftestCtx *ctx)

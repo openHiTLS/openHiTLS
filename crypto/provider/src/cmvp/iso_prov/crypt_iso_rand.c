@@ -20,7 +20,6 @@
 #include "crypt_drbg.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
-#include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
 #include "bsl_params.h"
@@ -31,7 +30,7 @@
 typedef struct {
     int32_t algId;
     void *ctx;
-    void *mgrCtx;
+    void *provCtx;
 } IsoRandCtx;
 
 static void *CRYPT_EAL_IsoRandNewCtx(int32_t algId, BSL_Param *param)
@@ -75,7 +74,7 @@ static void *CRYPT_EAL_IsoRandNewCtxWrapper(CRYPT_EAL_IsoProvCtx *provCtx, int32
     }
     ctx->algId = algId;
     ctx->ctx = randCtx;
-    ctx->mgrCtx = provCtx->mgrCtx;
+    ctx->provCtx = provCtx;
     return ctx;
 }
 
@@ -85,7 +84,7 @@ static int32_t DRBG_InstantiateWrapper(IsoRandCtx *ctx, const uint8_t *person, u
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_RAND, ctx->algId);
+    int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_RAND, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -98,7 +97,7 @@ static int32_t DRBG_UninstantiateWrapper(IsoRandCtx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_RAND, ctx->algId);
+    int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_RAND, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -112,7 +111,7 @@ static int32_t DRBG_GenerateBytesWrapper(IsoRandCtx *ctx, uint8_t *out, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_RANDGEN, CRYPT_ALGO_RAND, ctx->algId);
+    int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_RANDGEN, CRYPT_ALGO_RAND, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -125,7 +124,7 @@ static int32_t DRBG_ReseedWrapper(IsoRandCtx *ctx, const uint8_t *adin, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_RAND, ctx->algId);
+    int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_RAND, ctx->algId);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -146,7 +145,7 @@ static void DRBG_FreeWrapper(IsoRandCtx *ctx)
     if (ctx == NULL) {
         return;
     }
-    (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_RAND, ctx->algId);
+    (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_RAND, ctx->algId);
     if (ctx->ctx != NULL) {
         DRBG_Free(ctx->ctx);
     }

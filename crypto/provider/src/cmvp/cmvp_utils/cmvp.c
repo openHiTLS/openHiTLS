@@ -20,26 +20,10 @@
 #include <stddef.h>
 #include <string.h>
 #include "crypt_cmvp.h"
-#include "cmvp_common.h"
-#include "bsl_err.h"
 #include "crypt_errno.h"
-#include "crypt_types.h"
-#include "crypt_algid.h"
 #include "bsl_err_internal.h"
-#include "crypt_utils.h"
-#include "crypt_cmvp_selftest.h"
-#include "crypt_eal_pkey.h"
-#include "crypt_eal_md.h"
-#include "crypt_eal_rand.h"
-#include "crypt_eal_mac.h"
-#include "crypt_eal_cipher.h"
-#include "crypt_eal_kdf.h"
-#include "crypt_entropy.h"
-#include "bsl_sal.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_cmvp.h"
-#include "crypt_cmvp.h"
-#include "bsl_errno.h"
 
 #ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetCmvpSelftestMethod(CRYPT_SelftestCtx *ctx, const CRYPT_EAL_Func *funcs)

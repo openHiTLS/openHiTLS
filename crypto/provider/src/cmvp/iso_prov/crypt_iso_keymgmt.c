@@ -38,12 +38,6 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
-#ifdef HITLS_CRYPTO_PAILLIER
-#include "crypt_paillier.h"
-#endif
-#ifdef HITLS_CRYPTO_ELGAMAL
-#include "crypt_elgamal.h"
-#endif
 #ifdef HITLS_CRYPTO_SLH_DSA
 #include "crypt_slh_dsa.h"
 #endif
@@ -53,15 +47,10 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_HYBRIDKEM
-#include "crypt_hybridkem.h"
-#endif
 #include "crypt_errno.h"
-#include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
 #include "crypt_iso_provider.h"
-#include "crypt_provider.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_cmvp.h"
 #include "crypt_iso_selftest.h"
@@ -75,7 +64,7 @@ static int32_t ParaCheckAndLog(const CRYPT_Iso_Pkey_Ctx *ctx, const CRYPT_EAL_Pk
     CRYPT_EAL_PkeyC2Data data = {para, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
         NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return CRYPT_SUCCESS;
@@ -182,7 +171,7 @@ static int32_t CheckSetRsaPrvKey(CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *param
     CRYPT_EAL_PkeyC2Data data = {NULL, NULL, &prv, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
         NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return CRYPT_SUCCESS;
@@ -206,7 +195,7 @@ static int32_t CheckSetRsaPubKey(CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *param
     CRYPT_EAL_PkeyC2Data data = {NULL, &pub, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX, CRYPT_MD_MAX,
         NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return CRYPT_SUCCESS;
@@ -229,7 +218,7 @@ static int32_t CheckParaId(CRYPT_Iso_Pkey_Ctx *ctx, void *val, uint32_t len)
     CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, *(CRYPT_PKEY_ParaId *)val, CRYPT_EVENT_MAX,
         CRYPT_MD_MAX, NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return CRYPT_SUCCESS;
@@ -263,7 +252,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         return CRYPT_SUCCESS;
     }
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;
     }
     return CRYPT_SUCCESS;
@@ -300,7 +289,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         }                                                                                                    \
         ctx->algId = algId;                                                                                  \
         ctx->ctx = pkeyCtx;                                                                                  \
-        ctx->mgrCtx = provCtx->mgrCtx;                                                                       \
+        ctx->provCtx = provCtx;                                                                              \
         return ctx;                                                                                          \
     }
 
@@ -339,7 +328,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
         }                                                                                                    \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GEN, CRYPT_ALGO_PKEY, ctx->algId);              \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_GEN, CRYPT_ALGO_PKEY, ctx->algId);             \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -347,7 +336,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_PCT_TEST, CRYPT_ALGO_PKEY, ctx->algId);                 \
+        ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PCT_TEST, CRYPT_ALGO_PKEY, ctx->algId);                \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -368,7 +357,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);                   \
+        ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);                  \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -385,7 +374,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
-        ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);                   \
+        ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);                  \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -399,7 +388,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
         }                                                                                                    \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);           \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);          \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -412,7 +401,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
         }                                                                                                    \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);           \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);          \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -439,7 +428,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         }                                                                                                    \
         newCtx->algId = ctx->algId;                                                                          \
         newCtx->ctx = pkeyCtx;                                                                               \
-        newCtx->mgrCtx = ctx->mgrCtx;                                                                        \
+        newCtx->provCtx = ctx->provCtx;                                                                      \
         return newCtx;                                                                                       \
     }
 
@@ -473,7 +462,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
         if (ctx == NULL) {                                                                                   \
             return;                                                                                          \
         }                                                                                                    \
-        (void)CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_PKEY, ctx->algId);                     \
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_ZERO, CRYPT_ALGO_PKEY, ctx->algId);                    \
         if (ctx->algId == CRYPT_PKEY_SLH_DSA || ctx->algId == CRYPT_PKEY_ML_DSA ||                           \
             ctx->algId == CRYPT_PKEY_ML_KEM) {                                                               \
             CRYPT_##name##_Ctrl(ctx->ctx, CRYPT_CTRL_CLEAN_PUB_KEY, NULL, 0);                                \
@@ -491,7 +480,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
         }                                                                                                    \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);           \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);          \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \
@@ -504,7 +493,7 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
         }                                                                                                    \
-        int32_t ret = CRYPT_Iso_Log(ctx->mgrCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);           \
+        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_GETSSP, CRYPT_ALGO_PKEY, ctx->algId);          \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \

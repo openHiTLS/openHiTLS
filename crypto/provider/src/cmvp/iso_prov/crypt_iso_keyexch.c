@@ -25,20 +25,20 @@
 #include "crypt_errno.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provderimpl.h"
-
-#define KEY_EXCH_FUNC(name)                                                                                    \
-    static int32_t name##Wrapper(const CRYPT_Iso_Pkey_Ctx *prvKey, const CRYPT_Iso_Pkey_Ctx *pubKey,           \
-        uint8_t *sharedKey, uint32_t *shareKeyLen)                                                             \
-    {                                                                                                          \
-        if (prvKey == NULL || pubKey == NULL) {                                                                \
-            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                              \
-            return CRYPT_NULL_INPUT;                                                                           \
-        }                                                                                                      \
-        int32_t ret = CRYPT_Iso_Log(prvKey->mgrCtx, CRYPT_EVENT_KEYAGGREMENT, CRYPT_ALGO_PKEY, prvKey->algId); \
-        if (ret != CRYPT_SUCCESS) {                                                                            \
-            return ret;                                                                                        \
-        }                                                                                                      \
-        return (name)(prvKey->ctx, pubKey->ctx, sharedKey, shareKeyLen);                                       \
+ 
+#define KEY_EXCH_FUNC(name)                                                                                     \
+    static int32_t name##Wrapper(const CRYPT_Iso_Pkey_Ctx *prvKey, const CRYPT_Iso_Pkey_Ctx *pubKey,            \
+        uint8_t *sharedKey, uint32_t *shareKeyLen)                                                              \
+    {                                                                                                           \
+        if (prvKey == NULL || pubKey == NULL) {                                                                 \
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                               \
+            return CRYPT_NULL_INPUT;                                                                            \
+        }                                                                                                       \
+        int32_t ret = CRYPT_Iso_Log(prvKey->provCtx, CRYPT_EVENT_KEYAGGREMENT, CRYPT_ALGO_PKEY, prvKey->algId); \
+        if (ret != CRYPT_SUCCESS) {                                                                             \
+            return ret;                                                                                         \
+        }                                                                                                       \
+        return (name)(prvKey->ctx, pubKey->ctx, sharedKey, shareKeyLen);                                        \
     }
 
 #ifdef HITLS_CRYPTO_X25519
