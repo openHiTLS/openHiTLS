@@ -35,7 +35,7 @@ typedef struct {
     CRYPT_MAC_AlgId id;
 } CMVP_KDFTLS12_VECTOR;
 
-//https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/components/800-135testvectors/tls.zip
+// https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/components/800-135testvectors/tls.zip
 static const CMVP_KDFTLS12_VECTOR KDF_TLS12_VECTOR = {
     .key = "202c88c00f84a17a20027079604787461176455539e705be730890602c289a5001e34eeb3a043e5d52a65e66125188bf",
     .label = "6b657920657870616e73696f6eae6c806f8ad4d80784549dff28a4b58fd837681a51d928c3e30ee5ff14f3986862e1fd91",

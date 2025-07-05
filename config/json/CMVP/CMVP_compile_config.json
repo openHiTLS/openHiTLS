@@ -3,6 +3,7 @@
         "CC_DEFINE_FLAGS":{
             "CC_FLAGS_ADD":[
                 "-DHITLS_CRYPTO_CMVP_FIPS",
+                "-DHITLS_CRYPTO_ACVP_TESTS",
                 "-DHITLS_CRYPTO_CMVP_GM",
                 "-DHITLS_CRYPTO_CMVP_ISO19790",
                 "-DHITLS_CRYPTO_DRBG_GM",

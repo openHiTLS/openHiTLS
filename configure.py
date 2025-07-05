@@ -522,7 +522,7 @@ class CMakeGenerator:
         macros = self._cfg_custom_feature.get_fea_macros()
         macros.sort()
 
-        if '-DHITLS_CRYPTO_CMVP' in macros:
+        if '-DHITLS_CRYPTO_CMVP_ISO19790' in compile_flags:
             self._hmac = True
 
         compile_flags.extend(macros)

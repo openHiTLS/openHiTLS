@@ -91,7 +91,7 @@ static int32_t GetHkdfAndTlskdfParam(const BSL_Param *param, CRYPT_EAL_HkdfParam
     return GetMacId(param, &hkdf->macId);
 }
 
-static int32_t CheckKdfParam(IsoKdfCtx *ctx, const BSL_Param *param) 
+static int32_t CheckKdfParam(IsoKdfCtx *ctx, const BSL_Param *param)
 {
     int32_t ret = CRYPT_SUCCESS;
     CRYPT_EAL_Pbkdf2Param pbkdf2 = {KDF_DEF_MAC_ALGID, KDF_DEF_SALT_LEN, KDF_DEF_PBKDF2_ITER, KDF_DEF_KEY_LEN};

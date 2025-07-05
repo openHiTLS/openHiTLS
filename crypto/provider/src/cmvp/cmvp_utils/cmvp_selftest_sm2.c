@@ -303,7 +303,8 @@ EXIT:
     return ret;
 }
 
-static bool SetUserId(CRYPT_EAL_PkeyCtx *pkey, const char id[]) {
+static bool SetUserId(CRYPT_EAL_PkeyCtx *pkey, const char id[])
+{
     bool ret = false;
     uint8_t *userId = NULL;
 
@@ -535,7 +536,8 @@ bool CRYPT_CMVP_SelftestSM2Consistency(void)
     return SM2_Consistency_Sign() && SM2_Consistency_Crypt();
 }
 
-bool CRYPT_CMVP_SelftestSM2(void) {
+bool CRYPT_CMVP_SelftestSM2(void)
+{
     return CRYPT_CMVP_SelftestSM2Sign(NULL, NULL) && CRYPT_CMVP_SelftestSM2Crypt(NULL, NULL) &&
         CRYPT_CMVP_SelftestSM2Exchange(NULL, NULL) && CRYPT_CMVP_SelftestSM2Consistency();
 }
