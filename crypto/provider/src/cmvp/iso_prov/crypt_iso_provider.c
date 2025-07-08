@@ -25,6 +25,9 @@
 #include "bsl_err_internal.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
+#include "crypt_utils.h"
+#include "cmvp_iso19790.h"
+#include "crypt_eal_entropy.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_provider.h"
 #include "crypt_iso_provderimpl.h"
@@ -36,6 +39,9 @@
 #include "hitls_cert_type.h"
 #include "crypt_eal_rand.h"
 #include "hitls_type.h"
+
+#define CRYPT_ENTROPY_SOURCE_ENTROPY 8
+#define CRYPT_ENTROPY_SEED_POOL_SIZE 4096
 
 static const CRYPT_EAL_AlgInfo g_isoMds[] = {
     {CRYPT_MD_SHA1, g_isoMdSha1, CRYPT_EAL_ISO_ATTR},
@@ -237,6 +243,12 @@ static int32_t CRYPT_EAL_IsoProvQuery(void *provCtx, int32_t operaId, const CRYP
 
 static void CRYPT_EAL_IsoProvFree(void *provCtx)
 {
+    if (provCtx == NULL) {
+        return;
+    }
+    CRYPT_EAL_IsoProvCtx *temp = (CRYPT_EAL_IsoProvCtx *)provCtx;
+    CRYPT_EAL_SeedPoolFree(temp->pool);
+    CRYPT_EAL_EsFree(temp->es);
     BSL_SAL_Free(provCtx);
 }
 
@@ -248,6 +260,56 @@ static CRYPT_EAL_Func g_isoProvOutFuncs[] = {
     CRYPT_EAL_FUNC_END
 };
 
+static void EntropyRunLogCb(int32_t ret)
+{
+    CMVP_Iso19790EventProcess(CRYPT_EVENT_ES_HEALTH_TEST, 0, 0, ret);
+}
+
+static void GetSeedPool(CRYPT_EAL_SeedPoolCtx **seedPool, CRYPT_EAL_Es **es)
+{
+    CRYPT_EAL_Es *esTemp = NULL;
+    CRYPT_EAL_SeedPoolCtx *poolTemp = NULL;
+    int32_t ret = 0;
+    esTemp = CRYPT_EAL_EsNew();
+    GOTO_EXIT_IF(esTemp == NULL, CRYPT_MEM_ALLOC_FAIL);
+
+    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_CF, "sha256_df", (uint32_t)strlen("sha256_df"));
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_REMOVE_NS, "timestamp", (uint32_t)strlen("timestamp"));
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_LOG_CALLBACK, EntropyRunLogCb, 0);
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    bool healthTest = true;
+    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, sizeof(healthTest));
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    uint32_t size = CRYPT_ENTROPY_SEED_POOL_SIZE;
+    ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_POOL_SIZE, &size, sizeof(size));
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    ret = CRYPT_EAL_EsInit(esTemp);
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    poolTemp = CRYPT_EAL_SeedPoolNew(true);
+    GOTO_EXIT_IF(poolTemp == NULL, CRYPT_SEED_POOL_NEW_ERROR);
+
+    CRYPT_EAL_EsPara para = {false, CRYPT_ENTROPY_SOURCE_ENTROPY, esTemp, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
+
+    ret = CRYPT_EAL_SeedPoolAddEs(poolTemp, &para);
+    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+
+    *seedPool = poolTemp;
+    *es = esTemp;
+    return;
+
+EXIT:
+    CRYPT_EAL_SeedPoolFree(poolTemp);
+    CRYPT_EAL_EsFree(esTemp);
+}
+
 static int32_t IsoCreateProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, void **provCtx)
 {
     CRYPT_EAL_IsoProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_IsoProvCtx));
@@ -255,20 +317,18 @@ static int32_t IsoCreateProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    BSL_Param *runLog = BSL_PARAM_FindParam(param, CRYPT_PARAM_CMVP_LOG_FUNC);
-    int32_t ret = BSL_PARAM_GetPtrValue(runLog, CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR,
-        (void **)&temp->runLog, NULL);
-    if (ret != BSL_SUCCESS) {
+    int32_t ret = CRYPT_Iso_GetLogFunc(param, &temp->runLog);
+    if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(temp);
         return ret;
     }
-    if (temp->runLog == NULL) {
-        BSL_SAL_Free(temp);
-        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-        return BSL_INVALID_ARG;
-    }
     CRYPT_EAL_RegEventReport(temp->runLog);
     CRYPT_EAL_SetRandCallBackEx((CRYPT_EAL_RandFuncEx)CRYPT_EAL_RandbytesEx);
+    GetSeedPool(&temp->pool, &temp->es);
+    if (temp->pool == NULL || temp->es == NULL) {
+        BSL_SAL_Free(temp);
+        return CRYPT_ENTROPY_ES_CREATE_ERROR;
+    }
     temp->libCtx = libCtx;
     temp->mgrCtx = mgrCtx;
     *provCtx = temp;

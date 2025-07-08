@@ -35,6 +35,49 @@
 #include "crypt_mlkem.h"
 #include "crypt_slh_dsa.h"
 
+void CMVP_Iso19790EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)
+{
+    if (oper == CRYPT_EVENT_RANDGEN) {
+        CMVP_WriteSyslog("openHiTLS", err == CRYPT_SUCCESS ? LOG_INFO : LOG_ERR,
+            "Excute - entropy collection, result: 0x%x", err);
+        return;
+    }
+    if (oper == CRYPT_EVENT_INTEGRITY_TEST) {
+        if (err == CRYPT_SUCCESS) {
+            CMVP_WriteSyslog("openHiTLS", LOG_INFO, "Integrity test begin.");
+        } else {
+            CMVP_WriteSyslog("openHiTLS", LOG_ERR, "Integrity test failed, errcode: 0x%x", err);
+        }
+        return;
+    }
+
+    // ISO/IEC 19790:2012 AS09.33
+    // The module shall provide an output status indication when zeroing is complete
+    if (oper == CRYPT_EVENT_ZERO && err == CRYPT_SUCCESS) {
+        CMVP_WriteSyslog("openHiTLS", LOG_INFO, "SSP already zeroisation - algorithm type: %d, id: %d", type, id);
+    }
+    /*
+        ISO/IEC 19790:2012 AS06.26
+        The following events of the cryptographic module should be recorded by the OS audit mechanism:
+        ● Attempted to provide invalid input for the cryptographic officer function;
+    */
+    if (err != CRYPT_SUCCESS) {
+        CMVP_WriteSyslog("openHiTLS", LOG_ERR, "Occur error - algorithm type: %d, id: %d, operate: %d, errcode: 0x%x",
+            type, id, oper, err);
+    }
+    /*
+        ISO/IEC 19790:2012 AS06.26
+        The following events of the cryptographic module should be recorded by the OS audit mechanism:
+        ● Modify, access, delete, and add encrypted data and SSPs；
+        ● Use security-related encryption features
+        ISO/IEC 19790:2012 AS02.24
+        When a service uses approved encryption algorithms, security functions or processes,
+        and specified services or processes in an approved manner,
+        the service shall provide corresponding status indications.
+    */
+    CMVP_WriteSyslog("openHiTLS", LOG_INFO, "Excute - algorithm type: %d, id: %d, operate: %d", type, id, oper);
+}
+
 typedef struct {
     uint32_t algId;
     uint32_t mdId;
@@ -53,6 +96,10 @@ static const ASYM_MD_MAP ASYM_MD_LIST[] = {
     { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA256, true, true },
     { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA384, true, true },
     { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA512, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA3_224, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA3_256, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA3_384, true, true },
+    { CRYPT_PKEY_ECDSA, CRYPT_MD_SHA3_512, true, true },
     { CRYPT_PKEY_RSA, CRYPT_MD_SHA1, false, true },
     { CRYPT_PKEY_RSA, CRYPT_MD_SHA224, true, true },
     { CRYPT_PKEY_RSA, CRYPT_MD_SHA256, true, true },
@@ -109,14 +156,13 @@ static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
     }
     if (data->pub != NULL) {
         CRYPT_RsaPub pub = data->pub->key.rsaPub;
-        // The length of the RSA public key must be at least 2048 bits. 8 bits are 1 byte.
+        // The length of the RSA key must be at least 2048 bits. 8 bits are 1 byte.
         GOTO_EXIT_IF(pub.nLen < (2048 / 8), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     if (data->prv != NULL) {
         CRYPT_RsaPrv prv = data->prv->key.rsaPrv;
-        // The length of the RS private key must be at least 2048 bits. 8 bits are 1 byte.
-        GOTO_EXIT_IF(prv.dLen < (2048 / 8), CRYPT_CMVP_ERR_PARAM_CHECK);
+        // The length of the RSA key must be at least 2048 bits. 8 bits are 1 byte.
         GOTO_EXIT_IF(prv.nLen < (2048 / 8), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }

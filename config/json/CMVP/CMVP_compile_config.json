@@ -7,13 +7,15 @@
                 "-DHITLS_CRYPTO_CMVP_GM",
                 "-DHITLS_CRYPTO_CMVP_ISO19790",
                 "-DHITLS_CRYPTO_DRBG_GM",
+                "-DHITLS_CRYPTO_ENTROPY_SYS",
                 "-DHITLS_CRYPTO_RAND_CB"
             ]
         }
     },
     "linkFlag": {
         "LINK_FLAG_ADD":[
-            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_iso.ld"
+            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_iso.ld",
+            "-lm -lboundscheck"
         ]
     }
 }

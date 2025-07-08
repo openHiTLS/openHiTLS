@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CMVP_ISO19790
-
+#include <string.h>
 #include "crypt_eal_implprovider.h"
 #include "crypt_drbg.h"
 #include "bsl_sal.h"
@@ -23,17 +23,48 @@
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
 #include "bsl_params.h"
+#include "eal_entropy.h"
+#include "cmvp_iso19790.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provider.h"
 
 #if defined(HITLS_CRYPTO_DRBG)
+#define CRYPT_DRBG_PARAM_NUM 6
+
 typedef struct {
     int32_t algId;
     void *ctx;
     void *provCtx;
 } IsoRandCtx;
 
-static void *CRYPT_EAL_IsoRandNewCtx(int32_t algId, BSL_Param *param)
+static void *DefaultDrbgNew(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId)
+{
+    void *randCtx = NULL;
+    CRYPT_RandSeedMethod seedMethond = {0};
+    int32_t ret = EAL_SetDefaultEntropyMeth(&seedMethond);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return NULL;
+    }
+
+    int32_t index = 0;
+    BSL_Param randParam[CRYPT_DRBG_PARAM_NUM] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.cleanEntropy, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.getNonce, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.cleanNonce, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, provCtx->pool, 0);
+
+    randCtx = DRBG_New(algId, randParam);
+    if (randCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
+        return NULL;
+    }
+    return randCtx;
+}
+
+
+static void *CRYPT_EAL_IsoRandNewCtx(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId, BSL_Param *param)
 {
     void *randCtx = NULL;
 #ifdef HITLS_CRYPTO_ASM_CHECK
@@ -44,8 +75,7 @@ static void *CRYPT_EAL_IsoRandNewCtx(int32_t algId, BSL_Param *param)
 #endif
     BSL_Param *getEnt = BSL_PARAM_FindParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY);
     if (param == NULL || getEnt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return NULL;
+        return DefaultDrbgNew(provCtx, algId);
     }
     randCtx = DRBG_New(algId, param);
     if (randCtx == NULL) {
@@ -61,14 +91,14 @@ static void *CRYPT_EAL_IsoRandNewCtxWrapper(CRYPT_EAL_IsoProvCtx *provCtx, int32
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    void *randCtx = CRYPT_EAL_IsoRandNewCtx(algId, param);
-    if (randCtx == NULL) {
+    IsoRandCtx *ctx = BSL_SAL_Calloc(1, sizeof(IsoRandCtx));
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    IsoRandCtx *ctx = BSL_SAL_Calloc(1, sizeof(IsoRandCtx));
-    if (ctx == NULL) {
-        DRBG_Free(randCtx);
+    void *randCtx = CRYPT_EAL_IsoRandNewCtx(provCtx, algId, param);
+    if (randCtx == NULL) {
+        BSL_SAL_FREE(ctx);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }

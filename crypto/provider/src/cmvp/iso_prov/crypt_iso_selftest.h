@@ -38,6 +38,8 @@ int32_t CRYPT_Iso_Log(void *provCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE typ
 
 int32_t CRYPT_Iso_EventOperation(void *provCtx, BSL_Param *param);
 
+int32_t CRYPT_Iso_GetLogFunc(BSL_Param *param, CRYPT_EAL_CMVP_LogFunc *logFunc);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

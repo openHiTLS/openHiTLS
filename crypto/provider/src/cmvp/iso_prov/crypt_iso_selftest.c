@@ -232,6 +232,26 @@ static bool IsoCheckIsInternalLibCtx(BSL_Param *param)
     return false;
 }
 
+int32_t CRYPT_Iso_GetLogFunc(BSL_Param *param, CRYPT_EAL_CMVP_LogFunc *logFunc)
+{
+    int32_t ret = CRYPT_SUCCESS;
+    BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_CMVP_LOG_FUNC);
+    if (temp == NULL) {
+        *logFunc = CMVP_Iso19790EventProcess;
+        return CRYPT_SUCCESS;
+    }
+    ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR, (void **)logFunc, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (*logFunc == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_Iso_Selftest(BSL_Param *param)
 {
     CRYPT_EAL_LibCtx *libCtx = NULL;
@@ -244,17 +264,11 @@ int32_t CRYPT_Iso_Selftest(BSL_Param *param)
     }
 
     CRYPT_EAL_CMVP_LogFunc runLog = NULL;
-    BSL_Param *temp = BSL_PARAM_FindParam(param, CRYPT_PARAM_CMVP_LOG_FUNC);
-    ret = BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR, (void **)&runLog, NULL);
+    ret = CRYPT_Iso_GetLogFunc(param, &runLog);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_LibCtxFree(libCtx);
         return ret;
     }
-    if (runLog == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     runLog(CRYPT_EVENT_INTEGRITY_TEST, 0, 0, CRYPT_SUCCESS);
     ret = CMVP_Iso19790CheckIntegrity(libCtx, CRYPT_EAL_ISO_ATTR);
     if (ret != CRYPT_SUCCESS) {

@@ -29,6 +29,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+void CMVP_Iso19790EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
+
 bool CMVP_Iso19790PkeyC2(CRYPT_PKEY_AlgId id, const CRYPT_EAL_PkeyC2Data *data);
 
 bool CMVP_Iso19790MacC2(CRYPT_MAC_AlgId id, uint32_t keyLen);

@@ -25,6 +25,7 @@
 #ifdef HITLS_CRYPTO_CMVP_ISO19790
 
 #include <stdint.h>
+#include "crypt_eal_entropy.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_cmvp.h"
 
@@ -47,6 +48,8 @@ extern "C" {
 typedef struct EalIsoProvCtx {
     void *libCtx;
     void *mgrCtx;
+    CRYPT_EAL_Es *es;
+    CRYPT_EAL_SeedPoolCtx *pool;
     CRYPT_EAL_CMVP_LogFunc runLog;
 } CRYPT_EAL_IsoProvCtx;
 
