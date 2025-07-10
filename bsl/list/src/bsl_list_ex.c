@@ -144,9 +144,11 @@ void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode)
             // found matching node, delete this node and adjust the list
             if ((pstCurrentNode->next) != NULL) {
                 pstCurrentNode->next->prev = pstCurrentNode->prev;
+                pstList->curr = pstCurrentNode->next;
                 *pstListNode = pstCurrentNode->next; // update the current node and point it to the next node
             } else {
                 pstList->last = pstCurrentNode->prev;
+                pstList->curr = pstCurrentNode->prev;
                 *pstListNode = pstList->last;
             }
 

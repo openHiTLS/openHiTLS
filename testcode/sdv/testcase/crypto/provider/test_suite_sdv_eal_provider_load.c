@@ -1123,3 +1123,24 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC003(void)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
+    CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "default", NULL, NULL), CRYPT_SUCCESS);
+    CRYPT_EAL_ProviderUnload(libCtx, 0, "default");
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "default", NULL, NULL), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_ProviderUnload(libCtx, 0, "default");
+    CRYPT_EAL_LibCtxFree(libCtx);
+#endif
+}
+
+/* END_CASE */
