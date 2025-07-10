@@ -39,21 +39,25 @@ typedef struct {
     void *provCtx;
 } IsoCipherCtx;
 
+static int32_t CRYPT_ASMCAP_CipherCheck(int32_t algId)
+{
 #ifdef HITLS_CRYPTO_ASM_CHECK
-#define CIPHER_ASMCAP_Test(algId)                             \
-    if (CRYPT_ASMCAP_Cipher(algId) != CRYPT_SUCCESS) {        \
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);    \
-        return NULL;                                          \
+    if (CRYPT_ASMCAP_Cipher(algId) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
 #else
-#define CIPHER_ASMCAP_Test(algId)                             \
-    (void)(algId);
+    (void)algId;
 #endif
+    return CRYPT_SUCCESS;
+}
 
 #define CIPHER_NewCtx_FUNC(name)                                                                               \
     static void *MODES_##name##_NewCtxWrapper(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId)                    \
     {                                                                                                          \
-        CIPHER_ASMCAP_Test(algId);                                                                             \
+        if (CRYPT_ASMCAP_CipherCheck(algId) != CRYPT_SUCCESS) {                                                \
+            return NULL;                                                                                       \
+        }                                                                                                      \
         if (provCtx == NULL) {                                                                                 \
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                              \
             return NULL;                                                                                       \

@@ -52,9 +52,10 @@ static const CMVP_MlkemVector MLKEM_VECTOR[] = {
     }
 };
 
-static const char *MLKEM_SEED_VECTOR = NULL; 
+static const char *MLKEM_SEED_VECTOR = NULL;
 
-static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_MlkemVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv, CRYPT_EAL_PkeyCtx **pkeyPub)
+static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_MlkemVector *vector, CRYPT_EAL_PkeyCtx **pkeyPrv,
+    CRYPT_EAL_PkeyCtx **pkeyPub)
 {
     int32_t ret = CRYPT_CMVP_ERR_ALGO_SELFTEST;
     CRYPT_EAL_PkeyPrv prvKey = { 0 };

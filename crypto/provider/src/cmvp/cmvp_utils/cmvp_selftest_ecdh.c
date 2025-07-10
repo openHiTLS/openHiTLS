@@ -122,7 +122,8 @@ static bool CRYPT_CMVP_SelftestEcdhInternal(void *libCtx, const char *attrName)
 
     expShareKey = CMVP_StringsToBins(ECDH_VECTOR.shareKey, &expShareKeyLen);
     GOTO_EXIT_IF(expShareKey == NULL, CRYPT_CMVP_COMMON_ERR);
-    GOTO_EXIT_IF(GetPkey(libCtx, attrName, true, &bobPrvPkey, &bobPubPkey, &bobPub, &bobPrv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(GetPkey(libCtx, attrName, true, &bobPrvPkey, &bobPubPkey, &bobPub, &bobPrv) != true,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(GetPkey(libCtx, attrName, false, &alicePrvPkey, &alicePubPkey, &alicePub, &alicePrv) != true,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
     shareKeyLen = CRYPT_EAL_PkeyGetKeyLen(bobPrvPkey);

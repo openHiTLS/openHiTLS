@@ -39,16 +39,18 @@ typedef struct {
     void *provCtx;
 } IsoMacCtx;
 
+static int32_t CRYPT_ASMCAP_MacCheck(int32_t algId)
+{
 #ifdef HITLS_CRYPTO_ASM_CHECK
-#define MAC_ASMCAP_Test(algId)                             \
-    if (CRYPT_ASMCAP_Mac(algId) != CRYPT_SUCCESS) {        \
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT); \
-        return NULL;                                       \
+    if (CRYPT_ASMCAP_Mac(algId) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
 #else
-#define MAC_ASMCAP_Test(algId) \
-    (void)(algId);
+    (void)algId;
 #endif
+    return CRYPT_SUCCESS;
+}
 
 static int32_t CheckMacKeyLen(IsoMacCtx *ctx, uint32_t keyLen)
 {
@@ -63,7 +65,9 @@ static int32_t CheckMacKeyLen(IsoMacCtx *ctx, uint32_t keyLen)
 #define MAC_NewCtx_FUNC(name)                                                                                  \
     static void *CRYPT_##name##_NewCtxWrapper(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId)                    \
     {                                                                                                          \
-        MAC_ASMCAP_Test(algId);                                                                                \
+        if (CRYPT_ASMCAP_MacCheck(algId) != CRYPT_SUCCESS) {                                                   \
+            return NULL;                                                                                       \
+        }                                                                                                      \
         if (provCtx == NULL) {                                                                                 \
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                              \
             return NULL;                                                                                       \

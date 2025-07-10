@@ -85,8 +85,8 @@ static int32_t GetPkey(void *libCtx, const char *attrName, const CMVP_SlhdsaSign
     prvKey.id = CRYPT_PKEY_SLH_DSA;
     prvKey.key.slhDsaPrv.seed = vectorKey;
     prvKey.key.slhDsaPrv.prf = vectorKey + keyLen;
-    prvKey.key.slhDsaPrv.pub.seed = vectorKey + keyLen * 2;
-    prvKey.key.slhDsaPrv.pub.root = vectorKey + keyLen * 3;
+    prvKey.key.slhDsaPrv.pub.seed = vectorKey + keyLen * 2; // 2: pub.seed offset
+    prvKey.key.slhDsaPrv.pub.root = vectorKey + keyLen * 3; // 3: pub.root offset
     prvKey.key.slhDsaPrv.pub.len = keyLen;
     ret = CRYPT_EAL_PkeySetPrv(*pkeyPrv, &prvKey);
     GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);

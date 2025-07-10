@@ -920,7 +920,7 @@ typedef enum {
 
 typedef enum {
     CRYPT_CMVP_PROVIDER_SELFTEST = 0x01, /**< Self-test. */
-} CRYPT_CMVP_Selftest_AlgId;
+} CRYPT_CMVP_SELFTEST_AlgId;
 
 #ifdef __cplusplus
 }

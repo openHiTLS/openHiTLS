@@ -123,7 +123,8 @@ static bool ComputeShareKey(CMVP_DH_VECTOR vector, CRYPT_EAL_PkeyCtx *prv, CRYPT
     bool ret = false;
     uint8_t *expShare = NULL;
     uint8_t *share = NULL;
-    uint32_t expShareLen, shareLen;
+    uint32_t expShareLen;
+    uint32_t shareLen;
 
     expShare = CMVP_StringsToBins(vector.z, &expShareLen);
     GOTO_EXIT_IF(expShare == NULL, CRYPT_CMVP_COMMON_ERR);

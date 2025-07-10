@@ -29,15 +29,17 @@
 #include "crypt_iso_selftest.h"
 
 #define BSL_PARAM_MAX_NUMBER 1000
+#define BSL_PARAM_COUNT 4
 
 int32_t CRYPT_Iso_Log(void *provCtx, CRYPT_EVENT_TYPE event, CRYPT_ALGO_TYPE type, int32_t id)
 {
     int32_t algId = id;
     int32_t algType = type;
-    BSL_Param param[4] = {{0}, {0}, {0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
-    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(algId));
-    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_ALGO_TYPE, BSL_PARAM_TYPE_INT32, &algType, sizeof(algType));
+    int index = 0;
+    BSL_Param param[BSL_PARAM_COUNT] = {{0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_EVENT, BSL_PARAM_TYPE_INT32, &event, sizeof(event));
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(algId));
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_ALGO_TYPE, BSL_PARAM_TYPE_INT32, &algType, sizeof(algType));
     return CRYPT_Iso_EventOperation(provCtx, param);
 }
 

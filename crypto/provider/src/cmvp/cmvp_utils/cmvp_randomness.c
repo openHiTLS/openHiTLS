@@ -90,7 +90,7 @@ static double IgammaFraction(double a, double x)
     double prod = d;
     for (uint32_t k = 1; k < MAXITERTIMES; k++) {
         an = ((double)k) * (a - (double)k); // ak = k(a - k)
-        bn += 2.0; // bk = (x - a + 2k + 1)
+        bn += 2.0; // bk = (x - a + 2.0 * k + 1)
         c = bn + an / c;
         d = bn + an * d;
         if (fabs(c) < DBL_MIN) {

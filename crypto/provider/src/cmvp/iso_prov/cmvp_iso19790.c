@@ -331,6 +331,8 @@ EXIT:
 static bool ISO19790_MacParamCheck(CRYPT_MAC_AlgId id, uint32_t keyLen)
 {
     (void)id;
+    // https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf Chapter 10
+    // Key lengths ≥ 112 bits
     if (keyLen >= (112 / 8)) {
         return true;
     }
@@ -487,7 +489,8 @@ static bool ISO19790_DrbgKat(void *libCtx, const char *attrName)
     static const uint32_t list[] = {
         CRYPT_RAND_AES128_CTR, CRYPT_RAND_AES192_CTR, CRYPT_RAND_AES256_CTR,
         CRYPT_RAND_AES128_CTR_DF, CRYPT_RAND_AES192_CTR_DF, CRYPT_RAND_AES256_CTR_DF,
-        CRYPT_RAND_HMAC_SHA1, CRYPT_RAND_HMAC_SHA224, CRYPT_RAND_HMAC_SHA256, CRYPT_RAND_HMAC_SHA384, CRYPT_RAND_HMAC_SHA512,
+        CRYPT_RAND_HMAC_SHA1,
+        CRYPT_RAND_HMAC_SHA224, CRYPT_RAND_HMAC_SHA256, CRYPT_RAND_HMAC_SHA384, CRYPT_RAND_HMAC_SHA512,
         CRYPT_RAND_SHA1, CRYPT_RAND_SHA224, CRYPT_RAND_SHA256, CRYPT_RAND_SHA384, CRYPT_RAND_SHA512,
         CRYPT_RAND_SM4_CTR_DF,
         CRYPT_RAND_SM3,

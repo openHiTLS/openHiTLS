@@ -78,8 +78,8 @@ static const CRYPT_EAL_AlgInfo g_isoKeyMgmt[] = {
     {CRYPT_PKEY_ECDH, g_isoKeyMgmtEcdh, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_SM2, g_isoKeyMgmtSm2, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_SLH_DSA, g_isoKeyMgmtSlhDsa, CRYPT_EAL_ISO_ATTR},
-	{CRYPT_PKEY_ML_KEM, g_isoKeyMgmtMlKem, CRYPT_EAL_ISO_ATTR},
-	{CRYPT_PKEY_ML_DSA, g_isoKeyMgmtMlDsa, CRYPT_EAL_ISO_ATTR},
+    {CRYPT_PKEY_ML_KEM, g_isoKeyMgmtMlKem, CRYPT_EAL_ISO_ATTR},
+    {CRYPT_PKEY_ML_DSA, g_isoKeyMgmtMlDsa, CRYPT_EAL_ISO_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -104,7 +104,7 @@ static const CRYPT_EAL_AlgInfo g_isoSigns[] = {
     {CRYPT_PKEY_ECDSA, g_isoSignEcdsa, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_SM2, g_isoSignSm2, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_SLH_DSA, g_isoSignSlhDsa, CRYPT_EAL_ISO_ATTR},
-	{CRYPT_PKEY_ML_DSA, g_isoSignMlDsa, CRYPT_EAL_ISO_ATTR},
+    {CRYPT_PKEY_ML_DSA, g_isoSignMlDsa, CRYPT_EAL_ISO_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 

@@ -49,11 +49,16 @@ static void *DefaultDrbgNew(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId)
 
     int32_t index = 0;
     BSL_Param randParam[CRYPT_DRBG_PARAM_NUM] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.getEntropy, 0);
-    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.cleanEntropy, 0);
-    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.getNonce, 0);
-    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMethond.cleanNonce, 0);
-    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, provCtx->pool, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        seedMethond.getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        seedMethond.cleanEntropy, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+        seedMethond.getNonce, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+        seedMethond.cleanNonce, 0);
+    (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR,
+        provCtx->pool, 0);
 
     randCtx = DRBG_New(algId, randParam);
     if (randCtx == NULL) {

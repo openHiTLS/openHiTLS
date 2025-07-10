@@ -258,21 +258,25 @@ static int32_t PkeyCtrlCheck(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, ui
     return CRYPT_SUCCESS;
 }
 
+static int32_t CRYPT_ASMCAP_PkeyCheck(int32_t algId)
+{
 #ifdef HITLS_CRYPTO_ASM_CHECK
-#define PKEY_ASMCAP_Test(algId)                             \
-    if (CRYPT_ASMCAP_Pkey(algId) != CRYPT_SUCCESS) {        \
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);  \
-        return NULL;                                        \
+    if (CRYPT_ASMCAP_Pkey(algId) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
 #else
-#define PKEY_ASMCAP_Test(algId)                             \
-    (void)(algId);
+    (void)algId;
 #endif
+    return CRYPT_SUCCESS;
+}
 
 #define PKEY_NEW_Ctx_FUNC(name)                                                                              \
     static void *CRYPT_##name##_NewCtxExWrapper(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId)                \
     {                                                                                                        \
-        PKEY_ASMCAP_Test(algId);                                                                             \
+        if (CRYPT_ASMCAP_PkeyCheck(algId) != CRYPT_SUCCESS) {                                                \
+            return NULL;                                                                                     \
+        }                                                                                                    \
         if (provCtx == NULL || provCtx->libCtx == NULL) {                                                    \
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return NULL;                                                                                     \

@@ -83,13 +83,12 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
     }
 
     sprintf(timeStr, "%d-%d-%d %d:%d:%d",
-            tm_info->tm_year + 1900, 
-            tm_info->tm_mon + 1, 
-            tm_info->tm_mday, 
-            tm_info->tm_hour, 
-            tm_info->tm_min, 
+            tm_info->tm_year + 1900,
+            tm_info->tm_mon + 1,
+            tm_info->tm_mday,
+            tm_info->tm_hour,
+            tm_info->tm_min,
             tm_info->tm_sec);
-
 
     if (oper == CRYPT_EVENT_INTEGRITY_TEST) {
         if (err == CRYPT_SUCCESS) {
@@ -105,7 +104,7 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
     // ISO/IEC 19790:2012 AS09.33
     // The module shall provide an output status indication when zeroing is complete
     if (oper == CRYPT_EVENT_ZERO && err == CRYPT_SUCCESS) {
-        fprintf(g_logFile, "[%s] [open hitls] [INFO] SSP already zeroisation - algorithm type: %d, id: %d\n", 
+        fprintf(g_logFile, "[%s] [open hitls] [INFO] SSP already zeroisation - algorithm type: %d, id: %d\n",
                 timeStr, type, id);
         fflush(g_logFile);
     }
@@ -130,8 +129,8 @@ static void ISO19790_RunLogCb(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32
         and specified services or processes in an approved manner,
         the service shall provide corresponding status indications.
     */
-    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute - algorithm type: %d, id: %d, operate: %d\n", 
-            timeStr, type, id, oper);    
+    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute - algorithm type: %d, id: %d, operate: %d\n",
+            timeStr, type, id, oper);
     fflush(g_logFile);
     CloseLogFile();
 }
@@ -169,14 +168,14 @@ static void EntropyRunLogCb(int32_t ret)
     }
 
     sprintf(timeStr, "%d-%d-%d %d:%d:%d",
-            tm_info->tm_year + 1900, 
-            tm_info->tm_mon + 1, 
-            tm_info->tm_mday, 
-            tm_info->tm_hour, 
-            tm_info->tm_min, 
+            tm_info->tm_year + 1900,
+            tm_info->tm_mon + 1,
+            tm_info->tm_mday,
+            tm_info->tm_hour,
+            tm_info->tm_min,
             tm_info->tm_sec);
 
-    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute entropy health test - ret: %d\n", 
+    fprintf(g_logFile, "[%s] [open hitls] [INFO] Excute entropy health test - ret: %d\n",
             timeStr, ret);
     fflush(g_logFile);
     CloseLogFile();
@@ -705,7 +704,6 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "libopenhitls.so", providerParam, &providerMgr), CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
 
-
     ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, "libopenhitls.so", &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded);
@@ -775,11 +773,8 @@ void SDV_ISO19790_PROVIDER_ML_DSA_TEST_TC001()
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
-    // uint8_t e[] = {1, 0, 1};
-    // CRYPT_EAL_PkeyPara para = {0};
     int32_t mdId = CRYPT_MD_SHAKE128;
-    // int32_t pkcsv15 = mdId;
-    uint8_t signature[4627] = {0}; // 4627
+    uint8_t signature[4627] = {0};
     uint32_t signatureLen = sizeof(signature);
     uint8_t testData[] = "Test data for signing and verification with ECDSA";
     uint32_t testDataLen = sizeof(testData) - 1;
@@ -795,7 +790,6 @@ void SDV_ISO19790_PROVIDER_ML_DSA_TEST_TC001()
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx), CRYPT_SUCCESS);
-    // ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, testData, testDataLen, signature, &signatureLen), 0);
     ASSERT_TRUE(signatureLen > 0);
 
@@ -1118,7 +1112,6 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC003()
     kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso19790_provider");
     ASSERT_TRUE(kdfCtx != NULL);
 
-
     int32_t iter = 1024;
     int32_t saltLen = 16;
     int32_t macId = CRYPT_MAC_SIPHASH64;
@@ -1253,12 +1246,12 @@ void SDV_ISO19790_PROVIDER_ECDH_SM2_TEST_TC001()
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkeyCtx2), CRYPT_SUCCESS);
 
     uint8_t sharedKey1[32] = {0};
-    uint32_t sharedKeyLen1 = sizeof(sharedKey1);  
+    uint32_t sharedKeyLen1 = sizeof(sharedKey1);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkeyCtx1, pkeyCtx2, sharedKey1, &sharedKeyLen1), CRYPT_SUCCESS);
     ASSERT_EQ(sharedKeyLen1, 32);
 
     uint8_t sharedKey2[32] = {0};
-    uint32_t sharedKeyLen2 = sizeof(sharedKey2);  
+    uint32_t sharedKeyLen2 = sizeof(sharedKey2);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkeyCtx2, pkeyCtx1, sharedKey2, &sharedKeyLen2), CRYPT_SUCCESS);
     ASSERT_EQ(sharedKeyLen2, 32);
 
@@ -1272,4 +1265,3 @@ EXIT:
 #endif
 }
 /* END_CASE */
-

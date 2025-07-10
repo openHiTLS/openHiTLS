@@ -121,7 +121,6 @@ static int32_t SetRandomVector(const char *vector, uint8_t *r, uint32_t rLen)
     uint32_t randLen;
 
     rand = CMVP_StringsToBins(vector, &randLen);
-
     if (rand == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -313,7 +312,8 @@ static bool SetUserId(CRYPT_EAL_PkeyCtx *pkey, const char id[])
     userId = CMVP_StringsToBins(id, &(userIdLen));
     GOTO_EXIT_IF(userId == NULL, CRYPT_CMVP_COMMON_ERR);
 
-    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SM2_USER_ID, userId, userIdLen) != CRYPT_SUCCESS, CRYPT_CMVP_COMMON_ERR);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SM2_USER_ID, userId, userIdLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_COMMON_ERR);
     ret = true;
 EXIT:
     BSL_SAL_FREE(userId);
@@ -415,20 +415,26 @@ bool CRYPT_CMVP_SelftestSM2Exchange(void *libCtx, const char *attrName)
     GOTO_EXIT_IF(out == NULL, CRYPT_CMVP_COMMON_ERR);
     GOTO_EXIT_IF(SetUserId(selfCtx, SM2Exchange_VECTOR.userid1) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     CRYPT_RandRegist(TestExchangeVectorRandom);
-    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     GOTO_EXIT_IF(SetUserId(peerCtx, SM2Exchange_VECTOR.userid2) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(peerCtx, CRYPT_CTRL_SET_SM2_R, R, RLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeyCtrl(peerCtx, CRYPT_CTRL_SET_SM2_R, R, RLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     GOTO_EXIT_IF(SetPrvPkey(&selfCtx, SM2Exchange_VECTOR.self_d) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(SetPrvPkey(&peerCtx, SM2Exchange_VECTOR.peer_d) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(SetPubPkey(&selfCtx, SM2Exchange_VECTOR.self_x, SM2Exchange_VECTOR.self_y) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(SetPubPkey(&peerCtx, SM2Exchange_VECTOR.peer_x, SM2Exchange_VECTOR.peer_y) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(SetPubPkey(&selfCtx, SM2Exchange_VECTOR.self_x, SM2Exchange_VECTOR.self_y) != true,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(SetPubPkey(&peerCtx, SM2Exchange_VECTOR.peer_x, SM2Exchange_VECTOR.peer_y) != true,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
-    GOTO_EXIT_IF(CRYPT_EAL_PkeyComputeShareKey(selfCtx, peerCtx, out, &outLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeyComputeShareKey(selfCtx, peerCtx, out, &outLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(outLen != sharekeyLen, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(memcmp(out, sharekey, sharekeyLen) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
@@ -463,8 +469,10 @@ static bool SM2_Consistency_Sign(void)
 
     data = CMVP_StringsToBins(consistestdata, &dataLen);
     GOTO_EXIT_IF(data == NULL, CRYPT_CMVP_COMMON_ERR);
-    GOTO_EXIT_IF(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SM3, data, dataLen, sign, &signLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_EXIT_IF(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SM3, data, dataLen, sign, signLen) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SM3, data, dataLen, sign, &signLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_EXIT_IF(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SM3, data, dataLen, sign, signLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     ret = true;
 EXIT:

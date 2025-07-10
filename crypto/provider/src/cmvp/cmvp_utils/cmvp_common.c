@@ -57,7 +57,7 @@ uint8_t *CMVP_StringsToBins(const char *in, uint32_t *outLen)
 
     // A group of 2 bytes
     for (uint32_t i = 0; i < 2 * inLen; i += 2) {
-        // Formula for converting hex to int: (Hex% 32 + 9)% 25 = int, hexadecimal
+        // Formula for converting hex to int: (Hex% 32 + 9)% 25 = int, hexadecimal, 16: high 4 bits.
         out[i / 2] = ((uint8_t)in[i] % 32 + 9) % 25 * 16 + ((uint8_t)in[i + 1] % 32 + 9) % 25;
     }
     return out;

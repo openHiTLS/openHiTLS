@@ -36,7 +36,8 @@ const char *GetIntegrityKey(void)
     return CMVP_INTEGRITYKEY;
 }
 
-static uint8_t *GetLibHmac(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id, const char *libPath, uint32_t *hmacLen)
+static uint8_t *GetLibHmac(void *libCtx, const char *attrName, CRYPT_MAC_AlgId id, const char *libPath,
+    uint32_t *hmacLen)
 {
     char *buf = NULL;
     uint8_t *hmac = NULL;

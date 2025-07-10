@@ -400,11 +400,16 @@ static CRYPT_EAL_RndCtx *CMVP_DrbgInit(void *libCtx, const char *attrName, const
 
     int32_t index = 0;
     BSL_Param param[DRBG_PARAM_COUNT] = {0};
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0);
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.getEntropy, 0);
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, method.cleanEntropy, 0);
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.getNonce, 0);
-    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, method.cleanNonce, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR,
+        seedCtx, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        method.getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        method.cleanEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+        method.getNonce, 0);
+    (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
+        method.cleanNonce, 0);
     ctx = CRYPT_EAL_ProviderDrbgNewCtx(libCtx, drbgVec->id, attrName, param);
 
     GOTO_EXIT_IF(ctx == NULL,
@@ -428,7 +433,8 @@ static void FreeData(uint8_t *rand, uint8_t *expectRand, uint8_t *adinSeed, uint
     BSL_SAL_Free(adin2);
 }
 
-static uint8_t *ExecDrbg(CRYPT_EAL_RndCtx *ctx, uint32_t randLen, uint8_t *adin1, uint32_t adin1Len, uint8_t *adin2, uint32_t adin2Len)
+static uint8_t *ExecDrbg(CRYPT_EAL_RndCtx *ctx, uint32_t randLen, uint8_t *adin1, uint32_t adin1Len,
+    uint8_t *adin2, uint32_t adin2Len)
 {
     uint8_t *rand = NULL;
     rand = BSL_SAL_Malloc(randLen);
@@ -496,7 +502,7 @@ static bool CRYPT_CMVP_SelftestDrbgInternal(void *libCtx, const char *attrName, 
     GOTO_EXIT_IF(ctx == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(CRYPT_EAL_DrbgSeedWithAdin(ctx, adinSeed.data, adinSeed.len) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    // One byte and two characters
+    // 2: One byte and two characters
     rand = ExecDrbg(ctx, (uint32_t)strlen(drbgVec->retBits) / 2, adin1.data, adin1.len, adin2.data, adin2.len);
     GOTO_EXIT_IF(rand == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_EXIT_IF(memcmp(rand, expectRand.data, expectRand.len) != 0, CRYPT_CMVP_ERR_ALGO_SELFTEST);
