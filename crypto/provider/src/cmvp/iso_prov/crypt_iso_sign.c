@@ -34,7 +34,7 @@
 static int32_t CheckSignVerifyMdAlgId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t algId, bool isSign)
 {
     CRYPT_EVENT_TYPE event = isSign ? CRYPT_EVENT_SIGN : CRYPT_EVENT_VERIFY;
-    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, algId, CRYPT_PKEY_PARAID_MAX, event, CRYPT_MD_MAX, NULL, NULL};
+    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, algId, CRYPT_PKEY_PARAID_MAX, event, NULL, NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
         return CRYPT_CMVP_ERR_PARAM_CHECK;

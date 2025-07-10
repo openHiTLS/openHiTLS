@@ -1220,6 +1220,15 @@
                 ".include": ["crypto/provider/src/cmvp/cmvp_utils",
                             "crypto/bn/include",
                             "crypto/entropy/include",
+                            "crypto/mlkem/include",
+                            "crypto/dsa/include",
+                            "crypto/curve25519/include",
+                            "crypto/rsa/include",
+                            "crypto/ecdsa/include",
+                            "crypto/ecc/include",
+                            "crypto/sm2/include",
+                            "crypto/mldsa/include",
+                            "crypto/slh_dsa/include",
                             "include/bsl",
                             "include/crypto"
                 ]

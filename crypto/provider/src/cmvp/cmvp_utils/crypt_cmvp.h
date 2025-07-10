@@ -71,13 +71,17 @@ typedef struct {
 } CRYPT_EAL_KdfC2Data;
 
 typedef struct {
+    CRYPT_MD_AlgId mdId;
+} CRYPT_RSA_PkcsV15Para;
+
+typedef struct {
     const CRYPT_EAL_PkeyPara *para;
     const CRYPT_EAL_PkeyPub *pub;
     const CRYPT_EAL_PkeyPrv *prv;
     CRYPT_MD_AlgId mdId; /**< MD algorithm ID */
     CRYPT_PKEY_ParaId paraId; /**< PKEY parameter ID */
     CRYPT_EVENT_TYPE oper;
-    CRYPT_MD_AlgId pkcsv15;
+    const CRYPT_RSA_PkcsV15Para *pkcsv15;
     BSL_Param *pss;
     BSL_Param *oaep;
 } CRYPT_EAL_PkeyC2Data;

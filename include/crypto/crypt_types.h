@@ -772,7 +772,7 @@ typedef enum {
     CRYPT_EVENT_MAC,          /**< MAC. */
     CRYPT_EVENT_KDF,          /**< KDF. */
     CRYPT_EVENT_KEYAGGREMENT, /**< Key negotiation. */
-    CRYPT_EVENT_RANDGEN = CRYPT_EVENT_KEYAGGREMENT + 1, /**< Generating a random number. */
+    CRYPT_EVENT_RANDGEN,      /**< Generating a random number. */
     CRYPT_EVENT_ZERO,         /**< sensitive information to zero. */
     CRYPT_EVENT_ERR,          /**< An error occurred. */
     CRYPT_EVENT_SETSSP,       /**< Adding and Modifying Password Data and SSP. */

@@ -113,6 +113,8 @@ bool CRYPT_CMVP_SelftestSlhdsaSignVerify(void);
 
 bool CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(void *libCtx, const char *attrName);
 
+bool CRYPT_CMVP_SelftestPkeyPct(void *ctx, int32_t algId);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
