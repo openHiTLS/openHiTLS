@@ -316,6 +316,17 @@ void SDV_BSL_LIST_DETACH_FUNC_TC001(void)
     BslListNode *detachNode = testList->first->next->next->next;
     BSL_LIST_DetachNode(testList, &detachNode);
     ASSERT_TRUE(UserDataCompare(detachNode->data, &data[4]) == 0); // Dave's position became Emma.
+    /* When the deleted node is the current node, the current node will be
+     * updated to the next node first; otherwise, it will be updated to the previous node.
+     */
+    testList->curr = testList->last->prev;
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[6]) == 0);
+    ASSERT_TRUE(UserDataCompare(testList->curr->next->data, &data[7]) == 0);
+    BSL_LIST_DetachNode(testList, &testList->curr);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[7]) == 0);
+    ASSERT_TRUE(UserDataCompare(testList->curr->prev->data, &data[5]) == 0);
+    BSL_LIST_DetachNode(testList, &testList->curr);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[5]) == 0);
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
