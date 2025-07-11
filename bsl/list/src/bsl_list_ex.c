@@ -140,33 +140,36 @@ void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode)
 
     BslListNode *pstCurrentNode = pstList->first;
     while (pstCurrentNode != NULL) {
-        if (pstCurrentNode == *pstListNode) {
-            // found matching node, delete this node and adjust the list
-            if ((pstCurrentNode->next) != NULL) {
-                pstCurrentNode->next->prev = pstCurrentNode->prev;
+        if (pstCurrentNode != *pstListNode) {
+            pstCurrentNode = pstCurrentNode->next;
+            continue;
+        }
+        // found matching node, delete this node and adjust the list
+        if ((pstCurrentNode->next) != NULL) {
+            pstCurrentNode->next->prev = pstCurrentNode->prev;
+            if (*pstListNode == pstList->curr) {
                 pstList->curr = pstCurrentNode->next;
-                *pstListNode = pstCurrentNode->next; // update the current node and point it to the next node
-            } else {
-                pstList->last = pstCurrentNode->prev;
+            }
+            *pstListNode = pstCurrentNode->next; // update the current node and point it to the next node
+        } else {
+            pstList->last = pstCurrentNode->prev;
+            if (*pstListNode == pstList->curr) {
                 pstList->curr = pstCurrentNode->prev;
-                *pstListNode = pstList->last;
             }
-
-            if ((pstCurrentNode->prev) != NULL) {
-                pstCurrentNode->prev->next = pstCurrentNode->next;
-            } else {
-                pstList->first = pstCurrentNode->next;
-            }
-
-            pstList->count--;
-
-            BSL_SAL_FREE(pstCurrentNode);
-            return;
+            *pstListNode = pstList->last;
         }
 
-        pstCurrentNode = pstCurrentNode->next;
-    }
+        if ((pstCurrentNode->prev) != NULL) {
+            pstCurrentNode->prev->next = pstCurrentNode->next;
+        } else {
+            pstList->first = pstCurrentNode->next;
+        }
 
+        pstList->count--;
+
+        BSL_SAL_FREE(pstCurrentNode);
+        return;
+    }
     return;
 }
 #endif /* HITLS_BSL_LIST */
