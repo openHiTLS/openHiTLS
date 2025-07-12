@@ -51,6 +51,65 @@ static BSL_ASN1_TemplateItem g_pk8EncPriKeyTempl[] = {
 };
 #endif // HITLS_CRYPTO_KEY_EPKI && HITLS_CRYPTO_KEY_ENCODE
 
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_KEY_DECODE)
+int32_t CRYPT_EAL_GetRsaPssPara(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_RSA_PssPara *rsaPssParam)
+{
+    int32_t ret;
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_SALTLEN, &rsaPssParam->saltLen,
+        sizeof(rsaPssParam->saltLen));
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_MD, &rsaPssParam->mdId, sizeof(rsaPssParam->mdId));
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_MGF, &rsaPssParam->mgfId, sizeof(rsaPssParam->mgfId));
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+int32_t CRYPT_EAL_InitRsaPrv(const CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, CRYPT_EAL_PkeyPrv *rsaPrv)
+{
+    uint32_t bnLen = CRYPT_EAL_PkeyGetKeyLen(ealPriKey);
+    if (bnLen == 0) {
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    uint8_t *pri = (uint8_t *)BSL_SAL_Malloc(bnLen * 8); // 8 items
+    if (pri == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    rsaPrv->id = cid;
+    rsaPrv->key.rsaPrv.d = pri;
+    rsaPrv->key.rsaPrv.n = pri + bnLen;
+    rsaPrv->key.rsaPrv.p = pri + bnLen * 2; // 2nd buffer
+    rsaPrv->key.rsaPrv.q = pri + bnLen * 3; // 3rd buffer
+    rsaPrv->key.rsaPrv.dP = pri + bnLen * 4; // 4th buffer
+    rsaPrv->key.rsaPrv.dQ = pri + bnLen * 5; // 5th buffer
+    rsaPrv->key.rsaPrv.qInv = pri + bnLen * 6; // 6th buffer
+    rsaPrv->key.rsaPrv.e = pri + bnLen * 7; // 7th buffer
+
+    rsaPrv->key.rsaPrv.dLen = bnLen;
+    rsaPrv->key.rsaPrv.nLen = bnLen;
+    rsaPrv->key.rsaPrv.pLen = bnLen;
+    rsaPrv->key.rsaPrv.qLen = bnLen;
+    rsaPrv->key.rsaPrv.dPLen = bnLen;
+    rsaPrv->key.rsaPrv.dQLen = bnLen;
+    rsaPrv->key.rsaPrv.qInvLen = bnLen;
+    rsaPrv->key.rsaPrv.eLen = bnLen;
+    return CRYPT_SUCCESS;
+}
+
+void CRYPT_EAL_DeinitRsaPrv(CRYPT_EAL_PkeyPrv *rsaPrv)
+{
+    BSL_SAL_ClearFree(rsaPrv->key.rsaPrv.d, rsaPrv->key.rsaPrv.dLen * 8); // 8 items
+}
+#endif
+
 #ifdef HITLS_CRYPTO_KEY_DECODE
 #ifdef HITLS_CRYPTO_RSA
 static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_EAL_PkeyCtx *ealPriKey)
@@ -200,8 +259,7 @@ static int32_t EccEalKeyNew(BSL_ASN1_Buffer *ecParamOid, int32_t *alg, CRYPT_EAL
 {
     int32_t algId;
     BslOidString oidStr = {ecParamOid->len, (char *)ecParamOid->buff, 0};
-    CRYPT_PKEY_ParaId paraId = (CRYPT_PKEY_ParaId)BSL_OBJ_GetCIDFromOid(&oidStr);
-
+    CRYPT_PKEY_ParaId paraId = (CRYPT_PKEY_ParaId)BSL_OBJ_GetCID(&oidStr);
     if (paraId == CRYPT_ECC_SM2) {
         algId = CRYPT_PKEY_SM2;
     } else if (IsEcdsaEcParaId(paraId)) {
@@ -287,7 +345,7 @@ static int32_t ParseEccPrikeyAsn1(BSL_ASN1_Buffer *encode, BSL_ASN1_Buffer *pk8A
         return ret;
     }
     // the tag of public key is BSL_ASN1_TAG_BITSTRING, 1 denote unusedBits
-    CRYPT_EAL_PkeyPub pub = {.id = algId, .key.eccPub = {.data = pubkey->buff + 1,.len = pubkey->len - 1}};
+    CRYPT_EAL_PkeyPub pub = {.id = algId, .key.eccPub = {.data = pubkey->buff + 1, .len = pubkey->len - 1}};
     ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
@@ -401,8 +459,7 @@ int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPubKe
         return ret;
     }
     BslOidString oidStr = {oid->len, (char *)oid->buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
-
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
     if (cid == BSL_CID_EC_PUBLICKEY || cid == BSL_CID_SM2PRIME256) {
         return ParseEccPubkeyAsn1Buff(&bitPubkey, algParam, ealPubKey);
@@ -472,27 +529,6 @@ int32_t CRYPT_EAL_ParseAsn1SubPubkey(uint8_t *buff, uint32_t buffLen, void **eal
 #ifdef HITLS_CRYPTO_KEY_ENCODE
 
 #ifdef HITLS_CRYPTO_RSA
-static int32_t GetPssParamInfo(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_RSA_PssPara *rsaPssParam)
-{
-    int32_t ret;
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_SALTLEN, &rsaPssParam->saltLen,
-        sizeof(rsaPssParam->saltLen));
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_MD, &rsaPssParam->mdId, sizeof(rsaPssParam->mdId));
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_MGF, &rsaPssParam->mgfId, sizeof(rsaPssParam->mgfId));
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
-
 static int32_t EncodePssParam(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *pssParam)
 {
     if (pssParam == NULL) {
@@ -509,7 +545,7 @@ static int32_t EncodePssParam(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *pss
         return CRYPT_SUCCESS;
     }
     CRYPT_RSA_PssPara rsaPssParam = {0};
-    ret = GetPssParamInfo(ealPubKey, &rsaPssParam);
+    ret = CRYPT_EAL_GetRsaPssPara(ealPubKey, &rsaPssParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -580,7 +616,7 @@ static int32_t EncodeRsaPrvKey(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *pk
     BSL_Buffer tmp = {0};
     switch (pad) {
         case CRYPT_EMSA_PSS:
-            ret = GetPssParamInfo(ealPriKey, &rsaPssParam);
+            ret = CRYPT_EAL_GetRsaPssPara(ealPriKey, &rsaPssParam);
             if (ret != BSL_SUCCESS) {
                 return ret;
             }
@@ -608,37 +644,6 @@ static int32_t EncodeRsaPrvKey(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *pk
     }
     bitStr->data = tmp.data;
     bitStr->dataLen = tmp.dataLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t InitRsaPrvCtx(const CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, CRYPT_EAL_PkeyPrv *rsaPrv)
-{
-    uint32_t bnLen = CRYPT_EAL_PkeyGetKeyLen(ealPriKey);
-    if (bnLen == 0) {
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    uint8_t *pri = (uint8_t *)BSL_SAL_Malloc(bnLen * 8); // 8 items
-    if (pri == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    rsaPrv->id = cid;
-    rsaPrv->key.rsaPrv.d = pri;
-    rsaPrv->key.rsaPrv.n = pri + bnLen;
-    rsaPrv->key.rsaPrv.p = pri + bnLen * 2; // 2nd buffer
-    rsaPrv->key.rsaPrv.q = pri + bnLen * 3; // 3rd buffer
-    rsaPrv->key.rsaPrv.dP = pri + bnLen * 4; // 4th buffer
-    rsaPrv->key.rsaPrv.dQ = pri + bnLen * 5; // 5th buffer
-    rsaPrv->key.rsaPrv.qInv = pri + bnLen * 6; // 6th buffer
-    rsaPrv->key.rsaPrv.e = pri + bnLen * 7; // 7th buffer
-
-    rsaPrv->key.rsaPrv.dLen = bnLen;
-    rsaPrv->key.rsaPrv.nLen = bnLen;
-    rsaPrv->key.rsaPrv.pLen = bnLen;
-    rsaPrv->key.rsaPrv.qLen = bnLen;
-    rsaPrv->key.rsaPrv.dPLen = bnLen;
-    rsaPrv->key.rsaPrv.dQLen = bnLen;
-    rsaPrv->key.rsaPrv.qInvLen = bnLen;
-    rsaPrv->key.rsaPrv.eLen = bnLen;
     return CRYPT_SUCCESS;
 }
 
@@ -671,25 +676,20 @@ static void SetRsaPrv2Arr(const CRYPT_EAL_PkeyPrv *rsaPrv, BSL_ASN1_Buffer *asn1
     asn1[CRYPT_RSA_PRV_QINV_IDX].tag = BSL_ASN1_TAG_INTEGER;
 }
 
-static void DeinitRsaPrvCtx(CRYPT_EAL_PkeyPrv *rsaPrv)
-{
-    BSL_SAL_ClearFree(rsaPrv->key.rsaPrv.d, rsaPrv->key.rsaPrv.dLen * 8); // 8 items
-}
-
 int32_t EncodeRsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, BSL_Buffer *encode)
 {
     int32_t ret;
     BSL_ASN1_Buffer asn1[CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1] = {0};
 
     CRYPT_EAL_PkeyPrv rsaPrv = {0};
-    ret = InitRsaPrvCtx(ealPriKey, cid, &rsaPrv);
+    ret = CRYPT_EAL_InitRsaPrv(ealPriKey, cid, &rsaPrv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = CRYPT_EAL_PkeyGetPrv(ealPriKey, &rsaPrv);
     if (ret != CRYPT_SUCCESS) {
-        DeinitRsaPrvCtx(&rsaPrv);
+        CRYPT_EAL_DeinitRsaPrv(&rsaPrv);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -699,7 +699,7 @@ int32_t EncodeRsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId c
     asn1[CRYPT_RSA_PRV_VERSION_IDX].len = sizeof(version);
     asn1[CRYPT_RSA_PRV_VERSION_IDX].tag = BSL_ASN1_TAG_INTEGER;
     ret = CRYPT_ENCODE_RsaPrikeyAsn1Buff(asn1, CRYPT_RSA_PRV_OTHER_PRIME_IDX + 1, encode);
-    DeinitRsaPrvCtx(&rsaPrv);
+    CRYPT_EAL_DeinitRsaPrv(&rsaPrv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -773,8 +773,8 @@ int32_t EncodeEccPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *p
         {BSL_ASN1_TAG_INTEGER, sizeof(version), &version}, {0}, {0}, {0}};
 
     CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(ealPriKey);
-    BslOidString *oid = cid == CRYPT_PKEY_SM2 ? BSL_OBJ_GetOidFromCID((BslCid)CRYPT_ECC_SM2)
-                                              : BSL_OBJ_GetOidFromCID((BslCid)CRYPT_EAL_PkeyGetParaId(ealPriKey));
+    BslOidString *oid = cid == CRYPT_PKEY_SM2 ? BSL_OBJ_GetOID((BslCid)CRYPT_ECC_SM2)
+                                              : BSL_OBJ_GetOID((BslCid)CRYPT_EAL_PkeyGetParaId(ealPriKey));
     if (oid == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
@@ -796,9 +796,9 @@ static int32_t EncodeEccPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Bu
 {
     int32_t ret;
     CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(ealPubKey);
-    BslOidString *oid = BSL_OBJ_GetOidFromCID((BslCid)paraId);
+    BslOidString *oid = BSL_OBJ_GetOID((BslCid)paraId);
     if (CRYPT_EAL_PkeyGetId(ealPubKey) == CRYPT_PKEY_SM2) {
-        oid = BSL_OBJ_GetOidFromCID((BslCid)CRYPT_ECC_SM2);
+        oid = BSL_OBJ_GetOID((BslCid)CRYPT_ECC_SM2);
     }
     if (oid == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
@@ -1022,7 +1022,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslOidString *oidStr = BSL_OBJ_GetOidFromCID((BslCid)cid);
+    BslOidString *oidStr = BSL_OBJ_GetOID((BslCid)cid);
     if (oidStr == NULL) {
         BSL_SAL_FREE(bitTmp.data);
         ret = CRYPT_ERR_ALGID;
@@ -1074,7 +1074,7 @@ int32_t EncodeHashAlg(CRYPT_MD_AlgId mdId, BSL_ASN1_Buffer *asn)
         return CRYPT_SUCCESS;
     }
 
-    BslOidString *oidStr = BSL_OBJ_GetOidFromCID((BslCid)mdId);
+    BslOidString *oidStr = BSL_OBJ_GetOID((BslCid)mdId);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
@@ -1107,13 +1107,13 @@ static int32_t EncodeMgfAlg(CRYPT_MD_AlgId mgfId, BSL_ASN1_Buffer *asn)
         asn->len = 0;
         return CRYPT_SUCCESS;
     }
-    BslOidString *mgfStr = BSL_OBJ_GetOidFromCID(BSL_CID_MGF1);
+    BslOidString *mgfStr = BSL_OBJ_GetOID(BSL_CID_MGF1);
     if (mgfStr == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
     }
 
-    BslOidString *oidStr = BSL_OBJ_GetOidFromCID((BslCid)mgfId);
+    BslOidString *oidStr = BSL_OBJ_GetOID((BslCid)mgfId);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
@@ -1130,7 +1130,7 @@ static int32_t EncodeMgfAlg(CRYPT_MD_AlgId mgfId, BSL_ASN1_Buffer *asn)
     BSL_ASN1_Buffer asnArr[3] = {
         {BSL_ASN1_TAG_OBJECT_ID, mgfStr->octetLen, (uint8_t *)mgfStr->octs},
         {BSL_ASN1_TAG_OBJECT_ID, oidStr->octetLen, (uint8_t *)oidStr->octs},
-        {BSL_ASN1_TAG_NULL,0, NULL}, // param
+        {BSL_ASN1_TAG_NULL, 0, NULL}, // param
     };
     int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, 3, &(asn->buff), &(asn->len));
     if (ret != CRYPT_SUCCESS) {
@@ -1296,14 +1296,14 @@ static int32_t ParsePKCS7EncryptedContentInfo(CRYPT_EAL_LibCtx *libCtx, const ch
     }
     BslOidString typeOidStr = {asn1[HITLS_P7_ENC_CONTINFO_TYPE_IDX].len,
         (char *)asn1[HITLS_P7_ENC_CONTINFO_TYPE_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&typeOidStr);
+    BslCid cid = BSL_OBJ_GetCID(&typeOidStr);
     if (cid != BSL_CID_PKCS7_SIMPLEDATA) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNSUPPORTED_PKCS7_TYPE);
         return CRYPT_DECODE_UNSUPPORTED_PKCS7_TYPE;
     }
     BslOidString encOidStr = {asn1[HITLS_P7_ENC_CONTINFO_ENCALG_IDX].len,
         (char *)asn1[HITLS_P7_ENC_CONTINFO_ENCALG_IDX].buff, 0};
-    cid = BSL_OBJ_GetCIDFromOid(&encOidStr);
+    cid = BSL_OBJ_GetCID(&encOidStr);
     if (cid != BSL_CID_PBES2) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNSUPPORTED_ENCRYPT_TYPE);
         return CRYPT_DECODE_UNSUPPORTED_ENCRYPT_TYPE;
@@ -1311,7 +1311,7 @@ static int32_t ParsePKCS7EncryptedContentInfo(CRYPT_EAL_LibCtx *libCtx, const ch
     // parse sym alg id
     BslOidString symOidStr = {asn1[HITLS_P7_ENC_CONTINFO_SYMALG_IDX].len,
         (char *)asn1[HITLS_P7_ENC_CONTINFO_SYMALG_IDX].buff, 0};
-    BslCid symId = BSL_OBJ_GetCIDFromOid(&symOidStr);
+    BslCid symId = BSL_OBJ_GetCID(&symOidStr);
     if (symId == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -1394,7 +1394,7 @@ static int32_t EncodePKCS7EncryptedContentInfo(CRYPT_EAL_LibCtx *libCtx, const c
         return ret;
     }
     do {
-        BslOidString *oidStr = BSL_OBJ_GetOidFromCID(BSL_CID_PKCS7_SIMPLEDATA);
+        BslOidString *oidStr = BSL_OBJ_GetOID(BSL_CID_PKCS7_SIMPLEDATA);
         if (oidStr == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
             ret = CRYPT_ERR_ALGID;

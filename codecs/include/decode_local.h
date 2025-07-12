@@ -32,14 +32,14 @@ extern "C" {
 /**
  * @brief Decoder context structure
  */
-typedef struct _Decoder_Method {
+typedef struct CRYPT_DECODER_Method {
     CRYPT_DECODER_IMPL_NewCtx newCtx;               /* New context function */
     CRYPT_DECODER_IMPL_SetParam setParam;           /* Set parameter function */
     CRYPT_DECODER_IMPL_GetParam getParam;           /* Get parameter function */
     CRYPT_DECODER_IMPL_Decode decode;               /* Decode function */
     CRYPT_DECODER_IMPL_FreeOutData freeOutData;     /* Free output data function */
     CRYPT_DECODER_IMPL_FreeCtx freeCtx;             /* Free context function */
-} Decoder_Method; 
+} CRYPT_DECODER_Method;
 
 struct CRYPT_DecoderCtx {
     /* To get the provider manager context when query */
@@ -50,7 +50,7 @@ struct CRYPT_DecoderCtx {
     const char *outFormat;                    /* Output data format */
     const char *outType;                      /* Output data type */
     void *decoderCtx;                   /* Decoder internal context */
-    Decoder_Method *method;             /* Decoder method */
+    CRYPT_DECODER_Method *method;             /* Decoder method */
     int32_t decoderState;               /* Decoder state */
 };
 
@@ -60,7 +60,7 @@ typedef struct {
     BSL_Param *data;                       /* Data */
 } DataInfo;
 
-typedef struct _CRYPT_DecoderNode {
+typedef struct CRYPT_DECODER_Node {
     DataInfo inData;                       /* Input data */
     DataInfo outData;                      /* Output data */
     CRYPT_DECODER_Ctx *decoderCtx;         /* Decoder context */
@@ -68,7 +68,7 @@ typedef struct _CRYPT_DecoderNode {
 
 
 #define MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE 128
-struct _CRYPT_DECODER_PoolCtx {
+struct CRYPT_DECODER_PoolCtx {
     CRYPT_EAL_LibCtx *libCtx;               /* EAL library context */
     const char *attrName;                   /* Attribute name */
     const char *inputFormat;                /* Input data format */

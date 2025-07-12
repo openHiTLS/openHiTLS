@@ -92,7 +92,7 @@ int32_t HITLS_X509_CrlTagGetOrCheck(int32_t type, uint32_t idx, void *data, void
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
             BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+            BslCid cid = BSL_OBJ_GetCID(&oidStr);
             if (cid == BSL_CID_UNKNOWN) {
                 return HITLS_X509_ERR_GET_ANY_TAG;
             }

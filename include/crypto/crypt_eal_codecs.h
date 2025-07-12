@@ -90,7 +90,7 @@ int32_t CRYPT_DECODE_Decode(CRYPT_DECODER_Ctx *ctx, const BSL_Param *inParam, BS
  */
 void CRYPT_DECODE_FreeOutData(CRYPT_DECODER_Ctx *ctx, BSL_Param *outData);
 
-typedef struct _CRYPT_DECODER_PoolCtx CRYPT_DECODER_PoolCtx;
+typedef struct CRYPT_DECODER_PoolCtx CRYPT_DECODER_PoolCtx;
 
 /**
  * @brief Command codes for CRYPT_DECODE_PoolCtrl function

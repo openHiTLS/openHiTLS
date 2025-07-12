@@ -648,13 +648,10 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
 #endif
         if (ret != HITLS_PKI_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        ret = HITLS_X509_TrvList(crl->tbs.revokedCerts,
-            (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertRevoked, cert);
+        ret = HITLS_X509_TrvList(crl->tbs.revokedCerts, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertRevoked, cert);
         if (ret != HITLS_PKI_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         crl = BSL_LIST_GET_NEXT(storeCtx->crl);

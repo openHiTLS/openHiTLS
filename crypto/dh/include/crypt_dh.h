@@ -52,7 +52,7 @@ CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void);
  * @brief dh Allocate the context of dh.
  *
  * @param libCtx [IN] Library context
- * 
+ *
  * @retval (CRYPT_DH_Ctx *) Pointer to the memory space of the allocated context
  * @retval NULL             Invalid null pointer
  */

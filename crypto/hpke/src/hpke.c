@@ -1575,7 +1575,7 @@ int32_t CRYPT_EAL_HpkeGenerateKeyPair(CRYPT_EAL_LibCtx *libCtx, const char *attr
     }
 
     uint8_t ikmNew[HPKE_KEM_MAX_PRIVATE_KEY_LEN];
-    ret = CRYPT_EAL_RandbytesEx(NULL, ikmNew, ikmNewLen);
+    ret = CRYPT_EAL_RandbytesEx(libCtx, ikmNew, ikmNewLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

@@ -82,7 +82,7 @@ static void *CRYPT_EAL_DefCipherNewCtx(void *provCtx, int32_t algId)
     return NULL;
 }
 
-const CRYPT_EAL_Func g_defCbc[] = {
+const CRYPT_EAL_Func g_defEalCbc[] = {
 #ifdef HITLS_CRYPTO_CBC
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CBC_InitCtxEx},
@@ -95,7 +95,7 @@ const CRYPT_EAL_Func g_defCbc[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defCcm[] = {
+const CRYPT_EAL_Func g_defEalCcm[] = {
 #ifdef HITLS_CRYPTO_CCM
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CCM_InitCtx},
@@ -108,7 +108,7 @@ const CRYPT_EAL_Func g_defCcm[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defCfb[] = {
+const CRYPT_EAL_Func g_defEalCfb[] = {
 #ifdef HITLS_CRYPTO_CFB
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CFB_InitCtxEx},
@@ -121,7 +121,7 @@ const CRYPT_EAL_Func g_defCfb[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defChaCha[] = {
+const CRYPT_EAL_Func g_defEalChaCha[] = {
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CHACHA20POLY1305_InitCtx},
@@ -134,7 +134,7 @@ const CRYPT_EAL_Func g_defChaCha[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defCtr[] = {
+const CRYPT_EAL_Func g_defEalCtr[] = {
 #ifdef HITLS_CRYPTO_CTR
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_CTR_InitCtxEx},
@@ -147,7 +147,7 @@ const CRYPT_EAL_Func g_defCtr[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defEcb[] = {
+const CRYPT_EAL_Func g_defEalEcb[] = {
 #ifdef HITLS_CRYPTO_ECB
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_ECB_InitCtxEx},
@@ -160,7 +160,7 @@ const CRYPT_EAL_Func g_defEcb[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defGcm[] = {
+const CRYPT_EAL_Func g_defEalGcm[] = {
 #ifdef HITLS_CRYPTO_GCM
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_GCM_InitCtxEx},
@@ -173,7 +173,7 @@ const CRYPT_EAL_Func g_defGcm[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defOfb[] = {
+const CRYPT_EAL_Func g_defEalOfb[] = {
 #ifdef HITLS_CRYPTO_OFB
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_OFB_InitCtxEx},
@@ -186,7 +186,7 @@ const CRYPT_EAL_Func g_defOfb[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defXts[] = {
+const CRYPT_EAL_Func g_defEalXts[] = {
 #ifdef HITLS_CRYPTO_XTS
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_XTS_InitCtxEx},

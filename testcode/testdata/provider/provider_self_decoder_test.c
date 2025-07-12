@@ -30,7 +30,8 @@
 #define RSA_MAX_MODULUS_BITS 16384
 #define RSA_MAX_MODULUS_LEN (RSA_MAX_MODULUS_BITS / 8)
 
-#define PARAMISNULL(a) (a == NULL || a->value == NULL)
+#define PARAMISNULL(a) ((a) == NULL || (a)->value == NULL)
+#define PARAMISNULLLENIS0(a) ((a) == NULL || (a)->value == NULL || (a)->valueLen == 0)
 
 /* JSON to PEM decoder context */
 typedef struct {
@@ -241,7 +242,7 @@ static int32_t TestRsaSetPrvKey(void *ctx, const BSL_Param *param)
     const BSL_Param *dp = TestFindConstParam(param, CRYPT_PARAM_RSA_DP);
     const BSL_Param *dq = TestFindConstParam(param, CRYPT_PARAM_RSA_DQ);
     const BSL_Param *qInv = TestFindConstParam(param, CRYPT_PARAM_RSA_QINV);
-    if (PARAMISNULL(n) || PARAMISNULL(d) || n->valueType != BSL_PARAM_TYPE_OCTETS ||
+    if (PARAMISNULLLENIS0(n) || PARAMISNULLLENIS0(d) || n->valueType != BSL_PARAM_TYPE_OCTETS ||
         d->valueType != BSL_PARAM_TYPE_OCTETS) {
         return CRYPT_NULL_INPUT;
     }

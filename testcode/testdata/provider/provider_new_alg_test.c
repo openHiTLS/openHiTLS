@@ -448,7 +448,7 @@ typedef enum {
 static int32_t GetParaId(uint8_t *octs, uint32_t octsLen)
 {
     BslOidString oidStr = {octsLen, (char *)octs, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
     if (cid == BSL_CID_UNKNOWN) {
         return CRYPT_PKEY_PARAID_MAX;
     }
@@ -589,7 +589,7 @@ static int32_t NewAlgKeySubKeyInfoCb(int32_t type, uint32_t idx, void *data, voi
     switch (type) {
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+            BslCid cid = BSL_OBJ_GetCID(&oidStr);
             if (cid == NEW_PKEY_ALGID) {
                 // note: any It can be encoded empty or it can be null
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;

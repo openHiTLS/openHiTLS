@@ -80,7 +80,7 @@ int32_t HITLS_X509_ParseSignAlgInfo(BSL_ASN1_Buffer *algId, BSL_ASN1_Buffer *par
 {
     int32_t ret = HITLS_PKI_SUCCESS;
     BslOidString oidStr = {algId->len, (char *)algId->buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ALG_OID);
         return HITLS_X509_ERR_ALG_OID;
@@ -224,7 +224,7 @@ static bool X509_CheckIsRsa(uint32_t algId)
 int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buffer *asn)
 {
     int32_t ret;
-    BslOidString *oidStr = BSL_OBJ_GetOidFromCID(x509Alg->algId);
+    BslOidString *oidStr = BSL_OBJ_GetOID(x509Alg->algId);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ALG_OID);
         return HITLS_X509_ERR_ALG_OID;
@@ -606,7 +606,7 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg)
 {
     uint32_t pubKeyId = CRYPT_EAL_PkeyGetId(pubkey);
-    if (pubKeyId == BSL_CID_UNKNOWN) {
+    if (pubKeyId == CRYPT_PKEY_MAX) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
         return HITLS_X509_ERR_VFY_GET_SIGNID;
     }
@@ -626,7 +626,7 @@ int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgI
         return HITLS_X509_ERR_ALG_UNSUPPORT;
 #endif
     }
-    BslCid subSignAlg = BSL_OBJ_GetAsymIdFromSignId(subAlg->algId);
+    BslCid subSignAlg = BSL_OBJ_GetAsymAlgIdFromSignId(subAlg->algId);
     if (subSignAlg == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
         return HITLS_X509_ERR_VFY_GET_SIGNID;
@@ -759,6 +759,22 @@ int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawD
 }
 
 #ifdef HITLS_PKI_X509_VFY
+static int32_t X509_CheckAuthCertIssuer(BslList *authCertIssue, BSL_ASN1_List *issueName)
+{
+    HITLS_X509_GeneralName *name = NULL;
+    for (HITLS_X509_GeneralName *tmp = BSL_LIST_GET_FIRST(authCertIssue); tmp != NULL;
+        tmp = BSL_LIST_GET_NEXT(authCertIssue)) {
+        if (tmp->type == HITLS_X509_GN_DNNAME) {
+            name = tmp;
+            break;
+        }
+    }
+    if (name == NULL) {
+        return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
+    }
+    return HITLS_X509_CmpNameNode((BslList *)name->value.data, issueName);
+}
+
 int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt, BSL_ASN1_List *issueName,
     BSL_ASN1_Buffer *serialNum)
 {
@@ -786,21 +802,9 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
         return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
     }
     if (aki.issuerName != NULL) {
-        HITLS_X509_GeneralName *name = NULL;
-        for (HITLS_X509_GeneralName *tmp = BSL_LIST_GET_FIRST(aki.issuerName); tmp != NULL;
-            tmp = BSL_LIST_GET_NEXT(aki.issuerName)) {
-            if (tmp->type == HITLS_X509_GN_DNNAME) {
-                name = tmp;
-                break;
-            }
-        }
-        if (name == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
-            return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
-        }
-        ret = HITLS_X509_CmpNameNode((BslList *)name->value.data, issueName);
+        ret = X509_CheckAuthCertIssuer(aki.issuerName, issueName);
         HITLS_X509_ClearAuthorityKeyId(&aki);
-        if (ret != 0) {
+        if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
             return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
         }

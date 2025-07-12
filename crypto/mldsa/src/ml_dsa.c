@@ -560,7 +560,7 @@ static int32_t MLDSAPreHashEncode(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const u
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    BslOidString *oidInfo = BSL_OBJ_GetOidFromCID(hashId);
+    BslOidString *oidInfo = BSL_OBJ_GetOID(hashId);
     RETURN_RET_IF(oidInfo == NULL, CRYPT_ERR_ALGID);
 
     const EAL_MdMethod *hashMethod = EAL_MdFindMethod(hashId);

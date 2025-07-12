@@ -26,17 +26,17 @@
 #include "crypt_encode_decode_local.h"
 #include "crypt_decode_key_impl.h"
 
-typedef struct _DECODER_EPki2Pki_Ctx {
+typedef struct DECODER_EPki2PkiCtx {
     CRYPT_EAL_LibCtx *libCtx;
     const char *attrName;
     const char *outFormat;
     const char *outType;
-} DECODER_EPki2Pki_Ctx;
+} DECODER_EPki2PkiCtx;
 
-void *DECODER_EPki2Pki_NewCtx(void *provCtx)
+void *DECODER_EPKI2PKI_NewCtx(void *provCtx)
 {
     (void)provCtx;
-    DECODER_EPki2Pki_Ctx *ctx = (DECODER_EPki2Pki_Ctx *)BSL_SAL_Calloc(1, sizeof(DECODER_EPki2Pki_Ctx));
+    DECODER_EPki2PkiCtx *ctx = (DECODER_EPki2PkiCtx *)BSL_SAL_Calloc(1, sizeof(DECODER_EPki2PkiCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -46,9 +46,9 @@ void *DECODER_EPki2Pki_NewCtx(void *provCtx)
     return ctx;
 }
 
-int32_t DECODER_EPki2Pki_GetParam(void *ctx, BSL_Param *param)
+int32_t DECODER_EPKI2PKI_GetParam(void *ctx, BSL_Param *param)
 {
-    DECODER_EPki2Pki_Ctx *decoderCtx = (DECODER_EPki2Pki_Ctx *)ctx;
+    DECODER_EPki2PkiCtx *decoderCtx = (DECODER_EPki2PkiCtx *)ctx;
     if (decoderCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -60,9 +60,9 @@ int32_t DECODER_EPki2Pki_GetParam(void *ctx, BSL_Param *param)
     return DECODER_CommonGetParam(&commonCtx, param);
 }
 
-int32_t DECODER_EPki2Pki_SetParam(void *ctx, const BSL_Param *param)
+int32_t DECODER_EPKI2PKI_SetParam(void *ctx, const BSL_Param *param)
 {
-    DECODER_EPki2Pki_Ctx *decoderCtx = (DECODER_EPki2Pki_Ctx *)ctx;
+    DECODER_EPki2PkiCtx *decoderCtx = (DECODER_EPki2PkiCtx *)ctx;
     if (decoderCtx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -86,9 +86,9 @@ int32_t DECODER_EPki2Pki_SetParam(void *ctx, const BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-int32_t DECODER_EPki2Pki_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam)
+int32_t DECODER_EPKI2PKI_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam)
 {
-    DECODER_EPki2Pki_Ctx *decoderCtx = (DECODER_EPki2Pki_Ctx *)ctx;
+    DECODER_EPki2PkiCtx *decoderCtx = (DECODER_EPki2PkiCtx *)ctx;
     if (decoderCtx == NULL || inParam == NULL || outParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -115,7 +115,7 @@ int32_t DECODER_EPki2Pki_Decode(void *ctx, const BSL_Param *inParam, BSL_Param *
     return CRYPT_DECODE_ConstructBufferOutParam(outParam, decode.data, decode.dataLen);
 }
 
-void DECODER_EPki2Pki_FreeCtx(void *ctx)
+void DECODER_EPKI2PKI_FreeCtx(void *ctx)
 {
     if (ctx == NULL) {
         return;
@@ -123,7 +123,7 @@ void DECODER_EPki2Pki_FreeCtx(void *ctx)
     BSL_SAL_Free(ctx);
 }
 
-void DECODER_EPki2Pki_FreeOutData(void *ctx, BSL_Param *outParam)
+void DECODER_EPKI2PKI_FreeOutData(void *ctx, BSL_Param *outParam)
 {
     (void)ctx;
     if (outParam == NULL) {

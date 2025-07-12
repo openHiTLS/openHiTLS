@@ -25,7 +25,7 @@
 #include "crypt_slh_dsa.h"
 #include "crypt_mldsa.h"
 
-const CRYPT_EAL_Func g_defSignDsa[] = {
+const CRYPT_EAL_Func g_defEalSignDsa[] = {
 #ifdef HITLS_CRYPTO_DSA
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_DSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, (CRYPT_EAL_ImplPkeySignData)CRYPT_DSA_SignData},
@@ -35,7 +35,7 @@ const CRYPT_EAL_Func g_defSignDsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defSignEd25519[] = {
+const CRYPT_EAL_Func g_defEalSignEd25519[] = {
 #ifdef HITLS_CRYPTO_ED25519
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_CURVE25519_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_CURVE25519_Verify},
@@ -43,7 +43,7 @@ const CRYPT_EAL_Func g_defSignEd25519[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defSignRsa[] = {
+const CRYPT_EAL_Func g_defEalSignRsa[] = {
 #ifdef HITLS_CRYPTO_RSA_SIGN
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_RSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, (CRYPT_EAL_ImplPkeySignData)CRYPT_RSA_SignData},
@@ -64,7 +64,7 @@ const CRYPT_EAL_Func g_defSignRsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defSignEcdsa[] = {
+const CRYPT_EAL_Func g_defEalSignEcdsa[] = {
 #ifdef HITLS_CRYPTO_ECDSA
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_ECDSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, (CRYPT_EAL_ImplPkeySignData)CRYPT_ECDSA_SignData},
@@ -74,7 +74,7 @@ const CRYPT_EAL_Func g_defSignEcdsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defSignSm2[] = {
+const CRYPT_EAL_Func g_defEalSignSm2[] = {
 #ifdef HITLS_CRYPTO_SM2_SIGN
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_SM2_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_SM2_Verify},
@@ -82,7 +82,7 @@ const CRYPT_EAL_Func g_defSignSm2[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defSignSlhDsa[] = {
+const CRYPT_EAL_Func g_defEalSignSlhDsa[] = {
 #ifdef HITLS_CRYPTO_SLH_DSA
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_SLH_DSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_SLH_DSA_Verify},
@@ -90,7 +90,7 @@ const CRYPT_EAL_Func g_defSignSlhDsa[] = {
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defSignMlDsa[] = {
+const CRYPT_EAL_Func g_defEalSignMlDsa[] = {
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_ML_DSA_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_ML_DSA_Verify},

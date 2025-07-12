@@ -20,6 +20,7 @@
 #include "crypt_types.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,8 +31,6 @@ extern "C" {
 
 /* length function */
 typedef int32_t (*GetLenFunc)(const void *ctx);
-
-typedef int32_t (*CRYPT_EAL_ProcessFuncCb)(const BSL_Param *param, void *args);
 
 /* Prototype of the MD algorithm operation functions */
 typedef void* (*MdNewCtx)(void);

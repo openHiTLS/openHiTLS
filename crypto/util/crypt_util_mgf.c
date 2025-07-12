@@ -29,8 +29,8 @@
 #define HASH_MAX_MDSIZE (64)
 
 // outlen should be hash len
-int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size, uint8_t *out,
-                 uint32_t *outlen)
+int32_t CRYPT_CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size, uint8_t *out,
+    uint32_t *outlen)
 {
     void *mdCtx = hashMethod->newCtx();
     if (mdCtx == NULL) {
@@ -77,7 +77,7 @@ int32_t CRYPT_Mgf1(const EAL_MdMethod *hashMethod, const uint8_t *seed, const ui
     uint32_t i, outLen, partLen;
     for (i = 0, outLen = 0; outLen < maskLen; i++, outLen += partLen) {
         PUT_UINT32_BE(i, counter, 0);
-        ret = CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), md, &hashLen);
+        ret = CRYPT_CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), md, &hashLen);
         if (ret != CRYPT_SUCCESS) {
             goto EXIT;
         }

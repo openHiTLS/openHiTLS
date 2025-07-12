@@ -147,6 +147,14 @@ do {                                         \
         }                              \
     } while (0)
 
+#define RETURN_RET_IF_ERR_EX(func, ret)   \
+    do {                               \
+        (ret) = (func);                \
+        if ((ret) != CRYPT_SUCCESS) {  \
+            return ret;                \
+        }                              \
+    } while (0)
+
 #define BREAK_IF(condition) \
     do {                    \
         if (condition) {    \
@@ -246,7 +254,7 @@ do {                                         \
  * @param size [IN] Size of hash data
  * @param out [OUT] Output hash value
  */
-int32_t CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size,
+int32_t CRYPT_CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size,
     uint8_t *out, uint32_t *outlen);
 
 /**

@@ -46,7 +46,7 @@ typedef struct {
 static int32_t GetParaId(uint8_t *octs, uint32_t octsLen)
 {
     BslOidString oidStr = {octsLen, (char *)octs, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_PKEY_PARAID_MAX;
@@ -257,7 +257,7 @@ int32_t CRYPT_SM2_ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (subPubkeyInfo.keyType != BSL_CID_EC_PUBLICKEY) {
+    if (subPubkeyInfo.keyType != BSL_CID_EC_PUBLICKEY && subPubkeyInfo.keyType != BSL_CID_SM2PRIME256) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }

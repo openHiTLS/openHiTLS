@@ -143,7 +143,7 @@ static int32_t InputCheck(BN_BigNum *r, const BN_BigNum *p)
 
 int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p)
 {
-    return BN_RandRangeEx(NULL, r, p);    
+    return BN_RandRangeEx(NULL, r, p);  
 }
 
 int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p)

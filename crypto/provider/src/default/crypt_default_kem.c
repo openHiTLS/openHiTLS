@@ -24,7 +24,7 @@
 #include "crypt_hybridkem.h"
 #endif
 
-const CRYPT_EAL_Func g_defMlKem[] = {
+const CRYPT_EAL_Func g_defEalMlKem[] = {
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_ML_KEM_Encaps},
     {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_ML_KEM_Decaps},
@@ -32,7 +32,7 @@ const CRYPT_EAL_Func g_defMlKem[] = {
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defHybridKeyKem[] = {
+const CRYPT_EAL_Func g_defEalHybridKeyKem[] = {
 #ifdef HITLS_CRYPTO_HYBRIDKEM
     {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_HYBRID_KEM_Encaps},
     {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_HYBRID_KEM_Decaps},

@@ -332,7 +332,7 @@ static int32_t SetCertExt(HITLS_X509_Cert *cert)
 
     BslList *oidList = BSL_LIST_New(sizeof(BSL_Buffer));
     ASSERT_TRUE(oidList != NULL);
-    oid = BSL_OBJ_GetOidFromCID(BSL_CID_KP_SERVERAUTH);
+    oid = BSL_OBJ_GetOID(BSL_CID_KP_SERVERAUTH);
     ASSERT_NE(oid, NULL);
     oidBuff.data = (uint8_t *)oid->octs;
     oidBuff.dataLen = oid->octetLen;

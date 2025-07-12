@@ -1109,9 +1109,9 @@ void SDV_BSL_ASN1_ENCODE_LIST_TC001(int listSize, Hex *encode)
                 {BSL_ASN1_TAG_ANY, 0, 2}
     };
     BSL_ASN1_Template templ = {x509Name, sizeof(x509Name) / sizeof(x509Name[0])};
-    BslOidString *o = BSL_OBJ_GetOidFromCID(BSL_CID_AT_ORGANIZATIONNAME);
+    BslOidString *o = BSL_OBJ_GetOID(BSL_CID_AT_ORGANIZATIONNAME);
     char *oName = "Energy TEST";
-    BslOidString *cn = BSL_OBJ_GetOidFromCID(BSL_CID_AT_COMMONNAME);
+    BslOidString *cn = BSL_OBJ_GetOID(BSL_CID_AT_COMMONNAME);
     char *cnName = "Energy ECC Equipment Root CA 1";
     BSL_ASN1_Buffer in[] = {
         {BSL_ASN1_TAG_OBJECT_ID, o->octetLen, (uint8_t *)o->octs},

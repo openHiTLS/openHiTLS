@@ -50,12 +50,12 @@ typedef struct {
     int32_t keyAlgId;
     const char *outFormat;
     const char *outType;
-} DECODER_Der2Key_Ctx;
+} DECODER_Der2KeyCtx;
 
-DECODER_Der2Key_Ctx *DECODER_Der2Key_NewCtx(void *provCtx)
+DECODER_Der2KeyCtx *DECODER_DER2KEY_NewCtx(void *provCtx)
 {
     (void)provCtx;
-    DECODER_Der2Key_Ctx *ctx = (DECODER_Der2Key_Ctx *)BSL_SAL_Calloc(1, sizeof(DECODER_Der2Key_Ctx));
+    DECODER_Der2KeyCtx *ctx = (DECODER_Der2KeyCtx *)BSL_SAL_Calloc(1, sizeof(DECODER_Der2KeyCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -66,9 +66,9 @@ DECODER_Der2Key_Ctx *DECODER_Der2Key_NewCtx(void *provCtx)
 }
 
 #define DECODER_DEFINE_DER2KEY_NEW_CTX(keyType, keyId, keyMethod, asyCipherMethod, exchMethod, signMethod, kemMethod) \
-void *DECODER_##keyType##Der2Key_NewCtx(void *provCtx) \
+void *DECODER_##keyType##Der2KeyNewCtx(void *provCtx) \
 { \
-    DECODER_Der2Key_Ctx *ctx = DECODER_Der2Key_NewCtx(provCtx); \
+    DECODER_Der2KeyCtx *ctx = DECODER_DER2KEY_NewCtx(provCtx); \
     if (ctx == NULL) { \
         return NULL; \
     } \
@@ -107,9 +107,9 @@ int32_t DECODER_CommonGetParam(const DECODER_CommonCtx *commonCtx, BSL_Param *pa
     return CRYPT_SUCCESS;
 }
 
-int32_t DECODER_Der2Key_GetParam(void *ctx, BSL_Param *param)
+int32_t DECODER_DER2KEY_GetParam(void *ctx, BSL_Param *param)
 {
-    DECODER_Der2Key_Ctx *decoderCtx = (DECODER_Der2Key_Ctx *)ctx;
+    DECODER_Der2KeyCtx *decoderCtx = (DECODER_Der2KeyCtx *)ctx;
     if (decoderCtx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -121,9 +121,9 @@ int32_t DECODER_Der2Key_GetParam(void *ctx, BSL_Param *param)
     return DECODER_CommonGetParam(&commonCtx, param);
 }
 
-int32_t DECODER_Der2Key_SetParam(void *ctx, const BSL_Param *param)
+int32_t DECODER_DER2KEY_SetParam(void *ctx, const BSL_Param *param)
 {
-    DECODER_Der2Key_Ctx *decoderCtx = (DECODER_Der2Key_Ctx *)ctx;
+    DECODER_Der2KeyCtx *decoderCtx = (DECODER_Der2KeyCtx *)ctx;
     if (decoderCtx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -141,7 +141,7 @@ int32_t DECODER_Der2Key_SetParam(void *ctx, const BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-static int32_t CheckParams(DECODER_Der2Key_Ctx *decoderCtx, const BSL_Param *inParam, BSL_Param **outParam,
+static int32_t CheckParams(DECODER_Der2KeyCtx *decoderCtx, const BSL_Param *inParam, BSL_Param **outParam,
     BSL_Buffer *asn1Encode)
 {
     if (decoderCtx == NULL || inParam == NULL || outParam == NULL) {
@@ -165,14 +165,14 @@ static int32_t CheckParams(DECODER_Der2Key_Ctx *decoderCtx, const BSL_Param *inP
 #define DECODER_CHECK_PARAMS(ctx, inParam, outParam) \
     void *key = NULL; \
     BSL_Buffer asn1Encode = {0}; \
-    DECODER_Der2Key_Ctx *decoderCtx = (DECODER_Der2Key_Ctx *)ctx; \
+    DECODER_Der2KeyCtx *decoderCtx = (DECODER_Der2KeyCtx *)ctx; \
     int32_t ret = CheckParams(decoderCtx, inParam, outParam, &asn1Encode); \
     if (ret != CRYPT_SUCCESS) { \
         BSL_ERR_PUSH_ERROR(ret); \
         return ret; \
     }
 
-static int32_t ConstructOutputParams(DECODER_Der2Key_Ctx *decoderCtx, void *key, BSL_Param **outParam)
+static int32_t ConstructOutputParams(DECODER_Der2KeyCtx *decoderCtx, void *key, BSL_Param **outParam)
 {
     BSL_Param *result = BSL_SAL_Calloc(7, sizeof(BSL_Param));
     if (result == NULL) {
@@ -225,7 +225,7 @@ EXIT:
 }
 
 #define DECODER_DEFINE_PRVKEY_DER2KEY_DECODE(keyType, keyStructName, parseFunc) \
-int32_t DECODER_##keyType##PrvKeyDer2Key_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
+int32_t DECODER_##keyType##PrvKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
 { \
     DECODER_CHECK_PARAMS(ctx, inParam, outParam); \
     ret = parseFunc(asn1Encode.data, asn1Encode.dataLen, NULL, (keyStructName **)&key); \
@@ -237,7 +237,7 @@ int32_t DECODER_##keyType##PrvKeyDer2Key_Decode(void *ctx, const BSL_Param *inPa
 }
 
 #define DECODER_DEFINE_PUBKEY_DER2KEY_DECODE(keyType, keyStructName, parseFunc) \
-int32_t DECODER_##keyType##PubKeyDer2Key_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
+int32_t DECODER_##keyType##PubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
 { \
      DECODER_CHECK_PARAMS(ctx, inParam, outParam); \
     ret = parseFunc(asn1Encode.data, asn1Encode.dataLen, NULL, (keyStructName **)&key, BSL_CID_UNKNOWN); \
@@ -249,7 +249,7 @@ int32_t DECODER_##keyType##PubKeyDer2Key_Decode(void *ctx, const BSL_Param *inPa
 }
 
 #define DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(keyType, keyStructName, parseFunc) \
-int32_t DECODER_##keyType##SubPubKeyDer2Key_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
+int32_t DECODER_##keyType##SubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
 { \
     DECODER_CHECK_PARAMS(ctx, inParam, outParam) \
     ret = parseFunc(asn1Encode.data, asn1Encode.dataLen, (keyStructName **)&key, true); \
@@ -261,7 +261,7 @@ int32_t DECODER_##keyType##SubPubKeyDer2Key_Decode(void *ctx, const BSL_Param *i
 }
 
 #define DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(keyType, keyStructName, parseFunc) \
-int32_t DECODER_##keyType##SubPubKeyWithOutSeqDer2Key_Decode(void *ctx, const BSL_Param *inParam, \
+int32_t DECODER_##keyType##SubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, \
     BSL_Param **outParam) \
 { \
     DECODER_CHECK_PARAMS(ctx, inParam, outParam) \
@@ -274,7 +274,7 @@ int32_t DECODER_##keyType##SubPubKeyWithOutSeqDer2Key_Decode(void *ctx, const BS
 }
 
 #define DECODER_DEFINE_PKCS8_DECODE(keyType, keyStructName, parseFunc) \
-int32_t DECODER_##keyType##Pkcs8Der2Key_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
+int32_t DECODER_##keyType##Pkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
 { \
     DECODER_CHECK_PARAMS(ctx, inParam, outParam) \
     ret = parseFunc(asn1Encode.data, asn1Encode.dataLen, (keyStructName **)&key); \
@@ -285,9 +285,9 @@ int32_t DECODER_##keyType##Pkcs8Der2Key_Decode(void *ctx, const BSL_Param *inPar
     return ConstructOutputParams(decoderCtx, key, outParam); \
 }
 
-void DECODER_Der2Key_FreeOutData(void *ctx, BSL_Param *outData)
+void DECODER_DER2KEY_FreeOutData(void *ctx, BSL_Param *outData)
 {
-    DECODER_Der2Key_Ctx *decoderCtx = ctx;
+    DECODER_Der2KeyCtx *decoderCtx = ctx;
     if (decoderCtx == NULL || outData == NULL) {
         return;
     }
@@ -302,12 +302,12 @@ void DECODER_Der2Key_FreeOutData(void *ctx, BSL_Param *outData)
     BSL_SAL_Free(outData);
 }
 
-void DECODER_Der2Key_FreeCtx(void *ctx)
+void DECODER_DER2KEY_FreeCtx(void *ctx)
 {
     if (ctx == NULL) {
         return;
     }
-    DECODER_Der2Key_Ctx *decoderCtx = (DECODER_Der2Key_Ctx *)ctx;
+    DECODER_Der2KeyCtx *decoderCtx = (DECODER_Der2KeyCtx *)ctx;
     if (decoderCtx->method != NULL) {
         BSL_SAL_Free(decoderCtx->method);
     }
@@ -316,17 +316,20 @@ void DECODER_Der2Key_FreeCtx(void *ctx)
 #endif
 
 #ifdef HITLS_CRYPTO_RSA
-DECODER_DEFINE_DER2KEY_NEW_CTX(Rsa, CRYPT_PKEY_RSA, g_defKeyMgmtRsa, g_defAsymCipherRsa, NULL, g_defSignRsa, NULL)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Rsa, CRYPT_PKEY_RSA, g_defEalKeyMgmtRsa, g_defEalAsymCipherRsa, NULL, \
+    g_defEalSignRsa, NULL)
 #endif
 #ifdef HITLS_CRYPTO_ECDSA
-DECODER_DEFINE_DER2KEY_NEW_CTX(Ecdsa, CRYPT_PKEY_ECDSA, g_defKeyMgmtEcdsa, NULL, NULL, g_defSignEcdsa, NULL)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Ecdsa, CRYPT_PKEY_ECDSA, g_defEalKeyMgmtEcdsa, NULL, NULL, \
+    g_defEalSignEcdsa, NULL)
 #endif
 #ifdef HITLS_CRYPTO_SM2
-DECODER_DEFINE_DER2KEY_NEW_CTX(Sm2, CRYPT_PKEY_SM2, g_defKeyMgmtSm2, g_defAsymCipherSm2, g_defExchSm2, g_defSignSm2, \
-    NULL)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Sm2, CRYPT_PKEY_SM2, g_defEalKeyMgmtSm2, g_defEalAsymCipherSm2, g_defEalExchSm2, \
+    g_defEalSignSm2, NULL)
 #endif
 #ifdef HITLS_CRYPTO_ED25519
-DECODER_DEFINE_DER2KEY_NEW_CTX(Ed25519, CRYPT_PKEY_ED25519, g_defKeyMgmtEd25519, NULL, NULL, g_defSignEd25519, NULL)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Ed25519, CRYPT_PKEY_ED25519, g_defEalKeyMgmtEd25519, NULL, NULL, \
+    g_defEalSignEd25519, NULL)
 #endif
 
 #ifdef HITLS_CRYPTO_RSA

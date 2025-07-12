@@ -95,7 +95,7 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
     return randCtx;
 }
 
-const CRYPT_EAL_Func g_defRand[] = {
+const CRYPT_EAL_Func g_defEalRand[] = {
 #if defined(HITLS_CRYPTO_DRBG)
     {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, (CRYPT_EAL_ImplRandDrbgNewCtx)CRYPT_EAL_DefRandNewCtx},
     {CRYPT_EAL_IMPLRAND_DRBGINST, (CRYPT_EAL_ImplRandDrbgInst)DRBG_Instantiate},

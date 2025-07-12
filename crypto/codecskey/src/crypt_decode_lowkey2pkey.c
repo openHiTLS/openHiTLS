@@ -21,6 +21,7 @@
 #include "crypt_params_key.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
+#include "crypt_utils.h"
 #include "eal_pkey.h"
 #include "crypt_decode_key_impl.h"
 #include "bsl_err_internal.h"
@@ -30,12 +31,12 @@ typedef struct {
     const char *targetAttrName;
     const char *outFormat;
     const char *outType;
-} DECODER_Lowkey2Pkey_Ctx;
+} DECODER_Lowkey2PkeyCtx;
 
-void *DECODER_LowKeyObject2PkeyObject_NewCtx(void *provCtx)
+void *DECODER_LowKeyObject2PkeyObjectNewCtx(void *provCtx)
 {
     (void)provCtx;
-    DECODER_Lowkey2Pkey_Ctx *ctx = (DECODER_Lowkey2Pkey_Ctx *)BSL_SAL_Calloc(1, sizeof(DECODER_Lowkey2Pkey_Ctx));
+    DECODER_Lowkey2PkeyCtx *ctx = (DECODER_Lowkey2PkeyCtx *)BSL_SAL_Calloc(1, sizeof(DECODER_Lowkey2PkeyCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -46,9 +47,9 @@ void *DECODER_LowKeyObject2PkeyObject_NewCtx(void *provCtx)
     return (void *)ctx;
 }
 
-int32_t DECODER_LowKeyObject2PkeyObject_SetParam(void *ctx, const BSL_Param *param)
+int32_t DECODER_LowKeyObject2PkeyObjectSetParam(void *ctx, const BSL_Param *param)
 {
-    DECODER_Lowkey2Pkey_Ctx *decoderCtx = (DECODER_Lowkey2Pkey_Ctx *)ctx;
+    DECODER_Lowkey2PkeyCtx *decoderCtx = (DECODER_Lowkey2PkeyCtx *)ctx;
     if (decoderCtx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -73,9 +74,9 @@ int32_t DECODER_LowKeyObject2PkeyObject_SetParam(void *ctx, const BSL_Param *par
     return CRYPT_SUCCESS;
 }
 
-int32_t DECODER_LowKeyObject2PkeyObject_GetParam(void *ctx, BSL_Param *param)
+int32_t DECODER_LowKeyObject2PkeyObjectGetParam(void *ctx, BSL_Param *param)
 {
-    DECODER_Lowkey2Pkey_Ctx *decoderCtx = (DECODER_Lowkey2Pkey_Ctx *)ctx;
+    DECODER_Lowkey2PkeyCtx *decoderCtx = (DECODER_Lowkey2PkeyCtx *)ctx;
     if (decoderCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -86,10 +87,10 @@ int32_t DECODER_LowKeyObject2PkeyObject_GetParam(void *ctx, BSL_Param *param)
     };
     return DECODER_CommonGetParam(&commonCtx, param);
 }
-typedef struct _LowKeyObjectMethodInfo {
+typedef struct LowKeyObjectMethodInfo {
     CRYPT_EAL_ImplPkeyMgmtExport export;
     CRYPT_EAL_ImplPkeyMgmtDupCtx dupCtx;
-    CRYPT_EAL_ImplPkeyMgmtFreeCtx freeCtx; 
+    CRYPT_EAL_ImplPkeyMgmtFreeCtx freeCtx;
 } LowKeyObjectMethodInfo;
 
 static int32_t GetLowKeyObjectInfo(const BSL_Param *inParam, void **object, int32_t *objectType,
@@ -123,7 +124,7 @@ static int32_t GetLowKeyObjectInfo(const BSL_Param *inParam, void **object, int3
     if (lowObjectRef->value == NULL || lowObjectRefType->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
-    } 
+    }
     *object = (void *)(uintptr_t)lowObjectRef->value;
     *objectType = *((int32_t *)(uintptr_t)lowObjectRefType->value);
     method->export = (CRYPT_EAL_ImplPkeyMgmtExport)(uintptr_t)exportFunc->value;
@@ -196,8 +197,8 @@ static int32_t TransLowKeyToTargetLowKey(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, co
         return CRYPT_NULL_INPUT;
     }
     BSL_Param param[3] = {
-        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportTargetPkey, 0, 0}, 
-        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &importTargetPkeyArgs, 0, 0}, 
+        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportTargetPkey, 0, 0},
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &importTargetPkeyArgs, 0, 0},
         BSL_PARAM_END
     };
     int32_t ret = method->export(lowObjectRef, param);
@@ -244,38 +245,28 @@ static int32_t ConstructOutObjectParam(BSL_Param **outParam, void *object)
 }
 
 /* input is pem format buffer, output is der format buffer */
-int32_t DECODER_LowKeyObject2PkeyObject_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam)
+int32_t DECODER_LowKeyObject2PkeyObjectDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam)
 {
     if (ctx == NULL || inParam == NULL || outParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    DECODER_Lowkey2Pkey_Ctx *decoderCtx = (DECODER_Lowkey2Pkey_Ctx *)ctx;
+    DECODER_Lowkey2PkeyCtx *decoderCtx = (DECODER_Lowkey2PkeyCtx *)ctx;
     void *lowObjectRef = NULL;
     int32_t lowObjectRefType = 0;
     CRYPT_EAL_ProvMgrCtx *lastDecoderProviderCtx = NULL;
     LowKeyObjectMethodInfo method = {0};
     void *targetKeyRef = NULL;
     CRYPT_EAL_PkeyMgmtInfo pkeyAlgInfo = {0};
-    int32_t ret = GetLowKeyObjectInfo(inParam, &lowObjectRef, &lowObjectRefType, &method);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    int32_t ret = 0;
+    RETURN_RET_IF_ERR(GetLowKeyObjectInfo(inParam, &lowObjectRef, &lowObjectRefType, &method), ret);
     if (method.freeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    ret = GetProviderInfo(inParam, &lastDecoderProviderCtx);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = CRYPT_EAL_GetPkeyAlgInfo(decoderCtx->libCtx, lowObjectRefType, decoderCtx->targetAttrName, &pkeyAlgInfo);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF_ERR(GetProviderInfo(inParam, &lastDecoderProviderCtx), ret);
+    RETURN_RET_IF_ERR(CRYPT_EAL_GetPkeyAlgInfo(decoderCtx->libCtx, lowObjectRefType, decoderCtx->targetAttrName,
+        &pkeyAlgInfo), ret);
     if (pkeyAlgInfo.mgrCtx != lastDecoderProviderCtx) {
         ret = TransLowKeyToTargetLowKey(&pkeyAlgInfo, &method, lowObjectRef, &targetKeyRef);
     } else {
@@ -304,9 +295,9 @@ EXIT:
     return ret;
 }
 
-void DECODER_LowKeyObject2PkeyObject_FreeOutData(void *ctx, BSL_Param *outParam)
+void DECODER_LowKeyObject2PkeyObjectFreeOutData(void *ctx, BSL_Param *outParam)
 {
-    DECODER_Lowkey2Pkey_Ctx *decoderCtx = (DECODER_Lowkey2Pkey_Ctx *)ctx;
+    DECODER_Lowkey2PkeyCtx *decoderCtx = (DECODER_Lowkey2PkeyCtx *)ctx;
     if (outParam == NULL || decoderCtx == NULL) {
         return;
     }
@@ -320,7 +311,7 @@ void DECODER_LowKeyObject2PkeyObject_FreeOutData(void *ctx, BSL_Param *outParam)
     BSL_SAL_Free(outParam);
 }
 
-void DECODER_LowKeyObject2PkeyObject_FreeCtx(void *ctx)
+void DECODER_LowKeyObject2PkeyObjectFreeCtx(void *ctx)
 {
     if (ctx == NULL) {
         return;

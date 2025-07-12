@@ -316,13 +316,11 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
 
     ret = DRBG_GetNonce(ctx, &nonce, &addEntropy);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR_NONCE;
     }
 
     ret = DRBG_GetEntropy(ctx, &entropy, addEntropy);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR_ENTROPY;
     }
 

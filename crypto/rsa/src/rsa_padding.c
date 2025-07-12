@@ -186,7 +186,7 @@ int32_t CRYPT_RSA_SetPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgf
 
     const uint32_t maskedDBLen = emLen - hLen - 1;
     uint8_t *h = em + maskedDBLen;
-    ret = CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), h, &hLen);
+    ret = CRYPT_CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), h, &hLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -274,7 +274,7 @@ static int32_t VerifyH(const EAL_MdMethod *hashMethod, const CRYPT_Data *mHash, 
     };
 
     uint32_t hLen = hBuff->len;
-    int32_t ret = CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), hBuff->data, &hLen);
+    int32_t ret = CRYPT_CalcHash(hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), hBuff->data, &hLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -701,7 +701,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t i
 
     // Calculate hash
     const CRYPT_ConstData data = {ctx->label.data, ctx->label.len};
-    ret = CalcHash(hashMethod, &data, 1, db, &hashLen);
+    ret = CRYPT_CalcHash(hashMethod, &data, 1, db, &hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -795,7 +795,7 @@ static int32_t OaepVerifyHashMaskDB(const EAL_MdMethod *hashMethod, CRYPT_Data *
     int32_t ret;
     uint8_t hashVal[HASH_MAX_MDSIZE];
     CRYPT_ConstData data = {paramData->data, paramData->len};
-    ret = CalcHash(hashMethod, &data, 1, hashVal, &hashLen);
+    ret = CRYPT_CalcHash(hashMethod, &data, 1, hashVal, &hashLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

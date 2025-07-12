@@ -64,7 +64,7 @@ int32_t CRYPT_EAL_DefKdfCtrl(void *ctx, int32_t cmd, void *val, uint32_t valLen)
     return CRYPT_NOT_SUPPORT;
 }
 
-const CRYPT_EAL_Func g_defKdfScrypt[] = {
+const CRYPT_EAL_Func g_defEalKdfScrypt[] = {
 #ifdef HITLS_CRYPTO_SCRYPT
     {CRYPT_EAL_IMPLKDF_NEWCTX, (CRYPT_EAL_ImplKdfNewCtx)CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, (CRYPT_EAL_ImplKdfSetParam)CRYPT_SCRYPT_SetParam},
@@ -76,7 +76,7 @@ const CRYPT_EAL_Func g_defKdfScrypt[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defKdfPBKdf2[] = {
+const CRYPT_EAL_Func g_defEalKdfPBKdf2[] = {
 #ifdef HITLS_CRYPTO_PBKDF2
     {CRYPT_EAL_IMPLKDF_NEWCTX, (CRYPT_EAL_ImplKdfNewCtx)CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, (CRYPT_EAL_ImplKdfSetParam)CRYPT_PBKDF2_SetParam},
@@ -88,7 +88,7 @@ const CRYPT_EAL_Func g_defKdfPBKdf2[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defKdfKdfTLS12[] = {
+const CRYPT_EAL_Func g_defEalKdfKdfTLS12[] = {
 #ifdef HITLS_CRYPTO_KDFTLS12
     {CRYPT_EAL_IMPLKDF_NEWCTX, (CRYPT_EAL_ImplKdfNewCtx)CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, (CRYPT_EAL_ImplKdfSetParam)CRYPT_KDFTLS12_SetParam},
@@ -100,7 +100,7 @@ const CRYPT_EAL_Func g_defKdfKdfTLS12[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defKdfHkdf[] = {
+const CRYPT_EAL_Func g_defEalKdfHkdf[] = {
 #ifdef HITLS_CRYPTO_HKDF
     {CRYPT_EAL_IMPLKDF_NEWCTX, (CRYPT_EAL_ImplKdfNewCtx)CRYPT_EAL_DefKdfNewCtx},
     {CRYPT_EAL_IMPLKDF_SETPARAM, (CRYPT_EAL_ImplKdfSetParam)CRYPT_HKDF_SetParam},

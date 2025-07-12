@@ -45,7 +45,7 @@ int32_t CRYPT_EAL_GetEncodeFormat(const char *format)
     static const struct {
         const char *formatStr;
         int32_t formatInt;
-    } formatMap[] = {
+    } FORMAT_MAP[] = {
         {"ASN1", BSL_FORMAT_ASN1},
         {"PEM", BSL_FORMAT_PEM},
         {"PFX_COM", BSL_FORMAT_PFX_COM},
@@ -53,9 +53,9 @@ int32_t CRYPT_EAL_GetEncodeFormat(const char *format)
         {"OBJECT", BSL_FORMAT_OBJECT}
     };
 
-    for (size_t i = 0; i < sizeof(formatMap) / sizeof(formatMap[0]); i++) {
-        if (strcmp(format, formatMap[i].formatStr) == 0) {
-            return formatMap[i].formatInt;
+    for (size_t i = 0; i < sizeof(FORMAT_MAP) / sizeof(FORMAT_MAP[0]); i++) {
+        if (strcmp(format, FORMAT_MAP[i].formatStr) == 0) {
+            return FORMAT_MAP[i].formatInt;
         }
     }
 
@@ -493,7 +493,7 @@ int32_t CRYPT_EAL_GetEncodeType(const char *type)
     static const struct {
         const char *typeStr;
         int32_t typeInt;
-    } typeMap[] = {
+    } TYPE_MAP[] = {
         {"PRIKEY_PKCS8_UNENCRYPT", CRYPT_PRIKEY_PKCS8_UNENCRYPT},
         {"PRIKEY_PKCS8_ENCRYPT", CRYPT_PRIKEY_PKCS8_ENCRYPT},
         {"PRIKEY_RSA", CRYPT_PRIKEY_RSA},
@@ -503,9 +503,9 @@ int32_t CRYPT_EAL_GetEncodeType(const char *type)
         {"PUBKEY_SUBKEY_WITHOUT_SEQ", CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ}
     };
 
-    for (size_t i = 0; i < sizeof(typeMap) / sizeof(typeMap[0]); i++) {
-        if (strcmp(type, typeMap[i].typeStr) == 0) {
-            return typeMap[i].typeInt;
+    for (size_t i = 0; i < sizeof(TYPE_MAP) / sizeof(TYPE_MAP[0]); i++) {
+        if (strcmp(type, TYPE_MAP[i].typeStr) == 0) {
+            return TYPE_MAP[i].typeInt;
         }
     }
 

@@ -141,7 +141,7 @@ int32_t CRYPT_RSA_ParsePrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_
     return DecodeRsaPrikeyAsn1Buff(buff, buffLen, rsaPssParam, BSL_CID_UNKNOWN, rsaPriKey);
 }
 
-int32_t CRYPT_RSA_ParsePubkeyAsn1Buff( uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *param,
+int32_t CRYPT_RSA_ParsePubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *param,
     CRYPT_RSA_Ctx **rsaPubKey, BslCid cid)
 {
     // decode n and e

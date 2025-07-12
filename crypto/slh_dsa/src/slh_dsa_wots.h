@@ -57,7 +57,7 @@ int32_t WotsSign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_t ms
  * @param pub Output reconstructed WOTS+ public key, the length is n
  * @return int 0 on success, error code otherwise
  */
-int WotsPubKeyFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen, SlhDsaAdrs *adrs,
+int32_t WotsPubKeyFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen, SlhDsaAdrs *adrs,
                       const CryptSlhDsaCtx *ctx, uint8_t *pub);
 
 /**

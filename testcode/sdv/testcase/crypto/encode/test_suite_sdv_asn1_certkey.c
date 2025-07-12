@@ -103,7 +103,7 @@ int32_t BSL_ASN1_CertTagGetOrCheck(int32_t type, uint32_t idx, void *data, void 
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
             BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+            BslCid cid = BSL_OBJ_GetCID(&oidStr);
             if (idx == BSL_ASN1_ID_ANY_1 || idx == BSL_ASN1_ID_ANY_3) {
                 if (cid == BSL_CID_RSASSAPSS) {
                     // note: any It can be encoded empty or it can be null
@@ -147,7 +147,7 @@ int32_t BSL_ASN1_SubKeyInfoTagGetOrCheck(int32_t type, int32_t idx, void *data, 
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
             BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+            BslCid cid = BSL_OBJ_GetCID(&oidStr);
             if (cid == BSL_CID_EC_PUBLICKEY) {
                 // note: any It can be encoded empty or it can be null
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;

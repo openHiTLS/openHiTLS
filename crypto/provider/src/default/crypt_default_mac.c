@@ -118,7 +118,7 @@ MAC_FUNCS(SIPHASH)
 #ifdef HITLS_CRYPTO_GMAC
 MAC_DEINIT_FUNC(GMAC)
 #endif
-const CRYPT_EAL_Func g_defMacHmac[] = {
+const CRYPT_EAL_Func g_defEalMacHmac[] = {
 #ifdef HITLS_CRYPTO_HMAC
     {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_HMAC_Init},
@@ -132,7 +132,7 @@ const CRYPT_EAL_Func g_defMacHmac[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defMacCmac[] = {
+const CRYPT_EAL_Func g_defEalMacCmac[] = {
 #ifdef HITLS_CRYPTO_CMAC
     {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_CMAC_Init},
@@ -146,7 +146,7 @@ const CRYPT_EAL_Func g_defMacCmac[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defMacCbcMac[] = {
+const CRYPT_EAL_Func g_defEalMacCbcMac[] = {
 #ifdef HITLS_CRYPTO_CBC_MAC
     {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_CBC_MAC_Init},
@@ -160,7 +160,7 @@ const CRYPT_EAL_Func g_defMacCbcMac[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defMacGmac[] = {
+const CRYPT_EAL_Func g_defEalMacGmac[] = {
 #ifdef HITLS_CRYPTO_GMAC
     {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_GMAC_Init},
@@ -174,7 +174,7 @@ const CRYPT_EAL_Func g_defMacGmac[] = {
     CRYPT_EAL_FUNC_END,
 };
 
-const CRYPT_EAL_Func g_defMacSiphash[] = {
+const CRYPT_EAL_Func g_defEalMacSiphash[] = {
 #ifdef HITLS_CRYPTO_SIPHASH
     {CRYPT_EAL_IMPLMAC_NEWCTX, (CRYPT_EAL_ImplMacNewCtx)CRYPT_EAL_DefMacNewCtx},
     {CRYPT_EAL_IMPLMAC_INIT, (CRYPT_EAL_ImplMacInit)CRYPT_SIPHASH_Init},

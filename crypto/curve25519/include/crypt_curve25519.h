@@ -45,9 +45,9 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
 /**
  * @ingroup curve25519
  * @brief curve25519 Create a key pair structure and allocate memory space.
- * 
+ *
  * @param libCtx [IN] Library context
- * 
+ *
  * @retval (CRYPT_CURVE25519_Ctx *) Pointer to the key pair structure
  * @retval NULL                     Invalid null pointer
  */
@@ -69,7 +69,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void);
  * @brief curve25519 Create a key pair structure for ED25519 algorithm and allocate memory space.
  *
  * @param libCtx [IN] Library context
- * 
+ *
  * @retval (CRYPT_CURVE25519_Ctx *) Pointer to the key pair structure
  * @retval NULL                     Invalid null pointer
  */

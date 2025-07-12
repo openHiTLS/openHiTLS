@@ -32,11 +32,11 @@ typedef struct {
 
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *mgrCtx;
-    CRYPT_EAL_Func *funcsAsyCipher;
-    CRYPT_EAL_Func *funcsExch;
-    CRYPT_EAL_Func *funcSign;
-    CRYPT_EAL_Func *funcKem;
-    CRYPT_EAL_Func *funcsKeyMgmt;
+    const CRYPT_EAL_Func *funcsAsyCipher;
+    const CRYPT_EAL_Func *funcsExch;
+    const CRYPT_EAL_Func *funcSign;
+    const CRYPT_EAL_Func *funcKem;
+    const CRYPT_EAL_Func *funcsKeyMgmt;
 } CRYPT_EAL_AsyAlgFuncsInfo;
 
 /**

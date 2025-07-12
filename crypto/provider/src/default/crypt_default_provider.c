@@ -23,6 +23,7 @@
 #include "bsl_errno.h"
 #include "bsl_params.h"
 #include "bsl_err_internal.h"
+#include "crypt_utils.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_eal_implprovider.h"
@@ -37,185 +38,204 @@
 
 #define CRYPT_EAL_DEFAULT_ATTR "provider=default"
 
-static const CRYPT_EAL_AlgInfo g_defMds[] = {
-    {CRYPT_MD_MD5, g_defMdMd5, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA1, g_defMdSha1, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA224, g_defMdSha224, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA256, g_defMdSha256, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA384, g_defMdSha384, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA512, g_defMdSha512, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA3_224, g_defMdSha3224, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA3_256, g_defMdSha3256, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA3_384, g_defMdSha3384, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHA3_512, g_defMdSha3512, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHAKE128, g_defMdShake128, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SHAKE256, g_defMdShake256, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MD_SM3, g_defMdSm3, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalMds[] = {
+    {CRYPT_MD_MD5, g_defEalMdMd5, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA1, g_defEalMdSha1, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA224, g_defEalMdSha224, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA256, g_defEalMdSha256, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA384, g_defEalMdSha384, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA512, g_defEalMdSha512, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA3_224, g_defEalMdSha3224, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA3_256, g_defEalMdSha3256, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA3_384, g_defEalMdSha3384, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHA3_512, g_defEalMdSha3512, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHAKE128, g_defEalMdShake128, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SHAKE256, g_defEalMdShake256, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MD_SM3, g_defEalMdSm3, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
 
-static const CRYPT_EAL_AlgInfo g_defKdfs[] = {
-    {CRYPT_KDF_SCRYPT, g_defKdfScrypt, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_KDF_PBKDF2, g_defKdfPBKdf2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_KDF_KDFTLS12, g_defKdfKdfTLS12, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_KDF_HKDF, g_defKdfHkdf, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalKdfs[] = {
+    {CRYPT_KDF_SCRYPT, g_defEalKdfScrypt, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_KDF_PBKDF2, g_defEalKdfPBKdf2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_KDF_KDFTLS12, g_defEalKdfKdfTLS12, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_KDF_HKDF, g_defEalKdfHkdf, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defKeyMgmt[] = {
-    {CRYPT_PKEY_DSA, g_defKeyMgmtDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ED25519, g_defKeyMgmtEd25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_X25519, g_defKeyMgmtX25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_RSA, g_defKeyMgmtRsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_DH, g_defKeyMgmtDh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDSA, g_defKeyMgmtEcdsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDH, g_defKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defKeyMgmtSm2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_PAILLIER, g_defKeyMgmtPaillier, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ELGAMAL, g_defKeyMgmtElGamal, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SLH_DSA, g_defKeyMgmtSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
-	{CRYPT_PKEY_ML_KEM, g_defKeyMgmtMlKem, CRYPT_EAL_DEFAULT_ATTR},
-	{CRYPT_PKEY_ML_DSA, g_defKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_HYBRID_KEM, g_defKeyMgmtHybridKem, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
+    {CRYPT_PKEY_DSA, g_defEalKeyMgmtDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ED25519, g_defEalKeyMgmtEd25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_X25519, g_defEalKeyMgmtX25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_RSA, g_defEalKeyMgmtRsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_DH, g_defEalKeyMgmtDh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDSA, g_defEalKeyMgmtEcdsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDH, g_defEalKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, g_defEalKeyMgmtSm2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_PAILLIER, g_defEalKeyMgmtPaillier, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ELGAMAL, g_defEalKeyMgmtElGamal, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SLH_DSA, g_defEalKeyMgmtSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ML_KEM, g_defEalKeyMgmtMlKem, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_HYBRID_KEM, g_defEalKeyMgmtHybridKem, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defAsymCiphers[] = {
-    {CRYPT_PKEY_RSA, g_defAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defAsymCipherSm2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_PAILLIER, g_defAsymCipherPaillier, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ELGAMAL, g_defAsymCipherElGamal, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalAsymCiphers[] = {
+    {CRYPT_PKEY_RSA, g_defEalAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, g_defEalAsymCipherSm2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_PAILLIER, g_defEalAsymCipherPaillier, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ELGAMAL, g_defEalAsymCipherElGamal, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defKeyExch[] = {
-    {CRYPT_PKEY_X25519, g_defExchX25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_DH, g_defExchDh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDH, g_defExchEcdh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defExchSm2, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalKeyExch[] = {
+    {CRYPT_PKEY_X25519, g_defEalExchX25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_DH, g_defEalExchDh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDH, g_defEalExchEcdh, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, g_defEalExchSm2, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defSigns[] = {
-    {CRYPT_PKEY_DSA, g_defSignDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ED25519, g_defSignEd25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_RSA, g_defSignRsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDSA, g_defSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defSignSm2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SLH_DSA, g_defSignSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
-	{CRYPT_PKEY_ML_DSA, g_defSignMlDsa, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
+    {CRYPT_PKEY_DSA, g_defEalSignDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ED25519, g_defEalSignEd25519, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_RSA, g_defEalSignRsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ECDSA, g_defEalSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SM2, g_defEalSignSm2, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_SLH_DSA, g_defEalSignSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_ML_DSA, g_defEalSignMlDsa, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defMacs[] = {
-    {CRYPT_MAC_HMAC_MD5, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA1, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA224, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA256, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA384, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA512, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA3_224, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA3_256, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA3_384, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SHA3_512, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_HMAC_SM3, g_defMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_CMAC_AES128, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_CMAC_AES192, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_CMAC_AES256, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_CMAC_SM4, g_defMacCmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_CBC_MAC_SM4, g_defMacCbcMac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_SIPHASH64, g_defMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_SIPHASH128, g_defMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_GMAC_AES128, g_defMacGmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_GMAC_AES192, g_defMacGmac, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_MAC_GMAC_AES256, g_defMacGmac, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalMacs[] = {
+    {CRYPT_MAC_HMAC_MD5, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA1, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA224, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA256, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA384, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA512, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_224, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_256, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_384, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SHA3_512, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_HMAC_SM3, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_AES128, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_AES192, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_AES256, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CMAC_SM4, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_CBC_MAC_SM4, g_defEalMacCbcMac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_SIPHASH64, g_defEalMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_SIPHASH128, g_defEalMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_GMAC_AES128, g_defEalMacGmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_GMAC_AES192, g_defEalMacGmac, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_MAC_GMAC_AES256, g_defEalMacGmac, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defRands[] = {
-    {CRYPT_RAND_SHA1, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_SHA224, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_SHA256, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_SHA384, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_SHA512, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_SM3, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_HMAC_SHA1, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_HMAC_SHA224, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_HMAC_SHA256, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_HMAC_SHA384, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_HMAC_SHA512, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_AES128_CTR, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_AES192_CTR, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_AES256_CTR, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_AES128_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_AES192_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_AES256_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_RAND_SM4_CTR_DF, g_defRand, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalRands[] = {
+    {CRYPT_RAND_SHA1, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA224, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA256, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA384, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SHA512, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SM3, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA1, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA224, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA256, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA384, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_HMAC_SHA512, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES128_CTR, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES192_CTR, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES256_CTR, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES128_CTR_DF, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES192_CTR_DF, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_AES256_CTR_DF, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_RAND_SM4_CTR_DF, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defCiphers[] = {
-    {CRYPT_CIPHER_AES128_CBC, g_defCbc, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_CBC, g_defCbc, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_CBC, g_defCbc, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_CTR, g_defCtr, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_CTR, g_defCtr, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_CTR, g_defCtr, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_ECB, g_defEcb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_ECB, g_defEcb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_ECB, g_defEcb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_CCM, g_defCcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_CCM, g_defCcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_CCM, g_defCcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_XTS, g_defXts, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_XTS, g_defXts, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_CHACHA20_POLY1305, g_defChaCha, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_XTS, g_defXts, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_CBC, g_defCbc, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_ECB, g_defEcb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_CTR, g_defCtr, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_GCM, g_defGcm, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_CFB, g_defCfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_SM4_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_CFB, g_defCfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_CFB, g_defCfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_CFB, g_defCfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES128_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES192_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_CIPHER_AES256_OFB, g_defOfb, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalCiphers[] = {
+    {CRYPT_CIPHER_AES128_CBC, g_defEalCbc, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_CBC, g_defEalCbc, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_CBC, g_defEalCbc, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_CTR, g_defEalCtr, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_CTR, g_defEalCtr, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_CTR, g_defEalCtr, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_ECB, g_defEalEcb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_ECB, g_defEalEcb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_ECB, g_defEalEcb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_CCM, g_defEalCcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_CCM, g_defEalCcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_CCM, g_defEalCcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_GCM, g_defEalGcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_GCM, g_defEalGcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_GCM, g_defEalGcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_XTS, g_defEalXts, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_XTS, g_defEalXts, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_CHACHA20_POLY1305, g_defEalChaCha, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_XTS, g_defEalXts, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_CBC, g_defEalCbc, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_ECB, g_defEalEcb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_CTR, g_defEalCtr, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_GCM, g_defEalGcm, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_CFB, g_defEalCfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_SM4_OFB, g_defEalOfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_CFB, g_defEalCfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_CFB, g_defEalCfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_CFB, g_defEalCfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES128_OFB, g_defEalOfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES192_OFB, g_defEalOfb, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_CIPHER_AES256_OFB, g_defEalOfb, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defKems[] = {
-    {CRYPT_PKEY_ML_KEM, g_defMlKem, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_HYBRID_KEM, g_defHybridKeyKem, CRYPT_EAL_DEFAULT_ATTR},
+static const CRYPT_EAL_AlgInfo g_defEalKems[] = {
+    {CRYPT_PKEY_ML_KEM, g_defEalMlKem, CRYPT_EAL_DEFAULT_ATTR},
+    {CRYPT_PKEY_HYBRID_KEM, g_defEalHybridKeyKem, CRYPT_EAL_DEFAULT_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_defDecoders[] = {
-    {BSL_CID_DECODE_UNKNOWN, g_defPem2Der, "provider=default, inFormat=PEM, outFormat=ASN1"},
-    {BSL_CID_DECODE_UNKNOWN, g_defPrvP8Enc2P8, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_ENCRYPT, outFormat=ASN1, outType=PRIKEY_PKCS8_UNENCRYPT"},
-    {CRYPT_PKEY_RSA, g_defRsaPrvDer2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_RSA, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_RSA, g_defRsaPubDer2Key, "provider=default, inFormat=ASN1, inType=PUBKEY_RSA, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ECDSA, g_defEcdsaPrvDer2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_ECC, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_SM2, g_defSm2PrvDer2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_ECC, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_RSA, g_defP8Der2RsaKey, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ECDSA, g_defP8Der2EcdsaKey, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_SM2, g_defP8Der2Sm2Key, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ED25519, g_defP8Der2Ed25519Key, "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_RSA, g_defSubPubKeyDer2RsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ECDSA, g_defSubPubKeyDer2EcdsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_SM2, g_defSubPubKeyDer2Sm2Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ED25519, g_defSubPubKeyDer2Ed25519Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_RSA, g_defSubPubKeyWithoutSeqDer2RsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ECDSA, g_defSubPubKeyWithoutSeqDer2EcdsaKey, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_SM2, g_defSubPubKeyWithoutSeqDer2Sm2Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
-    {CRYPT_PKEY_ED25519, g_defSubPubKeyWithoutSeqDer2Ed25519Key, "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
-    {BSL_CID_DECODE_UNKNOWN, g_defLowKeyObject2PkeyObject, "provider=default, inFormat=OBJECT, inType=LOW_KEY, outFormat=OBJECT, outType=HIGH_KEY"},
+static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
+    {BSL_CID_DECODE_UNKNOWN, g_defEalPem2Der,
+        "provider=default, inFormat=PEM, outFormat=ASN1"},
+    {BSL_CID_DECODE_UNKNOWN, g_defEalPrvP8Enc2P8,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_ENCRYPT, outFormat=ASN1, outType=PRIKEY_PKCS8_UNENCRYPT"},
+    {CRYPT_PKEY_RSA, g_defEalRsaPrvDer2Key,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_RSA, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defEalRsaPubDer2Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_RSA, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defEalEcdsaPrvDer2Key,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_ECC, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defEalSm2PrvDer2Key,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_ECC, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defEalP8Der2RsaKey,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defEalP8Der2EcdsaKey,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defEalP8Der2Sm2Key,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ED25519, g_defEalP8Der2Ed25519Key,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defEalSubPubKeyDer2RsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defEalSubPubKeyDer2EcdsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defEalSubPubKeyDer2Sm2Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ED25519, g_defEalSubPubKeyDer2Ed25519Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_RSA, g_defEalSubPubKeyWithoutSeqDer2RsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ECDSA, g_defEalSubPubKeyWithoutSeqDer2EcdsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_SM2, g_defEalSubPubKeyWithoutSeqDer2Sm2Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {CRYPT_PKEY_ED25519, g_defEalSubPubKeyWithoutSeqDer2Ed25519Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+    {BSL_CID_DECODE_UNKNOWN, g_defEalLowKeyObject2PkeyObject,
+        "provider=default, inFormat=OBJECT, inType=LOW_KEY, outFormat=OBJECT, outType=HIGH_KEY"},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -225,37 +245,37 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
     int32_t ret = CRYPT_SUCCESS;
     switch (operaId) {
         case CRYPT_EAL_OPERAID_SYMMCIPHER:
-            *algInfos = g_defCiphers;
+            *algInfos = g_defEalCiphers;
             break;
         case CRYPT_EAL_OPERAID_KEYMGMT:
-            *algInfos = g_defKeyMgmt;
+            *algInfos = g_defEalKeyMgmt;
             break;
         case CRYPT_EAL_OPERAID_SIGN:
-            *algInfos = g_defSigns;
+            *algInfos = g_defEalSigns;
             break;
         case CRYPT_EAL_OPERAID_ASYMCIPHER:
-            *algInfos = g_defAsymCiphers;
+            *algInfos = g_defEalAsymCiphers;
             break;
         case CRYPT_EAL_OPERAID_KEYEXCH:
-            *algInfos = g_defKeyExch;
+            *algInfos = g_defEalKeyExch;
             break;
         case CRYPT_EAL_OPERAID_KEM:
-            *algInfos = g_defKems;
+            *algInfos = g_defEalKems;
             break;
         case CRYPT_EAL_OPERAID_HASH:
-            *algInfos = g_defMds;
+            *algInfos = g_defEalMds;
             break;
         case CRYPT_EAL_OPERAID_MAC:
-            *algInfos = g_defMacs;
+            *algInfos = g_defEalMacs;
             break;
         case CRYPT_EAL_OPERAID_KDF:
-            *algInfos = g_defKdfs;
+            *algInfos = g_defEalKdfs;
             break;
         case CRYPT_EAL_OPERAID_RAND:
-            *algInfos = g_defRands;
+            *algInfos = g_defEalRands;
             break;
         case CRYPT_EAL_OPERAID_DECODER:
-            *algInfos = g_defDecoders;
+            *algInfos = g_defEalDecoders;
             break;
         default:
             ret = CRYPT_NOT_SUPPORT;
@@ -364,7 +384,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -374,7 +394,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         192, // secBits
         HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
         97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -384,7 +404,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         256, // secBits
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
         129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
@@ -451,58 +471,29 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
 
 static int32_t BuildTlsGroupParam(const TLS_GroupInfo *groupInfo, BSL_Param *param)
 {
-    int32_t ret = BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME, BSL_PARAM_TYPE_OCTETS_PTR,
-        (void *)(uintptr_t)groupInfo->name, (uint32_t)strlen(groupInfo->name));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID, BSL_PARAM_TYPE_UINT16,
-       (void *)(uintptr_t)&(groupInfo->groupId), sizeof(groupInfo->groupId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->paraId), sizeof(groupInfo->paraId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->algId), sizeof(groupInfo->algId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->secBits), sizeof(groupInfo->secBits));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS, BSL_PARAM_TYPE_UINT32,
-        (void *)(uintptr_t)&(groupInfo->versionBits), sizeof(groupInfo->versionBits));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM, BSL_PARAM_TYPE_BOOL,
-        (void *)(uintptr_t)&(groupInfo->isKem), sizeof(groupInfo->isKem));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->pubkeyLen), sizeof(groupInfo->pubkeyLen));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->sharedkeyLen), sizeof(groupInfo->sharedkeyLen));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->ciphertextLen), sizeof(groupInfo->ciphertextLen));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
+    int32_t ret = 0;
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME,
+        BSL_PARAM_TYPE_OCTETS_PTR, (void *)(uintptr_t)groupInfo->name, (uint32_t)strlen(groupInfo->name)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID, BSL_PARAM_TYPE_UINT16,
+        (void *)(uintptr_t)&(groupInfo->groupId), sizeof(groupInfo->groupId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->paraId), sizeof(groupInfo->paraId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->algId), sizeof(groupInfo->algId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->secBits), sizeof(groupInfo->secBits)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS, BSL_PARAM_TYPE_UINT32,
+        (void *)(uintptr_t)&(groupInfo->versionBits), sizeof(groupInfo->versionBits)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM, BSL_PARAM_TYPE_BOOL,
+        (void *)(uintptr_t)&(groupInfo->isKem), sizeof(groupInfo->isKem)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->pubkeyLen), sizeof(groupInfo->pubkeyLen)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->sharedkeyLen), sizeof(groupInfo->sharedkeyLen)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(groupInfo->ciphertextLen), sizeof(groupInfo->ciphertextLen)), ret);
 
-    return BSL_SUCCESS;
+    return ret;
 }
 
 static int32_t CryptGetGroupCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
@@ -815,55 +806,31 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
 
 static int32_t BuildTlsSigAlgParam(const TLS_SigSchemeInfo *sigSchemeInfo, BSL_Param *param)
 {
-    int32_t ret = BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME,
-        BSL_PARAM_TYPE_OCTETS_PTR, (void *)(uintptr_t)sigSchemeInfo->name, (uint32_t)strlen(sigSchemeInfo->name));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID, BSL_PARAM_TYPE_UINT16,
-        (void *)(uintptr_t)&(sigSchemeInfo->signatureScheme), sizeof(sigSchemeInfo->signatureScheme));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->keyType), sizeof(sigSchemeInfo->keyType));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->paraId), sizeof(sigSchemeInfo->paraId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->signHashAlgId), sizeof(sigSchemeInfo->signHashAlgId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->signAlgId), sizeof(sigSchemeInfo->signAlgId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->hashAlgId), sizeof(sigSchemeInfo->hashAlgId));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->secBits), sizeof(sigSchemeInfo->secBits));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    ret = BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS,
+    int32_t ret = 0;
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME,
+        BSL_PARAM_TYPE_OCTETS_PTR, (void *)(uintptr_t)sigSchemeInfo->name, (uint32_t)strlen(sigSchemeInfo->name)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID, BSL_PARAM_TYPE_UINT16,
+        (void *)(uintptr_t)&(sigSchemeInfo->signatureScheme), sizeof(sigSchemeInfo->signatureScheme)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->keyType), sizeof(sigSchemeInfo->keyType)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->paraId), sizeof(sigSchemeInfo->paraId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->signHashAlgId), sizeof(sigSchemeInfo->signHashAlgId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->signAlgId), sizeof(sigSchemeInfo->signAlgId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->hashAlgId), sizeof(sigSchemeInfo->hashAlgId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, BSL_PARAM_TYPE_INT32,
+        (void *)(uintptr_t)&(sigSchemeInfo->secBits), sizeof(sigSchemeInfo->secBits)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS,
         BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(sigSchemeInfo->certVersionBits),
-        sizeof(sigSchemeInfo->certVersionBits));
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-    return BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS,
+        sizeof(sigSchemeInfo->certVersionBits)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS,
         BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(sigSchemeInfo->chainVersionBits),
-        sizeof(sigSchemeInfo->chainVersionBits));
+        sizeof(sigSchemeInfo->chainVersionBits)), ret);
+
+    return ret;
 }
 
 static int32_t CryptGetSignAlgCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
@@ -900,7 +867,7 @@ static int32_t CRYPT_EAL_DefaultProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EA
     }
 }
 
-static CRYPT_EAL_Func g_defProvOutFuncs[] = {
+static CRYPT_EAL_Func g_defEalProvOutFuncs[] = {
     {CRYPT_EAL_PROVCB_QUERY, CRYPT_EAL_DefaultProvQuery},
     {CRYPT_EAL_PROVCB_FREE, CRYPT_EAL_DefaultProvFree},
     {CRYPT_EAL_PROVCB_CTRL, NULL},
@@ -960,15 +927,9 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
         return CRYPT_PROVIDER_NOT_SUPPORT;
     }
 #ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
-	ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETSEEDCTX, &g_providerSeedCtx, 0);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETSEEDCTX, &g_providerSeedCtx, 0), ret);
 #endif
-    ret = mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
+    RETURN_RET_IF_ERR_EX(mgrCtrl(mgrCtx, CRYPT_EAL_MGR_GETLIBCTX, &libCtx, 0), ret);
     CRYPT_EAL_DefProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_DefProvCtx));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -976,7 +937,7 @@ int32_t CRYPT_EAL_DefaultProvInit(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param
     }
     temp->libCtx = libCtx;
     *provCtx = temp;
-    *outFuncs = g_defProvOutFuncs;
+    *outFuncs = g_defEalProvOutFuncs;
     return CRYPT_SUCCESS;
 }
 

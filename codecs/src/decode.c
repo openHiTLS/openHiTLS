@@ -68,7 +68,7 @@ int32_t CRYPT_DECODE_ParseDecoderAttr(const char *attrName, DECODER_AttrInfo *in
 static int32_t SetDecoderMethod(CRYPT_DECODER_Ctx *ctx, const CRYPT_EAL_Func *funcs)
 {
     int32_t index = 0;
-    Decoder_Method *method = BSL_SAL_Calloc(1, sizeof(Decoder_Method));
+    CRYPT_DECODER_Method *method = BSL_SAL_Calloc(1, sizeof(CRYPT_DECODER_Method));
     if (method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -116,12 +116,10 @@ CRYPT_DECODER_Ctx *CRYPT_DECODE_NewDecoderCtxByMethod(const CRYPT_EAL_Func *func
     }
     int32_t ret = CRYPT_EAL_ProviderCtrl(mgrCtx, CRYPT_PROVIDER_GET_USER_CTX, &provCtx, sizeof(provCtx));
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
     ret = SetDecoderMethod(ctx, funcs);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
     if (ctx->method->newCtx == NULL || ctx->method->setParam == NULL) {
@@ -143,7 +141,6 @@ CRYPT_DECODER_Ctx *CRYPT_DECODE_NewDecoderCtxByMethod(const CRYPT_EAL_Func *func
     if (attrName != NULL) {
         ret = CRYPT_DECODE_ParseDecoderAttr(attrName, &attrInfo);
         if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
             goto ERR;
         }
     }
@@ -164,7 +161,7 @@ CRYPT_DECODER_Ctx *CRYPT_DECODE_ProviderNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t
 {
     const CRYPT_EAL_Func *funcsDecoder = NULL;
     CRYPT_EAL_ProvMgrCtx *mgrCtx = NULL;
-    int32_t ret = CRYPT_EAL_ProviderGetFuncsAndMgrCtx(libCtx, CRYPT_EAL_OPERAID_DECODER, keyType, attrName, 
+    int32_t ret = CRYPT_EAL_ProviderGetFuncsAndMgrCtx(libCtx, CRYPT_EAL_OPERAID_DECODER, keyType, attrName,
         &funcsDecoder, &mgrCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

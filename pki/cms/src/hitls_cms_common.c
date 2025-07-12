@@ -106,7 +106,7 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
         return ret;
     }
     BslOidString oidStr = {asn1[HITLS_P7_DIGESTINFO_OID_IDX].len, (char *)asn1[HITLS_P7_DIGESTINFO_OID_IDX].buff, 0};
-    BslCid parseCid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid parseCid = BSL_OBJ_GetCID(&oidStr);
     if (parseCid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
         return HITLS_CMS_ERR_PARSE_TYPE;
@@ -135,7 +135,7 @@ int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *e
         return HITLS_CMS_ERR_NULL_POINTER;
     }
 
-    BslOidString *oidstr = BSL_OBJ_GetOidFromCID(cid);
+    BslOidString *oidstr = BSL_OBJ_GetOID(cid);
     if (oidstr == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
         return HITLS_CMS_ERR_INVALID_ALGO;

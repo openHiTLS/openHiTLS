@@ -150,7 +150,7 @@ ERR:
     return ret;
 }
 
-int WotsPubKeyFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen, SlhDsaAdrs *adrs,
+int32_t WotsPubKeyFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig, uint32_t sigLen, SlhDsaAdrs *adrs,
                       const CryptSlhDsaCtx *ctx, uint8_t *pub)
 {
     int32_t ret;

@@ -242,7 +242,7 @@ void SDV_X509_CSR_PARSE_FUNC_TC003(int format, char *path, int attrNum, int attr
 
     HITLS_X509_AttrEntry *entry = BSL_LIST_GET_FIRST(rawAttrs->list);
     ASSERT_EQ(attrCid, entry->cid);
-    BslOidString *oid = BSL_OBJ_GetOidFromCID(entry->cid);
+    BslOidString *oid = BSL_OBJ_GetOID(entry->cid);
     ASSERT_NE(oid, NULL);
     ASSERT_COMPARE("csr attr oid", entry->attrId.buff, entry->attrId.len, (uint8_t *)oid->octs, oid->octetLen);
     ASSERT_COMPARE("csr attr value", entry->attrValue.buff, entry->attrValue.len, attrValue->x, attrValue->len);

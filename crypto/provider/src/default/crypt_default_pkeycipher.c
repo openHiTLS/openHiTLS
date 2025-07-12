@@ -22,7 +22,7 @@
 #include "crypt_paillier.h"
 #include "crypt_elgamal.h"
 
-const CRYPT_EAL_Func g_defAsymCipherRsa[] = {
+const CRYPT_EAL_Func g_defEalAsymCipherRsa[] = {
 #ifdef HITLS_CRYPTO_RSA_ENCRYPT
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_RSA_Encrypt},
 #endif
@@ -32,7 +32,7 @@ const CRYPT_EAL_Func g_defAsymCipherRsa[] = {
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defAsymCipherSm2[] = {
+const CRYPT_EAL_Func g_defEalAsymCipherSm2[] = {
 #ifdef HITLS_CRYPTO_SM2_CRYPT
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_SM2_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, (CRYPT_EAL_ImplPkeyDecrypt)CRYPT_SM2_Decrypt},
@@ -40,7 +40,7 @@ const CRYPT_EAL_Func g_defAsymCipherSm2[] = {
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defAsymCipherPaillier[] = {
+const CRYPT_EAL_Func g_defEalAsymCipherPaillier[] = {
 #ifdef HITLS_CRYPTO_PAILLIER
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_PAILLIER_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, (CRYPT_EAL_ImplPkeyDecrypt)CRYPT_PAILLIER_Decrypt},
@@ -48,7 +48,7 @@ const CRYPT_EAL_Func g_defAsymCipherPaillier[] = {
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defAsymCipherElGamal[] = {
+const CRYPT_EAL_Func g_defEalAsymCipherElGamal[] = {
 #ifdef HITLS_CRYPTO_ELGAMAL
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, CRYPT_ELGAMAL_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, CRYPT_ELGAMAL_Decrypt},

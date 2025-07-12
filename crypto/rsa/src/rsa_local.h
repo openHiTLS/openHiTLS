@@ -31,7 +31,7 @@ extern "C" {
 
 #define HASH_MAX_MDSIZE  (64)
 
-#define PARAMISNULL(a) (a == NULL || a->value == NULL)
+#define PARAMISNULL(a) ((a) == NULL || (a)->value == NULL)
 
 typedef struct RSA_BlindSt {
     BN_BigNum *r;

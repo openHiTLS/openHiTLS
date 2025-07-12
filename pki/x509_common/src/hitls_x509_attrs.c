@@ -95,7 +95,7 @@ void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb fre
 #if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
 int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 {
-    BslOidString *oidStr = BSL_OBJ_GetOidFromCID(cid);
+    BslOidString *oidStr = BSL_OBJ_GetOID(cid);
     if (oidStr == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
@@ -165,7 +165,7 @@ int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *at
     }
     /* parse attribute id */
     BslOidString oid = {asnArr[HITLS_X509_ATTR_OID_IDX].len, (char *)asnArr[HITLS_X509_ATTR_OID_IDX].buff, 0};
-    attrEntry->cid = BSL_OBJ_GetCIDFromOid(&oid);
+    attrEntry->cid = BSL_OBJ_GetCID(&oid);
     if (attrEntry->cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_OBJ_ID);
         return HITLS_X509_ERR_PARSE_OBJ_ID;

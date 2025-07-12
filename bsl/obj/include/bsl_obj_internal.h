@@ -45,7 +45,7 @@ typedef struct {
 
 BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg);
 
-BslCid BSL_OBJ_GetAsymIdFromSignId(BslCid signAlg);
+BslCid BSL_OBJ_GetAsymAlgIdFromSignId(BslCid signAlg);
 
 const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid);
 

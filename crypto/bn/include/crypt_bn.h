@@ -848,7 +848,7 @@ int32_t BN_RandRange(BN_BigNum *r, const BN_BigNum *p);
 /**
  * @ingroup bn
  * @brief generate random BigNum
- * 
+ *
  * @param libCtx [IN] provider libCtx
  * @param r [OUT] Generate a random number.
  * @param p [IN] Compare data so that the generated r < p

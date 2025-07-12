@@ -17,7 +17,6 @@
 #define CRYPT_PARAMS_KEY_H
 
 #include <stdint.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

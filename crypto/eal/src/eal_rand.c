@@ -474,7 +474,7 @@ static CRYPT_EAL_RndCtx *EAL_RandNewDrbg(CRYPT_RAND_AlgId id, CRYPT_RandSeedMeth
     }
     randCtx->isDefaultSeed = false;
 
-    if (seedMeth == NULL || (seedMeth->getEntropy == NULL && seedMeth->getNonce == NULL)) {
+    if (seedMeth == NULL || seedMeth->getEntropy == NULL) {
 #ifdef HITLS_CRYPTO_ENTROPY
         ret = EAL_GetDefaultSeed(&seedMethTmp, &seedTmp);
         if (ret != CRYPT_SUCCESS) {
@@ -568,27 +568,9 @@ int32_t CRYPT_EAL_RandInit(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, 
         EAL_RandDeinit(ctx);
         return ret;
     }
-    CRYPT_RandRegist((CRYPT_EAL_RandFunc)CRYPT_EAL_Randbytes); // provide a random number generation function for BigNum.
+    CRYPT_RandRegist((CRYPT_EAL_RandFunc)CRYPT_EAL_Randbytes);
     g_globalRndCtx = ctx;
     return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *rndCtx, const uint8_t *pers, uint32_t persLen)
-{
-    if (rndCtx == NULL || rndCtx->meth == NULL || rndCtx->meth->inst == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    int32_t ret;
-    RETURN_RAND_LOCK(rndCtx, ret);
-    ret = rndCtx->meth->inst(rndCtx->ctx, pers, persLen, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        RAND_UNLOCK(rndCtx);
-        return ret;
-    }
-    rndCtx->working = true;
-    RAND_UNLOCK(rndCtx);
-    return ret;
 }
 
 int32_t CRYPT_EAL_RandbytesWithAdin(uint8_t *byte, uint32_t len, uint8_t *addin, uint32_t addinLen)
@@ -629,6 +611,24 @@ bool CRYPT_EAL_RandIsValidAlgId(CRYPT_RAND_AlgId id)
     return (DRBG_GetIdMap(id) != NULL);
 }
 #endif // end of HITLS_CRYPTO_DRBG
+
+int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *rndCtx, const uint8_t *pers, uint32_t persLen)
+{
+    if (rndCtx == NULL || rndCtx->meth == NULL || rndCtx->meth->inst == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret;
+    RETURN_RAND_LOCK(rndCtx, ret);
+    ret = rndCtx->meth->inst(rndCtx->ctx, pers, persLen, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        RAND_UNLOCK(rndCtx);
+        return ret;
+    }
+    rndCtx->working = true;
+    RAND_UNLOCK(rndCtx);
+    return ret;
+}
 
 CRYPT_EAL_RndCtx *CRYPT_EAL_DrbgNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
 {
@@ -819,7 +819,7 @@ int32_t CRYPT_EAL_ProviderRandInitCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t alg
         return ret;
     }
     ctx->working = true;
-    CRYPT_RandRegistEx((CRYPT_EAL_RandFuncEx)CRYPT_EAL_RandbytesEx); // provide a random number generation function for BigNum.
+    CRYPT_RandRegistEx((CRYPT_EAL_RandFuncEx)CRYPT_EAL_RandbytesEx);
     localLibCtx->drbg = ctx;
     return CRYPT_SUCCESS;
 }
@@ -920,7 +920,7 @@ int32_t CRYPT_EAL_RandbytesWithAdinEx(CRYPT_EAL_LibCtx *libCtx,
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
-    return CRYPT_EAL_DrbgbytesWithAdin(localCtx->drbg, byte, len, addin, addinLen);
+    return EAL_DrbgbytesWithAdin((CRYPT_EAL_RndCtx *)localCtx->drbg, byte, len, addin, addinLen);
 }
 #endif
 
@@ -935,7 +935,7 @@ int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t 
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
-    return CRYPT_EAL_DrbgbytesWithAdin(localCtx->drbg, byte, len, NULL, 0);
+    return EAL_DrbgbytesWithAdin((CRYPT_EAL_RndCtx *)localCtx->drbg, byte, len, NULL, 0);
 #else
     (void) libCtx;
     return CRYPT_EAL_Randbytes(byte, len);
@@ -954,7 +954,7 @@ int32_t CRYPT_EAL_RandSeedEx(CRYPT_EAL_LibCtx *libCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
-    return CRYPT_EAL_DrbgSeedWithAdin(localCtx->drbg, NULL, 0);
+    return EAL_DrbgSeedWithAdin((CRYPT_EAL_RndCtx *)localCtx->drbg, NULL, 0);
 #else
     (void) libCtx;
     return CRYPT_EAL_RandSeed();

@@ -2939,7 +2939,7 @@ void UT_TLS_DTLS_CONSISTENCY_RETANSIMATE_TC001(int isNeedSleep, int clientState)
     int32_t ret = HITLS_DtlsGetTimeout(client->ssl, &timeout);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     if (isNeedSleep) {
-        usleep(timeout);
+        sleep(2); // the sleep time is greater than the timeout period, the retransmission operation is triggered
         ret = HITLS_DtlsProcessTimeout(client->ssl);
         // When there are multiple messages, retransmission will be blocked, so it will be busy.
         // If there is only one message, it will be successfully sent.

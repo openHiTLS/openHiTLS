@@ -110,7 +110,7 @@ void CRYPT_DECODE_PoolFreeCtx(CRYPT_DECODER_PoolCtx *poolCtx)
 
 static int32_t SetDecodeType(void *val, size_t valLen, const char **targetValue)
 {
-    if (valLen == 0 ||valLen > MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE) {
+    if (valLen == 0 || valLen > MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -419,7 +419,6 @@ int32_t CRYPT_DECODE_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_DECODE_Prov
     };
     int32_t ret = CRYPT_EAL_ProviderProcessAll(ctx, ProcessEachProviderDecoder, &processArgs);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     
@@ -438,7 +437,6 @@ int32_t CRYPT_DECODE_PoolDecode(CRYPT_DECODER_PoolCtx *poolCtx, const BSL_Param 
     }
     int32_t ret = CRYPT_DECODE_ProviderProcessAll(poolCtx->libCtx, CollectDecoder, poolCtx);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (BSL_LIST_COUNT(poolCtx->decoders) == 0) {
@@ -457,11 +455,7 @@ int32_t CRYPT_DECODE_PoolDecode(CRYPT_DECODER_PoolCtx *poolCtx, const BSL_Param 
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = DecodeWithKeyChain(poolCtx, outParam);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
+    return DecodeWithKeyChain(poolCtx, outParam);
 }
 
 #endif /* HITLS_CRYPTO_CODECS && HITLS_CRYPTO_PROVIDER */

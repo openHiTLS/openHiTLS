@@ -34,6 +34,8 @@ int32_t HypertreeSign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx, uin
     uint32_t d = ctx->para.d;
     uint32_t len = 2 * n + 3;
     uint32_t retLen = (len + hp) * n * d;
+    uint32_t leafIdxTmp = leafIdx;
+    uint64_t treeIdxTmp = treeIdx;
 
     if (*sigLen < retLen) {
         return CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH;
@@ -49,17 +51,17 @@ int32_t HypertreeSign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx, uin
 
     for (uint32_t j = 0; j < d; j++) {
         if (j != 0) {
-            leafIdx = treeIdx & ((1UL << hp) - 1);
-            treeIdx = treeIdx >> hp;
+            leafIdxTmp = treeIdxTmp & ((1UL << hp) - 1);
+            treeIdxTmp = treeIdxTmp >> hp;
             ctx->adrsOps.setLayerAddr(&adrs, j);
         }
-        ctx->adrsOps.setTreeAddr(&adrs, treeIdx);
+        ctx->adrsOps.setTreeAddr(&adrs, treeIdxTmp);
         tmpLen = retLen - offset;
-        ret = XmssSign(root, n, leafIdx, &adrs, ctx, sig + offset, &tmpLen);
+        ret = XmssSign(root, n, leafIdxTmp, &adrs, ctx, sig + offset, &tmpLen);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
-        ret = XmssPkFromSig(leafIdx, sig + offset, tmpLen, root, n, &adrs, ctx, root);
+        ret = XmssPkFromSig(leafIdxTmp, sig + offset, tmpLen, root, n, &adrs, ctx, root);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
@@ -78,6 +80,8 @@ int32_t HypertreeVerify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
     uint32_t d = ctx->para.d;
     uint32_t len = 2 * n + 3;
     uint32_t retLen = (len + hp) * n * d;
+    uint32_t leafIdxTmp = leafIdx;
+    uint64_t treeIdxTmp = treeIdx;
 
     if (sigLen < retLen) {
         return CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH;
@@ -91,12 +95,12 @@ int32_t HypertreeVerify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
     (void)memcpy_s(node, sizeof(node), msg, msgLen);
     for (uint32_t j = 0; j < d; j++) {
         if (j != 0) {
-            leafIdx = treeIdx & ((1UL << hp) - 1);
-            treeIdx = treeIdx >> hp;
+            leafIdxTmp = treeIdxTmp & ((1UL << hp) - 1);
+            treeIdxTmp = treeIdxTmp >> hp;
             ctx->adrsOps.setLayerAddr(&adrs, j);
         }
-        ctx->adrsOps.setTreeAddr(&adrs, treeIdx);
-        ret = XmssPkFromSig(leafIdx, sig + offset, sigLen - offset, node, n, &adrs, ctx, node);
+        ctx->adrsOps.setTreeAddr(&adrs, treeIdxTmp);
+        ret = XmssPkFromSig(leafIdxTmp, sig + offset, sigLen - offset, node, n, &adrs, ctx, node);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }

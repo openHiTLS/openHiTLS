@@ -630,7 +630,7 @@ int32_t HITLS_X509_ParseExtItem(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *e
     // extnid
     extEntry->extnId = asnArr[HITLS_X509_EXT_OID_IDX];
     BslOidString oid = {extEntry->extnId.len, (char *)extEntry->extnId.buff, 0};
-    extEntry->cid = BSL_OBJ_GetCIDFromOid(&oid);
+    extEntry->cid = BSL_OBJ_GetCID(&oid);
     // critical
     if (asnArr[HITLS_X509_EXT_CRITICAL_IDX].tag == 0) {
         extEntry->critical = false;
@@ -657,7 +657,7 @@ static void FreeExtEntryCont(HITLS_X509_ExtEntry *entry)
 
 static int32_t GetExtEntryByCid(BslList *extList, BslCid cid, HITLS_X509_ExtEntry **entry, bool *isNew)
 {
-    BslOidString *oid = BSL_OBJ_GetOidFromCID(cid);
+    BslOidString *oid = BSL_OBJ_GetOID(cid);
     if (oid == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_OID);
         return HITLS_X509_ERR_EXT_OID;
@@ -720,7 +720,7 @@ static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List 
     }
 
     BslOidString oid = {extEntry.extnId.len, (char *)extEntry.extnId.buff, 0};
-    switch (BSL_OBJ_GetCIDFromOid(&oid)) {
+    switch (BSL_OBJ_GetCID(&oid)) {
         case BSL_CID_CE_KEYUSAGE:
             return ParseExtKeyUsage(&extEntry, (HITLS_X509_CertExt *)ext->extData);
         case BSL_CID_CE_BASICCONSTRAINTS:

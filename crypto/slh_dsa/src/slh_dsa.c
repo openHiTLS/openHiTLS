@@ -192,33 +192,33 @@ static uint32_t CAdrsGetAdrsLen(void)
 }
 
 static AdrsOps g_adrsOps[2] = {{
-                                   .setLayerAddr = UCAdrsSetLayerAddr,
-                                   .setTreeAddr = UCAdrsSetTreeAddr,
-                                   .setType = UCAdrsSetType,
-                                   .setKeyPairAddr = UCAdrsSetKeyPairAddr,
-                                   .setChainAddr = UCAdrsSetChainAddr,
-                                   .setTreeHeight = UCAdrsSetTreeHeight,
-                                   .setHashAddr = UCAdrsSetHashAddr,
-                                   .setTreeIndex = UCAdrsSetTreeIndex,
-                                   .getTreeHeight = UCAdrsGetTreeHeight,
-                                   .getTreeIndex = UCAdrsGetTreeIndex,
-                                   .copyKeyPairAddr = UCAdrsCopyKeyPairAddr,
-                                   .getAdrsLen = UCAdrsGetAdrsLen,
-                               },
-                               {
-                                   .setLayerAddr = CAdrsSetLayerAddr,
-                                   .setTreeAddr = CAdrsSetTreeAddr,
-                                   .setType = CAdrsSetType,
-                                   .setKeyPairAddr = CAdrsSetKeyPairAddr,
-                                   .setChainAddr = CAdrsSetChainAddr,
-                                   .setTreeHeight = CAdrsSetTreeHeight,
-                                   .setHashAddr = CAdrsSetHashAddr,
-                                   .setTreeIndex = CAdrsSetTreeIndex,
-                                   .getTreeHeight = CAdrsGetTreeHeight,
-                                   .getTreeIndex = CAdrsGetTreeIndex,
-                                   .copyKeyPairAddr = CAdrsCopyKeyPairAddr,
-                                   .getAdrsLen = CAdrsGetAdrsLen,
-                               }};
+    .setLayerAddr = UCAdrsSetLayerAddr,
+    .setTreeAddr = UCAdrsSetTreeAddr,
+    .setType = UCAdrsSetType,
+    .setKeyPairAddr = UCAdrsSetKeyPairAddr,
+    .setChainAddr = UCAdrsSetChainAddr,
+    .setTreeHeight = UCAdrsSetTreeHeight,
+    .setHashAddr = UCAdrsSetHashAddr,
+    .setTreeIndex = UCAdrsSetTreeIndex,
+    .getTreeHeight = UCAdrsGetTreeHeight,
+    .getTreeIndex = UCAdrsGetTreeIndex,
+    .copyKeyPairAddr = UCAdrsCopyKeyPairAddr,
+    .getAdrsLen = UCAdrsGetAdrsLen,
+},
+{
+    .setLayerAddr = CAdrsSetLayerAddr,
+    .setTreeAddr = CAdrsSetTreeAddr,
+    .setType = CAdrsSetType,
+    .setKeyPairAddr = CAdrsSetKeyPairAddr,
+    .setChainAddr = CAdrsSetChainAddr,
+    .setTreeHeight = CAdrsSetTreeHeight,
+    .setHashAddr = CAdrsSetHashAddr,
+    .setTreeIndex = CAdrsSetTreeIndex,
+    .getTreeHeight = CAdrsGetTreeHeight,
+    .getTreeIndex = CAdrsGetTreeIndex,
+    .copyKeyPairAddr = CAdrsCopyKeyPairAddr,
+    .getAdrsLen = CAdrsGetAdrsLen,
+}};
 
 void BaseB(const uint8_t *x, uint32_t xLen, uint32_t b, uint32_t *out, uint32_t outLen)
 {
@@ -493,7 +493,8 @@ static uint32_t GetMdSize(const EAL_MdMethod *hashMethod, int32_t hashId)
     return hashMethod->mdSize;
 }
 
-static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t **mpOut, uint32_t *mpLenOut)
+static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t **mpOut, uint32_t *mpLenOut)
 {
     int32_t ret;
     BslOidString *oid = NULL;
@@ -503,7 +504,7 @@ static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t
 
     uint32_t mpLen = SLH_DSA_PREFIX_LEN + ctx->contextLen;
     if (ctx->isPrehash) {
-        oid = BSL_OBJ_GetOidFromCID((BslCid)algId);
+        oid = BSL_OBJ_GetOID((BslCid)algId);
         if (oid == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
             return CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED;
@@ -511,7 +512,7 @@ static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t
         mpLen += 2 + oid->octetLen; // asn1 header length is 2
         prehashLen = GetMdSize(EAL_MdFindMethod(algId), algId);
         const CRYPT_ConstData constData = {data, dataLen};
-        ret = CalcHash(EAL_MdFindMethod(algId), &constData, 1, prehash, &prehashLen);
+        ret = CRYPT_CalcHash(EAL_MdFindMethod(algId), &constData, 1, prehash, &prehashLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;

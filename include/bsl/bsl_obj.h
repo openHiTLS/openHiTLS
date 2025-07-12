@@ -570,12 +570,13 @@ typedef struct {
 /**
  * @ingroup bsl_obj
  * @brief Create an object identifier mapping
- * @param[in] oid The object identifier string
+ * @param[in] octs The octs buff for octets
+ * @param[in] octetLen The length of the octs buff
  * @param[in] oidName The name of the object identifier
  * @param[in] cid The algorithm ID to map to
  * @return HITLS_OK on success, error code on failure
  */
-int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid);
+int32_t BSL_OBJ_Create(char *octs, uint32_t octetLen, const char *oidName, int32_t cid);
 
 
 /**
@@ -594,7 +595,7 @@ int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
  * @param[in] inputCid The algorithm ID
  * @return The object identifier string
  */
-BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid);
+BslOidString *BSL_OBJ_GetOID(BslCid ulCID);
 
 /**
  * @ingroup bsl_obj
@@ -602,7 +603,7 @@ BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid);
  * @param[in] oid The object identifier string
  * @return The algorithm ID
  */
-BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid);
+BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
 
 #ifdef __cplusplus
 }

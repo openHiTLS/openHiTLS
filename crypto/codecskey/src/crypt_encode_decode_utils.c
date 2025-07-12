@@ -49,21 +49,21 @@
 
 static BSL_ASN1_TemplateItem g_rsaPrvTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* ignore seq header */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* version */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* n */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* e */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* p */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* q */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d mod (p-1) */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d mod (q-1) */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* q^-1 mod p */
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
-         BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 1}, /* OtherPrimeInfos OPTIONAL */
-            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2}, /* OtherPrimeInfo */
-                {BSL_ASN1_TAG_INTEGER, 0, 3}, /* ri */
-                {BSL_ASN1_TAG_INTEGER, 0, 3}, /* di */
-                {BSL_ASN1_TAG_INTEGER, 0, 3} /* ti */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* version */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* n */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* e */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* p */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* q */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d mod (p-1) */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* d mod (q-1) */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* q^-1 mod p */
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY | BSL_ASN1_FLAG_SAME, 1}, /* OtherPrimeInfos OPTIONAL */
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2}, /* OtherPrimeInfo */
+    {BSL_ASN1_TAG_INTEGER, 0, 3}, /* ri */
+    {BSL_ASN1_TAG_INTEGER, 0, 3}, /* di */
+    {BSL_ASN1_TAG_INTEGER, 0, 3} /* ti */
 };
 
 /**
@@ -75,8 +75,8 @@ static BSL_ASN1_TemplateItem g_rsaPrvTempl[] = {
  */
 static BSL_ASN1_TemplateItem g_rsaPubTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* ignore seq */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* n */
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* e */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* n */
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* e */
 };
 
 #ifdef HITLS_CRYPTO_KEY_DECODE
@@ -93,23 +93,23 @@ static BSL_ASN1_TemplateItem g_rsaPubTempl[] = {
  */
 static BSL_ASN1_TemplateItem g_rsaPssTempl[] = {
     {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_HASH,
-    BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
-            {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
-            {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 2},
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 2},
     {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_MASKGEN,
-    BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
-            {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
-            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
-                {BSL_ASN1_TAG_OBJECT_ID, 0, 3},
-                {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 3},
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 3},
+    {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL, 3},
     {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN,
-    BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_TAG_INTEGER, 0, 1},
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_INTEGER, 0, 1},
     {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_TRAILED,
-    BSL_ASN1_FLAG_DEFAULT, 0},
-        {BSL_ASN1_TAG_INTEGER, 0, 1}
+        BSL_ASN1_FLAG_DEFAULT, 0},
+    {BSL_ASN1_TAG_INTEGER, 0, 1}
 };
 
 typedef enum {
@@ -143,14 +143,14 @@ typedef enum {
 
 static BSL_ASN1_TemplateItem g_ecPriKeyTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},  // ignore seq header
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, /* version */
-        {BSL_ASN1_TAG_OCTETSTRING, 0, 1}, /* private key */
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_EC_PRIKEY_PARAM,
-         BSL_ASN1_FLAG_OPTIONAL, 1},
-            {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
-        {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_EC_PRIKEY_PUBKEY,
-         BSL_ASN1_FLAG_OPTIONAL, 1},
-            {BSL_ASN1_TAG_BITSTRING, 0, 2},
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, /* version */
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 1}, /* private key */
+    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_EC_PRIKEY_PARAM,
+        BSL_ASN1_FLAG_OPTIONAL, 1},
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_EC_PRIKEY_PUBKEY,
+        BSL_ASN1_FLAG_OPTIONAL, 1},
+    {BSL_ASN1_TAG_BITSTRING, 0, 2},
 };
 #endif
 
@@ -165,9 +165,9 @@ static BSL_ASN1_TemplateItem g_ecPriKeyTempl[] = {
 */
 static BSL_ASN1_TemplateItem g_pk8PriKeyTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, // ignore seq header
-        {BSL_ASN1_TAG_INTEGER, 0, 1},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
-        {BSL_ASN1_TAG_OCTETSTRING, 0, 1},
+    {BSL_ASN1_TAG_INTEGER, 0, 1},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 1},
 };
 
 typedef enum {
@@ -187,24 +187,24 @@ typedef enum {
 */
 static BSL_ASN1_TemplateItem g_pk8EncPriKeyTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, // EncryptionAlgorithmIdentifier
-            {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
-            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
-                {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 3}, // derivation param
-                {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 3}, // enc scheme
-                    {BSL_ASN1_TAG_OBJECT_ID, 0, 4}, // alg
-                    {BSL_ASN1_TAG_OCTETSTRING, 0, 4}, // iv
-        {BSL_ASN1_TAG_OCTETSTRING, 0, 1}, // EncryptedData
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, // EncryptionAlgorithmIdentifier
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 2},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 3}, // derivation param
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 3}, // enc scheme
+    {BSL_ASN1_TAG_OBJECT_ID, 0, 4}, // alg
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 4}, // iv
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 1}, // EncryptedData
 };
 #endif
 
 static BSL_ASN1_TemplateItem g_pbkdf2DerParamTempl[] = {
     {BSL_ASN1_TAG_OBJECT_ID, 0, 0}, // derive alg
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_OCTETSTRING, 0, 1}, // salt
-        {BSL_ASN1_TAG_INTEGER, 0, 1}, // iteration
-        {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_OPTIONAL, 1}, // keyLen
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_DEFAULT | BSL_ASN1_FLAG_HEADERONLY, 1}, // prf
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 1}, // salt
+    {BSL_ASN1_TAG_INTEGER, 0, 1}, // iteration
+    {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_OPTIONAL, 1}, // keyLen
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_DEFAULT | BSL_ASN1_FLAG_HEADERONLY, 1}, // prf
 };
 #endif // HITLS_CRYPTO_KEY_EPKI
 /**
@@ -217,8 +217,8 @@ static BSL_ASN1_TemplateItem g_pbkdf2DerParamTempl[] = {
 */
 static BSL_ASN1_TemplateItem g_subKeyInfoTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
-        {BSL_ASN1_TAG_BITSTRING, 0, 1},
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1},
+    {BSL_ASN1_TAG_BITSTRING, 0, 1},
 };
 
 static BSL_ASN1_TemplateItem g_subKeyInfoInnerTempl[] = {
@@ -398,7 +398,7 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
 
     if (asns[CRYPT_RSAPSS_HASH_IDX].tag != 0) {
         BslOidString hashOid = {asns[CRYPT_RSAPSS_HASH_IDX].len, (char *)asns[CRYPT_RSAPSS_HASH_IDX].buff, 0};
-        para->mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCIDFromOid(&hashOid);
+        para->mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCID(&hashOid);
         if (para->mdId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MD);
             return CRYPT_DECODE_ERR_RSSPSS_MD;
@@ -406,7 +406,7 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
     }
     if (asns[CRYPT_RSAPSS_MGF1PARAM_IDX].tag != 0) {
         BslOidString mgf1 = {asns[CRYPT_RSAPSS_MGF1PARAM_IDX].len, (char *)asns[CRYPT_RSAPSS_MGF1PARAM_IDX].buff, 0};
-        para->mgfId = (CRYPT_MD_AlgId)BSL_OBJ_GetCIDFromOid(&mgf1);
+        para->mgfId = (CRYPT_MD_AlgId)BSL_OBJ_GetCID(&mgf1);
         if (para->mgfId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MGF1MD);
             return CRYPT_DECODE_ERR_RSSPSS_MGF1MD;
@@ -445,8 +445,8 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
     switch (type) {
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
-            if (cid == BSL_CID_EC_PUBLICKEY) {
+            BslCid cid = BSL_OBJ_GetCID(&oidStr);
+            if (cid == BSL_CID_EC_PUBLICKEY || cid == BSL_CID_SM2PRIME256) {
                 // note: any It can be encoded empty or it can be null
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
             } else if (cid == BSL_CID_RSASSAPSS) {
@@ -525,7 +525,7 @@ int32_t CRYPT_DECODE_SubPubkey(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
         return ret;
     }
     BslOidString oidStr = {oid->len, (char *)oid->buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -541,12 +541,13 @@ static int32_t ParsePk8PriParamAsn1(BSL_ASN1_Buffer *encode, BSL_ASN1_DecTemplCa
 {
     BSL_ASN1_Buffer *algo = &encode[CRYPT_PK8_PRIKEY_ALGID_IDX]; // AlgorithmIdentifier
     BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
-    int32_t ret = CRYPT_DECODE_AlgoIdAsn1Buff(algo->buff, algo->len, keyInfoCb, algoId, BSL_ASN1_TAG_ALGOID_ANY_IDX + 1);
+    int32_t ret = CRYPT_DECODE_AlgoIdAsn1Buff(algo->buff, algo->len, keyInfoCb,
+        algoId, BSL_ASN1_TAG_ALGOID_ANY_IDX + 1);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     BslOidString oidStr = {algoId[0].len, (char *)algoId[0].buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -610,7 +611,7 @@ static int32_t ParseDeriveKeyPrfAlgId(BSL_ASN1_Buffer *asn, int32_t *prfId, BSL_
         }
         BslOidString oidStr = {algoId[BSL_ASN1_TAG_ALGOID_IDX].len,
             (char *)algoId[BSL_ASN1_TAG_ALGOID_IDX].buff, 0};
-        *prfId = BSL_OBJ_GetCIDFromOid(&oidStr);
+        *prfId = BSL_OBJ_GetCID(&oidStr);
         if (*prfId == BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM);
             return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;
@@ -636,7 +637,7 @@ static int32_t ParseDeriveKeyParam(BSL_Buffer *derivekeyData, uint32_t *iter, ui
     }
     BslOidString oidStr = {derParam[CRYPT_PKCS_ENC_DERALG_IDX].len,
         (char *)derParam[CRYPT_PKCS_ENC_DERALG_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+    BslCid cid = BSL_OBJ_GetCID(&oidStr);
     if (cid != BSL_CID_PBKDF2) { // only pbkdf2 is supported
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM);
         return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;
@@ -737,7 +738,7 @@ int32_t CRYPT_DECODE_Pkcs8PrvDecrypt(CRYPT_EAL_LibCtx *libctx, const char *attrN
 
     BslOidString encOidStr = {asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].len,
         (char *)asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCIDFromOid(&encOidStr);
+    BslCid cid = BSL_OBJ_GetCID(&encOidStr);
     if (cid != BSL_CID_PBES2) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -745,7 +746,7 @@ int32_t CRYPT_DECODE_Pkcs8PrvDecrypt(CRYPT_EAL_LibCtx *libctx, const char *attrN
     // parse sym alg id
     BslOidString symOidStr = {asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].len,
         (char *)asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].buff, 0};
-    BslCid symId = BSL_OBJ_GetCIDFromOid(&symOidStr);
+    BslCid symId = BSL_OBJ_GetCID(&symOidStr);
     if (symId == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -801,7 +802,8 @@ int32_t CRYPT_ENCODE_EccPrikeyAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, 
 int32_t CRYPT_ENCODE_RsaPubkeyAsn1Buff(BSL_ASN1_Buffer *pubAsn1, BSL_Buffer *encodePub)
 {
     BSL_ASN1_Template pubTempl = {g_rsaPubTempl, sizeof(g_rsaPubTempl) / sizeof(g_rsaPubTempl[0])};
-    int32_t ret = BSL_ASN1_EncodeTemplate(&pubTempl, pubAsn1, CRYPT_RSA_PUB_E_IDX + 1, &encodePub->data, &encodePub->dataLen);
+    int32_t ret = BSL_ASN1_EncodeTemplate(&pubTempl, pubAsn1, CRYPT_RSA_PUB_E_IDX + 1,
+        &encodePub->data, &encodePub->dataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -862,7 +864,7 @@ static int32_t EncodeDeriveKeyParam(CRYPT_EAL_LibCtx *libCtx, CRYPT_Pbkdf2Param 
 {
     BSL_ASN1_Buffer derParam[CRYPT_PKCS_ENC_DERPRF_IDX + 1] = {0};
     /* deralg */
-    BslOidString *oidPbkdf = BSL_OBJ_GetOidFromCID((BslCid)param->pbkdfId);
+    BslOidString *oidPbkdf = BSL_OBJ_GetOID((BslCid)param->pbkdfId);
     if (oidPbkdf == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
@@ -894,7 +896,7 @@ static int32_t EncodeDeriveKeyParam(CRYPT_EAL_LibCtx *libCtx, CRYPT_Pbkdf2Param 
         BSL_SAL_FREE(derParam[CRYPT_PKCS_ENC_DERITER_IDX].buff);
         return ret;
     }
-    BslOidString *oidHmac = BSL_OBJ_GetOidFromCID((BslCid)param->hmacId);
+    BslOidString *oidHmac = BSL_OBJ_GetOID((BslCid)param->hmacId);
     if (oidHmac == NULL) {
         BSL_SAL_FREE(derParam[CRYPT_PKCS_ENC_DERITER_IDX].buff);
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
@@ -977,7 +979,7 @@ static int32_t EncodeEncryptedData(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
 static int32_t GenRandIv(CRYPT_EAL_LibCtx *libCtx, CRYPT_Pbkdf2Param *pkcsParam, BSL_ASN1_Buffer *asn1)
 {
     int32_t ret;
-    BslOidString *oidSym = BSL_OBJ_GetOidFromCID((BslCid)pkcsParam->symId);
+    BslOidString *oidSym = BSL_OBJ_GetOID((BslCid)pkcsParam->symId);
     if (oidSym == NULL) {
         return CRYPT_ERR_ALGID;
     }
@@ -1016,7 +1018,7 @@ int32_t CRYPT_ENCODE_PkcsEncryptedBuff(CRYPT_EAL_LibCtx *libCtx, const char *att
     CRYPT_Pbkdf2Param *pkcsParam, BSL_Buffer *unEncrypted, BSL_ASN1_Buffer *asn1)
 {
     int32_t ret;
-    BslOidString *oidPbes = BSL_OBJ_GetOidFromCID((BslCid)pkcsParam->pbesId);
+    BslOidString *oidPbes = BSL_OBJ_GetOID((BslCid)pkcsParam->pbesId);
     if (oidPbes == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return CRYPT_ERR_ALGID;
@@ -1073,7 +1075,7 @@ int32_t CRYPT_ENCODE_Pkcs8Info(CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo,
     BSL_ASN1_Buffer algo = {0};
     BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
     do {
-        BslOidString *oidStr = BSL_OBJ_GetOidFromCID((BslCid)pk8PrikeyInfo->keyType);
+        BslOidString *oidStr = BSL_OBJ_GetOID((BslCid)pk8PrikeyInfo->keyType);
         if (oidStr == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
             ret = CRYPT_ERR_ALGID;

@@ -146,7 +146,7 @@ int32_t HITLS_X509_CertTagGetOrCheck(int32_t type, uint32_t idx, void *data, voi
             if (idx == X509_ASN1_TBS_SIGNALG_ANY || idx == X509_ASN1_SIGNALG_ANY) {
                 BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
                 BslOidString oidStr = {param->len, (char *)param->buff, 0};
-                BslCid cid = BSL_OBJ_GetCIDFromOid(&oidStr);
+                BslCid cid = BSL_OBJ_GetCID(&oidStr);
                 if (cid == BSL_CID_UNKNOWN) {
                     return HITLS_X509_ERR_GET_ANY_TAG;
                 }

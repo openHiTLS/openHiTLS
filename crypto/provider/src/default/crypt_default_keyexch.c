@@ -28,28 +28,28 @@ typedef struct {
     int32_t index;
 } CRYPT_EAL_DefPkeyCtx;
 
-const CRYPT_EAL_Func g_defExchX25519[] = {
+const CRYPT_EAL_Func g_defEalExchX25519[] = {
 #ifdef HITLS_CRYPTO_X25519
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_CURVE25519_ComputeSharedKey},
 #endif
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defExchDh[] = {
+const CRYPT_EAL_Func g_defEalExchDh[] = {
 #ifdef HITLS_CRYPTO_DH
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_DH_ComputeShareKey},
 #endif
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defExchEcdh[] = {
+const CRYPT_EAL_Func g_defEalExchEcdh[] = {
 #ifdef HITLS_CRYPTO_ECDH
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_ECDH_ComputeShareKey},
 #endif
     CRYPT_EAL_FUNC_END
 };
 
-const CRYPT_EAL_Func g_defExchSm2[] = {
+const CRYPT_EAL_Func g_defEalExchSm2[] = {
 #if defined(HITLS_CRYPTO_SM2_EXCH)
     {CRYPT_EAL_IMPLPKEYEXCH_EXCH, (CRYPT_EAL_ImplPkeyExch)CRYPT_SM2_KapComputeKey},
 #endif

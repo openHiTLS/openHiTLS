@@ -220,16 +220,16 @@ static int32_t GetOidIndex(int32_t inputCid)
     return -1;
 }
 
-BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
+BslCid BSL_OBJ_GetCID(const BslOidString *oidstr)
 {
-    if (oid == NULL || oid->octs == NULL) {
+    if (oidstr == NULL || oidstr->octs == NULL) {
         return BSL_CID_UNKNOWN;
     }
 
     /* First, search in the g_oidTable */
     for (uint32_t i = 0; i < g_tableSize; i++) {
-        if (g_oidTable[i].strOid.octetLen == oid->octetLen) {
-            if (memcmp(g_oidTable[i].strOid.octs, oid->octs, oid->octetLen) == 0) {
+        if (g_oidTable[i].strOid.octetLen == oidstr->octetLen) {
+            if (memcmp(g_oidTable[i].strOid.octs, oidstr->octs, oidstr->octetLen) == 0) {
                 return g_oidTable[i].cid;
             }
         }
@@ -256,8 +256,8 @@ BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
     
     while (iter != end) {
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
-        if (oidInfo != NULL && oidInfo->strOid.octetLen == oid->octetLen &&
-            memcmp(oidInfo->strOid.octs, oid->octs, oid->octetLen) == 0) {
+        if (oidInfo != NULL && oidInfo->strOid.octetLen == oidstr->octetLen &&
+            memcmp(oidInfo->strOid.octs, oidstr->octs, oidstr->octetLen) == 0) {
             cid = oidInfo->cid;
             break;
         }
@@ -269,15 +269,15 @@ BslCid BSL_OBJ_GetCIDFromOid(BslOidString *oid)
 #endif // HITLS_BSL_HASH
 }
 
-BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
+BslOidString *BSL_OBJ_GetOID(BslCid ulCID)
 {
-    if (inputCid == BSL_CID_UNKNOWN) {
+    if (ulCID == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return NULL;
     }
 
     /* First, search in the g_oidTable */
-    int32_t index = GetOidIndex(inputCid);
+    int32_t index = GetOidIndex(ulCID);
     if (index != -1) {
         return &g_oidTable[index].strOid;
     }
@@ -300,7 +300,7 @@ BslOidString *BSL_OBJ_GetOidFromCID(BslCid inputCid)
     }
 
     /* Since g_oidHashTable is keyed by cid, we can directly look up the entry */
-    ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)inputCid, (uintptr_t *)&oidInfo);
+    ret = BSL_HASH_At(g_oidHashTable, (uintptr_t)ulCID, (uintptr_t *)&oidInfo);
     (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
     BslOidString *oidString = (ret == BSL_SUCCESS && oidInfo != NULL) ? &oidInfo->strOid : NULL;
     if (ret != BSL_SUCCESS) {
@@ -458,9 +458,9 @@ static int32_t InsertOidInfoToHashTable(int32_t cid, BslOidInfo *oidInfo)
 }
 
 // Main function for creating and registering OIDs
-int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid)
+int32_t BSL_OBJ_Create(char *octs, uint32_t octetLen, const char *oidName, int32_t cid)
 {
-    if (oid == NULL || oidName == NULL || cid == BSL_CID_UNKNOWN) {
+    if (octs == NULL || octetLen == 0 || oidName == NULL || cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -468,6 +468,11 @@ int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid
     if (IsOidCidInStaticTable(cid)) {
         return BSL_SUCCESS;
     }
+    const BslOidString oid = {
+        .octs = octs,
+        .octetLen = octetLen,
+        .flags = 6
+    };
 
     int32_t ret = BSL_SAL_ThreadRunOnce(&g_oidHashInitOnce, InitOidHashTableOnce);
     if (ret != BSL_SUCCESS) {
@@ -484,7 +489,7 @@ int32_t BSL_OBJ_Create(const BslOidString *oid, const char *oidName, int32_t cid
     }
 
     BslOidInfo *oidInfo = NULL;
-    ret = CreateOidInfo(oid, oidName, cid, &oidInfo);
+    ret = CreateOidInfo(&oid, oidName, cid, &oidInfo);
     if (ret != BSL_SUCCESS) {
         return ret;
     }

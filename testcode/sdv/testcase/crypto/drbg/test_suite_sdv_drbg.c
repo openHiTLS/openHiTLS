@@ -1318,7 +1318,7 @@ void SDV_CRYPT_DRBG_GETENTROPY_FUNC_TC001(int agId)
     ASSERT_NE(CRYPT_EAL_RandInit(agId, &seedMeth, (void *)&seedCtx, NULL, 0), CRYPT_SUCCESS);
     drbg = CRYPT_EAL_DrbgNew(agId, &seedMeth, (void *)&seedCtx);
     ASSERT_TRUE(drbg != NULL);
-    ASSERT_NE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0), CRYPT_SUCCESS);
 EXIT:
     CRYPT_EAL_DrbgDeinit(drbg);
     CRYPT_EAL_RandDeinit();

@@ -31,12 +31,12 @@ typedef struct {
     void *provCtx;
     const char *outFormat;
     const char *outType;
-} DECODER_Pem2Der_Ctx;
+} DECODER_Pem2DerCtx;
 
-void *DECODER_Pem2Der_NewCtx(void *provCtx)
+void *DECODER_Pem2DerNewCtx(void *provCtx)
 {
     (void)provCtx;
-    DECODER_Pem2Der_Ctx *ctx = (DECODER_Pem2Der_Ctx *)BSL_SAL_Calloc(1, sizeof(DECODER_Pem2Der_Ctx));
+    DECODER_Pem2DerCtx *ctx = (DECODER_Pem2DerCtx *)BSL_SAL_Calloc(1, sizeof(DECODER_Pem2DerCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -47,9 +47,9 @@ void *DECODER_Pem2Der_NewCtx(void *provCtx)
     return ctx;
 }
 
-int32_t DECODER_Pem2Der_GetParam(void *ctx, BSL_Param *param)
+int32_t DECODER_Pem2DerGetParam(void *ctx, BSL_Param *param)
 {
-    DECODER_Pem2Der_Ctx *decoderCtx = (DECODER_Pem2Der_Ctx *)ctx;
+    DECODER_Pem2DerCtx *decoderCtx = (DECODER_Pem2DerCtx *)ctx;
     if (decoderCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -61,7 +61,7 @@ int32_t DECODER_Pem2Der_GetParam(void *ctx, BSL_Param *param)
     return DECODER_CommonGetParam(&commonCtx, param);
 }
 
-int32_t DECODER_Pem2Der_SetParam(void *ctx, const BSL_Param *param)
+int32_t DECODER_Pem2DerSetParam(void *ctx, const BSL_Param *param)
 {
     (void)ctx;
     (void)param;
@@ -69,7 +69,7 @@ int32_t DECODER_Pem2Der_SetParam(void *ctx, const BSL_Param *param)
 }
 
 /* input is pem format buffer, output is der format buffer */
-int32_t DECODER_Pem2Der_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam)
+int32_t DECODER_Pem2DerDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam)
 {
     if (ctx == NULL || inParam == NULL || outParam == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -77,7 +77,7 @@ int32_t DECODER_Pem2Der_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **
     }
     BSL_PEM_Symbol symbol = {0};
     char *dataType = NULL;
-    DECODER_Pem2Der_Ctx *decoderCtx = (DECODER_Pem2Der_Ctx *)ctx;
+    DECODER_Pem2DerCtx *decoderCtx = (DECODER_Pem2DerCtx *)ctx;
     const BSL_Param *input = BSL_PARAM_FindConstParam(inParam, CRYPT_PARAM_DECODE_BUFFER_DATA);
     if (input == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -106,7 +106,7 @@ int32_t DECODER_Pem2Der_Decode(void *ctx, const BSL_Param *inParam, BSL_Param **
     return CRYPT_DECODE_ConstructBufferOutParam(outParam, asn1Encode, asn1Len);
 }
 
-void DECODER_Pem2Der_FreeOutData(void *ctx, BSL_Param *outParam)
+void DECODER_Pem2DerFreeOutData(void *ctx, BSL_Param *outParam)
 {
     (void)ctx;
     if (outParam == NULL) {
@@ -122,7 +122,7 @@ void DECODER_Pem2Der_FreeOutData(void *ctx, BSL_Param *outParam)
     BSL_SAL_Free(outParam);
 }
 
-void DECODER_Pem2Der_FreeCtx(void *ctx)
+void DECODER_Pem2DerFreeCtx(void *ctx)
 {
     if (ctx == NULL) {
         return;

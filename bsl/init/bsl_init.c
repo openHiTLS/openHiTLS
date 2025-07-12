@@ -32,10 +32,10 @@ int32_t BSL_GLOBAL_DeInit(void)
     BSL_ERR_RemoveErrStringBatch();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
-#ifdef HITLS_BSL_HASH
+#if defined HITLS_BSL_OBJ && defined HITLS_BSL_HASH
     BSL_OBJ_FreeSignHashTable();
     BSL_OBJ_FreeHashTable();
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ && HITLS_BSL_HASH
     return BSL_SUCCESS;
 }
 
