@@ -265,13 +265,11 @@ static void EntropyRunLogCb(int32_t ret)
     CMVP_Iso19790EventProcess(CRYPT_EVENT_ES_HEALTH_TEST, 0, 0, ret);
 }
 
-static void GetSeedPool(CRYPT_EAL_SeedPoolCtx **seedPool, CRYPT_EAL_Es **es)
+static int32_t CreateIsoEs(CRYPT_EAL_Es **es)
 {
-    CRYPT_EAL_Es *esTemp = NULL;
-    CRYPT_EAL_SeedPoolCtx *poolTemp = NULL;
-    int32_t ret = 0;
-    esTemp = CRYPT_EAL_EsNew();
-    GOTO_EXIT_IF(esTemp == NULL, CRYPT_MEM_ALLOC_FAIL);
+    int32_t ret = CRYPT_SUCCESS;
+    CRYPT_EAL_Es *esTemp = CRYPT_EAL_EsNew();
+    RETURN_RET_IF(esTemp == NULL, CRYPT_MEM_ALLOC_FAIL);
 
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_SET_CF, "sha256_df", (uint32_t)strlen("sha256_df"));
     GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
@@ -293,26 +291,47 @@ static void GetSeedPool(CRYPT_EAL_SeedPoolCtx **seedPool, CRYPT_EAL_Es **es)
     ret = CRYPT_EAL_EsInit(esTemp);
     GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
 
+    *es = esTemp;
+    return ret;
+
+EXIT:
+    CRYPT_EAL_EsFree(esTemp);
+    return ret;
+}
+
+static int32_t CreateSeedPool(CRYPT_EAL_SeedPoolCtx **seedPool, CRYPT_EAL_Es **es)
+{
+    CRYPT_EAL_SeedPoolCtx *poolTemp = NULL;
+    CRYPT_EAL_Es *esTemp = NULL;
+
+    int32_t ret = CreateIsoEs(&esTemp);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
     poolTemp = CRYPT_EAL_SeedPoolNew(true);
-    GOTO_EXIT_IF(poolTemp == NULL, CRYPT_SEED_POOL_NEW_ERROR);
+    if (poolTemp == NULL) {
+        CRYPT_EAL_EsFree(esTemp);
+        BSL_ERR_PUSH_ERROR(CRYPT_SEED_POOL_NEW_ERROR);
+        return CRYPT_SEED_POOL_NEW_ERROR;
+    }
 
     CRYPT_EAL_EsPara para = {false, CRYPT_ENTROPY_SOURCE_ENTROPY, esTemp, (CRYPT_EAL_EntropyGet)CRYPT_EAL_EsEntropyGet};
-
     ret = CRYPT_EAL_SeedPoolAddEs(poolTemp, &para);
-    GOTO_EXIT_IF(ret != CRYPT_SUCCESS, ret);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_SeedPoolFree(poolTemp);
+        CRYPT_EAL_EsFree(esTemp);
+        return ret;
+    }
 
     *seedPool = poolTemp;
     *es = esTemp;
-    return;
-
-EXIT:
-    CRYPT_EAL_SeedPoolFree(poolTemp);
-    CRYPT_EAL_EsFree(esTemp);
+    return CRYPT_SUCCESS;
 }
 
 static int32_t IsoCreateProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_Param *param, void **provCtx)
 {
-    CRYPT_EAL_IsoProvCtx *temp = BSL_SAL_Malloc(sizeof(CRYPT_EAL_IsoProvCtx));
+    CRYPT_EAL_IsoProvCtx *temp = BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_IsoProvCtx));
     if (temp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
@@ -324,10 +343,10 @@ static int32_t IsoCreateProvCtx(void *libCtx, CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_
     }
     CRYPT_EAL_RegEventReport(temp->runLog);
     CRYPT_EAL_SetRandCallBackEx((CRYPT_EAL_RandFuncEx)CRYPT_EAL_RandbytesEx);
-    GetSeedPool(&temp->pool, &temp->es);
-    if (temp->pool == NULL || temp->es == NULL) {
+    ret = CreateSeedPool(&temp->pool, &temp->es);
+    if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(temp);
-        return CRYPT_ENTROPY_ES_CREATE_ERROR;
+        return ret;
     }
     temp->libCtx = libCtx;
     temp->mgrCtx = mgrCtx;
