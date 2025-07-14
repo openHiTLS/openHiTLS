@@ -263,7 +263,7 @@ static void Iso19790_ProviderLoad(Iso19790_ProviderLoadCtx *ctx)
     (void)BSL_PARAM_InitValue(&randParam[3], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, CleanNonce, 0);
     (void)BSL_PARAM_InitValue(&randParam[4], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, pool, 0);
 
-    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, "provider=iso19790_provider", NULL, 0, randParam), 0);
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, "provider=iso", NULL, 0, randParam), 0);
 
     ctx->libCtx = libCtx;
     ctx->es = es;
@@ -303,7 +303,7 @@ void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    keyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_SM2, 0, "provider=iso19790_provider");
+    keyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_SM2, 0, "provider=iso");
     ASSERT_TRUE(keyCtx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(keyCtx), CRYPT_SUCCESS);
@@ -351,7 +351,7 @@ void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC002()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_RSA, 0, "provider=iso19790_provider");
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_RSA, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx != NULL);
     SetRsaPara(&para, e, 3, 2048);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_SUCCESS);
@@ -470,7 +470,7 @@ void SDV_ISO19790_PROVIDER_MD_TEST_TC001(int algId)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    mdCtx = CRYPT_EAL_ProviderMdNewCtx(ctx.libCtx, algId, "provider=iso19790_provider");
+    mdCtx = CRYPT_EAL_ProviderMdNewCtx(ctx.libCtx, algId, "provider=iso");
     ASSERT_TRUE(mdCtx != NULL);
     int32_t ret = CRYPT_EAL_MdInit(mdCtx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -510,7 +510,7 @@ void SDV_ISO19790_PROVIDER_MAC_TEST_TC001(int algId, int keyLen)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, "provider=iso19790_provider");
+    macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, "provider=iso");
     ASSERT_TRUE(macCtx != NULL);
     int32_t ret = CRYPT_EAL_MacInit(macCtx, macKey, macKeyLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -558,7 +558,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int macId, int iter, int saltLen)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso");
     ASSERT_TRUE(kdfCtx != NULL);
 
     BSL_Param param[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -604,7 +604,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC002(int algId, Hex *key, Hex *salt, Hex *i
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_HKDF, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_HKDF, "provider=iso");
     ASSERT_TRUE(kdfCtx != NULL);
 
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
@@ -654,7 +654,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC003(int algId, Hex *key, Hex *label, Hex *
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_KDFTLS12, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_KDFTLS12, "provider=iso");
     ASSERT_TRUE(kdfCtx != NULL);
 
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -745,7 +745,7 @@ void SDV_ISO19790_PROVIDER_CMVP_SELFTEST_Test_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    selftestCtx = CRYPT_CMVP_SelftestNewCtx(ctx.libCtx, "provider=iso19790_provider");
+    selftestCtx = CRYPT_CMVP_SelftestNewCtx(ctx.libCtx, "provider=iso");
     ASSERT_TRUE(selftestCtx != NULL);
 
     const char *version = CRYPT_CMVP_GetVersion(selftestCtx);
@@ -782,7 +782,7 @@ void SDV_ISO19790_PROVIDER_ML_DSA_TEST_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ML_DSA, 0, "provider=iso19790_provider");
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ML_DSA, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx != NULL);
 
     uint32_t val = CRYPT_MLDSA_TYPE_MLDSA_44;
@@ -820,7 +820,7 @@ void SDV_ISO19790_PROVIDER_ML_KEM_TEST_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ML_KEM, 0, "provider=iso19790_provider");
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ML_KEM, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx != NULL);
 
     uint32_t val = CRYPT_KEM_TYPE_MLKEM_512;
@@ -872,7 +872,7 @@ void SDV_ISO19790_PROVIDER_CIPHPER_TEST_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    cipherCtx = CRYPT_EAL_ProviderCipherNewCtx(ctx.libCtx, CRYPT_CIPHER_AES128_CBC, "provider=iso19790_provider");
+    cipherCtx = CRYPT_EAL_ProviderCipherNewCtx(ctx.libCtx, CRYPT_CIPHER_AES128_CBC, "provider=iso");
     ASSERT_TRUE(cipherCtx != NULL);
 
     int32_t ret = CRYPT_EAL_CipherInit(cipherCtx, key, keyLen, iv, ivLen, true);
@@ -940,7 +940,7 @@ void SDV_ISO19790_PROVIDER_PKEY_TEST_TC001(int hashId, Hex *p, Hex *q, Hex *g)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_DSA, 0, "provider=iso19790_provider");
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_DSA, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx != NULL);
     SetDsaPara(&para, p->x, p->len, q->x, q->len, g->x, g->len);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_SUCCESS);
@@ -973,7 +973,7 @@ void SDV_ISO19790_PROVIDER_MAC_PARAM_CHECK_TC001(int algId, int keyLen)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, "provider=iso19790_provider");
+    macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, "provider=iso");
     ASSERT_TRUE(macCtx != NULL);
     
     int32_t ret = CRYPT_EAL_MacInit(macCtx, macKey, macKeyLen);
@@ -1006,7 +1006,7 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC001(Hex *key, Hex *label, Hex *seed
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_KDFTLS12, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_KDFTLS12, "provider=iso");
     ASSERT_TRUE(kdfCtx != NULL);
 
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -1054,7 +1054,7 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC002(Hex *key, Hex *salt, Hex *info)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_HKDF, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_HKDF, "provider=iso");
     ASSERT_TRUE(kdfCtx != NULL);
 
     int32_t macId = CRYPT_MAC_HMAC_SHA256;
@@ -1109,7 +1109,7 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC003()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso19790_provider");
+    kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_PBKDF2, "provider=iso");
     ASSERT_TRUE(kdfCtx != NULL);
 
     int32_t iter = 1024;
@@ -1175,7 +1175,7 @@ void SDV_ISO19790_PROVIDER_DSA_PARAM_CHECK_TC001(Hex *p, Hex *q, Hex *g)
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_DSA, 0, "provider=iso19790_provider");
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_DSA, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx != NULL);
 
     SetDsaPara(&para, p->x, 256, q->x, 27, g->x, 256);
@@ -1208,7 +1208,7 @@ void SDV_ISO19790_PROVIDER_RSA_PARAM_CHECK_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_RSA, 0, "provider=iso19790_provider");
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_RSA, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx != NULL);
     SetRsaPara(&para, e, 3, 1024);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkeyCtx, &para), CRYPT_CMVP_ERR_PARAM_CHECK);
@@ -1236,8 +1236,8 @@ void SDV_ISO19790_PROVIDER_ECDH_SM2_TEST_TC001()
     Iso19790_ProviderLoad(&ctx);
     ASSERT_TRUE(ctx.libCtx != NULL && ctx.es != NULL && ctx.pool != NULL);
 
-    pkeyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ECDH, 0, "provider=iso19790_provider");
-    pkeyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ECDH, 0, "provider=iso19790_provider");
+    pkeyCtx1 = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ECDH, 0, "provider=iso");
+    pkeyCtx2 = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_ECDH, 0, "provider=iso");
     ASSERT_TRUE(pkeyCtx1 != NULL && pkeyCtx2 != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkeyCtx1, CRYPT_ECC_SM2), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkeyCtx2, CRYPT_ECC_SM2), CRYPT_SUCCESS);

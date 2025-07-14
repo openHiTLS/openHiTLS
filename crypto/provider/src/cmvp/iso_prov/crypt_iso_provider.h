@@ -43,7 +43,7 @@ extern "C" {
 #define CRYPT_PARAM_SELF_TEST_FLAG 8
 #define CRYPT_PARAM_LIB_CTX        9
 
-#define CRYPT_EAL_ISO_ATTR "provider=iso19790_provider"
+#define CRYPT_EAL_ISO_ATTR "provider=iso"
 
 typedef struct EalIsoProvCtx {
     void *libCtx;
