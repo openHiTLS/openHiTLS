@@ -402,6 +402,8 @@ class CMakeGenerator:
         if lib_name == 'hitls_auth':
             cmake += self._gen_cmd_cmake(
                 "target_link_libraries", "hitls_auth-shared hitls_crypto-shared hitls_bsl-shared " + str(self._args.securec_lib))
+        if lib_name == 'hitls_iso':
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_iso-shared m " + str(self._args.securec_lib))
         tgt_list.append(tgt_name)
         return cmake
 
@@ -511,7 +513,7 @@ class CMakeGenerator:
 
         if self._args.bundle_libs:
             # update projects
-            projects = self._gen_bundled_lib_cmake('openhitls', all_inc_dirs, projects, macros)
+            projects = self._gen_bundled_lib_cmake('hitls_iso', all_inc_dirs, projects, macros)
         return projects
 
     def _gen_target_cmake(self, lib_tgts):

@@ -14,8 +14,7 @@
     },
     "linkFlag": {
         "LINK_FLAG_ADD":[
-            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_iso.ld",
-            "-lm -lboundscheck"
+            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_iso.ld"
         ]
     }
 }
