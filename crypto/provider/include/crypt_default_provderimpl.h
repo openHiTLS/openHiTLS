@@ -124,6 +124,9 @@ extern const CRYPT_EAL_Func g_defEalOfb[];
 #ifdef HITLS_CRYPTO_XTS
 extern const CRYPT_EAL_Func g_defEalXts[];
 #endif
+#ifdef HITLS_CRYPTO_HCTR
+extern const CRYPT_EAL_Func g_defEalHctr[];
+#endif
 #endif // HITLS_CRYPTO_CIPHER
 
 #ifdef HITLS_CRYPTO_DRBG

@@ -207,6 +207,9 @@ static const CRYPT_EAL_AlgInfo g_defEalCiphers[] = {
 #ifdef HITLS_CRYPTO_OFB
     {CRYPT_CIPHER_SM4_OFB, g_defEalOfb, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_HCTR
+    {CRYPT_CIPHER_SM4_HCTR, g_defEalHctr, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #endif // HITLS_CRYPTO_SM4
     CRYPT_EAL_ALGINFO_END
 };

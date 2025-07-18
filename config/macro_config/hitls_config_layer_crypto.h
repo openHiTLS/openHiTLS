@@ -290,11 +290,15 @@
     #ifndef HITLS_CRYPTO_CHACHA20POLY1305
         #define HITLS_CRYPTO_CHACHA20POLY1305
     #endif
+    #ifndef HITLS_CRYPTO_HCTR
+        #define HITLS_CRYPTO_HCTR
+    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_CTR) || defined(HITLS_CRYPTO_CBC) || defined(HITLS_CRYPTO_ECB) || \
     defined(HITLS_CRYPTO_GCM) || defined(HITLS_CRYPTO_CCM) || defined(HITLS_CRYPTO_XTS) || \
-    defined(HITLS_CRYPTO_CFB) || defined(HITLS_CRYPTO_OFB) || defined(HITLS_CRYPTO_CHACHA20POLY1305)
+    defined(HITLS_CRYPTO_CFB) || defined(HITLS_CRYPTO_OFB) || defined(HITLS_CRYPTO_CHACHA20POLY1305) || \
+    defined(HITLS_CRYPTO_HCTR)
     #ifndef HITLS_CRYPTO_MODES
         #define HITLS_CRYPTO_MODES
     #endif

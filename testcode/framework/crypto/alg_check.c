@@ -438,6 +438,10 @@ bool IsSm4AlgDisabled(int id)
         case CRYPT_CIPHER_SM4_OFB:
             return true;
 #endif
+#ifndef HITLS_CRYPTO_HCTR
+        case CRYPT_CIPHER_SM4_HCTR:
+            return true;
+#endif
         default:
             return false;  // Unsupported algorithm ID
     }
@@ -481,6 +485,7 @@ bool IsCipherAlgDisabled(int id)
         case CRYPT_CIPHER_SM4_GCM:
         case CRYPT_CIPHER_SM4_CFB:
         case CRYPT_CIPHER_SM4_OFB:
+        case CRYPT_CIPHER_SM4_HCTR:
             return IsSm4AlgDisabled(id);
         default:
             return false;

@@ -94,6 +94,7 @@ static bool IsCipherAlgIdValid(int id)
         CRYPT_CIPHER_SM4_GCM,
         CRYPT_CIPHER_SM4_CFB,
         CRYPT_CIPHER_SM4_OFB,
+        CRYPT_CIPHER_SM4_HCTR
     };
     int algIdCnt = sizeof(algList) / sizeof(int);
     for (int i = 0; i < algIdCnt; i++) {

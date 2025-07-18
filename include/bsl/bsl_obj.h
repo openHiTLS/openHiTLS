@@ -458,6 +458,7 @@ typedef enum {
     BSL_CID_SM4_GCM = 2033,
     BSL_CID_SM4_CFB = 2034,
     BSL_CID_SM4_OFB = 2035,
+    BSL_CID_SM4_HCTR = 2058,
 
     BSL_CID_KDFTLS12 = 2036,
     BSL_CID_HKDF = 2037,

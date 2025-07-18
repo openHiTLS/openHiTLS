@@ -1655,3 +1655,86 @@ EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM4_HCTR_FUNC_TC001
+ * @title  HCTR mode encryption and decryption functional test against standard vector
+ * @precon HCTR mode implementation is complete and registered.
+ * @brief
+ * 1. Init HCTR context for encryption with standard key and tweak.
+ * 2. Call Update to buffer all plaintext; assert output length is 0.
+ * 3. Call Final to perform encryption and get the full ciphertext.
+ * 4. Compare the result with the expected ciphertext from GB/T 17964-2021.
+ * 5. Repeat the process for decryption.
+ * @expect
+ * All steps succeed and the results match the test vectors.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM4_HCTR_FUNC_TC001(int isProvider, int algId, Hex *key, Hex *tweak, Hex *plain, Hex *cipher)
+{
+    TestMemInit();
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    uint8_t *outTmp = NULL;
+    uint8_t *decryptedTmp = NULL;
+    uint32_t outLen = 0;
+    int32_t ret;
+
+    outTmp = (uint8_t *)BSL_SAL_Malloc(plain->len);
+    ASSERT_TRUE(outTmp != NULL);
+
+    ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(key->len, 32);
+    ASSERT_EQ(tweak->len, 16);
+    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, tweak->x, tweak->len, true);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    outLen = plain->len;
+    ret = CRYPT_EAL_CipherUpdate(ctx, plain->x, plain->len, outTmp, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, 0);
+
+    outLen = plain->len;
+    ret = CRYPT_EAL_CipherFinal(ctx, outTmp, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, plain->len);
+    
+    ASSERT_COMPARE("HCTR Encrypt Compare", cipher->x, cipher->len, outTmp, outLen);
+
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    ctx = NULL;
+    BSL_SAL_Free(outTmp);
+    outTmp = NULL;
+
+    decryptedTmp = (uint8_t *)BSL_SAL_Malloc(cipher->len);
+    ASSERT_TRUE(decryptedTmp != NULL);
+    
+    ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    
+    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, tweak->x, tweak->len, false);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    outLen = cipher->len;
+    ret = CRYPT_EAL_CipherUpdate(ctx, cipher->x, cipher->len, decryptedTmp, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, 0);
+
+    outLen = cipher->len;
+    ret = CRYPT_EAL_CipherFinal(ctx, decryptedTmp, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, cipher->len);
+
+    ASSERT_COMPARE("HCTR Decrypt Compare", plain->x, plain->len, decryptedTmp, outLen);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    if (outTmp != NULL) {
+        BSL_SAL_Free(outTmp);
+    }
+    if (decryptedTmp != NULL) {
+        BSL_SAL_Free(decryptedTmp);
+    }
+}
+/* END_CASE */
