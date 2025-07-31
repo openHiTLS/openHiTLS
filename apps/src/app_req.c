@@ -516,7 +516,7 @@ static void InitReqOptCtx(ReqOptCtx *optCtx)
 static void UnInitReqOptCtx(ReqOptCtx *optCtx)
 {
     if (optCtx->passin != NULL) {
-         BSL_SAL_ClearFree(optCtx->passin, strlen(optCtx->passin));
+        BSL_SAL_ClearFree(optCtx->passin, strlen(optCtx->passin));
     }
     if (optCtx->passout != NULL) {
         BSL_SAL_ClearFree(optCtx->passout, strlen(optCtx->passout));

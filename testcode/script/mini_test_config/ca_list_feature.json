@@ -87,7 +87,8 @@
                 "gcm", 
                 "aes",
                 "ecdh",
-                "suite_auth_psk"
+                "suite_auth_psk",
+                "codecskey"
             ]
         },
         "hitls_tls": {

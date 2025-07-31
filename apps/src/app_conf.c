@@ -215,7 +215,8 @@ static int32_t ParseBasicConstraints(char **value, HITLS_X509_ExtBCons *bCons)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t ProcBasicConstraints(BSL_CONF *cnf, bool critical, const char *cnfValue, ProcExtCallBack procExt, void *ctx)
+static int32_t ProcBasicConstraints(BSL_CONF *cnf, bool critical, const char *cnfValue,
+    ProcExtCallBack procExt, void *ctx)
 {
     (void)cnf;
     HITLS_X509_ExtBCons bCons = {critical, false, -1};
@@ -801,7 +802,7 @@ static int32_t GetDnTypeAndValue(const char **nameStr, HITLS_X509_DN *name, bool
         *tmp++ = *p++;
     }
     if (*p == '/' || *p == '+') {
-        *tmp++='\0';
+        *tmp++ = '\0';
     }
     int32_t ret = SetDnTypeAndValue(name, nameTypeStr, nameValueStr);
     BSL_SAL_FREE(nameTypeStr);

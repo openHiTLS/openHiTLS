@@ -18,8 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <linux/limits.h>
 #include <securec.h>
+#include <linux/limits.h>
 #include "app_errno.h"
 #include "app_help.h"
 #include "app_print.h"
@@ -576,7 +576,7 @@ static int32_t ParseAndAddCertChain(Pkcs12OptCtx *opt)
 static int32_t AddKeyBagToP12(char *name, CRYPT_EAL_PkeyCtx *pkey, HITLS_PKCS12 *p12)
 {
     // new a key Bag
-    HITLS_PKCS12_Bag *pkeyBag = HITLS_PKCS12_BagNew(BSL_CID_PKCS8SHROUDEDKEYBAG, pkey);
+    HITLS_PKCS12_Bag *pkeyBag = HITLS_PKCS12_BagNew(BSL_CID_PKCS8SHROUDEDKEYBAG, 0, pkey);
     if (pkeyBag == NULL) {
         AppPrintError("pkcs12: Failed to create the private key bag.\n");
         return HITLS_APP_X509_FAIL;
@@ -603,7 +603,7 @@ static int32_t AddKeyBagToP12(char *name, CRYPT_EAL_PkeyCtx *pkey, HITLS_PKCS12 
 static int32_t AddUserCertBagToP12(char *name, HITLS_X509_Cert *cert, HITLS_PKCS12 *p12)
 {
     // new a cert Bag
-    HITLS_PKCS12_Bag *certBag = HITLS_PKCS12_BagNew(BSL_CID_CERTBAG, cert);
+    HITLS_PKCS12_Bag *certBag = HITLS_PKCS12_BagNew(BSL_CID_CERTBAG, BSL_CID_X509CERTIFICATE, cert);
     if (certBag == NULL) {
         AppPrintError("pkcs12: Failed to create the user cert bag.\n");
         return HITLS_APP_X509_FAIL;
@@ -634,7 +634,7 @@ static int32_t AddOtherCertListBagToP12(char **caName, uint32_t caNameSize, HITL
     HITLS_X509_Cert *pstCert = BSL_LIST_GET_FIRST(certList);
     uint32_t index = 0;
     while (pstCert != NULL) {
-        HITLS_PKCS12_Bag *otherCertBag = HITLS_PKCS12_BagNew(BSL_CID_CERTBAG, pstCert);
+        HITLS_PKCS12_Bag *otherCertBag = HITLS_PKCS12_BagNew(BSL_CID_CERTBAG, BSL_CID_X509CERTIFICATE, pstCert);
         if (otherCertBag == NULL) {
             AppPrintError("pkcs12: Failed to create the other cert bag.\n");
             return HITLS_APP_X509_FAIL;
@@ -675,17 +675,6 @@ static int32_t PrintPkcs12(Pkcs12OptCtx *opt)
         return HITLS_APP_PASSWD_FAIL;
     }
     HITLS_PKCS12_EncodeParam encodeParam = { 0 };
-    CRYPT_Pbkdf2Param keyPbParam = { 0 };
-    keyPbParam.pbesId = opt->keyPbe;
-    keyPbParam.pbkdfId = BSL_CID_PBKDF2;
-    keyPbParam.hmacId = CRYPT_MAC_HMAC_SHA256;
-    keyPbParam.symId = CRYPT_CIPHER_AES256_CBC;
-    keyPbParam.saltLen = DEFAULT_SALTLEN;
-    keyPbParam.pwd = passOutBuf;
-    keyPbParam.pwdLen = passOutBufLen;
-    keyPbParam.itCnt = DEFAULT_ITCNT;
-    CRYPT_EncodeParam keyEncParam = { CRYPT_DERIVE_PBKDF2, &keyPbParam };
-
     CRYPT_Pbkdf2Param certPbParam = { 0 };
     certPbParam.pbesId = opt->certPbe;
     certPbParam.pbkdfId = BSL_CID_PBKDF2;
@@ -705,8 +694,7 @@ static int32_t PrintPkcs12(Pkcs12OptCtx *opt)
     hmacParam.itCnt = DEFAULT_ITCNT;
     HITLS_PKCS12_MacParam macParam = { .para = &hmacParam, .algId = BSL_CID_PKCS12KDF };
     encodeParam.macParam = macParam;
-    encodeParam.certEncParam = certEncParam;
-    encodeParam.keyEncParam = keyEncParam;
+    encodeParam.encParam = certEncParam;
 
     BSL_Buffer p12Buff = { 0 };
     ret = HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, opt->p12, &encodeParam, true, &p12Buff);
@@ -975,7 +963,7 @@ static void UnInitPkcs12OptCtx(Pkcs12OptCtx *optCtx)
     CRYPT_EAL_PkeyFreeCtx(optCtx->pkey);
     optCtx->pkey = NULL;
     if (optCtx->passin != NULL) {
-         BSL_SAL_ClearFree(optCtx->passin, strlen(optCtx->passin));
+        BSL_SAL_ClearFree(optCtx->passin, strlen(optCtx->passin));
     }
     if (optCtx->passout != NULL) {
         BSL_SAL_ClearFree(optCtx->passout, strlen(optCtx->passout));

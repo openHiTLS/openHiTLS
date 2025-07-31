@@ -82,7 +82,8 @@
                 "rsa",
                 "sha1",
                 "cipher",
-                "pkey"
+                "pkey",
+                "codecskey"
             ]
         },
         "hitls_tls": {

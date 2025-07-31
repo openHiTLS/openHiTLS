@@ -132,13 +132,13 @@ int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_U
     /* hash */
     const char *mdIdName = BSL_OBJ_GetOidNameFromCID((BslCid)para->mdId);
     RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Hash Algorithm: %s%s\n",
-        mdIdName == NULL ? CRYPT_UNKOWN_STRING : mdIdName, para->mdId == CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS,
-        CRYPT_DECODE_PRINT_RSAPSS_PARA);
+        mdIdName == NULL ? CRYPT_UNKOWN_STRING : mdIdName, para->mdId ==
+            CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS, CRYPT_DECODE_PRINT_RSAPSS_PARA);
     /* mgf */
     const char *mgfIdName = BSL_OBJ_GetOidNameFromCID((BslCid)para->mgfId);
     RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Mask Algorithm: %s%s\n",
-        mgfIdName == NULL ? CRYPT_UNKOWN_STRING : mgfIdName, para->mgfId == CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS,
-        CRYPT_DECODE_PRINT_RSAPSS_PARA);
+        mgfIdName == NULL ? CRYPT_UNKOWN_STRING : mgfIdName, para->mgfId ==
+            CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS, CRYPT_DECODE_PRINT_RSAPSS_PARA);
     /* saltLen */
     RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Salt Length: 0x%x%s\n",
         para->saltLen, para->saltLen == 20 ? " (default)" : "") != 0,

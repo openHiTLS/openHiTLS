@@ -848,7 +848,7 @@ int32_t CRYPT_DH_SetPubKeyEx(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
         return CRYPT_NULL_INPUT;
     }
     CRYPT_DhPub pub = {0};
-    if(GetConstParamValue(para, CRYPT_PARAM_DH_PUBKEY, &pub.data, &pub.len) == NULL) {
+    if (GetConstParamValue(para, CRYPT_PARAM_DH_PUBKEY, &pub.data, &pub.len) == NULL) {
         (void)GetConstParamValue(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY, (uint8_t **)&pub.data, &pub.len);
     }
     return CRYPT_DH_SetPubKey(ctx, &pub);

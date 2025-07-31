@@ -906,7 +906,7 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
         return HITLS_APP_CRYPTO_FAIL;
     }
     // Create a cipher context.
-    encOpt->keySet->ctx = CRYPT_EAL_ProviderCipherNewCtx(NULL, encOpt->cipherId ,"provider=default");
+    encOpt->keySet->ctx = CRYPT_EAL_ProviderCipherNewCtx(NULL, encOpt->cipherId, "provider=default");
     if (encOpt->keySet->ctx == NULL) {
         return HITLS_APP_CRYPTO_FAIL;
     }

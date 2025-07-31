@@ -195,7 +195,7 @@ int32_t CRYPT_CURVE25519_SetPubKeyEx(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param
         return CRYPT_NULL_INPUT;
     }
     CRYPT_Curve25519Pub pub = {0};
-    if(GetConstParamValue(para, CRYPT_PARAM_CURVE25519_PUBKEY, &pub.data, &pub.len) == NULL) {
+    if (GetConstParamValue(para, CRYPT_PARAM_CURVE25519_PUBKEY, &pub.data, &pub.len) == NULL) {
         (void)GetConstParamValue(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY, (uint8_t **)&pub.data, &pub.len);
     }
     return CRYPT_CURVE25519_SetPubKey(pkey, &pub);

@@ -434,7 +434,7 @@ static int32_t FileSumAndOut(CRYPT_EAL_MdCTX *ctx, const char *outfile)
 
 static CRYPT_EAL_MdCTX *InitAlgDigest(CRYPT_MD_AlgId id)
 {
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id ,"provider=default"); // creating an MD Context
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default"); // creating an MD Context
     if (ctx == NULL) {
         (void)AppPrintError("Failed to create the algorithm(%s) context\n", g_dgstInfo.algName);
         return NULL;

@@ -15,8 +15,8 @@
 #include "app_utils.h"
 #include <stdio.h>
 #include <securec.h>
-#include <linux/limits.h>
 #include <string.h>
+#include <linux/limits.h>
 #include "bsl_sal.h"
 #include "bsl_buffer.h"
 #include "bsl_ui.h"

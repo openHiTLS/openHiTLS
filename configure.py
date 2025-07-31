@@ -506,12 +506,12 @@ class CMakeGenerator:
 
         common_link_dir = [
             '${CMAKE_CURRENT_LIST_DIR}', # libhitls_*
-            'platform/Huawei_Secure_C/lib',
+            '${CMAKE_SOURCE_DIR}/platform/Secure_C/lib',
         ]
         common_link_lib = [
             'hitls_pki', 'hitls_crypto', 'hitls_bsl',
             'dl', 'pthread', 'm',
-            'securec'
+            str(self._args.securec_lib)
         ]
         cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_DIRS', common_link_dir)
         cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_LIBS', common_link_lib)

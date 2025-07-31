@@ -418,7 +418,6 @@ const char *BSL_OBJ_GetOidNameFromCID(BslCid ulCID)
 #endif // HITLS_PKI_X509 || HITLS_PKI_INFO
 
 
-
 #ifdef HITLS_BSL_HASH
 static int32_t BslOidStringCopy(const BslOidString *srcOidStr, BslOidString *oidString)
 {

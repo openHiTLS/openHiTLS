@@ -1159,7 +1159,7 @@
                 ".deps": ["crypto::bn", "bsl::asn1", "bsl::obj"]
             },
             "codecskey": {
-                ".features": ["codecskey", "key_epki", "key_encode", "key_decode"],
+                ".features": ["codecskey", "key_epki", "key_encode", "key_info", "key_decode"],
                 ".srcs": ["crypto/codecskey/src/*.c"],
                 ".deps": ["bsl::asn1", "bsl::obj"],
                 ".include": [

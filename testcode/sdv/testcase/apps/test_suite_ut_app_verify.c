@@ -22,7 +22,6 @@
 #include "bsl_sal.h"
 #include "bsl_errno.h"
 #include "app_function.h"
-#include "bsl_user_data.h"
 #include "bsl_list.h"
 
 #include "app_errno.h"

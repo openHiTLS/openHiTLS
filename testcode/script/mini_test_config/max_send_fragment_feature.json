@@ -82,7 +82,8 @@
                 "slh_dsa",
                 "cbc",
                 "cipher",
-                "pkey"
+                "pkey",
+                "codecskey"
             ]
         },
         "hitls_tls": {
