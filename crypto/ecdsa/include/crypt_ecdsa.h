@@ -96,7 +96,7 @@ CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(int32_t id);
  * @retval (CRYPT_EcdsaPara *) Pointer to the memory space of the allocated context
  * @retval NULL Invalid null pointer
  */
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const BSL_Param *eccPara);
+CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const CRYPT_EccPara *eccPara);
 
 /**
  * @ingroup ecdsa
@@ -127,7 +127,7 @@ void CRYPT_ECDSA_FreePara(CRYPT_EcdsaPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *param);
+int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPara *para);
 
 /**
  * @ingroup ecdsa
@@ -140,7 +140,7 @@ int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *param);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Get parameters successfully.
  */
-int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPara *para);
 
 /**
  * @ingroup ecdsa
@@ -272,6 +272,63 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
  * @brief ECDSA Set the private key data.
  *
  * @param ctx [OUT] ecdsa context structure
+ * @param prv [IN] External private key data
+ *
+ * @retval CRYPT_NULL_INPUT     Error null pointer input
+ * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
+ * @retval ECC error.           An error occurred in the internal ECC calculation.
+ * @retval CRYPT_SUCCESS        Set successfully.
+ */
+int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_DsaPrv *prv);
+
+/**
+ * @ingroup ecdsa
+ * @brief ECDSA Set the public key data.
+ *
+ * @param ctx [OUT] ecdsa context structure
+ * @param pub [IN] External public key data
+ *
+ * @retval CRYPT_NULL_INPUT     Error null pointer input
+ * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
+ * @retval ECC error.           An error occurred in the internal ECC calculation.
+ * @retval CRYPT_SUCCESS        Set successfully.
+ */
+int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_DsaPub *pub);
+
+/**
+ * @ingroup ecdsa
+ * @brief ECDSA Obtain the private key data.
+ *
+ * @param ctx [IN] ecdsa context structure
+ * @param prv [OUT] External private key data
+ *
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer input
+ * @retval CRYPT_ECC_PKEY_ERR_EMPTY_KEY The key is empty.
+ * @retval ECC error.                   An error occurred in the internal ECC calculation.
+ * @retval CRYPT_SUCCESS                Obtained successfully.
+ */
+int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_DsaPrv *prv);
+
+/**
+ * @ingroup ecdsa
+ * @brief ECDSA Obtain the public key data.
+ *
+ * @param ctx [IN] ecdsa context structure
+ * @param pub [OUT] External public key data
+ *
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer input
+ * @retval CRYPT_ECC_PKEY_ERR_EMPTY_KEY The key is empty.
+ * @retval ECC error.                   An error occurred in the internal ECC calculation.
+ * @retval CRYPT_SUCCESS                Obtained successfully.
+ */
+int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_DsaPub *pub);
+
+#ifdef HITLS_BSL_PARAMS
+/**
+ * @ingroup ecdsa
+ * @brief ECDSA Set the private key data.
+ *
+ * @param ctx [OUT] ecdsa context structure
  * @param para [IN] External private key data
  *
  * @retval CRYPT_NULL_INPUT     Error null pointer input
@@ -279,7 +336,7 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_ECDSA_SetPrvKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup ecdsa
@@ -293,7 +350,7 @@ int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_ECDSA_SetPubKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup ecdsa
@@ -307,7 +364,7 @@ int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+int32_t CRYPT_ECDSA_GetPrvKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup ecdsa
@@ -321,7 +378,34 @@ int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+int32_t CRYPT_ECDSA_GetPubKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+
+/**
+ * @ingroup ecdsa
+ * @brief Set the data of the key parameter structure to the key structure.
+ *
+ * @param ctx [OUT] Key structure for which related parameters need to be set
+ * @param para [IN] Key parameters
+ *
+ * @retval CRYPT_NULL_INPUT     Invalid null pointer input
+ * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
+ * @retval CRYPT_SUCCESS        Set successfully.
+ */
+int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
+
+/**
+ * @ingroup ecdsa
+ * @brief Obtain the key parameter structure.
+ *
+ * @param ctx [IN] Key structure for which related parameters need to be get
+ * @param para [OUT] Key parameters
+ *
+ * @retval CRYPT_NULL_INPUT     Invalid null pointer input
+ * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
+ * @retval CRYPT_SUCCESS        Get parameters successfully.
+ */
+int32_t CRYPT_ECDSA_GetParaEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+#endif
 
 /**
  * @ingroup ecdsa

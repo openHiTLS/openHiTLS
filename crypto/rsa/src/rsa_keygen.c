@@ -296,53 +296,50 @@ static int32_t ProcessRsaPrimeSeeds(const BSL_Param *para, CRYPT_RSA_Para *retPa
 }
 #endif
 
-CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para)
+static int32_t RsaNewParaBasicCheck(const CRYPT_RsaPara *para)
 {
-    const uint8_t *e = NULL;
-    uint32_t eLen = 0;
-    int32_t ret = GetRsaParam(para, CRYPT_PARAM_RSA_E, &e, &eLen);
-    if (ret != CRYPT_SUCCESS) {
+    if (para == NULL || para->e == NULL || para->eLen == 0 ||
+        para->bits > RSA_MAX_MODULUS_BITS || para->bits < RSA_MIN_MODULUS_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    /* the length of e cannot be greater than bits */
+    if (para->eLen > BN_BITS_TO_BYTES(para->bits)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
+        return CRYPT_RSA_ERR_KEY_BITS;
+    }
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
+{
+    if (RsaNewParaBasicCheck(para) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
     }
-    uint32_t bits = 0;
-    ret = GetRsaBits(para, &bits);
-    if (ret != CRYPT_SUCCESS) {
-        return NULL;
-    }
-    ret = ValidateRsaParams(eLen, bits);
-    if (ret != CRYPT_SUCCESS) {
-        return NULL;
-    }
-    CRYPT_RSA_Para *retPara = BSL_SAL_Calloc(1, sizeof(CRYPT_RSA_Para));
+    CRYPT_RSA_Para *retPara = BSL_SAL_Malloc(sizeof(CRYPT_RSA_Para));
     if (retPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    retPara->bits = bits;
-    retPara->e = BN_Create(bits);
-    retPara->p = BN_Create(bits);
-    retPara->q = BN_Create(bits);
+    retPara->bits = para->bits;
+    retPara->e = BN_Create(para->bits);
+    retPara->p = BN_Create(para->bits);
+    retPara->q = BN_Create(para->bits);
     if (retPara->e == NULL || retPara->p == NULL || retPara->q == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
-    ret = BN_Bin2Bn(retPara->e, e, eLen);
+    int32_t ret;
+    ret = BN_Bin2Bn(retPara->e, para->e, para->eLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    if (BN_BITS_TO_BYTES(bits) > RSA_SMALL_MODULUS_BYTES && BN_Bytes(retPara->e) > RSA_MAX_PUBEXP_BYTES) {
+    if (BN_BITS_TO_BYTES(para->bits) > RSA_SMALL_MODULUS_BYTES && BN_Bytes(retPara->e) > RSA_MAX_PUBEXP_BYTES) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         goto ERR;
     }
-
-#ifdef HITLS_CRYPTO_ACVP_TESTS
-    ret = ProcessRsaPrimeSeeds(para, retPara, bits);
-    if (ret != CRYPT_SUCCESS) {
-        goto ERR;
-    }
-#endif
-    
     return retPara;
 ERR:
     CRYPT_RSA_FreePara(retPara);
@@ -427,9 +424,9 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx)
     BSL_SAL_FREE(ctx);
 }
 
-static int32_t IsRSASetParamValid(const CRYPT_RSA_Para *para)
+static int32_t IsRSASetParamValid(const CRYPT_RSA_Ctx *ctx, const CRYPT_RSA_Para *para)
 {
-    if (para == NULL || para->e == NULL) {
+    if (ctx == NULL || para == NULL || para->e == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -516,7 +513,7 @@ ERR:
     return NULL;
 }
 
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPara *para)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -527,7 +524,7 @@ int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
     }
-    int32_t ret = IsRSASetParamValid(rsaPara);
+    int32_t ret = IsRSASetParamValid(ctx, rsaPara);
     if (ret != CRYPT_SUCCESS) {
         RSA_FREE_PARA(rsaPara);
         return ret;
@@ -539,6 +536,103 @@ int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
     ctx->para = rsaPara;
     return CRYPT_SUCCESS;
 }
+
+#ifdef HITLS_BSL_PARAMS
+CRYPT_RSA_Para *CRYPT_RSA_NewParaEx(const BSL_Param *para)
+{
+    const uint8_t *e = NULL;
+    uint32_t eLen = 0;
+    int32_t ret = GetRsaParam(para, CRYPT_PARAM_RSA_E, &e, &eLen);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    uint32_t bits = 0;
+    ret = GetRsaBits(para, &bits);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    ret = ValidateRsaParams(eLen, bits);
+    if (ret != CRYPT_SUCCESS) {
+        return NULL;
+    }
+    CRYPT_RSA_Para *retPara = BSL_SAL_Calloc(1, sizeof(CRYPT_RSA_Para));
+    if (retPara == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    retPara->bits = bits;
+    retPara->e = BN_Create(bits);
+    retPara->p = BN_Create(bits);
+    retPara->q = BN_Create(bits);
+    if (retPara->e == NULL || retPara->p == NULL || retPara->q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto ERR;
+    }
+    ret = BN_Bin2Bn(retPara->e, e, eLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    if (BN_BITS_TO_BYTES(bits) > RSA_SMALL_MODULUS_BYTES && BN_Bytes(retPara->e) > RSA_MAX_PUBEXP_BYTES) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
+        goto ERR;
+    }
+
+#ifdef HITLS_CRYPTO_ACVP_TESTS
+    ret = ProcessRsaPrimeSeeds(para, retPara, bits);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+#endif
+    
+    return retPara;
+ERR:
+    CRYPT_RSA_FreePara(retPara);
+    return NULL;
+}
+
+static int32_t IsRSASetParamValidEx(const CRYPT_RSA_Para *para)
+{
+    if (para == NULL || para->e == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (para->bits > RSA_MAX_MODULUS_BITS || para->bits < RSA_MIN_MODULUS_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
+        return CRYPT_RSA_ERR_KEY_BITS;
+    }
+
+    if (BN_GetBit(para->e, 0) != true || BN_IsLimb(para->e, 1) == true) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_E_VALUE);
+        return CRYPT_RSA_ERR_E_VALUE;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_RSA_SetParaEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_RSA_Para *rsaPara = CRYPT_RSA_NewParaEx(para);
+    if (rsaPara == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
+        return CRYPT_EAL_ERR_NEW_PARA_FAIL;
+    }
+    int32_t ret = IsRSASetParamValidEx(rsaPara);
+    if (ret != CRYPT_SUCCESS) {
+        RSA_FREE_PARA(rsaPara);
+        return ret;
+    }
+    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
+    RSA_FREE_PARA(ctx->para);
+    RSA_FREE_PRV_KEY(ctx->prvKey);
+    RSA_FREE_PUB_KEY(ctx->pubKey);
+    ctx->para = rsaPara;
+    return CRYPT_SUCCESS;
+}
+#endif
 
 CRYPT_RSA_PrvKey *RSA_NewPrvKey(uint32_t bits)
 {
@@ -1188,21 +1282,21 @@ int32_t CRYPT_RSA_Import(CRYPT_RSA_Ctx *ctx, const BSL_Param *params)
 {
     int32_t ret = CRYPT_SUCCESS;
     if (IsExistPrvKeyParams(params)) {
-        ret = CRYPT_RSA_SetPrvKey(ctx, params);
+        ret = CRYPT_RSA_SetPrvKeyEx(ctx, params);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
     }
     if (IsExistPubKeyParams(params)) {
-        ret = CRYPT_RSA_SetPubKey(ctx, params);
+        ret = CRYPT_RSA_SetPubKeyEx(ctx, params);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
     }
     if (IsExistRsaParam(params)) {
-        ret = CRYPT_RSA_SetPara(ctx, params);
+        ret = CRYPT_RSA_SetParaEx(ctx, params);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -1305,7 +1399,7 @@ int32_t CRYPT_RSA_Export(const CRYPT_RSA_Ctx *ctx, BSL_Param *params)
     }
     if (ctx->pubKey != NULL) {
         InitRsaPubKeyParams(rsaParams, &index, buffer, bytes);
-        ret = CRYPT_RSA_GetPubKey(ctx, rsaParams);
+        ret = CRYPT_RSA_GetPubKeyEx(ctx, rsaParams);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
             BSL_ERR_PUSH_ERROR(ret);
@@ -1314,7 +1408,7 @@ int32_t CRYPT_RSA_Export(const CRYPT_RSA_Ctx *ctx, BSL_Param *params)
     }
     if (ctx->prvKey != NULL) {
         InitRsaPrvKeyParams(rsaParams, &index, buffer, bytes);
-        ret = CRYPT_RSA_GetPrvKey(ctx, rsaParams);
+        ret = CRYPT_RSA_GetPrvKeyEx(ctx, rsaParams);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
             BSL_ERR_PUSH_ERROR(ret);

@@ -33,11 +33,17 @@ int32_t CRYPT_HYBRID_KEM_KeyCtrl(CRYPT_HybridKemCtx *ctx, int32_t opt, void *val
 
 int32_t CRYPT_HYBRID_KEM_GenKey(CRYPT_HybridKemCtx *ctx);
 
-int32_t CRYPT_HYBRID_KEM_SetEncapsKey(CRYPT_HybridKemCtx *ctx, const BSL_Param *param);
-int32_t CRYPT_HYBRID_KEM_SetDecapsKey(CRYPT_HybridKemCtx *ctx, const BSL_Param *param);
+int32_t CRYPT_HYBRID_KEM_SetEncapsKey(CRYPT_HybridKemCtx *ctx, const CRYPT_KemEncapsKey *ek);
+int32_t CRYPT_HYBRID_KEM_SetDecapsKey(CRYPT_HybridKemCtx *ctx, const CRYPT_KemDecapsKey *dk);
 
-int32_t CRYPT_HYBRID_KEM_GetEncapsKey(const CRYPT_HybridKemCtx *ctx, BSL_Param *param);
-int32_t CRYPT_HYBRID_KEM_GetDecapsKey(const CRYPT_HybridKemCtx *ctx, BSL_Param *param);
+int32_t CRYPT_HYBRID_KEM_GetEncapsKey(const CRYPT_HybridKemCtx *ctx, CRYPT_KemEncapsKey *ek);
+int32_t CRYPT_HYBRID_KEM_GetDecapsKey(const CRYPT_HybridKemCtx *ctx, CRYPT_KemDecapsKey *dk);
+
+int32_t CRYPT_HYBRID_KEM_GetEncapsKeyEx(const CRYPT_HybridKemCtx *ctx, BSL_Param *para);
+int32_t CRYPT_HYBRID_KEM_GetDecapsKeyEx(const CRYPT_HybridKemCtx *ctx, BSL_Param *para);
+
+int32_t CRYPT_HYBRID_KEM_SetEncapsKeyEx(CRYPT_HybridKemCtx *ctx, const BSL_Param *para);
+int32_t CRYPT_HYBRID_KEM_SetDecapsKeyEx(CRYPT_HybridKemCtx *ctx, const BSL_Param *para);
 
 int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, uint32_t *cipherLen,
     uint8_t *share, uint32_t *shareLen);

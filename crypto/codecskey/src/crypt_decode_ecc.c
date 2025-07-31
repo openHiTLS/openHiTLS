@@ -151,7 +151,7 @@ int32_t CRYPT_ECC_ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, void *
             subPubkeyInfo.pubKey.len, 0},
         BSL_PARAM_END
     };
-    ret = ECC_PkeySetPubKey(pctx, pubParam);
+    ret = ECC_PkeySetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         ECC_FreeCtx(pctx);
@@ -186,7 +186,7 @@ int32_t CRYPT_ECC_ParsePrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_A
             eccPrvInfo.pubkey.len - 1, 0},
         BSL_PARAM_END
     };
-    ret = ECC_PkeySetPubKey(pctx, pubParam);
+    ret = ECC_PkeySetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -195,7 +195,7 @@ int32_t CRYPT_ECC_ParsePrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_A
         {CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, eccPrvInfo.prikey.buff, eccPrvInfo.prikey.len, 0},
         BSL_PARAM_END
     };
-    ret = ECC_PkeySetPrvKey(pctx, prvParam);
+    ret = ECC_PkeySetPrvKeyEx(pctx, prvParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -271,7 +271,7 @@ int32_t CRYPT_SM2_ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_
             subPubkeyInfo.pubKey.len, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_SM2_SetPubKey(pctx, pubParam);
+    ret = CRYPT_SM2_SetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         CRYPT_SM2_FreeCtx(pctx);
@@ -301,7 +301,7 @@ int32_t CRYPT_SM2_ParsePrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_A
             eccPrvInfo.pubkey.len - 1, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_SM2_SetPubKey(pctx, pubParam);
+    ret = CRYPT_SM2_SetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -310,7 +310,7 @@ int32_t CRYPT_SM2_ParsePrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_A
         {CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, eccPrvInfo.prikey.buff, eccPrvInfo.prikey.len, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_SM2_SetPrvKey(pctx, prvParam);
+    ret = CRYPT_SM2_SetPrvKeyEx(pctx, prvParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -364,7 +364,7 @@ static int32_t ParseEd25519PrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, C
         {CRYPT_PARAM_CURVE25519_PRVKEY, BSL_PARAM_TYPE_OCTETS, tmpBuff, tmpBuffLen, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_CURVE25519_SetPrvKey(pctx, prvParam);
+    ret = CRYPT_CURVE25519_SetPrvKeyEx(pctx, prvParam);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_CURVE25519_FreeCtx(pctx);
         BSL_ERR_PUSH_ERROR(ret);
@@ -415,7 +415,7 @@ int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CR
         {CRYPT_PARAM_CURVE25519_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff, subPubkeyInfo.pubKey.len, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_CURVE25519_SetPubKey(pctx, pubParam);
+    ret = CRYPT_CURVE25519_SetPubKeyEx(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         CRYPT_CURVE25519_FreeCtx(pctx);

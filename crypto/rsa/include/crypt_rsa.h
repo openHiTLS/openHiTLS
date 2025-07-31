@@ -82,7 +82,7 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx);
  * @retval (CRYPT_RSA_Para *) Pointer to the allocated memory space of the structure
  * @retval NULL               Invalid null pointer.
  */
-CRYPT_RSA_Para *CRYPT_RSA_NewPara(const BSL_Param *para);
+CRYPT_RSA_Para *CRYPT_RSA_NewParaEx(const BSL_Param *para);
 
 /**
  * @ingroup rsa
@@ -104,7 +104,7 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx);
  * @ingroup rsa
  * @brief Set the data of the key parameter structure to the key structure.
  *
- * @param ctx [OUT] RSA context structure for which related parameters need to be set
+ * @param ctx [OUT] Key structure for which related parameters need to be set
  * @param para [IN] Key parameter structure
  *
  * @retval CRYPT_NULL_INPUT         Invalid null pointer input.
@@ -113,7 +113,7 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx);
  * @retval CRYPT_MEM_ALLOC_FAIL     internal memory allocation error
  * @retval CRYPT_SUCCESS            set successfully.
  */
-int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPara *para);
 
 /**
  * @ingroup rsa
@@ -194,6 +194,66 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
  * @brief RSA Set the private key information.
  *
  * @param ctx [OUT] rsa context structure
+ * @param prv [IN] Private key data
+ *
+ * @retval CRYPT_NULL_INPUT             Error null pointer input
+ * @retval CRYPT_RSA_ERR_KEY_BITS       The key length does not meet the requirements.
+ * @retval CRYPT_RSA_NO_KEY_INFO        does not contain the key information.
+ * @retval CRYPT_RSA_ERR_INPUT_VALUE    The entered value does not meet the calculation conditions.
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ * @retval BN error.                    An error occurs in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS                The private key is successfully set.
+ */
+int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv);
+
+/**
+ * @ingroup rsa
+ * @brief RSA Set the public key information.
+ *
+ * @param ctx [OUT] RSA context structure
+ * @param pub [IN] Public key data
+ *
+ * @retval CRYPT_NULL_INPUT          Error null pointer input
+ * @retval CRYPT_RSA_ERR_KEY_BITS    The key length does not meet the requirements.
+ * @retval CRYPT_RSA_ERR_INPUT_VALUE The entered value does not meet the calculation conditions.
+ * @retval CRYPT_MEM_ALLOC_FAIL      Memory allocation failure
+ * @retval BN error.                 An error occurs in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS             The public key is successfully set.
+ */
+int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub);
+
+/**
+ * @ingroup rsa
+ * @brief RSA Obtain the private key information.
+ *
+ * @param ctx [IN] RSA context structure
+ * @param prv [OUT] Private key data
+ *
+ * @retval CRYPT_NULL_INPUT Invalid null pointer input
+ * @retval BN error.        An error occurs in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS    The private key is obtained successfully.
+ */
+int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPrv *prv);
+
+/**
+ * @ingroup rsa
+ * @brief RSA Obtain the public key information.
+ *
+ * @param ctx [IN] RSA context structure
+ * @param pub [OUT] Public key data
+ *
+ * @retval CRYPT_NULL_INPUT Invalid null pointer input
+ * @retval BN error.        An error occurs in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS    The public key is obtained successfully.
+ */
+int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPub *pub);
+
+#ifdef HITLS_BSL_PARAMS
+/**
+ * @ingroup rsa
+ * @brief RSA Set the private key information.
+ *
+ * @param ctx [OUT] rsa context structure
  * @param para [IN] Private key data
  *
  * @retval CRYPT_NULL_INPUT             Error null pointer input
@@ -201,10 +261,10 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
  * @retval CRYPT_RSA_NO_KEY_INFO        does not contain the key information.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE    The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
- * @retval BN error                     An error occurs in the internal BigNum operation.
+ * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                The private key is successfully set.
  */
-int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_RSA_SetPrvKeyEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup rsa
@@ -217,10 +277,10 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
  * @retval CRYPT_RSA_ERR_KEY_BITS    The key length does not meet the requirements.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL      Memory allocation failure
- * @retval BN error                  An error occurs in the internal BigNum operation.
+ * @retval BN error.                 An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS             The public key is successfully set.
  */
-int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_RSA_SetPubKeyEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
 
 /**
  * @ingroup rsa
@@ -230,10 +290,10 @@ int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
  * @param para [OUT] Private key data
  *
  * @retval CRYPT_NULL_INPUT Invalid null pointer input
- * @retval BN error         An error occurs in the internal BigNum operation.
+ * @retval BN error.        An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The private key is obtained successfully.
  */
-int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para);
+int32_t CRYPT_RSA_GetPrvKeyEx(const CRYPT_RSA_Ctx *ctx, BSL_Param *para);
 
 /**
  * @ingroup rsa
@@ -243,10 +303,26 @@ int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para);
  * @param para [OUT] Public key data
  *
  * @retval CRYPT_NULL_INPUT Invalid null pointer input
- * @retval BN error         An error occurs in the internal BigNum operation.
+ * @retval BN error.        An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS    The public key is obtained successfully.
  */
-int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, BSL_Param *para);
+int32_t CRYPT_RSA_GetPubKeyEx(const CRYPT_RSA_Ctx *ctx, BSL_Param *para);
+
+/**
+ * @ingroup rsa
+ * @brief Set the data of the key parameter structure to the key structure.
+ *
+ * @param ctx [OUT] Key structure for which related parameters need to be set
+ * @param para [IN] Key parameter structure
+ *
+ * @retval CRYPT_NULL_INPUT         Invalid null pointer input.
+ * @retval CRYPT_RSA_ERR_KEY_BITS   The expected key length does not meet the requirements.
+ * @retval CRYPT_RSA_ERR_E_VALUE    The expected value of e does not meet the requirements.
+ * @retval CRYPT_MEM_ALLOC_FAIL     internal memory allocation error
+ * @retval CRYPT_SUCCESS            set successfully.
+ */
+int32_t CRYPT_RSA_SetParaEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
+#endif
 
 int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 

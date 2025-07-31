@@ -95,35 +95,69 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
 
 /**
  * @brief Get the public key of SLH-DSA
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
- * @param para Pointer to the public key
+ * @param pub Pointer to the public key
  */
-int32_t CRYPT_SLH_DSA_GetPubKey(const CryptSlhDsaCtx *ctx, BSL_Param *para);
+int32_t CRYPT_SLH_DSA_GetPubKey(const CryptSlhDsaCtx *ctx, CRYPT_SlhDsaPub *pub);
 
 /**
  * @brief Get the private key of SLH-DSA
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
- * @param para Pointer to the private key
+ * @param prv Pointer to the private key
  */
-int32_t CRYPT_SLH_DSA_GetPrvKey(const CryptSlhDsaCtx *ctx, BSL_Param *para);
+int32_t CRYPT_SLH_DSA_GetPrvKey(const CryptSlhDsaCtx *ctx, CRYPT_SlhDsaPrv *prv);
 
 /**
  * @brief Set the public key of SLH-DSA
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
- * @param para Pointer to the public key
+ * @param pub Pointer to the public key
  */
-int32_t CRYPT_SLH_DSA_SetPubKey(CryptSlhDsaCtx *ctx, const BSL_Param *para);
+int32_t CRYPT_SLH_DSA_SetPubKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPub *pub);
 
 /**
  * @brief Set the private key of SLH-DSA
- * 
+ *
+ * @param ctx Pointer to the SLH-DSA context
+ * @param prv Pointer to the private key
+ */
+int32_t CRYPT_SLH_DSA_SetPrvKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPrv *prv);
+
+#ifdef HITLS_BSL_PARAMS
+/**
+ * @brief Get the public key of SLH-DSA
+ *
+ * @param ctx Pointer to the SLH-DSA context
+ * @param para Pointer to the public key
+ */
+int32_t CRYPT_SLH_DSA_GetPubKeyEx(const CryptSlhDsaCtx *ctx, BSL_Param *para);
+
+/**
+ * @brief Get the private key of SLH-DSA
+ *
  * @param ctx Pointer to the SLH-DSA context
  * @param para Pointer to the private key
  */
-int32_t CRYPT_SLH_DSA_SetPrvKey(CryptSlhDsaCtx *ctx, const BSL_Param *para);
+int32_t CRYPT_SLH_DSA_GetPrvKeyEx(const CryptSlhDsaCtx *ctx, BSL_Param *para);
+
+/**
+ * @brief Set the public key of SLH-DSA
+ *
+ * @param ctx Pointer to the SLH-DSA context
+ * @param para Pointer to the public key
+ */
+int32_t CRYPT_SLH_DSA_SetPubKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
+
+/**
+ * @brief Set the private key of SLH-DSA
+ *
+ * @param ctx Pointer to the SLH-DSA context
+ * @param para Pointer to the private key
+ */
+int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
+#endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA_CHECK
 

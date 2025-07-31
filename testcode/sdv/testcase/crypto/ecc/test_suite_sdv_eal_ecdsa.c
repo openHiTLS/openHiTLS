@@ -1079,12 +1079,12 @@ void SDV_CRYPTO_ECDSA_SET_PARA_API_TC001(int paraId, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraId), CRYPT_SUCCESS);
 
     /* Input parameter test of CRYPT_EAL_PkeySetPara. */
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(NULL, &para) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, NULL) == CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(NULL, &para), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, NULL), CRYPT_NULL_INPUT);
     para.id = CRYPT_PKEY_DSA;
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_ALGID);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_EAL_ERR_ALGID);
     para.id = CRYPT_PKEY_ECDSA;
-    ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_NULL_INPUT);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);

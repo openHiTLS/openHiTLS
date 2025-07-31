@@ -852,13 +852,15 @@ CRYPT_DH_Para *CRYPT_DH_NewParaById(CRYPT_PKEY_ParaId id)
         BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
         return NULL;
     }
-    BSL_Param para[4] = {
-        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, vector->p->data, vector->p->len, 0},
-        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, vector->q->data, vector->q->len, 0},
-        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, vector->g->data, vector->g->len, 0},
-        BSL_PARAM_END
-    };
-    retPara = CRYPT_DH_NewPara(para);
+    CRYPT_DhPara para;
+    para.p = vector->p->data;
+    para.pLen = vector->p->len;
+    para.q = vector->q->data;
+    para.qLen = vector->q->len;
+    para.g = vector->g->data;
+    para.gLen = vector->g->len;
+
+    retPara = CRYPT_DH_NewPara(&para);
     if (retPara == NULL) {
         goto ERR;
     }

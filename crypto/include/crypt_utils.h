@@ -23,6 +23,10 @@
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
+#ifdef HITLS_BSL_PARAMS
+#include "bsl_params.h"
+#include "crypt_params_key.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -443,6 +447,33 @@ static inline int32_t GetUintCtrl(const void *ctx, void *val, uint32_t len, GetU
     *(uint32_t *)val = getUint(ctx);
     return CRYPT_SUCCESS;
 }
+
+#ifdef HITLS_BSL_PARAMS
+static inline const BSL_Param *GetConstParamValue(const BSL_Param *params, int32_t type,
+    uint8_t **value, uint32_t *valueLen)
+{
+    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, type);
+    if (temp != NULL) {
+        *value = temp->value;
+        if (valueLen != NULL) {
+            *valueLen = temp->valueLen;
+        }
+    }
+    return temp;
+}
+
+static inline BSL_Param *GetParamValue(BSL_Param *params, int32_t type, uint8_t **value, uint32_t *valueLen)
+{
+    BSL_Param *temp = BSL_PARAM_FindParam(params, type);
+    if (temp != NULL) {
+        *value = temp->value;
+        if (valueLen != NULL) {
+            *valueLen = temp->valueLen;
+        }
+    }
+    return temp;
+}
+#endif
 
 void GetCpuInstrSupportState(void);
 

@@ -166,7 +166,7 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
     }
     BSL_Param tmpPara[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, maxPubData,
         SM2_MAX_PUBKEY_DATA_LENGTH, 0}, BSL_PARAM_END};
-    GOTO_ERR_IF(CRYPT_SM2_GetPubKey(ctx, tmpPara), ret);
+    GOTO_ERR_IF(CRYPT_SM2_GetPubKeyEx(ctx, tmpPara), ret);
     pub.len = tmpPara[0].useLen;
     GOTO_ERR_IF(ctx->hashMethod->init(mdCtx, NULL), ret);
     // User A has a distinguishable identifier IDA with a length of entlenA bits,
@@ -232,43 +232,81 @@ uint32_t CRYPT_SM2_GetBits(const CRYPT_SM2_Ctx *ctx)
     return ECC_PkeyGetBits(ctx->pkey);
 }
 
-int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const BSL_Param *para)
+int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Sm2Prv *prv)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    return ECC_PkeySetPrvKey(ctx->pkey, para);
+    return ECC_PkeySetPrvKey(ctx->pkey, prv);
 }
 
-int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const BSL_Param *para)
+int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Sm2Pub *pub)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    return ECC_PkeySetPubKey(ctx->pkey, para);
+    return ECC_PkeySetPubKey(ctx->pkey, pub);
 }
 
-int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, BSL_Param *para)
-{
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    return ECC_PkeyGetPrvKey(ctx->pkey, para);
-}
-
-int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, BSL_Param *para)
+int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Sm2Prv *prv)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
-    return ECC_PkeyGetPubKey(ctx->pkey, para);
+    return ECC_PkeyGetPrvKey(ctx->pkey, prv);
 }
+
+int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Sm2Pub *pub)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    return ECC_PkeyGetPubKey(ctx->pkey, pub);
+}
+
+#ifdef HITLS_BSL_PARAMS
+int32_t CRYPT_SM2_SetPrvKeyEx(CRYPT_SM2_Ctx *ctx, const BSL_Param *para)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ECC_PkeySetPrvKeyEx(ctx->pkey, para);
+}
+
+int32_t CRYPT_SM2_SetPubKeyEx(CRYPT_SM2_Ctx *ctx, const BSL_Param *para)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ECC_PkeySetPubKeyEx(ctx->pkey, para);
+}
+
+int32_t CRYPT_SM2_GetPrvKeyEx(const CRYPT_SM2_Ctx *ctx, BSL_Param *para)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ECC_PkeyGetPrvKeyEx(ctx->pkey, para);
+}
+
+int32_t CRYPT_SM2_GetPubKeyEx(const CRYPT_SM2_Ctx *ctx, BSL_Param *para)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ECC_PkeyGetPubKeyEx(ctx->pkey, para);
+}
+#endif
 
 int32_t CRYPT_SM2_Gen(CRYPT_SM2_Ctx *ctx)
 {
@@ -291,14 +329,14 @@ int32_t CRYPT_SM2_Import(CRYPT_SM2_Ctx *ctx, const BSL_Param *params)
     const BSL_Param *prv = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_EC_PRVKEY);
     const BSL_Param *pub = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_EC_PUBKEY);
     if (prv != NULL) {
-        ret = CRYPT_SM2_SetPrvKey(ctx, prv);
+        ret = CRYPT_SM2_SetPrvKeyEx(ctx, prv);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
     }
     if (pub != NULL) {
-        ret = CRYPT_SM2_SetPubKey(ctx, pub);
+        ret = CRYPT_SM2_SetPubKeyEx(ctx, pub);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -331,7 +369,7 @@ int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params)
     }
     if (ctx->pkey->prvkey != NULL) {
         (void)BSL_PARAM_InitValue(&sm2Params[index], CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, buffer, keyBytes);
-        ret = CRYPT_SM2_GetPrvKey(ctx, sm2Params);
+        ret = CRYPT_SM2_GetPrvKeyEx(ctx, sm2Params);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
             BSL_ERR_PUSH_ERROR(ret);
@@ -343,7 +381,7 @@ int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params)
     if (ctx->pkey->pubkey != NULL) {
         (void)BSL_PARAM_InitValue(&sm2Params[index], CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS,
             buffer, keyBytes);
-        ret = CRYPT_SM2_GetPubKey(ctx, sm2Params);
+        ret = CRYPT_SM2_GetPubKeyEx(ctx, sm2Params);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
             BSL_ERR_PUSH_ERROR(ret);

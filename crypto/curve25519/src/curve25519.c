@@ -25,7 +25,10 @@
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
 #include "eal_md_local.h"
+#ifdef HITLS_BSL_PARAMS
+#include "bsl_params.h"
 #include "crypt_params_key.h"
+#endif
 
 #ifdef HITLS_CRYPTO_X25519
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
@@ -184,23 +187,74 @@ void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey)
     BSL_SAL_FREE(pkey);
 }
 
-int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para)
+#ifdef HITLS_BSL_PARAMS
+int32_t CRYPT_CURVE25519_SetPubKeyEx(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para)
 {
-    if (pkey == NULL || para == NULL) {
+    if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    // assume that the two scenarios will not coexist.
-    const BSL_Param *pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
-    if (pub == NULL) {
-        pub = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
+    CRYPT_Curve25519Pub pub = {0};
+    if(GetConstParamValue(para, CRYPT_PARAM_CURVE25519_PUBKEY, &pub.data, &pub.len) == NULL) {
+        (void)GetConstParamValue(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY, (uint8_t **)&pub.data, &pub.len);
     }
-    
-    if (pub == NULL || pub->value == NULL) {
+    return CRYPT_CURVE25519_SetPubKey(pkey, &pub);
+}
+
+int32_t CRYPT_CURVE25519_SetPrvKeyEx(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para)
+{
+    if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pub->valueLen != CRYPT_CURVE25519_KEYLEN) {
+    CRYPT_Curve25519Prv prv = {0};
+    (void)GetConstParamValue(para, CRYPT_PARAM_CURVE25519_PRVKEY, &prv.data, &prv.len);
+    return CRYPT_CURVE25519_SetPrvKey(pkey, &prv);
+}
+
+int32_t CRYPT_CURVE25519_GetPubKeyEx(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *para)
+{
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_Curve25519Pub pub = {0};
+    BSL_Param *paramPub = GetParamValue(para, CRYPT_PARAM_CURVE25519_PUBKEY, &pub.data, &(pub.len));
+    if (paramPub == NULL) {
+        paramPub = GetParamValue(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY, &pub.data, &(pub.len));
+    }
+    int32_t ret = CRYPT_CURVE25519_GetPubKey(pkey, &pub);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    paramPub->useLen = pub.len;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_CURVE25519_GetPrvKeyEx(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *para)
+{
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_Curve25519Prv prv = {0};
+    BSL_Param *paramPrv = GetParamValue(para, CRYPT_PARAM_CURVE25519_PRVKEY, &prv.data, &(prv.len));
+    int32_t ret = CRYPT_CURVE25519_GetPrvKey(pkey, &prv);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    paramPrv->useLen = prv.len;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Pub *pub)
+{
+    if (pkey == NULL || pub == NULL || pub->data == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pub->len != CRYPT_CURVE25519_KEYLEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_KEYLEN_ERROR);
         return CRYPT_CURVE25519_KEYLEN_ERROR;
     }
@@ -208,24 +262,20 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
     /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pkey->pubKey, CRYPT_CURVE25519_KEYLEN, pub->value, pub->valueLen);
+    (void)memcpy_s(pkey->pubKey, CRYPT_CURVE25519_KEYLEN, pub->data, pub->len);
     pkey->keyType |= CURVE25519_PUBKEY;
 
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para)
+int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Prv *prv)
 {
-    if (pkey == NULL || para == NULL) {
+    if (pkey == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const BSL_Param *prv = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_CURVE25519_PRVKEY);
-    if (prv == NULL || prv->value == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (prv->valueLen != CRYPT_CURVE25519_KEYLEN) {
+
+    if (prv->len != CRYPT_CURVE25519_KEYLEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_KEYLEN_ERROR);
         return CRYPT_CURVE25519_KEYLEN_ERROR;
     }
@@ -233,28 +283,20 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
     /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pkey->prvKey, CRYPT_CURVE25519_KEYLEN, prv->value, prv->valueLen);
+    (void)memcpy_s(pkey->prvKey, CRYPT_CURVE25519_KEYLEN, prv->data, prv->len);
     pkey->keyType |= CURVE25519_PRVKEY;
 
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *para)
+int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Pub *pub)
 {
-    if (pkey == NULL || para == NULL) {
+    if (pkey == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    // assume that the two scenarios will not coexist.
-    BSL_Param *pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PUBKEY);
-    if (pub == NULL) {
-        pub = BSL_PARAM_FindParam(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY);
-    }
-    if (pub == NULL || pub->value == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (pub->valueLen < CRYPT_CURVE25519_KEYLEN) {
+
+    if (pub->len < CRYPT_CURVE25519_KEYLEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_KEYLEN_ERROR);
         return CRYPT_CURVE25519_KEYLEN_ERROR;
     }
@@ -267,24 +309,20 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
     /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pub->value, pub->valueLen, pkey->pubKey, CRYPT_CURVE25519_KEYLEN);
+    (void)memcpy_s(pub->data, pub->len, pkey->pubKey, CRYPT_CURVE25519_KEYLEN);
 
-    pub->useLen = CRYPT_CURVE25519_KEYLEN;
+    pub->len = CRYPT_CURVE25519_KEYLEN;
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *para)
+int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve25519Prv *prv)
 {
-    if (pkey == NULL || para == NULL) {
+    if (pkey == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BSL_Param *prv = BSL_PARAM_FindParam(para, CRYPT_PARAM_CURVE25519_PRVKEY);
-    if (prv == NULL || prv->value == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (prv->valueLen < CRYPT_CURVE25519_KEYLEN) {
+
+    if (prv->len < CRYPT_CURVE25519_KEYLEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_KEYLEN_ERROR);
         return CRYPT_CURVE25519_KEYLEN_ERROR;
     }
@@ -297,9 +335,9 @@ int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param *
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
     /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(prv->value, prv->valueLen, pkey->prvKey, CRYPT_CURVE25519_KEYLEN);
+    (void)memcpy_s(prv->data, prv->len, pkey->prvKey, CRYPT_CURVE25519_KEYLEN);
 
-    prv->useLen = CRYPT_CURVE25519_KEYLEN;
+    prv->len = CRYPT_CURVE25519_KEYLEN;
     return CRYPT_SUCCESS;
 }
 
@@ -813,14 +851,14 @@ int32_t CRYPT_CURVE25519_Import(CRYPT_CURVE25519_Ctx *ctx, const BSL_Param *para
     const BSL_Param *pub = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_CURVE25519_PUBKEY);
 
     if (prv != NULL) {
-        ret = CRYPT_CURVE25519_SetPrvKey(ctx, params);
+        ret = CRYPT_CURVE25519_SetPrvKeyEx(ctx, params);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
     }
     if (pub != NULL) {
-        ret = CRYPT_CURVE25519_SetPubKey(ctx, params);
+        ret = CRYPT_CURVE25519_SetPubKeyEx(ctx, params);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -853,7 +891,7 @@ int32_t CRYPT_CURVE25519_Export(const CRYPT_CURVE25519_Ctx *ctx, BSL_Param *para
     if ((ctx->keyType & CURVE25519_PUBKEY) != 0) {
         (void)BSL_PARAM_InitValue(&ed25519Params[index], CRYPT_PARAM_CURVE25519_PUBKEY, BSL_PARAM_TYPE_OCTETS,
             buffer, keyBytes);
-        ret = CRYPT_CURVE25519_GetPubKey(ctx, ed25519Params);
+        ret = CRYPT_CURVE25519_GetPubKeyEx(ctx, ed25519Params);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
             return ret;
@@ -864,7 +902,7 @@ int32_t CRYPT_CURVE25519_Export(const CRYPT_CURVE25519_Ctx *ctx, BSL_Param *para
     if ((ctx->keyType & CURVE25519_PRVKEY) != 0) {
         (void)BSL_PARAM_InitValue(&ed25519Params[index], CRYPT_PARAM_CURVE25519_PRVKEY, BSL_PARAM_TYPE_OCTETS,
             buffer + keyBytes, keyBytes);
-        ret = CRYPT_CURVE25519_GetPrvKey(ctx, ed25519Params);
+        ret = CRYPT_CURVE25519_GetPrvKeyEx(ctx, ed25519Params);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
             return ret;

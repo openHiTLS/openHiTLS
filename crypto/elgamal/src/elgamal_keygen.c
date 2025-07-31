@@ -138,59 +138,18 @@ ERR:
     return NULL;
 }
 
-static int32_t GetElGamalParam(const BSL_Param *params, int32_t type, const uint8_t **value, uint32_t *valueLen)
+static int32_t NewParaCheck(const CRYPT_ElGamalPara *para)
 {
-    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, type);
-    if (temp == NULL || temp->valueLen == 0 || temp->value == NULL) {
+    if (para == NULL || para->q == NULL || para->qLen == 0 ||
+        para->bits == 0 || para->k_bits == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (para->bits > ELGAMAL_MAX_MODULUS_BITS || para->k_bits > ELGAMAL_MAX_MODULUS_BITS) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-
-    *value = temp->value;
-    *valueLen = temp->valueLen;
-
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetElGamalBits(const BSL_Param *params, uint32_t *bits)
-{
-    uint32_t bitsLen = sizeof(*bits);
-    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_ELGAMAL_BITS);
-    if (temp == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-
-    int32_t ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_ELGAMAL_BITS, BSL_PARAM_TYPE_UINT32, bits, &bitsLen);
-    if (ret != BSL_SUCCESS || *bits == 0 || *bits > ELGAMAL_MAX_MODULUS_BITS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetElGamalKBits(const BSL_Param *params, uint32_t *k_bits)
-{
-    uint32_t kLen = sizeof(*k_bits);
-    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, CRYPT_PARAM_ELGAMAL_KBITS);
-    if (temp == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-
-    int32_t ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_ELGAMAL_KBITS, BSL_PARAM_TYPE_UINT32, k_bits, &kLen);
-    if (ret != BSL_SUCCESS || *k_bits == 0 || *k_bits > ELGAMAL_MAX_MODULUS_BITS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
-static int32_t ValidateElGamalParams(uint32_t qLen, uint32_t k_bits)
-{
-    if (qLen != BN_BITS_TO_BYTES(k_bits)) {
+    if (para->qLen != BN_BITS_TO_BYTES(para->k_bits)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ELGAMAL_ERR_KEY_KBITS);
         return CRYPT_ELGAMAL_ERR_KEY_KBITS;
     }
@@ -198,34 +157,9 @@ static int32_t ValidateElGamalParams(uint32_t qLen, uint32_t k_bits)
     return CRYPT_SUCCESS;
 }
 
-CRYPT_ELGAMAL_Para *CRYPT_ELGAMAL_NewPara(const BSL_Param *params)
+CRYPT_ELGAMAL_Para *CRYPT_ELGAMAL_NewPara(const CRYPT_ElGamalPara *para)
 {
-    if (params == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return NULL;
-    }
-
-    const uint8_t *q = NULL;
-    uint32_t qLen = 0;
-    int32_t ret = GetElGamalParam(params, CRYPT_PARAM_ELGAMAL_Q, &q, &qLen);
-    if (ret != CRYPT_SUCCESS) {
-        return NULL;
-    }
-
-    uint32_t bits = 0;
-    ret = GetElGamalBits(params, &bits);
-    if (ret != CRYPT_SUCCESS) {
-        return NULL;
-    }
-
-    uint32_t k_bits = 0;
-    ret = GetElGamalKBits(params, &k_bits);
-    if (ret != CRYPT_SUCCESS) {
-        return NULL;
-    }
-
-    ret = ValidateElGamalParams(qLen, k_bits);
-    if (ret != CRYPT_SUCCESS) {
+    if (NewParaCheck(para) != CRYPT_SUCCESS) {
         return NULL;
     }
 
@@ -235,16 +169,23 @@ CRYPT_ELGAMAL_Para *CRYPT_ELGAMAL_NewPara(const BSL_Param *params)
         return NULL;
     }
 
-    retPara->bits = bits;
-    retPara->k_bits = k_bits;
-    retPara->q = BN_Create(k_bits);
+    retPara->bits = para->bits;
+    retPara->k_bits = para->k_bits;
+    retPara->q = BN_Create(para->k_bits);
     if (retPara->q == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        CRYPT_ELGAMAL_FreePara(retPara);
-        return NULL;
+        goto ERR;
+    }
+    int32_t ret = BN_Bin2Bn(retPara->q, para->q, para->qLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
     }
 
     return retPara;
+ERR:
+    CRYPT_ELGAMAL_FreePara(retPara);
+    return NULL;
 }
 
 void CRYPT_ELGAMAL_FreeCtx(CRYPT_ELGAMAL_Ctx *ctx)
@@ -339,32 +280,57 @@ CRYPT_ELGAMAL_Para *CRYPT_ElGamal_DupPara(const CRYPT_ELGAMAL_Para *para)
     return paraCopy;
 }
 
-int32_t CRYPT_ELGAMAL_SetPara(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *param)
+int32_t CRYPT_ELGAMAL_SetPara(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPara *para)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
-    CRYPT_ELGAMAL_Para *para = CRYPT_ELGAMAL_NewPara(param);
-    if (para == NULL) {
+    CRYPT_ELGAMAL_Para *elGamalPara = CRYPT_ELGAMAL_NewPara(para);
+    if (elGamalPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    int32_t ret = IsELGAMALSetParaVaild(ctx, para);
+    int32_t ret = IsELGAMALSetParaVaild(ctx, elGamalPara);
     if (ret != CRYPT_SUCCESS) {
-        CRYPT_ELGAMAL_FreePara(para);
+        CRYPT_ELGAMAL_FreePara(elGamalPara);
         return ret;
     }
 
     ELGAMAL_FREE_PARA(ctx->para);
     ELGAMAL_FREE_PUB_KEY(ctx->pubKey);
     ELGAMAL_FREE_PRV_KEY(ctx->prvKey);
-    ctx->para = para;
+    ctx->para = elGamalPara;
 
     return CRYPT_SUCCESS;
 }
+
+#ifdef HITLS_BSL_PARAMS
+int32_t CRYPT_ELGAMAL_SetParaEx(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para)
+{
+    if (para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    CRYPT_ElGamalPara elGamalPara = {0};
+    uint32_t len = sizeof(uint32_t);
+    int32_t ret = 0;
+    (void)GetConstParamValue(para, CRYPT_PARAM_ELGAMAL_Q, &(elGamalPara.q), &(elGamalPara.qLen));
+    const BSL_Param *temp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_ELGAMAL_BITS);
+    if (temp != NULL) {
+        RETURN_RET_IF_ERR(BSL_PARAM_GetValue(temp, CRYPT_PARAM_ELGAMAL_BITS,
+            BSL_PARAM_TYPE_UINT32, &elGamalPara.bits, &len), ret);
+    }
+    temp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_ELGAMAL_KBITS);
+    if (temp != NULL) {
+        RETURN_RET_IF_ERR(BSL_PARAM_GetValue(temp, CRYPT_PARAM_ELGAMAL_KBITS,
+            BSL_PARAM_TYPE_UINT32, &elGamalPara.k_bits, &len), ret);
+    }
+    return CRYPT_ELGAMAL_SetPara(ctx, &elGamalPara);
+}
+#endif
 
 uint32_t CRYPT_ELGAMAL_GetBits(const CRYPT_ELGAMAL_Ctx *ctx)
 {

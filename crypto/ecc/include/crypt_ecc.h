@@ -88,7 +88,7 @@ CRYPT_PKEY_ParaId ECC_GetParaId(const ECC_Para *para);
  *
  * @retval Curve ID
  */
-CRYPT_PKEY_ParaId ECC_GetCurveId(const BSL_Param *eccPara);
+CRYPT_PKEY_ParaId GetCurveId(const CRYPT_EccPara *eccPara);
 
 /**
  * @ingroup ecc

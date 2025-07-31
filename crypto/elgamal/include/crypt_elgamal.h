@@ -67,7 +67,7 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_DupCtx(CRYPT_ELGAMAL_Ctx *keyCtx);
    * @retval (CRYPT_ELGAMAL_Para *)  Pointer to the allocated memory space of the structure
    * @retval NULL                     Invalid null pointer.
    */
-CRYPT_ELGAMAL_Para *CRYPT_ELGAMAL_NewPara(const BSL_Param *para);
+CRYPT_ELGAMAL_Para *CRYPT_ELGAMAL_NewPara(const CRYPT_ElGamalPara *para);
 
 /**
    * @ingroup elgamal
@@ -90,7 +90,7 @@ void CRYPT_ELGAMAL_FreePara(CRYPT_ELGAMAL_Para *para);
    * @brief Set the data of the key parameter structure to the key structure.
    *
    * @param ctx [OUT] ElGamal context structure for which related parameters need to be set
-   * @param param [IN] Key parameter structure
+   * @param para [IN] Key parameter structure
    *
    * @retval CRYPT_NULL_INPUT             Invalid null pointer input.
    * @retval CRYPT_ELGAMAL_ERR_KEY_BITS  The expected key length does not meet the requirements.
@@ -98,7 +98,24 @@ void CRYPT_ELGAMAL_FreePara(CRYPT_ELGAMAL_Para *para);
    * @retval CRYPT_MEM_ALLOC_FAIL         internal memory allocation error
    * @retval CRYPT_SUCCESS                set successfully.
    */
-int32_t CRYPT_ELGAMAL_SetPara(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *param);
+int32_t CRYPT_ELGAMAL_SetPara(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPara *para);
+
+#ifdef HITLS_BSL_PARAMS
+/**
+   * @ingroup elgamal
+   * @brief Set the data of the key parameter structure to the key structure.
+   *
+   * @param ctx [OUT] ElGamal context structure for which related parameters need to be set
+   * @param para [IN] Key parameter structure
+   *
+   * @retval CRYPT_NULL_INPUT             Invalid null pointer input.
+   * @retval CRYPT_ELGAMAL_ERR_KEY_BITS  The expected key length does not meet the requirements.
+   * @retval CRYPT_ELGAMAL_ERR_E_VALUE   The expected value of e does not meet the requirements.
+   * @retval CRYPT_MEM_ALLOC_FAIL         internal memory allocation error
+   * @retval CRYPT_SUCCESS                set successfully.
+   */
+int32_t CRYPT_ELGAMAL_SetParaEx(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
+#endif
 
 /**
    * @ingroup elgamal
@@ -190,6 +207,66 @@ int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, 
    * @brief ElGamal Set the private key information.
    *
    * @param ctx [OUT] ElGamal context structure
+   * @param prv [IN] Private key data
+   *
+   * @retval CRYPT_NULL_INPUT                 Error null pointer input
+   * @retval CRYPT_ELGAMAL_ERR_KEY_BITS      The key length does not meet the requirements.
+   * @retval CRYPT_ELGAMAL_NO_KEY_INFO       does not contain the key information.
+   * @retval CRYPT_ELGAMAL_ERR_INPUT_VALUE   The entered value does not meet the calculation conditions.
+   * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+   * @retval BN error                         An error occurs in the internal BigNum operation.
+   * @retval CRYPT_SUCCESS                    The private key is successfully set.
+   */
+int32_t CRYPT_ELGAMAL_SetPrvKey(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPrv *prv);
+
+/**
+   * @ingroup elgamal
+   * @brief ElGamal Set the public key information.
+   *
+   * @param ctx [OUT] ElGamal context structure
+   * @param pub [IN] Public key data
+   *
+   * @retval CRYPT_NULL_INPUT                 Error null pointer input
+   * @retval CRYPT_ELGAMAL_ERR_KEY_BITS      The key length does not meet the requirements.
+   * @retval CRYPT_ELGAMAL_ERR_INPUT_VALUE   The entered value does not meet the calculation conditions.
+   * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
+   * @retval BN error                         An error occurs in the internal BigNum operation.
+   * @retval CRYPT_SUCCESS                    The public key is successfully set.
+   */
+int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPub *pub);
+
+/**
+   * @ingroup elgamal
+   * @brief ElGamal Obtain the private key information.
+   *
+   * @param ctx [IN] ElGamal context structure
+   * @param prv [OUT] Private key data
+   *
+   * @retval CRYPT_NULL_INPUT Invalid null pointer input
+   * @retval BN error         An error occurs in the internal BigNum operation.
+   * @retval CRYPT_SUCCESS    The private key is obtained successfully.
+   */
+int32_t CRYPT_ELGAMAL_GetPrvKey(const CRYPT_ELGAMAL_Ctx *ctx, CRYPT_ElGamalPrv *prv);
+
+/**
+   * @ingroup elgamal
+   * @brief ElGamal Obtain the public key information.
+   *
+   * @param ctx [IN] ElGamal context structure
+   * @param pub [OUT] Public key data
+   *
+   * @retval CRYPT_NULL_INPUT Invalid null pointer input
+   * @retval BN error         An error occurs in the internal BigNum operation.
+   * @retval CRYPT_SUCCESS    The public key is obtained successfully.
+   */
+int32_t CRYPT_ELGAMAL_GetPubKey(const CRYPT_ELGAMAL_Ctx *ctx, CRYPT_ElGamalPub *pub);
+
+#ifdef HITLS_BSL_PARAMS
+/**
+   * @ingroup elgamal
+   * @brief ElGamal Set the private key information.
+   *
+   * @param ctx [OUT] ElGamal context structure
    * @param para [IN] Private key data
    *
    * @retval CRYPT_NULL_INPUT                 Error null pointer input
@@ -200,7 +277,7 @@ int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, 
    * @retval BN error                         An error occurs in the internal BigNum operation.
    * @retval CRYPT_SUCCESS                    The private key is successfully set.
    */
-int32_t CRYPT_ELGAMAL_SetPrvKey(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_ELGAMAL_SetPrvKeyEx(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
 
 /**
    * @ingroup elgamal
@@ -216,7 +293,7 @@ int32_t CRYPT_ELGAMAL_SetPrvKey(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
    * @retval BN error                         An error occurs in the internal BigNum operation.
    * @retval CRYPT_SUCCESS                    The public key is successfully set.
    */
-int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
+int32_t CRYPT_ELGAMAL_SetPubKeyEx(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
 
 /**
    * @ingroup elgamal
@@ -229,7 +306,7 @@ int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const BSL_Param *para);
    * @retval BN error         An error occurs in the internal BigNum operation.
    * @retval CRYPT_SUCCESS    The private key is obtained successfully.
    */
-int32_t CRYPT_ELGAMAL_GetPrvKey(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para);
+int32_t CRYPT_ELGAMAL_GetPrvKeyEx(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para);
 
 /**
    * @ingroup elgamal
@@ -242,7 +319,8 @@ int32_t CRYPT_ELGAMAL_GetPrvKey(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para);
    * @retval BN error         An error occurs in the internal BigNum operation.
    * @retval CRYPT_SUCCESS    The public key is obtained successfully.
    */
-int32_t CRYPT_ELGAMAL_GetPubKey(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para);
+int32_t CRYPT_ELGAMAL_GetPubKeyEx(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para);
+#endif
 
 /**
    * @ingroup elgamal
