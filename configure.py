@@ -515,10 +515,6 @@ class CMakeGenerator:
         ]
         cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_DIRS', common_link_dir)
         cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_LIBS', common_link_lib)
-        cmake += 'if(HITLS_DOPRA)\n'
-        cmake += '    list(APPEND HITLS_APP_LINK_DIRS TEST/external/HiTLS_Binary/dopra/lib)\n'
-        cmake += '    list(APPEND HITLS_APP_LINK_LIBS rt dopra)\n'
-        cmake += 'endif()\n'
         cmake += self._gen_cmd_cmake('target_link_directories', '%s PRIVATE' % exe_name, '${HITLS_APP_LINK_DIRS}')
         cmake += self._gen_cmd_cmake('target_link_libraries', exe_name, '${HITLS_APP_LINK_LIBS}')
         cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(exe_name), '${EXE_LNK_FLAGS}')

@@ -42,12 +42,16 @@
     },
     "linkFlag": {
         "PUBLIC": [
-            "-shared",
             "-Wl,-z,noexecstack",
             "-Wl,-z,relro",
-            "-Wl,-z,now"
+            "-Wl,-z,now",
+            "-Wl,--build-id=none"
         ],
-        "SHARED": [],
-        "EXE": []
+        "SHARED": [
+            "-shared"
+        ],
+        "EXE": [
+            "-pie"
+        ]
     }
 }
