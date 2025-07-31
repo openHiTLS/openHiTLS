@@ -60,6 +60,13 @@ int32_t SAL_FILE_FWrite(bsl_sal_file_handle stream, const void *buffer, size_t s
         return BSL_NULL_INPUT;
     }
     size_t ret = fwrite(buffer, size, num, stream);
+    if (ret < size*num) {
+        if (ferror(stream)) {
+            perror("fwrite");  // 会根据 errno 输出错误信息
+        } else {
+            printf("写入未完成，但不是错误（可能是磁盘已满或其它原因）。\n");
+        }
+    }
 
     return ret == num ? BSL_SUCCESS : BSL_SAL_ERR_FILE_WRITE;
 }

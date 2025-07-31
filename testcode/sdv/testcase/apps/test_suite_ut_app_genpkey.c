@@ -53,6 +53,7 @@ typedef struct {
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC001()
 {
+    printf("UT_HITLS_APP_GENPKEY_TC001----start----------------------------------------------------------------------------------------------------------------------\n");
     char *argv[][20] = {
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-224"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256"},
@@ -102,12 +103,18 @@ void UT_HITLS_APP_GENPKEY_TC001()
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
         fflush(stdout);
         freopen("/dev/tty", "w", stdout);
+        if (ret != testData[i].expect) {
+            printf("ret: %d, i: %d ---------------------------------------------------------------------------------------------------------------------\n", ret, i);
+        } else {
+            printf("success, i: %d ---------------------------------------------------------------------------------------------------------------------\n", i);
+        }
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
     AppPrintErrorUioUnInit();
     remove(GENPKEY_TEST_FILE_PATH);
+    printf("UT_HITLS_APP_GENPKEY_TC001----end----------------------------------------------------------------------------------------------------------------------\n");
     return;
 }
 /* END_CASE */
@@ -120,6 +127,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC002()
 {
+    printf("UT_HITLS_APP_GENPKEY_TC002----start----------------------------------------------------------------------------------------------------------------------\n");
     mkdir(GENPKEY_TEST_DIR_PATH, 0775);
     char *argv[][20] = {
         {"genpkey", "-ttt"},
@@ -150,6 +158,11 @@ void UT_HITLS_APP_GENPKEY_TC002()
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
         fflush(stdout);
         freopen("/dev/tty", "w", stdout);
+        if (ret != testData[i].expect) {
+            printf("ret: %d, i: %d ---------------------------------------------------------------------------------------------------------------------\n", ret, i);
+        } else {
+            printf("success, i: %d ---------------------------------------------------------------------------------------------------------------------\n", i);
+        }
         ASSERT_EQ(ret, testData[i].expect);
     }
 
@@ -157,6 +170,7 @@ EXIT:
     AppPrintErrorUioUnInit();
     rmdir(GENPKEY_TEST_DIR_PATH);
     remove(GENPKEY_TEST_FILE_PATH);
+    printf("UT_HITLS_APP_GENPKEY_TC002----end----------------------------------------------------------------------------------------------------------------------\n");
     return;
 }
 /* END_CASE */
@@ -169,6 +183,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC003(char *cipherOpt)
 {
+    printf("UT_HITLS_APP_GENPKEY_TC003----start----------------------------------------------------------------------------------------------------------------------\n");
     mkdir(GENPKEY_TEST_DIR_PATH, 0775);
     char *argv[][20] = {
         {"genpkey", "-algorithm", "RSA", cipherOpt, "-pass", "pass:123456"},
@@ -183,6 +198,11 @@ void UT_HITLS_APP_GENPKEY_TC003(char *cipherOpt)
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
         fflush(stdout);
         freopen("/dev/tty", "w", stdout);
+        if (ret != testData[i].expect) {
+            printf("ret: %d, i: %d ---------------------------------------------------------------------------------------------------------------------\n", ret, i);
+        } else {
+            printf("success, i: %d ---------------------------------------------------------------------------------------------------------------------\n", i);
+        }
         ASSERT_EQ(ret, testData[i].expect);
     }
 
@@ -190,6 +210,7 @@ EXIT:
     AppPrintErrorUioUnInit();
     rmdir(GENPKEY_TEST_DIR_PATH);
     remove(GENPKEY_TEST_FILE_PATH);
+    printf("UT_HITLS_APP_GENPKEY_TC003----end----------------------------------------------------------------------------------------------------------------------\n");
     return;
 }
 /* END_CASE */
