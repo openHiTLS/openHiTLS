@@ -176,12 +176,6 @@ CRYPT_ELGAMAL_Para *CRYPT_ELGAMAL_NewPara(const CRYPT_ElGamalPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
-    int32_t ret = BN_Bin2Bn(retPara->q, para->q, para->qLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-
     return retPara;
 ERR:
     CRYPT_ELGAMAL_FreePara(retPara);

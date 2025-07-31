@@ -26,19 +26,6 @@
 #include "bsl_sal.h"
 #include "crypt_params_key.h"
 
-typedef struct {
-    BSL_Param *p; /**< ElGamal private key parameter marked as p */
-    BSL_Param *g; /**< ElGamal private key parameter marked as g */
-    BSL_Param *x; /**< ElGamal private key parameter marked as x */
-} CRYPT_ElGamalPrvParam;
-
-typedef struct {
-    BSL_Param *p; /**< ElGamal public key parameter marked as p */
-    BSL_Param *g; /**< ElGamal public key parameter marked as g */
-    BSL_Param *y; /**< ElGamal public key parameter marked as y */
-    BSL_Param *q; /**< ElGamal public key parameter marked as y */
-} CRYPT_ElGamalPubParam;
-
 #define PARAMISNULL(a) (a == NULL || a->value == NULL)
 
 static int32_t SetPrvPara(const CRYPT_ELGAMAL_PrvKey *prvKey, const CRYPT_ElGamalPrv *prv)
@@ -175,16 +162,12 @@ int32_t CRYPT_ELGAMAL_GetPrvKey(const CRYPT_ELGAMAL_Ctx *ctx, CRYPT_ElGamalPrv *
 
     return CRYPT_SUCCESS;
 ERR:
-    if (prv->p != NULL && prv->pLen != 0) {
-        BSL_SAL_CleanseData(prv->p, prv->pLen);
-    }
-    if (prv->g != NULL && prv->gLen != 0) {
-        BSL_SAL_CleanseData(prv->g, prv->gLen);
-    }
-    if (prv->xLen != 0) {
-        BSL_SAL_CleanseData(prv->x, prv->xLen);
-    }
-
+    BSL_SAL_CleanseData(prv->p, prv->pLen);
+    BSL_SAL_CleanseData(prv->g, prv->gLen);
+    BSL_SAL_CleanseData(prv->x, prv->xLen);
+    prv->pLen = 0;
+    prv->gLen = 0;
+    prv->xLen = 0;
     return ret;
 }
 
@@ -207,18 +190,14 @@ int32_t CRYPT_ELGAMAL_GetPubKey(const CRYPT_ELGAMAL_Ctx *ctx, CRYPT_ElGamalPub *
 
     return CRYPT_SUCCESS;
 ERR:
-    if (pub->gLen != 0) {
-        BSL_SAL_CleanseData(pub->g, pub->gLen);
-    }
-    if (pub->pLen != 0) {
-        BSL_SAL_CleanseData(pub->p, pub->pLen);
-    }
-    if (pub->qLen != 0) {
-        BSL_SAL_CleanseData(pub->q, pub->qLen);
-    }
-    if (pub->yLen != 0) {
-        BSL_SAL_CleanseData(pub->y, pub->yLen);
-    }
+    BSL_SAL_CleanseData(pub->g, pub->gLen);
+    BSL_SAL_CleanseData(pub->p, pub->pLen);
+    BSL_SAL_CleanseData(pub->q, pub->qLen);
+    BSL_SAL_CleanseData(pub->y, pub->yLen);
+    pub->gLen = 0;
+    pub->pLen = 0;
+    pub->qLen = 0;
+    pub->yLen = 0;
     return ret;
 }
 
@@ -264,8 +243,12 @@ int32_t CRYPT_ELGAMAL_GetPrvKeyEx(const CRYPT_ELGAMAL_Ctx *ctx, BSL_Param *para)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    paramP->useLen = prv.pLen;
-    paramG->useLen = prv.gLen;
+    if (paramP != NULL) {
+        paramP->useLen = prv.pLen;
+    }
+    if (paramG != NULL) {
+        paramG->useLen = prv.gLen;
+    }
     paramX->useLen = prv.xLen;
     return CRYPT_SUCCESS;
 }

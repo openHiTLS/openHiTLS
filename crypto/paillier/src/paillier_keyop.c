@@ -116,7 +116,8 @@ static int32_t SetPrvBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Paill
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (prv->n == NULL || prv->lambda == NULL || prv->mu == NULL || prv->n2 == NULL || prv->lambdaLen == 0 || prv->muLen == 0 || prv->nLen == 0 || prv->n2Len == 0) {    
+    if (prv->n == NULL || prv->lambda == NULL || prv->mu == NULL || prv->n2 == NULL ||
+        prv->lambdaLen == 0 || prv->muLen == 0 || prv->nLen == 0 || prv->n2Len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
         return CRYPT_PAILLIER_ERR_INPUT_VALUE;
     }
@@ -210,54 +211,47 @@ int32_t CRYPT_PAILLIER_GetPrvKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPr
         BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
         return CRYPT_PAILLIER_ERR_INPUT_VALUE;
     }
-    int32_t ret = BN_Bn2Bin(ctx->prvKey->lambda, prv->lambda, &prv->lambdaLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    int32_t ret = 0;
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->lambda, prv->lambda, &prv->lambdaLen), ret);
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->mu, prv->mu, &prv->muLen), ret);
+    if (prv->n != NULL) {
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->n, prv->n, &prv->nLen), ret);
     }
-    ret = BN_Bn2Bin(ctx->prvKey->mu, prv->mu, &prv->muLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    if (prv->n2 != NULL) {
+        GOTO_ERR_IF(BN_Bn2Bin(ctx->prvKey->n2, prv->n2, &prv->n2Len), ret);
     }
-    if (prv->n != NULL)
-    {
-        ret = BN_Bn2Bin(ctx->prvKey->n, prv->n, &prv->nLen);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-        }
-    }
-    if (prv->n2 != NULL)
-    {
-        ret = BN_Bn2Bin(ctx->prvKey->n2, prv->n2, &prv->n2Len);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-        }
-    }
+    return CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(prv->lambda, prv->lambdaLen);
+    BSL_SAL_CleanseData(prv->mu, prv->muLen);
+    BSL_SAL_CleanseData(prv->n, prv->nLen);
+    BSL_SAL_CleanseData(prv->n2, prv->n2Len);
+    prv->lambdaLen = 0;
+    prv->muLen = 0;
+    prv->nLen = 0;
+    prv->n2Len = 0;
     return ret;
 }
 
 int32_t CRYPT_PAILLIER_GetPubKey(const CRYPT_PAILLIER_Ctx *ctx, CRYPT_PaillierPub *pub)
 {
-    if (ctx == NULL || ctx->pubKey == NULL || pub == NULL) {
+    if (ctx == NULL || ctx->pubKey == NULL || pub == NULL ||
+        pub->n == NULL || pub->g == NULL || pub->n2 == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = BN_Bn2Bin(ctx->pubKey->g, pub->g, &pub->gLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = BN_Bn2Bin(ctx->pubKey->n, pub->n, &pub->nLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    if (pub->n2 != NULL) {
-        ret = BN_Bn2Bin(ctx->pubKey->n2, pub->n2, &pub->n2Len);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-        }
-    }
+    int32_t ret = 0;
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->pubKey->g, pub->g, &pub->gLen), ret);
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->pubKey->n, pub->n, &pub->nLen), ret);
+    GOTO_ERR_IF(BN_Bn2Bin(ctx->pubKey->n2, pub->n2, &pub->n2Len), ret);
+    return CRYPT_SUCCESS;
+ERR:
+    BSL_SAL_CleanseData(pub->g, pub->gLen);
+    BSL_SAL_CleanseData(pub->n, pub->nLen);
+    BSL_SAL_CleanseData(pub->n2, pub->n2Len);
+    pub->gLen = 0;
+    pub->nLen = 0;
+    pub->n2Len = 0;
     return ret;
 }
 
@@ -304,10 +298,14 @@ int32_t CRYPT_PAILLIER_GetPrvKeyEx(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *par
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    paramN->useLen = prv.nLen;
     paramLambda->useLen = prv.lambdaLen;
     paramMu->useLen = prv.muLen;
-    paramN2->useLen = prv.n2Len;
+    if (paramN != NULL) {
+        paramN->useLen = prv.nLen;
+    }
+    if (paramN2 != NULL) {
+        paramN2->useLen = prv.n2Len;
+    }
     return CRYPT_SUCCESS;
 }
 

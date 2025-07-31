@@ -317,7 +317,7 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
     }
-    CRYPT_RSA_Para *retPara = BSL_SAL_Malloc(sizeof(CRYPT_RSA_Para));
+    CRYPT_RSA_Para *retPara = BSL_SAL_Calloc(1, sizeof(CRYPT_RSA_Para));
     if (retPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
