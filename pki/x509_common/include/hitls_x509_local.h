@@ -287,6 +287,10 @@ bool X509_CheckCmdValid(int32_t *cmdSet, uint32_t cmdSize, int32_t cmd);
 
 int32_t X509_ExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t valLen);
 
+#ifdef HITLS_PKI_INFO
+int32_t HITLS_X509_EncodeCanonNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

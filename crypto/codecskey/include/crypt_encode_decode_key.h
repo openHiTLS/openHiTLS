@@ -22,6 +22,9 @@
 #include "bsl_types.h"
 #include "bsl_asn1.h"
 #include "crypt_eal_pkey.h"
+#ifdef HITLS_CRYPTO_KEY_INFO
+#include "bsl_uio.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,7 +71,7 @@ int32_t CRYPT_EAL_EncodeRsaPssAlgParam(const CRYPT_RSA_PssPara *rsaPssParam, uin
 
 #endif // HITLS_CRYPTO_KEY_ENCODE
 
-#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_KEY_DECODE)
+#if defined(HITLS_CRYPTO_RSA) && (defined(HITLS_CRYPTO_KEY_ENCODE) || defined(HITLS_CRYPTO_KEY_INFO))
 int32_t CRYPT_EAL_InitRsaPrv(const CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, CRYPT_EAL_PkeyPrv *rsaPrv);
 void CRYPT_EAL_DeinitRsaPrv(CRYPT_EAL_PkeyPrv *rsaPrv);
 int32_t CRYPT_EAL_GetRsaPssPara(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_RSA_PssPara *rsaPssParam);
@@ -85,6 +88,16 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const ch
 int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *data,
     const void *encodeParam, BSL_Buffer *encode);
 #endif
+
+#ifdef HITLS_CRYPTO_KEY_INFO
+int32_t CRYPT_EAL_PrintPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio);
+
+int32_t CRYPT_EAL_PrintPrikey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio);
+
+#ifdef HITLS_CRYPTO_RSA
+int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_UIO *uio);
+#endif
+#endif // HITLS_CRYPTO_KEY_INFO
 
 int32_t CRYPT_EAL_GetEncodeFormat(const char *format);
 

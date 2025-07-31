@@ -1,0 +1,92 @@
+# -------------------------------------------- Generate csr ----------------------------------------------
+[req_noext]
+
+[req]
+req_extensions=SAN
+
+[req_exts]
+req_extensions=REQ_EXTS
+
+[SAN]
+subjectAltName=critical,email:my@other.address,URI:ldap://somehost.com/CN=foo,DNS:test.storage.com,RID:1.2.3.4,IP:192.168.7.1,dirName:dir_sect,otherName:1.2.3.4;UTF8:some other identifier,IP:13::17,IP:1050:0000:0000:0000:0005:0600:300c:326b,IP:1050:0:0:0:5:600:300c:325b
+
+[REQ_EXTS]
+subjectAltName=critical,email:my@other.address,URI:ldap://somehost.com/CN=foo,DNS:test.storage.com,RID:1.2.3.4,IP:192.168.7.1,dirName:dir_sect,otherName:1.2.3.4;UTF8:some other identifier,IP:13::17,IP:1050:0000:0000:0000:0005:0600:300c:326b,IP:1050:0:0:0:5:600:300c:325b
+subjectKeyIdentifier=hash
+
+[dir_sect]
+O=My Organization
+OU=My Unit
+CN=My Name
+
+# -------------------------------------------- Generate cert ----------------------------------------------
+# Generate CA and subCa
+[v3_ca]
+basicConstraints = critical,pathlen:2
+subjectKeyIdentifier=hash
+
+# Generate rsapss+rsa EE-cert
+[v3_ee1]
+keyUsage = critical,nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = critical,timeStamping,serverAuth,clientAuth
+basicConstraints = CA:TRUE
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer:always
+authorityInfoAccess = OCSP;URI:http://ocsp.my.host/
+crlDistributionPoints=URI:http://myhost.com/myca.crl
+issuingDistributionPoint=critical, @idp_section
+issuerAltName = issuer:copy
+certificatePolicies = 1.2.4.5, 1.1.3.4
+policyConstraints = requireExplicitPolicy:3
+inhibitAnyPolicy = 2
+nameConstraints = permitted;IP:192.168.0.0/255.255.0.0
+noCheck = ignored
+tlsfeature = status_request
+[idp_section]
+fullname = URI:http://example.com/myca.crl
+indirectCRL = TRUE
+onlysomereasons = keyCompromise, CACompromise
+
+# Generate rsapss+ecc EE-cert
+[v3_ee2]
+keyUsage = critical,digitalSignature, keyEncipherment
+extendedKeyUsage = critical,timeStamping,clientAuth
+basicConstraints = pathlen:2
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=issuer:always
+
+# -------------------------------------------- extensions test ----------------------------------------------
+# ----------------------- combination 1 -----------------------
+[exts_1]
+subjectKeyIdentifier= critical, hash
+authorityKeyIdentifier=keyid:always
+basicConstraints=critical,CA:TRUE,pathlen:1
+keyUsage=critical,digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment,keyAgreement,keyCertSign,cRLSign,encipherOnly,decipherOnly
+extendedKeyUsage=serverAuth,clientAuth,codeSigning,emailProtection,timeStamping,OCSPSigning
+subjectAltName=email : AAA@com,email: BBB@com,URI:HTTP://somehost.com/CN=foo,DNS:XXX,IP:10.10.10.10,IP:a0::,dirName:dir_sect
+
+[exts_2]
+subjectKeyIdentifier= hash
+authorityKeyIdentifier=critical,keyid
+basicConstraints=critical,pathlen:1
+keyUsage=critical,digitalSignature,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth,serverAuth,serverAuth,emailProtection
+
+[exts_3]
+subjectKeyIdentifier= hash
+basicConstraints=critical,pathlen:1
+keyUsage=critical,digitalSignature,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth,serverAuth,serverAuth,emailProtection
+
+[exts_4]
+subjectKeyIdentifier= critical,hash
+authorityKeyIdentifier=keyid
+
+[aki_1]
+authorityKeyIdentifier=keyid
+
+[aki_2]
+authorityKeyIdentifier=keyid:always
+
+[ski_1]
+subjectKeyIdentifier= critical,hash

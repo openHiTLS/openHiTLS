@@ -1,0 +1,47 @@
+# 生成CSR
+[req]
+distinguished_name=req_distinguished_name
+req_extensions=SAN
+[SAN]
+subjectAltName=critical,email:my@other.address
+subjectKeyIdentifier=hash
+[req_distinguished_name]
+[dir_sect]
+O=My Organization
+OU=My Unit
+CN=My Name
+
+# 生成CA、SubCA
+[v3_ca]
+basicConstraints = critical,pathlen:2
+subjectKeyIdentifier=hash
+
+# 生成rsapss+rsa EE证书
+[v3_ee1]
+keyUsage = critical,nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = critical,timeStamping,serverAuth,clientAuth
+basicConstraints = CA:TRUE
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer:always
+authorityInfoAccess = OCSP;URI:http://ocsp.my.host/
+crlDistributionPoints=URI:http://myhost.com/myca.crl
+issuingDistributionPoint=critical, @idp_section
+issuerAltName = issuer:copy
+certificatePolicies = 1.2.4.5, 1.1.3.4
+policyConstraints = requireExplicitPolicy:3
+inhibitAnyPolicy = 2
+nameConstraints = permitted;IP:192.168.0.0/255.255.0.0
+noCheck = ignored
+tlsfeature = status_request
+[idp_section]
+fullname = URI:http://example.com/myca.crl
+indirectCRL = TRUE
+onlysomereasons = keyCompromise, CACompromise
+
+# 生成rsapss+ecc EE证书
+[v3_ee2]
+keyUsage = critical,digitalSignature, keyEncipherment
+extendedKeyUsage = critical,timeStamping,clientAuth
+basicConstraints = pathlen:2
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=issuer:always

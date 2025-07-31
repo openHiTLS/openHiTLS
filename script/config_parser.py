@@ -18,14 +18,15 @@ import json
 import os
 import re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
-from methods import trans2list, save_json_file
+from methods import trans2list, unique_list, save_json_file
 
 
 class Feature:
-    def __init__(self, name, target, parent, children, deps, opts, impl, ins_set):
+    def __init__(self, name, target, is_lib, parent, children, deps, opts, impl, ins_set):
         self.name = name
 
         self.target = target
+        self.is_lib = is_lib        # Indicates whether the target file is a lib or exe file.
 
         self.parent = parent
         self.children = children
@@ -38,8 +39,8 @@ class Feature:
 
 
     @classmethod
-    def simple(cls, name, target, parent, impl):
-        return Feature(name, target, parent, [], [], [], impl, [])
+    def simple(cls, name, target, is_lib, parent, impl):
+        return Feature(name, target, is_lib, parent, [], [], [], impl, [])
 
 
 class FeatureParser:
@@ -68,6 +69,10 @@ class FeatureParser:
         return self._cfg['libs']
 
     @property
+    def executes(self):
+        return self._cfg['executes']
+
+    @property
     def modules(self):
         return self._cfg['modules']
 
@@ -91,7 +96,11 @@ class FeatureParser:
     def _add_fea(self, feas_info, feature: Feature):
         fea_name = feature.name
         feas_info.setdefault(fea_name, {})
-        self._add_key_value(feas_info[fea_name], 'lib', feature.target)
+
+        if feature.is_lib:
+            self._add_key_value(feas_info[fea_name], 'lib', feature.target)
+        else:
+            self._add_key_value(feas_info[fea_name], 'execute', feature.target)
         self._add_key_value(feas_info[fea_name], 'parent', feature.parent)
         self._add_key_value(feas_info[fea_name], 'children', feature.children)
         self._add_key_value(feas_info[fea_name], 'opts', feature.opts)
@@ -100,8 +109,9 @@ class FeatureParser:
         feas_info[fea_name].setdefault('impl', {})
         feas_info[fea_name]['impl'][feature.impl] = feature.ins_set if feature.ins_set else []
 
-    def _parse_fea_obj(self, name, target, parent, impl, fea_obj, feas_info):
-        feature = Feature.simple(name, target, parent, impl)
+
+    def _parse_fea_obj(self, name, target, is_lib, parent, impl, fea_obj, feas_info):
+        feature = Feature.simple(name, target, is_lib, parent, impl)
         if not fea_obj:
             self._add_fea(feas_info, feature)
             return
@@ -114,14 +124,15 @@ class FeatureParser:
         for key, obj in fea_obj.items():
             if key not in non_sub_keys:
                 feature.children.append(key)
-                self._parse_fea_obj(key, target, name, impl, obj, feas_info)
+                self._parse_fea_obj(key, target, is_lib, name, impl, obj, feas_info)
 
         self._add_fea(feas_info, feature)
-    def parse_fearuers(self, all_feas, tmp_feas_info, target, target_obj):
+
+    def parse_fearuers(self, all_feas, tmp_feas_info, target, target_obj, is_lib):
         tmp_feas_info[target] = {}
         for impl, impl_obj in target_obj['features'].items():
             for fea, fea_obj in impl_obj.items():
-                self._parse_fea_obj(fea, target, None, impl, fea_obj, tmp_feas_info[target])
+                self._parse_fea_obj(fea, target, is_lib, None, impl, fea_obj, tmp_feas_info[target])
 
         # Check that feature names in different target are unique.
         tgt_feas = set(tmp_feas_info[target].keys())
@@ -137,14 +148,17 @@ class FeatureParser:
         return:
             feas_info: {
                 "children":[],  "parent":[],  "deps":[],
-                "opts":[[],[]],  "lib":"",
+                "opts":[[],[]], "lib":"",     "execute":""
                 "impl":{"c":[], "armv8:[], ...}, # [] lists the instruction sets supported by the feature.
             }
         """
         all_feas = set()
         tmp_feas_info = {}
         for lib, lib_obj in self._cfg['libs'].items():
-            self.parse_fearuers(all_feas, tmp_feas_info, lib, lib_obj)
+            self.parse_fearuers(all_feas, tmp_feas_info, lib, lib_obj, True)
+
+        for exe, exe_obj in self._cfg['executes'].items():
+            self.parse_fearuers(all_feas, tmp_feas_info, exe, exe_obj, False)
 
         feas_info = {}
         for obj in tmp_feas_info.values():
@@ -160,6 +174,7 @@ class FeatureParser:
                 for fea in mod_obj.get('.features', []):
                     if fea not in feas_info:
                         raise ValueError("Unrecognized '%s' in '.features' of '%s::%s'" % (fea, top_mod, mod))
+
                     if 'modules' not in feas_info[fea]:
                         feas_info[fea]['modules'] = [formated_mod]
                     else:
@@ -235,6 +250,7 @@ class FeatureParser:
             blurred_srcs.extend(trans2list(srcs[asm_type][first_key]))
         return blurred_srcs
 
+
 class FeatureConfigParser:
     """ Parses the user feature configuration file. """
     # Specifications of keys and values in the file.
@@ -251,7 +267,8 @@ class FeatureConfigParser:
         "asmType":{"require": True, "type": str, "choices": [], "default": "no_asm"},
         "libs":{"require": True, "type": dict, "choices": [], "default": {}},
         "bundleLibs":{"require": False, "type": bool, "choices": [True, False], "default": False},
-        "securecLib":{"require": False, "type": str, "choices": ["boundscheck", "securec", "sec_shared.z", ""], "default": "boundscheck"}
+        "securecLib":{"require": False, "type": str, "choices": ["boundscheck", "securec", "sec_shared.z", ""], "default": "boundscheck"},
+        "executes":{"require": False, "type": dict, "default": {}}
     }
 
     def __init__(self, features: FeatureParser, file_path):
@@ -274,6 +291,10 @@ class FeatureConfigParser:
     @property
     def libs(self):
         return self._cfg['libs']
+
+    @property
+    def executes(self):
+        return self._cfg.get('executes', {})
 
     @property
     def lib_type(self):
@@ -301,6 +322,20 @@ class FeatureConfigParser:
             return asm_fea.split('::')
         else:
             return asm_fea, ''
+
+    def enable_executes(self, targets):
+        for target in targets:
+            if 'executes' not in self._cfg:
+                self._cfg['executes'] = {target: {}}
+            else:
+                self._cfg['executes'][target] = {}
+            exe_objs = []
+            for fea, fea_obj in self._features.feas_info.items():
+                if fea_obj.get('execute', '') != target:
+                    continue
+                for i in fea_obj['impl'].keys():
+                    self._cfg['executes'][target].setdefault(i, [])
+                    self._cfg['executes'][target][i].append(fea)
 
     def _asm_fea_check(self, asm_fea, asm_type, info):
         fea, inc = self._get_fea_and_inc(asm_fea)
@@ -481,7 +516,10 @@ class FeatureConfigParser:
                 self._add_feature(fea, 'asm')
 
     def set_c_features(self, enable_feas):
-        for fea in enable_feas:
+        for f in enable_feas:
+            fea, _ = self._get_fea_and_inc(f)
+            if self._features.feas_info[fea].get('execute'):
+                continue
             if 'c' in self._features.feas_info[fea]['impl']:
                 self._add_feature(fea, 'c')
 
@@ -587,6 +625,7 @@ class FeatureConfigParser:
         macros = set()
         for lib, lib_value in self.libs.items():
             lib_upper = lib.upper()
+
             for fea in lib_value.get('c', []):
                 macros.add("-D%s_%s" % (lib_upper, fea.upper()))
             for fea in lib_value.get('asm', []):
@@ -623,10 +662,10 @@ class FeatureConfigParser:
         for child in feas_info[fea].get('children', []):
             self._re_get_fea_modules(child, feas_info, asm_type, inc, modules)
 
-    def _get_target_modules(self, target):
+    def _get_target_modules(self, target, is_lib):
         modules = {}
         feas_info = self._features.feas_info
-        obj = self.libs
+        obj = self.libs if is_lib else self.executes
         for fea in obj[target].get('c', []):
             self._re_get_fea_modules(fea, feas_info, 'c', '', modules)
 
@@ -649,14 +688,19 @@ class FeatureConfigParser:
         and the modules on which the lib feature depends (for obtaining the include directory).
             1. Add modules and their dependent modules based on features.
             2. Check whether the dependent modules are enabled.
-        return: {'lib':{"mod1":{"deps":[], "asmType":"", "incSet":""}}}
+        return: {'lib/exe':{"mod1":{"deps":[], "asmType":"", "incSet":""}}}
                 Module format: top_dir::sub_dir
         """
         enable_libs_mods = {}
+        enable_exes_mods = {}
         enable_mods = set()
         for lib in self.libs.keys():
-            enable_libs_mods[lib] = self._get_target_modules(lib)
+            enable_libs_mods[lib] = self._get_target_modules(lib, True)
             enable_mods.update(enable_libs_mods[lib])
+
+        for exe in self.executes.keys():
+            enable_exes_mods[exe] = self._get_target_modules(exe, False)
+            enable_mods.update(enable_exes_mods[exe])
 
         # Check whether the dependent module is enabled.
         for lib in enable_libs_mods.keys():
@@ -666,7 +710,14 @@ class FeatureConfigParser:
                         continue
                     if dep_mod not in enable_mods:
                         raise ValueError("Error: '%s' depends on '%s', but '%s' is disabled." % (mod, dep_mod, dep_mod))
-        return enable_libs_mods
+        for exe in enable_exes_mods.keys():
+            for mod in enable_exes_mods[exe]:
+                for dep_mod in enable_exes_mods[exe][mod].get('deps', []):
+                    if dep_mod == "platform::Secure_C":
+                        continue
+                    if dep_mod not in enable_mods:
+                        raise ValueError("Error: '%s' depends on '%s', but '%s' is disabled." % (mod, dep_mod, dep_mod))
+        return enable_libs_mods, enable_exes_mods
 
     def filter_no_asm_config(self):
         self._cfg['asmType'] = 'no_asm'
@@ -801,12 +852,12 @@ class CompileConfigParser:
                 self._cfg['compileFlag'][option_type] = {}
 
             flags = self._cfg['compileFlag'][option_type]
-            flags[option_op] = list(set(flags.get(option_op, []) + [option]))
+            flags[option_op] = unique_list(flags.get(option_op, []) + [option])
 
     def change_link_flags(self, flags, is_add):
         link_op = 'LINK_FLAG_ADD' if is_add else 'LINK_FLAG_DEL'
         new_flags = self._cfg['linkFlag'].get(link_op, []) + flags
-        self._cfg['linkFlag'][link_op] = list(set(new_flags))
+        self._cfg['linkFlag'][link_op] = unique_list(new_flags)
 
     def add_debug_options(self):
         flags_add = {'CC_FLAGS_ADD': ['-g3', '-gdwarf-2']}

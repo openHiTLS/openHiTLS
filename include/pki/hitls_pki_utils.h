@@ -16,6 +16,7 @@
 #ifndef HITLS_PKI_UTILS_H
 #define HITLS_PKI_UTILS_H
 
+#include "bsl_uio.h"
 #include "hitls_pki_types.h"
 
 #ifdef __cplusplus
@@ -25,6 +26,23 @@ extern "C" {
 typedef struct _HITLS_X509_Ext HITLS_X509_Ext;
 
 typedef struct _HITLS_X509_Attrs HITLS_X509_Attrs;
+
+/**
+ * @ingroup hitls_pki_utils
+ * @brief Generic function to print data.
+ * @attention
+ * Thread safe     : Not thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ *
+ * @param cmd     [IN] HITLS_PKI_PrintCmd
+ * @param val     [IN] The data to be printed.
+ * @param valLen  [In] The length of the data to be printed.
+ * @param uio     [In] Pointer to the BSL_UIO structure.
+ * @retval #HITLS_PKI_SUCCESS, success.
+ *         error codes see the hitls_pki_errno.h
+ */
+int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *uio);
 
 /**
  * @ingroup pki

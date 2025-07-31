@@ -34,9 +34,18 @@ static uint32_t g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
 #endif // HITLS_BSL_HASH
 
 BslOidInfo g_oidTable[] = {
-    {{9, "\140\206\110\1\145\3\4\1\2", BSL_OID_GLOBAL}, "AES128-CBC", BSL_CID_AES128_CBC},
-    {{9, "\140\206\110\1\145\3\4\1\26", BSL_OID_GLOBAL}, "AES192-CBC", BSL_CID_AES192_CBC},
-    {{9, "\140\206\110\1\145\3\4\1\52", BSL_OID_GLOBAL}, "AES256-CBC", BSL_CID_AES256_CBC},
+    {{9, "\140\206\110\1\145\3\4\1\1", BSL_OID_GLOBAL}, "aes-128-ecb", BSL_CID_AES128_ECB},
+    {{9, "\140\206\110\1\145\3\4\1\2", BSL_OID_GLOBAL}, "aes-128-cbc", BSL_CID_AES128_CBC},
+    {{9, "\140\206\110\1\145\3\4\1\3", BSL_OID_GLOBAL}, "aes-128-ofb", BSL_CID_AES128_OFB},
+    {{9, "\140\206\110\1\145\3\4\1\4", BSL_OID_GLOBAL}, "aes-128-cfb", BSL_CID_AES128_CFB},
+    {{9, "\140\206\110\1\145\3\4\1\25", BSL_OID_GLOBAL}, "aes-192-ecb", BSL_CID_AES192_ECB},
+    {{9, "\140\206\110\1\145\3\4\1\26", BSL_OID_GLOBAL}, "aes-192-cbc", BSL_CID_AES192_CBC},
+    {{9, "\140\206\110\1\145\3\4\1\27", BSL_OID_GLOBAL}, "aes-192-ofb", BSL_CID_AES192_OFB},
+    {{9, "\140\206\110\1\145\3\4\1\30", BSL_OID_GLOBAL}, "aes-192-cfb", BSL_CID_AES192_CFB},
+    {{9, "\140\206\110\1\145\3\4\1\51", BSL_OID_GLOBAL}, "aes-256-ecb", BSL_CID_AES256_ECB},
+    {{9, "\140\206\110\1\145\3\4\1\52", BSL_OID_GLOBAL}, "aes-256-cbc", BSL_CID_AES256_CBC},
+    {{9, "\140\206\110\1\145\3\4\1\53", BSL_OID_GLOBAL}, "aes-256-ofb", BSL_CID_AES256_OFB},
+    {{9, "\140\206\110\1\145\3\4\1\54", BSL_OID_GLOBAL}, "aes-256-cfb", BSL_CID_AES256_CFB},
     {{9, "\52\206\110\206\367\15\1\1\1", BSL_OID_GLOBAL}, "RSAENCRYPTION", BSL_CID_RSA}, // rsa subkey
     {{7, "\52\206\110\316\70\4\1", BSL_OID_GLOBAL}, "DSAENCRYPTION", BSL_CID_DSA}, // dsa subkey
     {{8, "\52\206\110\206\367\15\2\5", BSL_OID_GLOBAL}, "MD5", BSL_CID_MD5},
@@ -138,37 +147,18 @@ BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\2\12", BSL_OID_GLOBAL}, "SHA3-512", BSL_CID_SHA3_512},
     {{9, "\140\206\110\1\145\3\4\2\13", BSL_OID_GLOBAL}, "SHAKE128", BSL_CID_SHAKE128},
     {{9, "\140\206\110\1\145\3\4\2\14", BSL_OID_GLOBAL}, "SHAKE256", BSL_CID_SHAKE256},
+    {{8, "\53\157\2\214\123\0\1\1", BSL_OID_GLOBAL}, "CID_AES128_XTS", BSL_CID_AES128_XTS},
+    {{8, "\53\157\2\214\123\0\1\2", BSL_OID_GLOBAL}, "CID_AES256_XTS", BSL_CID_AES256_XTS},
+    {{8, "\52\201\34\317\125\1\150\12", BSL_OID_GLOBAL}, "CID_SM4_XTS", BSL_CID_SM4_XTS},
+    {{8, "\52\201\34\317\125\1\150\7", BSL_OID_GLOBAL}, "CID_SM4_CTR", BSL_CID_SM4_CTR},
+    {{8, "\52\201\34\317\125\1\150\10", BSL_OID_GLOBAL}, "CID_SM4_GCM", BSL_CID_SM4_GCM},
+    {{8, "\52\201\34\317\125\1\150\4", BSL_OID_GLOBAL}, "CID_SM4_CFB", BSL_CID_SM4_CFB},
+    {{8, "\52\201\34\317\125\1\150\3", BSL_OID_GLOBAL}, "CID_SM4_OFB", BSL_CID_SM4_OFB},
     {{9, "\53\44\3\3\2\10\1\1\7", BSL_OID_GLOBAL}, "BRAINPOOLP256R1", BSL_CID_ECC_BRAINPOOLP256R1},
     {{9, "\53\44\3\3\2\10\1\1\13", BSL_OID_GLOBAL}, "BRAINPOOLP384R1", BSL_CID_ECC_BRAINPOOLP384R1},
     {{9, "\53\44\3\3\2\10\1\1\15", BSL_OID_GLOBAL}, "BRAINPOOLP512R1", BSL_CID_ECC_BRAINPOOLP512R1},
     {{7, "\52\206\110\316\75\2\1", BSL_OID_GLOBAL}, "EC-PUBLICKEY", BSL_CID_EC_PUBLICKEY}, // ecc subkey
     {{10, "\11\222\46\211\223\362\54\144\1\1", BSL_OID_GLOBAL}, "UID", BSL_CID_AT_USERID},
-};
-
-
-/**
- * RFC 5280: A.1. Explicitly Tagged Module, 1988 Syntax
- * -- Upper Bounds
-*/
-
-static const BslAsn1DnInfo g_asn1StrTab[] = {
-    {BSL_CID_AT_COMMONNAME, 1, 64}, // ub-common-name INTEGER ::= 64
-    {BSL_CID_AT_SURNAME, 1, 40}, // ub-surname-length INTEGER ::= 40
-    {BSL_CID_AT_SERIALNUMBER, 1, 64}, // ub-serial-number INTEGER ::= 64
-    {BSL_CID_AT_COUNTRYNAME, 2, 2}, // ub-country-name-alpha-length INTEGER ::= 2
-    {BSL_CID_AT_LOCALITYNAME, 1, 128}, // ub-locality-name INTEGER ::= 128
-    {BSL_CID_AT_STATEORPROVINCENAME, 1, 128}, // ub-state-name INTEGER ::= 128
-    {BSL_CID_AT_STREETADDRESS, 1, -1}, // no limited
-    {BSL_CID_AT_ORGANIZATIONNAME, 1, 64}, // ub-organization-name INTEGER ::= 64
-    {BSL_CID_AT_ORGANIZATIONALUNITNAME, 1, 64}, // ub-organizational-unit-name INTEGER ::= 64
-    {BSL_CID_AT_TITLE, 1, 64}, // ub-title INTEGER ::= 64
-    {BSL_CID_AT_GIVENNAME, 1, 32768}, // ub-name INTEGER ::= 32768
-    {BSL_CID_AT_INITIALS, 1, 32768}, // ub-name INTEGER ::= 32768
-    {BSL_CID_AT_GENERATIONQUALIFIER, 1, 32768}, // ub-name INTEGER ::= 32768
-    {BSL_CID_AT_DNQUALIFIER, 1, -1}, // no limited
-    {BSL_CID_AT_PSEUDONYM, 1, 128}, // ub-pseudonym INTEGER ::= 128
-    {BSL_CID_DOMAINCOMPONENT, 1, -1, }, // no limited
-    {BSL_CID_AT_USERID, 1, 256}, // RFC1274
 };
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
@@ -361,16 +351,73 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
 #endif // HITLS_BSL_HASH
 }
 
-const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromCid(BslCid cid)
+
+#if defined(HITLS_PKI_X509) || defined(HITLS_PKI_INFO)
+
+/**
+ * RFC 5280: A.1. Explicitly Tagged Module, 1988 Syntax
+ * -- Upper Bounds
+*/
+
+static const BslAsn1DnInfo g_asn1DnTab[] = {
+    {BSL_CID_AT_COMMONNAME, 1, 64, "CN"}, // ub-common-name INTEGER ::= 64
+    {BSL_CID_AT_SURNAME, 1, 40, "SN"}, // ub-surname-length INTEGER ::= 40
+    {BSL_CID_AT_SERIALNUMBER, 1, 64, "serialNumber"}, // ub-serial-number INTEGER ::= 64
+    {BSL_CID_AT_COUNTRYNAME, 2, 2, "C"}, // ub-country-name-alpha-length INTEGER ::= 2
+    {BSL_CID_AT_LOCALITYNAME, 1, 128, "L"}, // ub-locality-name INTEGER ::= 128
+    {BSL_CID_AT_STATEORPROVINCENAME, 1, 128, "ST"}, // ub-state-name INTEGER ::= 128
+    {BSL_CID_AT_STREETADDRESS, 1, -1, "street"}, // no limited
+    {BSL_CID_AT_ORGANIZATIONNAME, 1, 64, "O"}, // ub-organization-name INTEGER ::= 64
+    {BSL_CID_AT_ORGANIZATIONALUNITNAME, 1, 64, "OU"}, // ub-organizational-unit-name INTEGER ::= 64
+    {BSL_CID_AT_TITLE, 1, 64, "title"}, // ub-title INTEGER ::= 64
+    {BSL_CID_AT_GIVENNAME, 1, 32768, "GN"}, // ub-name INTEGER ::= 32768
+    {BSL_CID_AT_INITIALS, 1, 32768, "initials"}, // ub-name INTEGER ::= 32768
+    {BSL_CID_AT_GENERATIONQUALIFIER, 1, 32768, "generationQualifier"}, // ub-name INTEGER ::= 32768
+    {BSL_CID_AT_DNQUALIFIER, 1, -1, "dnQualifier"}, // no limited
+    {BSL_CID_AT_PSEUDONYM, 1, 128, "pseudonym"}, // ub-pseudonym INTEGER ::= 128
+    {BSL_CID_DOMAINCOMPONENT, 1, -1, "DC"}, // no limited
+    {BSL_CID_AT_USERID, 1, 256, "UID"}, // RFC1274
+};
+
+#define BSL_DN_STR_CNT (sizeof(g_asn1DnTab) / sizeof(g_asn1DnTab[0]))
+
+const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromShortName(const char *shortName)
 {
-    for (size_t i = 0; i < sizeof(g_asn1StrTab) / sizeof(g_asn1StrTab[0]); i++) {
-        if (cid == g_asn1StrTab[i].cid) {
-            return &g_asn1StrTab[i];
+    for (size_t i = 0; i < BSL_DN_STR_CNT; i++) {
+        if (strcmp(g_asn1DnTab[i].shortName, shortName) == 0) {
+            return &g_asn1DnTab[i];
         }
     }
 
     return NULL;
 }
+
+const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromCid(BslCid cid)
+{
+    for (size_t i = 0; i < sizeof(g_asn1DnTab) / sizeof(g_asn1DnTab[0]); i++) {
+        if (cid == g_asn1DnTab[i].cid) {
+            return &g_asn1DnTab[i];
+        }
+    }
+
+    return NULL;
+}
+
+const char *BSL_OBJ_GetOidNameFromCID(BslCid ulCID)
+{
+    if (ulCID >= BSL_CID_MAX) { /* check if ulCID is within range */
+        return NULL;
+    }
+    int32_t index = GetOidIndex(ulCID);
+    if (index == -1) {
+        return NULL;
+    }
+    return g_oidTable[index].oidName;
+}
+
+#endif // HITLS_PKI_X509 || HITLS_PKI_INFO
+
+
 
 #ifdef HITLS_BSL_HASH
 static int32_t BslOidStringCopy(const BslOidString *srcOidStr, BslOidString *oidString)

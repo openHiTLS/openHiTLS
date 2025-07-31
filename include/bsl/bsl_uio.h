@@ -71,6 +71,7 @@ typedef enum {
     BSL_UIO_UDP,
     BSL_UIO_SCTP,
     BSL_UIO_MEM,
+    BSL_UIO_FILE,
     BSL_UIO_BUFFER,
     BSL_UIO_UNKNOWN, /* Unknown protocol should not appear */
 
@@ -135,6 +136,10 @@ typedef enum {
     BSL_UIO_MEM_SET_EOF,
     BSL_UIO_MEM_GET_EOF,
     BSL_UIO_MEM_GET_INFO,
+
+    BSL_UIO_FILE_OPEN = 0x500,
+    BSL_UIO_FILE_PTR,
+    BSL_UIO_FILE_GET_EOF,
 } BSL_UIO_CtrlParameter;
 
 typedef enum {
@@ -216,6 +221,14 @@ void BSL_UIO_FreeMethod(BSL_UIO_Method *meth);
  * @retval  pointer to the MEM UIO method
  */
 const BSL_UIO_Method *BSL_UIO_MemMethod(void);
+
+/**
+ * @ingroup bsl_uio
+ *
+ * @brief   obtain the default FILE UIO method
+ * @return  pointer to the FILE UIO method
+ */
+const BSL_UIO_Method *BSL_UIO_FileMethod(void);
 
 /**
  * @ingroup bsl_uio

@@ -34,6 +34,7 @@ usage()
     printf "%-50s %-30s\n" "* asan         : Enabling the ASAN capability."    "bash ${BASH_SOURCE[0]} asan"
     printf "%-50s %-30s\n" "* big-endian   : Specify the platform endianness." "bash ${BASH_SOURCE[0]} big-endian"
     printf "%-50s %-30s\n\n" "* run-tests  : Creating a custom test suite."    "bash ${BASH_SOURCE[0]} run-tests=xxx1|xxx2|xxx3"
+    printf "%-50s %-30s\n" "* apps         : Create apps testcase."            "bash ${BASH_SOURCE[0]} apps"
 }
 
 export_env()
@@ -45,6 +46,7 @@ export_env()
     ENABLE_PRINT=${ENABLE_PRINT:=ON}
     ENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT:=OFF}
     CUSTOM_CFLAGS=${CUSTOM_CFLAGS:=''}
+    ENABLE_APP=${ENABLE_APP:=OFF}
     ENABLE_TLS=${ENABLE_TLS:=ON}
     BIG_ENDIAN=${BIG_ENDIAN:=OFF}
     ENABLE_CRYPTO=${ENABLE_CRYPTO:=ON}
@@ -96,6 +98,10 @@ find_test_suite()
         cmvp_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/cmvp -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
     fi
     RUN_TEST_SUITES="${crypto_testsuite}${bsl_testsuite}${pki_testsuite}${proto_testsuite}${auth_testsuite}${cmvp_testsuite}"
+    if [[ ${ENABLE_APP} == "ON" ]]; then
+        apps_testsuite=$(find ${HITLS_ROOT_DIR}/testcode/sdv/testcase/apps -name "*.data" | sed -e "s/.data//" | tr -s "\n" " ")
+        RUN_TEST_SUITES="${apps_testsuite}"
+    fi
 }
 
 build_test_suite()
@@ -109,7 +115,7 @@ build_test_suite()
           -DGEN_TEST_FILES="${RUN_TEST_SUITES}" -DENABLE_TLS=${ENABLE_TLS} \
           -DENABLE_CRYPTO=${ENABLE_CRYPTO} -DENABLE_PKI=${ENABLE_PKI} -DENABLE_AUTH=${ENABLE_AUTH} \
           -DTLS_DEBUG=${TLS_DEBUG} -DOS_BIG_ENDIAN=${BIG_ENDIAN} -DPRINT_TO_TERMINAL=${ENABLE_PRINT} \
-          -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} ..
+          -DENABLE_FAIL_REPEAT=${ENABLE_FAIL_REPEAT} -DAPPS=${ENABLE_APP} ..
     make -j
 }
 
@@ -229,6 +235,9 @@ options()
                 ;;
             big-endian)
                 BIG_ENDIAN=ON
+                ;;
+            apps)
+                ENABLE_APP=ON
                 ;;
             --help|-h)
                 usage

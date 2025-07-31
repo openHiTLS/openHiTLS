@@ -23,6 +23,7 @@
 #define BSL_SAL_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -954,11 +955,20 @@ typedef enum {
     BSL_SAL_TIME_TICK_CB_FUNC,
     BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC,
 
-    BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,
-    BSL_SAL_FILE_READ_CB_FUNC,
-    BSL_SAL_FILE_WRITE_CB_FUNC,
-    BSL_SAL_FILE_CLOSE_CB_FUNC,
-    BSL_SAL_FILE_LENGTH_CB_FUNC,
+    BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,                 /* BslSalFileOpen */
+    BSL_SAL_FILE_READ_CB_FUNC,                          /* BslSalFileRead */
+    BSL_SAL_FILE_WRITE_CB_FUNC,                         /* BslSalFileWrite */
+    BSL_SAL_FILE_CLOSE_CB_FUNC,                         /* BslSalFileClose */
+    BSL_SAL_FILE_LENGTH_CB_FUNC,                        /* BslSalFileLength */
+    BSL_SAL_FILE_ERROR_CB_FUNC,                         /* BslSalFileError */
+    BSL_SAL_FILE_TELL_CB_FUNC,                          /* BslSalFileTell */
+    BSL_SAL_FILE_SEEK_CB_FUNC,                          /* BslSalFileSeek */
+    BSL_SAL_FILE_GETS_CB_FUNC,                          /* BslSalFGets */
+    BSL_SAL_FILE_PUTS_CB_FUNC,                          /* BslSalFPuts */
+    BSL_SAL_FILE_FLUSH_CB_FUNC,                         /* BslSalFlush */
+    BSL_SAL_FILE_EOF_CB_FUNC,                           /* BslSalFeof */
+    BSL_SAL_FILE_SET_ATTR_FUNC,                         /* BslSalFSetAttr */
+    BSL_SAL_FILE_GET_ATTR_FUNC,                         /* BslSalFGetAttr */
 
     BSL_SAL_DL_OPEN_CB_FUNC = 0x0700,
     BSL_SAL_DL_CLOSE_CB_FUNC,
@@ -1063,40 +1073,223 @@ typedef int32_t (*BslSalThreadUnlock)(BSL_SAL_ThreadLockHandle lock);
 typedef uint64_t (*BslSalThreadGetId)(void);
 
 /**
- * @ingroup bsl_sal
- * @brief Open the file.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_FILE_OPEN: file open fails.
- * @retval #BSL_NULL_INPUT: parameter error.
- */
+* @ingroup bsl_sal
+* @brief Open the file.
+*
+* @param stream [OUT] A pointer to the file handle that will be initialized upon successful opening of the file.
+* @param path [IN] A string specifying the path to the file to be opened.
+* @param mode [IN] A string specifying the access mode for the file.
+* @return If the operation succeeds, BSL_SUCCESS is returned.
+*         If the file open fails, BSL_SAL_ERR_FILE_OPEN is returned.
+*         If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
 typedef int32_t (*BslSalFileOpen)(bsl_sal_file_handle *stream, const char *path, const char *mode);
 
 /**
- * @ingroup bsl_sal
- * @brief Read from the file.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_FILE_READ: file read fails.
- * @retval #BSL_NULL_INPUT: parameter error.
- */
+* @ingroup bsl_sal
+* @brief Read the file.
+*
+* @param stream [IN] The file handle representing the file to be read.
+* @param buffer [OUT] A pointer to the buffer where the read data will be stored.
+* @param size [IN] The size of each element in the buffer (in bytes).
+* @param num [IN] The number of elements in the buffer.
+* @param len [OUT] A pointer to a variable where the actual number of bytes read will be stored.
+* @return  If the file is successfully read, BSL_SUCCESS is returned.
+*          If the file read fails, BSL_SAL_ERR_FILE_READ is returned.
+*          If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Not thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
 typedef int32_t (*BslSalFileRead)(bsl_sal_file_handle stream, void *buffer, size_t size, size_t num, size_t *len);
 
 /**
- * @ingroup bsl_sal
- * @brief Write to the file.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_FILE_WRITE: file write fails.
- * @retval #BSL_NULL_INPUT: parameter error.
- */
+* @ingroup bsl_sal
+* @brief Write the file
+*
+* @param stream [IN] The file handle representing the file to be written.
+* @param buffer [IN] A pointer to the buffer containing the data to be written.
+* @param size [IN] The size of each element in the buffer (in bytes).
+* @param num [IN] The number of elements in the buffer.
+* @return  If the file is successfully write, BSL_SUCCESS is returned.
+*          If the file read fails, BSL_SAL_ERR_FILE_WRITE is returned.
+*          If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Not thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
 typedef int32_t (*BslSalFileWrite)(bsl_sal_file_handle stream, const void *buffer, size_t size, size_t num);
 
 /**
- * @ingroup bsl_sal
- * @brief Close the file.
- */
+* @ingroup bsl_sal
+* @brief Close the file.
+*
+* @param stream [IN] The file handle representing the file to be closed.
+* @return NA
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
 typedef void (*BslSalFileClose)(bsl_sal_file_handle stream);
+
+/**
+* @ingroup bsl_sal
+* @brief Obtain the file length.
+*
+* @param path [IN] The path to the file whose length needs to be obtained.
+* @param len [OUT] A pointer to store the length of the file.
+* @return If the file length is obtained successfully, BSL_SUCCESS is returned.
+*         If the file read fails, BSL_SAL_ERR_FILE_LENGTH is returned.
+*         If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslSalFileLength)(const char *path, size_t *len);
+
+/**
+* @ingroup bsl_sal
+* @brief Test the error indicator for the given stream.
+*
+* @param stream [IN] The file handle representing the stream to check.
+* @return If the error indicator associated with the stream was set or the stream is null, false is returned.
+*         Otherwise, true is returned.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef bool (*BslSalFileError)(bsl_sal_file_handle stream);
+
+/**
+* @ingroup bsl_sal
+* @brief Get the current file position in stream.
+*
+* @param stream [IN] The file handle representing the stream to check.
+* @param pos [OUT] A pointer to store the current file position.
+* @return  If the file position is obtained successfully, BSL_SUCCESS is returned.
+*          If fail to get the file position, BSL_SAL_ERR_FILE_TELL is returned.
+*          If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslSalFileTell)(bsl_sal_file_handle stream, long *pos);
+
+/**
+* @ingroup bsl_sal
+* @brief Change the current file position associated with stream to a new location within the file.
+*
+* @param stream [IN] The file handle representing the stream to modify.
+* @param offset [IN] The number of bytes to move the file pointer from the origin.
+* @param origin [IN] The reference point for the new file position.
+* @return  If successful, BSL_SUCCESS is returned.
+*          If fail to change the file position, BSL_SAL_ERR_FILE_SEEK is returned.
+*          If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslSalFileSeek)(bsl_sal_file_handle stream, long offset, int32_t origin);
+
+/**
+* @ingroup bsl_sal
+* @brief Read a line from the stream and store it into the buffer.
+*
+* @param stream [IN] The file handle representing the stream to read from.
+* @param buf [OUT] The buffer where the read data will be stored.
+* @param readLen [IN] The maximum number of characters to read.
+* @return  If successful, the same read buffer is returned.
+*          Otherwise, return NULL.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef char *(*BslSalFGets)(bsl_sal_file_handle stream, char *buf, int32_t readLen);
+
+/**
+* @ingroup bsl_sal
+* @brief  Write a string to the specified stream.
+*
+* @param stream [IN] The file handle representing the stream to write to.
+* @param buf [IN] The string to write to the stream.
+* @return If successful, return true. Otherwise, return false.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef bool (*BslSalFPuts)(bsl_sal_file_handle stream, const char *buf);
+
+/**
+* @ingroup bsl_sal
+* @brief Flush cache buffer associated with the specified output stream.
+*
+* @param stream [IN] The file handle representing the stream to flush.
+* @return If successful, return true. Otherwise, return false.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef bool (*BslSalFlush)(bsl_sal_file_handle stream);
+
+/**
+* @ingroup bsl_sal
+* @brief Indicate whether the end-of-file flag is set for the given stream.
+*
+* @param stream [IN] The file handle representing the stream to check.
+* @return If successful, return BSL_SUCCESS. Otherwise, see bsl_errno.h.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslSalFeof)(bsl_sal_file_handle stream);
+
+/**
+* @ingroup bsl_sal
+* @brief Set the attributes associated with the terminal referred to by the open stream.
+*
+* @param stream [IN] The file handle representing the stream to modify.
+* @param cmd [IN] The command specifying which attribute to set.
+* @param arg [IN] The argument providing the value for the attribute.
+* @return  If successful, BSL_SUCCESS is returned.
+*          If fail to set, BSL_SAL_ERR_FILE_SET_ATTR is returned.
+*          If parameter error, BSL_NULL_INPUT is returned.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslSalFSetAttr)(bsl_sal_file_handle stream, int cmd, const void *arg);
+
+/**
+* @ingroup bsl_sal
+* @brief  Get the attributes associated with the terminal referred to by the open stream.
+*
+* @param stream [IN] The file handle representing the stream to check.
+* @param arg [OUT] A pointer to store the retrieved attributes.
+* @return  If successful, BSL_SUCCESS is returned.
+*          If fail to get, BSL_SAL_ERR_FILE_GET_ATTR is returned.
+*          If parameter error, BSL_NULL_INPUT is returned
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslSalFGetAttr)(bsl_sal_file_handle stream, void *arg);
 
 /**
  * @ingroup bsl_sal

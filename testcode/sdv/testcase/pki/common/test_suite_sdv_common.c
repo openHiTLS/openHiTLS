@@ -1122,9 +1122,9 @@ void SDV_HITLS_X509_PrintCtrl_TC001(void)
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &flag, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
     
-    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, NULL, sizeof(BslList), uio), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, &list, sizeof(BslList), NULL), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, &list, 0, uio), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, NULL, sizeof(BslList), uio), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, &list, sizeof(BslList), NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, &list, 0, uio), HITLS_X509_ERR_INVALID_PARAM);
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -1175,9 +1175,9 @@ static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, 
     ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, MAX_BUFF_SIZE, &dnBufLen), 0);
     if (isExpectFile) {
         ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
-        ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen);
+        ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen - 1); // Ignore line break differences 
     } else {
-        ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen);
+        ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen - 1);  // Ignore line break differences 
     }
     ret = 0;
 EXIT:
@@ -1204,7 +1204,7 @@ void SDV_HITLS_X509_PrintDn_TC002(char *certPath, int format, int printFlag, cha
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &rawIssuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     BSL_Buffer data = {(uint8_t *)rawIssuer, sizeof(BslList)};
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &printFlag, sizeof(int), NULL), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_DN, &data, "Print Distinguish name", &expectName, false), 0);
+    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_DNNAME, &data, "Print Distinguish name", &expectName, false), 0);
 
 EXIT:
     HITLS_X509_CertFree(cert);

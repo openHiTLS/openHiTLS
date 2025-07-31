@@ -295,6 +295,29 @@ typedef struct {
 } HITLS_PKCS12_PwdParam;
 
 /**
+ * @ingroup hitls_pki_types
+ * @brief Flags for printing Distinguished Names (DNs) in X509 certificates
+ */
+#define HITLS_PKI_PRINT_DN_ONELINE     0
+#define HITLS_PKI_PRINT_DN_MULTILINE   1
+#define HITLS_PKI_PRINT_DN_RFC2253     2  // default flag
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief Commands for printing X509 certificate and DN information
+ */
+typedef enum {
+    HITLS_PKI_SET_PRINT_FLAG,       // The default flag is rfc2253. Multi-threading is not supported.
+
+    HITLS_PKI_PRINT_DNNAME,
+    HITLS_PKI_PRINT_DNNAME_HASH,
+
+    HITLS_PKI_PRINT_CERT,
+    HITLS_PKI_PRINT_NEXTUPDATE,
+    HITLS_PKI_PRINT_CSR,
+} HITLS_PKI_PrintCmd;
+
+/**
  * While the standard imposes no constraints on password length, (pwdLen + saltLen) should be kept below 2^31
  * to avoid integer overflow in internal calculations.
 */

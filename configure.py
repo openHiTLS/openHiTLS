@@ -70,6 +70,7 @@ Note:
     Options for different functions can be combined.
 """
 
+
 import sys
 sys.dont_write_bytecode = True
 import os
@@ -82,6 +83,7 @@ from script.config_parser import (FeatureParser, CompileParser, FeatureConfigPar
 
 srcdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 work_dir = os.path.abspath(os.getcwd())
+
 
 def get_cfg_args():
     parser = argparse.ArgumentParser(prog='openHiTLS', description='parser configure arguments')
@@ -103,7 +105,8 @@ def get_cfg_args():
         parser.add_argument('--enable', metavar='feature', nargs='+', default=[],
                             help='enable some libs or features, such as --enable sha256 aes gcm_asm, default is "all"')
         parser.add_argument('--disable', metavar='feature', nargs='+', default=['uio_sctp'],
-                            help='disable some libs or features, such as --disable aes gcm_asm, default is disable "uio_sctp" ')
+                            help='disable some libs or features, such as --disable aes gcm_asm,\
+                            default is disable "uio_sctp" ')
         parser.add_argument('--enable-sctp', action="store_true", help='enable sctp which is used in DTLS')
         parser.add_argument('--asm_type', type=str, help='Assembly Type, default is "no_asm".')
         parser.add_argument('--asm', metavar='feature', default=[], nargs='+', help='config asm, such as --asm sha2')
@@ -130,6 +133,8 @@ def get_cfg_args():
         parser.add_argument('--hitls_version_num', default=0x00200000, help='%(prog)s version num')
         parser.add_argument('--bundle_libs', action='store_true', help='Indicates that multiple libraries are bundled together. By default, it is not bound.\
                             It need to be used together with "-m"')
+        # Compile the command apps.
+        parser.add_argument('--executes', dest='executes', default=[], nargs='*', help='Enable hitls command apps')
 
         args = vars(parser.parse_args())
 
@@ -146,6 +151,7 @@ def get_cfg_args():
         raise ValueError("Error: Failed to obtain parameters.") from e
 
     return argparse.Namespace(**args)
+
 
 class Configure:
     """Provides operations related to configuration and input parameter parsing:
@@ -216,6 +222,9 @@ class Configure:
     def update_feature_config(self, gen_cmake):
         """Update the feature configuration file in the build based on the input parameters."""
         conf_custom_feature = FeatureConfigParser(self._features, self._args.tmp_feature_config)
+    
+        if self._args.executes:
+            conf_custom_feature.enable_executes(self._args.executes)
 
         # If no feature is enabled before modules.cmake is generated, set enable to "all".
         if not conf_custom_feature.libs and not self._args.enable and gen_cmake:
@@ -223,11 +232,12 @@ class Configure:
 
         # Set parameters by referring to "FeatureConfigParser.key_value".
         conf_custom_feature.set_param('libType', self._args.lib_type)
+        if self._args.bundle_libs:
+            conf_custom_feature.set_param('bundleLibs', self._args.bundle_libs)
         conf_custom_feature.set_param('endian', self._args.endian)
         conf_custom_feature.set_param('system', self._args.system, False)
         conf_custom_feature.set_param('bits', self._args.bits, False)
-        if self._args.bundle_libs:
-            conf_custom_feature.set_param('bundleLibs', self._args.bundle_libs)
+
         enable_feas, asm_feas = conf_custom_feature.get_enable_feas(self._args.enable, self._args.asm)
 
         asm_type = self._args.asm_type if self._args.asm_type else ''
@@ -244,6 +254,7 @@ class Configure:
         # update feature and resave file.
         conf_custom_feature.update_feature(self._args.enable, self._args.disable, gen_cmake)
         conf_custom_feature.save(self._args.tmp_feature_config)
+
         self._args.bundle_libs = conf_custom_feature.bundle_libs
 
     def update_compile_config(self, all_options: CompleteOptionParser):
@@ -262,6 +273,7 @@ class Configure:
 
         conf_custom_compile.save(self._args.tmp_compile_config)
 
+
 class CMakeGenerator:
     """ Generating CMake Commands and Scripts Based on Configuration Files """
     def __init__(self, args, features: FeatureParser, all_options: CompleteOptionParser):
@@ -278,26 +290,25 @@ class CMakeGenerator:
         self._iso_provider = False
 
     @staticmethod
+    def _add_if_exists(inc_dirs, path):
+        if os.path.exists(path):
+            inc_dirs.add(path)
+    @staticmethod
     def _get_common_include(modules: list):
         """ modules: ['::','::']"""
         inc_dirs = set()
         top_modules = set(x.split('::')[0] for x in modules)
         top_modules.add('bsl/log')
         top_modules.add('bsl/err')
+        
         for module in top_modules:
-            path = module + '/include'
-            if os.path.exists(path):
-                inc_dirs.add(path)
-            path = 'include/' + module
-            if os.path.exists(path):
-                inc_dirs.add(path)
-
-        if os.path.exists('config/macro_config'):
-            inc_dirs.add('config/macro_config')
-        if os.path.exists('../../../../Secure_C/include'):
-            inc_dirs.add('../../../../Secure_C/include')
-        if os.path.exists('../../../platform/Secure_C/include'):
-            inc_dirs.add('../../../platform/Secure_C/include')
+            CMakeGenerator._add_if_exists(inc_dirs, module + '/include')
+            CMakeGenerator._add_if_exists(inc_dirs, 'include/' + module)
+        
+        CMakeGenerator._add_if_exists(inc_dirs, 'config/macro_config')
+        CMakeGenerator._add_if_exists(inc_dirs, '../../../../Secure_C/include')
+        CMakeGenerator._add_if_exists(inc_dirs, '../../../platform/Secure_C/include')
+        
         return inc_dirs
 
     def _get_module_include(self, mod: str, dep_mods: list):
@@ -365,12 +376,12 @@ class CMakeGenerator:
         tgt_name = module_name + '-objs'
         cmake = '\n# Add module {} \n'.format(module_name)
         cmake += self._gen_cmd_cmake('add_library', '{} OBJECT'.format(tgt_name))
+
         cmake += self._gen_cmd_cmake('target_include_directories', '{} PRIVATE'.format(tgt_name), inc_set)
         cmake += self._gen_cmd_cmake('target_sources', '{} PRIVATE'.format(tgt_name), src_list)
         mods_cmake[tgt_name] = cmake
-
     def _gen_shared_lib_cmake(self, lib_name, tgt_obj_list, tgt_list, macros):
-        tgt_name = lib_name + '-shared'
+        tgt_name = lib_name + '-shared' 
         properties = 'OUTPUT_NAME {}'.format(lib_name)
 
         cmake = '\n'
@@ -431,7 +442,7 @@ class CMakeGenerator:
 
         cmake = '\n'
         cmake += self._gen_cmd_cmake('add_executable', tgt_name, tgt_obj_list)
-        cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(tgt_name), '${PIE_EXE_LNK_FLAGS}')
+        cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(tgt_name), '${SHARED_LNK_FLAGS}')
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
         cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/obj)\n' % tgt_name
 
@@ -449,7 +460,6 @@ class CMakeGenerator:
 
     def _gen_lib_cmake(self, lib_name, inc_dirs, lib_obj, macros):
         lang = self._cfg_feature.libs[lib_name].get('lang', 'C')
-
         cmake = 'project({} {})\n\n'.format(lib_name, lang)
         cmake += self._gen_cmd_cmake('set', 'CMAKE_ASM_NASM_OBJECT_FORMAT elf64')
         cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', '${CC_ALL_OPTIONS}')
@@ -471,6 +481,52 @@ class CMakeGenerator:
             cmake += self._gen_obejct_lib_cmake(lib_name, tgt_obj_list, tgt_list)
         lib_obj['cmake'] = cmake
         lib_obj['targets'] = tgt_list
+
+    def _gen_exe_cmake(self, exe_name, inc_dirs, exe_obj):
+        lang = self._cfg_feature.executes[exe_name].get('lang', 'C')
+        definitions = '"${CMAKE_C_FLAGS} -DHITLS_VERSION=\'\\"%s\\"\' %s"' % (
+            self._args.hitls_version, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'')
+        cmake = 'project({} {})\n\n'.format(exe_name, lang)
+        cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', '${CC_ALL_OPTIONS}')
+        cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', definitions)
+
+        cmake += self._gen_cmd_cmake('include_directories', '', inc_dirs)
+        for _, mod_cmake in exe_obj['mods_cmake'].items():
+            cmake += mod_cmake
+
+        tgt_obj_list = list('$<TARGET_OBJECTS:{}>'.format(x) for x in exe_obj['mods_cmake'].keys())
+        cmake += self._gen_cmd_cmake('add_executable', exe_name, tgt_obj_list)
+        lib_type = self._cfg_custom_feature.lib_type
+        if 'shared' in lib_type:
+            cmake += self._gen_cmd_cmake('add_dependencies', exe_name,
+                                        'hitls_pki-shared hitls_crypto-shared hitls_bsl-shared')
+        elif 'static' in lib_type:
+            cmake += self._gen_cmd_cmake('add_dependencies', exe_name,
+                                        'hitls_pki-static hitls_crypto-static hitls_bsl-static')
+
+        common_link_dir = [
+            '${CMAKE_CURRENT_LIST_DIR}', # libhitls_*
+            'platform/Huawei_Secure_C/lib',
+        ]
+        common_link_lib = [
+            'hitls_pki', 'hitls_crypto', 'hitls_bsl',
+            'dl', 'pthread', 'm',
+            'securec'
+        ]
+        cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_DIRS', common_link_dir)
+        cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_LIBS', common_link_lib)
+        cmake += 'if(HITLS_DOPRA)\n'
+        cmake += '    list(APPEND HITLS_APP_LINK_DIRS TEST/external/HiTLS_Binary/dopra/lib)\n'
+        cmake += '    list(APPEND HITLS_APP_LINK_LIBS rt dopra)\n'
+        cmake += 'endif()\n'
+        cmake += self._gen_cmd_cmake('target_link_directories', '%s PRIVATE' % exe_name, '${HITLS_APP_LINK_DIRS}')
+        cmake += self._gen_cmd_cmake('target_link_libraries', exe_name, '${HITLS_APP_LINK_LIBS}')
+        cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(exe_name), '${EXE_LNK_FLAGS}')
+
+        cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX})\n' % exe_name
+
+        exe_obj['cmake'] = cmake
+        exe_obj['targets'] = [exe_name]
 
     def _gen_bundled_lib_cmake(self, lib_name, inc_dirs, projects, macros):
         lang = 'C ASM'
@@ -499,10 +555,13 @@ class CMakeGenerator:
         if 'object' in lib_type:
             cmake += self._gen_obejct_lib_cmake(lib_name, tgt_obj_list, tgt_list)
 
-        return {lib_name:{'cmake':cmake, 'targets':tgt_list}}
+        return {lib_name: {'cmake': cmake, 'targets': tgt_list}}
+
+    def _gen_common_compile_c_flags(self):
+        return self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', self._get_definitions())
 
     def _gen_projects_cmake(self, macros):
-        lib_enable_modules = self._cfg_custom_feature.get_enable_modules()
+        lib_enable_modules, exe_enable_modules = self._cfg_custom_feature.get_enable_modules()
 
         projects = {}
         all_inc_dirs = set()
@@ -520,6 +579,15 @@ class CMakeGenerator:
         if self._args.bundle_libs:
             # update projects
             projects = self._gen_bundled_lib_cmake('hitls', all_inc_dirs, projects, macros)
+
+        for exe, exe_obj in exe_enable_modules.items():
+            projects[exe] = {}
+            projects[exe]['mods_cmake'] = {}
+            inc_dirs = self._get_common_include(exe_obj.keys())
+            for mod, mod_obj in exe_obj.items():
+                self._gen_module_cmake(exe, mod, mod_obj, projects[exe]['mods_cmake'])
+            self._gen_exe_cmake(exe, inc_dirs, projects[exe])
+
         return projects
 
     def _gen_target_cmake(self, lib_tgts):
@@ -540,14 +608,14 @@ class CMakeGenerator:
         with open(macro_file, "w") as f:
             f.write(" ".join(hitls_macros))
             f.close()
-
+        self._cc_all_options = compile_flags
         compile_flags_str = '"{}"'.format(" ".join(compile_flags))
         shared_link_flags = '{}'.format(" ".join(link_flags['SHARED']) + " " + " ".join(link_flags['PUBLIC']))
         exe_link_flags = '{}'.format(" ".join(link_flags['EXE']) + " " + " ".join(link_flags['PUBLIC']))
 
         cmake = self._gen_cmd_cmake('set', 'CC_ALL_OPTIONS', compile_flags_str) + "\n"
         cmake += self._gen_cmd_cmake('set', 'SHARED_LNK_FLAGS', shared_link_flags) + "\n"
-        cmake += self._gen_cmd_cmake('set', 'PIE_EXE_LNK_FLAGS', exe_link_flags) + "\n"
+        cmake += self._gen_cmd_cmake('set', 'EXE_LNK_FLAGS', exe_link_flags) + "\n"
 
         return cmake, macros
 
@@ -555,6 +623,7 @@ class CMakeGenerator:
         self._cfg_custom_feature.check_bn_config()
 
         set_param_cmake, macros = self._gen_set_param_cmake(macro_file)
+        set_param_cmake += self._gen_common_compile_c_flags()
 
         projects = self._gen_projects_cmake(macros)
 
@@ -567,6 +636,7 @@ class CMakeGenerator:
                 f.write(lib_obj['cmake'])
                 f.write('\n\n')
             f.write(bottom_cmake)
+
 
 def main():
     os.chdir(srcdir)

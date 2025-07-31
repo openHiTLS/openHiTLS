@@ -8,6 +8,7 @@
                     "init": {"deps": ["err"]},
                     "base64": null,
                     "buffer": null,
+                    "conf": {"deps": ["uio_file", "list"]},
                     "pem": {"deps": ["base64"]},
                     "list": null,
                     "log": null,
@@ -22,15 +23,18 @@
                     "sal_str": null,
                     "sal_dl": null,
                     "tlv": null,
+                    "ui": {"deps": ["sal_file"]},
                     "uio": {
                         "uio_plt": null,
                         "uio_buffer": {"deps": ["uio_plt"]},
                         "uio_sctp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_udp": {"deps": ["uio_plt", "sal_net"]},
+                        "uio_file": {"deps": ["uio_plt", "sal_file"]},
                         "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]}
                     },
                     "params": null,
+                    "print":null,
                     "asn1": {"deps": ["sal_time", "uio_plt"]}
                 }
             }
@@ -186,6 +190,7 @@
                         },
                         "key_encode" : null,
                         "key_decode" : null,
+                        "key_info" : {"deps": ["print"]},
                         "deps": ["asn1", "obj"],
                         "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify"]
                     },
@@ -633,7 +638,7 @@
                         "deps": ["key_epki"]
                     },
                     "info": {
-                        "deps": ["uio_plt", "list", "obj", "asn1"],
+                        "deps": ["uio_plt", "list", "obj", "asn1", "print"],
                         "opts": ["x509_crt", "x509_crt_gen", "x509_crt_parse"]
                     }
                 }
@@ -650,7 +655,42 @@
             }
         }
     },
+    "executes":{
+        "hitls":{
+            "features": {
+                "c": {
+                    "apps": null
+                }
+            }
+        }
+    },
     "modules":{
+        "apps" :{
+            "main": {
+                ".features": ["apps"],
+                ".srcs": "apps/src/*.c",
+                ".deps": [
+                    "platform::Secure_C",
+                    "bsl::ui", "bsl::buffer", "bsl::conf", "bsl::obj", "bsl::asn1", "bsl::print",
+                    "pki::x509_csr", "pki::x509_cert", "pki::x509_common", "pki::x509_crl", "pki::pkcs12"
+                ],
+                ".include": [
+                    "include",
+                    "crypto/codecskey/include",
+                    "crypto/bn/include",
+                    "bsl/list/include",
+                    "bsl/buffer/include",
+                    "bsl/pem/include",
+                    "bsl/asn1/include",
+                    "bsl/conf/include",
+                    "include/pki",
+                    "pki/x509_cert/include",
+                    "pki/x509_common/include",
+                    "pki/x509_csr/include",
+                    "pki/pkcs12/include"
+                ]
+            }
+        },
         "crypto":{
             "eal": {
                 ".features": ["eal"],
@@ -1124,6 +1164,7 @@
                 ".deps": ["bsl::asn1", "bsl::obj"],
                 ".include": [
                     "crypto/codecskey/include",
+                    "bsl/print/include",
                     "bsl/pem/include",
                     "crypto/bn/include",
                     "crypto/eal/include",
@@ -1271,6 +1312,11 @@
                 ".srcs": "bsl/tlv/src/*.c",
                 ".deps": ["platform::Secure_C"]
             },
+            "ui": {
+                ".features": ["ui"],
+                ".srcs": "bsl/ui/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
             "list": {
                 ".features": ["list"],
                 ".srcs": "bsl/list/src/*.c",
@@ -1292,6 +1338,11 @@
                 ".srcs": "bsl/buffer/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             },
+            "conf": {
+                ".features": ["conf"],
+                ".srcs": "bsl/conf/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::list", "bsl::sal", "bsl::uio"]
+            },
             "pem": {
                 ".features": ["pem"],
                 ".srcs": "bsl/pem/src/*.c",
@@ -1304,7 +1355,7 @@
             },
             "uio": {
                 ".features": [
-                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp","uio_udp" ,"uio_mem"
+                    "uio_plt", "uio", "uio_buffer", "uio_sctp", "uio_tcp","uio_udp" , "uio_file", "uio_mem"
                 ],
                 ".srcs": "bsl/uio/src/*.c",
                 ".deps": ["platform::Secure_C", "bsl::sal"],
@@ -1315,6 +1366,11 @@
             "asn1": {
                 ".features": ["asn1"],
                 ".srcs": "bsl/asn1/src/*.c",
+                ".deps": ["bsl::sal"]
+            },
+            "print": {
+                ".features": ["print"],
+                ".srcs": "bsl/print/src/*.c",
                 ".deps": ["bsl::sal"]
             },
             "params": {
@@ -1501,11 +1557,15 @@
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "crypto::codecskey"],
                 ".include": ["bsl/pem/include"]
             },
-            "print" : {
+            "pki_print" : {
                 ".features" : ["info"],
                 ".srcs" : "pki/print/src/*",
-                ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "bsl::uio"],
-                ".include": ["pki/x509_common/include"]
+                ".deps" : ["pki::x509_common", "bsl::sal", "bsl::asn1", "bsl::print", "bsl::obj", "bsl::list", "crypto::codecskey"],
+                ".include": [
+                    "pki/print/include",
+                    "pki/x509_cert/include",
+                    "pki/x509_csr/include"
+                ]
             },
             "x509_verify" : {
                 ".features" : ["x509_vfy"],

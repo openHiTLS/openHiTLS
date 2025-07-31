@@ -1,0 +1,23 @@
+UT_HITLS_APP_PKEY_TC001 pkey pkcs8 enc rsa
+UT_HITLS_APP_PKEY_TC001:"../testdata/apps/pkey/enc_rsa_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_TC001 pkey pkcs8 enc ec
+UT_HITLS_APP_PKEY_TC001:"../testdata/apps/pkey/enc_ec_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_TC002 pkey pkcs1 rsa
+UT_HITLS_APP_PKEY_TC002:"../testdata/apps/pkey/rsa_key_pkcs1.pem"
+
+UT_HITLS_APP_PKEY_TC002 pkey pkcs8 rsa
+UT_HITLS_APP_PKEY_TC002:"../testdata/apps/pkey/rsa_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_TC002 pkey pkcs1 ec
+UT_HITLS_APP_PKEY_TC002:"../testdata/apps/pkey/ec_key_pkcs1.pem"
+
+UT_HITLS_APP_PKEY_TC002 pkey pkcs8 ec
+UT_HITLS_APP_PKEY_TC002:"../testdata/apps/pkey/ec_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_TC003
+UT_HITLS_APP_PKEY_TC003:"../testdata/apps/pkey/enc_ec_key_pkcs8.pem":"../testdata/apps/pkey/ec_key_pkcs8.pem"
+
+UT_HITLS_APP_PKEY_TC004
+UT_HITLS_APP_PKEY_TC004:"../testdata/apps/pkey/enc_ec_key_pkcs8.pem":"../testdata/apps/pkey/ec_key_pkcs8.pem"

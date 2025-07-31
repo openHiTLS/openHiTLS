@@ -25,19 +25,12 @@
 extern "C" {
 #endif
 
-/**
- * Print format
- */
-#define HITLS_PKI_PRINT_DN_ONELINE 0
-#define HITLS_PKI_PRINT_DN_MULTILINE 1
-#define HITLS_PKI_PRINT_DN_RFC2253 2        // Default flag
+int32_t HITLS_PKI_SetPrintFlag(int32_t val);
 
-typedef enum {
-    HITLS_PKI_SET_PRINT_FLAG,       // The default flag is rfc2253. Multi-threading is not supported.
-    HITLS_PKI_PRINT_DN,
-} HITLS_PKI_PrintCmd;
+int32_t HITLS_PKI_GetPrintFlag(void);
 
-int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *uio);
+int32_t HITLS_PKI_PrintDnName(uint32_t layer, BslList *list, bool newLine, BSL_UIO *uio);
+
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,91 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number: 4386 (0x1122)
+        Signature Algorithm: CID_RSASSAPSS
+            Hash Algorithm: CID_SHA256
+            Mask Algorithm: CID_SHA256
+            Salt Length: 0xa
+        Issuer: 
+            CID_AT_COUNTRYNAME = GB
+            CID_AT_COMMONNAME = test_rootCa
+        Validity:
+            Not Before: Sep 10 03:34:15 2024 GMT
+            Not After : Sep 8 03:34:15 2034 GMT
+        Subject: 
+            CID_AT_COUNTRYNAME = GB
+            CID_AT_COMMONNAME = test_intCa
+        Subject Public Key Info:
+            Public Key Algorithm: rsa
+                Public-Key: (2048 bit)
+                Modulus:
+                    c0:60:db:c5:b0:ca:d9:c9:fe:e0:9e:70:16:b1:37:74
+                    49:7d:d6:aa:cf:bb:f6:7a:77:1c:1f:66:44:d6:98:9b
+                    ad:8a:05:0f:fd:66:33:2b:67:06:2d:64:a0:b1:7e:b5
+                    1e:c0:03:be:3a:d2:e2:f3:2c:d2:c5:02:1a:94:ab:15
+                    40:71:9e:af:ca:46:76:f1:8e:86:f2:eb:32:90:94:2f
+                    b8:62:43:40:2d:84:8f:01:b3:5b:f1:d2:5e:30:5e:a8
+                    4e:cc:9e:4a:9a:0b:f9:bb:04:46:ab:ab:ce:2e:2e:49
+                    c6:1a:3a:d4:95:ee:2f:e9:60:19:c7:14:d6:30:7f:8e
+                    90:e8:a3:ab:3f:84:16:c6:54:d6:ce:51:bd:99:fe:2f
+                    15:86:a9:23:7d:a1:41:81:1c:a9:57:df:62:1e:9d:04
+                    25:42:01:1a:b5:c8:60:02:00:74:78:93:c3:eb:17:ff
+                    bf:07:10:ec:f1:5e:a8:23:c4:c1:bf:4d:8e:72:73:16
+                    5f:3d:61:d2:9b:0b:4f:7b:71:5b:6a:67:77:ff:55:05
+                    40:ff:c8:b7:c3:e4:e9:33:94:88:92:d2:91:05:fa:be
+                    83:bd:a0:93:35:87:87:ce:66:fb:9a:02:4d:d0:01:b5
+                    d4:57:34:b0:3a:28:ff:65:27:73:94:b4:89:68:4f:d1
+                Exponent: 65537 (0x10001)
+        X509V3 extensions:
+            CID_CE_KEYUSAGE: critical
+                Digital Signature, Non Repudiation, Key Encipherment
+            CID_CE_EXTKEYUSAGE: critical
+                CID_KP_TIMESTAMPING, CID_KP_SERVERAUTH, CID_KP_CLIENTAUTH
+            CID_CE_BASICCONSTRAINTS:
+                CA:TRUE
+            CID_CE_SUBJECTKEYIDENTIFIER:
+                d5:7d:c9:78:3a:43:1c:4f:aa:e4:af:bb:c1:7f:3f:10:7e:d0:af:a1
+            CID_CE_AUTHORITYKEYIDENTIFIER:
+                Keyid: 5a:33:b4:33:09:3c:0d:15:76:e1:d7:b7:26:b6:50:2a:9c:aa:d6:55
+                DirName:CN=test_rootCa,C=GB
+                Serial: 53:0b:66:90:c2:ed:d2:88:21:c9:c0:d2:9f:fa:23:ff:30:34:ff:25
+            CID_PE_AUTHORITYINFOACCESS:
+                <unsupported>
+            CID_CE_CRLDISTRIBUTIONPOINTS:
+                <unsupported>
+            CID_CE_ISSUINGDISTRIBUTIONPOINT: critical
+                <unsupported>
+            CID_CE_ISSUERALTNAME:
+                <unsupported>
+            CID_CE_CERTIFICATEPOLICIES:
+                <unsupported>
+            CID_CE_POLICYCONSTRAINTS:
+                <unsupported>
+            CID_CE_INHIBITANYPOLICY:
+                <unsupported>
+            CID_CE_NAMECONSTRAINTS:
+                <unsupported>
+            CID_PKIX_OCSP_NOCHECK:
+                <unsupported>
+            <Unsupported extension>
+    Signature Algorithm: CID_RSASSAPSS
+        Hash Algorithm: CID_SHA256
+        Mask Algorithm: CID_SHA256
+        Salt Length: 0xa
+    Signature Value:
+        1d:7e:2b:15:b4:9b:1a:8b:e1:d3:e2:a5:55:fc:8d:23
+        24:5f:bd:ae:82:81:43:6b:87:9e:92:b9:58:eb:f9:43
+        56:f2:33:c7:6e:3e:ff:7b:23:95:0c:05:3d:2d:9d:b3
+        f2:3a:e3:ae:86:15:f7:fc:d0:3c:bf:96:70:e8:12:b4
+        a9:de:63:d9:07:6f:9c:e6:26:a5:ed:35:50:e5:50:61
+        d8:14:30:02:57:d3:9b:e5:f7:f1:c2:af:50:56:2c:46
+        36:45:0e:26:a2:6e:1c:ae:a6:ce:fd:13:46:19:ee:ba
+        af:0e:7d:49:2f:1a:27:d2:85:6c:fe:be:88:b5:89:b6
+        b4:df:39:ab:d3:7d:44:31:66:74:43:63:ab:20:7f:a5
+        f5:08:53:8f:eb:1e:2b:b6:61:ab:06:d1:fb:8e:70:8d
+        f4:b8:92:3c:13:92:4d:32:27:e6:19:07:0f:c6:b3:a9
+        66:37:59:50:b0:19:fc:f9:c7:63:17:b4:e7:5f:6e:59
+        63:4b:30:6e:98:7b:82:5d:0f:4f:82:68:7d:37:fb:52
+        85:19:0b:62:90:04:6c:40:12:f0:9a:0b:46:94:98:c8
+        a7:01:da:3b:2a:d9:d9:a4:f1:0c:b9:68:6d:a8:e4:e2
+        57:84:c5:ff:cd:f5:94:29:87:2b:14:7a:f7:18:28:6d

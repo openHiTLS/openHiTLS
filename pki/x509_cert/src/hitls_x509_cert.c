@@ -1,16 +1,8 @@
-/*
- * This file is part of the openHiTLS project.
- *
- * openHiTLS is licensed under the Mulan PSL v2.
- * You can use this software according to the terms and conditions of the Mulan PSL v2.
- * You may obtain a copy of Mulan PSL v2 at:
- *
- *     http://license.coscl.org.cn/MulanPSL2
- *
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
- * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
- * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
- * See the Mulan PSL v2 for more details.
+/**
+ * @copyright Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ * @file      hitls_x509_cert.c
+ * @brief     x509 certificate resolution.
+ * @create:   2024-07-08
  */
 
 #include "hitls_build.h"
@@ -144,14 +136,14 @@ int32_t HITLS_X509_CertTagGetOrCheck(int32_t type, uint32_t idx, void *data, voi
         }
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             if (idx == X509_ASN1_TBS_SIGNALG_ANY || idx == X509_ASN1_SIGNALG_ANY) {
-                BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
+                BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
                 BslOidString oidStr = {param->len, (char *)param->buff, 0};
                 BslCid cid = BSL_OBJ_GetCID(&oidStr);
                 if (cid == BSL_CID_UNKNOWN) {
                     return HITLS_X509_ERR_GET_ANY_TAG;
                 }
                 if (cid == BSL_CID_RSASSAPSS) {
-                    // note: any can be encoded empty null
+                    // note: any can be encoded empty or null
                     *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
                     return BSL_SUCCESS;
                 } else {
@@ -332,26 +324,22 @@ int32_t HITLS_X509_ParseAsn1Cert(uint8_t **encode, uint32_t *encodeLen, HITLS_X5
     // parse tbs raw data
     ret = HITLS_X509_ParseTbsRawData(*encode, *encodeLen, &cert->tbs.tbsRawData, &cert->tbs.tbsRawDataLen);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // parse tbs
     ret = HITLS_X509_ParseCertTbs(asnArr, cert);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     // parse sign alg
     ret = HITLS_X509_ParseSignAlgInfo(&asnArr[HITLS_X509_CERT_SIGNALG_IDX],
         &asnArr[HITLS_X509_CERT_SIGNALG_ANY_IDX], &cert->signAlgId);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
     // parse signature
     ret = BSL_ASN1_DecodePrimitiveItem(&asnArr[HITLS_X509_CERT_SIGN_IDX], &cert->signature);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
@@ -392,7 +380,6 @@ int32_t HITLS_X509_CertMulParseBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrNa
     ret = HITLS_X509_ParseX509(libCtx, attrName, format, encode, true, &certCbk, list);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     *certlist = list;
@@ -409,7 +396,6 @@ static int32_t ProviderCertParseBuffInternal(HITLS_PKI_LibCtx *libCtx, const cha
     }
     int32_t ret = HITLS_X509_CertMulParseBuff(libCtx, attrName, format, encode, &list);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     HITLS_X509_Cert *tmp = BSL_LIST_GET_FIRST(list);
@@ -470,43 +456,105 @@ int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X
 
 #ifdef HITLS_PKI_INFO
 /* RFC2253 https://www.rfc-editor.org/rfc/rfc2253 */
+static int32_t X509GetPrintSNStr(const BSL_ASN1_Buffer *nameType, char *buff, uint32_t buffLen, uint32_t *usedLen)
+{
+    if (nameType == NULL || nameType->buff == NULL || nameType->len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    BslOidString oid = {
+        .octs = (char *)nameType->buff,
+        .octetLen = nameType->len,
+    };
+    const char *oidName = BSL_OBJ_GetOidNameFromOid(&oid);
+    if (oidName == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
+        return HITLS_X509_ERR_CERT_INVALID_DN;
+    }
+    if (strcpy_s(buff, buffLen, oidName) != EOK) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
+        return HITLS_X509_ERR_CERT_INVALID_DN;
+    }
+
+    *usedLen = (uint32_t)strlen(oidName);
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509PrintNameNode(const HITLS_X509_NameNode *nameNode, char *buff, uint32_t buffLen, uint32_t *usedLen)
+{
+    if (nameNode->layer == 1) {
+        return HITLS_PKI_SUCCESS;
+    }
+    uint32_t offset = 0;
+    *usedLen = 0;
+    /* Get the printable type */
+    int32_t ret = X509GetPrintSNStr(&nameNode->nameType, buff, buffLen, &offset);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    /* print '=' between type and value */
+    if (buffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e '=' and '\0'
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    buff[offset] = '=';
+    offset++;
+    /* print 'value' */
+    if (nameNode->nameValue.buff == NULL || nameNode->nameValue.len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (memcpy_s(buff + offset, buffLen - offset, nameNode->nameValue.buff, nameNode->nameValue.len) != EOK) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
+        return HITLS_X509_ERR_CERT_INVALID_DN;
+    }
+    offset += nameNode->nameValue.len;
+    *usedLen = offset;
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff)
 {
-    int64_t writeNum = 0;
-    uint8_t *dnBuf = NULL;
-    uint32_t dnBufLen = 0;
-    BSL_UIO *bufUio = BSL_UIO_New(BSL_UIO_MemMethod());
-    if (bufUio == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_UIO);
-        return HITLS_PRINT_ERR_UIO;
+    if (nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
     }
-    int32_t ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DN, nameList, sizeof(BslList), bufUio);
-    if (ret != HITLS_PKI_SUCCESS) {
-        goto ERR;
+    uint32_t offset = 0;
+    char tmpBuffStr[MAX_DN_STR_LEN] = {0};
+    char *tmpBuff = tmpBuffStr;
+    uint32_t tmpBuffLen = MAX_DN_STR_LEN;
+    (void)BSL_LIST_GET_FIRST(nameList);
+    HITLS_X509_NameNode *firstNameNode = BSL_LIST_GET_NEXT(nameList);
+    HITLS_X509_NameNode *nameNode = firstNameNode;
+    while (nameNode != NULL) {
+        if (tmpBuffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e ',' and '\0'
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+        }
+        if (nameNode != firstNameNode && nameNode->layer == 2) {  // Is 2 nodes.
+            *tmpBuff = ',';
+            tmpBuff++;
+            offset++;
+        }
+        uint32_t eachUsedLen = 0;
+        int32_t ret = X509PrintNameNode(nameNode, tmpBuff, tmpBuffLen - offset, &eachUsedLen);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        tmpBuff += eachUsedLen;
+        offset += eachUsedLen;
+        nameNode = BSL_LIST_GET_NEXT(nameList);
     }
-    ret = BSL_UIO_Ctrl(bufUio, BSL_UIO_GET_WRITE_NUM, (int32_t)sizeof(writeNum), (void *)&writeNum);
-    if (ret != BSL_SUCCESS) {
-        goto ERR;
+    buff->data = BSL_SAL_Calloc(offset + 1, sizeof(char));
+    if (buff->data == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
     }
-    dnBuf = BSL_SAL_Calloc(writeNum + 1, sizeof(uint8_t));
-    if (dnBuf == NULL) {
-        ret = BSL_MALLOC_FAIL;
-        goto ERR;
-    }
-    ret = BSL_UIO_Read(bufUio, dnBuf, writeNum + 1, &dnBufLen);
-    BSL_UIO_Free(bufUio);
-    if (ret != BSL_SUCCESS || dnBufLen != writeNum) {
-        ret = HITLS_PRINT_ERR_UIO;
-        goto ERR;
-    }
-    buff->data = dnBuf;
-    buff->dataLen = dnBufLen;
+    (void)memcpy_s(buff->data, offset + 1, tmpBuffStr, offset);
+    buff->dataLen = offset;
     return HITLS_PKI_SUCCESS;
-ERR:
-    BSL_SAL_Free(dnBuf);
-    BSL_UIO_Free(bufUio);
-    BSL_ERR_PUSH_ERROR(ret);
-    return ret;
 }
 
 static int32_t X509_GetDistinguishNameStr(HITLS_X509_Cert *cert, BSL_Buffer *val, int32_t opt)
@@ -556,12 +604,12 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     BSL_ASN1_Buffer serialNum = cert->tbs.serialNum;
-    val->data = BSL_SAL_Calloc(serialNum.len * 3, sizeof(uint8_t));
+    val->data = BSL_SAL_Calloc(serialNum.len * 3, sizeof(uint8_t));  // "%02x:" Use 3 bytes.
     if (val->data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    val->dataLen = serialNum.len * 3;
+    val->dataLen = serialNum.len * 3;  // "%02x:" Use 3 bytes.
     int32_t ret = GetAsn1SerialNumStr(&serialNum, val);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_SAL_FREE(val->data);
@@ -751,6 +799,7 @@ static int32_t X509_CertSetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
     }
 }
 #endif // HITLS_PKI_X509_CRT_GEN
+
 
 int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint32_t valLen)
 {

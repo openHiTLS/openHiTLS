@@ -3120,13 +3120,13 @@ SDV_X509_CERT_CTRL_FUNC_TC001 with key usage sha256 rsa v3 ca
 SDV_X509_CERT_CTRL_FUNC_TC001:"../testdata/cert/asn1/cawithkeyusage.der":852:BSL_CID_SHA256WITHRSAENCRYPTION:BSL_CID_SHA256:0:1:0:6
 
 SDV_X509_CERT_CTRL_FUNC_TC002 parse ecc p384 v3 ca cert
-SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/nist384ca.crt":"54:eb:17:4c:ce:5c:70:18:73:bc:dc:a3:3d:b9:81:1f:63:67:6d:06":"CN=ca.asn1.com,OU=asn1,O=openhitls,L=xian,ST=open,C=CN":"CN=ca.asn1.com,OU=asn1,O=openhitls,L=xian,ST=open,C=CN":"Feb 4 07:03:41 2024 GMT":"Feb 1 07:03:41 2034 GMT"
+SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/nist384ca.crt":"54:eb:17:4c:ce:5c:70:18:73:bc:dc:a3:3d:b9:81:1f:63:67:6d:06":"C=CN,ST=open,L=xian,O=openhitls,OU=asn1,CN=ca.asn1.com":"C=CN,ST=open,L=xian,O=openhitls,OU=asn1,CN=ca.asn1.com":"Feb 4 07:03:41 2024 GMT":"Feb 1 07:03:41 2034 GMT"
 
 SDV_X509_CERT_CTRL_FUNC_TC002 parse rsa pss v3 ca cert, any is null
 SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/rsa2048ssa-pss.crt":"54:f3:3f:24:20:59:84:91:1f:dc:3c:5c:50:a3:d8:90:d8:93:ff:5c":"CN=example.com":"CN=example.com":"Mar 25 12:13:22 2024 GMT":"Mar 23 12:13:22 2034 GMT"
 
 SDV_X509_CERT_CTRL_FUNC_TC002 with key usage sha256 rsa v3 ca
-SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/cawithkeyusage.der":"5a:ba:49:ca:e8:4a:3d:d8:be:35:53:d5:a4:ff:5a:85:32:4c:87:ef":"CN=CA,O=Test-hitls,C=CN":"CN=RootCA,O=Test-hitls,C=CN":"Apr 20 09:34:13 2024 GMT":"Apr 18 09:34:13 2034 GMT"
+SDV_X509_CERT_CTRL_FUNC_TC002:"../testdata/cert/asn1/cawithkeyusage.der":"5a:ba:49:ca:e8:4a:3d:d8:be:35:53:d5:a4:ff:5a:85:32:4c:87:ef":"C=CN,O=Test-hitls,CN=CA":"C=CN,O=Test-hitls,CN=RootCA":"Apr 20 09:34:13 2024 GMT":"Apr 18 09:34:13 2034 GMT"
 
 SDV_X509_CERT_DUP_FUNC_TC001 parse ecc p384 v3 ca cert
 SDV_X509_CERT_DUP_FUNC_TC001:"../testdata/cert/asn1/nist384ca.crt":BSL_CID_ECDSAWITHSHA256:0:0:0:65535

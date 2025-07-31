@@ -41,6 +41,7 @@ typedef struct {
     BslCid cid;
     int32_t min;
     int32_t max;
+    const char *shortName;
 } BslAsn1DnInfo;
 
 BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg);
@@ -52,6 +53,10 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid);
 BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg);
 
 const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromCid(BslCid cid);
+
+const char *BSL_OBJ_GetOidNameFromCID(BslCid ulCID);
+
+const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromShortName(const char *shortName);
 
 void BSL_OBJ_FreeSignHashTable(void);
 

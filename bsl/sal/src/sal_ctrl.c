@@ -71,7 +71,7 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
 #endif
 #ifdef HITLS_BSL_SAL_FILE
         case BSL_SAL_FILE_CB:
-            return SAL_FileCallback_Ctrl(funcType, funcCb);
+            return SAL_FileCallBack_Ctrl(funcType, funcCb);
 #endif
 #ifdef HITLS_BSL_SAL_DL
         case BSL_SAL_DL_CB:

@@ -1,0 +1,17 @@
+[req]
+distinguished_name=req_distinguished_name
+req_extensions=SAN
+[SAN]
+subjectAltName=email : AAA@com,email: BBB@com,URI:HTTP://somehost.com/CN=foo,DNS:XXX,IP:10.10.10.10,IP:a0::,dirName:dir_sect,dirName:dir_sect2
+authorityKeyIdentifier=criticala,bc
+[req_distinguished_name]
+[dir_sect]
+C=UK
+O=My Organization,CN=My Name
+OU=My Unit
+CN=My Name
+[dir_sect2]
+C=CN
+O=My Organization2
+OU=My Unit2
+CN=My Name2

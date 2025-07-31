@@ -63,6 +63,15 @@ typedef struct {
 /**
  * @ingroup crypt_types
  *
+ * @brief Pkcsv15 padding mode, when RSA is used for signature.
+ */
+typedef struct {
+    CRYPT_MD_AlgId mdId; /**< ID of the hash algorithm during pkcsv15 padding */
+} CRYPT_RSA_PkcsV15Para;
+
+/**
+ * @ingroup crypt_types
+ *
  * RSA salt length type, when rsa pss mode is used for signature and verify
  */
 typedef enum {
@@ -85,6 +94,11 @@ typedef struct {
     CRYPT_MD_AlgId mdId; /**< mdid when pss padding. */
     CRYPT_MD_AlgId mgfId; /**< mgfid when pss padding. */
 } CRYPT_RSA_PssPara;
+
+typedef struct {
+    CRYPT_MD_AlgId mdId;  /**< mdid when oaep padding */
+    CRYPT_MD_AlgId mgfId; /**< mgfid when oaep padding */
+} CRYPT_RSA_OaepPara;
 
 typedef enum {
     CRYPT_RSA_BLINDING = 0x00000001, /**< Enable the RSA blinding function for signature. */

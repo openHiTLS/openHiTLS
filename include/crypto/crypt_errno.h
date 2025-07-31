@@ -503,6 +503,15 @@ enum CRYPT_ERROR {
     CRYPT_ENCODE_ERR_SIGN_LEN_OVERFLOW,                  /**< The r and s length is too large. */
     CRYPT_ENCODE_ERR_SM2_ENCRYPT_DATA_LEN_OVERFLOW,      /**< The sm2 encrypt data length is too large. */
 
+    CRYPT_DECODE_PRINT_UNSUPPORT_ALG = 0x01340001,       /**< Failed to print unsupported alg. */
+    CRYPT_DECODE_PRINT_NO_KEY,                           /**< Failed to print key. */
+    CRYPT_DECODE_PRINT_KEYBITS,                          /**< Failed to print key bist. */
+    CRYPT_DECODE_PRINT_MODULUS,                          /**< Failed to print modulus. */
+    CRYPT_DECODE_PRINT_EXPONENT,                         /**< Failed to print exponent. */
+    CRYPT_DECODE_PRINT_RSAPSS_PARA,                      /**< Failed to print rsapss para. */
+    CRYPT_DECODE_PRINT_ECC_PUB,                          /**< Failed to print ecc pubkey. */
+    CRYPT_DECODE_PRINT_ECC_OID,                          /**< Failed to print ecc oid. */
+
     CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL = 0x01350001,     /**< Unexpected impl */
     CRYPT_PROVIDER_ERR_IMPL_NULL,
     CRYPT_PROVIDER_NOT_FOUND,                            /**< Provider not found. */

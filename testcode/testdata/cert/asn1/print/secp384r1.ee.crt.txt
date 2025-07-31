@@ -1,0 +1,53 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number:
+            3b:76:08:58:96:ba:cd:ef:4d:20:cf:1c:63:de:46:19:de:24:92:fc
+        Signature Algorithm: CID_SHA256WITHRSAENCRYPTION
+        Issuer: CN=test_intCa,C=GB
+        Validity:
+            Not Before: Sep 10 03:34:23 2024 GMT
+            Not After : Sep 8 03:34:23 2034 GMT
+        Subject: CN=test_ee,C=GB
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (384 bit)
+                Pub:
+                    04:78:e5:3d:76:66:02:b3:ad:ce:00:27:26:8d:e6:6a
+                    df:2b:51:3d:1f:34:f7:f5:e2:3b:4d:f9:58:16:a9:ca
+                    ca:fe:78:26:47:b2:7c:09:ac:a1:a1:d8:7e:b6:1f:db
+                    ea:9f:4d:8a:08:09:b8:7d:5b:bf:15:d6:42:5a:3b:e4
+                    f2:be:55:06:8e:2e:62:15:e0:5d:c6:23:51:3f:f8:dc
+                    ab:0f:ef:1e:d0:c8:a3:97:11:a2:af:bd:ef:bc:b5:41
+                    4e
+                ANS1 OID: CID_SECP384R1
+        X509V3 extensions:
+            CID_CE_KEYUSAGE: critical
+                Digital Signature, Key Encipherment
+            CID_CE_EXTKEYUSAGE: critical
+                CID_KP_TIMESTAMPING, CID_KP_CLIENTAUTH
+            CID_CE_BASICCONSTRAINTS:
+                CA:FALSE, pathlen:2
+            CID_CE_SUBJECTKEYIDENTIFIER:
+                de:e3:52:55:5e:1f:1c:1d:b3:63:a2:ed:2b:91:6f:c9:67:60:35:79
+            CID_CE_AUTHORITYKEYIDENTIFIER:
+                DirName:CN=test_rootCa,C=GB
+                Serial: 11:22
+    Signature Algorithm: CID_SHA256WITHRSAENCRYPTION
+    Signature Value:
+        24:69:b7:1a:c1:9f:10:55:46:84:dc:f1:d6:fb:84:8b
+        2f:7c:e7:a3:8e:56:76:03:cb:67:15:f8:80:cb:c1:cd
+        de:c3:a9:6e:ee:6b:56:f3:bf:67:68:13:9b:99:98:74
+        c6:82:f8:0c:00:92:04:86:64:09:0b:cd:8d:af:3d:42
+        fc:8a:33:ab:ae:8d:5f:2d:26:4e:6f:66:a6:d5:29:3f
+        8d:24:1f:25:d5:6f:a5:24:ec:7e:82:e7:e1:89:cf:4d
+        26:42:fe:34:ce:79:fc:8c:aa:f6:8f:b5:d9:70:96:1b
+        6e:6a:bc:a0:38:06:a1:93:98:d0:96:e4:33:8b:98:65
+        19:d2:19:61:4c:c4:20:af:12:c3:21:0d:af:80:c2:15
+        03:36:6d:6c:0f:b4:91:c8:32:00:9a:e0:19:bf:1e:f0
+        36:c6:b1:d3:d7:98:78:8c:f6:4d:7d:d2:c8:37:cd:73
+        49:4d:92:13:4a:9f:f3:ea:27:73:14:7d:cb:d0:08:d8
+        aa:00:ca:d0:48:e0:aa:e1:90:25:a8:94:b7:53:13:65
+        87:03:c9:6c:3f:0d:f7:66:a9:bc:a4:ba:fa:0b:e3:59
+        52:be:e8:8e:41:fa:8f:4f:73:5d:bd:4f:b5:1d:4e:0a
+        7b:4e:24:01:40:47:7b:61:ad:ea:29:d2:ba:34:9e:dc

@@ -48,6 +48,9 @@
     #ifndef HITLS_CRYPTO_KEY_EPKI
         #define HITLS_CRYPTO_KEY_EPKI
     #endif
+    #ifndef HITLS_CRYPTO_KEY_INFO
+        #define HITLS_CRYPTO_KEY_INFO
+    #endif
 #endif
 
 #ifdef HITLS_CRYPTO_KEY_EPKI
@@ -56,7 +59,14 @@
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_KEY_ENCODE) || defined(HITLS_CRYPTO_KEY_DECODE) || defined(HITLS_CRYPTO_KEY_EPKI)
+#ifdef HITLS_CRYPTO_KEY_INFO
+    #ifndef HITLS_BSL_PRINT
+        #define HITLS_BSL_PRINT
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_KEY_ENCODE) || defined(HITLS_CRYPTO_KEY_DECODE) || defined(HITLS_CRYPTO_KEY_EPKI) || \
+    defined(HITLS_CRYPTO_KEY_INFO)
     #ifndef HITLS_CRYPTO_CODECSKEY
         #define HITLS_CRYPTO_CODECSKEY
     #endif

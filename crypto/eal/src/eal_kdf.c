@@ -157,6 +157,16 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int
 }
 #endif // HITLS_CRYPTO_PROVIDER
 
+bool CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_AlgId id)
+{
+    const EAL_KdfMethod *method = EAL_KdfFindMethod(id);
+    if (method == NULL) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
 #ifdef HITLS_CRYPTO_PROVIDER

@@ -49,6 +49,10 @@ target_link_directories(TEST_INTF_SHARED INTERFACE
 set(TEST_INTF_LIBS "")
 set(TEST_INTF_SHARED_LIBS "")
 
+if(APPS)
+    list(APPEND TEST_INTF_LIBS hitls_apps)
+endif()
+
 if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
     list(APPEND TEST_INTF_LIBS tls_hlt tls_frame libhitls_tls.a rec_wrapper)
     list(APPEND TEST_INTF_SHARED_LIBS tls_hlt tls_frame libhitls_tls.so rec_wrapper)
@@ -107,6 +111,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/bsl/obj/include
     ${openHiTLS_SRC}/bsl/include
     ${openHiTLS_SRC}/bsl/sal/src
+    ${openHiTLS_SRC}/bsl/conf/include
     ${openHiTLS_SRC}/include/crypto/
     ${openHiTLS_SRC}/crypto/bn/include/
     ${openHiTLS_SRC}/crypto/bn/src/
@@ -216,6 +221,10 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/mlkem/src
     ${openHiTLS_SRC}/crypto/mldsa/include
     ${openHiTLS_SRC}/crypto/mldsa/src
+    ${openHiTLS_SRC}/apps/include
+    ${openHiTLS_SRC}/apps/src
+    ${openHiTLS_SRC}/bsl/ui/include
+    ${openHiTLS_SRC}/bsl/print/include
 )
 
 target_include_directories(TEST_INTF
@@ -276,3 +285,16 @@ foreach(test_suite ${TEST_FILES})
         target_link_libraries(${sdv_exe} PRIVATE TEST_INTF TESTCASE_PRE)
     endif()
 endforeach()
+
+if("${APPS}" STREQUAL "ON")
+    SET(APPS_LIB "hitls_apps")
+    aux_source_directory(${openHiTLS_SRC}/apps/src APPS_SRC)
+    add_library(${APPS_LIB} STATIC ${APPS_SRC})
+    target_link_libraries(${APPS_LIB} PRIVATE TEST_INTF)
+    target_compile_options(${APPS_LIB} PRIVATE -O0 -g3 -gdwarf-2)
+   
+    set_target_properties(${APPS_LIB}
+        PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"
+    )
+endif()

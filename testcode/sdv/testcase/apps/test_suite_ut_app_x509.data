@@ -1,0 +1,210 @@
+unknown opt
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -ttt":HITLS_APP_OPT_UNKOWN
+
+"-nameopt": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -nameopt":HITLS_APP_OPT_UNKOWN
+
+"-nameopt": unrecognized value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -nameopt test":HITLS_APP_OPT_VALUE_INVALID
+
+"-days": year > 9999
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -days 2912892 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -signkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_INVALID_ARG
+
+"-days": year = 10000
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -days 2912891 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -signkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_INVALID_ARG
+
+"-days": -1
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -days -1":HITLS_APP_OPT_UNKOWN
+
+"-days": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -days":HITLS_APP_OPT_UNKOWN
+
+"-days": not number
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -days a":HITLS_APP_OPT_UNKOWN
+
+"-set_serial": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -set_serial":HITLS_APP_OPT_UNKOWN
+
+"-set_serial": invalid value 0x
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -set_serial 0x":HITLS_APP_OPT_VALUE_INVALID
+
+"-set_serial": invalid value 123
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -set_serial 123":HITLS_APP_OPT_VALUE_INVALID
+
+"-set_serial": invalid value 0x12~+=
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -set_serial 0x12~+=":HITLS_APP_OPT_VALUE_INVALID
+
+"-md": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -md":HITLS_APP_OPT_UNKOWN
+
+"-md": unsupported alg
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -md sha2":HITLS_APP_OPT_VALUE_INVALID
+
+"-inform": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -inform":HITLS_APP_OPT_UNKOWN
+
+"-inform": unrecognized value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -inform pe":HITLS_APP_OPT_UNKOWN
+
+"-in": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in":HITLS_APP_OPT_UNKOWN
+
+"-in": not exist file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in no_exist.pem":HITLS_APP_LOAD_CERT_FAIL
+
+"-in": dir
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ./testdata1":HITLS_APP_LOAD_CERT_FAIL
+
+"-in": expect cert but csr
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/sm2.ca_v1.csr":HITLS_APP_LOAD_CERT_FAIL
+
+"-in": default expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/sm2.ca_v1.crt.der":HITLS_APP_LOAD_CERT_FAIL
+
+"-in -inform der": expect der but pem
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/sm2.ca_v1.crt -inform der":HITLS_APP_LOAD_CERT_FAIL
+
+"-in -inform pem": expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/sm2.ca_v1.crt.der -inform pem":HITLS_APP_LOAD_CERT_FAIL
+
+"-in -inform pem": file size > 256k
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/apps/x509/257k.pem":HITLS_APP_LOAD_CERT_FAIL
+
+"-req -in": missing key file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr":HITLS_APP_OPT_TYPE_INVALID
+
+"-req -in": default expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr.der -signkey sm2.ca_v1.key":HITLS_APP_LOAD_CSR_FAIL
+
+"-req -in": file size > 256k
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/apps/x509/257k.pem -signkey sm2.ca_v1.key":HITLS_APP_LOAD_CSR_FAIL
+
+"-req -in -inform PEM": expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr.der -inform PEM -signkey sm2.ca_v1.key":HITLS_APP_LOAD_CSR_FAIL
+
+"-req -in -inform DER": expect der but pem
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -inform DER -signkey sm2.ca_v1.key":HITLS_APP_LOAD_CSR_FAIL
+
+"-req -in": not csr
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.key -signkey sm2.ca_v1.key":HITLS_APP_LOAD_CSR_FAIL
+
+"-req -in": sign md must be sm3
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key":HITLS_APP_X509_FAIL
+
+"-signkey": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey":HITLS_APP_OPT_UNKOWN
+
+"-signkey": not exist file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey no_exist.key":HITLS_APP_X509_FAIL
+
+"-signkey": dir
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ./testdata":HITLS_APP_X509_FAIL
+
+"-signkey": expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key.der":HITLS_APP_X509_FAIL
+
+"-signkey": file size > 256k
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/apps/x509/257k.pem":HITLS_APP_X509_FAIL
+
+"-CA": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_OPT_UNKOWN
+
+"-CA": missing CAkey
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ../testdata/cert/asn1/print/rsa_pss.root.crt":HITLS_APP_OPT_TYPE_INVALID
+
+"-CA": not exist ca file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA no_exist.ca -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_LOAD_CERT_FAIL
+
+"-CA": dir
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ./testdata3 -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_LOAD_CERT_FAIL
+
+"-CA": expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ../testdata/cert/asn1/print/rsa_pss.root.crt.der -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_LOAD_CERT_FAIL
+
+"-CA": file size > 256k
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ../testdata/apps/x509/257k.pem -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_LOAD_CERT_FAIL
+
+"-CA": not cert
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ../testdata/cert/asn1/print/rsa_pss.root.csr -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key":HITLS_APP_LOAD_CERT_FAIL
+
+"-CA -CAkey": CA does not match the CAkey
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ../testdata/cert/asn1/print/rsa_pss.root.crt -CAkey ../testdata/cert/asn1/print/rsa.intca.key":HITLS_APP_X509_FAIL
+
+"-CAkey": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CAkey":HITLS_APP_OPT_UNKOWN
+
+"-CAkey": not exist cakey file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ca -CAkey no_exist.key":HITLS_APP_LOAD_KEY_FAIL
+
+"-CAkey": dir
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ca -CAkey ./testdat":HITLS_APP_LOAD_KEY_FAIL
+
+"-CAkey": expect pem but der
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ca -CAkey ../testdata/cert/asn1/print/rsa_pss.root.key.der":HITLS_APP_LOAD_KEY_FAIL
+
+"-CAkey": not key
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ca -CAkey ../testdata/cert/asn1/print/rsa_pss.root.csr":HITLS_APP_LOAD_KEY_FAIL
+
+"-CAkey": file size > 256k
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -req -in ../testdata/cert/asn1/print/rsa_pss.root.csr -CA ca -CAkey ../testdata/apps/x509/257k.pem":HITLS_APP_LOAD_KEY_FAIL
+
+"-extfile": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extfile":HITLS_APP_OPT_UNKOWN
+
+"-extfile": dir
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extfile ./testdata1 -extensions test -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key":HITLS_APP_X509_FAIL
+
+"-extfile": not exist file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extfile no_exist.cnf -extensions test -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key":HITLS_APP_X509_FAIL
+
+"-extfile": cert file
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extfile ../testdata/cert/asn1/print/rsa_pss.root.crt -extensions test -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key":HITLS_APP_X509_FAIL
+
+
+"-extensions": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extensions":HITLS_APP_OPT_UNKOWN
+
+"-extensions": length of value is greater than 512
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extensions aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":HITLS_APP_OPT_VALUE_INVALID
+
+"-extensions": no exist section
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -extensions v3_intca -extfile ../testdata/cert/asn1/print/print.cnf -req -in ../testdata/cert/asn1/print/sm2.ca_v1.csr -signkey ../testdata/cert/asn1/print/sm2.ca_v1.key":HITLS_APP_X509_FAIL
+
+"-outform": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -outform":HITLS_APP_OPT_UNKOWN
+
+"-outform": unrecognized value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -outform pe":HITLS_APP_OPT_UNKOWN
+
+"-out": missing value
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -out":HITLS_APP_OPT_UNKOWN
+
+"-out": dir
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -out ./testdata1":0
+
+"-out": not exist path
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -out ./no_exist/no_exist/x509.out":HITLS_APP_UIO_FAIL
+
+UT_HITLS_APP_X509_NormalOpt_TC001
+UT_HITLS_APP_X509_NormalOpt_TC001:"x509 -req -days 3650 -signkey ../testdata/apps/x509/sm2.key -in ../testdata/apps/x509/sm2.csr -userId 1234567812345678 -out sm2.crt -md sm3"
+
+FormatConvert: PEM->PEM
+UT_HITLS_APP_X509_FormatConvert_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.big.crt -inform PEM -out x509.out -outform PEM":"./x509.out":"../testdata/cert/asn1/print/rsa_pss.root.crt"
+
+FormatConvert: PEM->DER
+UT_HITLS_APP_X509_FormatConvert_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.big.crt -inform PEM -out x509.out -outform DER":"./x509.out":"../testdata/cert/asn1/print/rsa_pss.root.crt.der"
+
+FormatConvert: DER->PEM
+UT_HITLS_APP_X509_FormatConvert_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt.der -inform DER -out x509.out -outform PEM":"./x509.out":"../testdata/cert/asn1/print/rsa_pss.root.crt"
+
+FormatConvert: DER->DER
+UT_HITLS_APP_X509_FormatConvert_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt.der -inform DER -out x509.out -outform DER":"./x509.out":"../testdata/cert/asn1/print/rsa_pss.root.crt.der"
+
+Print: issuer subject, nameopt is oneline
+UT_HITLS_APP_X509_Print_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -noout -issuer -subject -nameopt oneline -out ./x509.out":"./x509.out":"4973737565723d43203d2047422c20434e203d20746573745f726f6f7443610a5375626a6563743d43203d2047422c20434e203d20746573745f726f6f7443610a"
+
+Print: issuer subject, nameopt is multiline
+UT_HITLS_APP_X509_Print_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -noout -issuer -subject -nameopt multiline -out ./x509.out":"./x509.out":"4973737565723d0a2020202043203d2047420a20202020434e203d20746573745f726f6f7443610a5375626a6563743d0a2020202043203d2047420a20202020434e203d20746573745f726f6f7443610a"
+
+Print: issuer subject, nameopt is rfc2253
+UT_HITLS_APP_X509_Print_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -noout -issuer -subject -nameopt rfc2253 -out ./x509.out":"./x509.out":"4973737565723d434e3d746573745f726f6f7443612c433d47420a5375626a6563743d434e3d746573745f726f6f7443612c433d47420a"

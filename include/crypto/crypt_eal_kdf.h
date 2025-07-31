@@ -35,6 +35,16 @@ extern "C" {
 typedef struct EalKdfCtx CRYPT_EAL_KdfCTX;
 
 /**
+ * @ingroup crypt_eal_kdf, Not supported in provider
+ * @brief   Check whether the given kdf algorithm ID is valid.
+ *
+ * @param   id [IN] kdf algorithm ID.
+ * @retval Valid, true is returned.
+ *         Invalid, false is returned.
+ */
+bool CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_AlgId id);
+
+/**
  * @ingroup crypt_eal_kdf
  * @brief Generate kdf handles in the providers
  *

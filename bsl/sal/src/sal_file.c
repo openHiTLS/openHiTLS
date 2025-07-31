@@ -16,30 +16,28 @@
 #include "hitls_build.h"
 
 #if defined(HITLS_BSL_SAL_FILE)
-#include <stdint.h>
-#include "bsl_sal.h"
-#include "bsl_errno.h"
+#include "bsl_err_internal.h"
 #include "sal_fileimpl.h"
 
-static BSL_SAL_FileCallback g_filleCallBack = {0};
+static BSL_SAL_FileCallback g_fileCallBack = { 0 };
 
-int32_t SAL_FileCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+int32_t SAL_FileCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
     if (type > BSL_SAL_FILE_LENGTH_CB_FUNC || type < BSL_SAL_FILE_OPEN_CB_FUNC) {
         return BSL_SAL_FILE_NO_REG_FUNC;
     }
     uint32_t offet = (uint32_t)(type - BSL_SAL_FILE_OPEN_CB_FUNC);
-    ((void **)&g_filleCallBack)[offet] = funcCb;
+    ((void **)&g_fileCallBack)[offet] = funcCb;
     return BSL_SUCCESS;
 }
 
 int32_t BSL_SAL_FileOpen(bsl_sal_file_handle *stream, const char *path, const char *mode)
 {
-    if (g_filleCallBack.pfFileOpen != NULL && g_filleCallBack.pfFileOpen != BSL_SAL_FileOpen) {
-        return g_filleCallBack.pfFileOpen(stream, path, mode);
+    if (g_fileCallBack.pfFileOpen != NULL && g_fileCallBack.pfFileOpen != BSL_SAL_FileOpen) {
+        return g_fileCallBack.pfFileOpen(stream, path, mode);
     }
 #ifdef HITLS_BSL_SAL_LINUX
-    return SAL_FileOpen(stream, path, mode);
+    return SAL_FILE_FOpen(stream, path, mode);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
 #endif
@@ -47,11 +45,11 @@ int32_t BSL_SAL_FileOpen(bsl_sal_file_handle *stream, const char *path, const ch
 
 int32_t BSL_SAL_FileRead(bsl_sal_file_handle stream, void *buffer, size_t size, size_t num, size_t *len)
 {
-    if (g_filleCallBack.pfFileRead != NULL && g_filleCallBack.pfFileRead != BSL_SAL_FileRead) {
-        return g_filleCallBack.pfFileRead(stream, buffer, size, num, len);
+    if (g_fileCallBack.pfFileRead != NULL && g_fileCallBack.pfFileRead != BSL_SAL_FileRead) {
+        return g_fileCallBack.pfFileRead(stream, buffer, size, num, len);
     }
 #ifdef HITLS_BSL_SAL_LINUX
-    return SAL_FileRead(stream, buffer, size, num, len);
+    return SAL_FILE_FRead(stream, buffer, size, num, len);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
 #endif
@@ -59,11 +57,11 @@ int32_t BSL_SAL_FileRead(bsl_sal_file_handle stream, void *buffer, size_t size, 
 
 int32_t BSL_SAL_FileWrite(bsl_sal_file_handle stream, const void *buffer, size_t size, size_t num)
 {
-    if (g_filleCallBack.pfFileWrite != NULL && g_filleCallBack.pfFileWrite != BSL_SAL_FileWrite) {
-        return g_filleCallBack.pfFileWrite(stream, buffer, size, num);
+    if (g_fileCallBack.pfFileWrite != NULL && g_fileCallBack.pfFileWrite != BSL_SAL_FileWrite) {
+        return g_fileCallBack.pfFileWrite(stream, buffer, size, num);
     }
 #ifdef HITLS_BSL_SAL_LINUX
-    return SAL_FileWrite(stream, buffer, size, num);
+    return SAL_FILE_FWrite(stream, buffer, size, num);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
 #endif
@@ -71,22 +69,135 @@ int32_t BSL_SAL_FileWrite(bsl_sal_file_handle stream, const void *buffer, size_t
 
 void BSL_SAL_FileClose(bsl_sal_file_handle stream)
 {
-    if (g_filleCallBack.pfFileClose != NULL && g_filleCallBack.pfFileClose != BSL_SAL_FileClose) {
-        g_filleCallBack.pfFileClose(stream);
+    if (g_fileCallBack.pfFileClose != NULL && g_fileCallBack.pfFileClose != BSL_SAL_FileClose) {
+        g_fileCallBack.pfFileClose(stream);
         return;
     }
 #ifdef HITLS_BSL_SAL_LINUX
-    SAL_FileClose(stream);
+    SAL_FILE_FClose(stream);
 #endif
 }
 
 int32_t BSL_SAL_FileLength(const char *path, size_t *len)
 {
-    if (g_filleCallBack.pfFileLength != NULL && g_filleCallBack.pfFileLength != BSL_SAL_FileLength) {
-        return g_filleCallBack.pfFileLength(path, len);
+    if (g_fileCallBack.pfFileLength != NULL && g_fileCallBack.pfFileLength != BSL_SAL_FileLength) {
+        return g_fileCallBack.pfFileLength(path, len);
     }
 #ifdef HITLS_BSL_SAL_LINUX
-    return SAL_FileLength(path, len);
+    return SAL_FILE_FLength(path, len);
+#else
+    return BSL_SAL_FILE_NO_REG_FUNC;
+#endif
+}
+
+bool SAL_FileError(bsl_sal_file_handle stream)
+{
+    if (g_fileCallBack.pfFileError != NULL && g_fileCallBack.pfFileError != SAL_FileError) {
+        return g_fileCallBack.pfFileError(stream);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FError(stream);
+#else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
+    return false;
+#endif
+}
+
+int32_t SAL_FileTell(bsl_sal_file_handle stream, long *pos)
+{
+    if (g_fileCallBack.pfFileTell != NULL && g_fileCallBack.pfFileTell != SAL_FileTell) {
+        return g_fileCallBack.pfFileTell(stream, pos);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FTell(stream, pos);
+#else
+    return BSL_SAL_FILE_NO_REG_FUNC;
+#endif
+}
+
+int32_t SAL_FileSeek(bsl_sal_file_handle stream, long offset, int32_t origin)
+{
+    if (g_fileCallBack.pfFileSeek != NULL && g_fileCallBack.pfFileSeek != SAL_FileSeek) {
+        return g_fileCallBack.pfFileSeek(stream, offset, origin);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FSeek(stream, offset, origin);
+#else
+    return BSL_SAL_FILE_NO_REG_FUNC;
+#endif
+}
+
+char *SAL_FGets(bsl_sal_file_handle stream, char *buf, int32_t readLen)
+{
+    if (g_fileCallBack.pfFileGets != NULL && g_fileCallBack.pfFileGets != SAL_FGets) {
+        return g_fileCallBack.pfFileGets(stream, buf, readLen);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FGets(stream, buf, readLen);
+#else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
+    return NULL;
+#endif
+}
+
+bool SAL_FPuts(bsl_sal_file_handle stream, const char *buf)
+{
+    if (g_fileCallBack.pfFilePuts != NULL && g_fileCallBack.pfFilePuts != SAL_FPuts) {
+        return g_fileCallBack.pfFilePuts(stream, buf);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FPuts(stream, buf);
+#else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
+    return false;
+#endif
+}
+
+bool SAL_Flush(bsl_sal_file_handle stream)
+{
+    if (g_fileCallBack.pfFileFlush != NULL && g_fileCallBack.pfFileFlush != SAL_Flush) {
+        return g_fileCallBack.pfFileFlush(stream);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_Flush(stream);
+#else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
+    return false;
+#endif
+}
+
+int32_t SAL_Feof(bsl_sal_file_handle stream)
+{
+    if (g_fileCallBack.pfFileEof != NULL && g_fileCallBack.pfFileEof != SAL_Feof) {
+        return g_fileCallBack.pfFileEof(stream);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_Feof(stream);
+#else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
+    return BSL_SAL_FILE_NO_REG_FUNC;
+#endif
+}
+
+int32_t SAL_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg)
+{
+    if (g_fileCallBack.pfFileSetAttr != NULL && g_fileCallBack.pfFileSetAttr != SAL_FSetAttr) {
+        return g_fileCallBack.pfFileSetAttr(stream, cmd, arg);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FSetAttr(stream, cmd, arg);
+#else
+    return BSL_SAL_FILE_NO_REG_FUNC;
+#endif
+}
+
+int32_t SAL_FGetAttr(bsl_sal_file_handle stream, void *arg)
+{
+    if (g_fileCallBack.pfFileGetAttr != NULL && g_fileCallBack.pfFileGetAttr != SAL_FGetAttr) {
+        return g_fileCallBack.pfFileGetAttr(stream, arg);
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_FILE_FGetAttr(stream, arg);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
 #endif
@@ -100,6 +211,9 @@ int32_t BSL_SAL_ReadFile(const char *path, uint8_t **buff, uint32_t *len)
     if (ret != BSL_SUCCESS) {
         return ret;
     }
+    if (fileLen > UINT32_MAX - 1) {
+        return BSL_SAL_ERR_FILE_LENGTH;
+    }
     bsl_sal_file_handle stream = NULL;
     ret = BSL_SAL_FileOpen(&stream, path, "rb");
     if (ret != BSL_SUCCESS) {
@@ -111,18 +225,16 @@ int32_t BSL_SAL_ReadFile(const char *path, uint8_t **buff, uint32_t *len)
         BSL_SAL_FileClose(stream);
         return BSL_MALLOC_FAIL;
     }
-    do {
-        ret = BSL_SAL_FileRead(stream, fileBuff, 1, fileLen, &readLen);
-        BSL_SAL_FileClose(stream);
-        if (ret != BSL_SUCCESS) {
-            break;
-        }
-        fileBuff[fileLen] = '\0';
-        *buff = fileBuff;
-        *len = (uint32_t)fileLen;
+
+    ret = BSL_SAL_FileRead(stream, fileBuff, 1, fileLen, &readLen);
+    BSL_SAL_FileClose(stream);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_FREE(fileBuff);
         return ret;
-    } while (0);
-    BSL_SAL_FREE(fileBuff);
+    }
+    fileBuff[fileLen] = '\0';
+    *buff = fileBuff;
+    *len = (uint32_t)fileLen;
     return ret;
 }
 
@@ -138,5 +250,6 @@ int32_t BSL_SAL_WriteFile(const char *path, const uint8_t *buff, uint32_t len)
     BSL_SAL_FileClose(stream);
     return ret;
 }
+
 
 #endif

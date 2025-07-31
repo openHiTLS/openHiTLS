@@ -1,0 +1,67 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number:
+            53:0b:66:90:c2:ed:d2:88:21:c9:c0:d2:9f:fa:23:ff:30:34:ff:25
+        Signature Algorithm: CID_RSASSAPSS
+            Hash Algorithm: CID_SHA256
+            Mask Algorithm: CID_SHA256
+            Salt Length: 0xa
+        Issuer: CID_AT_COUNTRYNAME = GB, CID_AT_COMMONNAME = test_rootCa
+        Validity:
+            Not Before: Sep 10 03:34:10 2024 GMT
+            Not After : Sep 8 03:34:10 2034 GMT
+        Subject: CID_AT_COUNTRYNAME = GB, CID_AT_COMMONNAME = test_rootCa
+        Subject Public Key Info:
+            Public Key Algorithm: CID_RSASSAPSS
+                Public-Key: (2048 bit)
+                Modulus:
+                    c3:e1:96:7b:d6:eb:4c:62:b8:df:1c:84:a5:10:61:73
+                    fe:04:23:c6:9b:82:c5:13:2e:32:31:b6:8a:16:ca:ee
+                    6f:ea:33:a5:3b:c4:96:f9:6a:a4:fd:04:a2:00:c7:34
+                    72:bb:78:73:c9:b9:7c:83:35:52:38:37:7c:da:3f:43
+                    0a:33:50:0e:10:c2:23:39:53:61:46:2e:ac:6f:79:fc
+                    6e:3b:0a:f2:4e:da:e1:a7:cc:28:7d:ef:ad:d2:d0:f0
+                    fd:d4:14:bf:1f:42:a4:dd:0a:c6:48:e5:e5:eb:4f:e8
+                    de:6e:84:51:ff:dd:18:a3:6a:53:24:c1:ab:59:3f:33
+                    c9:8d:2d:c0:81:97:e4:3f:74:dd:4f:22:73:21:3d:46
+                    32:88:47:02:52:48:77:83:05:16:56:f9:fe:0e:6f:8d
+                    d2:44:3e:35:e4:03:84:dc:52:2b:7f:05:6b:38:f4:42
+                    c8:d9:ad:c4:c0:a3:5f:32:ae:05:fe:de:9b:8e:b4:8e
+                    62:d5:b7:d7:a9:ee:16:f7:12:68:a4:84:38:f2:98:62
+                    ff:50:88:99:53:77:5b:a7:ac:99:c3:32:13:a8:ae:a5
+                    1b:eb:47:1f:da:85:a9:69:96:9e:32:d3:fa:a2:16:e7
+                    c5:67:1b:a4:9f:4c:41:33:a5:07:b0:e2:09:ff:86:ed
+                Exponent: 65537 (0x10001)
+                PSS parameter restrictions:
+                    Hash Algorithm: CID_SHA256
+                    Mask Algorithm: CID_SHA256
+                    Salt Length: 0xa
+        X509V3 extensions:
+            CID_CE_SUBJECTALTNAME: critical
+                Email:my@other.address, URI:ldap://somehost.com/CN=foo, DNS:test.storage.com, Registered ID:<unsupported>, IP Address:192.168.7.1, DirName:CN=My Name,OU=My Unit,O=My Organization, OtherName:<unsupported>, IP Address:13:0:0:0:0:0:0:17, IP Address:1050:0:0:0:5:600:300C:326B, IP Address:1050:0:0:0:5:600:300C:325B
+            CID_CE_BASICCONSTRAINTS: critical
+                CA:FALSE, pathlen:2
+            CID_CE_SUBJECTKEYIDENTIFIER:
+                5a:33:b4:33:09:3c:0d:15:76:e1:d7:b7:26:b6:50:2a:9c:aa:d6:55
+    Signature Algorithm: CID_RSASSAPSS
+        Hash Algorithm: CID_SHA256
+        Mask Algorithm: CID_SHA256
+        Salt Length: 0xa
+    Signature Value:
+        66:95:28:b0:b9:c7:77:2e:24:a7:62:60:e5:4b:77:55
+        9d:ec:6d:a1:3c:89:72:bc:c5:56:8d:bc:ee:c2:63:ae
+        34:6c:7c:f2:59:47:23:35:09:d7:43:ba:8f:6e:9f:3a
+        41:e5:b3:67:01:cf:83:39:2a:31:57:ee:31:6d:38:7d
+        c2:e3:df:84:90:cb:4b:81:06:88:e5:a6:61:7d:8b:6b
+        ee:b6:3b:b9:b4:3a:8b:c4:72:68:43:a7:b2:bb:0a:0e
+        45:34:59:61:f0:eb:a8:a3:d8:b4:85:d9:3c:d0:15:86
+        55:7c:df:b0:2a:fc:5b:0e:fd:e2:3f:65:f0:da:82:50
+        0b:d0:95:3e:72:56:71:d7:cb:1f:1c:0e:8f:cc:77:c3
+        b3:69:40:cc:07:57:83:55:4f:12:f7:7a:2c:e0:40:1c
+        5c:9a:7b:35:d4:6c:f7:e9:c2:fb:8c:78:6f:58:95:75
+        bb:77:c5:14:cb:c5:a2:7e:76:93:c0:78:c5:15:23:29
+        cd:c4:7f:7b:6d:cc:ca:df:9e:fe:4d:4c:1c:25:15:50
+        7e:47:12:fa:ac:08:94:3e:28:83:ad:32:2c:e4:c2:d5
+        7c:29:1c:fc:08:06:32:89:f5:c5:79:78:88:d2:18:83
+        b9:63:f6:c3:14:5c:f0:c1:bc:cc:c5:66:ea:f6:7a:6f

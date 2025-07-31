@@ -295,31 +295,6 @@ int32_t BSL_ASN1_EncodeLimb(uint8_t tag, uint64_t limb, BSL_ASN1_Buffer *asn);
  */
 int32_t BSL_ASN1_GetEncodeLen(uint32_t contentLen, uint32_t *encodeLen);
 
-/**
- * @ingroup bsl_asn1
- * @brief Print asn1 data according to the format.
- *
- * @param layer [IN] Print layer.
- * @param uio [IN/OUT] Print uio context.
- * @param fmt [IN] Print format.
- * @retval  BSL_SUCCESS, success.
- *          Other error codes see the bsl_errno.h.
- */
-int32_t BSL_ASN1_Printf(uint32_t layer, BSL_UIO *uio, const char *fmt, ...);
-
-/**
- * @ingroup bsl_asn1
- * @brief Print asn1 data.
- *
- * @param layer [IN] Print layer.
- * @param uio [IN/OUT] Print uio context.
- * @param buff [IN] Print buffer.
- * @param buffLen [IN] Print buffer length.
- * @retval  BSL_SUCCESS, success.
- *          Other error codes see the bsl_errno.h.
- */
-int32_t BSL_ASN1_PrintfBuff(uint32_t layer, BSL_UIO *uio, const void *buff, uint32_t buffLen);
-
 #ifdef __cplusplus
 }
 #endif
