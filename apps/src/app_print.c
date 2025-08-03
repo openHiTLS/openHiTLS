@@ -26,6 +26,7 @@
 #define X509_PRINT_MAX_INDENT (X509_PRINT_MAX_LAYER * X509_PRINT_LAYER_INDENT)
 #define LOG_BUFFER_LEN 2048
 static BSL_UIO *g_errorUIO = NULL;
+static BSL_UIO *g_infoUIO = NULL;
 
 int32_t AppUioVPrint(BSL_UIO *uio, const char *format, va_list args)
 {
@@ -95,4 +96,36 @@ void AppPrintErrorUioUnInit(void)
         BSL_UIO_Free(g_errorUIO);
         g_errorUIO = NULL;
     }
+}
+
+int32_t AppPrintInfoUioInit(void)
+{
+    if (g_infoUIO != NULL) {
+        return HITLS_APP_SUCCESS;
+    }
+    g_infoUIO = BSL_UIO_New(BSL_UIO_FileMethod());
+    if (g_infoUIO == NULL) {
+        return BSL_UIO_MEM_ALLOC_FAIL;
+    }
+    return BSL_UIO_Ctrl(g_infoUIO, BSL_UIO_FILE_PTR, 0, (void *)stdout);
+}
+
+void AppPrintInfoUioUnInit(void)
+{
+    if (g_infoUIO != NULL) {
+        BSL_UIO_Free(g_infoUIO);
+        g_infoUIO = NULL;
+    }
+}
+
+void AppPrintInfo(const char *format, ...)
+{
+    if (g_infoUIO == NULL) {
+        return;
+    }
+    va_list args;
+    va_start(args, format);
+    (void)AppUioVPrint(g_infoUIO, format, args);
+    va_end(args);
+    return;
 }
