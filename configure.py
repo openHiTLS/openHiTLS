@@ -509,7 +509,7 @@ class CMakeGenerator:
             '${CMAKE_SOURCE_DIR}/platform/Secure_C/lib',
         ]
         common_link_lib = [
-            'hitls_pki', 'hitls_crypto', 'hitls_bsl',
+            'hitls_tls', 'hitls_pki', 'hitls_crypto', 'hitls_bsl',
             'dl', 'pthread', 'm',
             str(self._args.securec_lib)
         ]

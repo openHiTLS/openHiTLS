@@ -113,7 +113,7 @@ static void InitClientParams(HITLS_ClientParams *params)
     /* Set default values */
     params->port = 443;
     params->connect_timeout = 10;
-    params->protocol = "tls12";
+    params->protocol = NULL;
     params->verify_depth = 9;
     params->cert_format = BSL_FORMAT_PEM;
     params->key_format = BSL_FORMAT_PEM;
