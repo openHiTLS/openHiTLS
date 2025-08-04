@@ -32,6 +32,7 @@ extern "C" {
 
 /* Protocol types */
 typedef enum {
+    APP_PROTOCOL_TLS,
     APP_PROTOCOL_TLS12,
     APP_PROTOCOL_TLS13,
     APP_PROTOCOL_DTLS12,

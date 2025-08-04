@@ -40,7 +40,7 @@
 APP_ProtocolType ParseProtocolType(const char *protocol_str)
 {
     if (protocol_str == NULL) {
-        return APP_PROTOCOL_TLS12; /* Default to TLS1.2 */
+        return APP_PROTOCOL_TLS;
     }
     
     if (strcmp(protocol_str, "tls12") == 0 || strcmp(protocol_str, "tls1.2") == 0) {
@@ -53,7 +53,7 @@ APP_ProtocolType ParseProtocolType(const char *protocol_str)
         return APP_PROTOCOL_TLCP;
     }
     
-    return APP_PROTOCOL_TLS12; /* Default fallback */
+    return APP_PROTOCOL_TLS; /* Default fallback */
 }
 
 HITLS_Config *CreateProtocolConfig(APP_ProtocolType protocol)
@@ -72,6 +72,9 @@ HITLS_Config *CreateProtocolConfig(APP_ProtocolType protocol)
             break;
         case APP_PROTOCOL_TLCP:
             config = HITLS_CFG_NewTLCPConfig();
+            break;
+        case APP_PROTOCOL_TLS:
+            config = HITLS_CFG_NewTLSConfig();
             break;
         default:
             AppPrintError("Unsupported protocol type: %d\n", protocol);

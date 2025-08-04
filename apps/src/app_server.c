@@ -114,7 +114,7 @@ static void InitServerParams(HITLS_ServerParams *params)
     /* Set default values */
     params->port = 4433;
     params->backlog = 5;
-    params->protocol = "tls12";
+    params->protocol = NULL;
     params->verify_depth = 9;
     params->cert_format = BSL_FORMAT_PEM;
     params->key_format = BSL_FORMAT_PEM;
