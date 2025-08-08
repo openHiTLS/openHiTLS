@@ -62,6 +62,32 @@ int32_t AppPrintErrorUioInit(FILE *fp);
 
 void AppPrintErrorUioUnInit(void);
 
+/**
+ * @ingroup HiTLS_APPS
+ * @brief Initialize the stdout UIO for AppPrintInfo.
+ *
+ * @retval  int32_t
+ */
+int32_t AppPrintInfoUioInit(void);
+
+/**
+ * @ingroup HiTLS_APPS
+ * @brief   Deinitialize the stdout UIO.
+ *
+ * @retval  void
+ */
+void AppPrintInfoUioUnInit(void);
+
+/**
+ * @ingroup HiTLS_APPS
+ * @brief Print info output to stdout UIO.
+ *
+ * @param format [IN] Log format character string
+ * @param... [IN] format Parameter
+ * @retval  void
+ */
+void AppPrintInfo(const char *format, ...);
+
 #ifdef __cplusplus
 }
 #endif

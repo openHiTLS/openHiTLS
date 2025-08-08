@@ -65,6 +65,32 @@ enum HITLS_APP_ERROR {
     HITLS_APP_LOAD_KEY_FAIL,           /* *< Failed to load the public and private keys. */
     HITLS_APP_ENCODE_KEY_FAIL,         /* *< Failed to encode the public and private keys. */
 
+    /* TLS Client/Server specific errors */
+    HITLS_APP_ERR_PARSE_OPT,           /* *< Failed to parse command line options */
+    HITLS_APP_ERR_CREATE_CONFIG,       /* *< Failed to create TLS configuration */
+    HITLS_APP_ERR_CREATE_CTX,          /* *< Failed to create TLS context */
+    HITLS_APP_ERR_SET_UIO,             /* *< Failed to set UIO */
+    HITLS_APP_ERR_CONNECT,             /* *< Failed to connect to server */
+    HITLS_APP_ERR_LISTEN,              /* *< Failed to create listening socket */
+    HITLS_APP_ERR_HANDSHAKE,           /* *< TLS handshake failed */
+    HITLS_APP_ERR_SEND_DATA,           /* *< Failed to send data */
+    HITLS_APP_ERR_RECV_DATA,           /* *< Failed to receive data */
+    HITLS_APP_ERR_DAEMON,              /* *< Failed to daemonize */
+    HITLS_APP_ERR_SET_CIPHER,          /* *< Failed to set cipher suites */
+    HITLS_APP_ERR_SET_SIGNATURE,       /* *< Failed to set signature algorithms */
+    HITLS_APP_ERR_SET_GROUPS,          /* *< Failed to set curves/groups */
+    HITLS_APP_ERR_LOAD_CA,             /* *< Failed to load CA certificate */
+    HITLS_APP_ERR_SET_VERIFY,          /* *< Failed to set verification options */
+    HITLS_APP_ERR_LOAD_CERT,           /* *< Failed to load certificate */
+    HITLS_APP_ERR_LOAD_KEY,            /* *< Failed to load private key */
+    HITLS_APP_ERR_SET_CERT,            /* *< Failed to set certificate */
+    HITLS_APP_ERR_SET_KEY,             /* *< Failed to set private key */
+    HITLS_APP_ERR_SET_TLCP_CERT,       /* *< Failed to set TLCP certificate */
+    HITLS_APP_ERR_SET_MTU,             /* *< Failed to set MTU */
+    HITLS_APP_ERR_SET_COOKIE,          /* *< Failed to set cookie exchange */
+    HITLS_APP_ERR_RESOLVE_HOST,        /* *< Failed to resolve hostname */
+    HITLS_APP_HELP_PRINTED,            /* *< Help was printed */
+
     HITLS_APP_MAX = 126,               /* *< maximum of the error code */
 };
 

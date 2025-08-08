@@ -671,7 +671,7 @@
                 ".srcs": "apps/src/*.c",
                 ".deps": [
                     "platform::Secure_C",
-                    "bsl::ui", "bsl::buffer", "bsl::conf", "bsl::obj", "bsl::asn1", "bsl::print",
+                    "bsl::ui", "bsl::buffer", "bsl::conf", "bsl::obj", "bsl::asn1", "bsl::print", "bsl::sal",
                     "pki::x509_csr", "pki::x509_cert", "pki::x509_common", "pki::x509_crl", "pki::pkcs12"
                 ],
                 ".include": [
