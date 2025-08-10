@@ -41,6 +41,12 @@ int32_t CRYPT_AES_AsmCheck(void)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
+#elif defined(HITLS_CRYPTO_AES_RISCV64)
+    if (!IsSupportV()) {
+        // RISCV64 should support the Vector instruction sets.
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
+    }
 #endif
     return CRYPT_SUCCESS;
 }
@@ -58,6 +64,12 @@ int32_t CRYPT_SM4_AsmCheck(void)
 #elif (HITLS_CRYPTO_SM4_ARMV8)
     if (!IsSupportAES()) {
         // sbox uses the AES instruction.
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
+    }
+#elif (HITLS_CRYPTO_SM4_RISCV64)
+    if (!IsSupportV()) {
+        // RISCV64 should support the Vector instruction sets.
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
