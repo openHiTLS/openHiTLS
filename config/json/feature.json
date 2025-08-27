@@ -236,7 +236,9 @@
                     "ecc": null
                 },
                 "armv7": {
-                    "sm3": null
+                    "ecc": null,
+                    "sm3": null,
+                    "sm2": null
                 }
             }
         },
@@ -1278,7 +1280,8 @@
                     "x8664": {
                         "x8664": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"],
                         "avx512": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"]
-                    }
+                    },
+                    "armv7": ["crypto/ecc/src/*armv7.c", "crypto/ecc/src/asm/*_armv7.S"]
                 },
                 ".deps": ["crypto::bn", "bsl::sal"],
                 ".include": ["crypto/eal/src"]
