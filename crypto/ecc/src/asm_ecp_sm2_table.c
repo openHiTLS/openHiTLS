@@ -27,7 +27,7 @@
  * x coordinate and four for the y. Both values are in little-endian order.
  */
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CURVE_SM2)
+#if defined(HITLS_CRYPTO_CURVE_SM2) && defined(HITLS_SIXTY_FOUR_BITS)
 #include "crypt_bn.h"
 
 #ifdef HITLS_SM2_PRECOMPUTE_512K_TBL
