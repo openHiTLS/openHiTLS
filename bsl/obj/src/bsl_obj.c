@@ -187,6 +187,7 @@ BslOidInfo g_oidTable[] = {
     {{3, "\125\35\22", BSL_OID_GLOBAL}, "IssuerAlternativeName", BSL_CID_CE_ISSUERALTERNATIVENAME},
     {{8, "\53\6\1\5\5\7\1\1", BSL_OID_GLOBAL}, "AuthorityInformationAccess", BSL_CID_CE_AUTHORITYINFORMATIONACCESS},
     {{10, "\52\206\110\206\367\15\1\11\27\1", BSL_OID_GLOBAL}, "x509crl", BSL_CID_X509CRL},
+    {{8, "\53\6\1\5\5\7\6\42", BSL_OID_GLOBAL}, "XMSS", BSL_CID_XMSS}, // XMSS
 };
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);

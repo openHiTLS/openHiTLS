@@ -57,6 +57,9 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+#include "crypt_xmss.h"
+#endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 #include "crypt_hybridkem.h"
 #endif
@@ -122,6 +125,11 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 #ifdef HITLS_CRYPTO_MLKEM
         case CRYPT_PKEY_ML_KEM:
             return CRYPT_ML_KEM_NewCtxEx(provCtx->libCtx);
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+        case CRYPT_PKEY_XMSS:
+            pkeyCtx = CRYPT_XMSS_NewCtxEx(provCtx->libCtx);
+            break;
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
         case CRYPT_PKEY_HYBRID_KEM:
@@ -423,6 +431,25 @@ const CRYPT_EAL_Func g_defEalKeyMgmtSlhDsa[] = {
     CRYPT_EAL_FUNC_END,
 };
 #endif
+
+const CRYPT_EAL_Func g_defEalKeyMgmtXmss[] = {
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_XMSS_Gen},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_XMSS_SetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_XMSS_SetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_XMSS_GetPrvKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_XMSS_GetPubKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_XMSS_DupCtx},
+#ifdef HITLS_CRYPTO_XMSS_CHECK
+    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)XPubKeyParamCheck},
+#endif
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_XMSS_Ctrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_XMSS_FreeCtx},
+#endif
+    CRYPT_EAL_FUNC_END,
+};
+
 
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 const CRYPT_EAL_Func g_defEalKeyMgmtHybridKem[] = {

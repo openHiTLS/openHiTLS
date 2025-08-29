@@ -44,6 +44,10 @@
 #ifdef HITLS_CRYPTO_SLH_DSA
 #include "crypt_slh_dsa.h"
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+#include "crypt_xmss.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
@@ -194,6 +198,9 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
 #endif
 #endif
 
+#ifdef HITLS_CRYPTO_XMSS
+int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen, CryptXmssCtx **pubKey, bool isComplete);
+#endif
 
 #ifdef HITLS_CRYPTO_KEY_ENCODE
 #ifdef HITLS_CRYPTO_RSA

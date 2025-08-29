@@ -565,10 +565,6 @@ static int32_t XPubKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pub->pubSeed->valueLen != ctx->para.n || pub->pubRoot->valueLen != ctx->para.n) {
-        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEYLEN);
-        return CRYPT_XMSS_ERR_INVALID_KEYLEN;
-    }
     return CRYPT_SUCCESS;
 }
 
@@ -622,7 +618,6 @@ int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
     prv.prvSeed->useLen = ctx->para.n;
     prv.prvPrf->useLen = ctx->para.n;
     prv.pubSeed->useLen = ctx->para.n;
@@ -631,7 +626,6 @@ int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para)
     (void)memcpy_s(prv.prvPrf->value, prv.prvPrf->valueLen, ctx->prvKey.prf, ctx->para.n);
     (void)memcpy_s(prv.pubSeed->value, prv.pubSeed->valueLen, ctx->prvKey.pub.seed, ctx->para.n);
     (void)memcpy_s(prv.pubRoot->value, prv.pubRoot->valueLen, ctx->prvKey.pub.root, ctx->para.n);
-
     return BSL_PARAM_SetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64,
             &index, sizeof(index));
 }
@@ -644,9 +638,8 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memcpy_s(ctx->prvKey.pub.seed, ctx->para.n, pub.pubSeed->value, ctx->para.n);
-    (void)memcpy_s(ctx->prvKey.pub.root, ctx->para.n, pub.pubRoot->value, ctx->para.n);
-
+    (void)memcpy_s(ctx->prvKey.pub.seed, MAX_MDSIZE, pub.pubSeed->value, pub.pubSeed->valueLen);
+    (void)memcpy_s(ctx->prvKey.pub.root, MAX_MDSIZE, pub.pubRoot->value, pub.pubRoot->valueLen);
     return CRYPT_SUCCESS;
 }
 
@@ -659,14 +652,34 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
     (void)memcpy_s(ctx->prvKey.seed, sizeof(ctx->prvKey.seed), prv.prvSeed->value, ctx->para.n);
     (void)memcpy_s(ctx->prvKey.prf, sizeof(ctx->prvKey.prf), prv.prvPrf->value, ctx->para.n);
     (void)memcpy_s(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed), prv.pubSeed->value, ctx->para.n);
     (void)memcpy_s(ctx->prvKey.pub.root, sizeof(ctx->prvKey.pub.root), prv.pubRoot->value, ctx->para.n);
-
     return BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64,
             &ctx->prvKey.index, &tmplen);
 }
 
+CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CryptXmssCtx *newCtx = CRYPT_XMSS_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    memcpy_s(newCtx, sizeof(CryptXmssCtx), ctx, sizeof(CryptXmssCtx));
+    if (ctx->addrand != NULL) {
+        newCtx->addrand = BSL_SAL_Calloc(1, ctx->addrandLen);
+        if (newCtx->addrand == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return NULL;
+        }
+        (void)memcpy_s(newCtx->addrand, ctx->addrandLen, ctx->addrand, ctx->addrandLen);
+    }
+    return newCtx;
+}
 #endif // HITLS_CRYPTO_XMSS

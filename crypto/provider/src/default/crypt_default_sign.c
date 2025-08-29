@@ -118,4 +118,12 @@ const CRYPT_EAL_Func g_defEalSignMlDsa[] = {
 };
 #endif
 
+const CRYPT_EAL_Func g_defEalSignXmss[] = {
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_XMSS_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_XMSS_Verify},
+#endif
+    CRYPT_EAL_FUNC_END,
+};
+
 #endif /* HITLS_CRYPTO_PROVIDER && HITLS_CRYPTO_PKEY_SIGN */

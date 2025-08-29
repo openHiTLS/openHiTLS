@@ -134,6 +134,10 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
  */
 int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
 
+int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CryptXmssCtx **pubKey, bool isComplete);
+
+CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

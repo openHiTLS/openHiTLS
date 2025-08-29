@@ -1255,7 +1255,8 @@
                     "crypto/provider/src/mgr",
                     "crypto/mldsa/include",
                     "crypto/slh_dsa/include",
-                    "crypto/mlkem/include"
+                    "crypto/mlkem/include",
+                    "crypto/xmss/include"
                 ]
             },
             "util": {

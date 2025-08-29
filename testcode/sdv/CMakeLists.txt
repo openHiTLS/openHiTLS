@@ -226,6 +226,8 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/mldsa/src
     ${openHiTLS_SRC}/crypto/slh_dsa/include
     ${openHiTLS_SRC}/crypto/slh_dsa/src
+    ${openHiTLS_SRC}/crypto/xmss/include
+    ${openHiTLS_SRC}/crypto/xmss/src
     ${openHiTLS_SRC}/apps/include
     ${openHiTLS_SRC}/apps/src
     ${openHiTLS_SRC}/bsl/ui/include

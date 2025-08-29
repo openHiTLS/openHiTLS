@@ -562,6 +562,45 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
 }
 #endif
 
+#ifdef HITLS_CRYPTO_XMSS
+
+static int32_t ParseXmssPubKeyAsn1Buff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_ASN1_BitString *bitPubkey,
+     CRYPT_EAL_PkeyCtx **ealPubKey)
+{
+    uint8_t *p = bitPubkey->buff;
+    if (bitPubkey->len <= 4 || bitPubkey->unusedBits != 0x00 || (bitPubkey->len - 4) % 2 != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEY);
+        return CRYPT_XMSS_ERR_INVALID_KEY;
+    }
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        attrName);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, p, 4);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    uint32_t hashLen = (bitPubkey->len - 4) / 2;
+    uint8_t *data = p + 4; 
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_XMSS, .key.xmssPub = {.root = data, .seed = data + hashLen, .len = hashLen}};
+    ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    *ealPubKey = pctx;
+    return ret;
+}
+#endif
+
 #ifdef HITLS_CRYPTO_SLH_DSA
 static int32_t ParseSlhDsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff,
                                          uint32_t buffLen, BslCid cid, CRYPT_EAL_PkeyCtx **ealPubKey)
@@ -746,6 +785,12 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         return ParseMlKemPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
     }
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+    if (cid == BSL_CID_XMSS) {
+        return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey);
+    }
+#endif
+
     BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
     return CRYPT_DECODE_UNKNOWN_OID;
 }
@@ -1547,6 +1592,41 @@ static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffe
 }
 #endif // HITLS_CRYPTO_MLKEM
 
+#ifdef HITLS_CRYPTO_XMSS
+static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr)
+{
+    uint32_t pubLen = 0;
+    uint32_t ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(uint32_t));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t hashLen = (pubLen - 4) / 2; // 4 bytes for algorithm type
+    uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(pubLen);
+    if (pub == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE, pub, 4);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(pub);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_XMSS, .key.xmssPub = {.seed = pub + 4 + hashLen, .root = pub + 4, .len = hashLen}};
+    ret = CRYPT_EAL_PkeyGetPub(ealPubKey, &pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(pub);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    bitStr->data = pub;
+    bitStr->dataLen = pubLen;
+    return CRYPT_SUCCESS;
+}
+#endif //HITLS_CRYPTO_XMSS
+
 static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitStr,
     BSL_ASN1_Buffer *keyParam, BslCid *cidOut)
 {
@@ -1723,6 +1803,13 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
         ret = EncodeMlKemPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
     }
 #endif
+
+#ifdef HITLS_CRYPTO_XMSS
+    if (cid == CRYPT_PKEY_XMSS){
+        ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
+    }
+#endif
+
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

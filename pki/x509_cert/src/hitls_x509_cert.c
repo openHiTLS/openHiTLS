@@ -433,7 +433,6 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
     BSL_Buffer encode = {data, dataLen};
     ret = ProviderCertParseBuffInternal(NULL, NULL, format, &encode, cert);
     BSL_SAL_Free(data);

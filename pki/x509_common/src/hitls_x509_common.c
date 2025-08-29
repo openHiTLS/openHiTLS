@@ -253,7 +253,12 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
         asnArr[1].buff = NULL;
         asnArr[1].len = 0;
         asnArr[1].tag = BSL_ASN1_TAG_NULL;
-    } else {
+    } else if(x509Alg->algId == BSL_CID_XMSS) {
+        asnArr[1].buff = NULL;
+        asnArr[1].len = 0;
+        asnArr[1].tag = BSL_ASN1_TAG_NULL;
+    }
+    else {
         /**
          * RFC5758 sec 3.2
          * When the ecdsa-with-SHA224, ecdsa-with-SHA256, ecdsa-with-SHA384, or
@@ -270,7 +275,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
         {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 0},
     };
     BSL_ASN1_Template templ = {algTempl, sizeof(algTempl) / sizeof(algTempl[0])};
-    // 2: alg + param
+    // 2: alg + param 
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, 2, &(asn->buff), &(asn->len));
     BSL_SAL_FREE(asnArr[1].buff);
     if (ret != BSL_SUCCESS) {

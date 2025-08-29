@@ -673,7 +673,7 @@ static const EAL_PkeyMethod METHODS[] = {
     EAL_PKEY_METHOD_DEFINE(
         CRYPT_PKEY_XMSS,
         CRYPT_XMSS_NewCtx,
-        NULL, // dupCtx
+        CRYPT_XMSS_DupCtx, // dupCtx
         CRYPT_XMSS_FreeCtx,
         NULL, // setPara
         NULL, // getPara

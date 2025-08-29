@@ -107,6 +107,12 @@ void DECODER_Pem2DerFreeOutData(void *ctx, BSL_Param *outParam);
 void DECODER_Pem2DerFreeCtx(void *ctx);
 #endif
 
+#ifdef HITLS_CRYPTO_XMSS
+void *DECODER_XmssDer2KeyNewCtx(void *provCtx);
+int32_t DECODER_XmssSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_XmssSubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+#endif
+
 void *DECODER_LowKeyObject2PkeyObjectNewCtx(void *provCtx);
 int32_t DECODER_LowKeyObject2PkeyObjectSetParam(void *ctx, const BSL_Param *param);
 int32_t DECODER_LowKeyObject2PkeyObjectGetParam(void *ctx, BSL_Param *param);

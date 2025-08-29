@@ -1,3 +1,9 @@
+SDV_X509_CERT_PARSE_FUNC_TC001 parse xmss cert pem
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/asn1/xmss_cert/end.pem"
+
+SDV_X509_CERT_PARSE_FUNC_TC001 parse xmss cert der
+SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/xmss_cert/end.der"
+
 SDV_X509_CERT_PARSE_FUNC_TC001 parse ed25519 cert pem
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/ed25519/ed25519.ca.pem"
 

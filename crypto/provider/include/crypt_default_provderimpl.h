@@ -63,6 +63,53 @@ extern const CRYPT_EAL_Func g_defEalMdSm3[];
 #endif // HITLS_CRYPTO_SM3
 #endif // HITLS_CRYPTO_MD
 
+#ifdef HITLS_CRYPTO_KDF
+extern const CRYPT_EAL_Func g_defEalKdfScrypt[];
+extern const CRYPT_EAL_Func g_defEalKdfPBKdf2[];
+extern const CRYPT_EAL_Func g_defEalKdfKdfTLS12[];
+extern const CRYPT_EAL_Func g_defEalKdfHkdf[];
+#endif // HITLS_CRYPTO_KDF
+
+#ifdef HITLS_CRYPTO_PKEY
+extern const CRYPT_EAL_Func g_defEalKeyMgmtDsa[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtEd25519[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtX25519[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtRsa[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtDh[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtEcdsa[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtEcdh[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtSm2[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtPaillier[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtSlhDsa[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtElGamal[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtMlKem[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtMlDsa[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtXmss[];
+extern const CRYPT_EAL_Func g_defEalKeyMgmtHybridKem[];
+
+extern const CRYPT_EAL_Func g_defEalExchX25519[];
+extern const CRYPT_EAL_Func g_defEalExchDh[];
+extern const CRYPT_EAL_Func g_defEalExchEcdh[];
+extern const CRYPT_EAL_Func g_defEalExchSm2[];
+
+
+extern const CRYPT_EAL_Func g_defEalAsymCipherRsa[];
+extern const CRYPT_EAL_Func g_defEalAsymCipherSm2[];
+extern const CRYPT_EAL_Func g_defEalAsymCipherPaillier[];
+extern const CRYPT_EAL_Func g_defEalAsymCipherElGamal[];
+
+extern const CRYPT_EAL_Func g_defEalSignDsa[];
+extern const CRYPT_EAL_Func g_defEalSignEd25519[];
+extern const CRYPT_EAL_Func g_defEalSignRsa[];
+extern const CRYPT_EAL_Func g_defEalSignEcdsa[];
+extern const CRYPT_EAL_Func g_defEalSignSm2[];
+extern const CRYPT_EAL_Func g_defEalSignMlDsa[];
+extern const CRYPT_EAL_Func g_defEalSignSlhDsa[];
+extern const CRYPT_EAL_Func g_defEalSignXmss[];
+extern const CRYPT_EAL_Func g_defEalMlKem[];
+extern const CRYPT_EAL_Func g_defEalHybridKeyKem[];
+#endif // HITLS_CRYPTO_PKEY
+
 #ifdef HITLS_CRYPTO_MAC
 #ifdef HITLS_CRYPTO_HMAC
 extern const CRYPT_EAL_Func g_defEalMacHmac[];
@@ -327,6 +374,7 @@ extern const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[];
 #ifdef HITLS_CRYPTO_RSA
 extern const CRYPT_EAL_Func g_defEalRsaPubDer2Key[];
 #endif
+extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2XmssKey[];
 #endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 #ifdef __cplusplus

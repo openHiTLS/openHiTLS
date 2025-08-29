@@ -388,6 +388,9 @@ int32_t ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, in
 #ifdef HITLS_CRYPTO_RSA
         case CRYPT_PUBKEY_RSA:
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+        case CRYPT_PUBKEY_XMSS:
+#endif
             return CRYPT_EAL_PubKeyParseBuff(libCtx, attrName, format, type, encode, ealPKey);
         case CRYPT_ENCDEC_UNKNOW:
             return CRYPT_EAL_UnKnownKeyParseBuff(libCtx, attrName, format, pwd, encode, ealPKey);
@@ -476,9 +479,12 @@ int32_t CRYPT_EAL_GetEncodeType(const char *type)
         {"PRIKEY_PKCS8_ENCRYPT", CRYPT_PRIKEY_PKCS8_ENCRYPT},
         {"PRIKEY_RSA", CRYPT_PRIKEY_RSA},
         {"PRIKEY_ECC", CRYPT_PRIKEY_ECC},
+        {"PRIKEY_XMSS",CRYPT_PRIKEY_XMSS}, 
         {"PUBKEY_SUBKEY", CRYPT_PUBKEY_SUBKEY},
         {"PUBKEY_RSA", CRYPT_PUBKEY_RSA},
+        {"PUBKEY_XMSS",CRYPT_PUBKEY_XMSS},
         {"PUBKEY_SUBKEY_WITHOUT_SEQ", CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ}
+
     };
 
     for (size_t i = 0; i < sizeof(TYPE_MAP) / sizeof(TYPE_MAP[0]); i++) {
