@@ -376,7 +376,7 @@ bool CRYPT_EAL_RandIsValidAlgId(CRYPT_RAND_AlgId id);
  */
 int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *ctx, const uint8_t *pers, uint32_t persLen);
 
- /**
+/**
  * @ingroup crypt_eal_rand
  * @brief get or set rand param
  *
@@ -389,6 +389,16 @@ int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *ctx, const uint8_t *pers, ui
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_DrbgCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
+
+/**
+ * @ingroup crypt_eal_rand
+ * @brief Get the seed of Primary DRBG.
+ *
+ * @param isParentEntropy [IN] If true, return primary DRBG; otherwise, return g_globalRndCtx.
+ *
+ * @retval  DRBG handle.
+ */
+CRYPT_EAL_RndCtx *CRYPT_EAL_GetSeeddCtx(bool isParentEntropy);
 
 #ifdef __cplusplus
 }

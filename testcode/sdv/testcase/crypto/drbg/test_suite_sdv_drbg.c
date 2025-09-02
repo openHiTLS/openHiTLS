@@ -2162,3 +2162,50 @@ EXIT:
     free(output);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_PRIMARY_DRBG_RESEED_FUNC_TC001
+ * @title  DRGB get seed ctx and reseed test.
+ * @precon nan
+ * @brief
+ *    1.Initialize the random number and obtain the seed.
+ *    2.Call the reseed function and obtain a random number.
+ * @expect
+ *    1.successful.
+ *    2.successful.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_PRIMARY_DRBG_RESEED_FUNC_TC001(int algId)
+{
+#if (!defined(HITLS_CRYPTO_ENTROPY))
+    (void)algId;
+#else
+    if (IsRandAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t addin[40] = {1, 2, 3, 4};
+    uint8_t randByte[64];
+    uint32_t working = 0;
+    TestMemInit();
+
+    ASSERT_TRUE(CRYPT_EAL_GetSeeddCtx(true) == NULL);
+    ASSERT_EQ(CRYPT_EAL_DrbgCtrl(NULL, CRYPT_CTRL_GET_WORKING_STATUS, &working, sizeof(working)), CRYPT_NULL_INPUT);
+
+    ASSERT_EQ(CRYPT_EAL_RandInit(algId, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
+    CRYPT_EAL_RndCtx *seedCtx = CRYPT_EAL_GetSeeddCtx(true);
+    ASSERT_EQ(CRYPT_EAL_DrbgCtrl(seedCtx, CRYPT_CTRL_GET_WORKING_STATUS, &working, sizeof(working)), CRYPT_SUCCESS);
+    ASSERT_EQ(working, 1);
+    ASSERT_EQ(CRYPT_EAL_DrbgSeedWithAdin(seedCtx, addin, sizeof(addin)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Randbytes(randByte, sizeof(randByte)), CRYPT_SUCCESS);
+
+    seedCtx = CRYPT_EAL_GetSeeddCtx(false);
+    ASSERT_EQ(CRYPT_EAL_DrbgCtrl(seedCtx, CRYPT_CTRL_GET_WORKING_STATUS, &working, sizeof(working)), CRYPT_SUCCESS);
+    ASSERT_EQ(working, 1);
+    ASSERT_EQ(CRYPT_EAL_DrbgSeedWithAdin(seedCtx, addin, sizeof(addin)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Randbytes(randByte, sizeof(randByte)), CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    return;
+#endif
+}
+/* END_CASE */

@@ -668,12 +668,36 @@ void CRYPT_EAL_DrbgDeinit(CRYPT_EAL_RndCtx *ctx)
     return;
 }
 
+CRYPT_EAL_RndCtx *CRYPT_EAL_GetSeeddCtx(bool isParentEntropy)
+{
+    if (isParentEntropy) {
+#ifdef HITLS_CRYPTO_ENTROPY
+        return g_seedDrbg.seed;
+#else
+        return NULL;
+#endif
+    }
+    return g_globalRndCtx;
+}
+
+static int32_t GetDrbgWorkingStatus(CRYPT_EAL_RndCtx *rndCtx, void *val, uint32_t len)
+{
+    RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
+    RETURN_RET_IF(len != sizeof(uint32_t), CRYPT_INVALID_ARG);
+    *(uint32_t *)val = (uint32_t)(rndCtx->working);
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_EAL_DrbgCtrl(CRYPT_EAL_RndCtx *rndCtx, int32_t opt, void *val, uint32_t len)
 {
     if (rndCtx == NULL || rndCtx->meth == NULL || rndCtx->meth->ctrl == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (opt == CRYPT_CTRL_GET_WORKING_STATUS) {
+        return GetDrbgWorkingStatus(rndCtx, val, len);
+    }
+
     int32_t ret;
     RETURN_RAND_LOCK(rndCtx, ret);
     if (rndCtx->working == true) {

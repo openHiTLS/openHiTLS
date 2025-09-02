@@ -718,6 +718,16 @@ BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
  */
 char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len);
 
+/**
+ * @ingroup bsl_obj
+ * @brief Get oid hex string from the number string
+ * @param[in] oid The number string
+ * @param[in] len The number string length
+ * @param[out] outLen The length of hex string
+ * @return Oid hex number
+ */
+uint8_t *BSL_OBJ_GetOidFromNumericString(const char *oid, uint32_t len, uint32_t *outLen);
+
 #ifdef __cplusplus
 }
 #endif

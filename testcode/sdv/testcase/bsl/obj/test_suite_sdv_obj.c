@@ -230,15 +230,23 @@ EXIT:
 void SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC001(Hex *str, char *expect)
 {
     char *oid = NULL;
+    uint8_t *hexOid = NULL;
     TestMemInit();
     oid = BSL_OBJ_GetOidNumericString(str->x, str->len);
     ASSERT_TRUE(oid != NULL);
     ASSERT_EQ(memcmp(oid, expect, strlen(expect)), 0);
 
+    uint32_t outLen = 0;
+    hexOid = BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), &outLen);
+    ASSERT_TRUE(hexOid != NULL);
+    ASSERT_EQ(outLen, str->len);
+    ASSERT_COMPARE("test obj", hexOid, outLen, str->x, str->len);
+
 EXIT:
     if (oid != NULL) {
         free(oid);
     }
+    BSL_SAL_Free(hexOid);
     return;
 }
 /* END_CASE */
@@ -253,6 +261,27 @@ void SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC002(Hex *str)
 {
     ASSERT_TRUE(BSL_OBJ_GetOidNumericString(str->x, str->len) == NULL);
 EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC001
+ * @title Exception Parameter Testing for the BSL_OBJ_GetOidFromNumericString Function.
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_GETOID_FROM_NUMBERIC_FUNC_TC001(char *expect)
+{
+    TestMemInit();
+    uint32_t outLen = 0;
+    uint8_t *hexOid = NULL;
+    ASSERT_TRUE(BSL_OBJ_GetOidFromNumericString(NULL, 0, &outLen) == NULL);
+    ASSERT_TRUE(BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), NULL) == NULL);
+    hexOid = BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), &outLen);
+    ASSERT_TRUE(hexOid == NULL);
+EXIT:
+    BSL_SAL_FREE(hexOid);
     return;
 }
 /* END_CASE */

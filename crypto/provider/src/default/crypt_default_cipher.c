@@ -134,9 +134,9 @@ const CRYPT_EAL_Func g_defEalChaCha[] = {
     {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_CHACHA20POLY1305_DeInitCtx},
     {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_CHACHA20POLY1305_Ctrl},
     {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx},
-#endif
     CRYPT_EAL_FUNC_END,
 };
+#endif
 
 #ifdef HITLS_CRYPTO_CTR
 const CRYPT_EAL_Func g_defEalCtr[] = {
@@ -186,9 +186,9 @@ const CRYPT_EAL_Func g_defEalOfb[] = {
     {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_OFB_DeInitCtx},
     {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_OFB_Ctrl},
     {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_OFB_FreeCtx},
-#endif
     CRYPT_EAL_FUNC_END,
 };
+#endif
 
 #ifdef HITLS_CRYPTO_XTS
 const CRYPT_EAL_Func g_defEalXts[] = {
