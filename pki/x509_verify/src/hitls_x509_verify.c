@@ -872,7 +872,6 @@ int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certC
             return ret;
         }
     }
-
 #ifdef HITLS_PKI_X509_VFY_CB
     return VerifyCertCbk(storeCtx, cert, storeCtx->curDepth, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
 #else
