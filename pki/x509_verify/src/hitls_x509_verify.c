@@ -416,6 +416,20 @@ static int32_t X509_AddCAPath(HITLS_X509_StoreCtx *storeCtx, const void *val, ui
 
     return HITLS_PKI_SUCCESS;
 }
+
+static int32_t X509_SetDefaultCAPath(HITLS_X509_StoreCtx *storeCtx)
+{
+    char defaultPath[MAX_PATH_LEN] = {0};
+    int32_t ret = snprintf_s(defaultPath, sizeof(defaultPath), sizeof(defaultPath) - 1,
+    "%s/ssl/certs", OPENHITLSDIR);
+    if (ret < 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    
+    /* Use X509_AddCAPath to add the default path */
+    return X509_AddCAPath(storeCtx, defaultPath, (uint32_t)strlen(defaultPath));
+}
 #endif /* HITLS_PKI_X509_VFY_LOCATION */
 
 static inline int32_t X509_ClearCRL(HITLS_X509_StoreCtx *storeCtx)
@@ -573,6 +587,8 @@ int32_t X509VfyBeforeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val,
 #ifdef HITLS_PKI_X509_VFY_LOCATION
         case HITLS_X509_STORECTX_ADD_CA_PATH:
             return X509_AddCAPath(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_SET_DEFAULT_PATH:
+            return X509_SetDefaultCAPath(storeCtx);
 #endif
         case HITLS_X509_STORECTX_CLEAR_CRL:
             return X509_ClearCRL(storeCtx);
@@ -632,12 +648,12 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-
-    // Allow val to be NULL only for specific commands like CLEAR_CRL
-    if (val == NULL && cmd != HITLS_X509_STORECTX_CLEAR_CRL) {
+    // Allow val to be NULL only for specific commands like CLEAR_CRL and SET_DEFAULT_PATH
+    if (val == NULL && cmd != HITLS_X509_STORECTX_CLEAR_CRL && cmd != HITLS_X509_STORECTX_SET_DEFAULT_PATH) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
+
     if (cmd < HITLS_X509_STORECTX_REF_UP) {
         return X509VfyBeforeCtrl(storeCtx, cmd, val, valLen);
     } else if (cmd < HITLS_X509_STORECTX_SET_ERROR) {
@@ -838,6 +854,16 @@ int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certC
         return ret;
     }
 
+    #ifdef HITLS_PKI_X509_VFY_LOCATION
+        // If we have CA paths set, try on-demand loading based on issuer DER-encoded DN
+        if (BSL_LIST_COUNT(storeCtx->caPaths) > 0) {
+            ret = FindIssuerByDer(storeCtx, cert, issue, issueInTrust);
+            if (ret == HITLS_PKI_SUCCESS) {
+                return HITLS_PKI_SUCCESS;
+            }
+        }
+    #endif
+
     // Then try the certificate chain if provided
     if (certChain != NULL) {
         ret = X509_GetIssueFromChain(storeCtx, certChain, cert, issue);
@@ -846,15 +872,7 @@ int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certC
             return ret;
         }
     }
-#ifdef HITLS_PKI_X509_VFY_LOCATION
-    // If we have CA paths set, try on-demand loading based on issuer DER-encoded DN
-    if (BSL_LIST_COUNT(storeCtx->caPaths) > 0) {
-        ret = FindIssuerByDer(storeCtx, cert, issue, issueInTrust);
-        if (ret == HITLS_PKI_SUCCESS) {
-            return HITLS_PKI_SUCCESS;
-        }
-    }
-#endif
+
 #ifdef HITLS_PKI_X509_VFY_CB
     return VerifyCertCbk(storeCtx, cert, storeCtx->curDepth, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
 #else

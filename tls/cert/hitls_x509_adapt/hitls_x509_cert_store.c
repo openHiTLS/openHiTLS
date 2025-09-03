@@ -100,6 +100,8 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLEAR_CRL, NULL, 0);
         case CERT_STORE_CTRL_ADD_CA_PATH:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_CA_PATH, input, strlen(input));
+        case CERT_STORE_CTRL_SET_DEFAULT_PATH:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_DEFAULT_PATH, NULL, 0);
         default:
             return HITLS_CERT_SELF_ADAPT_ERR;
     }

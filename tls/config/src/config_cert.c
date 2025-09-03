@@ -1284,3 +1284,17 @@ int32_t HITLS_CFG_FreeKey(HITLS_Config *config, HITLS_CERT_Key *key)
     SAL_CERT_KeyFree(config->certMgrCtx, key);
     return HITLS_SUCCESS;
 }
+
+int32_t HITLS_CFG_LoadDefaultCAPath(HITLS_Config *config)
+{
+    if (config == NULL || config->certMgrCtx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    if (store == NULL) {
+        return HITLS_CONFIG_NO_CERT;
+    }
+
+    return SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_SET_DEFAULT_PATH, NULL, NULL);
+}

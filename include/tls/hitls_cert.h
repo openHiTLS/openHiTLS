@@ -1217,6 +1217,15 @@ int32_t HITLS_CFG_FreeCert(HITLS_Config *config, HITLS_CERT_X509 *cert);
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_FreeKey(HITLS_Config *config, HITLS_CERT_Key *key);
+
+/**
+ * @brief   Load the default CA verification directory path
+ * @param   config  [OUT] TLS link configuration
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_LoadDefaultCAPath(HITLS_Config *config);
+
 #ifdef __cplusplus
 }
 #endif
