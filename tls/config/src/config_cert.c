@@ -1178,27 +1178,41 @@ int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file)
     if (config == NULL || file == NULL || strlen(file) == 0 || config->certMgrCtx == NULL) {
         return HITLS_NULL_INPUT;
     }
-    int32_t ret;
-    HITLS_CERT_X509 *cert =
-        SAL_CERT_X509Parse(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config), config, (const uint8_t *)file,
-                           (uint32_t)strlen(file), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
-    if (cert == NULL) {
+
+    int32_t ret = HITLS_SUCCESS;
+    HITLS_CERT_Chain *certList = NULL;
+    HITLS_CERT_X509 *tempCert = NULL;
+    HITLS_CERT_Store *store = NULL;
+
+    certList = SAL_CERT_X509ParseBundleFile(LIBCTX_FROM_CONFIG(config),
+                                            ATTRIBUTE_FROM_CONFIG(config), config,
+                                            (const uint8_t *)file, (uint32_t)strlen(file),
+                                            TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
+    if (certList == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
-#ifdef HITLS_TLS_FEATURE_SECURITY
-    ret = CheckCertSecuritylevel(config, cert, false);
-    if (ret != HITLS_SUCCESS) {
-        SAL_CERT_X509Free(cert);
-        return ret;
+
+    store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    if (store == NULL) {
+        SAL_CERT_ChainFree(certList);
+        return HITLS_NULL_INPUT;
     }
-#endif
-    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
-    ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, cert, NULL);
-    if (ret != HITLS_SUCCESS) {
-        SAL_CERT_X509Free(cert);
-        BSL_ERR_PUSH_ERROR(ret);
+
+    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
+    while (tempCert != NULL) {
+    HITLS_CERT_X509 *certRef = SAL_CERT_X509Ref(config->certMgrCtx, tempCert);
+        ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, certRef, NULL);
+        if (ret != HITLS_SUCCESS) {
+            SAL_CERT_X509Free(certRef);
+            SAL_CERT_ChainFree(certList);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
     }
-    return ret;
+
+    SAL_CERT_ChainFree(certList);
+    return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION */
 #endif /* HITLS_TLS_CONFIG_CERT_LOAD_FILE */
