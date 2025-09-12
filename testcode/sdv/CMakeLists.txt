@@ -15,6 +15,7 @@ message(STATUS "Enable bsl: ${ENABLE_BSL}")
 message(STATUS "Enable fail repeat: ${ENABLE_FAIL_REPEAT}")
 message(STATUS "Enable print: ${ENABLE_PRINT}")
 
+add_compile_definitions(OPENHITLSDIR="${CMAKE_INSTALL_PREFIX}/")
 set(TEST_SOURCE
     ${openHiTLS_SRC}/testcode/framework/gen_test/helper.c
     ${openHiTLS_SRC}/testcode/framework/gen_test/test.c

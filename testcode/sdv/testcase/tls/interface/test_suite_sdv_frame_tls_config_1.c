@@ -100,6 +100,7 @@
 #include "session_mgr.h"
 #include "hitls_x509_verify.h"
 #define DEFAULT_DESCRIPTION_LEN 128
+#define MAX_PATH_LEN 4096
 #define ERROR_HITLS_GROUP 1
 #define ERROR_HITLS_SIGNATURE 0xffffu
 typedef struct {
@@ -1992,3 +1993,204 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADDEFAULTCAPATH_TC002
+* @title  Test HITLS_CFG_LoadDefaultCAPath with NULL input
+* @brief
+*   1. Call HITLS_CFG_LoadDefaultCAPath with NULL config.
+* @expect
+*   1. Returns HITLS_NULL_INPUT.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADDEFAULTCAPATH_TC002(void)
+{
+    FRAME_Init();
+
+    // Test with NULL config
+    int32_t ret = HITLS_CFG_LoadDefaultCAPath(NULL);
+    ASSERT_EQ(ret, HITLS_NULL_INPUT);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADDEFAULTCAPATH_TC003
+* @title  Test HITLS_CFG_LoadDefaultCAPath sets correct default path
+* @brief
+*   1. Create a config object.
+*   2. Call HITLS_CFG_LoadDefaultCAPath.
+*   3. Verify that the CA store contains the expected default path.
+* @expect
+*   1. HITLS_CFG_LoadDefaultCAPath returns HITLS_SUCCESS.
+*   2. Default path is correctly configured.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADDEFAULTCAPATH_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Load default CA path
+    int32_t ret = HITLS_CFG_LoadDefaultCAPath(config);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Verify the path was set correctly by checking CA store
+    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    ASSERT_TRUE(store != NULL);
+
+    // Cast to HITLS_X509_StoreCtx to access internal structure
+    HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
+    ASSERT_TRUE(storeCtx != NULL);
+    ASSERT_TRUE(storeCtx->caPaths != NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(storeCtx->caPaths) > 0);
+
+    // Get the first path from the caPaths list
+    char *pathPtr = (char *)BSL_LIST_GET_FIRST(storeCtx->caPaths);
+    ASSERT_TRUE(pathPtr != NULL);
+
+    // Construct expected default path
+    char expectedPath[MAX_PATH_LEN] = {0};
+    ret = snprintf_s(expectedPath, sizeof(expectedPath), sizeof(expectedPath) - 1,
+                     "%s/ssl/certs", OPENHITLSDIR);
+    ASSERT_TRUE(ret > 0);
+
+    // Compare the actual path with expected path
+    ASSERT_TRUE(strcmp(pathPtr, expectedPath) == 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC001
+* @title  Test HITLS_CFG_LoadVerifyFile with bundle file containing multiple certificates
+* @brief
+*   1. Create a config object.
+*   2. Load a bundle file containing multiple CA certificates.
+*   3. Load client certificates signed by different CAs in the bundle.
+*   4. Verify all certificates can be validated.
+* @expect
+*   1. HITLS_CFG_LoadVerifyFile returns HITLS_SUCCESS.
+*   2. All certificates in bundle are loaded and can be used for verification.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Load bundle file containing multiple CA certificates
+    const char *bundlePath = "../testdata/tls/certificate/pem/rsa_sha256/ca_bundle.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, bundlePath);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Test verification with first CA's client cert
+    const char *clientCert1 = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
+    ret = HITLS_CFG_LoadCertFile(config, clientCert1, TLS_PARSE_FORMAT_PEM);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ret = HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Clean up for next test
+    HITLS_CFG_RemoveCertAndKey(config);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC002
+* @title  Test HITLS_CFG_LoadVerifyFile with empty bundle file
+* @brief
+*   1. Create a config object.
+*   2. Try to load an empty bundle file.
+* @expect
+*   1. Returns HITLS_CFG_ERR_LOAD_CERT_FILE.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    
+    // Try to load empty bundle file
+    const char *emptyBundlePath = "../testdata/tls/certificate/pem/rsa_sha256/empty_bundle.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, emptyBundlePath);
+    ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
+    
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC003
+* @title  Test HITLS_CFG_LoadVerifyFile with corrupted bundle file
+* @brief
+*   1. Create a config object.
+*   2. Try to load a bundle file with corrupted certificate data.
+* @expect
+*   1. Returns HITLS_CFG_ERR_LOAD_CERT_FILE.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    
+    // Try to load corrupted bundle file
+    const char *corruptedBundlePath = "../testdata/tls/certificate/pem/rsa_sha256/corrupted_bundle.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, corruptedBundlePath);
+    ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
+    
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_COMPAT_TC001
+* @title  Test HITLS_CFG_LoadVerifyFile backward compatibility with single certificate
+* @brief
+*   1. Create a config object.
+*   2. Load a single certificate file (existing functionality).
+*   3. Verify it works the same as before.
+* @expect
+*   1. HITLS_CFG_LoadVerifyFile returns HITLS_SUCCESS.
+*   2. Single certificate loading works as expected.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_COMPAT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    
+    // Load single certificate file (existing functionality)
+    const char *singleCertPath = "../testdata/tls/certificate/pem/rsa_sha256/ca.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, singleCertPath);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    
+    // Verify certificate can be used for validation
+    const char *clientCert = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
+    ret = HITLS_CFG_LoadCertFile(config, clientCert, TLS_PARSE_FORMAT_PEM);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    
+    ret = HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+

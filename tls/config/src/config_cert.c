@@ -1135,7 +1135,6 @@ static int32_t UseCertificateChainCommon(HITLS_Config *config, HITLS_CERT_Chain 
 
     int32_t ret = HITLS_SUCCESS;
 
-    // 1. 获取并设置第一个证书为主证书
     HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
     if (tempCert == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
@@ -1228,7 +1227,6 @@ int32_t HITLS_CFG_LoadVerifyBuffer(HITLS_Config *config, const uint8_t *buf,
         return HITLS_NULL_INPUT;
     }
 
-    // 解析验证证书Buffer
     HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(config,
                                             buf, bufLen,
                                             TLS_PARSE_TYPE_BUFF, format);
@@ -1236,10 +1234,8 @@ int32_t HITLS_CFG_LoadVerifyBuffer(HITLS_Config *config, const uint8_t *buf,
         return HITLS_CFG_ERR_LOAD_CERT_BUFFER;
     }
 
-    // 使用公共逻辑处理证书
     int32_t ret = LoadVerifyCommon(config, certList);
-    
-    // 清理资源
+
     SAL_CERT_ChainFree(certList);
     return ret;
 }
@@ -1274,7 +1270,6 @@ int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file)
         return HITLS_NULL_INPUT;
     }
 
-    // 解析验证证书文件
     HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(config,
                                             (const uint8_t *)file, (uint32_t)strlen(file),
                                             TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
@@ -1282,10 +1277,9 @@ int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file)
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
 
-    // 使用公共逻辑处理证书
     int32_t ret = LoadVerifyCommon(config, certList);
     
-    // 清理资源
+
     SAL_CERT_ChainFree(certList);
     return ret;
 }

@@ -289,7 +289,6 @@ int32_t HITLS_UseCertificateChainBuffer(HITLS_Ctx *ctx, const uint8_t *buf,
         return HITLS_NULL_INPUT;
     }
 
-    // 调用Config版本的函数
     return HITLS_CFG_UseCertificateChainBuffer(&(ctx->config.tlsConfig), buf, bufLen, format);
 }
 
@@ -298,7 +297,7 @@ int32_t HITLS_LoadVerifyBuffer(HITLS_Ctx *ctx, const uint8_t *buf,
     uint32_t bufLen, HITLS_ParseFormat format)
 {
     if (ctx == NULL) {
-    return HITLS_NULL_INPUT;
+        return HITLS_NULL_INPUT;
     }
 
     return HITLS_CFG_LoadVerifyBuffer(&(ctx->config.tlsConfig), buf, bufLen, format);
