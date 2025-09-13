@@ -876,8 +876,7 @@ int32_t HITLS_CFG_ParseCAList(HITLS_Config *config, const char *input, uint32_t 
     HITLS_TrustedCAList *list = NULL;
     HITLS_TrustedCANode *newCaNode = NULL;
     HITLS_CERT_Chain *certList =
-        SAL_CERT_X509ParseBundleFile(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config), config,
-                                     (const uint8_t *)input, inputLen, inputType, format);
+        SAL_CERT_X509ParseBundleFile(config, (const uint8_t *)input, inputLen, inputType, format);
     if (certList == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
@@ -1128,50 +1127,146 @@ int32_t HITLS_CFG_ClearVerifyCrls(HITLS_Config *config)
     return SAL_CERT_StoreCtrl(config, certStore, CERT_STORE_CTRL_CLEAR_CRL_LIST, NULL, NULL);
 }
 
+static int32_t UseCertificateChainCommon(HITLS_Config *config, HITLS_CERT_Chain *certList)
+{
+    if (config == NULL || certList == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    int32_t ret = HITLS_SUCCESS;
+
+    // 1. 获取并设置第一个证书为主证书
+    HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
+    if (tempCert == NULL) {
+        return HITLS_CFG_ERR_LOAD_CERT_FILE;
+    }
+
+    ret = HITLS_CFG_SetCertificate(config, tempCert, true);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
+    if (tempCert != NULL) {
+        ret = HITLS_CFG_ClearChainCerts(config);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+
+        while (tempCert != NULL) {
+            ret = HITLS_CFG_AddChainCert(config, tempCert, true);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+            tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
+        }
+    }
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_UseCertificateChainBuffer(HITLS_Config *config, const uint8_t *buf,
+                                           uint32_t bufLen, HITLS_ParseFormat format)
+{
+    if (config == NULL || buf == NULL || bufLen == 0) {
+        return HITLS_NULL_INPUT;
+    }
+
+
+    HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(
+        config,
+        buf,
+        bufLen,
+        TLS_PARSE_TYPE_BUFF,
+        format);
+
+    if (certList == NULL) {
+        return HITLS_CFG_ERR_LOAD_CERT_BUFFER;
+    }
+
+    int32_t ret = UseCertificateChainCommon(config, certList);
+
+    SAL_CERT_ChainFree(certList);
+    return ret;
+}
+
+#ifdef HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION
+static int32_t LoadVerifyCommon(HITLS_Config *config, HITLS_CERT_Chain *certList)
+{
+    if (config == NULL || certList == NULL || config->certMgrCtx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    int32_t ret = HITLS_SUCCESS;
+    HITLS_CERT_X509 *tempCert = NULL;
+    HITLS_CERT_Store *store = NULL;
+
+    store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    if (store == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
+    while (tempCert != NULL) {
+        HITLS_CERT_X509 *certRef = SAL_CERT_X509Ref(config->certMgrCtx, tempCert);
+        ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, certRef, NULL);
+        if (ret != HITLS_SUCCESS) {
+            SAL_CERT_X509Free(certRef);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
+    }
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_LoadVerifyBuffer(HITLS_Config *config, const uint8_t *buf,
+                                  uint32_t bufLen, HITLS_ParseFormat format)
+{
+    if (config == NULL || buf == NULL || bufLen == 0 || config->certMgrCtx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    // 解析验证证书Buffer
+    HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(config,
+                                            buf, bufLen,
+                                            TLS_PARSE_TYPE_BUFF, format);
+    if (certList == NULL) {
+        return HITLS_CFG_ERR_LOAD_CERT_BUFFER;
+    }
+
+    // 使用公共逻辑处理证书
+    int32_t ret = LoadVerifyCommon(config, certList);
+    
+    // 清理资源
+    SAL_CERT_ChainFree(certList);
+    return ret;
+}
+#endif /* HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION */
+
 #ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
 int32_t HITLS_CFG_UseCertificateChainFile(HITLS_Config *config, const char *file)
 {
     if (config == NULL || file == NULL) {
         return HITLS_NULL_INPUT;
     }
-    int32_t ret = HITLS_SUCCESS;
-    HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(LIBCTX_FROM_CONFIG(config), ATTRIBUTE_FROM_CONFIG(config),
-                                                              config, (const uint8_t *)file, (uint32_t)strlen(file),
-                                                              TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
+
+    HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(
+        config,
+        (const uint8_t *)file,
+        (uint32_t)strlen(file),
+        TLS_PARSE_TYPE_FILE,
+        TLS_PARSE_FORMAT_PEM);
     if (certList == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
-    HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
-    if (tempCert == NULL) {
-        SAL_CERT_ChainFree(certList);
-        return HITLS_CFG_ERR_LOAD_CERT_FILE;
-    }
-    ret = HITLS_CFG_SetCertificate(config, tempCert, true);
-    if (ret != HITLS_SUCCESS) {
-        SAL_CERT_ChainFree(certList);
-        return ret;
-    }
-    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
-    if (tempCert != NULL) {
-        ret = HITLS_CFG_ClearChainCerts(config);
-        if (ret != HITLS_SUCCESS) {
-            SAL_CERT_ChainFree(certList);
-            return ret;
-        }
-    }
 
-    while (tempCert != NULL) {
-        ret = HITLS_CFG_AddChainCert(config, tempCert, true);
-        if (ret != HITLS_SUCCESS) {
-            SAL_CERT_ChainFree(certList);
-            return ret;
-        }
-        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
-    }
+    int32_t ret = UseCertificateChainCommon(config, certList);
+
     SAL_CERT_ChainFree(certList);
     return ret;
 }
-
 #ifdef HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION
 int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file)
 {
@@ -1179,40 +1274,20 @@ int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file)
         return HITLS_NULL_INPUT;
     }
 
-    int32_t ret = HITLS_SUCCESS;
-    HITLS_CERT_Chain *certList = NULL;
-    HITLS_CERT_X509 *tempCert = NULL;
-    HITLS_CERT_Store *store = NULL;
-
-    certList = SAL_CERT_X509ParseBundleFile(LIBCTX_FROM_CONFIG(config),
-                                            ATTRIBUTE_FROM_CONFIG(config), config,
+    // 解析验证证书文件
+    HITLS_CERT_Chain *certList = SAL_CERT_X509ParseBundleFile(config,
                                             (const uint8_t *)file, (uint32_t)strlen(file),
                                             TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
     if (certList == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
 
-    store = SAL_CERT_GetCertStore(config->certMgrCtx);
-    if (store == NULL) {
-        SAL_CERT_ChainFree(certList);
-        return HITLS_NULL_INPUT;
-    }
-
-    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
-    while (tempCert != NULL) {
-    HITLS_CERT_X509 *certRef = SAL_CERT_X509Ref(config->certMgrCtx, tempCert);
-        ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, certRef, NULL);
-        if (ret != HITLS_SUCCESS) {
-            SAL_CERT_X509Free(certRef);
-            SAL_CERT_ChainFree(certList);
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
-    }
-
+    // 使用公共逻辑处理证书
+    int32_t ret = LoadVerifyCommon(config, certList);
+    
+    // 清理资源
     SAL_CERT_ChainFree(certList);
-    return HITLS_SUCCESS;
+    return ret;
 }
 #endif /* HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION */
 #endif /* HITLS_TLS_CONFIG_CERT_LOAD_FILE */

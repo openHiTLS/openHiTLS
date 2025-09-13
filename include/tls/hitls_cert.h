@@ -1175,6 +1175,34 @@ int32_t HITLS_CFG_UseCertificateChainFile(HITLS_Config *config, const char *file
 
 /**
  * @ingroup hitls_cert
+ * @brief   Use the certificate chain buffer to set the certificate chain.
+ *
+ * @param   config [OUT] TLS link configuration
+ * @param   buf [IN] Certificate chain buffer data
+ * @param   bufLen [IN] Buffer length
+ * @param   format [IN] Certificate format (PEM/DER/ASN1)
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_UseCertificateChainBuffer(HITLS_Config *config, const uint8_t *buf,
+                                           uint32_t bufLen, HITLS_ParseFormat format);
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Use the certificate chain buffer to set the certificate chain.
+ *
+ * @param   ctx [OUT] TLS connection handle
+ * @param   buf [IN] Certificate chain buffer data
+ * @param   bufLen [IN] Buffer length
+ * @param   format [IN] Certificate format (PEM/DER/ASN1)
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_UseCertificateChainBuffer(HITLS_Ctx *ctx, const uint8_t *buf,
+                                       uint32_t bufLen, HITLS_ParseFormat format);
+
+/**
+ * @ingroup hitls_cert
  * @brief   Load the verification file from the file.
  *
  * @param   config  [OUT] TLS link configuration
@@ -1183,6 +1211,34 @@ int32_t HITLS_CFG_UseCertificateChainFile(HITLS_Config *config, const char *file
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file);
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Load the verification certificates from buffer.
+ *
+ * @param   config [OUT] TLS link configuration
+ * @param   buf [IN] Certificate buffer data
+ * @param   bufLen [IN] Buffer length
+ * @param   format [IN] Certificate format (PEM/DER/ASN1)
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_LoadVerifyBuffer(HITLS_Config *config, const uint8_t *buf,
+                                  uint32_t bufLen, HITLS_ParseFormat format);
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Load the verification certificates from buffer.
+ *
+ * @param   ctx [OUT] TLS connection handle
+ * @param   buf [IN] Certificate buffer data
+ * @param   bufLen [IN] Buffer length
+ * @param   format [IN] Certificate format (PEM/DER/ASN1)
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_LoadVerifyBuffer(HITLS_Ctx *ctx, const uint8_t *buf,
+                              uint32_t bufLen, HITLS_ParseFormat format);
 /**
  * @ingroup hitls_cert
  * @brief   Load the verification file from the directory.

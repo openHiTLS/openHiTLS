@@ -168,12 +168,11 @@ int32_t SAL_CERT_X509Encode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf,
     return CheckCertCallBackRetVal("encode cert", ret, BINLOG_ID16086, HITLS_CERT_ERR_ENCODE_CERT);
 }
 
-HITLS_CERT_Chain *SAL_CERT_X509ParseBundleFile(HITLS_Lib_Ctx *libCtx, const char *attrName,
-    HITLS_Config *config, const uint8_t *buf, uint32_t len,
+HITLS_CERT_Chain *SAL_CERT_X509ParseBundleFile(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
-    (void)config;
-    return HITLS_X509_Adapt_BundleCertParse(libCtx, attrName, buf, len, type, SAL_CERT_GetParseFormatStr(format));
+    return HITLS_X509_Adapt_BundleCertParse(LIBCTX_FROM_CONFIG(config),
+        ATTRIBUTE_FROM_CONFIG(config), buf, len, type, SAL_CERT_GetParseFormatStr(format));
 }
 
 HITLS_CERT_X509 *SAL_CERT_X509Parse(HITLS_Lib_Ctx *libCtx, const char *attrName,
