@@ -53,6 +53,10 @@
 #define BSL_SAL_DL_CB       0x0700
 #endif
 
+#ifdef HITLS_BSL_SAL_PID
+#define BSL_SAL_PID_CB      0x0800
+#endif
+
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
 {
     uint32_t type = (uint32_t)funcType & 0xff00;
@@ -61,6 +65,10 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
             return SAL_MemCallBack_Ctrl(funcType, funcCb);
         case BSL_SAL_THREAD_CB:
             return SAL_ThreadCallback_Ctrl(funcType, funcCb);
+#ifdef HITLS_BSL_SAL_PID
+        case BSL_SAL_PID_CB:
+            return SAL_PiDCallback_Ctrl(funcType, funcCb);
+#endif
 #ifdef HITLS_BSL_SAL_NET
         case BSL_SAL_NET_CB:
             return SAL_NetCallback_Ctrl(funcType, funcCb);

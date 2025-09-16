@@ -270,7 +270,7 @@ static int32_t MLDSACleanPubKey(CRYPT_ML_DSA_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

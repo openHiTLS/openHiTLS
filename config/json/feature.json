@@ -1061,7 +1061,8 @@
                 ".include": [
                     "crypto/eal/src",
                     "crypto/entropy/include",
-                    "crypto/ealinit/include"
+                    "crypto/ealinit/include",
+                    "include/bsl"
                 ]
             },
             "provider": {

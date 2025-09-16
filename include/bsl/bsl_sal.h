@@ -231,6 +231,17 @@ uint64_t BSL_SAL_ThreadGetId(void);
 
 /**
  * @ingroup bsl_sal
+ * @brief Obtain the process ID.
+ *
+ * Obtain the process ID.
+ *
+ * @attention none
+ * @retval Process ID
+ */
+int32_t BSL_SAL_GetPid(void);
+
+/**
+ * @ingroup bsl_sal
  * @brief run once: Use the initialization callback.
  *
  * @attention This function should not be a cancel, otherwise the default implementation of run
@@ -973,6 +984,8 @@ typedef enum {
     BSL_SAL_DL_OPEN_CB_FUNC = 0x0700,
     BSL_SAL_DL_CLOSE_CB_FUNC,
     BSL_SAL_DL_SYM_CB_FUNC,
+
+    BSL_SAL_PID_GET_ID_CB_FUNC = 0x0800,
 
     BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;

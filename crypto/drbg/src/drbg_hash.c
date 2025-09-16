@@ -25,6 +25,7 @@
 #include "crypt_types.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
+#include "bsl_sal.h"
 
 #define DRBG_HASH_MAX_SEEDLEN  (111)
 
@@ -542,6 +543,7 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSee
     drbg->maxRequest = (drbg->isGm) ? DRBG_MAX_REQUEST_SM3 : DRBG_MAX_REQUEST;
 
     drbg->predictionResistance = false;
+    drbg->forkId = BSL_SAL_GetPid();
 
     return drbg;
 }

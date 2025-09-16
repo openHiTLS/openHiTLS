@@ -36,6 +36,7 @@
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "crypt_provider.h"
+#include "crypt_drbg.h"
 /* END_HEADER */
 
 #define CTR_AES128_SEEDLEN (32)
@@ -1027,6 +1028,51 @@ void SDV_CRYPT_DRBG_BYTES_ERR_PARA_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_MAX_OUTPUT_SIZE + 1), CRYPT_SUCCESS); // MAX SIZE + 1
     ASSERT_NE(CRYPT_EAL_Drbgbytes(drbg, NULL, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(NULL, output, DRBG_OUTPUT_SIZE), CRYPT_NULL_INPUT);
+
+EXIT:
+    CRYPT_EAL_DrbgDeinit(drbg);
+    drbgDataFree(&data);
+    free(output);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_DRBG_FORK_RESEED_FUNC_TC001
+ * @title  Detect whether the fork event will trigger a reseeding.
+ * @precon nan
+ * @brief
+ *    1.Initialize the random number seed, expected result 1.
+ *    2.Call CRYPT_EAL_Drbgbytes, use normal parameters, expected result 2.
+ * @expect
+ *    1.successful.
+ *    2.All interface succeeded.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_DRBG_FORK_RESEED_FUNC_TC001(void)
+{
+    uint8_t *output = malloc(DRBG_MAX_OUTPUT_SIZE + 1);
+    ASSERT_TRUE(output != NULL);
+    CRYPT_RandSeedMethod seedMeth = { 0 };
+    CRYPT_Data data = { 0 };
+    DRBG_Vec_t seedCtx = { 0 };
+    void *drbg = NULL;
+    DRBG_Ctx *ctx = NULL;
+    int32_t forkId;
+    TestMemInit();
+    regSeedMeth(&seedMeth);
+    drbgDataInit(&data, TEST_DRBG_DATA_SIZE);
+
+    seedCtx.nonce = &data;
+    seedCtx.entropy = &data;
+    drbg = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, &seedMeth, &seedCtx);
+    ASSERT_TRUE(drbg != NULL);
+    ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(drbg, NULL, 0) == CRYPT_SUCCESS);
+
+    ctx = (DRBG_Ctx *)((CRYPT_EAL_RndCtx *)drbg)->ctx;
+    forkId = ++ctx->forkId;
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg, output, DRBG_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_NE(ctx->forkId, forkId);
 
 EXIT:
     CRYPT_EAL_DrbgDeinit(drbg);

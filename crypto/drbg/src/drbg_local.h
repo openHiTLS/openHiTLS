@@ -75,6 +75,8 @@ struct DrbgCtx {
 
     void *libCtx; /* Library context */
     bool predictionResistance;
+
+    int32_t forkId;
 };
 
 #ifdef HITLS_CRYPTO_DRBG_HMAC

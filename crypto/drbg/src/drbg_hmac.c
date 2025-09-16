@@ -25,6 +25,7 @@
 #include "crypt_types.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
+#include "bsl_sal.h"
 
 #define DRBG_HMAC_MAX_MDLEN (64)
 
@@ -372,6 +373,7 @@ DRBG_Ctx *DRBG_NewHmacCtx(void *libCtx, const EAL_MacMethod *hmacMeth, CRYPT_MAC
     drbg->libCtx = libCtx;
 
     drbg->predictionResistance = false;
+    drbg->forkId = BSL_SAL_GetPid();
 
     return drbg;
 }

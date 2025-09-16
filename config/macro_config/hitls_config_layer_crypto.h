@@ -167,6 +167,12 @@
     #endif
 #endif
 
+#ifdef HITLS_CRYPTO_DRBG
+    #ifndef HITLS_BSL_SAL_PID
+        #define HITLS_BSL_SAL_PID
+    #endif
+#endif
+
 #if defined(HITLS_CRYPTO_DRBG_GM)
     #ifndef HITLS_BSL_SAL_TIME
         #define HITLS_BSL_SAL_TIME

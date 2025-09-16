@@ -25,6 +25,7 @@
 #include "crypt_types.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
+#include "bsl_sal.h"
 
 
 #define DRBG_CTR_MAX_KEYLEN (32)
@@ -656,6 +657,7 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, b
     DRBG_InitializeRanges(drbg, ctx, isUsedDf, keyLen);
 
     drbg->predictionResistance = false;
+    drbg->forkId = BSL_SAL_GetPid();
 
     return drbg;
 }
