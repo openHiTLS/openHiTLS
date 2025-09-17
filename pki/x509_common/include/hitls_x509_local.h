@@ -302,6 +302,8 @@ int32_t HITLS_X509_EncodeCanonNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *nam
 
 int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff);
 
+int32_t HITLS_X509_MatchPattern(const char *pattern, const char *hostname, uint32_t flags);
+
 #ifdef __cplusplus
 }
 #endif

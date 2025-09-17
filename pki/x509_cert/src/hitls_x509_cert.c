@@ -508,6 +508,41 @@ static int32_t X509_GetAsn1BslTimeStr(const BSL_TIME *time, BSL_Buffer *val)
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_GetCNStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff, uint32_t valLen)
+{
+    if (nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (buff == NULL || buff->data != NULL || valLen != sizeof(BSL_Buffer)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    HITLS_X509_NameNode *nameNode = BSL_LIST_GET_FIRST(nameList);
+    while (nameNode != NULL) {
+        BslOidString oid = {
+            .octs = (char *)nameNode->nameType.buff,
+            .octetLen = nameNode->nameType.len,
+        };
+        const char *oidName = BSL_OBJ_GetOidNameFromOid(&oid);
+        if (oidName == NULL || strcmp(oidName, "CN") != 0) {
+            nameNode = BSL_LIST_GET_NEXT(nameList);
+            continue;
+        }
+        buff->data = BSL_SAL_Malloc(nameNode->nameValue.len + 1);
+        if (buff->data == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+        (void)memcpy_s(buff->data, nameNode->nameValue.len + 1, nameNode->nameValue.buff, nameNode->nameValue.len);
+        buff->data[nameNode->nameValue.len] = '\0';
+        buff->dataLen = nameNode->nameValue.len;
+        return HITLS_PKI_SUCCESS;
+    }
+    BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_CN_NOT_FOUND);
+    return HITLS_X509_ERR_CERT_CN_NOT_FOUND;
+}
+
 static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint32_t valLen)
 {
     switch (cmd) {
@@ -531,6 +566,8 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
             return HITLS_X509_GetDistinguishNameStrFromList(cert->tbs.subjectName, val);
         case HITLS_X509_GET_ISSUER_DN_STR:
             return HITLS_X509_GetDistinguishNameStrFromList(cert->tbs.issuerName, val);
+        case HITLS_X509_GET_SUBJECT_CN_STR:
+            return X509_GetCNStrFromList(cert->tbs.subjectName, val, valLen);
         case HITLS_X509_GET_SERIALNUM_STR:
             return X509_GetSerialNumStr(cert, val);
         case HITLS_X509_GET_BEFORE_TIME_STR:
@@ -664,7 +701,8 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint3
     } else if (cmd <= HITLS_X509_EXT_CHECK_SKI) {
         static int32_t cmdSet[] = {HITLS_X509_EXT_SET_SKI, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_SET_KUSAGE,
             HITLS_X509_EXT_SET_SAN, HITLS_X509_EXT_SET_BCONS, HITLS_X509_EXT_SET_EXKUSAGE, HITLS_X509_EXT_GET_SKI,
-            HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_CHECK_SKI, HITLS_X509_EXT_GET_KUSAGE, HITLS_X509_EXT_GET_BCONS};
+            HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_CHECK_SKI, HITLS_X509_EXT_GET_KUSAGE, HITLS_X509_EXT_GET_BCONS,
+            HITLS_X509_EXT_GET_SAN};
         if (!X509_CheckCmdValid(cmdSet, sizeof(cmdSet) / sizeof(int32_t), cmd)) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_UNSUPPORT);
             return HITLS_X509_ERR_EXT_UNSUPPORT;

@@ -1253,6 +1253,9 @@ static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t 
             return GetExtKeyUsage(ext, val, valLen);
         case HITLS_X509_EXT_GET_BCONS:
             return GetExtBCons(ext, val, valLen);
+        case HITLS_X509_EXT_GET_SAN:
+            return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_SUBJECTALTNAME, &buff, sizeof(HITLS_X509_ExtSan),
+                (DecodeExtCb)HITLS_X509_ParseSubjectAltName);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;

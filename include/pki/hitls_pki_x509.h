@@ -127,6 +127,27 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
 int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot, HITLS_X509_Cert *cert,
     HITLS_X509_List **chain);
 
+/**
+ * @ingroup pki
+ * @brief Verifies a certificate's hostname according to RFC6125 and RFC9525.
+ *        It first checks for a matching dNSName in the Subject Alternative Name (SAN) extension.
+ *        If, and only if, no dNSName entries are present, it falls back to check the Common Name (CN).
+ *          flags:
+ *        - # if no flag, default mode with '*.example.com' as RFC9525, we will check CN name if SAN is not present.
+ *        - # if flag contains HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD:
+ *               more flexible wildcard matching as RFC6125 like 'fo*.example.com' matches
+ *              'foo.example.com', we also will check CN name if SAN is not present.
+ *
+ * @param cert [IN] The certificate to verify.
+ * @param hostname [IN] The hostname to match against.
+ * @param hostnameLen [IN] The length of the hostname.
+ * @param flags [IN] A flag controlling wildcard matching behavior.
+ * @retval #HITLS_PKI_SUCCESS if the hostname is successfully verified.
+ * @retval #HITLS_X509_ERR_VFY_HOSTNAME_FAIL if the hostname does not match.
+ * @retval Other error codes for parsing or parameter errors.
+ */
+int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, const char *hostname, uint32_t hostnameLen, uint32_t flags);
+
 #ifdef __cplusplus
 }
 #endif

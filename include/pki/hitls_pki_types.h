@@ -72,6 +72,7 @@ typedef enum {
     HITLS_X509_GET_SIGN_MDALG,         /** Get the hash algorithm of signature algorithm used to sign the cert/ */
     HITLS_X509_GET_ENCODE_SUBJECT_DN,  /** Get the ASN.1 DER encoded subject distinguished name */
     HITLS_X509_IS_SELF_SIGNED,         /** Determine whether the certificate is a self-signed certificate */
+    HITLS_X509_GET_SUBJECT_CN_STR,         /** Get the CN from the subject distinguished name */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
@@ -99,6 +100,8 @@ typedef enum {
     HITLS_X509_EXT_GET_KUSAGE,                  /** get the key usage form the crl/cert/csr.
                                                     Note: If key usage is not set, return 0xffff. */
     HITLS_X509_EXT_GET_BCONS,                   /** Get the basic constraints extension. */
+    HITLS_X509_EXT_GET_SAN,                     /** Get Subject Alternative Name from extensions.
+                                                    Note: Returns a list of HITLS_X509_GeneralName. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -321,6 +324,11 @@ typedef enum {
 
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
+
+/* Flags for HITLS_X509_VerifyHostname */
+#define HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD   0x01  /**< For compatibility purposes, ref RFC6125 to support
+                                                        match rules similar to  *.a.com matches foo.a.com,
+                                                        f*.com matches foo.com */
 
 typedef struct {
     BSL_Buffer *macPwd;
