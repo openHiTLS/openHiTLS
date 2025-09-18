@@ -224,7 +224,8 @@
                 },
                 "armv7": {
                     "sm3": null
-                }
+                },
+                "riscv64": {}
             }
         },
         "hitls_tls": {
