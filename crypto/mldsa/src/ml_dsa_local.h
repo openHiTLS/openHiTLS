@@ -48,6 +48,7 @@
 #define MLDSA_MOD_Q(val) {int32_t m = ((val) + (1 << 22u)) >> 23u; (val) = (val) - m * MLDSA_Q;}
 
 typedef struct {
+    int32_t paramId;
     uint8_t k;
     uint8_t l;
     uint8_t eta;
@@ -76,6 +77,9 @@ struct CryptMlDsaCtx {
     bool deterministicSignFlag;
     BSL_SAL_RefCount references;
     void *libCtx;
+    CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE prvKeyFormat;
+    bool hasSeed;
+    uint8_t seed[MLDSA_SEED_BYTES_LEN];
 };
 
 void MLDSA_ComputesNTT(int32_t w[MLDSA_N]);

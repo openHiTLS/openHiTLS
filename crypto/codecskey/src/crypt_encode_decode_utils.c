@@ -226,6 +226,32 @@ static BSL_ASN1_TemplateItem g_subKeyInfoInnerTempl[] = {
     {BSL_ASN1_TAG_BITSTRING, 0, 0},
 };
 
+#ifdef HITLS_CRYPTO_MLDSA
+/**
+ * MldsaPrivateKey  :=  CHOICE  {
+ *      seed [0]        OCTET STRING (SIZE (32)),
+ *      expandedKey     OCTET STRING (SIZE (2560)),
+ *      both SEQUENCE {
+ *          seed        OCTET STRING (SIZE (32)),
+ *          expandedKey OCTET STRING (SIZE (2560))
+ *      }
+ * }
+ *
+ * https://www.ietf.org/archive/id/draft-ietf-lamps-dilithium-certificates-12.html
+ */
+static BSL_ASN1_TemplateItem g_mldsaPrikeyInfoTempl[] = {
+    {BSL_ASN1_TAG_CHOICE, 0, 0}
+};
+
+/**
+ *    seed OCTET STRING (SIZE (32)),
+ *    expandedKey OCTET STRING (SIZE (2560))
+ */
+static BSL_ASN1_TemplateItem g_mldsaPrikeyBothFormatTempl[] = {
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 0},
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 0}
+};
+#endif
 /**
  * AlgorithmIdentifier  ::=  SEQUENCE  {
  *      algorithm               OBJECT IDENTIFIER,
@@ -330,6 +356,48 @@ int32_t CRYPT_DECODE_PrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, arrNum);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_MLDSA
+static int32_t DecodeMldsaPriKeyChoiceAsn1Buff(int32_t type, uint32_t idx, void *data, void *expVal)
+{
+    (void) type;
+    (void) idx;
+    uint8_t realTag = *(uint8_t*)data;
+     *(uint8_t*)expVal = realTag;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t* buffer, uint32_t bufferLen, BSL_ASN1_Buffer* asn1, uint32_t arrNum)
+{
+    uint8_t *tmpBuff = buffer;
+    uint32_t tmpBuffLen = bufferLen;
+    BSL_ASN1_Buffer asn1Tmp = {0};
+    BSL_ASN1_Template templ = {g_mldsaPrikeyInfoTempl,
+        sizeof(g_mldsaPrikeyInfoTempl) / sizeof(g_mldsaPrikeyInfoTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, DecodeMldsaPriKeyChoiceAsn1Buff,
+        &tmpBuff, &tmpBuffLen, &asn1Tmp, arrNum);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    switch (asn1Tmp.tag) {
+        case BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED:
+            templ.templItems = g_mldsaPrikeyBothFormatTempl;
+            templ.templNum = sizeof(g_mldsaPrikeyBothFormatTempl) / sizeof(g_mldsaPrikeyBothFormatTempl[0]);
+            ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &asn1Tmp.buff, &asn1Tmp.len, asn1, arrNum);
+            break;
+        case BSL_ASN1_TAG_OCTETSTRING:
+            asn1[CRYPT_ML_DSA_PRVKEY_IDX] = asn1Tmp;
+            break;
+        case BSL_ASN1_CLASS_CTX_SPECIFIC:
+            asn1[CRYPT_ML_DSA_PRVKEY_SEED_IDX] = asn1Tmp;
+            break;
+        default:
+            return BSL_INVALID_ARG;
     }
     return ret;
 }

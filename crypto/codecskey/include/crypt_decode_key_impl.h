@@ -77,6 +77,13 @@ int32_t DECODER_Ed25519SubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Par
 int32_t DECODER_Ed25519Pkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
 #endif
 
+#ifdef HITLS_CRYPTO_MLDSA
+void* DECODER_MldsaDer2KeyNewCtx(void *provCtx);
+int32_t DECODER_MldsaSubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_MldsaSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_MldsaPkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+#endif
+
 #ifdef HITLS_BSL_PEM
 void *DECODER_Pem2DerNewCtx(void *provCtx);
 int32_t DECODER_Pem2DerGetParam(void *ctx, BSL_Param *param);

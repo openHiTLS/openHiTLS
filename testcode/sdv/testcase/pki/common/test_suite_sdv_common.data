@@ -97,6 +97,7 @@ SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PRIKEY_RSA:".
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 rsa unencrypt key
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem"
 
+
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(pem) pkcs8 rsa unencrypt key
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8.pem"
 
@@ -121,6 +122,60 @@ SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse unkown(der) pkcs8 rsa encrypt key
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PRIKEY_PKCS8_ENCRYPT:"../testdata/cert/asn1/keypem/rsa-pri-key-p8-enc.der"
 
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa44 unencrypt both format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa44_both.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa44 unencrypt both format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa44_both.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa44 unencrypt pri-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa44_priv_only.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa44 unencrypt pri-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa44_priv_only.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa44 unencrypt seed-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa44_seed_only.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa44 unencrypt seed-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa44_seed_only.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa65 unencrypt both format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_both.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa65 unencrypt both format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_both.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa65 unencrypt pri-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_priv_only.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa65 unencrypt pri-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_priv_only.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa65 unencrypt seed-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_seed_only.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa65 unencrypt seed-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_seed_only.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa87 unencrypt both format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_both.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa87 unencrypt both format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_both.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa87 unencrypt pri-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_priv_only.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa87 unencrypt pri-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_priv_only.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 mldsa87 unencrypt seed-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_seed_only.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa87 unencrypt seed-only format
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_seed_only.der"
+
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem pkcs8 ec public key
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/secp384r1pub.pem"
 
@@ -144,6 +199,9 @@ SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_RSA:"../te
 
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(pem) rsa public key
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PUBKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pub-key.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem mldsa public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mldsa65pub.pem"
 
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(der) rsa public key
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PUBKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pub-key.der"

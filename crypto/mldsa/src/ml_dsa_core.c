@@ -1035,6 +1035,9 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, uint8_t *d)
 
     // sk ← skEncode(ρ, K, tr, 𝐬1, 𝐬2, t0)
     SkEncode(ctx, pubSeed, signSeed, tr, &st); // Step 10
+    
+    ctx->hasSeed = true;
+    (void)memcpy_s(ctx->seed, MLDSA_SEED_BYTES_LEN, d, MLDSA_SEED_BYTES_LEN);
 ERR:
     BSL_SAL_ClearFree(st.bufAddr, st.bufSize);
     BSL_SAL_CleanseData(seed, sizeof(seed));

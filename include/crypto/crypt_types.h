@@ -696,7 +696,10 @@ typedef enum {
 
 	CRYPT_CTRL_SET_MLDSA_ENCODE_FLAG = 700,  /**< Set the flag for encode messages. */
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG,         /**< Whether to calculate message representative */
-    
+    CRYPT_CTRL_GET_MLDSA_SEED,               /**< Get MLDSA private key seed */
+    CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,      /**< Set MLDSA private key encode format */
+    CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,      /**< Get MLDSA private key encode format*/
+
     // xmss
     CRYPT_CTRL_GET_XMSS_KEY_LEN = 800,     /**< Get the XMSS key length. */
 } CRYPT_PkeyCtrl;
@@ -823,6 +826,14 @@ typedef enum {
     CRYPT_ALGO_KDF,
     CRYPT_ALGO_RAND
 } CRYPT_ALGO_TYPE;
+
+typedef enum {
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET = 0,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_END,
+} CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE;
 
 /**
  * @ingroup crypt_types

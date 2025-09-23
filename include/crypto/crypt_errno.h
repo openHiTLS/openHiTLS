@@ -542,7 +542,10 @@ enum CRYPT_ERROR {
     CRYPT_MLDSA_SET_KEY_FAILED,                         /**< Failed to set the key. */
     CRYPT_MLDSA_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_MLDSA_INVALID_PRVKEY,                         /**< Invalid private key. */
-    CRYPT_MLDSA_INVALID_PUBKEY,                        /**< Invalid public key. */
+    CRYPT_MLDSA_INVALID_PUBKEY,                         /**< Invalid public key. */
+    CRYPT_MLDSA_PRVKEY_FORMAT_ERROR,
+    CRYPT_MLDSA_SEED_NOT_SET,                           /**< Invalid private key encode format. */
+    CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT,                /**< Input seed and private key are inconsistent */
 
     CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01370001, /**< The buffer length is insufficient. */
     CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */

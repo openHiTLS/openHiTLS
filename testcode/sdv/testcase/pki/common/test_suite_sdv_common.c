@@ -300,7 +300,7 @@ void SDV_CRYPT_EAL_ParseFilePubKey_TC001(void)
 {
     TestMemInit();
     BSL_GLOBAL_Init();
-
+    CRYPT_EAL_PkeyCtx *key = NULL;
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(0xff, 0, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY,
@@ -309,6 +309,7 @@ void SDV_CRYPT_EAL_ParseFilePubKey_TC001(void)
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA,
         "../testdata/cert/asn1/rsa2048pub_pkcs1.der", NULL, 0, NULL), CRYPT_INVALID_ARG);
 EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
@@ -1309,6 +1310,10 @@ void SDV_CRYPT_EAL_DecodeFileKey_Ex_TC001(void)
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_ECDSA, "ASN1", "PRIKEY_PKCS8_ENCRYPT",
         "../testdata/cert/asn1/prime256v1_pkcs8_enc.der", &pwd, &key), CRYPT_INVALID_ARG);
 
+    // Test inconsistent seed and private key
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_ML_DSA, "PEM", "PRIKEY_PKCS8_UNENCRYPT",
+        "../testdata/cert/asn1/mldsa-44-pri-key-both-inconsistent.key", &pwd, &key),
+        CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT);
 EXIT:
     BSL_GLOBAL_DeInit();
 #endif

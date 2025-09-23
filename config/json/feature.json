@@ -1201,7 +1201,8 @@
                     "crypto/sm2/include",
                     "crypto/curve25519/include",
                     "crypto/provider/include",
-                    "crypto/provider/src/mgr"
+                    "crypto/provider/src/mgr",
+                    "crypto/mldsa/include"
                 ]
             },
             "util": {

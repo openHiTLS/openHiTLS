@@ -33,7 +33,10 @@
 #ifdef HITLS_CRYPTO_ED25519
 #include "crypt_curve25519.h"
 #endif
-
+#ifdef HITLS_CRYPTO_MLDSA
+#include "crypt_mldsa.h"
+#define MLDSA_SEED_BYTES_LEN 32
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
@@ -74,6 +77,11 @@ typedef enum {
     CRYPT_ECPRIKEY_PARAM_IDX = 2,
     CRYPT_ECPRIKEY_PUBKEY_IDX = 3,
 } CRYPT_ECPRIKEY_TEMPL_IDX;
+
+typedef enum {
+    CRYPT_ML_DSA_PRVKEY_SEED_IDX = 0,
+    CRYPT_ML_DSA_PRVKEY_IDX = 1,
+} CRYPT_ML_DSA_PRV_TEMPL_IDX;
 
 typedef enum {
     CRYPT_RSA_PRV_VERSION_IDX = 0,
@@ -173,7 +181,15 @@ int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32
     CRYPT_CURVE25519_Ctx **pubKey, bool isComplete);
 #endif
 
+#ifdef HITLS_CRYPTO_MLDSA
+int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_ML_DSA_Ctx **pubKey, bool isComplete);
+int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
+int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_ML_DSA_Ctx **mldsaPriKey);
 #endif
+#endif
+
 
 #ifdef HITLS_CRYPTO_KEY_ENCODE
 int32_t EncodeRsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *pssParam, BSL_Buffer *encodePub);

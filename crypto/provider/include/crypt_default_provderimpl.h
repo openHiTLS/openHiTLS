@@ -269,6 +269,9 @@ extern const CRYPT_EAL_Func g_defEalP8Der2Sm2Key[];
 #ifdef HITLS_CRYPTO_ED25519
 extern const CRYPT_EAL_Func g_defEalP8Der2Ed25519Key[];
 #endif
+#ifdef HITLS_CRYPTO_MLDSA
+extern const CRYPT_EAL_Func g_defEalP8Der2MldsaKey[];
+#endif
 #ifdef HITLS_CRYPTO_RSA
 extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2RsaKey[];
 #endif
@@ -281,6 +284,9 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2Sm2Key[];
 #ifdef HITLS_CRYPTO_ED25519
 extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2Ed25519Key[];
 #endif
+#ifdef HITLS_CRYPTO_MLDSA
+extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2MldsaKey[];
+#endif
 #ifdef HITLS_CRYPTO_RSA
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2RsaKey[];
 #endif
@@ -292,6 +298,9 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2Sm2Key[];
 #endif
 #ifdef HITLS_CRYPTO_ED25519
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2Ed25519Key[];
+#endif
+#ifdef HITLS_CRYPTO_MLDSA
+extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2MldsaKey[];
 #endif
 extern const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[];
 #ifdef HITLS_CRYPTO_RSA
