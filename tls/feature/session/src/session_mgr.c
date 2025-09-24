@@ -20,6 +20,8 @@
 #include "sal_time.h"
 #include "bsl_hash.h"
 #include "hitls_error.h"
+#include "hitls_type.h"
+#include "tls_config.h"
 #include "session.h"
 #include "bsl_errno.h"
 #include "tls_binlog_id.h"
@@ -205,7 +207,7 @@ uint64_t SESSMGR_GetTimeout(TLS_SessionMgr *mgr)
 }
 
 #ifdef HITLS_TLS_FEATURE_SESSION
-void SESSMGR_SetCacheMode(TLS_SessionMgr *mgr, HITLS_SESS_CACHE_MODE mode)
+void SESSMGR_SetCacheMode(TLS_SessionMgr *mgr, uint32_t mode)
 {
     if (mgr != NULL) {
         BSL_SAL_ThreadWriteLock(mgr->lock);
@@ -215,9 +217,12 @@ void SESSMGR_SetCacheMode(TLS_SessionMgr *mgr, HITLS_SESS_CACHE_MODE mode)
     return;
 }
 
-HITLS_SESS_CACHE_MODE SESSMGR_GetCacheMode(TLS_SessionMgr *mgr)
+uint32_t SESSMGR_GetCacheMode(TLS_SessionMgr *mgr)
 {
-    HITLS_SESS_CACHE_MODE mode;
+    uint32_t mode = HITLS_SESS_CACHE_NO;
+    if (mgr == NULL) {
+        return mode;
+    }
     BSL_SAL_ThreadReadLock(mgr->lock);
     mode = mgr->sessCacheMode;
     BSL_SAL_ThreadUnlock(mgr->lock);
@@ -248,10 +253,9 @@ uint32_t SESSMGR_GetCacheSize(TLS_SessionMgr *mgr)
 }
 #endif
 
-#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
-void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isClient)
+void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isStore)
 {
-    if (mgr == NULL || sess == NULL) {
+    if (mgr == NULL || sess == NULL || !isStore) {
         return;
     }
 
@@ -269,65 +273,81 @@ void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isClie
         return;
     }
 
-    if (mode == HITLS_SESS_CACHE_NO) {
-        return;
-    }
-
-    if (isClient == true && mode == HITLS_SESS_CACHE_SERVER) {
-        return;
-    }
-
-    if (isClient == false && mode == HITLS_SESS_CACHE_CLIENT) {
-        return;
-    }
-
     BSL_SAL_ThreadWriteLock(mgr->lock);
 
     if (BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
+        HITLS_Session *tmpSess = NULL;
+        if (BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&tmpSess) == BSL_SUCCESS) {
+            BSL_HASH_Erase(mgr->hash, (uintptr_t)&key);
+        }
         /* Insert a session node */
         BSL_HASH_Insert(mgr->hash, (uintptr_t)&key, sizeof(key), (uintptr_t)sess, 0);
     } else {
         BSL_LOG_BINLOG_FIXLEN(
             BINLOG_ID15305, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN, "over sess cache size", 0, 0, 0, 0);
     }
-
     BSL_SAL_ThreadUnlock(mgr->lock);
+    if (mode & HITLS_SESS_ENABLE_TIME_UPDATE) {
+        uint64_t curTime = (uint64_t)BSL_SAL_CurrentSysTimeGet();
+        SESS_SetStartTime(sess, curTime);
+    }
     return;
 }
-#endif /* #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 
 #ifdef HITLS_TLS_FEATURE_SESSION_ID
 /* Find the matching session */
-HITLS_Session *SESSMGR_Find(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t sessionIdSize)
+HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdSize)
 {
-    if (mgr == NULL || sessionId == NULL || sessionIdSize == 0) {
+    if (ctx == NULL || ctx->globalConfig == NULL || ctx->globalConfig->sessMgr == NULL || sessionId == NULL ||
+        sessionIdSize == 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16706, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         return NULL;
     }
-    BSL_SAL_ThreadReadLock(mgr->lock);
-
     HITLS_Session *sess = NULL;
-    SessionKey key = {0};
-    key.sessionIdSize = sessionIdSize;
-    if (memcpy_s(key.sessionId, sizeof(key.sessionId), sessionId, sessionIdSize) == EOK) {
-        // Query the session corresponding to the key
-        if (BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&sess) != BSL_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(
-                BINLOG_ID15353, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN, "not find sess", 0, 0, 0, 0);
-                sess = NULL;
-                goto EXIT;
+    if ((SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr) & HITLS_SESS_DISABLE_INTERNAL_LOOKUP) == 0) {
+        SessionKey key = {0};
+        key.sessionIdSize = sessionIdSize;
+        if (memcpy_s(key.sessionId, sizeof(key.sessionId), sessionId, sessionIdSize) == EOK) {
+            // Query the session corresponding to the key
+            BSL_SAL_ThreadReadLock(ctx->globalConfig->sessMgr->lock);
+            if (BSL_HASH_At(ctx->globalConfig->sessMgr->hash, (uintptr_t)&key, (uintptr_t *)&sess) != BSL_SUCCESS) {
+                BSL_LOG_BINLOG_FIXLEN(
+                    BINLOG_ID15353, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN, "not find sess", 0, 0, 0, 0);
+                    sess = NULL;
+            }
+            BSL_SAL_ThreadUnlock(ctx->globalConfig->sessMgr->lock);
+        }
+
+        uint64_t curTime = (uint64_t)BSL_SAL_CurrentSysTimeGet();
+        /* Check whether the validity is valid */
+        if (SESS_CheckValidity(sess, curTime) == false) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16707, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "sess time out", 0, 0, 0,
+                                  0);
+            sess = NULL;
         }
     }
-
-    uint64_t curTime = (uint64_t)BSL_SAL_CurrentSysTimeGet();
-    /* Check whether the validity is valid */
-    if (SESS_CheckValidity(sess, curTime) == false) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16707, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "sess time out", 0, 0, 0, 0);
-        sess = NULL;
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    if (sess == NULL && ctx->globalConfig->sessionGetCb != NULL) {
+        int32_t copy = 1;
+        sess = ctx->globalConfig->sessionGetCb(ctx, sessionId, sessionIdSize, &copy);
+        if (sess != NULL) {
+            if (!HITLS_SESS_IsResumable(sess)) {
+                HITLS_SESS_Free(sess);
+                sess = NULL;
+                goto EXIT;
+            }
+            if (copy != 0) {
+                sess = HITLS_SESS_Dup(sess);
+            }
+            if ((SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr) & HITLS_SESS_DISABLE_INTERNAL_STORE) == 0) {
+                // Store the session in the internal cache, unlock the lock first,
+                // and then lock it again in SESSMGR_InsertSession
+                SESSMGR_InsertSession(ctx->globalConfig->sessMgr, sess, true);
+            }
+        }
     }
-
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
 EXIT:
-    BSL_SAL_ThreadUnlock(mgr->lock);
     return sess;
 }
 
@@ -353,33 +373,61 @@ bool SESSMGR_HasMacthSessionId(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t 
 }
 
 /* Clear timeout sessions */
-void SESSMGR_ClearTimeout(TLS_SessionMgr *mgr)
+void SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time)
 {
-    if (mgr == NULL) {
+    if (config == NULL || config->sessMgr == NULL) {
         return;
     }
-
-    uint64_t curTime = (uint64_t)BSL_SAL_CurrentSysTimeGet();
-
-    BSL_SAL_ThreadWriteLock(mgr->lock);
-
-    BSL_HASH_Iterator it = BSL_HASH_IterBegin(mgr->hash);
-
-    while (it != BSL_HASH_IterEnd(mgr->hash)) {
-        uintptr_t ptr = BSL_HASH_IterValue(mgr->hash, it);
+    BSL_SAL_ThreadWriteLock(config->sessMgr->lock);
+    BSL_HASH_Iterator it = BSL_HASH_IterBegin(config->sessMgr->hash);
+    while (it != BSL_HASH_IterEnd(config->sessMgr->hash)) {
+        uintptr_t ptr = BSL_HASH_IterValue(config->sessMgr->hash, it);
         HITLS_Session *sess = (HITLS_Session *)ptr;
-        if (SESS_CheckValidity(sess, curTime) == false) {
+        if (time == 0 ||SESS_CheckValidity(sess, time) == false) {
+            SESS_Disable(sess);
             /* Delete the node if it is invalid */
-            uintptr_t tmpKey = BSL_HASH_HashIterKey(mgr->hash, it);
+            uintptr_t tmpKey = BSL_HASH_HashIterKey(config->sessMgr->hash, it);
             // Returns the next iterator of the iterator where the key resides
-            it = BSL_HASH_Erase(mgr->hash, tmpKey);
+            it = BSL_HASH_Erase(config->sessMgr->hash, tmpKey);
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+            if (config->sessionRemoveCb != NULL) {
+                config->sessionRemoveCb(config, sess);
+            }
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
         } else {
-            it = BSL_HASH_IterNext(mgr->hash, it);
+            it = BSL_HASH_IterNext(config->sessMgr->hash, it);
         }
     }
 
-    BSL_SAL_ThreadUnlock(mgr->lock);
-    return;
+    BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+}
+
+int32_t SESSMGR_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
+{
+    if (config == NULL || sess == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    BSL_SAL_ThreadWriteLock(config->sessMgr->lock);
+    SessionKey key = {0};
+    key.sessionIdSize = sizeof(key.sessionId);
+    if (HITLS_SESS_GetSessionId(sess, key.sessionId, &(key.sessionIdSize)) != HITLS_SUCCESS) {
+        BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+        return HITLS_SESS_ERR_NOT_FOUND;
+    }
+    if (BSL_HASH_At(config->sessMgr->hash, (uintptr_t)&key, (uintptr_t *)&sess) != BSL_SUCCESS) {
+        BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+        return HITLS_SESS_ERR_NOT_FOUND;
+    }
+
+    BSL_HASH_Erase(config->sessMgr->hash, (uintptr_t)&key);
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    if (config->sessionRemoveCb != NULL) {
+        config->sessionRemoveCb(config, sess);
+    }
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
+    BSL_SAL_ThreadUnlock(config->sessMgr->lock);
+    return HITLS_SUCCESS;
 }
 
 int32_t SESSMGR_GernerateSessionId(TLS_Ctx *ctx, uint8_t *sessionId, uint32_t sessionIdSize)
@@ -394,7 +442,7 @@ int32_t SESSMGR_GernerateSessionId(TLS_Ctx *ctx, uint8_t *sessionId, uint32_t se
         }
 
         /* If duplicate session IDs already exist, generate new session ID */
-        if (SESSMGR_HasMacthSessionId(ctx->config.tlsConfig.sessMgr, sessionId, (uint8_t)sessionIdSize) == false) {
+        if (SESSMGR_HasMacthSessionId(ctx->globalConfig->sessMgr, sessionId, (uint8_t)sessionIdSize) == false) {
             return HITLS_SUCCESS;
         }
 

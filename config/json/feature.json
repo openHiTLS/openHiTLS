@@ -266,7 +266,9 @@
                         "feature_indicator": null,
                         "feature_session": {
                             "feature_session_ticket": null,
-                            "feature_session_id": null
+                            "feature_session_id": null,
+                            "feature_session_cache_cb": null,
+                            "feature_session_custom_ticket": null
                         },
                         "feature_mode": {
                             "feature_mode_fall_back_scsv": null,

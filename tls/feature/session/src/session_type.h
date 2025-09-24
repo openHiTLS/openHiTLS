@@ -37,7 +37,7 @@ struct TlsSessionManager {
     uint64_t sessTimeout;                                  /* Session timeout interval, in seconds */
 #ifdef HITLS_TLS_FEATURE_SESSION
     uint32_t sessCacheSize;                                /* session cache size: maximum number of sessions */
-    HITLS_SESS_CACHE_MODE sessCacheMode;                   /* session cache mode */
+    uint32_t sessCacheMode;                   /* session cache mode */
 
     /* TLS1.2 session ticket */
     HITLS_TicketKeyCb ticketKeyCb;                         /* allows users to customize ticket keys through callback */

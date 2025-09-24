@@ -220,7 +220,6 @@ void SESS_Disable(HITLS_Session *sess)
     return;
 }
 
-#ifdef HITLS_TLS_FEATURE_SESSION_ID
 int32_t HITLS_SESS_GetSessionId(const HITLS_Session *sess, uint8_t *sessionId, uint32_t *sessionIdSize)
 {
     if (sess == NULL || sessionId == NULL || sessionIdSize == NULL) {
@@ -242,6 +241,7 @@ int32_t HITLS_SESS_GetSessionId(const HITLS_Session *sess, uint8_t *sessionId, u
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION_ID
 int32_t HITLS_SESS_SetSessionIdCtx(HITLS_Session *sess, uint8_t *sessionIdCtx, uint32_t sessionIdCtxSize)
 {
     if (sess == NULL || sessionIdCtx == NULL) {
@@ -512,6 +512,20 @@ int32_t HITLS_SESS_SetTimeout(HITLS_Session *sess, uint64_t timeout)
     return HITLS_SUCCESS;
 }
 
+uint64_t HITLS_SESS_GetTimeout(HITLS_Session *sess)
+{
+    if (sess == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16744, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return 0;
+    }
+
+    BSL_SAL_ThreadReadLock(sess->lock);
+    uint64_t timeout = sess->timeout;
+    BSL_SAL_ThreadUnlock(sess->lock);
+    return timeout;
+}
+
 int32_t HITLS_SESS_SetCipherSuite(HITLS_Session *sess, uint16_t cipherSuite)
 {
     if (sess == NULL) {
@@ -717,5 +731,4 @@ int32_t HITLS_SESS_SetUserData(HITLS_Session *sess, void *userData)
     BSL_SAL_ThreadUnlock(sess->lock);
     return HITLS_SUCCESS;
 }
-
 #endif /* HITLS_TLS_FEATURE_SESSION */

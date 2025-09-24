@@ -573,7 +573,7 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportExtendMasterSecret = false;
     ctxConfig->isClient = isClient;
-    ctxConfig->setSessionCache = 2;
+    ctxConfig->setSessionCache = HITLS_SESS_CACHE_SERVER;
     HLT_SetGroups(ctxConfig, "NULL");
     HLT_SetCipherSuites(ctxConfig, "NULL");
     HLT_SetTls13CipherSuites(ctxConfig, "NULL");

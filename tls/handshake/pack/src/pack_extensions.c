@@ -456,7 +456,14 @@ static int32_t PackClientTicket(const TLS_Ctx *ctx, PackPacket *pkt)
     if (sessVersion != HITLS_VERSION_TLS13) {
         SESS_GetTicket(ctx->session, &ticket, &ticketSize);
     }
-
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    if (ctx->config.tlsConfig.maxVersion >= HITLS_VERSION_TLS10) {
+        if (ticket == NULL || ticketSize == 0) {
+            ticket = ctx->config.tlsConfig.sessionTicketExt;
+            ticketSize = ctx->config.tlsConfig.sessionTicketExtSize;
+        }
+    }
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
     ret = PackExtensionHeader(HS_EX_TYPE_SESSION_TICKET, (uint16_t)ticketSize, pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;

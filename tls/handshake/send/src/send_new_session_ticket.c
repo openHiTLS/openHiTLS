@@ -38,7 +38,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
     HS_Ctx *hsCtx = ctx->hsCtx;
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
+    TLS_SessionMgr *sessMgr = ctx->globalConfig->sessMgr;
 
     /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
@@ -108,7 +108,7 @@ int32_t Tls13TicketGenerate(TLS_Ctx *ctx)
     int32_t ret;
     HITLS_Session *newSession = NULL;
     HS_Ctx *hsCtx = ctx->hsCtx;
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
+    TLS_SessionMgr *sessMgr = ctx->globalConfig->sessMgr;
 
     uint64_t timeout = SESSMGR_GetTimeout(sessMgr);
     /* TLS1.3 timeout period cannot exceed 604800 seconds, that is, seven days. */

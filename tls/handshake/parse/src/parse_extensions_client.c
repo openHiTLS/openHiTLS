@@ -261,7 +261,16 @@ static int32_t ParseServerTicket(ParsePacket *pkt, ServerHelloMsg *msg)
     if (msg->haveTicket == true) {
         return ParseDupExtProcess(pkt->ctx, BINLOG_ID15964, BINGLOG_STR("ticket"));
     }
-
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    if (pkt->ctx->config.tlsConfig.sessionTicketExtCb != NULL) {
+        int32_t ret = pkt->ctx->config.tlsConfig.sessionTicketExtCb(pkt->ctx, pkt->buf, pkt->bufLen,
+                                                                 pkt->ctx->config.tlsConfig.sessionTicketExtCbArg);
+        if (ret == 0) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_SESSION_TICKET_FAIL, BINLOG_ID17378,
+                BINGLOG_STR("parse ticket extension failed."), ALERT_HANDSHAKE_FAILURE);
+        }
+    }
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
     /* The ticket extended data length of server hello can only be empty */
     if (pkt->bufLen != 0) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15965, BINGLOG_STR("tiket"));

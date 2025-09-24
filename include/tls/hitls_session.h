@@ -128,6 +128,40 @@ typedef int32_t (*HITLS_NewSessionCb) (HITLS_Ctx *ctx, HITLS_Session *session);
 
 /**
  * @ingroup hitls_session
+ * @brief   Remove a session.
+ *
+ * @param   ctx [IN]    Context
+ * @param   sess [IN]   Session
+ */
+typedef void (*HITLS_SessionRemoveCb)(HITLS_Config *config, HITLS_Session *sess);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Get a session based on the session ID.
+ *
+ * @param   ctx [IN]    Context
+ * @param   data [IN]   Session ID data
+ * @param   len [IN]    Session ID length
+ * @param   copy [OUT]  Whether to copy the session. 1: copy; 0: do not copy
+ * @retval  Session handle, if successful.
+ *          NULL, if failure.
+ */
+typedef HITLS_Session *(*HITLS_SessionGetCb) (HITLS_Ctx *ctx, const uint8_t *data, int32_t len, int32_t *copy);
+
+/**
+ * @ingroup hitls_session
+ * @brief Session ticket extension callback.
+ * @param   ctx  [IN] ctx context
+ * @param   data [IN]  Session ticket extension data
+ * @param   len  [IN]  Session ticket extension data length
+ * @param   arg  [IN]  User-defined parameter
+ * @retval  1, if successful.
+ * @retval  For other error codes, see hitls_error.h
+ */
+typedef int32_t (*HITLS_SessionTicketExtProcessCb)(HITLS_Ctx *ctx, const uint8_t *data, int32_t len, void *arg);
+
+/**
+ * @ingroup hitls_session
  * @brief   Set a callback for negotiating a new session call.
  *
  * @param   config       [OUT] config handle
@@ -136,6 +170,53 @@ typedef int32_t (*HITLS_NewSessionCb) (HITLS_Ctx *ctx, HITLS_Session *session);
  * @retval  HITLS_NULL_INPUT, config is null.
  */
 int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, const HITLS_NewSessionCb newSessionCb);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Set a callback for obtaining a session based on the session ID.
+ *
+ * @param   config      [OUT] config handle
+ * @param   sessionGetCb [IN] Callback.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_CFG_SetSessionGetCb(HITLS_Config *config, const HITLS_SessionGetCb sessionGetCb);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Set a callback for removing a session.
+ *
+ * @param   config              [OUT] config handle
+ * @param   sessionRemoveCb     [IN] Callback.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_CFG_SetSessionRemoveCb(HITLS_Config *config, const HITLS_SessionRemoveCb sessionRemoveCb);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Set a callback for processing the session ticket extension.
+ *
+ * @param   config                  [OUT] config handle
+ * @param   extSessionTicketCb      [IN] Callback.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ */
+int32_t HITLS_SetSessionTicketExtProcessCb(HITLS_Ctx *ctx, const HITLS_SessionTicketExtProcessCb sessionTicketExtCb,
+                                           void *arg);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Set the session ticket extension data.
+ *
+ * @param   ctx             [OUT] config handle
+ * @param   data            [IN] Session ticket extension data.
+ * @param   dataSize        [IN] Size of the session ticket extension data.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, config is null.
+ * @retval  HITLS_MEMCPY_FAIL, memory copy fails.
+ */
+int32_t HITLS_SetSessionTicketExtData(HITLS_Ctx *ctx, uint8_t *data, uint32_t dataSize);
 
 #define HITLS_TICKET_KEY_RET_NEED_ALERT    (-1)   // callback fails. A fatal error occurs.
                                                   // You need to send an alert
@@ -250,7 +331,7 @@ int32_t HITLS_CFG_SetSessionIdCtx(HITLS_Config *config, const uint8_t *sessionId
  * @retval  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MODE mode);
+int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, uint32_t mode);
 
 /**
  * @ingroup hitls_session
@@ -261,7 +342,7 @@ int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MOD
  * @retval  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MODE *mode);
+int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, uint32_t *mode);
 
 /**
  * @ingroup hitls_session
@@ -599,6 +680,17 @@ int32_t HITLS_SESS_SetTimeout(HITLS_Session *sess, uint64_t timeout);
 
 /**
  * @ingroup hitls_session
+ * @brief   Get the timeout interval, in seconds.
+ *
+ * @param   sess [OUT] Session information handle
+ * @param   timeout [IN] Timeout interval, in seconds.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+uint64_t HITLS_SESS_GetTimeout(HITLS_Session *sess);
+
+/**
+ * @ingroup hitls_session
  * @brief   Check whether the session can be recovered. Only simple check is performed, but the validity period
  * is not checked.
  *
@@ -635,6 +727,27 @@ void *HITLS_SESS_GetUserData(const HITLS_Session *sess);
  * @retval  For other error codes, see hitls_error.h.
  */
 int32_t HITLS_SESS_SetUserData(HITLS_Session *sess, void *userData);
+/**
+ * @ingroup hitls_session
+ * @brief   Clear the timeout session.
+ *
+ * @param   config [IN] Configuration handle.
+ * @param   nowTime [IN] Current time.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_ClearTimeoutSession(HITLS_Config *config, uint64_t nowTime);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Remove the session.
+ *
+ * @param   config [IN] Configuration handle.
+ * @param   sess [IN] Session information handle.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_RemoveSession(HITLS_Config *config, HITLS_Session *sess);
 #ifdef __cplusplus
 }
 #endif

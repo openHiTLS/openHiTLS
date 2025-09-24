@@ -119,6 +119,10 @@ void CFG_CleanConfig(HITLS_Config *config)
     config->customExts = NULL;
 #endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
     BSL_SAL_ReferencesFree(&(config->references));
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    BSL_SAL_FREE(config->sessionTicketExt);
+    config->sessionTicketExtSize = 0;
+#endif
 }
 
 
@@ -425,18 +429,6 @@ static int32_t SessionIdCtxCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_ID */
 #ifdef HITLS_TLS_FEATURE_SESSION
-static int32_t SessMgrDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
-{
-    destConfig->sessMgr = SESSMGR_Dup(srcConfig->sessMgr);
-    if (destConfig->sessMgr == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16593, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "MGR_Dup fail", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    return HITLS_SUCCESS;
-}
-
 int32_t HITLS_CFG_SetSessionTimeout(HITLS_Config *config, uint64_t timeout)
 {
     if (config == NULL || config->sessMgr == NULL) {
@@ -466,7 +458,28 @@ int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, const HITLS_NewSessionCb
     config->newSessionCb = newSessionCb;
     return HITLS_SUCCESS;
 }
-#endif
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+int32_t HITLS_CFG_SetSessionGetCb(HITLS_Config *config, const HITLS_SessionGetCb sessionGetCb)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->sessionGetCb = sessionGetCb;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetSessionRemoveCb(HITLS_Config *config, const HITLS_SessionRemoveCb sessionRemoveCb)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->sessionRemoveCb = sessionRemoveCb;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
+#endif /* HITLS_TLS_FEATURE_SESSION */
 
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
 static int32_t CryptKeyDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
@@ -547,9 +560,6 @@ static int32_t BasicConfigDeepCopy(HITLS_Config *destConfig, const HITLS_Config 
         {SessionIdCtxCopy},
 #endif
         {CertMgrDeepCopy},
-#ifdef HITLS_TLS_FEATURE_SESSION
-        {SessMgrDeepCopy},
-#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         {AlpnListDeepCopy},
 #endif
@@ -1847,7 +1857,7 @@ int32_t HITLS_CFG_SetSessionIdCtx(HITLS_Config *config, const uint8_t *sessionId
 #endif
 
 #ifdef HITLS_TLS_FEATURE_SESSION
-int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MODE mode)
+int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, uint32_t mode)
 {
     if (config == NULL || config->sessMgr == NULL) {
         return HITLS_NULL_INPUT;
@@ -1857,7 +1867,7 @@ int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MOD
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MODE *mode)
+int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, uint32_t *mode)
 {
     if (config == NULL || config->sessMgr == NULL || mode == NULL) {
         return HITLS_NULL_INPUT;
@@ -1885,6 +1895,23 @@ int32_t HITLS_CFG_GetSessionCacheSize(HITLS_Config *config, uint32_t *size)
 
     *size = SESSMGR_GetCacheSize(config->sessMgr);
     return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_ClearTimeoutSession(HITLS_Config *config, uint64_t nowTime)
+{
+    if (config == NULL || config->sessMgr == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    SESSMGR_ClearTimeout(config, nowTime);
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return SESSMGR_RemoveSession(config, sess);
 }
 #endif
 

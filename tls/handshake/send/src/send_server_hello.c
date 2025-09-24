@@ -50,8 +50,8 @@ static int32_t ServerPrepareSessionId(TLS_Ctx *ctx)
     }
 
     if (ctx->negotiatedInfo.isResume == false) {
-        HITLS_SESS_CACHE_MODE sessCacheMode = SESSMGR_GetCacheMode(ctx->config.tlsConfig.sessMgr);
-        bool needSessionId = (sessCacheMode == HITLS_SESS_CACHE_SERVER || sessCacheMode == HITLS_SESS_CACHE_BOTH) &&
+        HITLS_SESS_CACHE_MODE sessCacheMode = SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr);
+        bool needSessionId = ((sessCacheMode & HITLS_SESS_CACHE_SERVER) != 0) &&
             (!ctx->negotiatedInfo.isTicket);
         if (needSessionId) {
             hsCtx->sessionIdSize = HITLS_SESSION_ID_MAX_SIZE;

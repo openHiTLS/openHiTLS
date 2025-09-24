@@ -157,13 +157,18 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
-static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
+int32_t HsSetSessionInfo(TLS_Ctx *ctx)
 {
     int32_t ret = 0;
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
-
-    SESSMGR_ClearTimeout(sessMgr);
-
+    TLS_SessionMgr *sessMgr = NULL;
+    if (ctx->globalConfig != NULL) {
+        sessMgr = ctx->globalConfig->sessMgr;
+    }
+    HITLS_SESS_CACHE_MODE mode = SESSMGR_GetCacheMode(sessMgr);
+    if ((mode & HITLS_SESS_DISABLE_AUTO_CLEANUP) == 0) {
+        SESSMGR_ClearTimeout(ctx->globalConfig, (uint64_t)BSL_SAL_CurrentSysTimeGet());
+    }
+    
     /* This parameter is not required for session multiplexing */
     if (ctx->negotiatedInfo.isResume == true) {
         return HITLS_SUCCESS;
@@ -187,12 +192,18 @@ static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        return HITLS_SUCCESS;
+    }
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
     /* The session cache does not store TLS1.3 sessions */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
-        SESSMGR_InsertSession(sessMgr, ctx->session, ctx->isClient);
+    if ((mode & HITLS_SESS_DISABLE_INTERNAL_STORE) == 0) {
+        bool isStore =
+            ctx->isClient == true ? (mode & HITLS_SESS_CACHE_CLIENT) != 0 : (mode & HITLS_SESS_CACHE_SERVER) != 0;
+        SESSMGR_InsertSession(sessMgr, ctx->session, isStore);
         if (ctx->globalConfig != NULL && ctx->globalConfig->newSessionCb != NULL) {
-            HITLS_SESS_UpRef(ctx->session); // It is convenient for users to take away and needs to be released by users
+            HITLS_SESS_UpRef(ctx->session);
+            // It is convenient for users to take away and needs to be released by users
             if (ctx->globalConfig->newSessionCb(ctx, ctx->session) == 0) {
                 /* If the user does not reference the session, the number of reference times decreases by 1 */
                 HITLS_SESS_Free(ctx->session);

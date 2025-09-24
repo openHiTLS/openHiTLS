@@ -43,6 +43,9 @@
 #include "cert_mgr_ctx.h"
 #include "record.h"
 #include "hs_cookie.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
+#include "session_mgr.h"
+#endif
 #ifdef HITLS_TLS_PROTO_TLS13
 #if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_FEATURE_PSK)
 #define HS_MAX_BINDER_SIZE 64
@@ -785,10 +788,10 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
     HITLS_SESS_GetCipherSuite(sess, &cipherSuite);
 
     if (ServerCmpSessionIdCtx(ctx, sess) != true) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15886, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Resuming Sessions: session id ctx is inconsistent.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_MSG_HANDLE_SESSION_ID_CTX_ILLEGAL;
+        HITLS_SESS_Free(ctx->session);
+        ctx->session = NULL;
+        ctx->negotiatedInfo.isResume = false;
+        return HITLS_SUCCESS;
     }
 
     if (ctx->negotiatedInfo.version != version) {
@@ -869,7 +872,7 @@ static int32_t ResumeCheckExtendedMasterScret(TLS_Ctx *ctx, const ClientHelloMsg
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 static int32_t ServerCheckResumeTicket(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
+    TLS_SessionMgr *sessMgr = ctx->globalConfig->sessMgr;
     HITLS_Session *sess = NULL;
     uint8_t *ticketBuf = clientHello->extension.content.ticket;
     uint32_t ticketBufSize = clientHello->extension.content.ticketSize;
@@ -917,8 +920,6 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
     if (ctx->negotiatedInfo.isRenegotiation && !ctx->config.tlsConfig.isResumptionOnRenego) {
         return HITLS_SUCCESS;
     }
-    /* Obtain the session resumption information */
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
     /* Create a null session handle */
     HITLS_Session *sess = NULL;
     uint32_t ticketBufSize = clientHello->extension.content.ticketSize;
@@ -930,7 +931,8 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
         if (supportTicket && clientHello->extension.flag.haveTicket) {
             ctx->negotiatedInfo.isTicket = true;
         }
-        sess = HITLS_SESS_Dup(SESSMGR_Find(sessMgr, clientHello->sessionId, clientHello->sessionIdSize));
+        sess = HITLS_SESS_Dup(SESSMGR_Find(ctx, clientHello->sessionId, clientHello->sessionIdSize));
+
         int32_t ret = ResumeCheckExtendedMasterScret(ctx, clientHello, &sess);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17053, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -1643,7 +1645,7 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
     HITLS_Session *pskSession = NULL;
 
     int32_t ret = SESSMGR_DecryptSessionTicket(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        ctx->config.tlsConfig.sessMgr, &pskSession, ticket, ticketLen, &isTicketExcept);
+        ctx->globalConfig->sessMgr, &pskSession, ticket, ticketLen, &isTicketExcept);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16048, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Decrypt Ticket fail when processing client hello.", 0, 0, 0, 0);

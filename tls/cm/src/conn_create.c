@@ -175,6 +175,18 @@ void HITLS_Free(HITLS_Ctx *ctx)
     return;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION
+static int32_t HITLS_ClearBadSession(HITLS_Ctx *ctx)
+{
+    if (ctx != NULL && ctx->session != NULL && (ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0 &&
+        !(ctx->state == CM_STATE_HANDSHAKING || ctx->state == CM_STATE_IDLE)) {
+        SESSMGR_RemoveSession(ctx->globalConfig, ctx->session);
+        return HITLS_SESS_ERR_BAD_SESSION;
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
 {
@@ -410,7 +422,7 @@ int32_t HITLS_SetSession(HITLS_Ctx *ctx, HITLS_Session *session)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
-
+    HITLS_ClearBadSession(ctx);
     /* The client and server are specified only in hitls connect/accept. Therefore, the client cannot be specified here
      */
     HITLS_SESS_Free(ctx->session);

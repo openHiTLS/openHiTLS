@@ -115,7 +115,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC001(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -596,12 +596,11 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC005(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
     do {
-
         DataChannelParam channelParam;
         channelParam.port = PORT;
         channelParam.type = connType;
@@ -712,12 +711,11 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC006(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
     do {
-
         DataChannelParam channelParam;
         channelParam.port = PORT;
         channelParam.type = connType;
@@ -827,12 +825,11 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC007(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
     do {
-
         DataChannelParam channelParam;
         channelParam.port = PORT;
         channelParam.type = connType;
@@ -942,7 +939,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC008(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 

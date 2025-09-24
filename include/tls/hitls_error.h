@@ -233,6 +233,7 @@ typedef enum {
     HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE,             /**< The length of the parsing exceeds the maximum. */
     HITLS_PARSE_PRE_SHARED_KEY_FAILED,              /**< Failed to parse the PSK extension. */
     HITLS_PARSE_DUPLICATED_KEY_SHARE,               /**< duplicated key share entry. */
+    HITLS_PARSE_SESSION_TICKET_FAIL,                /**< parse session ticket fail. */
 
     HITLS_REASS_FAIL_START = 0x02070001,            /**< Reassembly module error code start bit. */
     HITLS_REASS_INVALID_FRAGMENT,                   /**< Receives invalid fragmented messages. */
@@ -392,8 +393,11 @@ typedef enum {
     HITLS_SESS_ERR_DEC_SESSION_ID_CTX_FAIL,        /**< Failed to decode the session ID context. */
     HITLS_SESS_ERR_DEC_SESSION_ID_FAIL,            /**< Failed to decode the session ID. */
     HITLS_SESS_ERR_DEC_EXT_MASTER_SECRET_FAIL,     /**< Failed to decode the extended master secret. */
+    HITLS_SESS_ERR_BAD_SESSION,                    /**< Invalid session in the unclosed state. */
     HITLS_SESS_ERR_ENC_PEER_CERT_FAIL,             /**< Failed to encode the peercert. */
     HITLS_SESS_ERR_DEC_PEER_CERT_FAIL,             /**< Failed to decode the peercert. */
+    HITLS_SESS_ERR_FLUSH_FAIL,                     /**< Session flush failure. */
+    HITLS_SESS_ERR_NOT_FOUND,                      /**< Session not found. */
 
     HITLS_X509_FAIL_START = 0x02120001,            /**< The X509 feature error code start bit of. */
 

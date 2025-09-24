@@ -1044,7 +1044,7 @@ void UT_TLS_CFG_GET_SESSION_CACHEMODE_API_TC001(void)
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
-    HITLS_SESS_CACHE_MODE getCacheMode = 0;
+    uint32_t getCacheMode = 0;
     ASSERT_EQ(HITLS_CFG_GetSessionCacheMode(config, &getCacheMode), 0);
 EXIT:
     HITLS_CFG_FreeConfig(config);

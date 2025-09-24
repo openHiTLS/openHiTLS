@@ -251,6 +251,18 @@ typedef struct TlsConfig {
     HITLS_AppVerifyCookieCb appVerifyCookieCb;
 #endif
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
+#ifdef HITLS_TLS_FEATURE_SESSION
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    HITLS_SessionRemoveCb sessionRemoveCb; /* session removal callback */
+    HITLS_SessionGetCb sessionGetCb;       /* obtains a session based on the session ID */
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    uint8_t *sessionTicketExt;
+    uint32_t sessionTicketExtSize;
+    HITLS_SessionTicketExtProcessCb sessionTicketExtCb;
+    void *sessionTicketExtCbArg;
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
+#endif /* HITLS_TLS_FEATURE_SESSION */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
 

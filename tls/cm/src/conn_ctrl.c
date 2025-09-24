@@ -698,3 +698,34 @@ int32_t HITLS_GetMiddleBoxCompat(HITLS_Ctx *ctx, bool *isMiddleBox)
     return HITLS_CFG_GetMiddleBoxCompat(&(ctx->config.tlsConfig), isMiddleBox);
 }
 #endif
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+int32_t HITLS_SetSessionTicketExtProcessCb(HITLS_Ctx *ctx, const HITLS_SessionTicketExtProcessCb sessionTicketExtCb,
+                                           void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    ctx->config.tlsConfig.sessionTicketExtCb = sessionTicketExtCb;
+    ctx->config.tlsConfig.sessionTicketExtCbArg = arg;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_SetSessionTicketExtData(HITLS_Ctx *ctx, uint8_t *data, uint32_t dataSize)
+{
+    if (ctx == NULL || data == NULL || dataSize == 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    HITLS_Config *config = &(ctx->config.tlsConfig);
+
+    BSL_SAL_FREE(config->sessionTicketExt);
+    config->sessionTicketExtSize = 0;
+    config->sessionTicketExt = BSL_SAL_Dump(data, dataSize);
+    if (config->sessionTicketExt == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    config->sessionTicketExtSize = dataSize;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
