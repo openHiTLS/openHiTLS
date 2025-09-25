@@ -17,7 +17,7 @@
 #define ASM_ECP_SM2_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CURVE_SM2 && defined(HITLS_SIXTY_FOUR_BITS)
+#if defined(HITLS_CRYPTO_CURVE_SM2) && defined(HITLS_SIXTY_FOUR_BITS)
 
 #include <stdint.h>
 #include "crypt_bn.h"
