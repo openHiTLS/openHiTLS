@@ -145,12 +145,76 @@ static int ECP_Sm2FpIsOdd(const Sm2Fp a){
     return (int) a[0] & 1;
 }
 
+static int ECP_Sm2FpIsEven(const Sm2Fp a){
+    return (int) (a[0] & 1) ^ 1;
+}
+
 static int ECP_Sm2FpIsZero(const Sm2Fp a) {
     return a[0] == 0 && a[1] == 0 && a[2] == 0 && a[3] == 0 && a[4] == 0 && a[5] == 0 && a[6] == 0 && a[7] == 0;
 }
 
+static int ECP_Sm2FpIsOne(const Sm2Fp a){
+    return a[0] == 1 && a[1] == 0 && a[2] == 0 && a[3] == 0 && a[4] == 0 && a[5] == 0 && a[6] == 0 && a[7] == 0;
+}
+
 static int ECP_Sm2FpEqu(const Sm2Fp a, const Sm2Fp b) {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3] && a[4] == b[4] && a[5] == b[5] && a[6] == b[6] && a[7] == b[7];
+}
+
+// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
+void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
+    Sm2Fp u, v = {0xFFFFFFFFU, 0xFFFFFFFFU, 0x00000000U, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
+    ECP_Sm2FpSet(u, q);
+    while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
+        while (ECP_Sm2FpIsEven(u)) {
+            ECP_Sm2FpHaf(u, u);
+            ECP_Sm2FpHaf(a, a);
+        }
+        while (ECP_Sm2FpIsEven(v)) {
+            ECP_Sm2FpHaf(v, v);
+            ECP_Sm2FpHaf(c, c);
+        }
+        if (ECP_Sm2FpCmp(u, v)) {
+            ECP_Sm2FpSub(u, u, v);
+            ECP_Sm2FpSub(a, a, c);
+        } else {
+            ECP_Sm2FpSub(v, v, u);
+            ECP_Sm2FpSub(c, c, a);
+        }
+    }
+    if (ECP_Sm2FpIsOne(u)) {
+        ECP_Sm2FpSet(r, a);
+    } else {
+        ECP_Sm2FpSet(r, c);
+    }
+}
+
+// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
+void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
+    Sm2Fp u, v = {0x39D54123U, 0x53BBF409U, 0x21C6052BU, 0x7203DF6BU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
+    ECP_Sm2FpSet(u, q);
+    while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
+        while (ECP_Sm2FpIsEven(u)) {
+            ECP_Sm2FnHaf(u, u);
+            ECP_Sm2FnHaf(a, a);
+        }
+        while (ECP_Sm2FpIsEven(v)) {
+            ECP_Sm2FnHaf(v, v);
+            ECP_Sm2FnHaf(c, c);
+        }
+        if (ECP_Sm2FpCmp(u, v)) {
+            ECP_Sm2FnSub(u, u, v);
+            ECP_Sm2FnSub(a, a, c);
+        } else {
+            ECP_Sm2FnSub(v, v, u);
+            ECP_Sm2FnSub(c, c, a);
+        }
+    }
+    if (ECP_Sm2FpIsOne(u)) {
+        ECP_Sm2FpSet(r, a);
+    } else {
+        ECP_Sm2FpSet(r, c);
+    }
 }
 
 static void ECP_Sm2FpNaf(Sm2Naf r, const uint8_t w, const Sm2Fp n) {

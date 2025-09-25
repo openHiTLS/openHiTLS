@@ -133,6 +133,13 @@ void ECP_Sm2FnAdd(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
  */
 void ECP_Sm2FnSub(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 
+    /**
+ * @brief Computes halving modulo sm2_n, i.e., r ≡ a/2 mod sm2_n.
+ * @param [out] r The result number.
+ * @param [in] a The number to halve.
+ */
+void ECP_Sm2FnHaf(Sm2Fp r, const Sm2Fp a);
+
 /**
  * @brief Computes multiplication modulo sm2_n, i.e., r ≡ a * b mod sm2_n.
  * @param [out] r The result number.
