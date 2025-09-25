@@ -288,6 +288,7 @@ static int ECP_Sm2PointAtInfinity(const Sm2Point *r){
     return ECP_Sm2FpIsZero(r->z);
 }
 
+// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
 void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     // Check if one of the points is the point at infinity
     if (ECP_Sm2PointAtInfinity(p)) {
@@ -336,6 +337,7 @@ void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
+// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
 void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     // Check if one of the points is the point at infinity
     if (ECP_Sm2PointAtInfinity(p)) {
@@ -383,6 +385,7 @@ void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
+// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
 void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointCopy(r, q);
@@ -427,6 +430,7 @@ void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Poin
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
+// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
 void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     const uint32_t *x1 = p->x, *y1 = p->y, *z1 = p->z, *x2 = q->x;
     Sm2Fp y2, x3, y3, z3, t1, t2, t3, t4;
@@ -472,6 +476,7 @@ void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Poin
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
+// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv
 void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
     if (ECP_Sm2PointAtInfinity(a)) {
         ECP_Sm2PointCopy(r, a);
@@ -503,6 +508,7 @@ void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
+// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.23
 void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointSet(r, p->x, p->y, p->z); return;
@@ -539,6 +545,7 @@ void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
     ECP_Sm2PointSet(r, x, y, z);
 }
 
+// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.38
 void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
     static Sm2Naf K;
     static Sm2Point upt[8];
@@ -571,6 +578,7 @@ void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
     ECP_Sm2PointMultDoubleCore(r, j - 1, r);
 }
 
+// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.42
 void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
     static Sm2Point a, b;
     static int8_t K[52];
