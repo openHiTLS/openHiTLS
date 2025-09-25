@@ -26,6 +26,7 @@
 #include "crypt_eal_codecs.h"
 #include "bsl_errno.h"
 #include "bsl_params.h"
+#include "hitls_pki_errno.h"
 #include "app_opt.h"
 #include "app_function.h"
 #include "app_list.h"
@@ -41,6 +42,10 @@
 #define SM2_PRVKEY_LEN 33
 #define CIPHER_TEXT_BASE_LEN 112
 #define MAX_CERT_KEY_SIZE (256 * 1024)
+
+#define APP_PKEYUTL_PBKDF2_IT_CNT_MIN 1024
+#define APP_PKEYUTL_PBKDF2_SALT_LEN_MIN 8
+#define APP_PKEYUTL_SM2_EXCH_TEMP_KEY_LEN 32 // SM3_MD_SIZE
 
 typedef enum OptionChoice {
     HITLS_APP_OPT_PKEYUTL_ERR = -1,
@@ -60,6 +65,7 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_PKEYUTL_INKEY,
     HITLS_APP_OPT_PKEYUTL_PEERKEY,
     HITLS_APP_OPT_PKEYUTL_USERID,
+    HITLS_APP_OPT_PKEYUTL_RPASS,
     HITLS_APP_PROV_ENUM,
 #ifdef HITLS_APP_SM_MODE
     HITLS_SM_OPTIONS_ENUM,
@@ -84,6 +90,8 @@ const HITLS_CmdOption g_pkeyUtlOpts[] = {
     {"peerkey", HITLS_APP_OPT_PKEYUTL_PEERKEY, HITLS_APP_OPT_VALUETYPE_IN_FILE,
         "Key for the other side in key exchange."},
     {"userid", HITLS_APP_OPT_PKEYUTL_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2."},
+    {"rpass", HITLS_APP_OPT_PKEYUTL_RPASS, HITLS_APP_OPT_VALUETYPE_STRING,
+        "Password to encrypt or decrypt sm2 temp key when key exchange."},
     HITLS_APP_PROV_OPTIONS,
 #ifdef HITLS_APP_SM_MODE
     HITLS_SM_OPTIONS,
@@ -104,6 +112,7 @@ typedef struct {
         char *outFile;        // Output file for result
         char *inkeyFile;      // Key for this side in key exchange
         char *peerkeyFile;    // Key for the other side in key exchange
+        char *rpass;
         char *userid;
         AppProvider *provider;
 #ifdef HITLS_APP_SM_MODE
@@ -184,7 +193,7 @@ static int32_t HandlePkeyUtlOut(PkeyUtlOpt *opt)
 {
     opt->outFile = HITLS_APP_OptGetValueStr();
     if (opt->outFile == NULL) {
-    AppPrintError("pkeyutl: Invalid output file.\n");
+        AppPrintError("pkeyutl: Invalid output file.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -194,7 +203,7 @@ static int32_t HandlePkeyUtlInkey(PkeyUtlOpt *opt)
 {
     opt->inkeyFile = HITLS_APP_OptGetValueStr();
     if (opt->inkeyFile == NULL) {
-    AppPrintError("pkeyutl: Invalid inkey file.\n");
+        AppPrintError("pkeyutl: Invalid inkey file.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -204,17 +213,17 @@ static int32_t HandlePkeyUtlPeerkey(PkeyUtlOpt *opt)
 {
     opt->peerkeyFile = HITLS_APP_OptGetValueStr();
     if (opt->peerkeyFile == NULL) {
-    AppPrintError("pkeyutl: Invalid peerkey file.\n");
+        AppPrintError("pkeyutl: Invalid peerkey file.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-        return HITLS_APP_SUCCESS;
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t HandlePkeyUtlR(PkeyUtlOpt *opt)
 {
     opt->outRFile = HITLS_APP_OptGetValueStr();
     if (opt->outRFile == NULL) {
-    AppPrintError("pkeyutl: Invalid outR file.\n");
+        AppPrintError("pkeyutl: Invalid outR file.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -234,7 +243,7 @@ static int32_t HandlePkeyUtlInR(PkeyUtlOpt *opt)
 {
     opt->inRFile = HITLS_APP_OptGetValueStr();
     if (opt->inRFile == NULL) {
-    AppPrintError("pkeyutl: Invalid inR file.\n");
+        AppPrintError("pkeyutl: Invalid inR file.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -254,7 +263,17 @@ static int32_t HandlePkeyUtlUserid(PkeyUtlOpt *opt)
 {
     opt->userid = HITLS_APP_OptGetValueStr();
     if (opt->userid == NULL) {
-    AppPrintError("pkeyutl: Invalid user ID.\n");
+        AppPrintError("pkeyutl: Invalid user ID.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t HandlePkeyUtlrPass(PkeyUtlOpt *opt)
+{
+    opt->rpass = HITLS_APP_OptGetValueStr();
+    if (opt->rpass == NULL) {
+        AppPrintError("pkeyutl: Invalid rpass.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -277,6 +296,7 @@ static const PkeyUtlOptHandleFuncMap g_ecOptHandleFuncMap[] = {
     {HITLS_APP_OPT_PKEYUTL_INKEY, HandlePkeyUtlInkey},
     {HITLS_APP_OPT_PKEYUTL_PEERKEY, HandlePkeyUtlPeerkey},
     {HITLS_APP_OPT_PKEYUTL_USERID, HandlePkeyUtlUserid},
+    {HITLS_APP_OPT_PKEYUTL_RPASS, HandlePkeyUtlrPass},
 };
 
 static int32_t ParsepkeyUtlOpt(PkeyUtlOpt *pkeyUtlOpt)
@@ -327,87 +347,99 @@ static int32_t GetReadBuf(uint8_t **buf, uint64_t *bufLen, char *inFile, uint32_
     return ret;
 }
 
-static int32_t CheckFilePathLength(const PkeyUtlOpt opt)
+static int32_t CheckFilePathLength(const PkeyUtlOpt *opt)
 {
     // Check all file path length
-    if (opt.inFile != NULL && strlen(opt.inFile) > PATH_MAX) {
+    if (opt->inFile != NULL && strlen(opt->inFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The input file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.outFile != NULL && strlen(opt.outFile) > PATH_MAX) {
+    if (opt->outFile != NULL && strlen(opt->outFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The output file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.pubinFile != NULL && strlen(opt.pubinFile) > PATH_MAX) {
+    if (opt->pubinFile != NULL && strlen(opt->pubinFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The public key file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.prvinFile != NULL && strlen(opt.prvinFile) > PATH_MAX) {
+    if (opt->prvinFile != NULL && strlen(opt->prvinFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The private key file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.inkeyFile != NULL && strlen(opt.inkeyFile) > PATH_MAX) {
+    if (opt->inkeyFile != NULL && strlen(opt->inkeyFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The inkey file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.peerkeyFile != NULL && strlen(opt.peerkeyFile) > PATH_MAX) {
+    if (opt->peerkeyFile != NULL && strlen(opt->peerkeyFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The peerkey file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.outRFile != NULL && strlen(opt.outRFile) > PATH_MAX) {
+    if (opt->outRFile != NULL && strlen(opt->outRFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The outR file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.inRFile != NULL && strlen(opt.inRFile) > PATH_MAX) {
+    if (opt->inRFile != NULL && strlen(opt->inRFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The inR file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.inRandFile != NULL && strlen(opt.inRandFile) > PATH_MAX) {
+    if (opt->inRandFile != NULL && strlen(opt->inRandFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The r file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    if (opt.outRandFile != NULL && strlen(opt.outRandFile) > PATH_MAX) {
+    if (opt->outRandFile != NULL && strlen(opt->outRandFile) > PATH_MAX) {
         AppPrintError("pkeyutl: The out r file length is invalid.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t CheckParam(const PkeyUtlOpt opt)
+static int32_t GetrPass(PkeyUtlOpt *opt, char **pass)
 {
-    int32_t count = opt.optEncrypt + opt.optDecrypt + opt.optDerive;
+    char *tmpPass = NULL;
+    int32_t ret = HITLS_APP_ParsePasswd(opt->rpass == NULL ? "stdin" : opt->rpass, &tmpPass);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("pkeyutl: Failed to parse the rpass, errCode: 0x%08x.\n", ret);
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    *pass = tmpPass;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t CheckParam(const PkeyUtlOpt *opt)
+{
+    int32_t count = opt->optEncrypt + opt->optDecrypt + opt->optDerive;
     if (count != 1) {
         AppPrintError("Must choose exactly one operation: encrypt, decrypt, or derive.\n");
         return HITLS_APP_INVALID_ARG;
     }
 
-    if (opt.outFile == NULL && opt.optDerive == 0) {
+    if (opt->outFile == NULL && opt->optDerive == 0) {
         AppPrintError("Output file not specified.\n");
         return HITLS_APP_INVALID_ARG;
     }
 
-    if (opt.optEncrypt == 1) {
-        if (opt.inFile == NULL || opt.pubinFile == NULL) {
+    if (opt->optEncrypt == 1) {
+        if (opt->inFile == NULL || opt->pubinFile == NULL) {
             AppPrintError("Encrypt: input file or public key file not specified.\n");
             return HITLS_APP_INVALID_ARG;
         }
     }
 
-    if (opt.optDecrypt == 1) {
-        if (opt.inFile == NULL || opt.prvinFile == NULL) {
+    if (opt->optDecrypt == 1) {
+        if (opt->inFile == NULL || opt->prvinFile == NULL) {
             AppPrintError("Decrypt: input file or inkey file not specified.\n");
             return HITLS_APP_INVALID_ARG;
         }
     }
 
-    if (opt.optDerive == 1) {
-        if (opt.inkeyFile == NULL) {
+    if (opt->optDerive == 1) {
+        if (opt->inkeyFile == NULL) {
             AppPrintError("Derive: inkey file or peerkey file not specified.\n");
             return HITLS_APP_INVALID_ARG;
         }
     }
 #ifdef HITLS_APP_SM_MODE
-    if (opt.smParam->smTag == 1 && opt.smParam->workPath == NULL) {
+    if (opt->smParam->smTag == 1 && opt->smParam->workPath == NULL) {
         AppPrintError(" The workpath is not specified.\n");
         return HITLS_APP_INVALID_ARG;
     }
@@ -675,34 +707,163 @@ static int32_t GetPeerCtx(CRYPT_EAL_PkeyCtx **peerCtx, PkeyUtlOpt *pkeyUtlOpt)
     return ret;
 }
 
-static int32_t SetSelfRand(CRYPT_EAL_PkeyCtx *ctx, char *inRandFile)
+static int32_t GetDataFromP12(AppProvider *provider, const char *file, uint8_t *password, uint32_t passwordLen,
+    uint8_t *data, uint32_t *dataLen)
 {
-    int32_t ret = HITLS_APP_SUCCESS;
-    uint8_t *randomBuf = NULL;
-    uint64_t randLen = 0;
-    uint8_t *hexBuf = NULL;
-    uint32_t hexLen;
-    ret = GetReadBuf(&randomBuf, &randLen, inRandFile, MAX_CERT_KEY_SIZE);
+    HITLS_PKCS12 *p12 = NULL;
+    BSL_Buffer encPwd = {0};
+    HITLS_PKCS12_PwdParam pwdParam = {0};
+    encPwd.data = password;
+    encPwd.dataLen = passwordLen;
+    pwdParam.encPwd = &encPwd;
+    pwdParam.macPwd = &encPwd;
+
+    int32_t ret = HITLS_PKCS12_ProviderParseFile(APP_GetCurrent_LibCtx(), provider->providerAttr, "ASN1", file,
+        &pwdParam, &p12, true);
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("pkeyutl: Failed to read p12 file, errCode: 0x%x.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+
+    BslList *bagList = NULL;
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GET_SECRETBAGS, &bagList, 0);
+    if (ret != HITLS_PKI_SUCCESS) {
+        HITLS_PKCS12_Free(p12);
+        AppPrintError("pkeyutl: Failed to get secret bags, errCode: 0x%x.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    HITLS_PKCS12_Bag *bag = BSL_LIST_GET_FIRST(bagList);
+    BSL_Buffer value = {data, *dataLen};
+    ret = HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_VALUE, &value, 0);
+    HITLS_PKCS12_Free(p12);
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("pkeyutl: Failed to get bag value, errCode: 0x%x.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    *dataLen = value.dataLen;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t GenP12File(AppProvider *provider, const char *file, HITLS_PKCS12_EncodeParam *encodeParam,
+    uint8_t *data, uint32_t dataLen)
+{
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_ProviderNew(APP_GetCurrent_LibCtx(), provider->providerAttr);
+    if (p12 == NULL) {
+        AppPrintError("pkeyutl: Failed to create the p12 ctx.\n");
+        return HITLS_APP_X509_FAIL;
+    }
+
+    BSL_Buffer value = {0};
+    value.data = data;
+    value.dataLen = dataLen;
+
+    HITLS_PKCS12_Bag *bag = HITLS_PKCS12_BagNew(BSL_CID_SECRETBAG, BSL_CID_CE_KEYUSAGE, &value);
+    if (bag == NULL) {
+        AppPrintError("pkeyutl: Failed to create the secret bag.\n");
+        HITLS_PKCS12_Free(p12);
+        return HITLS_APP_X509_FAIL;
+    }
+
+    int32_t ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_ADD_SECRETBAG, bag, 0);
+    HITLS_PKCS12_BagFree(bag);
+    if (ret != HITLS_PKI_SUCCESS) {
+        HITLS_PKCS12_Free(p12);
+        AppPrintError("pkeyutl: Failed to add the secret bag to p12, errCode: 0x%x.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+
+    ret = HITLS_PKCS12_GenFile(BSL_FORMAT_ASN1, p12, encodeParam, true, file);
+    HITLS_PKCS12_Free(p12);
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("pkeyutl: Failed to generate p12 file, errCode: 0x%x.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t AddDataToP12(AppProvider *provider, const char *file, uint8_t *password, uint32_t passwordLen,
+    uint8_t *data, uint32_t dataLen)
+{
+    CRYPT_Pbkdf2Param pbkdf2Param = {0};
+    pbkdf2Param.pbesId = BSL_CID_PBES2;
+    pbkdf2Param.pbkdfId = CRYPT_KDF_PBKDF2;
+    pbkdf2Param.hmacId = CRYPT_MAC_HMAC_SM3;
+    pbkdf2Param.symId = CRYPT_CIPHER_SM4_CBC;
+    pbkdf2Param.saltLen = APP_PKEYUTL_PBKDF2_SALT_LEN_MIN;
+    pbkdf2Param.pwd = password;
+    pbkdf2Param.pwdLen = passwordLen;
+    pbkdf2Param.itCnt = APP_PKEYUTL_PBKDF2_IT_CNT_MIN;
+
+    CRYPT_EncodeParam encParam = {0};
+    encParam.deriveMode = CRYPT_DERIVE_PBKDF2;
+    encParam.param = &pbkdf2Param;
+
+    HITLS_PKCS12_KdfParam kdfParam = {0};
+    kdfParam.saltLen = APP_PKEYUTL_PBKDF2_SALT_LEN_MIN;
+    kdfParam.itCnt = APP_PKEYUTL_PBKDF2_IT_CNT_MIN;
+    kdfParam.macId = CRYPT_MD_SM3;
+    kdfParam.pwd = password;
+    kdfParam.pwdLen = passwordLen;
+
+    HITLS_PKCS12_MacParam macParam = {0};
+    macParam.algId = BSL_CID_PKCS12KDF;
+    macParam.para = &kdfParam;
+
+    HITLS_PKCS12_EncodeParam encodeParam = {0};
+    encodeParam.encParam = encParam;
+    encodeParam.macParam = macParam;
+
+    return GenP12File(provider, file, &encodeParam, data, dataLen);
+}
+
+static int32_t GetTempKeyFromP12(PkeyUtlOpt *pkeyUtlOpt, CRYPT_EAL_PkeyCtx *ctx)
+{
+    char *pass = NULL;
+    int32_t ret = GetrPass(pkeyUtlOpt, &pass);
     if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("pkeyutl: Failed to read self r file for exchange.\n");
+        AppPrintError("pkeyutl: Failed to get rpass, errCode: 0x%x.\n", ret);
         return ret;
     }
-    hexBuf = BSL_SAL_Malloc(randLen * 2 + 1);
-    hexLen = randLen * 2;
-    ret = HITLS_APP_StrToHex((const char *)randomBuf, hexBuf, &hexLen);
+    uint8_t r[APP_PKEYUTL_SM2_EXCH_TEMP_KEY_LEN] = {0};
+    uint32_t rLen = sizeof(r);
+    ret = GetDataFromP12(pkeyUtlOpt->provider, pkeyUtlOpt->inRandFile, (uint8_t *)pass, strlen(pass), r, &rLen);
     if (ret != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("pkeyutl: Failed to convert self r to hex.");
-        BSL_SAL_FREE(randomBuf);
-        BSL_SAL_FREE(hexBuf);
+        BSL_SAL_ClearFree(pass, strlen(pass));
+        AppPrintError("pkeyutl: Failed to get SM2 r from p12, errCode: 0x%x.\n", ret);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_RANDOM, hexBuf, hexLen);
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_RANDOM, r, rLen);
+    BSL_SAL_CleanseData(r, rLen);
+    BSL_SAL_ClearFree(pass, strlen(pass));
     if (ret != CRYPT_SUCCESS) {
         AppPrintError("pkeyutl: Failed to set SM2 r, ret=%d\n", ret);
-        ret = HITLS_APP_CRYPTO_FAIL;
+        return HITLS_APP_CRYPTO_FAIL;
     }
-    BSL_SAL_FREE(randomBuf);
-    BSL_SAL_FREE(hexBuf);
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t WriteTempKeyToP12(PkeyUtlOpt *pkeyUtlOpt, CRYPT_EAL_PkeyCtx *ctx)
+{
+    char *pass = NULL;
+    int32_t ret = GetrPass(pkeyUtlOpt, &pass);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("pkeyutl: Failed to get rpass, errCode: 0x%x.\n", ret);
+        return ret;
+    }
+    uint8_t r[APP_PKEYUTL_SM2_EXCH_TEMP_KEY_LEN] = {0};
+    uint32_t rLen = sizeof(r);
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SM2_RANDOM, r, rLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_ClearFree(pass, strlen(pass));
+        AppPrintError("pkeyutl: Failed to get SM2 r, errCode: 0x%x.\n", ret);
+        return HITLS_APP_CRYPTO_FAIL;
+    }
+    ret = AddDataToP12(pkeyUtlOpt->provider, pkeyUtlOpt->outRandFile, (uint8_t *)pass, strlen(pass), r, rLen);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("pkeyutl: Failed to add SM2 r to p12, errCode: 0x%x.\n", ret);
+    }
+    BSL_SAL_ClearFree(pass, strlen(pass));
+    BSL_SAL_CleanseData(r, sizeof(r));
     return ret;
 }
 
@@ -712,13 +873,11 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
     uint8_t *priBuf = NULL;
     uint64_t priLen = 0;
     uint8_t localR[65];
-    uint8_t random[32];
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *peerCtx = NULL;
     uint8_t out[64];
     uint32_t outLen = sizeof(out);
     BSL_Buffer prv = {0};
-    uint8_t *buf = NULL;
     do {
 #ifdef HITLS_APP_SM_MODE
         if (pkeyUtlOpt->smParam->smTag == 1) {
@@ -769,7 +928,7 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
                 break;
             }
         } else {
-            ret = SetSelfRand(ctx, pkeyUtlOpt->inRandFile);
+            ret = GetTempKeyFromP12(pkeyUtlOpt, ctx);
             if (ret != HITLS_APP_SUCCESS) {
                 break;
             }
@@ -790,25 +949,10 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
             BSL_UIO_Free(fileWriteUio);
         }
         if (pkeyUtlOpt->outRandFile != NULL) {
-            BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outRandFile, 'w', 0);
-            BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
-            if (fileWriteUio == NULL) {
-                AppPrintError("pkeyutl: Failed to open the output file for r.\n");
-                ret = HITLS_APP_UIO_FAIL;
-                break;
-            }
-            ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SM2_RANDOM, random, sizeof(random));
-            if (ret != CRYPT_SUCCESS) {
-                BSL_UIO_Free(fileWriteUio);
-                AppPrintError("pkeyutl: Failed to get SM2 random, ret=%d\n", ret);
-                ret = HITLS_APP_CRYPTO_FAIL;
-                break;
-            }
-            ret = HITLS_APP_OptWriteUio(fileWriteUio, random, sizeof(random), HITLS_APP_FORMAT_HEX);
+            ret = WriteTempKeyToP12(pkeyUtlOpt, ctx);
             if (ret != HITLS_APP_SUCCESS) {
-                AppPrintError("pkeyutl: Failed to export r to the output file.\n");
+                break;
             }
-            BSL_UIO_Free(fileWriteUio);
         }
         if (pkeyUtlOpt->inRFile != NULL && pkeyUtlOpt->peerkeyFile != NULL) {
             ret = GetPeerCtx(&peerCtx, pkeyUtlOpt);
@@ -842,7 +986,6 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
             BSL_UIO_Free(shareFileUio);
         }
     } while (0);
-    BSL_SAL_FREE(buf);
     pkeyUtlOpt->inRFile = NULL;
     BSL_SAL_ClearFree(prv.data, prv.dataLen);
     BSL_SAL_CleanseData(out, outLen);
@@ -857,11 +1000,11 @@ int32_t HITLS_PkeyUtlMain(int argc, char *argv[])
 #ifdef HITLS_APP_SM_MODE
     HITLS_APP_SM_Param smParam = {NULL, 0, NULL, NULL, 0, HITLS_APP_SM_STATUS_OPEN};
     AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider, &smParam};
-    PkeyUtlOpt pkeyUtlOpt = {0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    PkeyUtlOpt pkeyUtlOpt = {0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
         "1234567812345678", &appProvider, &smParam};
 #else
     AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider};
-    PkeyUtlOpt pkeyUtlOpt = {0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    PkeyUtlOpt pkeyUtlOpt = {0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
         "1234567812345678", &appProvider};
 #endif
     int32_t ret = HITLS_APP_SUCCESS;
@@ -876,7 +1019,7 @@ int32_t HITLS_PkeyUtlMain(int argc, char *argv[])
             break;
         }
 
-        ret = CheckParam(pkeyUtlOpt);
+        ret = CheckParam(&pkeyUtlOpt);
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }

@@ -250,7 +250,7 @@ static int32_t AddCipherKeyToP12(HITLS_PKCS12 *p12, HITLS_APP_KeyInfo *keyInfo)
         AppPrintError("keymgmt: Failed to add the secret bag, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    return HITLS_PKI_SUCCESS;
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t AddAsymKeyToP12(HITLS_PKCS12 *p12, HITLS_APP_KeyInfo *keyInfo)

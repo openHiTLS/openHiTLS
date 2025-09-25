@@ -5,13 +5,13 @@ UT_HITLS_APP_PKEYUTL_TC001 test2
 UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -decrypt -prvin ../testdata/apps/sm2/prv.pem -in out_test.bin -out plain.txt":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_PKEYUTL_TC001 test3
-UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv1.pem -outR R2.bin -outr r2.bin":HITLS_APP_SUCCESS
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv1.pem -outR R2.bin -outr r2.bin -rpass pass:12345678":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_PKEYUTL_TC001 test4
 UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv.pem -peerkey ../testdata/apps/sm2/pub1.pem -inR R2.bin -outR R1.bin -out share1.key":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_PKEYUTL_TC001 test5
-UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv1.pem -peerkey ../testdata/apps/sm2/pub.pem -inR R1.bin -inr r2.bin -out share2.key":HITLS_APP_SUCCESS
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv1.pem -peerkey ../testdata/apps/sm2/pub.pem -inR R1.bin -inr r2.bin -rpass pass:12345678 -out share2.key":HITLS_APP_SUCCESS
 
 "-encrypto，-deriver": Redundant parameters
 UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -derive":HITLS_APP_INVALID_ARG
