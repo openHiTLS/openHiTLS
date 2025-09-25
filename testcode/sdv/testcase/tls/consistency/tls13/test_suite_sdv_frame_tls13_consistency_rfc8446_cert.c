@@ -722,7 +722,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CERTCHAIN_FUNC_TC002(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -786,7 +786,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CERTCHAIN_FUNC_TC003(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -850,7 +850,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CERTCHAIN_FUNC_TC004(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1803,7 +1803,7 @@ static void Test_AlertPackAndParse004(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
     ASSERT_EQ(frameMsg.recType.data, REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_EQ(alertMsg->alertLevel.data, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 
     memset_s(data, bufSize, 0, bufSize);
     ASSERT_EQ(parseLen, *len);

@@ -129,8 +129,13 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
             goto EXIT;
         }
     }
+    HITLS_SetVerifyResult(ctx, HITLS_SUCCESS);
     ret = HITLS_X509_CertVerify((HITLS_X509_StoreCtx *)store, certList);
     if (ret != HITLS_SUCCESS) {
+        int32_t x509Err = HITLS_SUCCESS;
+        (void)HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_GET_ERROR, &x509Err,
+            sizeof(x509Err));
+        HITLS_SetVerifyResult(ctx, x509Err != HITLS_SUCCESS ? x509Err : ret);
         BSL_ERR_PUSH_ERROR(ret);
     }
 
