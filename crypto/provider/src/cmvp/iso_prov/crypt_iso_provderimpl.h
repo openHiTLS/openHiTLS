@@ -45,7 +45,6 @@ extern const CRYPT_EAL_Func g_isoMdSha3224[];
 extern const CRYPT_EAL_Func g_isoMdSha3256[];
 extern const CRYPT_EAL_Func g_isoMdSha3384[];
 extern const CRYPT_EAL_Func g_isoMdSha3512[];
-extern const CRYPT_EAL_Func g_isoMdShake512[];
 extern const CRYPT_EAL_Func g_isoMdShake128[];
 extern const CRYPT_EAL_Func g_isoMdShake256[];
 extern const CRYPT_EAL_Func g_isoMdSm3[];

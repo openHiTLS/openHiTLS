@@ -164,8 +164,7 @@ ERR:
 
 bool CRYPT_CMVP_SelftestMlkemEncapsDecaps(void)
 {
-    bool ret = TestMlkemEncapsDecaps(NULL, NULL, &MLKEM_VECTOR[0]);
-    return ret;
+    return TestMlkemEncapsDecaps(NULL, NULL, &MLKEM_VECTOR[0]);
 }
 
 bool CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(void *libCtx, const char *attrName)

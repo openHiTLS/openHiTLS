@@ -24,7 +24,7 @@
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provider.h"
 
-#define ISO_19790_PROVIDER_VERSION "openHiTLS ISO 19790 Provider Version : V0.3.0"
+#define ISO_19790_PROVIDER_VERSION "openHiTLS Cryptographic Module 0.3.0"
 
 typedef struct {
     void *ctx;

@@ -167,6 +167,16 @@ static uint32_t CRYPT_ASMCAP_Test(int32_t algId)
         return CRYPT_##name##_CopyCtx(dst->ctx, src->ctx);                                              \
     }
 
+#define MD_SQUEEZE_FUNC(name)                                                                           \
+    static int32_t CRYPT_##name##_SqueezeWrapper(IsoMdCtx *ctx, uint8_t *out, uint32_t len)             \
+    {                                                                                                   \
+        if (ctx == NULL) {                                                                              \
+            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                       \
+            return CRYPT_NULL_INPUT;                                                                    \
+        }                                                                                               \
+        return CRYPT_##name##_Squeeze(ctx->ctx, out, len);                                              \
+    }
+
 MD_METHOD_FUNC(SHA1)
 MD_METHOD_FUNC(SHA2_224)
 MD_METHOD_FUNC(SHA2_256)
@@ -177,21 +187,10 @@ MD_METHOD_FUNC(SHA3_256)
 MD_METHOD_FUNC(SHA3_384)
 MD_METHOD_FUNC(SHA3_512)
 MD_METHOD_FUNC(SHAKE128)
-MD_METHOD_FUNC(SHAKE256)
-MD_METHOD_FUNC(SM3)
-
-#define MD_SQUEEZE_FUNC(name)                                                                   \
-    static int32_t CRYPT_##name##_SqueezeWrapper(IsoMdCtx *ctx, uint8_t *out, uint32_t len)     \
-    {                                                                                           \
-        if (ctx == NULL) {                                                                      \
-            BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                               \
-            return CRYPT_NULL_INPUT;                                                            \
-        }                                                                                       \
-        return CRYPT_##name##_Squeeze(ctx->ctx, out, len);                                      \
-    }
-
 MD_SQUEEZE_FUNC(SHAKE128)
+MD_METHOD_FUNC(SHAKE256)
 MD_SQUEEZE_FUNC(SHAKE256)
+MD_METHOD_FUNC(SM3)
 
 const CRYPT_EAL_Func g_isoMdSha1[] = {
 #ifdef HITLS_CRYPTO_SHA1

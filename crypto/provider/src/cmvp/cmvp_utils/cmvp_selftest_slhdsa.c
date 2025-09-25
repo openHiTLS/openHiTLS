@@ -152,8 +152,7 @@ ERR:
 
 bool CRYPT_CMVP_SelftestSlhdsaSignVerify(void)
 {
-    bool ret = TestSlhdsaSignVerify(NULL, NULL, &SLHDSA_VECTOR[0]);
-    return ret;
+    return TestSlhdsaSignVerify(NULL, NULL, &SLHDSA_VECTOR[0]);
 }
 
 bool CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(void *libCtx, const char *attrName)

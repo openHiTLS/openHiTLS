@@ -165,8 +165,7 @@ ERR:
 
 bool CRYPT_CMVP_SelftestMldsaSignVerify(void)
 {
-    bool ret = TestMldsaSignVerify(NULL, NULL, &MLDSA_VECTOR[0]);
-    return ret;
+    return TestMldsaSignVerify(NULL, NULL, &MLDSA_VECTOR[0]);
 }
 
 bool CRYPT_CMVP_SelftestProviderMldsaSignVerify(void *libCtx, const char *attrName)

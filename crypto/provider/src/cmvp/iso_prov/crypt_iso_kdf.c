@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_CMVP_ISO19790
 
 #include "crypt_eal_implprovider.h"
+#include "crypt_params_key.h"
 #include "crypt_pbkdf2.h"
 #include "crypt_kdf_tls12.h"
 #include "crypt_hkdf.h"
@@ -105,6 +106,8 @@ static int32_t CheckKdfParam(IsoKdfCtx *ctx, const BSL_Param *param)
         case CRYPT_KDF_PBKDF2:
             ret = GetPbkdf2Params(param, &pbkdf2);
             break;
+        case CRYPT_KDF_SCRYPT:
+            return CRYPT_SUCCESS;
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
@@ -132,9 +135,32 @@ static int32_t SSPLog(IsoKdfCtx *ctx, const BSL_Param *param, const int32_t *ssp
     return CRYPT_SUCCESS;
 }
 
+static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->algId != CRYPT_KDF_PBKDF2) {
+        return CRYPT_SUCCESS;
+    }
+    CRYPT_EAL_Pbkdf2Param pbkdf2Param = {KDF_DEF_MAC_ALGID, KDF_DEF_SALT_LEN, KDF_DEF_PBKDF2_ITER, len};
+    CRYPT_EAL_KdfC2Data data = {&pbkdf2Param, NULL};
+    if (!CMVP_Iso19790KdfC2(CRYPT_KDF_PBKDF2, &data)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
+        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
+        return CRYPT_CMVP_ERR_PARAM_CHECK;
+    }
+    return CRYPT_SUCCESS;
+}
+
 #ifdef HITLS_CRYPTO_SCRYPT
 static int32_t CheckSCRYPTParamAndLog(IsoKdfCtx *ctx, const BSL_Param *param)
 {
+    int32_t ret = CheckKdfParam(ctx, param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     int32_t sspParam[] = {CRYPT_PARAM_KDF_PASSWORD};
     return SSPLog(ctx, param, sspParam, sizeof(sspParam)/sizeof(sspParam[0]));
 }
@@ -174,25 +200,6 @@ static int32_t CheckPBKDF2ParamAndLog(IsoKdfCtx *ctx, const BSL_Param *param)
     }
     int32_t sspParam[] = {CRYPT_PARAM_KDF_PASSWORD};
     return SSPLog(ctx, param, sspParam, sizeof(sspParam)/sizeof(sspParam[0]));
-}
-
-static int32_t CheckDeriveKeyLen(IsoKdfCtx *ctx, uint32_t len)
-{
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ctx->algId != CRYPT_KDF_PBKDF2) {
-        return CRYPT_SUCCESS;
-    }
-    CRYPT_EAL_Pbkdf2Param pbkdf2Param = {KDF_DEF_MAC_ALGID, KDF_DEF_SALT_LEN, KDF_DEF_PBKDF2_ITER, len};
-    CRYPT_EAL_KdfC2Data data = {&pbkdf2Param, NULL};
-    if (!CMVP_Iso19790KdfC2(CRYPT_KDF_PBKDF2, &data)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CMVP_ERR_PARAM_CHECK);
-        (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_KDF, ctx->algId);
-        return CRYPT_CMVP_ERR_PARAM_CHECK;
-    }
-    return CRYPT_SUCCESS;
 }
 
 #define KDF_METHOD_FUNC(name)                                                                                  \

@@ -1207,7 +1207,7 @@
             },
             "util": {
                 ".features": [
-                    "sha1", "sha224", "sha256", "sha384", "sha512",
+                    "sha1", "sha224", "sha256", "sha384", "sha512", "sm3",
                     "bn",
                     "drbg_hash", "drbg_hmac", "drbg_ctr",
                     "rsa", "ed25519", "x25519", "slh_dsa"

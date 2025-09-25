@@ -464,6 +464,7 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
     (void)provCtx;
+    (void)algInfos;
     int32_t ret = CRYPT_SUCCESS;
     switch (operaId) {
 #ifdef HITLS_CRYPTO_CIPHER

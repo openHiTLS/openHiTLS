@@ -26,7 +26,7 @@
 #include "crypt_iso_selftest.h"
 #include "crypt_iso_provderimpl.h"
 
-#define PKEY_CIPHER_FUNC(name)                                                                                      \
+#define PKEY_CIPHER_ENCRYPT_FUNC(name)                                                                              \
     static int32_t CRYPT_##name##_EncryptWrapper(CRYPT_Iso_Pkey_Ctx *ctx, const uint8_t *data, uint32_t dataLen,    \
         uint8_t *out, uint32_t *outLen)                                                                             \
     {                                                                                                               \
@@ -39,8 +39,9 @@
             return ret;                                                                                             \
         }                                                                                                           \
         return CRYPT_##name##_Encrypt(ctx->ctx, data, dataLen, out, outLen);                                        \
-    }                                                                                                               \
-                                                                                                                    \
+    }
+
+#define PKEY_CIPHER_DECRYPT_FUNC(name)                                                                              \
     static int32_t CRYPT_##name##_DecryptWrapper(CRYPT_Iso_Pkey_Ctx *ctx, const uint8_t *data, uint32_t dataLen,    \
         uint8_t *out, uint32_t *outLen)                                                                             \
     {                                                                                                               \
@@ -55,8 +56,11 @@
         return CRYPT_##name##_Decrypt(ctx->ctx, data, dataLen, out, outLen);                                        \
     }
 
-PKEY_CIPHER_FUNC(RSA)
-PKEY_CIPHER_FUNC(SM2)
+PKEY_CIPHER_ENCRYPT_FUNC(RSA)
+PKEY_CIPHER_DECRYPT_FUNC(RSA)
+
+PKEY_CIPHER_ENCRYPT_FUNC(SM2)
+PKEY_CIPHER_DECRYPT_FUNC(SM2)
 
 const CRYPT_EAL_Func g_isoAsymCipherRsa[] = {
 #ifdef HITLS_CRYPTO_RSA_ENCRYPT
