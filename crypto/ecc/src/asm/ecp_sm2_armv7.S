@@ -85,227 +85,72 @@
 .equ sm2_l7, 0x7FFFFFFF
 .equ sm2_l8, 0x7FFFFFFF
 
-# Note: In next, V refers specifically to the reglist {v1-v8} that stores 256-bit numbers.
 # Return.
-.macro RET
-    MOV pc, lr
+.macro ret
+    mov pc, lr
 .endm
 
-# v = n
-.macro VLDR n1 n2 n3 n4 n5 n6 n7 n8
-	LDR v1, =\n1
-    LDR v2, =\n2
-    LDR v3, =\n3
-    LDR v4, =\n4
-    LDR v5, =\n5
-    LDR v6, =\n6
-    LDR v7, =\n7
-    LDR v8, =\n8
-.endm
-
-# v = v + n
-.macro VADD n1 n2 n3 n4 n5 n6 n7 n8
-	ADDS v1, \n1
-	ADCS v2, \n2
-	ADCS v3, \n3
-	ADCS v4, \n4
-	ADCS v5, \n5
-	ADCS v6, \n6
-	ADCS v7, \n7
-	ADCS v8, \n8
-.endm
-
-# v = v - n
-.macro VSUB n1 n2 n3 n4 n5 n6 n7 n8
-	SUBS v1, \n1
-	SBCS v2, \n2
-	SBCS v3, \n3
-	SBCS v4, \n4
-	SBCS v5, \n5
-	SBCS v6, \n6
-	SBCS v7, \n7
-	SBCS v8, \n8
-.endm
-
-# v = v - sm2_q
-.macro VSUBQ
-	VSUB sm2_q1, sm2_q2, sm2_q3, sm2_q4, sm2_q5, sm2_q6, sm2_q7, sm2_q8
-.endm
-
-# v = v + sm2_s
-.macro VADDS
-	VADD sm2_s1, sm2_s2, sm2_s3, sm2_s4, sm2_s5, sm2_s6, sm2_s7, sm2_s8
-.endm
-
-# v = v - sm2_m, Where sm2_m1~sm2_m4 is not an immediate value and must be loaded into a register.
-.macro VSUBM reg1 reg2
-	LDR \reg1, =sm2_m1
-	LDR \reg2, =sm2_m2
-	SUBS v1, \reg1
-	SBCS v2, \reg2
-	LDR \reg1, =sm2_m3
-	LDR \reg2, =sm2_m4
-	SBCS v3, \reg1
-	SBCS v4, \reg2
-	SBCS v5, #sm2_m5
-	SBCS v6, #sm2_m6
-	SBCS v7, #sm2_m7
-	SBCS v8, #sm2_m8
-.endm
-
-# v = v - sm2_l, Where sm2_l1~sm2_l4 is not an immediate value and must be loaded into a register.
-.macro VADDL reg1 reg2
-	LDR \reg1, =sm2_l1
-	LDR \reg2, =sm2_l2
-	ADDS v1, \reg1
-	ADCS v2, \reg2
-	LDR \reg1, =sm2_l3
-	LDR \reg2, =sm2_l4
-	ADCS v3, \reg1
-	ADCS v4, \reg2
-	ADCS v5, #sm2_l5
-	ADCS v6, #sm2_l6
-	ADCS v7, #sm2_l7
-	ADCS v8, #sm2_l8
-.endm
-
-# v = v >> 1
-.macro VLSR
-    LSRS v8, #1
-    RRXS v7, v7
-    RRXS v6, v6
-    RRXS v5, v5
-    RRXS v4, v4
-    RRXS v3, v3
-    RRXS v2, v2
-    RRXS v1, v1
-.endm
-
-# v = v >> 1 mod modulus
-.macro VHAF modulus
-    VLSR
-    BCC 0f
-    .ifc "\modulus", "sm2_p"
-        VADDS
-    .endif
-    .ifc "\modulus", "sm2_n"
-        VADDL ip lr
-    .endif
-    0:
-.endm
-
-# v = v mod modulus
-.macro VMOD modulus
-	BCS 0f
-    .ifc "\modulus", "sm2_p"
-        VSUBQ
-    .endif
-    .ifc "\modulus", "sm2_n"
-        VSUBM ip lr
-    .endif
-    0:
-.endm
-
-# v = - v
-.macro VNEG
-	MVN v1, v1
-	MVN v2, v2
-	MVN v3, v3
-	MVN v4, v4
-	MVN v5, v5
-	MVN v6, v6
-	MVN v7, v7
-	MVN v8, v8
-	ADDS v1, #1
-	ADCS v2, #0
-	ADCS v3, #0
-	ADCS v4, #0
-	ADCS v5, #0
-	ADCS v6, #0
-	ADCS v7, #0
-	ADCS v8, #0
-.endm
-
-# The number pointed to by \reg1 minus the number pointed to by \reg2.
-.macro PSUB reg1 reg2
-	LDM \reg1!, {v1-v4}
-	LDM \reg2!, {v5-v8}
-	SUBS v1, v5
-	SBCS v2, v6
-	SBCS v3, v7
-	SBCS v4, v8
-	PUSH {v1-v4}
-	LDM \reg1, {v5-v8}
-	LDM \reg2, {v1-v4}
-	SBCS v5, v1
-	SBCS v6, v2
-	SBCS v7, v3
-	SBCS v8, v4
-	SUB \reg1, #0x10
-	SUB \reg2, #0x10
-	POP {v1-v4}
-.endm
 
 # Multiplication iteration macro, one can refer to functions(ECP_Sm2FpMul/Sqr) that do not use macro expansion.
-.macro MULIT at, ap, cp, i
+.macro mulit at, ap, cp, i
 
-    MOV lr, #0
+    mov lr, #0
 
     # Select the loading method based on the parameter type of at:
     # imm: load immediate values;
     # oft: load from stack using stack pointer(sp) + offset.
     .ifc \at, imm
-    LDR ip, =\ap
+    ldr ip, =\ap
     .else
-    LDR ip, [sp, #\ap + 0x04 * \i]
+    ldr ip, [sp, #\ap + 0x04 * \i]
     .endif
 
     # When i == 0, there is no need to load the multiplier from memory.
     .if \i == 0
-        MOV r0, #0
-        MOV r1, #0
-        MOV r2, #0
-        MOV r3, #0
+        mov r0, #0
+        mov r1, #0
+        mov r2, #0
+        mov r3, #0
     .else
-        LDR r0, [sp, #\cp + 0x00 + 0x04 * \i]
-        LDR r1, [sp, #\cp + 0x04 + 0x04 * \i]
-        LDR r2, [sp, #\cp + 0x08 + 0x04 * \i]
-        LDR r3, [sp, #\cp + 0x0C + 0x04 * \i]
+        ldr r0, [sp, #\cp + 0x00 + 0x04 * \i]
+        ldr r1, [sp, #\cp + 0x04 + 0x04 * \i]
+        ldr r2, [sp, #\cp + 0x08 + 0x04 * \i]
+        ldr r3, [sp, #\cp + 0x0C + 0x04 * \i]
     .endif
 
-    UMAAL r0, lr, ip, v1
-    UMAAL r1, lr, ip, v2
-    UMAAL r2, lr, ip, v3
-    UMAAL r3, lr, ip, v4
+    umaal r0, lr, ip, v1
+    umaal r1, lr, ip, v2
+    umaal r2, lr, ip, v3
+    umaal r3, lr, ip, v4
 
-    STR r0, [sp, #\cp + 0x00 + 0x04 * \i]
-    STR r1, [sp, #\cp + 0x04 + 0x04 * \i]
-    STR r2, [sp, #\cp + 0x08 + 0x04 * \i]
-    STR r3, [sp, #\cp + 0x0C + 0x04 * \i]
+    str r0, [sp, #\cp + 0x00 + 0x04 * \i]
+    str r1, [sp, #\cp + 0x04 + 0x04 * \i]
+    str r2, [sp, #\cp + 0x08 + 0x04 * \i]
+    str r3, [sp, #\cp + 0x0C + 0x04 * \i]
 
     # When i == 0, there is no need to load the multiplier from memory.
     .if \i == 0
-        MOV r0, #0
-        MOV r1, #0
-        MOV r2, #0
-        MOV r3, #0
+        mov r0, #0
+        mov r1, #0
+        mov r2, #0
+        mov r3, #0
     .else
-        LDR r0, [sp, #\cp + 0x10 + 0x04 * \i]
-        LDR r1, [sp, #\cp + 0x14 + 0x04 * \i]
-        LDR r2, [sp, #\cp + 0x18 + 0x04 * \i]
-        LDR r3, [sp, #\cp + 0x1C + 0x04 * \i]
+        ldr r0, [sp, #\cp + 0x10 + 0x04 * \i]
+        ldr r1, [sp, #\cp + 0x14 + 0x04 * \i]
+        ldr r2, [sp, #\cp + 0x18 + 0x04 * \i]
+        ldr r3, [sp, #\cp + 0x1C + 0x04 * \i]
     .endif
 
-    UMAAL r0, lr, ip, v5
-    UMAAL r1, lr, ip, v6
-    UMAAL r2, lr, ip, v7
-    UMAAL r3, lr, ip, v8
+    umaal r0, lr, ip, v5
+    umaal r1, lr, ip, v6
+    umaal r2, lr, ip, v7
+    umaal r3, lr, ip, v8
 
-    STR r0, [sp, #\cp + 0x10 + 0x04 * \i]
-    STR r1, [sp, #\cp + 0x14 + 0x04 * \i]
-    STR r2, [sp, #\cp + 0x18 + 0x04 * \i]
-    STR r3, [sp, #\cp + 0x1C + 0x04 * \i]
-    STR lr, [sp, #\cp + 0x20 + 0x04 * \i]
+    str r0, [sp, #\cp + 0x10 + 0x04 * \i]
+    str r1, [sp, #\cp + 0x14 + 0x04 * \i]
+    str r2, [sp, #\cp + 0x18 + 0x04 * \i]
+    str r3, [sp, #\cp + 0x1C + 0x04 * \i]
+    str lr, [sp, #\cp + 0x20 + 0x04 * \i]
 .endm
 
 .section .text, "ax"
@@ -317,202 +162,202 @@
 .global ECP_Sm2FpCmp
 .type   ECP_Sm2FpCmp, %function
 ECP_Sm2FpCmp:
-	LDR r2, [r0, #0x1C]
-	LDR r3, [r1, #0x1C]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x18]
-	LDR r3, [r1, #0x18]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x14]
-	LDR r3, [r1, #0x14]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x10]
-	LDR r3, [r1, #0x10]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x0C]
-	LDR r3, [r1, #0x0C]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x08]
-	LDR r3, [r1, #0x08]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x04]
-	LDR r3, [r1, #0x04]
-	CMP r2, r3
-	BHI 1f
-	BCC 0f
-	LDR r2, [r0, #0x00]
-	LDR r3, [r1, #0x00]
-	CMP r2, r3
-	BCC 0f
- 1: MOV r0, 1
-    RET
- 0: MOV r0, 0
-    RET
+	ldr r2, [r0, #0x1C]
+	ldr r3, [r1, #0x1C]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x18]
+	ldr r3, [r1, #0x18]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x14]
+	ldr r3, [r1, #0x14]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x10]
+	ldr r3, [r1, #0x10]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x0C]
+	ldr r3, [r1, #0x0C]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x08]
+	ldr r3, [r1, #0x08]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x04]
+	ldr r3, [r1, #0x04]
+	cmp r2, r3
+	bhi 1f
+	bcc 0f
+	ldr r2, [r0, #0x00]
+	ldr r3, [r1, #0x00]
+	cmp r2, r3
+	bcc 0f
+ 1: mov r0, 1
+    ret
+ 0: mov r0, 0
+    ret
 
 ### Compute r ≡ a + b mod sm2_p.
 # void ECP_Sm2FpAdd(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 .global ECP_Sm2FpAdd
 .type   ECP_Sm2FpAdd, %function
 ECP_Sm2FpAdd:
-	PUSH {v1-v8}
-	LDM r2, {v1-v8}
-	LDR r2, [r1, #0x00]
-	LDR r3, [r1, #0x04]
-	ADDS v1, r2
-	ADCS v2, r3
-	LDR r2, [r1, #0x08]
-	LDR r3, [r1, #0x0C]
-	ADCS v3, r2
-	ADCS v4, r3
-	LDR r2, [r1, #0x10]
-	LDR r3, [r1, #0x14]
-	ADCS v5, r2
-	ADCS v6, r3
-	LDR r2, [r1, #0x18]
-	LDR r3, [r1, #0x1C]
-	ADCS v7, r2
-	ADCS v8, r3
-	BCC 0f
-	ADDS v1, #sm2_q1
-	ADCS v2, #sm2_q2
-	ADCS v3, #sm2_q3
-	ADCS v4, #sm2_q4
-	ADCS v5, #sm2_q5
-	ADCS v6, #sm2_q6
-	ADCS v7, #sm2_q7
-	ADCS v8, #sm2_q8
- 0: STM r0, {v1-v8}
-	POP {v1-v8}
-	RET
+	push {v1-v8}
+	ldm  r2, {v1-v8}
+	ldr  r2, [r1, #0x00]
+	ldr  r3, [r1, #0x04]
+	adds v1, r2
+	adcs v2, r3
+	ldr  r2, [r1, #0x08]
+	ldr  r3, [r1, #0x0C]
+	adcs v3, r2
+	adcs v4, r3
+	ldr  r2, [r1, #0x10]
+	ldr  r3, [r1, #0x14]
+	adcs v5, r2
+	adcs v6, r3
+	ldr  r2, [r1, #0x18]
+	ldr  r3, [r1, #0x1C]
+	adcs v7, r2
+	adcs v8, r3
+	bcc  0f
+	adds v1, #sm2_q1
+	adcs v2, #sm2_q2
+	adcs v3, #sm2_q3
+	adcs v4, #sm2_q4
+	adcs v5, #sm2_q5
+	adcs v6, #sm2_q6
+	adcs v7, #sm2_q7
+	adcs v8, #sm2_q8
+ 0: stm  r0, {v1-v8}
+	pop  {v1-v8}
+	ret
 
 ### Compute r ≡ a - b mod sm2_p.
 # void ECP_Sm2FpSub(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 .global ECP_Sm2FpSub
 .type   ECP_Sm2FpSub, %function
 ECP_Sm2FpSub:
-	PUSH {v1-v8}
-	LDM r1, {v1-v8}
-	LDR r1, [r2, #0x00]
-	LDR r3, [r2, #0x04]
-	SUBS v1, r1
-	SBCS v2, r3
-	LDR r1, [r2, #0x08]
-	LDR r3, [r2, #0x0C]
-	SBCS v3, r1
-	SBCS v4, r3
-	LDR r1, [r2, #0x10]
-	LDR r3, [r2, #0x14]
-	SBCS v5, r1
-	SBCS v6, r3
-	LDR r1, [r2, #0x18]
-	LDR r3, [r2, #0x1C]
-	SBCS v7, r1
-	SBCS v8, r3
-	BCS 0f
-	SUBS v1, #sm2_q1
-	SBCS v2, #sm2_q2
-	SBCS v3, #sm2_q3
-	SBCS v4, #sm2_q4
-	SBCS v5, #sm2_q5
-	SBCS v6, #sm2_q6
-	SBCS v7, #sm2_q7
-	SBCS v8, #sm2_q8
- 0: STM r0, {v1-v8}
-	POP {v1-v8}
-	RET
+	push {v1-v8}
+	ldm  r1, {v1-v8}
+	ldr  r1, [r2, #0x00]
+	ldr  r3, [r2, #0x04]
+	subs v1, r1
+	sbcs v2, r3
+	ldr  r1, [r2, #0x08]
+	ldr  r3, [r2, #0x0C]
+	sbcs v3, r1
+	sbcs v4, r3
+	ldr  r1, [r2, #0x10]
+	ldr  r3, [r2, #0x14]
+	sbcs v5, r1
+	sbcs v6, r3
+	ldr  r1, [r2, #0x18]
+	ldr  r3, [r2, #0x1C]
+	sbcs v7, r1
+	sbcs v8, r3
+	bcs  0f
+	subs v1, #sm2_q1
+	sbcs v2, #sm2_q2
+	sbcs v3, #sm2_q3
+	sbcs v4, #sm2_q4
+	sbcs v5, #sm2_q5
+	sbcs v6, #sm2_q6
+	sbcs v7, #sm2_q7
+	sbcs v8, #sm2_q8
+ 0: stm  r0, {v1-v8}
+	pop  {v1-v8}
+	ret
 
 ### Compute r ≡ -a mod sm2_p.
 # void ECP_Sm2FpNeg(Sm2Fp r, const Sm2Fp a);
 .global ECP_Sm2FpNeg
 .type   ECP_Sm2FpNeg, %function
 ECP_Sm2FpNeg:
-	PUSH {r4-r6}
-	LDM  r1!, {r2-r4}
-	RSB  r2, #sm2_p1
-	RSB  r3, #sm2_p2
-	RSBS r4, #sm2_p3
-	STM  r0!, {r2-r4}
-	LDM  r1, {r2-r6}
-	RSB  r2, #sm2_p4
-	RSB  r3, #sm2_p5
-	RSB  r4, #sm2_p6
-	RSB  r5, #sm2_p7
-	RSB  r6, #sm2_p7
-	SBCS r2, #0
-	SBCS r4, #0
-	SBCS r5, #0
-	SBCS r6, #1
-	STM  r0, {r2-r6}
-	POP  {r4-r6}
-	RET
+	push {r4-r6}
+	ldm  r1!, {r2-r4}
+	rsb  r2, #sm2_p1
+	rsb  r3, #sm2_p2
+	rsbs r4, #sm2_p3
+	stm  r0!, {r2-r4}
+	ldm  r1, {r2-r6}
+	rsb  r2, #sm2_p4
+	rsb  r3, #sm2_p5
+	rsb  r4, #sm2_p6
+	rsb  r5, #sm2_p7
+	rsb  r6, #sm2_p7
+	sbcs r2, #0
+	sbcs r4, #0
+	sbcs r5, #0
+	sbcs r6, #1
+	stm  r0, {r2-r6}
+	pop  {r4-r6}
+	ret
 
 ### Compute r ≡ 2a mod sm2_p.
 # void ECP_Sm2FpDou(Sm2Fp r, const Sm2Fp a);
 .global ECP_Sm2FpDou
 .type   ECP_Sm2FpDou, %function
 ECP_Sm2FpDou:
-	PUSH {r4-r8}
-	LDM r1, {r1-r8}
-	ADDS r1, r1
-	ADCS r2, r2
-	ADCS r3, r3
-	ADCS r4, r4
-	ADCS r5, r5
-	ADCS r6, r6
-	ADCS r7, r7
-	ADCS r8, r8
-	BCC 0f
-	ADDS r1, #sm2_q1
-	ADCS r2, #sm2_q2
-	ADCS r3, #sm2_q3
-	ADCS r4, #sm2_q4
-	ADCS r5, #sm2_q5
-	ADCS r6, #sm2_q6
-	ADCS r7, #sm2_q7
-	ADCS r8, #sm2_q8
- 0: STM  r0, {r1-r8}
-	POP  {r4-r8}
-	RET
+	push {r4-r8}
+	ldm  r1, {r1-r8}
+	adds r1, r1
+	adcs r2, r2
+	adcs r3, r3
+	adcs r4, r4
+	adcs r5, r5
+	adcs r6, r6
+	adcs r7, r7
+	adcs r8, r8
+	bcc  0f
+	adds r1, #sm2_q1
+	adcs r2, #sm2_q2
+	adcs r3, #sm2_q3
+	adcs r4, #sm2_q4
+	adcs r5, #sm2_q5
+	adcs r6, #sm2_q6
+	adcs r7, #sm2_q7
+	adcs r8, #sm2_q8
+ 0: stm  r0, {r1-r8}
+	pop  {r4-r8}
+	ret
 
 ### Compute r ≡ a/2 mod sm2_p.
 # void ECP_Sm2FpHaf(Sm2Fp r, const Sm2Fp a);
 .global ECP_Sm2FpHaf
 .type   ECP_Sm2FpHaf, %function
 ECP_Sm2FpHaf:
-	PUSH {r4-r8}
-	LDM r1, {r1-r8}
-    LSRS r8, #1
-    RRXS r7, r7
-    RRXS r6, r6
-    RRXS r5, r5
-    RRXS r4, r4
-    RRXS r3, r3
-    RRXS r2, r2
-    RRXS r1, r1
-	BCC 0f
-	ADDS r1, #sm2_s1
-	ADCS r2, #sm2_s2
-	ADCS r3, #sm2_s3
-	ADCS r4, #sm2_s4
-	ADCS r5, #sm2_s5
-	ADCS r6, #sm2_s6
-	ADCS r7, #sm2_s7
-	ADCS r8, #sm2_s8
- 0: STM  r0, {r1-r8}
-	POP  {r4-r8}
-	RET
+	push {r4-r8}
+	ldm  r1, {r1-r8}
+    lsrs r8, #1
+    rrxs r7, r7
+    rrxs r6, r6
+    rrxs r5, r5
+    rrxs r4, r4
+    rrxs r3, r3
+    rrxs r2, r2
+    rrxs r1, r1
+	bcc  0f
+	adds r1, #sm2_s1
+	adcs r2, #sm2_s2
+	adcs r3, #sm2_s3
+	adcs r4, #sm2_s4
+	adcs r5, #sm2_s5
+	adcs r6, #sm2_s6
+	adcs r7, #sm2_s7
+	adcs r8, #sm2_s8
+ 0: stm  r0, {r1-r8}
+	pop  {r4-r8}
+	ret
 
 ### Compute r ≡ a * b mod sm2_p.
 # void ECP_Sm2FpMul(sm2_fp r, const sm2_fp a, const sm2_fp b);
@@ -575,998 +420,921 @@ ECP_Sm2FpHaf:
 .global ECP_Sm2FpMul
 .type   ECP_Sm2FpMul, %function
 ECP_Sm2FpMul:
-	PUSH {v1-v8, ip, lr}
-	PUSH {r0}
+	push {v1-v8, ip, lr}
+	push {r0}
 
 	# Allocate stack space, load and store a, load b.
-	SUB sp, #0x20
-	LDM r1, {v1-v8}
-	STM sp, {v1-v8}
-	LDM r2, {v1-v8}
+	sub sp, #0x20
+	ldm r1, {v1-v8}
+	stm sp, {v1-v8}
+	ldm r2, {v1-v8}
 
 	# Allocate stack space, compute and store c.
-	SUB sp, #0x40
+	sub sp, #0x40
 	# 0
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x00]
-	MOV r0, #0
-	MOV r1, #0
-	MOV r2, #0
-	MOV r3, #0
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x00]
-	STR r1, [sp, #0x04 + 0x00]
-	STR r2, [sp, #0x08 + 0x00]
-	STR r3, [sp, #0x0C + 0x00]
-	MOV r0, #0
-	MOV r1, #0
-	MOV r2, #0
-	MOV r3, #0
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x00]
-	STR r1, [sp, #0x14 + 0x00]
-	STR r2, [sp, #0x18 + 0x00]
-	STR r3, [sp, #0x1C + 0x00]
-	STR lr, [sp, #0x20 + 0x00]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x00]
+	mov r0, #0
+	mov r1, #0
+	mov r2, #0
+	mov r3, #0
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x00]
+	str r1, [sp, #0x04 + 0x00]
+	str r2, [sp, #0x08 + 0x00]
+	str r3, [sp, #0x0C + 0x00]
+	mov r0, #0
+	mov r1, #0
+	mov r2, #0
+	mov r3, #0
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x00]
+	str r1, [sp, #0x14 + 0x00]
+	str r2, [sp, #0x18 + 0x00]
+	str r3, [sp, #0x1C + 0x00]
+	str lr, [sp, #0x20 + 0x00]
 	# 1
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x04]
-	LDR r0, [sp, #0x00 + 0x04]
-	LDR r1, [sp, #0x04 + 0x04]
-	LDR r2, [sp, #0x08 + 0x04]
-	LDR r3, [sp, #0x0C + 0x04]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x04]
-	STR r1, [sp, #0x04 + 0x04]
-	STR r2, [sp, #0x08 + 0x04]
-	STR r3, [sp, #0x0C + 0x04]
-	LDR r0, [sp, #0x10 + 0x04]
-	LDR r1, [sp, #0x14 + 0x04]
-	LDR r2, [sp, #0x18 + 0x04]
-	LDR r3, [sp, #0x1C + 0x04]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x04]
-	STR r1, [sp, #0x14 + 0x04]
-	STR r2, [sp, #0x18 + 0x04]
-	STR r3, [sp, #0x1C + 0x04]
-	STR lr, [sp, #0x20 + 0x04]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x04]
+	ldr r0, [sp, #0x00 + 0x04]
+	ldr r1, [sp, #0x04 + 0x04]
+	ldr r2, [sp, #0x08 + 0x04]
+	ldr r3, [sp, #0x0C + 0x04]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x04]
+	str r1, [sp, #0x04 + 0x04]
+	str r2, [sp, #0x08 + 0x04]
+	str r3, [sp, #0x0C + 0x04]
+	ldr r0, [sp, #0x10 + 0x04]
+	ldr r1, [sp, #0x14 + 0x04]
+	ldr r2, [sp, #0x18 + 0x04]
+	ldr r3, [sp, #0x1C + 0x04]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x04]
+	str r1, [sp, #0x14 + 0x04]
+	str r2, [sp, #0x18 + 0x04]
+	str r3, [sp, #0x1C + 0x04]
+	str lr, [sp, #0x20 + 0x04]
 	# 2
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x08]
-	LDR r0, [sp, #0x00 + 0x08]
-	LDR r1, [sp, #0x04 + 0x08]
-	LDR r2, [sp, #0x08 + 0x08]
-	LDR r3, [sp, #0x0C + 0x08]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x08]
-	STR r1, [sp, #0x04 + 0x08]
-	STR r2, [sp, #0x08 + 0x08]
-	STR r3, [sp, #0x0C + 0x08]
-	LDR r0, [sp, #0x10 + 0x08]
-	LDR r1, [sp, #0x14 + 0x08]
-	LDR r2, [sp, #0x18 + 0x08]
-	LDR r3, [sp, #0x1C + 0x08]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x08]
-	STR r1, [sp, #0x14 + 0x08]
-	STR r2, [sp, #0x18 + 0x08]
-	STR r3, [sp, #0x1C + 0x08]
-	STR lr, [sp, #0x20 + 0x08]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x08]
+	ldr r0, [sp, #0x00 + 0x08]
+	ldr r1, [sp, #0x04 + 0x08]
+	ldr r2, [sp, #0x08 + 0x08]
+	ldr r3, [sp, #0x0C + 0x08]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x08]
+	str r1, [sp, #0x04 + 0x08]
+	str r2, [sp, #0x08 + 0x08]
+	str r3, [sp, #0x0C + 0x08]
+	ldr r0, [sp, #0x10 + 0x08]
+	ldr r1, [sp, #0x14 + 0x08]
+	ldr r2, [sp, #0x18 + 0x08]
+	ldr r3, [sp, #0x1C + 0x08]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x08]
+	str r1, [sp, #0x14 + 0x08]
+	str r2, [sp, #0x18 + 0x08]
+	str r3, [sp, #0x1C + 0x08]
+	str lr, [sp, #0x20 + 0x08]
 	# 3
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x0C]
-	LDR r0, [sp, #0x00 + 0x0C]
-	LDR r1, [sp, #0x04 + 0x0C]
-	LDR r2, [sp, #0x08 + 0x0C]
-	LDR r3, [sp, #0x0C + 0x0C]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x0C]
-	STR r1, [sp, #0x04 + 0x0C]
-	STR r2, [sp, #0x08 + 0x0C]
-	STR r3, [sp, #0x0C + 0x0C]
-	LDR r0, [sp, #0x10 + 0x0C]
-	LDR r1, [sp, #0x14 + 0x0C]
-	LDR r2, [sp, #0x18 + 0x0C]
-	LDR r3, [sp, #0x1C + 0x0C]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x0C]
-	STR r1, [sp, #0x14 + 0x0C]
-	STR r2, [sp, #0x18 + 0x0C]
-	STR r3, [sp, #0x1C + 0x0C]
-	STR lr, [sp, #0x20 + 0x0C]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x0C]
+	ldr r0, [sp, #0x00 + 0x0C]
+	ldr r1, [sp, #0x04 + 0x0C]
+	ldr r2, [sp, #0x08 + 0x0C]
+	ldr r3, [sp, #0x0C + 0x0C]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x0C]
+	str r1, [sp, #0x04 + 0x0C]
+	str r2, [sp, #0x08 + 0x0C]
+	str r3, [sp, #0x0C + 0x0C]
+	ldr r0, [sp, #0x10 + 0x0C]
+	ldr r1, [sp, #0x14 + 0x0C]
+	ldr r2, [sp, #0x18 + 0x0C]
+	ldr r3, [sp, #0x1C + 0x0C]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x0C]
+	str r1, [sp, #0x14 + 0x0C]
+	str r2, [sp, #0x18 + 0x0C]
+	str r3, [sp, #0x1C + 0x0C]
+	str lr, [sp, #0x20 + 0x0C]
 	# 4
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x10]
-	LDR r0, [sp, #0x00 + 0x10]
-	LDR r1, [sp, #0x04 + 0x10]
-	LDR r2, [sp, #0x08 + 0x10]
-	LDR r3, [sp, #0x0C + 0x10]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x10]
-	STR r1, [sp, #0x04 + 0x10]
-	STR r2, [sp, #0x08 + 0x10]
-	STR r3, [sp, #0x0C + 0x10]
-	LDR r0, [sp, #0x10 + 0x10]
-	LDR r1, [sp, #0x14 + 0x10]
-	LDR r2, [sp, #0x18 + 0x10]
-	LDR r3, [sp, #0x1C + 0x10]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x10]
-	STR r1, [sp, #0x14 + 0x10]
-	STR r2, [sp, #0x18 + 0x10]
-	STR r3, [sp, #0x1C + 0x10]
-	STR lr, [sp, #0x20 + 0x10]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x10]
+	ldr r0, [sp, #0x00 + 0x10]
+	ldr r1, [sp, #0x04 + 0x10]
+	ldr r2, [sp, #0x08 + 0x10]
+	ldr r3, [sp, #0x0C + 0x10]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x10]
+	str r1, [sp, #0x04 + 0x10]
+	str r2, [sp, #0x08 + 0x10]
+	str r3, [sp, #0x0C + 0x10]
+	ldr r0, [sp, #0x10 + 0x10]
+	ldr r1, [sp, #0x14 + 0x10]
+	ldr r2, [sp, #0x18 + 0x10]
+	ldr r3, [sp, #0x1C + 0x10]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x10]
+	str r1, [sp, #0x14 + 0x10]
+	str r2, [sp, #0x18 + 0x10]
+	str r3, [sp, #0x1C + 0x10]
+	str lr, [sp, #0x20 + 0x10]
 	# 5
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x14]
-	LDR r0, [sp, #0x00 + 0x14]
-	LDR r1, [sp, #0x04 + 0x14]
-	LDR r2, [sp, #0x08 + 0x14]
-	LDR r3, [sp, #0x0C + 0x14]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x14]
-	STR r1, [sp, #0x04 + 0x14]
-	STR r2, [sp, #0x08 + 0x14]
-	STR r3, [sp, #0x0C + 0x14]
-	LDR r0, [sp, #0x10 + 0x14]
-	LDR r1, [sp, #0x14 + 0x14]
-	LDR r2, [sp, #0x18 + 0x14]
-	LDR r3, [sp, #0x1C + 0x14]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x14]
-	STR r1, [sp, #0x14 + 0x14]
-	STR r2, [sp, #0x18 + 0x14]
-	STR r3, [sp, #0x1C + 0x14]
-	STR lr, [sp, #0x20 + 0x14]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x14]
+	ldr r0, [sp, #0x00 + 0x14]
+	ldr r1, [sp, #0x04 + 0x14]
+	ldr r2, [sp, #0x08 + 0x14]
+	ldr r3, [sp, #0x0C + 0x14]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x14]
+	str r1, [sp, #0x04 + 0x14]
+	str r2, [sp, #0x08 + 0x14]
+	str r3, [sp, #0x0C + 0x14]
+	ldr r0, [sp, #0x10 + 0x14]
+	ldr r1, [sp, #0x14 + 0x14]
+	ldr r2, [sp, #0x18 + 0x14]
+	ldr r3, [sp, #0x1C + 0x14]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x14]
+	str r1, [sp, #0x14 + 0x14]
+	str r2, [sp, #0x18 + 0x14]
+	str r3, [sp, #0x1C + 0x14]
+	str lr, [sp, #0x20 + 0x14]
 	# 6
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x18]
-	LDR r0, [sp, #0x00 + 0x18]
-	LDR r1, [sp, #0x04 + 0x18]
-	LDR r2, [sp, #0x08 + 0x18]
-	LDR r3, [sp, #0x0C + 0x18]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x18]
-	STR r1, [sp, #0x04 + 0x18]
-	STR r2, [sp, #0x08 + 0x18]
-	STR r3, [sp, #0x0C + 0x18]
-	LDR r0, [sp, #0x10 + 0x18]
-	LDR r1, [sp, #0x14 + 0x18]
-	LDR r2, [sp, #0x18 + 0x18]
-	LDR r3, [sp, #0x1C + 0x18]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x18]
-	STR r1, [sp, #0x14 + 0x18]
-	STR r2, [sp, #0x18 + 0x18]
-	STR r3, [sp, #0x1C + 0x18]
-	STR lr, [sp, #0x20 + 0x18]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x18]
+	ldr r0, [sp, #0x00 + 0x18]
+	ldr r1, [sp, #0x04 + 0x18]
+	ldr r2, [sp, #0x08 + 0x18]
+	ldr r3, [sp, #0x0C + 0x18]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x18]
+	str r1, [sp, #0x04 + 0x18]
+	str r2, [sp, #0x08 + 0x18]
+	str r3, [sp, #0x0C + 0x18]
+	ldr r0, [sp, #0x10 + 0x18]
+	ldr r1, [sp, #0x14 + 0x18]
+	ldr r2, [sp, #0x18 + 0x18]
+	ldr r3, [sp, #0x1C + 0x18]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x18]
+	str r1, [sp, #0x14 + 0x18]
+	str r2, [sp, #0x18 + 0x18]
+	str r3, [sp, #0x1C + 0x18]
+	str lr, [sp, #0x20 + 0x18]
 	# 7
-	MOV lr, #0
-	LDR ip, [sp, #0x40 + 0x1C]
-	LDR r0, [sp, #0x00 + 0x1C]
-	LDR r1, [sp, #0x04 + 0x1C]
-	LDR r2, [sp, #0x08 + 0x1C]
-	LDR r3, [sp, #0x0C + 0x1C]
-	UMAAL r0, lr, ip, v1
-	UMAAL r1, lr, ip, v2
-	UMAAL r2, lr, ip, v3
-	UMAAL r3, lr, ip, v4
-	STR r0, [sp, #0x00 + 0x1C]
-	STR r1, [sp, #0x04 + 0x1C]
-	STR r2, [sp, #0x08 + 0x1C]
-	STR r3, [sp, #0x0C + 0x1C]
-	LDR r0, [sp, #0x10 + 0x1C]
-	LDR r1, [sp, #0x14 + 0x1C]
-	LDR r2, [sp, #0x18 + 0x1C]
-	LDR r3, [sp, #0x1C + 0x1C]
-	UMAAL r0, lr, ip, v5
-	UMAAL r1, lr, ip, v6
-	UMAAL r2, lr, ip, v7
-	UMAAL r3, lr, ip, v8
-	STR r0, [sp, #0x10 + 0x1C]
-	STR r1, [sp, #0x14 + 0x1C]
-	STR r2, [sp, #0x18 + 0x1C]
-	STR r3, [sp, #0x1C + 0x1C]
-	STR lr, [sp, #0x20 + 0x1C]
+	mov lr, #0
+	ldr ip, [sp, #0x40 + 0x1C]
+	ldr r0, [sp, #0x00 + 0x1C]
+	ldr r1, [sp, #0x04 + 0x1C]
+	ldr r2, [sp, #0x08 + 0x1C]
+	ldr r3, [sp, #0x0C + 0x1C]
+	umaal r0, lr, ip, v1
+	umaal r1, lr, ip, v2
+	umaal r2, lr, ip, v3
+	umaal r3, lr, ip, v4
+	str r0, [sp, #0x00 + 0x1C]
+	str r1, [sp, #0x04 + 0x1C]
+	str r2, [sp, #0x08 + 0x1C]
+	str r3, [sp, #0x0C + 0x1C]
+	ldr r0, [sp, #0x10 + 0x1C]
+	ldr r1, [sp, #0x14 + 0x1C]
+	ldr r2, [sp, #0x18 + 0x1C]
+	ldr r3, [sp, #0x1C + 0x1C]
+	umaal r0, lr, ip, v5
+	umaal r1, lr, ip, v6
+	umaal r2, lr, ip, v7
+	umaal r3, lr, ip, v8
+	str r0, [sp, #0x10 + 0x1C]
+	str r1, [sp, #0x14 + 0x1C]
+	str r2, [sp, #0x18 + 0x1C]
+	str r3, [sp, #0x1C + 0x1C]
+	str lr, [sp, #0x20 + 0x1C]
 
     # Load c8~cf and compute w0~w5.
-	# Tips: set ip = 1 such that UMLAL ra, rb, rc, ip ==> (rb|ra) += rc.
-	LDR v1, [sp, 0x20]
-	LDR v2, [sp, 0x24]
-	LDR v3, [sp, 0x28]
-	LDR v4, [sp, 0x2C]
-	LDR v5, [sp, 0x30]
-	LDR v6, [sp, 0x34]
-	LDR v7, [sp, 0x38]
-	LDR v8, [sp, 0x3C]
-    MOV ip, #1
-    MOV lr, #0
+	# Tips: set ip = 1 such that umlal ra, rb, rc, ip ==> (rb|ra) += rc.
+	ldr v1, [sp, 0x20]
+	ldr v2, [sp, 0x24]
+	ldr v3, [sp, 0x28]
+	ldr v4, [sp, 0x2C]
+	ldr v5, [sp, 0x30]
+	ldr v6, [sp, 0x34]
+	ldr v7, [sp, 0x38]
+	ldr v8, [sp, 0x3C]
+    mov ip, #1
+    mov lr, #0
 
     # Note, The 4 bits overflow values of w0, w1...w5 are stored in bits 0-3, 4-8...20-24 of register lr, respectively.
     # w0 = c8 + c9 + c10 + c11
-	UMULL r0, r1, v1, ip
-	UMLAL r0, r1, v2, ip
-	UMLAL r0, r1, v3, ip
-	UMLAL r0, r1, v4, ip
-    BFI lr, r1, #0, #4
+	umull r0, r1, v1, ip
+	umlal r0, r1, v2, ip
+	umlal r0, r1, v3, ip
+	umlal r0, r1, v4, ip
+    bfi lr, r1, #0, #4
 
     # w1 = c8 + c13
-	UMULL r1, r2, v1, ip
-	UMLAL r1, r2, v6, ip
-	BFI lr, r2, #4, #4
+	umull r1, r2, v1, ip
+	umlal r1, r2, v6, ip
+	bfi lr, r2, #4, #4
 
     # w2 = c9 + c14
-	UMULL r2, r3, v2, ip
-	UMLAL r2, r3, v7, ip
-	BFI lr, r3, #8, #4
+	umull r2, r3, v2, ip
+	umlal r2, r3, v7, ip
+	bfi lr, r3, #8, #4
 
     # w3 = c14 + c15, register r4,r5,r6,r7 is free now.
-	UMULL r6, r7, v7, ip
-	UMLAL r6, r7, v8, ip
-	BFI lr, r7, #12, #4
-	MOV r3, r6
+	umull r6, r7, v7, ip
+	umlal r6, r7, v8, ip
+	bfi lr, r7, #12, #4
+	mov r3, r6
 
     # w4 = w3 + c13
-	UMLAL r6, r7, v6, ip
-	BFI lr, r7, #16, #4
-	MOV r4, r6
+	umlal r6, r7, v6, ip
+	bfi lr, r7, #16, #4
+	mov r4, r6
 
     # w5 = w4 + c12
-	UMLAL r6, r7, v5, ip
-	BFI lr, r7, #20, #4
-	MOV r5, r6
+	umlal r6, r7, v5, ip
+	bfi lr, r7, #20, #4
+	mov r5, r6
 
     # w0 = w0 + w5
-    UBFX v5, lr, #0, #4
-    ADDS r6, r6, r0
-    ADCS r7, r7, v5
-    BFI lr, r7, #0, #4
-    MOV r0, r6
-    MOV r7, lr
+    ubfx v5, lr, #0, #4
+    adds r6, r6, r0
+    adcs r7, r7, v5
+    bfi lr, r7, #0, #4
+    mov r0, r6
+    mov r7, lr
 
     # Load c0,c1,c2,c3 and compute t0,t1,t2,t3 where lr is used as the carry register.
-    # Tips: set ip = 0 such that UMAAL ra, lr, rx, ip ==> (lr|ra) = ra + lr.
-    LDM sp, {v5-v8}
-    MOV ip, #0
-    MOV lr, #0
+    # Tips: set ip = 0 such that umaal ra, lr, rx, ip ==> (lr|ra) = ra + lr.
+    ldm sp, {v5-v8}
+    mov ip, #0
+    mov lr, #0
 
     # t0 = c0 + w0 + w4
-    UBFX r6, r7, #0, #4
-	ADDS v5, r0
-	ADCS lr, r6
-    UBFX r6, r7, #16, #4
-    ADDS v5, r4
-    ADCS lr, r6
+    ubfx r6, r7, #0, #4
+	adds v5, r0
+	adcs lr, r6
+    ubfx r6, r7, #16, #4
+    adds v5, r4
+    adcs lr, r6
 
     # t1 = c1 + w0 + w4 - w1
-	UMAAL v6, lr, r0, ip
-	ADDS v6, r4
-	ADCS lr, r6
-	UBFX r6, r7, #0, #4
-	ADDS v6, r0
-	ADCS lr, r6
-	UBFX r6, r7, #4, #4
-	SUBS v6, r1
-	SBCS lr, r6
+	umaal v6, lr, r0, ip
+	adds v6, r4
+	adcs lr, r6
+	ubfx r6, r7, #0, #4
+	adds v6, r0
+	adcs lr, r6
+	ubfx r6, r7, #4, #4
+	subs v6, r1
+	sbcs lr, r6
 
     # t2 = c2 - w1 - w2
-	UMAAL v7, lr, r0, ip
-	SUBS v7, r1
-	SBCS lr, r6
-	UBFX r6, r7, #8, #4
-	SUBS v7, r2
-	SBCS lr, r6
+	umaal v7, lr, r0, ip
+	subs v7, r1
+	sbcs lr, r6
+	ubfx r6, r7, #8, #4
+	subs v7, r2
+	sbcs lr, r6
 
     # t3 = c3 + w5 + w1 + cb, register r1 is free now, load cb to r1
-	ADDS v8, v8, lr
-	MOV lr, #0
-	UBFX r6, r7, #4, #4
-	ADDS v8, r1
-	ADCS lr, r6
-	UBFX r6, r7, #20, #4
-	ADDS v8, r5
-	ADCS lr, r6
-	LDR r1, [sp, #0x2C]
-	ADDS v8, r1
-	ADCS lr, #0
+	adds v8, v8, lr
+	mov lr, #0
+	ubfx r6, r7, #4, #4
+	adds v8, r1
+	adcs lr, r6
+	ubfx r6, r7, #20, #4
+	adds v8, r5
+	adcs lr, r6
+	ldr r1, [sp, #0x2C]
+	adds v8, r1
+	adcs lr, #0
 
 	# Stroe t0,t1,t2,t3, load c4,c5,c6,c7, compute t4,t5,t6,t7,t8
-	STM sp, {v5-v8}
-	LDR v5, [sp, #0x10]
-	LDR v6, [sp, #0x14]
-	LDR v7, [sp, #0x18]
-	LDR v8, [sp, #0x1C]
+	stm sp, {v5-v8}
+	ldr v5, [sp, #0x10]
+	ldr v6, [sp, #0x14]
+	ldr v7, [sp, #0x18]
+	ldr v8, [sp, #0x1C]
 
     # t4 = c4 + w5 + w2
-	UMAAL v5, lr, r0, ip
-	ADDS v5, r5
-    ADCS lr, r6
-    UBFX r6, r7, #8, #4
-	ADDS v5, r2
-	ADCS lr, r6
+	umaal v5, lr, r0, ip
+	adds v5, r5
+    adcs lr, r6
+    ubfx r6, r7, #8, #4
+	adds v5, r2
+	adcs lr, r6
 
     # t5 = c5 + w4 + ca + cf, register r2 and r4 is free now, load ca to r2 and cf to r4
-	UMAAL v6, lr, r0, ip
-	UBFX r6, r7, #16, #4
-	ADDS v6, r4
-	ADCS lr, r6
-	LDR r2, [sp, #0x28]
-    LDR r4, [sp, #0x3C]
-    ADDS v6, r2
-    ADCS lr, #0
-    ADDS v6, r4
-    ADCS lr, #0
+	umaal v6, lr, r0, ip
+	ubfx r6, r7, #16, #4
+	adds v6, r4
+	adcs lr, r6
+	ldr r2, [sp, #0x28]
+    ldr r4, [sp, #0x3C]
+    adds v6, r2
+    adcs lr, #0
+    adds v6, r4
+    adcs lr, #0
 
     # t6 = c6 + w3 + cb
-	UMAAL v7, lr, r0, ip
-	UBFX r6, r7, #12, #4
-	ADDS v7, r3
-	ADCS lr, r6
-	ADDS v7, r1
-	ADCS lr, #0
+	umaal v7, lr, r0, ip
+	ubfx r6, r7, #12, #4
+	adds v7, r3
+	adcs lr, r6
+	adds v7, r1
+	adcs lr, #0
 
     # t7 = c7 + w0 + w5 + cf, t8 = lr
-	UMAAL v8, lr, r0, ip
-	UBFX r6, r7, #0, #4
-	ADDS v8, r0
-	ADCS lr, r6
-	UBFX r6, r7, #20, #4
-	ADDS v8, r5
-	ADCS lr, r6
-    ADDS v8, r4
-    ADCS lr, #0
+	umaal v8, lr, r0, ip
+	ubfx r6, r7, #0, #4
+	adds v8, r0
+	adcs lr, r6
+	ubfx r6, r7, #20, #4
+	adds v8, r5
+	adcs lr, r6
+    adds v8, r4
+    adcs lr, #0
 
 	# compute r = t7 + t8 | t6 | t5 | t4 | t3 + t8 | t2 - t8 | t1 | t0 + t8
-    LDM sp, {v1-v4}
-	ADDS v1, lr
-	ADCS v2, #0
-	ADCS v3, #0
-	ADCS v4, lr
-	ADCS v5, #0
-	ADCS v6, #0
-	ADCS v7, #0
-	ADCS v8, lr
-	SUBS v3, lr
-	SBCS v4, #0
-	SBCS v5, #0
-	SBCS v6, #0
-	SBCS v7, #0
-	SBCS v8, #0
-	ADD sp, #0x60
-	POP {r0}
-	STM r0, {v1-v8}
-	POP {v1-v8, ip, lr}
-	RET
+    ldm sp, {v1-v4}
+	adds v1, lr
+	adcs v2, #0
+	adcs v3, #0
+	adcs v4, lr
+	adcs v5, #0
+	adcs v6, #0
+	adcs v7, #0
+	adcs v8, lr
+	subs v3, lr
+	sbcs v4, #0
+	sbcs v5, #0
+	sbcs v6, #0
+	sbcs v7, #0
+	sbcs v8, #0
+	add sp, #0x60
+	pop {r0}
+	stm r0, {v1-v8}
+	pop {v1-v8, ip, lr}
+	ret
 
 ### Compute r ≡ a² mod sm2_p.
 # void ECP_Sm2FpSqr(sm2_fp r, const sm2_fp a);
 .global ECP_Sm2FpSqr
 .type   ECP_Sm2FpSqr, %function
 ECP_Sm2FpSqr:
-	PUSH {v1-v8, ip, lr}
-	PUSH {r0}
+	push {v1-v8, ip, lr}
+	push {r0}
 
 	# Allocate stack space, load a, compute c = a * a
-    LDM r1, {v1-v8}
-    SUB sp, #0x40
+    ldm r1, {v1-v8}
+    sub sp, #0x40
 
 	# 0
-	MOV lr, #0
-	MOV r0, #0
-	MOV r1, #0
-	MOV r2, #0
-	MOV r3, #0
-	UMAAL r0, lr, v1, v1
-	UMAAL r1, lr, v1, v2
-	UMAAL r2, lr, v1, v3
-	UMAAL r3, lr, v1, v4
-	STR r0, [sp, #0x00 + 0x00]
-	STR r1, [sp, #0x04 + 0x00]
-	STR r2, [sp, #0x08 + 0x00]
-	STR r3, [sp, #0x0C + 0x00]
-	MOV r0, #0
-	MOV r1, #0
-	MOV r2, #0
-	MOV r3, #0
-	UMAAL r0, lr, v1, v5
-	UMAAL r1, lr, v1, v6
-	UMAAL r2, lr, v1, v7
-	UMAAL r3, lr, v1, v8
-	STR r0, [sp, #0x10 + 0x00]
-	STR r1, [sp, #0x14 + 0x00]
-	STR r2, [sp, #0x18 + 0x00]
-	STR r3, [sp, #0x1C + 0x00]
-	STR lr, [sp, #0x20 + 0x00]
+	mov lr, #0
+	mov r0, #0
+	mov r1, #0
+	mov r2, #0
+	mov r3, #0
+	umaal r0, lr, v1, v1
+	umaal r1, lr, v1, v2
+	umaal r2, lr, v1, v3
+	umaal r3, lr, v1, v4
+	str r0, [sp, #0x00 + 0x00]
+	str r1, [sp, #0x04 + 0x00]
+	str r2, [sp, #0x08 + 0x00]
+	str r3, [sp, #0x0C + 0x00]
+	mov r0, #0
+	mov r1, #0
+	mov r2, #0
+	mov r3, #0
+	umaal r0, lr, v1, v5
+	umaal r1, lr, v1, v6
+	umaal r2, lr, v1, v7
+	umaal r3, lr, v1, v8
+	str r0, [sp, #0x10 + 0x00]
+	str r1, [sp, #0x14 + 0x00]
+	str r2, [sp, #0x18 + 0x00]
+	str r3, [sp, #0x1C + 0x00]
+	str lr, [sp, #0x20 + 0x00]
 	# 1
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x04]
-	LDR r1, [sp, #0x04 + 0x04]
-	LDR r2, [sp, #0x08 + 0x04]
-	LDR r3, [sp, #0x0C + 0x04]
-	UMAAL r0, lr, v2, v1
-	UMAAL r1, lr, v2, v2
-	UMAAL r2, lr, v2, v3
-	UMAAL r3, lr, v2, v4
-	STR r0, [sp, #0x00 + 0x04]
-	STR r1, [sp, #0x04 + 0x04]
-	STR r2, [sp, #0x08 + 0x04]
-	STR r3, [sp, #0x0C + 0x04]
-	LDR r0, [sp, #0x10 + 0x04]
-	LDR r1, [sp, #0x14 + 0x04]
-	LDR r2, [sp, #0x18 + 0x04]
-	LDR r3, [sp, #0x1C + 0x04]
-	UMAAL r0, lr, v2, v5
-	UMAAL r1, lr, v2, v6
-	UMAAL r2, lr, v2, v7
-	UMAAL r3, lr, v2, v8
-	STR r0, [sp, #0x10 + 0x04]
-	STR r1, [sp, #0x14 + 0x04]
-	STR r2, [sp, #0x18 + 0x04]
-	STR r3, [sp, #0x1C + 0x04]
-	STR lr, [sp, #0x20 + 0x04]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x04]
+	ldr r1, [sp, #0x04 + 0x04]
+	ldr r2, [sp, #0x08 + 0x04]
+	ldr r3, [sp, #0x0C + 0x04]
+	umaal r0, lr, v2, v1
+	umaal r1, lr, v2, v2
+	umaal r2, lr, v2, v3
+	umaal r3, lr, v2, v4
+	str r0, [sp, #0x00 + 0x04]
+	str r1, [sp, #0x04 + 0x04]
+	str r2, [sp, #0x08 + 0x04]
+	str r3, [sp, #0x0C + 0x04]
+	ldr r0, [sp, #0x10 + 0x04]
+	ldr r1, [sp, #0x14 + 0x04]
+	ldr r2, [sp, #0x18 + 0x04]
+	ldr r3, [sp, #0x1C + 0x04]
+	umaal r0, lr, v2, v5
+	umaal r1, lr, v2, v6
+	umaal r2, lr, v2, v7
+	umaal r3, lr, v2, v8
+	str r0, [sp, #0x10 + 0x04]
+	str r1, [sp, #0x14 + 0x04]
+	str r2, [sp, #0x18 + 0x04]
+	str r3, [sp, #0x1C + 0x04]
+	str lr, [sp, #0x20 + 0x04]
 	# 2
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x08]
-	LDR r1, [sp, #0x04 + 0x08]
-	LDR r2, [sp, #0x08 + 0x08]
-	LDR r3, [sp, #0x0C + 0x08]
-	UMAAL r0, lr, v3, v1
-	UMAAL r1, lr, v3, v2
-	UMAAL r2, lr, v3, v3
-	UMAAL r3, lr, v3, v4
-	STR r0, [sp, #0x00 + 0x08]
-	STR r1, [sp, #0x04 + 0x08]
-	STR r2, [sp, #0x08 + 0x08]
-	STR r3, [sp, #0x0C + 0x08]
-	LDR r0, [sp, #0x10 + 0x08]
-	LDR r1, [sp, #0x14 + 0x08]
-	LDR r2, [sp, #0x18 + 0x08]
-	LDR r3, [sp, #0x1C + 0x08]
-	UMAAL r0, lr, v3, v5
-	UMAAL r1, lr, v3, v6
-	UMAAL r2, lr, v3, v7
-	UMAAL r3, lr, v3, v8
-	STR r0, [sp, #0x10 + 0x08]
-	STR r1, [sp, #0x14 + 0x08]
-	STR r2, [sp, #0x18 + 0x08]
-	STR r3, [sp, #0x1C + 0x08]
-	STR lr, [sp, #0x20 + 0x08]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x08]
+	ldr r1, [sp, #0x04 + 0x08]
+	ldr r2, [sp, #0x08 + 0x08]
+	ldr r3, [sp, #0x0C + 0x08]
+	umaal r0, lr, v3, v1
+	umaal r1, lr, v3, v2
+	umaal r2, lr, v3, v3
+	umaal r3, lr, v3, v4
+	str r0, [sp, #0x00 + 0x08]
+	str r1, [sp, #0x04 + 0x08]
+	str r2, [sp, #0x08 + 0x08]
+	str r3, [sp, #0x0C + 0x08]
+	ldr r0, [sp, #0x10 + 0x08]
+	ldr r1, [sp, #0x14 + 0x08]
+	ldr r2, [sp, #0x18 + 0x08]
+	ldr r3, [sp, #0x1C + 0x08]
+	umaal r0, lr, v3, v5
+	umaal r1, lr, v3, v6
+	umaal r2, lr, v3, v7
+	umaal r3, lr, v3, v8
+	str r0, [sp, #0x10 + 0x08]
+	str r1, [sp, #0x14 + 0x08]
+	str r2, [sp, #0x18 + 0x08]
+	str r3, [sp, #0x1C + 0x08]
+	str lr, [sp, #0x20 + 0x08]
 	# 3
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x0C]
-	LDR r1, [sp, #0x04 + 0x0C]
-	LDR r2, [sp, #0x08 + 0x0C]
-	LDR r3, [sp, #0x0C + 0x0C]
-	UMAAL r0, lr, v4, v1
-	UMAAL r1, lr, v4, v2
-	UMAAL r2, lr, v4, v3
-	UMAAL r3, lr, v4, v4
-	STR r0, [sp, #0x00 + 0x0C]
-	STR r1, [sp, #0x04 + 0x0C]
-	STR r2, [sp, #0x08 + 0x0C]
-	STR r3, [sp, #0x0C + 0x0C]
-	LDR r0, [sp, #0x10 + 0x0C]
-	LDR r1, [sp, #0x14 + 0x0C]
-	LDR r2, [sp, #0x18 + 0x0C]
-	LDR r3, [sp, #0x1C + 0x0C]
-	UMAAL r0, lr, v4, v5
-	UMAAL r1, lr, v4, v6
-	UMAAL r2, lr, v4, v7
-	UMAAL r3, lr, v4, v8
-	STR r0, [sp, #0x10 + 0x0C]
-	STR r1, [sp, #0x14 + 0x0C]
-	STR r2, [sp, #0x18 + 0x0C]
-	STR r3, [sp, #0x1C + 0x0C]
-	STR lr, [sp, #0x20 + 0x0C]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x0C]
+	ldr r1, [sp, #0x04 + 0x0C]
+	ldr r2, [sp, #0x08 + 0x0C]
+	ldr r3, [sp, #0x0C + 0x0C]
+	umaal r0, lr, v4, v1
+	umaal r1, lr, v4, v2
+	umaal r2, lr, v4, v3
+	umaal r3, lr, v4, v4
+	str r0, [sp, #0x00 + 0x0C]
+	str r1, [sp, #0x04 + 0x0C]
+	str r2, [sp, #0x08 + 0x0C]
+	str r3, [sp, #0x0C + 0x0C]
+	ldr r0, [sp, #0x10 + 0x0C]
+	ldr r1, [sp, #0x14 + 0x0C]
+	ldr r2, [sp, #0x18 + 0x0C]
+	ldr r3, [sp, #0x1C + 0x0C]
+	umaal r0, lr, v4, v5
+	umaal r1, lr, v4, v6
+	umaal r2, lr, v4, v7
+	umaal r3, lr, v4, v8
+	str r0, [sp, #0x10 + 0x0C]
+	str r1, [sp, #0x14 + 0x0C]
+	str r2, [sp, #0x18 + 0x0C]
+	str r3, [sp, #0x1C + 0x0C]
+	str lr, [sp, #0x20 + 0x0C]
 	# 4
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x10]
-	LDR r1, [sp, #0x04 + 0x10]
-	LDR r2, [sp, #0x08 + 0x10]
-	LDR r3, [sp, #0x0C + 0x10]
-	UMAAL r0, lr, v5, v1
-	UMAAL r1, lr, v5, v2
-	UMAAL r2, lr, v5, v3
-	UMAAL r3, lr, v5, v4
-	STR r0, [sp, #0x00 + 0x10]
-	STR r1, [sp, #0x04 + 0x10]
-	STR r2, [sp, #0x08 + 0x10]
-	STR r3, [sp, #0x0C + 0x10]
-	LDR r0, [sp, #0x10 + 0x10]
-	LDR r1, [sp, #0x14 + 0x10]
-	LDR r2, [sp, #0x18 + 0x10]
-	LDR r3, [sp, #0x1C + 0x10]
-	UMAAL r0, lr, v5, v5
-	UMAAL r1, lr, v5, v6
-	UMAAL r2, lr, v5, v7
-	UMAAL r3, lr, v5, v8
-	STR r0, [sp, #0x10 + 0x10]
-	STR r1, [sp, #0x14 + 0x10]
-	STR r2, [sp, #0x18 + 0x10]
-	STR r3, [sp, #0x1C + 0x10]
-	STR lr, [sp, #0x20 + 0x10]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x10]
+	ldr r1, [sp, #0x04 + 0x10]
+	ldr r2, [sp, #0x08 + 0x10]
+	ldr r3, [sp, #0x0C + 0x10]
+	umaal r0, lr, v5, v1
+	umaal r1, lr, v5, v2
+	umaal r2, lr, v5, v3
+	umaal r3, lr, v5, v4
+	str r0, [sp, #0x00 + 0x10]
+	str r1, [sp, #0x04 + 0x10]
+	str r2, [sp, #0x08 + 0x10]
+	str r3, [sp, #0x0C + 0x10]
+	ldr r0, [sp, #0x10 + 0x10]
+	ldr r1, [sp, #0x14 + 0x10]
+	ldr r2, [sp, #0x18 + 0x10]
+	ldr r3, [sp, #0x1C + 0x10]
+	umaal r0, lr, v5, v5
+	umaal r1, lr, v5, v6
+	umaal r2, lr, v5, v7
+	umaal r3, lr, v5, v8
+	str r0, [sp, #0x10 + 0x10]
+	str r1, [sp, #0x14 + 0x10]
+	str r2, [sp, #0x18 + 0x10]
+	str r3, [sp, #0x1C + 0x10]
+	str lr, [sp, #0x20 + 0x10]
 	# 5
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x14]
-	LDR r1, [sp, #0x04 + 0x14]
-	LDR r2, [sp, #0x08 + 0x14]
-	LDR r3, [sp, #0x0C + 0x14]
-	UMAAL r0, lr, v6, v1
-	UMAAL r1, lr, v6, v2
-	UMAAL r2, lr, v6, v3
-	UMAAL r3, lr, v6, v4
-	STR r0, [sp, #0x00 + 0x14]
-	STR r1, [sp, #0x04 + 0x14]
-	STR r2, [sp, #0x08 + 0x14]
-	STR r3, [sp, #0x0C + 0x14]
-	LDR r0, [sp, #0x10 + 0x14]
-	LDR r1, [sp, #0x14 + 0x14]
-	LDR r2, [sp, #0x18 + 0x14]
-	LDR r3, [sp, #0x1C + 0x14]
-	UMAAL r0, lr, v6, v5
-	UMAAL r1, lr, v6, v6
-	UMAAL r2, lr, v6, v7
-	UMAAL r3, lr, v6, v8
-	STR r0, [sp, #0x10 + 0x14]
-	STR r1, [sp, #0x14 + 0x14]
-	STR r2, [sp, #0x18 + 0x14]
-	STR r3, [sp, #0x1C + 0x14]
-	STR lr, [sp, #0x20 + 0x14]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x14]
+	ldr r1, [sp, #0x04 + 0x14]
+	ldr r2, [sp, #0x08 + 0x14]
+	ldr r3, [sp, #0x0C + 0x14]
+	umaal r0, lr, v6, v1
+	umaal r1, lr, v6, v2
+	umaal r2, lr, v6, v3
+	umaal r3, lr, v6, v4
+	str r0, [sp, #0x00 + 0x14]
+	str r1, [sp, #0x04 + 0x14]
+	str r2, [sp, #0x08 + 0x14]
+	str r3, [sp, #0x0C + 0x14]
+	ldr r0, [sp, #0x10 + 0x14]
+	ldr r1, [sp, #0x14 + 0x14]
+	ldr r2, [sp, #0x18 + 0x14]
+	ldr r3, [sp, #0x1C + 0x14]
+	umaal r0, lr, v6, v5
+	umaal r1, lr, v6, v6
+	umaal r2, lr, v6, v7
+	umaal r3, lr, v6, v8
+	str r0, [sp, #0x10 + 0x14]
+	str r1, [sp, #0x14 + 0x14]
+	str r2, [sp, #0x18 + 0x14]
+	str r3, [sp, #0x1C + 0x14]
+	str lr, [sp, #0x20 + 0x14]
 	# 6
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x18]
-	LDR r1, [sp, #0x04 + 0x18]
-	LDR r2, [sp, #0x08 + 0x18]
-	LDR r3, [sp, #0x0C + 0x18]
-	UMAAL r0, lr, v7, v1
-	UMAAL r1, lr, v7, v2
-	UMAAL r2, lr, v7, v3
-	UMAAL r3, lr, v7, v4
-	STR r0, [sp, #0x00 + 0x18]
-	STR r1, [sp, #0x04 + 0x18]
-	STR r2, [sp, #0x08 + 0x18]
-	STR r3, [sp, #0x0C + 0x18]
-	LDR r0, [sp, #0x10 + 0x18]
-	LDR r1, [sp, #0x14 + 0x18]
-	LDR r2, [sp, #0x18 + 0x18]
-	LDR r3, [sp, #0x1C + 0x18]
-	UMAAL r0, lr, v7, v5
-	UMAAL r1, lr, v7, v6
-	UMAAL r2, lr, v7, v7
-	UMAAL r3, lr, v7, v8
-	STR r0, [sp, #0x10 + 0x18]
-	STR r1, [sp, #0x14 + 0x18]
-	STR r2, [sp, #0x18 + 0x18]
-	STR r3, [sp, #0x1C + 0x18]
-	STR lr, [sp, #0x20 + 0x18]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x18]
+	ldr r1, [sp, #0x04 + 0x18]
+	ldr r2, [sp, #0x08 + 0x18]
+	ldr r3, [sp, #0x0C + 0x18]
+	umaal r0, lr, v7, v1
+	umaal r1, lr, v7, v2
+	umaal r2, lr, v7, v3
+	umaal r3, lr, v7, v4
+	str r0, [sp, #0x00 + 0x18]
+	str r1, [sp, #0x04 + 0x18]
+	str r2, [sp, #0x08 + 0x18]
+	str r3, [sp, #0x0C + 0x18]
+	ldr r0, [sp, #0x10 + 0x18]
+	ldr r1, [sp, #0x14 + 0x18]
+	ldr r2, [sp, #0x18 + 0x18]
+	ldr r3, [sp, #0x1C + 0x18]
+	umaal r0, lr, v7, v5
+	umaal r1, lr, v7, v6
+	umaal r2, lr, v7, v7
+	umaal r3, lr, v7, v8
+	str r0, [sp, #0x10 + 0x18]
+	str r1, [sp, #0x14 + 0x18]
+	str r2, [sp, #0x18 + 0x18]
+	str r3, [sp, #0x1C + 0x18]
+	str lr, [sp, #0x20 + 0x18]
 	# 7
-	MOV lr, #0
-	LDR r0, [sp, #0x00 + 0x1C]
-	LDR r1, [sp, #0x04 + 0x1C]
-	LDR r2, [sp, #0x08 + 0x1C]
-	LDR r3, [sp, #0x0C + 0x1C]
-	UMAAL r0, lr, v8, v1
-	UMAAL r1, lr, v8, v2
-	UMAAL r2, lr, v8, v3
-	UMAAL r3, lr, v8, v4
-	STR r0, [sp, #0x00 + 0x1C]
-	STR r1, [sp, #0x04 + 0x1C]
-	STR r2, [sp, #0x08 + 0x1C]
-	STR r3, [sp, #0x0C + 0x1C]
-	LDR r0, [sp, #0x10 + 0x1C]
-	LDR r1, [sp, #0x14 + 0x1C]
-	LDR r2, [sp, #0x18 + 0x1C]
-	LDR r3, [sp, #0x1C + 0x1C]
-	UMAAL r0, lr, v8, v5
-	UMAAL r1, lr, v8, v6
-	UMAAL r2, lr, v8, v7
-	UMAAL r3, lr, v8, v8
-	STR r0, [sp, #0x10 + 0x1C]
-	STR r1, [sp, #0x14 + 0x1C]
-	STR r2, [sp, #0x18 + 0x1C]
-	STR r3, [sp, #0x1C + 0x1C]
-	STR lr, [sp, #0x20 + 0x1C]
+	mov lr, #0
+	ldr r0, [sp, #0x00 + 0x1C]
+	ldr r1, [sp, #0x04 + 0x1C]
+	ldr r2, [sp, #0x08 + 0x1C]
+	ldr r3, [sp, #0x0C + 0x1C]
+	umaal r0, lr, v8, v1
+	umaal r1, lr, v8, v2
+	umaal r2, lr, v8, v3
+	umaal r3, lr, v8, v4
+	str r0, [sp, #0x00 + 0x1C]
+	str r1, [sp, #0x04 + 0x1C]
+	str r2, [sp, #0x08 + 0x1C]
+	str r3, [sp, #0x0C + 0x1C]
+	ldr r0, [sp, #0x10 + 0x1C]
+	ldr r1, [sp, #0x14 + 0x1C]
+	ldr r2, [sp, #0x18 + 0x1C]
+	ldr r3, [sp, #0x1C + 0x1C]
+	umaal r0, lr, v8, v5
+	umaal r1, lr, v8, v6
+	umaal r2, lr, v8, v7
+	umaal r3, lr, v8, v8
+	str r0, [sp, #0x10 + 0x1C]
+	str r1, [sp, #0x14 + 0x1C]
+	str r2, [sp, #0x18 + 0x1C]
+	str r3, [sp, #0x1C + 0x1C]
+	str lr, [sp, #0x20 + 0x1C]
 
     # Load c8~cf and compute w0~w5.
-	# Tips: set ip = 1 such that UMLAL ra, rb, rc, ip ==> (rb|ra) += rc.
-	LDR v1, [sp, 0x20]
-	LDR v2, [sp, 0x24]
-	LDR v3, [sp, 0x28]
-	LDR v4, [sp, 0x2C]
-	LDR v5, [sp, 0x30]
-	LDR v6, [sp, 0x34]
-	LDR v7, [sp, 0x38]
-	LDR v8, [sp, 0x3C]
-    MOV ip, #1
-    MOV lr, #0
+	# Tips: set ip = 1 such that umlal ra, rb, rc, ip ==> (rb|ra) += rc.
+	ldr v1, [sp, 0x20]
+	ldr v2, [sp, 0x24]
+	ldr v3, [sp, 0x28]
+	ldr v4, [sp, 0x2C]
+	ldr v5, [sp, 0x30]
+	ldr v6, [sp, 0x34]
+	ldr v7, [sp, 0x38]
+	ldr v8, [sp, 0x3C]
+    mov ip, #1
+    mov lr, #0
 
     # Note, The 4 bits overflow values of w0, w1...w5 are stored in bits 0-3, 4-8...20-24 of register lr, respectively.
     # w0 = c8 + c9 + c10 + c11
-	UMULL r0, r1, v1, ip
-	UMLAL r0, r1, v2, ip
-	UMLAL r0, r1, v3, ip
-	UMLAL r0, r1, v4, ip
-    BFI lr, r1, #0, #4
+	umull r0, r1, v1, ip
+	umlal r0, r1, v2, ip
+	umlal r0, r1, v3, ip
+	umlal r0, r1, v4, ip
+    bfi lr, r1, #0, #4
 
     # w1 = c8 + c13
-	UMULL r1, r2, v1, ip
-	UMLAL r1, r2, v6, ip
-	BFI lr, r2, #4, #4
+	umull r1, r2, v1, ip
+	umlal r1, r2, v6, ip
+	bfi lr, r2, #4, #4
 
     # w2 = c9 + c14
-	UMULL r2, r3, v2, ip
-	UMLAL r2, r3, v7, ip
-	BFI lr, r3, #8, #4
+	umull r2, r3, v2, ip
+	umlal r2, r3, v7, ip
+	bfi lr, r3, #8, #4
 
     # w3 = c14 + c15, register r4,r5,r6,r7 is free now.
-	UMULL r6, r7, v7, ip
-	UMLAL r6, r7, v8, ip
-	BFI lr, r7, #12, #4
-	MOV r3, r6
+	umull r6, r7, v7, ip
+	umlal r6, r7, v8, ip
+	bfi lr, r7, #12, #4
+	mov r3, r6
 
     # w4 = w3 + c13
-	UMLAL r6, r7, v6, ip
-	BFI lr, r7, #16, #4
-	MOV r4, r6
+	umlal r6, r7, v6, ip
+	bfi lr, r7, #16, #4
+	mov r4, r6
 
     # w5 = w4 + c12
-	UMLAL r6, r7, v5, ip
-	BFI lr, r7, #20, #4
-	MOV r5, r6
+	umlal r6, r7, v5, ip
+	bfi lr, r7, #20, #4
+	mov r5, r6
 
     # w0 = w0 + w5
-    UBFX v5, lr, #0, #4
-    ADDS r6, r6, r0
-    ADCS r7, r7, v5
-    BFI lr, r7, #0, #4
-    MOV r0, r6
-    MOV r7, lr
+    ubfx v5, lr, #0, #4
+    adds r6, r6, r0
+    adcs r7, r7, v5
+    bfi lr, r7, #0, #4
+    mov r0, r6
+    mov r7, lr
 
     # Load c0,c1,c2,c3 and compute t0,t1,t2,t3 where lr is used as the carry register.
-    # Tips: set ip = 0 such that UMAAL ra, lr, rx, ip ==> (lr|ra) = ra + lr.
-    LDM sp, {v5-v8}
-    MOV ip, #0
-    MOV lr, #0
+    # Tips: set ip = 0 such that umaal ra, lr, rx, ip ==> (lr|ra) = ra + lr.
+    ldm sp, {v5-v8}
+    mov ip, #0
+    mov lr, #0
 
     # t0 = c0 + w0 + w4
-    UBFX r6, r7, #0, #4
-	ADDS v5, r0
-	ADCS lr, r6
-    UBFX r6, r7, #16, #4
-    ADDS v5, r4
-    ADCS lr, r6
+    ubfx r6, r7, #0, #4
+	adds v5, r0
+	adcs lr, r6
+    ubfx r6, r7, #16, #4
+    adds v5, r4
+    adcs lr, r6
 
     # t1 = c1 + w0 + w4 - w1
-	UMAAL v6, lr, r0, ip
-	ADDS v6, r4
-	ADCS lr, r6
-	UBFX r6, r7, #0, #4
-	ADDS v6, r0
-	ADCS lr, r6
-	UBFX r6, r7, #4, #4
-	SUBS v6, r1
-	SBCS lr, r6
+	umaal v6, lr, r0, ip
+	adds v6, r4
+	adcs lr, r6
+	ubfx r6, r7, #0, #4
+	adds v6, r0
+	adcs lr, r6
+	ubfx r6, r7, #4, #4
+	subs v6, r1
+	sbcs lr, r6
 
     # t2 = c2 - w1 - w2
-	UMAAL v7, lr, r0, ip
-	SUBS v7, r1
-	SBCS lr, r6
-	UBFX r6, r7, #8, #4
-	SUBS v7, r2
-	SBCS lr, r6
+	umaal v7, lr, r0, ip
+	subs v7, r1
+	sbcs lr, r6
+	ubfx r6, r7, #8, #4
+	subs v7, r2
+	sbcs lr, r6
 
     # t3 = c3 + w5 + w1 + cb, register r1 is free now, load cb to r1
-	ADDS v8, v8, lr
-	MOV lr, #0
-	UBFX r6, r7, #4, #4
-	ADDS v8, r1
-	ADCS lr, r6
-	UBFX r6, r7, #20, #4
-	ADDS v8, r5
-	ADCS lr, r6
-	LDR r1, [sp, #0x2C]
-	ADDS v8, r1
-	ADCS lr, #0
+	adds v8, v8, lr
+	mov lr, #0
+	ubfx r6, r7, #4, #4
+	adds v8, r1
+	adcs lr, r6
+	ubfx r6, r7, #20, #4
+	adds v8, r5
+	adcs lr, r6
+	ldr r1, [sp, #0x2C]
+	adds v8, r1
+	adcs lr, #0
 
 	# Stroe t0,t1,t2,t3, load c4,c5,c6,c7, compute t4,t5,t6,t7,t8
-	STM sp, {v5-v8}
-	LDR v5, [sp, #0x10]
-	LDR v6, [sp, #0x14]
-	LDR v7, [sp, #0x18]
-	LDR v8, [sp, #0x1C]
+	stm sp, {v5-v8}
+	ldr v5, [sp, #0x10]
+	ldr v6, [sp, #0x14]
+	ldr v7, [sp, #0x18]
+	ldr v8, [sp, #0x1C]
 
     # t4 = c4 + w5 + w2
-	UMAAL v5, lr, r0, ip
-	ADDS v5, r5
-    ADCS lr, r6
-    UBFX r6, r7, #8, #4
-	ADDS v5, r2
-	ADCS lr, r6
+	umaal v5, lr, r0, ip
+	adds v5, r5
+    adcs lr, r6
+    ubfx r6, r7, #8, #4
+	adds v5, r2
+	adcs lr, r6
 
     # t5 = c5 + w4 + ca + cf, register r2 and r4 is free now, load ca to r2 and cf to r4
-	UMAAL v6, lr, r0, ip
-	UBFX r6, r7, #16, #4
-	ADDS v6, r4
-	ADCS lr, r6
-	LDR r2, [sp, #0x28]
-    LDR r4, [sp, #0x3C]
-    ADDS v6, r2
-    ADCS lr, #0
-    ADDS v6, r4
-    ADCS lr, #0
+	umaal v6, lr, r0, ip
+	ubfx r6, r7, #16, #4
+	adds v6, r4
+	adcs lr, r6
+	ldr r2, [sp, #0x28]
+    ldr r4, [sp, #0x3C]
+    adds v6, r2
+    adcs lr, #0
+    adds v6, r4
+    adcs lr, #0
 
     # t6 = c6 + w3 + cb
-	UMAAL v7, lr, r0, ip
-	UBFX r6, r7, #12, #4
-	ADDS v7, r3
-	ADCS lr, r6
-	ADDS v7, r1
-	ADCS lr, #0
+	umaal v7, lr, r0, ip
+	ubfx r6, r7, #12, #4
+	adds v7, r3
+	adcs lr, r6
+	adds v7, r1
+	adcs lr, #0
 
     # t7 = c7 + w0 + w5 + cf, t8 = lr
-	UMAAL v8, lr, r0, ip
-	UBFX r6, r7, #0, #4
-	ADDS v8, r0
-	ADCS lr, r6
-	UBFX r6, r7, #20, #4
-	ADDS v8, r5
-	ADCS lr, r6
-    ADDS v8, r4
-    ADCS lr, #0
+	umaal v8, lr, r0, ip
+	ubfx r6, r7, #0, #4
+	adds v8, r0
+	adcs lr, r6
+	ubfx r6, r7, #20, #4
+	adds v8, r5
+	adcs lr, r6
+    adds v8, r4
+    adcs lr, #0
 
 	# compute r = t7 + t8 | t6 | t5 | t4 | t3 + t8 | t2 - t8 | t1 | t0 + t8
-    LDM sp, {v1-v4}
-	ADDS v1, lr
-	ADCS v2, #0
-	ADCS v3, #0
-	ADCS v4, lr
-	ADCS v5, #0
-	ADCS v6, #0
-	ADCS v7, #0
-	ADCS v8, lr
-	SUBS v3, lr
-	SBCS v4, #0
-	SBCS v5, #0
-	SBCS v6, #0
-	SBCS v7, #0
-	SBCS v8, #0
-	ADD sp, #0x40
-	POP {r0}
-	STM r0, {v1-v8}
-	POP {v1-v8, ip, lr}
-	RET
-
-### Compute r ≡ a⁻¹ mod sm2_p.
-# void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q);
-# Note: Binary algorithm for inversion.
-#   u = a, v = p, a = 1, c = 0
-#   While(u > 0)
-#       While(u is even)
-#           u = u >> 1, a = a / 2 mod p
-#       While(v is even)
-#           v = v >> 1, c = c / 2 mod p
-#       If (u >= v)
-#           u = u - v, a = a - c mod p
-#       Else
-#           v = v - u, c = c - a mod p
-#   return c
-.global ECP_Sm2FpInv
-.type   ECP_Sm2FpInv, %function
-ECP_Sm2FpInv:
-	PUSH {v1-v8, ip, lr}
-	PUSH {r0}
-	LDM r1, {v1-v8}
-	SUB sp, sp, #0x80
-	ADD r0, sp, #0x00
-	ADD r1, sp, #0x20
-	ADD r2, sp, #0x40
-	ADD r3, sp, #0x60
-	STM r0, {v1-v8}
-    VLDR sm2_p1, sm2_p2, sm2_p3, sm2_p4, sm2_p5, sm2_p6, sm2_p7, sm2_p8
-    STM r1, {v1-v8}
-    VLDR 1, 0, 0, 0, 0, 0, 0, 0
-    STM r2, {v1-v8}
-    MOV v1, 0
-    STM r3, {v1-v8}
-
-	## while u >= 1 do inv_loop
- 	.Lfp_inv_while:
-	LDR v1, [r0]
-	TEQ v1, #0
-	BNE .Lfp_inv_loop
-	LDM r0, {v1-v8}
-	TEQ v2, #0
-	BNE .Lfp_inv_loop
-	TEQ v3, #0
-	BNE .Lfp_inv_loop
-	TEQ v4, #0
-	BNE .Lfp_inv_loop
-	TEQ v5, #0
-	BNE .Lfp_inv_loop
-	TEQ v6, #0
-	BNE .Lfp_inv_loop
-	TEQ v7, #0
-	BNE .Lfp_inv_loop
-	TEQ v8, #0
-	BNE .Lfp_inv_loop
-	B .Lfp_inv_end
-
-	.Lfp_inv_loop:
-	## while u is even, u = u >> 1, a = a / 2 mod p,
-	.Lfp_inv_u_loop:
-	LDR v1, [r0]
-	TST v1, #1
-	BNE .Lfp_inv_v_loop
-	LDM r0, {v1-v8}
-	VLSR
-	STM r0, {v1-v8}
-	LDM r2, {v1-v8}
-    VHAF sm2_p
-    STM r2, {v1-v8}
-	B .Lfp_inv_u_loop
-
-	## while v is even, v = v >> 1, c = c / 2 mod p
-	.Lfp_inv_v_loop:
-	LDR v1, [r1]
-	TST v1, #1
-	BNE .Lfp_inv_update_uv
-	LDM r1, {v1-v8}
-	VLSR
-	STM r1, {v1-v8}
-	LDM r3, {v1-v8}
-    VHAF sm2_p
-    STM r3, {v1-v8}
-	B .Lfp_inv_v_loop
-
-	## if u >= v, u = u - v, a = a - c mod p, else v = v - u, c = c - a mod p
-	.Lfp_inv_update_uv:
-	PSUB r0, r1
-	BCC .Lfp_v_is_bigger
-
-	.Lfp_u_is_bigger:
-	STM r0, {v1-v8}
-	PSUB r2, r3
-    VMOD sm2_p
-    STM r2, {v1-v8}
-	B .Lfp_inv_while
-
-	.Lfp_v_is_bigger:
-    VNEG
-	STM r1, {v1-v8}
-	PSUB r3, r2
-    VMOD sm2_p
-    STM r3, {v1-v8}
-	B .Lfp_inv_while
-
-	.Lfp_inv_end:
-	ADD sp, sp, #0x80
-	POP {r0}
-	LDM r3, {v1-v8}
-	STM r0, {v1-v8}
-	POP {v1-v8}
-	RET
+    ldm sp, {v1-v4}
+	adds v1, lr
+	adcs v2, #0
+	adcs v3, #0
+	adcs v4, lr
+	adcs v5, #0
+	adcs v6, #0
+	adcs v7, #0
+	adcs v8, lr
+	subs v3, lr
+	sbcs v4, #0
+	sbcs v5, #0
+	sbcs v6, #0
+	sbcs v7, #0
+	sbcs v8, #0
+	add sp, #0x40
+	pop {r0}
+	stm r0, {v1-v8}
+	pop {v1-v8, ip, lr}
+	ret
 
 ### Compute r ≡ a + b mod sm2_n.
 # void ECP_Sm2FnAdd(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 .global ECP_Sm2FnAdd
 .type   ECP_Sm2FnAdd, %function
 ECP_Sm2FnAdd:
-	PUSH {v1-v8}
-	LDM r2, {v1-v8}
-	LDR r2, [r1, #0x00]
-	LDR r3, [r1, #0x04]
-	ADDS v1, r2
-	ADCS v2, r3
-	LDR r2, [r1, #0x08]
-	LDR r3, [r1, #0x0C]
-	ADCS v3, r2
-	ADCS v4, r3
-	LDR r2, [r1, #0x10]
-	LDR r3, [r1, #0x14]
-	ADCS v5, r2
-	ADCS v6, r3
-	LDR r2, [r1, #0x18]
-	LDR r3, [r1, #0x1C]
-	ADCS v7, r2
-	ADCS v8, r3
-	BCC 0f
-	LDR r2, =sm2_m1
-	LDR r3, =sm2_m2
-	ADDS v1, r2
-	ADCS v2, r3
-	LDR r2, =sm2_m3
-	LDR r3, =sm2_m4
-	ADCS v3, r2
-	ADCS v4, r3
-	ADCS v5, #sm2_m5
-	ADCS v6, #sm2_m6
-	ADCS v7, #sm2_m7
-	ADCS v8, #sm2_m8
- 0: STM r0, {v1-v8}
-	POP {v1-v8}
-	RET
+	push {v1-v8}
+	ldm  r2, {v1-v8}
+	ldr  r2, [r1, #0x00]
+	ldr  r3, [r1, #0x04]
+	adds v1, r2
+	adcs v2, r3
+	ldr  r2, [r1, #0x08]
+	ldr  r3, [r1, #0x0C]
+	adcs v3, r2
+	adcs v4, r3
+	ldr  r2, [r1, #0x10]
+	ldr  r3, [r1, #0x14]
+	adcs v5, r2
+	adcs v6, r3
+	ldr  r2, [r1, #0x18]
+	ldr  r3, [r1, #0x1C]
+	adcs v7, r2
+	adcs v8, r3
+	bcc  0f
+	ldr  r2, =sm2_m1
+	ldr  r3, =sm2_m2
+	adds v1, r2
+	adcs v2, r3
+	ldr  r2, =sm2_m3
+	ldr  r3, =sm2_m4
+	adcs v3, r2
+	adcs v4, r3
+	adcs v5, #sm2_m5
+	adcs v6, #sm2_m6
+	adcs v7, #sm2_m7
+	adcs v8, #sm2_m8
+ 0: stm  r0, {v1-v8}
+	pop  {v1-v8}
+	ret
 
 ### Compute r ≡ a - b mod sm2_n.
 # void ECP_Sm2FnSub(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 .global ECP_Sm2FnSub
 .type   ECP_Sm2FnSub, %function
 ECP_Sm2FnSub:
-	PUSH {v1-v8}
-	LDM r1, {v1-v8}
-	LDR r1, [r2, #0x00]
-	LDR r3, [r2, #0x04]
-	SUBS v1, r1
-	SBCS v2, r3
-	LDR r1, [r2, #0x08]
-	LDR r3, [r2, #0x0C]
-	SBCS v3, r1
-	SBCS v4, r3
-	LDR r1, [r2, #0x10]
-	LDR r3, [r2, #0x14]
-	SBCS v5, r1
-	SBCS v6, r3
-	LDR r1, [r2, #0x18]
-	LDR r3, [r2, #0x1C]
-	SBCS v7, r1
-	SBCS v8, r3
-	BCS 0f
-	LDR r2, =sm2_m1
-	LDR r3, =sm2_m2
-	SUBS v1, r2
-	SBCS v2, r3
-	LDR r2, =sm2_m3
-	LDR r3, =sm2_m4
-	SBCS v3, r2
-	SBCS v4, r3
-	SBCS v5, #sm2_m5
-	SBCS v6, #sm2_m6
-	SBCS v7, #sm2_m7
-	SBCS v8, #sm2_m8
- 0: STM r0, {v1-v8}
-	POP {v1-v8}
-	RET
+	push {v1-v8}
+	ldm r1, {v1-v8}
+	ldr r1, [r2, #0x00]
+	ldr r3, [r2, #0x04]
+	subs v1, r1
+	sbcs v2, r3
+	ldr r1, [r2, #0x08]
+	ldr r3, [r2, #0x0C]
+	sbcs v3, r1
+	sbcs v4, r3
+	ldr r1, [r2, #0x10]
+	ldr r3, [r2, #0x14]
+	sbcs v5, r1
+	sbcs v6, r3
+	ldr r1, [r2, #0x18]
+	ldr r3, [r2, #0x1C]
+	sbcs v7, r1
+	sbcs v8, r3
+	bcs 0f
+	ldr r2, =sm2_m1
+	ldr r3, =sm2_m2
+	subs v1, r2
+	sbcs v2, r3
+	ldr r2, =sm2_m3
+	ldr r3, =sm2_m4
+	sbcs v3, r2
+	sbcs v4, r3
+	sbcs v5, #sm2_m5
+	sbcs v6, #sm2_m6
+	sbcs v7, #sm2_m7
+	sbcs v8, #sm2_m8
+ 0: stm r0, {v1-v8}
+	pop {v1-v8}
+	ret
+
+### Compute r ≡ a/2 mod sm2_n.
+# void ECP_Sm2FnHaf(Sm2Fp r, const Sm2Fp a);
+.global ECP_Sm2FnHaf
+.type   ECP_Sm2FnHaf, %function
+ECP_Sm2FnHaf:
+	push {v1-v8}
+	ldm  r1, {v1-v8}
+    lsrs v8, #1
+    rrxs v7, v7
+    rrxs v6, v6
+    rrxs v5, v5
+    rrxs v4, v4
+    rrxs v3, v3
+    rrxs v2, v2
+    rrxs v1, v1
+	bcc  0f
+	ldr r1, =sm2_l1
+	ldr r2, =sm2_l2
+	adds v1, r1
+	adcs v2, r2
+	ldr r1, =sm2_l3
+	ldr r2, =sm2_l4
+	adcs v3, r1
+	adcs v4, r2
+	adcs v5, #sm2_l5
+	adcs v6, #sm2_l6
+	adcs v7, #sm2_l7
+	adcs v8, #sm2_l8
+ 0: stm  r0, {v1-v8}
+	pop  {v1-v8}
+	ret
+
 
 ### Compute r ≡ a * b mod sm2_n.
 # void ECP_Sm2FnMul(sm2_fp r, const sm2_fp a, const sm2_fp b);
@@ -1590,221 +1358,128 @@ ECP_Sm2FnSub:
 .global ECP_Sm2FnMul
 .type   ECP_Sm2FnMul, %function
 ECP_Sm2FnMul:
-	PUSH {v1-v8, ip, lr}
-	PUSH {r0}
+	push {v1-v8, ip, lr}
+	push {r0}
 
 	# Allocate stack space, load and store a, .
-    SUB sp, #0xE8
-	LDM r1, {v1-v8}
-	STM sp, {v1-v8}
+    sub sp, #0xE8
+	ldm r1, {v1-v8}
+	stm sp, {v1-v8}
 
 	# load b in V and compute c = a * b.
-	LDM r2, {v1-v8}
-    MULIT oft 0x0 0x20 0
-    MULIT oft 0x0 0x20 1
-    MULIT oft 0x0 0x20 2
-    MULIT oft 0x0 0x20 3
-    MULIT oft 0x0 0x20 4
-    MULIT oft 0x0 0x20 5
-    MULIT oft 0x0 0x20 6
-    MULIT oft 0x0 0x20 7
+	ldm r2, {v1-v8}
+    mulit oft 0x0 0x20 0
+    mulit oft 0x0 0x20 1
+    mulit oft 0x0 0x20 2
+    mulit oft 0x0 0x20 3
+    mulit oft 0x0 0x20 4
+    mulit oft 0x0 0x20 5
+    mulit oft 0x0 0x20 6
+    mulit oft 0x0 0x20 7
 
     # load c >> 256 in V and compute d = (c >> 256) * u
-    ADDS ip, sp, #0x40
-    LDM ip, {v1-v8}
-    MULIT imm 0xF15149A0 0x60 0
-    MULIT imm 0x12AC6361 0x60 1
-    MULIT imm 0xFA323C01 0x60 2
-    MULIT imm 0x8DFC2096 0x60 3
-    MULIT imm 0x00000001 0x60 4
-    MULIT imm 0x00000001 0x60 5
-    MULIT imm 0x00000001 0x60 6
-    MULIT imm 0x00000001 0x60 7
-    MULIT imm 0x00000001 0x60 8
+    adds ip, sp, #0x40
+    ldm ip, {v1-v8}
+    mulit imm 0xF15149A0 0x60 0
+    mulit imm 0x12AC6361 0x60 1
+    mulit imm 0xFA323C01 0x60 2
+    mulit imm 0x8DFC2096 0x60 3
+    mulit imm 0x00000001 0x60 4
+    mulit imm 0x00000001 0x60 5
+    mulit imm 0x00000001 0x60 6
+    mulit imm 0x00000001 0x60 7
+    mulit imm 0x00000001 0x60 8
 
     # load sm2_n in V and compute e = (d >> 256) * sm2_n.
-    VLDR sm2_n1, sm2_n2, sm2_n3, sm2_n4, sm2_n5, sm2_n6, sm2_n7, sm2_n8
-    MULIT oft 0x80 0xA4 0
-    MULIT oft 0x80 0xA4 1
-    MULIT oft 0x80 0xA4 2
-    MULIT oft 0x80 0xA4 3
-    MULIT oft 0x80 0xA4 4
-    MULIT oft 0x80 0xA4 5
-    MULIT oft 0x80 0xA4 6
-    MULIT oft 0x80 0xA4 7
-    MULIT oft 0x80 0xA4 8
+    ldr v1, =sm2_n1
+    ldr v2, =sm2_n2
+    ldr v3, =sm2_n3
+    ldr v4, =sm2_n4
+    ldr v5, =sm2_n5
+    ldr v6, =sm2_n6
+    ldr v7, =sm2_n7
+    ldr v8, =sm2_n8
+    mulit oft 0x80 0xA4 0
+    mulit oft 0x80 0xA4 1
+    mulit oft 0x80 0xA4 2
+    mulit oft 0x80 0xA4 3
+    mulit oft 0x80 0xA4 4
+    mulit oft 0x80 0xA4 5
+    mulit oft 0x80 0xA4 6
+    mulit oft 0x80 0xA4 7
+    mulit oft 0x80 0xA4 8
 
 	# compute r = c - e
-	ADDS r0, sp, #0x20
-	ADDS r1, sp, #0xA4
- 	LDM r0!, {v1-v4}
- 	LDM r1!, {v5-v8}
- 	SUBS v1, v5
- 	SBCS v2, v6
- 	SBCS v3, v7
- 	SBCS v4, v8
- 	LDM r0, {v5-v8, ip}
- 	LDM r1, {r0-r3, lr}
- 	SBCS v5, r0
- 	SBCS v6, r1
- 	SBCS v7, r2
- 	SBCS v8, r3
- 	SBCS ip, lr
+	adds r0, sp, #0x20
+	adds r1, sp, #0xA4
+ 	ldm r0!, {v1-v4}
+ 	ldm r1!, {v5-v8}
+ 	subs v1, v5
+ 	sbcs v2, v6
+ 	sbcs v3, v7
+ 	sbcs v4, v8
+ 	ldm r0, {v5-v8, ip}
+ 	ldm r1, {r0-r3, lr}
+ 	sbcs v5, r0
+ 	sbcs v6, r1
+ 	sbcs v7, r2
+ 	sbcs v8, r3
+ 	sbcs ip, lr
 
  	# compute r = r mod sm2_n: while(r >= sm2_n){ r = r - sm2_n}
- 	LDR r0, =sm2_n1
-    LDR r1, =sm2_n2
-    LDR r2, =sm2_n3
-    LDR r3, =sm2_n4
- 0: TEQ ip, #0
+ 	ldr r0, =sm2_n1
+    ldr r1, =sm2_n2
+    ldr r2, =sm2_n3
+    ldr r3, =sm2_n4
+ 0: teq ip, #0
     BEQ 1f
-    SUBS v1, r0
-    SBCS v2, r1
-    SBCS v3, r2
-    SBCS v4, r3
-	SBCS v5, sm2_n5
-	SBCS v6, sm2_n6
-	SBCS v7, sm2_n7
-	SBCS v8, sm2_n8
-	SBCS ip, #0
-    TEQ ip, #0
-    BNE 0b
- 1: CMP v8, #sm2_n8
-	BCC 3f
- 	BHI 2f
- 	CMP v7, #sm2_n7
-	BCC 3f
- 	BHI 2f
-	CMP v6, #sm2_n6
-	BCC 3f
- 	BHI 2f
-	CMP v5, #sm2_n5
-	BCC 3f
- 	BHI 2f
-	CMP v4, r3
-	BCC 3f
- 	BHI 2f
-	CMP v3, r2
-	BCC 3f
- 	BHI 2f
-	CMP v2, r1
-	BCC 3f
- 	BHI 2f
-	CMP v1, r0
-	BCC 3f
- 2: SUBS v1, r0
-    SBCS v2, r1
-    SBCS v3, r2
-    SBCS v4, r3
-    SBCS v5, #sm2_n5
-    SBCS v6, #sm2_n6
-    SBCS v7, #sm2_n7
-    SBCS v8, #sm2_n8
- 3: ADDS sp, #0xE8
-    POP {r0}
-    STM r0, {v1-v8}
-    POP {v1-v8, ip, lr}
-    RET
+    subs v1, r0
+    sbcs v2, r1
+    sbcs v3, r2
+    sbcs v4, r3
+	sbcs v5, sm2_n5
+	sbcs v6, sm2_n6
+	sbcs v7, sm2_n7
+	sbcs v8, sm2_n8
+	sbcs ip, #0
+    teq ip, #0
+    bne 0b
+ 1: cmp v8, #sm2_n8
+	bcc 3f
+ 	bhi 2f
+ 	cmp v7, #sm2_n7
+	bcc 3f
+ 	bhi 2f
+	cmp v6, #sm2_n6
+	bcc 3f
+ 	bhi 2f
+	cmp v5, #sm2_n5
+	bcc 3f
+ 	bhi 2f
+	cmp v4, r3
+	bcc 3f
+ 	bhi 2f
+	cmp v3, r2
+	bcc 3f
+ 	bhi 2f
+	cmp v2, r1
+	bcc 3f
+ 	bhi 2f
+	cmp v1, r0
+	bcc 3f
+ 2: subs v1, r0
+    sbcs v2, r1
+    sbcs v3, r2
+    sbcs v4, r3
+    sbcs v5, #sm2_n5
+    sbcs v6, #sm2_n6
+    sbcs v7, #sm2_n7
+    sbcs v8, #sm2_n8
+ 3: adds sp, #0xE8
+    pop {r0}
+    stm r0, {v1-v8}
+    pop {v1-v8, ip, lr}
+    ret
 
-### Compute r ≡ a^(-1) mod sm2_n.
-# void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q);
-.global ECP_Sm2FnInv
-.type   ECP_Sm2FnInv, %function
-ECP_Sm2FnInv:
-	PUSH {v1-v8, ip, lr}
-	PUSH {r0}
-	# u = input, v = n, a = 1, c = 0
-	LDM r1, {v1-v8}
-	SUBS sp, sp, #0x80
-	ADDS r0, sp, #0x00
-	ADDS r1, sp, #0x20
-	ADDS r2, sp, #0x40
-	ADDS r3, sp, #0x60
-	STM r0, {v1-v8}
-    VLDR sm2_n1, sm2_n2, sm2_n3, sm2_n4, sm2_n5, sm2_n6, sm2_n7, sm2_n8
-    STM r1, {v1-v8}
-    VLDR 1, 0, 0, 0, 0, 0, 0, 0
-    STM r2, {v1-v8}
-    MOV v1, 0
-    STM r3, {v1-v8}
-
-	## while u >= 1 do inv_loop
- 	.Lfn_inv_while:
-	LDR v1, [r0]
-	TEQ v1, #0
-	BNE .Lfn_inv_loop
-	LDM r0, {v1-v8}
-	TEQ v2, #0
-	BNE .Lfn_inv_loop
-	TEQ v3, #0
-	BNE .Lfn_inv_loop
-	TEQ v4, #0
-	BNE .Lfn_inv_loop
-	TEQ v5, #0
-	BNE .Lfn_inv_loop
-	TEQ v6, #0
-	BNE .Lfn_inv_loop
-	TEQ v7, #0
-	BNE .Lfn_inv_loop
-	TEQ v8, #0
-	BNE .Lfn_inv_loop
-	B .Lfn_inv_end
-
-	.Lfn_inv_loop:
-
-	## while u is even, u = u >> 1, a = a / 2 mod n
-
-	.Lfn_inv_u_loop:
-	LDR v1, [r0]
-	TST v1, #1
-	BNE .Lfn_inv_v_loop
-	LDM r0, {v1-v8}
-	VLSR
-	STM r0, {v1-v8}
-	LDM r2, {v1-v8}
-	VHAF sm2_n
-    STM r2, {v1-v8}
-	B .Lfn_inv_u_loop
-
-	## while v is even, v = v >> 1, c = c / 2 mod n
-	.Lfn_inv_v_loop:
-	LDR v1, [r1]
-	TST v1, #1
-	BNE .Lfn_inv_update_uv
-	LDM r1, {v1-v8}
-	VLSR
-	STM r1, {v1-v8}
-	LDM r3, {v1-v8}
-    VHAF sm2_n
-    STM r3, {v1-v8}
-	B .Lfn_inv_v_loop
-
-	## if u >= v, u = u - v, a = a - c mod n, else v = v - u, c = c - a mod n
-	.Lfn_inv_update_uv:
-	PSUB r0, r1
-	BCC .Lfn_v_is_bigger
-
-	.Lfn_u_is_bigger:
-	STM r0, {v1-v8}
-	PSUB r2, r3
-    VMOD sm2_n
-    STM r2, {v1-v8}
-	B .Lfn_inv_while
-
-	.Lfn_v_is_bigger:
-    VNEG
-	STM r1, {v1-v8}
-	PSUB r3, r2
-    VMOD sm2_n
-    STM r3, {v1-v8}
-	B .Lfn_inv_while
-
-	.Lfn_inv_end:
-	ADDS sp, sp, #0x80
-	POP {r0}
-	LDM r3, {v1-v8}
-	STM r0, {v1-v8}
-	POP {v1-v8, ip, lr}
-	RET
 .end
 #endif
