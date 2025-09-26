@@ -190,15 +190,25 @@ typedef struct {
 
 static TLS_GroupInfo g_tlsGroupInfo[] = {
     {
+        "curveSm2",
+        CRYPT_ECC_SM2,
+        CRYPT_PKEY_ECDH,
+        128, // secBits
+        HITLS_EC_GROUP_CURVESM2, // groupId
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    },
+    {
         "sm2",
-        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX	
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId
-        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
+        65, 48, 0, // pubkeyLen=65, sharedkeyLen=48 (384 bits)
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
-    },
+    }
 };
 
 static int32_t BuildTlsGroupParam(TLS_GroupInfo *groupInfo, BSL_Param *p)
@@ -268,8 +278,8 @@ static TLS_SigSchemeInfo g_signSchemeInfo[] = {
         HITLS_SIGN_SM2,
         HITLS_HASH_SM3,
         128,
-        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
-        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT | TLS13_VERSION_BIT,
+        TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT | TLS13_VERSION_BIT,
     },
 };
 

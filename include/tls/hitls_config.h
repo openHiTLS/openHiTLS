@@ -197,6 +197,9 @@ typedef enum {
     HITLS_CHACHA20_POLY1305_SHA256 = 0x1303,
     HITLS_AES_128_CCM_SHA256 = 0x1304,
     HITLS_AES_128_CCM_8_SHA256 = 0x1305,
+    /* RFC 8998 */
+    HITLS_SM4_GCM_SM3 = 0x00C6,
+    HITLS_SM4_CCM_SM3 = 0x00C7,
     /* TLCP 1.1 cipher suite */
     HITLS_ECDHE_SM4_CBC_SM3 = 0xE011,
     HITLS_ECC_SM4_CBC_SM3 = 0xE013,
@@ -1613,6 +1616,18 @@ int32_t HITLS_CFG_GetResumptionOnRenegoSupport(HITLS_Config *config, bool *isSup
  * @retval  For other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_GetClientRenegotiateSupport(HITLS_Config *config, bool *isSupport);
+
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether to to only support tls1.3 SM
+ * @param   config   [IN] Config handle
+ * @param   isOnlySupportSM  [OUT] Indicates whether to only support tls1.3 SM
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetTls13SM(HITLS_Config *config, bool isOnlySupportSM);
+#endif
 
 #ifdef __cplusplus
 }

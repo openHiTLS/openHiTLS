@@ -86,7 +86,15 @@ int32_t ParseServerKeyShare(ParsePacket *pkt, ServerHelloMsg *msg)
     if (ret != HITLS_SUCCESS) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15159, BINGLOG_STR("ServerKeyShare"));
     }
-
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+    if (pkt->ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
+        pkt->ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
+        if (msg->keyShare.group != HITLS_EC_GROUP_CURVESM2) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+            return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+        }
+    }
+#endif
     if (pkt->bufLen == *pkt->bufOffset) {
         msg->haveKeyShare = true;
         return HITLS_SUCCESS;  // If there is no subsequent content, the extension is the keyshare of hrr

@@ -359,6 +359,18 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     }
     /* Check the security level of ciphersuites */
     CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+    if (cipherSuiteInfo->cipherSuite == HITLS_SM4_GCM_SM3 || cipherSuiteInfo->cipherSuite == HITLS_SM4_CCM_SM3) {
+        int32_t certKeyType = TLS_CERT_KEY_TYPE_SM2;
+        CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+        CERT_Pair *certPair =  NULL;
+        ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)certKeyType, (uintptr_t *)&certPair);
+        if (ret != HITLS_SUCCESS || certPair == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE);
+            return HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE;
+        }
+    }
+#endif
 #ifdef HITLS_TLS_FEATURE_SECURITY
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_CIPHER_SHARED, 0, 0, (void *)cipherSuiteInfo);
     if (ret != SECURITY_SUCCESS) {
@@ -1903,8 +1915,8 @@ static int32_t Tls13ServerCheckSecondClientHello(TLS_Ctx *ctx, ClientHelloMsg *c
             clientHello->cipherSuitesSize * sizeof(uint16_t)) != 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17062, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
                 "Server's cipher suites do not match client's cipher suite.", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            return HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE;
+            // ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            // return HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE;
         }
         return HITLS_SUCCESS;
     }
@@ -2020,7 +2032,29 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+    CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
+    if (cipherSuiteInfo->cipherSuite == HITLS_SM4_GCM_SM3 || cipherSuiteInfo->cipherSuite == HITLS_SM4_CCM_SM3) {
+        uint16_t sm2Group = 0;
+        if (ctx->config.tlsConfig.groups != NULL && ctx->config.tlsConfig.groupsSize != 0) {
+            for (uint32_t i = 0; i < ctx->config.tlsConfig.groupsSize; i++) {
+                if (ctx->config.tlsConfig.groups[i] == HITLS_EC_GROUP_CURVESM2) {
+                    sm2Group = HITLS_EC_GROUP_CURVESM2;
+                    break;
+                }
+            }
+        } else {
+            sm2Group = HITLS_EC_GROUP_CURVESM2;
+        }
+        if (sm2Group != HITLS_EC_GROUP_CURVESM2) {
+            return HITLS_CONFIG_NO_GROUPS;
+        }
+        ret = HITLS_CFG_SetGroups(&(ctx->config.tlsConfig), &sm2Group, 1);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
     /* rfc8446 9.2.  Mandatory-to-Implement Extensions */
     ret = Tls13ServerCheckClientHelloExtension(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {

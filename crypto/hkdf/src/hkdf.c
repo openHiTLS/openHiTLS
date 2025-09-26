@@ -37,6 +37,7 @@ static const uint32_t HKDF_ID_LIST[] = {
     CRYPT_MAC_HMAC_SHA256,
     CRYPT_MAC_HMAC_SHA384,
     CRYPT_MAC_HMAC_SHA512,
+    CRYPT_MAC_HMAC_SM3,
 };
 
 bool CRYPT_HKDF_IsValidAlgId(CRYPT_MAC_AlgId id)

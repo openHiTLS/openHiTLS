@@ -99,7 +99,7 @@ HITLS_SignHashAlgo SAL_CERT_GetDefaultSignHashAlgo(HITLS_CERT_KeyType keyType)
             return CERT_SIG_SCHEME_ECDSA_SHA1;
         case TLS_CERT_KEY_TYPE_ED25519:
             return CERT_SIG_SCHEME_ED25519;
-#ifdef HITLS_TLS_PROTO_TLCP11
+#if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_PROTO_TLS13)
         case TLS_CERT_KEY_TYPE_SM2:
             return CERT_SIG_SCHEME_SM2_SM3;
 #endif
@@ -194,6 +194,14 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
                 ((baseSignAlgorithms[i] & 0xff00) == sha1Mask) ||
                 ((baseSignAlgorithms[i] & 0xff00) == sha224Mask)) {
                 /* not defined for use in signed TLS handshake messages in TLS1.3 */
+                continue;
+            }
+        }
+#endif
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+        if (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
+            ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
+            if (baseSignAlgorithms[i] != CERT_SIG_SCHEME_SM2_SM3) {
                 continue;
             }
         }
@@ -449,6 +457,15 @@ static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
             it = BSL_HASH_IterNext(certPairs, it);
             continue;
         }
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+        if (!ctx->isClient && (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
+            ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3)) {
+            if (keyType != TLS_CERT_KEY_TYPE_SM2) {
+                it = BSL_HASH_IterNext(certPairs, it);
+                continue;
+            }
+        }
+#endif
         ret = SAL_CERT_CheckCertInfo(ctx, info, certPair->cert, true, true);
         if (ret != HITLS_SUCCESS) {
             it = BSL_HASH_IterNext(certPairs, it);
@@ -749,6 +766,37 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, PackPacket *pkt)
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15046, "encode device cert err");
     }
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+    if (!ctx->isClient &&
+        (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
+        ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3)) {
+        HITLS_CERT_Key *pubkey = NULL;
+        ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
+        if (ret != HITLS_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
+        ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
+        if (ret != HITLS_SUCCESS || keyType != TLS_CERT_KEY_TYPE_SM2) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_INVALID_KEY_TYPE);
+            SAL_CERT_KeyFree(mgrCtx, pubkey);
+            return HITLS_CERT_ERR_INVALID_KEY_TYPE;
+        }
+        SAL_CERT_KeyFree(mgrCtx, pubkey);
+        int32_t signAlg = 0;
+        ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
+        if (ret != HITLS_SUCCESS || signAlg != CERT_SIG_SCHEME_SM2_SM3) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
+            return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
+        }
+        bool checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
+        if (!checkUsageRec) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_KEYUSAGE);
+            return HITLS_CERT_ERR_KEYUSAGE;
+        }
+    }
+#endif
     // Check the size. If a certificate exists in the chain, directly put the data in the chain into the buf and return.
     if (BSL_LIST_COUNT(currentCertPair->chain) > 0 || BSL_LIST_COUNT(mgrCtx->extraChain) > 0) {
         return EncodeCertificateChain(ctx, pkt);

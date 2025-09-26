@@ -262,6 +262,34 @@ FRAME_LinkObj *FRAME_CreateLinkWithCert(HITLS_Config *config, BSL_UIO_TransportT
     return CreateLink(config, type);
 }
 
+FRAME_LinkObj *FRAME_CreateLinkWithCerts(HITLS_Config *config, BSL_UIO_TransportType type, const FRAME_CertInfo* certInfo, size_t certInfoLen)
+{
+#ifdef HITLS_TLS_CONFIG_KEY_USAGE
+    HITLS_CFG_SetCheckKeyUsage(config, false);
+#endif /* HITLS_TLS_CONFIG_KEY_USAGE */
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    if (config->securityLevel == HITLS_SECURITY_LEVEL_ONE) {
+        HITLS_CFG_SetSecurityLevel(config, HITLS_SECURITY_LEVEL_ZERO);
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    int32_t ret;
+    for (size_t i = 0; i < certInfoLen; i++) {
+        ret = HiTLS_X509_LoadCertAndKey(config,
+        certInfo[i].caFile,
+        certInfo[i].chainFile,
+        certInfo[i].endEquipmentFile,
+        certInfo[i].signFile,
+        certInfo[i].privKeyFile,
+        certInfo[i].signPrivKeyFile);
+        if (ret != HITLS_SUCCESS) {
+            return NULL;
+        }
+    }
+    
+    return CreateLink(config, type);
+}
+
 void FRAME_FreeLink(FRAME_LinkObj *linkObj)
 {
     if (linkObj == NULL) {

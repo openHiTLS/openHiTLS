@@ -48,9 +48,10 @@ static int32_t SetMdAttr(CRYPT_EAL_PkeyCtx *ctx, const char *attrName)
 }
 #endif
 
-static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, int32_t mdAlgId, const char *attrName)
+static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, int32_t mdAlgId, const char *attrName)
 {
     (void)attrName;
+    (void)hitlsCtx;
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     int32_t ret = SetMdAttr(ctx, attrName);
     if (ret != CRYPT_SUCCESS) {
@@ -70,6 +71,13 @@ static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo,
             BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);
     } else if (signAlgo == HITLS_SIGN_SM2) {
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+        if (hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
+            hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
+            char sm2DefaultUserid[] = "TLSv1.3+GM+Cipher+Suite";
+            return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
+        }
+#endif
         /* The default user id as specified in GM/T 0009-2012 */
         char sm2DefaultUserid[] = "1234567812345678";
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
@@ -81,8 +89,7 @@ static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo,
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen)
 {
-    (void)ctx;
-    if (SetPkeySignParam(key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+    if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
     return CRYPT_EAL_PkeySign(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
@@ -91,8 +98,7 @@ int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, const uint8_t *sign, uint32_t signLen)
 {
-    (void)ctx;
-    if (SetPkeySignParam(key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+    if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
     return CRYPT_EAL_PkeyVerify(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);

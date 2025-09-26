@@ -584,6 +584,18 @@ chacha20poly1305, chacha20, rsa"
 #error "[HiTLS] cipher suite HITLS_TLS_SUITE_ECC_SM4_GCM_SM3 must work with sm3, gcm, sm4, sm2"
 #endif
 #endif
+#if defined(HITLS_TLS_SUITE_SM4_GCM_SM3)
+#if !defined(HITLS_CRYPTO_SM3) || !defined(HITLS_CRYPTO_GCM) || !defined(HITLS_CRYPTO_SM4) || \
+    !defined(HITLS_CRYPTO_SM2)
+#error "[HiTLS] cipher suite HITLS_TLS_SUITE_SM4_GCM_SM3 must work with sm3, gcm, sm4, sm2"
+#endif
+#endif
+#if defined(HITLS_TLS_SUITE_SM4_CCM_SM3)
+#if !defined(HITLS_CRYPTO_SM3) || !defined(HITLS_CRYPTO_CCM) || !defined(HITLS_CRYPTO_SM4) || \
+    !defined(HITLS_CRYPTO_SM2)
+#error "[HiTLS] cipher suite HITLS_TLS_SUITE_SM4_CCM_SM3 must work with sm3, ccm, sm4, sm2"
+#endif
+#endif
 
 #if defined(HITLS_TLS_SUITE_AES_128_GCM_SHA256) || defined(HITLS_TLS_SUITE_AES_256_GCM_SHA384) || \
     defined(HITLS_TLS_SUITE_CHACHA20_POLY1305_SHA256) || defined(HITLS_TLS_SUITE_AES_128_CCM_SHA256) || \

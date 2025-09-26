@@ -36,6 +36,7 @@ static const uint16_t DEFAULT_GROUP_ID[] = {
     HITLS_EC_GROUP_SECP384R1,
     HITLS_EC_GROUP_SECP521R1,
     HITLS_EC_GROUP_SM2,
+    HITLS_EC_GROUP_CURVESM2,
     HITLS_FF_DHE_2048,
     HITLS_FF_DHE_3072,
     HITLS_FF_DHE_4096,
@@ -148,12 +149,22 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
+        "curveSm2",
+        CRYPT_ECC_SM2,
+        CRYPT_PKEY_ECDH,
+        128, // secBits
+        HITLS_EC_GROUP_CURVESM2, // groupId
+        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
+        TLS13_VERSION_BIT, // versionBits
+        false,
+    },
+    {
         "sm2",
-        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX	
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId
-        65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
+        65, 48, 0, // pubkeyLen=65, sharedkeyLen=48 (384 bits)
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
     },

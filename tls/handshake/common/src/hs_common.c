@@ -718,10 +718,6 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
             }
         }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-        if (ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
-            signAlgorithms[i] == CERT_SIG_SCHEME_SM2_SM3) {
-            continue;
-        }
 #ifdef HITLS_TLS_FEATURE_SECURITY
         if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, signAlgorithms[i], NULL) != SECURITY_SUCCESS) {
             continue;

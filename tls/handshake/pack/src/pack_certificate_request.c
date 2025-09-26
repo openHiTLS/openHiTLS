@@ -192,7 +192,24 @@ static int32_t PackSignAlgorithmsExtension(const TLS_Ctx *ctx, PackPacket *pkt)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
     }
-
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+    if (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
+        ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
+        int sm2SigAlgMask = 0;
+        for (uint32_t i = 0; i < signAlgorithmsSize; i++) {
+            if (signAlgorithms[i] == CERT_SIG_SCHEME_SM2_SM3) {
+                sm2SigAlgMask = 1;
+                break;
+            }
+        }
+        if (sm2SigAlgMask == 0) {
+            BSL_SAL_FREE(signAlgorithms);
+            return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
+        }
+        signAlgorithmsSize = 1;
+        signAlgorithms[0] = CERT_SIG_SCHEME_SM2_SM3;
+    }
+#endif
     uint16_t exMsgHeaderLen = sizeof(uint16_t);
     uint16_t exMsgDataLen = sizeof(uint16_t) * (uint16_t)signAlgorithmsSize;
 

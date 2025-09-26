@@ -1028,7 +1028,8 @@ static void GetCipherSuitesCnt(const uint16_t *cipherSuites, uint32_t cipherSuit
     uint32_t tmpTls13CipherSize = *tls13CipherSize;
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
 #ifdef HITLS_TLS_PROTO_TLS13
-        if (cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) {
+        if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
+            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
             tmpTls13CipherSize++;
             continue;
         }
@@ -1075,7 +1076,8 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
         if (CFG_CheckCipherSuiteSupported(cipherSuites[i]) != true) {
             continue;
         }
-        if (cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) {
+        if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
+            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
 #ifdef HITLS_TLS_PROTO_TLS13
             tls13CipherSuite[validTls13Cipher] = cipherSuites[i];
             validTls13Cipher++;

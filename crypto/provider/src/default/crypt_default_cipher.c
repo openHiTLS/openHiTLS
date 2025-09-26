@@ -58,6 +58,7 @@ static void *CRYPT_EAL_DefCipherNewCtx(void *provCtx, int32_t algId)
         {CRYPT_CIPHER_AES128_CCM, MODES_CCM_NewCtx},
         {CRYPT_CIPHER_AES192_CCM, MODES_CCM_NewCtx},
         {CRYPT_CIPHER_AES256_CCM, MODES_CCM_NewCtx},
+        {CRYPT_CIPHER_SM4_CCM, MODES_CCM_NewCtx},
 #endif
         {CRYPT_CIPHER_AES128_GCM, MODES_GCM_NewCtx},
         {CRYPT_CIPHER_AES192_GCM, MODES_GCM_NewCtx},

@@ -738,7 +738,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     // Test getting group capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback,
         &groupCount), CRYPT_SUCCESS);
-    ASSERT_EQ(groupCount, 16);
+    ASSERT_EQ(groupCount, 17);
 
     // Test getting signature algorithm capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcessFuncCb)SigAlgCapsCallback,

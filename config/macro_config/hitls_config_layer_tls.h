@@ -769,6 +769,15 @@
     #endif
 #endif
 
+#ifdef HITLS_TLS_SUITE_SM_TLS13
+    #ifndef HITLS_TLS_SUITE_SM4_GCM_SM3
+        #define HITLS_TLS_SUITE_SM4_GCM_SM3
+    #endif
+    #ifndef HITLS_TLS_SUITE_SM4_CCM_SM3
+        #define HITLS_TLS_SUITE_SM4_CCM_SM3
+    #endif
+#endif
+
 #if defined(HITLS_TLS_SUITE_AES_128_GCM_SHA256) || defined(HITLS_TLS_SUITE_AES_256_GCM_SHA384) || \
     defined(HITLS_TLS_SUITE_CHACHA20_POLY1305_SHA256) || defined(HITLS_TLS_SUITE_AES_128_CCM_SHA256) || \
     defined(HITLS_TLS_SUITE_AES_128_CCM_8_SHA256)
@@ -1079,7 +1088,9 @@
         #define HITLS_TLS_SUITE_AUTH_SM2
     #endif
 #endif
-#if defined(HITLS_TLS_SUITE_ECC_SM4_GCM_SM3)
+#if defined(HITLS_TLS_SUITE_ECC_SM4_GCM_SM3) || \
+    defined(HITLS_TLS_SUITE_SM4_GCM_SM3) || \
+    defined(HITLS_TLS_SUITE_SM4_CCM_SM3)
     #ifndef HITLS_TLS_SUITE_CIPHER_AEAD
         #define HITLS_TLS_SUITE_CIPHER_AEAD
     #endif
