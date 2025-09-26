@@ -23,6 +23,7 @@
 #include "hitls_pki_x509.h"
 #include "bsl_list.h"
 #include "hitls_error.h"
+#include "hitls_cert.h"
 
 
 static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listArray, uint32_t *num)
@@ -114,8 +115,11 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
+
+    HITLS_SetVerifyResult(ctx, HITLS_SUCCESS);
     ret = HITLS_X509_CertVerify((HITLS_X509_StoreCtx *)store, certList);
     if (ret != HITLS_SUCCESS) {
+        HITLS_SetVerifyResult(ctx, ret);
         BSL_ERR_PUSH_ERROR(ret);
     }
 

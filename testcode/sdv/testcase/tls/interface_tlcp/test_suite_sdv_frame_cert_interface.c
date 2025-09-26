@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include "hitls_error.h"
+#include "hitls_pki_errno.h"
 #include "hitls_cert.h"
 #include "hitls.h"
 #include "hitls_func.h"
@@ -476,9 +477,9 @@ void UT_TLS_SetAndGetCert_FUNC_TC001(int version)
 
     ASSERT_TRUE(HITLS_GetVerifyResult(ctx, &result) == HITLS_SUCCESS);
     ASSERT_EQ(result, HITLS_X509_V_OK);
-    ASSERT_TRUE(HITLS_SetVerifyResult(ctx, HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_SetVerifyResult(ctx, (HITLS_ERROR)HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetVerifyResult(ctx, &result) == HITLS_SUCCESS);
-    ASSERT_TRUE(result == HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT);
+    ASSERT_TRUE(result == (HITLS_ERROR)HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
