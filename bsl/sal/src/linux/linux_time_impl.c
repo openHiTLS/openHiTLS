@@ -99,4 +99,15 @@ long SAL_TicksPerSec(void)
 {
     return sysconf(_SC_CLK_TCK);
 }
+
+uint64_t SAL_TIME_GetNSec(void)
+{
+    uint64_t tick = 0;
+    struct timespec time;
+    if (clock_gettime(CLOCK_MONOTONIC, &time) == 0) {
+        tick = ((uint64_t)time.tv_sec & 0xFFFFFFFF) * 1000000000UL;
+        tick = tick + (uint64_t)time.tv_nsec;
+    }
+    return tick;
+}
 #endif

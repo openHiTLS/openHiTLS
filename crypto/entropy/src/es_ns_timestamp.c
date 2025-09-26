@@ -17,26 +17,15 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include <time.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "es_noise_source.h"
 
 #define TIME_STAMP_ENTROPY_RCT_CUT_OFF 5
 #define TIME_STAMP_ENTROPY_APT_WINDOW_SIZE 512
 #define TIME_STAMP_ENTROPY_APT_CUT_OFF 39
-
-static uint64_t CRPT_Gettick(void)
-{
-    uint64_t tick = 0;
-    struct timespec time;
-    if (clock_gettime(CLOCK_MONOTONIC, &time) == 0) {
-        tick = ((uint64_t)time.tv_sec & 0xFFFFFFFF) * 1000000000UL;
-        tick = tick + (uint64_t)time.tv_nsec;
-    }
-    return tick;
-}
 
 static int32_t ES_TimeStampRead(void *ctx, uint32_t timeout, uint8_t *buf, uint32_t bufLen)
 {
@@ -46,7 +35,7 @@ static int32_t ES_TimeStampRead(void *ctx, uint32_t timeout, uint8_t *buf, uint3
     (void)ctx;
     (void)timeout;
     for (uint32_t i = 0; i < bufLen; i++) {
-        buf[i] = CRPT_Gettick() & 0xFF;
+        buf[i] = BSL_SAL_TIME_GetNSec() & 0xFF;
     }
 
     return CRYPT_SUCCESS;

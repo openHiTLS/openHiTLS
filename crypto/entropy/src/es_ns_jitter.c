@@ -17,9 +17,9 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include <time.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "es_noise_source.h"
 
@@ -119,17 +119,6 @@ static void UpdateAptHealth(ES_JitterState *e, uint8_t data)
     }
 }
 
-static uint64_t NS_ENTROPY_Gettick(void)
-{
-    uint64_t ticks = 0;
-    struct timespec time;
-    if (clock_gettime(CLOCK_REALTIME, &time) == 0) {
-        ticks = ((uint64_t)time.tv_sec & 0xFFFFFFFF) * 1000000000UL;
-        ticks = ticks + (uint64_t)time.tv_nsec;
-    }
-    return ticks;
-}
-
 #define NS_MOVE_LEVEL 128
 
 static void __attribute__((optimize("O0"))) EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
@@ -175,9 +164,9 @@ static void EntropyMeasure(ES_JitterState *e, int32_t index)
     int i;
     // One byte has eight bits. Only the status of one bit can be obtained each time the memory is read or written.
     for (i = 0; i < 8; i++) {  // 8 bit
-        uint64_t tick1 = NS_ENTROPY_Gettick();
+        uint64_t tick1 = BSL_SAL_TIME_GetNSec();
         EntropyMemeryAccess(e, GetUChar(tick1));
-        uint64_t tick = NS_ENTROPY_Gettick();
+        uint64_t tick = BSL_SAL_TIME_GetNSec();
         uint64_t delta = tick - tick1;
         uint8_t bit;
         if (delta & 0x01) {

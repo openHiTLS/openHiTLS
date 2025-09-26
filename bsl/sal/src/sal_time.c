@@ -28,8 +28,7 @@ static BSL_SAL_TimeCallback g_timeCallback = {0};
 
 int32_t SAL_TimeCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-
-    if (type > BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC || type < BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC) {
+    if (type > BSL_SAL_TIME_GET_TIME_IN_NS || type < BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC) {
         return BSL_SAL_TIME_NO_REG_FUNC;
     }
     uint32_t offset = (uint32_t)(type - BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC);
@@ -433,4 +432,16 @@ long BSL_SAL_TicksPerSec(void)
 #endif
 }
 
+uint64_t BSL_SAL_TIME_GetNSec(void)
+{
+    if (g_timeCallback.pfBslGetTimeInNS != NULL && g_timeCallback.pfBslGetTimeInNS != BSL_SAL_TIME_GetNSec) {
+        return g_timeCallback.pfBslGetTimeInNS();
+    }
+#ifdef HITLS_BSL_SAL_LINUX
+    return SAL_TIME_GetNSec();
+#else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_TIME_NO_REG_FUNC);
+    return 0;
+#endif
+}
 #endif /* HITLS_BSL_SAL_TIME */

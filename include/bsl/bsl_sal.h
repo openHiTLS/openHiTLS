@@ -596,6 +596,15 @@ long BSL_SAL_Tick(void);
 long BSL_SAL_TicksPerSec(void);
 
 /**
+ * @ingroup bsl_sal
+ * @brief   Get the system time in nanoseconds.
+ *
+ * @attention none
+ * @retval The time in nanoseconds.
+ */
+uint64_t BSL_SAL_TIME_GetNSec(void);
+
+/**
  * @ingroup  bsl_sal_net
  * @brief socket address.
  * 
@@ -965,6 +974,7 @@ typedef enum {
     BSL_SAL_TIME_SLEEP_CB_FUNC,
     BSL_SAL_TIME_TICK_CB_FUNC,
     BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC,
+    BSL_SAL_TIME_GET_TIME_IN_NS,
 
     BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,                 /* BslSalFileOpen */
     BSL_SAL_FILE_READ_CB_FUNC,                          /* BslSalFileRead */
@@ -1371,6 +1381,14 @@ typedef long (*BslSalTick)(void);
  * @retval Number of ticks per second.
  */
 typedef long (*BslSalTicksPerSec)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get the system time in nanoseconds.
+ *
+ * @retval The time in nanoseconds.
+ */
+typedef uint64_t (*BslGetTimeInNS)(void);
 
 /**
  * @ingroup bsl_sal

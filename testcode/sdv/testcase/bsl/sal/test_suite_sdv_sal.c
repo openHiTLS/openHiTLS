@@ -861,3 +861,30 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+static uint64_t TestTimeGetNSec(void)
+{
+    return 0x1122334455667788;
+}
+
+/**
+ * @test   SDV_BSL_TIME_GET_NSEC_FUNC_TC001
+ * @title  Test of BSL_SAL_TIME_GetNSec.
+ * @precon nan
+ */
+/* BEGIN_CASE */
+void SDV_BSL_TIME_GET_NSEC_FUNC_TC001(void)
+{
+#ifdef HITLS_BSL_SAL_LINUX
+    ASSERT_TRUE(BSL_SAL_TIME_GetNSec() > 0);
+#else
+    ASSERT_EQ(BSL_SAL_TIME_GetNSec(), 0);
+#endif
+
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, TestTimeGetNSec), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_TIME_GetNSec(), TestTimeGetNSec());
+    ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, NULL), BSL_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
