@@ -25,7 +25,6 @@
 #include "crypt_types.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
-#include "bsl_sal.h"
 
 #define DRBG_HMAC_MAX_MDLEN (64)
 
