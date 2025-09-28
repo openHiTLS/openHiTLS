@@ -124,35 +124,15 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
             "client check peer cert failed", 0, 0, 0, 0);
         return ret;
     }
-#ifdef HITLS_TLS_SUITE_SM_TLS13
-    if (ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
-        ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+    if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
         HITLS_Config *config = &ctx->config.tlsConfig;
         HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(peerCert);
-        HITLS_CERT_Key *pubkey = NULL;
-        ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
-        if (ret != HITLS_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
-        ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
-        if (ret != HITLS_SUCCESS || keyType != TLS_CERT_KEY_TYPE_SM2) {
-            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_INVALID_KEY_TYPE);
-            SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
-            return HITLS_CERT_ERR_INVALID_KEY_TYPE;
-        }
-        SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
         int32_t signAlg = 0;
         ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
         if (ret != HITLS_SUCCESS || signAlg != CERT_SIG_SCHEME_SM2_SM3) {
             BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
             return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
-        }
-        bool checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
-        if (!checkUsageRec) {
-            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_KEYUSAGE);
-            return HITLS_CERT_ERR_KEYUSAGE;
         }
     }
 #endif

@@ -36,7 +36,6 @@ static const uint16_t DEFAULT_GROUP_ID[] = {
     HITLS_EC_GROUP_SECP384R1,
     HITLS_EC_GROUP_SECP521R1,
     HITLS_EC_GROUP_SM2,
-    HITLS_EC_GROUP_CURVESM2,
     HITLS_FF_DHE_2048,
     HITLS_FF_DHE_3072,
     HITLS_FF_DHE_4096,
@@ -160,7 +159,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
     },
     {
         "sm2",
-        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX	
+        CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
         HITLS_EC_GROUP_SM2, // groupId

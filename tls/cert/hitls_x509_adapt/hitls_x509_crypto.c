@@ -71,9 +71,8 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
             BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);
     } else if (signAlgo == HITLS_SIGN_SM2) {
-#ifdef HITLS_TLS_SUITE_SM_TLS13
-        if (hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
-            hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+        if (IS_SM_TLS13(hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
             char sm2DefaultUserid[] = "TLSv1.3+GM+Cipher+Suite";
             return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
         }

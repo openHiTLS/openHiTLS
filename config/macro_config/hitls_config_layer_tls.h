@@ -769,12 +769,15 @@
     #endif
 #endif
 
-#ifdef HITLS_TLS_SUITE_SM_TLS13
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
     #ifndef HITLS_TLS_SUITE_SM4_GCM_SM3
         #define HITLS_TLS_SUITE_SM4_GCM_SM3
     #endif
     #ifndef HITLS_TLS_SUITE_SM4_CCM_SM3
         #define HITLS_TLS_SUITE_SM4_CCM_SM3
+    #endif
+    #ifndef HITLS_TLS_CONFIG_KEY_USAGE
+        #define HITLS_TLS_CONFIG_KEY_USAGE
     #endif
 #endif
 

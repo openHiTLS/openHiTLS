@@ -285,7 +285,8 @@
                         "feature_max_send_fragment": null,
                         "feature_rec_inbuffer_size": null,
                         "feature_custom_extension": null,
-                        "feature_certificate_authorities": null
+                        "feature_certificate_authorities": null,
+                        "feature_sm_tls13": null
                     },
                     "proto": {
                         "deps": ["tlv", "sal", "eal", "list"],
@@ -584,6 +585,12 @@
                         },
                         "suite_ecc_sm4_gcm_sm3": {
                             "deps": ["sm3", "gcm", "sm4", "sm2"]
+                        },
+                        "suite_sm4_gcm_sm3": {
+                            "deps": ["sm3", "gcm", "sm4", "sm2"]
+                        },
+                        "suite_sm4_ccm_sm3": {
+                            "deps": ["sm3", "ccm", "sm4", "sm2"]
                         }
                     },
                     "suite_cipher": {

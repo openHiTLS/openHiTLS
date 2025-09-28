@@ -92,7 +92,7 @@ build_hitls_code()
     add_options="${add_options} -DHITLS_CRYPTO_DRBG_GM" # enable GM DRBG
     add_options="${add_options} -DHITLS_CRYPTO_ACVP_TESTS" # enable ACVP tests
     add_options="${add_options} -DHITLS_CRYPTO_DSA_GEN_PARA" # enable DSA genPara tests
-    add_options="${add_options} -DHITLS_TLS_SUITE_SM_TLS13" # enable rfc8998 tests
+    add_options="${add_options} -DHITLS_TLS_FEATURE_SM_TLS13" # enable rfc8998 tests
     add_options="${add_options} ${test_options}"
 
     build_options=""

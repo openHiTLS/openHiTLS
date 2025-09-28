@@ -120,7 +120,7 @@ int32_t HITLS_CFG_GetPostHandshakeAuthSupport(HITLS_Config *config, bool *isSupp
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_SUITE_SM_TLS13
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
 static int32_t SetTLS13SMCipherSuites(HITLS_Config *config, bool isOnlySupportSM)
 {
     const uint16_t smCiphersuites13[] = {
@@ -237,9 +237,9 @@ static int32_t SetTLS13SMGroups(HITLS_Config *config, bool isOnlySupportSM)
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_SetTls13SM(HITLS_Config *config, bool isOnlySupportSM)
+int32_t HITLS_CFG_EnableTls13SM(HITLS_Config *config, bool isOnlySupportSM)
 {
-    if (config == NULL) {
+    if (config == NULL || (config->version & TLS13_VERSION_BIT) == 0) {
         return HITLS_NULL_INPUT;
     }
     int32_t ret = SetTLS13SMCipherSuites(config, isOnlySupportSM);

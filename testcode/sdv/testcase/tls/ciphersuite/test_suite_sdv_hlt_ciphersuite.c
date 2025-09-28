@@ -161,11 +161,6 @@ char *HITLS_GM_Ciphersuite[] = {
     "HITLS_ECC_SM4_GCM_SM3",
 };
 
-char *HITLS_TLS13_GM_Ciphersuite[] = {
-    "HITLS_SM4_GCM_SM3",
-    "HITLS_SM4_CCM_SM3"
-};
-
 static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, char *cert)
 {
     HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
@@ -194,7 +189,7 @@ static void CONNECT(int version, int connType, char *Ciphersuite, int hasPsk, ch
 
     serverCtxConfig->securitylevel = g_testSecurityLevel;
     clientCtxConfig->securitylevel = g_testSecurityLevel;
-    if (version == TLCP1_1 || version == DTLCP1_1 || strncmp(cert, "SM2", strlen("SM2")) == 0) {
+    if (version == TLCP1_1 || version == DTLCP1_1) {
         SetGMCert(serverCtxConfig, clientCtxConfig, cert);
     } else {
         SetCert(serverCtxConfig, cert);
@@ -307,14 +302,5 @@ void SDV_TLS_GM_CIPHER_SUITE(void)
         SUB_PROC_END();
     }
     SUB_PROC_WAIT(sizeof(HITLS_GM_Ciphersuite) / sizeof(HITLS_GM_Ciphersuite[0]));
-}
-/* END_CASE */
-
-/* BEGIN_CASE */
-void SDV_TLS_TLS3_GM_CIPHER_SUITE(void)
-{
-    for (uint16_t i = 0; i < sizeof(HITLS_TLS13_GM_Ciphersuite) / sizeof(HITLS_TLS13_GM_Ciphersuite[0]); i++) {
-        CONNECT(TLS1_3, TCP, HITLS_TLS13_GM_Ciphersuite[i], 0, "SM2");
-    }
 }
 /* END_CASE */

@@ -30,7 +30,8 @@
 #error "[HiTLS] The tls verify must work with pki vfy location"
 #endif
 
-#if (defined(HITLS_TLS_FEATURE_PHA) || defined(HITLS_TLS_FEATURE_KEY_UPDATE)) && !defined(HITLS_TLS_PROTO_TLS13)
+#if (defined(HITLS_TLS_FEATURE_PHA) || defined(HITLS_TLS_FEATURE_KEY_UPDATE) || defined(HITLS_TLS_FEATURE_SM_TLS13)) && \
+    !defined(HITLS_TLS_PROTO_TLS13)
     #error "[HiTLS] Integrity check must work with TLS13"
 #endif
 

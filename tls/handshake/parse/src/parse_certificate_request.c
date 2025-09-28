@@ -69,18 +69,6 @@ static int32_t ParseSignatureAndHashAlgo(ParsePacket *pkt, CertificateRequestMsg
         pkt->ctx->peerInfo.signatureAlgorithms[index] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
         *pkt->bufOffset += sizeof(uint16_t);
     }
-#ifdef HITLS_TLS_SUITE_SM_TLS13
-    if (pkt->ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_GCM_SM3 ||
-        pkt->ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_SM4_CCM_SM3) {
-        if (pkt->ctx->peerInfo.signatureAlgorithmsSize > 0 &&
-            (pkt->ctx->peerInfo.signatureAlgorithmsSize != 1 ||
-             pkt->ctx->peerInfo.signatureAlgorithms[0] != CERT_SIG_SCHEME_SM2_SM3)) {
-            BSL_SAL_FREE(pkt->ctx->peerInfo.signatureAlgorithms);
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-            return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
-        }
-    }
-#endif
     msg->signatureAlgorithms = pkt->ctx->peerInfo.signatureAlgorithms;
     msg->signatureAlgorithmsSize = pkt->ctx->peerInfo.signatureAlgorithmsSize;
     msg->haveSignatureAndHashAlgo = true;

@@ -1035,6 +1035,10 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     uint32_t keyshareLen = 0u;
     /* The keyshare extension of the server must contain the keyExchange field */
     if (serverHello->keyShare.keyExchangeSize == 0 || serverHello->keyShare.group == HITLS_NAMED_GROUP_BUTT ||
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+        (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite)
+         && serverHello->keyShare.group != HITLS_EC_GROUP_CURVESM2) ||
+#endif
         /* Check whether the sent support group is the same as the negotiated group */
         (serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.group &&
             serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {

@@ -157,6 +157,8 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC001(char *sCipherSuite, char *cCip
     HITLS_Config *config_s = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(config_c != NULL);
     ASSERT_TRUE(config_s != NULL);
+    ASSERT_EQ(HITLS_CFG_EnableTls13SM(config_c, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_EnableTls13SM(config_s, false), HITLS_SUCCESS);
     if (sVerifyMode == 1) {
         HITLS_CFG_SetVerifyNoneSupport(config_s, false);
     }
@@ -166,14 +168,14 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC001(char *sCipherSuite, char *cCip
         HITLS_CFG_SetClientVerifySupport(config_s, true);
     }
     if (sVerifyMode == 3) {
-        HITLS_CFG_SetTls13SM(config_c, true);
+        HITLS_CFG_EnableTls13SM(config_c, true);
     }
     if (cVerifyMode == 1) {
         HITLS_CFG_SetVerifyNoneSupport(config_c, false);
     }
     if (cVerifyMode == 2) {
         HITLS_CFG_SetVerifyNoneSupport(config_c, false);
-        HITLS_CFG_SetTls13SM(config_c, true);
+        HITLS_CFG_EnableTls13SM(config_c, true);
     }
     if (sCipherSuite != NULL) {
         uint16_t sCipherSuites[2] = {0};
@@ -335,7 +337,7 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC002(char *cipherSuite, char *sign,
         GetTls13Group(group, groups_s, &groups_s_len);
         HITLS_CFG_SetGroups(config, groups_s, groups_s_len);
     }
-    int32_t ret = HITLS_CFG_SetTls13SM(config, false);
+    int32_t ret = HITLS_CFG_EnableTls13SM(config, false);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_EQ(config->tls13cipherSuitesSize, 5);
     ASSERT_EQ(memcmp(config->tls13CipherSuites, smCiphersuites13, sizeof(smCiphersuites13)), 0);
@@ -369,9 +371,9 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC003()
     };
     const uint16_t smSignAlg = CERT_SIG_SCHEME_SM2_SM3;
     const uint16_t smGroup = HITLS_EC_GROUP_CURVESM2;
-    int32_t ret = HITLS_CFG_SetTls13SM(config_c, true);
+    int32_t ret = HITLS_CFG_EnableTls13SM(config_c, true);
     ASSERT_EQ(ret, HITLS_SUCCESS);
-    ret = HITLS_CFG_SetTls13SM(config_s, true);
+    ret = HITLS_CFG_EnableTls13SM(config_s, true);
     ASSERT_EQ(config_c->cipherSuitesSize, 0);
     ASSERT_EQ(config_c->tls13cipherSuitesSize, sizeof(smCiphersuites13) / sizeof(uint16_t));
     ASSERT_EQ(memcmp(config_c->tls13CipherSuites, smCiphersuites13, sizeof(smCiphersuites13)), 0);

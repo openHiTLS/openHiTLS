@@ -134,10 +134,6 @@ static int32_t SetTLS13DefaultCipherSuites(HITLS_Config *config)
         HITLS_AES_256_GCM_SHA384,
         HITLS_CHACHA20_POLY1305_SHA256,
         HITLS_AES_128_GCM_SHA256,
-#ifdef HITLS_TLS_SUITE_SM_TLS13
-        HITLS_SM4_GCM_SM3,
-        HITLS_SM4_CCM_SM3,
-#endif
     };
 
     BSL_SAL_FREE(config->tls13CipherSuites);

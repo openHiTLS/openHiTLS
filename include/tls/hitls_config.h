@@ -1617,17 +1617,15 @@ int32_t HITLS_CFG_GetResumptionOnRenegoSupport(HITLS_Config *config, bool *isSup
  */
 int32_t HITLS_CFG_GetClientRenegotiateSupport(HITLS_Config *config, bool *isSupport);
 
-#ifdef HITLS_TLS_SUITE_SM_TLS13
 /**
  * @ingroup hitls_config
- * @brief   Set whether to to only support tls1.3 SM
+ * @brief   Set enable support tls1.3 SM
  * @param   config   [IN] Config handle
  * @param   isOnlySupportSM  [OUT] Indicates whether to only support tls1.3 SM
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For other error codes, see hitls_error.h.
  */
-int32_t HITLS_CFG_SetTls13SM(HITLS_Config *config, bool isOnlySupportSM);
-#endif
+int32_t HITLS_CFG_EnableTls13SM(HITLS_Config *config, bool isOnlySupportSM);
 
 #ifdef __cplusplus
 }

@@ -175,6 +175,8 @@ uint8_t CFG_GetCertTypeByCipherSuite(uint16_t cipherSuite);
  */
 HITLS_NamedGroup CFG_GetEcdsaCurveNameBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme);
 
+#define IS_SM_TLS13(cipherSuite) (((cipherSuite) == HITLS_SM4_GCM_SM3) || ((cipherSuite) == HITLS_SM4_CCM_SM3))
+
 #ifdef __cplusplus
 }
 #endif

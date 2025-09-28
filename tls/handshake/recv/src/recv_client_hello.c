@@ -46,6 +46,8 @@
 #ifdef HITLS_TLS_FEATURE_SESSION
 #include "session_mgr.h"
 #endif
+#include "cert_method.h"
+
 #ifdef HITLS_TLS_PROTO_TLS13
 #if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_FEATURE_PSK)
 #define HS_MAX_BINDER_SIZE 64
@@ -92,7 +94,12 @@ static uint16_t FindSupportedCurves(const TLS_Ctx *ctx, const uint16_t *perferen
 #endif /* HITLS_TLS_FEATURE_SECURITY */
         return 0;
     }
-
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+    if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite) &&
+        perferenceGroups[index] != HITLS_EC_GROUP_CURVESM2) {
+        return 0;
+    }
+#endif
     return perferenceGroups[index];
 }
 
@@ -332,7 +339,30 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *cl
             "get cipher suite info fail when processing client hello.", 0, 0, 0, 0);
         return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
     }
-
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+    if (IS_SM_TLS13(cipher)) {
+        int32_t certKeyType = TLS_CERT_KEY_TYPE_SM2;
+        CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+        CERT_Pair *certPair =  NULL;
+        ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)certKeyType, (uintptr_t *)&certPair);
+        if (ret != HITLS_SUCCESS || certPair == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE);
+            return HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE;
+        }
+        HITLS_Config *config = &ctx->config.tlsConfig;
+        int32_t signAlg = 0;
+        ret = SAL_CERT_X509Ctrl(config, certPair->cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
+        if (ret != HITLS_SUCCESS || signAlg != CERT_SIG_SCHEME_SM2_SM3) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
+            return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
+        }
+        bool checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, certPair->cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
+        if (!checkUsageRec) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_KEYUSAGE);
+            return HITLS_CERT_ERR_KEYUSAGE;
+        }
+    }
+#endif
     (void)memcpy_s(&ctx->negotiatedInfo.cipherSuiteInfo, sizeof(CipherSuiteInfo),
         &cipherSuiteInfo, sizeof(CipherSuiteInfo));
     return HITLS_SUCCESS;
@@ -359,18 +389,6 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     }
     /* Check the security level of ciphersuites */
     CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
-#ifdef HITLS_TLS_SUITE_SM_TLS13
-    if (cipherSuiteInfo->cipherSuite == HITLS_SM4_GCM_SM3 || cipherSuiteInfo->cipherSuite == HITLS_SM4_CCM_SM3) {
-        int32_t certKeyType = TLS_CERT_KEY_TYPE_SM2;
-        CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
-        CERT_Pair *certPair =  NULL;
-        ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)certKeyType, (uintptr_t *)&certPair);
-        if (ret != HITLS_SUCCESS || certPair == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE);
-            return HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE;
-        }
-    }
-#endif
 #ifdef HITLS_TLS_FEATURE_SECURITY
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_CIPHER_SHARED, 0, 0, (void *)cipherSuiteInfo);
     if (ret != SECURITY_SUCCESS) {
@@ -2032,29 +2050,6 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#ifdef HITLS_TLS_SUITE_SM_TLS13
-    CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
-    if (cipherSuiteInfo->cipherSuite == HITLS_SM4_GCM_SM3 || cipherSuiteInfo->cipherSuite == HITLS_SM4_CCM_SM3) {
-        uint16_t sm2Group = 0;
-        if (ctx->config.tlsConfig.groups != NULL && ctx->config.tlsConfig.groupsSize != 0) {
-            for (uint32_t i = 0; i < ctx->config.tlsConfig.groupsSize; i++) {
-                if (ctx->config.tlsConfig.groups[i] == HITLS_EC_GROUP_CURVESM2) {
-                    sm2Group = HITLS_EC_GROUP_CURVESM2;
-                    break;
-                }
-            }
-        } else {
-            sm2Group = HITLS_EC_GROUP_CURVESM2;
-        }
-        if (sm2Group != HITLS_EC_GROUP_CURVESM2) {
-            return HITLS_CONFIG_NO_GROUPS;
-        }
-        ret = HITLS_CFG_SetGroups(&(ctx->config.tlsConfig), &sm2Group, 1);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-    }
-#endif
     /* rfc8446 9.2.  Mandatory-to-Implement Extensions */
     ret = Tls13ServerCheckClientHelloExtension(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {
