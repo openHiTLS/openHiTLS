@@ -26,6 +26,7 @@
 #include "bsl_sal.h"
 
 static BSL_SAL_ThreadCallback g_threadCallback = {0};
+static BSL_SAL_PiDCallback g_pidCallback = {0};
 
 int32_t BSL_SAL_ThreadLockNew(BSL_SAL_ThreadLockHandle *lock)
 {
@@ -93,9 +94,21 @@ uint64_t BSL_SAL_ThreadGetId(void)
         return g_threadCallback.pfThreadGetId();
     }
 #if defined (HITLS_BSL_SAL_THREAD) && defined(HITLS_BSL_SAL_LINUX)
-    return SAL_GetPid();
+    return SAL_GetThreadId();
 #else
     return BSL_SUCCESS;
+#endif
+}
+
+int32_t BSL_SAL_GetPid(void)
+{
+    if ((g_pidCallback.pfGetId != NULL) && (g_pidCallback.pfGetId != BSL_SAL_GetPid)) {
+        return g_pidCallback.pfGetId();
+    }
+#if defined (HITLS_BSL_SAL_PID) && defined(HITLS_BSL_SAL_LINUX)
+    return SAL_GetPid();
+#else
+    return 0;
 #endif
 }
 
@@ -125,3 +138,14 @@ int32_t SAL_ThreadCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
     ((void **)&g_threadCallback)[offset] = funcCb;
     return BSL_SUCCESS;
 }
+
+#ifdef HITLS_BSL_SAL_PID
+int32_t SAL_PiDCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+{
+    if (type != BSL_SAL_PID_GET_ID_CB_FUNC) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+    g_pidCallback.pfGetId = (int32_t (*)(void))funcCb;
+    return BSL_SUCCESS;
+}
+#endif

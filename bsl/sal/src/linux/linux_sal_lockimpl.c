@@ -91,7 +91,7 @@ void SAL_RwLockFree(BSL_SAL_ThreadLockHandle rwLock)
 #endif
 
 #if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_THREAD)
-uint64_t SAL_GetPid(void)
+uint64_t SAL_GetThreadId(void)
 {
     // By default, gettid is not used to obtain the global tid corresponding to the thread
     // because other thread functions use the pthread library.
@@ -203,5 +203,12 @@ int32_t BSL_SAL_DeleteCondVar(BSL_SAL_CondVar condVar)
         return BSL_SAL_ERR_UNKNOWN;
     }
     return BSL_SUCCESS;
+}
+#endif
+
+#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_PID)
+int32_t SAL_GetPid(void)
+{
+    return (int32_t)getpid();
 }
 #endif

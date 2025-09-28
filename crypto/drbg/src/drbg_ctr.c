@@ -624,6 +624,7 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, b
 
     drbg->strength = keyLen * 8;
     drbg->maxRequest = (drbg->isGm) ? DRBG_MAX_REQUEST_SM4 : DRBG_MAX_REQUEST;
+    drbg->forkId = BSL_SAL_GetPid();
     // NIST.SP.800-90Ar1, Section 10.3.1 Table 3 defined those initial value.
     if (isUsedDf) {
         // shift rightwards by 3, converting from bit length to byte length

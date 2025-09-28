@@ -72,6 +72,8 @@ struct DrbgCtx {
        When seedMeth and seedCtx are empty, the default entropy source is used. */
     CRYPT_RandSeedMethod seedMeth;
     void *seedCtx; /* Seed context */
+
+    int32_t forkId;
 };
 
 #ifdef HITLS_CRYPTO_DRBG_HMAC

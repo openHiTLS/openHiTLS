@@ -29,6 +29,7 @@
 #include "crypt_drbg_local.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "bsl_sal.h"
 
 #define DRBG_NONCE_FROM_ENTROPY (2)
 
@@ -345,8 +346,10 @@ ERR_NONCE:
     return ret;
 }
 
-static inline bool DRBG_IsNeedReseed(const DRBG_Ctx *ctx, bool pr)
+static inline bool DRBG_IsNeedReseed(DRBG_Ctx *ctx, bool pr)
 {
+    int32_t forkId = BSL_SAL_GetPid();
+
     if (pr) {
         return true;
     }
@@ -360,6 +363,10 @@ static inline bool DRBG_IsNeedReseed(const DRBG_Ctx *ctx, bool pr)
         return ((time - ctx->lastReseedTime) > ctx->reseedIntervalTime) ? true : false;
     }
 #endif
+    if (ctx->forkId != forkId) {
+        ctx->forkId = forkId;
+        return true;
+    }
     return false;
 }
 
