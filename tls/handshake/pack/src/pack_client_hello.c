@@ -107,7 +107,7 @@ static int32_t PackCipherSuites(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLe
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
-        if (!IsCipherSuiteAllowed(ctx, cipherSuites[i])) {
+        if (!IsCipherSuiteAllowed(ctx, cipherSuites[i], false)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15845, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
                 "The cipher suite [0x%04x] is NOT supported, index=[%u].", cipherSuites[i], i, 0, 0);
             continue;

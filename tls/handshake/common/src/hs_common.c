@@ -755,7 +755,7 @@ int32_t HS_CheckReceivedExtension(HITLS_Ctx *ctx, HS_MsgType hsType, uint64_t hs
     return HITLS_SUCCESS;
 }
 
-bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite)
+bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite, bool checkNegoVersion)
 {
     if (!CFG_CheckCipherSuiteSupported(cipherSuite)) {
         return false;
@@ -779,10 +779,12 @@ bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite)
             }
     }
 
-    uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
-    if (negotiatedVersion > 0) {
-        if (!CFG_CheckCipherSuiteVersion(cipherSuite, negotiatedVersion, negotiatedVersion)) {
-            return false;
+    if (checkNegoVersion) {
+        uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
+        if (negotiatedVersion > 0) {
+            if (!CFG_CheckCipherSuiteVersion(cipherSuite, negotiatedVersion, negotiatedVersion)) {
+                return false;
+            }
         }
     }
 
