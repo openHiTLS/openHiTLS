@@ -96,7 +96,7 @@ static uint16_t FindSupportedCurves(const TLS_Ctx *ctx, const uint16_t *perferen
     }
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
     if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite) &&
-        perferenceGroups[index] != HITLS_EC_GROUP_CURVESM2) {
+        perferenceGroups[index] != HITLS_EC_GROUP_SM2) {
         return 0;
     }
 #endif
@@ -1933,8 +1933,8 @@ static int32_t Tls13ServerCheckSecondClientHello(TLS_Ctx *ctx, ClientHelloMsg *c
             clientHello->cipherSuitesSize * sizeof(uint16_t)) != 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17062, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
                 "Server's cipher suites do not match client's cipher suite.", 0, 0, 0, 0);
-            // ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            // return HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE;
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            return HITLS_MSG_HANDLE_ILLEGAL_CIPHER_SUITE;
         }
         return HITLS_SUCCESS;
     }

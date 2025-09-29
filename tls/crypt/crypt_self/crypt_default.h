@@ -221,14 +221,16 @@ int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_
  * @param ctx [IN] cipher ctx handle. The handle is set NULL by the invoker.
  */
 void CRYPT_DEFAULT_CipherFree(HITLS_Cipher_Ctx *ctx);
+
 /**
  * @brief Generate the ECDH key pair.
- *
+ * 
+ * @param ctx [IN] ssl ctx handle.
  * @param curveParams [IN] ECDH parameter
  *
  * @return Key handle
  */
-HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateEcdhKey(const HITLS_ECParameters *curveParams);
+HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateEcdhKey(HITLS_Ctx *ctx, const HITLS_ECParameters *curveParams);
 
 /**
  * @brief Generate a DH key pair.

@@ -99,7 +99,7 @@ int32_t STUB_CRYPT_RandBytesCallbackLibCtx(void *libCtx, uint8_t *buf, uint32_t 
  *
  * @return  Key handle
  */
-HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(const HITLS_ECParameters *curveParams)
+HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(HITLS_Ctx *ctx, const HITLS_ECParameters *curveParams)
 {
     uint32_t keyLen = 0u;
     if (curveParams == NULL) {
@@ -113,7 +113,7 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallback(const HITLS_ECParameters
     const TLS_GroupInfo *groupInfo = NULL;
     switch (curveParams->type) {
         case HITLS_EC_CURVE_TYPE_NAMED_CURVE:
-            groupInfo = ConfigGetGroupInfo(NULL, curveParams->param.namedcurve);
+            groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, curveParams->param.namedcurve);
             if (groupInfo == NULL) {
                 BSL_SAL_FREE(ecdhKey);
                 return NULL;
@@ -152,7 +152,7 @@ HITLS_CRYPT_Key *STUB_CRYPT_GenerateEcdhKeyPairCallbackLibCtx(void *libCtx,
     (void)libCtx;
     (void)attrName;
     (void)config;
-    return STUB_CRYPT_GenerateEcdhKeyPairCallback(curveParams);
+    return STUB_CRYPT_GenerateEcdhKeyPairCallback(NULL, curveParams);
 }
 
 /**

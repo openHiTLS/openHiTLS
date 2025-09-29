@@ -58,11 +58,12 @@ typedef int32_t (*CRYPT_RandBytesCallback)(uint8_t *buf, uint32_t len);
  * @ingroup hitls_crypt_reg
  * @brief   ECDH: Generate a key pair based on elliptic curve parameters.
  *
+ * @param   ctx [IN] TLS object
  * @param   curveParams [IN] Elliptic curve parameter
  *
  * @retval  Key handle
  */
-typedef HITLS_CRYPT_Key *(*CRYPT_GenerateEcdhKeyPairCallback)(const HITLS_ECParameters *curveParams);
+typedef HITLS_CRYPT_Key *(*CRYPT_GenerateEcdhKeyPairCallback)(HITLS_Ctx *ctx, const HITLS_ECParameters *curveParams);
 
 /**
  * @ingroup hitls_crypt_reg

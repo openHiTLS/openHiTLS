@@ -632,7 +632,7 @@ HITLS_CRYPT_Key *SAL_CRYPT_GenEcdhKeyPair(TLS_Ctx *ctx, const HITLS_ECParameters
     if (g_cryptEcdhMethod.generateEcdhKeyPair == NULL) {
         return NULL;
     }
-    return g_cryptEcdhMethod.generateEcdhKeyPair(curveParams);
+    return g_cryptEcdhMethod.generateEcdhKeyPair(ctx, curveParams);
 #endif
 }
 

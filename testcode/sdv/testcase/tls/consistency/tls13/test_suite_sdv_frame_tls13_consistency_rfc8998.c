@@ -117,13 +117,13 @@ int GetTls13Sign(const char *sign, uint16_t *signs, size_t *signsLen)
 int GetTls13Group(const char *group, uint16_t *groups, size_t *groupsLen)
 {
     if (strcmp(group, "curveSM2") == 0) {
-        groups[0] = HITLS_EC_GROUP_CURVESM2;
+        groups[0] = HITLS_EC_GROUP_SM2;
         *groupsLen = 1;
         return 0;
     }
     if (strcmp(group, "X25519:curveSM2") == 0) {
         groups[0] = HITLS_EC_GROUP_CURVE25519;
-        groups[1] = HITLS_EC_GROUP_CURVESM2;
+        groups[1] = HITLS_EC_GROUP_SM2;
         *groupsLen = 2;
         return 0;
     }
@@ -318,7 +318,7 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC002(char *cipherSuite, char *sign,
         HITLS_SM4_CCM_SM3,
     };
     const uint16_t smSignAlg = CERT_SIG_SCHEME_SM2_SM3;
-    const uint16_t smGroup = HITLS_EC_GROUP_CURVESM2;
+    const uint16_t smGroup = HITLS_EC_GROUP_SM2;
     if (cipherSuite != NULL) {
         uint16_t cipherSuites[2] = {0};
         size_t cipherSuitesLen = 0;
@@ -370,7 +370,7 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC003()
         HITLS_SM4_CCM_SM3,
     };
     const uint16_t smSignAlg = CERT_SIG_SCHEME_SM2_SM3;
-    const uint16_t smGroup = HITLS_EC_GROUP_CURVESM2;
+    const uint16_t smGroup = HITLS_EC_GROUP_SM2;
     int32_t ret = HITLS_CFG_EnableTls13SM(config_c, true);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ret = HITLS_CFG_EnableTls13SM(config_s, true);

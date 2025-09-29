@@ -206,7 +206,7 @@ static int32_t SetTLS13SMSignAlgs(HITLS_Config *config, bool isOnlySupportSM)
 
 static int32_t SetTLS13SMGroups(HITLS_Config *config, bool isOnlySupportSM)
 {
-    const uint16_t smGroup = HITLS_EC_GROUP_CURVESM2;
+    const uint16_t smGroup = HITLS_EC_GROUP_SM2;
     if (isOnlySupportSM) {
         BSL_SAL_FREE(config->groups);
         config->groups = BSL_SAL_Dump(&smGroup, sizeof(smGroup));
@@ -225,7 +225,7 @@ static int32_t SetTLS13SMGroups(HITLS_Config *config, bool isOnlySupportSM)
         tls13Groups[0] = smGroup;
         int index = 1; // 第一个存放SM的Group值，1表示开始存放其他Group
         for (uint32_t i = 0; i < config->groupsSize; i++) {
-            if (config->groups[i] != HITLS_EC_GROUP_CURVESM2) {
+            if (config->groups[i] != HITLS_EC_GROUP_SM2) {
                 tls13Groups[index++] = config->groups[i];
             }
         }

@@ -194,7 +194,7 @@ static TLS_GroupInfo g_tlsGroupInfo[] = {
         CRYPT_ECC_SM2,
         CRYPT_PKEY_ECDH,
         128, // secBits
-        HITLS_EC_GROUP_CURVESM2, // groupId
+        HITLS_EC_GROUP_SM2, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
         TLS13_VERSION_BIT, // versionBits
         false,

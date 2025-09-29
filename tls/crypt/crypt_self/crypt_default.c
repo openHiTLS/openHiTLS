@@ -146,9 +146,10 @@ void CRYPT_DEFAULT_CipherFree(HITLS_Cipher_Ctx *ctx)
     HITLS_CRYPT_CipherFree(ctx);
 }
 
-HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateEcdhKey(const HITLS_ECParameters *curveParams)
+HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateEcdhKey(HITLS_Ctx *ctx, const HITLS_ECParameters *curveParams)
 {
-    return HITLS_CRYPT_GenerateEcdhKey(NULL, NULL, NULL, curveParams);
+    return HITLS_CRYPT_GenerateEcdhKey(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        &ctx->config.tlsConfig, curveParams);
 }
 
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH

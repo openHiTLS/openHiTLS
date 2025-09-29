@@ -35,7 +35,9 @@ static const uint16_t DEFAULT_GROUP_ID[] = {
     HITLS_EC_GROUP_SECP256R1,
     HITLS_EC_GROUP_SECP384R1,
     HITLS_EC_GROUP_SECP521R1,
+#if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_FEATURE_SM_TLS13)
     HITLS_EC_GROUP_SM2,
+#endif
     HITLS_FF_DHE_2048,
     HITLS_FF_DHE_3072,
     HITLS_FF_DHE_4096,
@@ -147,16 +149,19 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
     {
         "curveSm2",
         CRYPT_ECC_SM2,
         CRYPT_PKEY_ECDH,
         128, // secBits
-        HITLS_EC_GROUP_CURVESM2, // groupId
+        HITLS_EC_GROUP_SM2, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
         TLS13_VERSION_BIT, // versionBits
         false,
     },
+#endif
+#ifdef HITLS_TLS_PROTO_TLCP11
     {
         "sm2",
         CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
@@ -167,6 +172,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
     },
+#endif
     {
         "ffdhe8192",
         CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
@@ -229,9 +235,11 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
 
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
-    (void)config;
     for (uint32_t i = 0; i < sizeof(GROUP_INFO) / sizeof(TLS_GroupInfo); i++) {
         if (GROUP_INFO[i].groupId == groupId) {
+            if (config != NULL && (config->version & GROUP_INFO[i].versionBits) == 0) {
+                continue;
+            }
             return &GROUP_INFO[i];
         }
     }
@@ -326,7 +334,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
 {
     for (uint32_t i = 0; i < config->groupInfolen; i++) {
-        if (config->groupInfo[i].groupId == groupId) {
+        if (config->groupInfo[i].groupId == groupId && (config->version & config->groupInfo[i].versionBits) != 0) {
             return &config->groupInfo[i];
         }
     }

@@ -2556,8 +2556,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_DATA_AFTER_COMPRESSION_FUNC_TC002()
     uint32_t *recvLen = &ioUserData->recMsg.len;
     uint8_t *recvBuf = ioUserData->recMsg.msg;
     ASSERT_TRUE(recvLen != 0);
-    recvBuf[4] += 3;
-    recvBuf[8] += 3;
+    uint32_t tmpLen = 0;
+    tmpLen = BSL_ByteToUint16(&recvBuf[3]);
+    tmpLen += 3;
+    BSL_Uint16ToByte(tmpLen, &recvBuf[3]);
+    tmpLen = BSL_ByteToUint24(&recvBuf[6]);
+    tmpLen += 3;
+    BSL_Uint24ToByte(tmpLen, &recvBuf[6]);
     recvBuf[*recvLen] = 0x01;
     recvBuf[(*recvLen)+1] = 0x01;
     recvBuf[(*recvLen)+2] = 0x01;
