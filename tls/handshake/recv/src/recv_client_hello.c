@@ -340,7 +340,7 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *cl
 #endif /* HITLS_TLS_PROTO_TLS13 */
 static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipherSuite)
 {
-    if (!IsCipherSuiteAllowed(ctx, cipherSuite)) {
+    if (!IsCipherSuiteAllowed(ctx, cipherSuite, true)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17046, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "No proper cipher suite", 0, 0, 0, 0);
         return HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE;

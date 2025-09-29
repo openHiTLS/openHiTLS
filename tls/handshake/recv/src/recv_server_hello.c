@@ -406,7 +406,7 @@ static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *ser
 
 static bool IsCipherSuiteSupport(const TLS_Ctx *ctx, uint16_t cipherSuite)
 {
-    if (!IsCipherSuiteAllowed(ctx, cipherSuite)) {
+    if (!IsCipherSuiteAllowed(ctx, cipherSuite, true)) {
         return false;
     }
 #ifdef HITLS_TLS_PROTO_TLS13
