@@ -2202,3 +2202,91 @@ EXIT:
     FRAME_FreeLink(testInfo.server);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC001(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+
+    HLT_SetCertPath(serverConfig, "NULL", "NULL", "NULL", "NULL", "NULL", "NULL");
+    HLT_SetPsk(serverConfig, "1A1A1A1A1A");
+    HLT_SetCipherSuites(serverConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+
+    HLT_SetCertPath(clientConfig, "NULL", "NULL", "NULL", "NULL", "NULL", "NULL");
+    HLT_SetPsk(clientConfig, "1A1A1A1A1A");
+    HLT_SetCipherSuites(clientConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
+
+    HITLS_Ctx *clientTlsCtx = (HITLS_Ctx *)clientRes->ssl;
+    const char *name = clientTlsCtx->negotiatedInfo.cipherSuiteInfo.name;
+    char *expectName = "HITLS_AES_128_GCM_SHA256";
+    ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+EXIT:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC002(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+
+    HLT_SetCertPath(serverConfig, ECDSA_SHA_CA_PATH, ECDSA_SHA_CHAIN_PATH, ECDSA_SHA256_EE_PATH,
+        ECDSA_SHA256_PRIV_PATH, "NULL", "NULL");
+    HLT_SetPsk(serverConfig, "123456789");
+    HLT_SetCipherSuites(serverConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+
+    HLT_SetCertPath(clientConfig, ECDSA_SHA_CA_PATH, ECDSA_SHA_CHAIN_PATH, ECDSA_SHA256_EE_PATH,
+        ECDSA_SHA256_PRIV_PATH, "NULL", "NULL");
+    HLT_SetPsk(clientConfig, "123456789");
+    HLT_SetCipherSuites(clientConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
+
+    HITLS_Ctx *clientTlsCtx = (HITLS_Ctx *)clientRes->ssl;
+    const char *name = clientTlsCtx->negotiatedInfo.cipherSuiteInfo.name;
+    char *expectName = "HITLS_AES_256_GCM_SHA384";
+    ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+EXIT:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */

@@ -327,9 +327,8 @@ static int32_t ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientH
     return ret;
 }
 #ifdef HITLS_TLS_PROTO_TLS13
-static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipher)
+static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, uint16_t cipher, bool preferSha256)
 {
-    (void)clientHello;
     int32_t ret = 0;
     CipherSuiteInfo cipherSuiteInfo = {0};
 
@@ -337,7 +336,11 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *cl
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15218, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "get cipher suite info fail when processing client hello.", 0, 0, 0, 0);
-        return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+        return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
+    }
+
+    if (preferSha256 && cipherSuiteInfo.hashAlg != HITLS_HASH_SHA_256) {
+        return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
     }
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
     if (IS_SM_TLS13(cipher)) {
@@ -365,11 +368,14 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *cl
 #endif
     (void)memcpy_s(&ctx->negotiatedInfo.cipherSuiteInfo, sizeof(CipherSuiteInfo),
         &cipherSuiteInfo, sizeof(CipherSuiteInfo));
+
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipherSuite)
+static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipherSuite,
+    bool preferSha256)
 {
+    (void)preferSha256;
     if (!IsCipherSuiteAllowed(ctx, cipherSuite, true)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17046, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "No proper cipher suite", 0, 0, 0, 0);
@@ -378,7 +384,7 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     int32_t ret = 0;
 #ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        ret = Tls13ServerNegotiateCipher(ctx, clientHello, cipherSuite);
+        ret = Tls13ServerNegotiateCipher(ctx, cipherSuite, preferSha256);
     } else
 #endif /* HITLS_TLS_PROTO_TLS13 */
     {
@@ -409,6 +415,29 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_PROTO_TLS13
+static bool Tls13HasCertificate(TLS_Ctx *ctx)
+{
+    CERT_MgrCtx *certMgrCtx = ctx->config.tlsConfig.certMgrCtx;
+    BSL_HASH_Hash *certPairs = certMgrCtx->certPairs;
+    BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
+    while (it != BSL_HASH_IterEnd(certPairs)) {
+        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, it);
+        if (keyType == TLS_CERT_KEY_TYPE_DSA) {
+             /* in TLS1.3, Do not use the DSA certificate. */
+            it = BSL_HASH_IterNext(certPairs, it);
+            continue;
+        }
+        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, it);
+        if (certPair != NULL && certPair->cert != NULL && certPair->privateKey != NULL) {
+            return true;
+        }
+        it = BSL_HASH_IterNext(certPairs, it);
+    }
+    return false;
+}
+#endif
+
 // Select the cipher suite.
 int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
@@ -432,13 +461,22 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
         normalCipherSuitesSize = clientHello->cipherSuitesSize;
     }
 
+    bool preferSha256 = false;
+
+#ifdef HITLS_TLS_PROTO_TLS13
+    /* TLS 1.3 PSK connection establishment, prioritizing the SHA-256 cipher suite when no certificate is available. */
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && ctx->config.tlsConfig.pskServerCb != NULL) {
+        preferSha256 = !Tls13HasCertificate(ctx);
+    }
+#endif
+
     /* Select the supported cipher suite. If the cipher suite is found, return success */
     for (uint16_t i = 0u; i < preferenceCipherSuitesSize; i++) {
         for (uint32_t j = 0u; j < normalCipherSuitesSize; j++) {
             if (normalCipherSuites[j] != preferenceCipherSuites[i]) {
                 continue;
             }
-            if (CheckCipherSuite(ctx, clientHello, normalCipherSuites[j]) != HITLS_SUCCESS) {
+            if (CheckCipherSuite(ctx, clientHello, normalCipherSuites[j], preferSha256) != HITLS_SUCCESS) {
                 break;
             }
             return HITLS_SUCCESS;
@@ -2126,9 +2164,8 @@ static int32_t CheckSupportVersion(TLS_Ctx *ctx, uint16_t version, uint16_t *sel
 
 bool IsTls13KeyExchAvailable(TLS_Ctx *ctx)
 {
-    TLS_Config *config = &ctx->config.tlsConfig;
-    CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
 #ifdef HITLS_TLS_FEATURE_PSK
+    TLS_Config *config = &ctx->config.tlsConfig;
     if (config->pskServerCb != NULL) {
         return true;
     }
@@ -2138,22 +2175,7 @@ bool IsTls13KeyExchAvailable(TLS_Ctx *ctx)
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
     /* The PSK is not used. The certificate must be set */
-    BSL_HASH_Hash *certPairs = certMgrCtx->certPairs;
-    BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
-    while (it != BSL_HASH_IterEnd(certPairs)) {
-        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, it);
-        if (keyType == TLS_CERT_KEY_TYPE_DSA) {
-             /* in TLS1.3, Do not use the DSA certificate. */
-            it = BSL_HASH_IterNext(certPairs, it);
-            continue;
-        }
-        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, it);
-        if (certPair != NULL && certPair->cert != NULL && certPair->privateKey != NULL) {
-            return true;
-        }
-        it = BSL_HASH_IterNext(certPairs, it);
-    }
-    return false;
+    return Tls13HasCertificate(ctx);
 }
 
 static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t *selectVersion)
