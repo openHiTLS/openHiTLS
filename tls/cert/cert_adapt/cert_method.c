@@ -90,17 +90,22 @@ HITLS_CERT_MgrMethod *HITLS_CERT_GetMgrMethod(void)
 
 #endif /* HITLS_TLS_FEATURE_PROVIDER */
 
-int32_t CheckCertCallBackRetVal(const char *logStr, int32_t callBackRet, uint32_t bingLogId, uint32_t hitlsRet)
+int32_t CheckCertCallBackRetVal(
+    const char *logStr, int32_t callBackRet, uint32_t bingLogId, int32_t hitlsRet, int32_t cmd)
 {
+#ifndef HITLS_BSL_LOG
+    (void)logStr;
+    (void)bingLogId;
+#endif
     if (callBackRet != HITLS_SUCCESS) {
-        if (hitlsRet == HITLS_CERT_KEY_CTRL_ERR_IS_DATA_ENC_USAGE || hitlsRet == HITLS_CERT_KEY_CTRL_ERR_IS_ENC_USAGE ||
-            hitlsRet == HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE) {
-            return (int32_t)hitlsRet;
+        if (cmd == CERT_KEY_CTRL_IS_KEYENC_USAGE || cmd == CERT_KEY_CTRL_IS_DATA_ENC_USAGE ||
+            cmd == CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE) {
+            return hitlsRet;
         }
         BSL_LOG_BINLOG_FIXLEN(bingLogId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "%s error: callback ret = 0x%x.", logStr, callBackRet, 0, 0);
-        BSL_ERR_PUSH_ERROR((int32_t)hitlsRet);
-        return (int32_t)hitlsRet;
+            "%s cmd %d error: callback ret = 0x%x.", logStr, cmd, callBackRet, 0);
+        BSL_ERR_PUSH_ERROR(hitlsRet);
+        return hitlsRet;
     }
     return HITLS_SUCCESS;
 }
@@ -143,7 +148,8 @@ int32_t SAL_CERT_BuildChain(HITLS_Config *config, HITLS_CERT_Store *store, HITLS
 #else
     ret = config->certMgrCtx->method.buildCertChain(config, store, cert, certList, num);
 #endif
-    return CheckCertCallBackRetVal("cert store build chain by cert", ret, BINLOG_ID16083, HITLS_CERT_ERR_BUILD_CHAIN);
+    return CheckCertCallBackRetVal(
+        "cert store build chain by cert", ret, BINLOG_ID16083, HITLS_CERT_ERR_BUILD_CHAIN, CERT_CTRL_BUTT);
 }
 
 int32_t SAL_CERT_VerifyChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT_X509 **certList, uint32_t num)
@@ -154,7 +160,8 @@ int32_t SAL_CERT_VerifyChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT
 #else
     ret = ctx->config.tlsConfig.certMgrCtx->method.verifyCertChain(ctx, store, certList, num);
 #endif
-    return CheckCertCallBackRetVal("cert store verify chain", ret, BINLOG_ID16084, HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+    return CheckCertCallBackRetVal(
+        "cert store verify chain", ret, BINLOG_ID16084, HITLS_CERT_ERR_VERIFY_CERT_CHAIN, CERT_CTRL_BUTT);
 }
 
 int32_t SAL_CERT_X509Encode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf, uint32_t len, uint32_t *usedLen)
@@ -165,7 +172,7 @@ int32_t SAL_CERT_X509Encode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf,
 #else
     ret = ctx->config.tlsConfig.certMgrCtx->method.certEncode(ctx, cert, buf, len, usedLen);
 #endif
-    return CheckCertCallBackRetVal("encode cert", ret, BINLOG_ID16086, HITLS_CERT_ERR_ENCODE_CERT);
+    return CheckCertCallBackRetVal("encode cert", ret, BINLOG_ID16086, HITLS_CERT_ERR_ENCODE_CERT, CERT_CTRL_BUTT);
 }
 
 HITLS_CERT_Chain *SAL_CERT_X509ParseBundleFile(HITLS_Config *config, const uint8_t *buf, uint32_t len,
@@ -297,48 +304,6 @@ void SAL_CERT_KeyFree(const CERT_MgrCtx *mgrCtx, HITLS_CERT_Key *key)
 
 /* change the error code when modifying the ctrl command */
 
-static const struct {
-    HITLS_CERT_CtrlCmd cmd;
-    uint32_t err;
-} g_tlsCertCtrlErrorCode[] = {
-    { CERT_STORE_CTRL_SET_VERIFY_DEPTH, HITLS_CERT_STORE_CTRL_ERR_SET_VERIFY_DEPTH },
-    { CERT_STORE_CTRL_ADD_CERT_LIST, HITLS_CERT_STORE_CTRL_ERR_ADD_CERT_LIST },
-    { CERT_STORE_CTRL_ADD_CRL_LIST, HITLS_CERT_STORE_CTRL_ERR_ADD_CRL_LIST },
-    { CERT_STORE_CTRL_CLEAR_CRL_LIST, HITLS_CERT_STORE_CTRL_ERR_CLEAR_CRL_LIST },
-    { CERT_STORE_CTRL_GET_VERIFY_DEPTH, HITLS_CERT_STORE_CTRL_ERR_GET_VERIFY_DEPTH },
-
-    { CERT_CTRL_GET_ENCODE_LEN, HITLS_CERT_CTRL_ERR_GET_ENCODE_LEN },
-    { CERT_CTRL_GET_PUB_KEY, HITLS_CERT_CTRL_ERR_GET_PUB_KEY },
-    { CERT_CTRL_GET_SIGN_ALGO, HITLS_CERT_CTRL_ERR_GET_SIGN_ALGO },
-    { CERT_CTRL_GET_ENCODE_SUBJECT_DN, HITLS_CERT_CTRL_ERR_GET_SUBJECT_DN },
-    { CERT_CTRL_IS_SELF_SIGNED, HITLS_CERT_CTRL_ERR_IS_SELF_SIGNED },
-
-    { CERT_KEY_CTRL_GET_SIGN_LEN, HITLS_CERT_KEY_CTRL_ERR_GET_SIGN_LEN },
-    { CERT_KEY_CTRL_GET_TYPE, HITLS_CERT_KEY_CTRL_ERR_GET_TYPE },
-    { CERT_KEY_CTRL_GET_CURVE_NAME, HITLS_CERT_KEY_CTRL_ERR_GET_CURVE_NAME },
-    { CERT_KEY_CTRL_GET_POINT_FORMAT, HITLS_CERT_KEY_CTRL_ERR_GET_POINT_FORMAT },
-    { CERT_KEY_CTRL_GET_SECBITS, HITLS_CERT_KEY_CTRL_ERR_GET_SECBITS },
-    { CERT_KEY_CTRL_IS_KEYENC_USAGE, HITLS_CERT_KEY_CTRL_ERR_IS_ENC_USAGE },
-    { CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE, HITLS_CERT_KEY_CTRL_ERR_IS_DIGITAL_SIGN_USAGE },
-    { CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE, HITLS_CERT_KEY_CTRL_ERR_IS_KEY_CERT_SIGN_USAGE },
-    { CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE, HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE },
-    { CERT_KEY_CTRL_GET_PARAM_ID, HITLS_CERT_KEY_CTRL_ERR_GET_PARAM_ID },
-    { CERT_KEY_CTRL_IS_DATA_ENC_USAGE, HITLS_CERT_KEY_CTRL_ERR_IS_DATA_ENC_USAGE },
-    { CERT_KEY_CTRL_IS_NON_REPUDIATION_USAGE, HITLS_CERT_KEY_CTRL_ERR_IS_NON_REPUDIATION_USAGE },
-    { CERT_STORE_CTRL_GET_VERIFY_FLAGS, HITLS_CERT_STORE_CTRL_ERR_GET_VERIFY_FLAGS },
-    { CERT_STORE_CTRL_SET_VERIFY_FLAGS, HITLS_CERT_STORE_CTRL_ERR_SET_VERIFY_FLAGS },
-};
-
-static uint32_t GetTlsCertCtrlErrorCode(HITLS_CERT_CtrlCmd cmd)
-{
-    for (size_t i = 0; i < sizeof(g_tlsCertCtrlErrorCode) / sizeof(g_tlsCertCtrlErrorCode[0]); i++) {
-        if (g_tlsCertCtrlErrorCode[i].cmd == cmd) {
-            return g_tlsCertCtrlErrorCode[i].err;
-        }
-    }
-    return HITLS_CERT_CTRL_ERR_INVALID_CMD;
-}
-
 int32_t SAL_CERT_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd, void *in, void *out)
 {
     int32_t ret;
@@ -351,7 +316,7 @@ int32_t SAL_CERT_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_
 #else
     ret = config->certMgrCtx->method.certStoreCtrl(config, store, cmd, in, out);
 #endif
-    return CheckCertCallBackRetVal("cert store ctrl", ret, BINLOG_ID16094, GetTlsCertCtrlErrorCode(cmd));
+    return CheckCertCallBackRetVal("cert store ctrl", ret, BINLOG_ID16094, ret, cmd);
 }
 
 int32_t SAL_CERT_X509Ctrl(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_CtrlCmd cmd, void *in, void *out)
@@ -371,7 +336,7 @@ int32_t SAL_CERT_X509Ctrl(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CER
 #else
     ret = config->certMgrCtx->method.certCtrl(config, cert, cmd, in, out);
 #endif
-    return CheckCertCallBackRetVal("cert ctrl", ret, BINLOG_ID16096, GetTlsCertCtrlErrorCode(cmd));
+    return CheckCertCallBackRetVal("cert ctrl", ret, BINLOG_ID16096, ret, cmd);
 }
 
 int32_t SAL_CERT_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_CtrlCmd cmd, void *in, void *out)
@@ -391,7 +356,7 @@ int32_t SAL_CERT_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_C
 #else
     ret = config->certMgrCtx->method.keyCtrl(config, key, cmd, in, out);
 #endif
-    return CheckCertCallBackRetVal("key ctrl", ret, BINLOG_ID16098, GetTlsCertCtrlErrorCode(cmd));
+    return CheckCertCallBackRetVal("key ctrl", ret, BINLOG_ID16098, ret, cmd);
 }
 
 int32_t SAL_CERT_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, CERT_SignParam *signParam)
@@ -409,7 +374,7 @@ int32_t SAL_CERT_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, CERT_SignParam 
     ret = ctx->config.tlsConfig.certMgrCtx->method.createSign(ctx, key, signParam->signAlgo,
         signParam->hashAlgo, signParam->data, signParam->dataLen, signParam->sign, &signParam->signLen);
 #endif
-    return CheckCertCallBackRetVal("create signature", ret, BINLOG_ID16103, HITLS_CERT_ERR_CREATE_SIGN);
+    return CheckCertCallBackRetVal("create signature", ret, BINLOG_ID16103, HITLS_CERT_ERR_CREATE_SIGN, CERT_CTRL_BUTT);
 }
 
 int32_t SAL_CERT_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, CERT_SignParam *signParam)
@@ -422,7 +387,7 @@ int32_t SAL_CERT_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, CERT_SignParam 
     ret = ctx->config.tlsConfig.certMgrCtx->method.verifySign(ctx, key, signParam->signAlgo,
         signParam->hashAlgo, signParam->data, signParam->dataLen, signParam->sign, signParam->signLen);
 #endif
-    return CheckCertCallBackRetVal("verify signature", ret, BINLOG_ID16101, HITLS_CERT_ERR_VERIFY_SIGN);
+    return CheckCertCallBackRetVal("verify signature", ret, BINLOG_ID16101, HITLS_CERT_ERR_VERIFY_SIGN, CERT_CTRL_BUTT);
 }
 
 #if defined(HITLS_TLS_SUITE_KX_RSA) || defined(HITLS_TLS_PROTO_TLCP11)
@@ -438,7 +403,7 @@ int32_t SAL_CERT_KeyEncrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint8_t *
     }
     ret = ctx->config.tlsConfig.certMgrCtx->method.encrypt(ctx, key, in, inLen, out, outLen);
 #endif
-    return CheckCertCallBackRetVal("pubkey encrypt", ret, BINLOG_ID15059, HITLS_CERT_ERR_ENCRYPT);
+    return CheckCertCallBackRetVal("pubkey encrypt", ret, BINLOG_ID15059, HITLS_CERT_ERR_ENCRYPT, CERT_CTRL_BUTT);
 }
 
 int32_t SAL_CERT_KeyDecrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint8_t *in, uint32_t inLen,
@@ -464,7 +429,7 @@ int32_t SAL_CERT_CheckPrivateKey(HITLS_Config *config, HITLS_CERT_X509 *cert, HI
     ret = config->certMgrCtx->method.checkPrivateKey(config, cert, key);
 #endif
     return CheckCertCallBackRetVal(
-        "check cert and private key", ret, BINLOG_ID15538, HITLS_CERT_ERR_CHECK_CERT_AND_KEY);
+        "check cert and private key", ret, BINLOG_ID15538, HITLS_CERT_ERR_CHECK_CERT_AND_KEY, CERT_CTRL_BUTT);
 }
 
 HITLS_CERT_CRLList *SAL_CERT_CrlParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,

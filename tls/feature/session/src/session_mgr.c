@@ -404,7 +404,7 @@ void SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time)
 
 int32_t SESSMGR_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
 {
-    if (config == NULL || sess == NULL) {
+    if (config == NULL || sess == NULL || config->sessMgr == NULL) {
         return HITLS_NULL_INPUT;
     }
 

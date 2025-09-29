@@ -1085,8 +1085,8 @@ bool SAL_CERT_CheckCertKeyUsage(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, HITLS_CER
     HITLS_Config *config = &ctx->config.tlsConfig;
     int32_t ret = SAL_CERT_X509Ctrl(config, cert, keyusage, NULL, (void *)&isUsage);
     if (ret != HITLS_SUCCESS) {
-        if (ret == HITLS_CERT_KEY_CTRL_ERR_IS_DATA_ENC_USAGE || ret == HITLS_CERT_KEY_CTRL_ERR_IS_ENC_USAGE ||
-            ret == HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE) {
+        if (keyusage == CERT_KEY_CTRL_IS_KEYENC_USAGE || keyusage == CERT_KEY_CTRL_IS_DATA_ENC_USAGE ||
+            keyusage == CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE) {
             return false;
         }
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16340, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "%d fail", keyusage, 0, 0, 0);

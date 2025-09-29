@@ -98,6 +98,7 @@
 #include "cert_method.h"
 #include "bsl_list.h"
 #include "session_mgr.h"
+#include "hitls_pki_errno.h"
 #include "hitls_x509_verify.h"
 #define DEFAULT_DESCRIPTION_LEN 128
 #define MAX_PATH_LEN 4096
@@ -1988,7 +1989,7 @@ void UT_TLS_CFG_USECERTCHAINFILE_TC003(void)
     int32_t ret = HITLS_CFG_UseCertificateChainFile(config, path);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
-    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_CHECK), HITLS_CERT_STORE_CTRL_ERR_ADD_CERT_LIST);
+    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_CHECK), HITLS_X509_ERR_CERT_EXIST);
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -2121,12 +2122,12 @@ void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC002(void)
     FRAME_Init();
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
-    
+
     // Try to load empty bundle file
     const char *emptyBundlePath = "../testdata/tls/certificate/pem/rsa_sha256/empty_bundle.pem";
     int32_t ret = HITLS_CFG_LoadVerifyFile(config, emptyBundlePath);
     ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
-    
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -2147,12 +2148,12 @@ void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC003(void)
     FRAME_Init();
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
-    
+
     // Try to load corrupted bundle file
     const char *corruptedBundlePath = "../testdata/tls/certificate/pem/rsa_sha256/corrupted_bundle.pem";
     int32_t ret = HITLS_CFG_LoadVerifyFile(config, corruptedBundlePath);
     ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
-    
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -2175,20 +2176,20 @@ void UT_TLS_CFG_LOADVERIFYFILE_COMPAT_TC001(void)
     FRAME_Init();
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
-    
+
     // Load single certificate file (existing functionality)
     const char *singleCertPath = "../testdata/tls/certificate/pem/rsa_sha256/ca.pem";
     int32_t ret = HITLS_CFG_LoadVerifyFile(config, singleCertPath);
     ASSERT_EQ(ret, HITLS_SUCCESS);
-    
+
     // Verify certificate can be used for validation
     const char *clientCert = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
     ret = HITLS_CFG_LoadCertFile(config, clientCert, TLS_PARSE_FORMAT_PEM);
     ASSERT_EQ(ret, HITLS_SUCCESS);
-    
+
     ret = HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
-    
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }

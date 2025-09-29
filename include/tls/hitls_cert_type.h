@@ -89,6 +89,8 @@ typedef enum {
     CERT_STORE_CTRL_ADD_CRL_LIST,       /**< Add CRL list to verify store */
     CERT_STORE_CTRL_CLEAR_CRL_LIST,     /**< Clear all CRLs from verify store */
     CERT_STORE_CTRL_ADD_CA_PATH,        /**< Add the CA path. */
+    CERT_STORE_CTRL_SET_VERIFY_FLAGS,   /**< Set the certificate verification flags. */
+    CERT_STORE_CTRL_GET_VERIFY_FLAGS,   /**< Get the certificate verification flags. */
     CERT_STORE_CTRL_SET_DEFAULT_PATH,   /**< Set the default CA path. */
 
     CERT_CTRL_GET_ENCODE_LEN = 200,           /**< Obtain the length of the certificate code. */
@@ -109,8 +111,6 @@ typedef enum {
     CERT_KEY_CTRL_GET_PARAM_ID,               /**< Obtain the parameter ID. */
     CERT_KEY_CTRL_IS_DATA_ENC_USAGE,          /**< Is it the data encryption permission. */
     CERT_KEY_CTRL_IS_NON_REPUDIATION_USAGE,   /**< Is it the non-repudiation permission. */
-    CERT_STORE_CTRL_GET_VERIFY_FLAGS,   /**< Get the certificate verification flags. */
-    CERT_STORE_CTRL_SET_VERIFY_FLAGS,   /**< Set the certificate verification flags. */
 
     CERT_CTRL_BUTT,
 } HITLS_CERT_CtrlCmd;

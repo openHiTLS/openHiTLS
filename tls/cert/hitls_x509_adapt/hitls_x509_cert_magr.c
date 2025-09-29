@@ -252,8 +252,10 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
         case CERT_CTRL_GET_ENCODE_SUBJECT_DN:
             ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE_SUBJECT_DN, output, sizeof(BSL_Buffer *));
             break;
+#ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
         case CERT_CTRL_IS_SELF_SIGNED:
             return HITLS_X509_CertCtrl(cert, HITLS_X509_IS_SELF_SIGNED, (bool *)output, (uint32_t)sizeof(bool));
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);
             return HITLS_CERT_SELF_ADAPT_ERR;
