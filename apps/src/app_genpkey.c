@@ -34,8 +34,10 @@
 
 #define RSA_KEYGEN_BITS_STR "rsa_keygen_bits:"
 #define EC_PARAMGEN_CURVE_STR "ec_paramgen_curve:"
+#define MLDSA_PARAM_STR "mldsa_param:"
 #define RSA_KEYGEN_BITS_STR_LEN ((int)(sizeof(RSA_KEYGEN_BITS_STR) - 1))
 #define EC_PARAMGEN_CURVE_LEN ((int)(sizeof(EC_PARAMGEN_CURVE_STR) - 1))
+#define MLDSA_PARAM_LEN ((int)(sizeof(MLDSA_PARAM_STR) - 1))
 #define MAX_PKEY_OPT_ARG 10U
 #define DEFAULT_RSA_KEYGEN_BITS 2048U
 
@@ -46,16 +48,18 @@ typedef enum {
     HITLS_APP_OPT_PASS,
     HITLS_APP_OPT_PUBOUT,
     HITLS_APP_OPT_OUT,
+    HITLS_APP_OPT_OUTFORM,
 } HITLSOptType;
 
 const HITLS_CmdOption g_genPkeyOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
-    {"algorithm", HITLS_APP_OPT_ALGORITHM, HITLS_APP_OPT_VALUETYPE_STRING, "Key algorithm"},
-    {"pkeyopt", HITLS_APP_OPT_PKEYOPT, HITLS_APP_OPT_VALUETYPE_STRING, "Set key options"},
+    {"algorithm", HITLS_APP_OPT_ALGORITHM, HITLS_APP_OPT_VALUETYPE_STRING, "Key algorithm (RSA, EC, ML-DSA)"},
+    {"pkeyopt", HITLS_APP_OPT_PKEYOPT, HITLS_APP_OPT_VALUETYPE_STRING, "Set key options (e.g., mldsa_param:ML-DSA-65)"},
     {"", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Any supported cipher"},
     {"pass", HITLS_APP_OPT_PASS, HITLS_APP_OPT_VALUETYPE_STRING, "Output file pass phrase source"},
     {"pubout", HITLS_APP_OPT_PUBOUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output public key"},
     {"out", HITLS_APP_OPT_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
+    {"outform", HITLS_APP_OPT_OUTFORM, HITLS_APP_OPT_VALUETYPE_STRING, "Output format (PEM or DER, default: PEM)"},
     {NULL},
 };
 
@@ -69,6 +73,7 @@ typedef struct {
     char *pubOut;
     char *outFilePath;
     char *passOutArg;
+    BSL_ParseFormat outFormat;
 } OutPutGenKeyPara;
 
 typedef struct {
@@ -135,6 +140,42 @@ static CRYPT_EAL_PkeyCtx *GenEcPkeyCtx(const GenPkeyOptPara *optPara)
     return pkey;
 }
 
+static CRYPT_EAL_PkeyCtx *GenMlDsaPkeyCtx(const GenPkeyOptPara *optPara)
+{
+    // Validate that a parameter was set
+    if (optPara->pkeyParaId == CRYPT_PKEY_PARAID_MAX) {
+        AppPrintError("genpkey: ML-DSA parameter not specified. Use -pkeyopt mldsa_param:ML-DSA-XX\n");
+        AppPrintError("Supported parameters: ML-DSA-44, ML-DSA-65, ML-DSA-87\n");
+        return NULL;
+    }
+
+    // Validate the parameter is a valid ML-DSA variant
+    if (optPara->pkeyParaId != CRYPT_MLDSA_TYPE_MLDSA_44 &&
+        optPara->pkeyParaId != CRYPT_MLDSA_TYPE_MLDSA_65 &&
+        optPara->pkeyParaId != CRYPT_MLDSA_TYPE_MLDSA_87) {
+        AppPrintError("genpkey: Invalid ML-DSA parameter ID: %u\n", optPara->pkeyParaId);
+        return NULL;
+    }
+
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_DSA,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
+    if (pkey == NULL) {
+        AppPrintError("genpkey: Failed to initialize the ML-DSA private key.\n");
+        return NULL;
+    }
+    if (CRYPT_EAL_PkeySetParaById(pkey, optPara->pkeyParaId) != CRYPT_SUCCESS) {
+        AppPrintError("genpkey: Failed to set ML-DSA parameters (param ID: %u).\n", optPara->pkeyParaId);
+        CRYPT_EAL_PkeyFreeCtx(pkey);
+        return NULL;
+    }
+    if (CRYPT_EAL_PkeyGen(pkey) != CRYPT_SUCCESS) {
+        AppPrintError("genpkey: Failed to generate the ML-DSA private key.\n");
+        CRYPT_EAL_PkeyFreeCtx(pkey);
+        return NULL;
+    }
+    return pkey;
+}
+
 static int32_t GetRsaKeygenBits(const char *algorithm, const char *pkeyOptArg, uint32_t *bits)
 {
     uint32_t numBits = 0;
@@ -174,6 +215,58 @@ static int32_t GetParamGenCurve(const char *algorithm, const char *pkeyOptArg, u
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t GetMlDsaParam(const char *algorithm, const char *pkeyOptArg, uint32_t *pkeyParaId)
+{
+    // Validate input parameters
+    if (algorithm == NULL || pkeyOptArg == NULL || pkeyParaId == NULL) {
+        (void)AppPrintError("genpkey: Internal error - NULL parameter passed to GetMlDsaParam.\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    // Validate algorithm type
+    if (strcasecmp(algorithm, "ML-DSA") != 0) {
+        (void)AppPrintError("genpkey: Algorithm mismatch - expected ML-DSA, got %s.\n", algorithm);
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    // Validate parameter format
+    if (strlen(pkeyOptArg) <= MLDSA_PARAM_LEN) {
+        (void)AppPrintError("genpkey: ML-DSA parameter string too short: %s\n", pkeyOptArg);
+        (void)AppPrintError("Expected format: mldsa_param:ML-DSA-XX\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    // Validate parameter prefix
+    if (strncmp(pkeyOptArg, MLDSA_PARAM_STR, MLDSA_PARAM_LEN) != 0) {
+        (void)AppPrintError("genpkey: ML-DSA parameter must start with 'mldsa_param:'\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    const char *paramName = pkeyOptArg + MLDSA_PARAM_LEN;
+
+    // Validate parameter name is not empty
+    if (strlen(paramName) == 0) {
+        (void)AppPrintError("genpkey: ML-DSA parameter name is empty.\n"
+            "Supported parameters: ML-DSA-44, ML-DSA-65, ML-DSA-87\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    // Parse and validate ML-DSA variant
+    if (strcasecmp(paramName, "ML-DSA-44") == 0) {
+        *pkeyParaId = CRYPT_MLDSA_TYPE_MLDSA_44;
+    } else if (strcasecmp(paramName, "ML-DSA-65") == 0) {
+        *pkeyParaId = CRYPT_MLDSA_TYPE_MLDSA_65;
+    } else if (strcasecmp(paramName, "ML-DSA-87") == 0) {
+        *pkeyParaId = CRYPT_MLDSA_TYPE_MLDSA_87;
+    } else {
+        (void)AppPrintError("genpkey: ML-DSA parameter '%s' is not supported.\n", paramName);
+        (void)AppPrintError("Supported parameters: ML-DSA-44, ML-DSA-65, ML-DSA-87\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t SetPkeyPara(GenPkeyOptCtx *optCtx)
 {
     if (optCtx->genPkeyCtxFunc == NULL) {
@@ -193,6 +286,9 @@ static int32_t SetPkeyPara(GenPkeyOptCtx *optCtx)
         } else if (strncmp(pkeyOptArg, EC_PARAMGEN_CURVE_STR, EC_PARAMGEN_CURVE_LEN) == 0) {
             // ec_paramgen_curve:curve
             return GetParamGenCurve(algorithm, pkeyOptArg, &optCtx->genPkeyOptPara.pkeyParaId);
+        } else if (strncmp(pkeyOptArg, MLDSA_PARAM_STR, MLDSA_PARAM_LEN) == 0) {
+            // mldsa_param:ML-DSA-44/ML-DSA-65/ML-DSA-87
+            return GetMlDsaParam(algorithm, pkeyOptArg, &optCtx->genPkeyOptPara.pkeyParaId);
         } else {
             (void)AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
             return HITLS_APP_INVALID_ARG;
@@ -208,8 +304,11 @@ static int32_t GenPkeyOptAlgorithm(GenPkeyOptCtx *optCtx)
         optCtx->genPkeyCtxFunc = GenRsaPkeyCtx;
     } else if (strcasecmp(optCtx->inPara.algorithm, "EC") == 0) {
         optCtx->genPkeyCtxFunc = GenEcPkeyCtx;
+    } else if (strcasecmp(optCtx->inPara.algorithm, "ML-DSA") == 0) {
+        optCtx->genPkeyCtxFunc = GenMlDsaPkeyCtx;
     } else {
-        (void)AppPrintError("genpkey: The %s algorithm is not supported.\n", optCtx->inPara.algorithm);
+        (void)AppPrintError("genpkey: The %s algorithm is not supported.\n"
+            "Supported algorithms: RSA, EC, ML-DSA\n", optCtx->inPara.algorithm);
         return HITLS_APP_INVALID_ARG;
     }
     return HITLS_APP_SUCCESS;
@@ -249,6 +348,20 @@ static int32_t GenPkeyOptPubOut(GenPkeyOptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t GenPkeyOptOutForm(GenPkeyOptCtx *optCtx)
+{
+    char *format = HITLS_APP_OptGetValueStr();
+    if (strcasecmp(format, "PEM") == 0) {
+        optCtx->outPara.outFormat = BSL_FORMAT_PEM;
+    } else if (strcasecmp(format, "DER") == 0) {
+        optCtx->outPara.outFormat = BSL_FORMAT_ASN1;
+    } else {
+        (void)AppPrintError("genpkey: Invalid output format %s. Supported formats: PEM, DER\n", format);
+        return HITLS_APP_INVALID_ARG;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static const GenPkeyOptHandleTable g_genPkeyOptHandleTable[] = {
     {HITLS_APP_OPT_ERR, GenPkeyOptErr},
     {HITLS_APP_OPT_HELP, GenPkeyOptHelp},
@@ -258,6 +371,7 @@ static const GenPkeyOptHandleTable g_genPkeyOptHandleTable[] = {
     {HITLS_APP_OPT_PASS, GenPkeyOptPassout},
     {HITLS_APP_OPT_PUBOUT, GenPkeyOptPubOut},
     {HITLS_APP_OPT_OUT, GenPkeyOptOut},
+    {HITLS_APP_OPT_OUTFORM, GenPkeyOptOutForm},
 };
 
 static int32_t ParseGenPkeyOpt(GenPkeyOptCtx *optCtx)
@@ -306,15 +420,15 @@ static int32_t HandleGenPkeyOpt(GenPkeyOptCtx *optCtx)
     }
 
     if (optCtx->outPara.pubOut != NULL) {
-        ret = HITLS_APP_PrintPubKey(optCtx->pkey, optCtx->outPara.pubOut, BSL_FORMAT_PEM);
+        ret = HITLS_APP_PrintPubKey(optCtx->pkey, optCtx->outPara.pubOut, optCtx->outPara.outFormat);
         if (ret != HITLS_APP_SUCCESS) {
             return ret;
         }
     }
 
     // 4. Output the private key.
-    return HITLS_APP_PrintPrvKey(optCtx->pkey, optCtx->outPara.outFilePath, BSL_FORMAT_PEM, optCtx->cipherAlgCid,
-        &optCtx->passout);
+    return HITLS_APP_PrintPrvKey(optCtx->pkey, optCtx->outPara.outFilePath, optCtx->outPara.outFormat,
+        optCtx->cipherAlgCid, &optCtx->passout);
 }
 
 static void InitGenPkeyOptCtx(GenPkeyOptCtx *optCtx)
@@ -333,6 +447,8 @@ static void InitGenPkeyOptCtx(GenPkeyOptCtx *optCtx)
 
     optCtx->outPara.outFilePath = NULL;
     optCtx->outPara.passOutArg = NULL;
+    optCtx->outPara.pubOut = NULL;
+    optCtx->outPara.outFormat = BSL_FORMAT_PEM;  // Default to PEM format
 }
 
 static void UnInitGenPkeyOptCtx(GenPkeyOptCtx *optCtx)
