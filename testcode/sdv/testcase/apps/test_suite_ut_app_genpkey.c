@@ -193,3 +193,112 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_GENPKEY_TC004
+ * @spec  -
+ * @title   测试ML-DSA密钥生成
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_GENPKEY_TC004()
+{
+    char *argv[][20] = {
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44"},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65"},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-87"},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-87", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44", "-aes256-cbc", "-pass", "pass:123456"},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-aes256-cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-87", "-aes256-cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
+    };
+
+    OptTestData testData[] = {
+        {5, argv[0], HITLS_APP_SUCCESS},
+        {5, argv[1], HITLS_APP_SUCCESS},
+        {5, argv[2], HITLS_APP_SUCCESS},
+        {7, argv[3], HITLS_APP_SUCCESS},
+        {7, argv[4], HITLS_APP_SUCCESS},
+        {7, argv[5], HITLS_APP_SUCCESS},
+        {8, argv[6], HITLS_APP_SUCCESS},
+        {10, argv[7], HITLS_APP_SUCCESS},
+        {10, argv[8], HITLS_APP_SUCCESS},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
+        fflush(stdout);
+        freopen("/dev/tty", "w", stdout);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    remove(GENPKEY_TEST_FILE_PATH);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_GENPKEY_TC005
+ * @spec  -
+ * @title   测试outform参数配置
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_GENPKEY_TC005(char *outformOpt)
+{
+    char *argv[][20] = {
+        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", GENPKEY_TEST_FILE_PATH, "-outform", outformOpt},
+    };
+
+    OptTestData testData[] = {
+        {9, argv[0], HITLS_APP_SUCCESS},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
+        fflush(stdout);
+        freopen("/dev/tty", "w", stdout);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    remove(GENPKEY_TEST_FILE_PATH);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_GENPKEY_TC006
+ * @spec  -
+ * @title   测试ML-DSA配合outform参数
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_GENPKEY_TC006(char *outformOpt)
+{
+    char *argv[][20] = {
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-out", GENPKEY_TEST_FILE_PATH, "-outform", outformOpt},
+    };
+
+    OptTestData testData[] = {
+        {9, argv[0], HITLS_APP_SUCCESS},
+    };
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
+        fflush(stdout);
+        freopen("/dev/tty", "w", stdout);
+        ASSERT_EQ(ret, testData[i].expect);
+    }
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    remove(GENPKEY_TEST_FILE_PATH);
+    return;
+}
+/* END_CASE */
