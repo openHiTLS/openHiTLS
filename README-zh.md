@@ -93,6 +93,12 @@ python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitl
 ```
 python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --bits=64 --system=linux --asm_type x8664
 ```
+
+* 命令行构建：
+```
+python3 ../configure.py --executes hitls
+```
+
 选项介绍可参考[构建安装指导](docs/zh/4_使用指南/1_构建及安装指导.md)
 
 3. 生成构建脚本:
