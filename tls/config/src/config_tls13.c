@@ -147,7 +147,7 @@ static int32_t SetTLS13SMCipherSuites(HITLS_Config *config, bool isOnlySupportSM
         }
         (void)memcpy_s(tls13CipherSuites, tls13CipherSuitesSize, smCiphersuites13, smCiphersuites13Size);
         uint16_t firstSmCipherSuite = 0;
-        int index = 2; // 前两个存放SM算法套，2表示开始存放其他算法套的下标
+        int index = 2;
         for (uint32_t i = 0; i < config->tls13cipherSuitesSize; i++) {
             if (config->tls13CipherSuites[i] != HITLS_SM4_GCM_SM3 &&
                 config->tls13CipherSuites[i] != HITLS_SM4_CCM_SM3) {
