@@ -76,7 +76,7 @@ static CRYPT_EAL_LibCtx *SM_ProviderLoad(void)
 
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_SM_LIB_NAME, NULL, NULL), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SM3, HITLS_SM_PROVIDER_ATTR, NULL, 0, NULL),
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SM4_CTR_DF, HITLS_SM_PROVIDER_ATTR, NULL, 0, NULL),
         CRYPT_SUCCESS);
     return libCtx;
 

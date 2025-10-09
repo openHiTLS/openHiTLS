@@ -481,7 +481,8 @@ static int32_t AsymSignAndVerify(CRYPT_EAL_PkeyCtx *pkeyCtx)
     uint8_t sign[1024] = {0};
     uint32_t signLen = sizeof(sign);
 
-    int32_t ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), CRYPT_RAND_SM3, HITLS_SM_PROVIDER_ATTR, NULL, 0, NULL);
+    int32_t ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), CRYPT_RAND_SM4_CTR_DF, HITLS_SM_PROVIDER_ATTR,
+        NULL, 0, NULL);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
     ret = CRYPT_EAL_PkeySign(pkeyCtx, CRYPT_MD_SM3, data, dataLen, sign, &signLen);
@@ -1321,7 +1322,7 @@ void UT_HITLS_APP_KEYMGMT_TC017(void)
     ret = HITLS_APP_FindKey(&g_appProvider, &smParam, CRYPT_PKEY_SM2, &keyInfo);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
-    ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), CRYPT_RAND_SM3, "provider=sm", NULL, 0, NULL);
+    ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), CRYPT_RAND_SM4_CTR_DF, "provider=sm", NULL, 0, NULL);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
     ret = CRYPT_EAL_PkeySign(keyInfo.pkeyCtx, CRYPT_MD_SM3, data, dataLen, sign, &signLen);
@@ -1343,7 +1344,7 @@ void UT_HITLS_APP_KEYMGMT_TC017(void)
     ret = TLCP_Receive_Init(&tlcpCtx);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
-    ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), CRYPT_RAND_SM3, "provider=sm", NULL, 0, NULL);
+    ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), CRYPT_RAND_SM4_CTR_DF, "provider=sm", NULL, 0, NULL);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
     ret = HITLS_APP_ReceiveKey(&g_appProvider, &smParam, -1, -1, TLCP_Receive, &tlcpCtx);

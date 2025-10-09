@@ -73,7 +73,6 @@ static const CRYPT_EAL_AlgInfo g_smMacs[] = {
 };
 
 static const CRYPT_EAL_AlgInfo g_smRands[] = {
-    {CRYPT_RAND_SM3, g_smRand, CRYPT_EAL_SM_ATTR},
     {CRYPT_RAND_SM4_CTR_DF, g_smRand, CRYPT_EAL_SM_ATTR},
     CRYPT_EAL_ALGINFO_END
 };

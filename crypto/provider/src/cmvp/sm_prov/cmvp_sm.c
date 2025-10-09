@@ -26,10 +26,40 @@
 #include "crypt_params_key.h"
 #include "securec.h"
 #include "bsl_sal.h"
+#include "crypt_sm2.h"
+
+static bool CMVP_Sm2SignVerifyPct(void *ctx)
+{
+    bool ret = false;
+    uint8_t *sign = NULL;
+    uint32_t signLen = 0;
+    const uint8_t msg[] = {0x01, 0x02, 0x03, 0x04};
+    uint32_t mdId = CRYPT_MD_SM3;
+
+    GOTO_ERR_IF_TRUE(CRYPT_SM2_Ctrl(ctx, CRYPT_CTRL_GET_SIGNLEN, &signLen, sizeof(signLen)) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    sign = BSL_SAL_Malloc(signLen);
+    GOTO_ERR_IF_TRUE(sign == NULL, CRYPT_MEM_ALLOC_FAIL);
+
+    GOTO_ERR_IF_TRUE(CRYPT_SM2_Sign(ctx, mdId, msg, sizeof(msg), sign, &signLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    GOTO_ERR_IF_TRUE(CRYPT_SM2_Verify(ctx, mdId, msg, sizeof(msg), sign, signLen) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
+
+    ret = true;
+ERR:
+    BSL_SAL_Free(sign);
+    return ret;
+}
 
 bool CMVP_SmPkeyPct(void *ctx, int32_t algId)
 {
-    return CRYPT_CMVP_SelftestPkeyPct(ctx, algId);
+    if (algId != CRYPT_PKEY_SM2) {
+        return false;
+    }
+    return CMVP_Sm2SignVerifyPct(ctx);
 }
 
 bool CMVP_SmPkeyC2(int32_t algId)
@@ -91,7 +121,6 @@ static bool DrbgKat(void *libCtx, const char *attrName)
 {
     static const uint32_t list[] = {
         CRYPT_RAND_SM4_CTR_DF,
-        CRYPT_RAND_SM3,
     };
 
     for (uint32_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) {
@@ -213,10 +242,6 @@ static int32_t RandomStartupSelftest(void *libCtx, const char *attrName, int32_t
 
 int32_t CMVP_SmRandomStartupSelftest(void *libCtx, const char *attrName)
 {
-    int32_t ret = RandomStartupSelftest(libCtx, attrName, CRYPT_RAND_SM3);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
     return RandomStartupSelftest(libCtx, attrName, CRYPT_RAND_SM4_CTR_DF);
 }
 
